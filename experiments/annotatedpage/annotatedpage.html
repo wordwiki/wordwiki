@@ -25,22 +25,45 @@
          stroke:purple;
      }
 
+    .tooltip {
+        background-color: beige;
+    }
+
     </style>
 
     <script>
-     function activate_group() {
-         const group_elem = event.currentTarget;
+    function activate_group() {
+        const group_elem = event.currentTarget;
 
-         console.info(`activate group ${group_elem.id}`);
+        console.info(`activate group ${group_elem.id}`);
 
-         const current_active_group_elem = document.querySelector('#annotatedPage svg .group.active');
-         if(current_active_group_elem) {
-             console.info(`deactivating group ${current_active_group_elem.id}`);
-             current_active_group_elem.classList.remove('active');
-         }
-         
-         group_elem.classList.add('active');
-     }
+        const current_active_group_elem = document.querySelector('#annotatedPage svg .group.active');
+        if (current_active_group_elem) {
+            console.info(`deactivating group ${current_active_group_elem.id}`);
+            current_active_group_elem.classList.remove('active');
+            const currentActiveTooltip = document.querySelector(`#${current_active_group_elem.id}-tooltip`);
+            if (currentActiveTooltip) {
+                currentActiveTooltip.style.display = 'none';
+            }
+        }
+        
+        group_elem.classList.add('active');
+
+        const tooltip = document.querySelector(`#${group_elem.id}-tooltip`);
+        console.info(`tooltip ${tooltip.id}`);
+        if (tooltip) {
+            const annotatedPage = document.querySelector('#annotatedPage');
+            const annotatedPageTop = annotatedPage.getBoundingClientRect().top;
+            const annotatedPageLeft = annotatedPage.getBoundingClientRect().left;
+
+            tooltip.style.display = 'block'; 
+            tooltip.style.position = 'absolute';
+            tooltip.style.top = event.pageY - annotatedPageTop;
+            tooltip.style.left = event.pageX  - annotatedPageLeft;
+        }
+
+
+    }
     </script>
 
 </head>
@@ -59,10 +82,23 @@
                 <rect class="segment" x="630" y="340" width="300" height="60"/>
             </svg>
 
+            <svg class="group" id="cat" onclick="activate_group()">
+                <rect class="segment" x="35" y="340" width="30" height="100" />
+            </svg>
+
             <svg class="group" id="mouse" onclick="activate_group()">
                 <rect class="segment" x="35" y="375" width="590" height="40" />
             </svg>
             
         </svg>
+        <div id="puppy-tooltip" class='tooltip' style="display: none;">
+            <p> puppy <p>
+        </div>
+        <div id="cat-tooltip" class='tooltip' style="display: none;">
+            <p> cat <p>
+        </div>
+        <div id="mouse-tooltip" class='tooltip' style="display: none;">
+            <p> mouse <p>
+        </div>
     </div>
 </body>
