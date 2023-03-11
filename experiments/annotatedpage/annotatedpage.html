@@ -58,8 +58,8 @@
 
             tooltip.style.display = 'block'; 
             tooltip.style.position = 'absolute';
-            tooltip.style.top = event.pageY - annotatedPageTop;
-            tooltip.style.left = event.pageX  - annotatedPageLeft;
+            tooltip.style.top = event.pageY - annotatedPageTop - document.body.scrollTop;
+            tooltip.style.left = event.pageX  - annotatedPageLeft - document.body.scrollLeft;
         }
 
 
