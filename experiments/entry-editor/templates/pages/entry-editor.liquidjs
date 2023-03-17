@@ -1,0 +1,82 @@
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <link href="/resources/entry-editor.css" media="screen" rel="stylesheet" type="text/css" />
+  <script src="https://unpkg.com/htmx.org@1.8.6"></script>
+  <script src='/resources/entry-editor.js'></script>
+</head>
+
+<body>
+
+
+
+<form hx-put="./contact/1" hx-target="#out" hx-swap="outerHTML">
+  <div>
+    <label>First Name</label>
+    <input ty
+    pe="text" name="firstName" value="Joe">
+  </div>
+  <div class="form-group">
+    <label>Last Name</label>
+    <input type="text" name="lastName" value="Blow">
+  </div>
+  <div class="form-group">
+    <label>Email Address</label>
+    <input type="email" name="email" value="joe@blow.com">
+  </div>
+  <button class="btn">Submit</button>
+  <button class="btn" hx-get="/contact/1">Cancel</button>
+</form> 
+
+<div id=out>
+OUT
+</div>
+
+<ul>
+   {% editlist spelling in entry.spelling %}
+   <li>SPELLING::
+           <span class=editable id=38>
+           
+               <span class=content>
+                 {{spelling.text|raw}} <!-- XXX raw is slightly wrong -->
+               </span>
+
+               <dialog>
+
+                 <form method=dialog hx-put='/contact/1' hx-target='closest .editable' hx-indicator='closest .editable' hx-trigger='submit[closeDialog()]'>
+                    <p>
+                      <label>Spelling:</label> <input type='text' name='text' value="{{spelling.text}}">
+                      <input type='hidden' name='_text' value="{{spelling.text}}">
+                    </p>
+                    
+                    <input type=submit value=Save>
+                    <input type=submit value=Cancel>
+                  </form>
+               </dialog>
+               
+               <div class=popup>
+                 <button><img src='/resources/menu-icon.svg'></button>
+                 <div>
+                    <ul>
+                      <li><a href="#">Edit</a>
+                      <li><a href="#">Insert Before</a>
+                      <li><a href="#">Insert After</a>
+                      <li><a href="#">Move Up</a>
+                      <li><a href="#">Move Down</a>
+                      <li><a href="#">Delete</a>
+                    </ul>
+                 </div>
+               </div>
+          </span>
+          DOG. 
+      {% else %}
+        <li>no spellings.
+   {% endeditlist %}
+</ul>
+
+<script>
+bindHandlers();
+</script>
+</body>
+</html>
