@@ -38,9 +38,6 @@
     </style>
 
     <script>
-    
-    const DEFAULT_TOOLTIP_WIDTH = 200;
-    const DEFAULT_TOOLTIP_HEIGHT = 160;
     function activate_group() {
         const group_elem = event.currentTarget;
         document.addEventListener('dragover', function(e) { e.preventDefault() })
@@ -72,16 +69,26 @@
             const default_top = event.pageY - annotatedPageTop - document.body.scrollTop;
             const default_left = event.pageX - annotatedPageLeft - document.body.scrollLeft;
 
-            tooltip.style.top = default_top;
-            tooltip.style.left = Math.min(default_left, annotatedPage.scrollWidth - DEFAULT_TOOLTIP_WIDTH);
+            tooltip.style.top = Math.min(default_top, annotatedPage.scrollHeight - tooltip.scrollHeight);
+            tooltip.style.left = Math.min(default_left, annotatedPage.scrollWidth - tooltip.scrollWidth);
+
+            let tooltipYOffset = 0;
+            let tooltipXOffset = 0;
+
+            tooltip.addEventListener('dragstart', (e) => {
+                tooltipXOffset = e.pageX - tooltip.getBoundingClientRect().left - document.body.scrollLeft;
+                tooltipYOffset = e.pageY - tooltip.getBoundingClientRect().top - document.body.scrollTop;
+            });
 
             tooltip.addEventListener("dragend", (e) => {
                 if (e.pageX == 0 || e.pageY == 0) {
                     return;
                 }
                 // console.info(`drag ${e.pageX} ${e.pageY}`);
-                tooltip.style.top = e.pageY - annotatedPageTop - document.body.scrollTop;
-                tooltip.style.left = e.pageX  - annotatedPageLeft - document.body.scrollLeft;
+                const currentAnnotatedPageTop = annotatedPage.getBoundingClientRect().top;
+                const currentAnnotatedPageLeft = annotatedPage.getBoundingClientRect().left;
+                tooltip.style.top = Math.min(e.pageY - currentAnnotatedPageTop - document.body.scrollTop - tooltipYOffset, annotatedPage.scrollHeight - tooltip.scrollHeight);
+                tooltip.style.left = Math.min(e.pageX  - currentAnnotatedPageLeft - document.body.scrollLeft - tooltipXOffset, annotatedPage.scrollWidth - tooltip.scrollWidth);
             });
         }
 
