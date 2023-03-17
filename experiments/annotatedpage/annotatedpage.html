@@ -27,15 +27,25 @@
 
     .tooltip {
         background-color: beige;
+        overflow: scroll;
+        resize: both;
+        padding-left: 5px;
+        padding-right: 5px;
+        width: 200px;
+        height: 160px;
     }
 
     </style>
 
     <script>
+    
+    const DEFAULT_TOOLTIP_WIDTH = 200;
+    const DEFAULT_TOOLTIP_HEIGHT = 160;
     function activate_group() {
         const group_elem = event.currentTarget;
+        document.addEventListener('dragover', function(e) { e.preventDefault() })
 
-        console.info(`activate group ${group_elem.id}`);
+        // console.info(`activate group ${group_elem.id}`);
 
         const current_active_group_elem = document.querySelector('#annotatedPage svg .group.active');
         if (current_active_group_elem) {
@@ -50,7 +60,7 @@
         group_elem.classList.add('active');
 
         const tooltip = document.querySelector(`#${group_elem.id}-tooltip`);
-        console.info(`tooltip ${tooltip.id}`);
+        // console.info(`tooltip ${tooltip.id}`);
         if (tooltip) {
             const annotatedPage = document.querySelector('#annotatedPage');
             const annotatedPageTop = annotatedPage.getBoundingClientRect().top;
@@ -58,12 +68,26 @@
 
             tooltip.style.display = 'block'; 
             tooltip.style.position = 'absolute';
-            tooltip.style.top = event.pageY - annotatedPageTop - document.body.scrollTop;
-            tooltip.style.left = event.pageX  - annotatedPageLeft - document.body.scrollLeft;
+
+            const default_top = event.pageY - annotatedPageTop - document.body.scrollTop;
+            const default_left = event.pageX - annotatedPageLeft - document.body.scrollLeft;
+
+            tooltip.style.top = default_top;
+            tooltip.style.left = Math.min(default_left, annotatedPage.scrollWidth - DEFAULT_TOOLTIP_WIDTH);
+
+            tooltip.addEventListener("dragend", (e) => {
+                if (e.pageX == 0 || e.pageY == 0) {
+                    return;
+                }
+                // console.info(`drag ${e.pageX} ${e.pageY}`);
+                tooltip.style.top = e.pageY - annotatedPageTop - document.body.scrollTop;
+                tooltip.style.left = e.pageX  - annotatedPageLeft - document.body.scrollLeft;
+            });
         }
 
 
     }
+
     </script>
 
 </head>
@@ -91,13 +115,13 @@
             </svg>
             
         </svg>
-        <div id="puppy-tooltip" class='tooltip' style="display: none;">
+        <div id="puppy-tooltip" class='tooltip' style="display: none;" draggable="true">
             <p> puppy <p>
         </div>
-        <div id="cat-tooltip" class='tooltip' style="display: none;">
+        <div id="cat-tooltip" class='tooltip' style="display: none;" draggable="true">
             <p> cat <p>
         </div>
-        <div id="mouse-tooltip" class='tooltip' style="display: none;">
+        <div id="mouse-tooltip" class='tooltip' style="display: none;" draggable="true">
             <p> mouse <p>
         </div>
     </div>
