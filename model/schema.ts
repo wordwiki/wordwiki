@@ -32,10 +32,10 @@ export abstract class ScalarField extends Field {
      */
     validate(locus: string, value: any) {
         if(value == null || value == undefined) {
-            if(this.optional)
+            if(true || this.optional) // DISABLE OPTIONAL fOR NOW
                 return;
             else
-                throw new ValidationError(locus, 'missing required value');
+                throw new ValidationError(locus, `missing required value for field: ${this.name}`);
         } else {
             return this.validate_required(locus, value);
         }
@@ -112,28 +112,44 @@ export class BooleanField extends ScalarField {
 
 // Relation vs SubRelation - top level etc.
 export class RelationField extends Field {
-    //fields: any; //{[name: string]: Field}; // TODO: fix this typing
+    //fields: {[name: string]: Field}; // TODO: fix this typing
 
-    constructor(name: string, public fields: any) {
+    constructor(name: string, public fields: {[name: string]: Field}) {
         super(name);
         this.fields = fields;
     }
 
     non_relation_fields() {
-        return this.fields.filter(f=>!(f instanceof RelationField));
+        return Object.values(this.fields).filter(f=>!(f instanceof RelationField));
     }
 
     relation_fields() {
-        return this.fields.filter(f=>f instanceof RelationField);
+        return Object.values(this.fields).filter(f=>f instanceof RelationField);
     }
 
     validate(locus: string, value: any) {
+        if(!value) // XXX treating missing relation value as empty relation, TODO cleanup
+            return;
+        if (!Array.isArray(value))
+            throw new ValidationError(locus, `relations must be arrays`);
+        for(let elem of value) {
+            this.validate_relation_member(locus, elem);
+        }
+    }
+
+    validate_relation_member(locus: string, value: any) {
         const relation_locus = locus + '/' + this.name;
-        for(const field_name of this.fields) {
+        for(const field_name of Object.keys(this.fields)) {
             const field = this.fields[field_name];
             const field_value = value[field_name];
             field.validate(relation_locus, field_value);
         }
+        for(const value_field_name of Object.keys(value)) {
+            if(!Object.hasOwn(this.fields, value_field_name)) {
+                throw new ValidationError(locus, `unknown field '${value_field_name}' in value for relation '${this.name}'`);
+            }
+        }
+        // TODO add code for missing fields
     }
 
     /**
@@ -159,7 +175,7 @@ export class RelationField extends Field {
         for(const field_name of Object.getOwnPropertyNames(field_schema)) {
             const field_body = field_schema[field_name];
             // TODO: locus is wrong here.
-            fields[field_name] = parse_field(locus, name, field_body);
+            fields[field_name] = parse_field(locus, field_name, field_body);
         }
 
         return new RelationField(name, fields);
@@ -247,11 +263,30 @@ const sample_entry_schema = {
 
 
 function main() {
-    console.info('Hello.');
     let schema = RelationField.parse_schema('entry', 'entry', sample_entry_schema);
     console.info('Schema', schema);
     let dumped_schema_json = schema.schema_to_json();
     console.info('Schema again', dumped_schema_json);
+
+    let test_entry = {
+        part_of_speech: 'noun',
+        subentry: [
+            {
+                spelling: [
+                    {
+                        text: 'Cat',
+                        variant: 'mm-li',
+                    },
+                    {
+                        text: 'Caat',
+                        variant: 'mm-sf',
+                    },
+                ]
+            }
+        ]
+    };
+
+    schema.validate('root', [test_entry]);
 }
 
 if (import.meta.main)
