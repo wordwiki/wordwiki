@@ -38,12 +38,8 @@
     </style>
 
     <script>
-    function activate_group() {
-        const group_elem = event.currentTarget;
-        document.addEventListener('dragover', function(e) { e.preventDefault() })
-
-        // console.info(`activate group ${group_elem.id}`);
-
+    
+    function deactivate_current_active_group() {
         const current_active_group_elem = document.querySelector('#annotatedPage svg .group.active');
         if (current_active_group_elem) {
             console.info(`deactivating group ${current_active_group_elem.id}`);
@@ -53,6 +49,19 @@
                 currentActiveTooltip.style.display = 'none';
             }
         }
+    }
+
+    function do_nothing() {
+        event.stopPropagation();
+    }
+
+    function activate_group() {
+        const group_elem = event.currentTarget;
+        document.addEventListener('dragover', function(e) { e.preventDefault() });
+
+        // console.info(`activate group ${group_elem.id}`);
+
+        deactivate_current_active_group();
         
         group_elem.classList.add('active');
 
@@ -92,14 +101,14 @@
             });
         }
 
-
+        event.stopPropagation();
     }
 
     </script>
 
 </head>
 
-<body>
+<body onclick="deactivate_current_active_group()">
 
     <h1>Sample Page</h1>
     
@@ -122,14 +131,25 @@
             </svg>
             
         </svg>
-        <div id="puppy-tooltip" class='tooltip' style="display: none;" draggable="true">
-            <p> puppy <p>
+        <div id="puppy-tooltip" class='tooltip' style="display: none;" draggable="true" onclick="do_nothing()">
+            <p> puppy </p>
         </div>
-        <div id="cat-tooltip" class='tooltip' style="display: none;" draggable="true">
-            <p> cat <p>
+        <div id="cat-tooltip" class='tooltip' style="display: none;" draggable="true" onclick="do_nothing()">
+            <p> cat </p>
         </div>
-        <div id="mouse-tooltip" class='tooltip' style="display: none;" draggable="true">
-            <p> mouse <p>
+        <div id="mouse-tooltip" class='tooltip' style="display: none;" draggable="true" onclick="do_nothing()">
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
+            <p> mouse </p>
         </div>
     </div>
 </body>
