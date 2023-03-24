@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <link href="/resources/entry-editor.css" media="screen" rel="stylesheet" type="text/css" />
   <script src="https://unpkg.com/htmx.org@1.8.6"></script>
+  <script src="https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js"></script>
   <script src='/resources/entry-editor.js'></script>
 </head>
 
@@ -11,11 +12,22 @@
 
 
 
-<form hx-put="./contact/1" hx-target="#out" hx-swap="outerHTML">
+  {% editlist spelling in entry.spelling %}
+     {{spelling.text|raw}}
+  {% endeditlist %}
+  <p>Try section tag:</p>
+  {% section - "cat" %}
+    CAT SECTION: (({{section.path}}))
+    {% section - "dog" %}
+       CHILD SECTION {{section.path}}
+       CHILD SECTION PARENT {{section.parent.path}}
+    {% endsection %}
+  {% endsection %}
+
+<form hx-put="./contact/1" hx-vals='{"myVal": "My Value"}' hx-target="#out_cat" id='puppy'>
   <div>
     <label>First Name</label>
-    <input ty
-    pe="text" name="firstName" value="Joe">
+    <input type="text" name="firstName" value="Joe">
   </div>
   <div class="form-group">
     <label>Last Name</label>
@@ -29,54 +41,55 @@
   <button class="btn" hx-get="/contact/1">Cancel</button>
 </form> 
 
-<div id=out>
+<div id="out_cat">
 OUT
 </div>
 
-<ul>
-   {% editlist spelling in entry.spelling %}
-   <li>SPELLING::
-           <span class=editable id=38>
-           
-               <span class=content>
-                 {{spelling.text|raw}} <!-- XXX raw is slightly wrong -->
-               </span>
+{% section div "entry" | append: "_7" %}
+  {% section ul "spelling-list" %}
+    {% for spelling in entry.spelling %}
+      <li> SPELLING::
+        {% section span.editable spelling.id %}
+            <span class=content>
+              {{spelling.text|raw}} <!-- XXX raw is slightly wrong -->
+            </span>
 
-               <dialog>
+            <dialog>
+              <form method=dialog hx-put='/actions/save' hx-target='#{{section.path}}' hx-indicator='#{{section.path}}' hx-trigger='submit[closeDialog()]' hx-swap='morph:outerHTML'>
+                <p>
+                  <label>Spelling:</label> <input type='text' name='text' value="{{spelling.text}}">
+                  <input type='hidden' name='_text' value="{{spelling.text}}">
+                </p>
+                <input type=submit value=Save>
+                <input type=submit value=Cancel>
+              </form>
+            </dialog>
 
-                 <form method=dialog hx-put='/contact/1' hx-target='closest .editable' hx-indicator='closest .editable' hx-trigger='submit[closeDialog()]'>
-                    <p>
-                      <label>Spelling:</label> <input type='text' name='text' value="{{spelling.text}}">
-                      <input type='hidden' name='_text' value="{{spelling.text}}">
-                    </p>
-                    
-                    <input type=submit value=Save>
-                    <input type=submit value=Cancel>
-                  </form>
-               </dialog>
-               
-               <div class=popup>
-                 <button><img src='/resources/menu-icon.svg'></button>
-                 <div>
-                    <ul>
-                      <li><a href="#">Edit</a>
-                      <li><a href="#">Insert Before</a>
-                      <li><a href="#">Insert After</a>
-                      <li><a href="#">Move Up</a>
-                      <li><a href="#">Move Down</a>
-                      <li><a href="#">Delete</a>
-                    </ul>
-                 </div>
-               </div>
-          </span>
-          DOG. 
-      {% else %}
-        <li>no spellings.
-   {% endeditlist %}
-</ul>
+            <div class=popup>
+              <button><img src='/resources/menu-icon.svg'></button>
+              <div>
+                <ul>
+                  <li><a href="#">Edit</a>
+                  <li><a href="#">Insert Before</a>
+                  <li><a href="#">Insert After</a>
+                  <li><a href="#">Move Up</a>
+                  <li><a href="#">Move Down</a>
+                  <li><a href="#">Delete</a>
+                </ul>
+              </div>
+            </div>
+        {% endsection %}
+      </li>
+    {% else %}
+      <li>no spellings.
+    {% endfor %}
+  {% endsection %}
+{% endsection %}       
 
 <script>
+// Move this to onload etc. XXX
 bindHandlers();
+bindHandlersAfterEachHtmxSettle();
 </script>
 </body>
 </html>

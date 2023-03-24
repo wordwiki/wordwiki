@@ -11,89 +11,89 @@ public_id = 'ala_latl'
 public_note = ''
 
 [[spelling]]
-_id = 104
+id = 104
 text = "ala'latl"
 variant = 'mm-li'
 
 [[spelling]]
-_id = 104
+id = 105
 text = "ala'latlcc"
 variant = 'mm-sf'
 
 [[definitions]]
-_id = 111
+id = 111
 definition = 'He/she goes with him/her'
 
 [[examples]]
-_id = 112
+id = 112
 translation = 'The woman has her child with her.'
 
     [[examples.text]]
-    _id = 113
+    id = 113
     text = "E'pit ala'latl unjann."
     variant = 'mm-li'
 
 [[glosses]]
-_id = 114
+id = 114
 gloss = 'go around  with'
 
 [[glosses]]
-_id = 115
+id = 115
 gloss = 'go out with'
 
 [[pronunciation_guide]]
-_id = 106
+id = 106
 text = 'a·laa·la·dêl'
 variant = 'mm-li'
 
 [[alternate_grammatical_forms]]
-_id = 116
+id = 116
 gloss = 'I go around with him'
 grammatical_form = '1-3'
 
     [[alternate_grammatical_forms.text]]
-    _id = 117
+    id = 117
     text = "ala'l'g"
     variant = 'mm-li'
 
 [[alternate_grammatical_forms]]
-_id = 118
+id = 118
 gloss = 'I go around with you'
 grammatical_form = '1-2'
 
     [[alternate_grammatical_forms.text]]
-    _id = 119
+    id = 119
     text = "ala'lul"
     variant = 'mm-li'
 
 [[alternate_grammatical_forms]]
-_id = 120
+id = 120
 gloss = 'he/she goes around with me'
 grammatical_form = '3-1'
 
     [[alternate_grammatical_forms.text]]
-    _id = 121
+    id = 121
     text = "ala'lit"
     variant = 'mm-li'
 
 [[related_entries]]
-_id = 107
+id = 107
 unresolved_text = "ala'ulatl"
 
 [[related_entries]]
-_id = 108
+id = 108
 unresolved_text = "ala'ulatg"
 
 [[related_entries]]
-_id = 109
+id = 109
 unresolved_text = "ala'toq"
 
 [[related_entries]]
-_id = 110
+id = 110
 unresolved_text = "ala'ulet"
 
 [[status]]
-_id = 105
+id = 105
 details = ''
 status = 'done'
 variant = 'mm-li'

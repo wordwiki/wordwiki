@@ -6,6 +6,7 @@ import XRegExp from  'https://deno.land/x/xregexp/src/index.js';
 import * as liquid from "https://esm.sh/liquidjs@10.6.0";
 import EditListTag from './editlist-tag.ts';
 import SectionTag from './section-tag.ts';
+import {SectionedPageEmitter} from './section-tag.ts';
 import { sleep } from "https://deno.land/x/sleep/mod.ts";
 import {stringify}  from './liquid-utils.ts';
 
@@ -34,6 +35,7 @@ class EntryEditorServer {
     }
     
     async handleRequest(request: server.Request): Promise<server.Response> {
+        console.info('REQUEST URL', request.url);
         const url = new URL(request.url);
         let match: any = undefined;
         //console.info('url', url);
@@ -42,7 +44,16 @@ class EntryEditorServer {
             case !!(match=XRegExp.cache(`^/entry/(?<id>[\\w-]+)$`, 'x').exec(url.pathname)):
                 console.info('match', match);
                 //console.info('ENTRY', match.groups.id);
-                return this.renderEntry();
+                return this.renderEntry(request.headers['ww-section']);
+            case !!(url.pathname === '/actions/save'):
+                console.info('SAVE', request.headers);
+                await this.actionSave();
+                // Then render the entry given in the hx-current-url, with the specified hx-target as the
+                // section.
+                request.url = request.headers['hx-current-url'];  // XXX add checking
+                request.headers['ww-section'] = request.headers['hx-target'];
+                // Somehow munge section in here as well.
+                return this.handleRequest(request);
             default:
                 //await sleep(1);
                 break;
@@ -56,7 +67,13 @@ class EntryEditorServer {
         });
     }
 
-    async renderEntry(): Promise<server.Response> {
+    async actionSave() {
+        console.info('INSIDE ACTION AVAV');
+        this.entry.spelling[0].text += '*';
+    }
+
+    
+    async renderEntry(section_path: string|undefined): Promise<server.Response> {
         const entry_editor_template =
             await this.template_engine.parseFile('entry-editor.liquidjs');
 
@@ -65,7 +82,7 @@ class EntryEditorServer {
         //let body = await this.template_engine.render(entry_editor_template, scope);
 
         let scope = new liquid.Context({entry: this.entry}, this.template_engine.options, {});
-        let emitter = new PartialEmitter();
+        let emitter = new SectionedPageEmitter(section_path || '__');
         //emitter.write('foo');
         let body = await liquid.toPromise(this.template_engine.renderer.renderTemplates(entry_editor_template, scope, emitter));
         
@@ -88,14 +105,14 @@ async function test(): Promise<void> {
 //import { stringify } from '../util'
 //import { Emitter } from './emitter'
 
-export class PartialEmitter implements liquid.Emitter {
-    public buffer = '';
+// export class PartialEmitter implements liquid.Emitter {
+//     public buffer = '';
 
-    public write (html: any) {
-        //console.info('not emitting', stringify(html));
-        this.buffer += stringify(html)
-    }
-}
+//     public write (html: any) {
+//         //console.info('not emitting', stringify(html));
+//         this.buffer += stringify(html)
+//     }
+// }
 
 
 

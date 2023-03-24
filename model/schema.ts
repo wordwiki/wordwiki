@@ -182,6 +182,46 @@ export class RelationField extends Field {
     }
 }
 
+/**
+ *
+ */
+export class DocumentField extends RelationField {
+    constructor(name: string, fields: {[name: string]: Field}) {
+        super(name, fields);
+    }
+    // come up with an example of this.
+}
+
+/**
+ *
+ */
+export class CollectionField extends RelationField {
+    constructor(name: string, fields: {[name: string]: Field}) {
+        super(name, fields);
+    }
+}
+
+/**
+ *
+ */
+export class DatabaseField extends RelationField {
+    constructor(name: string, fields: {[name: string]: Field}) {
+        super(name, fields);
+    }
+}
+
+/**
+ *
+ */
+export class UniverseField extends RelationField {
+    constructor(name: string, fields: {[name: string]: Field}) {
+        super(name, fields);
+    }
+}
+
+
+
+
 export function parse_field(locus: string, name: string, schema: any): Field {
     const typ = schema.$type;
     switch(typ) {

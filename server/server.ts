@@ -25,20 +25,19 @@
  */
 export interface Request {
     /** Returns a Headers object consisting of the headers associated with request. Note that headers added in the network layer by the user agent will not be accounted for in this object, e.g., the "Host" header. */
-    readonly headers: {[key: string]: string};
+    headers: {[key: string]: string};
     /** Returns request's HTTP method, which is "GET" by default. */
-    readonly method: string;
+    method: string;
     /** Returns the URL of request as a string. */
-    readonly url: string;
-    readonly body: any;
+    url: string;
+    body: any;
 }
 
 export interface Response {
-    readonly status: number;
-    readonly headers: {[key: string]: string};
-    readonly url: string;
-    readonly body: string,
-    
+    status: number;
+    headers: {[key: string]: string};
+    url: string;
+    body: string,
 }
 
 //export type RequestHandler = (request: Request) => Response;

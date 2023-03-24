@@ -1,3 +1,10 @@
+function bindHandlersAfterEachHtmxSettle() {
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+        //evt.preventDefault();
+        bindHandlers();
+    });
+}
+
 function bindHandlers() {
     bindEditHandlers();
     bindPopupHandlers();
