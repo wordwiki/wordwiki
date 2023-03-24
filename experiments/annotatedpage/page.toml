@@ -1,0 +1,50 @@
+id: '1382912374'
+volume: "banq-12"
+page: 37
+
+[[group]]
+id: '38218943824'
+name: 'cat'
+
+   [[group.rect]]
+   id: '1429873424'
+   x: 37
+   y: 33
+   width: 76
+   height: 21
+
+[[group]]
+id: '414293784'
+name: 'dog'
+
+   [[group.rect]]
+   id: '438193291'
+   x: 42
+   y: 59
+   width: 84
+   height: 25
+
+   [[group.rect]]
+   id: '438193291'
+   x: 148
+   y: 70
+   width: 71
+   height: 35
+   
+   [[group.polygon]]
+   id: '938193291'
+
+       [[group.polygon.point]]
+       id: '213431'
+       x: 148
+       y: 70
+       
+       [[group.polygon.point]]
+       id: '213431'
+       x: 204
+       y: 70
+       
+       [[group.polygon.point]]
+       id: '2134dd'
+       x: 307
+       y: 70
