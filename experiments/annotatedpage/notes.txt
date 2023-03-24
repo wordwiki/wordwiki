@@ -1,0 +1,26 @@
+* Annotator feedback
+** Possible user improvements
+- if box will be off left of page, or off bottom, may position differently?
+- test on mobile
+- standard positioning will obstruct original text - might be nicer to nudge top
+  to bottom of bounding box (obviously more complicated when there is more than one).
+** Scroll/Size improvements
+- maybe box should be sized to content, up to a certain max width - this has interactions with page width
+  and postion).
+- height should be content height, unless overflow.
+- scroll bars should not show unless there is content to scroll.
+** Code notes
+- you are using python function variable and function naming conventions (I know I was as well!)
+- we are building up lots of event listeners - each click adds another e.preventDefault(),
+  and each popoup adds a new dragstart and dragend (all of which are firing).
+- each of these dragstart/dragend pairs are closures that are capturing different tooltipYOffeset etc
+  pairs and doing arithmetic with variables that may change on page scroll - I can't reproduce a glitch,
+  but is certainly doing something complicated.
+- I don't understand the e.pageX == 0 || e.pageY == 0 bit?
+- capturing the 'annotatedPage' inside the 'dragend' closure is not ideal.  In practice it will not
+  matter - but it is a style that should be avoided (Capturing Dom nodes in a JS closure is potentially
+  making GC problems).
+- maybe rename 'do_nothing()' to stopPropagation? or something?
+
+* Next steps
+- make code that builds annotator page from data.
