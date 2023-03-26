@@ -39,7 +39,7 @@ export class DenoHttpServer extends HttpServer {
         let denoRequest = requestEvent.request;
         const headers = Object.fromEntries(denoRequest.headers.entries());
         const contentType = headers['content-type'];
-        console.info(headers);
+        //console.info(headers);
 
         const url = new URL(requestEvent.request.url);
         const filepath = decodeURIComponent(url.pathname);

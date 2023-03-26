@@ -6,9 +6,12 @@ import XRegExp from  'https://deno.land/x/xregexp/src/index.js';
 import * as liquid from "https://esm.sh/liquidjs@10.6.0";
 import EditListTag from './editlist-tag.ts';
 import SectionTag from './section-tag.ts';
+import SelectTag from './select-tag.ts';
 import {SectionedPageEmitter} from './section-tag.ts';
 import { sleep } from "https://deno.land/x/sleep/mod.ts";
 import {stringify}  from './liquid-utils.ts';
+
+import { DB } from "https://deno.land/x/sqlite/mod.ts";
 
 // TODO: inline a lexeme (as json)
 // TODO: render a the lexeme using the template engine
@@ -18,7 +21,7 @@ import {stringify}  from './liquid-utils.ts';
 class EntryEditorServer {
     template_engine: liquid.Liquid;
 
-    constructor(public entry: any) {
+    constructor(public entry: any, db: DB) {
         let templates_root = 'templates';
         this.template_engine = new liquid.Liquid({
             strictFilters: true,
@@ -27,11 +30,16 @@ class EntryEditorServer {
             root: `${templates_root}/pages`,
             partials: `${templates_root}/partials`,
             layouts: `${templates_root}/layouts`,
+            globals: { db },
             //cache: true, // off while testing
         });
 
+        console.info(this.template_engine.options.globals);
+
+        
         this.template_engine.registerTag('editlist', EditListTag);
         this.template_engine.registerTag('section', SectionTag);
+        this.template_engine.registerTag('select', SelectTag);
     }
     
     async handleRequest(request: server.Request): Promise<server.Response> {
@@ -96,8 +104,34 @@ class EntryEditorServer {
 }
 
 async function test(): Promise<void> {
+
+
+    const db = new DB('entry.db');
+    db.execute(`DROP TABLE IF EXISTS people`);
+    db.execute(`
+         CREATE TABLE IF NOT EXISTS people (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         name TEXT
+         )
+    `);
+
+    // Run a simple query
+    for (const name of ["Peter Parker", "Clark Kent", "Bruce Wayne"]) {
+        db.query("INSERT INTO people (name) VALUES (?)", [name]);
+    }
+
+    // Print out data in table
+    for (const [name] of db.query(`SELECT name FROM people WHERE name > 'C'`)) {
+        console.log(name);
+    }
+
+    // TODO: maybe switch to positional?
+    let prepped = db.prepareQuery('SELECT *, purps.id as id1, peeps.id as id2 FROM people as purps JOIN people as peeps WHERE purps.name > :startName');
+    console.info(prepped.columns());
+    console.info(prepped.all({ startName: 'A'}));
+
     let entry = toml_parse(await Deno.readTextFile('entry.toml'));
-    let entryEditorServer = new EntryEditorServer(entry);
+    let entryEditorServer = new EntryEditorServer(entry, db);
     await new DenoHttpServer({port: 9000}, entryEditorServer.handleRequest.bind(entryEditorServer)).run();
 }
 

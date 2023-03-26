@@ -86,6 +86,28 @@ OUT
   {% endsection %}
 {% endsection %}       
 
+<ul>
+{% select * FROM people WHERE name > {{'C'}} %}
+   <li>{{ people.id }} :: {{ people.name }}
+      {% select * FROM people WHERE people.id = {{people.id}} :: name:people2 %}
+         {{ people2.name }}
+      {% endselect %}
+{% endselect %}
+</ul>
+
+{% comment %}
+{% select * FROM spelling WHERE entry_id={{entry.id}} %}
+   {{ spelling.name }} {{ spelling.size }}
+{% endselect %}
+
+
+
+{% select * FROM spelling WHERE entry_id={{entry.id}} :: name:spelling outer:span inner:div.editable %}
+   {{ spelling.name }} {{ spelling.size }}
+{% endselect %}
+
+{% endcomment %}
+
 <script>
 // Move this to onload etc. XXX
 bindHandlers();
