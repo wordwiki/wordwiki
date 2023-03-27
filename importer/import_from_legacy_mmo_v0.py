@@ -12,7 +12,6 @@ import tomli_w
 import pytomlpp
 from pathlib import Path
 import gzip
-import nanoid
 
 sys.stdin.reconfigure(encoding='utf-8')
 sys.stdout.reconfigure(encoding='utf-8')
@@ -75,24 +74,23 @@ def import_legacy_mmo(i_realize_that_this_will_nuke_the_working_mmo_db=False):
     #import_json_into_db(model, entries)
 
     root = 'mikmaq'
-    os.makedirs(root, exist_ok=True)
     
     # import into fs
-    #import_json_into_fs(root, None, entries)
+    import_json_into_fs(root, None, entries)
 
 
-    #os.makedirs(root+'/categories')
+    os.makedirs(root+'/categories')
 
     
     # spew new format to JSON
     # Note: we are doing this after import to DB so that we can see the
     #       _id fields that get added int the db import process
-    #os.makedirs(root+'/import-report')
-    with open(root+'/entries.json', 'w') as f:
+    os.makedirs(root+'/import-report')
+    with open(root+'/import-report/entries.json', 'w') as f:
         json.dump(entries, f, sort_keys=False, indent=2, ensure_ascii=False)
 
     # spew leftovers to JSON
-    with open(root+'/leftovers.json', 'w') as f:
+    with open(root+'/import-report/leftovers.json', 'w') as f:
         json.dump(lexemes, f, sort_keys=False, indent=2, ensure_ascii=False)
     
 def import_json_into_fs(root, model, entries):
@@ -121,7 +119,7 @@ def import_json_into_fs(root, model, entries):
         #    tomli_w.dump(e, f, multiline_strings=True)
         #    #json.dump(e, f, sort_keys=True, indent=2, ensure_ascii=False)
 
-class LocalIdAllocator_OFF:
+class LocalIdAllocator:
     def __init__(self, next_id=100):
         self.next_id = next_id
 
@@ -129,16 +127,7 @@ class LocalIdAllocator_OFF:
         id = self.next_id
         self.next_id += 1
         return id
-
-
-class LocalIdAllocator:
-    def __init__(self, next_id=100):
-        self.next_id = next_id
-
-    def alloc_next_id(self):
-        return nanoid.generate('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 16)
-   
-        
+    
 def convert_lexeme_to_entries(legacy_lexemes_by_name, src_lexeme):
 
     attrs = dict()
@@ -174,50 +163,44 @@ def convert_lexeme_to_entries(legacy_lexemes_by_name, src_lexeme):
     assert not src_subentry.pop('label')
     phonetic_form = src_subentry.pop('phoneticForm')
 
-    sub_entries = []
+    out_entries = []
     for (idx, pos) in enumerate(src_parts_of_speech):
         part_of_speech_label = pos.pop('label')
-        attrs = dict()
         for sense in pos['senses']:
-            sub_entries.extend(convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, status, borrowed_word, phonetic_form, part_of_speech_label, recordings, sense, attrs, derived_id, len(sub_entries)))
+            out_entries.extend(convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, status, borrowed_word, phonetic_form, part_of_speech_label, recordings, sense, attrs, derived_id, len(out_entries)))
 
-    entry = dict()
-    entry['entry_id'] = id_allocator.alloc_next_id()
-    entry['spelling'] = ortho_text('spelling_id', id_allocator, lexeme)
-    entry['subentry'] = sub_entries
-    # remodel date TODO toolbox last edit date.
-    # TODO: change date format from "31/Jul/2019", to "2019-07-31"
-    #entry['last_modified_date'] = date
-    entry['internal_note'] = note
-    entry['public_note'] = ''
-            
-    return [entry]
+    return out_entries
 
 # for pacific: picture of reference - what refer to
 
 def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, status, borrowed_word, phonetic_form, part_of_speech_label, recordings, sense, attrs, public_id, idx):
 
     entry = dict()
-    entry['subentry_id'] = id_allocator.alloc_next_id()
-    #entry['public_id'] = f"{public_id}-{idx+1}" if idx > 0 else public_id
+    entry['public_id'] = f"{public_id}-{idx+1}" if idx > 0 else public_id
     #entry['lexeme'] = lex_text
+    entry['spelling'] = ortho_text(id_allocator, lexeme)
     # remodel status TODO: skip/done ???
     assert status=='done' or status=='skip', 'unknown status {status}'
-    if False: 
-        entry['status'] = [{
-            'status_id': id_allocator.alloc_next_id(),
-            'variant': 'mm-li',
-            'status': status,
-            'details': ''
-        }]            
+    entry['status'] = [{
+        '_id': id_allocator.alloc_next_id(),
+        'variant': 'mm-li',
+        'status': status,
+        'details': ''
+    }]            
     
+    # remodel date TODO toolbox last edit date.
+    # TODO: change date format from "31/Jul/2019", to "2019-07-31"
+    entry['last_modified_date'] = date
+    entry['internal_note'] = note
+    entry['public_note'] = ''
+
     if borrowed_word:
         attrs['borrowed_word'] = borrowed_word
     
     # TODO is phonetic_form a li/sf thing as well?
     # - maybe different by ortho ...
     # - copy li to  ...
-    entry['pronunciation_guide'] = ortho_text('pronunciation_guide_id', id_allocator, phonetic_form);
+    entry['pronunciation_guide'] = ortho_text(id_allocator, phonetic_form);
     entry['part_of_speech'] = part_of_speech_label
 
     # TODO should cross_ref resolve?  Try to resolve?
@@ -241,11 +224,11 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     #             print('FOUND', r)
     #         else:
     #             print('NOT FOUND', r)
-    entry['related_entry'] = [convert_related_entry(id_allocator, e) for e in related_entries]
+    entry['related_entries'] = [convert_related_entry(id_allocator, e) for e in related_entries]
                 
     # try to resolve!
     #entry['related_entries'] = sense.pop('crossRef')  # TODO should be list of lexes
-    entry['definition'] = [convert_definition(id_allocator, sense.pop('definition'))]
+    entry['definitions'] = [convert_definition(id_allocator, sense.pop('definition'))]
     #assert not sense.pop('label')
     assert len(sense.pop('notes')) == 0
     sense.pop('picture')
@@ -262,22 +245,22 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     
     #entry['recordings'] = recordings
 
-    entry['example'] = [convert_example(id_allocator, ex) for ex in sense['examples']]
+    entry['examples'] = [convert_example(id_allocator, ex) for ex in sense['examples']]
         
-    entry['gloss'] = [convert_gloss(id_allocator, g) for g in sense.pop('glosses')]
+    entry['glosses'] = [convert_gloss(id_allocator, g) for g in sense.pop('glosses')]
 
     # Example conjugations
     # TODO rename to Alternate Forms
-    entry['alternate_grammatical_form'] = [convert_alternate_form(id_allocator, af) for af in sense['lexicalFunctions']]
+    entry['alternate_grammatical_forms'] = [convert_alternate_form(id_allocator, af) for af in sense['lexicalFunctions']]
 
     # TODO can I rename to categories?
-    entry['category'] = [convert_category(id_allocator, c) for c in sense.pop('semanticDomains')]
+    entry['categories'] = [convert_category(id_allocator, c) for c in sense.pop('semanticDomains')]
     
     # WTF: 'other_regional_forms', li, sf
-    entry['other_regional_form'] = [convert_other_regional_form(id_allocator, f) for f in sense.pop('variantForms')]
+    entry['other_regional_forms'] = [convert_other_regional_form(id_allocator, f) for f in sense.pop('variantForms')]
     # - text, region, gloss
 
-    entry['attr'] = convert_attrs(id_allocator, attrs)
+    entry['attrs'] = convert_attrs(id_allocator, attrs)
     
     return [entry]
 
@@ -289,10 +272,10 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
 #     }, { ... } ]
 def convert_alternate_form(id_allocator, src):
     out = dict()
-    out['alternate_grammatical_form_id'] = id_allocator.alloc_next_id()
+    out['_id'] = id_allocator.alloc_next_id()
     out['gloss'] = src.pop('gloss')
     out['grammatical_form'] = src.pop('label')
-    out['alternate_form_text'] = ortho_text('alternate_form_text_id', id_allocator, src.pop('lexeme'), src.pop('sfGloss'))
+    out['text'] = ortho_text(id_allocator, src.pop('lexeme'), src.pop('sfGloss'))
     return out
     
 
@@ -308,7 +291,7 @@ def convert_alternate_form(id_allocator, src):
 
 def convert_definition(id_allocator, definition_text):
     out = dict()
-    out['definition_id'] = id_allocator.alloc_next_id()
+    out['_id'] = id_allocator.alloc_next_id()
     # try to resolve - but need id to do that!
     # so, will need to pre-assign ids.
     out['definition'] = definition_text
@@ -319,7 +302,7 @@ def convert_definition(id_allocator, definition_text):
 
 def convert_related_entry(id_allocator, related_entry_name):
     out = dict()
-    out['related_entry_id'] = id_allocator.alloc_next_id()
+    out['_id'] = id_allocator.alloc_next_id()
     # try to resolve - but need id to do that!
     # so, will need to pre-assign ids.
     out['unresolved_text'] = related_entry_name
@@ -330,27 +313,27 @@ def convert_related_entry(id_allocator, related_entry_name):
 
 def convert_example(id_allocator, src):
     out = dict()
-    out['example_id'] = id_allocator.alloc_next_id()
+    out['_id'] = id_allocator.alloc_next_id()
     out['translation'] = src.pop('exampleEnglish')
-    out['example_text'] = ortho_text('example_text_id', id_allocator, src.pop('exampleSentence'), src.pop('exampleSf'))
+    out['text'] = ortho_text(id_allocator, src.pop('exampleSentence'), src.pop('exampleSf'))
     #out['recordings'] = src.pop('recordings')
     return out
 
 def convert_gloss(id_allocator, src):
     out = dict()
-    out['gloss_id'] = id_allocator.alloc_next_id()
+    out['_id'] = id_allocator.alloc_next_id()
     out['gloss'] = src.pop('text')
     return out
 
 def convert_category(id_allocator, category):
     out = dict()
-    out['category_id'] = id_allocator.alloc_next_id()
+    #out['_id'] = id_allocator.alloc_next_id()
     out['category'] = category
     return out
 
 def convert_other_regional_form(id_allocator, regional_form):
     out = dict()
-    out['other_regional_form_id'] = id_allocator.alloc_next_id()
+    out['_id'] = id_allocator.alloc_next_id()
     #print('OTHER REG', regional_form['label'])
     out['text'] = regional_form['label']
     return out
@@ -359,23 +342,23 @@ def convert_attrs(id_allocator, attrs):
     out = []
     for (k,v) in attrs.items():
         out.append({
-            'attr_id': id_allocator.alloc_next_id(),
+            '_id': id_allocator.alloc_next_id(),
             'attr': k,
             'value': v
             })
     return out
 
-def ortho_text(id_name, id_allocator, li, sf=None):
+def ortho_text(id_allocator, li, sf=None):
     out = []
     if li:
-        out.append(ortho_text_record(id_name, id_allocator, 'mm-li', li))
+        out.append(ortho_text_record(id_allocator, 'mm-li', li))
     if sf:
-        out.append(ortho_text_record(id_name, id_allocator, 'mm-sf', sf))
+        out.append(ortho_text_record(id_allocator, 'mm-sf', sf))
     return out
 
-def ortho_text_record(id_name, id_allocator, selector, text):
+def ortho_text_record(id_allocator, selector, text):
     return {
-        id_name: id_allocator.alloc_next_id(),
+        '_id': id_allocator.alloc_next_id(),
         'variant': selector,
         'text': text
     }    
