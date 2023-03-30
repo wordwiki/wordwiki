@@ -1,7 +1,7 @@
 import { DB, PreparedQuery, QueryParameter, QueryParameterSet } from "https://deno.land/x/sqlite/mod.ts";
 import * as schema from '../../model/schema.ts';
 
-export const entry_schema_json = {
+export const entrySchemaJson = {
     $type: 'relation',
     entry_id: {$type: 'primary_key'},
     spelling: {
@@ -112,28 +112,30 @@ export const entry_schema_json = {
 
 
 async function main() {
-    let entry_schema = schema.RelationField.parse_schema('entry', 'entry', entry_schema_json);
-    console.info('Schema', entry_schema);
-    let dumped_entry_schema_json = entry_schema.schema_to_json();
-    console.info('Schema again', dumped_entry_schema_json);
+    let entrySchema = schema.RelationField.parseSchemaFromCompactJson('entry', 'entry', entrySchemaJson);
+    console.info('Schema', entrySchema);
+    let dumpedEntrySchemaJson = entrySchema.schemaToCompactJson();
+    console.info('Schema again', dumpedEntrySchemaJson);
 
-    const create_schema_dml = entry_schema.create_db_tables();
+    const createSchemaDml = entrySchema.createDbTables();
     console.info('CREATE SCHEMA');
-    create_schema_dml.forEach(s => console.info(s));
+    createSchemaDml.forEach(s => console.info(s));
     
     const db = new DB('dict.db');
-    create_schema_dml.forEach(dml => db.execute(dml));
+    createSchemaDml.forEach(dml => db.execute(dml));
 
     const entries =
         JSON.parse(await Deno.readTextFile("importer/mikmaq/entries.json"));
 
-    entry_schema.validate('root', entries);
+    entrySchema.validate('root', entries);
 
     //console.info('autocommit', db.autocommit);
-    
+
+    console.time('insert entries');
     db.execute("BEGIN TRANSACTION;");
-    entries.forEach((entry:any) => entry_schema.insert(db, entry));
+    entries.forEach((entry:any) => entrySchema.insert(db, entry));
     db.execute("COMMIT;");
+    console.timeEnd('insert entries');
 }
 
 if (import.meta.main)
