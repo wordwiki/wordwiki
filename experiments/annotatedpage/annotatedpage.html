@@ -15,6 +15,10 @@
          stroke-width:3;
          stroke:green;
      }
+     #annotatedPage > svg > svg.group.active > rect.active {
+         stroke:orange;
+         stroke-width:3;
+     }
 
      .group:hover > rect.segment {
          stroke:red;
@@ -25,9 +29,225 @@
          stroke:purple;
      }
 
+     #annotatedPage circle {
+         stroke:magenta;
+         fill:transparent;
+         stroke-width:5;
+         fill-opacity: 10%;
+     }
     </style>
 
     <script>
+
+
+        function redrawCircles(segment) {
+            const segmentX = parseInt(segment.getAttribute('x'), 10)
+            const segmentY = parseInt(segment.getAttribute('y'), 10)
+            const segmentWidth = parseInt(segment.getAttribute('width'))
+            const segmentHeight = parseInt(segment.getAttribute('height'))
+            const peerCircles = segment.parentNode.querySelectorAll('.resize_circle')
+            for (const circle of peerCircles) {
+                if(circle.parentElement !== segment.parentNode) {
+                    continue
+                }
+                const circleType = circle.getAttribute('data-circletype')
+                if(circleType === 'top-left') {
+                    circle.setAttribute("cx", segmentX.toString());
+                    circle.setAttribute("cy", segmentY.toString());
+                } else if(circleType === 'top-right') {
+                    circle.setAttribute('cx', segmentX + segmentWidth)
+                    circle.setAttribute('cy', segmentY)
+                } else if(circleType === 'bottom-left') {
+                    circle.setAttribute('cx', segmentX)
+                    circle.setAttribute('cy', segmentY + segmentHeight)
+                } else if(circleType === 'bottom-right') {
+                    circle.setAttribute('cx', segmentX + segmentWidth)
+                    circle.setAttribute('cy', segmentY + segmentHeight)
+                } else if(circleType === 'middle') {
+                    circle.setAttribute('cx', segmentX + segmentWidth/2)
+                    circle.setAttribute('cy', segmentY + segmentHeight/2)
+                }
+            }
+        }
+
+        function activeResizeCircleHandleMouseMove(event, currentActiveRect, currentActiveCircle) {
+            const mousex = parseInt(event.offsetX, 10)
+            const mousey = parseInt(event.offsetY, 10)
+            const circleType = currentActiveCircle.getAttribute('data-circletype')
+            const mouseRelativeX = parseInt(currentActiveCircle.getAttribute('data-mouserelativex'), 10)
+            const mouseRelativeY = parseInt(currentActiveCircle.getAttribute('data-mouserelativey'), 10)
+            const rectWidth = parseInt(currentActiveRect.getAttribute('width'), 10)
+            const rectHeight = parseInt(currentActiveRect.getAttribute('height'), 10)
+            const circleX = parseInt(currentActiveCircle.getAttribute('cx'), 10)
+            const circleY = parseInt(currentActiveCircle.getAttribute('cy'), 10)
+            const newCircleX = mousex + mouseRelativeX
+            const newCircleY = mousey + mouseRelativeY
+            //currentActiveCircle.setAttribute('cx', newCircleX)
+            //currentActiveCircle.setAttribute('cy', newCircleY)
+            if(circleType === 'top-left') {
+                currentActiveRect.setAttribute('x', newCircleX)
+                currentActiveRect.setAttribute('y', newCircleY)
+                const newRectHeight = rectHeight + (circleY - newCircleY)
+                const newRectWidth = rectWidth + (circleX - newCircleX)
+                currentActiveRect.setAttribute('height', newRectHeight)
+                currentActiveRect.setAttribute('width', newRectWidth)
+            } else if(circleType === 'top-right') {
+                currentActiveRect.setAttribute('y', newCircleY)
+                const newRectHeight = rectHeight + (circleY - newCircleY)
+                const newRectWidth = rectWidth + (newCircleX - circleX)
+                currentActiveRect.setAttribute('height', newRectHeight)
+                currentActiveRect.setAttribute('width', newRectWidth)
+            } else if(circleType === 'bottom-left') {
+                currentActiveRect.setAttribute('x', newCircleX)
+                const newRectHeight = rectHeight + (newCircleY - circleY)
+                const newRectWidth = rectWidth + (circleX - newCircleX)
+                currentActiveRect.setAttribute('height', newRectHeight)
+                currentActiveRect.setAttribute('width', newRectWidth)
+            } else if(circleType === 'bottom-right') {
+                const newRectHeight = rectHeight + (newCircleY - circleY)
+                const newRectWidth = rectWidth + (newCircleX - circleX)
+                currentActiveRect.setAttribute('height', newRectHeight)
+                currentActiveRect.setAttribute('width', newRectWidth)
+            } else if(circleType === 'middle') {
+                currentActiveRect.setAttribute('x', newCircleX - rectWidth/2)
+                currentActiveRect.setAttribute('y', newCircleY - rectHeight/2)
+            }
+            redrawCircles(currentActiveRect)
+
+        }
+
+        function resizeCircleHandleMouseDown(event) {
+            const circle = event.currentTarget
+            circle.classList.add("active")
+            circle.setAttribute('data-mouserelativex', parseInt(circle.getAttribute('cx'), 10) - event.offsetX)
+            circle.setAttribute('data-mouserelativey', parseInt(circle.getAttribute('cy'), 10) - event.offsetY)
+            event.stopPropagation()
+        }
+
+        function resizeCircleHandleMouseUp(event) {
+            const circle = event.currentTarget
+            circle.classList.remove("active")
+            event.stopPropagation()
+        }
+
+        function newSegmentResizeCircle(segment) {
+            const segmentX = parseInt(segment.getAttribute('x'), 10)
+            const segmentY = parseInt(segment.getAttribute('y'), 10)
+            const segmentWidth = parseInt(segment.getAttribute('width'))
+            const segmentHeight = parseInt(segment.getAttribute('height'))
+
+            const topLeftCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            topLeftCircle.setAttribute("r", "20");
+            topLeftCircle.setAttribute("data-circletype", "top-left")
+            topLeftCircle.classList.add("resize_circle");
+            topLeftCircle.addEventListener("mousedown", resizeCircleHandleMouseDown)
+            topLeftCircle.addEventListener("mouseup", resizeCircleHandleMouseUp)
+            segment.parentNode.appendChild(topLeftCircle);
+
+            const topRightCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            topRightCircle.setAttribute('r', '20')
+            topRightCircle.setAttribute('data-circletype', 'top-right')
+            topRightCircle.classList.add('resize_circle')
+            topRightCircle.addEventListener('mousedown', resizeCircleHandleMouseDown)
+            topRightCircle.addEventListener('mouseup', resizeCircleHandleMouseUp)
+            segment.parentNode.appendChild(topRightCircle)
+
+            const bottomLeftCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            bottomLeftCircle.setAttribute('r', '20')
+            bottomLeftCircle.setAttribute('data-circletype', 'bottom-left')
+            bottomLeftCircle.classList.add('resize_circle')
+            bottomLeftCircle.addEventListener('mousedown', resizeCircleHandleMouseDown)
+            bottomLeftCircle.addEventListener('mouseup', resizeCircleHandleMouseUp)
+            segment.parentNode.appendChild(bottomLeftCircle)
+
+            const bottomRightCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            bottomRightCircle.setAttribute('r', '20')
+            bottomRightCircle.setAttribute('data-circletype', 'bottom-right')
+            bottomRightCircle.classList.add('resize_circle')
+            bottomRightCircle.addEventListener('mousedown', resizeCircleHandleMouseDown)
+            bottomRightCircle.addEventListener('mouseup', resizeCircleHandleMouseUp)
+            segment.parentNode.appendChild(bottomRightCircle)
+
+            const middleCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            middleCircle.setAttribute('r', '20')
+            middleCircle.setAttribute('data-circletype', 'middle')
+            middleCircle.classList.add('resize_circle')
+            middleCircle.addEventListener('mousedown', resizeCircleHandleMouseDown)
+            middleCircle.addEventListener('mouseup', resizeCircleHandleMouseUp)
+            segment.parentNode.appendChild(middleCircle)
+
+            redrawCircles(segment)
+
+        }
+
+        function segmentActivate(segment) {
+            segment.classList.add('active');
+            newSegmentResizeCircle(segment);
+        }
+
+        function segmentDeactivate(segment) {
+            segment.classList.remove('active');
+            /*
+            const current_active_resize_circle = document.querySelector("#annotatedPage .resize_circle");
+            segment.classList.remove('active');
+            segment.parentNode.removeChild(current_active_resize_circle);
+            //document.removeChild(current_active_resize_circle)
+
+             */
+        }
+
+        function segmentHandleClick(event) {
+            console.log("clicked on segment");
+            const segment_elem = event.currentTarget;
+            const current_active_segment_elem = document.querySelector("#annotatedPage > svg > svg.group.active > rect.active");
+            //console.log(`shift: ${event.shiftKey}, seg: ${current_active_segment_elem}, id: ${current_active_segment_elem ? current_active_segment_elem.id : 0}` )
+            if(event.shiftKey && current_active_segment_elem) {
+                console.log("made it to parent changer");
+                segment_elem.parentNode.removeChild(segment_elem);
+                current_active_segment_elem.parentNode.appendChild(segment_elem);
+                event.stopPropagation();
+            } else {
+                if(current_active_segment_elem) {
+                    segmentDeactivate(current_active_segment_elem);
+                }
+                segmentActivate(segment_elem);
+            }
+        }
+
+        function segmentHandleMouseDown(event) {
+            event.stopPropagation();
+        }
+
+        function newSegment() {
+            const segment = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            segment.classList.add("segment");
+            segment.addEventListener("mousedown", segmentHandleMouseDown);
+            segment.addEventListener("click", segmentHandleClick);
+            return segment;
+        }
+
+        function groupHandleClick(event) {
+            const group_elem = event.currentTarget;
+            console.info(`activate group ${group_elem.id}`);
+            const current_active_group_elem = document.querySelector('#annotatedPage svg .group.active');
+
+            if (current_active_group_elem) {
+                console.info(`deactivating group ${current_active_group_elem.id}`);
+                current_active_group_elem.classList.remove('active');
+            }
+            group_elem.classList.add('active');
+
+        }
+
+        function newGroup() {
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            group.classList.add('group');
+            group.addEventListener("click", groupHandleClick);
+            const svg = document.querySelector("#annotatedPage > svg");
+            svg.appendChild(group);
+            return group;
+        }
+/*
      function activate_group() {
          const group_elem = event.currentTarget;
 
@@ -38,8 +258,77 @@
              console.info(`deactivating group ${current_active_group_elem.id}`);
              current_active_group_elem.classList.remove('active');
          }
-         
+
          group_elem.classList.add('active');
+     }
+
+ */
+     function mouseDownNewSegment() {
+         console.info("mouse down! drawing a new rect")
+         console.info(`x: ${event.clientX}, y: ${event.clientY}`)
+         //let dictPage = document.querySelector("#annotatedPage > svg")
+         const group = newGroup()
+         const newRect = newSegment()
+         newRect.setAttribute("x", event.offsetX)
+         newRect.setAttribute("y", event.offsetY)
+         newRect.setAttribute("data-anchorx", event.offsetX)
+         newRect.setAttribute("data-anchory", event.offsetY)
+         newRect.setAttribute("width", "1")
+         newRect.setAttribute("height", "1")
+         //newRect.classList.add("group")
+         newRect.classList.add("segment")
+         newRect.classList.add("resizing")
+         //newRect.id = "crocodile"
+         console.info(`adding child ${newRect} to parent ${mouse}`)
+         group.appendChild(newRect)
+         event.stopPropagation()
+         //currentRect = newRect
+     }
+
+     function mouseUp() {
+         const currentRect = document.querySelector("rect.resizing")
+         if(currentRect === null) {
+             return null
+         }
+         currentRect.classList.remove("resizing")
+     }
+
+     function mouseMove(event) {
+         // Drag events fire once every few hundred ms - better to use mousemove
+         const currentRect = document.querySelector("rect.resizing")
+         const currentActiveRect = document.querySelector("rect.active")
+         const currentActiveCircle = document.querySelector("circle.active")
+
+         if(currentActiveRect !== null && currentActiveCircle !== null && currentRect === null) {
+             activeResizeCircleHandleMouseMove(event, currentActiveRect, currentActiveCircle)
+         }
+         if(currentRect === null) {
+             return null;
+         }
+
+         const mousex = event.offsetX
+         const mousey = event.offsetY
+         const anchorx = currentRect.getAttribute("data-anchorx")
+         const anchory = currentRect.getAttribute("data-anchory")
+         const width = Math.abs(anchorx - mousex)
+         const height = Math.abs(anchory - mousey)
+
+         let x = anchorx
+         let y = anchory
+
+         if( mousex < anchorx ){
+             x = mousex
+         }
+         if(mousey < anchory) {
+             y = mousey
+         }
+
+
+         //console.log(`width: ${width} height ${height} crx: ${currentRect.getAttribute("x")}, mousex: ${Number(mousex)}`)
+         currentRect.setAttribute("x", x)
+         currentRect.setAttribute("y", y)
+         currentRect.setAttribute("width", width)
+         currentRect.setAttribute("height", height)
      }
     </script>
 
@@ -47,22 +336,24 @@
 
 <body>
 
-    <h1>Sample Page</h1>
+  <h1>Sample Page</h1>
+
+  <div> Hello World! this time from windows. Yeah okay this is much better, as long as it doesnt crash </div>
     
     <div id="annotatedPage">
         
         <img src="01R_P9S16SS1P1_050.jpg" width="982" height="1500">
-        <svg width="982" height="1500">
+        <svg width="982" height="1500" onmousedown="mouseDownNewSegment()" onmousemove="mouseMove(event)" onmouseup="mouseUp()">
 
-            <svg class="group" id="puppy" onclick="activate_group()">
+            <svg class="group" id="puppy">
                 <rect class="segment" x="35" y="340" width="590" height="30" />
-                <rect class="segment" x="630" y="340" width="300" height="60"/>
+                <rect class="segment" x="630" y="340" width="300" height="60" data-favdog="scup"/>
             </svg>
 
-            <svg class="group" id="mouse" onclick="activate_group()">
+            <svg class="group" id="mouse">
                 <rect class="segment" x="35" y="375" width="590" height="40" />
+
             </svg>
-            
         </svg>
     </div>
 </body>
