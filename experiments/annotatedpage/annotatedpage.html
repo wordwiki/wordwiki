@@ -187,13 +187,24 @@
 
         function segmentDeactivate(segment) {
             segment.classList.remove('active');
-            /*
-            const current_active_resize_circle = document.querySelector("#annotatedPage .resize_circle");
+
+            var nodes = document.querySelectorAll("#annotatedPage .resize_circle");
+
+            // Iterating over the selected nodes
+            nodes.forEach(function(node) {
+            // Do something with each node
+            segment.classList.remove('active');
+            segment.parentNode.removeChild(node)
+            });
+
+
+           /* const current_active_resize_circles = document.querySelectorAll("#annotatedPage .resize_circle");
+
             segment.classList.remove('active');
             segment.parentNode.removeChild(current_active_resize_circle);
             //document.removeChild(current_active_resize_circle)
-
-             */
+            */
+             
         }
 
         function segmentHandleClick(event) {
@@ -247,7 +258,7 @@
             svg.appendChild(group);
             return group;
         }
-/*
+    /*
      function activate_group() {
          const group_elem = event.currentTarget;
 
@@ -261,8 +272,8 @@
 
          group_elem.classList.add('active');
      }
-
- */
+     */
+ 
      function mouseDownNewSegment() {
          console.info("mouse down! drawing a new rect")
          console.info(`x: ${event.clientX}, y: ${event.clientY}`)
@@ -279,7 +290,7 @@
          newRect.classList.add("segment")
          newRect.classList.add("resizing")
          //newRect.id = "crocodile"
-         console.info(`adding child ${newRect} to parent ${mouse}`)
+         
          group.appendChild(newRect)
          event.stopPropagation()
          //currentRect = newRect
@@ -292,6 +303,22 @@
          }
          currentRect.classList.remove("resizing")
      }
+     // removing rects with d key
+     function removeRect(event){
+        const activeSegment = document.querySelector('.segment.active');
+        if (activeSegment) {   
+            segmentDeactivate(activeSegment);      
+            activeSegment.remove();
+            console.info("deleted rect")        
+        }
+     }
+     function handleKeyPress(event) {
+        if (event.key === 'd') { 
+        removeRect();
+        }
+     }
+     document.addEventListener('keydown', handleKeyPress);
+
 
      function mouseMove(event) {
          // Drag events fire once every few hundred ms - better to use mousemove
@@ -345,15 +372,10 @@
         <img src="01R_P9S16SS1P1_050.jpg" width="982" height="1500">
         <svg width="982" height="1500" onmousedown="mouseDownNewSegment()" onmousemove="mouseMove(event)" onmouseup="mouseUp()">
 
-            <svg class="group" id="puppy">
-                <rect class="segment" x="35" y="340" width="590" height="30" />
-                <rect class="segment" x="630" y="340" width="300" height="60" data-favdog="scup"/>
-            </svg>
+           
 
-            <svg class="group" id="mouse">
-                <rect class="segment" x="35" y="375" width="590" height="40" />
-
-            </svg>
+            
         </svg>
     </div>
 </body>
+```
