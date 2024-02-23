@@ -1,0 +1,129 @@
+
+
+// Inlined from: https://github.com/adriengibrat/ts-custom-error
+// By: Adrien Gibrat
+// Licence: MIT
+
+/**
+Extend native Error to create custom errors
+
+Because [extending native Error in node and in browsers is tricky](https://stackoverflow.com/questions/1382107/whats-a-good-way-to-extend-error-in-javascript)
+
+```js
+class MyError extends Error {
+	constructor(m) {
+		super(m)
+	}
+}
+```
+ [doesn't work as expected in ES6](https://stackoverflow.com/questions/31089801/extending-error-in-javascript-with-es6-syntax-babel) and [is broken in Typescript](https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work).
+
+
+Simply extends and call `super` in you custom constructor.
+
+```ts
+import { CustomError } from 'ts-custom-error'
+
+class HttpError extends CustomError {
+	public constructor(
+		public code: number,
+		message?: string,
+	) {
+		super(message)
+	}
+}
+
+...
+
+new HttpError(404, 'Not found')
+**/   
+
+// copy from https://github.com/microsoft/TypeScript/blob/main/lib/lib.es2022.error.d.ts
+// avoid typescript isue https://github.com/adriengibrat/ts-custom-error/issues/81
+interface ErrorOptions {
+    cause?: unknown
+}
+
+/**
+ * Allows to easily extend a base class to create custom applicative errors.
+ *
+ * example:
+ * ```
+ * class HttpError extends CustomError {
+ * 	public constructor(
+ * 		public code: number,
+ * 		message?: string,
+ *      cause?: Error,
+ * 	) {
+ * 		super(message, { cause })
+ * 	}
+ * }
+ *
+ * new HttpError(404, 'Not found')
+ * ```
+ */
+export class CustomError extends Error {
+        //name: string;
+
+	constructor(message?: string, options?: ErrorOptions) {
+		super(message, options)
+		// set error name as constructor name, make it not enumerable to keep native Error behavior
+		// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/new.target#new.target_in_constructors
+		// see https://github.com/adriengibrat/ts-custom-error/issues/30
+		Object.defineProperty(this, 'name', {
+			value: new.target.name,
+			enumerable: false,
+			configurable: true,
+		})
+		// fix the extended error prototype chain
+		// because typescript __extends implementation can't
+		// see https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+		fixProto(this, new.target.prototype)
+		// try to remove contructor from stack trace
+		fixStack(this)
+	}
+}
+
+/**
+ * Fix the prototype chain of the error
+ *
+ * Use Object.setPrototypeOf
+ * Support ES6 environments
+ *
+ * Fallback setting __proto__
+ * Support IE11+, see https://docs.microsoft.com/en-us/scripting/javascript/reference/javascript-version-information
+ */
+export function fixProto(target: Error, prototype: {}) {
+    const setPrototypeOf: Function = (Object as any).setPrototypeOf
+    setPrototypeOf
+	? setPrototypeOf(target, prototype)
+	: ((target as any).__proto__ = prototype)
+}
+
+/**
+ * Capture and fix the error stack when available
+ *
+ * Use Error.captureStackTrace
+ * Support v8 environments
+ */
+export function fixStack(target: Error, fn: Function = target.constructor) {
+    const captureStackTrace: Function = (Error as any).captureStackTrace
+    captureStackTrace && captureStackTrace(target, fn)
+}
+
+
+
+
+
+class AbstractMethodError extends CustomError {
+    public constructor(
+	message?: string,
+    ) {
+	super(message)
+    }
+}
+
+
+
+
+
