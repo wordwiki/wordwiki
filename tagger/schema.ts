@@ -46,11 +46,6 @@ const createUserDml = block`
 
 assertDmlContainsAllFields(createUserDml, userFieldNames);
 
-// export const selectScannedDocument = ()=>db().prepare<ScannedDocument, {document_id: number}>(block`
-// /**/   SELECT ${scannedDocumentFieldNames.join()}
-// /**/          FROM scanned_document
-// /**/          WHERE document_id = :document_id`);
-
 
 // --------------------------------------------------------------------------------
 // --- Scanned Document -----------------------------------------------------------
@@ -61,7 +56,10 @@ export interface ScannedDocument {
 
     /**
      * Document id's spill out into URLs and into user-visible directory names
-     * on the filesystem (for associated resources).
+     * on the file system (for associated resources).
+     *
+     * To make this more pleasant, document also have a 'friendly_document_id'
+     * that is pleasant for humans.
      *
      * To allow this id to be used in URLs and filenames without escaping,
      * we restrict this id to: '[a-zA-Z][a-zA-Z0-9_]*'
@@ -227,6 +225,17 @@ export const selectScannedPage = ()=>db().prepare<ScannedPage, {page_id: number}
 /**/   SELECT ${scannedPageFieldNames.join()}
 /**/          FROM scanned_page
 /**/          WHERE page_id = :page_id`);
+
+export const selectScannedPageByPageNumber = ()=>db().prepare<ScannedPage, {document_id: number, page_number: number}>(block`
+/**/   SELECT ${scannedPageFieldNames.join()}
+/**/          FROM scanned_page
+/**/          WHERE document_id = :document_id AND page_number = :page_number`);
+
+export const selectScannedPagesForDocument = ()=>db().prepare<ScannedPage, {document_id: number}>(block`
+/**/   SELECT ${scannedPageFieldNames.join()}
+/**/          FROM scanned_page
+/**/          WHERE document_id = :document_id
+/**/          ORDER BY page_number`);
 
 // --------------------------------------------------------------------------------
 // --- Layer ----------------------------------------------------------------------

@@ -120,7 +120,7 @@ export async function getDerived(contentStorePath: string,
         // --- Make a tmp target name in the same dir for atomic update
         const tmpTargetName = outputContentPath.replace('.'+extension, '_tmp.'+extension);
         if(await fs.exists(tmpTargetName)) {
-            await Deno.remove(tmpTargetName);
+            await Deno.remove(tmpTargetName, { recursive: true });
             if(await fs.exists(tmpTargetName))
                 throw new Error(`failed to erase existing tmp target name ${tmpTargetName}`);
         }

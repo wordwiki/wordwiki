@@ -97,7 +97,7 @@ export class Db {
      * free sqlite resources.
      */
     unmemoizedPrepare<O extends RowObject, P extends QueryParameterSet>(sql: string): PreparedQuery<O,P> {
-        console.info('perparing ', sql);
+        //console.info('preparing ', sql);
         return new PreparedQuery<O,P>(this.db.prepareQuery<Row,O,P>(sql));
     }
 
@@ -161,6 +161,10 @@ export class Db {
         this.db.execute('END TRANSACTION;');
     }
     
+    rawQuery(sql: string, params: QueryParameterSet={}): Array<Row> {
+        return this.db.query(sql, params);
+    }
+
     close() {
         this.db.close(true);
     }
@@ -221,6 +225,10 @@ function example() {
     Db.deleteDb('test.db');
     const db = Db.open('test.db');
 
+    console.info(db.rawQuery('select 1+1'));
+    console.info(db.rawQuery('PRAGMA main.cache_size = -100000'));
+    console.info(db.rawQuery('PRAGMA main.cache_size'));
+    
     db.execute(block`
 /**/   CREATE TABLE person(
 /**/      person_id INTEGER PRIMARY KEY ASC,

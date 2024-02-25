@@ -32,7 +32,7 @@ async function importPDM() {
 /**
  * Custom importer for the Rand dictionary.
  */
-async function importRAND() {
+async function importRand() {
     const friendly_document_id = 'Rand'
 
     const pageFiles = (await Array.fromAsync(await Deno.readDir(`imports/${friendly_document_id}`))).
@@ -53,7 +53,7 @@ async function importRAND() {
  *
  */
 async function importPacifiquesGeography() {
-    importPDF('PacifiquesGeography',
+    await importPDF('PacifiquesGeography',
               'pacifiques-geography-', '.png',
               "Pacifique's Geography");
 }
@@ -92,7 +92,7 @@ async function main() {
     db().beginTransaction();
     switch(friendly_document_id) {
         case 'PDM': await importPDM(); break;
-        case 'RAND': await importRAND(); break;
+        case 'Rand': await importRand(); break;
         case 'PacifiquesGeography': await importPacifiquesGeography(); break;
         default:
             throw new Error(`unknown book "${friendly_document_id}"`);

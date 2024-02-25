@@ -8,6 +8,7 @@ import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './schema.ts';
 import * as config from "./config.ts";
+import {getImageSize} from "./get-image-size.ts";
 
 /**
  * Create a new scanned document based on the supplied fields and importing
@@ -38,17 +39,7 @@ async function importScannedPage(document_id: number, friendly_document_id: stri
     const image_ref = 'content/'+
             await content.getDerived(pageImagesRoot, {importPageImage},
                                      ['importPageImage', sourceImagePath], 'jpg');
-
-
-    const size_json_file = 'derived/'+
-        await content.getDerived(`derived/${friendly_document_id}-sizes`,
-                                 {getImageSizeCmd},
-                                 ['getImageSizeCmd', sourceImagePath], 'json');
-    const {width, height} = JSON.parse(new TextDecoder("utf-8").decode(
-        await Deno.readFile(size_json_file)));
-    if(!width || !height)
-        throw new Error(`invalid derive image size for image ${import_path} derived to ${image_ref}`);
-    
+    const {width, height} = await getImageSize(image_ref);
     const pageId = db().insert<ScannedPage, 'page_id'>(
         'scanned_page', {document_id, page_number, import_path,
                          image_ref, width, height}, 'page_id');
@@ -82,46 +73,4 @@ async function importPageImage(targetImagePath: string, sourceImagePath: string)
         throw new Error(`failed to convert image ${sourceImagePath} to ${targetImagePath}: ${new TextDecoder().decode(stderr)}`);
 
     console.info(`done convert image ${sourceImagePath} to ${targetImagePath}`);
-}
-
-/**
- * Content store function to get the size of an image.
- *
- */
-async function getImageSizeCmd(targetResultPath: string, sourceImagePath: string) {
-    //const sourceImagePath = contentRoot+'/'+sourceImageRef;
-    if(!fileExists(sourceImagePath))
-        throw new Error(`expected source image ${sourceImagePath} to exist`);
-    const size = await getImageSize(sourceImagePath);
-    return JSON.stringify(size);
-}
-
-/**
- * Given an imagePath, return its size.
- *
- * A bit pokey because it execs image magick.
- */
-async function getImageSize(imagePath: string): Promise<{width: number, height: number}> {
-    const { code, stdout, stderr } = await new Deno.Command(
-        config.imageMagickPath, {
-            args: [
-                imagePath, '-ping', '-format', '{"width":%w, "height":%h}', 'info:'
-            ],
-        }).output();
-
-    if(code !== 0)
-        throw new Error(`failed to get image size for ${imagePath}: ${new TextDecoder().decode(stderr)}`);
-
-    const sizeJson = new TextDecoder().decode(stdout);
-    let size;
-    try {
-        size = JSON.parse(sizeJson);
-    } catch(e) {
-        throw new Error(`Failed to parse image size for ${imagePath} - '${sizeJson}' - ${e}`);
-    }
-    if(!size.width || !size.height) {
-        throw new Error(`Failed to parse image size for ${imagePath} - missing fields in '${sizeJson}'`);
-    }
-
-    return size;
 }
