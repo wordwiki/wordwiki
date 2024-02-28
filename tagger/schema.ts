@@ -325,6 +325,20 @@ export const selectLayerByLayerName = ()=>db().prepare<Layer, {document_id: numb
 /**/          FROM layer
 /**/          WHERE document_id = :document_id AND layer_name = :layer_name`);
 
+export function deleteLayer(layer_id: number) {
+    db().execute<{layer_id: number}>
+        ('DELETE FROM TABLE bounding_box WHERE layer_id = :layer_id',
+         {layer_id});
+
+    db().execute<{layer_id: number}>
+        ('DELETE FROM TABLE bounding_group WHERE layer_id = :layer_id',
+         {layer_id});
+
+    db().execute<{layer_id: number}>
+        ('DELETE FROM TABLE layer WHERE layer_id = :layer_id',
+         {layer_id});
+}
+
 // --------------------------------------------------------------------------------
 // --- Bounding Group -------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -605,6 +619,234 @@ const createChangeLogDml = block`
 /**/   `;
 assertDmlContainsAllFields(createChangeLogDml, changeLogFieldNames);
 
+// --------------------------------------------------------------------------------
+// --- Fact -----------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+/**
+ *
+ */
+export interface Assertion {
+    assertion_id: number;
+
+    /**
+     * The timestamp at which this assertion was made.
+     */
+    valid_from?: number;
+
+    /**
+     * The timestamp at which this assertion was retracted (an edit if
+     * a subsequent assertion with the same 'id' is made, or a delete if not)
+     */
+    valid_to?: number;
+    
+    /**
+     * Parent fact id (not assertion id).
+     */
+    parent_id?: number,
+
+    /**
+     * Fact id
+     */
+    id: number,
+
+    /**
+     * Fact type
+     */
+    ty: string,
+
+    /**
+     * (Denormalized) Flattening of the ancestor and self ids and types.
+     */
+    ty1?: string;
+    id1?: number;
+    ty2?: string;
+    id2?: number;
+    ty3?: string;
+    id3?: number;
+    ty4?: string;
+    id4?: number;
+    ty5?: string;
+    id5?: number;
+
+    /**
+     * Fields for the assertion.  Interpreted as per ty.
+     *
+     * TODO: these are cheap - add more, and try to give them
+     * some semantics (and maybe separate out language content for
+     * better searching)
+     */
+    text1?: string;
+    text2?: string;
+    text3?: string;
+    int1?: number;
+    ref1?: number;
+    public_note?: string;
+    internal_note?: string;
+    
+    /**
+     * Locale expression for which this assertion hosts.
+     */
+    locale_expr?: string;
+
+    /**
+     * (Denormalized) Expansion of the locale expression into the
+     * specific locales for which this assertion holds.
+     */
+    expanded_locale_list?: string;
+
+    /**
+     * (Denormalized) Boolean fields corresponding to whether this
+     * assertion holds in a few application specified locales.
+     */
+    is_locale1?: boolnum;
+    is_locale2?: boolnum;
+    is_locale3?: boolnum;
+    is_locale4?: boolnum;
+
+    /**
+     * Our present level of confidence (0-10) in this fact.
+     *
+     * This is critical because when gathering dictionary information, we
+     * may collect an assertion 'I think "cat" had a secondary meaning ...',
+     * or we may be collecting information from the public, without vetting.
+     */
+    confidence?: number;
+    confidence_note?: string;
+    
+    /**
+     * Key used to order this assertion within its peers (same parent_id and ty).
+     *
+     * (see utils/order_key for more details)
+     */
+    order_key?: string;
+
+    /**
+     *
+     */
+    published?: boolnum;
+
+    /**
+     * More thought here about approval, priorities, discussion etc.
+     */
+    change_by_user_id?: number;
+    change_action?: string;
+    change_arg?: string;
+    change_note?: string;
+}
+export type AssertionPartial = Partial<Assertion>;
+export const assertionFieldNames: Array<keyof Assertion> = [
+    "assertion_id",
+
+    "valid_from", "valid_to",
+
+    "parent_id", "id", "ty",
+    
+    "ty1", "id1",
+    "ty2", "id2",
+    "ty3", "id3",
+    "ty4", "id4",
+    "ty5", "id5",
+
+    "text1", "text2", "text3", "int1", "ref1",
+    "public_note", "internal_note",
+    
+    "locale_expr", "expanded_locale_list",
+    "is_locale1", "is_locale2", "is_locale3", "is_locale4",
+
+    "confidence", "confidence_note",
+
+    "order_key",
+    "published",
+
+    "change_by_user_id", "change_action", "change_arg", "change_note",
+    ];
+
+const createAssertionDml = block`
+/**/   CREATE TABLE IF NOT EXISTS assertion(
+/**/       assertion_id INTEGER PRIMARY KEY ASC,
+/**/
+/**/       valid_from INTEGER,
+/**/       valid_to INTEGER,
+/**/
+/**/       parent_id INTEGER,
+/**/       id INTEGER NOT NULL,
+/**/       ty TEXT NOT NULL,
+/**/
+/**/       ty1 TEXT NOT NULL,
+/**/       id1 INTEGER,
+/**/       ty2 TEXT,
+/**/       id2 INTEGER,
+/**/       ty3 TEXT,
+/**/       id3 INTEGER,
+/**/       ty4 TEXT,
+/**/       id4 INTEGER,
+/**/       ty5 TEXT,
+/**/       id5 INTEGER,
+/**/
+/**/       text1 TEXT,
+/**/       text2 TEXT,
+/**/       text3 TEXT,
+/**/       int1 TEXT,
+/**/       ref1 NUMBER,
+/**/       public_note NUMBER,
+/**/       internal_note NUMBER,
+/**/
+/**/       locale_expr TEXT,
+/**/       expanded_locale_list TEXT,
+/**/       is_locale1 INTEGER,
+/**/       is_locale2 INTEGER,
+/**/       is_locale3 INTEGER,
+/**/       is_locale4 INTEGER,
+/**/
+/**/       confidence INTEGER,
+/**/       confidence_note TEXT,
+/**/
+/**/       order_key TEXT,
+/**/
+/**/       published INTEGER,
+/**/
+/**/       change_by_user_id NUMBER,
+/**/       change_action TEXT,
+/**/       change_arg TEXT,
+/**/       change_note TEXT);
+/**/
+/**/   CREATE UNIQUE INDEX IF NOT EXISTS current_assertions_by_id_ty ON assertion(id, ty) WHERE valid_to = NULL;
+/**/
+/**/   CREATE INDEX IF NOT EXISTS assertions_ty1 ON assertion(ty1);
+/**/   CREATE INDEX IF NOT EXISTS assertions_ty2 ON assertion(ty2);
+/**/   CREATE INDEX IF NOT EXISTS assertions_ty3 ON assertion(ty3);
+/**/   CREATE INDEX IF NOT EXISTS assertions_ty4 ON assertion(ty4);
+/**/   CREATE INDEX IF NOT EXISTS assertions_ty5 ON assertion(ty5);
+/**/
+/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty1 ON assertion(id1, ty1);
+/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty2 ON assertion(id2, ty2);
+/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty3 ON assertion(id3, ty3);
+/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty4 ON assertion(id4, ty4);
+/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty5 ON assertion(id5, ty5);
+/**/
+/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE valid_to = NULL;
+/**/
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published = 1;
+/**/
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published = 1 AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published = 1 AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published = 1 AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published = 1 AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published = 1 AND is_locale1 = 1;
+/**/   `;
+
+
+assertDmlContainsAllFields(createAssertionDml, assertionFieldNames);
+
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -612,11 +854,11 @@ assertDmlContainsAllFields(createChangeLogDml, changeLogFieldNames);
 
 const allSchemaDml =
     createUserDml + createDocumentDml + createPageDml + createLayerDml +
-    createBoundingGroupDml + createBoundingBoxDml + createChangeLogDml;
+    createBoundingGroupDml + createBoundingBoxDml + createChangeLogDml +
+    createAssertionDml;
 
 export function createAllTables() {
     db().executeStatements(allSchemaDml);
-    db().executeStatements('CREATE VIRTUAL TABLE email USING FTS5(sender, title, body);');
     console.info('db created');
 }
 
@@ -624,26 +866,12 @@ export function createAllTables() {
 //     ('UPDATE TABLE bounding_box SET bounding_group_id = NULL WHERE layer_id = :layer_id')
 //     .allEntries();
 
-export function deleteLayer(layer_id: number) {
-    db().execute<{layer_id: number}>
-        ('DELETE FROM TABLE bounding_box WHERE layer_id = :layer_id',
-         {layer_id});
-
-    db().execute<{layer_id: number}>
-        ('DELETE FROM TABLE bounding_group WHERE layer_id = :layer_id',
-         {layer_id});
-
-    db().execute<{layer_id: number}>
-        ('DELETE FROM TABLE layer WHERE layer_id = :layer_id',
-         {layer_id});
-}
-
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-async function main() {
-    const cmd = Deno.args[0];
+async function main(args: string[]) {
+    const cmd = args[0];
     switch(cmd) {
         case 'createDb': // TODO REMOVE THIS ONCE WE ARE MORE STABLE (TOO DANGER!)
             console.info('DELETING DB');
@@ -657,4 +885,4 @@ async function main() {
 }
 
 if (import.meta.main)
-    await main();
+    await main(Deno.args);

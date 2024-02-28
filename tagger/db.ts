@@ -118,7 +118,7 @@ export class Db {
         return this.first<{},P>(sql) !== undefined;
     }
     
-    execute<P extends QueryParameterSet={}>(sql: string, params?: P) {
+    execute<P extends QueryParameters={}>(sql: string, params?: P) {
         return this.prepare<{},P>(sql).execute(params);
     }
 

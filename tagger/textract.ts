@@ -2,7 +2,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
 import * as utils from "../utils/utils.ts";
 import {unwrap} from "../utils/utils.ts";
-import { db, Db, PreparedQuery } from "./db.ts";
+import { db, Db, PreparedQuery, boolnum } from "./db.ts";
 import * as content from "../utils/content-store.ts";
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
@@ -44,9 +44,9 @@ export async function textractDocument(document_id: number) {
     console.info('begin textractDocument');
     //console.info('pages are', pages);
 
-    const textractPageLayerId = getOrCreateNamedReferenceLayer(document_id, 'TextractPage');
-    const textractLineLayerId = getOrCreateNamedReferenceLayer(document_id, 'TextractLine');
-    const textractWordLayerId = getOrCreateNamedReferenceLayer(document_id, 'TextractWord');
+    const textractPageLayerId = getOrCreateNamedLayer(document_id, 'TextractPage', 1);
+    const textractLineLayerId = getOrCreateNamedLayer(document_id, 'TextractLine', 1);
+    const textractWordLayerId = getOrCreateNamedLayer(document_id, 'TextractWord', 1);
 
     console.info('textracting pages ', textractPageLayerId, textractLineLayerId, textractWordLayerId);
     for(const page of pages) {
@@ -88,15 +88,19 @@ function insertTextractBlock(document_id: number, layer_id: number, page_id: num
 }
 
 /**
- * Find a named layer, creating it if it does not yet exist.
+ * Find a named reference layer, creating it if it does not yet exist.
  */
-function getOrCreateNamedReferenceLayer(document_id: number, layer_name: string): number {
+function getOrCreateNamedLayer(document_id: number, layer_name: string, is_reference_layer: boolnum): number {
     const alreadyExistingLayer = selectLayerByLayerName().first({document_id, layer_name});
-    if(alreadyExistingLayer)
-        return alreadyExistingLayer.layer_id;
-    else
+    if(alreadyExistingLayer) {
+        if(alreadyExistingLayer.is_reference_layer !== is_reference_layer)
+            throw new Error(`Expected is_reference_layer to be ${is_reference_layer} for layer ${layer_name} in document ${document_id}`);
+        else
+            return alreadyExistingLayer.layer_id;
+    } else {
         return db().insert<Layer, 'layer_id'>(
-            'layer', {document_id, layer_name, is_reference_layer: 1}, 'layer_id');
+            'layer', {document_id, layer_name, is_reference_layer}, 'layer_id');
+    }
 }
 
 /**

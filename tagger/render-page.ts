@@ -1,12 +1,86 @@
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
+import { selectLayerByLayerName } from "./schema.ts";
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, BoundingBox, boundingBoxFieldNames, BoundingGroup, boundingGroupFieldNames} from './schema.ts';
+import {block} from "../utils/strings.ts";
+import * as utils from "../utils/utils.ts";
+import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 
-async function renderPreviewPage(pageNumber: number, pageWidth: number, pageHeight: number, blocks:Block[]) {
+async function test() {
+    const pdm = selectScannedDocumentByFriendlyId().required({friendly_document_id: 'PDM'});
+    const pdmWordLayer = selectLayerByLayerName().required({document_id: pdm.document_id, layer_name: 'TextractWord'});
+    console.time('bondingBoxesForPage');
+    //for(let page_number=1; page_number<100; page_number++) {
+    const page_number = 10;
+    const pdmSamplePage = selectScannedPageByPageNumber().required(
+        {document_id: pdm.document_id, page_number});
+    const page = renderPage(pdmSamplePage.page_id, pdmWordLayer.layer_id, undefined);
+    //}
+    console.timeEnd('bondingBoxesForPage');
 
-    const blocksSvg = blocks.filter(block=>block.type !== 'PAGE' && block.type !== 'LINE').map(block=>`
-            <svg class="group ${block.type}" id="mouse" onclick="activate_group()">
-               <rect class="segment" x="${block.x}" y="${block.y}" width="${block.w}" height="${block.h}" />
-            </svg>`).join('\n');
+    console.info(page);
+    
+    const output = new TextEncoder().encode(page);
+    const file = await Deno.open('test.html', {write: true, create: true});
+    try {
+        await writeAll(file, output);
+    } finally {
+        file.close();
+    }
 
-    return `<!DOCTYPE html>
+    
+}
+
+type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'>;
+type BoxGroupJoin = BoundingBox & GroupJoinPartial;
+
+export const boxesForPageLayer = ()=>db().
+    prepare<BoxGroupJoin, {page_id:number, layer_id:number}>(
+        block`
+/**/      SELECT ${boundingBoxFieldNames.map(n=>'bb.'+n).join()},
+/**/             bg.column_number, bg.heading_level, bg.heading
+/**/         FROM bounding_box AS bb LEFT JOIN bounding_group AS bg USING(bounding_group_id)
+/**/         WHERE bb.page_id = :page_id AND
+/**/               bb.layer_id = :layer_id
+/**/         ORDER BY bb.bounding_box_id`);
+
+
+export function renderGroup(groupId: number, boxes: BoxGroupJoin[]): string {
+    utils.assert(boxes.length > 0, 'Cannot render an empty group');
+    const group: GroupJoinPartial = boxes[0];
+    return block`
+/**/      <svg class="group WORD" id="${groupId}" onclick="activate_group()">
+/**/           ${boxes.map(b=>renderBox(b))}
+/**/      </svg>`;
+}
+
+export function renderBox(box: BoxGroupJoin): string {
+    return block`
+/**/       <rect class="segment" x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" />`;
+}
+
+
+
+export function renderPage(page_id: number,
+                           layer_id: number,
+                           reference_layer_id?: number) {
+
+    const page = selectScannedPage().required({page_id});
+
+    const boxes = boxesForPageLayer().all({page_id, layer_id});
+
+    
+    //console.info('data', boxes);
+
+    const pageImageUrl = page.image_ref;
+    
+    const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
+
+    const blocksSvg = 
+        [...boxesByGroup.entries()].
+        map(([groupId, boxes])=>renderGroup(groupId, boxes)).join('');
+
+    
+    const html = `<!DOCTYPE html>
 <head>
 
     <style>
@@ -62,22 +136,30 @@ stroke:red !important;
 <body>
 
     <div>
-    <h1>PDM Textract preview page ${pageNumber}</h1>
-    <a href="./page-${String(pageNumber-1).padStart(5, '0')}.html">PREV</a> / 
-    <a href="./page-${String(pageNumber+1).padStart(5, '0')}.html">NEXT</a>
+    <h1>PDM Textract preview page ${page.page_number}</h1>
+    <a href="./page-${String(page.page_number-1).padStart(5, '0')}.html">PREV</a> / 
+    <a href="./page-${String(page.page_number+1).padStart(5, '0')}.html">NEXT</a>
 
     </div>
     <div id="annotatedPage">
         
-         <img src="../pdm/page-${String(pageNumber).padStart(5, '0')}.jpg" width="${pageWidth}" height="${pageHeight}">
-         <svg width="${pageWidth}" height="${pageHeight}">
+         <img src="${pageImageUrl}" width="${page.width}" height="${page.height}">
+         <svg width="${page.width}" height="${page.height}">
 ${blocksSvg}
         </svg>
     </div>
     <div>
-       <a href="./page-${String(pageNumber-1).padStart(5, '0')}.html">PREV</a> / 
-       <a href="./page-${String(pageNumber+1).padStart(5, '0')}.html">NEXT</a>
+       <a href="./page-${String(page.page_number-1).padStart(5, '0')}.html">PREV</a> / 
+       <a href="./page-${String(page.page_number+1).padStart(5, '0')}.html">NEXT</a>
     </div>
 </body>`;
+
+    return html;
 }
 
+
+
+if (import.meta.main) {
+    await test();
+
+}
