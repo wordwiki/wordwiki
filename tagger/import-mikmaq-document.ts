@@ -50,6 +50,29 @@ async function importRand() {
 }
 
 /**
+ * Custom importer for the Clark dictionary.
+ */
+async function importClark() {
+    const friendly_document_id = 'Clark'
+
+    const pageFiles = (await Array.fromAsync(await Deno.readDir(`imports/${friendly_document_id}`))).
+        filter(f=>f.isFile).
+        map(f=>f.name).
+        filter(f=>/^[0-9][0-9][0-9][0-9][0-9]-.*[.]tif$/.test(f)).
+        toSorted();
+
+    if(pageFiles.length !== 234)
+        throw new Error(`Expected 234 page files for Clark, found ${pageFiles.length}`);
+    //console.info('Clark page files', pageFiles.length, pageFiles);
+    
+    await importScannedDocument({
+        friendly_document_id,
+        title: "Rand's Micmac dictionary from phonographic word-lists - transcribed and alphabetically arranged, with a grammar and list of place-names by Jeremiah S. Clark",
+        source_url: 'https://www.islandlives.ca/islandora/object/ilives%3A230896',
+    }, pageFiles);
+}
+
+/**
  *
  */
 async function importPacifiquesGeography() {
@@ -93,6 +116,7 @@ async function main() {
     switch(friendly_document_id) {
         case 'PDM': await importPDM(); break;
         case 'Rand': await importRand(); break;
+        case 'Clark': await importClark(); break;
         case 'PacifiquesGeography': await importPacifiquesGeography(); break;
         default:
             throw new Error(`unknown book "${friendly_document_id}"`);

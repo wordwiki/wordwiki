@@ -1,6 +1,9 @@
 /**
- * Importer for the MMO legacy format.
+ * 'Raw' importer for the MMO legacy format.
  *
+ * This imports directly into the DB format - we have a nicer path
+ * via model.ts - this is scaffolding so we don't have to get that fully
+ * working yet.
  */
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../utils/utils.ts";
