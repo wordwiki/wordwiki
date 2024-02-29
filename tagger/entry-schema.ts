@@ -10,98 +10,116 @@ import * as timestamp from '../utils/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
 
-export const entrySchemaJson = {
-    $type: 'relation',
-    $prompt: 'Entry',
-    entry_id: {$type: 'primary_key'},
-    spelling: {
+export const dictSchemaJson = {
+    $type: 'schema',
+    $name: 'dict',
+    entry: {
         $type: 'relation',
-        spelling_id: {$type: 'primary_key'},
-        text: {$type: 'string'},
-        variant: {$type: 'string'}
-    },
-    subentry: {
-        $type: 'relation',
-        subentry_id: {$type: 'primary_key'},
-        part_of_speech: {$type: 'string'},
-        definition: {
+        $tag: 'en',
+        $prompt: 'Entry',
+        entry_id: {$type: 'primary_key'},
+        spelling: {
             $type: 'relation',
-            definition_id: {$type: 'primary_key'},
-            definition: {$type: 'string'},
-            //variant: {$type: 'string'}
+            $tag: 'sp',
+            $style: { $prompt: 'SPELLING!' },
+            spelling_id: {$type: 'primary_key'},
+            text: {$type: 'string', $bind: 'srctxt'},
+            variant: {$type: 'string'}
         },
-        gloss: {
+        subentry: {
             $type: 'relation',
-            gloss_id: {$type: 'primary_key'},
-            gloss: {$type: 'string'}
-        },
-        example: {
-            $type: 'relation',
-            example_id: {$type: 'primary_key'},
-            translation: {$type: 'string'},
-            example_text: {
+            $tag: 'se',
+            subentry_id: {$type: 'primary_key'},
+            part_of_speech: {$type: 'string', $bind: 'label'},
+            definition: {
                 $type: 'relation',
-                example_text_id: {$type: 'primary_key'},
-                text: {$type: 'string'},
-                variant: {$type: 'string'}
-            },                
-        },
-        // recording: {
-        //     $type: 'subrelation',
-        //     speaker: {$type: 'string'},
-        //     recording: {$type: 'string'},
-        //     variant: {$type: 'string'}
-        // },
-        pronunciation_guide: {
-            $type: 'relation',
-            pronunciation_guide_id: {$type: 'primary_key'},
-            text: {$type: 'string'},
-            variant: {$type: 'string'},
-        },
-        category: {
-            $type: 'relation',
-            category_id: {$type: 'primary_key'},
-            category: {$type: 'string'},
-        },
-        related_entry: {
-            $type: 'relation',
-            related_entry_id: {$type: 'primary_key'},
-            unresolved_text: {$type: 'string'},
-        },
-        alternate_grammatical_form: {
-            $type: 'relation',
-            alternate_grammatical_form_id: {$type: 'primary_key'},
-            gloss: {$type: 'string'},
-            grammatical_form: {$type: 'string'},
-            alternate_form_text: {
+                $tag: 'de',
+                definition_id: {$type: 'primary_key'},
+                definition: {$type: 'string', $bind: 'targettxt'},
+                //variant: {$type: 'string'}
+            },
+            gloss: {
                 $type: 'relation',
-                alternate_form_text_id: {$type: 'primary_key'},
-                text: {$type: 'string'},
-                variant: {$type: 'string'}
+                $tag: 'gl',
+                gloss_id: {$type: 'primary_key'},
+                gloss: {$type: 'string', $bind: 'targettxt'}
+            },
+            example: {
+                $type: 'relation',
+                $tag: 'ex',
+                example_id: {$type: 'primary_key'},
+                translation: {$type: 'string', $bind: 'targettxt'},
+                example_text: {
+                    $type: 'relation',
+                    $tag: 'et',
+                    example_text_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'targettxt'},
+                    variant: {$type: 'string'}
+                },                
+            },
+            // recording: {
+            //     $type: 'subrelation',
+            //     speaker: {$type: 'string'},
+            //     recording: {$type: 'string'},
+            //     variant: {$type: 'string'}
+            // },
+            pronunciation_guide: {
+                $type: 'relation',
+                $tag: 'pg',
+                pronunciation_guide_id: {$type: 'primary_key'},
+                text: {$type: 'string', $bind: 'txt'},
+                variant: {$type: 'string'},
+            },
+            category: {
+                $type: 'relation',
+                $tag: 'ct',
+                category_id: {$type: 'primary_key'},
+                // TODO later convert to ref.
+                category: {$type: 'string', $bind: 'label'},
+            },
+            related_entry: {
+                $type: 'relation',
+                $tag: 're',
+                related_entry_id: {$type: 'primary_key'},
+                unresolved_text: {$type: 'string', $bind: 'txt'},
+            },
+            alternate_grammatical_form: {
+                $type: 'relation',
+                $tag: 'ag',
+                alternate_grammatical_form_id: {$type: 'primary_key'},
+                gloss: {$type: 'string', $bind: 'targettxt'},
+                grammatical_form: {$type: 'string', $bind: 'label'},
+                alternate_form_text: {
+                    $type: 'relation',
+                    $tag: 'ax',
+                    alternate_form_text_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'srctxt'},
+                    variant: {$type: 'string'}
+                },
+            },
+            other_regional_form: {
+                $type: 'relation',
+                $tag: 'rf',
+                other_regional_form_id: {$type: 'primary_key'},
+                text: {$type: 'string', $bind: 'srctxt'},
+            },
+            attr: {
+                $type: 'relation',
+                $tag: 'at',
+                attr_id: {$type: 'primary_key'},
+                attr: {$type: 'string', $bind: 'label'},
+                value: {$type: 'string', $bind: 'value'},
             },
         },
-        other_regional_form: {
-            $type: 'relation',
-            other_regional_form_id: {$type: 'primary_key'},
-            text: {$type: 'string'},
-        },
-        attr: {
-            $type: 'relation',
-            attr_id: {$type: 'primary_key'},
-            attr: {$type: 'string'},
-            value: {$type: 'string'},
-        },
-    },
-  internal_note: {$type: 'string'},
-  public_note: {$type: 'string' },
-}
+    }
+};
 
 function test() {
-    let entrySchema = model.RelationField.parseSchemaFromCompactJson('entry', 'entry', entrySchemaJson);
-    entrySchema.resolve();
-    entrySchema.validateSchema('entry');
-    console.info('Schema', entrySchema);
-    let dumpedEntrySchemaJson = entrySchema.schemaToCompactJson();
+    let dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+    dictSchema.resolve();
+    dictSchema.validateSchema('dict');
+    console.info('Schema', dictSchema);
+    let dumpedEntrySchemaJson = dictSchema.schemaToCompactJson();
     console.info('Schema again', dumpedEntrySchemaJson);
 }
 

@@ -71,10 +71,10 @@ interface Entry {
 
 function importEntry(entry: Entry) {
     const entryAssertion = insertAssertion(createAssertion(
-        undefined, 1, entry.entry_id, 'lx',
+        undefined, 1, entry.entry_id, 'en',
         {
-            text1: entry.internal_note,
-            text2: entry.public_note,
+            internal_note: entry.internal_note,
+            public_note: entry.public_note,
         }));
     entry.spelling.forEach(s=>importSpelling(entryAssertion, s));
     entry.subentry.forEach(s=>importSubentry(entryAssertion, s));
@@ -90,7 +90,7 @@ function importSpelling(parent: Assertion, spelling: Spelling) {
     insertAssertion(createAssertion(
         parent, 2, spelling.spelling_id, 'sp',
         {
-            text1: spelling.text,
+            srctxt: spelling.text,
             locale_expr: spelling.variant,
         }));
 }
@@ -114,7 +114,7 @@ function importSubentry(parent: Assertion, subentry: Subentry) {
     const subentryAssertion = insertAssertion(createAssertion(
         parent, 2, subentry.subentry_id, 'se',
         {
-            text1: subentry.part_of_speech,
+            label: subentry.part_of_speech,
         }));
     subentry.definition.forEach(s=>importDefinition(subentryAssertion, s));
     subentry.gloss.forEach(s=>importGloss(subentryAssertion, s));
@@ -138,7 +138,7 @@ function importDefinition(parent: Assertion, definition: Definition) {
     insertAssertion(createAssertion(
         parent, 3, definition.definition_id, 'de',
         {
-            text1: definition.definition,
+            targettxt: definition.definition,
         }));
 }
 
@@ -151,7 +151,7 @@ function importGloss(parent: Assertion, gloss: Gloss) {
     insertAssertion(createAssertion(
         parent, 3, gloss.gloss_id, 'gl',
         {
-            text1: gloss.gloss,
+            targettxt: gloss.gloss,
         }));
 }
 
@@ -165,7 +165,7 @@ function importExample(parent: Assertion, example: Example) {
     const exampleAssertion = insertAssertion(createAssertion(
         parent, 3, example.example_id, 'ex',
         {
-            text1: example.translation,
+            targettxt: example.translation,
         }));
     example.example_text.forEach(s=>importExampleText(exampleAssertion, s));
 }
@@ -178,9 +178,9 @@ interface ExampleText {
 
 function importExampleText(parent: Assertion, exampleText: ExampleText) {
     insertAssertion(createAssertion(
-        parent, 4, exampleText.example_text_id, 'extx',
+        parent, 4, exampleText.example_text_id, 'et',
         {
-            text1: exampleText.text,
+            srctxt: exampleText.text,
             locale_expr: exampleText.variant,
         }));
 }
@@ -195,7 +195,7 @@ function importPronunciationGuide(parent: Assertion, pronunciationGuide: Pronunc
     insertAssertion(createAssertion(
         parent, 3, pronunciationGuide.pronunciation_guide_id, 'pg',
         {
-            text1: pronunciationGuide.text,
+            txt: pronunciationGuide.text,
             locale_expr: pronunciationGuide.variant,
         }));
 }
@@ -209,7 +209,7 @@ function importCategory(parent: Assertion, category: Category) {
     insertAssertion(createAssertion(
         parent, 3, category.category_id, 'ct',
         {
-            text1: category.category,
+            label: category.category,
         }));
 }
 
@@ -222,7 +222,7 @@ function importRelatedEntry(parent: Assertion, relatedEntry: RelatedEntry) {
     insertAssertion(createAssertion(
         parent, 3, relatedEntry.related_entry_id, 're',
         {
-            text1: relatedEntry.unresolved_text, // ??? ??? TODO WTF ??? XXX ???
+            txt: relatedEntry.unresolved_text, // ??? ??? TODO WTF ??? XXX ???
         }));
 }
 
@@ -237,8 +237,8 @@ function importAlternateGrammaticalForm(parent: Assertion, alternateGrammaticalF
     const alternateGrammaticalFormAssertion = insertAssertion(createAssertion(
         parent, 3, alternateGrammaticalForm.alternate_grammatical_form_id, 'ag',
         {
-            text1: alternateGrammaticalForm.gloss,
-            text2: alternateGrammaticalForm.grammatical_form,
+            label: alternateGrammaticalForm.grammatical_form,
+            targettxt: alternateGrammaticalForm.gloss,
         }));
     alternateGrammaticalForm.alternate_form_text.forEach(s=>importAlternateFormText(alternateGrammaticalFormAssertion, s));
 }
@@ -253,7 +253,7 @@ function importAlternateFormText(parent: Assertion, alternateFormText: Alternate
     insertAssertion(createAssertion(
         parent, 4, alternateFormText.alternate_form_text_id, 'agtx',
         {
-            text1: alternateFormText.text,
+            srctxt: alternateFormText.text,
             locale_expr: alternateFormText.variant,
         }));
 }
@@ -267,7 +267,7 @@ function importOtherRegionalForm(parent: Assertion, otherRegionalForm: OtherRegi
     insertAssertion(createAssertion(
         parent, 3, otherRegionalForm.other_regional_form_id, 'rf',
         {
-            text1: otherRegionalForm.text,
+            srctxt: otherRegionalForm.text,
         }));
 }
 
@@ -281,27 +281,27 @@ function importAttr(parent: Assertion, attr: Attr) {
     insertAssertion(createAssertion(
         parent, 3, attr.attr_id, 'at',
         {
-            text1: attr.attr,
-            text2: attr.value,
+            label: attr.attr,
+            value: attr.value,
         }));
 }
 
-interface Status {
-    status_id: number;
-    variant: string;
-    status: string;
-    details: string;
-}
+// interface Status {
+//     status_id: number;
+//     variant: string;
+//     status: string;
+//     details: string;
+// }
 
-function importStatus(parent: Assertion, status: Status) {
-    insertAssertion(createAssertion(
-        parent, 3, status.status_id, 'st',
-        {
-            text1: status.status,
-            text2: status.details,
-            locale_expr: status.variant,
-        }));
-}
+// function importStatus(parent: Assertion, status: Status) {
+//     insertAssertion(createAssertion(
+//         parent, 3, status.status_id, 'st',
+//         {
+//             attr1: status.status,
+//             attr2: status.details,
+//             locale_expr: status.variant,
+//         }));
+// }
 
 async function main(args: string[]) {
     const [command, ...commandArgs] = args;

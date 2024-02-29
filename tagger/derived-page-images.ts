@@ -24,12 +24,9 @@ export async function getTilesForImage(imagePath: string, tileWidth: number, til
 /**
  *
  */
-async function getTilesForImageCmd(targetResultPath: string, sourceImagePath: string, tileWidthStr: string, tileHeightStr: string) {
-    const tileWidth = parseInt(tileWidthStr);
-    const tileHeight = parseInt(tileHeightStr);
+async function getTilesForImageCmd(targetResultPath: string, sourceImagePath: string, tileWidth: number, tileHeight: number) {
     
     // --- Make output directory, splatting if it already exists.
-    //await Deno.remove(targetResultPath, { recursive: true });    
     await Deno.mkdir(targetResultPath);
 
     // --- Exec imagemagick to do the actual tiling

@@ -623,6 +623,16 @@ assertDmlContainsAllFields(createChangeLogDml, changeLogFieldNames);
 // --- Assertion ------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
+// TODO: there needs to be multiple tables with this schema (we will load them
+//       as SQLite attached databases.   - this will be a much nicer model
+//       of working with multiple dictionaries than merging them into one
+//       table.
+
+// TODO: make assertion_id allocation scheme that clusters assertion_ids for
+//       all assertions in a tree (made less important by the fact that most
+//       of our DBs are small enough that they will end up entirely in RAM -
+//       but still good to do)
+
 /**
  *
  */
@@ -639,6 +649,17 @@ export interface Assertion {
      * a subsequent assertion with the same 'id' is made, or a delete if not)
      */
     valid_to?: number;
+
+    /**
+     * The timestamp at which this assertion was published.
+     */
+    published_from?: number;
+
+    /**
+     * The timestamp at which the publish of this assertion was retracted
+     * (either because it was deleted, or it was replaced with a newer publish)
+     */
+    published_to?: number;
     
     /**
      * Parent fact id (not assertion id).
@@ -676,11 +697,17 @@ export interface Assertion {
      * some semantics (and maybe separate out language content for
      * better searching)
      */
-    text1?: string;
-    text2?: string;
-    text3?: string;
-    int1?: number;
-    ref1?: number;
+    srctxt?: string;
+    targettxt?: string;
+    label?: string;
+    value?: string;
+    txt?: string;
+    num?: number;
+    ref?: number;
+
+    /**
+     * Notes on this assertion (public and internal)
+     */
     public_note?: string;
     internal_note?: string;
     
@@ -729,7 +756,7 @@ export interface Assertion {
     /**
      * More thought here about approval, priorities, discussion etc.
      */
-    change_by_user_id?: number;
+    change_by_username?: string;
     change_action?: string;
     change_arg?: string;
     change_note?: string;
@@ -739,6 +766,7 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "assertion_id",
 
     "valid_from", "valid_to",
+    "published_from", "published_to",
 
     "parent_id", "id", "ty",
     
@@ -748,7 +776,8 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "ty4", "id4",
     "ty5", "id5",
 
-    "text1", "text2", "text3", "int1", "ref1",
+    "srctxt", "targettxt", "label", "value", "txt", "num", "ref",
+    
     "public_note", "internal_note",
     
     "locale_expr", "expanded_locale_list",
@@ -757,9 +786,8 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "confidence", "confidence_note",
 
     "order_key",
-    "published",
 
-    "change_by_user_id", "change_action", "change_arg", "change_note",
+    "change_by_username", "change_action", "change_arg", "change_note",
     ];
 
 const createAssertionDml = block`
@@ -768,6 +796,9 @@ const createAssertionDml = block`
 /**/
 /**/       valid_from INTEGER,
 /**/       valid_to INTEGER,
+/**/
+/**/       published_from INTEGER,
+/**/       published_to INTEGER,
 /**/
 /**/       parent_id INTEGER,
 /**/       id INTEGER NOT NULL,
@@ -784,11 +815,14 @@ const createAssertionDml = block`
 /**/       ty5 TEXT,
 /**/       id5 INTEGER,
 /**/
-/**/       text1 TEXT,
-/**/       text2 TEXT,
-/**/       text3 TEXT,
-/**/       int1 TEXT,
-/**/       ref1 NUMBER,
+/**/       srctxt TEXT,
+/**/       targettxt TEXT,
+/**/       label TEXT,
+/**/       value TEXT,
+/**/       txt TEXT,
+/**/       num NUMBER,
+/**/       ref NUMBER,
+/**/
 /**/       public_note NUMBER,
 /**/       internal_note NUMBER,
 /**/
@@ -804,9 +838,7 @@ const createAssertionDml = block`
 /**/
 /**/       order_key TEXT,
 /**/
-/**/       published INTEGER,
-/**/
-/**/       change_by_user_id NUMBER,
+/**/       change_by_username NUMBER,
 /**/       change_action TEXT,
 /**/       change_arg TEXT,
 /**/       change_note TEXT);
@@ -831,17 +863,19 @@ const createAssertionDml = block`
 /**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE valid_to = NULL;
 /**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE valid_to = NULL;
 /**/
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published = 1;
+/**/ -- NEED SOME MODEL CHANGE SO CAN INDEX LATEST PUBLISHED XXX TODO XXX TODO
 /**/
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published = 1 AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published = 1 AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published = 1 AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published = 1 AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published = 1 AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
 /**/   `;
 
 

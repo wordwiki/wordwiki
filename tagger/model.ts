@@ -8,7 +8,7 @@ import {panic, assert, assertNever} from "../utils/utils.ts";
 import * as orderkey from '../utils/orderkey.ts';
 import * as timestamp from '../utils/timestamp.ts';
 //import { longestIncreasingSequenceUsingCompareFn } from '../utils/longest-increasing-sequence.js';
-import { Record, Value, getPrimaryKey, getString, getOptionalString, idCollator } from './record.ts';
+import {RecordValue, Value, getPrimaryKey, getString, getOptionalString, idCollator } from './record.ts';
 
 export enum FieldKind {
     Model=0,
@@ -22,6 +22,19 @@ export interface Style {
     $style?: string,
 }
 
+export function validateStyle(locus:string, style: any): Style {
+    return {
+        $prompt: validateOptionalStringProperty(locus, '$prompt', style.$prompt),
+        $style: validateOptionalStringProperty(locus, '$style', style.$style), 
+    };
+}
+
+function validateOptionalStringProperty(locus: string, name: string, value: any): string {
+    if(!(value === undefined || typeof value === 'string'))
+        throw new ValidationError(locus, `invalid optional attr '${name}'- expected optional string - got ${JSON.stringify(value)} of type ${typeof value}`);
+    return value;
+}
+
 /**
  *
  */
@@ -33,6 +46,7 @@ export interface FieldVisitorI<A,R> {
     visitIdField(f: IdField, a: A): R;
     visitPrimaryKeyField(f: PrimaryKeyField, a: A): R;
     visitRelationField(f: RelationField, a: A): R;
+    visitSchema(f: Schema, a: A): R;
 }
 
 /**
@@ -48,6 +62,9 @@ export class DataVisitor implements FieldVisitorI<any,void> {
     visitPrimaryKeyField(f: PrimaryKeyField, v: any) { this.visitField(f, v); }
     visitRelationField(relationField: RelationField, v: any) {
         relationField.modelFields.forEach(f=>f.accept(this, v[f.name]));
+    }
+    visitSchema(schema: Schema, v: any) {
+        schema.modelFields.forEach(f=>f.accept(this, v[f.name]));
     }
 }
 
@@ -138,9 +155,8 @@ export interface ValidateOpts {
  * implementers.
  */
 export abstract class ScalarFieldBase extends Field {
-    constructor(name: string, public optional: boolean, style: Style={}) {
+    constructor(name: string, public bind: string, public optional: boolean, style: Style={}) {
         super(name, style);
-        this.optional = optional;
     }
 
     abstract jsTypename(): string;
@@ -192,10 +208,9 @@ export abstract class ScalarFieldBase extends Field {
      */
     buildSchemaToCompactJson(typ: string, extraFields: any): any {
         const json = { $type: this.schemaTypename() } as any; // XXX fix typing
-        if (this.optional)
-            json.$optional = true;
-        if (extraFields)
-            Object.assign(json, extraFields)
+        this.bind && (json.$bind = this.bind);
+        this.optional && (json.$optional = true);
+        extraFields && Object.assign(json, extraFields);
         return json;
     }
 
@@ -204,9 +219,11 @@ export abstract class ScalarFieldBase extends Field {
         return [`${this.name} ${this.sqlTypename()}${this.optional?'':' NOT NULL'}`];
     }
 
-    static parseSchemaValidate(locus:string, name:string, schema:any, $type:string, extra: any, expect_type: string) {
+    static parseSchemaValidate(locus:string, name:string, schema:any, $type:string, bind:string,  $style:Style, extra: any, expect_type: string) {
         if($type !== expect_type)
             throw new ValidationError(locus, `Expected schema field type ${expect_type} got field type ${$type}`);
+        if($style)
+            validateStyle(locus, $style);
         if(Object.getOwnPropertyNames(extra).length !== 0)
             throw new ValidationError(locus, `Unexpected properties in schema node of type ${$type}: ${Object.getOwnPropertyNames(extra)}`);
     }
@@ -216,8 +233,8 @@ export abstract class ScalarFieldBase extends Field {
  * Boolean Field
  */
 export class BooleanField extends ScalarFieldBase {
-    constructor(name: string, optional: boolean, style: Style={}) {
-        super(name, optional, style);
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitBooleanField(this, a); }
@@ -228,9 +245,9 @@ export class BooleanField extends ScalarFieldBase {
     sqlTypename(): string { return 'INTEGER'; }
     
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BooleanField {
-        const {$type, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, extra, 'boolean');
-        return new BooleanField(name, !!$optional);
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'boolean');
+        return new BooleanField(name, $bind, !!$optional);
     }
 }
 
@@ -246,8 +263,8 @@ export class BooleanField extends ScalarFieldBase {
  * We will add BigInt fields if we need larger integers.
  */
 export class IntegerField extends ScalarFieldBase {
-    constructor(name: string, optional: boolean=false, style: Style={}) {
-        super(name, optional, style);
+    constructor(name: string, bind: string, optional: boolean=false, style: Style={}) {
+        super(name, bind, optional, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitIntegerField(this, a); }
@@ -269,9 +286,9 @@ export class IntegerField extends ScalarFieldBase {
     }
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IntegerField {
-        const {$type, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, extra, 'integer');
-        return new IntegerField(name, !!$optional);
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'integer');
+        return new IntegerField(name, $bind, !!$optional);
     }
 }
 
@@ -285,8 +302,8 @@ export class IntegerField extends ScalarFieldBase {
  * and would like to avoid one.
  */
 export class FloatField extends ScalarFieldBase {
-    constructor(name: string, optional: boolean, style: Style={}) {
-        super(name, optional, style);
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitFloatField(this, a); }
@@ -310,9 +327,9 @@ export class FloatField extends ScalarFieldBase {
     }
     
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): FloatField {
-        const {$type, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, extra, 'float');
-        return new FloatField(name, !!$optional);
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'float');
+        return new FloatField(name, $bind, !!$optional);
     }
 }
 
@@ -332,8 +349,8 @@ enum StringFormat {
  * TODO: add a format field (shortText, multilineText, markdown, json, html etc)
  */
 export class StringField extends ScalarFieldBase {
-    constructor(name: string, optional: boolean, public format:StringFormat = StringFormat.Text, style: Style={}) {
-        super(name, optional, style);
+    constructor(name: string, bind: string, optional: boolean, public format:StringFormat = StringFormat.Text, style: Style={}) {
+        super(name, bind, optional, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitStringField(this, a); }
@@ -343,9 +360,9 @@ export class StringField extends ScalarFieldBase {
     sqlTypename(): string { return 'TEXT'; }
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): StringField {
-        const {$type, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, extra, 'string');
-        return new StringField(name, !!$optional);
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'string');
+        return new StringField(name, $bind, !!$optional);
     }
 }
 
@@ -359,8 +376,8 @@ export class StringField extends ScalarFieldBase {
 export class IdField extends ScalarFieldBase {
     static IdRegex = new RegExp(`^[a-zA-Z]+`);
 
-    constructor(name: string, optional: boolean=false, style: Style={}) {
-        super(name, optional, style);
+    constructor(name: string, bind: string, optional: boolean=false, style: Style={}) {
+        super(name, bind, optional, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitIdField(this, a); }
@@ -379,9 +396,9 @@ export class IdField extends ScalarFieldBase {
     }
     
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IdField {
-        const {$type, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, extra, 'id');
-        return new IdField(name);
+        const {$type, $bind, $style, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'id');
+        return new IdField(name, $bind);
     }
 }
 
@@ -389,8 +406,8 @@ export class IdField extends ScalarFieldBase {
  *
  */
 export class PrimaryKeyField extends IdField {
-    constructor(name: string, style: Style={}) {
-        super(name, false, style);
+    constructor(name: string, bind:string="id", style: Style={}) {
+        super(name, bind, false, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitPrimaryKeyField(this, a); }
@@ -402,9 +419,9 @@ export class PrimaryKeyField extends IdField {
     }
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): PrimaryKeyField {
-        const {$type, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, extra, 'primary_key');
-        return new PrimaryKeyField(name);
+        const {$type, $bind, $style, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'primary_key');
+        return new PrimaryKeyField(name, $bind);
     }
 }
 
@@ -425,7 +442,7 @@ export class RelationField extends Field {
     #syntheticFieldsColIndex_: number|undefined;
     #parentFieldsColIndex_: number|undefined;
 
-    constructor(name: string, public modelFields: Field[], style: Style={}) {
+    constructor(name: string, public tag: string, public modelFields: Field[], style: Style={}) {
         super(name, style);
     }
 
@@ -603,7 +620,7 @@ export class RelationField extends Field {
         }
     }
 
-    validateRelationMember(locus: string, value: Record, opts: ValidateOpts) {
+    validateRelationMember(locus: string, value: RecordValue, opts: ValidateOpts) {
         // Want option to load/validate order and versioning fields.  Will need to pass thoug
         const relationLocus = locus + '/' + this.name;
         for(const field of this.fields) {
@@ -638,6 +655,7 @@ export class RelationField extends Field {
     schemaToCompactJson(): any {
         const json = {} as any; // fix typing
         json.$type = 'relation';
+        json.$tag = this.tag;
         for(const field of this.fields) {
             json[field.name] = field.schemaToCompactJson();
         }
@@ -645,15 +663,21 @@ export class RelationField extends Field {
     }
     
     static parseSchemaFromCompactJson(locus: string, name: string, schemaJson: any): RelationField {
-        const {$type, $prompt, $style, ...field_schema} = schemaJson;
-        if($type !== 'relation' && $type !== 'subrelation')
-            throw new ValidationError(locus, `expected relation or subrelation type`);
+        const {$type, $tag, $prompt, $style, ...field_schema} = schemaJson;
+        if($type !== 'relation')
+            throw new ValidationError(locus, `expected relation type got $type ${$type}`);
+        if(typeof $tag !== 'string')
+            throw new ValidationError(locus, `missing required $tag on relation ${name}`);
 
+        // We are presently allowing $prompt to be specified as top level instead
+        // of in $style - not sure we should have this shortcut?
+        const style = { $prompt, $style };
+        
         // TODO: locus needs asjusting here
         const fields = Object.entries(field_schema).map(([field_name, field_body]) =>
             parse_field(locus, field_name, field_body));
 
-        const schema = new RelationField(name, fields, { $prompt, $style });
+        const schema = new RelationField(name, $tag, fields, style);
 
         return schema;
     }
@@ -680,6 +704,55 @@ export function parse_field(locus: string, name: string, schema: any): Field {
             throw new ValidationError(locus, `unknown field type ${schema.$type}`);
     }
 }
+
+/**
+ *
+ *
+ */
+/*
+  - TODO: add top level resolve/validate
+  - TODO: add check for unique tags in there.
+ */
+export class Schema extends RelationField {
+    #relationsByName: Record<string,RelationField>|undefined = undefined;
+    #relationsByTag: Record<string,RelationField>|undefined = undefined;
+    
+    constructor(name: string, public rootRelations: RelationField[]) {
+        // TODO this '_' as the root tag is a hack - FIX.
+        super(name, '_', rootRelations, {});
+    }
+
+    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitSchema(this, a); }
+
+    get relationsByName(): Record<string,RelationField> {
+        return this.#relationsByName??=(()=>{
+            this.descendantAndSelfRelations.map(r=>[r.name, r]);
+            throw new Error('not impl yet');
+        })();
+    }
+
+    get relationsByTag(): Record<string,RelationField> {
+        return this.#relationsByTag??=(()=>{
+            throw new Error('not impl yet');
+        })();
+    }
+        
+    static parseSchemaFromCompactJson(locus: string, schemaJson: any): RelationField {
+        const {$type, $name, ...field_schema} = schemaJson;
+        if($type !== 'schema')
+            throw new ValidationError(locus, `expected schema type got $type ${$type}`);
+        
+        console.info('field_schema', field_schema);
+        const rootRelations = Object.entries(field_schema).map(([field_name, field_body]:[string,any]) => {
+            if(field_body?.$type !== 'relation')
+                throw new ValidationError(locus, `all top level items in a schema must be relations - item named ${field_name} is not a relation`);
+            return RelationField.parseSchemaFromCompactJson(locus, field_name, field_body);
+        });
+        
+        return new Schema($name, rootRelations);
+    }
+}
+
 
 /**
  * Thrown by validate methods to report a validation error.

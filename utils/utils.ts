@@ -160,13 +160,26 @@ export function className(v: any): string {
  * (and 'rover' will have the inferred type 'Puppy' - instead of 'Puppy|undefined',
  * because the ?? arm ate the 'undefined' case and turned into 'never').
  */
-export function panic(message: string = 'panic'): never {
-    throw new Error (`Panic: ${message}`);
+export function panic(message: string = 'panic', detail: any=undefined): never {
+    if(detail !== undefined)
+        throw new Error(`Panic: ${message} - ${JSON.stringify(detail)}`);
+    else
+        throw new Error(`Panic: ${message}`);
 }
+
+// export function panic(message: string = 'panic'): never {
+//     throw new Error (`Panic: ${message}`);
+// }
 
 export function unwrap<T>(v: T|null|undefined, message: string = 'panic'): T {
     if(v === null || v === undefined)
         throw new Error (`Unexpected null or undefined: ${message}`);
+    return v;
+}
+
+export function unwrapWithDetail<T>(v: T|null|undefined, message: string, detail: any): T {
+    if(v === null || v === undefined)
+        throw new Error (`${message} - ${JSON.stringify(detail)}`);
     return v;
 }
 

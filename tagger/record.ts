@@ -19,8 +19,8 @@ export const newId: ()=>string =
  */
 export const idCollator = Intl.Collator('en');
 
-export type Record = {[name: string]: Value};
-export type Value = null|boolean|number|string|Record[];
+export type RecordValue = {[name: string]: Value};
+export type Value = null|boolean|number|string|RecordValue[];
 
 
 /**
@@ -70,12 +70,12 @@ export function getInteger(record:any, name:string): number {
     return value;
 }
 
-export function getRelation(record: any, name:string): Record[] {
+export function getRelation(record: any, name:string): RecordValue[] {
     const value = record[name];
     if(value === undefined || value === null)
         return [];
     if(!Array.isArray(value))
         throw new Error(`Expected field ${name} to be a array - it is a ${typeof value}`);
     // TODO: add typecheck that is Array of Objects
-    return value as Record[];
+    return value as RecordValue[];
 }
