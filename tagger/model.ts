@@ -724,20 +724,32 @@ export class Schema extends RelationField {
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitSchema(this, a); }
 
+    resolveAndValidate(locus: string) {
+        this.resolve();
+        this.validateSchema(locus);
+    }
+    
     get relationsByName(): Record<string,RelationField> {
         return this.#relationsByName??=(()=>{
-            this.descendantAndSelfRelations.map(r=>[r.name, r]);
-            throw new Error('not impl yet');
-        })();
+            const duplicateNames =
+                utils.duplicateItems(this.descendantAndSelfRelations.map(r=>r.name));
+            if(duplicateNames.size > 0)
+                throw new Error(`Duplicate field names in schema ${this.name} - ${duplicateNames}`);
+            return Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.name, r]));
+         })();
     }
 
     get relationsByTag(): Record<string,RelationField> {
         return this.#relationsByTag??=(()=>{
-            throw new Error('not impl yet');
+            const duplicateTags =
+                utils.duplicateItems(this.descendantAndSelfRelations.map(r=>r.tag));
+            if(duplicateTags.size > 0)
+                throw new Error(`Duplicate field tags in schema ${this.tag} - ${duplicateTags}`);
+            return Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.tag, r]));
         })();
     }
         
-    static parseSchemaFromCompactJson(locus: string, schemaJson: any): RelationField {
+    static parseSchemaFromCompactJson(locus: string, schemaJson: any): Schema {
         const {$type, $name, ...field_schema} = schemaJson;
         if($type !== 'schema')
             throw new ValidationError(locus, `expected schema type got $type ${$type}`);
@@ -749,7 +761,9 @@ export class Schema extends RelationField {
             return RelationField.parseSchemaFromCompactJson(locus, field_name, field_body);
         });
         
-        return new Schema($name, rootRelations);
+        const schema = new Schema($name, rootRelations);
+        schema.resolveAndValidate(locus);
+        return schema;
     }
 }
 

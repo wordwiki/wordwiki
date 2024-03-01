@@ -1,5 +1,5 @@
-import * as server from './server.ts';
 import * as mime_types from './mime-types.ts';
+import * as server from './http-server.ts';
 import {HttpServer} from './http-server.ts';
 
 /**
@@ -43,14 +43,14 @@ export class DenoHttpServer extends HttpServer {
 
         const url = new URL(requestEvent.request.url);
         const filepath = decodeURIComponent(url.pathname);
-        //console.info('request filepath', filepath, headers);
-        // TODO make this not be hardcoded XXX
-        if (filepath.startsWith('/resources/')) {
-            if (filepath.includes('..'))
-                throw new Error(`File request URLs cannot contain '..' - "${filepath}"`);
-            return this.serveFileRequest(requestEvent, '.'+filepath);
+
+        // --- If the path resolves to a content file path, serve that directly
+        const resolvedContentFilePath = this.matchContentFilePath(filepath);
+        if(resolvedContentFilePath) {
+            console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
+            return this.serveFileRequest(requestEvent, resolvedContentFilePath);
         }
-        
+    
         let body: any;
         switch (true) {
             case !denoRequest.bodyUsed:
@@ -100,6 +100,35 @@ export class DenoHttpServer extends HttpServer {
 //         );
     }
 
+    /**
+     * Returns the translated filepath if the request path matches one of
+     * the configured content path rewrites.
+     *
+     * Uses a linear search - will have to do something fancier if we end
+     * up having lots of content directories.
+     */
+    matchContentFilePath(filepath: string): string|undefined {
+        if(this.config.contentdirs) {
+            //console.info(this.config.contentdirs);
+            for(const maybeFilePrefix of Object.keys(this.config.contentdirs)) {
+                if(filepath.startsWith(maybeFilePrefix)) {
+
+                    if (filepath.includes('..'))
+                        throw new Error(`File request URLs cannot contain '..' - "${filepath}"`);
+                    if(!maybeFilePrefix.endsWith('/'))
+                        throw new Error(`Content dir paths must end in / : "${maybeFilePrefix}"`);
+                    const replacementPrefix = this.config.contentdirs[maybeFilePrefix];
+                    if(!replacementPrefix.endsWith('/'))
+                        throw new Error(`Content dir replacement prefix must end in / : "${replacementPrefix}`);
+
+                    const resolvedFilePath = replacementPrefix+filepath.substring(maybeFilePrefix.length);
+                    return resolvedFilePath;
+                }
+            }
+        }
+        return undefined;
+    }
+    
     async serveFileRequest(requestEvent: Deno.RequestEvent, filepath: string) {
         console.info('serving file request', filepath);
 
@@ -163,5 +192,5 @@ async function log_request(request: server.Request): Promise<server.Response> {
 }
 
 if (import.meta.main) {
-    await new DenoHttpServer({port: 9000}, log_request).run();
+    await new DenoHttpServer({port: 9000, contentdirs: {'/puppies/': './PUPPIES/'}}, log_request).run();
 }

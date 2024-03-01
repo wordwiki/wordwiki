@@ -38,9 +38,38 @@ export function isElemMarkup(n: any): boolean {
     return Array.isArray(n) && n.length >= 2 && utils.isObjectLiteral(n[1]);
 }
 
+export function markupToString(markup: any, indent: string='') {
+    return new MarkupRenderer().renderContentMarkupItem(markup, indent);
+}
+
+// NOTE: Our HTML rendering rules are half baked!  We will come back to
+//       this later. XXX TODO
+
+// Source: https://html.spec.whatwg.org/#elements-2
+// end tags must not be specified for void elements. (ie <img> not <img/> or <img></img>)
+export const htmlVoidElements = new Set([
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'source', 'track', 'wbr']);
+
+export const htmlTemplateElement = 'template';
+export const htmlRawTextElements = new Set(['script', 'style']);
+export const escapableRawTextElements = new Set(['textarea', 'title']);
+
+// https://html.spec.whatwg.org/#phrasing-content-2
+// We are suppressing adding new indentation related whitespace into
+// these elements in contexts where there is not already whitespace.
+export const phrasingContentElements = new Set([
+    'a', 'abbr', 'area', 'audio', 'b', 'bdi', 'bdo', 'br', 'button', 'canvas',
+    'cite', 'code', 'data', 'datalist', 'del', 'dfn', 'em', 'embed', 'i', 'iframe',
+    'img', 'input', 'ins', 'kbd', 'label', 'link', 'map', 'mark', 'math', 'meta',
+    'meter', 'noscript', 'object', 'output', 'picture', 'progress', 'q',
+    'ruby', 's', 'samp', 'script', 'select', 'slot', 'small', 'span',
+    'strong', 'sub', 'sup', 'svg', 'template', 'textarea', 'time', 'u',
+    'var', 'video', 'w', 'br']);
+
 export class MarkupRenderer {
 
-    constructor() {
+    constructor(public useEmptyElementTags:boolean = false) {
     }
 
     renderContentMarkupItem(item: any, indent: string=''): string {
@@ -122,58 +151,79 @@ export class MarkupRenderer {
         }
 
         const flattenedContent = flattenMarkup(content);
-        
-        // --- If we have no content fields, we can complete render as a self closing
-        //     tag.
-        if(flattenedContent.length === 0) {
-            out += '/>';
-            return out;
-        }
-
-        out += '>';
-
-        if(isShortInlineContent(flattenedContent, Math.max(100-indent.length, 40))) {
-            // --- If is simple, short content, render all on one line
-            out += this.renderContentMarkupArray(flattenedContent, indent);
-            out += `</${tagName}>`;
-            return out;
-        } else {
-            const maxWidth = 100;
-            const nestedIndent = indent + '    ';
-            const newLineWithIndent = '\n'+nestedIndent;
-            const contentStartCol = nestedIndent.length;
-
-            out += newLineWithIndent;
-            
-            let cursor = contentStartCol;
-            for(const item of flattenedContent) {
-                // --- If this is not the first item on a line, and adding this
-                //     item would make this line to long, start a new line
-                const inlineContentItemLength = estimateInlineContentItemLength(item);
-                if(inlineContentItemLength === -1) {
-                    // --- Render block item (starting a new line if we are not
-                    //     already at the beginning of a line)
-                    if(cursor > contentStartCol) {
-                        out += newLineWithIndent;
-                    }
-                    out += this.renderContentMarkupItem(item, nestedIndent);
-                    cursor += maxWidth;
-                } else {
-                    // --- Render inline item
-                    if(cursor > contentStartCol &&
-                        cursor + inlineContentItemLength > maxWidth) {
-                        out += newLineWithIndent;
-                        cursor = contentStartCol;
-                    }
-                    const renderedItem = this.renderContentMarkupItem(item, nestedIndent);
-                    out += renderedItem;
-                    cursor += renderedItem.length;
-                } 
+        switch(true) {
+                
+            case htmlVoidElements.has(tagName): {
+                // --- HTML void elements are not allowed to have any content -
+                //     and also do not need closing tags.
+                if(flattenedContent.length !== 0)
+                    throw new Error(`unexpected content for void element ${tagName}`);
+                out += '>';
+                return out;
             }
 
-            out += `\n${indent}</${tagName}>`;
+            case flattenedContent.length === 0 && this.useEmptyElementTags: {
+                out += '/>';
+                return out;
+            }
 
-            return out;
+            case phrasingContentElements.has(tagName) || isShortInlineContent(flattenedContent, Math.max(100-indent.length, 40)): {
+                // --- If is simple, short content, or content that we cannot insert
+                //     leading/trailing whitespace into, render all on one line
+                out += '>';
+                out += this.renderContentMarkupArray(flattenedContent, indent);
+                out += `</${tagName}>`;
+                return out;
+            }
+
+            case htmlRawTextElements.has(tagName) || escapableRawTextElements.has(tagName): {
+                // XXX THIS IS INCOMPLETE (+ should be different for raw/escapable anyway
+                //     but is good enough to get our other stuff working.
+                out += '>';
+                out += this.renderContentMarkupArray(flattenedContent, indent);
+                out += `</${tagName}>`;
+                return out;
+            }
+                
+            default: {
+                out += '>';
+                const maxWidth = 100;
+                const nestedIndent = indent + '    ';
+                const newLineWithIndent = '\n'+nestedIndent;
+                const contentStartCol = nestedIndent.length;
+
+                out += newLineWithIndent;
+
+                let cursor = contentStartCol;
+                for(const item of flattenedContent) {
+                    // --- If this is not the first item on a line, and adding this
+                    //     item would make this line to long, start a new line
+                    const inlineContentItemLength = estimateInlineContentItemLength(item);
+                    if(inlineContentItemLength === -1) {
+                        // --- Render block item (starting a new line if we are not
+                        //     already at the beginning of a line)
+                        if(cursor > contentStartCol) {
+                            out += newLineWithIndent;
+                        }
+                        out += this.renderContentMarkupItem(item, nestedIndent);
+                        cursor += maxWidth;
+                    } else {
+                        // --- Render inline item
+                        if(cursor > contentStartCol &&
+                            cursor + inlineContentItemLength > maxWidth) {
+                            out += newLineWithIndent;
+                            cursor = contentStartCol;
+                        }
+                        const renderedItem = this.renderContentMarkupItem(item, nestedIndent);
+                        out += renderedItem;
+                        cursor += renderedItem.length;
+                    } 
+                }
+                
+                out += `\n${indent}</${tagName}>`;
+
+                return out;
+            }
         }
     }
 
@@ -263,7 +313,4 @@ function estimateInlineContentItemLength(item: any): number {
     }
 }
 
-export function markupToString(markup: any, indent: string='') {
-    return new MarkupRenderer().renderContentMarkupItem(markup, indent);
-}
 

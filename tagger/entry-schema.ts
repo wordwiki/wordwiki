@@ -116,8 +116,6 @@ export const dictSchemaJson = {
 
 function test() {
     let dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
-    dictSchema.resolve();
-    dictSchema.validateSchema('dict');
     console.info('Schema', dictSchema);
     let dumpedEntrySchemaJson = dictSchema.schemaToCompactJson();
     console.info('Schema again', dumpedEntrySchemaJson);

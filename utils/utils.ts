@@ -325,6 +325,27 @@ export function difference<T>(a: Set<T>, b: Set<T>): Set<T> {
     return new Set(Array.from(a).filter(e=>!b.has(e)));
 }
 
+/**
+ *
+ */
+export function duplicateItems<T>(items: T[]): Set<T> {
+    const uniqueItems: Set<T> = new Set();
+    const dups: Set<T> = new Set();
+    for(const item of items) {
+        if(uniqueItems.has(item))
+            dups.add(item);
+        else
+            uniqueItems.add(item);
+    }
+    return dups;
+}
+
+/**
+ *
+ */
+//export function fromEntriesNoDups
+
+
 // export function reference_longest_increasing_sequence<T>(v: T[], cmp: (T,T)=>number): number[] {
 //     switch(v.length) {
 //         case 0: return [];
