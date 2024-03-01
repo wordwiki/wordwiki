@@ -82,6 +82,7 @@ export class DenoHttpServer extends HttpServer {
         // objects.
 
         // XXX TODO more conversion here. XXX - we are dropping lots of fields.
+        // XXX THIS HARD WIRED text/html utf-8 is BORKED - JUST TILL WE GET THINGS WORKING
         return requestEvent.respondWith(new Response(titan1cResponse.body, {
             status: titan1cResponse.status,
             headers: {

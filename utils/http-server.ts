@@ -36,7 +36,7 @@ export interface Request {
 export interface Response {
     status: number;
     headers: {[key: string]: string};
-    url: string;
+    //url: string;
     body: string,
 }
 

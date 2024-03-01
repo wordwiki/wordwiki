@@ -5,27 +5,28 @@ import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 
-async function test() {
-    const pdm = selectScannedDocumentByFriendlyId().required({friendly_document_id: 'PDM'});
-    const pdmWordLayer = selectLayerByLayerName().required({document_id: pdm.document_id, layer_name: 'TextractWord'});
+export async function friendlyRenderPage(friendly_document_id: string,
+                                         page_number: number, layer_name: string = 'TextractLine'): Promise<string> {
+    const pdm = selectScannedDocumentByFriendlyId().required({friendly_document_id});
+    const pdmWordLayer = selectLayerByLayerName().required({document_id: pdm.document_id, layer_name});
     console.time('bondingBoxesForPage');
     //for(let page_number=1; page_number<100; page_number++) {
-    const page_number = 10;
     const pdmSamplePage = selectScannedPageByPageNumber().required(
         {document_id: pdm.document_id, page_number});
     const page = renderPage(pdmSamplePage.page_id, pdmWordLayer.layer_id, undefined);
     //}
     console.timeEnd('bondingBoxesForPage');
+    return page;
 
-    console.info(page);
+    // console.info(page);
     
-    const output = new TextEncoder().encode(page);
-    const file = await Deno.open('test.html', {write: true, create: true});
-    try {
-        await writeAll(file, output);
-    } finally {
-        file.close();
-    }
+    // const output = new TextEncoder().encode(page);
+    // const file = await Deno.open('test.html', {write: true, create: true});
+    // try {
+    //     await writeAll(file, output);
+    // } finally {
+    //     file.close();
+    // }
 
     
 }
@@ -71,7 +72,7 @@ export function renderPage(page_id: number,
     
     //console.info('data', boxes);
 
-    const pageImageUrl = page.image_ref;
+    const pageImageUrl = '/'+page.image_ref;
     
     const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
 
@@ -137,8 +138,8 @@ stroke:red !important;
 
     <div>
     <h1>PDM Textract preview page ${page.page_number}</h1>
-    <a href="./page-${String(page.page_number-1).padStart(5, '0')}.html">PREV</a> / 
-    <a href="./page-${String(page.page_number+1).padStart(5, '0')}.html">NEXT</a>
+    <a href="./${page.page_number-1}.html">PREV</a> / 
+    <a href="./${page.page_number+1}.html">NEXT</a>
 
     </div>
     <div id="annotatedPage">
@@ -160,6 +161,6 @@ ${blocksSvg}
 
 
 if (import.meta.main) {
-    await test();
+    await friendlyRenderPage('PDM', 10);
 
 }
