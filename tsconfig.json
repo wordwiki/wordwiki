@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "jsx": "react",
+        "jsxFactory": "jsx",
+        "jsxFragmentFactory": "jsxFragment",
+        "outDir": "dist", 
+        "plugins": [
+            {
+            "name": "typescript-deno-plugin",
+            "enable": true, // default is `true`
+            "importmap": "import_map.json"
+        }
+        ]
+    }
+}

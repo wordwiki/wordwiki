@@ -4,6 +4,9 @@ import {friendlyRenderPage} from './render-page.ts';
 import {ScannedDocument, ScannedPage} from './schema.ts';
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
+import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import * as utils from "../utils/utils.ts";
+import * as strings from "../utils/strings.ts";
 
 // Proto request handler till we figure out how we want our urls etc to workc
 async function taggerRequestHandler(request: server.Request): Promise<server.Response> {
@@ -136,25 +139,44 @@ class ScannedPageFacade extends DbRecordFacade<ScannedPage> {
 //     but that is fine.
 // - should play with htmlx next.
 
-
-
-
-
-
-
-
-
-
-
 export async function taggerServer(port: number = 9000) {
     console.info('Starting tagger server');
+    
     const contentdirs = {
+        '/resources/': await findResourceDir()+'/',
         '/content/': 'content/',
         '/derived/': 'derived/'};
     await new DenoHttpServer({port, contentdirs}, taggerRequestHandler).run();
 }
 
+/**
+ * We want the site resources (.js, .css, images) to be part of the source tree
+ * (ie. under revision control etc).  So we have a directory in the source tree
+ * called 'resources'.  AFAICT Deno has no particular support for this (accessing
+ * these files as part of it's normal package mechanism) - so for now we are
+ * using import.meta to find this file, then locating the resource dir relative to that.
+ *
+ * The present issue is that we are only supporting file: urls for now.
+ *
+ * An additional complication to consider when improving this is that in the
+ * public site, we will usually be running behind apache or nginx, so having the
+ * resouces available as files in a known location is important.
+ *
+ * Also: once we start uploading resources to a CDN, we will want to make corresponding
+ * changes to resources URLs.
+ */
+async function findResourceDir() {
+    const serverFileUrl = new URL(import.meta.url);
+    if(serverFileUrl.protocol !== 'file:')
+        throw new Error(`wordwiki server can only be run (for now) with it's code on the local filesystem (to allow access to resource files) - got server file url - ${serverFileUrl} with protocol ${serverFileUrl.protocol}`);
+    const serverFilePath = decodeURIComponent(serverFileUrl.pathname);
+    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/tagger/server.ts')+'/resources';
+    const resourceMarkerPath = resourceDir+'/'+'resource_dir_marker.txt';
+    if(!await fileExists(resourceMarkerPath))
+        throw new Error(`resource directory ${resourceDir} is missing marker file ${resourceMarkerPath}`);
 
+    return resourceDir;
+}
 
 function parsePlay() {
     console.info(/^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+))$/.exec('/page/PDM/21'));

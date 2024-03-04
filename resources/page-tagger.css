@@ -1,0 +1,28 @@
+#annotatedPage {
+  position:relative; display:inline-block;
+}
+
+#annotatedPage svg {
+  position:absolute; top:0; left:0;
+}
+
+.group.WORD > rect.segment {
+  fill-opacity: 10%;
+  stroke-width:3;
+  stroke:green;
+}
+
+.group.LINE > rect.segment {
+  stroke:blue;
+  stroke-width:6;
+}
+
+.group:hover > rect.segment {
+  stroke:red !important;
+}
+
+.group.active > rect.segment {
+  stroke-width:3;
+  stroke:purple;
+}
+

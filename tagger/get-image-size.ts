@@ -35,7 +35,7 @@ export async function getImageSize(imagePath: string): Promise<{width: number, h
  * Content store function to get the size of an image.
  */
 async function getImageSizeCmd(targetResultPath: string, sourceImagePath: string) {
-    if(!fileExists(sourceImagePath))
+    if(!await fileExists(sourceImagePath))
         throw new Error(`expected source image ${sourceImagePath} to exist`);
     const size = await getImageSizeUncached(sourceImagePath);
     return JSON.stringify(size);

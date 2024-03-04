@@ -31,7 +31,7 @@ export async function importScannedDocument(fields: ScannedDocumentOpt, pageFile
 async function importScannedPage(document_id: number, friendly_document_id: string, page_number: number, import_path: string): Promise<number> {
 
     const sourceImagePath = `imports/${friendly_document_id}/${import_path}`;
-    if(!fileExists(sourceImagePath))
+    if(!await fileExists(sourceImagePath))
         throw new Error(`expected source image ${sourceImagePath} to exist`);
     //console.info('source image path is', sourceImagePath);
 
@@ -56,7 +56,7 @@ async function importScannedPage(document_id: number, friendly_document_id: stri
  */
 async function importPageImage(targetImagePath: string, sourceImagePath: string) {
     //const sourceImagePath = contentRoot+'/'+sourceImageRef;
-    if(!fileExists(sourceImagePath))
+    if(!await fileExists(sourceImagePath))
         throw new Error(`expected source image ${sourceImagePath} to exist`);
 
     const quality = 80;
