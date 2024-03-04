@@ -1,28 +1,85 @@
 #annotatedPage {
-  position:relative; display:inline-block;
+    position:relative; display:inline-block;
 }
 
-#annotatedPage svg {
-  position:absolute; top:0; left:0;
+#annotatedPage > svg {
+    position:absolute; top:0; left:0;
 }
 
-.group.WORD > rect.segment {
+.group rect.frame {
+    fill-opacity: 10%;
+    stroke-width:3;
+    stroke:green;
+}
+
+.group svg.box {
+    overflow: visible;
+}
+
+svg.box circle.grabber {
   fill-opacity: 10%;
   stroke-width:3;
-  stroke:green;
+  stroke:red;
+  overflow: visible;
+  display: none;
 }
 
-.group.LINE > rect.segment {
-  stroke:blue;
-  stroke-width:6;
+svg.box:hover circle {
+  display: inline;
 }
 
-.group:hover > rect.segment {
-  stroke:red !important;
+svg.box circle.grabber.active {
+  stroke: purple;
 }
 
-.group.active > rect.segment {
-  stroke-width:3;
-  stroke:purple;
+/* .group circle.grabber { */
+/*   fill-opacity: 10%; */
+/*   stroke-width:3; */
+/*   stroke:red; */
+/*   overflow: visible; */
+/*   display: none; */
+/* } */
+
+/* .group svg.box:hover circle.grabber { */
+/*   display: inline; */
+/* } */
+
+.group.LINE > rect.frame {
+    stroke:blue;
+    stroke-width:6;
+}
+
+.group:hover > rect.frame {
+    stroke:red !important;
+}
+
+.group.active > rect.frame {
+    stroke-width:3;
+    stroke:purple;
+}
+
+
+.context-menu {
+}
+
+.context-menu > rect.frame {
+    stroke-width:3;
+    stroke:purple;
+}
+
+.context-menu > svg.items > svg > rect {
+    fill-opacity: 30%;
+    fill: blue;
+}
+
+.context-menu > svg.items > svg:hover > rect {
+    fill-opacity: 30%;
+    fill: yellow;
+}
+
+.context-menu > svg.items > svg > text {
+    font: bold 20px sans-serif;
+    fill: red;
+    stroke: red;
 }
 

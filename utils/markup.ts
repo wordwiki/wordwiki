@@ -407,7 +407,7 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
     out.push(tagName);
     for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
         out.push(ATTRIBUTE_NODE, name);
-        if(value)
+        if(value != undefined)
             out.push(String(value));
     }
     for(const c of content)

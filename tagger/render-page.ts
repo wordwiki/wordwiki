@@ -37,7 +37,7 @@ export function renderPage(page_id: number,
     return (
         ['html', {},
          ['head', {},
-          ['link', {href: '/resources/page-tagger.css', rel:'stylesheet', type:'text/css'}],
+          ['link', {href: '/resources/page-tagger2.css', rel:'stylesheet', type:'text/css'}],
           ['script', {src:'/resources/page-tagger.js'}]],
          ['body', {},
           ['div', {},
@@ -46,20 +46,33 @@ export function renderPage(page_id: number,
            ['a', {href:`./${page.page_number+1}.html`}, 'NEXT']],
           ['div', {id: 'annotatedPage'},
            ['img', {src:pageImageUrl, width:page.width, height:page.height}],
-           ['svg', {width:page.width, height:page.height}, blocksSvg]]]]);
+           ['svg', {width:page.width, height:page.height,
+                    onmousedown: 'pageEditorMouseDown(event)',
+                    onmousemove: 'pageEditorMouseMove(event)',
+                    onmouseup: 'pageEditorMouseUp(event)'},
+            blocksSvg]]]]);
 }
 
 export function renderGroup(groupId: number, boxes: BoxGroupJoin[]): any {
     utils.assert(boxes.length > 0, 'Cannot render an empty group');
     const group: GroupJoinPartial = boxes[0];
     return (
-        ['svg', {class:"group WORD", id:groupId, onclick:"activate_group()"},
+        ['svg', {class:"group WORD", id:groupId},
          boxes.map(b=>renderBox(b))
         ]);
 }
 
-export function renderBox(box: BoxGroupJoin): any {
+export function renderBoxOld(box: BoxGroupJoin): any {
     return ['rect', {class:"segment", x:box.x, y:box.y, width:box.w, height:box.h}];
+}
+
+export function renderBox(box: BoxGroupJoin): any {
+    return ['svg', {class:"box", x:box.x, y:box.y, width:box.w, height:box.h},
+            ['rect', {class:"frame", x:0, y:0, width:'100%', height:'100%'}],
+            ['circle', {class:"grabber", cx:0, cy:0, r:12}],
+            ['circle', {class:"grabber", cx:0, cy:'100%', r:12}],
+            ['circle', {class:"grabber", cx:'100%', cy:0, r:12}],
+            ['circle', {class:"grabber", cx:'100%', cy:'100%', r:12}]];
 }
 
 export async function friendlyRenderPage(friendly_document_id: string,
