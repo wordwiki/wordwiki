@@ -6,8 +6,9 @@ import {Node, Expression, Identifier, Literal, ArrayExpression,
         ArrowFunctionExpression, TemplateLiteral,
         ParenthesizedExpression, Property, SpreadElement,
         PrivateIdentifier} from "npm:acorn@8.11.3";
-import * as strings from '../utils/strings.ts';
-
+import * as strings from './strings.ts';
+import * as utils from './utils.ts';
+import {panic} from './utils.ts';
 
 // Users of this module may prefer to use this renamed re-export of 'Node' to avoid
 // taking a dependency on acorn.
@@ -23,8 +24,39 @@ export function dumpJsExpr(jsExprSrc: string): string {
     return JSON.stringify(parseJsExpr(jsExprSrc), undefined, 2);
 }
 
-export function evalJsExprSrc(s: Scope, jsExprSrc: string): any {
-    return new Eval().eval(s, parseJsExpr(jsExprSrc));
+export function evalJsExprSrc(s: Scope, jsExprSrc: string, safeMode:boolean=false): any {
+    return new Eval(safeMode).eval(s, parseJsExpr(jsExprSrc));
+}
+
+export const pubMarker = Symbol('pub');
+
+// TODO: later make versions that check if have specified permissions etc.
+export function pub(value: boolean=false) {
+    return function (target: any, context: ClassMethodDecoratorContext) {
+        // const fn = target[propertyKey];
+        // if(!(fn instanceof Function))
+        //     throw new Error(`attempt to mark non-function ${utils.className(target)}.${propertyKey} as public`);
+        // fn[pubMarker] = true;
+        return (a:number,b:number)=>a*b;
+    };
+}
+
+
+function loggedMethod(originalMethod: any, context: ClassMethodDecoratorContext) {
+    const methodName = String(context.name);
+
+    function replacementMethod(this: any, ...args: any[]) {
+        console.log(`LOG: Entering method '${methodName}'.`)
+        const result = originalMethod.call(this, ...args);
+        console.log(`LOG: Exiting method '${methodName}'.`)
+        return result;
+    }
+
+    return replacementMethod;
+}
+
+class Foo {
+    
 }
 
 /**
@@ -32,29 +64,64 @@ export function evalJsExprSrc(s: Scope, jsExprSrc: string): any {
  * trees as emitted by acornjs.
  *
  * For estree node documentation see: https://github.com/estree/estree
+ *
+ * - toString() is implicitly called by JS to do conversion to string.
+ * - valueOf() is implicitly calles by JS to do numeric and primitive conversion.
+ *
+ * These cannot be banned by safeMode.  So you should not allow expressions
+ * to access any values where calling toString() or valueOf() on that value
+ * would leak secrets.
+ *
+ * If your security rules allow map/flatMap it is easy for users to
+ * construct expressions that will consume all CPU, RAM or IO (if you
+ * have methods that do IO).  But map is so useful in templates, that
+ * we often do want to allow it.  We will probably introduce some invocation
+ * limit feature to allow map to be used with less risk of resource exhaustion
+ * attacks.
+ * 
+ * We will probably want to have a version of this that allows 'await' -
+ * but that would require making all the methods 'async', which would
+ * add a lot of overhead.  So we will probably have to maintain two
+ * copies of this.
  */
 export class Eval {
     constructor(readonly safeMode: boolean = false) {
     }
     
-    eval(s: Scope, e: Node): any {
+    eval(s: Scope, e: JsNode): any {
         switch(e.type) {
-            case 'Identifier': return this.evalIdentifier(s, e as Identifier);
-            case 'Literal': return this.evalLiteral(s, e as Literal);
-            case 'ArrayExpression': return this.evalArrayExpression(s, e as ArrayExpression);
-            case 'ObjectExpression': return this.evalObjectExpression(s, e as ObjectExpression);
-            case 'UnaryExpression': return this.evalUnaryExpression(s, e as UnaryExpression);
-            case 'BinaryExpression': return this.evalBinaryExpression(s, e as BinaryExpression);
-            case 'LogicalExpression': return this.evalLogicalExpression(s, e as LogicalExpression);
-            case 'MemberExpression': return this.evalMemberExpression(s, e as MemberExpression);
-            case 'ConditionalExpression': return this.evalConditionalExpression(s, e as ConditionalExpression);
-            case 'CallExpression': return this.evalCallExpression(s, e as CallExpression);
-            case 'NewExpression': return this.evalNewExpression(s, e as NewExpression);
-            case 'SequenceExpression': return this.evalSequenceExpression(s, e as SequenceExpression);
-            case 'ArrowFunctionExpression': return this.evalArrowFunctionExpression(s, e as ArrowFunctionExpression);
-            case 'TemplateLiteral': return this.evalTemplateLiteral(s, e as TemplateLiteral);
-            case 'ParenthesizedExpression': return this.evalParenthesizedExpression(s, e as ParenthesizedExpression);
-            default: throw new Error(`jsterp: unsupported node type ${e.type}`);
+            case 'Identifier':
+                return this.evalIdentifier(s, e as Identifier);
+            case 'Literal':
+                return this.evalLiteral(s, e as Literal);
+            case 'ArrayExpression':
+                return this.evalArrayExpression(s, e as ArrayExpression);
+            case 'ObjectExpression':
+                return this.evalObjectExpression(s, e as ObjectExpression);
+            case 'UnaryExpression':
+                return this.evalUnaryExpression(s, e as UnaryExpression);
+            case 'BinaryExpression':
+                return this.evalBinaryExpression(s, e as BinaryExpression);
+            case 'LogicalExpression':
+                return this.evalLogicalExpression(s, e as LogicalExpression);
+            case 'MemberExpression':
+                return this.evalMemberExpression(s, e as MemberExpression);
+            case 'ConditionalExpression':
+                return this.evalConditionalExpression(s, e as ConditionalExpression);
+            case 'CallExpression':
+                return this.evalCallExpression(s, e as CallExpression);
+            case 'NewExpression':
+                return this.evalNewExpression(s, e as NewExpression);
+            case 'SequenceExpression':
+                return this.evalSequenceExpression(s, e as SequenceExpression);
+            case 'ArrowFunctionExpression':
+                return this.evalArrowFunctionExpression(s, e as ArrowFunctionExpression);
+            case 'TemplateLiteral':
+                return this.evalTemplateLiteral(s, e as TemplateLiteral);
+            case 'ParenthesizedExpression':
+                return this.evalParenthesizedExpression(s, e as ParenthesizedExpression);
+            default:
+                throw new Error(`jsterp: unsupported node type ${e.type}`);
         }
     }
     
@@ -144,12 +211,21 @@ export class Eval {
 
     evalMemberExpression(s: Scope, e: MemberExpression): any {
         let propertyKey = this.evalProperty(s, e.property, e.computed) as PropertyKey;
-        if(this.safeMode) {
-            if(typeof propertyKey === 'string')
-                propertyKey = propertyKey + '$';
-        }
+
+        // TODO this is a crappy version of safe mode.
+        // probably switch to a decorator based scheme.
+        // if(this.safeMode) {
+        //     if(typeof propertyKey === 'string')
+        //         propertyKey = propertyKey + '$';
+        // }
         const obj = this.eval(s, e.object);
         let member = obj[propertyKey];
+
+        if(this.safeMode && !member[pubMarker])
+            throw new Error(`attempt to access non-public property ${String(propertyKey)}`);
+
+        // TODO this is intended to whitelist some core builtin functions
+        //      even when in safe mode. (like toString and filter).
         // if(!member && obj instanceof Array) {
         //     switch(propertyKey) {
         //         case 'filter': member = member['filter']; break;
@@ -158,8 +234,6 @@ export class Eval {
         // }
         //console.info('got member', member, 'for name', propertyKey);
 
-        // TODO: this is borked - we are doing the bind even for function
-        //       valued properties.
         if(member instanceof Function)
             member = member.bind(obj);
         
@@ -208,9 +282,19 @@ export class Eval {
             return this.eval(fnScope, e.body);
         }
     }
-    
+
     evalTemplateLiteral(s: Scope, e: TemplateLiteral): any {
-        throw new Error('jsterp: TemplateLiteral not implemented yet');
+        const txts = e.quasis.map(q=>q.value.cooked ??
+            panic('jsterp: missing cooked template value'));
+        const values = e.expressions.map(x=>this.eval(s, x));
+        if(txts.length != values.length+1)
+            throw new Error('jsterp: malformed template literal');
+        let result = txts[0];
+        values.forEach((subst, i) => {
+            result += String(subst);
+            result += txts[i+1];
+        });
+        return result;
     }
 
     evalParenthesizedExpression(s: Scope, e: ParenthesizedExpression): any {
@@ -242,7 +326,6 @@ export class Eval {
 }
 
 export function jsPlay() {
-    //console.info(dumpJsExpr(`new Test().toString()`));
     expectString({}, "true ? 2+2 : 5", "4");
     expectString({Test}, `new Test().add(8,8)`, "16");
     expectString({Test}, `new Test().puppy`, "Rover");
@@ -250,27 +333,38 @@ export function jsPlay() {
     expectJSON({}, `((a, b)=>a+b+2)(3,4)`, "9");
     expectString({Test}, `new Test().toString()`, "TEST Rover");
     expectJSON({}, `[99, 73, 4].filter(a=>a>7)`, "[99,73]");
+    expectString({}, '`${7} seven ${8} cat ${9}`', "7 seven 8 cat 9");
+    expectString({}, '`seven ${8*2} cat`', "seven 16 cat");
+    expectString({}, '[0,1,2].flatMap(v1=>[0,1,2].flatMap(v2=>[0,1,2].flatMap(v3=>[v1,v2,v3]))).filter(v=>v!==0).map(v=>`v${v}`).join(":")',
+                 'v1:v2:v1:v1:v1:v1:v2:v2:v2:v1:v2:v2:v1:v1:v1:v1:v2:v1:v1:v1:v1:v1:v1:v1:v2:v1:v2:v1:v2:v1:v1:v2:v2:v2:v2:v1:v2:v2:v2:v1:v2:v1:v1:v2:v1:v2:v2:v2:v2:v2:v1:v2:v2:v2');
+    expectJSON({info: console.info}, 'info(`done tests`)', undefined);
+    expectValue({Test}, 'Test.mul(2,2)', 4);
 
-    //dumpDeep(new Test());
 }
 
 function dumpDeep(o: any) {
     for(let k of Object.getOwnPropertyNames(o))
-        console.info('PP', k);
+        console.info('--', k);
     const oProto = Object.getPrototypeOf(o);
     if(oProto)
         dumpDeep(oProto);
 }
 
-export function expectString(s: Scope, jsExprStr: string, expectResultStr: any): any {
-    const result = evalJsExprSrc(s, jsExprStr);
+export function expectValue(s: Scope, jsExprStr: string, expectResult: any, safeMode:boolean = false): any {
+    const result = evalJsExprSrc(s, jsExprStr, safeMode);
+    if(result !== expectResult)
+        console.info(`FOR: ${jsExprStr} EXPECTED: ${expectResult} GOT: ${result}`);
+}
+
+export function expectString(s: Scope, jsExprStr: string, expectResultStr: any, safeMode:boolean = false): any {
+    const result = evalJsExprSrc(s, jsExprStr, safeMode);
     const resultStr = String(result);
     if(resultStr !== expectResultStr)
         console.info(`FOR: ${jsExprStr} EXPECTED: ${expectResultStr} GOT: ${resultStr}`);
 }
 
-export function expectJSON(s: Scope, jsExprStr: string, expectResultStr: any): any {
-    const result = evalJsExprSrc(s, jsExprStr);
+export function expectJSON(s: Scope, jsExprStr: string, expectResultStr: any, safeMode: boolean = false): any {
+    const result = evalJsExprSrc(s, jsExprStr, safeMode);
     const resultStr = JSON.stringify(result);
     if(resultStr !== expectResultStr)
         console.info(`FOR: ${jsExprStr} EXPECTED: ${expectResultStr} GOT: ${resultStr}`);
@@ -278,8 +372,17 @@ export function expectJSON(s: Scope, jsExprStr: string, expectResultStr: any): a
 
 class Test {
     puppy: string = 'Rover';
-
+    
+    static mul(a: number, b: number): number {
+        return a*b;
+    }
+    
     add(a: number, b: number): number {
+        return a+b;
+    }
+
+    @pub()
+    safeAdd(a: number, b: number): number {
         return a+b;
     }
     
@@ -292,6 +395,9 @@ class Test {
         return 7;
     }
 }
+
+console.info(new Test().safeAdd(3,3));
+
 
 if (import.meta.main)
     jsPlay();

@@ -1,4 +1,5 @@
 import * as utils from './utils.ts';
+import * as linkedom from "https://esm.sh/linkedom@0.16.8";
 
 export type DumpOpts = Record<string, any>;
 
@@ -29,10 +30,6 @@ export module JSX {
     //     props: any; // specify the property name to use
     // }    
 }
-
-
-
-
 
 export function isElemMarkup(n: any): boolean {
     return Array.isArray(n) && n.length >= 2 && utils.isObjectLiteral(n[1]);
@@ -312,5 +309,120 @@ function estimateInlineContentItemLength(item: any): number {
                 return -1;
     }
 }
+
+
+export const ELEMENT_NODE = 1;
+export const ATTRIBUTE_NODE = 2;
+export const TEXT_NODE = 3;
+export const CDATA_SECTION_NODE = 4;
+export const COMMENT_NODE = 8;
+export const DOCUMENT_NODE = 9;
+export const DOCUMENT_TYPE_NODE = 10;
+export const DOCUMENT_FRAGMENT_NODE = 11;
+
+export const NODE_END = -1;
+
+//type HtmlDocument = ReturnType<typeof linkedom.parseJSON>;
+
+
+export function renderToStringViaLinkeDOM(markup: any): string {
+    return toLinkeDOM(markup).toString();
+}
+
+// export function toLinkeDOM(markup: any): any {
+//     const jsdon = renderToJSDON(markup)
+//     console.info(jsdon);
+//     return linkedom.parseJSON(jsdon);
+// }
+
+export function toLinkeDOM(markup: any): any {
+    return linkedom.parseJSON(renderToJSDON(markup));
+}
+
+/**
+ * Render our markup to the JSDON format defined in:
+ *
+ * https://github.com/WebReflection/jsdon
+ *
+ * This allows us to load our markup into LinkeDOM - a DOM
+ * implementation.
+ *
+ * We are primarily doing this to then serialized the markup
+ * to HTML using the LinkeDOM serializer.  This is a lot of copying,
+ * and at some point we should make our serializer good instead.
+ */
+type JSDON = Array<number|string>;
+
+export function renderToJSDON(item: any, wrapInHtmlDocument: boolean=true): JSDON {
+    const out: JSDON = [];
+    if(wrapInHtmlDocument) {
+        out.push(DOCUMENT_NODE);
+        out.push(DOCUMENT_TYPE_NODE, "html");
+    }        
+    renderItemToJSDON(out, item);
+    if(wrapInHtmlDocument) {
+        out.push(NODE_END, NODE_END);
+    }
+    return out;
+}
+
+function renderItemToJSDON(out: JSDON, item: any) {
+    switch(typeof item) {
+        case 'undefined':
+            break;
+        case 'number':
+        case 'boolean':
+        case 'bigint':
+            out.push(TEXT_NODE, String(item));
+            break;
+        case 'string':
+            out.push(TEXT_NODE, item);
+            break;
+        case 'object':
+            if(item == null)
+                break;
+            else if(Array.isArray(item)) {
+                if(isElemMarkup(item)) {
+                    renderElementToJSDON(out, item as ElemExprLiteral);
+                    break;
+                } else {
+                    for(const i of item)
+                        renderItemToJSDON(out, i);
+                    break;
+                }
+            } else {
+                throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
+            }
+
+        default:
+            throw new Error(`unhandled content item ${item} of type ${typeof item}`);
+    }
+}
+
+function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
+    const [tag, {...attrs}, ...content] = e;
+    const tagName = tag instanceof Function ? tag.name : String(tag);
+
+    out.push(ELEMENT_NODE);
+    out.push(tagName);
+    for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
+        out.push(ATTRIBUTE_NODE, name);
+        if(value)
+            out.push(String(value));
+    }
+    for(const c of content)
+        renderItemToJSDON(out, c);
+    out.push(NODE_END);
+}
+
+function linkeDOMPlay() {
+    console.info(renderToStringViaLinkeDOM(
+        ['div', {class: 'top', style: 'none', 'cat': null}, 'hello',
+         ['img', {width: 7, height: 9}]]));
+}
+
+if (import.meta.main)
+    linkeDOMPlay();
+
 
 

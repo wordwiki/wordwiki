@@ -2,7 +2,8 @@ import * as server from '../utils/http-server.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
 import {friendlyRenderPage} from './render-page.ts';
 import {ScannedDocument, ScannedPage} from './schema.ts';
-import * as acorn from "npm:acorn@8.11.3";
+import {evalJsExprSrc} from '../utils/jsterp.ts';
+import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 
 // Proto request handler till we figure out how we want our urls etc to workc
 async function taggerRequestHandler(request: server.Request): Promise<server.Response> {
@@ -20,9 +21,12 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
         const page_number = parseInt(PageNumber);
         
         const body = await friendlyRenderPage(book, page_number);
-        
-        return Promise.resolve({status: 200, headers: {}, body});
+        const html = renderToStringViaLinkeDOM(body);
+        return Promise.resolve({status: 200, headers: {}, body: html});
     } else {
+
+        //        evalJsExprSrc({DocF
+        
         return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
     }
     
@@ -30,8 +34,28 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
 }
 
 
+// Make a fancy facade over a db record that can be initted in a bunch of different
+//  ways using static methods.
+// Doc.forRecord({...});
+// Doc.forFriendlyId('PDM').pageByNumber(7).render()
+// Page.byNumber(Doc.byFriendlyId('PDM').id, 17);
+// BoundingBox.byId(73772).render()
+// new Doc(docById(777))
+// new Page(pageByNumber(docById(777)
+
+class RecordFacade {
+    // - problem with static methods is we won't be constructing the real type.
+    // - probably have to use builders.  Want lazy eval of args, but don't want
+    //   to have to type all the ... so capture using closures.
+    // - perhaps constructor arg can be the closure?
+}
+
+class Doc extends RecordFacade {
+}
+
 class Facade {
 }
+
 
 class DbRecordFacade<T> extends Facade {
     #record: T|undefined;
@@ -137,8 +161,6 @@ function parsePlay() {
     console.info(/^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+))|(?<Puppy>\/puppy\/(?<PuppyBook>[a-zA-Z]+)\/(?<PuppyNumber>[0-9]+))$/.exec('/page/PDM/21'));
     console.info(/^(?<Page>\/page\/(?<Book>)(?<PageNumber>[0-9]+))$/.exec('/page/PDM/7.html'));
     console.info(/^(?<Page>\/page\/(?<Book>)(?<PageNumber>[0-9]+))$/.exec('/page/PDM/7.html'));
-
-    console.log(JSON.stringify(acorn.parse("boundingBox(7372).resize(100,100,50,50),boundingGroup('377').html", {ecmaVersion: 2023}), undefined, 2));
 }
 
 if (import.meta.main) {
