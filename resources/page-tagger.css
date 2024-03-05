@@ -24,13 +24,17 @@ svg.box circle.grabber {
   display: none;
 }
 
-svg.box:hover circle {
+#annotatedPage:not(.drag-in-progress) svg.box:hover circle {
   display: inline;
 }
 
-svg.box circle.grabber.active {
-  stroke: purple;
+svg.box.active circle {
+  display: inline;
 }
+
+/*svg.box circle.grabber.active {
+  stroke: purple;
+}*/
 
 /* .group circle.grabber { */
 /*   fill-opacity: 10%; */

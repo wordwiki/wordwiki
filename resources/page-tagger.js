@@ -56,6 +56,10 @@ function grabberMouseDown(event, grabber) {
 
     const minWidth = 20;
     const minHeight = 20;
+
+    // --- Add 'drag-in-progress' class to #annotatedPage to disable some
+    //     hover behaviour that would be annoying during a drag.
+    document.getElementById('annotatedPage')?.classList.add('drag-in-progress');
     
     // --- Register the drag tx - handles mouseMove events until the mouseDown (or abort)
     dragTxBegin({
@@ -80,7 +84,6 @@ function grabberMouseDown(event, grabber) {
                 break;
             }
             case !isTop && isLeft: { // bottom left grabber
-                console.info('bottom left');
                 const clampedDeltaX = Math.min(deltaX, initialWidth-minWidth);
                 const clampedDeltaY = Math.min(deltaY, initialHeight-minHeight);
                 box.setAttribute('x', initialX + clampedDeltaX);
@@ -96,9 +99,11 @@ function grabberMouseDown(event, grabber) {
             }
         },
         onCommit(event, target) {
+            document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
             console.info('commit - post to server here!');
         },
         onAbort() {
+            document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
             box.setAttribute('x', initialX);
             box.setAttribute('y', initialY);
             box.setAttribute('width', initialWidth);
@@ -122,7 +127,7 @@ function grabberMouseDown(event, grabber) {
  */
 function adjustEventTarget(target) {
     switch(true) {
-    case target.tagName === 'rect' && target.classList.contains('frame'):
+    case target?.tagName === 'rect' && target?.classList?.contains('frame'):
         return target.parentElement;
     default:
         return target;
@@ -142,6 +147,16 @@ function adjustEventTarget(target) {
  * Selecting a child element always also select the containing elements.
  * (for example, selecting a grabber will also select the containing
  * boundingBox and boundingBoxGroup)
+ *
+ * When a group is selected, we also move the <svg> element for that group
+ * to the bottom of the list of groups.
+ *
+ * When a box is selected, we also move the <svg> element for that box to
+ * the bottom of the list of boxes within the containing group.
+ *
+ * These two moves mean that the group and the box are last painted - thus
+ * having the highest z-index - thus being non occluded by any other element
+ * so that they can be interacted with.
  */
   
 /**
@@ -167,6 +182,7 @@ function selectGroup(group) {
         throw new Error('select group called on non-group');
     clearSelection();
     group.classList.add('active');
+    moveElementToEndOfParent(group);
 }
 
 /**
@@ -176,8 +192,8 @@ function selectBox(box) {
     if(!isBox(box))
         throw new Error('select box called on non-box');
     selectGroup(box.parentElement);
-    console.info('selecting box', box);
     box.classList.add('active');
+    moveElementToEndOfParent(box);
 }
 
 /**
@@ -273,4 +289,29 @@ function safeParseInt(v) {
     if(Number.isNaN(r))
         throw new Error(`expected integer, got ${v}`);
     return r;
+}
+
+/**
+ * Moves an element to be the last child of the containing element.
+ *
+ * Does nothing if already last element (so cheap to repeatedly call).
+ * 
+ * This is used for z-order reasons in our svg based editor (ie. we
+ * want the selected item to have the highest z-order so that it is
+ * fully interactive)
+ */
+function moveElementToEndOfParent(elem) {
+    // --- If we are already last element in parent - nothing to do.
+    if(!elem.nextSibling)
+        return;
+
+    // --- If we have no parent - nothing to do.
+    const parent = elem.parentElement;
+    if(!parent)
+        return;
+
+    // --- Relocate element to end of parent element
+    //     (note that appendChild is defined to remove the node if it already
+    //     exists in the document - so this is a move operation)
+    parent.appendChild(elem);
 }

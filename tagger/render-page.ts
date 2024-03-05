@@ -37,7 +37,7 @@ export function renderPage(page_id: number,
     return (
         ['html', {},
          ['head', {},
-          ['link', {href: '/resources/page-tagger2.css', rel:'stylesheet', type:'text/css'}],
+          ['link', {href: '/resources/page-tagger.css', rel:'stylesheet', type:'text/css'}],
           ['script', {src:'/resources/page-tagger.js'}]],
          ['body', {},
           ['div', {},

@@ -7,9 +7,6 @@ export const new_range_start_key = new Big('0.5');
 export const begin_key = new Big('0.1');
 export const end_key = new Big('0.9');
 
-
-
-
 /**
  *
  *
