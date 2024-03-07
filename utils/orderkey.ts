@@ -1,5 +1,33 @@
 /**
+ * A mechanism to generate an initial list of ordered keys and then
+ * a mechanism to generate a new key that will sort between a supplied
+ * pair of keys.
  *
+ * This is used to represent explicitly ordered data in a relational
+ * database (where tuples are inheranly unordered).
+ *
+ * Doing this using an order key is much more multi-transaction friendly and cheaper
+ * than just using item numbers.
+ *
+ * Some trouble is taken to keep the keys short, but if you repeatedly insert
+ * in one interval (for example at the top or bottom), they will grow by
+ * a character for every few inserts.
+ * 
+ * A periodic renumber (unsing initial()) can be used to recover from this.
+ *
+ * Example of the user inserting definitions for the word 'cat' in specific orders:
+ *
+ * 0.5  : 'a strong tackle used to hoist an anchor to the cathead of a ship'
+ * 0.2  : 'a carnivorous mammal (Felis catus) long domesticated as a pet...'
+ * 0.3  : 'a player or devotee of jazz'
+ * 0.25 : 'any of a family (Felidae) of carnivorous usually solitary and nocturnal...'
+ *
+ * With the final sort order being:
+ *
+ * 0.2  : 'a carnivorous mammal (Felis catus) long domesticated as a pet...'
+ * 0.25 : 'any of a family (Felidae) of carnivorous usually solitary and nocturnal...'
+ * 0.3  : 'a player or devotee of jazz'
+ * 0.5  : 'a strong tackle used to hoist an anchor to the cathead of a ship'
  */
 import Big from './big.mjs';
 
@@ -8,7 +36,6 @@ export const begin_key = new Big('0.1');
 export const end_key = new Big('0.9');
 
 /**
- *
  *
  */
 export function initial(size: number): string[] {

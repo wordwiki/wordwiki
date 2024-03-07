@@ -7,6 +7,8 @@ import * as content from "../utils/content-store.ts";
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 
+export const routes = ()=> ({
+});
 
 // --------------------------------------------------------------------------------
 // --- User -----------------------------------------------------------------------
@@ -19,6 +21,13 @@ export interface User {
     username: string;
     email?: string;
 
+    /**
+     * We disable users rather than deleting them because the
+     * dictionary change history is joined to users, so deleting the
+     * user would destroy the change history.  Depending on policy and
+     * situation, one may choose to change the user, username and
+     * email to some anon string on semantic 'delete'.
+     */
     disabled?: boolnum;
     
     password_salt: string;
@@ -236,6 +245,11 @@ export const selectScannedPagesForDocument = ()=>db().prepare<ScannedPage, {docu
 /**/          FROM scanned_page
 /**/          WHERE document_id = :document_id
 /**/          ORDER BY page_number`);
+
+export const maxPageNumberForDocument = ()=>db().prepare<{max_page_number: number}, {document_id: number}>(block`
+/**/   SELECT MAX(page_number) as max_page_number
+/**/          FROM scanned_page
+/**/          WHERE document_id = :document_id`);
 
 // --------------------------------------------------------------------------------
 // --- Layer ----------------------------------------------------------------------
@@ -565,23 +579,23 @@ const createBoundingBoxDml = block`
 /**/        INSERT INTO bounding_box_fts(rowid, text) VALUES (new.bounding_box_id, new.text);
 /**/   END;
 /**/   CREATE TRIGGER IF NOT EXISTS bounding_box_fts_delete AFTER DELETE ON bounding_box BEGIN
-/**/       INSERT INTO bounding_box_fts(fts_idx, rowid, text) VALUES('delete', old.text);
+/**/       INSERT INTO bounding_box_fts(bounding_box_fts, rowid, text) VALUES('delete', old.bounding_box_id, old.text);
 /**/   END;
 /**/   CREATE TRIGGER IF NOT EXISTS bounding_box_fts_update AFTER UPDATE ON bounding_box BEGIN
-/**/       INSERT INTO bounding_box_fts(fts_idx, rowid, text) VALUES('delete', old.text);
-/**/       INSERT INTO bounding_box_fts(rowid, text) VALUES (new.text);
+/**/       INSERT INTO bounding_box_fts(bounding_box_fts, rowid, text) VALUES('delete', old.bounding_box_id, old.text);
+/**/       INSERT INTO bounding_box_fts(rowid, text) VALUES (new.bounding_box_id, new.text);
 /**/  END;
 /**/   `;
 assertDmlContainsAllFields(createBoundingBoxDml, boundingBoxFieldNames);
 
+export const selectBoundingBox = ()=>db().prepare<BoundingBox, {bounding_box_id: number}>(block`
+/**/   SELECT ${boundingBoxFieldNames.join()}
+/**/          FROM bounding_box
+/**/          WHERE bounding_box_id = :bounding_box_id`);
 
-export function reshapeBoundingBox(bounding_box_id: number,
-                                   shape: {x: number, y: number, w: number, h: number}) {
-    // db.update
-    // Write a new update function that takes a partial type + an id and and id_field_name
-    // and writes the field.
+export function updateBoundingBox<T extends Partial<BoundingBox>>(bounding_box_id: number,fieldNames:Array<keyof T>, fields: T) {
+    return db().update<T>('bounding_box', 'bounding_box_id', fieldNames, bounding_box_id, fields);
 }
-
 
 // --------------------------------------------------------------------------------
 // --- ChangeLog ------------------------------------------------------------------
@@ -899,6 +913,7 @@ export function createAllTables() {
 // await db.prepare<{}, {layer_id: number}>
 //     ('UPDATE TABLE bounding_box SET bounding_group_id = NULL WHERE layer_id = :layer_id')
 //     .allEntries();
+
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------

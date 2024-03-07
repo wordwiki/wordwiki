@@ -191,6 +191,7 @@ async function textractPage(page_id: number): Promise<Block[]> {
  * the cache by erasing the correspoinding content-derived directory.
  */
 async function textractPageImpl(targetPath: string, imageRef: string) {
+    console.info(`textracting ${imageRef}`);
     const { code, stdout, stderr } = await new Deno.Command(
         awsCmdPath, {
             args: [

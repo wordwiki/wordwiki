@@ -97,7 +97,7 @@ export class Db {
      * free sqlite resources.
      */
     unmemoizedPrepare<O extends RowObject, P extends QueryParameterSet>(sql: string): PreparedQuery<O,P> {
-        //console.info('preparing ', sql);
+        console.info('preparing ', sql);
         return new PreparedQuery<O,P>(this.db.prepareQuery<Row,O,P>(sql));
     }
 
@@ -132,6 +132,18 @@ export class Db {
         const sql = `INSERT INTO ${table_name} (${fieldNames.join(',')}) VALUES (${fieldNames.map(f=>':'+f).join(',')}) RETURNING ${String(id_field_name)} AS id`;
         return this.insertWithAutoId<P>(sql, params);
     }
+
+    update<T extends QueryParameters>(table_name: string, id_field_name: string, fieldNames: Array<keyof T>, id: number, fields: T) {
+        const setTerms = fieldNames.map(name=>`${String(name)} = :${String(name)}`);
+        const updateSql = `UPDATE ${table_name} SET ${setTerms.join(', ')} WHERE ${id_field_name} = :__id__`;
+        this.execute<T & {__id__: number}>(updateSql, Object.assign({'__id__': id}, fields));
+    }
+
+    // updateSafe<T extends QueryParameters>(table_name: string, id_field_name: string, id: number, params: T) {
+    //     const setTerms = Object.entries(params).map(([name, value])=>`${name} = :${name}`);
+    //     const updateSql = `UPDATE ${table_name} SET ${setTerms.join(', ')} WHERE ${id_field_name} = :__id__`;
+    //     this.execute<T & {__id__: number}>(updateSql, Object.assign({'__id__': id}, params));
+    // }
     
     /**
      * Run multiple semicolon-separated statements from a single

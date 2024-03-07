@@ -16,6 +16,13 @@
     overflow: visible;
 }
 
+circle.puppy {
+  fill-opacity: 10%;
+  stroke-width:3;
+  stroke:orange;
+  overflow: visible;
+}
+
 svg.box circle.grabber {
   fill-opacity: 10%;
   stroke-width:3;
@@ -87,3 +94,23 @@ svg.box.active circle {
     stroke: red;
 }
 
+.page-jump, .current-page-jump {
+  text-decoration: none;
+  color: black;
+}
+
+.current-page-jump {
+  color: red;
+}
+
+.current-page-jump::before {
+  font-weight: bold;
+  color: navy;
+  content: "[";
+}
+
+.current-page-jump::after {
+  font-weight: bold;
+  color: navy;
+  content: "]";
+}

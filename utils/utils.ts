@@ -310,6 +310,7 @@ export function union<T>(a: Set<T>, b: Set<T>): Set<T> {
  * Note: native version is coming soon.
  *
  * TODO: change so iters over smaller set.
+ * TODO: probably should use a loop rather than '.filter'.
  */
 export function intersection<T>(a: Set<T>, b: Set<T>): Set<T> {
     return new Set(Array.from(a).filter(e=>b.has(e)));
@@ -338,6 +339,22 @@ export function duplicateItems<T>(items: T[]): Set<T> {
             uniqueItems.add(item);
     }
     return dups;
+}
+
+/**
+ * Returns all enumerable string property keys of an object (ignoring symbol keys),
+ * including inherited enumerable properties.
+ *
+ * This is just repackaging 'for in' (as opposed to 'for of') - but
+ * giving an explicit name to it's (often unexpected, almost always
+ * unwanted) behaviour for use in those rare situations where that behaviour
+ * is what we actually want.
+ */
+export function getAllPropertyNames(o: Object): string[] {
+    const allPropertyNames: string[] = [];
+    for(const propertyName in o)
+        allPropertyNames.push(propertyName);
+    return allPropertyNames;
 }
 
 /**

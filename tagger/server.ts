@@ -1,12 +1,25 @@
 import * as server from '../utils/http-server.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {friendlyRenderPage} from './render-page.ts';
+import {friendlyRenderPageEditor} from './page-editor.ts';
+import * as pageEditor from './page-editor.ts';
 import {ScannedDocument, ScannedPage} from './schema.ts';
+import * as schema from './schema.ts';
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import * as utils from "../utils/utils.ts";
 import * as strings from "../utils/strings.ts";
+import { db } from "./db.ts";
+let allRoutes_: Record<string, any>|undefined = undefined;
+
+export function allRoutes() {
+    return allRoutes_ ??= (()=>Object.assign(
+        {},
+        pageEditor.routes(),
+        schema.routes(),
+    ))();
+}
+
 
 // Proto request handler till we figure out how we want our urls etc to workc
 async function taggerRequestHandler(request: server.Request): Promise<server.Response> {
@@ -14,8 +27,9 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
     const requestUrl = new URL(request.url);
     const filepath = decodeURIComponent(requestUrl.pathname);
 
+    // TEMPORARY MANUAL HANDING OF THE ONE VANITY URL WE ARE CURRENTLY SUPPORTING
     const pageRequest = /^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+)[.]html)$/.exec(filepath);
-    console.info('pageRequest', pageRequest, 'for', filepath);
+    //console.info('pageRequest', pageRequest, 'for', filepath);
     if(pageRequest !== null) {
         const {Book, PageNumber} = pageRequest.groups as any
         if(typeof Book !== 'string') throw new Error('missing book');
@@ -23,19 +37,23 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
         if(typeof PageNumber !== 'string') throw new Error('missing page number');
         const page_number = parseInt(PageNumber);
         
-        const body = await friendlyRenderPage(book, page_number);
+        const body = await friendlyRenderPageEditor(book, page_number);
         const html = renderToStringViaLinkeDOM(body);
         return Promise.resolve({status: 200, headers: {}, body: html});
+    } else if (filepath === '/favicon.ico') {
+        return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
     } else {
-
-        //        evalJsExprSrc({DocF
-        
+        console.info('FILEPATH is ', filepath);
+        const jsExprSrc = strings.stripRequiredPrefix(filepath, '/');
+        console.info('about to eval', jsExprSrc);
+        const result = evalJsExprSrc(allRoutes(), jsExprSrc);
+        console.info('result is', result);
         return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
     }
-    
-    
 }
 
+
+ 
 
 // Make a fancy facade over a db record that can be initted in a bunch of different
 //  ways using static methods.
@@ -185,7 +203,45 @@ function parsePlay() {
     console.info(/^(?<Page>\/page\/(?<Book>)(?<PageNumber>[0-9]+))$/.exec('/page/PDM/7.html'));
 }
 
+/*
+  {
+  bounding_box_id: 39969,
+  imported_from_bounding_box_id: null,
+  bounding_group_id: 39969,
+  document_id: 1,
+  layer_id: 3,
+  page_id: 201,
+  x: 1019,
+  y: 2336,
+  w: 371,
+  h: 133,
+  color: null,
+  tags: null,
+  text: "literain",
+  notes: null
+  }
+*/
+
+
+
+function printBB(bounding_box_id: number) {
+    console.info(schema.selectBoundingBox().required({bounding_box_id}));
+}
+
+function sqlPlay() {
+    const id = 39969;
+    printBB(id);
+    console.info('A');
+    db().executeStatements(`UPDATE bounding_box SET x=7 WHERE bounding_box_id = 39969`);
+    console.info('CC');
+    db().execute<{}>(`UPDATE bounding_box SET x=7 WHERE bounding_box_id = 39969`, {});
+    console.info('B');
+    //db().execute<{}>(`UPDATE TABLE bounding_box SET x, y, w, h = (1,2,3,4) WHERE bounding_box_id = 39969`, {});
+    
+}
+
 if (import.meta.main) {
-    parsePlay();
+    //sqlPlay();
+    //parsePlay();
     await taggerServer();
 }

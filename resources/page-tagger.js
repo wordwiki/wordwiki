@@ -10,11 +10,18 @@ function pageEditorMouseDown(event) {
     // --- If we have an active drag operation - abort it
     dragTxAbort();
 
-    // --- Dispatch the click based on widget kind
-    switch(getWidgetKind(target)) {
-    case 'box': boxMouseDown(event, target); break
-    case 'grabber': grabberMouseDown(event, target); break;
-    default: break;
+    if(event.shiftKey) {
+        // --- Holding down shift allows drawing new boxes even
+        //     if the click action would normally be interpreted
+        //     by another widget in that space.
+        newBoxMouseDown(event, target);
+    } else {
+        // --- Dispatch the click based on widget kind
+        switch(getWidgetKind(target)) {
+        case 'box': boxMouseDown(event, target); break
+        case 'grabber': grabberMouseDown(event, target); break;
+        default: newBoxMouseDown(event, target); break;
+        }
     }
 }
 
@@ -32,23 +39,32 @@ function boxMouseDown(event, target) {
     selectBox(target);
 }
 
-function grabberMouseDown(event, grabber) {
+/**
+ * Handles the dragging operation of a box grabber.
+ *
+ * Registers a dragTx, and subsequent mouse operations are routed to
+ * the dragTx until the operation is completed or aborted.
+ *
+ * The extraAbortAction parameter is used when creating new boxes
+ * to remove the box if it has not yet reached a viable size.
+ */
+function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
 
     // --- Store the drag start mouse X and Y
     const dragStartClientX = event.clientX;
     const dragStartClientY = event.clientY;
     
-    // --- Select the grabber (and containing box and group)
+    // --- Select the grabber (and containing box and group).
     selectBoxGrabber(grabber);
 
     // --- Find the box that contains this grabber.
     const box = getSelectedBox();
 
     // --- Store the initial coordinates of the box in case we need to abort.
-    const initialX = safeParseInt(box.getAttribute('x'));
-    const initialY = safeParseInt(box.getAttribute('y'));
-    const initialWidth = safeParseInt(box.getAttribute('width'));
-    const initialHeight = safeParseInt(box.getAttribute('height'));
+    const initialX = getIntAttribute(box, 'x');
+    const initialY = getIntAttribute(box, 'y');
+    const initialWidth = getIntAttribute(box, 'width');
+    const initialHeight = getIntAttribute(box, 'height');
 
     // --- Figure out which of the four grabbers this is
     const isTop = grabber.getAttribute('cy') === '0';
@@ -99,7 +115,29 @@ function grabberMouseDown(event, grabber) {
             }
         },
         onCommit(event, target) {
+            // --- If we are about to commit an invalid change, abort instead
+            //     (in practice, this only occurs for new box draws, where they
+            //     go though a larval stage where they are too small to be a
+            //     valid box - for existing boxes, we don't allow the UI to shrink
+            //     below viable)
+            if(getIntAttribute(box, 'width') < minWidth ||
+               getIntAttribute(box, 'height') < minHeight) {
+                this.onAbort();
+                return;
+            }
+
             document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
+
+            const bounding_box_id = safeParseInt(stripRequiredPrefix(box.id, 'bb_'));
+            const x = getIntAttribute(box, 'x');
+            const y = getIntAttribute(box, 'y');
+            const w = getIntAttribute(box, 'width');
+            const h = getIntAttribute(box, 'height');
+            const updateUrl = `/updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
+            console.info('requestiong', updateUrl);
+            const response = fetch(updateUrl);
+            //const responseJson = await response.json();
+            //console.log('UPDATE RETURNED', responseJson);
             console.info('commit - post to server here!');
         },
         onAbort() {
@@ -108,8 +146,102 @@ function grabberMouseDown(event, grabber) {
             box.setAttribute('y', initialY);
             box.setAttribute('width', initialWidth);
             box.setAttribute('height', initialHeight);
+
+            // Used for new boxes that have not yet reached viable dimensions.
+            if(extraAbortAction)
+                extraAbortAction();
         }
     });
+}
+
+function puppyMouseDown(event, target) {
+    const scannedPageSvg = document.getElementById('scanned-page') ??
+          panic('unable to find scanned page element');
+    const scannedPageSvgLocation = scannedPageSvg.getBoundingClientRect();
+
+
+    console.info('--- PUPPY!');
+    console.info('event', event);
+    console.info({clientX: event.clientX, clientY: event.clientY,
+                  screenX: event.screenX, screenY: event.screenY});
+    console.info('scannedPageSvgLocation', scannedPageSvgLocation);
+    
+    const x = event.clientX - scannedPageSvgLocation.x ; // Wrong
+    const y = event.clientY - scannedPageSvgLocation.y; // Wrong
+    console.info({x, y});
+    console.info();
+
+    const grabber = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    grabber.classList.add('puppy');
+    grabber.setAttribute('cx', x)
+    grabber.setAttribute('cy', y)
+    grabber.setAttribute('r', 20);
+
+    // Want to figure out coords
+    console.info('adding grabber', grabber);
+    scannedPageSvg.appendChild(grabber);    
+}
+
+function newBoxMouseDown(event, target) {
+    
+    const scannedPageSvg = document.getElementById('scanned-page') ??
+          panic('unable to find scanned page element');
+    const scannedPageSvgLocation = scannedPageSvg.getBoundingClientRect();
+    
+    // --- Compute initial size and position for box
+    const x = event.clientX - scannedPageSvgLocation.x;
+    const y = event.clientY - scannedPageSvgLocation.y;
+    const width = 0;
+    const height = 0;
+    const grabberRadius = 12;
+
+    // --- Create the parent bounding group (long term we
+    //     will usually be adding to an existing group instead - but
+    //     do this for now).
+    const boundingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    boundingGroup.classList.add('group');
+    boundingGroup.classList.add('WORD');
+
+    // --- Create the boundingBox
+    const boundingBox = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    boundingBox.classList.add('box');
+    boundingBox.setAttribute('x', x)
+    boundingBox.setAttribute('y', y)
+    boundingBox.setAttribute('width', width)
+    boundingBox.setAttribute('height', height)
+    boundingGroup.appendChild(boundingBox);
+    
+    // --- Add the frame rect
+    const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    frame.classList.add('frame');
+    frame.setAttribute('x', 0)
+    frame.setAttribute('y', 0)
+    frame.setAttribute('width', '100%')
+    frame.setAttribute('height', '100%')
+    boundingBox.appendChild(frame);
+    
+    // --- Add the four corner grabber circles
+    const grabbers = [];
+    for(const cx of ['0', '100%']) {
+        for(const cy of ['0', '100%']) {
+            const grabber = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            grabber.classList.add('grabber');
+            grabber.setAttribute('cx', cx)
+            grabber.setAttribute('cy', cy)
+            grabber.setAttribute('r', grabberRadius)
+            grabbers.push(grabber);
+        }
+    }
+    grabbers.forEach(g=>boundingBox.appendChild(g));
+    const lowerLeftGrabber = grabbers[3];
+
+    // --- Add the new group to the document
+    scannedPageSvg.appendChild(boundingGroup);
+
+    // --- Start a resize operation on lower left grabber on the box,
+    //     removing to box if it never reaches a viable size.
+    console.info('grabber is', lowerLeftGrabber);
+    grabberMouseDown(event, lowerLeftGrabber, ()=>boundingGroup.remove());
 }
 
 /**
@@ -118,7 +250,7 @@ function grabberMouseDown(event, grabber) {
  * the event handler on the element of interest, and allowing the event
  * to bubble up to it.
  *
- * But we have chosen to forgo bubbling and handle all events at the page
+ * But we have chosen to forgo bubbling and handle all events at the svg page
  * level, so we need to deal with this occlusion problem some other way.
  *
  * This function is called at the beginning of every event handler to
@@ -291,6 +423,16 @@ function safeParseInt(v) {
     return r;
 }
 
+function getIntAttribute(elem, name) {
+    const attrText = elem.getAttribute(name);
+    if(!attrText) // missing attr is represented as "" or null as per the spec
+        throw new Error(`missing required integer attribute ${name} on elem ${elem}`);
+    const attrVal = Number.parseInt(attrText);
+    if(Number.isNaN(attrVal))
+        throw new Error(`expected integer valued attribute ${name} on elem ${elem} - got ${String(attrVal)}`);
+    return attrVal;
+}
+
 /**
  * Moves an element to be the last child of the containing element.
  *
@@ -314,4 +456,23 @@ function moveElementToEndOfParent(elem) {
     //     (note that appendChild is defined to remove the node if it already
     //     exists in the document - so this is a move operation)
     parent.appendChild(elem);
+}
+
+/**
+ * This is used in conjunction with the ?? operator to deal with unexpected
+ * nulls.
+ *
+ * For example:
+ * 
+ * document.getElementById('scanned-page') ?? panic('unable to find scanned page');
+ */
+function panic(message) {
+    throw new Error('panic: '+message);
+}
+
+function stripRequiredPrefix (s, prefix) {
+    if (s.startsWith (prefix))
+        return s.substring (prefix.length);
+    else
+        throw new Error(`expected string "${s}" to have prefix "${prefix}"`);
 }

@@ -127,8 +127,11 @@ export class Eval {
     
     evalIdentifier(s: Scope, e: Identifier): any {
         let v = s[e.name];
+        // TODO: probably remove the boundnames from the error unless in
+        //       dev mode - exceptions will be shown on client and having
+        //       list of names ... hackers ... etc ... security by obscurity ???
         if(v === undefined && !(v in s))
-            throw new Error(`jsterp: unbound identifier '${e.name}'`);
+            throw new Error(`jsterp: unbound identifier '${e.name}' - bound names are: ${utils.getAllPropertyNames(s).join()}`);
         return v;
     }
 
