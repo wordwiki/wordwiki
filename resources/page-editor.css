@@ -1,0 +1,169 @@
+/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+
+#annotatedPage {
+    position:relative; display:inline-block;
+}
+
+#annotatedPage > svg {
+    position:absolute; top:0; left:0;
+}
+
+/* ------------------------------------------------------------------ */
+/* --- Group Frame --------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+
+svg.group > rect.group-frame {
+  fill-opacity: 10%;
+  stroke-width:3;
+  stroke:yellow;
+  display: none;
+}
+
+/** Shadow the frame surrounding the hovered group */
+svg.group > rect.group-frame:hover {
+  stroke:orange;
+}
+
+/** Shadow the group for the hovered box */
+svg.group:has(> .box:hover) rect.group-frame {
+  stroke:orange;
+}
+
+/** Highlight the frame surrounding the active group */
+svg.group:has(> .box.active) > rect.group-frame {
+  stroke:orange;
+}
+
+/*.group:has(> .box.active) > rect.group-frame:hover {
+  stroke:orange;
+}
+*/
+
+/* ------------------------------------------------------------------ */
+/* --- Box ---------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+
+svg.box {
+  overflow: visible;
+}
+
+svg.box > rect.frame {
+    fill-opacity: 0%;
+    stroke-width:1;
+    stroke:grey;
+    visibility: visible;
+    pointer-events: all;
+}
+
+svg.group.active > svg.box > rect.frame {
+  stroke-width:3;
+  stroke:green;
+  visibility: visible;
+}
+
+#annotatedPage:not(.drag-in-progress) svg.group:not(.active):has(> .box:hover) > svg.box > rect.frame {
+  visibility: visible;
+  stroke: purple;
+  stroke-width:3;
+  visibility: visible;
+}
+
+svg.box > circle.grabber {
+  fill-opacity: 10%;
+  stroke-width:3;
+  stroke:red;
+  overflow: visible;
+  display: none;
+}
+
+#annotatedPage:not(.drag-in-progress) svg.box:hover > circle.grabber {
+  display: inline;
+}
+
+svg.box.active circle {
+  display: inline;
+}
+
+/*svg.box circle.grabber.active {
+  stroke: purple;
+}*/
+
+/* .group circle.grabber { */
+/*   fill-opacity: 10%; */
+/*   stroke-width:3; */
+/*   stroke:red; */
+/*   overflow: visible; */
+/*   display: none; */
+/* } */
+
+/* .group svg.box:hover circle.grabber { */
+/*   display: inline; */
+/* } */
+
+.group.LINE > rect.frame {
+    stroke:blue;
+    stroke-width:6;
+}
+
+.group:hover > rect.frame {
+    stroke:red !important;
+}
+
+.group.active > rect.frame {
+    stroke-width:3;
+    stroke:purple;
+}
+
+/* ------------------------------------------------------------------ */
+/* --- Context menu WIP --------------------------------------------- */
+/* ------------------------------------------------------------------ */
+.context-menu {
+}
+
+.context-menu > rect.frame {
+    stroke-width:3;
+    stroke:purple;
+}
+
+.context-menu > svg.items > svg > rect {
+    fill-opacity: 30%;
+    fill: blue;
+}
+
+.context-menu > svg.items > svg:hover > rect {
+    fill-opacity: 30%;
+    fill: yellow;
+}
+
+.context-menu > svg.items > svg > text {
+    font: bold 20px sans-serif;
+    fill: red;
+    stroke: red;
+}
+
+/* ------------------------------------------------------------------ */
+/* --- Page Jump Feature -------------------------------------------- */
+/* ------------------------------------------------------------------ */
+
+.page-jump, .current-page-jump {
+  text-decoration: none;
+  color: black;
+}
+
+.current-page-jump {
+  color: red;
+}
+
+.current-page-jump::before {
+  font-weight: bold;
+  color: navy;
+  content: "[";
+}
+
+.current-page-jump::after {
+  font-weight: bold;
+  color: navy;
+  content: "]";
+}

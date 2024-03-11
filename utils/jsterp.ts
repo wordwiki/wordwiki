@@ -159,6 +159,10 @@ export class Eval {
             obj[this.evalProperty(s, prop.key, prop.computed) as PropertyKey] =
                 this.eval(s, prop.value);
         }
+
+        // if(Object.hasOwn(obj, '__ref__'))
+        //     return resolveObjectRef(scope, obj);
+        // else
         return obj;
     }
 
@@ -325,6 +329,12 @@ export class Eval {
             default:
                 return this.eval(s, key);
         }
+    }
+
+    resolveObjectRef(s: Scope, ref: Record<string,any>): any {
+        const {resolver, ...args} = ref;
+        const argValues = Object.values(args);
+        return resolver(argValues);
     }
 }
 

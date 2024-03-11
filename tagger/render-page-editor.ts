@@ -50,13 +50,13 @@ export function renderPageEditor(page_id: number,
 
     const blocksSvg = 
         [...boxesByGroup.entries()].
-        map(([groupId, boxes])=>renderGroup(groupId, boxes));
+        map(([groupId, boxes])=>renderGroup(page, groupId, boxes));
 
     return (
         ['html', {},
          ['head', {},
-          ['link', {href: '/resources/page-tagger.css', rel:'stylesheet', type:'text/css'}],
-          ['script', {src:'/resources/page-tagger.js'}]],
+          ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
+          ['script', {src:'/resources/page-editor.js'}]],
          ['body', {},
 
           ['div', {},
@@ -72,11 +72,22 @@ export function renderPageEditor(page_id: number,
             blocksSvg]]]]);
 }
 
-export function renderGroup(groupId: number, boxes: BoxGroupJoin[]): any {
+export function renderGroup(page: ScannedPage,
+                            groupId: number, boxes: BoxGroupJoin[]): any {
     utils.assert(boxes.length > 0, 'Cannot render an empty group');
     const group: GroupJoinPartial = boxes[0];
+
+    // --- Group frame contains all boxes + a margin.
+    const groupMargin = 10;
+    const groupX = Math.max(Math.min(...boxes.map(b=>b.x)) - groupMargin, 0);
+    const groupY = Math.max(Math.min(...boxes.map(b=>b.y)) - groupMargin, 0);
+    const groupLeft = Math.min(Math.max(...boxes.map(b=>b.x+b.w)) + groupMargin, page.width);
+    const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, page.height);
     return (
         ['svg', {class:"group WORD", id:`bg_${groupId}`},
+         ['rect', {class:"group-frame", x:groupX, y:groupY,
+                   width:groupLeft-groupX,
+                   height:groupBottom-groupY}],
          boxes.map(b=>renderBox(b))
         ]);
 }
@@ -95,7 +106,7 @@ export function renderBox(box: BoxGroupJoin): any {
 }
 
 export function renderPageJumper(current_page_num: number, total_pages: number): any {
-    const targets = Array.from(new Set(
+    const targetPageNumbers = Array.from(new Set(
         [1,
          ...range(1, Math.floor(total_pages/100)+1).map(v=>v*100),
          ...range(0, 10).map(v=>Math.floor(current_page_num/100)*100+v*10),
@@ -104,11 +115,9 @@ export function renderPageJumper(current_page_num: number, total_pages: number):
          current_page_num+1, current_page_num+2,
          total_pages]))
         .filter(p=>p>=1 && p<=total_pages)
-        .toSorted();
-
-    console.info(targets);
+        .toSorted((a, b) => a - b);
     
-    return targets.map(n=>
+    return targetPageNumbers.map(n=>
         [['a', {href:`./${n}.html`,
                 class: n===current_page_num?'current-page-jump':'page-jump'}, n],
          ' ']);

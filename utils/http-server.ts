@@ -40,6 +40,21 @@ export interface Response {
     body: string,
 }
 
+export function htmlResponse(htmlText: string): Response {
+    return {status: 200, headers: {}, body: htmlText};            
+}
+
+export function jsonResponse(json:any): Response {
+    return jsonTextResponse(JSON.stringify(json));
+}
+
+export function jsonTextResponse(jsonText: string): Response {
+    // TODO JSON content type.
+    return {status: 200, headers: {}, body: jsonText};            
+}
+
+//export function forwardResponse(url: 
+
 //export type RequestHandler = (request: Request) => Response;
 
 interface HttpServerConfig {

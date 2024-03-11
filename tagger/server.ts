@@ -1,7 +1,7 @@
 import * as server from '../utils/http-server.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {friendlyRenderPageEditor} from './page-editor.ts';
-import * as pageEditor from './page-editor.ts';
+import {friendlyRenderPageEditor} from './render-page-editor.ts';
+import * as pageEditor from './render-page-editor.ts';
 import {ScannedDocument, ScannedPage} from './schema.ts';
 import * as schema from './schema.ts';
 import {evalJsExprSrc} from '../utils/jsterp.ts';
@@ -26,6 +26,10 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
     console.info('tagger request', request);
     const requestUrl = new URL(request.url);
     const filepath = decodeURIComponent(requestUrl.pathname);
+    const searchParams: Record<string,string> = {};
+    requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
+    if(Object.keys(searchParams).length > 0)
+        console.info('Search params are:', searchParams);
 
     // TEMPORARY MANUAL HANDING OF THE ONE VANITY URL WE ARE CURRENTLY SUPPORTING
     const pageRequest = /^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+)[.]html)$/.exec(filepath);
@@ -44,11 +48,48 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
         return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
     } else {
         console.info('FILEPATH is ', filepath);
-        const jsExprSrc = strings.stripRequiredPrefix(filepath, '/');
-        console.info('about to eval', jsExprSrc);
-        const result = evalJsExprSrc(allRoutes(), jsExprSrc);
-        console.info('result is', result);
-        return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+        const jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
+
+
+        // --- Top level of root scope is active routes
+        const routes = allRoutes();
+        let rootScope = routes;
+
+        // --- If we have URL search parameters, push them as a scope
+        if(Object.keys(searchParams).length > 0)
+            rootScope = Object.create(rootScope, searchParams);
+
+        // --- If the query request body is a {}, then it is form parms or
+        //     a json {} - push on scope.
+        if(utils.isObjectLiteral(request.body))
+            rootScope = Object.create(rootScope, request.body as Record<string,any>);
+
+        console.info('about to eval', jsExprSrc, 'with root scope ',
+                     utils.getAllPropertyNames(rootScope));
+        
+        let result = null;
+        try {
+            result = evalJsExprSrc(rootScope, jsExprSrc);
+            while(result instanceof Promise)
+                result = await result;
+        } catch(e) {
+            // TODO more fiddling here.
+            return {status: 400, headers: {}, body: String(e)};            
+        }
+
+        if(typeof result === 'string')
+            return server.htmlResponse(result);
+        else
+            return server.jsonTextResponse(JSON.stringify(result));
+        
+        // result can be a command - like forward
+        // result can be json, a served page, etc
+        // so - want to define a result interface - and have the individualt mentods rethren tnat
+        // this can also be the opporthunity to allow streaming
+        // this mech is part of our deno server stuff.
+        // have shortcuts for returning other things:
+        
+        //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
     }
 }
 

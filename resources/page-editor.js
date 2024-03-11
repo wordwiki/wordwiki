@@ -6,23 +6,38 @@ function pageEditorMouseDown(event) {
 
     // --- Adjust event target to be ancestor or self element of application interest.
     const target = adjustEventTarget(event.target);
+    const widgetKind = getWidgetKind(target);
 
     // --- If we have an active drag operation - abort it
     dragTxAbort();
 
-    if(event.shiftKey) {
+    switch(true) {
+    case event.shiftKey: {
         // --- Holding down shift allows drawing new boxes even
         //     if the click action would normally be interpreted
         //     by another widget in that space.
-        newBoxMouseDown(event, target);
-    } else {
+        newBoxMouseDown(event, target, event.ctrlKey);
+        break;
+    }
+
+    case event.ctrlKey && widgetKind === 'box': {
+        // --- Ctrl click on a box adds the clicked on box to the currently selected group
+        const currentlySelectedGroup = getSelectedGroup();
+        if(currentlySelectedGroup) {
+            addBoxToGroup(target, currentlySelectedGroup);
+        }
+        break;
+    }
+
+    default: {
         // --- Dispatch the click based on widget kind
-        switch(getWidgetKind(target)) {
+        switch(widgetKind) {
         case 'box': boxMouseDown(event, target); break
         case 'grabber': grabberMouseDown(event, target); break;
-        default: newBoxMouseDown(event, target); break;
+        default: newBoxMouseDown(event, target, event.ctrlKey); break;
         }
-    }
+        break;
+    }}
 }
 
 function pageEditorMouseMove(event) {
@@ -58,7 +73,8 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
     selectBoxGrabber(grabber);
 
     // --- Find the box that contains this grabber.
-    const box = getSelectedBox();
+    const box = getSelectedBox() ?? panic('failed to get box for grabber');
+    const group = getSelectedGroup() ?? panic('failed to get group for grabber');
 
     // --- Store the initial coordinates of the box in case we need to abort.
     const initialX = getIntAttribute(box, 'x');
@@ -113,6 +129,7 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
                 break;
             }
             }
+            updateGroupDimensions(group);
         },
         onCommit(event, target) {
             // --- If we are about to commit an invalid change, abort instead
@@ -128,17 +145,35 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
 
             document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
 
-            const bounding_box_id = safeParseInt(stripRequiredPrefix(box.id, 'bb_'));
+            const bounding_box_id = (box.id && safeParseInt(stripRequiredPrefix(box.id, 'bb_'))) || undefined;
             const x = getIntAttribute(box, 'x');
             const y = getIntAttribute(box, 'y');
             const w = getIntAttribute(box, 'width');
             const h = getIntAttribute(box, 'height');
-            const updateUrl = `/updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
-            console.info('requestiong', updateUrl);
-            const response = fetch(updateUrl);
-            //const responseJson = await response.json();
-            //console.log('UPDATE RETURNED', responseJson);
-            console.info('commit - post to server here!');
+            if(!bounding_box_id) {
+                console.info('TODO add code to add a new bounding box');
+                rpc`newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`.
+                fetch(`/newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
+                    response=>{
+                        console.info('SUCCESS', successValue);
+                        // TODO: magic here to handle error messaging to user, also calling onAbort if
+                        //       the request fails
+                        // TODO: factor this to a separate RPC thing.
+                        console.info('RESPONSE JSON', response.json());
+                    },
+                    error=>{
+                        console.info('FAIL', failValue);
+                    });
+                // possibly to an existing group, or starting a new group.
+            } else {
+                fetch(`/updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
+                    successValue=>{
+                        console.info('SUCCESS', successValue);
+                    },
+                    failValue=>{
+                        console.info('FAIL', failValue);
+                    });
+            }
         },
         onAbort() {
             document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
@@ -146,6 +181,7 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
             box.setAttribute('y', initialY);
             box.setAttribute('width', initialWidth);
             box.setAttribute('height', initialHeight);
+            updateGroupDimensions(group);
 
             // Used for new boxes that have not yet reached viable dimensions.
             if(extraAbortAction)
@@ -182,7 +218,7 @@ function puppyMouseDown(event, target) {
     scannedPageSvg.appendChild(grabber);    
 }
 
-function newBoxMouseDown(event, target) {
+function newBoxMouseDown(event, target, addToCurrentGroup) {
     
     const scannedPageSvg = document.getElementById('scanned-page') ??
           panic('unable to find scanned page element');
@@ -195,13 +231,6 @@ function newBoxMouseDown(event, target) {
     const height = 0;
     const grabberRadius = 12;
 
-    // --- Create the parent bounding group (long term we
-    //     will usually be adding to an existing group instead - but
-    //     do this for now).
-    const boundingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    boundingGroup.classList.add('group');
-    boundingGroup.classList.add('WORD');
-
     // --- Create the boundingBox
     const boundingBox = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     boundingBox.classList.add('box');
@@ -209,7 +238,6 @@ function newBoxMouseDown(event, target) {
     boundingBox.setAttribute('y', y)
     boundingBox.setAttribute('width', width)
     boundingBox.setAttribute('height', height)
-    boundingGroup.appendChild(boundingBox);
     
     // --- Add the frame rect
     const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -235,13 +263,70 @@ function newBoxMouseDown(event, target) {
     grabbers.forEach(g=>boundingBox.appendChild(g));
     const lowerLeftGrabber = grabbers[3];
 
-    // --- Add the new group to the document
-    scannedPageSvg.appendChild(boundingGroup);
+    const selectedGroup = getSelectedGroup();
+    if(addToCurrentGroup && selectedGroup) {
+        // --- Add our new box to the active group
+        selectedGroup.appendChild(boundingBox);
 
-    // --- Start a resize operation on lower left grabber on the box,
-    //     removing to box if it never reaches a viable size.
-    console.info('grabber is', lowerLeftGrabber);
-    grabberMouseDown(event, lowerLeftGrabber, ()=>boundingGroup.remove());
+        // --- Start a resize on our new box, dropping the box on abort
+        grabberMouseDown(event, lowerLeftGrabber, ()=>boundingBox.remove());
+
+    } else {
+        // --- Create the parent bounding group (long term we
+        //     will usually be adding to an existing group instead - but
+        //     do this for now).
+        const boundingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        boundingGroup.classList.add('group');
+        boundingGroup.classList.add('WORD');
+
+        // --- Create bounding group frame
+        const groupFrame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        groupFrame.classList.add('group-frame');
+        groupFrame.setAttribute('x', 0)
+        groupFrame.setAttribute('y', 0)
+        groupFrame.setAttribute('width', 0);
+        groupFrame.setAttribute('height', 0);
+        boundingGroup.appendChild(groupFrame);
+
+        // --- Add our new box as the initial box in our new group
+        boundingGroup.appendChild(boundingBox);
+
+        // --- Add the new group to the document
+        scannedPageSvg.appendChild(boundingGroup);
+
+        // --- Resize the bounding group frame
+        updateGroupDimensions(boundingGroup);
+
+        // --- Start a resize on our new box, dropping the whole group on abort
+        grabberMouseDown(event, lowerLeftGrabber, ()=>boundingGroup.remove());
+    }    
+}
+
+/**
+ * If there is a currently selected group, add the specified
+ * box to that group.
+ *
+ * TODO more work once we get layers working.
+ */
+function addBoxToGroup(box, group) {
+    isBox(box) && isGroup(group) || panic();
+    const fromGroup = box.parentElement;
+    isGroup(fromGroup) || panic();
+    
+    group.appendChild(box);
+    updateGroupDimensions(group);
+    
+    if(getBoxesForGroup(fromGroup).length === 0) {
+        fromGroup.remove();
+    } else {
+        updateGroupDimensions(fromGroup);
+    }
+            
+    // TODO: update db
+    // TODO: deal with empty source gropu
+    // TODO: resize source group if still non-empty
+    // TODO: deal with layers (ie. maybe copy etc).
+    
 }
 
 /**
@@ -264,6 +349,41 @@ function adjustEventTarget(target) {
     default:
         return target;
     }
+}
+
+/**
+ * Updates a groups dimensions to contain all of the groups boxes +
+ * a margin.
+ */
+function updateGroupDimensions(group) {
+    isGroup(group) || panic();
+
+    // --- Get page width and height
+    const pageImage = document.getElementById('scanned-page') ?? panic();
+    const pageWidth = getIntAttribute(pageImage, 'width');
+    const pageHeight = getIntAttribute(pageImage, 'height');
+    
+    // --- Query the dimensions for all boxes in this group.
+    const boxDimensions = getBoxesForGroup(group).
+          map(box=>({x: getIntAttribute(box, 'x'),
+                     y: getIntAttribute(box, 'y'),
+                     w: getIntAttribute(box, 'width'),
+                     h: getIntAttribute(box, 'height')}));
+    
+    // --- Group frame contains all boxes + a margin.
+    const groupMargin = 10;
+    const groupX = Math.max(Math.min(...boxDimensions.map(b=>b.x)) - groupMargin, 0);
+    const groupY = Math.max(Math.min(...boxDimensions.map(b=>b.y)) - groupMargin, 0);
+    const groupLeft = Math.min(Math.max(...boxDimensions.map(b=>b.x+b.w)) + groupMargin, pageWidth);
+    const groupBottom = Math.min(Math.max(...boxDimensions.map(b=>b.y+b.h)) + groupMargin, pageHeight);
+
+    // --- Update group frame dimensions
+    const groupFrame = group.querySelector('rect.group-frame') ??
+          panic('could not find group frame');
+    setAttributeIfChanged(groupFrame, 'x', groupX);
+    setAttributeIfChanged(groupFrame, 'y', groupY);
+    setAttributeIfChanged(groupFrame, 'width', groupLeft-groupX);
+    setAttributeIfChanged(groupFrame, 'height', groupBottom-groupY);
 }
 
 // ---------------------------------------------------------------------------
@@ -344,9 +464,13 @@ function selectBoxGrabber(grabber) {
  * will reduce the blast radius if we need to make
  * structural changes to the markup.
  */
-
 function getSelectedGroup() {
     return document.querySelector('svg.group.active');
+}
+
+function getBoxesForGroup(group) {
+    isGroup(group) || panic();
+    return Array.from(group.querySelectorAll('svg.box'));
 }
 
 function getSelectedBox() {
@@ -466,7 +590,7 @@ function moveElementToEndOfParent(elem) {
  * 
  * document.getElementById('scanned-page') ?? panic('unable to find scanned page');
  */
-function panic(message) {
+function panic(message = 'internal error') {
     throw new Error('panic: '+message);
 }
 
@@ -475,4 +599,28 @@ function stripRequiredPrefix (s, prefix) {
         return s.substring (prefix.length);
     else
         throw new Error(`expected string "${s}" to have prefix "${prefix}"`);
+}
+
+/**
+ * We set some attrs at high frequency, and often we are setting them to
+ * the same value.  The browser DOM code probably recognizes this and does
+ * not register it as a change - but just in case, this function can be
+ * used that avoid doing the set if the value (after conversion to string
+ * as per DOM convention) has not changed.
+ */
+function setAttributeIfChanged(elem, attrName, newValue) {
+    const prevValueString = elem.getAttribute(attrName);
+    const newValueString = newValue == undefined ? '' : String(newValue);
+    if(newValueString !== prevValueString)
+        elem.setAttribute(attrName, newValueString);
+}
+
+function mergeTemplate(tmplStrs, substs) {
+    // There is always at least one element in tmplStrs (as per ES2016 spec)
+    let result = tmplStrs[0];
+    substs.forEach((subst, i) => {
+        result += String(subst);
+        result += tmplStrs[i+1];
+    });
+    return result;
 }

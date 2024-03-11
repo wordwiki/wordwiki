@@ -178,3 +178,10 @@ const fieldToFieldViewInst = new FieldToFieldView();
 export function fieldToFieldView(f: Field): FieldView {
     return f.accept(fieldToFieldViewInst, undefined);
 }
+
+/**
+ *
+ */
+export function renderEditor(r: RelationFieldView): any {
+    
+}
