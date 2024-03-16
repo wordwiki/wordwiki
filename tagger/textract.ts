@@ -7,7 +7,7 @@ import * as content from "../utils/content-store.ts";
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 //import * as scannedDocument from "./scanned-document.ts";
-import {selectScannedDocument, selectScannedDocumentByFriendlyId, selectScannedPage, ScannedPage, scannedPageFieldNames, Layer, selectLayerByLayerName, BoundingBox, BoundingGroup, boundingBoxFieldNames, selectLayer} from  "./schema.ts";
+import {selectScannedDocument, selectScannedDocumentByFriendlyId, selectScannedPage, ScannedPage, scannedPageFieldNames, Layer, selectLayerByLayerName, BoundingBox, BoundingGroup, boundingBoxFieldNames, selectLayer, getOrCreateNamedLayer} from  "./schema.ts";
 import {awsCmdPath} from './config.ts';
 
 // As of Jan 2024, textract cost is $1.50USD/1000 pages (+S3, transfer etc).
@@ -85,22 +85,6 @@ function insertTextractBlock(document_id: number, layer_id: number, page_id: num
     return db().insert<BoundingBox, 'bounding_box_id'>(
         'bounding_box', {bounding_group_id, document_id, layer_id, page_id,
                          x, y, w, h, text}, 'bounding_box_id');
-}
-
-/**
- * Find a named reference layer, creating it if it does not yet exist.
- */
-function getOrCreateNamedLayer(document_id: number, layer_name: string, is_reference_layer: boolnum): number {
-    const alreadyExistingLayer = selectLayerByLayerName().first({document_id, layer_name});
-    if(alreadyExistingLayer) {
-        if(alreadyExistingLayer.is_reference_layer !== is_reference_layer)
-            throw new Error(`Expected is_reference_layer to be ${is_reference_layer} for layer ${layer_name} in document ${document_id}`);
-        else
-            return alreadyExistingLayer.layer_id;
-    } else {
-        return db().insert<Layer, 'layer_id'>(
-            'layer', {document_id, layer_name, is_reference_layer}, 'layer_id');
-    }
 }
 
 /**

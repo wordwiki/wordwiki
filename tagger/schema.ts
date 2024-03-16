@@ -339,6 +339,22 @@ export const selectLayerByLayerName = ()=>db().prepare<Layer, {document_id: numb
 /**/          FROM layer
 /**/          WHERE document_id = :document_id AND layer_name = :layer_name`);
 
+/**
+ * Find a named reference layer, creating it if it does not yet exist.
+ */
+export function getOrCreateNamedLayer(document_id: number, layer_name: string, is_reference_layer: boolnum): number {
+    const alreadyExistingLayer = selectLayerByLayerName().first({document_id, layer_name});
+    if(alreadyExistingLayer) {
+        if(alreadyExistingLayer.is_reference_layer !== is_reference_layer)
+            throw new Error(`Expected is_reference_layer to be ${is_reference_layer} for layer ${layer_name} in document ${document_id}`);
+        else
+            return alreadyExistingLayer.layer_id;
+    } else {
+        return db().insert<Layer, 'layer_id'>(
+            'layer', {document_id, layer_name, is_reference_layer}, 'layer_id');
+    }
+}
+
 export function deleteLayer(layer_id: number) {
     db().execute<{layer_id: number}>
         ('DELETE FROM TABLE bounding_box WHERE layer_id = :layer_id',
@@ -370,6 +386,11 @@ export interface BoundingGroup {
      */
     layer_id: number;
 
+    /**
+     *
+     */
+    color?: string;
+    
     /**
      * The order of a bounding group within a document is based on the order of
      * (page_number_of_first_box, column_number, x_of_first_box, y_of_first_box).
@@ -431,7 +452,7 @@ export interface BoundingGroup {
 export type BoundingGroupOpt = Partial<BoundingGroup>;
 export const boundingGroupFieldNames: Array<keyof BoundingGroup> = [
     'bounding_group_id', 'document_id',
-    'layer_id', 'column_number',
+    'layer_id', 'color', 'column_number',
     'heading_level', 'heading', 'tags',
     'transcription', 'expandedTranscription', 'translation',
     'notes'];
@@ -441,6 +462,7 @@ const createBoundingGroupDml = block`
 /**/       bounding_group_id INTEGER PRIMARY KEY ASC,
 /**/       document_id INTEGER NOT NULL,
 /**/       layer_id INTEGER NOT NULL,
+/**/       color TEXT,
 /**/       column_number INTEGER,
 /**/       heading_level INTEGER,
 /**/       heading INTEGER,

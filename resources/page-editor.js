@@ -20,19 +20,37 @@ function pageEditorMouseDown(event) {
         break;
     }
 
-    case event.ctrlKey && widgetKind === 'box': {
-        // --- Ctrl click on a box adds the clicked on box to the currently selected group
-        const currentlySelectedGroup = getSelectedGroup();
-        if(currentlySelectedGroup) {
-            addBoxToGroup(target, currentlySelectedGroup);
-        }
-        break;
-    }
-
     default: {
         // --- Dispatch the click based on widget kind
         switch(widgetKind) {
-        case 'box': boxMouseDown(event, target); break
+        case 'box': {
+            if(event.ctrlKey) {
+                // --- Ctrl click on a box adds the clicked on box to the currently selected group
+                const currentlySelectedGroup = getSelectedGroup();
+                if(currentlySelectedGroup) {
+                    addBoxToGroup(target, currentlySelectedGroup);
+                }
+            } else {
+                // --- Normal click on a box begins a new selection with just
+                //     this box (and the containing group in the group level selection).
+                selectBox(target);
+            }
+            break;
+        };
+        case 'ref-box': {
+            const addToCurrentGroup = event.ctrlKey;
+            if(addToCurrentGroup) {
+                const currentlySelectedGroup = getSelectedGroup();
+                if(currentlySelectedGroup) {
+                    migrateRefBoxToExistingGroup(target, currentlySelectedGroup);
+                    selectBox(target);
+                }
+            } else {
+                migrateRefBoxToNewGroup(target);
+                selectBox(target);
+            }
+            break;
+        }
         case 'grabber': grabberMouseDown(event, target); break;
         default: newBoxMouseDown(event, target, event.ctrlKey); break;
         }
@@ -48,6 +66,28 @@ function pageEditorMouseMove(event) {
 function pageEditorMouseUp(event) {
     const target = adjustEventTarget(event.target);
     dragTxCommit(event, target);
+}
+
+/**
+ * Sometimes the element of interest to the application will be occluded
+ * by a child decoration element.  Normally this is handled by registering
+ * the event handler on the element of interest, and allowing the event
+ * to bubble up to it.
+ *
+ * But we have chosen to forgo bubbling and handle all events at the svg page
+ * level, so we need to deal with this occlusion problem some other way.
+ *
+ * This function is called at the beginning of every event handler to
+ * adjust the event target to the nearest containing element of application
+ * interest.
+ */
+function adjustEventTarget(target) {
+    switch(true) {
+    case target?.tagName === 'rect' && target?.classList?.contains('frame'):
+            return target.parentElement;
+    default:
+        return target;
+    }
 }
 
 function boxMouseDown(event, target) {
@@ -123,7 +163,7 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
                 box.setAttribute('height', Math.max(initialHeight + deltaY, minHeight));
                 break;
             }
-            case !isTop && !isLeft: {// bottom right grabber
+            case !isTop && !isLeft: { // bottom right grabber
                 box.setAttribute('width', Math.max(initialWidth + deltaX, minWidth));
                 box.setAttribute('height', Math.max(initialHeight + deltaY, minHeight));
                 break;
@@ -151,28 +191,28 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
             const w = getIntAttribute(box, 'width');
             const h = getIntAttribute(box, 'height');
             if(!bounding_box_id) {
-                console.info('TODO add code to add a new bounding box');
-                rpc`newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`.
-                fetch(`/newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
-                    response=>{
-                        console.info('SUCCESS', successValue);
-                        // TODO: magic here to handle error messaging to user, also calling onAbort if
-                        //       the request fails
-                        // TODO: factor this to a separate RPC thing.
-                        console.info('RESPONSE JSON', response.json());
-                    },
-                    error=>{
-                        console.info('FAIL', failValue);
-                    });
-                // possibly to an existing group, or starting a new group.
+                // fetch(`/newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
+                //     response=>{ console.info('added new box', response); },
+                //     error=>{ this.onAbort(); alert('Failed to add new box'); });
+                rpc`newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`.then(
+                    response=>{ console.info('added new box', response); },
+                    error=>{ this.onAbort(); alert('Failed to add new box'); });
             } else {
-                fetch(`/updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
-                    successValue=>{
-                        console.info('SUCCESS', successValue);
-                    },
-                    failValue=>{
-                        console.info('FAIL', failValue);
-                    });
+                (async ()=>{
+                    try {
+                        await rpc`updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
+                    } catch (e) {
+                        alert(`Failed to resize bounding box ${e}`);
+                        this.onAbort();
+                    }
+                })();
+                // fetch(`/updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
+                //     successValue=>{
+                //         console.info('SUCCESS', successValue);
+                //     },
+                //     failValue=>{
+                //         this.onAbort(); alert('Failed to resize bounding box');
+                //     });
             }
         },
         onAbort() {
@@ -190,34 +230,9 @@ function grabberMouseDown(event, grabber, extraAbortAction=undefined) {
     });
 }
 
-function puppyMouseDown(event, target) {
-    const scannedPageSvg = document.getElementById('scanned-page') ??
-          panic('unable to find scanned page element');
-    const scannedPageSvgLocation = scannedPageSvg.getBoundingClientRect();
-
-
-    console.info('--- PUPPY!');
-    console.info('event', event);
-    console.info({clientX: event.clientX, clientY: event.clientY,
-                  screenX: event.screenX, screenY: event.screenY});
-    console.info('scannedPageSvgLocation', scannedPageSvgLocation);
-    
-    const x = event.clientX - scannedPageSvgLocation.x ; // Wrong
-    const y = event.clientY - scannedPageSvgLocation.y; // Wrong
-    console.info({x, y});
-    console.info();
-
-    const grabber = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    grabber.classList.add('puppy');
-    grabber.setAttribute('cx', x)
-    grabber.setAttribute('cy', y)
-    grabber.setAttribute('r', 20);
-
-    // Want to figure out coords
-    console.info('adding grabber', grabber);
-    scannedPageSvg.appendChild(grabber);    
-}
-
+/**
+ *
+ */
 function newBoxMouseDown(event, target, addToCurrentGroup) {
     
     const scannedPageSvg = document.getElementById('scanned-page') ??
@@ -229,6 +244,68 @@ function newBoxMouseDown(event, target, addToCurrentGroup) {
     const y = event.clientY - scannedPageSvgLocation.y;
     const width = 0;
     const height = 0;
+
+    // --- Create the boundingBox
+    const boundingBox = createNewBoundingBox(x, y, width, height);
+    const lowerLeftGrabber = boundingBox.querySelector('circle.grabber[cx="100%"][cy="100%"]');
+    if(!lowerLeftGrabber)
+        throw new Error('failed to find lower left grabber in newly created bounding box');
+
+    const selectedGroup = getSelectedGroup();
+    if(addToCurrentGroup && selectedGroup) {
+        // --- Add our new box to the active group
+        selectedGroup.appendChild(boundingBox);
+
+        // --- Start a resize on our new box, dropping the box on abort
+        grabberMouseDown(event, lowerLeftGrabber, ()=>boundingBox.remove());
+
+    } else {
+        // --- Create the parent bounding group
+        const boundingGroup = createNewBoundingGroup(chooseNewGroupColor(x, y));
+
+        // --- Add our new box as the initial box in our new group
+        boundingGroup.appendChild(boundingBox);
+
+        // --- Add the new group to the document
+        scannedPageSvg.appendChild(boundingGroup);
+
+        // --- Resize the bounding group frame
+        updateGroupDimensions(boundingGroup);
+
+        // --- Start a resize on our new box, dropping the whole group on abort
+        grabberMouseDown(event, lowerLeftGrabber, ()=>boundingGroup.remove());
+    }    
+}
+
+// ---------------------------------------------------------------------------------
+// --- Bounding Box/Group operations -----------------------------------------------
+// ---------------------------------------------------------------------------------
+
+/**
+ * Creates a new bounding group (not yet added to DOM).
+ */
+function createNewBoundingGroup(color=undefined) {
+    const boundingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    if(color)
+        boundingGroup.setAttribute('stroke', color);
+    boundingGroup.classList.add('group');
+
+    // --- Create bounding group frame
+    const groupFrame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    groupFrame.classList.add('group-frame');
+    groupFrame.setAttribute('x', 0)
+    groupFrame.setAttribute('y', 0)
+    groupFrame.setAttribute('width', 0);
+    groupFrame.setAttribute('height', 0);
+    boundingGroup.appendChild(groupFrame);
+
+    return boundingGroup;
+}
+
+/**
+ * Creates a new bounding box (not yet added to the DOM).
+ */
+function createNewBoundingBox(x, y, width, height) {
     const grabberRadius = 12;
 
     // --- Create the boundingBox
@@ -257,50 +334,58 @@ function newBoxMouseDown(event, target, addToCurrentGroup) {
             grabber.setAttribute('cx', cx)
             grabber.setAttribute('cy', cy)
             grabber.setAttribute('r', grabberRadius)
-            grabbers.push(grabber);
+            boundingBox.appendChild(grabber);
         }
     }
-    grabbers.forEach(g=>boundingBox.appendChild(g));
-    const lowerLeftGrabber = grabbers[3];
 
-    const selectedGroup = getSelectedGroup();
-    if(addToCurrentGroup && selectedGroup) {
-        // --- Add our new box to the active group
-        selectedGroup.appendChild(boundingBox);
+    return boundingBox;
+}    
 
-        // --- Start a resize on our new box, dropping the box on abort
-        grabberMouseDown(event, lowerLeftGrabber, ()=>boundingBox.remove());
+/**
+ *
+ */
+function migrateRefBoxToExistingGroup(box, group) {
+    isRefBox(box) || panic('expected ref box');
+    isGroup(group) || panic('expected group');
 
-    } else {
-        // --- Create the parent bounding group (long term we
-        //     will usually be adding to an existing group instead - but
-        //     do this for now).
-        const boundingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        boundingGroup.classList.add('group');
-        boundingGroup.classList.add('WORD');
-
-        // --- Create bounding group frame
-        const groupFrame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        groupFrame.classList.add('group-frame');
-        groupFrame.setAttribute('x', 0)
-        groupFrame.setAttribute('y', 0)
-        groupFrame.setAttribute('width', 0);
-        groupFrame.setAttribute('height', 0);
-        boundingGroup.appendChild(groupFrame);
-
-        // --- Add our new box as the initial box in our new group
-        boundingGroup.appendChild(boundingBox);
-
-        // --- Add the new group to the document
-        scannedPageSvg.appendChild(boundingGroup);
-
-        // --- Resize the bounding group frame
-        updateGroupDimensions(boundingGroup);
-
-        // --- Start a resize on our new box, dropping the whole group on abort
-        grabberMouseDown(event, lowerLeftGrabber, ()=>boundingGroup.remove());
-    }    
+    box.classList.remove('ref');
+    group.appendChild(box);
+    // XXX TODO do RPC, update ID
 }
+
+/**
+ *
+ */
+function migrateRefBoxToNewGroup(box) {
+    isRefBox(box) || panic('expected ref box');
+
+    box.classList.remove('ref');
+    
+    const newGroup = createNewBoundingGroup(chooseNewGroupColor(getIntAttribute(box, 'x'),
+                                                                getIntAttribute(box, 'y')));
+    newGroup.appendChild(box);
+    updateGroupDimensions(newGroup);
+
+    const scannedPageSvg = document.getElementById('scanned-page') ??
+          panic('unable to find scanned page element');
+
+    scannedPageSvg.appendChild(newGroup);
+
+    // (async ()=>{
+    //     try {
+    //         const {new_group_Id, new_box_id} = await rpc`copyRefBoxToNewGroup(${getIntAttribute(box, 'id')})`;
+    //         newGroupId.id = newGroupId;
+    //         box.id = newBoxId;
+    //     } catch (e) {
+    //         // XXX rollback logic here.
+    //         // XXX we also have to worry about race conditions with a subseqent resize ???
+    //         alert(`Failed create new box ${e}`);
+    //     }
+    // })();
+    
+    // XXX TODO RPC, update ID
+}
+
 
 /**
  * If there is a currently selected group, add the specified
@@ -329,31 +414,12 @@ function addBoxToGroup(box, group) {
     
 }
 
-/**
- * Sometimes the element of interest to the application will be occluded
- * by a child decoration element.  Normally this is handled by registering
- * the event handler on the element of interest, and allowing the event
- * to bubble up to it.
- *
- * But we have chosen to forgo bubbling and handle all events at the svg page
- * level, so we need to deal with this occlusion problem some other way.
- *
- * This function is called at the beginning of every event handler to
- * adjust the event target to the nearest containing element of application
- * interest.
- */
-function adjustEventTarget(target) {
-    switch(true) {
-    case target?.tagName === 'rect' && target?.classList?.contains('frame'):
-        return target.parentElement;
-    default:
-        return target;
-    }
-}
 
 /**
  * Updates a groups dimensions to contain all of the groups boxes +
  * a margin.
+ *
+ * This should be called after altering any contained bounding boxes.
  */
 function updateGroupDimensions(group) {
     isGroup(group) || panic();
@@ -384,6 +450,17 @@ function updateGroupDimensions(group) {
     setAttributeIfChanged(groupFrame, 'y', groupY);
     setAttributeIfChanged(groupFrame, 'width', groupLeft-groupX);
     setAttributeIfChanged(groupFrame, 'height', groupBottom-groupY);
+}
+
+const groupColors = [
+    'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
+    'seagreen', 'steelblue', 'dodgerblue', 'peru', 'tan', 'rebeccapurple'];
+
+/**
+ *
+ */
+function chooseNewGroupColor(x, y) {
+    return groupColors[randomInt(groupColors.length)];
 }
 
 // ---------------------------------------------------------------------------
@@ -430,8 +507,7 @@ function clearSelection() {
  * Select a group.
  */
 function selectGroup(group) {
-    if(!isGroup(group))
-        throw new Error('select group called on non-group');
+    isGroup(group) || panic('select group called on non-group');
     clearSelection();
     group.classList.add('active');
     moveElementToEndOfParent(group);
@@ -441,8 +517,7 @@ function selectGroup(group) {
  * Select a box and the containing group.
  */
 function selectBox(box) {
-    if(!isBox(box))
-        throw new Error('select box called on non-box');
+    isBox(box) || panic('select box called on non-box');
     selectGroup(box.parentElement);
     box.classList.add('active');
     moveElementToEndOfParent(box);
@@ -452,8 +527,7 @@ function selectBox(box) {
  * Select a grabber and the containing box and group.
  */
 function selectBoxGrabber(grabber) {
-    if(!isGrabber(grabber))
-        throw new Error('select grabber called on non-grabber');
+    isGrabber(grabber) || panic('select grabber called on non-grabber');
     selectBox(grabber.parentElement);
     grabber.classList.add('active');
 }
@@ -489,17 +563,26 @@ function isBox(elem) {
     return elem.classList.contains('box');
 }
 
+function isRef(elem) {
+    return elem.classList.contains('ref');
+}
+
+function isRefBox(elem) {
+    return isBox(elem) && isRef(elem);
+}
+
 function isGrabber(elem) {
     return elem.classList.contains('grabber');
 }
 
 function getWidgetKind(elem) {
     const classList = elem.classList;
+    const isInRefLayer = isRef(elem);
     switch(true) {
-      case classList.contains('group'): return 'group';
-      case classList.contains('box'): return 'box';
-      case classList.contains('grabber'): return 'grabber';
-      default: return undefined;
+    case classList.contains('group'): return isInRefLayer ? 'ref-group' : 'group';
+    case classList.contains('box'): return isInRefLayer ? 'ref-box' : 'box';
+    case classList.contains('grabber'): return 'grabber';
+    default: return undefined;
     }
 }
 
@@ -615,12 +698,47 @@ function setAttributeIfChanged(elem, attrName, newValue) {
         elem.setAttribute(attrName, newValueString);
 }
 
-function mergeTemplate(tmplStrs, substs) {
-    // There is always at least one element in tmplStrs (as per ES2016 spec)
-    let result = tmplStrs[0];
-    substs.forEach((subst, i) => {
-        result += String(subst);
-        result += tmplStrs[i+1];
+/**
+ *
+ */
+async function rpc(rpcExprSegments, ...args) {
+
+    console.info('RPC', rpcExprSegments, args);
+    
+    // --- Replace ${} in this tagged template expr with arg
+    //     references, and hoist the args into an arg {}.
+    let rpcExpr = rpcExprSegments[0];
+    const argsObj = {};
+    args.forEach((argVal, i) => {
+        const argName = `$arg${i}`;
+        argsObj[argName] = argVal;
+        rpcExpr += `(${argName})`;
+        rpcExpr += rpcExprSegments[i+1];
     });
-    return result;
+
+    // --- Make the request with expr as the URL and the
+    //     args json as the post body.
+    const request = await new Request('/'+rpcExpr, {
+        method: "POST",
+        body: JSON.stringify(argsObj)});
+
+    const response = await fetch(request);
+    
+    console.info('RPC response', response);
+
+    if(!response.ok) {
+        let errorJson = undefined;
+        try {
+            errorJson = await response.json();
+        } catch (e) {
+            console.info('failed to read error json');
+        }
+        throw new Error(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed - ${JSON.stringify(errorJson)}`);
+    }
+
+    return await response.json();
+}
+
+function randomInt(max) {
+    return Math.floor(Math.random() * max);
 }

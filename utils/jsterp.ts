@@ -6,6 +6,10 @@ import {Node, Expression, Identifier, Literal, ArrayExpression,
         ArrowFunctionExpression, TemplateLiteral,
         ParenthesizedExpression, Property, SpreadElement,
         PrivateIdentifier} from "npm:acorn@8.11.3";
+import {Statement, ExpressionStatement, BlockStatement, EmptyStatement,
+        ReturnStatement, BreakStatement, ContinueStatement, SwitchStatement,
+        SwitchCase, WhileStatement, DoWhileStatement, ForInStatement,
+        ForOfStatement} from "npm:acorn@8.11.3";
 import * as strings from './strings.ts';
 import * as utils from './utils.ts';
 import {panic} from './utils.ts';
@@ -414,4 +418,6 @@ console.info(new Test().safeAdd(3,3));
 
 if (import.meta.main)
     jsPlay();
-    
+
+
+

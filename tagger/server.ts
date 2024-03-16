@@ -57,12 +57,12 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
 
         // --- If we have URL search parameters, push them as a scope
         if(Object.keys(searchParams).length > 0)
-            rootScope = Object.create(rootScope, searchParams);
+            rootScope = Object.assign(Object.create(rootScope), searchParams);
 
         // --- If the query request body is a {}, then it is form parms or
         //     a json {} - push on scope.
         if(utils.isObjectLiteral(request.body))
-            rootScope = Object.create(rootScope, request.body as Record<string,any>);
+            rootScope = Object.assign(Object.create(rootScope), request.body as Record<string,any>);
 
         console.info('about to eval', jsExprSrc, 'with root scope ',
                      utils.getAllPropertyNames(rootScope));
@@ -74,14 +74,15 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
                 result = await result;
         } catch(e) {
             // TODO more fiddling here.
-            return {status: 400, headers: {}, body: String(e)};            
+            console.info('request failed', e);
+            return server.jsonResponse({error: String(e)}, 400)
         }
 
         if(typeof result === 'string')
             return server.htmlResponse(result);
         else
-            return server.jsonTextResponse(JSON.stringify(result));
-        
+            return server.jsonResponse(result);
+                
         // result can be a command - like forward
         // result can be json, a served page, etc
         // so - want to define a result interface - and have the individualt mentods rethren tnat

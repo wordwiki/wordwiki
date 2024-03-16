@@ -51,22 +51,26 @@ svg.box {
 
 svg.box > rect.frame {
     fill-opacity: 0%;
-    stroke-width:1;
-    stroke:grey;
+    stroke-width:3;
+    /*stroke:grey;*/
     visibility: visible;
     pointer-events: all;
 }
 
+svg.box.ref > rect.frame {
+  stroke:grey;
+}
+
 svg.group.active > svg.box > rect.frame {
-  stroke-width:3;
-  stroke:green;
+  stroke-width:6;
+  /*stroke:green;*/
   visibility: visible;
 }
 
 #annotatedPage:not(.drag-in-progress) svg.group:not(.active):has(> .box:hover) > svg.box > rect.frame {
   visibility: visible;
-  stroke: purple;
-  stroke-width:3;
+  /*stroke: purple;*/
+  stroke-width:4;
   visibility: visible;
 }
 
@@ -78,11 +82,11 @@ svg.box > circle.grabber {
   display: none;
 }
 
-#annotatedPage:not(.drag-in-progress) svg.box:hover > circle.grabber {
+#annotatedPage:not(.drag-in-progress) svg.box:not(.ref):hover > circle.grabber {
   display: inline;
 }
 
-svg.box.active circle {
+svg.box.active:(not .ref) circle {
   display: inline;
 }
 

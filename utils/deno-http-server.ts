@@ -53,16 +53,20 @@ export class DenoHttpServer extends HttpServer {
     
         let body: any;
         switch (true) {
-            case !denoRequest.bodyUsed:
-                body = undefined;
-                break;
+            // case !denoRequest.bodyUsed:
+            //     console.info('body not used');
+            //     body = undefined;
+            //     break;
             case contentType === 'application/x-www-form-urlencoded' || contentType == 'multipart/form-data':
                 body = extract_form_data(await denoRequest.formData());
                 break;
-            case contentType === 'application/json':
+            case contentType === 'application/json' || contentType === "text/plain;charset=UTF-8":
+                // XXX the text/plain etc above is wrong FIX
                 body = await denoRequest.json();
+                console.info('got request body', body);
                 break;
             default:
+                console.info('ignoring request body');
                 body = undefined;
                 break;
         }
@@ -83,11 +87,12 @@ export class DenoHttpServer extends HttpServer {
 
         // XXX TODO more conversion here. XXX - we are dropping lots of fields.
         // XXX THIS HARD WIRED text/html utf-8 is BORKED - JUST TILL WE GET THINGS WORKING
+        const responseHeaders = Object.assign({}, titan1cResponse.headers);
+        responseHeaders["content-type"] ??= "text/html; charset=utf-8";
+        console.info('RESPONSE HEADERS', responseHeaders, 'BODY', titan1cResponse.body);
         return requestEvent.respondWith(new Response(titan1cResponse.body, {
             status: titan1cResponse.status,
-            headers: {
-                "content-type": "text/html; charset=utf-8",
-            },
+            headers: responseHeaders,
         }));
 //         const body_out = `Your user-agent is:\n\n${
 // requestEvent.request.headers.get("user-agent") ?? "Unknown"

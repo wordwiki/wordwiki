@@ -40,17 +40,20 @@ export interface Response {
     body: string,
 }
 
-export function htmlResponse(htmlText: string): Response {
-    return {status: 200, headers: {}, body: htmlText};            
+export function htmlResponse(htmlText: string, status:number=200): Response {
+    return {status, headers: {}, body: htmlText};            
 }
 
-export function jsonResponse(json:any): Response {
-    return jsonTextResponse(JSON.stringify(json));
+export function jsonResponse(json:any, status:number=200): Response {
+    return jsonTextResponse(JSON.stringify(json??null), status);
 }
 
-export function jsonTextResponse(jsonText: string): Response {
+export function jsonTextResponse(jsonText: string, status:number=200): Response {
     // TODO JSON content type.
-    return {status: 200, headers: {}, body: jsonText};            
+    console.info('jsonTextResponse', jsonText);
+    return {status,
+            headers: {"content-type": "application/json;charset=utf-8"},
+            body: jsonText};            
 }
 
 //export function forwardResponse(url: 
