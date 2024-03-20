@@ -25,6 +25,7 @@ export const RAPTURE_TIME = (LOCAL_EPOCH_START + 2**33) - (1024*1024);
 const COUNTER_MASK = 0x0FFFFF;
 
 //
+export const BEGIN_TIME = LOCAL_EPOCH_START;
 export const END_TIME = Number.MAX_SAFE_INTEGER;
 
 
@@ -108,3 +109,22 @@ export function currentSystemTimeInLocalEpochOrRaptureTime(): number {
     return Math.min(currentSystemTimeInLocalEpoch(), RAPTURE_TIME);
 }
 
+// export function formatTimestampAsLocalTime(t: number) {
+//     const jsDate = new Date(extractTimeFromTimestamp(t)*1000 + LOCAL_EPOCH_START);
+//     const counter = extractCounterFromTimestamp(t);
+//     return jsDate.`${jsDate.getFullYear()}-${jsDate.getMonth()+1)}-${jsDate.getDate()}
+// }
+
+export function formatTimestampAsUTCTime(t: number): string {
+    switch(t) {
+        case BEGIN_TIME: return 'BEGIN_TIME';
+        case END_TIME: return 'END_TIME';
+        default: {
+            const jsDate = new Date(extractTimeFromTimestamp(t)*1000 + LOCAL_EPOCH_START);
+            const counter = extractCounterFromTimestamp(t);
+            // TODO this is an ugly representation, is in UTC, has millis that will always
+            //      0 FIX FIX
+            return `${jsDate.toISOString()}-${counter}`;
+        }
+    }
+}

@@ -677,17 +677,22 @@ export interface Assertion {
 
     /**
      * The timestamp at which this assertion was made.
+     *
+     * May choose to switch to 0 as beginning of time for less special
+     * casing.
      */
-    valid_from?: number;
+    valid_from: number;
 
     /**
      * The timestamp at which this assertion was retracted (an edit if
      * a subsequent assertion with the same 'id' is made, or a delete if not)
      */
-    valid_to?: number;
+    valid_to: number;
 
     /**
      * The timestamp at which this assertion was published.
+     *
+     * TODO Think about null here (we have removed from valid_from modelling).
      */
     published_from?: number;
 
@@ -700,18 +705,23 @@ export interface Assertion {
     /**
      * Parent fact id (not assertion id).
      */
-    parent_id?: number,
+    //parent_id?: number,
 
     /**
      * Fact id
      */
-    id: number,
+    id: number;
 
     /**
      * Fact type
      */
-    ty: string,
+    ty: string;
 
+    /**
+     * depth
+     */
+    depth: number;
+    
     /**
      * (Denormalized) Flattening of the ancestor and self ids and types.
      */
@@ -728,19 +738,16 @@ export interface Assertion {
 
     /**
      * Fields for the assertion.  Interpreted as per ty.
-     *
-     * TODO: these are cheap - add more, and try to give them
-     * some semantics (and maybe separate out language content for
-     * better searching)
      */
-    srctxt?: string;
-    targettxt?: string;
-    label?: string;
-    value?: string;
-    txt?: string;
-    num?: number;
-    ref?: number;
-
+    attr1?: any;
+    attr2?: any;
+    attr3?: any;
+    attr4?: any;
+    attr5?: any;
+    attr6?: any;
+    attr7?: any;
+    attr8?: any;
+    
     /**
      * Notes on this assertion (public and internal)
      */
@@ -761,6 +768,8 @@ export interface Assertion {
     /**
      * (Denormalized) Boolean fields corresponding to whether this
      * assertion holds in a few application specified locales.
+     *
+     * PROBABLY DROP THIS W NEW PER-LOCALE TABLE COPY.
      */
     is_locale1?: boolnum;
     is_locale2?: boolnum;
@@ -797,6 +806,45 @@ export interface Assertion {
     change_arg?: string;
     change_note?: string;
 }
+
+export function getAssertionPath(a: Assertion): [string, number][] {
+    const depth = a.depth;
+    const path: [string, number][] = [];
+    path.push([a.ty1!, a.id1!]);
+    if(depth===1) return path;
+    path.push([a.ty2!, a.id2!]);
+    if(depth===2) return path;
+    path.push([a.ty3!, a.id3!]);
+    if(depth===3) return path;
+    path.push([a.ty4!, a.id4!]);
+    if(depth===4) return path;
+    path.push([a.ty5!, a.id5!]);
+    if(depth===5) return path;
+    utils.panic('unexpected depth');
+}
+
+export function getAssertionTypeN(a: Assertion, n: number): string|undefined {
+    switch(n) {
+        case 0: return a.ty1;
+        case 1: return a.ty2;
+        case 2: return a.ty3;
+        case 3: return a.ty4;
+        case 4: return a.ty5;
+        default: return undefined;
+    }
+}
+
+export function getAssertionIdN(a: Assertion, n: number): number|undefined {
+    switch(n) {
+        case 0: return a.id1;
+        case 1: return a.id2;
+        case 2: return a.id3;
+        case 3: return a.id4;
+        case 4: return a.id5;
+        default: return undefined;
+    }
+}
+
 export type AssertionPartial = Partial<Assertion>;
 export const assertionFieldNames: Array<keyof Assertion> = [
     "assertion_id",
@@ -804,7 +852,7 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "valid_from", "valid_to",
     "published_from", "published_to",
 
-    "parent_id", "id", "ty",
+    "id", "ty", "depth",
     
     "ty1", "id1",
     "ty2", "id2",
@@ -812,7 +860,8 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "ty4", "id4",
     "ty5", "id5",
 
-    "srctxt", "targettxt", "label", "value", "txt", "num", "ref",
+    //"srctxt", "targettxt", "label", "value", "txt", "num", "ref",
+    "attr1", "attr2", "attr3", "attr4", "attr5", "attr6", "attr7", "attr8",
     
     "public_note", "internal_note",
     
@@ -826,19 +875,20 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "change_by_username", "change_action", "change_arg", "change_note",
     ];
 
+
 const createAssertionDml = block`
 /**/   CREATE TABLE IF NOT EXISTS assertion(
 /**/       assertion_id INTEGER PRIMARY KEY ASC,
 /**/
-/**/       valid_from INTEGER,
-/**/       valid_to INTEGER,
+/**/       valid_from INTEGER NOT NULL,
+/**/       valid_to INTEGER NOT NULL,
 /**/
 /**/       published_from INTEGER,
 /**/       published_to INTEGER,
 /**/
-/**/       parent_id INTEGER,
 /**/       id INTEGER NOT NULL,
 /**/       ty TEXT NOT NULL,
+/**/       depth INTEGER,
 /**/
 /**/       ty1 TEXT NOT NULL,
 /**/       id1 INTEGER,
@@ -851,18 +901,28 @@ const createAssertionDml = block`
 /**/       ty5 TEXT,
 /**/       id5 INTEGER,
 /**/
-/**/       srctxt TEXT,
-/**/       targettxt TEXT,
-/**/       label TEXT,
-/**/       value TEXT,
-/**/       txt TEXT,
-/**/       num NUMBER,
-/**/       ref NUMBER,
+/**/       -- srctxt TEXT,
+/**/       -- targettxt TEXT,
+/**/       -- label TEXT,
+/**/       -- value TEXT,
+/**/       -- txt TEXT,
+/**/       -- num NUMBER,
+/**/       -- ref NUMBER,
+/**/
+/**/       attr1,
+/**/       attr2,
+/**/       attr3,
+/**/       attr4,
+/**/       attr5,
+/**/       attr6,
+/**/       attr7,
+/**/       attr8,
 /**/
 /**/       public_note NUMBER,
 /**/       internal_note NUMBER,
 /**/
 /**/       locale_expr TEXT,
+/**/       -- TODO probably drop all but locale_expr once we have per-local denorm copies.
 /**/       expanded_locale_list TEXT,
 /**/       is_locale1 INTEGER,
 /**/       is_locale2 INTEGER,
@@ -917,6 +977,11 @@ const createAssertionDml = block`
 
 assertDmlContainsAllFields(createAssertionDml, assertionFieldNames);
 
+export const selectAssertionsForTopLevelFact = ()=>db().prepare<Assertion, {id1: number}>(block`
+/**/   SELECT ${assertionFieldNames.join()}
+/**/          FROM assertion
+/**/          WHERE id1 = :id1
+/**/          ORDER BY valid_from, id`);
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------

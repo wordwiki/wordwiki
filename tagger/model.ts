@@ -435,7 +435,9 @@ export class RelationField extends Field {
     #fieldsByName: {[name: string]: Field}|undefined = undefined;
     #primaryKeyField: PrimaryKeyField|undefined = undefined;
     #nonRelationFields: Field[]|undefined = undefined;
+    #scalarFields: ScalarFieldBase[]|undefined = undefined;
     #relationFields: RelationField[]|undefined = undefined;
+    #relationFieldsByTag: Record<string, RelationField>|undefined = undefined;
     #ancestorRelations_: RelationField[]|undefined;
     #descendantAndSelfRelations_: RelationField[]|undefined;
     #primaryKeyColIndex_: number|undefined;
@@ -508,6 +510,7 @@ export class RelationField extends Field {
       return !!this.#fieldsByName||
             !!this.#primaryKeyField||
             !!this.#nonRelationFields||
+            !!this.#scalarFields||
             !!this.#relationFields||
             !!this.#ancestorRelations_||
             !!this.#descendantAndSelfRelations_||
@@ -522,11 +525,23 @@ export class RelationField extends Field {
         return this.#nonRelationFields??=this.fields.filter(f=>!(f instanceof RelationField));
     }
 
+    get scalarFields(): ScalarFieldBase[] {
+        return this.#scalarFields??=
+            this.fields.filter(f=>f instanceof ScalarFieldBase).map(f=>f as ScalarFieldBase);
+    }
+    
     get relationFields(): RelationField[] {
         return this.#relationFields??=
             this.fields.filter(f=>f instanceof RelationField).map(f=>f as RelationField);
     }
 
+    get relationFieldsByTag(): Record<string, RelationField> {
+        // Note: we are already validating tag uniqueness across the whole
+        //       schema, so no need to check here as well.
+        return this.#relationFieldsByTag??=
+            Object.fromEntries(this.relationFields.map(r=>[r.tag, r]));
+    }
+    
     get primaryKeyField(): PrimaryKeyField {
         return this.#primaryKeyField??=(()=>{
             const primaryKeyFields = this.fields.filter(f=>f instanceof PrimaryKeyField).map(f=>f as PrimaryKeyField);

@@ -23,37 +23,38 @@ export const dictSchemaJson = {
             $tag: 'sp',
             $style: { $prompt: 'SPELLING!' },
             spelling_id: {$type: 'primary_key'},
-            text: {$type: 'string', $bind: 'srctxt'},
+            text: {$type: 'string', $bind: 'attr1'},
             variant: {$type: 'string'}
         },
         subentry: {
             $type: 'relation',
             $tag: 'se',
             subentry_id: {$type: 'primary_key'},
-            part_of_speech: {$type: 'string', $bind: 'label'},
+            part_of_speech: {$type: 'string', $bind: 'attr1'},
+            // probably should have variant here TODO
             definition: {
                 $type: 'relation',
                 $tag: 'de',
                 definition_id: {$type: 'primary_key'},
-                definition: {$type: 'string', $bind: 'targettxt'},
+                definition: {$type: 'string', $bind: 'attr1'},
                 //variant: {$type: 'string'}
             },
             gloss: {
                 $type: 'relation',
                 $tag: 'gl',
                 gloss_id: {$type: 'primary_key'},
-                gloss: {$type: 'string', $bind: 'targettxt'}
+                gloss: {$type: 'string', $bind: 'attr1'}
             },
             example: {
                 $type: 'relation',
                 $tag: 'ex',
                 example_id: {$type: 'primary_key'},
-                translation: {$type: 'string', $bind: 'targettxt'},
+                translation: {$type: 'string', $bind: 'attr1'},
                 example_text: {
                     $type: 'relation',
                     $tag: 'et',
                     example_text_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'targettxt'},
+                    text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'string'}
                 },                
             },
@@ -67,7 +68,7 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'pg',
                 pronunciation_guide_id: {$type: 'primary_key'},
-                text: {$type: 'string', $bind: 'txt'},
+                text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'string'},
             },
             category: {
@@ -75,25 +76,25 @@ export const dictSchemaJson = {
                 $tag: 'ct',
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
-                category: {$type: 'string', $bind: 'label'},
+                category: {$type: 'string', $bind: 'attr1'},
             },
             related_entry: {
                 $type: 'relation',
                 $tag: 're',
                 related_entry_id: {$type: 'primary_key'},
-                unresolved_text: {$type: 'string', $bind: 'txt'},
+                unresolved_text: {$type: 'string', $bind: 'attr1'},
             },
             alternate_grammatical_form: {
                 $type: 'relation',
                 $tag: 'ag',
                 alternate_grammatical_form_id: {$type: 'primary_key'},
-                gloss: {$type: 'string', $bind: 'targettxt'},
-                grammatical_form: {$type: 'string', $bind: 'label'},
+                gloss: {$type: 'string', $bind: 'attr1'},
+                grammatical_form: {$type: 'string', $bind: 'attr2'},
                 alternate_form_text: {
                     $type: 'relation',
                     $tag: 'ax',
                     alternate_form_text_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'srctxt'},
+                    text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'string'}
                 },
             },
@@ -101,14 +102,14 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'rf',
                 other_regional_form_id: {$type: 'primary_key'},
-                text: {$type: 'string', $bind: 'srctxt'},
+                text: {$type: 'string', $bind: 'attr1'},
             },
             attr: {
                 $type: 'relation',
                 $tag: 'at',
                 attr_id: {$type: 'primary_key'},
-                attr: {$type: 'string', $bind: 'label'},
-                value: {$type: 'string', $bind: 'value'},
+                attr: {$type: 'string', $bind: 'attr1'},
+                value: {$type: 'string', $bind: 'attr2'},
             },
         },
     }

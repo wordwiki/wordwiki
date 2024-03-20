@@ -12,6 +12,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 import {block} from "../utils/strings.ts";
 import { ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt, Assertion, assertionFieldNames } from './schema.ts';
 import * as config from "./config.ts";
+import * as timestamp from "../utils/timestamp.ts";
 
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
@@ -43,9 +44,12 @@ function createAssertion(parent: Assertion|undefined, depth: number,
                          id: number, ty: string, fields: Partial<Assertion>) {
     return Object.assign({
         assertion_id: id,
-        parent_id: parent?.id,
+        valid_from: timestamp.BEGIN_TIME,
+        valid_to: timestamp.END_TIME,
+        //parent_id: parent?.id,
         id: id,
         ty: ty,
+        depth: depth,
         ty1: parent?.ty1,
         id1: parent?.id1,
         ty2: parent?.ty2,
@@ -90,7 +94,7 @@ function importSpelling(parent: Assertion, spelling: Spelling) {
     insertAssertion(createAssertion(
         parent, 2, spelling.spelling_id, 'sp',
         {
-            srctxt: spelling.text,
+            attr1: spelling.text,
             locale_expr: spelling.variant,
         }));
 }
@@ -114,7 +118,7 @@ function importSubentry(parent: Assertion, subentry: Subentry) {
     const subentryAssertion = insertAssertion(createAssertion(
         parent, 2, subentry.subentry_id, 'se',
         {
-            label: subentry.part_of_speech,
+            attr1: subentry.part_of_speech,
         }));
     subentry.definition.forEach(s=>importDefinition(subentryAssertion, s));
     subentry.gloss.forEach(s=>importGloss(subentryAssertion, s));
@@ -138,7 +142,7 @@ function importDefinition(parent: Assertion, definition: Definition) {
     insertAssertion(createAssertion(
         parent, 3, definition.definition_id, 'de',
         {
-            targettxt: definition.definition,
+            attr1: definition.definition,
         }));
 }
 
@@ -151,7 +155,7 @@ function importGloss(parent: Assertion, gloss: Gloss) {
     insertAssertion(createAssertion(
         parent, 3, gloss.gloss_id, 'gl',
         {
-            targettxt: gloss.gloss,
+            attr1: gloss.gloss,
         }));
 }
 
@@ -165,7 +169,7 @@ function importExample(parent: Assertion, example: Example) {
     const exampleAssertion = insertAssertion(createAssertion(
         parent, 3, example.example_id, 'ex',
         {
-            targettxt: example.translation,
+            attr1: example.translation,
         }));
     example.example_text.forEach(s=>importExampleText(exampleAssertion, s));
 }
@@ -180,7 +184,7 @@ function importExampleText(parent: Assertion, exampleText: ExampleText) {
     insertAssertion(createAssertion(
         parent, 4, exampleText.example_text_id, 'et',
         {
-            srctxt: exampleText.text,
+            attr1: exampleText.text,
             locale_expr: exampleText.variant,
         }));
 }
@@ -195,7 +199,7 @@ function importPronunciationGuide(parent: Assertion, pronunciationGuide: Pronunc
     insertAssertion(createAssertion(
         parent, 3, pronunciationGuide.pronunciation_guide_id, 'pg',
         {
-            txt: pronunciationGuide.text,
+            attr1: pronunciationGuide.text,
             locale_expr: pronunciationGuide.variant,
         }));
 }
@@ -209,7 +213,7 @@ function importCategory(parent: Assertion, category: Category) {
     insertAssertion(createAssertion(
         parent, 3, category.category_id, 'ct',
         {
-            label: category.category,
+            attr1: category.category,
         }));
 }
 
@@ -222,7 +226,7 @@ function importRelatedEntry(parent: Assertion, relatedEntry: RelatedEntry) {
     insertAssertion(createAssertion(
         parent, 3, relatedEntry.related_entry_id, 're',
         {
-            txt: relatedEntry.unresolved_text, // ??? ??? TODO WTF ??? XXX ???
+            attr1: relatedEntry.unresolved_text, // ??? ??? TODO WTF ??? XXX ???
         }));
 }
 
@@ -237,8 +241,8 @@ function importAlternateGrammaticalForm(parent: Assertion, alternateGrammaticalF
     const alternateGrammaticalFormAssertion = insertAssertion(createAssertion(
         parent, 3, alternateGrammaticalForm.alternate_grammatical_form_id, 'ag',
         {
-            label: alternateGrammaticalForm.grammatical_form,
-            targettxt: alternateGrammaticalForm.gloss,
+            attr1: alternateGrammaticalForm.grammatical_form,
+            attr2: alternateGrammaticalForm.gloss,
         }));
     alternateGrammaticalForm.alternate_form_text.forEach(s=>importAlternateFormText(alternateGrammaticalFormAssertion, s));
 }
@@ -251,9 +255,9 @@ interface AlternateFormText {
 
 function importAlternateFormText(parent: Assertion, alternateFormText: AlternateFormText) {
     insertAssertion(createAssertion(
-        parent, 4, alternateFormText.alternate_form_text_id, 'agtx',
+        parent, 4, alternateFormText.alternate_form_text_id, 'ax',
         {
-            srctxt: alternateFormText.text,
+            attr1: alternateFormText.text,
             locale_expr: alternateFormText.variant,
         }));
 }
@@ -267,7 +271,7 @@ function importOtherRegionalForm(parent: Assertion, otherRegionalForm: OtherRegi
     insertAssertion(createAssertion(
         parent, 3, otherRegionalForm.other_regional_form_id, 'rf',
         {
-            srctxt: otherRegionalForm.text,
+            attr1: otherRegionalForm.text,
         }));
 }
 
@@ -281,8 +285,8 @@ function importAttr(parent: Assertion, attr: Attr) {
     insertAssertion(createAssertion(
         parent, 3, attr.attr_id, 'at',
         {
-            label: attr.attr,
-            value: attr.value,
+            attr1: attr.attr,
+            attr2: attr.value,
         }));
 }
 
