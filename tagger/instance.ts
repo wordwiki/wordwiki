@@ -229,14 +229,14 @@ export function fieldToFieldInst(f: Field): FieldInst {
 // - child relations are in a {}, as name: relation pairs.  The relation contains a list
 //   of tuple objects which have the
 
-type Tag = string;
+export type Tag = string;
 
 /**
  *
  */
-class Container {
+export class Container {
     readonly schema: RelationField;
-    readonly children: Record<Tag,Fact> = {};
+    readonly children: Record<Tag,FactCollection> = {};
 
     constructor(schema: RelationField) {
         this.schema = schema;
@@ -253,6 +253,7 @@ class Container {
         let relation = this.children[ty];
         if(!relation) {
             const childRelation = this.schema.relationFieldsByTag[ty];
+            // TODO this is WRONG
             if(!childRelation)
                 throw new Error(`unexpected tag ${ty} -- FIX ERROR NEED LOCUS ETC`);
             relation = new Fact(childRelation, id, ty);
@@ -264,12 +265,16 @@ class Container {
         else
             return relation.getFactByPath(path, index+1);
     }
+
+    searchFacts(predicate: (f:Fact)=>boolean, collection: Fact[]=[]): Fact[] {
+        return collection;
+    }
 }
 
-class Database extends Container {
+export class Database extends Container {
     declare schema: Schema;
     
-    readonly factsById: Map<number, Fact> = new Map();
+    //readonly factsById: Map<number, FactCollection> = new Map();
     
     constructor(schema: Schema) {
         super(schema);
@@ -298,7 +303,7 @@ class Database extends Container {
 /**
  *
  */
-class Fact extends Container {
+export class Fact extends Container {
     readonly id: number;
     readonly ty: string;
     
@@ -322,7 +327,8 @@ class Fact extends Container {
             id: this.id,
             assertions: this.assertions.map(a=>a.dump()),
             children: Object.values(this.children).map(child=>({
-                type: child.schema.name, members: child.dump()}))
+                type: child.scheman
+                    .name, members: child.dump()}))
         }
     }
 }
@@ -330,7 +336,7 @@ class Fact extends Container {
 /**
  *
  */
-class AssertionNode {
+export class AssertionNode {
     readonly fact: Fact;
     readonly assertion: Assertion;
     
@@ -361,8 +367,15 @@ class AssertionNode {
     }    
 }
 
+// Name is wrong.
+export class FactCollection {
+    readonly schema: RelationField;
+    facts: Array<Fact> = [];
 
-
+    constructor(schema: RelationField) {
+        this.schema = schema;
+    }
+}
 
 // TODO think about different kinds of scopes - list VS singleton value - singleton
 //      value solves a lot of the problems with locale - most specific is chosen.
@@ -657,14 +670,22 @@ function test() {
 
     // --- Load the tuples for a dictionary entry.
     const sampleEntryAssertions = selectAssertionsForTopLevelFact().all({id1:1000});
-    console.info('Sample entry assertions', sampleEntryAssertions);
+    //console.info('Sample entry assertions', sampleEntryAssertions);
 
     // --- Create an empty instance schema
     const mmoDb = new Database(dictSchema);
     sampleEntryAssertions.forEach(a=>mmoDb.apply(a));
     console.info(JSON.stringify(mmoDb.dump(), undefined, 2));
+
+    // --- Navigate to pronunciation guide
+    //let pronouciationGuide: Fact = mmoDb.searchFacts(f=>f.id===112);
     
-    // --- 
+    // --- Edit pronunciation guide
+    
+    // --- Add a second pronunciation guide
+
+    // --- Persist this to disk!
+    
 
     
     //fieldToFieldInstInst.accept(dictSchema);
