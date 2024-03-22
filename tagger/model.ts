@@ -769,7 +769,7 @@ export class Schema extends RelationField {
         if($type !== 'schema')
             throw new ValidationError(locus, `expected schema type got $type ${$type}`);
         
-        console.info('field_schema', field_schema);
+        //console.info('field_schema', field_schema);
         const rootRelations = Object.entries(field_schema).map(([field_name, field_body]:[string,any]) => {
             if(field_body?.$type !== 'relation')
                 throw new ValidationError(locus, `all top level items in a schema must be relations - item named ${field_name} is not a relation`);

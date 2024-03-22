@@ -26,7 +26,7 @@ async function importMMO() {
     console.info(entries.map(e=>e.entry_id).toSorted());
 
     db().beginTransaction();
-    db().execute('DELETE FROM assertion', {});
+    db().execute('DELETE FROM dict', {});
 
     entries.forEach(e=>true ? importEntry(e) : undefined);
     
@@ -36,7 +36,7 @@ async function importMMO() {
 function insertAssertion(assertion: Assertion): Assertion {
     //console.info('inserting assertion', assertion);
     db().execute<Assertion>(
-        `INSERT INTO assertion (${assertionFieldNames.join(',')}) VALUES (${assertionFieldNames.map(f=>':'+f).join(',')}) RETURNING assertion_id AS id`, assertion);
+        `INSERT INTO dict (${assertionFieldNames.join(',')}) VALUES (${assertionFieldNames.map(f=>':'+f).join(',')}) RETURNING assertion_id AS id`, assertion);
     return assertion;
 }
 

@@ -876,8 +876,8 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     ];
 
 
-const createAssertionDml = block`
-/**/   CREATE TABLE IF NOT EXISTS assertion(
+const createAssertionDml = (tableName:string)=>block`
+/**/   CREATE TABLE IF NOT EXISTS ${tableName}(
 /**/       assertion_id INTEGER PRIMARY KEY ASC,
 /**/
 /**/       valid_from INTEGER NOT NULL,
@@ -939,47 +939,47 @@ const createAssertionDml = block`
 /**/       change_arg TEXT,
 /**/       change_note TEXT);
 /**/
-/**/   CREATE UNIQUE INDEX IF NOT EXISTS current_assertions_by_id_ty ON assertion(id, ty) WHERE valid_to = NULL;
+/**/   CREATE UNIQUE INDEX IF NOT EXISTS current_${tableName}_by_id_ty ON ${tableName}(id, ty) WHERE valid_to = NULL;
 /**/
-/**/   CREATE INDEX IF NOT EXISTS assertions_ty1 ON assertion(ty1);
-/**/   CREATE INDEX IF NOT EXISTS assertions_ty2 ON assertion(ty2);
-/**/   CREATE INDEX IF NOT EXISTS assertions_ty3 ON assertion(ty3);
-/**/   CREATE INDEX IF NOT EXISTS assertions_ty4 ON assertion(ty4);
-/**/   CREATE INDEX IF NOT EXISTS assertions_ty5 ON assertion(ty5);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty1 ON ${tableName}(ty1);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty2 ON ${tableName}(ty2);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty3 ON ${tableName}(ty3);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty4 ON ${tableName}(ty4);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty5 ON ${tableName}(ty5);
 /**/
-/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty1 ON assertion(id1, ty1);
-/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty2 ON assertion(id2, ty2);
-/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty3 ON assertion(id3, ty3);
-/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty4 ON assertion(id4, ty4);
-/**/   CREATE INDEX IF NOT EXISTS assertions_by_id_ty5 ON assertion(id5, ty5);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty1 ON ${tableName}(id1, ty1);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty2 ON ${tableName}(id2, ty2);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty3 ON ${tableName}(id3, ty3);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty4 ON ${tableName}(id4, ty4);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty5 ON ${tableName}(id5, ty5);
 /**/
-/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE valid_to = NULL;
 /**/
 /**/ -- NEED SOME MODEL CHANGE SO CAN INDEX LATEST PUBLISHED XXX TODO XXX TODO
 /**/
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
 /**/
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty1 ON assertion(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty2 ON assertion(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty3 ON assertion(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty4 ON assertion(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_assertions_by_id_ty5 ON assertion(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
 /**/   `;
 
 
-assertDmlContainsAllFields(createAssertionDml, assertionFieldNames);
+assertDmlContainsAllFields(createAssertionDml('__test__'), assertionFieldNames);
 
-export const selectAssertionsForTopLevelFact = ()=>db().prepare<Assertion, {id1: number}>(block`
+export const selectAssertionsForTopLevelFact = (tableName: string)=>db().prepare<Assertion, {id1: number}>(block`
 /**/   SELECT ${assertionFieldNames.join()}
-/**/          FROM assertion
+/**/          FROM ${tableName}
 /**/          WHERE id1 = :id1
 /**/          ORDER BY valid_from, id`);
 
@@ -990,9 +990,10 @@ export const selectAssertionsForTopLevelFact = ()=>db().prepare<Assertion, {id1:
 const allSchemaDml =
     createUserDml + createDocumentDml + createPageDml + createLayerDml +
     createBoundingGroupDml + createBoundingBoxDml + createChangeLogDml +
-    createAssertionDml;
+    createAssertionDml('dict');
 
 export function createAllTables() {
+    console.info('ALL SCHEMA DML', allSchemaDml);
     db().executeStatements(allSchemaDml);
     console.info('db created');
 }
