@@ -66,6 +66,34 @@ export class VersionedRelationContainer {
         for(const v of Object.values(this.childRelations))
             v.forEachVersionedTuple(f);
     }
+
+    findVersionedTuples(filter: (r:VersionedTuple)=>boolean): Array<VersionedTuple> {
+        const collection: VersionedTuple[] = [];
+        this.forEachVersionedTuple(t=>{
+            if(filter(t))
+                collection.push(t);
+        });
+        return collection;
+    }
+
+    findVersionedTupleById(id: number): VersionedTuple|undefined {
+        let found: VersionedTuple|undefined;
+        this.forEachVersionedTuple(t=>{
+            if(t.id === id) {
+                if(found !== undefined)
+                    throw new Error(`multiple tuples found for id ${id}`);
+                found = t;
+            }
+        });
+        return found;
+    }
+
+    findRequiredVersionedTupleById(id: number): VersionedTuple {
+        const tuple = this.findVersionedTupleById(id);
+        if(tuple === undefined)
+            throw new Error(`failed to find required versioned tuple for id ${id}`);
+        return tuple;
+    }
 }
 
 /**
@@ -107,15 +135,42 @@ export class VersionedTuple extends VersionedRelationContainer {
     }
 
     applyAssertion(assertion: Assertion) {
+        const tuple = new TupleVersion(this, assertion);
         // TODO lots of validation here + index updating etc.
-        this.tupleVersions.push(new TupleVersion(this, assertion));
+        // TODO update current.
+        // TODO tie into speculative mechanism.
+        const mostRecentTuple = this.mostRecentTuple;
+        if(mostRecentTuple) {
+            if(mostRecentTuple.assertion.valid_to) {
+                if(tuple.assertion.valid_from !== mostRecentTuple.assertion.valid_to) {
+                    throw new Error(`FIX ERROR: valid_from chain broken`);
+                }
+            } else {
+                // This is tricky - we should probably mute the valid_to on the previous
+                //  most current tuple - but this complicates undo etc.  The fact that
+                //  valid_to with a non-null value is also used for undo complicates things.
+                if(mostRecentTuple.assertion.valid_from <= tuple.assertion.valid_from) {
+                    throw new Error(`FIX ERROR: time travel prolbem`);
+                }
+            }
+        }
+        
+        this.tupleVersions.push(tuple);
+        if(tuple.isCurrent)
+            this.#currentTuple = tuple;
     }
 
+    get mostRecentTuple() {
+        // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
+        return this.tupleVersions[this.tupleVersions.length-1];
+    }
+
+    
     forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
         f(this);
         super.forEachVersionedTuple(f);
     }
-    
+
     dump(): any {
         return {
             //type: this.schema.name,
@@ -124,10 +179,6 @@ export class VersionedTuple extends VersionedRelationContainer {
             ...Object.fromEntries(Object.values(this.childRelations).map(c=>
                 [c.schema.name, c.dump()]))
         };
-    }
-
-    dumpVersions(): any {
-        //return tupleVersions.map(v=>v.dump());
     }
 }
 
@@ -226,16 +277,16 @@ function test() {
     const entries = mmoDb.childRelations['en'];
     //console.info('entries', entries);
     
-    // --- Navigate to pronunciation guide
-    //let pronouciationGuide: VersionedTuple = mmoDb.searchVersionedTuples(f=>f.id===112);
-    
-    // --- Edit pronunciation guide
+    // --- Navigate to definition
+    let definition = mmoDb.findRequiredVersionedTupleById(992);
+    console.info('definition', definition.dump());
+
+    // --- Edit definition
+    //definition.applyAssertion();
     
     // --- Add a second pronunciation guide
 
     // --- Persist this to disk!
-    
-
     
     //fieldToFieldInstInst.accept(dictSchema);
 }

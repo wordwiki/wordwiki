@@ -203,7 +203,8 @@ export async function taggerServer(port: number = 9000) {
     console.info('Starting tagger server');
     
     const contentdirs = {
-        '/resources/': await findResourceDir()+'/',
+        '/resources/': await findResourceDir('resources')+'/',
+        '/scripts/': await findResourceDir('web-build')+'/',
         '/content/': 'content/',
         '/derived/': 'derived/'};
     await new DenoHttpServer({port, contentdirs}, taggerRequestHandler).run();
@@ -225,12 +226,12 @@ export async function taggerServer(port: number = 9000) {
  * Also: once we start uploading resources to a CDN, we will want to make corresponding
  * changes to resources URLs.
  */
-async function findResourceDir() {
+async function findResourceDir(resourceDirName: string = 'resources') {
     const serverFileUrl = new URL(import.meta.url);
     if(serverFileUrl.protocol !== 'file:')
         throw new Error(`wordwiki server can only be run (for now) with it's code on the local filesystem (to allow access to resource files) - got server file url - ${serverFileUrl} with protocol ${serverFileUrl.protocol}`);
     const serverFilePath = decodeURIComponent(serverFileUrl.pathname);
-    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/tagger/server.ts')+'/resources';
+    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/tagger/server.ts')+'/'+resourceDirName;
     const resourceMarkerPath = resourceDir+'/'+'resource_dir_marker.txt';
     if(!await fileExists(resourceMarkerPath))
         throw new Error(`resource directory ${resourceDir} is missing marker file ${resourceMarkerPath}`);

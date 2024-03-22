@@ -1,12 +1,12 @@
 {
-  "jsc": {
-    "parser": {
-      "syntax": "typescript",
-      "tsx": true,
-      "decorators": true,
-      "dynamicImport": false
+    "jsc": {
+        "parser": {
+            "syntax": "typescript",
+            "tsx": false,
+            "decorators": true,
+            "dynamicImport": false
+        },
+        "target": "es2022"
     },
-    "target": "es2022"
-  },
-  "isModule": true
+    "isModule": true
 }

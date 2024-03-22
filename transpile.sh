@@ -1,14 +1,15 @@
 set -e
-#npm i -g chokidar
-cp client.html dist
 echo 'BEGIN SWC'
-npx swc -d dist/model model/*.ts
-npx swc -d dist/templates templates/*.ts templates/*.tsx
-npx swc -d dist/utils utils/*.ts
-rsync -a utils/big.mjs dist/utils
-(cd dist && find . -name "*.js" -exec sed -i 's/[.]tsx\?/.js/g' "{}" ";")
-# The sed above is hitting these - thus the constant recopy!!!
-# (Removing the -v for now! what we don't know about won't hurt us)
-rsync -a model/jswasm/ dist/model/jswasm/
+mkdir -p web-build
+
+cp resources/resource_dir_marker.txt web-build
+
+swc compile --config-file .swcrc utils/*.ts tagger/*.ts --out-dir web-build
+
+# deno insists on typscript imports having a .ts extension (for good reasons), and I
+# can't figure out how to get SWC to transpile these to .js extensions - so I am doing
+# it with 'sed'.  TODO: figure out a better way to do this.
+(cd web-build && find . -name "*.js" -exec sed -i 's/^\(import .*\)[.]tsx\?/\1.js/g' "{}" ";")
+
 echo 'END SWC'
 #npx swc -w -d dist client/main.ts client/worker.ts client/greeter.ts
