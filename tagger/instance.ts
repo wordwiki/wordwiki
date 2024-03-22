@@ -2,6 +2,7 @@ import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, FloatField,
         StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {unwrap, panic} from "../utils/utils.ts";
+import * as utils from "../utils/utils.ts";
 import {dictSchemaJson} from "./entry-schema.ts";
 import { Assertion, getAssertionPath, selectAssertionsForTopLevelFact } from "./schema.ts";
 import * as timestamp from "../utils/timestamp.ts";
@@ -18,54 +19,84 @@ export type Tag = string;
 
 // TODO 
 
-
+// Perhaps the versioned relation tree should be forced??
 
 /**
  *
  */
 export class VersionedRelationContainer {
     readonly schema: RelationField;
-    readonly childRelations: Record<Tag,VersionedRelation> = {};
+    readonly childRelations: Record<Tag,VersionedRelation>;
 
     constructor(schema: RelationField) {
         this.schema = schema;
+        this.childRelations = Object.fromEntries(
+            schema.relationFields.map(r=>[r.tag, new VersionedRelation(r, this)]));
     }
 
     applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
-        const versionedRelation = this.getVersionedRelationByPath(path);
-        versionedRelation.applyAssertion(assertion);
+        const versionedTuple = this.getVersionedTupleByPath(path);
+        versionedTuple.applyAssertion(assertion);
     }
 
-    getVersionedRelationByPath(path: [string, number][], index: number=0): VersionedRelation {
-        //console.info('PATH is', path, path[index], index);
+    getVersionedTupleByPath(path: [string, number][], index: number=0): VersionedTuple {
+        //console.info('PATH is', path, path[index], index, 'SELF is', this.schema.tag, 'child is', this.schema.relationFields.map(r=>r.tag), 'self type', utils.className(this));
         const [ty, id] = path[index];
 
-        let versionedRelation = this.childRelations[ty];
+        const versionedRelation = this.childRelations[ty];
         if(!versionedRelation) {
-            const childRelationSchema = this.schema.relationFieldsByTag[ty];
-            // TODO this is WRONG
-            if(!childRelationSchema)
-                throw new Error(`unexpected tag ${ty} -- FIX ERROR NEED LOCUS ETC`);
-            versionedRelation = new VersionedRelation(childRelationSchema, id);
-            this.childRelations[ty] = versionedRelation;
+            throw new Error(`unexpected tag ${ty} -- FIX ERROR NEED LOCUS ETC`);
         }
+        utils.assert(versionedRelation.schema.tag === ty);
 
+        let versionedTuple = versionedRelation.tuples[id];
+         if(!versionedTuple) {
+            versionedTuple = new VersionedTuple(versionedRelation.schema, id);
+            versionedRelation.tuples[id] = versionedTuple;
+        }
+        utils.assert(versionedTuple.schema.tag === ty);
+        
         if(index+1 === path.length)
-            return versionedRelation;
+            return versionedTuple;
         else
-            return versionedRelation.getVersionedRelationByPath(path, index+1);
+            return versionedTuple.getVersionedTupleByPath(path, index+1);
     }
 
-    forEachVersionedRelation(f: (r:VersionedRelation)=>void) {
+    forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
         for(const v of Object.values(this.childRelations))
-            v.forEachVersionedRelation(f);
+            v.forEachVersionedTuple(f);
     }
 }
 
 /**
  *
  */
-export class VersionedRelation extends VersionedRelationContainer {
+export class VersionedRelation {
+    readonly schema: RelationField;
+    readonly container: VersionedRelationContainer;
+    readonly tuples: Record<number,VersionedTuple> = {};
+
+    constructor(schema: RelationField, container: VersionedRelationContainer) {
+        this.schema = schema;
+        this.container = container;
+    }
+
+    forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
+        for(const v of Object.values(this.tuples))
+            v.forEachVersionedTuple(f);
+    }
+
+    dump(): any {
+        return Object.fromEntries(Object.entries(this.tuples).map(([id, child])=>
+            [id, child.dump()]));
+    }
+}
+
+
+/**
+ *
+ */
+export class VersionedTuple extends VersionedRelationContainer {
     readonly id: number;
     readonly tupleVersions: TupleVersion[] = [];
     #currentTuple: TupleVersion|undefined = undefined;
@@ -80,19 +111,19 @@ export class VersionedRelation extends VersionedRelationContainer {
         this.tupleVersions.push(new TupleVersion(this, assertion));
     }
 
-    forEachVersionedRelation(f: (r:VersionedRelation)=>void) {
+    forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
         f(this);
-        super.forEachVersionedRelation(f);
+        super.forEachVersionedTuple(f);
     }
     
     dump(): any {
         return {
-            type: this.schema.name,
-            id: this.id,
-            tupleVersions: this.tupleVersions.map(a=>a.dump()),
-            childRelations: Object.values(this.childRelations).map(child=>({
-                type: child.schema.name, members: child.dump()}))
-        }
+            //type: this.schema.name,
+            //id: this.id,
+            versions: this.tupleVersions.map(a=>a.dump()),
+            ...Object.fromEntries(Object.values(this.childRelations).map(c=>
+                [c.schema.name, c.dump()]))
+        };
     }
 
     dumpVersions(): any {
@@ -104,13 +135,13 @@ export class VersionedRelation extends VersionedRelationContainer {
  *
  */
 export class TupleVersion {
-    readonly relation: VersionedRelation;
+    readonly relation: VersionedTuple;
     readonly assertion: Assertion;
     
     #domainFields: Record<string,any>|undefined = undefined;
     //#changeRegistrations
 
-    constructor(relation: VersionedRelation, assertion: Assertion) {
+    constructor(relation: VersionedTuple, assertion: Assertion) {
         this.relation = relation;
         this.assertion = assertion;
     }
@@ -129,10 +160,12 @@ export class TupleVersion {
     dump(): any {
         const a = this.assertion;
         return {
-            valid_from: timestamp.formatTimestampAsUTCTime(a.valid_from),
-            valid_to: timestamp.formatTimestampAsUTCTime(a.valid_to),
-            id: this.relation.id,
-            ty: this.relation.schema.tag,
+            ...(a.valid_from !== timestamp.BEGIN_TIME ?
+                {valid_from: timestamp.formatTimestampAsUTCTime(a.valid_from)} : {}),
+            ...(a.valid_to !== timestamp.END_TIME ?
+                {valid_to: timestamp.formatTimestampAsUTCTime(a.valid_to)} : {}),
+            //id: this.relation.id,
+            //ty: this.relation.schema.tag,
             ...this.domainFields,
         };
     }
@@ -166,9 +199,14 @@ export class VersionedDatabaseWorkspace extends VersionedRelationContainer {
     }
 
     dump(): any {
-        return Object.values(this.childRelations).map(child=>({
-            type: child.schema.name, members: child.dump()}));
+        return Object.fromEntries(Object.entries(this.childRelations).map(([id, child])=>
+            [id, child.dump()]));
     }
+
+    // dump(): any {
+    //     return Object.values(this.childRelations).map(child=>({
+    //         type: child.schema.name: child.dump()}));
+    // }
     
 }
 
@@ -187,8 +225,6 @@ function test() {
 
     const entries = mmoDb.childRelations['en'];
     //console.info('entries', entries);
-    
-
     
     // --- Navigate to pronunciation guide
     //let pronouciationGuide: VersionedTuple = mmoDb.searchVersionedTuples(f=>f.id===112);
