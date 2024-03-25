@@ -21,17 +21,186 @@ export type Tag = string;
 
 // Perhaps the versioned relation tree should be forced??
 
+// /**
+//  *
+//  */
+// export class VersionedRelationContainer {
+//     readonly schema: RelationField;
+//     readonly childRelations: Record<Tag,VersionedRelation>;
+
+//     constructor(schema: RelationField) {
+//         this.schema = schema;
+//         this.childRelations = Object.fromEntries(
+//             schema.relationFields.map(r=>[r.tag, new VersionedRelation(r, this)]));
+//     }
+
+// }
+
+
+interface Entry0 {
+    name: string;
+    
+    spellings: {
+        text: string;
+        variant: string;
+    }[],
+
+    subentry: {
+        part_of_speech: string;
+        definition: {
+            definition: string;
+        }[];
+        gloss: {
+            gloss: string;
+        }[];
+    }[],
+}
+
+/*
+  - would like typed access to the tree, including rich apis (meaning that
+  we don't want to have the typed access by doing a copy of the tree).
+  - don't want to use proxies
+  - can take advantage of the relative immutability.
+  - the shape below is wrong anyway for a multi-versioned tree.
+  - 
+ */
+
+// Maybe variant is universal?  --- PROBABLY!  --- CAN JUST BURY EVERYWHERE THEN!
+// interface VariantTupleVerisonT extends TupleVersionT {
+//     variant: string;
+// }
+
+// How does root work?
+// - the mode-consistent way would be to have a root tuple id (for example 0),
+//   and then normal model would work from there.
+// - there would be versioned data for this root tuple.
+// - the type and id would be fixed (by the schema).
+// - we could just forbid tuples at this level (and have an empty tuple
+//   at the top) so that we can have a more consistent model.
+// - problem is with lifetimes, which we need to figure out in general.
+// - specifically, we have decoupled child lifetimes from parent tuple lifetimes,
+//   but how do we handle children/decendants if the parent is deleted/not present.
+// - from a user perspective, deleting the parent should delete the children - which
+//   means the parent lifetime would effect the children.
+// - this means that usual tree access will need to be parameterized by when.
+// - anyway, this also means that if we want to have a unified root model,
+//   we probably want to make a record for it.
+// - not a bad thing to have for a dictionary anyway.
+// - not super bad for export.
+// - probably add to ty/id path thing just for consistency.
+
+
+// - how does visibility work with a locale view?
+// - if there is no tuple in the current locale, then we don't see children.
+
+
+
+interface NodeT {
+}
+
+/**
+ * 
+ */
+interface Node<TupleT> extends NodeT {
+    $tuples: TupleT[];
+}
+
 /**
  *
  */
-export class VersionedRelationContainer {
-    readonly schema: RelationField;
-    readonly childRelations: Record<Tag,VersionedRelation>;
+interface TupleVersionT {
+    assertion_id: number;
+    id: number;
+    valid_from: number;
+    valid_to: number;
+}
 
-    constructor(schema: RelationField) {
+interface DictionaryNode extends Node<Dictionary> {
+    entry: EntryNode[];
+}
+
+interface Dictionary extends TupleVersionT {
+}
+
+interface EntryNode extends Node<Entry> {
+    spelling: SpellingNode[];
+    subentry: SubentryNode[];
+}
+
+interface Entry extends TupleVersionT {
+}
+
+interface SpellingNode extends Node<Spelling> {
+}
+
+interface Spelling extends TupleVersionT {
+    text: string;
+}
+
+interface SubentryNode extends Node<Subentry> {
+    definition: DefinitionNode[];
+    //gloss: GlossNode[];
+    // example: Example[];
+    // recording: Recording[];
+    // pronunication_guide: PronunciationGuide[];
+    // category: Category[];
+    // related_entry: RelatedEntry[];
+    // alternate_grammatical_form: AlternateGrammaticalForm[];
+    // other_regional_form: OtherRegionalForm[];
+    // attr: Attr[];
+}
+
+interface Subentry extends TupleVersionT {
+    part_of_speech: string;
+}
+
+interface DefinitionNode extends Node<Definition> {
+    // ...
+}
+
+interface Definition extends TupleVersionT {
+    definition: string;
+}
+
+interface Gloss extends TupleVersionT {
+    gloss: string;
+}
+
+// interface Subentry extends Node {
+//     part_of_speech: string;
+//     definition: Definition[];
+// }
+
+// interface Definition extends Node {
+//     definition: string;
+// }
+
+
+//let k: Entry.
+
+// VersionedTuple can take a type parameter:
+// -
+
+
+// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+/**
+ *
+ */
+export class VersionedTuple/*<T extends NodeT>*/ {
+    readonly id: number;
+    readonly schema: RelationField;
+    readonly tupleVersions: TupleVersion[] = [];
+    readonly childRelations: Record<Tag,VersionedRelation>;
+    #currentTuple: TupleVersion|undefined = undefined;
+
+    constructor(schema: RelationField, id: number) {
         this.schema = schema;
         this.childRelations = Object.fromEntries(
             schema.relationFields.map(r=>[r.tag, new VersionedRelation(r, this)]));
+        this.id = id;
     }
 
     applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
@@ -63,6 +232,7 @@ export class VersionedRelationContainer {
     }
 
     forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
+        f(this);
         for(const v of Object.values(this.childRelations))
             v.forEachVersionedTuple(f);
     }
@@ -94,122 +264,7 @@ export class VersionedRelationContainer {
             throw new Error(`failed to find required versioned tuple for id ${id}`);
         return tuple;
     }
-}
-
-/**
- *
- */
-export class VersionedRelation {
-    readonly schema: RelationField;
-    readonly container: VersionedRelationContainer;
-    readonly tuples: Record<number,VersionedTuple> = {};
-
-    constructor(schema: RelationField, container: VersionedRelationContainer) {
-        this.schema = schema;
-        this.container = container;
-    }
-
-    forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
-        for(const v of Object.values(this.tuples))
-            v.forEachVersionedTuple(f);
-    }
-
-    dump(): any {
-        return Object.fromEntries(Object.entries(this.tuples).map(([id, child])=>
-            [id, child.dump()]));
-    }
-}
-
-interface Entry0 {
-    name: string;
     
-    spellings: {
-        text: string;
-        variant: string;
-    }[],
-
-    subentry: {
-        part_of_speech: string;
-        definition: {
-            definition: string;
-        }[];
-        gloss: {
-            gloss: string;
-        }[];
-    }[],
-}
-
-/*
-  - would like typed access to the tree, including rich apis (meaning that
-  we don't want to have the typed access by doing a copy of the tree).
-  - don't want to use proxies
-  - can take advantage of the relative immutability.
-  - the shape below is wrong anyway for a multi-versioned tree.
-  - 
- */
-
-/**
- * id of node is id of parent.
- * 
- */
-interface Node {
-    id: number;
-}
-
-/**
- *
- */
-interface TypedVersionedTuple {
-    assertion_id: number;
-    id: number;
-    valid_from: number;
-    valid_to: number;
-}
-
-interface VariantVersionTuple extends TypedVersionedTuple {
-    variant: string;
-}
-
-interface EntryNode extends Node {
-    //entry: EntryTuple[]
-    //spelling: Spelling[];
-    //subentry: Subentry[];
-}
-
-interface Entry extends TypedVersionedTuple {
-}
-
-interface Spelling extends TypedVersionedTuple {
-    text: string;
-}
-
-// interface Subentry extends Node {
-//     part_of_speech: string;
-//     definition: Definition[];
-// }
-
-// interface Definition extends Node {
-//     definition: string;
-// }
-
-
-//let k: Entry.
-
-// VersionedTuple can take a type parameter:
-// - 
-/**
- *
- */
-export class VersionedTuple extends VersionedRelationContainer {
-    readonly id: number;
-    readonly tupleVersions: TupleVersion[] = [];
-    #currentTuple: TupleVersion|undefined = undefined;
-
-    constructor(schema: RelationField, id: number) {
-        super(schema);
-        this.id = id;
-    }
-
     applyAssertion(assertion: Assertion) {
         const tuple = new TupleVersion(this, assertion);
         // TODO lots of validation here + index updating etc.
@@ -242,10 +297,10 @@ export class VersionedTuple extends VersionedRelationContainer {
     }
 
     
-    forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
-        f(this);
-        super.forEachVersionedTuple(f);
-    }
+    // forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
+    //     f(this);
+    //     super.forEachVersionedTuple(f);
+    // }
 
     dump(): any {
         return {
@@ -255,6 +310,34 @@ export class VersionedTuple extends VersionedRelationContainer {
             ...Object.fromEntries(Object.values(this.childRelations).map(c=>
                 [c.schema.name, c.dump()]))
         };
+    }
+}
+
+/**
+ *
+ *
+ * - need to handle views of the content based on time + variant
+ * - ordering of view needs to also be time based.
+ * - need to track local (uncommitted) insertions etc.
+ */
+export class VersionedRelation {
+    readonly schema: RelationField;
+    readonly parent: VersionedTuple;
+    readonly tuples: Record<number,VersionedTuple> = {};
+
+    constructor(schema: RelationField, parent: VersionedTuple) {
+        this.schema = schema;
+        this.parent = parent;
+    }
+
+    forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
+        for(const v of Object.values(this.tuples))
+            v.forEachVersionedTuple(f);
+    }
+
+    dump(): any {
+        return Object.fromEntries(Object.entries(this.tuples).map(([id, child])=>
+            [id, child.dump()]));
     }
 }
 
@@ -296,46 +379,44 @@ export class TupleVersion {
             ...this.domainFields,
         };
     }
-
-    
 }
 
-/**
- *
- */
-export class VersionedDatabaseWorkspace extends VersionedRelationContainer {
-    declare schema: Schema;
+// /**
+//  *
+//  */
+// export class VersionedDatabaseWorkspace extends VersionedRelationContainer {
+//     declare schema: Schema;
     
-    //readonly factsById: Map<number, FactCollection> = new Map();
+//     //readonly factsById: Map<number, FactCollection> = new Map();
     
-    constructor(schema: Schema) {
-        super(schema);
-    }
+//     constructor(schema: Schema) {
+//         super(schema);
+//     }
 
-    apply(assertion: Assertion) {
-        // We want to be able to apply assertions at any depth, in any order.
-        // - Top level apply will lookup RelationField for ty (using index on schema),
-        //   and then traversal will walk/create nodes, then apply to fact.
-        // - top level is still a container even if we are only mirroring a single
-        //   record.
-        // const relationField = this.schema.relationsByTag[assertion.ty];
-        // if(!relationField)
-        //     throw new Error(`Failed to find relation with tag '${assertion.ty}' in schema ${this.schema.name}`);
+//     apply(assertion: Assertion) {
+//         // We want to be able to apply assertions at any depth, in any order.
+//         // - Top level apply will lookup RelationField for ty (using index on schema),
+//         //   and then traversal will walk/create nodes, then apply to fact.
+//         // - top level is still a container even if we are only mirroring a single
+//         //   record.
+//         // const relationField = this.schema.relationsByTag[assertion.ty];
+//         // if(!relationField)
+//         //     throw new Error(`Failed to find relation with tag '${assertion.ty}' in schema ${this.schema.name}`);
 
-        return this.applyAssertionByPath(getAssertionPath(assertion), assertion);
-    }
+//         return this.applyAssertionByPath(getAssertionPath(assertion), assertion);
+//     }
 
-    dump(): any {
-        return Object.fromEntries(Object.entries(this.childRelations).map(([id, child])=>
-            [id, child.dump()]));
-    }
+//     dump(): any {
+//         return Object.fromEntries(Object.entries(this.childRelations).map(([id, child])=>
+//             [id, child.dump()]));
+//     }
 
-    // dump(): any {
-    //     return Object.values(this.childRelations).map(child=>({
-    //         type: child.schema.name: child.dump()}));
-    // }
+//     // dump(): any {
+//     //     return Object.values(this.childRelations).map(child=>({
+//     //         type: child.schema.name: child.dump()}));
+//     // }
     
-}
+// }
 
 
 function test() {
@@ -346,8 +427,9 @@ function test() {
     //console.info('Sample entry assertions', sampleEntryAssertions);
 
     // --- Create an empty instance schema
-    const mmoDb = new VersionedDatabaseWorkspace(dictSchema);
-    sampleEntryAssertions.forEach(a=>mmoDb.apply(a));
+    //const mmoDb = new VersionedDatabaseWorkspace(dictSchema);
+    const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
+    sampleEntryAssertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
     console.info(JSON.stringify(mmoDb.dump(), undefined, 2));
 
     const entries = mmoDb.childRelations['en'];
