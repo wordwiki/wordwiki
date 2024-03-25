@@ -94,6 +94,15 @@ interface Entry0 {
 // - if there is no tuple in the current locale, then we don't see children.
 
 
+type TupleType<T extends {$tuples: any[]}> = T["$tuples"][0];
+
+let k: string[];
+const v: typeof k[0] = '7';
+
+// type ChildRelationsType<T> = {
+//     [Property in keyof Omit<T, '$tuples'>]: VersionedRelation<T[Property]>
+// };
+
 
 interface NodeT {
 }
@@ -119,6 +128,9 @@ interface DictionaryNode extends Node<Dictionary> {
     entry: EntryNode[];
 }
 
+let x: TupleType<DictionaryNode>;
+//(void)d;
+
 interface Dictionary extends TupleVersionT {
 }
 
@@ -126,6 +138,9 @@ interface EntryNode extends Node<Entry> {
     spelling: SpellingNode[];
     subentry: SubentryNode[];
 }
+
+//let d: ChildRelationsType<EntryNode> = { spelling: [], subentry: [] };
+//(void)d;
 
 interface Entry extends TupleVersionT {
 }
