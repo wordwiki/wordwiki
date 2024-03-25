@@ -120,7 +120,83 @@ export class VersionedRelation {
     }
 }
 
+interface Entry0 {
+    name: string;
+    
+    spellings: {
+        text: string;
+        variant: string;
+    }[],
 
+    subentry: {
+        part_of_speech: string;
+        definition: {
+            definition: string;
+        }[];
+        gloss: {
+            gloss: string;
+        }[];
+    }[],
+}
+
+/*
+  - would like typed access to the tree, including rich apis (meaning that
+  we don't want to have the typed access by doing a copy of the tree).
+  - don't want to use proxies
+  - can take advantage of the relative immutability.
+  - the shape below is wrong anyway for a multi-versioned tree.
+  - 
+ */
+
+/**
+ * id of node is id of parent.
+ * 
+ */
+interface Node {
+    id: number;
+}
+
+/**
+ *
+ */
+interface TypedVersionedTuple {
+    assertion_id: number;
+    id: number;
+    valid_from: number;
+    valid_to: number;
+}
+
+interface VariantVersionTuple extends TypedVersionedTuple {
+    variant: string;
+}
+
+interface EntryNode extends Node {
+    //entry: EntryTuple[]
+    //spelling: Spelling[];
+    //subentry: Subentry[];
+}
+
+interface Entry extends TypedVersionedTuple {
+}
+
+interface Spelling extends TypedVersionedTuple {
+    text: string;
+}
+
+// interface Subentry extends Node {
+//     part_of_speech: string;
+//     definition: Definition[];
+// }
+
+// interface Definition extends Node {
+//     definition: string;
+// }
+
+
+//let k: Entry.
+
+// VersionedTuple can take a type parameter:
+// - 
 /**
  *
  */
