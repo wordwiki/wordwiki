@@ -24,7 +24,7 @@ export const dictSchemaJson = {
             $style: { $prompt: 'SPELLING!' },
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
-            variant: {$type: 'string'}
+            variant: {$type: 'variant'}
         },
         subentry: {
             $type: 'relation',
@@ -38,24 +38,32 @@ export const dictSchemaJson = {
                 definition_id: {$type: 'primary_key'},
                 definition: {$type: 'string', $bind: 'attr1'},
                 //variant: {$type: 'string'}
+                // same issue as for gloss variant!!!
             },
             gloss: {
                 $type: 'relation',
                 $tag: 'gl',
                 gloss_id: {$type: 'primary_key'},
                 gloss: {$type: 'string', $bind: 'attr1'}
+                //variant: {$type: 'string'} - COMPLICATED
+                // the gloss is (for example) in english, but may want to have
+                // a different gloss for SF than LI?  How to model?
+                //may also want to gloss into multiple languages.
+                //do we need this power for other items?
             },
             example: {
                 $type: 'relation',
                 $tag: 'ex',
                 example_id: {$type: 'primary_key'},
                 translation: {$type: 'string', $bind: 'attr1'},
+                // Probably move translation into a sub relation (so can have variants)
+                // Thiunk about pairings of tranlation and example.
                 example_text: {
                     $type: 'relation',
                     $tag: 'et',
                     example_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
-                    variant: {$type: 'string'}
+                    variant: {$type: 'variant'}
                 },                
             },
             // recording: {
@@ -69,7 +77,7 @@ export const dictSchemaJson = {
                 $tag: 'pg',
                 pronunciation_guide_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
-                variant: {$type: 'string'},
+                variant: {$type: 'variant'},
             },
             category: {
                 $type: 'relation',
@@ -84,6 +92,8 @@ export const dictSchemaJson = {
                 related_entry_id: {$type: 'primary_key'},
                 unresolved_text: {$type: 'string', $bind: 'attr1'},
             },
+
+            // Probably same variant treatment here as we are doing for examples
             alternate_grammatical_form: {
                 $type: 'relation',
                 $tag: 'ag',
@@ -95,7 +105,7 @@ export const dictSchemaJson = {
                     $tag: 'ax',
                     alternate_form_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
-                    variant: {$type: 'string'}
+                    variant: {$type: 'variant'}
                 },
             },
             other_regional_form: {

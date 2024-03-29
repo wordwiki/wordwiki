@@ -413,7 +413,7 @@ class Test {
     }
 }
 
-console.info(new Test().safeAdd(3,3));
+//console.info(new Test().safeAdd(3,3));
 
 
 if (import.meta.main)

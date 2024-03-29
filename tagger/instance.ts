@@ -4,9 +4,14 @@ import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, Float
 import {unwrap, panic} from "../utils/utils.ts";
 import * as utils from "../utils/utils.ts";
 import {dictSchemaJson} from "./entry-schema.ts";
-import { Assertion, getAssertionPath, selectAssertionsForTopLevelFact } from "./schema.ts";
+import { Assertion, getAssertionPath, selectAssertionsForTopLevelFact, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
 import * as timestamp from "../utils/timestamp.ts";
+import {BEGINNING_OF_TIME, END_OF_TIME} from '../utils/timestamp.ts';
 import {assert} from '../utils/utils.ts';
+import * as view from './view.ts';
+import * as orderkey from '../utils/orderkey.ts';
+import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
+import {block} from "../utils/strings.ts";
 
 export type Tag = string;
 
@@ -36,25 +41,6 @@ export type Tag = string;
 
 // }
 
-
-interface Entry0 {
-    name: string;
-    
-    spellings: {
-        text: string;
-        variant: string;
-    }[],
-
-    subentry: {
-        part_of_speech: string;
-        definition: {
-            definition: string;
-        }[];
-        gloss: {
-            gloss: string;
-        }[];
-    }[],
-}
 
 /*
   - would like typed access to the tree, including rich apis (meaning that
@@ -93,24 +79,48 @@ interface Entry0 {
 // - how does visibility work with a locale view?
 // - if there is no tuple in the current locale, then we don't see children.
 
+type FilterConditionally<Source, Condition> = Pick<Source, {[K in keyof Source]: Source[K] extends Condition ? K : never}[keyof Source]>;
 
-type TupleType<T extends {$tuples: any[]}> = T["$tuples"][0];
+type ArrayElemType<T extends any[]> = T[number];
 
-let k: string[];
-const v: typeof k[0] = '7';
+let k: number[] = [1,2,3];
+type FFF = ArrayElemType<typeof k>;
+
+
+//type TupleType<T extends {$tuples: any[]}> = T["$tuples"][0];
+type TupleType<T extends {$tuples: any[]}> = ArrayElemType<T["$tuples"]>;
+
+// type ChildRelationsType<T, F extends {[n:string]: NodeT[]}=FilterConditionally<Omit<T, '$tuples'>, NodeT[]>> = {
+//     [Property in keyof F]: VersionedRelation<ArrayElemType<F[Property]>>
+// };
+
+// type ChildRelationsType<T> =
+//     Pick<T, {[K in keyof T]: T[K] extends NodeT[] ? K : never}[keyof T]>;
 
 // type ChildRelationsType<T> = {
-//     [Property in keyof Omit<T, '$tuples'>]: VersionedRelation<T[Property]>
+//     [Property in keyof Pick<T, {[K in keyof T]: T[K] extends NodeT[] ? K : never}[keyof T]>]: VersionedRelation<T[Property] extends NodeT[] ? T[Property][number] : never>
 // };
 
 
+
+//     [Property in keyof T]: VersionedRelation<ArrayElemType<T[Property]>>
+// };
+
+interface Foo {
+    //a: Cat;
+    b: string;
+}
+
+
+
 interface NodeT {
+    isNodeT?: boolean;
 }
 
 /**
  * 
  */
-interface Node<TupleT> extends NodeT {
+interface Node<TupleT extends TupleVersionT> extends NodeT {
     $tuples: TupleT[];
 }
 
@@ -126,7 +136,14 @@ interface TupleVersionT {
 
 interface DictionaryNode extends Node<Dictionary> {
     entry: EntryNode[];
+    spelling: SpellingNode[];
+    bar: string;
 }
+
+//type S1 = FilterConditionally<DictionaryNode, NodeT[]>;
+//type S = ChildRelationsType<DictionaryNode>;
+
+// let z: ChildRelationsType<DictionaryNode> = { entry: undefined as VersionedRelation<EntryNode> };
 
 let x: TupleType<DictionaryNode>;
 //(void)d;
@@ -209,6 +226,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     readonly schema: RelationField;
     readonly tupleVersions: TupleVersion[] = [];
     readonly childRelations: Record<Tag,VersionedRelation>;
+    //readonly childRelations: ChildRelationsType<NodeT>;
     #currentTuple: TupleVersion|undefined = undefined;
 
     constructor(schema: RelationField, id: number) {
@@ -233,10 +251,10 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         }
         utils.assert(versionedRelation.schema.tag === ty);
 
-        let versionedTuple = versionedRelation.tuples[id];
+        let versionedTuple = versionedRelation.tuples.get(id);
          if(!versionedTuple) {
-            versionedTuple = new VersionedTuple(versionedRelation.schema, id);
-            versionedRelation.tuples[id] = versionedTuple;
+             versionedTuple = new VersionedTuple(versionedRelation.schema, id);
+             versionedRelation.tuples.set(id, versionedTuple);
         }
         utils.assert(versionedTuple.schema.tag === ty);
         
@@ -335,10 +353,10 @@ export class VersionedTuple/*<T extends NodeT>*/ {
  * - ordering of view needs to also be time based.
  * - need to track local (uncommitted) insertions etc.
  */
-export class VersionedRelation {
+export class VersionedRelation/*<T extends NodeT>*/ {
     readonly schema: RelationField;
     readonly parent: VersionedTuple;
-    readonly tuples: Record<number,VersionedTuple> = {};
+    readonly tuples: Map<number,VersionedTuple/*<T>*/> = new Map();
 
     constructor(schema: RelationField, parent: VersionedTuple) {
         this.schema = schema;
@@ -346,15 +364,17 @@ export class VersionedRelation {
     }
 
     forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
-        for(const v of Object.values(this.tuples))
+        for(const v of this.tuples.values())
             v.forEachVersionedTuple(f);
     }
 
     dump(): any {
-        return Object.fromEntries(Object.entries(this.tuples).map(([id, child])=>
+        return Object.fromEntries([...this.tuples.entries()].map(([id, child])=>
             [id, child.dump()]));
     }
 }
+
+
 
 /**
  *
@@ -372,7 +392,7 @@ export class TupleVersion {
     }
 
     get isCurrent(): boolean {
-        return this.assertion.valid_to === timestamp.END_TIME;
+        return this.assertion.valid_to === timestamp.END_OF_TIME;
     }
     
     get domainFields(): Record<string,any> {
@@ -385,14 +405,138 @@ export class TupleVersion {
     dump(): any {
         const a = this.assertion;
         return {
-            ...(a.valid_from !== timestamp.BEGIN_TIME ?
+            ...(a.valid_from !== timestamp.BEGINNING_OF_TIME ?
                 {valid_from: timestamp.formatTimestampAsUTCTime(a.valid_from)} : {}),
-            ...(a.valid_to !== timestamp.END_TIME ?
+            ...(a.valid_to !== timestamp.END_OF_TIME ?
                 {valid_to: timestamp.formatTimestampAsUTCTime(a.valid_to)} : {}),
             //id: this.relation.id,
             //ty: this.relation.schema.tag,
             ...this.domainFields,
         };
+    }
+}
+
+export function compareVersionedTupleByRecentness(a: TupleVersion, b: TupleVersion): number {
+    return compareAssertionsByRecentness(a.assertion, b.assertion);
+}
+
+export function compareVersionedTupleAssertionByOrderKey(a: TupleVersion, b: TupleVersion): number {
+    return compareAssertionsByOrderKey(a.assertion, b.assertion);
+}
+
+/**
+ *
+ */
+export abstract class VersionedTupleQuery {
+    readonly src: VersionedTuple;
+    readonly schema: RelationField;
+    readonly tupleVersions: TupleVersion[];
+    readonly childRelations: Record<Tag,VersionedRelationQuery> = {};
+    
+    constructor(src: VersionedTuple) {
+        this.src = src;
+        this.schema = src.schema;
+        this.tupleVersions = this.computeTuples();
+        this.childRelations = this.computeChildRelations();
+    }
+
+    abstract computeTuples(): TupleVersion[];
+    abstract computeChildRelations(): Record<Tag, VersionedRelationQuery>;
+
+    get mostRecentTupleVersion(): TupleVersion|undefined {
+        // Note: we are using the spec behaviour where out of bound [] refs === undefined.
+        return this.tupleVersions[this.tupleVersions.length-1];
+    }
+
+    get historicalTupleVersions(): TupleVersion[] {
+        return this.tupleVersions.slice(0, -1);
+    }
+    
+    dump(): any {
+        return {
+            //type: this.schema.name,
+            //id: this.id,
+            versions: this.tupleVersions.map(a=>a.dump()),
+            ...Object.fromEntries(Object.values(this.childRelations).map(c=>
+                [c.src.schema.name, c.dump()]))
+        };
+    }
+}
+
+/**
+ *
+ */
+export class CurrentTupleQuery extends VersionedTupleQuery {
+    declare childRelations: Record<Tag, CurrentRelationQuery>;
+    
+    constructor(src: VersionedTuple) {
+        super(src);
+    }
+    
+    // Note: we will probably switch VersionTuple to have a ordered by
+    //       recentness query, in which case we should remove the sort from here.
+    computeTuples(): TupleVersion[] {
+        return this.src.tupleVersions.
+            filter(tv=>tv.isCurrent).
+            toSorted(compareVersionedTupleByRecentness);
+    }
+
+    computeChildRelations(): Record<Tag, VersionedRelationQuery> {
+        return Object.fromEntries(Object.entries(this.src.childRelations).
+                map(([tag,rel])=>
+                    [tag, new CurrentRelationQuery(rel)]));
+    }
+}
+
+/**
+ *
+ */
+export abstract class VersionedRelationQuery {
+    readonly src: VersionedRelation;
+    readonly schema: RelationField;
+    readonly tuples: Map<number,VersionedTupleQuery>;
+    
+    constructor(src: VersionedRelation) {
+        this.src = src;
+        this.schema = src.schema;
+        this.tuples = this.computeTuples();
+    }
+
+    abstract computeTuples(): Map<number, VersionedTupleQuery>;
+
+    dump(): any {
+        return Object.fromEntries([...this.tuples.entries()].map(([id, child])=>
+            [id, child.dump()]));
+    }
+}
+    
+/**
+ *
+ * TODO: hook up versioned parent.
+ */
+export class CurrentRelationQuery extends VersionedRelationQuery {
+    declare tuples: Map<number,CurrentTupleQuery>;
+    
+    constructor(src: VersionedRelation) {
+        super(src);
+    }
+
+    computeTuples(): Map<number, CurrentTupleQuery> {
+        const currentTupleQuerys = [...this.src.tuples.entries()].
+            map(([id,tup]: [number, VersionedTuple]): [number, CurrentTupleQuery]=>
+                [id, new CurrentTupleQuery(tup)]);
+        
+        const currentTupleQuerysByRecentness =
+            currentTupleQuerys.toSorted(([aId, aTup]: [number, CurrentTupleQuery], [bId, bTup]: [number, CurrentTupleQuery]) => {
+                const aMostRecent = aTup.mostRecentTupleVersion;
+                const bMostRecent = bTup.mostRecentTupleVersion;
+                if(aMostRecent === undefined && bMostRecent === undefined) return 0;
+                if(aMostRecent === undefined) return -1;
+                if(bMostRecent === undefined) return 1;
+                return compareVersionedTupleByRecentness(aMostRecent, bMostRecent);
+            });
+
+        return new Map(currentTupleQuerysByRecentness);
     }
 }
 
@@ -434,18 +578,20 @@ export class TupleVersion {
 // }
 
 
-function test() {
+/**
+ *
+ */
+export function testRenderEntry(assertions: Assertion[]): any {
+    
     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
 
-    // --- Load the tuples for a dictionary entry.
-    const sampleEntryAssertions = selectAssertionsForTopLevelFact('dict').all({id1:1000});
-    //console.info('Sample entry assertions', sampleEntryAssertions);
+    console.info('Sample entry assertions', assertions);
 
     // --- Create an empty instance schema
     //const mmoDb = new VersionedDatabaseWorkspace(dictSchema);
     const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
-    sampleEntryAssertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
-    console.info(JSON.stringify(mmoDb.dump(), undefined, 2));
+    assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
+    console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
 
     const entries = mmoDb.childRelations['en'];
     //console.info('entries', entries);
@@ -454,16 +600,71 @@ function test() {
     let definition = mmoDb.findRequiredVersionedTupleById(992);
     console.info('definition', definition.dump());
 
-    // --- Edit definition
-    //definition.applyAssertion();
-    
-    // --- Add a second pronunciation guide
+    const current = new CurrentTupleQuery(mmoDb);
+    console.info('current view', JSON.stringify(current.dump(), undefined, 2));
 
-    // --- Persist this to disk!
-    
-    //fieldToFieldInstInst.accept(dictSchema);
+    const mmoView = view.schemaView(dictSchema);
+
+    return view.renderTuple(mmoView, current);
 }
 
+/**
+ *
+ */
+export function test(entry_id: number=1000): any {
+    // --- Load the tuples for a dictionary entry.
+    const sampleEntryAssertions = selectAssertionsForTopLevelFact('dict').all({id1:entry_id});
+    return (
+        ['html', {},
+         ['head', {},
+          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+          /*['script', {src:'/scripts/tagger/page-editor.js'}]*/],
+         ['body', {},
+          testRenderEntry(sampleEntryAssertions)]]);
+}
+
+/**
+ *
+ */
+function clientRenderTest(entry_id: number): any {
+    return (
+        ['html', {},
+         ['head', {},
+          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+          ['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+          ['script', {type: 'module'}, block`
+/**/           import * as instance from '/scripts/tagger/instance.js';
+/**/           document.addEventListener("DOMContentLoaded", (event) => {
+/**/             console.log("DOM fully loaded and parsed");
+/**/             instance.renderSample(document.getElementById('root'))
+/**/           });`
+          ]
+        ],
+        
+        ['body', {},
+         ['div', {id: 'root'}, entry_id]]]);
+}
+
+console.info('HI FROM INSTANCE!');
+
+export function renderSample(root: Element) {
+    console.info('rendering sample');
+    root.innerHTML = 'POW!';
+
+    
+
+    
+}
+
+export function getAssertionsForEntry(entry_id: number): any {
+    return selectAssertionsForTopLevelFact('dict').all({id1: entry_id});
+}
+
+export const routes = ()=> ({
+    instanceTest: test,
+    clientRenderTest,
+    getAssertionsForEntry,
+});
 
 
 

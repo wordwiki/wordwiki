@@ -3,6 +3,8 @@ import * as linkedom from "https://esm.sh/linkedom@0.16.8";
 
 export type DumpOpts = Record<string, any>;
 
+export type Markup = any;
+
 export type Tag = string|Function|symbol;
 export type ElemExprLiteral = any; //[string|Function|symbol, Record<string, any>, ...ElemExprContentLiteralItem];
 export type ElemExprContentLiteralItem = any; //ElemExprLiteral|string|number|Function;

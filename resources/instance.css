@@ -1,0 +1,33 @@
+/**/
+
+table.relation {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0px solid purple;
+  /*margin-left: 2em;*/
+}
+
+table.relation > tbody > tr > td, table.relation > tbody > tr > th {
+  /*border-collapse: collapse;*/
+  border: 1px solid grey;
+  text-align: left; 
+}
+
+table.relation > tbody > tr > th {
+  width: 10em;
+  /*background-color: green;*/
+}
+
+table.relation > tbody > tr > td.relation-container {
+  padding: 0 0 0 2em;
+  border: 0px;
+  /*padding-left: 2em;*/
+}
+
+td: {
+  align-left;
+}
+
+td.field-variant {
+  width: 3em;
+}

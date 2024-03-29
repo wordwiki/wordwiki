@@ -6,6 +6,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 import * as content from "../utils/content-store.ts";
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
+import * as orderkey from '../utils/orderkey.ts';
 
 export const routes = ()=> ({
 });
@@ -719,8 +720,9 @@ export interface Assertion {
 
     /**
      * depth
+     * TRY TO DROP
      */
-    depth: number;
+    //depth: number;
     
     /**
      * (Denormalized) Flattening of the ancestor and self ids and types.
@@ -747,45 +749,14 @@ export interface Assertion {
     attr6?: any;
     attr7?: any;
     attr8?: any;
-    
-    /**
-     * Notes on this assertion (public and internal)
-     */
-    public_note?: string;
-    internal_note?: string;
-    
-    /**
-     * Locale expression for which this assertion hosts.
-     */
-    locale_expr?: string;
+    attr9?: any;
+    attr10?: any;
+    attr11?: any;
+    attr12?: any;
+    attr13?: any;
+    attr14?: any;
+    attr15?: any;
 
-    /**
-     * (Denormalized) Expansion of the locale expression into the
-     * specific locales for which this assertion holds.
-     */
-    expanded_locale_list?: string;
-
-    /**
-     * (Denormalized) Boolean fields corresponding to whether this
-     * assertion holds in a few application specified locales.
-     *
-     * PROBABLY DROP THIS W NEW PER-LOCALE TABLE COPY.
-     */
-    is_locale1?: boolnum;
-    is_locale2?: boolnum;
-    is_locale3?: boolnum;
-    is_locale4?: boolnum;
-
-    /**
-     * Our present level of confidence (0-10) in this fact.
-     *
-     * This is critical because when gathering dictionary information, we
-     * may collect an assertion 'I think "cat" had a secondary meaning ...',
-     * or we may be collecting information from the public, without vetting.
-     */
-    confidence?: number;
-    confidence_note?: string;
-    
     /**
      * Key used to order this assertion within its peers (same parent_id and ty).
      *
@@ -794,10 +765,25 @@ export interface Assertion {
     order_key?: string;
 
     /**
-     *
+     * Locale expression for which this assertion hosts.
      */
-    published?: boolnum;
-
+    locale_expr?: string;
+    
+    /**
+     * Notes on this assertion
+     */
+    note?: string;
+    
+    /**
+     * Our present level of confidence (0-10) in this fact.
+     *
+     * This is critical because when gathering dictionary information, we
+     * may collect an assertion 'I think "cat" had a secondary meaning ...',
+     * or we may be collecting information from the public, without vetting.
+     */
+    //confidence?: number;
+    //confidence_note?: string;
+    
     /**
      * More thought here about approval, priorities, discussion etc.
      */
@@ -807,20 +793,50 @@ export interface Assertion {
     change_note?: string;
 }
 
+/**
+ *
+ */
 export function getAssertionPath(a: Assertion): [string, number][] {
-    const depth = a.depth;
     const path: [string, number][] = [];
-    path.push([a.ty1!, a.id1!]);
-    if(depth===1) return path;
-    path.push([a.ty2!, a.id2!]);
-    if(depth===2) return path;
-    path.push([a.ty3!, a.id3!]);
-    if(depth===3) return path;
-    path.push([a.ty4!, a.id4!]);
-    if(depth===4) return path;
-    path.push([a.ty5!, a.id5!]);
-    if(depth===5) return path;
-    utils.panic('unexpected depth');
+    if(a.ty1==null || a.id1==null) throw new Error(`Invalid assertion, missing ty1 or id1`);
+    path.push([a.ty1, a.id1]);
+    if(a.ty2==null || a.id2==null) return path;
+    path.push([a.ty2, a.id2]);
+    if(a.ty3==null || a.id3==null) return path;
+    path.push([a.ty3, a.id3]);
+    if(a.ty4==null || a.id4==null) return path;
+    path.push([a.ty4, a.id4]);
+    if(a.ty5==null || a.id5==null) return path;
+    path.push([a.ty5, a.id5]);
+    return path;
+}
+
+/**
+ * Compares two Assertions by user defined order_key.
+ *
+ * When there are duplicate order keys (which occurs when not pre-filtering
+ * by a particular time), provides stable results, and attempts to make
+ * them as pleasant as possible - but they still will be a bit weird
+ * if the item has been moved in the list.
+ *
+ * Handles null/undefined order_keys.
+ */
+export function compareAssertionsByOrderKey(a: Assertion, b: Assertion): number {
+    return orderkey.compareOrderKeys(a.order_key, b.order_key) ||
+        a.id - b.id ||               // if order keys same - next order by fact id
+        a.valid_to - b.valid_to ||   // if facts ids are the same, next by assertion time
+        a.assertion_id - b.assertion_id  // Finally by assertion_id (always unique)
+}
+
+/**
+ * Compares to assertions based on how recently they were made.  For assertions
+ * made at the same time, falls back to id, then assertion_id so always have
+ * a stable sort.
+ */
+export function compareAssertionsByRecentness(a: Assertion, b: Assertion): number {
+    return a.valid_from - b.valid_from ||
+        a.id - b.id ||
+        a.assertion_id - b.assertion_id;
 }
 
 export function getAssertionTypeN(a: Assertion, n: number): string|undefined {
@@ -852,7 +868,7 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "valid_from", "valid_to",
     "published_from", "published_to",
 
-    "id", "ty", "depth",
+    "id", "ty",
     
     "ty1", "id1",
     "ty2", "id2",
@@ -860,18 +876,13 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "ty4", "id4",
     "ty5", "id5",
 
-    //"srctxt", "targettxt", "label", "value", "txt", "num", "ref",
     "attr1", "attr2", "attr3", "attr4", "attr5", "attr6", "attr7", "attr8",
+    "attr9", "attr10", "attr11", "attr12", "attr13", "attr14", "attr15",
+
+    "order_key", "locale_expr",
+
+    "note",
     
-    "public_note", "internal_note",
-    
-    "locale_expr", "expanded_locale_list",
-    "is_locale1", "is_locale2", "is_locale3", "is_locale4",
-
-    "confidence", "confidence_note",
-
-    "order_key",
-
     "change_by_username", "change_action", "change_arg", "change_note",
     ];
 
@@ -888,7 +899,6 @@ const createAssertionDml = (tableName:string)=>block`
 /**/
 /**/       id INTEGER NOT NULL,
 /**/       ty TEXT NOT NULL,
-/**/       depth INTEGER,
 /**/
 /**/       ty1 TEXT NOT NULL,
 /**/       id1 INTEGER,
@@ -901,14 +911,6 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       ty5 TEXT,
 /**/       id5 INTEGER,
 /**/
-/**/       -- srctxt TEXT,
-/**/       -- targettxt TEXT,
-/**/       -- label TEXT,
-/**/       -- value TEXT,
-/**/       -- txt TEXT,
-/**/       -- num NUMBER,
-/**/       -- ref NUMBER,
-/**/
 /**/       attr1,
 /**/       attr2,
 /**/       attr3,
@@ -917,24 +919,20 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       attr6,
 /**/       attr7,
 /**/       attr8,
-/**/
-/**/       public_note NUMBER,
-/**/       internal_note NUMBER,
-/**/
-/**/       locale_expr TEXT,
-/**/       -- TODO probably drop all but locale_expr once we have per-local denorm copies.
-/**/       expanded_locale_list TEXT,
-/**/       is_locale1 INTEGER,
-/**/       is_locale2 INTEGER,
-/**/       is_locale3 INTEGER,
-/**/       is_locale4 INTEGER,
-/**/
-/**/       confidence INTEGER,
-/**/       confidence_note TEXT,
+/**/       attr9,
+/**/       attr10,
+/**/       attr11,
+/**/       attr12,
+/**/       attr13,
+/**/       attr14,
+/**/       attr15,
 /**/
 /**/       order_key TEXT,
+/**/       locale_expr TEXT,
 /**/
-/**/       change_by_username NUMBER,
+/**/       note TEXT,
+/**/
+/**/       change_by_username TEXT,
 /**/       change_action TEXT,
 /**/       change_arg TEXT,
 /**/       change_note TEXT);
@@ -967,11 +965,11 @@ const createAssertionDml = (tableName:string)=>block`
 /**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
 /**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
 /**/
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
-/**/   CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
+/**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
 /**/   `;
 
 

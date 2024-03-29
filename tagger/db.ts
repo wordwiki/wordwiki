@@ -6,6 +6,7 @@ import {unwrap} from "../utils/utils.ts";
 //       release (3.8) was cut just before they enabled full text search.
 //       Once another release happens we can go back to importing from deno.land.
 import * as denoSqlite from "../../deno-sqlite/mod.ts";
+//import * as denoSqlite from "./fake-deno-sqlite.ts";
 //import * as denoSqlite from "https://deno.land/x/sqlite@v3.8/mod.ts";
 
 export type Row = denoSqlite.Row;

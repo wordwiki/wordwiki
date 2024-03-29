@@ -24,9 +24,9 @@ export const RAPTURE_TIME = (LOCAL_EPOCH_START + 2**33) - (1024*1024);
 // second, we will just advance to the next second).
 const COUNTER_MASK = 0x0FFFFF;
 
-//
-export const BEGIN_TIME = LOCAL_EPOCH_START;
-export const END_TIME = Number.MAX_SAFE_INTEGER;
+// TODO rename to beinning_of_time, END_OF_TIME
+export const BEGINNING_OF_TIME = LOCAL_EPOCH_START;
+export const END_OF_TIME = Number.MAX_SAFE_INTEGER;
 
 
 /**
@@ -117,8 +117,8 @@ export function currentSystemTimeInLocalEpochOrRaptureTime(): number {
 
 export function formatTimestampAsUTCTime(t: number): string {
     switch(t) {
-        case BEGIN_TIME: return 'BEGIN_TIME';
-        case END_TIME: return 'END_TIME';
+        case BEGINNING_OF_TIME: return 'BEGINNING_OF_TIME';
+        case END_OF_TIME: return 'END_OF_TIME';
         default: {
             const jsDate = new Date(extractTimeFromTimestamp(t)*1000 + LOCAL_EPOCH_START);
             const counter = extractCounterFromTimestamp(t);

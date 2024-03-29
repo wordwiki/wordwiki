@@ -31,6 +31,24 @@
  */
 import Big from './big.mjs';
 
+/**
+ * Collator used to compare order keys.
+ */
+export const orderKeyCollator = Intl.Collator('en');
+
+
+/**
+ * Compare two order keys.
+ *
+ * Supports null/undefined order keys with null/undefined sorting last.
+ */
+export function compareOrderKeys(a: string|undefined|null, b: string|undefined|null): number {
+    if(a == undefined) return 1;
+    if(b == undefined) return -1;
+    return orderKeyCollator.compare(a, b);
+}
+
+
 export const new_range_start_key = new Big('0.5');
 export const begin_key = new Big('0.1');
 export const end_key = new Big('0.9');

@@ -49,7 +49,7 @@ function createAssertion(parent: Assertion|undefined, depth: number,
         //parent_id: parent?.id,
         id: id,
         ty: ty,
-        depth: depth,
+        //depth: depth,
         ty1: parent?.ty1,
         id1: parent?.id1,
         ty2: parent?.ty2,
@@ -77,8 +77,8 @@ function importEntry(entry: Entry) {
     const entryAssertion = insertAssertion(createAssertion(
         undefined, 1, entry.entry_id, 'en',
         {
-            internal_note: entry.internal_note,
-            public_note: entry.public_note,
+            // TODO: audit this
+            note: entry.internal_note + entry.public_note,
         }));
     entry.spelling.forEach(s=>importSpelling(entryAssertion, s));
     entry.subentry.forEach(s=>importSubentry(entryAssertion, s));

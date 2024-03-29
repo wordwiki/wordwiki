@@ -43,6 +43,7 @@ export interface FieldVisitorI<A,R> {
     visitIntegerField(f: IntegerField, a: A): R;
     visitFloatField(f: FloatField, a: A): R;
     visitStringField(f: StringField, a: A): R;
+    visitVariantField(f: VariantField, a: A): R;
     visitIdField(f: IdField, a: A): R;
     visitPrimaryKeyField(f: PrimaryKeyField, a: A): R;
     visitRelationField(f: RelationField, a: A): R;
@@ -58,6 +59,7 @@ export class DataVisitor implements FieldVisitorI<any,void> {
     visitIntegerField(f: IntegerField, v: any) { this.visitField(f, v); }
     visitFloatField(f: FloatField, v: any) { this.visitField(f, v); }
     visitStringField(f: StringField, v: any) { this.visitField(f, v); }
+    visitVariantField(f: VariantField, v: any) { this.visitField(f, v); }
     visitIdField(f: IdField, v: any) { this.visitField(f, v); }
     visitPrimaryKeyField(f: PrimaryKeyField, v: any) { this.visitField(f, v); }
     visitRelationField(relationField: RelationField, v: any) {
@@ -363,6 +365,29 @@ export class StringField extends ScalarFieldBase {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'string');
         return new StringField(name, $bind, !!$optional);
+    }
+}
+
+/**
+ * Variant Field
+ *
+ * 
+ */
+export class VariantField extends StringField {
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, StringFormat.Text, style);
+    }
+
+    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitVariantField(this, a); }
+    
+    jsTypename(): string { return 'string'; }
+    schemaTypename(): string { return 'variant'; }
+    sqlTypename(): string { return 'TEXT'; }
+
+    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
+        return new VariantField(name, $bind, !!$optional);
     }
 }
 
@@ -709,6 +734,8 @@ export function parse_field(locus: string, name: string, schema: any): Field {
             return PrimaryKeyField.parseSchemaFromCompactJson(locus, name, schema);
         case 'string':
             return StringField.parseSchemaFromCompactJson(locus, name, schema);
+        case 'variant':
+            return VariantField.parseSchemaFromCompactJson(locus, name, schema);
         case 'integer':
             return IntegerField.parseSchemaFromCompactJson(locus, name, schema);
         case 'float':
