@@ -709,6 +709,8 @@ function setAttributeIfChanged(elem: Element, attrName: string, newValue: string
         elem.setAttribute(attrName, newValueString);
 }
 
+// TODO: use utils.rpc once we have switched how this page is loaded
+//       (we can't import at the moment) XXX TODO XXX TODO
 /**
  *
  */

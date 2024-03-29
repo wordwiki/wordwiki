@@ -288,68 +288,99 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
 // - so use a colspan to embed the child items table in the parent table.
 // - so the scope of render needs to be larger that a single tuple.
 // - the scope of the entity that is rendered is a relation (recursively)
-export function renderRelation(viewTree: SchemaView, r: CurrentRelationQuery): Markup {
-    const schema = r.schema;
-    const view = viewTree.relationViewForRelation.get(schema)
-        ?? panic('unable find relation view for relation', schema.name);
-    return (
-        // This table has the number of cols in the schema for 'r'
-        ['table', {class: `relation relation-${schema.name}`},
-         [...r.tuples.values()].map(t=>renderTuple(viewTree, t))
-        ]);
-}
 
-export function renderTuple(viewTree: SchemaView, r: CurrentTupleQuery): Markup {
-    const schema = r.schema;
-    const view = viewTree.relationViewForRelation.get(schema)
-        ?? panic('unable find relation view for relation', schema.name);
-    const isHistoryOpen = true;
-    return [
-        // --- Render prompt and curent values
-        //     (later, support this line being replaced with an open editor)
-        renderCurrentTupleRow(viewTree, r),
-
-        // --- If history is open for this tuple, render history rows
-        isHistoryOpen ? [
-            r.historicalTupleVersions.map(h=>
-                ['tr', {},
-                 ['td', {}],  // Empty header col
-                 view.userScalarViews.map(v=>renderScalarCell(viewTree, r, v, h, true))])
-            ]: undefined,
-
-        // --- Render child relations
-        schema.relationFields.length > 0 ? [
-            ['tr', {},
-             ['td', {class: 'relation-container', colspan: view.userScalarViews.length+1},
-              Object.values(r.childRelations).map(
-                  childRelation=>renderRelation(viewTree, childRelation))
-             ]]
-        ]: undefined
-    ];
-}
-
-export function renderCurrentTupleRow(viewTree: SchemaView, r: CurrentTupleQuery): Markup {
-    const schema = r.schema;
-    const view = viewTree.relationViewForRelation.get(schema)
-        ?? panic('unable find relation view for relation', schema.name);
-    const current = r.mostRecentTupleVersion;
-    return (
-        ['tr', {},
-         ['th', {}, view.prompt],
-         current ? [  // current is undefined for deleted tuples - more work here TODO
-             view.userScalarViews.map(v=>renderScalarCell(viewTree, r, v, current))
-         ]: undefined
-        ]);
-}    
-
-export function renderScalarCell(viewTree: SchemaView, r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
-    return (
-        ['td', {class: `field-${v.field.schemaTypename()}`},
-         (t.assertion as any)[v.field.bind]     // XXX be fancy here;
-        ]);
-}
-
+export class Renderer {
     
+    constructor(public viewTree: SchemaView, public renderRootId: string) {
+    }
+
+    renderRelation(r: CurrentRelationQuery): Markup {
+        const schema = r.schema;
+        const view = this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+        return (
+            // This table has the number of cols in the schema for 'r'
+            ['table', {class: `relation relation-${schema.name}`},
+             [...r.tuples.values()].map(t=>this.renderTuple(t))
+            ]);
+    }
+
+    renderTuple(r: CurrentTupleQuery): Markup {
+        const schema = r.schema;
+        const view = this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+        const isHistoryOpen = true;
+        return [
+            // --- If this tuple a proposed new tuple under edit, render the editor
+            r.src.proposedNewTupleUnderEdit && this.renderTupleEditor(r, r.src.proposedNewTupleUnderEdit),
+
+            // --- Render prompt and curent values
+            //     (later, support this line being replaced with an open editor)
+            this.renderCurrentTupleRow(r),
+
+            // --- If history is open for this tuple, render history rows
+            isHistoryOpen ? [
+                r.historicalTupleVersions.map(h=>
+                    ['tr', {},
+                     ['td', {}],  // Empty header col
+                     view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true))])
+                ]: undefined,
+
+            // --- Render child relations
+            schema.relationFields.length > 0 ? [
+                ['tr', {},
+                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+1},
+                  Object.values(r.childRelations).map(
+                      childRelation=>this.renderRelation(childRelation))
+                 ]]
+            ]: undefined
+        ];
+    }
+
+    renderCurrentTupleRow(r: CurrentTupleQuery): Markup {
+        const schema = r.schema;
+        const view = this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+        const current = r.mostRecentTupleVersion;
+        return (
+            ['tr', {id: `tuple-${r.src.id}`}, // TODO I Think this id is wrong
+             ['th', {}, view.prompt],
+             current ? [  // current is undefined for deleted tuples - more work here TODO
+                 view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
+             ]: undefined
+            ]);
+    }    
+
+    // ??? What happens if the tuple is rendered twice on the same screen - this current id scheme implies both should be under
+    // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
+    // somehow.
+    // We need to scope our render trees!
+    renderScalarCell(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
+        return (
+            ['td', {class: `field field-${v.field.schemaTypename()}`, onclick:'imports.beginFieldEdit()', id: t.assertion_id},
+             (t.assertion as any)[v.field.bind]     // XXX be fancy here;
+            ]);
+    }
+
+    renderTupleEditor(r: CurrentTupleQuery, t: TupleVersion): Markup {
+        const schema = r.schema;
+        const view = this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+        return (
+            ['tr', {id: `NOT-DONE`},
+             ['th', {}, view.prompt],
+             view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
+            ]);
+    }
+
+    renderScalarCellEditor(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
+        return (
+            ['td', {class: `field-${v.field.schemaTypename()}`},
+             'EDIT', (t.assertion as any)[v.field.bind]     // XXX be fancy here;
+            ]);
+    }
+}
+
 /**
  *
  */

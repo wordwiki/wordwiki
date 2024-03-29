@@ -12,6 +12,7 @@ import * as view from './view.ts';
 import * as orderkey from '../utils/orderkey.ts';
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import {block} from "../utils/strings.ts";
+import { rpc } from '../utils/rpc.ts';
 
 export type Tag = string;
 
@@ -227,8 +228,9 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     readonly tupleVersions: TupleVersion[] = [];
     readonly childRelations: Record<Tag,VersionedRelation>;
     //readonly childRelations: ChildRelationsType<NodeT>;
+    proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
     #currentTuple: TupleVersion|undefined = undefined;
-
+    
     constructor(schema: RelationField, id: number) {
         this.schema = schema;
         this.childRelations = Object.fromEntries(
@@ -391,6 +393,10 @@ export class TupleVersion {
         this.assertion = assertion;
     }
 
+    get assertion_id(): number {
+        return this.assertion.assertion_id;
+    }
+    
     get isCurrent(): boolean {
         return this.assertion.valid_to === timestamp.END_OF_TIME;
     }
@@ -604,8 +610,8 @@ export function testRenderEntry(assertions: Assertion[]): any {
     console.info('current view', JSON.stringify(current.dump(), undefined, 2));
 
     const mmoView = view.schemaView(dictSchema);
-
-    return view.renderTuple(mmoView, current);
+    const renderer = new view.Renderer(mmoView, 'root');
+    return renderer.renderTuple(current);
 }
 
 /**
@@ -631,9 +637,13 @@ function clientRenderTest(entry_id: number): any {
         ['html', {},
          ['head', {},
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+          ['script', {}, 'let imports = {}'],
           ['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
           ['script', {type: 'module'}, block`
 /**/           import * as instance from '/scripts/tagger/instance.js';
+/**/
+/**/           imports = instance.exportToBrowser;
+/**/
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");
 /**/             instance.renderSample(document.getElementById('root'))
@@ -645,20 +655,30 @@ function clientRenderTest(entry_id: number): any {
          ['div', {id: 'root'}, entry_id]]]);
 }
 
+export const exportToBrowser = {
+    beginFieldEdit: ()=>{ console.info('BEGIN FIELD EDIT'); },
+};
+
 console.info('HI FROM INSTANCE!');
 
-export function renderSample(root: Element) {
+export async function renderSample(root: Element) {
     console.info('rendering sample');
     root.innerHTML = 'POW!';
 
-    
+    const entryId = 1000;
+    const assertions = await rpc`getAssertionsForEntry(${entryId})`;
+    console.info('Assertions', JSON.stringify(assertions, undefined, 2));
 
+    const rendered = testRenderEntry(assertions);
+
+    root.innerHTML = renderToStringViaLinkeDOM(rendered);
     
 }
 
 export function getAssertionsForEntry(entry_id: number): any {
     return selectAssertionsForTopLevelFact('dict').all({id1: entry_id});
 }
+
 
 export const routes = ()=> ({
     instanceTest: test,

@@ -24,6 +24,12 @@ table.relation > tbody > tr > td.relation-container {
   /*padding-left: 2em;*/
 }
 
+/*
+table.relation > tbody > tr:hover {
+  border: green;
+}
+*/
+
 td: {
   align-left;
 }
