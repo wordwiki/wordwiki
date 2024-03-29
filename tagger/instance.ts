@@ -219,6 +219,47 @@ interface Gloss extends TupleVersionT {
 // -------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------
 
+export class VersionedDb {
+    readonly tables: Map<Tag, VersionedTable>;
+
+    constructor(schemas: Schema[]) {
+        this.tables = new Map(schemas.map(schema=>[schema.tag, new VersionedTuple(schema, 0)]));
+        if(this.tables.size !== schemas.length)
+            throw new Error(`duplicate schema names`);
+    }
+
+    applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
+        const versionedTuple = this.getVersionedTupleByPath(path);
+        versionedTuple.applyAssertion(assertion);
+    }
+
+    getVersionedTupleByPath(path: [string, number][], index: number=0): VersionedTuple {
+        //console.info('PATH is', path, path[index], index, 'SELF is', this.schema.tag, 'child is', this.schema.relationFields.map(r=>r.tag), 'self type', utils.className(this));
+        const [ty, id] = path[index];
+
+        const table = this.tables.get(ty);
+        if(!table) {
+            throw new Error(`unexpected tag ${ty} -- FIX ERROR NEED LOCUS ETC`);
+        }
+        utils.assert(table.schema.tag === ty);
+
+        // let versionedTuple = versionedRelation.tuples.get(id);
+        //  if(!versionedTuple) {
+        //      versionedTuple = new VersionedTuple(versionedRelation.schema, id);
+        //      versionedRelation.tuples.set(id, versionedTuple);
+        // }
+        // utils.assert(versionedTuple.schema.tag === ty);
+        
+        // if(index+1 === path.length)
+        //     return versionedTuple;
+        // else
+        //     return versionedTuple.getVersionedTupleByPath(path, index+1);
+        throw new Error('not impl yet - remember to implement id of 0 as well');
+    }
+    
+}
+
+
 /**
  *
  */
@@ -228,7 +269,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     readonly tupleVersions: TupleVersion[] = [];
     readonly childRelations: Record<Tag,VersionedRelation>;
     //readonly childRelations: ChildRelationsType<NodeT>;
-    proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
+    //proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
     #currentTuple: TupleVersion|undefined = undefined;
     
     constructor(schema: RelationField, id: number) {
@@ -345,6 +386,15 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             ...Object.fromEntries(Object.values(this.childRelations).map(c=>
                 [c.schema.name, c.dump()]))
         };
+    }
+}
+
+/**
+ *
+ */
+export class VersionedTable extends VersionedTuple {
+    constructor(schema: RelationField) {
+        super(schema, 0);
     }
 }
 

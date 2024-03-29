@@ -1,6 +1,7 @@
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, FloatField,
         StringField, VariantField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
+import {Assertion} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
 import {Markup} from '../utils/markup.ts';
 import {CurrentTupleQuery, CurrentRelationQuery, TupleVersion} from './instance.ts';
@@ -289,7 +290,34 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
 // - so the scope of render needs to be larger that a single tuple.
 // - the scope of the entity that is rendered is a relation (recursively)
 
+
+// XXX Also need to refactor this to allow rendering starting at any subtree.
+//     (for post change rerender).
+
+
+/**
+ * 
+ *
+ *
+ */
+export class TupleEditor {
+    constructor(public renderRootId: string, public tuple_id: number, public assertion: Assertion) {
+    }
+}
+
+let currentlyOpenTupleEditor: TupleEditor|undefined = undefined;
+
+function isTupleUnderEdit(renderRootId: string, tuple_id: number): boolean {
+    return currentlyOpenTupleEditor !== undefined &&
+        currentlyOpenTupleEditor.renderRootId === renderRootId &&
+        currentlyOpenTupleEditor.tuple_id === tuple_id;
+}
+
 export class Renderer {
+    // CURRENTLY EDTIING TUPLE HERE IS PROBABLY BAD (MEANS THESE INSTS HAVE MEANINGFULL STATE)
+    // PROBABLY WANT ONE EDITOR OPEN AT A TIME - SO BETTER IF IS GLOBAL STATE (using the renderRootId).
+    
+    currentlyEditingTuple: TupleVersion|undefined = undefined;
     
     constructor(public viewTree: SchemaView, public renderRootId: string) {
     }
@@ -312,7 +340,8 @@ export class Renderer {
         const isHistoryOpen = true;
         return [
             // --- If this tuple a proposed new tuple under edit, render the editor
-            r.src.proposedNewTupleUnderEdit && this.renderTupleEditor(r, r.src.proposedNewTupleUnderEdit),
+            //r.src.proposedNewTupleUnderEdit && this.renderTupleEditor(r, r.src.proposedNewTupleUnderEdit),
+            // TODO TODO NEW PROPOSED EDIT MECHJANISM HERE XXX TODO
 
             // --- Render prompt and curent values
             //     (later, support this line being replaced with an open editor)
@@ -343,7 +372,7 @@ export class Renderer {
             ?? panic('unable find relation view for relation', schema.name);
         const current = r.mostRecentTupleVersion;
         return (
-            ['tr', {id: `tuple-${r.src.id}`}, // TODO I Think this id is wrong
+            ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`},
              ['th', {}, view.prompt],
              current ? [  // current is undefined for deleted tuples - more work here TODO
                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
@@ -355,9 +384,13 @@ export class Renderer {
     // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
     // somehow.
     // We need to scope our render trees!
+    // - Probably better to move tuple under edit into this view class? (it really does belong to it - not to the
+    //   shared global thing)
     renderScalarCell(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
         return (
-            ['td', {class: `field field-${v.field.schemaTypename()}`, onclick:'imports.beginFieldEdit()', id: t.assertion_id},
+            ['td', {class: `field field-${v.field.schemaTypename()}`,
+                    onclick:'imports.beginFieldEdit()',
+                    },
              (t.assertion as any)[v.field.bind]     // XXX be fancy here;
             ]);
     }
@@ -367,7 +400,7 @@ export class Renderer {
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         return (
-            ['tr', {id: `NOT-DONE`},
+            ['tr', {id: `tuple-${this.renderRootId}-${t.assertion_id}`},
              ['th', {}, view.prompt],
              view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
             ]);
