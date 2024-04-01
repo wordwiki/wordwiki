@@ -759,9 +759,8 @@ export class Schema extends RelationField {
     #relationsByName: Record<string,RelationField>|undefined = undefined;
     #relationsByTag: Record<string,RelationField>|undefined = undefined;
     
-    constructor(name: string, public rootRelations: RelationField[]) {
-        // TODO this '_' as the root tag is a hack - FIX.
-        super(name, '_', rootRelations, {});
+    constructor(name: string, tag: string, public rootRelations: RelationField[]) {
+        super(name, tag, rootRelations, {});
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitSchema(this, a); }
@@ -792,9 +791,13 @@ export class Schema extends RelationField {
     }
         
     static parseSchemaFromCompactJson(locus: string, schemaJson: any): Schema {
-        const {$type, $name, ...field_schema} = schemaJson;
+        const {$type, $name, $tag, ...field_schema} = schemaJson;
         if($type !== 'schema')
             throw new ValidationError(locus, `expected schema type got $type ${$type}`);
+        if(typeof $name !== 'string')
+            throw new ValidationError(locus, `missing required $name on schema ${name}`);
+        if(typeof $tag !== 'string')
+            throw new ValidationError(locus, `missing required $tag on schema ${name}`);
         
         //console.info('field_schema', field_schema);
         const rootRelations = Object.entries(field_schema).map(([field_name, field_body]:[string,any]) => {
@@ -803,7 +806,7 @@ export class Schema extends RelationField {
             return RelationField.parseSchemaFromCompactJson(locus, field_name, field_body);
         });
         
-        const schema = new Schema($name, rootRelations);
+        const schema = new Schema($name, $tag, rootRelations);
         schema.resolveAndValidate(locus);
         return schema;
     }

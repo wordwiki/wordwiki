@@ -727,6 +727,7 @@ export interface Assertion {
     /**
      * (Denormalized) Flattening of the ancestor and self ids and types.
      */
+    ty0?: string;
     ty1?: string;
     id1?: number;
     ty2?: string;
@@ -798,7 +799,9 @@ export interface Assertion {
  */
 export function getAssertionPath(a: Assertion): [string, number][] {
     const path: [string, number][] = [];
-    if(a.ty1==null || a.id1==null) throw new Error(`Invalid assertion, missing ty1 or id1`);
+    if(a.ty0==null) throw new Error(`Invalid assertion, missing ty0`);
+    path.push([a.ty0, 0]);
+    if(a.ty1==null || a.id1==null) return path;
     path.push([a.ty1, a.id1]);
     if(a.ty2==null || a.id2==null) return path;
     path.push([a.ty2, a.id2]);
@@ -841,22 +844,24 @@ export function compareAssertionsByRecentness(a: Assertion, b: Assertion): numbe
 
 export function getAssertionTypeN(a: Assertion, n: number): string|undefined {
     switch(n) {
-        case 0: return a.ty1;
-        case 1: return a.ty2;
-        case 2: return a.ty3;
-        case 3: return a.ty4;
-        case 4: return a.ty5;
+        case 0: return a.ty0;
+        case 1: return a.ty1;
+        case 2: return a.ty2;
+        case 3: return a.ty3;
+        case 4: return a.ty4;
+        case 5: return a.ty5;
         default: return undefined;
     }
 }
 
 export function getAssertionIdN(a: Assertion, n: number): number|undefined {
     switch(n) {
-        case 0: return a.id1;
-        case 1: return a.id2;
-        case 2: return a.id3;
-        case 3: return a.id4;
-        case 4: return a.id5;
+        case 0: return 0; // id0 is the root of a table and always 0
+        case 1: return a.id1;
+        case 2: return a.id2;
+        case 3: return a.id3;
+        case 4: return a.id4;
+        case 5: return a.id5;
         default: return undefined;
     }
 }
@@ -869,7 +874,8 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "published_from", "published_to",
 
     "id", "ty",
-    
+
+    "ty0",
     "ty1", "id1",
     "ty2", "id2",
     "ty3", "id3",
@@ -900,6 +906,7 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       id INTEGER NOT NULL,
 /**/       ty TEXT NOT NULL,
 /**/
+/**/       ty0 TEXT NOT NULL,
 /**/       ty1 TEXT NOT NULL,
 /**/       id1 INTEGER,
 /**/       ty2 TEXT,

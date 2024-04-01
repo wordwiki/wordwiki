@@ -233,30 +233,33 @@ export class VersionedDb {
         versionedTuple.applyAssertion(assertion);
     }
 
-    getVersionedTupleByPath(path: [string, number][], index: number=0): VersionedTuple {
-        //console.info('PATH is', path, path[index], index, 'SELF is', this.schema.tag, 'child is', this.schema.relationFields.map(r=>r.tag), 'self type', utils.className(this));
-        const [ty, id] = path[index];
-
-        const table = this.tables.get(ty);
-        if(!table) {
-            throw new Error(`unexpected tag ${ty} -- FIX ERROR NEED LOCUS ETC`);
-        }
-        utils.assert(table.schema.tag === ty);
-
-        // let versionedTuple = versionedRelation.tuples.get(id);
-        //  if(!versionedTuple) {
-        //      versionedTuple = new VersionedTuple(versionedRelation.schema, id);
-        //      versionedRelation.tuples.set(id, versionedTuple);
-        // }
-        // utils.assert(versionedTuple.schema.tag === ty);
-        
-        // if(index+1 === path.length)
-        //     return versionedTuple;
-        // else
-        //     return versionedTuple.getVersionedTupleByPath(path, index+1);
-        throw new Error('not impl yet - remember to implement id of 0 as well');
+    getTable(tag: string): VersionedTuple {
+        return this.tables.get(tag) ?? panic('unable to find table', tag);
     }
     
+    getVersionedTupleByPath(path: [string, number][]): VersionedTuple {
+        console.info('ROOT PATH is', path);
+
+        // --- Find table hosting root tag
+        const [ty, id] = path[0];
+        if(id !== 0)
+            throw new Error(`root elem in any table is always id 0 - path is ${JSON.stringify(path)}`);
+        const table = this.tables.get(ty);
+        if(!table)
+            throw new Error(`could not find table with tag ${ty} in workspace, active tables are ${[...this.tables.keys()].join()}`);
+        utils.assert(table.schema.tag === ty);
+
+        // --- Recurse
+        if(path.length === 1)
+            return table;
+        else
+            return table.getVersionedTupleByPath(path, 1);
+    }
+
+    dump(): any {
+        return [...this.tables.entries()].map(([tag, table])=>
+            [tag, table.dump()]);
+    }
 }
 
 
@@ -279,12 +282,12 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         this.id = id;
     }
 
-    applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
-        const versionedTuple = this.getVersionedTupleByPath(path);
-        versionedTuple.applyAssertion(assertion);
-    }
+    // applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
+    //     const versionedTuple = this.getVersionedTupleByPath(path, index);
+    //     versionedTuple.applyAssertion(assertion);
+    // }
 
-    getVersionedTupleByPath(path: [string, number][], index: number=0): VersionedTuple {
+    getVersionedTupleByPath(path: [string, number][], index:number): VersionedTuple {
         //console.info('PATH is', path, path[index], index, 'SELF is', this.schema.tag, 'child is', this.schema.relationFields.map(r=>r.tag), 'self type', utils.className(this));
         const [ty, id] = path[index];
 
@@ -635,7 +638,7 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
 
 
 /**
- *
+ * 9:45 Wed haircut
  */
 export function testRenderEntry(assertions: Assertion[]): any {
     
@@ -644,19 +647,22 @@ export function testRenderEntry(assertions: Assertion[]): any {
     console.info('Sample entry assertions', assertions);
 
     // --- Create an empty instance schema
-    //const mmoDb = new VersionedDatabaseWorkspace(dictSchema);
-    const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
+    const mmoDb = new VersionedDb([dictSchema]);
     assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
     console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
+    
+    // const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
+    // assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
+    // console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
 
-    const entries = mmoDb.childRelations['en'];
+    //const entries = mmoDb.childRelations['en'];
     //console.info('entries', entries);
     
     // --- Navigate to definition
-    let definition = mmoDb.findRequiredVersionedTupleById(992);
-    console.info('definition', definition.dump());
+    // let definition = mmoDb.findRequiredVersionedTupleById(992);
+    // console.info('definition', definition.dump());
 
-    const current = new CurrentTupleQuery(mmoDb);
+    const current = new CurrentTupleQuery(mmoDb.getTable('di'));
     console.info('current view', JSON.stringify(current.dump(), undefined, 2));
 
     const mmoView = view.schemaView(dictSchema);
@@ -686,28 +692,40 @@ function clientRenderTest(entry_id: number): any {
     return (
         ['html', {},
          ['head', {},
+          ['meta', {charset:"utf-8"}],
+          ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+          ['title', {}, 'Wordwiki'],
+          ['link', {href:"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",  rel:"stylesheet", integrity:"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH", crossorigin:"anonymous"}],
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['script', {}, 'let imports = {}'],
-          ['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+          //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
           ['script', {type: 'module'}, block`
-/**/           import * as instance from '/scripts/tagger/instance.js';
+/**/           import * as workspace from '/scripts/tagger/workspace.js';
+/**/           import * as view from '/scripts/tagger/view.js';
 /**/
-/**/           imports = instance.exportToBrowser;
+/**/           imports = Object.assign(
+/**/                        {},
+/**/                        view.exportToBrowser(),
+/**/                        workspace.exportToBrowser());
 /**/
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");
-/**/             instance.renderSample(document.getElementById('root'))
+/**/             workspace.renderSample(document.getElementById('root'))
 /**/           });`
           ]
         ],
         
-        ['body', {},
-         ['div', {id: 'root'}, entry_id]]]);
-}
+         ['body', {},
+          
+          ['div', {id: 'root'}, entry_id],
 
-export const exportToBrowser = {
-    beginFieldEdit: ()=>{ console.info('BEGIN FIELD EDIT'); },
-};
+          ['script', {'src':"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js", integrity:"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz", crossorigin:"anonymous"}]
+
+         ] // body
+         
+        ]);
+
+}
 
 console.info('HI FROM INSTANCE!');
 
@@ -729,6 +747,8 @@ export function getAssertionsForEntry(entry_id: number): any {
     return selectAssertionsForTopLevelFact('dict').all({id1: entry_id});
 }
 
+export const exportToBrowser = ()=> ({
+});
 
 export const routes = ()=> ({
     instanceTest: test,

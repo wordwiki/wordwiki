@@ -13,6 +13,7 @@ import * as timestamp from '../utils/timestamp.ts';
 export const dictSchemaJson = {
     $type: 'schema',
     $name: 'dict',
+    $tag: 'di',
     entry: {
         $type: 'relation',
         $tag: 'en',
@@ -58,6 +59,15 @@ export const dictSchemaJson = {
                 translation: {$type: 'string', $bind: 'attr1'},
                 // Probably move translation into a sub relation (so can have variants)
                 // Thiunk about pairings of tranlation and example.
+
+                // Recordings of example sentences have tricky modelling WRT
+                // variants as well (for example the simplest models don't allow
+                // a recording to be shared by mutiple locales that have a different
+                // orthography - which is not OK.
+
+                // Have the same problem with using locale for the translation as we
+                // do for gloss - the locale should probably be WRT the source
+                // language of the dictionary.
                 example_text: {
                     $type: 'relation',
                     $tag: 'et',

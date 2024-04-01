@@ -10,7 +10,7 @@ import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import * as utils from "../utils/utils.ts";
 import * as strings from "../utils/strings.ts";
 import { db } from "./db.ts";
-import * as instance from './instance.ts';
+import * as workspace from './workspace.ts';
 import * as markup from '../utils/markup.ts';
 
 let allRoutes_: Record<string, any>|undefined = undefined;
@@ -21,7 +21,7 @@ export function allRoutes() {
         {},
         pageEditor.routes(),
         schema.routes(),
-        instance.routes(),
+        workspace.routes(),
     ))();
 }
 

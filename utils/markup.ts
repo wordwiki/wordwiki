@@ -6,10 +6,11 @@ export type DumpOpts = Record<string, any>;
 export type Markup = any;
 
 export type Tag = string|Function|symbol;
-export type ElemExprLiteral = any; //[string|Function|symbol, Record<string, any>, ...ElemExprContentLiteralItem];
+//export type ElemExprLiteral = any; //[string|Function|symbol, Record<string, any>, ...ElemExprContentLiteralItem];
+export type ElemExprLiteral = [Tag, Record<string, any>, ...any];
 export type ElemExprContentLiteralItem = any; //ElemExprLiteral|string|number|Function;
 
-export function createElement(tag: Tag|undefined, props: Record<string, any>, ...children: ElemExprContentLiteralItem[]): ElemExprLiteral {
+export function createElement(tag: Tag|undefined, props: Record<string, any>, ...children: ElemExprContentLiteralItem[]): ElemExprLiteral|any[] {
     if(tag === undefined) {
         if(props != null && Object.keys(props).length !== 0)
             throw new Error(`unexpected props for fragment: '${props}'`);
@@ -33,9 +34,19 @@ export module JSX {
     // }    
 }
 
-export function isElemMarkup(n: any): boolean {
+export function isElemMarkup(n: any): n is ElemExprLiteral {
     return Array.isArray(n) && n.length >= 2 && utils.isObjectLiteral(n[1]);
 }
+
+export function getElemId(n: any): string|undefined {
+    const idVal = n?.[1]?.id;
+    return typeof idVal === 'string' ? idVal : undefined;
+}
+
+// ----------------------------------------------------------------------------
+// --- Render -----------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 
 export function markupToString(markup: any, indent: string='') {
     return new MarkupRenderer().renderContentMarkupItem(markup, indent);
@@ -422,6 +433,98 @@ function linkeDOMPlay() {
         ['div', {class: 'top', style: 'none', 'cat': null}, 'hello',
          ['img', {width: 7, height: 9}]]));
 }
+
+
+
+// ----------------------------------------------------------------------------
+// --- Diff -------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+  - expect a single root node, and ids must match (if not throw Error)
+  - recursive by-value compare of a and b contents, when an elem with an id
+    is found, they are pairwise added to descendants collection.
+  - if don't match, return [b] (b is replacement for a - they have the same
+    id, so will be easy to find)
+    - if do match, for all child elems with ids, rerun algo.
+    - will be super easy to apply this to DOM.
+ */
+
+
+// Stopped working on for the moment.
+// - I still think a V0 that can only replace entire nodes (ie. no insert, delete or move)
+//   will be some benefit (and is super easy to implement) - so will probably finish.
+// - Probably not super hard to add insert/delete ???
+
+export function diffElem(a: ElemExprLiteral, b: ElemExprLiteral): ElemExprLiteral[] {
+    if(!isElemMarkup(a) || !isElemMarkup(b))
+        throw new Error('attempt to diff non-elems');
+    const [aTag, aAttrs, ...aChildren] = a;
+    const [bTag, bAttrs, ...bChildren] = b;
+    const aId = aAttrs['id'];
+    const bId = bAttrs['id'];
+    if(aId === undefined || bId === undefined || aId !== bId)
+        throw new Error('top level diff only works on two elements with identical ids');
+
+    // --- Compare attrs, rerendering if any have changed (including order change)
+    const aAttrEntries = aAttrs.entries();
+    const bAttrEntries = bAttrs.entries();
+    if(aAttrEntries.length !== bAttrEntries.length)
+        return [b];
+    for(let i=0; i<aAttrEntries.length; i++) {
+        if(aAttrs[0] !== bAttrs[0] || aAttrs[1] !== bAttrs[1])
+            return [b];
+    }
+
+    // --- Compare Children
+    return diffContent(a, b, aChildren, bChildren);
+}
+
+function diffContent(aParent: ElemExprLiteral, bParent: ElemExprLiteral,
+                     aContent: any[], bContent: any[]): ElemExprLiteral[] {
+    const diffs = [];
+    if(aContent.length !== bContent.length)
+        return [bParent];
+    for(let i=0; i<aContent.length; i++) {
+        const a = aContent[i];
+        const b = bContent[i];
+
+        // --- Identical content --- So happy!
+        if(a === b)
+            continue;
+
+        // --- If either side is an elem - compare as such
+        if(isElemMarkup(a) || isElemMarkup(b)) {
+            // TODO: handle non ide elems here 
+            if(getElemId(a) !== getElemId(b))
+                diffs.push(b);
+            else
+                diffs.push(...diffElem(a, b));
+        }
+
+        // ---
+
+        
+        // if(Array.isArray(a) && Array.isArray(b))
+        //         const childElemDiffs = diffElem(a, b);
+        //         if(childElemDiffs.length !== 0)
+        //             diffs.push(...childElemDiffs);
+        //         continue;
+        //     }
+                
+            
+        // }
+        
+    }
+
+
+    return diffs;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 
 if (import.meta.main)
     linkeDOMPlay();

@@ -4,7 +4,7 @@ import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, Float
 import {Assertion} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
 import {Markup} from '../utils/markup.ts';
-import {CurrentTupleQuery, CurrentRelationQuery, TupleVersion} from './instance.ts';
+import {CurrentTupleQuery, CurrentRelationQuery, TupleVersion} from './workspace.ts';
 import * as utils from '../utils/utils.ts';
 import * as strings from '../utils/strings.ts';
 
@@ -307,17 +307,44 @@ export class TupleEditor {
 
 let currentlyOpenTupleEditor: TupleEditor|undefined = undefined;
 
-function isTupleUnderEdit(renderRootId: string, tuple_id: number): boolean {
-    return currentlyOpenTupleEditor !== undefined &&
+// function isTupleUnderEdit(renderRootId: string, tuple_id: number): boolean {
+//     return currentlyOpenTupleEditor !== undefined &&
+//         currentlyOpenTupleEditor.renderRootId === renderRootId &&
+//         currentlyOpenTupleEditor.tuple_id === tuple_id;
+// }
+
+function getCurrentlyOpenTupleEditorForTupleId(renderRootId: string, tuple_id: number): TupleEditor|undefined {
+    return (currentlyOpenTupleEditor !== undefined &&
         currentlyOpenTupleEditor.renderRootId === renderRootId &&
-        currentlyOpenTupleEditor.tuple_id === tuple_id;
+        currentlyOpenTupleEditor.tuple_id === tuple_id)
+        ? currentlyOpenTupleEditor
+        : undefined;
 }
+
+export function beginFieldEdit(renderRootId: string, tuple_id: number) {
+    console.info('begin field edit', renderRootId, tuple_id);
+    if(currentlyOpenTupleEditor) {
+        alert('A field editor is already open');
+        return;
+    }
+
+    // NEXT populate assertion better!
+    // CReating the assertion is a job for the global workspace.
+    const new_assertion: Assertion = ({} as Assertion);
+    currentlyOpenTupleEditor = new TupleEditor(renderRootId, tuple_id, new_assertion);
+
+    // Re-render the tuple with the now open tuple editor
+    // - we can use the global workspace to find the tuple by tuple_id ???
+    // - figure out how this works for the first tuple in a relation (but sounds
+    //   patchable)
+}
+
 
 export class Renderer {
     // CURRENTLY EDTIING TUPLE HERE IS PROBABLY BAD (MEANS THESE INSTS HAVE MEANINGFULL STATE)
     // PROBABLY WANT ONE EDITOR OPEN AT A TIME - SO BETTER IF IS GLOBAL STATE (using the renderRootId).
     
-    currentlyEditingTuple: TupleVersion|undefined = undefined;
+    //currentlyEditingTuple: TupleVersion|undefined = undefined;
     
     constructor(public viewTree: SchemaView, public renderRootId: string) {
     }
@@ -338,10 +365,11 @@ export class Renderer {
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         const isHistoryOpen = true;
+        const currentlyOpenTupleEditor = getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
+
         return [
             // --- If this tuple a proposed new tuple under edit, render the editor
-            //r.src.proposedNewTupleUnderEdit && this.renderTupleEditor(r, r.src.proposedNewTupleUnderEdit),
-            // TODO TODO NEW PROPOSED EDIT MECHJANISM HERE XXX TODO
+            currentlyOpenTupleEditor && this.renderTupleEditor(r, currentlyOpenTupleEditor),
 
             // --- Render prompt and curent values
             //     (later, support this line being replaced with an open editor)
@@ -352,13 +380,15 @@ export class Renderer {
                 r.historicalTupleVersions.map(h=>
                     ['tr', {},
                      ['td', {}],  // Empty header col
-                     view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true))])
+                     view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
+                     ['td', {class: 'tuple-menu'}, this.renderSampleMenu()]
+                    ])
                 ]: undefined,
 
             // --- Render child relations
             schema.relationFields.length > 0 ? [
                 ['tr', {},
-                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+1},
+                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+2},
                   Object.values(r.childRelations).map(
                       childRelation=>this.renderRelation(childRelation))
                  ]]
@@ -372,11 +402,13 @@ export class Renderer {
             ?? panic('unable find relation view for relation', schema.name);
         const current = r.mostRecentTupleVersion;
         return (
-            ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`},
+            ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
+                    class: 'tuple'},
              ['th', {}, view.prompt],
              current ? [  // current is undefined for deleted tuples - more work here TODO
                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
-             ]: undefined
+             ]: undefined,
+             ['td', {class: 'tuple-menu'}, this.renderSampleMenu()]
             ]);
     }    
 
@@ -389,28 +421,46 @@ export class Renderer {
     renderScalarCell(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
         return (
             ['td', {class: `field field-${v.field.schemaTypename()}`,
-                    onclick:'imports.beginFieldEdit()',
+                    onclick:`imports.beginFieldEdit('${this.renderRootId}', ${r.src.id})`,
                     },
              (t.assertion as any)[v.field.bind]     // XXX be fancy here;
             ]);
     }
 
-    renderTupleEditor(r: CurrentTupleQuery, t: TupleVersion): Markup {
+    renderTupleEditor(r: CurrentTupleQuery, t: TupleEditor): Markup {
         const schema = r.schema;
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         return (
-            ['tr', {id: `tuple-${this.renderRootId}-${t.assertion_id}`},
+            ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
              ['th', {}, view.prompt],
              view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
             ]);
     }
 
-    renderScalarCellEditor(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
+    renderScalarCellEditor(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleEditor): Markup {
         return (
-            ['td', {class: `field-${v.field.schemaTypename()}`},
+            ['td', {class: `fieldedit`},
              'EDIT', (t.assertion as any)[v.field.bind]     // XXX be fancy here;
             ]);
+    }
+
+    renderSampleMenu(): Markup {
+        return (
+            ['div', {class:'dropdown'},
+             ['button',
+              {class:'btn btn-secondary dropdown-toggle',
+               type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+              '≡'],
+             ['ul', {class:'dropdown-menu'},
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Edit']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Up']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Down']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Insert Above']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Insert Below']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
+             ]]);
     }
 }
 
@@ -448,3 +498,10 @@ export function schemaView(f: Schema): SchemaView {
  */
 export function renderEditor(r: RelationView): any {
 }
+
+export const exportToBrowser = ()=> ({
+    beginFieldEdit,
+});
+
+export const routes = ()=> ({
+});
