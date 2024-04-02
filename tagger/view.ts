@@ -1,12 +1,18 @@
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, FloatField,
         StringField, VariantField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
-import {Assertion} from './schema.ts';
+import {Assertion, getAssertionPath} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
 import {Markup} from '../utils/markup.ts';
-import {CurrentTupleQuery, CurrentRelationQuery, TupleVersion} from './workspace.ts';
+import {VersionedDb, CurrentTupleQuery, CurrentRelationQuery, TupleVersion} from './workspace.ts';
+import * as workspace from './workspace.ts';
 import * as utils from '../utils/utils.ts';
 import * as strings from '../utils/strings.ts';
+import { rpc } from '../utils/rpc.ts';
+import {block} from "../utils/strings.ts";
+import {dictSchemaJson} from "./entry-schema.ts";
+
+import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 
 // export function buildView(schema: Schema): SchemaView {
 //     // return new RelationSQLDriver(db, relationField,
@@ -22,7 +28,8 @@ export abstract class View {
     prompt: string|undefined;
     
     constructor(public field: Field) {
-        this.prompt = field.style.$prompt ?? strings.capitalize(field.name).replaceAll('_', ' ');
+        this.prompt = field.style.$prompt ??
+            strings.capitalize(field.name).replaceAll('_', ' ');
     }
 
     abstract accept<A,R>(v: ViewVisitorI<A,R>, a: A): R;
@@ -296,6 +303,78 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
 
 
 /**
+ *
+ */
+export class ActiveViews {
+    workspace: VersionedDb;
+    activeViews: Map<string, ActiveView> = new Map();
+    currentlyOpenTupleEditor: TupleEditor|undefined = undefined;
+
+    constructor(workspace: VersionedDb) {
+        this.workspace = workspace;
+    }
+    
+    registerActiveView(activeView: ActiveView) {
+        this.activeViews.set(activeView.id, activeView);
+    }
+
+    rerenderAllViews() {
+        for(const activeView of this.activeViews.values())
+            activeView.rerender();
+    }
+
+    rerenderViewById(viewId: string) {
+        this.activeViews.get(viewId)?.rerender();
+    }
+    
+    getCurrentlyOpenTupleEditorForTupleId(renderRootId: string, tuple_id: number): TupleEditor|undefined {
+        return (this.currentlyOpenTupleEditor !== undefined &&
+            this.currentlyOpenTupleEditor.renderRootId === renderRootId &&
+            this.currentlyOpenTupleEditor.tuple_id === tuple_id)
+            ? this.currentlyOpenTupleEditor
+            : undefined;
+    }
+
+    beginFieldEdit(renderRootId: string, tuple_id: number) {
+        console.info('begin field edit', renderRootId, tuple_id);
+        if(this.currentlyOpenTupleEditor) {
+            alert('A field editor is already open');
+            return;
+        }
+
+        // NEXT populate assertion better!
+        // CReating the assertion is a job for the global workspace.
+        const new_assertion: Assertion = ({} as Assertion);
+        this.currentlyOpenTupleEditor = new TupleEditor(renderRootId, tuple_id, new_assertion);
+
+        // Re-render the tuple with the now open tuple editor
+        // - we can use the global workspace to find the tuple by tuple_id ???
+        // - figure out how this works for the first tuple in a relation (but sounds
+        //   patchable)
+        this.rerenderViewById(renderRootId);
+    }
+}
+
+export class ActiveView {
+    constructor(public id: string,
+                public viewTree: SchemaView, // This is restricting view to be from one schema XXX revisit
+                public query: ()=>CurrentTupleQuery) {
+    }
+
+    rerender() {
+        const queryResults = this.query();
+        const renderer = new Renderer(this.viewTree, this.id);
+        const markup = renderer.renderTuple(queryResults);
+
+        const container = document.getElementById(this.id)
+            ?? panic('unable to find view anchor', this.id);
+
+        console.info(`rendering ${this.id}`);
+        container.innerHTML = renderToStringViaLinkeDOM(markup);
+    }
+}
+
+/**
  * 
  *
  *
@@ -305,46 +384,21 @@ export class TupleEditor {
     }
 }
 
-let currentlyOpenTupleEditor: TupleEditor|undefined = undefined;
-
-// function isTupleUnderEdit(renderRootId: string, tuple_id: number): boolean {
-//     return currentlyOpenTupleEditor !== undefined &&
-//         currentlyOpenTupleEditor.renderRootId === renderRootId &&
-//         currentlyOpenTupleEditor.tuple_id === tuple_id;
-// }
-
-function getCurrentlyOpenTupleEditorForTupleId(renderRootId: string, tuple_id: number): TupleEditor|undefined {
-    return (currentlyOpenTupleEditor !== undefined &&
-        currentlyOpenTupleEditor.renderRootId === renderRootId &&
-        currentlyOpenTupleEditor.tuple_id === tuple_id)
-        ? currentlyOpenTupleEditor
-        : undefined;
+/**
+ *
+ */
+// TODO somewhere we want a workspace.  - probably assoc with active views
+// makes more sense for views to own workspace than the other way around.
+// difficulty
+let activeViews_: ActiveViews|undefined = undefined;
+export function activeViews(): ActiveViews {
+    return activeViews_ ??= new ActiveViews(new VersionedDb([]));
 }
 
-export function beginFieldEdit(renderRootId: string, tuple_id: number) {
-    console.info('begin field edit', renderRootId, tuple_id);
-    if(currentlyOpenTupleEditor) {
-        alert('A field editor is already open');
-        return;
-    }
-
-    // NEXT populate assertion better!
-    // CReating the assertion is a job for the global workspace.
-    const new_assertion: Assertion = ({} as Assertion);
-    currentlyOpenTupleEditor = new TupleEditor(renderRootId, tuple_id, new_assertion);
-
-    // Re-render the tuple with the now open tuple editor
-    // - we can use the global workspace to find the tuple by tuple_id ???
-    // - figure out how this works for the first tuple in a relation (but sounds
-    //   patchable)
-}
-
-
+/**
+ *
+ */
 export class Renderer {
-    // CURRENTLY EDTIING TUPLE HERE IS PROBABLY BAD (MEANS THESE INSTS HAVE MEANINGFULL STATE)
-    // PROBABLY WANT ONE EDITOR OPEN AT A TIME - SO BETTER IF IS GLOBAL STATE (using the renderRootId).
-    
-    //currentlyEditingTuple: TupleVersion|undefined = undefined;
     
     constructor(public viewTree: SchemaView, public renderRootId: string) {
     }
@@ -365,7 +419,7 @@ export class Renderer {
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         const isHistoryOpen = true;
-        const currentlyOpenTupleEditor = getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
+        const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
 
         return [
             // --- If this tuple a proposed new tuple under edit, render the editor
@@ -381,14 +435,14 @@ export class Renderer {
                     ['tr', {},
                      ['td', {}],  // Empty header col
                      view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
-                     ['td', {class: 'tuple-menu'}, this.renderSampleMenu()]
+                     //['td', {class: 'tuple-menu'}, this.renderSampleMenu()]
                     ])
                 ]: undefined,
 
             // --- Render child relations
             schema.relationFields.length > 0 ? [
                 ['tr', {},
-                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+2},
+                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+3},
                   Object.values(r.childRelations).map(
                       childRelation=>this.renderRelation(childRelation))
                  ]]
@@ -408,7 +462,8 @@ export class Renderer {
              current ? [  // current is undefined for deleted tuples - more work here TODO
                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
              ]: undefined,
-             ['td', {class: 'tuple-menu'}, this.renderSampleMenu()]
+             ['td', {class: 'tuple-history'}, '↶'], // style different if have history etc.
+             ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]
             ]);
     }    
 
@@ -421,7 +476,7 @@ export class Renderer {
     renderScalarCell(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
         return (
             ['td', {class: `field field-${v.field.schemaTypename()}`,
-                    onclick:`imports.beginFieldEdit('${this.renderRootId}', ${r.src.id})`,
+                    onclick:`activeViews.beginFieldEdit('${this.renderRootId}', ${r.src.id})`,
                     },
              (t.assertion as any)[v.field.bind]     // XXX be fancy here;
             ]);
@@ -445,7 +500,9 @@ export class Renderer {
             ]);
     }
 
-    renderSampleMenu(): Markup {
+    // TODO: the event handlers should not be literal onclick scripts on each
+    //       item (bloat).
+    renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
         return (
             ['div', {class:'dropdown'},
              ['button',
@@ -453,7 +510,7 @@ export class Renderer {
                type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               '≡'],
              ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Edit']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.beginFieldEdit('${this.renderRootId}', ${r.src.id})`}, 'Edit']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Up']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Down']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Insert Above']],
@@ -499,8 +556,88 @@ export function schemaView(f: Schema): SchemaView {
 export function renderEditor(r: RelationView): any {
 }
 
+// export async function run0() {
+//     console.info('rendering sample');
+
+//     const root = document.getElementById('root') ?? panic();
+//     root.innerHTML = 'POW!';
+
+//     const entryId = 1000;
+//     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
+//     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+
+//     const rendered = workspace.testRenderEntry(assertions);
+
+//     root.innerHTML = renderToStringViaLinkeDOM(rendered);
+    
+    
+// }
+
+// export async function run() {
+//     console.info('rendering sample 2');
+//     const views = activeViews();
+
+//     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+//     views.workspace.addTable(dictSchema);
+
+    
+
+
+
+    
+//     const dictView = schemaView(dictSchema);
+    
+//     views.registerActiveView(
+//         new ActiveView('root',
+//                        dictView,
+//                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('di'))));
+    
+//     const root = document.getElementById('root') ?? panic();
+//     root.innerHTML = 'POW!';
+
+//     const entryId = 1000;
+//     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
+//     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+
+//     const rendered = workspace.testRenderEntry(assertions);
+
+//     root.innerHTML = renderToStringViaLinkeDOM(rendered);
+    
+    
+// }
+
+export async function run() {
+    console.info('rendering sample 2');
+    const views = activeViews();
+
+    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+    views.workspace.addTable(dictSchema);
+    
+    const dictView = schemaView(dictSchema);
+    
+    views.registerActiveView(
+        new ActiveView('root',
+                       dictView,
+                       ()=>new CurrentTupleQuery(views.workspace.getTableByTag('di'))));
+    
+    // const root = document.getElementById('root') ?? panic();
+    // root.innerHTML = 'POW!';
+
+    // TODO make this less weird
+    const entryId = 1000;
+    const assertions = await rpc`getAssertionsForEntry(${entryId})`;
+    console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+    assertions.forEach((a:Assertion)=>views.workspace.applyAssertionByPath(getAssertionPath(a), a));
+
+    
+    activeViews().rerenderAllViews();
+    
+}
+
 export const exportToBrowser = ()=> ({
-    beginFieldEdit,
+    activeViews,
+    run,
+    //beginFieldEdit,
 });
 
 export const routes = ()=> ({

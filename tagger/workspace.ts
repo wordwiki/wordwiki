@@ -220,14 +220,20 @@ interface Gloss extends TupleVersionT {
 // -------------------------------------------------------------------------------
 
 export class VersionedDb {
-    readonly tables: Map<Tag, VersionedTable>;
+    readonly tables: Map<Tag, VersionedTable> = new Map();
 
     constructor(schemas: Schema[]) {
-        this.tables = new Map(schemas.map(schema=>[schema.tag, new VersionedTuple(schema, 0)]));
-        if(this.tables.size !== schemas.length)
-            throw new Error(`duplicate schema names`);
+        schemas.forEach(s=>this.addTable(s));
     }
 
+    addTable(schema: Schema): VersionedTable {
+        if(this.tables.has(schema.tag))
+            throw new Error(`attempting to add schema with duplicate tag ${schema.tag}`);
+        const versionedTable = new VersionedTable(schema);
+        this.tables.set(schema.tag, versionedTable);
+        return versionedTable;
+    }
+    
     applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
         const versionedTuple = this.getVersionedTupleByPath(path);
         versionedTuple.applyAssertion(assertion);
@@ -235,6 +241,10 @@ export class VersionedDb {
 
     getTable(tag: string): VersionedTuple {
         return this.tables.get(tag) ?? panic('unable to find table', tag);
+    }
+
+    getTableByTag(tag: string): VersionedTable {
+        return this.tables.get(tag) ?? panic('unable to find table with tag', tag);
     }
     
     getVersionedTupleByPath(path: [string, number][]): VersionedTuple {
@@ -640,50 +650,50 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
 /**
  * 9:45 Wed haircut
  */
-export function testRenderEntry(assertions: Assertion[]): any {
+// export function testRenderEntry(assertions: Assertion[]): any {
     
-    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+//     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
 
-    console.info('Sample entry assertions', assertions);
+//     console.info('Sample entry assertions', assertions);
 
-    // --- Create an empty instance schema
-    const mmoDb = new VersionedDb([dictSchema]);
-    assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
-    console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
+//     // --- Create an empty instance schema
+//     const mmoDb = new VersionedDb([dictSchema]);
+//     assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
+//     //console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
     
-    // const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
-    // assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
-    // console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
+//     // const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
+//     // assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
+//     // console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
 
-    //const entries = mmoDb.childRelations['en'];
-    //console.info('entries', entries);
+//     //const entries = mmoDb.childRelations['en'];
+//     //console.info('entries', entries);
     
-    // --- Navigate to definition
-    // let definition = mmoDb.findRequiredVersionedTupleById(992);
-    // console.info('definition', definition.dump());
+//     // --- Navigate to definition
+//     // let definition = mmoDb.findRequiredVersionedTupleById(992);
+//     // console.info('definition', definition.dump());
 
-    const current = new CurrentTupleQuery(mmoDb.getTable('di'));
-    console.info('current view', JSON.stringify(current.dump(), undefined, 2));
+//     const current = new CurrentTupleQuery(mmoDb.getTable('di'));
+//     console.info('current view', JSON.stringify(current.dump(), undefined, 2));
 
-    const mmoView = view.schemaView(dictSchema);
-    const renderer = new view.Renderer(mmoView, 'root');
-    return renderer.renderTuple(current);
-}
+//     const mmoView = view.schemaView(dictSchema);
+//     const renderer = new view.Renderer(mmoView, 'root');
+//     return renderer.renderTuple(current);
+// }
 
 /**
  *
  */
-export function test(entry_id: number=1000): any {
-    // --- Load the tuples for a dictionary entry.
-    const sampleEntryAssertions = selectAssertionsForTopLevelFact('dict').all({id1:entry_id});
-    return (
-        ['html', {},
-         ['head', {},
-          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          /*['script', {src:'/scripts/tagger/page-editor.js'}]*/],
-         ['body', {},
-          testRenderEntry(sampleEntryAssertions)]]);
-}
+// export function test(entry_id: number=1000): any {
+//     // --- Load the tuples for a dictionary entry.
+//     const sampleEntryAssertions = selectAssertionsForTopLevelFact('dict').all({id1:entry_id});
+//     return (
+//         ['html', {},
+//          ['head', {},
+//           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+//           /*['script', {src:'/scripts/tagger/page-editor.js'}]*/],
+//          ['body', {},
+//           testRenderEntry(sampleEntryAssertions)]]);
+// }
 
 /**
  *
@@ -697,7 +707,9 @@ function clientRenderTest(entry_id: number): any {
           ['title', {}, 'Wordwiki'],
           ['link', {href:"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",  rel:"stylesheet", integrity:"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH", crossorigin:"anonymous"}],
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          ['script', {}, 'let imports = {}'],
+          ['script', {}, block`
+/**/           let imports = {};
+/**/           let activeViews = undefined`],
           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
           ['script', {type: 'module'}, block`
 /**/           import * as workspace from '/scripts/tagger/workspace.js';
@@ -708,9 +720,12 @@ function clientRenderTest(entry_id: number): any {
 /**/                        view.exportToBrowser(),
 /**/                        workspace.exportToBrowser());
 /**/
+/**/           activeViews = imports.activeViews();
+/**/
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");
-/**/             workspace.renderSample(document.getElementById('root'))
+/**/             view.run();
+/**/             //workspace.renderSample(document.getElementById('root'))
 /**/           });`
           ]
         ],
@@ -727,21 +742,27 @@ function clientRenderTest(entry_id: number): any {
 
 }
 
-console.info('HI FROM INSTANCE!');
+// - Workspace needs to be global (per page)
+// - Live views - which have a html id and a ??? also need to be global.
+// - after a change, we (ideally incrementally - but for now just completely) rerender
+//   all live views.
+// - the RHS of the live views thing? Can be a ()=>CurrentTupleQuery[] for now.
 
-export async function renderSample(root: Element) {
-    console.info('rendering sample');
-    root.innerHTML = 'POW!';
+//console.info('HI FROM INSTANCE!');
 
-    const entryId = 1000;
-    const assertions = await rpc`getAssertionsForEntry(${entryId})`;
-    console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+// export async function renderSample(root: Element) {
+//     console.info('rendering sample');
+//     root.innerHTML = 'POW!';
 
-    const rendered = testRenderEntry(assertions);
+//     const entryId = 1000;
+//     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
+//     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
 
-    root.innerHTML = renderToStringViaLinkeDOM(rendered);
+//     const rendered = testRenderEntry(assertions);
+
+//     root.innerHTML = renderToStringViaLinkeDOM(rendered);
     
-}
+// }
 
 export function getAssertionsForEntry(entry_id: number): any {
     return selectAssertionsForTopLevelFact('dict').all({id1: entry_id});
@@ -751,7 +772,7 @@ export const exportToBrowser = ()=> ({
 });
 
 export const routes = ()=> ({
-    instanceTest: test,
+    //instanceTest: test,
     clientRenderTest,
     getAssertionsForEntry,
 });
@@ -759,5 +780,5 @@ export const routes = ()=> ({
 
 
 
-if (import.meta.main)
-    await test();
+// if (import.meta.main)
+//     await test();

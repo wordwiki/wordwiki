@@ -28,6 +28,11 @@ table.relation > tbody > tr.tuple:hover {
   background: lightgrey;
 }
 
+table.relation > tbody > tr > td.tuple-history {
+  width: 2em;
+  text-align: center;
+}
+
 table.relation > tbody > tr > td.tuple-menu {
   width: 1em;
 }
