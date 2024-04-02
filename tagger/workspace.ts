@@ -1,5 +1,5 @@
 import * as model from "./model.ts";
-import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, FloatField,
+import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {unwrap, panic} from "../utils/utils.ts";
 import * as utils from "../utils/utils.ts";
@@ -233,18 +233,31 @@ export class VersionedDb {
         this.tables.set(schema.tag, versionedTable);
         return versionedTable;
     }
+
+    applyAssertion(assertion: Assertion) {
+        this.applyAssertionByPath(getAssertionPath(assertion), assertion);
+    }
     
-    applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
+    applyAssertionByPath(path: [string, number][], assertion: Assertion) {
         const versionedTuple = this.getVersionedTupleByPath(path);
         versionedTuple.applyAssertion(assertion);
     }
 
+    applyProposedAssertion(assertion: Assertion) {
+        const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
+        versionedTuple.applyProposedAssertion(assertion);
+    }
+    
     getTable(tag: string): VersionedTuple {
         return this.tables.get(tag) ?? panic('unable to find table', tag);
     }
 
     getTableByTag(tag: string): VersionedTable {
         return this.tables.get(tag) ?? panic('unable to find table with tag', tag);
+    }
+
+    getVersionedTupleById(tableTag:string, typeTag:string, id:number): VersionedTuple|undefined {
+        return this.tables.get(tableTag)?.getVersionedTupleById(typeTag, id);
     }
     
     getVersionedTupleByPath(path: [string, number][]): VersionedTuple {
@@ -380,6 +393,18 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             this.#currentTuple = tuple;
     }
 
+    applyProposedAssertion(assertion: Assertion) {
+        const tuple = new TupleVersion(this, assertion);
+
+        // TODO lots of validation here + index updating etc.
+        // TODO update current.
+        // TODO tie into speculative mechanism.
+        
+        this.tupleVersions.push(tuple);
+        if(tuple.isCurrent)
+            this.#currentTuple = tuple;
+    }
+    
     get mostRecentTuple() {
         // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
         return this.tupleVersions[this.tupleVersions.length-1];
@@ -408,6 +433,11 @@ export class VersionedTuple/*<T extends NodeT>*/ {
 export class VersionedTable extends VersionedTuple {
     constructor(schema: RelationField) {
         super(schema, 0);
+    }
+
+    getVersionedTupleById(typeTag:string, id:number): VersionedTuple|undefined {
+        // TODO this is doing a search every time - the intent is to have an index XXX
+        return this.findVersionedTupleById(id);
     }
 }
 

@@ -156,7 +156,7 @@ export interface ValidateOpts {
  * exists solely as a optional convenience for select scalar field
  * implementers.
  */
-export abstract class ScalarFieldBase extends Field {
+export abstract class ScalarField extends Field {
     constructor(name: string, public bind: string, public optional: boolean, style: Style={}) {
         super(name, style);
     }
@@ -234,7 +234,7 @@ export abstract class ScalarFieldBase extends Field {
 /**
  * Boolean Field
  */
-export class BooleanField extends ScalarFieldBase {
+export class BooleanField extends ScalarField {
     constructor(name: string, bind: string, optional: boolean, style: Style={}) {
         super(name, bind, optional, style);
     }
@@ -248,7 +248,7 @@ export class BooleanField extends ScalarFieldBase {
     
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BooleanField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'boolean');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'boolean');
         return new BooleanField(name, $bind, !!$optional);
     }
 }
@@ -264,7 +264,7 @@ export class BooleanField extends ScalarFieldBase {
  *
  * We will add BigInt fields if we need larger integers.
  */
-export class IntegerField extends ScalarFieldBase {
+export class IntegerField extends ScalarField {
     constructor(name: string, bind: string, optional: boolean=false, style: Style={}) {
         super(name, bind, optional, style);
     }
@@ -289,7 +289,7 @@ export class IntegerField extends ScalarFieldBase {
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IntegerField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'integer');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'integer');
         return new IntegerField(name, $bind, !!$optional);
     }
 }
@@ -303,7 +303,7 @@ export class IntegerField extends ScalarFieldBase {
  * fixup on load, but we presently don't need post-load fixup pass,
  * and would like to avoid one.
  */
-export class FloatField extends ScalarFieldBase {
+export class FloatField extends ScalarField {
     constructor(name: string, bind: string, optional: boolean, style: Style={}) {
         super(name, bind, optional, style);
     }
@@ -330,7 +330,7 @@ export class FloatField extends ScalarFieldBase {
     
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): FloatField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'float');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'float');
         return new FloatField(name, $bind, !!$optional);
     }
 }
@@ -350,7 +350,7 @@ enum StringFormat {
  *
  * TODO: add a format field (shortText, multilineText, markdown, json, html etc)
  */
-export class StringField extends ScalarFieldBase {
+export class StringField extends ScalarField {
     constructor(name: string, bind: string, optional: boolean, public format:StringFormat = StringFormat.Text, style: Style={}) {
         super(name, bind, optional, style);
     }
@@ -363,7 +363,7 @@ export class StringField extends ScalarFieldBase {
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): StringField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'string');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'string');
         return new StringField(name, $bind, !!$optional);
     }
 }
@@ -386,7 +386,7 @@ export class VariantField extends StringField {
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
         return new VariantField(name, $bind, !!$optional);
     }
 }
@@ -398,7 +398,7 @@ export class VariantField extends StringField {
  *
  * Furthermore, we restrict the alphabet used to serialized ids to [a-zA-Z].
  */
-export class IdField extends ScalarFieldBase {
+export class IdField extends ScalarField {
     static IdRegex = new RegExp(`^[a-zA-Z]+`);
 
     constructor(name: string, bind: string, optional: boolean=false, style: Style={}) {
@@ -422,7 +422,7 @@ export class IdField extends ScalarFieldBase {
     
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IdField {
         const {$type, $bind, $style, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'id');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'id');
         return new IdField(name, $bind);
     }
 }
@@ -445,7 +445,7 @@ export class PrimaryKeyField extends IdField {
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): PrimaryKeyField {
         const {$type, $bind, $style, ...extra} = schema;
-        ScalarFieldBase.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'primary_key');
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'primary_key');
         return new PrimaryKeyField(name, $bind);
     }
 }
@@ -460,10 +460,11 @@ export class RelationField extends Field {
     #fieldsByName: {[name: string]: Field}|undefined = undefined;
     #primaryKeyField: PrimaryKeyField|undefined = undefined;
     #nonRelationFields: Field[]|undefined = undefined;
-    #scalarFields: ScalarFieldBase[]|undefined = undefined;
+    #scalarFields: ScalarField[]|undefined = undefined;
     #relationFields: RelationField[]|undefined = undefined;
     #relationFieldsByTag: Record<string, RelationField>|undefined = undefined;
     #ancestorRelations_: RelationField[]|undefined;
+    #schema_: Schema|undefined;
     #descendantAndSelfRelations_: RelationField[]|undefined;
     #primaryKeyColIndex_: number|undefined;
     #syntheticFieldsColIndex_: number|undefined;
@@ -538,6 +539,7 @@ export class RelationField extends Field {
             !!this.#scalarFields||
             !!this.#relationFields||
             !!this.#ancestorRelations_||
+            !!this.#schema_||
             !!this.#descendantAndSelfRelations_||
             !!this.#primaryKeyColIndex_;
     }
@@ -550,9 +552,9 @@ export class RelationField extends Field {
         return this.#nonRelationFields??=this.fields.filter(f=>!(f instanceof RelationField));
     }
 
-    get scalarFields(): ScalarFieldBase[] {
+    get scalarFields(): ScalarField[] {
         return this.#scalarFields??=
-            this.fields.filter(f=>f instanceof ScalarFieldBase).map(f=>f as ScalarFieldBase);
+            this.fields.filter(f=>f instanceof ScalarField).map(f=>f as ScalarField);
     }
     
     get relationFields(): RelationField[] {
@@ -629,6 +631,15 @@ export class RelationField extends Field {
     get ancestorRelations():RelationField[] {
         return this.#ancestorRelations_??=
             this.parentRelation?[...this.parentRelation.ancestorRelations,this.parentRelation]:[];
+    }
+
+    get schema(): Schema {
+        return this.#schema_??= (()=>{
+            if(this instanceof Schema)
+                return this;
+            else
+                return (this.parentRelation ?? panic('no schema found')).schema;
+        })();
     }
 
     get descendantAndSelfRelations(): RelationField[] {

@@ -1,5 +1,5 @@
 import * as model from "./model.ts";
-import {FieldVisitorI, Field, ScalarFieldBase, BooleanField, IntegerField, FloatField,
+import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, VariantField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {Assertion, getAssertionPath} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
@@ -38,24 +38,39 @@ export abstract class View {
 /**
  *
  */
-export abstract class ScalarViewBase extends View {
-    declare field: ScalarFieldBase;
-    constructor(field: ScalarFieldBase) { super(field); }
+export abstract class ScalarView extends View {
+    declare field: ScalarField;
+    constructor(field: ScalarField) { super(field); }
+
+    renderView(v: any): Markup {
+        return String(v);
+    }
+
+    /*abstract*/ renderEditor(v: any): Markup {
+        //throw new Error(`renderEditor not implemented on ${utils.className(this)}`);
+        return String(v);
+    }
 }
 
 /**
  *
  */
-export class BooleanView extends ScalarViewBase {
+export class BooleanView extends ScalarView {
     declare field: BooleanField;
     constructor(field: BooleanField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBooleanView(this, a); }
+
+    renderEditor(v: any): Markup {
+        const checkboxAttrs: Record<string,string> = {type: 'checkbox'};
+        if(v) checkboxAttrs['checked'] = '';
+        return ['input', checkboxAttrs];
+    }
 }
 
 /**
  *
  */
-export class IntegerView extends ScalarViewBase {
+export class IntegerView extends ScalarView {
     declare field: IntegerField;
     constructor(field: IntegerField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitIntegerView(this, a); }
@@ -64,7 +79,7 @@ export class IntegerView extends ScalarViewBase {
 /**
  *
  */
-export class FloatView extends ScalarViewBase {
+export class FloatView extends ScalarView {
     declare field: FloatField;
     constructor(field: FloatField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitFloatView(this, a); }
@@ -73,10 +88,16 @@ export class FloatView extends ScalarViewBase {
 /**
  *
  */
-export class StringView extends ScalarViewBase {
+export class StringView extends ScalarView {
     declare field: StringField;
     constructor(field: StringField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitStringView(this, a); }
+
+    // TODO: how to know what width to use - easy if one - want full width, but
+    //       if multiple?
+    renderEditor(v: any): Markup {
+        return ['input', {type: 'text', placeholder: this.prompt, value: String(v??'')}];
+    }
 }
 
 /**
@@ -91,7 +112,7 @@ export class VariantView extends StringView {
 /**
  *
  */
-export class IdView extends ScalarViewBase {
+export class IdView extends ScalarView {
     declare field: IdField;
     constructor(field: IdField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitIdView(this, a); }
@@ -100,7 +121,7 @@ export class IdView extends ScalarViewBase {
 /**
  *
  */
-export class PrimaryKeyView extends ScalarViewBase {
+export class PrimaryKeyView extends ScalarView {
     declare field: PrimaryKeyField;
     constructor(field: PrimaryKeyField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitPrimaryKeyView(this, a); }
@@ -112,8 +133,8 @@ export class PrimaryKeyView extends ScalarViewBase {
 export class RelationView extends View {
     declare field: RelationField;
     #nonRelationViews: View[]|undefined = undefined;
-    #scalarViews: ScalarViewBase[]|undefined = undefined;
-    #userScalarViews: ScalarViewBase[]|undefined = undefined;
+    #scalarViews: ScalarView[]|undefined = undefined;
+    #userScalarViews: ScalarView[]|undefined = undefined;
     #relationViews: RelationView[]|undefined = undefined;
     #relationViewsByTag: Record<string, RelationView>|undefined = undefined;
     //#ancestorRelations_: RelationView[]|undefined;
@@ -130,12 +151,12 @@ export class RelationView extends View {
         return this.#nonRelationViews??=this.views.filter(f=>!(f instanceof RelationView));
     }
 
-    get scalarViews(): ScalarViewBase[] {
+    get scalarViews(): ScalarView[] {
         return this.#scalarViews??=
-            this.views.filter(f=>f instanceof ScalarViewBase).map(f=>f as ScalarViewBase);
+            this.views.filter(f=>f instanceof ScalarView).map(f=>f as ScalarView);
     }
 
-    get userScalarViews(): ScalarViewBase[] {
+    get userScalarViews(): ScalarView[] {
         return this.#scalarViews??=
             this.scalarViews.filter(f=>!(f instanceof PrimaryKeyView));
     }
@@ -335,22 +356,56 @@ export class ActiveViews {
             : undefined;
     }
 
-    beginFieldEdit(renderRootId: string, tuple_id: number) {
+    beginFieldEdit(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number) {
         console.info('begin field edit', renderRootId, tuple_id);
+
+        // --- Only one tuple editor can be open at a time
+        //     (later will get fancier and close open ones or something TODO)
         if(this.currentlyOpenTupleEditor) {
             alert('A field editor is already open');
             return;
         }
 
+        // --- Find the tuple
+        const tuple = this.workspace.getVersionedTupleById(db_tag, tuple_tag, tuple_id);
+        if(!tuple) {
+            alert('internal error - cannot find tuple to edit'); // XXX
+            return;
+        }
+        const mostRecentTupleVersion = tuple.mostRecentTuple;
+
         // NEXT populate assertion better!
         // CReating the assertion is a job for the global workspace.
-        const new_assertion: Assertion = ({} as Assertion);
+        const new_assertion: Assertion = Object.assign(
+            {},
+            mostRecentTupleVersion.assertion,
+            // TODO: change_by fields clear, from/to
+            {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
         this.currentlyOpenTupleEditor = new TupleEditor(renderRootId, tuple_id, new_assertion);
 
         // Re-render the tuple with the now open tuple editor
         // - we can use the global workspace to find the tuple by tuple_id ???
         // - figure out how this works for the first tuple in a relation (but sounds
         //   patchable)
+        this.rerenderViewById(renderRootId);
+    }
+
+    endFieldEdit() {
+        if(!this.currentlyOpenTupleEditor) {
+            alert('No field editor is currently open');
+            return;
+        }
+
+        const tupleEditor = this.currentlyOpenTupleEditor;
+        const renderRootId = tupleEditor.renderRootId;
+        const newAssertion = tupleEditor.assertion;
+
+        // TODO Should check if differnt than prev tuple TODO TODO
+        // - what from and to times to use for new assertions.
+        //newAssertion = 
+
+        this.currentlyOpenTupleEditor = undefined;
+        
         this.rerenderViewById(renderRootId);
     }
 }
@@ -380,7 +435,13 @@ export class ActiveView {
  *
  */
 export class TupleEditor {
-    constructor(public renderRootId: string, public tuple_id: number, public assertion: Assertion) {
+    constructor(public renderRootId: string,
+                public tuple_id: number,
+                public assertion: Assertion) {
+    }
+
+    endFieldEdit() {
+        
     }
 }
 
@@ -422,12 +483,11 @@ export class Renderer {
         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
 
         return [
-            // --- If this tuple a proposed new tuple under edit, render the editor
-            currentlyOpenTupleEditor && this.renderTupleEditor(r, currentlyOpenTupleEditor),
-
-            // --- Render prompt and curent values
-            //     (later, support this line being replaced with an open editor)
-            this.renderCurrentTupleRow(r),
+            // --- If this tuple a proposed new tuple under edit, render the editor,
+            //     otherwise render the current row.
+            currentlyOpenTupleEditor
+                ? this.renderTupleEditor(r, currentlyOpenTupleEditor)
+                : this.renderCurrentTupleRow(r),
 
             // --- If history is open for this tuple, render history rows
             isHistoryOpen ? [
@@ -473,12 +533,13 @@ export class Renderer {
     // We need to scope our render trees!
     // - Probably better to move tuple under edit into this view class? (it really does belong to it - not to the
     //   shared global thing)
-    renderScalarCell(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleVersion, history: boolean=false): Markup {
+    renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
+        const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
         return (
             ['td', {class: `field field-${v.field.schemaTypename()}`,
-                    onclick:`activeViews.beginFieldEdit('${this.renderRootId}', ${r.src.id})`,
-                    },
-             (t.assertion as any)[v.field.bind]     // XXX be fancy here;
+                    onclick:`activeViews.beginFieldEdit('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
+                   },
+             v.renderView(value)
             ]);
     }
 
@@ -486,17 +547,25 @@ export class Renderer {
         const schema = r.schema;
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
-        return (
+        return [
             ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
              ['th', {}, view.prompt],
              view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
-            ]);
+            ],
+            ['tr', {},
+             ['th', {}, ''],
+             ['td', {colspan: view.userScalarViews.length+3},
+              ['button', {type:'button', class:'btn btn-primary',
+                          onclick:'activeViews.endFieldEdit()'}, 'Save'],
+            ]]
+        ];
     }
 
-    renderScalarCellEditor(r: CurrentTupleQuery, v: ScalarViewBase, t: TupleEditor): Markup {
+    renderScalarCellEditor(r: CurrentTupleQuery, v: ScalarView, t: TupleEditor): Markup {
+        const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here; 
         return (
             ['td', {class: `fieldedit`},
-             'EDIT', (t.assertion as any)[v.field.bind]     // XXX be fancy here;
+             v.renderEditor(value)
             ]);
     }
 
@@ -510,7 +579,7 @@ export class Renderer {
                type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               '≡'],
              ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.beginFieldEdit('${this.renderRootId}', ${r.src.id})`}, 'Edit']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.beginFieldEdit('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Up']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Down']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Insert Above']],
@@ -627,7 +696,7 @@ export async function run() {
     const entryId = 1000;
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
-    assertions.forEach((a:Assertion)=>views.workspace.applyAssertionByPath(getAssertionPath(a), a));
+    assertions.forEach((a:Assertion)=>views.workspace.applyAssertion(a));
 
     
     activeViews().rerenderAllViews();

@@ -419,9 +419,11 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
     out.push(ELEMENT_NODE);
     out.push(tagName);
     for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
-        out.push(ATTRIBUTE_NODE, name);
-        if(value != undefined)
-            out.push(String(value));
+        if(name !== '') {
+            out.push(ATTRIBUTE_NODE, name);
+            if(value != undefined)
+                out.push(String(value));
+        }
     }
     for(const c of content)
         renderItemToJSDON(out, c);
