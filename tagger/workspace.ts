@@ -401,6 +401,8 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         // TODO tie into speculative mechanism.
         
         this.tupleVersions.push(tuple);
+        console.info('applied proposed assertion', assertion);
+        
         if(tuple.isCurrent)
             this.#currentTuple = tuple;
     }

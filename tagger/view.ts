@@ -46,9 +46,13 @@ export abstract class ScalarView extends View {
         return String(v);
     }
 
-    /*abstract*/ renderEditor(v: any): Markup {
+    /*abstract*/ renderEditor(relation_id: number, v: any): Markup {
         //throw new Error(`renderEditor not implemented on ${utils.className(this)}`);
         return String(v);
+    }
+
+    loadFromEditor(relation_id: number): any {
+        return undefined;
     }
 }
 
@@ -60,7 +64,7 @@ export class BooleanView extends ScalarView {
     constructor(field: BooleanField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBooleanView(this, a); }
 
-    renderEditor(v: any): Markup {
+    renderEditor(relation_id: number, v: any): Markup {
         const checkboxAttrs: Record<string,string> = {type: 'checkbox'};
         if(v) checkboxAttrs['checked'] = '';
         return ['input', checkboxAttrs];
@@ -95,8 +99,23 @@ export class StringView extends ScalarView {
 
     // TODO: how to know what width to use - easy if one - want full width, but
     //       if multiple?
-    renderEditor(v: any): Markup {
-        return ['input', {type: 'text', placeholder: this.prompt, value: String(v??'')}];
+    // -- give id.
+    // -- write a loader that can get the value based on id.
+    // -- before writing this, do the other end
+    renderEditor(relation_id: number, v: any): Markup {
+        return ['input', {type: 'text', placeholder: this.prompt,
+                          value: String(v??''),
+                          id: `input-${relation_id}-${this.field.name}`}];
+    }
+
+    loadFromEditor(relation_id: number): any {
+        const inputId = `input-${relation_id}-${this.field.name}`;
+        const inputElement = document.getElementById(inputId);
+        if(!inputElement)
+            throw new Error(`failed to find input element ${inputId}`); // TODO fix error
+        const value = (inputElement as HTMLInputElement).value; //getAttribute('value');
+        // TODO more checking here.
+        return value;
     }
 }
 
@@ -374,6 +393,16 @@ export class ActiveViews {
         }
         const mostRecentTupleVersion = tuple.mostRecentTuple;
 
+        // --- Find the view
+        // TODO TODO
+        const viewTree: SchemaView =
+            (this.activeViews.get(renderRootId)
+                ?? panic('unable to find render root', renderRootId))
+                .viewTree;
+        const tupleView: RelationView =
+            viewTree.relationViewForRelation.get(tuple.schema) ??
+            panic('unable to find relation view for relation', tuple.schema.tag);
+        
         // NEXT populate assertion better!
         // CReating the assertion is a job for the global workspace.
         const new_assertion: Assertion = Object.assign(
@@ -381,7 +410,10 @@ export class ActiveViews {
             mostRecentTupleVersion.assertion,
             // TODO: change_by fields clear, from/to
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
-        this.currentlyOpenTupleEditor = new TupleEditor(renderRootId, tuple_id, new_assertion);
+
+        // --- Instantiate a field editor
+        this.currentlyOpenTupleEditor = new TupleEditor(
+            renderRootId, tupleView, tuple_id, new_assertion);
 
         // Re-render the tuple with the now open tuple editor
         // - we can use the global workspace to find the tuple by tuple_id ???
@@ -397,12 +429,16 @@ export class ActiveViews {
         }
 
         const tupleEditor = this.currentlyOpenTupleEditor;
+
+        tupleEditor.endFieldEdit();
+        
         const renderRootId = tupleEditor.renderRootId;
         const newAssertion = tupleEditor.assertion;
 
         // TODO Should check if differnt than prev tuple TODO TODO
         // - what from and to times to use for new assertions.
-        //newAssertion = 
+        //newAssertion =
+        this.workspace.applyProposedAssertion(newAssertion);
 
         this.currentlyOpenTupleEditor = undefined;
         
@@ -436,12 +472,39 @@ export class ActiveView {
  */
 export class TupleEditor {
     constructor(public renderRootId: string,
+                public view: RelationView,
                 public tuple_id: number,
                 public assertion: Assertion) {
     }
-
+    
     endFieldEdit() {
-        
+        // We need the schema here to do the reload.
+        // Copy field values from form into assertion.
+        // field values are named.
+
+        // const view = this.viewTree.relationViewForRelation.get(schema)
+        //     ?? panic('unable find relation view for relation', schema.name);
+        // return [
+        //     ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
+        //      ['th', {}, view.prompt],
+        //      view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
+        //     ],
+        //     ['tr', {},
+        //      ['th', {}, ''],
+        //      ['td', {colspan: view.userScalarViews.length+3},
+        //       ['button', {type:'button', class:'btn btn-primary',
+        //                   onclick:'activeViews.endFieldEdit()'}, 'Save'],
+        //      ]]
+        // ];
+
+        console.info('in endFieldEdit');
+        for(const fieldView of this.view.userScalarViews) {
+            const formValue = fieldView.loadFromEditor(this.assertion.assertion_id);
+            console.info('formValue is', formValue);
+            if(formValue !== undefined) {
+                (this.assertion as any)[fieldView.field.bind] = formValue;
+            }
+        }
     }
 }
 
@@ -565,7 +628,7 @@ export class Renderer {
         const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here; 
         return (
             ['td', {class: `fieldedit`},
-             v.renderEditor(value)
+             v.renderEditor(t.assertion.assertion_id, value)
             ]);
     }
 
