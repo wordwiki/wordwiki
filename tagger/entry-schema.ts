@@ -40,6 +40,19 @@ export const dictSchemaJson = {
                 definition: {$type: 'string', $bind: 'attr1'},
                 //variant: {$type: 'string'}
                 // same issue as for gloss variant!!!
+                // - need two locales for definition - where it is applicable,
+                //   and the language of the definition as well.
+                // - this is a complication of wanting multiple target langugages
+                //   maybe should drop for now (we will need a bit model redo
+                //   at some point).
+                // - expressive power needed:
+                //    - for source languge facts, we can use locale to specify
+                //      their applicability.
+                //    - target language facts also have a locale (like most facts) BUT
+                //      also have a target language and both have to match.
+                //    - for most dictionaries, the target can be defaulted (for
+                //      example to 'en', - so user does not need to be aware of this).
+                // - this is a low confusion item (the hard part is appling to example)
             },
             gloss: {
                 $type: 'relation',
@@ -49,8 +62,6 @@ export const dictSchemaJson = {
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
-                //may also want to gloss into multiple languages.
-                //do we need this power for other items?
             },
             example: {
                 $type: 'relation',
@@ -68,14 +79,26 @@ export const dictSchemaJson = {
                 // Have the same problem with using locale for the translation as we
                 // do for gloss - the locale should probably be WRT the source
                 // language of the dictionary.
+
+                // Add target_loccale to the top level translatoin, and we are fine.
+                // (having one be privledged is a win to prevent drift, and have
+                // a more understandable model - can still to NxN pariings).
                 example_text: {
                     $type: 'relation',
                     $tag: 'et',
                     example_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'}
-                },                
+                },
+
+                // Recordings of example sentence need to be pulled out of the
+                // varianted examples because often is just spelling difference, or
+                // is good enough.
+
+                // Variant needs support for saying things like 'mm/sf' - meaning usable
+                // for smith francis, but not ideal.  Easy enough.
             },
+
             // recording: {
             //     $type: 'subrelation',
             //     speaker: {$type: 'string'},

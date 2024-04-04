@@ -1,3 +1,5 @@
+
+
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, VariantField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
@@ -370,11 +372,33 @@ export class ActiveViews {
     getCurrentlyOpenTupleEditorForTupleId(renderRootId: string, tuple_id: number): TupleEditor|undefined {
         return (this.currentlyOpenTupleEditor !== undefined &&
             this.currentlyOpenTupleEditor.renderRootId === renderRootId &&
-            this.currentlyOpenTupleEditor.tuple_id === tuple_id)
+            this.currentlyOpenTupleEditor.ref_tuple_id === tuple_id)
             ? this.currentlyOpenTupleEditor
             : undefined;
     }
 
+    getCurrentlyOpenTupleEditorForRenderRootId(renderRootId: string): TupleEditor|undefined {
+        return (this.currentlyOpenTupleEditor !== undefined &&
+            this.currentlyOpenTupleEditor.renderRootId === renderRootId)
+            ? this.currentlyOpenTupleEditor
+            : undefined;
+    }
+
+    insertAbove(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number) {
+        console.info('insert below');
+    }
+    
+    insertBelow(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number) {
+        console.info('insert below');
+    }
+
+    insertChild(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number, child_tag: string) {
+        console.info('insert child', child_tag);
+    }
+
+    /**
+     *
+     */
     beginFieldEdit(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number) {
         console.info('begin field edit', renderRootId, tuple_id);
 
@@ -413,7 +437,7 @@ export class ActiveViews {
 
         // --- Instantiate a field editor
         this.currentlyOpenTupleEditor = new TupleEditor(
-            renderRootId, tupleView, tuple_id, new_assertion);
+            renderRootId, tupleView, 'self', tuple_id, new_assertion);
 
         // Re-render the tuple with the now open tuple editor
         // - we can use the global workspace to find the tuple by tuple_id ???
@@ -446,6 +470,9 @@ export class ActiveViews {
     }
 }
 
+/**
+ *
+ */
 export class ActiveView {
     constructor(public id: string,
                 public viewTree: SchemaView, // This is restricting view to be from one schema XXX revisit
@@ -465,15 +492,19 @@ export class ActiveView {
     }
 }
 
+
+type TupleRefKind = 'self' | 'child' | 'before' | 'after';
+
+
 /**
- * 
  *
  *
  */
 export class TupleEditor {
     constructor(public renderRootId: string,
                 public view: RelationView,
-                public tuple_id: number,
+                public ref_kind: TupleRefKind,
+                public ref_tuple_id: number,
                 public assertion: Assertion) {
     }
     
@@ -527,8 +558,13 @@ export class Renderer {
     constructor(public viewTree: SchemaView, public renderRootId: string) {
     }
 
-    renderRelation(r: CurrentRelationQuery): Markup {
+    renderRelation0(r: CurrentRelationQuery): Markup {
         const schema = r.schema;
+        // TODO somehow change this to find tuple editor targeting an insert into
+        //      this relation
+        // const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
+        // const currentlyOpenTupleEditorPosition = currentlyOpenTupleEditor?.assertion.order
+        // _key;
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         return (
@@ -538,19 +574,63 @@ export class Renderer {
             ]);
     }
 
+    // - For a before or after tuple editor, need to notice and render in here.
+    // - how about for an empty list?
+    //    - need to chenge the // render child relations loop to also render
+    //      if there is an open tuple editor targetting the relation
+    // - that is all
+    // - the order of the temporary relation should probably be based on order id
+    // - hoist the same tuple editing to here as well.
+    renderRelation(r: CurrentRelationQuery): Markup {
+        const schema = r.schema;
+        // TODO somehow change this to find tuple editor targeting an insert into
+        //      this relation
+        // const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
+        // const currentlyOpenTupleEditorPosition = currentlyOpenTupleEditor?.assertion.order
+        // _key;
+
+        const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
+        const refKind = currentlyOpenTupleEditor?.ref_kind;
+        const refId = currentlyOpenTupleEditor?.ref_tuple_id;
+        
+        const view = this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+        return (
+            // This table has the number of cols in the schema for 'r'
+            ['table', {class: `relation relation-${schema.name}`},
+             // [(refId === r.src.id && refKind === 'first-child')
+             //     ? this.renderTupleEditor(currentlyOpenTupleEditor!) : undefined],
+             [...r.tuples.values()].map(t=>{
+                 const tuple_id = t.src.id;
+                 if(tuple_id === refId && refKind === 'self')
+                     return this.renderTupleEditor(t.schema, currentlyOpenTupleEditor!);
+                 return [
+                     [tuple_id === refId && refKind === 'before'
+                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
+                         : undefined],
+                     this.renderTuple(t),
+                     [tuple_id === refId && refKind === 'after'
+                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
+                         : undefined]
+                 ];
+             })
+            ]);
+    }
+
     renderTuple(r: CurrentTupleQuery): Markup {
         const schema = r.schema;
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
-        const isHistoryOpen = true;
+        const isHistoryOpen = false;
         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
 
         return [
             // --- If this tuple a proposed new tuple under edit, render the editor,
             //     otherwise render the current row.
-            currentlyOpenTupleEditor
-                ? this.renderTupleEditor(r, currentlyOpenTupleEditor)
-                : this.renderCurrentTupleRow(r),
+            // currentlyOpenTupleEditor
+            //     ? this.renderTupleEditor(r, currentlyOpenTupleEditor)
+            //     : this.renderCurrentTupleRow(r),
+            this.renderCurrentTupleRow(r),
 
             // --- If history is open for this tuple, render history rows
             isHistoryOpen ? [
@@ -578,6 +658,7 @@ export class Renderer {
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         const current = r.mostRecentTupleVersion;
+        const tupleJson = JSON.stringify(current?.assertion);
         return (
             ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
                     class: 'tuple'},
@@ -585,7 +666,7 @@ export class Renderer {
              current ? [  // current is undefined for deleted tuples - more work here TODO
                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
              ]: undefined,
-             ['td', {class: 'tuple-history'}, '↶'], // style different if have history etc.
+             ['td', {class: 'tuple-history', title: tupleJson}, '↶'], // style different if have history etc.
              ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]
             ]);
     }    
@@ -606,14 +687,14 @@ export class Renderer {
             ]);
     }
 
-    renderTupleEditor(r: CurrentTupleQuery, t: TupleEditor): Markup {
-        const schema = r.schema;
+    renderTupleEditor(schema: RelationField, t: TupleEditor): Markup {
+        //const schema = r.schema;
         const view = this.viewTree.relationViewForRelation.get(schema)
             ?? panic('unable find relation view for relation', schema.name);
         return [
             ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
              ['th', {}, view.prompt],
-             view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
+             view.userScalarViews.map(v=>this.renderScalarCellEditor(v, t))
             ],
             ['tr', {},
              ['th', {}, ''],
@@ -624,7 +705,7 @@ export class Renderer {
         ];
     }
 
-    renderScalarCellEditor(r: CurrentTupleQuery, v: ScalarView, t: TupleEditor): Markup {
+    renderScalarCellEditor(v: ScalarView, t: TupleEditor): Markup {
         const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here; 
         return (
             ['td', {class: `fieldedit`},
@@ -634,7 +715,16 @@ export class Renderer {
 
     // TODO: the event handlers should not be literal onclick scripts on each
     //       item (bloat).
+    // TODO: add an 'Insert Child XXX' for each child relation kind.
     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
+        const insertChildMenuItems = 
+            r.schema.relationFields.map(c=>
+                ['li', {},
+                 ['a', {class:'dropdown-item', href:'#',
+                        onclick:`activeViews.insertChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
+                  `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
+                 ]]);
+        
         return (
             ['div', {class:'dropdown'},
              ['button',
@@ -645,8 +735,9 @@ export class Renderer {
               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.beginFieldEdit('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Up']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Down']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Insert Above']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Insert Below']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.insertAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.insertBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
+              insertChildMenuItems,
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
               ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
              ]]);

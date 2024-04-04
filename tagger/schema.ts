@@ -717,12 +717,6 @@ export interface Assertion {
      * Fact type
      */
     ty: string;
-
-    /**
-     * depth
-     * TRY TO DROP
-     */
-    //depth: number;
     
     /**
      * (Denormalized) Flattening of the ancestor and self ids and types.
@@ -759,6 +753,11 @@ export interface Assertion {
     attr15?: any;
 
     /**
+     * User tags.
+     */
+    tags?: string;
+    
+    /**
      * Key used to order this assertion within its peers (same parent_id and ty).
      *
      * (see utils/order_key for more details)
@@ -769,6 +768,11 @@ export interface Assertion {
      * Locale expression for which this assertion hosts.
      */
     locale_expr?: string;
+
+    /**
+     * Expression of the level of confidence we have that this assertion is true.
+     */
+    confidence_expr?: string;
     
     /**
      * Notes on this assertion
@@ -885,7 +889,9 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "attr1", "attr2", "attr3", "attr4", "attr5", "attr6", "attr7", "attr8",
     "attr9", "attr10", "attr11", "attr12", "attr13", "attr14", "attr15",
 
-    "order_key", "locale_expr",
+    "tags",
+
+    "order_key", "locale_expr", "confidence_expr",
 
     "note",
     
@@ -934,8 +940,12 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       attr14,
 /**/       attr15,
 /**/
+/**/       tags TEXT,
+/**/
 /**/       order_key TEXT,
+/**/
 /**/       locale_expr TEXT,
+/**/       confidence_expr TEXT,
 /**/
 /**/       note TEXT,
 /**/
