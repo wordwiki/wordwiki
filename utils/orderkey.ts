@@ -53,6 +53,10 @@ export const new_range_start_key = new Big('0.5');
 export const begin_key = new Big('0.1');
 export const end_key = new Big('0.9');
 
+export const new_range_start_string = new_range_start_key.toString();
+export const begin_string = begin_key.toString();
+export const end_string = end_key.toString();
+
 /**
  *
  */

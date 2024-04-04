@@ -462,10 +462,10 @@ export class RelationField extends Field {
     #nonRelationFields: Field[]|undefined = undefined;
     #scalarFields: ScalarField[]|undefined = undefined;
     #relationFields: RelationField[]|undefined = undefined;
-    #relationFieldsByTag: Record<string, RelationField>|undefined = undefined;
     #ancestorRelations_: RelationField[]|undefined;
     #schema_: Schema|undefined;
     #descendantAndSelfRelations_: RelationField[]|undefined;
+    #descendantAndSelfRelationsByTag: Record<string, RelationField>|undefined = undefined;
     #primaryKeyColIndex_: number|undefined;
     #syntheticFieldsColIndex_: number|undefined;
     #parentFieldsColIndex_: number|undefined;
@@ -562,13 +562,6 @@ export class RelationField extends Field {
             this.fields.filter(f=>f instanceof RelationField).map(f=>f as RelationField);
     }
 
-    get relationFieldsByTag(): Record<string, RelationField> {
-        // Note: we are already validating tag uniqueness across the whole
-        //       schema, so no need to check here as well.
-        return this.#relationFieldsByTag??=
-            Object.fromEntries(this.relationFields.map(r=>[r.tag, r]));
-    }
-    
     get primaryKeyField(): PrimaryKeyField {
         return this.#primaryKeyField??=(()=>{
             const primaryKeyFields = this.fields.filter(f=>f instanceof PrimaryKeyField).map(f=>f as PrimaryKeyField);
@@ -651,6 +644,13 @@ export class RelationField extends Field {
             ...this.relationFields.map(r=>r.descendantAndSelfRelations));
     }
 
+    get descendantAndSelfRelationsByTag(): Record<string, RelationField> {
+        // Note: we are already validating tag uniqueness across the whole
+        //       schema, so no need to check here as well.
+        return this.#descendantAndSelfRelationsByTag??=
+            Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.tag, r]));
+    }
+        
     validateSchema(locus: string) {
         if(this.fields.length !== Object.getOwnPropertyNames(this.fieldsByName).length) {
             throw new ValidationError(locus,

@@ -4,7 +4,8 @@ import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatFiel
 import {unwrap, panic} from "../utils/utils.ts";
 import * as utils from "../utils/utils.ts";
 import {dictSchemaJson} from "./entry-schema.ts";
-import { Assertion, getAssertionPath, selectAssertionsForTopLevelFact, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
+import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
+import * as schema from "./schema.ts";
 import * as timestamp from "../utils/timestamp.ts";
 import {BEGINNING_OF_TIME, END_OF_TIME} from '../utils/timestamp.ts';
 import {assert} from '../utils/utils.ts';
@@ -260,7 +261,7 @@ export class VersionedDb {
         return this.tables.get(tableTag)?.getVersionedTupleById(typeTag, id);
     }
     
-    getVersionedTupleByPath(path: [string, number][]): VersionedTuple {
+    getVersionedTupleByPath(path: AssertionPath): VersionedTuple {
         console.info('ROOT PATH is', path);
 
         // --- Find table hosting root tag
@@ -279,12 +280,19 @@ export class VersionedDb {
             return table.getVersionedTupleByPath(path, 1);
     }
 
+    getVersionedTupleParentRelation(childTuplePath: AssertionPath): VersionedRelation {
+        const parentTuple = this.getVersionedTupleByPath(schema.parentAssertionPath(childTuplePath));
+        const parentRelationTag = childTuplePath[childTuplePath.length-1][0]
+        const parentRelation = parentTuple?.childRelations?.[parentRelationTag];
+        utils.assert(parentRelation.schema.tag === parentRelationTag);
+        return parentRelation;
+    }
+    
     dump(): any {
         return [...this.tables.entries()].map(([tag, table])=>
             [tag, table.dump()]);
     }
 }
-
 
 /**
  *
@@ -639,6 +647,31 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
 
         return new Map(currentTupleQuerysByRecentness);
     }
+}
+
+export function generateBeforeOrderKey(parent: VersionedRelation,
+                                       refTupleId: number): string {
+    const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
+    const refTuple = orderedTuplesById.get(refTupleId);
+    if(refTuple===undefined)
+        throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key`);
+    let prev: CurrentTupleQuery|undefined = undefined;
+    for(let t of orderedTuplesById.values()) {
+        if(t.src.id === refTupleId) {
+            const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.begin_string;
+            return orderkey.between(
+                before_key,
+                refTuple.mostRecentTupleVersion?.assertion.order_key
+                    ?? panic('tuple is missing:: tuple_id is', refTupleId));
+        }
+        prev = t;
+    }
+    throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key (2)`);
+}
+
+export function generateAfterOrderKey(parent: VersionedRelation,
+                                      refTupleId: number): string {
+    throw new Error('not impl yet');
 }
 
 // /**

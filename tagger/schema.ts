@@ -798,10 +798,12 @@ export interface Assertion {
     change_note?: string;
 }
 
+export type AssertionPath = [string, number][];
+
 /**
  *
  */
-export function getAssertionPath(a: Assertion): [string, number][] {
+export function getAssertionPath(a: Assertion): AssertionPath {
     const path: [string, number][] = [];
     if(a.ty0==null) throw new Error(`Invalid assertion, missing ty0`);
     path.push([a.ty0, 0]);
@@ -817,6 +819,14 @@ export function getAssertionPath(a: Assertion): [string, number][] {
     path.push([a.ty5, a.id5]);
     return path;
 }
+
+/**
+ *
+ */
+export function parentAssertionPath(a: AssertionPath): AssertionPath {
+    return a.slice(0, -1);
+}
+
 
 /**
  * Compares two Assertions by user defined order_key.
@@ -844,6 +854,32 @@ export function compareAssertionsByRecentness(a: Assertion, b: Assertion): numbe
     return a.valid_from - b.valid_from ||
         a.id - b.id ||
         a.assertion_id - b.assertion_id;
+}
+
+export function getAssertionPathFields(a: Assertion): Pick<Assertion, 'ty0'|'ty1'|'id1'|'ty2'|'id2'|'ty3'|'id3'|'ty4'|'id4'|'ty5'|'id5'> {
+    return {
+        ty0: a.ty0,
+        ty1: a.ty1, id1: a.id1,
+        ty2: a.ty2, id2: a.id2,
+        ty3: a.ty3, id3: a.id3,
+        ty4: a.ty4, id4: a.id4,
+        ty5: a.ty5, id5: a.id5,
+    };
+}
+
+export function copyAssertionPath(src: Assertion, target: Assertion): Assertion {
+    target.ty0 = src.ty0;
+    target.ty1 = src.ty1;
+    target.id1 = src.id1;
+    target.ty2 = src.ty2;
+    target.id2 = src.id2;
+    target.ty3 = src.ty3;
+    target.id3 = src.id3;
+    target.ty4 = src.ty4;
+    target.id4 = src.id4;
+    target.ty5 = src.ty5;
+    target.id5 = src.id5;
+    return target;
 }
 
 export function getAssertionTypeN(a: Assertion, n: number): string|undefined {
