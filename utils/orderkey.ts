@@ -59,6 +59,7 @@ export const end_string = end_key.toString();
 
 /**
  *
+ * TODO: make this more sophisticated (initial spread could be more compact)
  */
 export function initial(size: number): string[] {
     const digits = size.toString().length;
@@ -78,13 +79,13 @@ export function between(a_key: string, b_key: string): string {
     const a:any = new Big(a_key);
     const b:any = new Big(b_key);
 
-    // --- Expect both order keys to be positive numbers between 0.1 and 0.9 (exclusive)
-    if(a.lte(begin_key) || a.s !== 1 || a.e !== -1)
+    // --- Expect both order keys to be positive numbers between 0.1 and 0.9 (inclusive)
+    if(a.lt(begin_key) || a.s !== 1 || a.e !== -1)
         throw new Error(`internal error: order key in incorrect form: ${a}`);
-    if(b.gte(end_key) || b.s !== 1 || b.e !== -1)
+    if(b.gt(end_key) || b.s !== 1 || b.e !== -1)
         throw new Error(`internal error: order key in incorrect form: ${b}`);
     if(a.gte(b))
-        throw new Error(`internal error: lower order key >= bigger order key`);
+        throw new Error(`internal error: lower order key >= bigger order key: ${a} >= ${b}`);
 
     // --- Calculate mid point between two order keys.  (We use times(0.5) rather
     //     than div(2) to avoid the auto rounding done by div).

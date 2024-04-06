@@ -446,13 +446,54 @@ export class ActiveViews {
 
     editNewChild(renderRootId: string,
                  refDbTag: string, refTupleTag: string, refTupleId: number,
-                 refKind: TupleRefKind, child_tag: string) {
-        // --- Find the reference tuple
-        const refTuple = this.workspace.getVersionedTupleById(
-            refDbTag, refTupleTag, refTupleId)
-            ?? panic('cannot find ref tuple for edit', refTupleId);
+                 refKind: TupleRefKind, childTag: string) {
 
-        //const newTupleSchema = 
+        // --- Find the reference tuple
+        const parentTuple = this.workspace.getVersionedTupleById(
+            refDbTag, refTupleTag, refTupleId)
+            ?? panic('cannot find tuple for edit', refTupleId);
+
+        // --- Find child relation we are inserting into
+        const parentRelation = parentTuple.childRelations[childTag]
+            ?? panic('cannot find child relation for edit', childTag);
+
+        
+        
+
+
+        
+        // const refAssertion = refTuple.mostRecentTuple?.assertion
+        //     ?? panic('cannot use ref tuple', refTupleId);
+        // const newTupleSchema = refTuple.schema;
+        
+        // const mostRecentTupleVersion = refTuple.mostRecentTuple;
+        // const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+
+        // //const activeView = this.activeViews.get(renderRootId)
+        // const parent = this.workspace.getVersionedTupleParentRelation(
+        //     getAssertionPath(refTuple.mostRecentTuple.assertion));
+        // const order_key = refKind === 'before'
+        //     ? generateBeforeOrderKey(parent, refTupleId)
+        //     : generateAfterOrderKey(parent, refTupleId);
+        
+        // // TODO make this new assertion making less raw.
+        // const newAssertion: Assertion = Object.assign(
+        //     {},
+        //     getAssertionPathFields(refAssertion),
+        //     {
+        //         ty: refAssertion.ty,
+        //         assertion_id: id,
+        //         valid_from: BEGINNING_OF_TIME,
+        //         valid_to: END_OF_TIME,
+        //         [`id${newTupleSchema.ancestorRelations.length}`]: id,
+        //         id: id,
+        //         order_key,
+        //     });
+
+        // console.info('REF assertion', refAssertion);
+        // console.info('NEW assertion', newAssertion);
+        
+        // this.openFieldEdit(renderRootId, refKind, refDbTag, refTupleTag, refTupleId, newAssertion);
     }
 
     editNew(renderRootId: string,
@@ -670,11 +711,6 @@ export class Renderer {
     // - hoist the same tuple editing to here as well.
     renderRelation(r: CurrentRelationQuery): Markup {
         const schema = r.schema;
-        // TODO somehow change this to find tuple editor targeting an insert into
-        //      this relation
-        // const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
-        // const currentlyOpenTupleEditorPosition = currentlyOpenTupleEditor?.assertion.order
-        // _key;
 
         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
         const refKind = currentlyOpenTupleEditor?.ref_kind;
@@ -939,7 +975,7 @@ export async function run() {
     const entryId = 1000;
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
-    assertions.forEach((a:Assertion)=>views.workspace.applyAssertion(a));
+    assertions.forEach((a:Assertion)=>views.workspace.untrackedApplyAssertion(a));
 
     
     activeViews().rerenderAllViews();

@@ -215,6 +215,161 @@ interface Gloss extends TupleVersionT {
 // VersionedTuple can take a type parameter:
 // -
 
+export class RemoteDb {
+    activeRequest: Promise<Response>|undefined;
+    pendingRequest: PendingRequest = new PendingRequest();
+    
+    // - does a larger RPC that:
+    //  - pushed proposed assertions to server
+    //  - with updates applied, runs the supplied (possibly nop) rpc
+    //  - responds with:
+    //     - all updates to server since last timestamp we have recieved from server
+    //       (which we will have sent in the call)
+    //  - can also respond with PANIC - meaning that the local changes could not
+    //    be applied to DB, and we presenty don't have a cheap way to recover from
+    //    this.  So, in the event of panic, we inform the user of the error and
+    //    reload the page (will get fancier later).
+    //  - just an RPC failure does not result in a panic - the db is still in
+    //    sync, just failed to do the RPC.
+    //  - only one of these in flight at a time, if the user code initiates
+    //    a second rpc while one is in flight, it queues until the first one returns
+    //    (lots of trickness otherwise which we don't want to deal with now).
+    //  - rpc can also include a closure that runs on current before submitting
+    //    remote.  Think more about this and make it more txey.
+    //  - queue mechanism will submit NOP rpcs every 250ms if there are no user
+    //    updates (to keep local db up to date).
+    //  - non empty remote updates trigger a view refresh.
+    //  - can also add closure that run locally before or after rpc (and
+    //    are in queue).
+    //  - there is still some time travel here:
+    //     - we are (on every interaction) pushing all local updates to server,
+    //       and getting all updates from server.
+    //     - so the client is always a bit behind server, and has proposed changes
+    //       it is sending.
+    //     - so code using the workspace will be running on a non-tip version.
+    //     - long term we should be doing stuff about that - but pretty much we
+    //       are only editing for now, and anything more serious runs as a proper
+    //       db tx on the server - so not an issue.
+
+    // - think about data faulting as well.
+    // - also rpc collapsing (which also helps with data faulting)
+    // - rpc collapsing could reduce our queue depth to max 1 pending.
+
+    // - having a queue depth of 1 
+
+    // - rpc's can be db queries - somehow want to take rpc results and send
+    //   the data only if we don't have it etc.
+    // - for starts, we can always send.
+
+    // - how does fault work:
+    async rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]): Promise<any> {
+        
+        // --- Replace ${} in this tagged template expr with arg
+        //     references, and hoist the args into an arg {}.
+        let rpcExpr = rpcExprSegments[0];
+        const argsObj: Record<string, any> = {};
+        args.forEach((argVal, i) => {
+            const argName = `$arg${i}`;
+            argsObj[argName] = argVal;
+            rpcExpr += `(${argName})`;
+            rpcExpr += rpcExprSegments[i+1];
+        });
+
+        const rpcPromise = new Promise((resolve, reject) => {
+            this.pendingRequest.addRpc(new Rpc(rpcExpr, argsObj, resolve, reject));
+        });
+
+        if(!this.activeRequest)
+            this.invokePendingRequest();
+
+        return rpcPromise;
+    }
+        
+    async invokePendingRequest() {
+        // --- If there is already an active request in flight, return false
+        if(!this.activeRequest)
+            return;
+
+        // // --- Collect all changes to the workspace since our last request returned
+        // // TODO
+        
+        // const request = await new Request('/'+rpcExpr, {
+        //     method: "POST",
+        //     body: JSON.stringify(argsObj)});
+
+        // const response = await fetch(request);
+        
+        // console.info('RPC response', response);
+
+        // if(!response.ok) {
+        //     let errorJson = undefined;
+        //     try {
+        //         errorJson = await response.json();
+        //     } catch (e) {
+        //         console.info('failed to read error json');
+        //     }
+        //     throw new Error(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed - ${JSON.stringify(errorJson)}`);
+        // }
+
+        // // try {
+        // // } finally {
+        // // }
+
+        return;
+    }
+
+        // Add ourselves to the list of promises that will be resolved when
+        // the pendingRequest resolves.
+
+        // If there is no activeRequest, trigger the pendingRequest.
+
+    // ALSO: When active request resolves, it will fire the pending request if
+    //       one is waiting.
+    // ALSO: a timer that will queue a NOP rpc if there has not been a request
+    //       issued in 200ms (to get a sync pump)
+
+    // COMPLICATION: what time does the RPC happen at?
+    // - for just an edit system, it is fine to be just pumping changes back and forth.
+    // - for just a single RPC, it is good that the RPC has all the edits applied
+    //   before the RPC is fired (they are parameters to the RPC) and it is good
+    //   that the changes made by the RPC are always pumped back as part of the RPC.
+
+    // - simplest implementation is that each RPC does a full sync before and after.
+    // - BUT: RPCs can be slightly delayed (while waiting for prev to complete) - so
+    //   this means that if we push all user edits, we will be pushing user edits
+    //   made after the RPC has been issued.
+    // - the issue with anything else is that the state tracking gets really hard,
+    //   and we are barely using RPCs anyway (and we need to ship in 2 weeks,
+    //   so just accept what is easy to code)
+    // - so pending request contains a sequence of rpcs, and syncs all user changes
+    //   then runs all rpcs in sequence, then returns all results.
+    // - the weakness to this scheme is that local edits (mostly user edits) get
+    //   to timetravel from the futuer to occur before a pending RPC.
+    // - we can forbid use changes if there is a pending RPC???
+    // - anyway does not matter.
+}
+
+/**
+ *
+ * - fault requests 
+ */
+export class PendingRequest {
+    rpcs: Rpc[] = [];
+
+    addRpc(rpc: Rpc) {
+        this.rpcs.push(rpc);
+    }
+}
+
+export class Rpc {
+    constructor(public url: string, public args: Record<string, any>,
+                public resolve: (r:any)=>void, public reject: (r:any)=>void) {
+    }
+}
+
+
+
+
 
 // -------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------
@@ -222,11 +377,15 @@ interface Gloss extends TupleVersionT {
 
 export class VersionedDb {
     readonly tables: Map<Tag, VersionedTable> = new Map();
+    
+    mostRecentSourceDbTimestamp: number = BEGINNING_OF_TIME;
+    mostRecentLocalTimestamp: number = BEGINNING_OF_TIME;
+    proposedAssertions: Assertion[] = [];
 
     constructor(schemas: Schema[]) {
         schemas.forEach(s=>this.addTable(s));
     }
-
+    
     addTable(schema: Schema): VersionedTable {
         if(this.tables.has(schema.tag))
             throw new Error(`attempting to add schema with duplicate tag ${schema.tag}`);
@@ -235,18 +394,21 @@ export class VersionedDb {
         return versionedTable;
     }
 
-    applyAssertion(assertion: Assertion) {
-        this.applyAssertionByPath(getAssertionPath(assertion), assertion);
-    }
-    
-    applyAssertionByPath(path: [string, number][], assertion: Assertion) {
-        const versionedTuple = this.getVersionedTupleByPath(path);
-        versionedTuple.applyAssertion(assertion);
+    applyProposedAssertion(assertion: Assertion)  {
+        const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
+        const assertAtTime = timestamp.nextTime(this.mostRecentLocalTimestamp);
+        versionedTuple.applyProposedAssertion(assertAtTime, assertion);
+        this.mostRecentLocalTimestamp = assertAtTime;
+        this.proposedAssertions.push(assertion);
     }
 
-    applyProposedAssertion(assertion: Assertion) {
-        const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
-        versionedTuple.applyProposedAssertion(assertion);
+    untrackedApplyAssertion(assertion: Assertion) {
+        this.untrackedApplyAssertionByPath(getAssertionPath(assertion), assertion);
+    }
+    
+    untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion) {
+        const versionedTuple = this.getVersionedTupleByPath(path);
+        versionedTuple.untrackedApplyAssertion(assertion);
     }
     
     getTable(tag: string): VersionedTuple {
@@ -313,9 +475,9 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         this.id = id;
     }
 
-    // applyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
+    // untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
     //     const versionedTuple = this.getVersionedTupleByPath(path, index);
-    //     versionedTuple.applyAssertion(assertion);
+    //     versionedTuple.untrackedApplyAssertion(assertion);
     // }
 
     getVersionedTupleByPath(path: [string, number][], index:number): VersionedTuple {
@@ -375,12 +537,11 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         return tuple;
     }
     
-    applyAssertion(assertion: Assertion) {
+    untrackedApplyAssertion(assertion: Assertion) {
         const tuple = new TupleVersion(this, assertion);
         // TODO lots of validation here + index updating etc.
-        // TODO update current.
-        // TODO tie into speculative mechanism.
         const mostRecentTuple = this.mostRecentTuple;
+
         if(mostRecentTuple) {
             if(mostRecentTuple.assertion.valid_to) {
                 if(tuple.assertion.valid_from !== mostRecentTuple.assertion.valid_to) {
@@ -397,17 +558,24 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         }
         
         this.tupleVersions.push(tuple);
+        
         if(tuple.isCurrent)
             this.#currentTuple = tuple;
     }
 
-    applyProposedAssertion(assertion: Assertion) {
+    applyProposedAssertion(assertAtTime: number, assertion: Assertion) {
+
         const tuple = new TupleVersion(this, assertion);
+        const mostRecentTuple = this.mostRecentTuple;
 
         // TODO lots of validation here + index updating etc.
         // TODO update current.
         // TODO tie into speculative mechanism.
-        
+
+        if(mostRecentTuple) {
+            
+        }
+
         this.tupleVersions.push(tuple);
         console.info('applied proposed assertion', assertion);
         
@@ -642,7 +810,7 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
                 if(aMostRecent === undefined && bMostRecent === undefined) return 0;
                 if(aMostRecent === undefined) return -1;
                 if(bMostRecent === undefined) return 1;
-                return compareVersionedTupleByRecentness(aMostRecent, bMostRecent);
+                return compareVersionedTupleAssertionByOrderKey(aMostRecent, bMostRecent);
             });
 
         return new Map(currentTupleQuerysByRecentness);
@@ -671,7 +839,22 @@ export function generateBeforeOrderKey(parent: VersionedRelation,
 
 export function generateAfterOrderKey(parent: VersionedRelation,
                                       refTupleId: number): string {
-    throw new Error('not impl yet');
+    const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
+    const refTuple = orderedTuplesById.get(refTupleId);
+    if(refTuple===undefined)
+        throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute after order key`);
+    let prev: CurrentTupleQuery|undefined = undefined;
+    for(let t of [...orderedTuplesById.values()].toReversed()) {
+        if(t.src.id === refTupleId) {
+            const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.end_string;
+            return orderkey.between(
+                refTuple.mostRecentTupleVersion?.assertion.order_key
+                    ?? panic('tuple is missing:: tuple_id is', refTupleId),
+                before_key);
+        }
+        prev = t;
+    }
+    throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key (2)`);
 }
 
 // /**
@@ -696,7 +879,7 @@ export function generateAfterOrderKey(parent: VersionedRelation,
 //         // if(!relationField)
 //         //     throw new Error(`Failed to find relation with tag '${assertion.ty}' in schema ${this.schema.name}`);
 
-//         return this.applyAssertionByPath(getAssertionPath(assertion), assertion);
+//         return this.untrackedApplyAssertionByPath(getAssertionPath(assertion), assertion);
 //     }
 
 //     dump(): any {
@@ -723,11 +906,11 @@ export function generateAfterOrderKey(parent: VersionedRelation,
 
 //     // --- Create an empty instance schema
 //     const mmoDb = new VersionedDb([dictSchema]);
-//     assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
+//     assertions.forEach(a=>mmoDb.untrackedApplyAssertionByPath(getAssertionPath(a), a));
 //     //console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
     
 //     // const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
-//     // assertions.forEach(a=>mmoDb.applyAssertionByPath(getAssertionPath(a), a));
+//     // assertions.forEach(a=>mmoDb.untrackedApplyAssertionByPath(getAssertionPath(a), a));
 //     // console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
 
 //     //const entries = mmoDb.childRelations['en'];

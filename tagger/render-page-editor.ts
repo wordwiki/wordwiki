@@ -104,9 +104,37 @@ export function renderPageEditor(page_id: number,
     return (
         ['html', {},
          ['head', {},
+          ['meta', {charset:"utf-8"}],
+          ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+          ['link', {href:"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",  rel:"stylesheet", integrity:"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH", crossorigin:"anonymous"}],
           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
           //['script', {src:'/resources/page-editor.js'}]],
-          ['script', {src:'/scripts/tagger/page-editor.js'}]],
+          ['script', {src:'/scripts/tagger/page-editor.js'}],
+          
+          ['script', {}, block`
+ /**/           let imports = {};
+ /**/           let activeViews = undefined`],
+          //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+          
+ //          ['script', {type: 'module'}, block`
+ // /**/           import * as workspace from '/scripts/tagger/workspace.js';
+ // /**/           import * as view from '/scripts/tagger/view.js';
+ // /**/
+ // /**/           imports = Object.assign(
+ // /**/                        {},
+ // /**/                        view.exportToBrowser(),
+ // /**/                        workspace.exportToBrowser());
+ // /**/
+ // /**/           activeViews = imports.activeViews();
+ // /**/
+ // /**/           document.addEventListener("DOMContentLoaded", (event) => {
+ // /**/             console.log("DOM fully loaded and parsed");
+ // /**/             view.run();
+ // /**/             //workspace.renderSample(document.getElementById('root'))
+ // /**/           });`
+ //          ]
+         ], // head
+         
          ['body', {},
 
           ['div', {},
@@ -120,7 +148,12 @@ export function renderPageEditor(page_id: number,
                     onmousemove: 'pageEditorMouseMove(event)',
                     onmouseup: 'pageEditorMouseUp(event)'},
             refBlocksSvg,
-            blocksSvg]]]]);
+            blocksSvg]]],
+
+         ['script', {'src':"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js", integrity:"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz", crossorigin:"anonymous"}]
+
+        ] // body
+    );
 }
 
 export function renderGroup(page: ScannedPage,
