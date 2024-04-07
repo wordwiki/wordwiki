@@ -477,6 +477,11 @@ const createBoundingGroupDml = block`
 /**/   `;
 assertDmlContainsAllFields(createBoundingGroupDml, boundingGroupFieldNames);
 
+export const selectBoundingGroup = ()=>db().prepare<BoundingGroup, {bounding_group_id: number}>(block`
+/**/   SELECT ${boundingGroupFieldNames.join()}
+/**/          FROM bounding_group
+/**/          WHERE bounding_group_id = :bounding_group_id`);
+
 
 // --------------------------------------------------------------------------------
 // --- Bounding Box ---------------------------------------------------------------
@@ -566,6 +571,13 @@ export const boundingBoxFieldNames: Array<keyof BoundingBox> = [
     'bounding_box_id', 'imported_from_bounding_box_id', 'bounding_group_id',
     'document_id', 'layer_id', 
     'page_id', 'x', 'y', 'w', 'h', 'color', 'tags', 'text', 'notes'];
+
+export interface Shape {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
 
 const createBoundingBoxDml = block`
 /**/   CREATE TABLE IF NOT EXISTS bounding_box(

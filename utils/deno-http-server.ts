@@ -89,7 +89,7 @@ export class DenoHttpServer extends HttpServer {
         // XXX THIS HARD WIRED text/html utf-8 is BORKED - JUST TILL WE GET THINGS WORKING
         const responseHeaders = Object.assign({}, titan1cResponse.headers);
         responseHeaders["content-type"] ??= "text/html; charset=utf-8";
-        console.info('RESPONSE HEADERS', responseHeaders, 'BODY', titan1cResponse.body);
+        //console.info('RESPONSE HEADERS', responseHeaders, 'BODY', titan1cResponse.body);
         return requestEvent.respondWith(new Response(titan1cResponse.body, {
             status: titan1cResponse.status,
             headers: responseHeaders,

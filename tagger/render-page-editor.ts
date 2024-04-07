@@ -1,68 +1,22 @@
-/*
-  - Tue Mar 19th - Element
-  - Wed Mar 20th - Soul
-  - 1:35
- */
-
-
+import * as pageEditor from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-import { selectLayerByLayerName } from "./schema.ts";
-import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, BoundingBox, boundingBoxFieldNames, BoundingGroup, boundingGroupFieldNames, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
+import { selectLayer, selectLayerByLayerName } from "./schema.ts";
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
 import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
 import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 
-export const routes = ()=> ({
-    pageEditor: renderPageEditor,
-    updateBoundingBoxShape(bounding_box_id: number,
-                           newShape: {x:number, y:number, w:number, h:number}) {
-        updateBoundingBox(bounding_box_id, ['x', 'y', 'w', 'h'], newShape);
-    },
-    //copyRefBoxToNewGroup,
-    //}
-});
 
-// export function copyRefBoxToNewGroup(ref_box_id): {new_group_id: number, new_box_id: number} {
-//     const newGroup = db().insert<BoundingGroup, 'bounding_group_id'>(
-//         'bounding_group', {
-//             document_id,
-//             layer_id,
-//             color
-//             imported_from_bounding_box_id: ref_box_id,
-//             bounding_group_id,
-//             document_id,
-//                 layer_id,
-//                 page_id,
-//                 x,
-                
-//             },
-//             const refBox = selectBoundingBox().required({bounding_box_id: ref_box_id});
-//             const newBox = db().insert<BoundingBox, 'bounding_box_id'>(
-//                 'bounding_box', {
-//                     imported_from_bounding_box_id: ref_box_id,
-//                     bounding_group_id,
-//                     document_id,
-//                     layer_id,
-//                     page_id,
-//                     x,
-                    
-//                 },
-//                 'bounding_box_id');
-//             return {new_group_id: 0, new_box_id: 0};
-//         })
-
-
-
-type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'>;
+type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
 
 export const boxesForPageLayer = ()=>db().
     prepare<BoxGroupJoin, {page_id:number, layer_id:number}>(
         block`
 /**/      SELECT ${boundingBoxFieldNames.map(n=>'bb.'+n).join()},
-/**/             bg.column_number, bg.heading_level, bg.heading
+/**/             bg.column_number, bg.heading_level, bg.heading, bg.color
 /**/         FROM bounding_box AS bb LEFT JOIN bounding_group AS bg USING(bounding_group_id)
 /**/         WHERE bb.page_id = :page_id AND
 /**/               bb.layer_id = :layer_id
@@ -146,7 +100,9 @@ export function renderPageEditor(page_id: number,
            ['svg', {id: 'scanned-page', width:page.width, height:page.height,
                     onmousedown: 'pageEditorMouseDown(event)',
                     onmousemove: 'pageEditorMouseMove(event)',
-                    onmouseup: 'pageEditorMouseUp(event)'},
+                    onmouseup: 'pageEditorMouseUp(event)',
+                    'data-layer-id': layer_id,
+                    'data-page-id': page_id},
             refBlocksSvg,
             blocksSvg]]],
 
@@ -167,13 +123,12 @@ export function renderGroup(page: ScannedPage,
     const groupY = Math.max(Math.min(...boxes.map(b=>b.y)) - groupMargin, 0);
     const groupLeft = Math.min(Math.max(...boxes.map(b=>b.x+b.w)) + groupMargin, page.width);
     const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, page.height);
-    const stroke = refLayer ? 'Grey' : 'Yellow';  // TODO XXX FIX
+    const stroke = (refLayer ? 'grey' : group.color) ?? 'yellow';
     return (
-        ['svg', {class:`group ${refLayer?'ref':''}`, id:`bg_${groupId}`},
+        ['svg', {class:`group ${refLayer?'ref':''}`, id:`bg_${groupId}`, stroke},
          ['rect', {class:"group-frame", x:groupX, y:groupY,
                    width:groupLeft-groupX,
-                   height:groupBottom-groupY,
-                   stroke}],
+                   height:groupBottom-groupY}],
          boxes.map(b=>renderBox(b, refLayer))
         ]);
 }
@@ -228,4 +183,129 @@ if (import.meta.main) {
     const page_number = parseInt(Deno.args[1] ?? '1');
     const markup = await friendlyRenderPageEditor(friendly_document_id, page_number);
     console.info(renderToStringViaLinkeDOM(markup));
+}
+
+// --------------------------------------------------------------------------------
+// --- RPCs -----------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+export const routes = ()=> ({
+    pageEditor: renderPageEditor,
+    updateBoundingBoxShape,
+    newBoundingBoxInNewGroup,
+    newBoundingBoxInExistingGroup,
+    copyRefBoxToNewGroup,
+    copyRefBoxToExistingGroup,
+    migrateBoxToGroup,
+});
+
+export function updateBoundingBoxShape(bounding_box_id: number, shape: Shape) {
+    db().transaction(()=>
+        updateBoundingBox(bounding_box_id, ['x', 'y', 'w', 'h'], shape));
+}
+
+export function newBoundingBoxInNewGroup(page_id: number, layer_id: number,
+                                         shape: {x:number, y:number, w:number, h:number},
+                                         color: string): {bounding_group_id: number, bounding_box_id: number} {
+    return db().transaction(()=>{
+
+        const page = selectScannedPage().required({page_id});
+        const layer = selectLayer().required({layer_id});
+        utils.assert(page.document_id === layer.document_id);
+        const document_id = page.document_id;
+        
+        const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
+            'bounding_group', {
+                document_id, // NEED to pass in
+                layer_id,
+                color,
+            }, 'bounding_group_id');
+
+        const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
+            'bounding_box', {bounding_group_id, document_id, layer_id, page_id,
+                             x: shape.x, y: shape.y, w: shape.w, h: shape.h}, 'bounding_box_id');
+
+        return {bounding_group_id, bounding_box_id};
+    });
+}
+
+export function newBoundingBoxInExistingGroup(page_id: number,
+                                              bounding_group_id: number,
+                                              shape: Shape): {bounding_box_id: number} {
+    return db().transaction(()=>{
+
+        if(typeof bounding_group_id !== 'number')
+            throw new Error('invalid bounding_group_id parameter in call to newBoundingBoxInExistingGroup');
+
+        const group = selectBoundingGroup().required({bounding_group_id});
+
+        const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
+            'bounding_box', {
+                bounding_group_id,
+                document_id: group.document_id,
+                layer_id: group.layer_id, page_id,
+                x: shape.x, y: shape.y, w: shape.w, h: shape.h}, 'bounding_box_id');
+
+        return {bounding_box_id};
+    });
+}
+
+export function copyRefBoxToNewGroup(ref_box_id: number, layer_id: number, color: string): {bounding_group_id: number, bounding_box_id: number} {
+    return db().transaction(()=>{
+
+        if(typeof ref_box_id !== 'number')
+            throw new Error('invalid ref_box_id parameter in call to copyRefToNewGroup');
+        
+        const refBox = selectBoundingBox().required({bounding_box_id: ref_box_id});
+
+        const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
+            'bounding_group', {
+                document_id: refBox.document_id,
+                layer_id,
+                color,
+            }, 'bounding_group_id');
+        
+        const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
+            'bounding_box', {
+                imported_from_bounding_box_id: refBox.bounding_box_id,
+                bounding_group_id,
+                document_id: refBox.document_id,
+                layer_id, page_id: refBox.page_id,
+                x: refBox.x, y: refBox.y, w: refBox.w, h: refBox.h}, 'bounding_box_id');
+
+        return {bounding_group_id, bounding_box_id};
+    });
+}
+
+export function copyRefBoxToExistingGroup(bounding_group_id: number, ref_box_id: number): {bounding_box_id: number} {
+    return db().transaction(()=>{
+
+        if(typeof ref_box_id !== 'number')
+            throw new Error('invalid ref_box_id parameter in call to copyRefToNewGroup');
+
+        const group = selectBoundingGroup().required({bounding_group_id});
+        console.info('target group layer id is', group.layer_id);
+        const refBox = selectBoundingBox().required({bounding_box_id: ref_box_id});
+
+        const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
+            'bounding_box', {
+                imported_from_bounding_box_id: refBox.bounding_box_id,
+                bounding_group_id,
+                document_id: refBox.document_id,
+                layer_id: group.layer_id, page_id: refBox.page_id,
+                x: refBox.x, y: refBox.y, w: refBox.w, h: refBox.h}, 'bounding_box_id');
+
+        return {bounding_box_id};
+    });
+}
+
+export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: number): {} {
+    return db().transaction(()=>{
+
+        // TODO add more paranoia here.
+        
+        updateBoundingBox(bounding_box_id, ['bounding_group_id'], {bounding_group_id});
+
+        return {};
+    });
 }

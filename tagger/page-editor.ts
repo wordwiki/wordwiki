@@ -26,13 +26,14 @@ function pageEditorMouseDown(event: MouseEvent) {
         switch(widgetKind) {
         case 'box': {
             if(event.ctrlKey) {
-                // --- Ctrl click on a box adds the clicked on box to the currently selected group
+                // --- Ctrl click on a box adds the clicked on box to the
+                //     currently selected group
                 const currentlySelectedGroup = getSelectedGroup();
                 if(currentlySelectedGroup) {
-                    addBoxToGroup(target, currentlySelectedGroup);
+                    migrateBoxToGroup(target, currentlySelectedGroup);
                 }
             } else {
-                // --- Normal click on a box begins a new selection with just
+                // --- Normal click on a non-ref box begins a new selection with just
                 //     this box (and the containing group in the group level selection).
                 selectBox(target);
             }
@@ -43,12 +44,12 @@ function pageEditorMouseDown(event: MouseEvent) {
             if(addToCurrentGroup) {
                 const currentlySelectedGroup = getSelectedGroup();
                 if(currentlySelectedGroup) {
-                    migrateRefBoxToExistingGroup(target, currentlySelectedGroup);
-                    selectBox(target);
+                    copyRefBoxToExistingGroup(target, currentlySelectedGroup);
+                    //selectBox(target);
                 }
             } else {
-                migrateRefBoxToNewGroup(target);
-                selectBox(target);
+                copyRefBoxToNewGroup(target);
+                //selectBox(target);
             }
             break;
         }
@@ -189,35 +190,18 @@ function grabberMouseDown(event: MouseEvent, grabber: Element, extraAbortAction:
             }
 
             document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
-
-            const bounding_box_id = (box.id && safeParseInt(stripRequiredPrefix(box.id, 'bb_'))) || undefined;
+            
             const x = getIntAttribute(box, 'x');
             const y = getIntAttribute(box, 'y');
             const w = getIntAttribute(box, 'width');
             const h = getIntAttribute(box, 'height');
-            if(!bounding_box_id) {
-                // fetch(`/newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
-                //     response=>{ console.info('added new box', response); },
-                //     error=>{ this.onAbort(); alert('Failed to add new box'); });
-                rpc`newBoundingBoxInNewGroup({x:${x},y:${y},w:${w},h:${h}})`.then(
-                    response=>{ console.info('added new box', response); },
-                    error=>{ this.onAbort(); alert('Failed to add new box'); });
+            if(!box.id) {
+                  if(group.id)
+                    newBoundingBoxInExistingGroup(group, box, x, y, w, h, this.onAbort);
+                else
+                    newBoundingBoxInNewGroup(group, box, x, y, w, h, this.onAbort);
             } else {
-                (async ()=>{
-                    try {
-                        await rpc`updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
-                    } catch (e) {
-                        alert(`Failed to resize bounding box ${e}`);
-                        this.onAbort();
-                    }
-                })();
-                // fetch(`/updateBoundingBoxShape(${bounding_box_id}, {x:${x},y:${y},w:${w},h:${h}})`, {options:'POST'}).then(
-                //     successValue=>{
-                //         console.info('SUCCESS', successValue);
-                //     },
-                //     failValue=>{
-                //         this.onAbort(); alert('Failed to resize bounding box');
-                //     });
+                updateBoundingBoxShape(box, x, y, w, h, this.onAbort);
             }
         },
         onAbort() {
@@ -347,80 +331,6 @@ function createNewBoundingBox(x:number, y:number, width:number, height:number): 
 }    
 
 /**
- *
- */
-function migrateRefBoxToExistingGroup(box: Element, group: Element) {
-    isRefBox(box) || panic('expected ref box');
-    isGroup(group) || panic('expected group');
-
-    box.classList.remove('ref');
-    group.appendChild(box);
-    // XXX TODO do RPC, update ID
-}
-
-/**
- *
- */
-function migrateRefBoxToNewGroup(box: Element) {
-    isRefBox(box) || panic('expected ref box');
-
-    box.classList.remove('ref');
-    
-    const newGroup = createNewBoundingGroup(chooseNewGroupColor(getIntAttribute(box, 'x'),
-                                                                getIntAttribute(box, 'y')));
-    newGroup.appendChild(box);
-    updateGroupDimensions(newGroup);
-
-    const scannedPageSvg = document.getElementById('scanned-page') ??
-          panic('unable to find scanned page element');
-
-    scannedPageSvg.appendChild(newGroup);
-
-    // (async ()=>{
-    //     try {
-    //         const {new_group_Id, new_box_id} = await rpc`copyRefBoxToNewGroup(${getIntAttribute(box, 'id')})`;
-    //         newGroupId.id = newGroupId;
-    //         box.id = newBoxId;
-    //     } catch (e) {
-    //         // XXX rollback logic here.
-    //         // XXX we also have to worry about race conditions with a subseqent resize ???
-    //         alert(`Failed create new box ${e}`);
-    //     }
-    // })();
-    
-    // XXX TODO RPC, update ID
-}
-
-
-/**
- * If there is a currently selected group, add the specified
- * box to that group.
- *
- * TODO more work once we get layers working.
- */
-function addBoxToGroup(box: Element, group: Element) {
-    isBox(box) && isGroup(group) || panic();
-    const fromGroup = box.parentElement || panic();
-    isGroup(fromGroup) || panic();
-    
-    group.appendChild(box);
-    updateGroupDimensions(group);
-    
-    if(getBoxesForGroup(fromGroup).length === 0) {
-        fromGroup.remove();
-    } else {
-        updateGroupDimensions(fromGroup);
-    }
-            
-    // TODO: update db
-    // TODO: deal with empty source gropu
-    // TODO: resize source group if still non-empty
-    // TODO: deal with layers (ie. maybe copy etc).
-    
-}
-
-
-/**
  * Updates a groups dimensions to contain all of the groups boxes +
  * a margin.
  *
@@ -430,7 +340,7 @@ function updateGroupDimensions(group: Element) {
     isGroup(group) || panic();
 
     // --- Get page width and height
-    const pageImage = document.getElementById('scanned-page') ?? panic();
+    const pageImage = getScannedPageForElement(group);
     const pageWidth = getIntAttribute(pageImage, 'width');
     const pageHeight = getIntAttribute(pageImage, 'height');
     
@@ -465,8 +375,56 @@ const groupColors = [
  *
  */
 function chooseNewGroupColor(x: number, y: number) {
-    return groupColors[randomInt(groupColors.length)];
+    const unusedGroupColors = new Set(groupColors);
+    const distanceByColor: Map<string, number> = new Map();
+    // let furthestColorDistance: number = 0;
+    // let furthestColor: string|undefined = undefined;
+    const nonRefGroups = document.querySelectorAll('svg.group:not(.ref)');
+    for(const group of nonRefGroups) {
+        const groupColor = group.getAttribute('stroke');
+        if(!groupColor)
+            continue;
+        unusedGroupColors.delete(groupColor);
+        for(const box of group.children) {
+            // Skip the group frame
+            if(!box.classList.contains('box')) continue;
+            
+            const distance = Math.hypot(x-getIntAttribute(box, 'x'), y-getIntAttribute(box, 'y'));
+            if(distance < (distanceByColor.get(groupColor)??Number.MAX_SAFE_INTEGER)) {
+                distanceByColor.set(groupColor, distance);
+            }
+        }
+    }
+
+    if(unusedGroupColors.size > 0) {
+        const unusedGroupColorsArray = Array.from(unusedGroupColors);
+        const unusedColor =  unusedGroupColorsArray[randomInt(unusedGroupColorsArray.length)];
+        console.info('choosing unused color', unusedColor);
+        return unusedColor;
+    } else {
+        const colorsByDistance = Array.from(distanceByColor.entries())
+            .toSorted(([color1, distance1], [color2, distance2])=>distance1-distance2);
+        console.info('colorsByDistance', colorsByDistance);
+        if(colorsByDistance.length === 0)
+            panic('new color chooser is borked (should have chosen an unused color)');
+        const furthestColor = colorsByDistance[colorsByDistance.length-1][0];
+        console.info('furthestColor', furthestColor);
+        return furthestColor
+    }
 }
+
+function getBoxId(box: Element): number {
+    isBox(box) || panic('expected box');
+    const idStr = box.id || panic('box is missing id');
+    return safeParseInt(stripRequiredPrefix(idStr, 'bb_'));
+}
+
+function getGroupId(group: Element): number {
+    isGroup(group) || panic('expected group');
+    const idStr = group.id || panic('group is missing id');
+    return safeParseInt(stripRequiredPrefix(idStr, 'bg_'));
+}
+
 
 // ---------------------------------------------------------------------------
 // --- Selection Model -------------------------------------------------------
@@ -513,6 +471,8 @@ function clearSelection() {
  */
 function selectGroup(group: Element) {
     isGroup(group) || panic('select group called on non-group');
+    if(group.classList.contains('ref'))
+        throw new Error('A reference group should never be the selected group');
     clearSelection();
     group.classList.add('active');
     moveElementToEndOfParent(group);
@@ -523,6 +483,8 @@ function selectGroup(group: Element) {
  */
 function selectBox(box: Element) {
     isBox(box) || panic('select box called on non-box');
+    if(box.classList.contains('ref'))
+        throw new Error('A reference box should never be the selected box');
     selectGroup(box.parentElement || panic());
     box.classList.add('active');
     moveElementToEndOfParent(box);
@@ -544,7 +506,10 @@ function selectBoxGrabber(grabber: Element) {
  * structural changes to the markup.
  */
 function getSelectedGroup() {
-    return document.querySelector('svg.group.active');
+    const group = document.querySelector('svg.group.active');
+    if(group && group.classList.contains('ref'))
+        throw new Error('A reference group should never be the selected group');
+    return group;
 }
 
 function getBoxesForGroup(group: Element) {
@@ -591,6 +556,26 @@ function getWidgetKind(elem: Element) {
     }
 }
 
+/**
+ * This + our use of id's is what would prevent us form having two taggers
+ * active on a page at once - so we factor it to make it easier to fix that.
+ *
+ * (to fix this, we will need to scope all our box, box-group and scanned-page
+ * ids)
+ */
+function getScannedPageForElement(e: Element) {
+    return document.getElementById('scanned-page') ?? panic();
+}
+
+function getContainingLayerId(e: Element): number {
+    return getIntAttribute(getScannedPageForElement(e), 'data-layer-id');
+}
+
+function getContainingPageId(e: Element): number {
+    return getIntAttribute(getScannedPageForElement(e), 'data-page-id');
+}
+
+
 // ------------------------------------------------------------------------
 // --- Bookkeeping for an active drag operation ---------------------------
 // ------------------------------------------------------------------------
@@ -628,6 +613,187 @@ function dragTxCommit(event: MouseEvent, target: Element) {
 function dragTxAbort() {
     activeDragTx?.onAbort();
     activeDragTx = undefined;
+}
+
+// ---------------------------------------------------------------------------
+// --- RPC -------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+/**
+ *
+ */
+function updateBoundingBoxShape(box: Element,
+                                x: number, y: number, w: number, h: number,
+                                onAbort: ()=>void) {
+    (async ()=>{
+        const box_id = getBoxId(box);
+        try {
+            await rpc`updateBoundingBoxShape(${box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
+        } catch (e) {
+            onAbort();
+            alert(`Failed to resize bounding box ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ *
+ */
+function newBoundingBoxInNewGroup(group: Element, box: Element,
+                                  x: number, y: number, w: number, h: number,
+                                  onAbort: ()=>void) {
+    (async() => {
+        if(group.id)
+            throw new Error('new group already has id');
+        if(box.id)
+            throw new Error('new box already has id');
+
+        const page_id = getContainingPageId(box);
+        const layer_id = getContainingLayerId(box);
+        const color = group.getAttribute('stroke');
+
+        try {
+            const response = await rpc`newBoundingBoxInNewGroup(${page_id}, ${layer_id}, {x:${x},y:${y},w:${w},h:${h}}, ${color})`;
+            console.info('added new box', response);
+            if(!Object.hasOwn(response, 'bounding_group_id') ||
+                !Object.hasOwn(response, 'bounding_box_id'))
+                throw new Error(`new bounding box rpc had malformed response`);
+            if(box.id || group.id) 
+                throw new Error(`bounding box has already been added to another group`);
+            group.setAttribute('id', `bg_${response.bounding_group_id}`);
+            box.setAttribute('id', `bb_${response.bounding_box_id}`);
+        } catch (e) {
+            onAbort();
+            alert(`Failed to add new box in new group: ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ *
+ */
+function newBoundingBoxInExistingGroup(group: Element, box: Element,
+                                       x: number, y: number, w: number, h: number,
+                                       onAbort: ()=>void) {
+    (async() => {
+        if(!group.id)
+            throw new Error('existing group is missing id');
+        if(box.id)
+            throw new Error('new box already has id');
+
+        try {
+            const page_id = getContainingPageId(box);
+            const response = await rpc`newBoundingBoxInExistingGroup(${page_id}, ${getGroupId(group)}, {x:${x},y:${y},w:${w},h:${h}})`;
+            console.info('added new box to existing group', response);
+            if(!Object.hasOwn(response, 'bounding_box_id'))
+                throw new Error(`new bounding box in existing group rpc had malformed response`);
+            if(box.id) 
+                throw new Error(`bounding box has already been added to another group`);
+            box.setAttribute('id', `bb_${response.bounding_box_id}`);
+        } catch (e) {
+            onAbort();
+            alert(`Failed to add new box in existing group: ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ *
+ */
+function copyRefBoxToNewGroup(box: Element) {
+    isRefBox(box) || panic('expected ref box');
+
+    // TODO roll this back if RPC fails!
+    const color = chooseNewGroupColor(getIntAttribute(box, 'x'),
+                                      getIntAttribute(box, 'y'));
+    const newGroup = createNewBoundingGroup(color);
+    newGroup.appendChild(box);
+    box.classList.remove('ref');
+    updateGroupDimensions(newGroup);
+    getScannedPageForElement(box).appendChild(newGroup);
+    selectBox(box);
+
+    (async() => {
+        try {
+            const refBoxId = getBoxId(box);
+            const layer_id = getContainingLayerId(box);
+            const response = await rpc`copyRefBoxToNewGroup(${refBoxId}, ${layer_id}, ${color})`;
+            console.info('copied ref box to new group', response);
+            if(!Object.hasOwn(response, 'bounding_group_id') ||
+                !Object.hasOwn(response, 'bounding_box_id'))
+                throw new Error(`copy ref box to new group rpc had malformed response`);
+            
+            newGroup.setAttribute('id', `bg_${response.bounding_group_id}`);
+            box.setAttribute('id', `bb_${response.bounding_box_id}`);
+        } catch (e) {
+            alert(`Failed to add new group based on ref box: ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ *
+ *
+ */
+function copyRefBoxToExistingGroup(box: Element, group: Element) {
+    isRefBox(box) || panic('expected ref box');
+    isGroup(group) || panic('expected group');
+    isRef(group) && panic('expected non-ref group');
+
+    // TODO roll this back if RPC fails!
+    group.appendChild(box);
+    box.classList.remove('ref');
+    updateGroupDimensions(group);
+    selectBox(box);
+    
+    (async() => {
+        try {
+            const response = await rpc`copyRefBoxToExistingGroup(${getGroupId(group)}, ${getBoxId(box)})`;
+            console.info('copied ref box to group', response);
+            if(!Object.hasOwn(response, 'bounding_box_id'))
+                throw new Error(`copy ref box to group rpc had malformed response`);
+            box.setAttribute('id', `bb_${response.bounding_box_id}`);
+        } catch (e) {
+            alert(`Failed to add ref box to group: ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ * If there is a currently selected group, add the specified
+ * box to that group.
+ *
+ * TODO more work once we get layers working.
+ */
+function migrateBoxToGroup(box: Element, group: Element) {
+    isBox(box) && isGroup(group) || panic();
+    const fromGroup = box.parentElement || panic();
+    isGroup(fromGroup) || panic();
+    
+    // TODO roll this back if RPC fails!
+    group.appendChild(box);
+    updateGroupDimensions(group);
+    
+    if(getBoxesForGroup(fromGroup).length === 0) {
+        fromGroup.remove();
+    } else {
+        updateGroupDimensions(fromGroup);
+    }
+
+    (async() => {
+        try {
+            const response = await rpc`migrateBoxToGroup(${getGroupId(group)}, ${getBoxId(box)})`;
+            console.info('migrated box to group', response);
+        } catch (e) {
+            alert(`Failed to migrate box to group: ${e}`);
+            throw e;
+        }
+    })();
 }
 
 // -----------------------------------------------------------------------
