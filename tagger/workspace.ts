@@ -216,8 +216,13 @@ interface Gloss extends TupleVersionT {
 // -
 
 export class RemoteDb {
-    activeRequest: Promise<Response>|undefined;
+    versionedDb: VersionedDb;
     pendingRequest: PendingRequest = new PendingRequest();
+    requestInFlight: boolean = false;
+
+    constructor(versionedDb: VersionedDb) {
+        this.versionedDb = versionedDb;
+    }
     
     // - does a larger RPC that:
     //  - pushed proposed assertions to server
@@ -275,47 +280,117 @@ export class RemoteDb {
             rpcExpr += rpcExprSegments[i+1];
         });
 
+        // --- Queue up the request
         const rpcPromise = new Promise((resolve, reject) => {
             this.pendingRequest.addRpc(new Rpc(rpcExpr, argsObj, resolve, reject));
         });
 
-        if(!this.activeRequest)
-            this.invokePendingRequest();
+        // --- If we don't have a request in flight - launch the request now
+        if(!this.requestInFlight)
+            this.invokePendingRequests();
 
         return rpcPromise;
     }
-        
-    async invokePendingRequest() {
-        // --- If there is already an active request in flight, return false
-        if(!this.activeRequest)
+
+    // This will mean that manual RPCs will not have return values.
+    // TODO any unplanned error paths result in an out of sync workspace -
+    //      need to reload in these cases to recover. XXX XXX
+    async invokePendingRequests(): Promise<void> {
+
+        // --- If there is already an active request in flight, do nothing, we
+        //     will be triggered when the in flight request returns.
+        if(!this.requestInFlight)
             return;
-
-        // // --- Collect all changes to the workspace since our last request returned
-        // // TODO
         
-        // const request = await new Request('/'+rpcExpr, {
-        //     method: "POST",
-        //     body: JSON.stringify(argsObj)});
+        // --- Take all changes to the workspace since our last request returned
+        //     XXX NOTE: yes, this means that user changes can time travel ahead
+        //     of RPCs.  This will do for now, but needs to be fixed.  We have
+        //     a much more sophisticated model in mind - but need a working
+        //     system this week ... (and we hardly use RPCs anyway).
+        const proposedAssertions = this.versionedDb.takeProposedAssertions();
+        const pendingRpcs = this.pendingRequest.rpcs;
 
-        // const response = await fetch(request);
+        // --- If we have nothing to do, return
+        //     (a nop RPC is used for our periodic sync requests)
+        if(proposedAssertions.length === 0 && pendingRpcs.length === 0)
+            return;
+            
+        // The inflight stuff is broken here - how are we tracking the
+        //  that we are in flight.
         
-        // console.info('RPC response', response);
+        // --- Request object will have all proposed assertions, followed by all rpcs
+        const requestArgs = {
+            lastUpdateTimestamp: this.versionedDb.mostRecentSourceDbTimestamp,
+            proposedAssertions,
+            rpcs: pendingRpcs.map(rpc=>({
+                id: rpc.id,
+                stmt: rpc.stmt,
+                args: rpc.args,
+            })),
+        };
 
-        // if(!response.ok) {
-        //     let errorJson = undefined;
-        //     try {
-        //         errorJson = await response.json();
-        //     } catch (e) {
-        //         console.info('failed to read error json');
-        //     }
-        //     throw new Error(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed - ${JSON.stringify(errorJson)}`);
-        // }
+        // --- Make the request with expr as the URL and the
+        //     args json as the post body.
+        const httpRequest = new Request('/workspace-rpc-and-sync', {
+            method: "POST",
+            body: JSON.stringify(requestArgs)});
 
-        // // try {
-        // // } finally {
-        // // }
+        const inFlightRequest = this.pendingRequest;
+        this.requestInFlight = true;
+        this.pendingRequest = new PendingRequest();
+        const response = await fetch(httpRequest);
+        try {
+            console.info('RPC response', response);
 
-        return;
+            // --- If whole RPC failed, we are dead, for now just give error, need
+            //     to resync client at this point - we are in an unknown state XXX
+            //     XXX XXX XXX
+            if(!response.ok) {
+                let errorJson = undefined;
+                try {
+                    errorJson = await response.json();
+                } catch (e) {
+                    console.info('failed to read error json');
+                }
+                const errorMsg = `Workspace sync ${JSON.stringify(requestArgs)} failed - ${JSON.stringify(errorJson)}`;
+                alert(errorMsg);
+                throw new Error(errorMsg);
+            }
+
+            // --- On response we will line up RPC responses with our source RPCs and
+            //     call the corresponding resolve/reject methods.
+            const responseJson = await response.json();
+
+            // --- Apply updates to workspace (we will be getting our own proposed
+            //     updates back here, applyServerAssertion deals with that).
+            const updates = responseJson.updates;
+            for(const update of updates) {
+                this.versionedDb.applyServerAssertion(update);
+            }
+
+            // --- Line up RPC responses with our source RPCs and
+            //     call the corresponding resolve/reject methods.
+            const rpcResponses = responseJson.rpcReponses;
+            if(!rpcResponses)
+                throw new Error(`RPC response missing`);
+            for(const rpc of inFlightRequest.rpcs) {
+                if(!Object.hasOwn(rpcResponses, rpc.id))
+                    throw new Error(`RPC response missing response #${rpc.id}`);
+                const rpcResponse = responseJson.rpcResponses[rpc.id];
+                if(Object.hasOwn(rpcResponse, 'error'))
+                    rpc.reject(rpcResponse.error);
+                else if(Object.hasOwn(rpcResponse, 'ok'))
+                    rpc.resolve(rpcResponse.ok);
+                else
+                    throw new Error(`malformed RPC response`);
+            }
+        } finally {
+            this.requestInFlight = false;
+        }
+
+        // --- Recurse (via a promise so no stack growth) in case we have
+        //     new requests pending.
+        return this.invokePendingRequests();
     }
 
         // Add ourselves to the list of promises that will be resolved when
@@ -351,7 +426,6 @@ export class RemoteDb {
 
 /**
  *
- * - fault requests 
  */
 export class PendingRequest {
     rpcs: Rpc[] = [];
@@ -361,15 +435,70 @@ export class PendingRequest {
     }
 }
 
+/**
+ *
+ */
 export class Rpc {
-    constructor(public url: string, public args: Record<string, any>,
+    static nextRpcId = 1;
+    id: number;
+    constructor(public stmt: string, public args: Record<string, any>,
                 public resolve: (r:any)=>void, public reject: (r:any)=>void) {
+        this.id = Rpc.nextRpcId++;
     }
 }
 
+interface WorksplaceRpc {
+    id: number,
+    stmt: string,
+    args: Record<string, any>,
+}
+
+export interface WorkspaceRpcAndSyncRequest {
+    proposedAssertions: Assertion[],
+    rpcs: WorksplaceRpc[],
+}
 
 
+export async function workspaceRpcAndSync(request: WorkspaceRpcAndSyncRequest): Promise<any> {
+    (Array.isArray(request?.proposedAssertions) && Array.isArray(request?.rpcs))
+        || panic('malformed worksplace rpc and sync request');
 
+    // --- 
+
+    
+    // // --- Top level of root scope is active routes
+    // const routes = allRoutes();
+    // let rootScope = routes;
+
+    // // --- If we have URL search parameters, push them as a scope
+    // if(Object.keys(searchParams).length > 0)
+    //     rootScope = Object.assign(Object.create(rootScope), searchParams);
+
+    // // --- If the query request body is a {}, then it is form parms or
+    // //     a json {} - push on scope.
+    // rootScope = Object.assign(Object.create(rootScope), bodyParms);
+
+    // console.info('about to eval', jsExprSrc, 'with root scope ',
+    //              utils.getAllPropertyNames(rootScope));
+
+    // let result = null;
+    // try {
+    //     result = evalJsExprSrc(rootScope, jsExprSrc);
+    //     while(result instanceof Promise)
+    //         result = await result;
+    // } catch(e) {
+    //     // TODO more fiddling here.
+    //     console.info('request failed', e);
+    //     return server.jsonResponse({error: String(e)}, 400)
+    // }
+
+    // if(typeof result === 'string')
+    //     return server.htmlResponse(result);
+    // else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') // this squigs me - but is is soooo convenient!
+    //     return server.htmlResponse(markup.renderToStringViaLinkeDOM(result));
+    // else
+    //     return server.jsonResponse(result);
+}
 
 // -------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------
@@ -377,7 +506,7 @@ export class Rpc {
 
 export class VersionedDb {
     readonly tables: Map<Tag, VersionedTable> = new Map();
-    
+
     mostRecentSourceDbTimestamp: number = BEGINNING_OF_TIME;
     mostRecentLocalTimestamp: number = BEGINNING_OF_TIME;
     proposedAssertions: Assertion[] = [];
@@ -385,6 +514,10 @@ export class VersionedDb {
     constructor(schemas: Schema[]) {
         schemas.forEach(s=>this.addTable(s));
     }
+
+    //loadEntry(
+    
+
     
     addTable(schema: Schema): VersionedTable {
         if(this.tables.has(schema.tag))
@@ -394,12 +527,25 @@ export class VersionedDb {
         return versionedTable;
     }
 
+    applyServerAssertion(assertion: Assertion)  {
+        const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
+        throw new Error('apply server assertion not implemented yet');
+    }
+    
     applyProposedAssertion(assertion: Assertion)  {
         const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
         const assertAtTime = timestamp.nextTime(this.mostRecentLocalTimestamp);
         versionedTuple.applyProposedAssertion(assertAtTime, assertion);
         this.mostRecentLocalTimestamp = assertAtTime;
         this.proposedAssertions.push(assertion);
+    }
+    
+    takeProposedAssertions(): Assertion[] {
+        try {
+            return this.proposedAssertions;
+        } finally {
+            this.proposedAssertions = [];
+        }
     }
 
     untrackedApplyAssertion(assertion: Assertion) {
@@ -568,6 +714,9 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         const tuple = new TupleVersion(this, assertion);
         const mostRecentTuple = this.mostRecentTuple;
 
+        assertion.valid_from = assertAtTime;
+
+        
         // TODO lots of validation here + index updating etc.
         // TODO update current.
         // TODO tie into speculative mechanism.
@@ -582,7 +731,31 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         if(tuple.isCurrent)
             this.#currentTuple = tuple;
     }
-    
+
+    applyServerAssertion(assertion: Assertion) {
+
+        // TODO MORE VALIDATION HERE.
+        // TODO If already have same assertion as a proposed assertion,
+        //      confirm they are the same and do minor touchups (time)
+        
+        const tuple = new TupleVersion(this, assertion);
+        const mostRecentTuple = this.mostRecentTuple;
+
+        // TODO lots of validation here + index updating etc.
+        // TODO update current.
+        // TODO tie into speculative mechanism.
+
+        if(mostRecentTuple) {
+            
+        }
+
+        this.tupleVersions.push(tuple);
+        console.info('applied proposed assertion', assertion);
+        
+        if(tuple.isCurrent)
+            this.#currentTuple = tuple;
+    }
+
     get mostRecentTuple() {
         // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
         return this.tupleVersions[this.tupleVersions.length-1];
@@ -603,6 +776,13 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                 [c.schema.name, c.dump()]))
         };
     }
+}
+
+/**
+ *
+ */
+export function isRootTupleId(tuple_id: number): boolean {
+    return tuple_id === 0;
 }
 
 /**
@@ -1023,6 +1203,7 @@ export const routes = ()=> ({
     //instanceTest: test,
     clientRenderTest,
     getAssertionsForEntry,
+    //workplaceSync,
 });
 
 

@@ -25,7 +25,8 @@ export const boxesForPageLayer = ()=>db().
 export function renderPageEditor(page_id: number,
                                  layer_id: number,
                                  reference_layer_ids: number[],
-                                 total_pages_in_document?: number): any {
+                                 total_pages_in_document?: number,
+                                 scale_factor:number=4): any {
 
     const page = selectScannedPage().required({page_id});
 
@@ -96,13 +97,17 @@ export function renderPageEditor(page_id: number,
            renderPageJumper(page.page_number, total_pages_in_document)],
           
           ['div', {id: 'annotatedPage'},
-           ['img', {src:pageImageUrl, width:page.width, height:page.height}],
-           ['svg', {id: 'scanned-page', width:page.width, height:page.height,
+           //['img', {src:pageImageUrl, width:page.width, height:page.height}],
+           ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
+                    viewBox: `0 0 ${page.width} ${page.height}`,
                     onmousedown: 'pageEditorMouseDown(event)',
                     onmousemove: 'pageEditorMouseMove(event)',
                     onmouseup: 'pageEditorMouseUp(event)',
                     'data-layer-id': layer_id,
-                    'data-page-id': page_id},
+                    'data-page-id': page_id,
+                    'data-scale-factor': scale_factor,
+                   },
+            ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
             refBlocksSvg,
             blocksSvg]]],
 

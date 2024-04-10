@@ -115,6 +115,23 @@ export function currentSystemTimeInLocalEpochOrRaptureTime(): number {
 //     return jsDate.`${jsDate.getFullYear()}-${jsDate.getMonth()+1)}-${jsDate.getDate()}
 // }
 
+// TODO probably don't wire en-CA here
+const shortLocalTimeFormat = new Intl.DateTimeFormat('en-CA', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+});
+
+export function formatTimestampAsLocalTime(t: number): string {
+    switch(t) {
+        case BEGINNING_OF_TIME: return ''; //'←';
+        case END_OF_TIME: return ''; //'→';
+        default: {
+            const jsDate = new Date(extractTimeFromTimestamp(t)*1000 + LOCAL_EPOCH_START);
+            return shortLocalTimeFormat.format(jsDate);
+        }
+    }
+}
+
 export function formatTimestampAsUTCTime(t: number): string {
     switch(t) {
         case BEGINNING_OF_TIME: return 'BEGINNING_OF_TIME';

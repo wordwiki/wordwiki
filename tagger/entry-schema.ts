@@ -154,6 +154,23 @@ export const dictSchemaJson = {
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2'},
             },
+            image_reference: {
+                $type: 'relation',
+                $tag: 'ev',
+                reference_id: {$type: 'primary_key'},
+                bounding_box_id: {$type: 'integer', $bind: 'attr1'},
+                transcription: {$type: 'string', $bind: '$attr2'},
+                expandedTranscription: {$type: 'string', $bind: '$attr3'},
+                translation: {$type: 'string', $bind: '$attr4'},
+                notes: {$type: 'string', $bind: 'attr5'},
+            },
+            supporting_evidence: {
+                $type: 'relation',
+                $tag: 'ev',
+                evidence_id: {$type: 'primary_key'},
+                text: {$type: 'string', $bind: 'attr1'},
+                variant: {$type: 'variant'}
+            },
         },
     }
 };

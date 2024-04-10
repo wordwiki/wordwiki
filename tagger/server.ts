@@ -50,59 +50,64 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
         const html = renderToStringViaLinkeDOM(body);
         return Promise.resolve({status: 200, headers: {}, body: html});
     } else if (filepath === '/favicon.ico') {
-        return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+        return Promise.resolve({status: 200, headers: {}, body: 'not found'});
+    } else if (filepath === '/workspace-rpc-and-sync') {
+        console.info('workspace sync request');
+        const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
+        return workspace.workspaceRpcAndSync(bodyParms as workspace.WorkspaceRpcAndSyncRequest);
     } else {
-        console.info('FILEPATH is ', filepath);
         const jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-
-
-        // --- Top level of root scope is active routes
-        const routes = allRoutes();
-        let rootScope = routes;
-
-        // --- If we have URL search parameters, push them as a scope
-        if(Object.keys(searchParams).length > 0)
-            rootScope = Object.assign(Object.create(rootScope), searchParams);
-
-        // --- If the query request body is a {}, then it is form parms or
-        //     a json {} - push on scope.
-        if(utils.isObjectLiteral(request.body))
-            rootScope = Object.assign(Object.create(rootScope), request.body as Record<string,any>);
-
-        console.info('about to eval', jsExprSrc, 'with root scope ',
-                     utils.getAllPropertyNames(rootScope));
-        
-        let result = null;
-        try {
-            result = evalJsExprSrc(rootScope, jsExprSrc);
-            while(result instanceof Promise)
-                result = await result;
-        } catch(e) {
-            // TODO more fiddling here.
-            console.info('request failed', e);
-            return server.jsonResponse({error: String(e)}, 400)
-        }
-
-        if(typeof result === 'string')
-            return server.htmlResponse(result);
-        else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') // this squigs me - but is is soooo convenient!
-            return server.htmlResponse(markup.renderToStringViaLinkeDOM(result));
-        else
-            return server.jsonResponse(result);
-                
-        // result can be a command - like forward
-        // result can be json, a served page, etc
-        // so - want to define a result interface - and have the individualt mentods rethren tnat
-        // this can also be the opporthunity to allow streaming
-        // this mech is part of our deno server stuff.
-        // have shortcuts for returning other things:
-        
-        //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+        const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
+        return taggerRpcHandler(jsExprSrc, searchParams, bodyParms);
     }
 }
 
+export async function taggerRpcHandler(jsExprSrc: string,
+                                       searchParams: Record<string, any>,
+                                       bodyParms: Record<string, any>): Promise<any> {
+    // --- Top level of root scope is active routes
+    const routes = allRoutes();
+    let rootScope = routes;
 
- 
+    // --- If we have URL search parameters, push them as a scope
+    if(Object.keys(searchParams).length > 0)
+        rootScope = Object.assign(Object.create(rootScope), searchParams);
+
+    // --- If the query request body is a {}, then it is form parms or
+    //     a json {} - push on scope.
+    rootScope = Object.assign(Object.create(rootScope), bodyParms);
+
+    console.info('about to eval', jsExprSrc, 'with root scope ',
+                 utils.getAllPropertyNames(rootScope));
+
+    let result = null;
+    try {
+        result = evalJsExprSrc(rootScope, jsExprSrc);
+        while(result instanceof Promise)
+            result = await result;
+    } catch(e) {
+        // TODO more fiddling here.
+        console.info('request failed', e);
+        return server.jsonResponse({error: String(e)}, 400)
+    }
+
+    if(typeof result === 'string')
+        return server.htmlResponse(result);
+    else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') // this squigs me - but is is soooo convenient!
+        return server.htmlResponse(markup.renderToStringViaLinkeDOM(result));
+    else
+        return server.jsonResponse(result);
+
+    // result can be a command - like forward
+    // result can be json, a served page, etc
+    // so - want to define a result interface - and have the individualt mentods rethren tnat
+    // this can also be the opporthunity to allow streaming
+    // this mech is part of our deno server stuff.
+    // have shortcuts for returning other things:
+
+    //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+}
+
 
 // Make a fancy facade over a db record that can be initted in a bunch of different
 //  ways using static methods.
@@ -206,7 +211,7 @@ class ScannedPageFacade extends DbRecordFacade<ScannedPage> {
 //     but that is fine.
 // - should play with htmlx next.
 
-export async function taggerServer(port: number = 9000) {
+export async function taggerServer(port: number = 9000, hostname: string = 'localhost') {
     console.info('Starting tagger server');
     
     const contentdirs = {
@@ -214,7 +219,7 @@ export async function taggerServer(port: number = 9000) {
         '/scripts/': await findResourceDir('web-build')+'/',
         '/content/': 'content/',
         '/derived/': 'derived/'};
-    await new DenoHttpServer({port, contentdirs}, taggerRequestHandler).run();
+    await new DenoHttpServer({port, hostname, contentdirs}, taggerRequestHandler).run();
 }
 
 /**

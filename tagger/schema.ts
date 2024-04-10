@@ -7,6 +7,7 @@ import * as content from "../utils/content-store.ts";
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 import * as orderkey from '../utils/orderkey.ts';
+import * as timestamp from '../utils/timestamp.ts';
 
 export const routes = ()=> ({
 });
@@ -1002,6 +1003,9 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       change_arg TEXT,
 /**/       change_note TEXT);
 /**/
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_valid_from ON ${tableName}(valid_from);
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_valid_to ON ${tableName}(valid_to) WHERE valid_to != ${timestamp.END_OF_TIME};
+/**/
 /**/   CREATE UNIQUE INDEX IF NOT EXISTS current_${tableName}_by_id_ty ON ${tableName}(id, ty) WHERE valid_to = NULL;
 /**/
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty1 ON ${tableName}(ty1);
@@ -1024,11 +1028,11 @@ const createAssertionDml = (tableName:string)=>block`
 /**/
 /**/ -- NEED SOME MODEL CHANGE SO CAN INDEX LATEST PUBLISHED XXX TODO XXX TODO
 /**/
-/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
-/**/   CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/ --  CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/ --  CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/ --  CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/ --  CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
+/**/ --  CREATE INDEX IF NOT EXISTS published_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE published_from IS NOT NULL AND published_to IS NOT NULL;
 /**/
 /**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
 /**/   -- CREATE INDEX IF NOT EXISTS published_locale1_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE published_from IS NOT NULL AND published_to IS NOT NULL AND is_locale1 = 1;
@@ -1045,6 +1049,20 @@ export const selectAssertionsForTopLevelFact = (tableName: string)=>db().prepare
 /**/          FROM ${tableName}
 /**/          WHERE id1 = :id1
 /**/          ORDER BY valid_from, id`);
+
+//const highestValueTo = (tableName: string)=>
+
+/**
+ * Returns the highest timestamp in a table.
+ *
+ */
+export function highestTimestamp(tableName: string): number {
+    const maxValidFrom = db().prepare<Assertion, {}>(`SELECT MAX(valid_from) FROM ${tableName}`).required({}).valid_from;
+    // TODO we have an index that matches this, but not sure if sqlite will use it!
+    const maxValidTo = db().prepare<Assertion, {}>(`SELECT MAX(valid_to) FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`).required({}).valid_to;
+    console.info('maxValidTo', maxValidTo, 'maxValidFrom', maxValidFrom);
+    return Math.max(maxValidTo, maxValidFrom);
+}
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------

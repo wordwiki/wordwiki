@@ -142,8 +142,9 @@ function grabberMouseDown(event: MouseEvent, grabber: Element, extraAbortAction:
     // --- Register the drag tx - handles mouseMove events until the mouseDown (or abort)
     dragTxBegin({
         onMouseMove(event: MouseEvent, target: Element) {
-            const deltaX = event.clientX-dragStartClientX;
-            const deltaY = event.clientY-dragStartClientY;
+            const scaleFactor = getContainingScaleFactor(target);
+            const deltaX = (event.clientX-dragStartClientX) * scaleFactor;
+            const deltaY = (event.clientY-dragStartClientY) * scaleFactor;
             switch(true) {
             case isTop && isLeft: {  // top left grabber
                 const clampedDeltaX = Math.min(deltaX, initialWidth-minWidth);
@@ -229,8 +230,9 @@ function newBoxMouseDown(event:MouseEvent, target:Element, addToCurrentGroup:boo
     const scannedPageSvgLocation = scannedPageSvg.getBoundingClientRect();
     
     // --- Compute initial size and position for box
-    const x = event.clientX - scannedPageSvgLocation.x;
-    const y = event.clientY - scannedPageSvgLocation.y;
+    const scaleFactor = getContainingScaleFactor(target);
+    const x = (event.clientX - scannedPageSvgLocation.x) * scaleFactor;
+    const y = (event.clientY - scannedPageSvgLocation.y) * scaleFactor;
     const width = 0;
     const height = 0;
 
@@ -369,7 +371,7 @@ function updateGroupDimensions(group: Element) {
 
 const groupColors = [
     'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
-    'seagreen', 'steelblue', 'dodgerblue', 'peru', 'tan', 'rebeccapurple'];
+    'seagreen', 'steelblue', /*'dodgerblue',*/ 'peru', /*'tan',*/ 'rebeccapurple'];
 
 /**
  *
@@ -377,8 +379,6 @@ const groupColors = [
 function chooseNewGroupColor(x: number, y: number) {
     const unusedGroupColors = new Set(groupColors);
     const distanceByColor: Map<string, number> = new Map();
-    // let furthestColorDistance: number = 0;
-    // let furthestColor: string|undefined = undefined;
     const nonRefGroups = document.querySelectorAll('svg.group:not(.ref)');
     for(const group of nonRefGroups) {
         const groupColor = group.getAttribute('stroke');
@@ -575,6 +575,9 @@ function getContainingPageId(e: Element): number {
     return getIntAttribute(getScannedPageForElement(e), 'data-page-id');
 }
 
+function getContainingScaleFactor(e: Element): number {
+    return getIntAttribute(getScannedPageForElement(e), 'data-scale-factor');
+}
 
 // ------------------------------------------------------------------------
 // --- Bookkeeping for an active drag operation ---------------------------
