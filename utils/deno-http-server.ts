@@ -81,7 +81,13 @@ export class DenoHttpServer extends HttpServer {
             // USE Content-type: 
             body,
         };
-        const titan1cResponse = await this.requestHandler(titan1cRequest);
+        let titan1cResponse: server.Response;
+        try {
+            titan1cResponse = await this.requestHandler(titan1cRequest);
+        } catch(e) {
+            // Want error response to be dependent on the desired content type XXX
+            titan1cResponse = server.htmlResponse(`ERROR: ${String(e)}`, 400);
+        }
         // The native HTTP server uses the web standard `Request` and `Response`
         // objects.
 

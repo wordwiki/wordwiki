@@ -157,23 +157,147 @@ export const dictSchemaJson = {
             image_reference: {
                 $type: 'relation',
                 $tag: 'ev',
-                reference_id: {$type: 'primary_key'},
+                image_reference_id: {$type: 'primary_key'},
                 bounding_box_id: {$type: 'integer', $bind: 'attr1'},
                 transcription: {$type: 'string', $bind: '$attr2'},
-                expandedTranscription: {$type: 'string', $bind: '$attr3'},
+                expanded_transcription: {$type: 'string', $bind: '$attr3'},
                 translation: {$type: 'string', $bind: '$attr4'},
                 notes: {$type: 'string', $bind: 'attr5'},
             },
             supporting_evidence: {
                 $type: 'relation',
                 $tag: 'ev',
-                evidence_id: {$type: 'primary_key'},
+                supporting_evidence_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'}
             },
         },
     }
 };
+
+// interface Dictionary extends TupleVersionT {
+// }
+
+interface Entry {
+    entry_id: number,
+    spelling: Spelling[],
+    subentry: Subentry[],
+}
+
+interface Spelling {
+    spelling_id: number,
+    text: string,
+    variant: string,
+}
+
+interface Subentry {
+    subentry_id: number,
+    definition: Definition[],
+    gloss: Gloss[],
+    example: Example[],
+    //recording: Recording[],
+    pronunication_guide: PronunciationGuide[],
+    category: Category[],
+    related_entry: RelatedEntry[],
+    alternate_grammatical_form: AlternateGrammaticalForm[],
+    other_regional_form: OtherRegionalForm[],
+    attr: Attr[],
+    image_reference: ImageReference[],
+    supporting_evidence: SupportingEvidence[],
+}
+
+interface Definition {
+    definition_id: number,
+    definition: string,
+}
+
+interface Gloss {
+    gloss_id: number,
+    gloss: string,
+}
+
+interface Example {
+    example_id: number,
+    translation: string,
+    example_text: ExampleText[],
+}
+
+interface ExampleText {
+    example_text_id: number,
+    text: string,
+    variant: string,
+}
+
+interface Recording {
+    recording_id: number,
+    speaker: string,
+    recording: string,
+    variant: string,
+}
+
+interface PronunciationGuide {
+    pronunciation_guide_id: number,
+    text: string,
+    variant: string,
+}
+
+interface Category {
+    category_id: number,
+    category: string,
+}
+
+interface RelatedEntry {
+    related_entry_id: number,
+    unresolved_text: string,
+}
+
+interface AlternateGrammaticalForm {
+    alternate_grammatical_form_id: number,
+    gloss: string,
+    grammatical_form: string,
+    alternate_form_text: AlternateFormText[],
+}
+
+interface AlternateFormText {
+    alternate_form_text_id: number,
+    text: string,
+    variant: string,
+}
+
+interface OtherRegionalForm {
+    other_regional_form_id: number,
+    text: string,
+}
+
+interface Attr {
+    attr_id: number,
+    attr: string,
+    value: string,
+}
+
+interface ImageReference {
+    image_reference_id: number,
+    bounding_box_id: number,
+    transcription: string,
+    expanded_transcription: string,
+    translation: string,
+    notes: string,
+}
+
+interface SupportingEvidence {
+    supporting_evidence_id: number,
+    text: string,
+    variant: string,
+}
+
+
+
+
+
+
+
+
+
 
 function test() {
     let dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);

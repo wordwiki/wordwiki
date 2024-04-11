@@ -7,7 +7,7 @@ import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
 import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
-
+import * as config from './config.ts';
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -61,7 +61,7 @@ export function renderPageEditor(page_id: number,
          ['head', {},
           ['meta', {charset:"utf-8"}],
           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-          ['link', {href:"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",  rel:"stylesheet", integrity:"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH", crossorigin:"anonymous"}],
+          config.bootstrapCssLink,
           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
           //['script', {src:'/resources/page-editor.js'}]],
           ['script', {src:'/scripts/tagger/page-editor.js'}],
@@ -111,7 +111,7 @@ export function renderPageEditor(page_id: number,
             refBlocksSvg,
             blocksSvg]]],
 
-         ['script', {'src':"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js", integrity:"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz", crossorigin:"anonymous"}]
+         config.bootstrapScriptTag,
 
         ] // body
     );

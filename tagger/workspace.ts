@@ -14,6 +14,7 @@ import * as orderkey from '../utils/orderkey.ts';
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import {block} from "../utils/strings.ts";
 import { rpc } from '../utils/rpc.ts';
+import * as config from './config.ts';
 
 export type Tag = string;
 
@@ -107,113 +108,6 @@ type TupleType<T extends {$tuples: any[]}> = ArrayElemType<T["$tuples"]>;
 
 //     [Property in keyof T]: VersionedRelation<ArrayElemType<T[Property]>>
 // };
-
-interface Foo {
-    //a: Cat;
-    b: string;
-}
-
-
-
-interface NodeT {
-    isNodeT?: boolean;
-}
-
-/**
- * 
- */
-interface Node<TupleT extends TupleVersionT> extends NodeT {
-    $tuples: TupleT[];
-}
-
-/**
- *
- */
-interface TupleVersionT {
-    assertion_id: number;
-    id: number;
-    valid_from: number;
-    valid_to: number;
-}
-
-interface DictionaryNode extends Node<Dictionary> {
-    entry: EntryNode[];
-    spelling: SpellingNode[];
-    bar: string;
-}
-
-//type S1 = FilterConditionally<DictionaryNode, NodeT[]>;
-//type S = ChildRelationsType<DictionaryNode>;
-
-// let z: ChildRelationsType<DictionaryNode> = { entry: undefined as VersionedRelation<EntryNode> };
-
-let x: TupleType<DictionaryNode>;
-//(void)d;
-
-interface Dictionary extends TupleVersionT {
-}
-
-interface EntryNode extends Node<Entry> {
-    spelling: SpellingNode[];
-    subentry: SubentryNode[];
-}
-
-//let d: ChildRelationsType<EntryNode> = { spelling: [], subentry: [] };
-//(void)d;
-
-interface Entry extends TupleVersionT {
-}
-
-interface SpellingNode extends Node<Spelling> {
-}
-
-interface Spelling extends TupleVersionT {
-    text: string;
-}
-
-interface SubentryNode extends Node<Subentry> {
-    definition: DefinitionNode[];
-    //gloss: GlossNode[];
-    // example: Example[];
-    // recording: Recording[];
-    // pronunication_guide: PronunciationGuide[];
-    // category: Category[];
-    // related_entry: RelatedEntry[];
-    // alternate_grammatical_form: AlternateGrammaticalForm[];
-    // other_regional_form: OtherRegionalForm[];
-    // attr: Attr[];
-}
-
-interface Subentry extends TupleVersionT {
-    part_of_speech: string;
-}
-
-interface DefinitionNode extends Node<Definition> {
-    // ...
-}
-
-interface Definition extends TupleVersionT {
-    definition: string;
-}
-
-interface Gloss extends TupleVersionT {
-    gloss: string;
-}
-
-// interface Subentry extends Node {
-//     part_of_speech: string;
-//     definition: Definition[];
-// }
-
-// interface Definition extends Node {
-//     definition: string;
-// }
-
-
-//let k: Entry.
-
-// VersionedTuple can take a type parameter:
-// -
 
 
 
@@ -545,6 +439,10 @@ export class VersionedDb {
     constructor(schemas: Schema[]) {
         schemas.forEach(s=>this.addTable(s));
     }
+
+    async persistProposedAssertions() {
+        
+    }
     
     addTable(schema: Schema): VersionedTable {
         if(this.tables.has(schema.tag))
@@ -874,6 +772,7 @@ export class TupleVersion {
     readonly assertion: Assertion;
     
     #domainFields: Record<string,any>|undefined = undefined;
+    #json: Record<string,any>|undefined = undefined;
     //#changeRegistrations
 
     constructor(relation: VersionedTuple, assertion: Assertion) {
@@ -892,10 +791,19 @@ export class TupleVersion {
     get domainFields(): Record<string,any> {
         // TODO: consider checking type of domain fields.
         // TODO: fix the 'as any' below
+        // TODO: consider droppiong memoization of this because have toJSON (below)
         return this.#domainFields ??= Object.fromEntries(
             this.relation.schema.scalarFields.map(f=>[f.name, (this.assertion as any)[f.bind]]));
     }
 
+    // This will have some time stuff added etc XXX TODO
+    toJSON(): Record<string,any> {
+        const schema = this.relation.schema;
+        return this.#json ??= {
+            ...this.domainFields,
+        };
+    }
+    
     dump(): any {
         const a = this.assertion;
         return {
@@ -926,6 +834,7 @@ export abstract class VersionedTupleQuery {
     readonly schema: RelationField;
     readonly tupleVersions: TupleVersion[];
     readonly childRelations: Record<Tag,VersionedRelationQuery> = {};
+    #json: Record<string,any>|undefined = undefined;
     
     constructor(src: VersionedTuple) {
         this.src = src;
@@ -944,6 +853,36 @@ export abstract class VersionedTupleQuery {
 
     get historicalTupleVersions(): TupleVersion[] {
         return this.tupleVersions.slice(0, -1);
+    }
+
+    toJSON(): any {
+        return this.#json ??= (()=>{
+            // if(!this.mostRecentTupleVersion)
+            //     return ['DELETED'];
+            const schema = this.schema;
+            const current = this.mostRecentTupleVersion;
+            // TODO what about no most recent tuple version??? XXX  (deleted tuples prob!)
+            const entityFields =
+                this.mostRecentTupleVersion?.toJSON() ?? {};
+
+                //(this.mostRecentTupleVersion ?? panic('no most recent tuple version')).toJSON();
+            const controlFields = {};
+            const historicalVersions = this.historicalTupleVersions.map(h=>h.toJSON());
+            const childRelations = Object.fromEntries(schema.relationFields.map(r=>
+                [r.name, this.childRelations[r.tag].toJSON()]));
+            //console.info('CHILD RELATIONS', JSON.stringify(childRelations, undefined, 2));
+            const json: any = {
+                ...controlFields,
+                ...entityFields
+            };
+            // const json: any = entityFields;
+            if(historicalVersions.length > 0)
+                json['history'] = historicalVersions;
+            if(schema.relationFields.length > 0)
+                Object.assign(json, childRelations);
+
+            return json;
+        })();
     }
     
     dump(): any {
@@ -998,6 +937,10 @@ export abstract class VersionedRelationQuery {
 
     abstract computeTuples(): Map<number, VersionedTupleQuery>;
 
+    toJSON(): any {
+        return Array.from(this.tuples.values()).map(t=>t.toJSON());
+    }
+                               
     dump(): any {
         return Object.fromEntries([...this.tuples.entries()].map(([id, child])=>
             [id, child.dump()]));
@@ -1170,7 +1113,7 @@ function clientRenderTest(entry_id: number): any {
           ['meta', {charset:"utf-8"}],
           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
           ['title', {}, 'Wordwiki'],
-          ['link', {href:"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",  rel:"stylesheet", integrity:"sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH", crossorigin:"anonymous"}],
+          config.bootstrapCssLink,
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
 /**/           let imports = {};
@@ -1199,13 +1142,68 @@ function clientRenderTest(entry_id: number): any {
           
           ['div', {id: 'root'}, entry_id],
 
-          ['script', {'src':"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js", integrity:"sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz", crossorigin:"anonymous"}]
+          config.bootstrapScriptTag,
 
          ] // body
          
         ]);
 
 }
+
+
+/**
+ *
+ */
+function renderEntryListTest(): any {
+    return (
+        ['html', {},
+         ['head', {},
+          ['meta', {charset:"utf-8"}],
+          ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+          ['title', {}, 'Wordwiki'],
+          
+          config.bootstrapCssLink,
+
+          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+          ['script', {}, block`
+/**/           let imports = {};
+/**/           let activeViews = undefined`],
+          //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+          ['script', {type: 'module'}, block`
+/**/           import * as workspace from '/scripts/tagger/workspace.js';
+/**/           import * as view from '/scripts/tagger/view.js';
+/**/
+/**/           imports = Object.assign(
+/**/                        {},
+/**/                        view.exportToBrowser(),
+/**/                        workspace.exportToBrowser());
+/**/
+/**/           activeViews = imports.activeViews();
+/**/
+/**/           document.addEventListener("DOMContentLoaded", (event) => {
+/**/             console.log("DOM fully loaded and parsed");
+/**/             //view.run();
+/**/             //workspace.renderSample(document.getElementById('root'))
+/**/           });`
+          ]
+        ],
+        
+         ['body', {},
+          
+          //['div', {id: 'root'}, entry_id],
+
+          config.bootstrapScriptTag,
+
+         ] // body
+         
+        ]);
+
+}
+
+
+
+
+
 
 // - Workspace needs to be global (per page)
 // - Live views - which have a html id and a ??? also need to be global.
@@ -1239,9 +1237,31 @@ export const exportToBrowser = ()=> ({
 export const routes = ()=> ({
     //instanceTest: test,
     clientRenderTest,
+    renderEntryListTest,
     getAssertionsForEntry,
     //workplaceSync,
 });
+
+
+export function jsonTest() {
+    console.info('full load test');
+    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+
+    const workspace = new VersionedDb([dictSchema]);
+    const assertions = schema.selectAllAssertions('dict').all();
+    assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
+
+    // Make a current query somehow.
+    // TOO SLOW. add some more caching.
+    for(let i=0; i<10; i++) {
+        console.time('Make JSON');
+        const current = new CurrentTupleQuery(workspace.getTableByTag('di'));
+        const currentJSON = current.toJSON();
+        console.timeEnd('Make JSON');
+    }
+    //console.info(JSON.stringify(current.toJSON(), undefined, 2));
+}
+
 
 export function fullLoadTest() {
     console.info('full load test');
@@ -1288,8 +1308,37 @@ export function fullLoadTest() {
     }
     console.timeEnd('spelling search');
 
+
+
+
+
+    
+    
     /*
-      - off a VersionedTuple, 
+      - off a VersionedTuple,
+      - re-api to make this nice, then maybe try for typing.
+      - also think about current vs history.
+      - no caching needed - will be plenty fast enough to do raw on each search.
+      - then make some rendering for a lexeme, and make some searches etc.
+
+      - how is this related to current view?
+
+
+      - can't even know ordering without doing the currentRelationQuery.
+
+      - try how fast using that.  If so, may provide another way forward - may
+      be worth just making a JSON of tip each time?
+      - is not one-per request - is one per update.
+      - update freq is expected to be 1 per second etc etc.
+      - try to make a JSON version of current with history, informed by schema.
+      - this is generally useful anyway.
+      - if prohibit modification, can attach to workspace tree, and mostly reuse,
+      so can make very cost effective.
+      - this identity chucked for a tree when any sub changes thing can allow for
+      efficient caching as well (though don't want for now).
+
+      SO: rethink is wanting nice JSON dumps of subtree/trees bound with 
+      
      */
     
     //console.info(`matching tuple count ${matchingTuples.length}`);
@@ -1297,7 +1346,11 @@ export function fullLoadTest() {
     console.info('end');
 }
 
+
+
+
+
 if (import.meta.main) {
-    fullLoadTest();
-    fullLoadTest();
+    //fullLoadTest();
+    jsonTest();
 }

@@ -15,7 +15,6 @@ import * as markup from '../utils/markup.ts';
 
 let allRoutes_: Record<string, any>|undefined = undefined;
 
-
 export function allRoutes() {
     return allRoutes_ ??= (()=>Object.assign(
         {},
@@ -24,7 +23,6 @@ export function allRoutes() {
         workspace.routes(),
     ))();
 }
-
 
 // Proto request handler till we figure out how we want our urls etc to workc
 async function taggerRequestHandler(request: server.Request): Promise<server.Response> {
@@ -158,59 +156,6 @@ class ScannedDocumentFacade extends DbRecordFacade<ScannedDocument> {
 class ScannedPageFacade extends DbRecordFacade<ScannedPage> {
 }
 
-// - also need to be able to go backwards (generate nice url for object).
-
-// - one alternative is just to serialize server side, stash in a log, and
-//   send id (which includes a password).
-// - this gives lots of power at the cost of opaque (and inconsistent) URLs.
-
-// - try something textual first
-
-// - we can know # of args easily enough (by parsing JS text) - but can't know
-//   types.  We can textually know types (JSON rules) - and as long as we
-//   have an escape hatch to repr something as a string that we use at serialzation
-//   time ...
-// - /boundingBox/7372/resize/100/100/50/50/render.html
-//   (looks up box   )(calls resize       )(calls render)
-// - /boundingBox/7372/resize/100/100/50/50//boundingGroup/377/render.html
-//   (does a resize action, tossing (non error) result, then doing a render of
-//    something else)
-// - 
-
-// boundingBox(7372).resize(100,100,50,50),boundingGroup('377').html
-// also allow nested exprs
-// - this is now a subset of JS - can parse with a JS parser, then dispatch
-//   of the AST ???
-// ().,
-
-// https://www.rfc-editor.org/rfc/rfc3986#page-13
-// 
-
-
-
-
-
-// - objects have identity based on DB identity.
-// - can spin up an obj client side with just an id, then call a method on it.
-//   (calls will need to be async)
-// - return values can include identity of objects, which will auto create objects.
-// - should be able to lazy load the scanned doc record, or be pre-pop with
-// - should have methods on that will do updates, render things etc.
-// - should be able to have methods that are not exposed over the wire.
-// - ideally use magic to type the client side of this (without pulling
-//   the code over - (for example proxy-based dispatch, but fully typed)
-// - serialized versions of identity and calls can also be sane URLs
-//   (for example a particular render of a page)
-// - use the RPC mech we made for prev version as a base.
-// - htmlx compatible (if we are going to use that) (or do our own thing)
-//   - htmlx will make our thing much simpler (having the binding and
-//     replacement instructions as part of the document).
-//   - htmlx will do straight http requests for content URLs, which will
-//     dispatch though these objects to render.
-//   - so, when using the HTMLx stuff, we are not using the RPC layer -
-//     but that is fine.
-// - should play with htmlx next.
-
 export async function taggerServer(port: number = 9000, hostname: string = 'localhost') {
     console.info('Starting tagger server');
     
@@ -258,26 +203,6 @@ function parsePlay() {
     console.info(/^(?<Page>\/page\/(?<Book>)(?<PageNumber>[0-9]+))$/.exec('/page/PDM/7.html'));
 }
 
-/*
-  {
-  bounding_box_id: 39969,
-  imported_from_bounding_box_id: null,
-  bounding_group_id: 39969,
-  document_id: 1,
-  layer_id: 3,
-  page_id: 201,
-  x: 1019,
-  y: 2336,
-  w: 371,
-  h: 133,
-  color: null,
-  tags: null,
-  text: "literain",
-  notes: null
-  }
-*/
-
-
 
 function printBB(bounding_box_id: number) {
     console.info(schema.selectBoundingBox().required({bounding_box_id}));
@@ -299,4 +224,5 @@ if (import.meta.main) {
     //sqlPlay();
     //parsePlay();
     await taggerServer();
+    //await taggerServer(9000, "0.0.0.0");
 }
