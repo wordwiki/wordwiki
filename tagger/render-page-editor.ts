@@ -145,6 +145,7 @@ export function renderBoxOld(box: BoxGroupJoin): any {
 export function renderBox(box: BoxGroupJoin, refLayer: boolean=false): any {
     return ['svg', {class:`box ${refLayer?'ref':''}`, x:box.x, y:box.y, width:box.w, height:box.h, id: `bb_${box.bounding_box_id}`},
             ['rect', {class:"frame", x:0, y:0, width:'100%', height:'100%'}],
+            //['rect', {class:"frame2", x:0, y:0, width:'100%', height:'100%'}],
             ['circle', {class:"grabber", cx:0, cy:0, r:12}],
             ['circle', {class:"grabber", cx:0, cy:'100%', r:12}],
             ['circle', {class:"grabber", cx:'100%', cy:0, r:12}],

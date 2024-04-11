@@ -30,6 +30,30 @@ function pageEditorMouseDown(event: MouseEvent) {
                 //     currently selected group
                 const currentlySelectedGroup = getSelectedGroup();
                 if(currentlySelectedGroup) {
+                    // This changes based on whether in group already - removes if is
+                    // in, and otherwise does copyBoxToGroup
+                    // if client gets out of sync with server, this will be a bit wonky.
+                    isBox(target) ?? panic('expected box');
+                    const targetGroup = target.parentElement ?? panic('box has no parent');
+                    isGroup(targetGroup) ?? panic('expected parent of box to be group');
+                    // Issue: the box that got the click may be an alias for
+                    //        our own box (because of multi tagging).
+                    // - so what we really want to know is if we have a box in our group
+                    //   that has the exact same location - in which case we will
+                    //   proceed as if we are operating on that box.
+
+                    // const box:Element = Array.from(currentlySelectedGroup.querySelectorAll('svg.box:not(.ref)'))
+                    //     .filter(groupBox=>
+                    //         getIntAttribute(groupBox, 'x')===getIntAttribute(target, 'x') &&
+                    //         getIntAttribute(groupBox, 'y')===getIntAttribute(target, 'y') &&
+                    //         getIntAttribute(groupBox, 'w')===getIntAttribute(target, 'w') &&
+                    //         getIntAttribute(groupBox, 'h')===getIntAttribute(target, 'h'))
+                    // [0] ?? target;
+
+                    
+
+                    
+                    
                     migrateBoxToGroup(target, currentlySelectedGroup);
                 }
             } else {
@@ -332,53 +356,24 @@ function createNewBoundingBox(x:number, y:number, width:number, height:number): 
     return boundingBox;
 }    
 
-/**
- * Updates a groups dimensions to contain all of the groups boxes +
- * a margin.
- *
- * This should be called after altering any contained bounding boxes.
- */
-function updateGroupDimensions(group: Element) {
-    isGroup(group) || panic();
-
-    // --- Get page width and height
-    const pageImage = getScannedPageForElement(group);
-    const pageWidth = getIntAttribute(pageImage, 'width');
-    const pageHeight = getIntAttribute(pageImage, 'height');
-    
-    // --- Query the dimensions for all boxes in this group.
-    const boxDimensions = getBoxesForGroup(group).
-          map(box=>({x: getIntAttribute(box, 'x'),
-                     y: getIntAttribute(box, 'y'),
-                     w: getIntAttribute(box, 'width'),
-                     h: getIntAttribute(box, 'height')}));
-    
-    // --- Group frame contains all boxes + a margin.
-    const groupMargin = 10;
-    const groupX = Math.max(Math.min(...boxDimensions.map(b=>b.x)) - groupMargin, 0);
-    const groupY = Math.max(Math.min(...boxDimensions.map(b=>b.y)) - groupMargin, 0);
-    const groupLeft = Math.min(Math.max(...boxDimensions.map(b=>b.x+b.w)) + groupMargin, pageWidth);
-    const groupBottom = Math.min(Math.max(...boxDimensions.map(b=>b.y+b.h)) + groupMargin, pageHeight);
-
-    // --- Update group frame dimensions
-    const groupFrame = group.querySelector('rect.group-frame') ??
-          panic('could not find group frame');
-    setAttributeIfChanged(groupFrame, 'x', String(groupX));
-    setAttributeIfChanged(groupFrame, 'y', String(groupY));
-    setAttributeIfChanged(groupFrame, 'width', String(groupLeft-groupX));
-    setAttributeIfChanged(groupFrame, 'height', String(groupBottom-groupY));
-}
-
 const groupColors = [
     'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
     'seagreen', 'steelblue', /*'dodgerblue',*/ 'peru', /*'tan',*/ 'rebeccapurple'];
 
 /**
+ * Picks a color for a new group.
  *
+ * If all the colors are not already in use on the page, randomly picks from
+ * the unused colors.
+ *
+ * If all the colors are already in use on the page, picks the color whose
+ * nearest use (currently using upper left x,y of box) is furthest from the
+ * proposed new point.
  */
 function chooseNewGroupColor(x: number, y: number) {
     const unusedGroupColors = new Set(groupColors);
     const distanceByColor: Map<string, number> = new Map();
+    // TODO this shold be scoped to the single svg page under edit - not whole document
     const nonRefGroups = document.querySelectorAll('svg.group:not(.ref)');
     for(const group of nonRefGroups) {
         const groupColor = group.getAttribute('stroke');
@@ -577,6 +572,96 @@ function getContainingPageId(e: Element): number {
 
 function getContainingScaleFactor(e: Element): number {
     return getIntAttribute(getScannedPageForElement(e), 'data-scale-factor');
+}
+
+// ------------------------------------------------------------------------
+// --- Derived markup upkeep ----------------------------------------------
+// ------------------------------------------------------------------------
+
+/**
+ * Updates a groups dimensions to contain all of the groups boxes +
+ * a margin.
+ *
+ * This should be called after altering any contained bounding boxes.
+ */
+function updateGroupDimensions(group: Element) {
+    // Currently disabled do to bug (and not really using anyway) TODO TODO XXX
+    return;
+    isGroup(group) || panic();
+
+    // --- Get page width and height
+    const pageImage = getScannedPageForElement(group);
+    const pageWidth = getIntAttribute(pageImage, 'width');
+    const pageHeight = getIntAttribute(pageImage, 'height');
+    
+    // --- Query the dimensions for all boxes in this group.
+    const boxDimensions = getBoxesForGroup(group).
+          map(box=>({x: getIntAttribute(box, 'x'),
+                     y: getIntAttribute(box, 'y'),
+                     w: getIntAttribute(box, 'width'),
+                     h: getIntAttribute(box, 'height')}));
+    
+    // --- Group frame contains all boxes + a margin.
+    const groupMargin = 10;
+    const groupX = Math.max(Math.min(...boxDimensions.map(b=>b.x)) - groupMargin, 0);
+    const groupY = Math.max(Math.min(...boxDimensions.map(b=>b.y)) - groupMargin, 0);
+    const groupLeft = Math.min(Math.max(...boxDimensions.map(b=>b.x+b.w)) + groupMargin, pageWidth);
+    const groupBottom = Math.min(Math.max(...boxDimensions.map(b=>b.y+b.h)) + groupMargin, pageHeight);
+
+    // --- Update group frame dimensions
+    const groupFrame = group.querySelector('rect.group-frame') ??
+          panic('could not find group frame');
+    setAttributeIfChanged(groupFrame, 'x', String(groupX));
+    setAttributeIfChanged(groupFrame, 'y', String(groupY));
+    setAttributeIfChanged(groupFrame, 'width', String(groupLeft-groupX));
+    setAttributeIfChanged(groupFrame, 'height', String(groupBottom-groupY));
+}
+
+/**
+ * A common situation is to have multiple bounding groups contain the
+ * exact same bounding box (for example, because a shared prefix of
+ * a definition is shared by multiple definitions).
+ *
+ * This function runs on the SVG DOM, identifying these situations and
+ * updating class tags to allow this to render in a reasonable way
+ * (and have some custom behaviour).
+ */
+function updateMultiTaggingAnnotations(page: Element) {
+
+    // --- Partition bounding boxes by their complete coordinates
+    const boundingBoxes = page.querySelectorAll('svg.box:not(.ref)');
+    const groupedByLocation = Map.groupBy(
+        boundingBoxes,
+        box => `${getIntAttribute(box, 'x')}_${getIntAttribute(box, 'y')}_${getIntAttribute(box, 'w')}_${getIntAttribute(box, 'h')}`);
+    const boxesWithNonSharedLocation = Array.from(groupedByLocation.entries())
+        .filter(([id, boxes]) => boxes.length === 1).map(([id, boxes]) => boxes[0]);
+    const boxesWithSharedLocation = new Map(Array.from(groupedByLocation.entries())
+        .filter(([id, boxes]) => boxes.length > 1));
+
+    // --- If any non-shared boxes have multi-tags, remove the multi-tags.
+    for(const nonSharedBox of boxesWithNonSharedLocation.values()) {
+        removeMultiTag(nonSharedBox);
+    }
+
+    // --- For shared boxes, update the 'multi' tags
+    for(const [locationSignature, boxes] of boxesWithSharedLocation.entries()) {
+        boxes.forEach((box, index) => {
+            if(!box.classList.contains(`multi-${index}`)) {
+                removeMultiTag(box);
+                box.classList.add('multi');
+                box.classList.add(`multi-${index}`);
+            }
+        });
+    }
+}
+
+function removeMultiTag(box: Element) {
+    if(box.classList.contains('multi')) {
+        box.classList.remove('multi');
+        const multiTags =
+            Array.from(box.classList).filter(c=>c.startsWith('multi-'));
+        multiTags.forEach(m=>box.classList.remove(m));
+    }
 }
 
 // ------------------------------------------------------------------------

@@ -59,6 +59,7 @@ svg.box > rect.frame {
     /*stroke:grey;*/
     visibility: visible;
     pointer-events: all;
+    margin: 5px;
 }
 
 svg.box.ref > rect.frame {

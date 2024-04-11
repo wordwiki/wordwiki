@@ -1050,6 +1050,12 @@ export const selectAssertionsForTopLevelFact = (tableName: string)=>db().prepare
 /**/          WHERE id1 = :id1
 /**/          ORDER BY valid_from, id`);
 
+export const selectAllAssertions = (tableName: string)=>db().prepare<Assertion>(block`
+/**/   SELECT ${assertionFieldNames.join()}
+/**/          FROM ${tableName}
+/**/          ORDER BY valid_from, id`);
+
+
 //const highestValueTo = (tableName: string)=>
 
 /**

@@ -215,6 +215,12 @@ interface Gloss extends TupleVersionT {
 // VersionedTuple can take a type parameter:
 // -
 
+
+
+/*
+  - how to load data?
+  - it has to be part of the rpc mechanism, or have time smearage.
+*/
 export class RemoteDb {
     versionedDb: VersionedDb;
     pendingRequest: PendingRequest = new PendingRequest();
@@ -267,6 +273,31 @@ export class RemoteDb {
     // - for starts, we can always send.
 
     // - how does fault work:
+
+    /**
+     *
+     */
+    async loadTopLevelFact(tableName: string, fact_id: number): Promise<any> {
+        // Need to understand this return value.
+        // - Can we live without this for now ???
+        //   - Can we just load a page, then save the whole page at the end,
+        //     and not bother with all this joy?  (as a zero cut).
+        //   - Then would not need rpc at all.
+        //   - maybe????
+        //   - will not be live edit either.
+        //   - THIS IS AN ABSOLUTE WIN!!!!
+        //   - JUST GET THE FRICKING EDITOR WORKING!!!!
+
+        // Would really like a full dictionary load into core to make the queries
+        // super easy.
+
+        // Experiment with loading whole table into a workspace, then doing queries
+        // against that!!!.
+    }
+
+    /**
+     *
+     */
     async rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]): Promise<any> {
         
         // --- Replace ${} in this tagged template expr with arg
@@ -514,10 +545,6 @@ export class VersionedDb {
     constructor(schemas: Schema[]) {
         schemas.forEach(s=>this.addTable(s));
     }
-
-    //loadEntry(
-    
-
     
     addTable(schema: Schema): VersionedTable {
         if(this.tables.has(schema.tag))
@@ -570,7 +597,7 @@ export class VersionedDb {
     }
     
     getVersionedTupleByPath(path: AssertionPath): VersionedTuple {
-        console.info('ROOT PATH is', path);
+        //console.info('ROOT PATH is', path);
 
         // --- Find table hosting root tag
         const [ty, id] = path[0];
@@ -613,6 +640,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     //readonly childRelations: ChildRelationsType<NodeT>;
     //proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
     #currentTuple: TupleVersion|undefined = undefined;
+    //[name: string]: RelationField;
     
     constructor(schema: RelationField, id: number) {
         this.schema = schema;
@@ -621,6 +649,15 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         this.id = id;
     }
 
+    
+    get current(): TupleVersion|undefined {
+        return this.#currentTuple;
+    }
+
+    get currentAssertion(): Assertion|undefined {
+        return this.#currentTuple?.assertion;
+    }
+    
     // untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
     //     const versionedTuple = this.getVersionedTupleByPath(path, index);
     //     versionedTuple.untrackedApplyAssertion(assertion);
@@ -1206,8 +1243,61 @@ export const routes = ()=> ({
     //workplaceSync,
 });
 
+export function fullLoadTest() {
+    console.info('full load test');
+    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+
+    const workspace = new VersionedDb([dictSchema]);
+
+    console.time('load all assertions');
+    const assertions = schema.selectAllAssertions('dict').all();
+    console.timeEnd('load all assertions');
+    console.time('apply all assertions');
+    assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
+    console.timeEnd('apply all assertions');
+
+    // THAT WAS EASY!!!
+    // NOW TRY TO QUERY!!! (find recent changes etc)
+    // IDEALLY WOULD LIKE TO OVERLAY SOME TYPING!!!
+
+    // TODO switch so top level is not a tuple, but a relation.
+    const dictionaryTuple = workspace.getTableByTag('di');
+    const entriesRelation: VersionedRelation = dictionaryTuple.childRelations['en'];
 
 
+    // THIS IS AN ABSOLUTELY HORRIBLE SEARCH - FACTOR TO MAKE NICE.  
 
-// if (import.meta.main)
-//     await test();
+    
+    // Entry tuples is Map<number,VersionedTuple>
+    const entryTuples = entriesRelation.tuples;
+    console.info(`tuple count ${entryTuples.size}`);
+
+    // Print all entries with a spelling that begins with 'matu'.
+    // - 1 ms per linear (approx).    So super fasty.
+    console.time('spelling search');
+    for(let i=0; i<100; i++) {
+        const matchingTuples = [...entryTuples.values()]
+                                   .filter((t:VersionedTuple)=>{
+                                       //console.info(t.schema.tag);
+                                       const matches =
+                                           [...t.childRelations['sp'].tuples.values()].filter(t=>
+                                               t.currentAssertion?.attr1.startsWith('matu'));
+                                       // if(matches.length > 0)
+                                       //     console.info(matches.length);
+                                       return false});
+    }
+    console.timeEnd('spelling search');
+
+    /*
+      - off a VersionedTuple, 
+     */
+    
+    //console.info(`matching tuple count ${matchingTuples.length}`);
+    
+    console.info('end');
+}
+
+if (import.meta.main) {
+    fullLoadTest();
+    fullLoadTest();
+}
