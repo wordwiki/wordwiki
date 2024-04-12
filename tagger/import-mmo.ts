@@ -29,6 +29,11 @@ async function importMMO() {
     db().beginTransaction();
     db().execute('DELETE FROM dict', {});
 
+    // Add the top level 'di' assertion.
+    const dictAssertion = createAssertion(undefined, 0, 0, 'di', orderkey.new_range_start_string, {});
+    console.info('dict assertion', JSON.stringify(dictAssertion, undefined, 2));
+    insertAssertion(dictAssertion);
+    
     //entries.forEach(e=>true ? importEntry(e) : undefined);
 
     importEach(entries, (s,k)=>importEntry(s, k));    
@@ -51,7 +56,7 @@ function insertAssertion(assertion: Assertion): Assertion {
 function createAssertion(parent: Assertion|undefined, depth: number,
                          id: number, ty: string, order_key: string,
                          fields: Partial<Assertion>) {
-    return Object.assign({
+    const assertion = Object.assign({
         assertion_id: id,
         valid_from: timestamp.BEGINNING_OF_TIME,
         valid_to: timestamp.END_OF_TIME,
@@ -70,10 +75,17 @@ function createAssertion(parent: Assertion|undefined, depth: number,
         id4: parent?.id4,
         ty5: parent?.ty5,
         id5: parent?.id5,
-        [`id${depth}`]: id,
+        //[`id${depth}`]: id,
         [`ty${depth}`]: ty,
         order_key,
     }, fields);
+
+    if(depth === 0)
+        utils.assert(id === 0, 'root assertion has fixed id 0');
+    else
+        assertion[`id${depth}`] = id;
+    
+    return assertion;
 }
 
 interface Entry {

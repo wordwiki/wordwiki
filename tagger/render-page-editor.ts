@@ -1,7 +1,7 @@
 import * as pageEditor from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import { selectLayer, selectLayerByLayerName } from "./schema.ts";
-import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, selectBoundingBoxesForGroup, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
 import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
@@ -109,11 +109,19 @@ export function renderPageEditor(page_id: number,
                    },
             ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
             refBlocksSvg,
-            blocksSvg]]],
+            blocksSvg]],
 
-         config.bootstrapScriptTag,
+          
+          Array.from(boxesByGroup.keys()).map(bounding_group_id =>
+              ['p', {},
+               renderStandaloneGroup(bounding_group_id)]
+              ),
+          
+          config.bootstrapScriptTag,
+          
+         ] // body,
 
-        ] // body
+        ] // html
     );
 }
 
@@ -314,4 +322,73 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
 
         return {};
     });
+}
+
+// --------------------------------------------------------------------------------
+// --- Standalone group render ----------------------------------------------------
+// --------------------------------------------------------------------------------
+
+/**
+ *
+ */
+export function renderStandaloneGroup(bounding_group_id: number,
+                                      scale_factor:number=4,
+                                      box_stroke:string = 'green'): any {
+
+    console.info('RENDERING STANDALONE GROUP', bounding_group_id);
+    
+    // --- Find boxes for group
+    const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+
+    // --- If no boxes in group, render as empty.
+    if(boxes.length === 0) {
+        console.info('STANDALONE GROUP IS EMPTY');
+        return ['div', {}, 'Empty Group'];
+    }
+    
+    // --- We don't currently support groups that span pages
+    const page_id = boxes[0].page_id;
+    boxes.forEach(b=>b.page_id === page_id
+        || utils.panic('all boxes in a group must be on a single page'));
+
+    // --- Load page
+    const page = selectScannedPage().required({page_id});
+
+    // --- Group frame contains all boxes + a margin
+    //     (note that margin is reduced if there is not enough space)
+    const groupMargin = 75;
+    const groupX = Math.max(Math.min(...boxes.map(b=>b.x)) - groupMargin, 0);
+    const groupY = Math.max(Math.min(...boxes.map(b=>b.y)) - groupMargin, 0);
+    const groupRight = Math.min(Math.max(...boxes.map(b=>b.x+b.w)) + groupMargin, page.width);
+    const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, page.height);
+    const groupWidth = groupRight-groupX;
+    const groupHeight = groupBottom-groupY;
+    console.info({groupX, groupY, groupRight, groupBottom, groupWidth, groupHeight});
+
+    const groupSvg =
+        ['svg', {class:`group`, id:`bg_${bounding_group_id}`, stroke: box_stroke},
+         ['rect', {class:"group-frame", x:groupX, y:groupY,
+                   width:groupRight-groupX,
+                   height:groupBottom-groupY}],
+         
+         boxes.map(box=>
+             ['svg', {class:`box`, x:box.x-groupX, y:box.y-groupY, width:box.w, height:box.h, id: `bb_${box.bounding_box_id}`},
+              ['rect', {class:"frame", x:0, y:0, width:'100%', height:'100%'}]
+             ])
+        ];
+
+    // This is wrong !! - need to rework this using tiles !!
+    const pageImageUrl = '/'+page.image_ref;
+    const image = ['image',
+                   {href:pageImageUrl, x:-groupX, y:-groupY, width:page.width, height:page.height}];
+    
+    return ['svg', {width:groupWidth/scale_factor, height:groupHeight/scale_factor,
+                    viewBox: `0 0 ${groupWidth} ${groupHeight}`,
+                    onmousedown: 'pageEditorMouseDown(event)',
+                    'data-page-id': page_id,
+                    'data-scale-factor': scale_factor,
+                   },
+            image,
+            groupSvg,
+           ]; // svg
 }

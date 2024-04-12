@@ -633,6 +633,11 @@ export function updateBoundingBox<T extends Partial<BoundingBox>>(bounding_box_i
     return db().update<T>('bounding_box', 'bounding_box_id', fieldNames, bounding_box_id, fields);
 }
 
+export const selectBoundingBoxesForGroup = ()=>db().prepare<BoundingBox, {bounding_group_id: number}>(block`
+/**/   SELECT ${boundingBoxFieldNames.join()}
+/**/          FROM bounding_box
+/**/          WHERE bounding_group_id = :bounding_group_id`);
+
 // --------------------------------------------------------------------------------
 // --- ChangeLog ------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -962,7 +967,7 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       ty TEXT NOT NULL,
 /**/
 /**/       ty0 TEXT NOT NULL,
-/**/       ty1 TEXT NOT NULL,
+/**/       ty1 TEXT,
 /**/       id1 INTEGER,
 /**/       ty2 TEXT,
 /**/       id2 INTEGER,

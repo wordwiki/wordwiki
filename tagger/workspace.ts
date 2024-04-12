@@ -546,7 +546,6 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             schema.relationFields.map(r=>[r.tag, new VersionedRelation(r, this)]));
         this.id = id;
     }
-
     
     get current(): TupleVersion|undefined {
         return this.#currentTuple;
