@@ -6,7 +6,10 @@ import * as server from '../utils/http-server.ts';
 import * as strings from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import * as workspace from './workspace.ts';
+import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
+import * as entry from './entry-schema.ts';
+import * as timestamp from '../utils/timestamp.ts';
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
@@ -26,10 +29,11 @@ export interface WordWikiConfig {
  */
 export class WordWiki {
     config: WordWikiConfig;
-    dictSchema: model.Schema;
-    workspace: workspace.VersionedDb;
-    entriesJSON_: any = undefined;
     routes: Record<string, any>;
+    dictSchema: model.Schema;
+    #workspace: VersionedDb|undefined = undefined;
+    #entriesJSON: any|undefined = undefined;
+    #lastAllocatedTxTimestamp: number|undefined;
 
     /**
      *
@@ -39,12 +43,6 @@ export class WordWiki {
         
         // --- Load schema and create an empty workspace
         this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
-        this.workspace = new workspace.VersionedDb([this.dictSchema]);
-
-        // --- Do initial load of dictionary
-        const assertions = schema.selectAllAssertions('dict').all();
-        assertions.forEach((a:Assertion)=>this.workspace.untrackedApplyAssertion(a));
-
         // --- Set up our routes
         this.routes = Object.assign(
             {},
@@ -55,49 +53,144 @@ export class WordWiki {
         );        
     }
 
-    /**
-     *
-     */
-    applyProposedAssertions(assertions: Assertion[]) {
+    get lastAllocatedTxTimestamp() {
+        // TODO as we add more tables, this will need to be extended.
+        return this.#lastAllocatedTxTimestamp ??= schema.highestTimestamp('dict');
+    }
 
-        // --- Verify that assertions are compatible with workspace
+    allocTxTimestamps(count: number=1) {
+        const lastTxTimestamp = this.lastAllocatedTxTimestamp;
+        const nextTxTimestamp = timestamp.nextTime(lastTxTimestamp);
+        utils.assert(count>=1);
+        this.#lastAllocatedTxTimestamp = nextTxTimestamp + count-1;
+        return nextTxTimestamp;
+    }
 
+    get workspace() {
+        return this.#workspace ??= (()=>{
+            
+            // --- Create workspace
+            const workspace = new VersionedDb([this.dictSchema]);
 
-        // --- Verify that assertions are compatible with DB
+            // --- Do load of dictionary
+            const assertions = schema.selectAllAssertions('dict').all();
+            assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
 
+            return workspace;
+        })();
+    }
 
-
-        // --- Apply assertions do DB.
-
-
-
-        // Somehow they also apply to workspace .....
-
-
-        // --- Failure mode is panic!! reload from DB.
-
-        // --- Invalidate cache (eventually is incremental, and part of
-        //     workspace, just do cheezy thing for now) CHEEZE CHEEEZE XXX
-        this.entriesJSON_ = undefined;
+    requestWorkspaceReload() {
+        this.#workspace = undefined;
+        this.requestEntriesJSONReload();
     }
 
     /**
      *
      */
-    get entriesJSON() {
-        return this.entriesJSON_ ??=
-            new workspace.CurrentTupleQuery(this.workspace.getTableByTag('di')).toJSON();
+    get entriesJSON(): entry.Entry[] {
+        return this.#entriesJSON ??=
+            new workspace.CurrentTupleQuery(this.workspace.getTableByTag('di')).toJSON().entry;
     }
+
+    requestEntriesJSONReload() {
+        this.#entriesJSON = undefined;
+    }
+    
+    /**
+     * This should probaly move to workspace.
+     *
+     */
+    applyTransaction(assertions: Assertion[]): number {
+
+        // --- Allocate a new server timestamp for this tx
+        //     TODO we may want to allocate multiple here to give client new base.
+        const serverTimestamp = this.allocTxTimestamps(1);
+        
+        // --- No assertions can be trivially applied (we check this
+        //     because our consistency checks can't handle this case)
+        if(assertions.length === 0)
+            return serverTimestamp;
+
+        // ---- Validate that this is a single tx (all assertions have the same
+        //      valid_from)
+        const clientTimestamp = assertions[0].valid_from;
+        assertions.forEach(a=>{
+            if(a.valid_from !== clientTimestamp)
+                throw new Error(`All assertions in a transaction must have the same timestamp`);
+            if(a.valid_to !== timestamp.END_OF_TIME && a.valid_to !== clientTimestamp)
+                throw new Error(`Assertions can either be valid to the tx time (a delete tombstone) or valid till the end of time`);
+        });
+        
+        try {
+            // --- Rewrite client timestamps to our newly allocated server timestamp
+            assertions.forEach(a=>{
+                if(a.valid_from === clientTimestamp)
+                    a.valid_from = serverTimestamp;
+                if(a.valid_to === clientTimestamp)
+                    a.valid_to = clientTimestamp;
+            });
+            
+            // --- Apply assertions to workspace (throwing exception if incompatible)
+            
+            
+            // --- Apply assertions to DB (in a TX) doing some confirmation as we go.
+            db().transaction(()=>{
+                // Trick here is that we need prev txids - workspace can give us those.
+                // Then can load them an confirm that their valid_to matches, then update.
+                // We can get the whole prev anyway.
+                
+                
+            });
+
+            // --- Request rebuld of entries JSON
+            this.requestEntriesJSONReload();
+
+        } catch (e) {
+            // --- Request workspace reload
+            this.requestWorkspaceReload();
+            throw e;
+        }
+
+        return -1; // TOOT
+    }
+
 
     samplePage(): any {
+
+        console.info('ENTRIES', this.entriesJSON);
+
+        const entriesWithHouseGloss = this.entriesJSON.filter(
+            entry=>entry.subentry.some(
+                subentry=>subentry.gloss.some(
+                    gloss=>gloss.gloss.includes('house'))));
+
+        console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
+
+        
         return (
             ['html', {},
+
              ['head', {},
               ['meta', {charset:"utf-8"}],
               ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-              config.bootstrapCssLink],
+              config.bootstrapCssLink
+             ], // head
+             
              ['body', {},
-              ['div', {}, 'CATS!']]]);
+
+              ['h2', {}, 'Sample Entries'],
+              
+              ['ul', {},
+               entriesWithHouseGloss.map(e=>
+                   ['li', {}, entry.renderEntryCompactSummary(e)])
+              ],
+
+              config.bootstrapScriptTag
+              
+             ] // body
+            ] // html
+        );
     }
     
     /**

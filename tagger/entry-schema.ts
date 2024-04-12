@@ -178,19 +178,19 @@ export const dictSchemaJson = {
 // interface Dictionary extends TupleVersionT {
 // }
 
-interface Entry {
+export interface Entry {
     entry_id: number,
     spelling: Spelling[],
     subentry: Subentry[],
 }
 
-interface Spelling {
+export interface Spelling {
     spelling_id: number,
     text: string,
     variant: string,
 }
 
-interface Subentry {
+export interface Subentry {
     subentry_id: number,
     definition: Definition[],
     gloss: Gloss[],
@@ -206,76 +206,76 @@ interface Subentry {
     supporting_evidence: SupportingEvidence[],
 }
 
-interface Definition {
+export interface Definition {
     definition_id: number,
     definition: string,
 }
 
-interface Gloss {
+export interface Gloss {
     gloss_id: number,
     gloss: string,
 }
 
-interface Example {
+export interface Example {
     example_id: number,
     translation: string,
     example_text: ExampleText[],
 }
 
-interface ExampleText {
+export interface ExampleText {
     example_text_id: number,
     text: string,
     variant: string,
 }
 
-interface Recording {
+export interface Recording {
     recording_id: number,
     speaker: string,
     recording: string,
     variant: string,
 }
 
-interface PronunciationGuide {
+export interface PronunciationGuide {
     pronunciation_guide_id: number,
     text: string,
     variant: string,
 }
 
-interface Category {
+export interface Category {
     category_id: number,
     category: string,
 }
 
-interface RelatedEntry {
+export interface RelatedEntry {
     related_entry_id: number,
     unresolved_text: string,
 }
 
-interface AlternateGrammaticalForm {
+export interface AlternateGrammaticalForm {
     alternate_grammatical_form_id: number,
     gloss: string,
     grammatical_form: string,
     alternate_form_text: AlternateFormText[],
 }
 
-interface AlternateFormText {
+export interface AlternateFormText {
     alternate_form_text_id: number,
     text: string,
     variant: string,
 }
 
-interface OtherRegionalForm {
+export interface OtherRegionalForm {
     other_regional_form_id: number,
     text: string,
 }
 
-interface Attr {
+export interface Attr {
     attr_id: number,
     attr: string,
     value: string,
 }
 
-interface ImageReference {
+export interface ImageReference {
     image_reference_id: number,
     bounding_box_id: number,
     transcription: string,
@@ -284,19 +284,20 @@ interface ImageReference {
     notes: string,
 }
 
-interface SupportingEvidence {
+export interface SupportingEvidence {
     supporting_evidence_id: number,
     text: string,
     variant: string,
 }
 
 
-
-
-
-
-
-
+/**
+ *
+ */
+export function renderEntryCompactSummary(e: Entry): any {
+    // NEXT DO NICe JOB OF THIS!!!
+    return JSON.stringify(e, undefined, 2);
+}
 
 
 function test() {
