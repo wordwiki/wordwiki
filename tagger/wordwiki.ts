@@ -283,9 +283,18 @@ export class WordWiki {
 
         if(typeof result === 'string')
             return server.htmlResponse(result);
-        else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') // this squigs me - but is is soooo convenient!
-            return server.htmlResponse(markup.renderToStringViaLinkeDOM(result));
-        else
+        else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') { // this squigs me - but is is soooo convenient!
+            let htmlText: string = 'cat';
+            try {
+                // Note: we allow markup to contain Promises, which we force
+                //       at render time.
+                htmlText = await markup.asyncRenderToStringViaLinkeDOM(result);
+            } catch(e) {
+                console.info('request failed during content force', e);
+                return server.jsonResponse({error: String(e)}, 400);
+            }
+            return server.htmlResponse(htmlText);
+        } else {
             return server.jsonResponse(result);
 
         // result can be a command - like forward
@@ -296,6 +305,7 @@ export class WordWiki {
         // have shortcuts for returning other things:
 
         //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+        }
     }
 }
 

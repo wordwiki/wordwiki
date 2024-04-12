@@ -164,6 +164,28 @@ export async function getDerived(contentStorePath: string,
     return Promise.resolve(outputContentId);
 }
 
+// /**
+//  *
+//  */
+// export function getDerivedPath(contentStorePath: string,
+//                                fns: {[fnName: string]: Function},
+//                                closure: any[],
+//                                extension: string):string {
+
+//     // --- Extract content store parent and name from contentStorePath
+//     const contentStoreParent = posix.dirname(contentStorePath);
+//     const contentStore = posix.basename(contentStorePath);
+
+//     // --- Serialize closure to JSON and compute hash
+//     const closureJson = JSON.stringify(closure, undefined, '  ');
+//     const hash = await digestString(closureJson);
+
+//     // --- Compute filename for closure output
+//     const outputContentId = formatContentId({contentStore, hash, extension});
+//     const outputContentPath = posix.join(contentStoreParent, outputContentId);
+
+//     return outputContentId;
+// }
 
 async function addAsync(target: string, a: number, b: number): Promise<String> {
     return String(a+b);

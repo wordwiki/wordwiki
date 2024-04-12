@@ -338,15 +338,16 @@ export const NODE_END = -1;
 //type HtmlDocument = ReturnType<typeof linkedom.parseJSON>;
 
 
-export function renderToStringViaLinkeDOM(markup: any): string {
-    return toLinkeDOM(markup).toString();
-}
 
 // export function toLinkeDOM(markup: any): any {
 //     const jsdon = renderToJSDON(markup)
 //     console.info(jsdon);
 //     return linkedom.parseJSON(jsdon);
 // }
+
+export function renderToStringViaLinkeDOM(markup: any): string {
+    return toLinkeDOM(markup).toString();
+}
 
 export function toLinkeDOM(markup: any): any {
     return linkedom.parseJSON(renderToJSDON(markup));
@@ -429,6 +430,91 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
         renderItemToJSDON(out, c);
     out.push(NODE_END);
 }
+
+/**
+ * Async version of rendering markup to html text via linkedom.
+ *
+ * Promises that appear in the content or attr value position will be forced.
+ *
+ * Probably quite a bit slower than the sync one - so keeping that one around as
+ * well.
+ */
+export async function asyncRenderToStringViaLinkeDOM(markup: any): Promise<string> {
+    return (await asyncToLinkeDOM(markup)).toString();
+}
+
+export async function asyncToLinkeDOM(markup: any): Promise<any> {
+    return linkedom.parseJSON(await asyncRenderToJSDON(markup));
+}
+
+export async function asyncRenderToJSDON(item: any, wrapInHtmlDocument: boolean=true): Promise<JSDON> {
+    const out: JSDON = [];
+    if(wrapInHtmlDocument) {
+        out.push(DOCUMENT_NODE);
+        out.push(DOCUMENT_TYPE_NODE, "html");
+    }        
+    await asyncRenderItemToJSDON(out, item);
+    if(wrapInHtmlDocument) {
+        out.push(NODE_END, NODE_END);
+    }
+    return out;
+}
+
+async function asyncRenderItemToJSDON(out: JSDON, item: any) {
+    switch(typeof item) {
+        case 'undefined':
+            break;
+        case 'number':
+        case 'boolean':
+        case 'bigint':
+            out.push(TEXT_NODE, String(item));
+            break;
+        case 'string':
+            out.push(TEXT_NODE, item);
+            break;
+        case 'object':
+            if(item == null)
+                break;
+            else if(Array.isArray(item)) {
+                if(isElemMarkup(item)) {
+                    await asyncRenderElementToJSDON(out, item as ElemExprLiteral);
+                    break;
+                } else {
+                    for(const i of item)
+                        await asyncRenderItemToJSDON(out, i);
+                    break;
+                }
+            } else if(item instanceof Promise) {
+                asyncRenderItemToJSDON(out, await item);
+            } else {
+                throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
+            }
+
+        default:
+            throw new Error(`unhandled content item ${item} of type ${typeof item}`);
+    }
+}
+
+async function asyncRenderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
+    const [tag, {...attrs}, ...content] = e;
+    const tagName = tag instanceof Function ? tag.name : String(tag);
+
+    out.push(ELEMENT_NODE);
+    out.push(tagName);
+    for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
+        if(name !== '') {
+            out.push(ATTRIBUTE_NODE, name);
+            if(value instanceof Promise)
+                value = await value;
+            if(value != undefined)
+                out.push(String(value));
+        }
+    }
+    for(const c of content)
+        await asyncRenderItemToJSDON(out, c);
+    out.push(NODE_END);
+}
+
 
 function linkeDOMPlay() {
     console.info(renderToStringViaLinkeDOM(

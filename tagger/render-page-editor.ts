@@ -8,6 +8,7 @@ import {range} from "../utils/utils.ts";
 import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import * as config from './config.ts';
+import * as derivedPageImages from './derived-page-images.ts';
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -391,4 +392,9 @@ export function renderStandaloneGroup(bounding_group_id: number,
             image,
             groupSvg,
            ]; // svg
+}
+
+export function renderTiledImage(srcImagePath: string,
+                                 tileWidth=config.defaultTileWidth,
+                                 tileHeight=config.defaultTileHeight) {
 }
