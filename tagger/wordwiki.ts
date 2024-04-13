@@ -11,7 +11,7 @@ import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as timestamp from '../utils/timestamp.ts';
 import {db} from "./db.ts";
-import {renderToStringViaLinkeDOM} from '../utils/markup.ts';
+import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
 import {ScannedDocument, ScannedPage, Assertion} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
@@ -234,7 +234,7 @@ export class WordWiki {
             const page_number = parseInt(PageNumber);
 
             const body = await friendlyRenderPageEditor(book, page_number);
-            const html = renderToStringViaLinkeDOM(body);
+            const html = await asyncRenderToStringViaLinkeDOM(body);
             return Promise.resolve({status: 200, headers: {}, body: html});
         } else if (filepath === '/favicon.ico') {
             return Promise.resolve({status: 200, headers: {}, body: 'not found'});

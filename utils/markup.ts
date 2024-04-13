@@ -474,21 +474,20 @@ async function asyncRenderItemToJSDON(out: JSDON, item: any) {
             break;
         case 'object':
             if(item == null)
-                break;
+                void 0;
             else if(Array.isArray(item)) {
                 if(isElemMarkup(item)) {
                     await asyncRenderElementToJSDON(out, item as ElemExprLiteral);
-                    break;
                 } else {
                     for(const i of item)
                         await asyncRenderItemToJSDON(out, i);
-                    break;
                 }
             } else if(item instanceof Promise) {
-                asyncRenderItemToJSDON(out, await item);
+                await asyncRenderItemToJSDON(out, await item);
             } else {
                 throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
             }
+            break;
 
         default:
             throw new Error(`unhandled content item ${item} of type ${typeof item}`);

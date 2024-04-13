@@ -86,6 +86,7 @@ export class DenoHttpServer extends HttpServer {
             titan1cResponse = await this.requestHandler(titan1cRequest);
         } catch(e) {
             // Want error response to be dependent on the desired content type XXX
+            console.info('ERROR', e);
             titan1cResponse = server.htmlResponse(`ERROR: ${String(e)}`, 400);
         }
         // The native HTTP server uses the web standard `Request` and `Response`

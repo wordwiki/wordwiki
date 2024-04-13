@@ -378,10 +378,8 @@ export function renderStandaloneGroup(bounding_group_id: number,
              ])
         ];
 
-    // This is wrong !! - need to rework this using tiles !!
-    const pageImageUrl = '/'+page.image_ref;
-    const image = ['image',
-                   {href:pageImageUrl, x:-groupX, y:-groupY, width:page.width, height:page.height}];
+    const image = renderTiledImage(page.image_ref, page.width, page.height,
+        -groupX, -groupY, groupWidth, groupHeight);
     
     return ['svg', {width:groupWidth/scale_factor, height:groupHeight/scale_factor,
                     viewBox: `0 0 ${groupWidth} ${groupHeight}`,
@@ -394,7 +392,69 @@ export function renderStandaloneGroup(bounding_group_id: number,
            ]; // svg
 }
 
-export function renderTiledImage(srcImagePath: string,
-                                 tileWidth=config.defaultTileWidth,
-                                 tileHeight=config.defaultTileHeight) {
+export async function renderTiledImage(srcImagePath: string,
+                                       srcImageWidth: number, srcImageHeight: number,
+                                       x: number, y: number, w: number, h: number,
+                                       maxTileWidth=config.defaultTileWidth,
+                                       maxTileHeight=config.defaultTileHeight): Promise<any> {
+    
+    const tilesPath = await derivedPageImages.getTilesForImage(srcImagePath, maxTileWidth, maxTileHeight);
+    const srcImageWidthInTiles = Math.ceil(srcImageWidth / maxTileWidth);
+    const srcImageHeightInTiles = Math.ceil(srcImageHeight / maxTileHeight);
+    
+    const tiles = [];
+    for(let yidx=0; yidx<srcImageHeightInTiles; yidx++) {
+        for(let xidx=0; xidx<srcImageWidthInTiles; xidx++) {
+
+            const tileX = xidx*maxTileWidth;
+            const tileY = yidx*maxTileHeight;
+            const tileWidth = xidx < srcImageWidthInTiles-1
+                ? maxTileWidth
+                : srcImageWidth % maxTileWidth;
+            const tileHeight = yidx < srcImageHeightInTiles-1
+                ? maxTileHeight
+                : srcImageHeight % maxTileHeight;
+
+            if(intersect({left: tileX, right: tileX+tileWidth,
+                          top: tileY, bottom: tileY+tileHeight},
+                         {left: -x, right: -x+w,
+                          top: -y, bottom: -y+h})) {
+                const tileUrl = `/${tilesPath}/tile-${xidx}-${yidx}.jpg`
+                const tile = ['image',
+                              {href: tileUrl,
+                               x: x+tileX,
+                               y: y+tileY,
+                               width:tileWidth,
+                               height:tileHeight}];
+                tiles.push(tile);
+            }
+        }
+    }
+
+    return tiles;
 }
+
+interface Rect {
+    left: number,
+    right: number,
+    top: number,
+    bottom: number;
+}
+
+function intersect(a: Rect, b: Rect): boolean {
+    return (a.left <= b.right &&
+        b.left <= a.right &&
+        a.top <= b.bottom &&
+        b.top <= a.bottom)
+}
+    
+export async function renderTiledImageOff(srcImagePath: string,
+                                       srcImageWidth: number, srcImageHeight: number,
+                                       x: number, y: number, w: number, h: number,
+                                       tileWidth=config.defaultTileWidth,
+                                       tileHeight=config.defaultTileHeight): Promise<any> {
+    return ['image', {href:`/${srcImagePath}`, x, y, width:srcImageWidth, height:srcImageHeight}];
+}
+
+
+
