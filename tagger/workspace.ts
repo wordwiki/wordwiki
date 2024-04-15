@@ -443,6 +443,11 @@ export class VersionedDb {
     async persistProposedAssertions() {
         
     }
+
+    reset() {
+        //this.tables.forEach(t=>t.reset());
+        throw new Error('not impl');
+    }
     
     addTable(schema: Schema): VersionedTable {
         if(this.tables.has(schema.tag))
@@ -546,6 +551,14 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             schema.relationFields.map(r=>[r.tag, new VersionedRelation(r, this)]));
         this.id = id;
     }
+
+    reset() {
+        throw new Error('not impl yet');
+        //this.tupleVersions = [];
+        this.#currentTuple = undefined;
+        //this.childRelations.forEach(r=>r.reset());
+    }
+
     
     get current(): TupleVersion|undefined {
         return this.#currentTuple;
@@ -1125,7 +1138,7 @@ function clientRenderTest(entry_id: number): any {
 /**/                        view.exportToBrowser(),
 /**/                        workspace.exportToBrowser());
 /**/
-/**/           activeViews = imports.activeViews();
+/**/           activeViews = imports.activeViews;
 /**/
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");
@@ -1139,8 +1152,14 @@ function clientRenderTest(entry_id: number): any {
           
           ['div', {id: 'root'}, entry_id],
 
-          config.bootstrapScriptTag,
+          ['button', {onclick:'imports.popupEntryEditor(bootstrap, 1000)'}, 'GO DOG GO'],
 
+
+          
+          view.renderModalEditorSkeleton(),
+
+          
+          config.bootstrapScriptTag,
          ] // body
          
         ]);
@@ -1175,7 +1194,7 @@ function renderEntryListTest(): any {
 /**/                        view.exportToBrowser(),
 /**/                        workspace.exportToBrowser());
 /**/
-/**/           activeViews = imports.activeViews();
+/**/           activeViews = imports.activeViews;
 /**/
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");

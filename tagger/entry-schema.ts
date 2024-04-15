@@ -295,10 +295,11 @@ export interface SupportingEvidence {
  *
  */
 export function renderEntryCompactSummary(e: Entry): any {
-    // NEXT DO NICe JOB OF THIS!!!
-    return JSON.stringify(e, undefined, 2);
+    // TODO handle dialects here.
+    const spellings = e.spelling.map(s=>s.text);
+    const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+    return ['div', {}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')];
 }
-
 
 function test() {
     let dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);

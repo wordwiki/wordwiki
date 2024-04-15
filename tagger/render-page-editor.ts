@@ -193,9 +193,8 @@ export async function friendlyRenderPageEditor(friendly_document_id: string,
     return renderPageEditor(pdmSamplePage.page_id, pdmTaggingLayer, [pdmWordLayer.layer_id], totalPagesInDocument);
 }
 
-if (import.meta.main) {
-    const friendly_document_id = Deno.args[0] ?? 'PDM';
-    const page_number = parseInt(Deno.args[1] ?? '1');
+
+async function samplePageRender(friendly_document_id: string, page_number: number) {
     const markup = await friendlyRenderPageEditor(friendly_document_id, page_number);
     console.info(renderToStringViaLinkeDOM(markup));
 }
@@ -231,7 +230,7 @@ export function newBoundingBoxInNewGroup(page_id: number, layer_id: number,
         
         const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
             'bounding_group', {
-                document_id, // NEED to pass in
+                document_id,
                 layer_id,
                 color,
             }, 'bounding_group_id');
@@ -456,5 +455,32 @@ export async function renderTiledImageOff(srcImagePath: string,
     return ['image', {href:`/${srcImagePath}`, x, y, width:srcImageWidth, height:srcImageHeight}];
 }
 
+// --------------------------------------------------------------------------------
+// --- Text search of layer -------------------------------------------------------
+// --------------------------------------------------------------------------------
 
+function sampleTextSearch(search: string, layer_id: number = 5) {
+    //SELECT * FROM email WHERE email MATCH 'fts5' ORDER BY rank;
+    // Want document id in here as well.
+    const results = db().all<any, {search:string, layer_id: number}>(`SELECT * FROM bounding_box_fts WHERE text MATCH :search AND layer_id = :layer_id ORDER BY rank`, {search, layer_id});
+    console.info(JSON.stringify(results, undefined, 2));
+    
+}
 
+// --------------------------------------------------------------------------------
+// --- CLI ------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+if (import.meta.main) {
+    switch(Deno.args[0]) {
+        case 'render':
+            await samplePageRender(String(Deno.args[1] ?? 'PDM'), Number.parseInt(Deno.args[1] ?? '1'));
+            break;
+        case 'search':
+            sampleTextSearch(String(Deno.args[1] ?? 'seal'));
+            break;
+        default: {
+            throw new Error('unknown command');
+        }
+    }
+}

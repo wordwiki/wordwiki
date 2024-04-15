@@ -158,14 +158,14 @@ export class WordWiki {
 
     samplePage(): any {
 
-        console.info('ENTRIES', this.entriesJSON);
+        //console.info('ENTRIES', this.entriesJSON);
 
         const entriesWithHouseGloss = this.entriesJSON.filter(
             entry=>entry.subentry.some(
                 subentry=>subentry.gloss.some(
                     gloss=>gloss.gloss.includes('house'))));
 
-        console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
+        //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
         
         return (
@@ -183,7 +183,7 @@ export class WordWiki {
               
               ['ul', {},
                entriesWithHouseGloss.map(e=>
-                   ['li', {}, entry.renderEntryCompactSummary(e)])
+                   ['li', {onclick: 'alert("hello")'}, entry.renderEntryCompactSummary(e)])
               ],
 
               config.bootstrapScriptTag

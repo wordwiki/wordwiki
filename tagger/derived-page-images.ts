@@ -80,7 +80,7 @@ export async function preWarmDerivedPageImagesCacheForDocument(friendly_document
     for(const page of pages) {
         console.info(`generating derived images for page ${friendly_document_id}.${page.page_number}`);
         await getTilesForImage(
-            page.image_ref, config.defaultTileWidth, config.defaultTileWidth);
+            page.image_ref, config.defaultTileWidth, config.defaultTileHeight);
     }
 }
 

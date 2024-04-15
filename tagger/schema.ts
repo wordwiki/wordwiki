@@ -610,16 +610,16 @@ const createBoundingBoxDml = block`
 /**/   -- TODO: probably also want a second one with using the trigram tokenizer
 /**/   --       (because of prefixes in mikmaq)
 /**/   CREATE VIRTUAL TABLE IF NOT EXISTS bounding_box_fts USING FTS5(
-/**/       bounding_box_id, text, content='bounding_box', content_rowid='bounding_box_id');
+/**/       bounding_box_id, text, layer_id, content='bounding_box', content_rowid='bounding_box_id');
 /**/   CREATE TRIGGER IF NOT EXISTS bounding_box_fts_insert AFTER INSERT ON bounding_box BEGIN
-/**/        INSERT INTO bounding_box_fts(rowid, text) VALUES (new.bounding_box_id, new.text);
+/**/        INSERT INTO bounding_box_fts(rowid, text, layer_id) VALUES (new.bounding_box_id, new.text, new.layer_id);
 /**/   END;
 /**/   CREATE TRIGGER IF NOT EXISTS bounding_box_fts_delete AFTER DELETE ON bounding_box BEGIN
-/**/       INSERT INTO bounding_box_fts(bounding_box_fts, rowid, text) VALUES('delete', old.bounding_box_id, old.text);
+/**/       INSERT INTO bounding_box_fts(bounding_box_fts, rowid, text, layer_id) VALUES('delete', old.bounding_box_id, old.text, old.layer_id);
 /**/   END;
 /**/   CREATE TRIGGER IF NOT EXISTS bounding_box_fts_update AFTER UPDATE ON bounding_box BEGIN
-/**/       INSERT INTO bounding_box_fts(bounding_box_fts, rowid, text) VALUES('delete', old.bounding_box_id, old.text);
-/**/       INSERT INTO bounding_box_fts(rowid, text) VALUES (new.bounding_box_id, new.text);
+/**/       INSERT INTO bounding_box_fts(bounding_box_fts, rowid, text, layer_id) VALUES('delete', old.bounding_box_id, old.text, old.layer_id);
+/**/       INSERT INTO bounding_box_fts(rowid, text, layer_id) VALUES (new.bounding_box_id, new.text, new.layer_id);
 /**/  END;
 /**/   `;
 assertDmlContainsAllFields(createBoundingBoxDml, boundingBoxFieldNames);

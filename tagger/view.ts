@@ -508,6 +508,7 @@ export class ActiveViews {
     }
         
     editTupleUpdate(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+
         // --- Find the reference tuple
         const refTuple = this.workspace.getVersionedTupleById(
             refDbTag, refTupleTag, refTupleId)
@@ -690,7 +691,20 @@ export class TupleEditor {
 // difficulty
 let activeViews_: ActiveViews|undefined = undefined;
 export function activeViews(): ActiveViews {
-    return activeViews_ ??= new ActiveViews(new VersionedDb([]));
+    return activeViews_ ??= (()=> {
+        console.info('*** creating new active view');
+        return new ActiveViews(new VersionedDb([]));
+    })();
+}
+
+/**
+ * We have changed how we are doing views (we have switched to transient, single
+ * item editors).  This hack is used to put off the deeper refactoring to
+ * come if we stick with this change.
+ */
+export function dropActiveViewsAndWorkspace() {
+    console.info('*** dropping active views');
+    activeViews_ = undefined;
 }
 
 /**
@@ -820,7 +834,7 @@ export class Renderer {
              current ? [  // current is undefined for deleted tuples - more work here TODO
                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
              ]: undefined,
-             ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews.viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
+             ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews().viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
              ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]],
             isHistoryOpen
                 ? ['tr', {},
@@ -866,7 +880,7 @@ export class Renderer {
         const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
         return (
             ['td', {class: `field field-${v.field.schemaTypename()}`,
-                    onclick:`activeViews.editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
+                    onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
                    },
              v.renderView(value)
             ]);
@@ -886,7 +900,7 @@ export class Renderer {
              ['th', {}, ''],
              ['td', {colspan: view.userScalarViews.length+this.uiColCount},
               ['button', {type:'button', class:'btn btn-primary',
-                          onclick:'activeViews.endFieldEdit()'}, 'Save'],
+                          onclick:'activeViews().endFieldEdit()'}, 'Save'],
              ],
 
              // TODO: add history when under edit.  Not so simple because need
@@ -918,7 +932,7 @@ export class Renderer {
             r.schema.relationFields.map(c=>
                 ['li', {},
                  ['a', {class:'dropdown-item', href:'#',
-                        onclick:`activeViews.editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
+                        onclick:`activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
                   `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
                  ]]);
 
@@ -932,12 +946,12 @@ export class Renderer {
                type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               '≡'],
              ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
               isLeaf && [
                   ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Up']],
                   ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Down']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews.editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
                   insertChildMenuItems,
                   ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
               ], // isLeaf
@@ -1031,7 +1045,90 @@ export function renderEditor(r: RelationView): any {
     
 // }
 
+
+export function renderModalEditorSkeleton() {
+    
+    return [
+        ['div', {class: 'modal fade',  id:'modalEditor',
+                 'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
+                 tabindex:'-1', 'aria-labelledby':'modalEditorLabel',
+                 'aria-hidden':'true'},
+         ['div', {class:'modal-dialog modal-dialog-scrollable modal-xl'},
+          
+          ['div', {class:'modal-content'},
+           
+           ['div', {class:'modal-header'},
+            ['h1', {class:'modal-title fs-5', id:'modalEditorLabel'},
+             'Modal title'],
+            ['button', {type:'button', class:'btn-close', 'data-bs-dismiss':'modal',
+                        'aria-label':'Close'}]
+           
+           ], // div.modal-header
+         
+           ['div', {class:'modal-body', id:'modalEditorBody'}
+            
+           ], // div.modal-body
+
+           ['div', {class:'modal-footer'},
+            ['button', {type:'button', class:'btn btn-secondary',
+                        'data-bs-dismiss':'modal',
+                        onclick:'console.info("saving info")'}, 'Save']
+           ], // div.modal-footer
+         
+          ] // div.modal-content
+
+         ] // div.modal-dialog
+
+        ] // div.modal
+    ];
+    
+}
+
+/**
+ *
+ */
+export function initPopupEntryEditor() {
+    
+}
+ 
+/**
+ *
+ * TODO: firing this again while it is loading will (like on a slow connection) needs
+ *       some protection.
+ */
+export async function popupEntryEditor(bootstrap: any, entryId: number) {
+
+    // TODO make this less weird
+    const assertions = await rpc`getAssertionsForEntry(${entryId})`;
+    
+    dropActiveViewsAndWorkspace();
+    
+    const views = activeViews();
+
+    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+    views.workspace.addTable(dictSchema);
+
+    assertions.forEach((a:Assertion)=>views.workspace.untrackedApplyAssertion(a));
+    
+    const dictView = schemaView(dictSchema);
+    
+    views.registerActiveView(
+        new ActiveView('modalEditorBody',
+                       dictView,
+                       ()=>new CurrentTupleQuery(views.workspace.getTableByTag('di'))));
+
+
+    views.rerenderAllViews();
+
+    bootstrap.Modal.getOrCreateInstance('#modalEditor').show();
+
+    console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+    
+}
+
 export async function run() {
+    return;
+    
     console.info('rendering sample 2');
     const views = activeViews();
 
@@ -1051,7 +1148,7 @@ export async function run() {
     // TODO make this less weird
     const entryId = 1000;
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
-    console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+    //console.info('Assertions', JSON.stringify(assertions, undefined, 2));
     assertions.forEach((a:Assertion)=>views.workspace.untrackedApplyAssertion(a));
 
     
@@ -1062,8 +1159,10 @@ export async function run() {
 export const exportToBrowser = ()=> ({
     activeViews,
     run,
+    popupEntryEditor,
     //beginFieldEdit,
 });
 
 export const routes = ()=> ({
 });
+
