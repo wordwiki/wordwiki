@@ -370,6 +370,9 @@ export class ActiveViews {
             alert(`Failed to save changes: ${e}`);
             throw e;
         }
+
+        // TODO do something nicer!!!
+        location.reload();
     }
     
     viewByName(viewName: string): ActiveView {

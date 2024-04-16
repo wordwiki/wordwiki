@@ -5,11 +5,14 @@ import * as schema from "./schema.ts";
 import * as server from '../utils/http-server.ts';
 import * as strings from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
+import * as view from './view.ts';
 import * as workspace from './workspace.ts';
 import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as timestamp from '../utils/timestamp.ts';
+import * as templates from './templates.ts';
+import {block} from "../utils/strings.ts";
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
@@ -178,7 +181,7 @@ export class WordWiki {
                 // Then can load them an confirm that their valid_to matches, then update.
                 // We can get the whole prev anyway.
                 // For now, just persist as they are.
-                // TODO XXX embedding 'dict' in here is BAD (also in insert).
+                // TODO XXX embedding 'dict' in here is BAD (also in insert)
                 updatedPrevAssertions.forEach(p=>
                     p && updateAssertion('dict', p.assertion_id, ['valid_to'], {valid_to: p.valid_to}));
                 assertions.forEach(a=>
@@ -196,43 +199,94 @@ export class WordWiki {
     }
 
 
-    samplePage(): any {
+    samplePage(query: Record<string, any>): any {
 
         //console.info('ENTRIES', this.entriesJSON);
 
-        const entriesWithHouseGloss = this.entriesJSON.filter(
+        const search = String(query['searchText'] ?? '');
+
+
+        console.info('SEARCH IS', search, 'QUERY IS', query);
+
+        
+        const entriesWithHouseGloss = search === '' ? [] :
+            this.entriesJSON.filter(
             entry=>entry.subentry.some(
                 subentry=>subentry.gloss.some(
-                    gloss=>gloss.gloss.includes('house'))));
+                    gloss=>gloss.gloss.includes(search))));
 
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
+        const pageBody = [
+            ['h2', {}, 'Query for ', search],
+
+            // --- Query form
+            ['form', {name: 'search', method: 'get', action:'/wordwiki.samplePage(query)'},
+
+             // --- Search text row
+             ['div', {class:'row mb-3'},
+              ['label', {for:'searchText', class:'col-sm-2 col-form-label'}, 'Search Text'],
+              ['div', {class:'col-sm-10'},
+               ['input', {type:'text', class:'form-control', id:'searchText', name:'searchText', value:search}]]
+             ], // row
+
+             ['button', {type:'submit', class:'btn btn-primary'}, 'Search'],
+            ], // form
         
-        return (
-            ['html', {},
-
-             ['head', {},
-              ['meta', {charset:"utf-8"}],
-              ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-              config.bootstrapCssLink
-             ], // head
-             
-             ['body', {},
-
-              ['h2', {}, 'Sample Entries'],
-              
-              ['ul', {},
-               entriesWithHouseGloss.map(e=>
-                   ['li', {onclick: 'alert("hello")'}, entry.renderEntryCompactSummary(e)])
-              ],
-
-              config.bootstrapScriptTag
-              
-             ] // body
-            ] // html
-        );
+            ['ul', {},
+             entriesWithHouseGloss.map(e=>
+                 ['li', {onclick: `imports.popupEntryEditor(${e.entry_id})`}, entry.renderEntryCompactSummary(e)])
+            ]
+        ];
+        
+        return templates.queryPageTemplate('Wordwiki', pageBody);
     }
-    
+
+        
+    //     return (
+    //         ['html', {},
+
+    //          ['head', {},
+    //           ['meta', {charset:"utf-8"}],
+    //           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+    //           ['title', {}, 'Wordwiki'],
+    //           config.bootstrapCssLink,
+    //           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+    //           ['script', {}, block`
+    // /**/           let imports = {};
+    // /**/           let activeViews = undefined`],
+    //           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+    //           ['script', {type: 'module'}, block`
+    // /**/           import * as workspace from '/scripts/tagger/workspace.js';
+    // /**/           import * as view from '/scripts/tagger/view.js';
+    // /**/
+    // /**/           imports = Object.assign(
+    // /**/                        {},
+    // /**/                        view.exportToBrowser(),
+    // /**/                        workspace.exportToBrowser());
+    // /**/
+    // /**/           activeViews = imports.activeViews;
+    // /**/
+    // /**/           document.addEventListener("DOMContentLoaded", (event) => {
+    // /**/             console.log("DOM fully loaded and parsed");
+    // /**/             view.run();
+    // /**/             //workspace.renderSample(document.getElementById('root'))
+    // /**/           });`
+    //           ]
+    //          ], // head
+             
+    //          ['body', {},
+
+
+    //           view.renderModalEditorSkeleton(),
+              
+    //           config.bootstrapScriptTag
+              
+    //          ] // body
+    //         ] // html
+    //     );
+    // }
+
     /**
      *
      */
@@ -255,7 +309,8 @@ export class WordWiki {
      */
     // Proto request handler till we figure out how we want our urls etc to workc
     async requestHandler(request: server.Request): Promise<server.Response> {
-        console.info('tagger request', request);
+        if(!request?.url?.endsWith('/favicon.ico'))
+            console.info('tagger request', request);
         const requestUrl = new URL(request.url);
         const filepath = decodeURIComponent(requestUrl.pathname);
         const searchParams: Record<string,string> = {};
@@ -299,9 +354,10 @@ export class WordWiki {
         // --- Top level of root scope is active routes
         let rootScope = this.routes;
 
-        // --- If we have URL search parameters, push them as a scope
-        if(Object.keys(searchParams).length > 0)
-            rootScope = Object.assign(Object.create(rootScope), searchParams);
+        // --- Push (possibly empty) URL search parameters as a scope
+        //     with the single binding 'query'.  Later we may add more stuff
+        //     from the request to this scope.
+        rootScope = Object.assign(Object.create(rootScope), {query: searchParams});
 
         // --- If the query request body is a {}, then it is form parms or
         //     a json {} - push on scope.
