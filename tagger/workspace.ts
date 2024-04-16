@@ -4,7 +4,7 @@ import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatFiel
 import {unwrap, panic} from "../utils/utils.ts";
 import * as utils from "../utils/utils.ts";
 import {dictSchemaJson} from "./entry-schema.ts";
-import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
+import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, updateAssertion, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
 import * as schema from "./schema.ts";
 import * as timestamp from "../utils/timestamp.ts";
 import {BEGINNING_OF_TIME, END_OF_TIME} from '../utils/timestamp.ts';
@@ -383,7 +383,6 @@ export interface WorkspaceRpcAndSyncRequest {
     rpcs: WorksplaceRpc[],
 }
 
-
 export async function workspaceRpcAndSync(request: WorkspaceRpcAndSyncRequest): Promise<any> {
     (Array.isArray(request?.proposedAssertions) && Array.isArray(request?.rpcs))
         || panic('malformed worksplace rpc and sync request');
@@ -441,7 +440,7 @@ export class VersionedDb {
     }
 
     async persistProposedAssertions() {
-        
+        await rpc`wordwiki.applyTransactions(${this.proposedAssertions})`;
     }
 
     reset() {
@@ -461,13 +460,22 @@ export class VersionedDb {
         const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
         throw new Error('apply server assertion not implemented yet');
     }
+
+    nextTime(): number {
+        return timestamp.nextTime(this.mostRecentLocalTimestamp);        
+    }
     
-    applyProposedAssertion(assertion: Assertion)  {
+    applyProposedAssertion(assertion: Assertion): Assertion|undefined  {
+        if(assertion.valid_from <= this.mostRecentLocalTimestamp)
+            throw new Error('Attemp to assert into the past');
+        if(assertion.valid_to !== assertion.valid_from &&
+            assertion.valid_to !== timestamp.END_OF_TIME)
+            throw new Error('New assertions must either be true to the end of time, or be deletion tombstones');
         const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
-        const assertAtTime = timestamp.nextTime(this.mostRecentLocalTimestamp);
-        versionedTuple.applyProposedAssertion(assertAtTime, assertion);
-        this.mostRecentLocalTimestamp = assertAtTime;
+        const updatedPrevAssertion = versionedTuple.applyProposedAssertion(assertion);
+        this.mostRecentLocalTimestamp = assertion.valid_from;
         this.proposedAssertions.push(assertion);
+        return updatedPrevAssertion;
     }
     
     takeProposedAssertions(): Assertion[] {
@@ -656,27 +664,58 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             this.#currentTuple = tuple;
     }
 
-    applyProposedAssertion(assertAtTime: number, assertion: Assertion) {
+    applyProposedAssertion(assertion: Assertion): Assertion|undefined {
 
         const tuple = new TupleVersion(this, assertion);
         const mostRecentTuple = this.mostRecentTuple;
+        let updatedPrevAssertion: Assertion|undefined = undefined;
 
-        assertion.valid_from = assertAtTime;
+        const assertAtTime = assertion.valid_from;
 
+        // --- New assertions must be either valid till the end of time
+        //     OR have valid_from === valid_to === assertAtTime (which
+        //     is a tombstone).
+        utils.assert(assertion.valid_to === timestamp.END_OF_TIME ||
+            assertion.valid_to === assertion.valid_from);
         
-        // TODO lots of validation here + index updating etc.
-        // TODO update current.
-        // TODO tie into speculative mechanism.
-
         if(mostRecentTuple) {
-            
+            switch(true) {
+                    
+                case mostRecentTuple.assertion.valid_to === timestamp.END_OF_TIME: {
+                    // --- We are replacing a tuple that was valid to the end of time,
+                    //     this is a normal update - set the valid_to of the
+                    //     replaced assertion with the start time of the new
+                    //     assertion.
+                    mostRecentTuple.assertion.valid_to = assertAtTime;
+                    updatedPrevAssertion = mostRecentTuple.assertion;
+                    break;
+                }
+                    
+                case mostRecentTuple.assertion.valid_to < assertAtTime: {
+                    // --- Assertion we are replacing is deleted, so our new assertion
+                    //     is starting a new valid period.
+                    break;
+                }
+                    
+                case mostRecentTuple.assertion.valid_to >= assertAtTime: {
+                    // --- Tuple we are replacing has an end of life in our future
+                    //     (and not the end of time), something is wrong.
+                    throw new Error(`Attempt to assert a tuple in the past`);
+                }
+                default: {
+                    // --- Tuple we are replacing
+                    break;
+                }
+            }
         }
-
+                
         this.tupleVersions.push(tuple);
         console.info('applied proposed assertion', assertion);
         
         if(tuple.isCurrent)
             this.#currentTuple = tuple;
+
+        return updatedPrevAssertion;
     }
 
     applyServerAssertion(assertion: Assertion) {
@@ -1152,7 +1191,7 @@ function clientRenderTest(entry_id: number): any {
           
           ['div', {id: 'root'}, entry_id],
 
-          ['button', {onclick:'imports.popupEntryEditor(bootstrap, 1000)'}, 'GO DOG GO'],
+          ['button', {onclick:'imports.popupEntryEditor(1000)'}, 'GO DOG GO'],
 
 
           

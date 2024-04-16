@@ -1060,6 +1060,9 @@ export const selectAllAssertions = (tableName: string)=>db().prepare<Assertion>(
 /**/          FROM ${tableName}
 /**/          ORDER BY valid_from, id`);
 
+export function updateAssertion<T extends Partial<Assertion>>(tableName: string, assertion_id: number,fieldNames:Array<keyof T>, fields: T) {
+    return db().update<T>(tableName, 'assertion_id', fieldNames, assertion_id, fields);
+}
 
 //const highestValueTo = (tableName: string)=>
 

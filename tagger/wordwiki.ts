@@ -13,7 +13,7 @@ import * as timestamp from '../utils/timestamp.ts';
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {ScannedDocument, ScannedPage, Assertion} from './schema.ts';
+import {ScannedDocument, ScannedPage, Assertion, updateAssertion} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
@@ -96,13 +96,37 @@ export class WordWiki {
     requestEntriesJSONReload() {
         this.#entriesJSON = undefined;
     }
+
+
+
+    applyTransactions(assertions: Assertion[]) {
+
+        // --- Partition assertions into txes by valid_from
+        const txIds = assertions.map(a=>a.valid_from);
+        utils.assert(txIds.join(',') === txIds.toSorted((a,b)=>a-b).join(','),
+                     'assertions in a tx group must be in valid_from order');
+        const transactionsById = Map.groupBy(assertions, a=>a.valid_from);
+
+        try {
+            db().transaction(()=>{
+                Array.from(transactionsById.values()).forEach(a=>this.applyTransaction(a));
+            });
+        } catch (e) {
+            // --- Request workspace reload
+            this.requestWorkspaceReload();
+            throw e;
+        }
+    }
     
     /**
      * This should probaly move to workspace.
      *
      */
-    applyTransaction(assertions: Assertion[]): number {
+    applyTransaction(assertions: Assertion[]) {
 
+        console.info('Applying TX',
+                     JSON.stringify(assertions, undefined, 2));
+        
         // --- Allocate a new server timestamp for this tx
         //     TODO we may want to allocate multiple here to give client new base.
         const serverTimestamp = this.allocTxTimestamps(1);
@@ -110,15 +134,26 @@ export class WordWiki {
         // --- No assertions can be trivially applied (we check this
         //     because our consistency checks can't handle this case)
         if(assertions.length === 0)
-            return serverTimestamp;
+            return;
 
         // ---- Validate that this is a single tx (all assertions have the same
         //      valid_from)
+        // THIS WILL NOT BE TRUE FOR OUR NEW SAVE FEATURE, IT CONSISTS OF MULTIPLE TXes.
+        // (with potential repeated writes to the same assertion).
+        // HOW TO HANDLE THIS:
+        //  - they will be in order - do we want to break it down into separate txes
+        //    (or have that be part of the update protocol so we don't have to reverse
+        //    engineer it.
+        //  - do we want applying all the TXes to be one DB transaction? - if not, we can
+        //    just break it down into multiple Txes and apply them separately.
+        //  - this is probably fine for now (we can wrap the whole outer thing in a DB tx
+        //    to ...)
+        
         const clientTimestamp = assertions[0].valid_from;
         assertions.forEach(a=>{
             if(a.valid_from !== clientTimestamp)
                 throw new Error(`All assertions in a transaction must have the same timestamp`);
-            if(a.valid_to !== timestamp.END_OF_TIME && a.valid_to !== clientTimestamp)
+            if(!(a.valid_to === timestamp.END_OF_TIME || a.valid_to === clientTimestamp))
                 throw new Error(`Assertions can either be valid to the tx time (a delete tombstone) or valid till the end of time`);
         });
         
@@ -132,15 +167,22 @@ export class WordWiki {
             });
             
             // --- Apply assertions to workspace (throwing exception if incompatible)
-            
+            // TODO swith to an apply method that gives us enough info to update the valid_to
+            //      on the prev record.
+            const updatedPrevAssertions =
+                assertions.map(a=>this.workspace.applyProposedAssertion(a));
             
             // --- Apply assertions to DB (in a TX) doing some confirmation as we go.
             db().transaction(()=>{
                 // Trick here is that we need prev txids - workspace can give us those.
                 // Then can load them an confirm that their valid_to matches, then update.
                 // We can get the whole prev anyway.
-                
-                
+                // For now, just persist as they are.
+                // TODO XXX embedding 'dict' in here is BAD (also in insert).
+                updatedPrevAssertions.forEach(p=>
+                    p && updateAssertion('dict', p.assertion_id, ['valid_to'], {valid_to: p.valid_to}));
+                assertions.forEach(a=>
+                    db().insert<Assertion, 'assertion_id'>('dict', a, 'assertion_id'));
             });
 
             // --- Request rebuld of entries JSON
@@ -151,8 +193,6 @@ export class WordWiki {
             this.requestWorkspaceReload();
             throw e;
         }
-
-        return -1; // TOOT
     }
 
 

@@ -356,6 +356,22 @@ export class ActiveViews {
         this.workspace = workspace;
     }
 
+    /**
+     * Note: this is part of a temporary saving model for the proto versin -
+     * the workspace must be droppped after saving changes in this manner.
+     * TEMPORARY TEMP TEMP XXX
+     */
+    async saveChanges() {
+        console.info('--- Saving changes');
+        try {
+            await this.workspace.persistProposedAssertions();
+            console.info('--- Done saving changes');
+        } catch(e) {
+            alert(`Failed to save changes: ${e}`);
+            throw e;
+        }
+    }
+    
     viewByName(viewName: string): ActiveView {
         return this.activeViews.get(viewName)
             ?? panic('unable to find active view', viewName);
@@ -521,8 +537,53 @@ export class ActiveViews {
         const new_assertion: Assertion = Object.assign(
             {},
             mostRecentTupleVersion.assertion,
-            // TODO: change_by fields clear, from/to
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
+
+        this.openFieldEdit(renderRootId, 'replaceSelf', refDbTag, refTupleTag, refTupleId,
+                           new_assertion);
+    }
+
+    editTupleUpdateOFF(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+
+        // --- Find the reference tuple
+        const refTuple = this.workspace.getVersionedTupleById(
+            refDbTag, refTupleTag, refTupleId)
+            ?? panic('cannot find ref tuple for edit', refTupleId);
+
+        // NEXT populate assertion better!
+        // CReating the assertion is a job for the global workspace.
+        // USING TUPLE FOR THIS - this needs to factor
+        const mostRecentTupleVersion = refTuple.mostRecentTuple;
+        // const new_assertion: Assertion = Object.assign(
+        //     {},
+        //     mostRecentTupleVersion.assertion);
+        let new_assertion_: Record<string, any> = {};
+        for(const k in mostRecentTupleVersion.assertion) {
+            new_assertion_[k] = (mostRecentTupleVersion.assertion as any)[k];
+        }
+        const new_assertion: Assertion = new_assertion_ as Assertion;
+        console.info('new_assertion["undefined"]', (new_assertion as any)['undefined']);
+        for(const k in new_assertion) {
+            console.info('k', k);
+        }
+        delete (new_assertion as any)['undefined'];
+            // TODO: change_by fields clear, from/to
+        //{assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
+        console.info('mostRecentTupleVersion.assertion', mostRecentTupleVersion.assertion);
+        console.info('CAT NEW Assertion A', new_assertion);
+        new_assertion.assertion_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        console.info('CAT NEW Assertion B', new_assertion);
+
+        for(const k in new_assertion) {
+            console.info('k', k);
+        }
+        
+        // const new_assertion2: Assertion = Object.assign(
+        //     {},
+        //     mostRecentTupleVersion.assertion,
+        //     // TODO: change_by fields clear, from/to
+        //     {assertion_id3: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
+        // console.info('CAT NEW Assertion 2', new_assertion2);
 
         this.openFieldEdit(renderRootId, 'replaceSelf', refDbTag, refTupleTag, refTupleId,
                            new_assertion);
@@ -591,6 +652,9 @@ export class ActiveViews {
         
         const renderRootId = tupleEditor.renderRootId;
         const newAssertion = tupleEditor.assertion;
+        
+        newAssertion.valid_from = this.workspace.nextTime();
+        newAssertion.valid_to = timestamp.END_OF_TIME;
 
         // TODO Should check if differnt than prev tuple TODO TODO
         // - what from and to times to use for new assertions.
@@ -1072,7 +1136,7 @@ export function renderModalEditorSkeleton() {
            ['div', {class:'modal-footer'},
             ['button', {type:'button', class:'btn btn-secondary',
                         'data-bs-dismiss':'modal',
-                        onclick:'console.info("saving info")'}, 'Save']
+                        onclick:'activeViews().saveChanges()'}, 'Save']
            ], // div.modal-footer
          
           ] // div.modal-content
@@ -1090,13 +1154,23 @@ export function renderModalEditorSkeleton() {
 export function initPopupEntryEditor() {
     
 }
- 
+
+/**
+ * This editor expects to run in an environment where the bootstrap JS code
+ * has been loaded as a script.  This function packages accessing the bootstrap
+ * global inst via the browser window object.
+ */
+export function getGlobalBoostrapInst() {
+    return (window as any)?.bootstrap
+        ?? panic("can't find global bootstrap inst");
+}
+
 /**
  *
  * TODO: firing this again while it is loading will (like on a slow connection) needs
  *       some protection.
  */
-export async function popupEntryEditor(bootstrap: any, entryId: number) {
+export async function popupEntryEditor(entryId: number) {
 
     // TODO make this less weird
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
@@ -1120,9 +1194,9 @@ export async function popupEntryEditor(bootstrap: any, entryId: number) {
 
     views.rerenderAllViews();
 
-    bootstrap.Modal.getOrCreateInstance('#modalEditor').show();
+    getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').show();
 
-    console.info('Assertions', JSON.stringify(assertions, undefined, 2));
+    //console.info('Assertions', JSON.stringify(assertions, undefined, 2));
     
 }
 

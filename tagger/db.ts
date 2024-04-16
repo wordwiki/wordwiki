@@ -129,7 +129,21 @@ export class Db {
     }
 
     insert<T extends QueryParameters, K extends keyof T, P extends QueryParameters = Omit<T,K>>(table_name: string, params: P, id_field_name: K): number {
-        const fieldNames = Object.keys(params);
+        // EMERGENCY HACK
+        // MDN says:
+        // BUT: we use object.assign all over the place to copy objects, and it seems to
+        // be sometimes introuding a {"undefined": ""} property.  I really should track this down more, but need to get this working now, thus
+        // this hack:
+
+        let paramsCopy: Record<string, any> = {};
+        for(let k in params as Record<string, any>) {
+            if(k != 'undefined')
+                paramsCopy[k] = params[k];
+        }
+        params = paramsCopy as P;
+        
+        const fieldNames = Object.keys(paramsCopy);
+        console.info('fieldNames', fieldNames);
         const sql = `INSERT INTO ${table_name} (${fieldNames.join(',')}) VALUES (${fieldNames.map(f=>':'+f).join(',')}) RETURNING ${String(id_field_name)} AS id`;
         return this.insertWithAutoId<P>(sql, params);
     }
