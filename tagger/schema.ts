@@ -838,6 +838,39 @@ export function getAssertionPath(a: Assertion): AssertionPath {
     return path;
 }
 
+export function assertionPathToFields(p: AssertionPath): Pick<Assertion, 'ty0'|'ty1'|'id1'|'ty2'|'id2'|'ty3'|'id3'|'ty4'|'id4'|'ty5'|'id5'> {
+    const a: ReturnType<typeof assertionPathToFields> = {};
+    const l = p.length;
+    if(l >= 1) {
+        a.ty0 = p[0][0];
+        utils.assert(p[0][1] === 0);
+    }
+    if(l >= 2) {
+        a.ty1 = p[1][0];
+        a.id1 = p[1][1];
+    }
+    if(l >= 3) {
+        a.ty2 = p[2][0];
+        a.id2 = p[2][1];
+    }
+    if(l >= 4) {
+        a.ty3 = p[3][0];
+        a.id3 = p[3][1];
+    }
+    if(l >= 5) {
+        a.ty4 = p[4][0];
+        a.id4 = p[4][1];
+    }
+    if(l >= 6) {
+        a.ty5 = p[5][0];
+        a.id5 = p[5][1];
+    }
+    if(l >= 14) {
+        throw new Error('assertion path overflow!');
+    }
+    return a;
+}
+
 /**
  *
  */
@@ -1071,11 +1104,16 @@ export function updateAssertion<T extends Partial<Assertion>>(tableName: string,
  *
  */
 export function highestTimestamp(tableName: string): number {
-    const maxValidFrom = db().prepare<Assertion, {}>(`SELECT MAX(valid_from) FROM ${tableName}`).required({}).valid_from;
+    console.info('AAA', db().prepare<Assertion, {}>(`SELECT MAX(valid_from) AS max_valid_from FROM ${tableName}`).required({}));
+    const maxValidFrom = db().prepare<{max_valid_from: number}, {}>(`SELECT MAX(valid_from) AS max_valid_from FROM ${tableName}`).required({}).max_valid_from;
     // TODO we have an index that matches this, but not sure if sqlite will use it!
-    const maxValidTo = db().prepare<Assertion, {}>(`SELECT MAX(valid_to) FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`).required({}).valid_to;
+    //      not causing problems at the moment, becase we are reading this once at
+    //      startup - but should investigate.
+//console.info('FFF', db().prepare<{max_valid_to: number}, {}>(`SELECT * FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`).all({}));
+    const maxValidTo = db().prepare<{max_valid_to: number}, {}>(`SELECT MAX(valid_to) AS max_valid_to FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`).required({}).max_valid_to;
     console.info('maxValidTo', maxValidTo, 'maxValidFrom', maxValidFrom);
-    return Math.max(maxValidTo, maxValidFrom);
+    return Math.max(maxValidTo ?? timestamp.BEGINNING_OF_TIME,
+                    maxValidFrom ?? timestamp.BEGINNING_OF_TIME);
 }
 
 // --------------------------------------------------------------------------------

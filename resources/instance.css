@@ -24,9 +24,10 @@ table.relation > tbody > tr > td.relation-container {
   /*padding-left: 2em;*/
 }
 
-table.relation > tbody > tr.tuple:hover {
+/*table.relation > tbody > tr.tuple:hover {
   background: lightgrey;
 }
+*/
 
 table.relation > tbody > tr > td.tuple-history {
   width: 2em;

@@ -1,3 +1,9 @@
+function onContentLoaded() {
+    updateDerivedDom(
+        document.getElementById('scanned-page')
+            ?? panic('cannot bind to page editor'));
+}
+
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -34,32 +40,40 @@ function pageEditorMouseDown(event: MouseEvent) {
                     // in, and otherwise does copyBoxToGroup
                     // if client gets out of sync with server, this will be a bit wonky.
                     isBox(target) ?? panic('expected box');
-                    const targetGroup = target.parentElement ?? panic('box has no parent');
-                    isGroup(targetGroup) ?? panic('expected parent of box to be group');
+                    //const targetGroup = target.parentElement ?? panic('box has no parent');
+                    //isGroup(targetGroup) ?? panic('expected parent of box to be group');
                     // Issue: the box that got the click may be an alias for
                     //        our own box (because of multi tagging).
                     // - so what we really want to know is if we have a box in our group
                     //   that has the exact same location - in which case we will
                     //   proceed as if we are operating on that box.
 
-                    // const box:Element = Array.from(currentlySelectedGroup.querySelectorAll('svg.box:not(.ref)'))
-                    //     .filter(groupBox=>
-                    //         getIntAttribute(groupBox, 'x')===getIntAttribute(target, 'x') &&
-                    //         getIntAttribute(groupBox, 'y')===getIntAttribute(target, 'y') &&
-                    //         getIntAttribute(groupBox, 'w')===getIntAttribute(target, 'w') &&
-                    //         getIntAttribute(groupBox, 'h')===getIntAttribute(target, 'h'))
-                    // [0] ?? target;
+                    const updatedTarget:Element = Array.from(currentlySelectedGroup.querySelectorAll('svg.box:not(.ref)'))
+                        .filter(groupBox=>
+                            getIntAttribute(groupBox, 'x')===getIntAttribute(target, 'x') &&
+                            getIntAttribute(groupBox, 'y')===getIntAttribute(target, 'y') &&
+                            getIntAttribute(groupBox, 'width')===getIntAttribute(target, 'width') &&
+                            getIntAttribute(groupBox, 'height')===getIntAttribute(target, 'height'))
+                    [0] ?? target;
 
-                    
-
-                    
-                    
-                    migrateBoxToGroup(target, currentlySelectedGroup);
+                    // --- If target box is already in the selected group, then
+                    //     toggle the selection (ie. deselect it)
+                    const updatedTargetGroup = getGroupForBox(updatedTarget);
+                    if(updatedTargetGroup === currentlySelectedGroup) {
+                        console.info('TODO: REMOVE FROM GROUP', updatedTarget);
+                        // If box is no longer in any groups will also delete box.
+                        // - if was a ref box, goes back to being a ref box.
+                        // - if was hand drawn box, goes away.
+                        // - do the mult-select case (and rendering) first!
+                        removeBoxFromGroup(currentlySelectedGroup, updatedTarget);
+                    } else {
+                        copyBoxToGroup(currentlySelectedGroup, updatedTarget);
+                    }
                 }
             } else {
                 // --- Normal click on a non-ref box begins a new selection with just
                 //     this box (and the containing group in the group level selection).
-                selectBox(target);
+                selectBoxOrRotateSelectionIfAlreadySelectedMultiselect(target);
             }
             break;
         };
@@ -471,6 +485,7 @@ function selectGroup(group: Element) {
     clearSelection();
     group.classList.add('active');
     moveElementToEndOfParent(group);
+    updateMultiTaggingAnnotations(getScannedPageForElement(group));
 }
 
 /**
@@ -483,6 +498,39 @@ function selectBox(box: Element) {
     selectGroup(box.parentElement || panic());
     box.classList.add('active');
     moveElementToEndOfParent(box);
+    updateMultiTaggingAnnotations(getScannedPageForElement(box));
+}
+
+const idCollator = Intl.Collator('en');
+
+function selectBoxOrRotateSelectionIfAlreadySelectedMultiselect(box: Element) {
+    const group = getGroupForBox(box);
+    
+    // --- If the group this box is in is not already selected, do a normal selection
+    if(getSelectedGroup() !== group) {
+        selectBox(box);
+        return;
+    }
+
+    // --- If we are doing a second select on a selected multi-select box,
+    //     rotate to the next group that selected that box
+    if(isMultiSeletedBox(box)) {
+        const page = getScannedPageForElement(box);
+        const boxesInGroup =
+            Array.from(findBoxesWithSharedLocation(page).boxesWithSharedLocation.values())
+                .filter(v=>v.some(b=>b===box))[0]
+            ?.toSorted((a,b)=>idCollator.compare(a.id, b.id));
+
+        console.info('BOXES IN GROUP', boxesInGroup);
+        const currentBoxIndexInSelectionGroup = boxesInGroup.indexOf(box);
+        if(currentBoxIndexInSelectionGroup === -1)
+            throw new Error('unable to find expected box in multi select group');
+        const nextBoxToSelect = boxesInGroup[
+            (currentBoxIndexInSelectionGroup+1) % boxesInGroup.length];
+
+        console.info('Selecting next box in multi select group', nextBoxToSelect);
+        selectBox(nextBoxToSelect);
+    }
 }
 
 /**
@@ -512,6 +560,10 @@ function getBoxesForGroup(group: Element) {
     return Array.from(group.querySelectorAll('svg.box'));
 }
 
+function getGroupForBox(box: Element) {
+    return box.parentElement;
+}
+    
 function getSelectedBox() {
     return document.querySelector('svg.box.active');
 }
@@ -526,6 +578,10 @@ function isGroup(elem: Element): boolean {
 
 function isBox(elem: Element): boolean {
     return elem.classList.contains('box');
+}
+
+function isMultiSeletedBox(elem: Element): boolean {
+    return isBox(elem) && elem.classList.contains('multi');
 }
 
 function isRef(elem: Element): boolean {
@@ -578,6 +634,7 @@ function getContainingScaleFactor(e: Element): number {
 // --- Derived markup upkeep ----------------------------------------------
 // ------------------------------------------------------------------------
 
+
 /**
  * Updates a groups dimensions to contain all of the groups boxes +
  * a margin.
@@ -628,15 +685,8 @@ function updateGroupDimensions(group: Element) {
  */
 function updateMultiTaggingAnnotations(page: Element) {
 
-    // --- Partition bounding boxes by their complete coordinates
-    const boundingBoxes = page.querySelectorAll('svg.box:not(.ref)');
-    const groupedByLocation = Map.groupBy(
-        boundingBoxes,
-        box => `${getIntAttribute(box, 'x')}_${getIntAttribute(box, 'y')}_${getIntAttribute(box, 'w')}_${getIntAttribute(box, 'h')}`);
-    const boxesWithNonSharedLocation = Array.from(groupedByLocation.entries())
-        .filter(([id, boxes]) => boxes.length === 1).map(([id, boxes]) => boxes[0]);
-    const boxesWithSharedLocation = new Map(Array.from(groupedByLocation.entries())
-        .filter(([id, boxes]) => boxes.length > 1));
+    const {boxesWithSharedLocation, boxesWithNonSharedLocation} =
+        findBoxesWithSharedLocation(page);
 
     // --- If any non-shared boxes have multi-tags, remove the multi-tags.
     for(const nonSharedBox of boxesWithNonSharedLocation.values()) {
@@ -644,7 +694,9 @@ function updateMultiTaggingAnnotations(page: Element) {
     }
 
     // --- For shared boxes, update the 'multi' tags
-    for(const [locationSignature, boxes] of boxesWithSharedLocation.entries()) {
+    for(const [locationSignature, boxes] of
+        Array.from(boxesWithSharedLocation.entries()).toReversed()) {
+        console.info('Shared location group:', boxes);
         boxes.forEach((box, index) => {
             if(!box.classList.contains(`multi-${index}`)) {
                 removeMultiTag(box);
@@ -655,6 +707,29 @@ function updateMultiTaggingAnnotations(page: Element) {
     }
 }
 
+interface MultiBoxes {
+    boxesWithSharedLocation: Map<string, Element[]>;
+    boxesWithNonSharedLocation: Element[];
+}
+
+/**
+ *
+ */
+function findBoxesWithSharedLocation(page: Element): MultiBoxes {
+    
+    // --- Partition bounding boxes by their complete coordinates
+    const boundingBoxes = page.querySelectorAll('svg.box:not(.ref)');
+    const groupedByLocation = Map.groupBy(
+        boundingBoxes,
+        box => `${getIntAttribute(box, 'x')}_${getIntAttribute(box, 'y')}_${getIntAttribute(box, 'width')}_${getIntAttribute(box, 'height')}`);
+    const boxesWithNonSharedLocation = Array.from(groupedByLocation.entries())
+        .filter(([id, boxes]) => boxes.length === 1).map(([id, boxes]) => boxes[0]);
+    const boxesWithSharedLocation = new Map(Array.from(groupedByLocation.entries())
+        .filter(([id, boxes]) => boxes.length > 1));
+
+    return {boxesWithSharedLocation, boxesWithNonSharedLocation};
+}
+
 function removeMultiTag(box: Element) {
     if(box.classList.contains('multi')) {
         box.classList.remove('multi');
@@ -662,6 +737,12 @@ function removeMultiTag(box: Element) {
             Array.from(box.classList).filter(c=>c.startsWith('multi-'));
         multiTags.forEach(m=>box.classList.remove(m));
     }
+}
+
+function updateDerivedDom(refElem: Element) {
+    console.time('updateDerivedDom');
+    updateMultiTaggingAnnotations(getScannedPageForElement(refElem));
+    console.timeEnd('updateDerivedDom');
 }
 
 // ------------------------------------------------------------------------
@@ -707,18 +788,27 @@ function dragTxAbort() {
 // --- RPC -------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+// Note: these are not 'clean' RPCs, they are the end part of an action
+//       that may have already been done on the DOM (and therefore needs
+//       to be undone if the RPC fails).
+// TODO DOC BETTER, AND MAYBE MOVE CLOSER TO THE ACTIONS RATHER THAN IN
+//      AN 'RPC' section (the crime is not the mix of dom and RPC, it is
+//      factoring it out)
+
 /**
  *
  */
 function updateBoundingBoxShape(box: Element,
                                 x: number, y: number, w: number, h: number,
                                 onAbort: ()=>void) {
+    updateDerivedDom(box);
     (async ()=>{
         const box_id = getBoxId(box);
         try {
             await rpc`updateBoundingBoxShape(${box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
         } catch (e) {
             onAbort();
+            updateDerivedDom(box);
             alert(`Failed to resize bounding box ${e}`);
             throw e;
         }
@@ -731,6 +821,7 @@ function updateBoundingBoxShape(box: Element,
 function newBoundingBoxInNewGroup(group: Element, box: Element,
                                   x: number, y: number, w: number, h: number,
                                   onAbort: ()=>void) {
+    updateDerivedDom(box);
     (async() => {
         if(group.id)
             throw new Error('new group already has id');
@@ -753,6 +844,7 @@ function newBoundingBoxInNewGroup(group: Element, box: Element,
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
             onAbort();
+            updateDerivedDom(box);
             alert(`Failed to add new box in new group: ${e}`);
             throw e;
         }
@@ -765,6 +857,7 @@ function newBoundingBoxInNewGroup(group: Element, box: Element,
 function newBoundingBoxInExistingGroup(group: Element, box: Element,
                                        x: number, y: number, w: number, h: number,
                                        onAbort: ()=>void) {
+    updateDerivedDom(box);
     (async() => {
         if(!group.id)
             throw new Error('existing group is missing id');
@@ -782,6 +875,7 @@ function newBoundingBoxInExistingGroup(group: Element, box: Element,
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
             onAbort();
+            updateDerivedDom(box);
             alert(`Failed to add new box in existing group: ${e}`);
             throw e;
         }
@@ -803,7 +897,8 @@ function copyRefBoxToNewGroup(box: Element) {
     updateGroupDimensions(newGroup);
     getScannedPageForElement(box).appendChild(newGroup);
     selectBox(box);
-
+    updateDerivedDom(box);
+    
     (async() => {
         try {
             const refBoxId = getBoxId(box);
@@ -817,6 +912,8 @@ function copyRefBoxToNewGroup(box: Element) {
             newGroup.setAttribute('id', `bg_${response.bounding_group_id}`);
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
+            // TODO XXX insufficient rollback logic here
+            updateDerivedDom(box);
             alert(`Failed to add new group based on ref box: ${e}`);
             throw e;
         }
@@ -837,6 +934,7 @@ function copyRefBoxToExistingGroup(box: Element, group: Element) {
     box.classList.remove('ref');
     updateGroupDimensions(group);
     selectBox(box);
+    updateDerivedDom(box);
     
     (async() => {
         try {
@@ -846,17 +944,82 @@ function copyRefBoxToExistingGroup(box: Element, group: Element) {
                 throw new Error(`copy ref box to group rpc had malformed response`);
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
+            // TODO XXX insufficient rollback logic here
+            updateDerivedDom(box);
             alert(`Failed to add ref box to group: ${e}`);
             throw e;
         }
     })();
 }
 
+
 /**
- * If there is a currently selected group, add the specified
- * box to that group.
+ * Copy the specified non-ref box to another group
  *
- * TODO more work once we get layers working.
+ */
+function copyBoxToGroup(toGroup: Element, srcBox: Element) {
+    isBox(srcBox) && isGroup(toGroup) || panic();
+    isRefBox(srcBox) && panic("use copyRefBoxToGroup for ref boxes");
+    const srcGroup = srcBox.parentElement || panic();
+    isGroup(srcGroup) || panic();
+    
+    // TODO roll this back if RPC fails!
+    const newBox =
+        createNewBoundingBox(
+            getIntAttribute(srcBox, 'x'),
+            getIntAttribute(srcBox, 'y'),
+            getIntAttribute(srcBox, 'width'),
+            getIntAttribute(srcBox, 'height'));
+
+    toGroup.appendChild(newBox);
+
+    updateGroupDimensions(toGroup);
+    updateDerivedDom(newBox);
+
+    (async() => {
+        try {
+            const response = await rpc`copyBoxToExistingGroup(${getGroupId(toGroup)}, ${getBoxId(srcBox)})`;
+            console.info('copied box to group', response);
+            newBox.setAttribute('id', `bb_${response.bounding_box_id}`);
+        } catch (e) {
+            updateDerivedDom(srcBox);
+            alert(`Failed to copy box to group: ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ * Remove a box from a group (possibly also removing the group
+ * if it no longer has any boxes?)
+ *
+ * TODO: if was based on a ref box, we want the ref box to
+ *       be restored (for now user will have to do a page refresh) XXX
+ */
+function removeBoxFromGroup(group: Element, box: Element) {
+    isBox(box) && isGroup(group) || panic();
+    
+    // TODO roll this back if RPC fails!
+    group.removeChild(box);
+    updateGroupDimensions(group);
+    updateDerivedDom(group);
+
+    (async() => {
+        try {
+            const response = await rpc`removeBoxFromGroup(${getBoxId(box)})`;
+            console.info('removed box from group', response);
+            // TODO: consider also removing group based on return value?
+        } catch (e) {
+            alert(`Failed to remove box from group: ${e}`);
+            throw e;
+        }
+    })();
+}
+
+/**
+ * Migrate a (non-ref) box to a new group.
+ *
+ * We are not presently using this (removed from the UI)
  */
 function migrateBoxToGroup(box: Element, group: Element) {
     isBox(box) && isGroup(group) || panic();
@@ -873,11 +1036,14 @@ function migrateBoxToGroup(box: Element, group: Element) {
         updateGroupDimensions(fromGroup);
     }
 
+    updateDerivedDom(box);
+
     (async() => {
         try {
             const response = await rpc`migrateBoxToGroup(${getGroupId(group)}, ${getBoxId(box)})`;
             console.info('migrated box to group', response);
         } catch (e) {
+            updateDerivedDom(box);
             alert(`Failed to migrate box to group: ${e}`);
             throw e;
         }
@@ -885,7 +1051,7 @@ function migrateBoxToGroup(box: Element, group: Element) {
 }
 
 // -----------------------------------------------------------------------
-// --- Misc --------------------------------------------------------------
+// --- Misc Utils --------------------------------------------------------
 // -----------------------------------------------------------------------
 
 function safeParseInt(v: string) {

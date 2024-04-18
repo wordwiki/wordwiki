@@ -73,8 +73,16 @@ export function initial(size: number): string[] {
  *
  *
  */
-export function between(a_key: string, b_key: string): string {
+export function between(a_key?: string, b_key?: string): string {
 
+    if(a_key === undefined && b_key === undefined)
+        return new_range_start_string;
+    
+    if(a_key === undefined)
+        a_key = begin_string;
+    if(b_key === undefined)
+        b_key = end_string;
+    
     Big.strict = true;
     const a:any = new Big(a_key);
     const b:any = new Big(b_key);

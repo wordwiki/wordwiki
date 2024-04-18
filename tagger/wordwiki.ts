@@ -199,12 +199,11 @@ export class WordWiki {
     }
 
 
-    samplePage(query: Record<string, any>): any {
+    samplePage(query: {searchText?: string}): any {
 
         //console.info('ENTRIES', this.entriesJSON);
 
-        const search = String(query['searchText'] ?? '');
-
+        const search = String(query.searchText ?? '');
 
         console.info('SEARCH IS', search, 'QUERY IS', query);
 
@@ -217,8 +216,9 @@ export class WordWiki {
 
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
-        const pageBody = [
-            ['h2', {}, 'Query for ', search],
+        const title = ['Query for ', search];
+        const body = [
+            ['h2', {}, title],
 
             // --- Query form
             ['form', {name: 'search', method: 'get', action:'/wordwiki.samplePage(query)'},
@@ -239,53 +239,8 @@ export class WordWiki {
             ]
         ];
         
-        return templates.queryPageTemplate('Wordwiki', pageBody);
+        return templates.pageTemplate({title, body});
     }
-
-        
-    //     return (
-    //         ['html', {},
-
-    //          ['head', {},
-    //           ['meta', {charset:"utf-8"}],
-    //           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-    //           ['title', {}, 'Wordwiki'],
-    //           config.bootstrapCssLink,
-    //           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-    //           ['script', {}, block`
-    // /**/           let imports = {};
-    // /**/           let activeViews = undefined`],
-    //           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
-    //           ['script', {type: 'module'}, block`
-    // /**/           import * as workspace from '/scripts/tagger/workspace.js';
-    // /**/           import * as view from '/scripts/tagger/view.js';
-    // /**/
-    // /**/           imports = Object.assign(
-    // /**/                        {},
-    // /**/                        view.exportToBrowser(),
-    // /**/                        workspace.exportToBrowser());
-    // /**/
-    // /**/           activeViews = imports.activeViews;
-    // /**/
-    // /**/           document.addEventListener("DOMContentLoaded", (event) => {
-    // /**/             console.log("DOM fully loaded and parsed");
-    // /**/             view.run();
-    // /**/             //workspace.renderSample(document.getElementById('root'))
-    // /**/           });`
-    //           ]
-    //          ], // head
-             
-    //          ['body', {},
-
-
-    //           view.renderModalEditorSkeleton(),
-              
-    //           config.bootstrapScriptTag
-              
-    //          ] // body
-    //         ] // html
-    //     );
-    // }
 
     /**
      *

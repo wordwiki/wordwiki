@@ -466,8 +466,10 @@ export class VersionedDb {
     }
     
     applyProposedAssertion(assertion: Assertion): Assertion|undefined  {
+        // This is a bit problemattic - we can insert mulitple assertions at the
+        // same timestamp - but we are not doing that now so leave this XXX TODO
         if(assertion.valid_from <= this.mostRecentLocalTimestamp)
-            throw new Error('Attemp to assert into the past');
+            throw new Error('Attempt to assert into the past');
         if(assertion.valid_to !== assertion.valid_from &&
             assertion.valid_to !== timestamp.END_OF_TIME)
             throw new Error('New assertions must either be true to the end of time, or be deletion tombstones');
@@ -1026,6 +1028,10 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
     }
 }
 
+export function currentTuplesForVersionedRelation(relation: VersionedRelation): CurrentTupleQuery[] {
+    return Array.from(new CurrentRelationQuery(relation).tuples.values());
+}
+
 export function generateBeforeOrderKey(parent: VersionedRelation,
                                        refTupleId: number): string {
     const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
@@ -1036,10 +1042,11 @@ export function generateBeforeOrderKey(parent: VersionedRelation,
     for(let t of orderedTuplesById.values()) {
         if(t.src.id === refTupleId) {
             const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.begin_string;
-            return orderkey.between(
-                before_key,
-                refTuple.mostRecentTupleVersion?.assertion.order_key
-                    ?? panic('tuple is missing:: tuple_id is', refTupleId));
+            const after_key = refTuple.mostRecentTupleVersion?.assertion.order_key
+                ?? panic('tuple is missing:: tuple_id is', refTupleId);
+            const result_key = orderkey.between(before_key, after_key);
+            console.info('generateBeforeOrderKey', {before_key, after_key, result_key});
+            return result_key;
         }
         prev = t;
     }
@@ -1064,6 +1071,16 @@ export function generateAfterOrderKey(parent: VersionedRelation,
         prev = t;
     }
     throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key (2)`);
+}
+
+export function generateAtEndOrderKey(parent: VersionedRelation): string {
+    const childrenInOrder = Array.from(new CurrentRelationQuery(parent).tuples.values());
+    const lastExistingChild = childrenInOrder[childrenInOrder.length-1];
+    return lastExistingChild === undefined
+        ? orderkey.new_range_start_string
+        : orderkey.between(
+            lastExistingChild.mostRecentTupleVersion?.assertion?.order_key,
+            orderkey.end_string);
 }
 
 // /**

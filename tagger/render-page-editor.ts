@@ -9,6 +9,7 @@ import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
+import * as templates from './templates.ts';
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -56,75 +57,126 @@ export function renderPageEditor(page_id: number,
             map(([groupId, boxes])=>renderGroup(page, groupId, boxes, true));
     });
 
+    const title = 'Tagger'; // XXX fix
+    
+    const extraHead = [
+        ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],        ['script', {src:'/scripts/tagger/page-editor.js'}],
+        ['script', {}, block`
+/**/           let imports = {};
+/**/           let activeViews = undefined`],
 
-    return (
-        ['html', {},
-         ['head', {},
-          ['meta', {charset:"utf-8"}],
-          ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-          config.bootstrapCssLink,
-          ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-          //['script', {src:'/resources/page-editor.js'}]],
-          ['script', {src:'/scripts/tagger/page-editor.js'}],
-          
-          ['script', {}, block`
- /**/           let imports = {};
- /**/           let activeViews = undefined`],
-          //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
-          
- //          ['script', {type: 'module'}, block`
- // /**/           import * as workspace from '/scripts/tagger/workspace.js';
- // /**/           import * as view from '/scripts/tagger/view.js';
- // /**/
- // /**/           imports = Object.assign(
- // /**/                        {},
- // /**/                        view.exportToBrowser(),
- // /**/                        workspace.exportToBrowser());
- // /**/
- // /**/           activeViews = imports.activeViews();
- // /**/
- // /**/           document.addEventListener("DOMContentLoaded", (event) => {
- // /**/             console.log("DOM fully loaded and parsed");
- // /**/             view.run();
- // /**/             //workspace.renderSample(document.getElementById('root'))
- // /**/           });`
- //          ]
-         ], // head
-         
-         ['body', {},
+        ['script', {}, block`
+/**/        addEventListener("DOMContentLoaded", event => onContentLoaded());
+/**/        `]
+    ];
 
-          ['div', {},
-           ['h1', {}, 'PDM Textract preview page', page.page_number],
-           renderPageJumper(page.page_number, total_pages_in_document)],
+    const body = [
+        ['div', {},
+         ['h1', {}, 'PDM Textract preview page', page.page_number],
+         renderPageJumper(page.page_number, total_pages_in_document)],
           
-          ['div', {id: 'annotatedPage'},
-           //['img', {src:pageImageUrl, width:page.width, height:page.height}],
-           ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
-                    viewBox: `0 0 ${page.width} ${page.height}`,
-                    onmousedown: 'pageEditorMouseDown(event)',
-                    onmousemove: 'pageEditorMouseMove(event)',
-                    onmouseup: 'pageEditorMouseUp(event)',
-                    'data-layer-id': layer_id,
-                    'data-page-id': page_id,
-                    'data-scale-factor': scale_factor,
-                   },
-            ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
-            refBlocksSvg,
-            blocksSvg]],
+        ['div', {id: 'annotatedPage'},
+         //['img', {src:pageImageUrl, width:page.width, height:page.height}],
+         ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
+                  viewBox: `0 0 ${page.width} ${page.height}`,
+                  onmousedown: 'pageEditorMouseDown(event)',
+                  onmousemove: 'pageEditorMouseMove(event)',
+                  onmouseup: 'pageEditorMouseUp(event)',
+                  'data-layer-id': layer_id,
+                  'data-page-id': page_id,
+                  'data-scale-factor': scale_factor,
+                 },
+          ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
+          refBlocksSvg,
+          blocksSvg]],
+          
+        Array.from(boxesByGroup.keys()).map(bounding_group_id =>
+            ['p', {},
+             renderStandaloneGroup(bounding_group_id)]
+                                           ),
+          
+        config.bootstrapScriptTag,
+          
+    ]; // body
 
-          
-          Array.from(boxesByGroup.keys()).map(bounding_group_id =>
-              ['p', {},
-               renderStandaloneGroup(bounding_group_id)]
-              ),
-          
-          config.bootstrapScriptTag,
-          
-         ] // body,
-
-        ] // html
-    );
+    return templates.pageTemplate({title, extraHead, body});
 }
+
+    
+//     return (
+//         ['html', {},
+//          ['head', {},
+//           ['meta', {charset:"utf-8"}],
+//           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+//           config.bootstrapCssLink,
+//           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
+//           //['script', {src:'/resources/page-editor.js'}]],
+//           ['script', {src:'/scripts/tagger/page-editor.js'}],
+          
+//           ['script', {}, block`
+//  /**/           let imports = {};
+//  /**/           let activeViews = undefined`],
+//           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+          
+//  //          ['script', {type: 'module'}, block`
+//  // /**/           import * as workspace from '/scripts/tagger/workspace.js';
+//  // /**/           import * as view from '/scripts/tagger/view.js';
+//  // /**/
+//  // /**/           imports = Object.assign(
+//  // /**/                        {},
+//  // /**/                        view.exportToBrowser(),
+//  // /**/                        workspace.exportToBrowser());
+//  // /**/
+//  // /**/           activeViews = imports.activeViews();
+//  // /**/
+//  // /**/           document.addEventListener("DOMContentLoaded", (event) => {
+//  // /**/             console.log("DOM fully loaded and parsed");
+//  // /**/             view.run();
+//  // /**/             //workspace.renderSample(document.getElementById('root'))
+//  // /**/           });`
+//  //          ]
+//          ], // head
+
+
+//          ['script', {}, block`
+// /**/        addEventListener("DOMContentLoaded", event => onContentLoaded());
+// /**/        `
+// /**/     ],
+         
+//          ['body', {},
+
+//           ['div', {},
+//            ['h1', {}, 'PDM Textract preview page', page.page_number],
+//            renderPageJumper(page.page_number, total_pages_in_document)],
+          
+//           ['div', {id: 'annotatedPage'},
+//            //['img', {src:pageImageUrl, width:page.width, height:page.height}],
+//            ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
+//                     viewBox: `0 0 ${page.width} ${page.height}`,
+//                     onmousedown: 'pageEditorMouseDown(event)',
+//                     onmousemove: 'pageEditorMouseMove(event)',
+//                     onmouseup: 'pageEditorMouseUp(event)',
+//                     'data-layer-id': layer_id,
+//                     'data-page-id': page_id,
+//                     'data-scale-factor': scale_factor,
+//                    },
+//             ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
+//             refBlocksSvg,
+//             blocksSvg]],
+
+          
+//           Array.from(boxesByGroup.keys()).map(bounding_group_id =>
+//               ['p', {},
+//                renderStandaloneGroup(bounding_group_id)]
+//               ),
+          
+//           config.bootstrapScriptTag,
+          
+//          ] // body,
+
+//         ] // html
+//     );
+//}
 
 export function renderGroup(page: ScannedPage,
                             groupId: number, boxes: BoxGroupJoin[], refLayer: boolean=false): any {
@@ -210,6 +262,8 @@ export const routes = ()=> ({
     newBoundingBoxInExistingGroup,
     copyRefBoxToNewGroup,
     copyRefBoxToExistingGroup,
+    copyBoxToExistingGroup,
+    removeBoxFromGroup,
     migrateBoxToGroup,
 });
 
@@ -295,7 +349,7 @@ export function copyRefBoxToExistingGroup(bounding_group_id: number, ref_box_id:
     return db().transaction(()=>{
 
         if(typeof ref_box_id !== 'number')
-            throw new Error('invalid ref_box_id parameter in call to copyRefToNewGroup');
+            throw new Error('invalid ref_box_id parameter in call to copyRefBoxToExistingGroup');
 
         const group = selectBoundingGroup().required({bounding_group_id});
         console.info('target group layer id is', group.layer_id);
@@ -310,6 +364,46 @@ export function copyRefBoxToExistingGroup(bounding_group_id: number, ref_box_id:
                 x: refBox.x, y: refBox.y, w: refBox.w, h: refBox.h}, 'bounding_box_id');
 
         return {bounding_box_id};
+    });
+}
+
+export function copyBoxToExistingGroup(target_bounding_group_id: number, src_box_id: number): {bounding_box_id: number} {
+    return db().transaction(()=>{
+
+        if(typeof src_box_id !== 'number')
+            throw new Error('invalid src_box_id parameter in call to copyBoxToExistingGroup');
+
+        // const group = selectBoundingGroup().required({bounding_group_id: target});
+        // console.info('target group layer id is', group.layer_id);
+        const srcBox = selectBoundingBox().required({bounding_box_id: src_box_id});
+
+        const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
+            'bounding_box', {
+                imported_from_bounding_box_id: srcBox.bounding_box_id,
+                bounding_group_id: target_bounding_group_id,
+                document_id: srcBox.document_id,
+                layer_id: srcBox.layer_id,
+                page_id: srcBox.page_id,
+                x: srcBox.x,
+                y: srcBox.y,
+                w: srcBox.w,
+                h: srcBox.h}, 'bounding_box_id');
+
+        return {bounding_box_id};
+    });
+}
+
+export function removeBoxFromGroup(bounding_box_id: number) {
+    return db().transaction(()=>{
+
+        if(typeof bounding_box_id !== 'number')
+            throw new Error('invalid box_id parameter in call to removeBoxFromGroup');
+
+        // Consider removing empty groups as well (but need to figure out how
+        // our binding onto dict stuff works first).
+        
+        db().execute('DELETE FROM bounding_box WHERE bounding_box_id=:bounding_box_id',
+                     {bounding_box_id});
     });
 }
 

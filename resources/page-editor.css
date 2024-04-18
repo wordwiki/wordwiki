@@ -66,10 +66,15 @@ svg.box.ref > rect.frame {
   stroke:grey;
 }
 
+
 svg.group.active > svg.box > rect.frame {
   stroke-width:6;
   /*stroke:green;*/
   visibility: visible;
+}
+
+svg.group:not(.active) > svg.box.multi > rect.frame {
+  stroke: red;
 }
 
 #annotatedPage:not(.drag-in-progress) svg.group:not(.active):has(> .box:hover) > svg.box > rect.frame {

@@ -2,14 +2,20 @@ import * as config from './config.ts';
 import {block} from "../utils/strings.ts";
 import * as view from './view.ts';
 
-export function queryPageTemplate(title: any, body: any): any {
+export interface PageContent {
+    title?: any;
+    extraHead?: any;
+    body?: any;
+}
+
+export function pageTemplate(content: PageContent): any {
     return (
         ['html', {},
 
          ['head', {},
           ['meta', {charset:"utf-8"}],
           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-          title !== undefined ? ['title', {}, title] : undefined,
+          content.title !== undefined ? ['title', {}, content.title] : undefined,
           config.bootstrapCssLink,
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
@@ -32,12 +38,13 @@ export function queryPageTemplate(title: any, body: any): any {
 /**/             view.run();
 /**/             //workspace.renderSample(document.getElementById('root'))
 /**/           });`
-          ]
+          ],
+          content.extraHead,
          ], // head
 
          ['body', {},
 
-          body,
+          content.body,
 
           view.renderModalEditorSkeleton(),
 

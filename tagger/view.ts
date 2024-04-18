@@ -3,7 +3,7 @@
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, VariantField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
-import {Assertion, getAssertionPath, getAssertionPathFields} from './schema.ts';
+import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
 import {Markup} from '../utils/markup.ts';
 import {VersionedDb, CurrentTupleQuery, CurrentRelationQuery, TupleVersion, generateBeforeOrderKey, generateAfterOrderKey} from './workspace.ts';
@@ -422,6 +422,7 @@ export class ActiveViews {
 
     editNewLastChild(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number, child_tag: string) {
         this.editNewChild(renderRootId, db_tag, tuple_tag, tuple_id, 'lastChild', child_tag);
+        
     }
 
     editNewPeer(renderRootId: string,
@@ -437,7 +438,7 @@ export class ActiveViews {
             ?? panic('cannot use ref tuple', refTupleId);
         const newTupleSchema = refTuple.schema;
         
-        const mostRecentTupleVersion = refTuple.mostRecentTuple;
+        //const mostRecentTupleVersion = refTuple.mostRecentTuple;
         const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
         //const activeView = this.activeViews.get(renderRootId)
@@ -454,7 +455,7 @@ export class ActiveViews {
             {
                 ty: refAssertion.ty,
                 assertion_id: id,
-                valid_from: BEGINNING_OF_TIME,
+                valid_from: BEGINNING_OF_TIME,  // This is wrong - but it is overridden
                 valid_to: END_OF_TIME,
                 [`id${newTupleSchema.ancestorRelations.length}`]: id,
                 id: id,
@@ -480,43 +481,29 @@ export class ActiveViews {
         const parentRelation = parentTuple.childRelations[childTag]
             ?? panic('cannot find child relation for edit', childTag);
 
-        
-        
+        // ---
+        const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
+        // --- Position is tricky
+        const order_key = workspace.generateAtEndOrderKey(parentRelation);
 
-        
-        // const refAssertion = refTuple.mostRecentTuple?.assertion
-        //     ?? panic('cannot use ref tuple', refTupleId);
-        // const newTupleSchema = refTuple.schema;
-        
-        // const mostRecentTupleVersion = refTuple.mostRecentTuple;
-        // const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        // --- Make new child assertion
+        // TODO make this new assertion making less raw.
+        const newAssertion: Assertion = Object.assign(
+            {},
+            assertionPathToFields([...getAssertionPath(parentTuple.currentAssertion??panic()), [childTag, id]]),
+            {
+                ty: childTag,
+                assertion_id: id,
+                valid_from: BEGINNING_OF_TIME,  // This is wrong - but it is overridden
+                valid_to: END_OF_TIME,
+                id: id,
+                order_key,
+            });
 
-        // //const activeView = this.activeViews.get(renderRootId)
-        // const parent = this.workspace.getVersionedTupleParentRelation(
-        //     getAssertionPath(refTuple.mostRecentTuple.assertion));
-        // const order_key = refKind === 'before'
-        //     ? generateBeforeOrderKey(parent, refTupleId)
-        //     : generateAfterOrderKey(parent, refTupleId);
+        console.info('NEW assertion', newAssertion);
         
-        // // TODO make this new assertion making less raw.
-        // const newAssertion: Assertion = Object.assign(
-        //     {},
-        //     getAssertionPathFields(refAssertion),
-        //     {
-        //         ty: refAssertion.ty,
-        //         assertion_id: id,
-        //         valid_from: BEGINNING_OF_TIME,
-        //         valid_to: END_OF_TIME,
-        //         [`id${newTupleSchema.ancestorRelations.length}`]: id,
-        //         id: id,
-        //         order_key,
-        //     });
-
-        // console.info('REF assertion', refAssertion);
-        // console.info('NEW assertion', newAssertion);
-        
-        // this.openFieldEdit(renderRootId, refKind, refDbTag, refTupleTag, refTupleId, newAssertion);
+        this.openFieldEdit(renderRootId, refKind, refDbTag, refTupleTag, refTupleId, newAssertion);
     }
 
     editNew(renderRootId: string,
@@ -546,50 +533,98 @@ export class ActiveViews {
                            new_assertion);
     }
 
-    editTupleUpdateOFF(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+    // editTupleUpdateOFF(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+
+    //     // --- Find the reference tuple
+    //     const refTuple = this.workspace.getVersionedTupleById(
+    //         refDbTag, refTupleTag, refTupleId)
+    //         ?? panic('cannot find ref tuple for edit', refTupleId);
+
+    //     // NEXT populate assertion better!
+    //     // CReating the assertion is a job for the global workspace.
+    //     // USING TUPLE FOR THIS - this needs to factor
+    //     const mostRecentTupleVersion = refTuple.mostRecentTuple;
+    //     // const new_assertion: Assertion = Object.assign(
+    //     //     {},
+    //     //     mostRecentTupleVersion.assertion);
+    //     let new_assertion_: Record<string, any> = {};
+    //     for(const k in mostRecentTupleVersion.assertion) {
+    //         new_assertion_[k] = (mostRecentTupleVersion.assertion as any)[k];
+    //     }
+    //     const new_assertion: Assertion = new_assertion_ as Assertion;
+    //     console.info('new_assertion["undefined"]', (new_assertion as any)['undefined']);
+    //     for(const k in new_assertion) {
+    //         console.info('k', k);
+    //     }
+    //     delete (new_assertion as any)['undefined'];
+    //         // TODO: change_by fields clear, from/to
+    //     //{assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
+    //     console.info('mostRecentTupleVersion.assertion', mostRecentTupleVersion.assertion);
+    //     console.info('CAT NEW Assertion A', new_assertion);
+    //     new_assertion.assertion_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+    //     console.info('CAT NEW Assertion B', new_assertion);
+
+    //     for(const k in new_assertion) {
+    //         console.info('k', k);
+    //     }
+        
+    //     // const new_assertion2: Assertion = Object.assign(
+    //     //     {},
+    //     //     mostRecentTupleVersion.assertion,
+    //     //     // TODO: change_by fields clear, from/to
+    //     //     {assertion_id3: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
+    //     // console.info('CAT NEW Assertion 2', new_assertion2);
+
+    //     this.openFieldEdit(renderRootId, 'replaceSelf', refDbTag, refTupleTag, refTupleId,
+    //                        new_assertion);
+    // }
+
+    moveUp(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+        console.info('--- Move up', renderRootId, refTupleId);
 
         // --- Find the reference tuple
         const refTuple = this.workspace.getVersionedTupleById(
             refDbTag, refTupleTag, refTupleId)
             ?? panic('cannot find ref tuple for edit', refTupleId);
 
-        // NEXT populate assertion better!
-        // CReating the assertion is a job for the global workspace.
-        // USING TUPLE FOR THIS - this needs to factor
-        const mostRecentTupleVersion = refTuple.mostRecentTuple;
-        // const new_assertion: Assertion = Object.assign(
-        //     {},
-        //     mostRecentTupleVersion.assertion);
-        let new_assertion_: Record<string, any> = {};
-        for(const k in mostRecentTupleVersion.assertion) {
-            new_assertion_[k] = (mostRecentTupleVersion.assertion as any)[k];
-        }
-        const new_assertion: Assertion = new_assertion_ as Assertion;
-        console.info('new_assertion["undefined"]', (new_assertion as any)['undefined']);
-        for(const k in new_assertion) {
-            console.info('k', k);
-        }
-        delete (new_assertion as any)['undefined'];
-            // TODO: change_by fields clear, from/to
-        //{assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
-        console.info('mostRecentTupleVersion.assertion', mostRecentTupleVersion.assertion);
-        console.info('CAT NEW Assertion A', new_assertion);
-        new_assertion.assertion_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        console.info('CAT NEW Assertion B', new_assertion);
+        console.info('FOUND THE TUPLE TO MOVE UP! SOOO HAPPY', refTuple);
 
-        for(const k in new_assertion) {
-            console.info('k', k);
-        }
+        // --- Find the parent of the reference tuple
+        const parentTuple = this.workspace.getVersionedTupleByPath(
+            parentAssertionPath(getAssertionPath(refTuple.currentAssertion ??
+                panic("can't move up tuple with no parent"))));
+
+        console.info('FOUND THE PARENT OF tHE TUPLE TO MOVE UP! SOOO HAPPY', parentTuple);
+        const parentRelation = parentTuple.childRelations[refTupleTag]
+            ?? panic("failed to find parent relation for move up");
+
+        // --- 
+
+
         
-        // const new_assertion2: Assertion = Object.assign(
-        //     {},
-        //     mostRecentTupleVersion.assertion,
-        //     // TODO: change_by fields clear, from/to
-        //     {assertion_id3: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
-        // console.info('CAT NEW Assertion 2', new_assertion2);
+        // --- If this tuple is already the first tuple in its parent, nothing to do
+        const updatedOrderKey = workspace.generateBeforeOrderKey(
+            parentRelation, refTuple.id);
 
-        this.openFieldEdit(renderRootId, 'replaceSelf', refDbTag, refTupleTag, refTupleId,
-                           new_assertion);
+        console.info('updatedOrderKey is', updatedOrderKey);
+
+        const newAssertion: Assertion = Object.assign(
+            {},
+            refTuple.currentAssertion,
+            {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+             valid_from: this.workspace.nextTime(),
+             valid_to: timestamp.END_OF_TIME,
+             order_key: updatedOrderKey
+            }
+        );
+        
+        this.workspace.applyProposedAssertion(newAssertion);
+
+        this.rerenderViewById(renderRootId);
+    }
+
+    moveDown(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+        console.info('--- Move down', renderRootId, refTupleId);
     }
     
     /**
@@ -967,7 +1002,7 @@ export class Renderer {
              ['th', {}, ''],
              ['td', {colspan: view.userScalarViews.length+this.uiColCount},
               ['button', {type:'button', class:'btn btn-primary',
-                          onclick:'activeViews().endFieldEdit()'}, 'Save'],
+                          onclick:'activeViews().endFieldEdit()'}, 'Update'],
              ],
 
              // TODO: add history when under edit.  Not so simple because need
@@ -1015,9 +1050,10 @@ export class Renderer {
              ['ul', {class:'dropdown-menu'},
               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
               isLeaf && [
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Up']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Move Down']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#',
+                                    onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
                   insertChildMenuItems,
                   ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
@@ -1126,7 +1162,7 @@ export function renderModalEditorSkeleton() {
            
            ['div', {class:'modal-header'},
             ['h1', {class:'modal-title fs-5', id:'modalEditorLabel'},
-             'Modal title'],
+             'Edit Entry'], // XXX don't want 'Entry' embeddedd here
             ['button', {type:'button', class:'btn-close', 'data-bs-dismiss':'modal',
                         'aria-label':'Close'}]
            
