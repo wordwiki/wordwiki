@@ -44,6 +44,9 @@ export interface FieldVisitorI<A,R> {
     visitFloatField(f: FloatField, a: A): R;
     visitStringField(f: StringField, a: A): R;
     visitVariantField(f: VariantField, a: A): R;
+    visitBlobField(f: BlobField, v: A): R;
+    visitAudioField(f: AudioField, v: A): R;
+    visitImageField(f: ImageField, v: A): R;
     visitIdField(f: IdField, a: A): R;
     visitPrimaryKeyField(f: PrimaryKeyField, a: A): R;
     visitRelationField(f: RelationField, a: A): R;
@@ -60,6 +63,9 @@ export class DataVisitor implements FieldVisitorI<any,void> {
     visitFloatField(f: FloatField, v: any) { this.visitField(f, v); }
     visitStringField(f: StringField, v: any) { this.visitField(f, v); }
     visitVariantField(f: VariantField, v: any) { this.visitField(f, v); }
+    visitBlobField(f: BlobField, v: any) { this.visitField(f, v); }
+    visitAudioField(f: AudioField, v: any) { this.visitBlobField(f, v); }
+    visitImageField(f: ImageField, v: any) { this.visitBlobField(f, v); }
     visitIdField(f: IdField, v: any) { this.visitField(f, v); }
     visitPrimaryKeyField(f: PrimaryKeyField, v: any) { this.visitField(f, v); }
     visitRelationField(relationField: RelationField, v: any) {
@@ -388,6 +394,73 @@ export class VariantField extends StringField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
         return new VariantField(name, $bind, !!$optional);
+    }
+}
+
+/**
+ * Blob Field
+ *
+ * (Binary large object)
+ */
+export class BlobField extends StringField {
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, StringFormat.Text, style);
+    }
+
+    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitBlobField(this, a); }
+    
+    jsTypename(): string { return 'string'; }
+    schemaTypename(): string { return 'blob'; }
+    sqlTypename(): string { return 'TEXT'; }
+
+    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BlobField {
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'blob');
+        return new BlobField(name, $bind, !!$optional);
+    }
+}
+
+/**
+ * Audio Field
+ *
+ */
+export class AudioField extends BlobField {
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, style);
+    }
+
+    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitAudioField(this, a); }
+    
+    jsTypename(): string { return 'string'; }
+    schemaTypename(): string { return 'audio'; }
+    sqlTypename(): string { return 'TEXT'; }
+
+    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): AudioField {
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'audio');
+        return new AudioField(name, $bind, !!$optional);
+    }
+}
+
+/**
+ * Image Field
+ *
+ */
+export class ImageField extends BlobField {
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, style);
+    }
+
+    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitImageField(this, a); }
+    
+    jsTypename(): string { return 'string'; }
+    schemaTypename(): string { return 'image'; }
+    sqlTypename(): string { return 'TEXT'; }
+
+    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): ImageField {
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'image');
+        return new ImageField(name, $bind, !!$optional);
     }
 }
 
@@ -747,6 +820,12 @@ export function parse_field(locus: string, name: string, schema: any): Field {
             return StringField.parseSchemaFromCompactJson(locus, name, schema);
         case 'variant':
             return VariantField.parseSchemaFromCompactJson(locus, name, schema);
+        case 'blob':
+            return BlobField.parseSchemaFromCompactJson(locus, name, schema);
+        case 'audio':
+            return AudioField.parseSchemaFromCompactJson(locus, name, schema);
+        case 'image':
+            return ImageField.parseSchemaFromCompactJson(locus, name, schema);
         case 'integer':
             return IntegerField.parseSchemaFromCompactJson(locus, name, schema);
         case 'float':

@@ -13,22 +13,31 @@ import {getImageSize} from "./get-image-size.ts";
 /**
  * Create a new scanned document based on the supplied fields and importing
  * the specified page files.
+ *
+ * We have some documents that require different rotation for alternating
+ * pages, thus the rotationFn.
  */
-export async function importScannedDocument(fields: ScannedDocumentOpt, pageFiles: string[]) {
+export async function importScannedDocument(fields: ScannedDocumentOpt,
+                                            pageFiles: string[],
+                                            rotationFn: (pageNum: number)=>number|undefined = (x: number)=>undefined) {
     const document_id = db().insert<ScannedDocumentOpt, 'document_id'>(
         'scanned_document', fields, 'document_id');
     console.info('document_id is', document_id);
     console.info(selectScannedDocument().required({document_id}));
     for(let page_number=1; page_number<pageFiles.length+1; page_number++)
         await importScannedPage(document_id, unwrap(fields.friendly_document_id),
-                                page_number, pageFiles[page_number-1]);
+                                page_number, pageFiles[page_number-1], rotationFn);
 }
 
 /**
  * Import a scanned page into the content store (converting image to jpg etc).
  * (details of image conversion should be configurable)
  */
-async function importScannedPage(document_id: number, friendly_document_id: string, page_number: number, import_path: string): Promise<number> {
+async function importScannedPage(document_id: number,
+                                 friendly_document_id: string,
+                                 page_number: number,
+                                 import_path: string,
+                                 rotationFn: (pageNum: number)=>number|undefined = (x: number)=>undefined): Promise<number> {
 
     const sourceImagePath = `imports/${friendly_document_id}/${import_path}`;
     if(!await fileExists(sourceImagePath))
@@ -36,9 +45,12 @@ async function importScannedPage(document_id: number, friendly_document_id: stri
     //console.info('source image path is', sourceImagePath);
 
     const pageImagesRoot = `content/${friendly_document_id}`;
+    const rotation = rotationFn(page_number);
+    console.info('rotation for page', page_number, 'is', rotation);
     const image_ref = 'content/'+
             await content.getDerived(pageImagesRoot, {importPageImage},
-                                     ['importPageImage', sourceImagePath], 'jpg');
+                                     ['importPageImage', sourceImagePath,
+                                      rotation], 'jpg');
     const {width, height} = await getImageSize(image_ref);
     const pageId = db().insert<ScannedPage, 'page_id'>(
         'scanned_page', {document_id, page_number, import_path,
@@ -54,7 +66,7 @@ async function importScannedPage(document_id: number, friendly_document_id: stri
  * (things like quality should be in the parameter list, and thereby in the
  * content store closure)
  */
-async function importPageImage(targetImagePath: string, sourceImagePath: string) {
+async function importPageImage(targetImagePath: string, sourceImagePath: string, rotation?: number) {
     //const sourceImagePath = contentRoot+'/'+sourceImageRef;
     if(!await fileExists(sourceImagePath))
         throw new Error(`expected source image ${sourceImagePath} to exist`);
@@ -65,6 +77,7 @@ async function importPageImage(targetImagePath: string, sourceImagePath: string)
             args: [
                 sourceImagePath,
                 "-quality", String(quality),
+                ...(rotation ? ["-rotate", String(rotation)]:[]),
                 targetImagePath
             ],
         }).output();

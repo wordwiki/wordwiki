@@ -97,6 +97,14 @@ export const dictSchemaJson = {
 
                 // Variant needs support for saying things like 'mm/sf' - meaning usable
                 // for smith francis, but not ideal.  Easy enough.
+                example_recording: {
+                    $type: 'relation',
+                    $tag: 'er',
+                    recording_id: {$type: 'primary_key'},
+                    recording: {$type: 'audio', $bind: 'attr1'},
+                    speaker: {$type: 'string', $bind: 'attr2'},
+                    variant: {$type: 'variant'}
+                },
             },
 
             // recording: {
@@ -172,7 +180,15 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'}
             },
         },
-    }
+    },
+    recording: {
+        $type: 'relation',
+        $tag: 'lr',
+        recording_id: {$type: 'primary_key'},
+        recording: {$type: 'audio', $bind: 'attr1'},
+        speaker: {$type: 'string', $bind: 'attr2'},
+        variant: {$type: 'variant'}
+    },
 };
 
 // interface Dictionary extends TupleVersionT {
@@ -182,6 +198,7 @@ export interface Entry {
     entry_id: number,
     spelling: Spelling[],
     subentry: Subentry[],
+    recording: Recording[],
 }
 
 export interface Spelling {
@@ -220,6 +237,7 @@ export interface Example {
     example_id: number,
     translation: string,
     example_text: ExampleText[],
+    example_recording: ExampleRecording[],
 }
 
 export interface ExampleText {
@@ -228,7 +246,7 @@ export interface ExampleText {
     variant: string,
 }
 
-export interface Recording {
+export interface ExampleRecording {
     recording_id: number,
     speaker: string,
     recording: string,
@@ -290,6 +308,12 @@ export interface SupportingEvidence {
     variant: string,
 }
 
+export interface Recording {
+    recording_id: number,
+    speaker: string,
+    recording: string,
+    variant: string,
+}
 
 /**
  *

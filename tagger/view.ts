@@ -2,7 +2,8 @@
 
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
-        StringField, VariantField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
+        StringField, VariantField, BlobField, AudioField, ImageField,
+        IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
 import {Markup} from '../utils/markup.ts';
@@ -134,6 +135,33 @@ export class VariantView extends StringView {
 /**
  *
  */
+export class BlobView extends StringView {
+    declare field: BlobField;
+    constructor(field: BlobField) { super(field); }
+    accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBlobView(this, a); }
+}
+
+/**
+ *
+ */
+export class AudioView extends StringView {
+    declare field: AudioField;
+    constructor(field: AudioField) { super(field); }
+    accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitAudioView(this, a); }
+}
+
+/**
+ *
+ */
+export class ImageView extends StringView {
+    declare field: ImageField;
+    constructor(field: ImageField) { super(field); }
+    accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitImageView(this, a); }
+}
+
+/**
+ *
+ */
 export class IdView extends ScalarView {
     declare field: IdField;
     constructor(field: IdField) { super(field); }
@@ -252,6 +280,9 @@ export interface ViewVisitorI<A,R> {
     visitFloatView(f: FloatView, a: A): R;
     visitStringView(f: StringView, a: A): R;
     visitVariantView(f: VariantView, a: A): R;
+    visitBlobView(f: BlobView, a: A): R;
+    visitAudioView(f: AudioView, a: A): R;
+    visitImageView(f: ImageView, a: A): R;
     visitIdView(f: IdView, a: A): R;
     visitPrimaryKeyView(f: PrimaryKeyView, a: A): R;
     visitRelationView(f: RelationView, a: A): R;
@@ -286,6 +317,18 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
     }
 
     visitVariantView(f: VariantView, v: any): Markup {
+        return this.visitView(f, v);
+    }
+
+    visitBlobView(f: BlobView, v: any): Markup {
+        return this.visitView(f, v);
+    }
+
+    visitAudioView(f: AudioView, v: any): Markup {
+        return this.visitView(f, v);
+    }
+
+    visitImageView(f: ImageView, v: any): Markup {
         return this.visitView(f, v);
     }
     
@@ -1072,6 +1115,9 @@ export class FieldToView implements FieldVisitorI<any,View> {
     visitFloatField(f: FloatField, v: any): View { return new FloatView(f); }
     visitStringField(f: StringField, v: any): View { return new StringView(f); }
     visitVariantField(f: VariantField, v: any): View { return new VariantView(f); }
+    visitBlobField(f: BlobField, v: any): View { return new BlobView(f); }
+    visitAudioField(f: AudioField, v: any): View { return new AudioView(f); }
+    visitImageField(f: ImageField, v: any): View { return new ImageView(f); }
     visitIdField(f: IdField, v: any): View { return new IdView(f); }
     visitPrimaryKeyField(f: PrimaryKeyField, v: any): View { return new PrimaryKeyView(f); }
     visitRelationField(f: RelationField, v: any): View {

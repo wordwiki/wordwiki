@@ -31,6 +31,9 @@ async function importPDM() {
 
 /**
  * Custom importer for the Rand dictionary.
+ *
+ * Even pages (after stripping bogus lead page) need 270 degree rotation.
+ * Odd paged need 90 degree rotation.
  */
 async function importRand() {
     const friendly_document_id = 'Rand'
@@ -39,14 +42,15 @@ async function importRand() {
         filter(f=>f.isFile).
         map(f=>f.name).
         filter(f=>/^dictionaryoflang00rand_0_orig_[0-9][0-9][0-9][0-9][.]jp2$/.test(f)).
-        toSorted();
+        toSorted().
+        slice(1);  // Drop test page at the beginning.
 
     console.info('Rand page files', pageFiles);
     
     await importScannedDocument({
         friendly_document_id,
         title: 'Dictionary of the language of the Micmac Indians : who reside in Nova Scotia, New Brunswick, Prince Edward Island, Cape Breton and Newfoundland',
-    }, pageFiles);
+    }, pageFiles, pageNum=>pageNum%2 ? 90 : 270);
 }
 
 /**
