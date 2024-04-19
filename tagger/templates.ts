@@ -4,7 +4,7 @@ import * as view from './view.ts';
 
 export interface PageContent {
     title?: any;
-    extraHead?: any;
+    head?: any;
     body?: any;
 }
 
@@ -39,7 +39,7 @@ export function pageTemplate(content: PageContent): any {
 /**/             //workspace.renderSample(document.getElementById('root'))
 /**/           });`
           ],
-          content.extraHead,
+          content.head,
          ], // head
 
          ['body', {},

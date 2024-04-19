@@ -2,6 +2,7 @@ import * as pageEditor from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import { selectLayer, selectLayerByLayerName } from "./schema.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, selectBoundingBoxesForGroup, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
+import * as schema from './schema.ts';
 import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
@@ -59,7 +60,7 @@ export function renderPageEditor(page_id: number,
 
     const title = 'Tagger'; // XXX fix
     
-    const extraHead = [
+    const head = [
         ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],        ['script', {src:'/scripts/tagger/page-editor.js'}],
         ['script', {}, block`
 /**/           let imports = {};
@@ -74,7 +75,11 @@ export function renderPageEditor(page_id: number,
         ['div', {},
          ['h1', {}, 'PDM Textract preview page', page.page_number],
          renderPageJumper(page.page_number, total_pages_in_document)],
-          
+        
+        reference_layer_ids.length === 1
+            ? renderTextSearchForm(reference_layer_ids[0])
+            : [],
+        
         ['div', {id: 'annotatedPage'},
          //['img', {src:pageImageUrl, width:page.width, height:page.height}],
          ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
@@ -99,7 +104,7 @@ export function renderPageEditor(page_id: number,
           
     ]; // body
 
-    return templates.pageTemplate({title, extraHead, body});
+    return templates.pageTemplate({title, head, body});
 }
 
     
@@ -265,6 +270,7 @@ export const routes = ()=> ({
     copyBoxToExistingGroup,
     removeBoxFromGroup,
     migrateBoxToGroup,
+    renderTextSearchResults,
 });
 
 export function updateBoundingBoxShape(bounding_box_id: number, shape: Shape) {
@@ -425,18 +431,82 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
 /**
  *
  */
+export function renderTextSearchForm(layer_id: number, searchText: string=''): any {
+    return [
+        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, query.searchText)`},
+         ['label', {class:'sr-only', for:'searchText'}, 'Search'],
+         ['input', {type:'text', class:'form-control mb-2 mr-sm-2',
+                    id:'searchText', name:'searchText', placeholder:'Search',
+                    value:searchText}],
+         ['button', {type:'submit', class:'btn btn-primary mb-2'}, 'Search'],
+        ] // form
+    ];
+}
+
+/**
+ *
+ */
+export function renderTextSearchResults(layer_id: number, searchText?: string) {
+    searchText = searchText ?? '';
+    
+    const layer = schema.selectLayer().required({layer_id});
+    const document = schema.selectScannedDocument().required(
+        {document_id: layer.document_id});
+
+    const title = `Search for '${searchText}' in layer ${layer.layer_name} of ${document.title}`;
+    const head = [
+        ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}]];
+    
+    let renderedResults: any = undefined;
+    if(searchText.length < 2) {
+        renderedResults = ['p', {}, 'Search string must be at least 2 characters long'];
+    } else {
+        const results = db().all<any, {searchText:string, layer_id: number}>(`SELECT * FROM bounding_box_fts WHERE text MATCH :searchText AND layer_id = :layer_id ORDER BY rank LIMIT 500`, {searchText, layer_id});
+
+        if(results.length === 0) {
+            renderedResults = ['p', {}, `No results found for search '${searchText}'`];
+        } else {
+            renderedResults =
+                ['code', {}, JSON.stringify(results, undefined, 2)];
+            renderedResults =
+                ['ul', {}, 
+                 results.map(({bounding_box_id, text})=>
+                     ['li', {}, text, ['br', {}],
+                      renderStandaloneBoxes([
+                          selectBoundingBox().required({bounding_box_id})])])
+                ]; // ul
+        }
+    }
+
+    const body= [
+        ['h2', {}, title],
+        renderTextSearchForm(layer_id, searchText??''),
+        renderedResults,
+    ];
+        
+    return templates.pageTemplate({title, head, body});
+}
+
+/**
+ *
+ */
 export function renderStandaloneGroup(bounding_group_id: number,
                                       scale_factor:number=4,
                                       box_stroke:string = 'green'): any {
-
-    console.info('RENDERING STANDALONE GROUP', bounding_group_id);
-    
-    // --- Find boxes for group
     const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+    return renderStandaloneBoxes(boxes, scale_factor, box_stroke);
+}
+
+/**
+ *
+ */
+export function renderStandaloneBoxes(boxes: BoundingBox[],
+                                      scale_factor:number=4,
+                                      box_stroke:string = 'green'): any {
 
     // --- If no boxes in group, render as empty.
     if(boxes.length === 0) {
-        console.info('STANDALONE GROUP IS EMPTY');
+        //console.info('STANDALONE GROUP IS EMPTY');
         return ['div', {}, 'Empty Group'];
     }
     
@@ -445,7 +515,7 @@ export function renderStandaloneGroup(bounding_group_id: number,
     boxes.forEach(b=>b.page_id === page_id
         || utils.panic('all boxes in a group must be on a single page'));
 
-    // --- Load page
+    // --- Load page TODO FACTOR THIS OUT OF HERE (repeated loads of page are boring)
     const page = selectScannedPage().required({page_id});
 
     // --- Group frame contains all boxes + a margin
@@ -457,10 +527,10 @@ export function renderStandaloneGroup(bounding_group_id: number,
     const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, page.height);
     const groupWidth = groupRight-groupX;
     const groupHeight = groupBottom-groupY;
-    console.info({groupX, groupY, groupRight, groupBottom, groupWidth, groupHeight});
+    //console.info({groupX, groupY, groupRight, groupBottom, groupWidth, groupHeight});
 
     const groupSvg =
-        ['svg', {class:`group`, id:`bg_${bounding_group_id}`, stroke: box_stroke},
+        ['svg', {class:`group`, stroke: box_stroke},
          ['rect', {class:"group-frame", x:groupX, y:groupY,
                    width:groupRight-groupX,
                    height:groupBottom-groupY}],
@@ -476,7 +546,6 @@ export function renderStandaloneGroup(bounding_group_id: number,
     
     return ['svg', {width:groupWidth/scale_factor, height:groupHeight/scale_factor,
                     viewBox: `0 0 ${groupWidth} ${groupHeight}`,
-                    onmousedown: 'pageEditorMouseDown(event)',
                     'data-page-id': page_id,
                     'data-scale-factor': scale_factor,
                    },
