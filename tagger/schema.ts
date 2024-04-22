@@ -83,7 +83,10 @@ export interface ScannedDocument {
     /**
      * Document title.
      */
-    title?: string;
+    title: string;
+    short_title?: string,
+    author?: string,
+    published?: string,
 
     /**
      * URL for the source document if this document is imported from
@@ -103,7 +106,8 @@ export interface ScannedDocument {
 }
 export type ScannedDocumentOpt = Partial<ScannedDocument>;
 export const scannedDocumentFieldNames:Array<keyof ScannedDocument> = [
-    'document_id', 'friendly_document_id', 'title',
+    'document_id', 'friendly_document_id',
+    'title', 'short_title', 'author', 'published',
     'source_url', 'source_title', 'source_credit', 'source_notes',
     'source_page_root_url'];
 
@@ -112,6 +116,9 @@ const createDocumentDml = block`
 /**/       document_id INTEGER PRIMARY KEY ASC,
 /**/       friendly_document_id TEXT NOT NULL,
 /**/       title TEXT NOT NULL,
+/**/       short_title TEXT,
+/**/       author TEXT,
+/**/       published TEXT,
 /**/       source_url TEXT,
 /**/       source_title TEXT,
 /**/       source_credit TEXT,
@@ -788,6 +795,12 @@ export interface Assertion {
     locale_expr?: string;
 
     /**
+     * Locale expression for which this assertion hosts if this is an
+     * assertion expressed in the target language.
+     */
+    target_locale_expr?: string;
+    
+    /**
      * Expression of the level of confidence we have that this assertion is true.
      */
     confidence_expr?: string;
@@ -978,7 +991,7 @@ export const assertionFieldNames: Array<keyof Assertion> = [
 
     "tags",
 
-    "order_key", "locale_expr", "confidence_expr",
+    "order_key", "locale_expr", "target_locale_expr", "confidence_expr",
 
     "note",
     
@@ -1032,6 +1045,7 @@ const createAssertionDml = (tableName:string)=>block`
 /**/       order_key TEXT,
 /**/
 /**/       locale_expr TEXT,
+/**/       target_locale_expr TEXT,
 /**/       confidence_expr TEXT,
 /**/
 /**/       note TEXT,

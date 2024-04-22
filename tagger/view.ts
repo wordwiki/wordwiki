@@ -399,6 +399,13 @@ export class ActiveViews {
         this.workspace = workspace;
     }
 
+    nextTime(): number {
+        // This is not necc ahead of all the server timestamps, just ahead
+        // of all the timestamps in the current workspace.  Once we are live
+        // following, this will need redoing XXX
+        return timestamp.nextTime(this.workspace.mostRecentLocalTimestamp);        
+    }
+    
     /**
      * Note: this is part of a temporary saving model for the proto versin -
      * the workspace must be droppped after saving changes in this manner.
@@ -508,7 +515,7 @@ export class ActiveViews {
         console.info('REF assertion', refAssertion);
         console.info('NEW assertion', newAssertion);
         
-        this.openFieldEdit(renderRootId, refKind, refDbTag, refTupleTag, refTupleId, newAssertion);
+        this.openFieldEdit(renderRootId, refKind, undefined, refDbTag, refTupleTag, refTupleId, newAssertion);
     }
 
     editNewChild(renderRootId: string,
@@ -546,7 +553,7 @@ export class ActiveViews {
 
         console.info('NEW assertion', newAssertion);
         
-        this.openFieldEdit(renderRootId, refKind, refDbTag, refTupleTag, refTupleId, newAssertion);
+        this.openFieldEdit(renderRootId, refKind, parentRelation.schema.tag, refDbTag, refTupleTag, refTupleId, newAssertion);
     }
 
     editNew(renderRootId: string,
@@ -572,7 +579,7 @@ export class ActiveViews {
             mostRecentTupleVersion.assertion,
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
 
-        this.openFieldEdit(renderRootId, 'replaceSelf', refDbTag, refTupleTag, refTupleId,
+        this.openFieldEdit(renderRootId, 'replaceSelf', undefined, refDbTag, refTupleTag, refTupleId,
                            new_assertion);
     }
 
@@ -618,7 +625,7 @@ export class ActiveViews {
     //     //     {assertion_id3: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
     //     // console.info('CAT NEW Assertion 2', new_assertion2);
 
-    //     this.openFieldEdit(renderRootId, 'replaceSelf', refDbTag, refTupleTag, refTupleId,
+    //     this.openFieldEdit(renderRootId, 'replaceSelf', undefined, refDbTag, refTupleTag, refTupleId,
     //                        new_assertion);
     // }
 
@@ -655,7 +662,7 @@ export class ActiveViews {
             {},
             refTuple.currentAssertion,
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
-             valid_from: this.workspace.nextTime(),
+             valid_from: this.nextTime(),
              valid_to: timestamp.END_OF_TIME,
              order_key: updatedOrderKey
             }
@@ -675,11 +682,12 @@ export class ActiveViews {
      */
     openFieldEdit(renderRootId: string,
                   refKind: TupleRefKind,
+                  refRelation: string|undefined,
                   refDbTag: string,
                   refTupleTag: string,
                   refTupleId: number,
                   new_assertion: Assertion) {
-        console.info('begin field edit', refKind, refTupleTag, refTupleId);
+        console.info('begin field edit', refKind, refRelation, refTupleTag, refTupleId);
 
         // --- Only one tuple editor can be open at a time
         //     (later will get fancier and close open ones or something TODO)
@@ -702,7 +710,7 @@ export class ActiveViews {
         
         // --- Instantiate a field editor
         this.currentlyOpenTupleEditor = new TupleEditor(
-            renderRootId, tupleView, refKind, refTupleId, new_assertion);
+            renderRootId, tupleView, refKind, refRelation, refTupleId, new_assertion);
 
         // Re-render the tuple with the now open tuple editor
         // - we can use the global workspace to find the tuple by tuple_id ???
@@ -734,7 +742,7 @@ export class ActiveViews {
         const renderRootId = tupleEditor.renderRootId;
         const newAssertion = tupleEditor.assertion;
         
-        newAssertion.valid_from = this.workspace.nextTime();
+        newAssertion.valid_from = this.nextTime();
         newAssertion.valid_to = timestamp.END_OF_TIME;
 
         // TODO Should check if differnt than prev tuple TODO TODO
@@ -793,6 +801,7 @@ export class TupleEditor {
     constructor(public renderRootId: string,
                 public view: RelationView,
                 public ref_kind: TupleRefKind,
+                public ref_relation: string|undefined,
                 public ref_tuple_id: number,
                 public assertion: Assertion) {
     }
@@ -891,6 +900,7 @@ export class Renderer {
 
         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
         const refKind = currentlyOpenTupleEditor?.ref_kind;
+        const refRelation = currentlyOpenTupleEditor?.ref_relation;
         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
         
         const view = this.viewTree.relationViewForRelation.get(schema)
@@ -898,7 +908,8 @@ export class Renderer {
         return (
             // This table has the number of cols in the schema for 'r'
             ['table', {class: `relation relation-${schema.name}`},
-             [(refId === r.src.parent.id && refKind === 'firstChild')
+             [(refId === r.src.parent.id && refKind === 'firstChild'
+                 && refRelation === schema.tag)
                  ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!) : undefined],
              [...r.tuples.values()].map(t=>{
                  const tuple_id = t.src.id;
@@ -914,7 +925,8 @@ export class Renderer {
                          : undefined]
                  ];
              }),
-             [(refId === r.src.parent.id && refKind === 'lastChild')
+             [(refId === r.src.parent.id && refKind === 'lastChild'
+                 && refRelation === schema.tag)
                  ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!) : undefined],
             ]);
     }
@@ -935,8 +947,8 @@ export class Renderer {
         return [
             // --- If this tuple a proposed new tuple under edit, render the editor,
             //     otherwise render the current row.
-            currentlyOpenTupleEditor?.ref_kind === 'replaceSelf'
-                && currentlyOpenTupleEditor?.ref_tuple_id === r.src.id
+            (currentlyOpenTupleEditor?.ref_kind === 'replaceSelf'
+                && currentlyOpenTupleEditor?.ref_tuple_id === r.src.id)
                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor)
                 : this.renderCurrentTupleRow(r),
             //this.renderCurrentTupleRow(r),
@@ -1101,7 +1113,7 @@ export class Renderer {
                   insertChildMenuItems,
                   ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
               ], // isLeaf
-              ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
+              //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
              ]]);
     }
 }
@@ -1255,7 +1267,9 @@ export function getGlobalBoostrapInst() {
  * TODO: firing this again while it is loading will (like on a slow connection) needs
  *       some protection.
  */
-export async function popupEntryEditor(entryId: number) {
+export async function popupEntryEditor(entryId: number,
+                                       nestedTypeTag:string='en',
+                                       nestedId:number=entryId) {
 
     // TODO make this less weird
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
@@ -1274,8 +1288,9 @@ export async function popupEntryEditor(entryId: number) {
     views.registerActiveView(
         new ActiveView('modalEditorBody',
                        dictView,
-                       ()=>new CurrentTupleQuery(views.workspace.getTableByTag('di'))));
-
+                       ()=>new CurrentTupleQuery(
+                           views.workspace.getVersionedTupleById('di', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId))));
+    
 
     views.rerenderAllViews();
 

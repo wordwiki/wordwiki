@@ -65,16 +65,16 @@ export async function textractDocument(document_id: number) {
             });
         }
     }
-    console.info(db().all<BoundingBox, {}>(
-        block`
-/**/       SELECT ${boundingBoxFieldNames.join()} FROM bounding_box`, {}));
+//     console.info(db().all<BoundingBox, {}>(
+//         block`
+// /**/       SELECT ${boundingBoxFieldNames.join()} FROM bounding_box`, {}));
 
-    // Sample FTS query
-    console.info(db().all<{text:string, bounding_box_id: number}, {query: string}>(
-        block`
-/**/    SELECT bounding_box_id, text FROM bounding_box_fts
-/**/        WHERE text match :query`,
-        {query: 'pene*'}));
+//     // Sample FTS query
+//     console.info(db().all<{text:string, bounding_box_id: number}, {query: string}>(
+//         block`
+// /**/    SELECT bounding_box_id, text FROM bounding_box_fts
+// /**/        WHERE text match :query`,
+//         {query: 'pene*'}));
 }
 
 function insertTextractBlock(document_id: number, layer_id: number, page_id: number,

@@ -143,7 +143,7 @@ export class Db {
         params = paramsCopy as P;
         
         const fieldNames = Object.keys(paramsCopy);
-        console.info('fieldNames', fieldNames);
+        //console.info('fieldNames', fieldNames);
         const sql = `INSERT INTO ${table_name} (${fieldNames.join(',')}) VALUES (${fieldNames.map(f=>':'+f).join(',')}) RETURNING ${String(id_field_name)} AS id`;
         return this.insertWithAutoId<P>(sql, params);
     }

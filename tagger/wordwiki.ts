@@ -65,7 +65,8 @@ export class WordWiki {
         const lastTxTimestamp = this.lastAllocatedTxTimestamp;
         const nextTxTimestamp = timestamp.nextTime(lastTxTimestamp);
         utils.assert(count>=1);
-        this.#lastAllocatedTxTimestamp = nextTxTimestamp + count-1;
+        this.#lastAllocatedTxTimestamp = nextTxTimestamp + count - 1;
+        console.info('alloced timestamp', {last: lastTxTimestamp, next: nextTxTimestamp, next_txt: timestamp.formatTimestampAsLocalTime(nextTxTimestamp)});
         return nextTxTimestamp;
     }
 
@@ -166,8 +167,12 @@ export class WordWiki {
                 if(a.valid_from === clientTimestamp)
                     a.valid_from = serverTimestamp;
                 if(a.valid_to === clientTimestamp)
-                    a.valid_to = clientTimestamp;
+                    a.valid_to = serverTimestamp;
             });
+
+            console.info('Applying TX after advancing to server timestamp',
+                         serverTimestamp,
+                         JSON.stringify(assertions, undefined, 2));
             
             // --- Apply assertions to workspace (throwing exception if incompatible)
             // TODO swith to an apply method that gives us enough info to update the valid_to

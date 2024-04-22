@@ -461,15 +461,17 @@ export class VersionedDb {
         throw new Error('apply server assertion not implemented yet');
     }
 
-    nextTime(): number {
-        return timestamp.nextTime(this.mostRecentLocalTimestamp);        
-    }
+    // we cannot implement nextTime here because we don't neccisareily have the
+    // whole db (incuding all tables) which particpate in one global time scheme.
+    // nextTime(): number {
+    //     return timestamp.nextTime(this.mostRecentLocalTimestamp);        
+    // }
     
     applyProposedAssertion(assertion: Assertion): Assertion|undefined  {
         // This is a bit problemattic - we can insert mulitple assertions at the
         // same timestamp - but we are not doing that now so leave this XXX TODO
         if(assertion.valid_from <= this.mostRecentLocalTimestamp)
-            throw new Error('Attempt to assert into the past');
+            throw new Error(`Attempt to assert into the past - asserting at ${assertion.valid_from} most recent local timestamp is ${this.mostRecentLocalTimestamp} - ${assertion.valid_from - this.mostRecentLocalTimestamp} should be positive`);
         if(assertion.valid_to !== assertion.valid_from &&
             assertion.valid_to !== timestamp.END_OF_TIME)
             throw new Error('New assertions must either be true to the end of time, or be deletion tombstones');
@@ -495,6 +497,7 @@ export class VersionedDb {
     untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion) {
         const versionedTuple = this.getVersionedTupleByPath(path);
         versionedTuple.untrackedApplyAssertion(assertion);
+        this.mostRecentLocalTimestamp = assertion.valid_from;
     }
     
     getTable(tag: string): VersionedTuple {
@@ -589,7 +592,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
 
         const versionedRelation = this.childRelations[ty];
         if(!versionedRelation) {
-            throw new Error(`unexpected tag ${ty} -- FIX ERROR NEED LOCUS ETC`);
+            throw new Error(`unexpected tag ${ty} as child of ${this.schema.tag} -- FIX ERROR NEED LOCUS ETC`);
         }
         utils.assert(versionedRelation.schema.tag === ty);
 
@@ -903,7 +906,9 @@ export abstract class VersionedTupleQuery {
     }
 
     get historicalTupleVersions(): TupleVersion[] {
-        return this.tupleVersions.slice(0, -1);
+        //if(this.src.tupleVersions.length !== 1)
+        //    console.info(`HAVE TUPLE VERSIONS ON`);
+        return this.src.tupleVersions; //.filter(t=>t!==this.mostRecentTupleVersion);
     }
 
     toJSON(): any {

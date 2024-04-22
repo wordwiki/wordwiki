@@ -14,23 +14,25 @@ import { ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage
 import * as config from "./config.ts";
 import * as timestamp from "../utils/timestamp.ts";
 import * as orderkey from '../utils/orderkey.ts';
+import * as content from "../utils/content-store.ts";
 
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
 
 async function importMMO() {
     // XXX TODO move this file/path into our import tree.
-    const entries = JSON.parse(await Deno.readTextFile("/home/dziegler/wordwiki/importer/mikmaq/entry-tuples.json")) as Entry[];
+    //const entries = JSON.parse(await Deno.readTextFile("/home/dziegler/wordwiki/importer/mikmaq/entry-tuples.json")) as Entry[];
+    const entries = JSON.parse(await Deno.readTextFile("/home/dziegler/wordwiki/importer/mikmaq/entries.json")) as Entry[];
 
     console.info('entry count', entries.length);
 
-    console.info(entries.map(e=>e.entry_id).toSorted());
+    //console.info(entries.map(e=>e.entry_id).toSorted());
 
     db().beginTransaction();
     db().execute('DELETE FROM dict', {});
 
     // Add the top level 'di' assertion.
-    const dictAssertion = createAssertion(undefined, 0, 0, 'di', orderkey.new_range_start_string, {});
+    const dictAssertion = createAssertion(undefined, 0, 0, 'di', orderkey.new_range_start_string, true, {});
     console.info('dict assertion', JSON.stringify(dictAssertion, undefined, 2));
     insertAssertion(dictAssertion);
     
@@ -42,6 +44,7 @@ async function importMMO() {
 }
 
 function importEach<T>(v: T[], f: (a:T, okey:string)=>void) {
+    if(!Array.isArray(v)) throw new Error(`expected array of elems to import - got ${typeof v} - ${v}`);
     const order_keys = orderkey.initial(v.length);
     v.forEach((a,idx)=>f(a, order_keys[idx]));
 }
@@ -55,6 +58,7 @@ function insertAssertion(assertion: Assertion): Assertion {
 
 function createAssertion(parent: Assertion|undefined, depth: number,
                          id: number, ty: string, order_key: string,
+                         published: boolean,
                          fields: Partial<Assertion>) {
     const assertion = Object.assign({
         assertion_id: id,
@@ -78,33 +82,45 @@ function createAssertion(parent: Assertion|undefined, depth: number,
         //[`id${depth}`]: id,
         [`ty${depth}`]: ty,
         order_key,
+        ...(published
+            ? {
+                published_from: timestamp.BEGINNING_OF_TIME,
+                published_to: timestamp.END_OF_TIME,
+            }
+            : {})
     }, fields);
 
     if(depth === 0)
         utils.assert(id === 0, 'root assertion has fixed id 0');
     else
-        assertion[`id${depth}`] = id;
+        (assertion as any)[`id${depth}`] = id;
     
     return assertion;
 }
 
 interface Entry {
     entry_id: number;
+    published: boolean;
     spelling: Spelling[];
+    recording: Recording[];
     subentry: Subentry[];
     internal_note: string;
     public_note: string;
 }
 
 function importEntry(entry: Entry, order_key: string) {
+    if(typeof entry.published !== 'boolean')
+        throw new Error('expected published to be boolean');
+    const published: boolean = entry.published;
     const entryAssertion = insertAssertion(createAssertion(
-        undefined, 1, entry.entry_id, 'en', order_key,
+        undefined, 1, entry.entry_id, 'en', order_key, published,
         {
             // TODO: audit this
             note: entry.internal_note + entry.public_note,
         }));
-    importEach(entry.spelling, (s,k)=>importSpelling(entryAssertion, s, k));
-    importEach(entry.subentry, (s,k)=>importSubentry(entryAssertion, s, k));
+    importEach(entry.spelling, (s,k)=>importSpelling(entryAssertion, s, k, published));
+    importEach(entry.recording, (s,k)=>importRecording(entryAssertion, s, k, published));
+    importEach(entry.subentry, (s,k)=>importSubentry(entryAssertion, s, k, published));
 }
 
 interface Spelling {
@@ -113,19 +129,34 @@ interface Spelling {
     variant: string;
 }
 
-function importSpelling(parent: Assertion, spelling: Spelling, order_key: string) {
+function importSpelling(parent: Assertion, spelling: Spelling, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 2, spelling.spelling_id, 'sp', order_key,
+        parent, 2, spelling.spelling_id, 'sp', order_key, published,
         {
             attr1: spelling.text,
             locale_expr: spelling.variant,
         }));
 }
 
+interface Recording {
+    recording_id: number;
+    recording: string;
+    speaker: string;
+}
+
+function importRecording(parent: Assertion, recording: Recording, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 2, recording.recording_id, 'rc', order_key, published,
+        {
+            attr1: recording.recording,
+            attr2: recording.speaker,
+        }));
+}
+
 interface Subentry {
     subentry_id: number;
     part_of_speech: string;
-    definition: Definition[];
+    translation: Translation[];
     gloss: Gloss[];
     example: Example[];
     pronunciation_guide: PronunciationGuide[];
@@ -137,35 +168,35 @@ interface Subentry {
     //status: Status[];
 }
 
-function importSubentry(parent: Assertion, subentry: Subentry, order_key: string) {
+function importSubentry(parent: Assertion, subentry: Subentry, order_key: string, published: boolean) {
     const subentryAssertion = insertAssertion(createAssertion(
-        parent, 2, subentry.subentry_id, 'se', order_key,
+        parent, 2, subentry.subentry_id, 'se', order_key, published,
         {
             attr1: subentry.part_of_speech,
         }));
-    importEach(subentry.definition, (s,k)=>importDefinition(subentryAssertion, s, k));
-    importEach(subentry.gloss, (s,k)=>importGloss(subentryAssertion, s, k));
-    importEach(subentry.example, (s,k)=>importExample(subentryAssertion, s, k));
-    importEach(subentry.pronunciation_guide, (s,k)=>importPronunciationGuide(subentryAssertion, s, k));
-    importEach(subentry.category, (s,k)=>importCategory(subentryAssertion, s, k));
-    importEach(subentry.related_entry, (s,k)=>importRelatedEntry(subentryAssertion, s, k));
-    importEach(subentry.alternate_grammatical_form, (s,k)=>importAlternateGrammaticalForm(subentryAssertion, s, k));
-    importEach(subentry.other_regional_form, (s,k)=>importOtherRegionalForm(subentryAssertion, s, k));
-    importEach(subentry.attr, (s,k)=>importAttr(subentryAssertion, s, k));
+    importEach(subentry.translation, (s,k)=>importTranslation(subentryAssertion, s, k, published));
+    importEach(subentry.gloss, (s,k)=>importGloss(subentryAssertion, s, k, published));
+    importEach(subentry.example, (s,k)=>importExample(subentryAssertion, s, k, published));
+    importEach(subentry.pronunciation_guide, (s,k)=>importPronunciationGuide(subentryAssertion, s, k, published));
+    importEach(subentry.category, (s,k)=>importCategory(subentryAssertion, s, k, published));
+    importEach(subentry.related_entry, (s,k)=>importRelatedEntry(subentryAssertion, s, k, published));
+    importEach(subentry.alternate_grammatical_form, (s,k)=>importAlternateGrammaticalForm(subentryAssertion, s, k, published));
+    importEach(subentry.other_regional_form, (s,k)=>importOtherRegionalForm(subentryAssertion, s, k, published));
+    importEach(subentry.attr, (s,k)=>importAttr(subentryAssertion, s, k, published));
     // console.info('STATUS', subentry);
     // importEach(subentry.status, (s,k)=>importStatus(subentryAssertion, s, k));
 }
 
-interface Definition {
-    definition_id: number;
-    definition: string;
+interface Translation {
+    translation_id: number;
+    translation: string;
 }
 
-function importDefinition(parent: Assertion, definition: Definition, order_key: string) {
+function importTranslation(parent: Assertion, translation: Translation, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, definition.definition_id, 'de', order_key,
+        parent, 3, translation.translation_id, 'tr', order_key, published,
         {
-            attr1: definition.definition,
+            attr1: translation.translation,
         }));
 }
 
@@ -174,9 +205,9 @@ interface Gloss {
     gloss: string;
 }
 
-function importGloss(parent: Assertion, gloss: Gloss, order_key: string) {
+function importGloss(parent: Assertion, gloss: Gloss, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, gloss.gloss_id, 'gl', order_key,
+        parent, 3, gloss.gloss_id, 'gl', order_key, published,
         {
             attr1: gloss.gloss,
         }));
@@ -184,17 +215,19 @@ function importGloss(parent: Assertion, gloss: Gloss, order_key: string) {
 
 interface Example {
     example_id: number;
-    translation: string;
     example_text: ExampleText[];
+    example_translation: ExampleTranslation[];
+    example_recording: ExampleRecording[];
 }
 
-function importExample(parent: Assertion, example: Example, order_key: string) {
+function importExample(parent: Assertion, example: Example, order_key: string, published: boolean) {
     const exampleAssertion = insertAssertion(createAssertion(
-        parent, 3, example.example_id, 'ex', order_key,
+        parent, 3, example.example_id, 'ex', order_key, published,
         {
-            attr1: example.translation,
         }));
-    importEach(example.example_text, (s,k)=>importExampleText(exampleAssertion, s, k));
+    importEach(example.example_text, (s,k)=>importExampleText(exampleAssertion, s, k, published));
+    importEach(example.example_translation, (s,k)=>importExampleTranslation(exampleAssertion, s, k, published));
+    importEach(example.example_recording, (s,k)=>importExampleRecording(exampleAssertion, s, k, published));
 }
 
 interface ExampleText {
@@ -203,12 +236,41 @@ interface ExampleText {
     variant: string;
 }
 
-function importExampleText(parent: Assertion, exampleText: ExampleText, order_key: string) {
+function importExampleText(parent: Assertion, exampleText: ExampleText, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 4, exampleText.example_text_id, 'et', order_key,
+        parent, 4, exampleText.example_text_id, 'et', order_key, published,
         {
             attr1: exampleText.text,
             locale_expr: exampleText.variant,
+        }));
+}
+
+interface ExampleTranslation {
+    example_translation_id: number;
+    text: string;
+}
+
+function importExampleTranslation(parent: Assertion, exampleTranslation: ExampleTranslation, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 4, exampleTranslation.example_translation_id, 'el', order_key, published,
+        {
+            attr1: exampleTranslation.text,
+        }));
+}
+
+
+interface ExampleRecording {
+    example_recording_id: number;
+    recording: string;
+    speaker: string;
+}
+
+function importExampleRecording(parent: Assertion, exampleRecording: ExampleRecording, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 4, exampleRecording.example_recording_id, 'er', order_key, published,
+        {
+            attr1: exampleRecording.recording,
+            attr2: exampleRecording.speaker,
         }));
 }
 
@@ -218,9 +280,9 @@ interface PronunciationGuide {
     variant: string;
 }
 
-function importPronunciationGuide(parent: Assertion, pronunciationGuide: PronunciationGuide, order_key: string) {
+function importPronunciationGuide(parent: Assertion, pronunciationGuide: PronunciationGuide, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, pronunciationGuide.pronunciation_guide_id, 'pg', order_key,
+        parent, 3, pronunciationGuide.pronunciation_guide_id, 'pg', order_key, published,
         {
             attr1: pronunciationGuide.text,
             locale_expr: pronunciationGuide.variant,
@@ -232,9 +294,9 @@ interface Category {
     category: string;
 }
 
-function importCategory(parent: Assertion, category: Category, order_key: string) {
+function importCategory(parent: Assertion, category: Category, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, category.category_id, 'ct', order_key,
+        parent, 3, category.category_id, 'ct', order_key, published,
         {
             attr1: category.category,
         }));
@@ -245,9 +307,9 @@ interface RelatedEntry {
     unresolved_text: string;
 }
 
-function importRelatedEntry(parent: Assertion, relatedEntry: RelatedEntry, order_key: string) {
+function importRelatedEntry(parent: Assertion, relatedEntry: RelatedEntry, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, relatedEntry.related_entry_id, 're', order_key,
+        parent, 3, relatedEntry.related_entry_id, 're', order_key, published,
         {
             attr1: relatedEntry.unresolved_text, // ??? ??? TODO WTF ??? XXX ???
         }));
@@ -260,14 +322,14 @@ interface AlternateGrammaticalForm {
     alternate_form_text: AlternateFormText[];
 }
 
-function importAlternateGrammaticalForm(parent: Assertion, alternateGrammaticalForm: AlternateGrammaticalForm, order_key: string) {
+function importAlternateGrammaticalForm(parent: Assertion, alternateGrammaticalForm: AlternateGrammaticalForm, order_key: string, published: boolean) {
     const alternateGrammaticalFormAssertion = insertAssertion(createAssertion(
-        parent, 3, alternateGrammaticalForm.alternate_grammatical_form_id, 'ag', order_key,
+        parent, 3, alternateGrammaticalForm.alternate_grammatical_form_id, 'ag', order_key, published,
         {
             attr1: alternateGrammaticalForm.grammatical_form,
             attr2: alternateGrammaticalForm.gloss,
         }));
-    importEach(alternateGrammaticalForm.alternate_form_text, (s,k)=>importAlternateFormText(alternateGrammaticalFormAssertion, s, k));
+    importEach(alternateGrammaticalForm.alternate_form_text, (s,k)=>importAlternateFormText(alternateGrammaticalFormAssertion, s, k, published));
 }
 
 interface AlternateFormText {
@@ -276,9 +338,9 @@ interface AlternateFormText {
     variant: string;
 }
 
-function importAlternateFormText(parent: Assertion, alternateFormText: AlternateFormText, order_key: string) {
+function importAlternateFormText(parent: Assertion, alternateFormText: AlternateFormText, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 4, alternateFormText.alternate_form_text_id, 'ax', order_key,
+        parent, 4, alternateFormText.alternate_form_text_id, 'ax', order_key, published,
         {
             attr1: alternateFormText.text,
             locale_expr: alternateFormText.variant,
@@ -290,9 +352,9 @@ interface OtherRegionalForm {
     text: string;
 }
 
-function importOtherRegionalForm(parent: Assertion, otherRegionalForm: OtherRegionalForm, order_key: string) {
+function importOtherRegionalForm(parent: Assertion, otherRegionalForm: OtherRegionalForm, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, otherRegionalForm.other_regional_form_id, 'rf', order_key,
+        parent, 3, otherRegionalForm.other_regional_form_id, 'rf', order_key, published,
         {
             attr1: otherRegionalForm.text,
         }));
@@ -304,9 +366,9 @@ interface Attr {
     value: string;
 }
 
-function importAttr(parent: Assertion, attr: Attr, order_key: string) {
+function importAttr(parent: Assertion, attr: Attr, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, attr.attr_id, 'at', order_key,
+        parent, 3, attr.attr_id, 'at', order_key, published,
         {
             attr1: attr.attr,
             attr2: attr.value,

@@ -50,7 +50,34 @@ async function importRand() {
     await importScannedDocument({
         friendly_document_id,
         title: 'Dictionary of the language of the Micmac Indians : who reside in Nova Scotia, New Brunswick, Prince Edward Island, Cape Breton and Newfoundland',
+        short_title: 'Dictionary of the language of the Micmac Indians',
+        author: 'Rand, Silas Tertius',
+        published: 'Nova Scotia Printing Company, 1888',
     }, pageFiles, pageNum=>pageNum%2 ? 90 : 270);
+}
+
+/**
+ * Custom importer for Rand First Reading Book
+ */
+async function importRandFirstReadingBook() {
+    const friendly_document_id = 'RandFirstReadingBook'
+
+    const pageFiles = (await Array.fromAsync(await Deno.readDir(`imports/${friendly_document_id}`))).
+        filter(f=>f.isFile).
+        map(f=>f.name).
+        filter(f=>/^firstreadingbook00rand_orig_[0-9][0-9][0-9][0-9][.]jp2$/.test(f)).
+        toSorted().
+        slice(8);  // Drop test page at the beginning.
+
+    console.info('Rand first reading book page files', pageFiles);
+    
+    await importScannedDocument({
+        friendly_document_id,
+        title: 'A first reading book in the Micmac language: comprising the Micmac numerals, and the names of the different kinds of beasts, birds, fishes, trees, &c. of the maritime provinces of Canada',
+        short_title: 'A first reading book in the Micmac language',
+        author: 'Rand, Silas Tertius',
+        published: 'Nova Scotia Printing Company, Halifax, 1875',
+    }, pageFiles, pageNum=>pageNum%2 ? 270 : 90);
 }
 
 /**
@@ -122,6 +149,7 @@ async function main() {
         case 'Rand': await importRand(); break;
         case 'Clark': await importClark(); break;
         case 'PacifiquesGeography': await importPacifiquesGeography(); break;
+        case 'RandFirstReadingBook': await importRandFirstReadingBook(); break;
         default:
             throw new Error(`unknown book "${friendly_document_id}"`);
     }

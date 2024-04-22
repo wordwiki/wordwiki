@@ -51,7 +51,8 @@ export const END_OF_TIME = Number.MAX_SAFE_INTEGER;
  */
 export function nextTime(lastTimestamp: number): number {
     const currentSystemTimeInLocalEpoch = currentSystemTimeInLocalEpochOrRaptureTime();
-    const lastTimestampTime = extractTimeFromTimestamp(currentSystemTimeInLocalEpoch);
+    const lastTimestampTime = extractTimeFromTimestamp(lastTimestamp);
+    console.info({currentSystemTimeInLocalEpoch, lastTimestamp, lastTimestampTime});
     if(currentSystemTimeInLocalEpoch > lastTimestampTime) {
         return makeTimestamp(currentSystemTimeInLocalEpoch, 0);
     } else {

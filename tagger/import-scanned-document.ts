@@ -23,7 +23,7 @@ export async function importScannedDocument(fields: ScannedDocumentOpt,
     const document_id = db().insert<ScannedDocumentOpt, 'document_id'>(
         'scanned_document', fields, 'document_id');
     console.info('document_id is', document_id);
-    console.info(selectScannedDocument().required({document_id}));
+    //console.info(selectScannedDocument().required({document_id}));
     for(let page_number=1; page_number<pageFiles.length+1; page_number++)
         await importScannedPage(document_id, unwrap(fields.friendly_document_id),
                                 page_number, pageFiles[page_number-1], rotationFn);
@@ -46,7 +46,7 @@ async function importScannedPage(document_id: number,
 
     const pageImagesRoot = `content/${friendly_document_id}`;
     const rotation = rotationFn(page_number);
-    console.info('rotation for page', page_number, 'is', rotation);
+    //console.info('rotation for page', page_number, 'is', rotation);
     const image_ref = 'content/'+
             await content.getDerived(pageImagesRoot, {importPageImage},
                                      ['importPageImage', sourceImagePath,

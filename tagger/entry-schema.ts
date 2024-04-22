@@ -33,11 +33,20 @@ export const dictSchemaJson = {
             subentry_id: {$type: 'primary_key'},
             part_of_speech: {$type: 'string', $bind: 'attr1'},
             // probably should have variant here TODO
+            // translation TODO
+            translation: {
+                $type: 'relation',
+                $tag: 'tr',
+                translation_id: {$type: 'primary_key'},
+                translation: {$type: 'string', $bind: 'attr1'},
+                variant: {$type: 'variant'}
+            },
             definition: {
                 $type: 'relation',
                 $tag: 'de',
                 definition_id: {$type: 'primary_key'},
                 definition: {$type: 'string', $bind: 'attr1'},
+                variant: {$type: 'variant'}
                 //variant: {$type: 'string'}
                 // same issue as for gloss variant!!!
                 // - need two locales for definition - where it is applicable,
@@ -58,7 +67,8 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'gl',
                 gloss_id: {$type: 'primary_key'},
-                gloss: {$type: 'string', $bind: 'attr1'}
+                gloss: {$type: 'string', $bind: 'attr1'},
+                variant: {$type: 'variant'}
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
@@ -67,7 +77,7 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'ex',
                 example_id: {$type: 'primary_key'},
-                translation: {$type: 'string', $bind: 'attr1'},
+                //translation: {$type: 'string', $bind: 'attr1'},
                 // Probably move translation into a sub relation (so can have variants)
                 // Thiunk about pairings of tranlation and example.
 
@@ -91,6 +101,14 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'}
                 },
 
+                example_translation: {
+                    $type: 'relation',
+                    $tag: 'el',
+                    example_translation_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'attr1'},
+                    variant: {$type: 'variant'}
+                },
+                
                 // Recordings of example sentence need to be pulled out of the
                 // varianted examples because often is just spelling difference, or
                 // is good enough.
@@ -100,7 +118,7 @@ export const dictSchemaJson = {
                 example_recording: {
                     $type: 'relation',
                     $tag: 'er',
-                    recording_id: {$type: 'primary_key'},
+                    example_recording_id: {$type: 'primary_key'},
                     recording: {$type: 'audio', $bind: 'attr1'},
                     speaker: {$type: 'string', $bind: 'attr2'},
                     variant: {$type: 'variant'}
@@ -154,6 +172,7 @@ export const dictSchemaJson = {
                 $tag: 'rf',
                 other_regional_form_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
+                variant: {$type: 'variant'},
             },
             attr: {
                 $type: 'relation',
@@ -161,16 +180,38 @@ export const dictSchemaJson = {
                 attr_id: {$type: 'primary_key'},
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2'},
+                variant: {$type: 'variant'},
             },
-            image_reference: {
+            document_reference: {
                 $type: 'relation',
                 $tag: 'ev',
-                image_reference_id: {$type: 'primary_key'},
-                bounding_box_id: {$type: 'integer', $bind: 'attr1'},
-                transcription: {$type: 'string', $bind: '$attr2'},
-                expanded_transcription: {$type: 'string', $bind: '$attr3'},
-                translation: {$type: 'string', $bind: '$attr4'},
-                notes: {$type: 'string', $bind: 'attr5'},
+                document_reference_id: {$type: 'primary_key'},
+                layer_id: {$type: 'integer', $bind: 'attr1'},
+                transcription: {
+                    $type: 'relation',
+                    $tag: 'vt',
+                    transcription_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: '$attr1'},
+                },
+                expanded_transcription: {
+                    $type: 'relation',
+                    $tag: 've',
+                    expanded_transcription_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: '$attr1'},
+                },
+                text: {
+                    $type: 'relation',
+                    $tag: 'vt',
+                    text_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: '$attr1'},
+                    variant: {$type: 'variant'},
+                },
+                notes: {
+                    $type: 'relation',
+                    $tag: 'vn',
+                    notes_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: '$attr1'},
+                },
             },
             supporting_evidence: {
                 $type: 'relation',
@@ -180,14 +221,14 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'}
             },
         },
-    },
-    recording: {
-        $type: 'relation',
-        $tag: 'lr',
-        recording_id: {$type: 'primary_key'},
-        recording: {$type: 'audio', $bind: 'attr1'},
-        speaker: {$type: 'string', $bind: 'attr2'},
-        variant: {$type: 'variant'}
+        recording: {
+            $type: 'relation',
+            $tag: 'rc',
+            recording_id: {$type: 'primary_key'},
+            recording: {$type: 'audio', $bind: 'attr1'},
+            speaker: {$type: 'string', $bind: 'attr2'},
+            variant: {$type: 'variant'}
+        },
     },
 };
 
@@ -209,6 +250,7 @@ export interface Spelling {
 
 export interface Subentry {
     subentry_id: number,
+    translation: Translation[],
     definition: Definition[],
     gloss: Gloss[],
     example: Example[],
@@ -219,8 +261,13 @@ export interface Subentry {
     alternate_grammatical_form: AlternateGrammaticalForm[],
     other_regional_form: OtherRegionalForm[],
     attr: Attr[],
-    image_reference: ImageReference[],
+    image_reference: DocumentReference[],
     supporting_evidence: SupportingEvidence[],
+}
+
+export interface Translation {
+    translation_id: number,
+    translation: string,
 }
 
 export interface Definition {
@@ -237,11 +284,18 @@ export interface Example {
     example_id: number,
     translation: string,
     example_text: ExampleText[],
+    example_translation: ExampleTranslation[],
     example_recording: ExampleRecording[],
 }
 
 export interface ExampleText {
     example_text_id: number,
+    text: string,
+    variant: string,
+}
+
+export interface ExampleTranslation {
+    example_translation_id: number,
     text: string,
     variant: string,
 }
@@ -293,9 +347,9 @@ export interface Attr {
     value: string,
 }
 
-export interface ImageReference {
-    image_reference_id: number,
-    bounding_box_id: number,
+export interface DocumentReference {
+    document_reference_id: number,
+    layer_id: number,
     transcription: string,
     expanded_transcription: string,
     translation: string,
@@ -331,6 +385,15 @@ function test() {
     let dumpedEntrySchemaJson = dictSchema.schemaToCompactJson();
     console.info('Schema again', dumpedEntrySchemaJson);
 }
+
+/**
+ *
+ */
+export function renderEntry(e: Entry): any {
+    
+    
+}
+
 
 if (import.meta.main)
     //await bunny();
