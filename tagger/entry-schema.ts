@@ -13,15 +13,15 @@ import * as timestamp from '../utils/timestamp.ts';
 export const dictSchemaJson = {
     $type: 'schema',
     $name: 'dict',
-    $tag: 'di',
+    $tag: 'dct',
     entry: {
         $type: 'relation',
-        $tag: 'en',
+        $tag: 'ent',
         $prompt: 'Entry',
         entry_id: {$type: 'primary_key'},
         spelling: {
             $type: 'relation',
-            $tag: 'sp',
+            $tag: 'spl',
             $style: { $prompt: 'SPELLING!' },
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
@@ -29,21 +29,21 @@ export const dictSchemaJson = {
         },
         subentry: {
             $type: 'relation',
-            $tag: 'se',
+            $tag: 'sub',
             subentry_id: {$type: 'primary_key'},
             part_of_speech: {$type: 'string', $bind: 'attr1'},
             // probably should have variant here TODO
             // translation TODO
             translation: {
                 $type: 'relation',
-                $tag: 'tr',
+                $tag: 'tra',
                 translation_id: {$type: 'primary_key'},
                 translation: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'}
             },
             definition: {
                 $type: 'relation',
-                $tag: 'de',
+                $tag: 'def',
                 definition_id: {$type: 'primary_key'},
                 definition: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'}
@@ -65,7 +65,7 @@ export const dictSchemaJson = {
             },
             gloss: {
                 $type: 'relation',
-                $tag: 'gl',
+                $tag: 'gls',
                 gloss_id: {$type: 'primary_key'},
                 gloss: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'}
@@ -75,7 +75,7 @@ export const dictSchemaJson = {
             },
             example: {
                 $type: 'relation',
-                $tag: 'ex',
+                $tag: 'exa',
                 example_id: {$type: 'primary_key'},
                 //translation: {$type: 'string', $bind: 'attr1'},
                 // Probably move translation into a sub relation (so can have variants)
@@ -95,7 +95,7 @@ export const dictSchemaJson = {
                 // a more understandable model - can still to NxN pariings).
                 example_text: {
                     $type: 'relation',
-                    $tag: 'et',
+                    $tag: 'etx',
                     example_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'}
@@ -103,7 +103,7 @@ export const dictSchemaJson = {
 
                 example_translation: {
                     $type: 'relation',
-                    $tag: 'el',
+                    $tag: 'etr',
                     example_translation_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'}
@@ -117,7 +117,7 @@ export const dictSchemaJson = {
                 // for smith francis, but not ideal.  Easy enough.
                 example_recording: {
                     $type: 'relation',
-                    $tag: 'er',
+                    $tag: 'erc',
                     example_recording_id: {$type: 'primary_key'},
                     recording: {$type: 'audio', $bind: 'attr1'},
                     speaker: {$type: 'string', $bind: 'attr2'},
@@ -133,21 +133,21 @@ export const dictSchemaJson = {
             // },
             pronunciation_guide: {
                 $type: 'relation',
-                $tag: 'pg',
+                $tag: 'prn',
                 pronunciation_guide_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
             },
             category: {
                 $type: 'relation',
-                $tag: 'ct',
+                $tag: 'cat',
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
                 category: {$type: 'string', $bind: 'attr1'},
             },
             related_entry: {
                 $type: 'relation',
-                $tag: 're',
+                $tag: 'rel',
                 related_entry_id: {$type: 'primary_key'},
                 unresolved_text: {$type: 'string', $bind: 'attr1'},
             },
@@ -155,13 +155,13 @@ export const dictSchemaJson = {
             // Probably same variant treatment here as we are doing for examples
             alternate_grammatical_form: {
                 $type: 'relation',
-                $tag: 'ag',
+                $tag: 'alt',
                 alternate_grammatical_form_id: {$type: 'primary_key'},
                 gloss: {$type: 'string', $bind: 'attr1'},
                 grammatical_form: {$type: 'string', $bind: 'attr2'},
                 alternate_form_text: {
                     $type: 'relation',
-                    $tag: 'ax',
+                    $tag: 'alx',
                     alternate_form_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'}
@@ -169,14 +169,14 @@ export const dictSchemaJson = {
             },
             other_regional_form: {
                 $type: 'relation',
-                $tag: 'rf',
+                $tag: 'orf',
                 other_regional_form_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
             },
             attr: {
                 $type: 'relation',
-                $tag: 'at',
+                $tag: 'att',
                 attr_id: {$type: 'primary_key'},
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2'},
@@ -184,38 +184,38 @@ export const dictSchemaJson = {
             },
             document_reference: {
                 $type: 'relation',
-                $tag: 'ev',
+                $tag: 'doc', // doc
                 document_reference_id: {$type: 'primary_key'},
                 layer_id: {$type: 'integer', $bind: 'attr1'},
                 transcription: {
                     $type: 'relation',
-                    $tag: 'vt',
+                    $tag: 'dtr',
                     transcription_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: '$attr1'},
                 },
                 expanded_transcription: {
                     $type: 'relation',
-                    $tag: 've',
+                    $tag: 'dex',
                     expanded_transcription_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: '$attr1'},
                 },
                 text: {
                     $type: 'relation',
-                    $tag: 'vt',
+                    $tag: 'dtx',
                     text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: '$attr1'},
                     variant: {$type: 'variant'},
                 },
                 notes: {
                     $type: 'relation',
-                    $tag: 'vn',
+                    $tag: 'dnt',
                     notes_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: '$attr1'},
                 },
             },
             supporting_evidence: {
                 $type: 'relation',
-                $tag: 'ev',
+                $tag: 'eve',
                 supporting_evidence_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'}
@@ -223,7 +223,7 @@ export const dictSchemaJson = {
         },
         recording: {
             $type: 'relation',
-            $tag: 'rc',
+            $tag: 'rec',
             recording_id: {$type: 'primary_key'},
             recording: {$type: 'audio', $bind: 'attr1'},
             speaker: {$type: 'string', $bind: 'attr2'},
@@ -388,10 +388,70 @@ function test() {
 
 /**
  *
+ * Switch to mm-li query for now.
  */
 export function renderEntry(e: Entry): any {
-    
-    
+    return [
+        ['h1', {}, renderEntrySpellings(e, e.spelling)],
+        // note
+        renderSubentriesCompact(e, e.subentry),
+    ];
+}
+
+export function renderEntrySpellings(e: Entry, spellings: Spelling[]): any {
+    return spellings.map(s=>s.text).join('/')    
+}
+
+
+export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
+    switch(subentries.length) {
+        case 0:
+            return ['p', {}, 'No entries'];
+        case 1:
+            return renderSubentry(e, subentries[0]);
+        default:
+            return renderSubentries(e, subentries);
+    }
+}
+
+export function renderSubentries(e: Entry, s: Subentry[]): any {
+    return [
+        ['ol', {},
+         s.map(s=>['li', {}, renderSubentry(e, s)])]];
+}
+
+export function renderSubentry(e: Entry, s: Subentry): any {
+    return [
+        s.translation.map(t=>renderTranslation(e, t)),
+        s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
+        renderGlosses(e, s.gloss),
+        s.example.map(x=>renderExample(e, x)),
+    ];
+}
+
+export function renderTranslation(e: Entry, t: Translation): any {
+    //const onclick = `imports.popupEntryEditor(${e.entry_id}, )`;
+    const onclick = '';
+    return [['div', {onclick}, ['b', {}, 'Translation: '], t.translation]];
+}
+
+export function renderGlosses(e: Entry, glosses: Gloss[]): any {
+    if(glosses.length === 0) return [];
+     return [
+         ['div', {},
+          ['b', {}, 'Meanings:'],
+          ['ul', {},
+           glosses.map(g=>['li', {}, g.gloss])]
+         ]
+     ];
+}
+
+export function renderExample(e: Entry, example: Example): any { 
+    return [];
+    //     ['b', {}, 'Example of word used in sentence'],
+    //     ['ul', {},
+    //      s.gloss.map(g=>['li', {}, g.gloss])]
+    // ];
 }
 
 

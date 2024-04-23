@@ -1037,6 +1037,35 @@ export function currentTuplesForVersionedRelation(relation: VersionedRelation): 
     return Array.from(new CurrentRelationQuery(relation).tuples.values());
 }
 
+// export function generateRelativeOrderKey(parent: VersionedRelation,
+//                                          refTupleId: number): string {
+//     const peers = currentTuplesForVersionedRelation(parent);
+//     const refIndex = peers.findIndex(p=>p.src.id === refTupleId);
+//     if(refIndex === -1)
+//         throw new Error(`unable to find ref tuple with id ${refTupleId} for move operation`);
+//     if(refIndex === 0)
+//         throw new Error('aldready ab begining'); // XXX
+//     const targetIndex = refIndex + offset;
+    
+//     const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
+//     const refTuple = orderedTuplesById.get(refTupleId);
+//     if(refTuple===undefined)
+//         throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key`);
+//     let prev: CurrentTupleQuery|undefined = undefined;
+//     for(let t of orderedTuplesById.values()) {
+//         if(t.src.id === refTupleId) {
+//             const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.begin_string;
+//             const after_key = refTuple.mostRecentTupleVersion?.assertion.order_key
+//                 ?? panic('tuple is missing:: tuple_id is', refTupleId);
+//             const result_key = orderkey.between(before_key, after_key);
+//             console.info('generateBeforeOrderKey', {before_key, after_key, result_key});
+//             return result_key;
+//         }
+//         prev = t;
+//     }
+//     throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key (2)`);
+// }
+
 export function generateBeforeOrderKey(parent: VersionedRelation,
                                        refTupleId: number): string {
     const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
@@ -1151,7 +1180,7 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
 //     // let definition = mmoDb.findRequiredVersionedTupleById(992);
 //     // console.info('definition', definition.dump());
 
-//     const current = new CurrentTupleQuery(mmoDb.getTable('di'));
+//     const current = new CurrentTupleQuery(mmoDb.getTable('dct'));
 //     console.info('current view', JSON.stringify(current.dump(), undefined, 2));
 
 //     const mmoView = view.schemaView(dictSchema);
@@ -1332,7 +1361,7 @@ export function jsonTest() {
     // TOO SLOW. add some more caching.
     for(let i=0; i<10; i++) {
         console.time('Make JSON');
-        const current = new CurrentTupleQuery(workspace.getTableByTag('di'));
+        const current = new CurrentTupleQuery(workspace.getTableByTag('dct'));
         const currentJSON = current.toJSON();
         console.timeEnd('Make JSON');
     }
@@ -1358,8 +1387,8 @@ export function fullLoadTest() {
     // IDEALLY WOULD LIKE TO OVERLAY SOME TYPING!!!
 
     // TODO switch so top level is not a tuple, but a relation.
-    const dictionaryTuple = workspace.getTableByTag('di');
-    const entriesRelation: VersionedRelation = dictionaryTuple.childRelations['en'];
+    const dictionaryTuple = workspace.getTableByTag('dct');
+    const entriesRelation: VersionedRelation = dictionaryTuple.childRelations['ent'];
 
 
     // THIS IS AN ABSOLUTELY HORRIBLE SEARCH - FACTOR TO MAKE NICE.  

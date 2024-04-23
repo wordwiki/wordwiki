@@ -5,6 +5,7 @@ import * as schema from "./schema.ts";
 import * as server from '../utils/http-server.ts';
 import * as strings from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
+import {panic} from '../utils/utils.ts';
 import * as view from './view.ts';
 import * as workspace from './workspace.ts';
 import {VersionedDb} from  './workspace.ts';
@@ -94,7 +95,7 @@ export class WordWiki {
      */
     get entriesJSON(): entry.Entry[] {
         return this.#entriesJSON ??=
-            new workspace.CurrentTupleQuery(this.workspace.getTableByTag('di')).toJSON().entry;
+            new workspace.CurrentTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry;
     }
 
     requestEntriesJSONReload() {
@@ -204,6 +205,18 @@ export class WordWiki {
     }
 
 
+    entry(entryId: number): any {
+
+        const e = this.entriesJSON
+            .filter(entry=>entry.entry_id === entryId)[0]
+            ?? panic('Unable to find entry', entryId);
+        
+        const title = entry.renderEntrySpellings(e, e.spelling);
+        const body = entry.renderEntry(e);
+        
+        return templates.pageTemplate({title, body});
+    }
+    
     samplePage(query: {searchText?: string}): any {
 
         //console.info('ENTRIES', this.entriesJSON);
@@ -222,10 +235,8 @@ export class WordWiki {
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
         const title = ['Query for ', search];
-        const body = [
-            ['h2', {}, title],
 
-            // --- Query form
+        const queryForm = [
             ['form', {name: 'search', method: 'get', action:'/wordwiki.samplePage(query)'},
 
              // --- Search text row
@@ -237,10 +248,29 @@ export class WordWiki {
 
              ['button', {type:'submit', class:'btn btn-primary'}, 'Search'],
             ], // form
+        ];
         
+        function renderEntryItem(e: entry.Entry): any {
+            return [
+                ['span', {onclick: `imports.popupEntryEditor(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+            ];
+        }
+
+        function renderEntryItem0(e: entry.Entry): any {
+            return [
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+            ];
+        }
+        
+        const body = [
+            ['h2', {}, title],
+
+            // --- Query form
+            queryForm,
+
+            // --- Results
             ['ul', {},
-             entriesWithHouseGloss.map(e=>
-                 ['li', {onclick: `imports.popupEntryEditor(${e.entry_id})`}, entry.renderEntryCompactSummary(e)])
+             entriesWithHouseGloss.map(e=>['li', {}, renderEntryItem(e)]),
             ]
         ];
         

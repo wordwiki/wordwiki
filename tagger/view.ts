@@ -631,6 +631,8 @@ export class ActiveViews {
 
     moveUp(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
         console.info('--- Move up', renderRootId, refTupleId);
+        alert('move up is not implemented yet');
+        return;
 
         // --- Find the reference tuple
         const refTuple = this.workspace.getVersionedTupleById(
@@ -675,6 +677,7 @@ export class ActiveViews {
 
     moveDown(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
         console.info('--- Move down', renderRootId, refTupleId);
+        alert('move down is not implemented yet');
     }
     
     /**
@@ -1190,7 +1193,7 @@ export function renderEditor(r: RelationView): any {
 //     views.registerActiveView(
 //         new ActiveView('root',
 //                        dictView,
-//                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('di'))));
+//                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('dct'))));
     
 //     const root = document.getElementById('root') ?? panic();
 //     root.innerHTML = 'POW!';
@@ -1268,7 +1271,7 @@ export function getGlobalBoostrapInst() {
  *       some protection.
  */
 export async function popupEntryEditor(entryId: number,
-                                       nestedTypeTag:string='en',
+                                       nestedTypeTag:string='ent',
                                        nestedId:number=entryId) {
 
     // TODO make this less weird
@@ -1289,7 +1292,7 @@ export async function popupEntryEditor(entryId: number,
         new ActiveView('modalEditorBody',
                        dictView,
                        ()=>new CurrentTupleQuery(
-                           views.workspace.getVersionedTupleById('di', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId))));
+                           views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId))));
     
 
     views.rerenderAllViews();
@@ -1314,7 +1317,7 @@ export async function run() {
     views.registerActiveView(
         new ActiveView('root',
                        dictView,
-                       ()=>new CurrentTupleQuery(views.workspace.getTableByTag('di'))));
+                       ()=>new CurrentTupleQuery(views.workspace.getTableByTag('dct'))));
     
     // const root = document.getElementById('root') ?? panic();
     // root.innerHTML = 'POW!';
