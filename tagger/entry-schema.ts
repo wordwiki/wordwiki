@@ -22,7 +22,7 @@ export const dictSchemaJson = {
         spelling: {
             $type: 'relation',
             $tag: 'spl',
-            $style: { $prompt: 'SPELLING!' },
+            //$style: { $prompt: 'SPELLING!' },
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
             variant: {$type: 'variant'}
@@ -38,14 +38,14 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'tra',
                 translation_id: {$type: 'primary_key'},
-                translation: {$type: 'string', $bind: 'attr1'},
+                translation: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'}
             },
             definition: {
                 $type: 'relation',
                 $tag: 'def',
                 definition_id: {$type: 'primary_key'},
-                definition: {$type: 'string', $bind: 'attr1'},
+                definition: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'}
                 //variant: {$type: 'string'}
                 // same issue as for gloss variant!!!
@@ -67,7 +67,7 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'gls',
                 gloss_id: {$type: 'primary_key'},
-                gloss: {$type: 'string', $bind: 'attr1'},
+                gloss: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'}
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
@@ -97,7 +97,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: 'etx',
                     example_text_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'attr1'},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
                     variant: {$type: 'variant'}
                 },
 
@@ -105,7 +105,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: 'etr',
                     example_translation_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'attr1'},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
                     variant: {$type: 'variant'}
                 },
                 
@@ -179,7 +179,7 @@ export const dictSchemaJson = {
                 $tag: 'att',
                 attr_id: {$type: 'primary_key'},
                 attr: {$type: 'string', $bind: 'attr1'},
-                value: {$type: 'string', $bind: 'attr2'},
+                value: {$type: 'string', $bind: 'attr2', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
             },
             document_reference: {
@@ -191,33 +191,33 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: 'dtr',
                     transcription_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1'},
+                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
                 },
                 expanded_transcription: {
                     $type: 'relation',
                     $tag: 'dex',
                     expanded_transcription_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1'},
+                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
                 },
                 text: {
                     $type: 'relation',
                     $tag: 'dtx',
                     text_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1'},
+                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
                     variant: {$type: 'variant'},
                 },
                 notes: {
                     $type: 'relation',
                     $tag: 'dnt',
                     notes_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1'},
+                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
                 },
             },
             supporting_evidence: {
                 $type: 'relation',
                 $tag: 'eve',
                 supporting_evidence_id: {$type: 'primary_key'},
-                text: {$type: 'string', $bind: 'attr1'},
+                text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'}
             },
         },
@@ -255,7 +255,7 @@ export interface Subentry {
     gloss: Gloss[],
     example: Example[],
     //recording: Recording[],
-    pronunication_guide: PronunciationGuide[],
+    pronunciation_guide: PronunciationGuide[],
     category: Category[],
     related_entry: RelatedEntry[],
     alternate_grammatical_form: AlternateGrammaticalForm[],
@@ -386,27 +386,32 @@ function test() {
     console.info('Schema again', dumpedEntrySchemaJson);
 }
 
+// TODO Generizise the entry rendering, then do the whole lexeme.
+// TODO Figure out research section.
+
 /**
  *
  * Switch to mm-li query for now.
  */
 export function renderEntry(e: Entry): any {
+    const editSpellings = `imports.popupEntryEditor('Edit Spellings', ${e.entry_id}, 'ent', ${e.entry_id}, 'spl')`;
+    const editEntry = `imports.popupEntryEditor('Edit Entry', ${e.entry_id}, 'ent', ${e.entry_id})`;    
     return [
-        ['h1', {}, renderEntrySpellings(e, e.spelling)],
-        // note
+        ['h1', {class: 'editable', onclick: editEntry}, renderEntrySpellings(e, e.spelling)],
         renderSubentriesCompact(e, e.subentry),
     ];
 }
 
 export function renderEntrySpellings(e: Entry, spellings: Spelling[]): any {
-    return spellings.map(s=>s.text).join('/')    
+    return spellings.map(s=>s.text).join('/') || 'No Spellings';
 }
 
 
 export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
+    const editSubentries = `imports.popupEntryEditor('Edit Subentries', ${e.entry_id}, 'ent', ${e.entry_id}, 'sub')`;        
     switch(subentries.length) {
         case 0:
-            return ['p', {}, 'No entries'];
+            return ['p', {class: 'editable', onclick: editSubentries}, 'No entries'];
         case 1:
             return renderSubentry(e, subentries[0]);
         default:
@@ -421,37 +426,78 @@ export function renderSubentries(e: Entry, s: Subentry[]): any {
 }
 
 export function renderSubentry(e: Entry, s: Subentry): any {
+    console.info('SUBENTRY', JSON.stringify(s, undefined, 2))
+    console.info('PRON', JSON.stringify(s.pronunciation_guide, undefined, 2));
+    //                                    pronunciation_guide
+                                          
+    console.info('cat', Object.entries(s));
     return [
-        s.translation.map(t=>renderTranslation(e, t)),
-        s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
-        renderGlosses(e, s.gloss),
-        s.example.map(x=>renderExample(e, x)),
+        renderPronunciationGuides(e, s, s.pronunciation_guide),
+        renderTranslations(e, s, s.translation),
+        //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
+        renderGlosses(e, s, s.gloss),
+        //s.example.map(x=>renderExample(e, x)),
+        renderExamples(e, s, s.example),
     ];
 }
 
-export function renderTranslation(e: Entry, t: Translation): any {
-    //const onclick = `imports.popupEntryEditor(${e.entry_id}, )`;
-    const onclick = '';
-    return [['div', {onclick}, ['b', {}, 'Translation: '], t.translation]];
+export function renderPronunciationGuides(e: Entry, s: Subentry,
+                                          pronunciationGuides: PronunciationGuide[]): any {
+    if(!pronunciationGuides)
+        throw new Error('missing pron guides');
+    const onclick = `imports.popupEntryEditor('Edit Pronunciations', ${e.entry_id}, 'sub', ${s.subentry_id}, 'prn')`;
+    return [['div', {class: 'editable', onclick},
+             pronunciationGuides.map(p=>renderPronunciationGuide(e, s, p))
+            ]];
 }
 
-export function renderGlosses(e: Entry, glosses: Gloss[]): any {
-    if(glosses.length === 0) return [];
-     return [
-         ['div', {},
-          ['b', {}, 'Meanings:'],
+export function renderPronunciationGuide(e: Entry, s: Subentry, p: PronunciationGuide): any {
+    return [['div', {},  ['b', {}, 'Pronunciation Guide: '], p.text]];
+}
+
+export function renderTranslations(e: Entry, s: Subentry, translations: Translation[]): any {
+    const onclick = `imports.popupEntryEditor('Edit Translations', ${e.entry_id}, 'sub', ${s.subentry_id}, 'tra')`;
+    return [['div', {class: 'editable', onclick},
+             translations.map(t=>renderTranslation(e, s, t))
+            ]];
+}
+
+export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
+    return [['div', {},  ['b', {}, 'Translation: '], t.translation]];
+}
+
+export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
+    const edit = `imports.popupEntryEditor('Edit Glosses', ${e.entry_id}, 'sub', ${s.subentry_id}, 'gls')`;
+    return [
+        ['div', {class: 'editable', onclick: edit},
+         ['b', {}, 'Meanings:'],
           ['ul', {},
-           glosses.map(g=>['li', {}, g.gloss])]
+           glosses.length === 0
+              ? ['li', 'No glosses']
+              : glosses.map(g=>['li', {}, g.gloss])]
          ]
      ];
 }
 
-export function renderExample(e: Entry, example: Example): any { 
-    return [];
-    //     ['b', {}, 'Example of word used in sentence'],
-    //     ['ul', {},
-    //      s.gloss.map(g=>['li', {}, g.gloss])]
-    // ];
+export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any {
+    const edit = `imports.popupEntryEditor('Edit Examples', ${e.entry_id}, 'sub', ${s.subentry_id}, 'exa')`;
+    return [
+        ['div', {class: 'editable', onclick: edit},
+         ['b', {}, 'Example of word used in a sentence:'],
+         ['ul', {},
+          examples.length === 0
+             ? ['li', 'No examples']
+             : examples.map(example=>['li', {}, renderExample(e, example)])]
+        ]
+    ];
+}
+
+export function renderExample(e: Entry, example: Example): any {
+    return [
+        example.example_text.map(t=>['div', {}, t.text]),
+        example.example_translation.map(t=>['div', {}, ['i', {}, t.text]]),
+        // TODO add recording here
+    ];
 }
 
 

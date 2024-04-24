@@ -250,13 +250,13 @@ export class WordWiki {
             ], // form
         ];
         
-        function renderEntryItem(e: entry.Entry): any {
+        function renderEntryItem_OFF(e: entry.Entry): any {
             return [
-                ['span', {onclick: `imports.popupEntryEditor(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['span', {onclick: `imports.popupEntryEditor('Edit Entry', ${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
-        function renderEntryItem0(e: entry.Entry): any {
+        function renderEntryItem(e: entry.Entry): any {
             return [
                 ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];

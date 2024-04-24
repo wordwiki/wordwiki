@@ -108,6 +108,7 @@ export class StringView extends ScalarView {
     // -- before writing this, do the other end
     renderEditor(relation_id: number, v: any): Markup {
         return ['input', {type: 'text', placeholder: this.prompt,
+                          size: this.field.style.$width ?? 30,
                           value: String(v??''),
                           id: `input-${relation_id}-${this.field.name}`}];
     }
@@ -766,8 +767,9 @@ export class ActiveView {
     tupleIdsWithHistoryOpen: Set<number> = new Set();
     
     constructor(public id: string,
+                public title: string,
                 public viewTree: SchemaView, // This is restricting view to be from one schema XXX revisit
-                public query: ()=>CurrentTupleQuery) {
+                public query: ()=>CurrentTupleQuery|CurrentRelationQuery) {
     }
 
     toggleHistory(tupleId: number) {
@@ -779,15 +781,29 @@ export class ActiveView {
     }
     
     rerender() {
-        const queryResults = this.query();
         const renderer = new Renderer(this.viewTree, this.tupleIdsWithHistoryOpen, this.id);
-        const markup = renderer.renderTable(queryResults);
+        const queryResults = this.query();
 
-        const container = document.getElementById(this.id)
-            ?? panic('unable to find view anchor', this.id);
+        let markup;
+        if(queryResults instanceof CurrentTupleQuery) {
+            markup = renderer.renderTable(queryResults);
+        } else if(queryResults instanceof CurrentRelationQuery) {
+            markup = renderer.renderRelation(queryResults);
+        } else {
+            panic('unexpected active view query');
+        }
+
+        const modalTitle = document.querySelector(`#${this.id} h1.modal-title`)
+            ?? panic('unable to find modal editor title for dialog', this.id);
+
+        modalTitle.innerHTML = this.title;
+        
+        const modalBody = document.querySelector(`#${this.id} div.modal-body`)
+            ?? panic('unable to find modal editor body for dialog', this.id);
 
         console.info(`rendering ${this.id}`);
-        container.innerHTML = renderToStringViaLinkeDOM(markup);
+
+        modalBody.innerHTML = renderToStringViaLinkeDOM(markup);
     }
 }
 
@@ -1223,7 +1239,7 @@ export function renderModalEditorSkeleton() {
            
            ['div', {class:'modal-header'},
             ['h1', {class:'modal-title fs-5', id:'modalEditorLabel'},
-             'Edit Entry'], // XXX don't want 'Entry' embeddedd here
+             'Edit'],
             ['button', {type:'button', class:'btn-close', 'data-bs-dismiss':'modal',
                         'aria-label':'Close'}]
            
@@ -1270,9 +1286,11 @@ export function getGlobalBoostrapInst() {
  * TODO: firing this again while it is loading will (like on a slow connection) needs
  *       some protection.
  */
-export async function popupEntryEditor(entryId: number,
+export async function popupEntryEditor(title: string,
+                                       entryId: number,
                                        nestedTypeTag:string='ent',
-                                       nestedId:number=entryId) {
+                                       nestedId:number=entryId,
+                                       restrictToRelation:string|undefined = undefined) {
 
     // TODO make this less weird
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
@@ -1287,13 +1305,18 @@ export async function popupEntryEditor(entryId: number,
     assertions.forEach((a:Assertion)=>views.workspace.untrackedApplyAssertion(a));
     
     const dictView = schemaView(dictSchema);
+
+    let query: ()=>CurrentTupleQuery|CurrentRelationQuery;
+    if(restrictToRelation)
+        query = ()=>new CurrentTupleQuery(
+            views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId)
+                ?? panic('unable to find entry', entryId)).childRelations[restrictToRelation]
+        ?? panic('unable to find relation to view', restrictToRelation);
+    else
+        query = ()=>new CurrentTupleQuery(
+            views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId));
     
-    views.registerActiveView(
-        new ActiveView('modalEditorBody',
-                       dictView,
-                       ()=>new CurrentTupleQuery(
-                           views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId))));
-    
+    views.registerActiveView(new ActiveView('modalEditor', title, dictView, query));
 
     views.rerenderAllViews();
 
@@ -1316,6 +1339,7 @@ export async function run() {
     
     views.registerActiveView(
         new ActiveView('root',
+                       'Edit ENTRY',
                        dictView,
                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('dct'))));
     
@@ -1337,6 +1361,7 @@ export const exportToBrowser = ()=> ({
     activeViews,
     run,
     popupEntryEditor,
+    //popupRelationEditor,
     //beginFieldEdit,
 });
 

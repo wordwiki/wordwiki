@@ -20,6 +20,7 @@ export enum FieldKind {
 export interface Style {
     $prompt?: string,
     $style?: string,
+    $width?: number,
 }
 
 export function validateStyle(locus:string, style: any): Style {
@@ -213,6 +214,8 @@ export abstract class ScalarField extends Field {
     /**
      * Factoring of the common parts of the schemaToCompactJson() method
      * to make per-type field implementations less bulky.
+     *
+     * TODO add $style
      */
     buildSchemaToCompactJson(typ: string, extraFields: any): any {
         const json = { $type: this.schemaTypename() } as any; // XXX fix typing
@@ -370,7 +373,7 @@ export class StringField extends ScalarField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): StringField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'string');
-        return new StringField(name, $bind, !!$optional);
+        return new StringField(name, $bind, !!$optional, StringFormat.Text, $style);
     }
 }
 
@@ -795,7 +798,7 @@ export class RelationField extends Field {
 
         // We are presently allowing $prompt to be specified as top level instead
         // of in $style - not sure we should have this shortcut?
-        const style = { $prompt, $style };
+        const style = { $prompt, ...$style };
         
         // TODO: locus needs asjusting here
         const fields = Object.entries(field_schema).map(([field_name, field_body]) =>

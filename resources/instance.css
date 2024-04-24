@@ -45,3 +45,13 @@ td: {
 td.field-variant {
   width: 3em;
 }
+
+/* Set a min height for the modal editor so that we can always see the popup menus */
+#modalEditor .modal-content
+{
+  min-height:500px;
+}
+
+.editable:hover {
+  background: #EEEEEE; /*lightgrey;*/
+}

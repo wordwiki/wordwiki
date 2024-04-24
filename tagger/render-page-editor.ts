@@ -62,13 +62,6 @@ export function renderPageEditor(page_id: number,
     
     const head = [
         ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],        ['script', {src:'/scripts/tagger/page-editor.js'}],
-        ['script', {}, block`
-/**/           let imports = {};
-/**/           let activeViews = undefined`],
-
-        ['script', {}, block`
-/**/        addEventListener("DOMContentLoaded", event => onContentLoaded());
-/**/        `]
     ];
 
     const body = [
