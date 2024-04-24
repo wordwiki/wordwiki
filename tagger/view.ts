@@ -9,6 +9,7 @@ import {unwrap, panic} from "../utils/utils.ts";
 import {Markup} from '../utils/markup.ts';
 import {VersionedDb, CurrentTupleQuery, CurrentRelationQuery, TupleVersion, generateBeforeOrderKey, generateAfterOrderKey} from './workspace.ts';
 import * as workspace from './workspace.ts';
+import {getAssertionsForEntry} from './workspace.ts';
 import * as utils from '../utils/utils.ts';
 import * as strings from '../utils/strings.ts';
 import { rpc } from '../utils/rpc.ts';
@@ -17,7 +18,7 @@ import {dictSchemaJson} from "./entry-schema.ts";
 import * as timestamp from "../utils/timestamp.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import { BEGINNING_OF_TIME, END_OF_TIME } from "../utils/timestamp.ts";
-
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 // export function buildView(schema: Schema): SchemaView {
 //     // return new RelationSQLDriver(db, relationField,
 //     //                              relationField.relationFields.map(r=>buildRelationSQLDriver(db, r)));
@@ -1326,6 +1327,23 @@ export async function popupEntryEditor(title: string,
     
 }
 
+/**
+ * XXX todo this is panic written proto crap that should be redone and moved!
+ */
+export function launchAddNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string) {
+    console.info('Launching add new document reference', entry_id, subentry_id, friendly_document_id);
+    // Await an RPC that does the data changes.
+    // When the RPC returns, navigate to the URL that is returned.
+    (async ()=>{
+        const editorUrl = await rpc`wordwiki.addNewDocumentReference(${entry_id}, ${subentry_id}, ${friendly_document_id})`;
+        window.location = editorUrl.location;
+    })();
+}
+
+
+/**
+ *
+ */
 export async function run() {
     return;
     
@@ -1361,6 +1379,7 @@ export const exportToBrowser = ()=> ({
     activeViews,
     run,
     popupEntryEditor,
+    launchAddNewDocumentReference,
     //popupRelationEditor,
     //beginFieldEdit,
 });

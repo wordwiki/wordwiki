@@ -17,7 +17,7 @@ import {block} from "../utils/strings.ts";
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {ScannedDocument, ScannedPage, Assertion, updateAssertion} from './schema.ts';
+import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
@@ -54,6 +54,7 @@ export class WordWiki {
             pageEditor.routes(),
             schema.routes(),
             workspace.routes(),
+            view.routes(),
         );        
     }
 
@@ -202,6 +203,53 @@ export class WordWiki {
             this.requestWorkspaceReload();
             throw e;
         }
+    }
+
+    // XXX THIS IS UTTER GARBAGE - JUST GET IT OUT THE DOOR FIX FIX TODO XXX
+    addNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string): any {
+        console.info('Add new document reference', entry_id, subentry_id, friendly_document_id);
+
+        // --- Create new layer in the specified document id.  
+        const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
+        const new_layer_id = db().insert<Layer, 'layer_id'>(
+            'layer', {document_id: document.document_id, is_reference_layer: 0}, 'layer_id');
+        console.info('new layer id is', new_layer_id);
+
+        // --- Add a new document reference to the subentry that references this new
+        //     document id
+        // XXX Seems safest to do all mutes though a workspace - this is a hack fest for now.
+        // TODO make this less weird
+        const ws = new VersionedDb([model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson)]);
+        workspace.getAssertionsForEntry(entry_id)
+            .forEach((a:Assertion)=>ws.untrackedApplyAssertion(a));
+        const subentry = ws.getVersionedTupleById('dct', 'sub', subentry_id)
+            ?? panic('unable to find subentry', subentry_id);
+        const refsRelation = subentry.childRelations['ref']
+            ?? panic("can't find doc refs?");
+        //console.info('refsRelation', refsRelation);
+
+        const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        const order_key = workspace.generateAtEndOrderKey(refsRelation);
+
+        const newAssertion: Assertion = Object.assign(
+            {},
+            assertionPathToFields([...getAssertionPath(subentry.currentAssertion??panic()), ['ref', id]]),
+            {
+                ty: 'ref',
+                assertion_id: id,
+                valid_from: timestamp.nextTime(timestamp.BEGINNING_OF_TIME),  // This is wrong - but it is overridden
+                valid_to: timestamp.END_OF_TIME,
+                attr1: new_layer_id,
+                id: id,
+                order_key,
+            });
+
+        console.info('applying assertion', JSON.stringify(newAssertion, undefined, 2));
+        
+        this.applyTransaction([newAssertion]);
+
+        // --- Redirect the browser to the image tagger on this layer.
+        return {location: 'https://entropy.org'};
     }
 
 

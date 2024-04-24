@@ -184,33 +184,33 @@ export const dictSchemaJson = {
             },
             document_reference: {
                 $type: 'relation',
-                $tag: 'doc', // doc
+                $tag: 'ref',
                 document_reference_id: {$type: 'primary_key'},
                 layer_id: {$type: 'integer', $bind: 'attr1'},
                 transcription: {
                     $type: 'relation',
-                    $tag: 'dtr',
-                    transcription_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
+                    $tag: 'rtr',
+                    ref_transcription_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 },
                 expanded_transcription: {
                     $type: 'relation',
-                    $tag: 'dex',
-                    expanded_transcription_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
+                    $tag: 'rex',
+                    ref_expanded_transcription_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 },
                 text: {
                     $type: 'relation',
-                    $tag: 'dtx',
-                    text_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
+                    $tag: 'rtx',
+                    ref_text_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                     variant: {$type: 'variant'},
                 },
-                notes: {
+                note: {
                     $type: 'relation',
-                    $tag: 'dnt',
-                    notes_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: '$attr1', $style: { $width: 50 }},
+                    $tag: 'rnt',
+                    ref_note_id: {$type: 'primary_key'},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 },
             },
             supporting_evidence: {
@@ -261,7 +261,7 @@ export interface Subentry {
     alternate_grammatical_form: AlternateGrammaticalForm[],
     other_regional_form: OtherRegionalForm[],
     attr: Attr[],
-    image_reference: DocumentReference[],
+    document_reference: DocumentReference[],
     supporting_evidence: SupportingEvidence[],
 }
 
@@ -350,10 +350,30 @@ export interface Attr {
 export interface DocumentReference {
     document_reference_id: number,
     layer_id: number,
-    transcription: string,
-    expanded_transcription: string,
-    translation: string,
-    notes: string,
+    transcription: RefTranscription[],
+    expanded_transcription: RefExpandedTranscription[],
+    text: RefText[],
+    note: RefNote[],
+}
+
+export interface RefTranscription {
+    ref_transcription_id: number,
+    text: string,
+}
+
+export interface RefExpandedTranscription {
+    ref_expanded_transcription_id: number,
+    text: string,
+}
+
+export interface RefText {
+    ref_text_id: number,
+    text: string,
+}
+
+export interface RefNote {
+    ref_note_id: number,
+    text: string,
 }
 
 export interface SupportingEvidence {
@@ -432,6 +452,8 @@ export function renderSubentry(e: Entry, s: Subentry): any {
                                           
     console.info('cat', Object.entries(s));
     return [
+        renderDocumentReferences(e, s, s.document_reference),
+        // renderSupportingEvidence(e, s, s.supporting_evidence),
         renderPronunciationGuides(e, s, s.pronunciation_guide),
         renderTranslations(e, s, s.translation),
         //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
@@ -465,6 +487,14 @@ export function renderTranslations(e: Entry, s: Subentry, translations: Translat
 export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
     return [['div', {},  ['b', {}, 'Translation: '], t.translation]];
 }
+// export function renderCompactList(e: Entry,
+//                                   parentId: number,
+//                                   parentRelationTag: string,
+                                  
+                                  
+                                  
+
+
 
 export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
     const edit = `imports.popupEntryEditor('Edit Glosses', ${e.entry_id}, 'sub', ${s.subentry_id}, 'gls')`;
@@ -497,6 +527,32 @@ export function renderExample(e: Entry, example: Example): any {
         example.example_text.map(t=>['div', {}, t.text]),
         example.example_translation.map(t=>['div', {}, ['i', {}, t.text]]),
         // TODO add recording here
+    ];
+}
+
+export function renderDocumentReferences(e: Entry, s: Subentry,
+                                         documentReferences: DocumentReference[]): any {
+    const edit = `imports.popupEntryEditor('Edit Document References', ${e.entry_id}, 'sub', ${s.subentry_id}, 'ref')`;
+    return [
+        ['div', {class: 'editable', onclick: edit},
+         ['b', {}, 'Document References:'],
+         ['ul', {},
+          documentReferences.length === 0
+             ? ['li', {}, 'No references']
+             : documentReferences.map(ref=>['li', {}, renderDocumentReference(e, ref)]),
+          ['li', {},
+           ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, 'PDM')`}, 'Add new PDM doc reference']]
+         ]
+        ]
+    ];
+}
+
+export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
+    return [
+        ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
+        ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
+        ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),
+        ref.note.map(t=>['div', {}, ['b', {}, 'Note: '], t.text]),
     ];
 }
 
