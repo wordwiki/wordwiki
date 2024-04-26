@@ -47,7 +47,7 @@ export class DenoHttpServer extends HttpServer {
         // --- If the path resolves to a content file path, serve that directly
         const resolvedContentFilePath = this.matchContentFilePath(filepath);
         if(resolvedContentFilePath) {
-            console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
+            //console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
             return this.serveFileRequest(requestEvent, resolvedContentFilePath);
         }
     
@@ -143,12 +143,12 @@ export class DenoHttpServer extends HttpServer {
     }
     
     async serveFileRequest(requestEvent: Deno.RequestEvent, filepath: string) {
-        console.info('serving file request', filepath);
+        //console.info('serving file request', filepath);
 
         let extension = filepath.match(/\.([^./]+)$/)?.[1];
         let mime_type = (extension ? mime_types.extension_to_mime_type[extension] : null)
             || 'text/plain';
-        console.info('extension', extension, 'mime_type', mime_type);
+        //console.info('extension', extension, 'mime_type', mime_type);
         
         // Try opening the file
         let file;

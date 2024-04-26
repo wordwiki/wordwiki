@@ -17,11 +17,12 @@ import {block} from "../utils/strings.ts";
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath} from './schema.ts';
+import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {friendlyRenderPageEditor} from './render-page-editor.ts';
+import {rpcUrl} from '../utils/rpc.ts';
 
 export interface WordWikiConfig {
     hostname: string,
@@ -211,9 +212,12 @@ export class WordWiki {
 
         // --- Create new layer in the specified document id.  
         const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
-        const new_layer_id = db().insert<Layer, 'layer_id'>(
-            'layer', {document_id: document.document_id, is_reference_layer: 0}, 'layer_id');
-        console.info('new layer id is', new_layer_id);
+        const document_id = document.document_id;
+        const layer_id = schema.getOrCreateNamedLayer(document.document_id, 'Tagging', 0);
+        const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
+            'bounding_group', {document_id, layer_id}, 'bounding_group_id');
+
+        console.info('new bounding group id is', bounding_group_id);
 
         // --- Add a new document reference to the subentry that references this new
         //     document id
@@ -239,7 +243,7 @@ export class WordWiki {
                 assertion_id: id,
                 valid_from: timestamp.nextTime(timestamp.BEGINNING_OF_TIME),  // This is wrong - but it is overridden
                 valid_to: timestamp.END_OF_TIME,
-                attr1: new_layer_id,
+                attr1: bounding_group_id,
                 id: id,
                 order_key,
             });
@@ -248,8 +252,21 @@ export class WordWiki {
         
         this.applyTransaction([newAssertion]);
 
+
+        const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+        // XXX Note: if a entry has bounding boxes on muiltiple pages, we are
+        //     picking the first page by page_id, not page number.
+        const page_id =
+            bounding_boxes.length > 0
+            ? bounding_boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0]
+            : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
+
+        const reference_layer_id = getOrCreateNamedLayer(document_id, 'Text', 1);
+        const title = 'TITLE'; // XXX
+        const taggerUrl = `/renderPageEditor(${page_id}, ${layer_id}, ${JSON.stringify([reference_layer_id])}, ${JSON.stringify(title)}, 1, ${bounding_group_id})`;
+        
         // --- Redirect the browser to the image tagger on this layer.
-        return {location: 'https://entropy.org'};
+        return {location: taggerUrl};
     }
 
 
@@ -402,7 +419,7 @@ export class WordWiki {
         rootScope = Object.assign(Object.create(rootScope), bodyParms);
 
         console.info('about to eval', jsExprSrc, 'with root scope ',
-                     utils.getAllPropertyNames(rootScope));
+                     JSON.stringify(utils.getAllPropertyNames(rootScope)));
 
         let result = null;
         try {

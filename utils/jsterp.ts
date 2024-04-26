@@ -326,10 +326,16 @@ export class Eval {
         switch(true) {
             case key.type === 'PrivateIdentifier':
                 return (key as PrivateIdentifier).name;
-            case !computed:
-                if(key.type !== 'Identifier')
-                    throw new Error('jsterp: expected identifier');
-                return (key as Identifier).name;
+            case !computed: {
+                switch (key.type) {
+                    case 'Identifier':
+                        return (key as Identifier).name;
+                    case 'Literal':
+                        return this.evalLiteral(s, key);
+                    default: 
+                        throw new Error(`jsterp: expected property key - type is ${key.type}`);
+                }
+            }
             default:
                 return this.eval(s, key);
         }

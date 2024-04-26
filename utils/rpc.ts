@@ -5,17 +5,18 @@
 export async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]): Promise<any> {
 
     console.info('RPC', rpcExprSegments, args);
-    
-    // --- Replace ${} in this tagged template expr with arg
-    //     references, and hoist the args into an arg {}.
-    let rpcExpr = rpcExprSegments[0];
-    const argsObj: Record<string, any> = {};
-    args.forEach((argVal, i) => {
-        const argName = `$arg${i}`;
-        argsObj[argName] = argVal;
-        rpcExpr += `(${argName})`;
-        rpcExpr += rpcExprSegments[i+1];
-    });
+
+    const {rpcExpr, argsObj} = rpcUrl(rpcExprSegments, ...args);
+    // // --- Replace ${} in this tagged template expr with arg
+    // //     references, and hoist the args into an arg {}.
+    // let rpcExpr = rpcExprSegments[0];
+    // const argsObj: Record<string, any> = {};
+    // args.forEach((argVal, i) => {
+    //     const argName = `$arg${i}`;
+    //     argsObj[argName] = argVal;
+    //     rpcExpr += `(${argName})`;
+    //     rpcExpr += rpcExprSegments[i+1];
+    // });
 
     // --- Make the request with expr as the URL and the
     //     args json as the post body.
@@ -40,3 +41,20 @@ export async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]
     return await response.json();
 }
 
+export function rpcUrl(rpcExprSegments: ReadonlyArray<string>, ...args: any[]): { rpcExpr: string, argsObj: Record<string, any>} {
+
+    console.info('RPC', rpcExprSegments, args);
+    
+    // --- Replace ${} in this tagged template expr with arg
+    //     references, and hoist the args into an arg {}.
+    let rpcExpr = rpcExprSegments[0];
+    const argsObj: Record<string, any> = {};
+    args.forEach((argVal, i) => {
+        const argName = `$arg${i}`;
+        argsObj[argName] = argVal;
+        rpcExpr += `(${argName})`;
+        rpcExpr += rpcExprSegments[i+1];
+    });
+
+    return {rpcExpr, argsObj};
+}

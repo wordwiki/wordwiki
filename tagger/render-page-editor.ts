@@ -25,68 +25,97 @@ export const boxesForPageLayer = ()=>db().
 /**/               bb.layer_id = :layer_id
 /**/         ORDER BY bb.x, bb.y, bb.bounding_box_id`);
 
+
+export interface PageEditorConfig {
+    layer_id: number,
+    reference_layer_ids: number[],
+    title?: string,
+    is_popup_editor?: boolean,
+    locked_bounding_group_id?: number,
+    highlight_bounding_box_id?: number,
+    total_pages_in_document?: number,
+    scale_factor?:number
+}
+
 export function renderPageEditor(page_id: number,
-                                 layer_id: number,
-                                 reference_layer_ids: number[],
-                                 total_pages_in_document?: number,
-                                 scale_factor:number=4): any {
-
+                                 cfg: PageEditorConfig): any {
     const page = selectScannedPage().required({page_id});
+    const document = selectScannedDocument().required({document_id: page.document_id});
 
-    total_pages_in_document ??= maxPageNumberForDocument().required({document_id: page.document_id}).max_page_number;
+    const title = cfg.title || document.title;
+    
+    const total_pages_in_document = cfg.total_pages_in_document
+        ?? maxPageNumberForDocument().required({document_id: page.document_id}).max_page_number;
 
     const pageImageUrl = '/'+page.image_ref;
 
-    // --- Render user boxes
-    const boxes = boxesForPageLayer().all({page_id, layer_id});
+    // --- Render user blocks
+    const boxes = boxesForPageLayer().all({page_id, layer_id: cfg.layer_id});
     const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
     const blocksSvg = 
         [...boxesByGroup.entries()].
         map(([groupId, boxes])=>renderGroup(page, groupId, boxes));
 
+    // --- If the locked bounding group has no boxes in this page,
+    //     render it anyway as an empty group
+    const emptyLockedGroupSvg =
+        (cfg.locked_bounding_group_id && !boxesByGroup.has(cfg.locked_bounding_group_id))
+        ? [renderGroup(page, cfg.locked_bounding_group_id, [])]
+        : undefined;
+    
     // --- We don't render reference boxes that have been imported to user
     //     boxes that are still active on the page.
     const importedFromBoundingBoxIds =
         new Set(boxes.map(b=>b.imported_from_bounding_box_id).filter(b=>b!==null));
     
     // --- Render reference layers
-    let refBlocksSvg:any = reference_layer_ids.flatMap(layer_id=> {
+    let refBlocksSvg:any = cfg.reference_layer_ids.flatMap(layer_id=> {
         const refBoxes = boxesForPageLayer().all({page_id, layer_id})
             .filter(b=>!importedFromBoundingBoxIds.has(b.bounding_box_id));
         const refBoxesByGroup = utils.groupToMap(refBoxes, box=>box.bounding_group_id);
         return [...refBoxesByGroup.entries()].
             map(([groupId, boxes])=>renderGroup(page, groupId, boxes, true));
     });
-
-    const title = 'Tagger'; // XXX fix
     
     const head = [
         ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],        ['script', {src:'/scripts/tagger/page-editor.js'}],
     ];
 
+    const scale_factor = cfg.scale_factor ?? 4;
     const body = [
         ['div', {},
          ['h1', {}, 'PDM Textract preview page', page.page_number],
          renderPageJumper(page.page_number, total_pages_in_document)],
+
+        ['ul', {},
+         ['li', {}, 'page_id: ', page_id],
+         ['li', {}, 'layer_id: ', cfg.layer_id],
+         ['li', {}, 'reference_layer_ids: ', cfg.reference_layer_ids],
+         ['li', {}, 'title: ', cfg.title],
+         ['li', {}, 'is_popup_editor: ', cfg.is_popup_editor],
+         ['li', {}, 'locked_bounding_group_id: ', cfg.locked_bounding_group_id]],
         
-        reference_layer_ids.length === 1
-            ? renderTextSearchForm(reference_layer_ids[0])
+        cfg.reference_layer_ids.length === 1
+            ? renderTextSearchForm(cfg.reference_layer_ids[0], cfg)
             : [],
         
         ['div', {id: 'annotatedPage'},
          //['img', {src:pageImageUrl, width:page.width, height:page.height}],
-         ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
+         ['svg', {id: 'scanned-page',
+                  width:page.width/scale_factor,
+                  height:page.height/scale_factor,
                   viewBox: `0 0 ${page.width} ${page.height}`,
                   onmousedown: 'pageEditorMouseDown(event)',
                   onmousemove: 'pageEditorMouseMove(event)',
                   onmouseup: 'pageEditorMouseUp(event)',
-                  'data-layer-id': layer_id,
+                  'data-layer-id': cfg.layer_id,
                   'data-page-id': page_id,
-                  'data-scale-factor': scale_factor,
+                  'data-scale-factor': cfg.scale_factor,
                  },
           ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
           refBlocksSvg,
-          blocksSvg]],
+          blocksSvg,
+          emptyLockedGroupSvg]],
           
         Array.from(boxesByGroup.keys()).map(bounding_group_id =>
             ['p', {},
@@ -231,7 +260,7 @@ export function renderPageJumper(current_page_num: number, total_pages: number):
 
 export async function friendlyRenderPageEditor(friendly_document_id: string,
                                                page_number: number,
-                                               layer_name: string = 'TextractWord'): Promise<any> {
+                                               layer_name: string = 'Text'): Promise<any> {
     const pdm = selectScannedDocumentByFriendlyId().required({friendly_document_id});
     //const
     const pdmTaggingLayer = getOrCreateNamedLayer(pdm.document_id, 'Tagging', 0);
@@ -239,8 +268,10 @@ export async function friendlyRenderPageEditor(friendly_document_id: string,
     const pdmSamplePage = selectScannedPageByPageNumber().required(
         {document_id: pdm.document_id, page_number});
     const totalPagesInDocument = maxPageNumberForDocument().required({document_id: pdm.document_id}).max_page_number;
-    console.info('max_page_number', totalPagesInDocument);
-    return renderPageEditor(pdmSamplePage.page_id, pdmTaggingLayer, [pdmWordLayer.layer_id], totalPagesInDocument);
+    //console.info('max_page_number', totalPagesInDocument);
+    return renderPageEditor(pdmSamplePage.page_id,
+                            {layer_id: pdmTaggingLayer,
+                             reference_layer_ids: [pdmWordLayer.layer_id]});
 }
 
 
@@ -254,7 +285,7 @@ async function samplePageRender(friendly_document_id: string, page_number: numbe
 // --------------------------------------------------------------------------------
 
 export const routes = ()=> ({
-    pageEditor: renderPageEditor,
+    renderPageEditor: renderPageEditor,
     updateBoundingBoxShape,
     newBoundingBoxInNewGroup,
     newBoundingBoxInExistingGroup,
@@ -424,9 +455,10 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
 /**
  *
  */
-export function renderTextSearchForm(layer_id: number, searchText: string=''): any {
+export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
+                                     searchText: string=''): any {
     return [
-        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, query.searchText)`},
+        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
          ['label', {class:'sr-only', for:'searchText'}, 'Search'],
          ['input', {type:'text', class:'form-control mb-2 mr-sm-2',
                     id:'searchText', name:'searchText', placeholder:'Search',
@@ -439,8 +471,10 @@ export function renderTextSearchForm(layer_id: number, searchText: string=''): a
 /**
  *
  */
-export function renderTextSearchResults(layer_id: number, searchText?: string) {
+export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig, searchText?: string) {
     searchText = searchText ?? '';
+
+    console.info('CFG', JSON.stringify(cfg, undefined, 2));
     
     const layer = schema.selectLayer().required({layer_id});
     const document = schema.selectScannedDocument().required(
@@ -449,6 +483,21 @@ export function renderTextSearchResults(layer_id: number, searchText?: string) {
     const title = `Search for '${searchText}' in layer ${layer.layer_name} of ${document.title}`;
     const head = [
         ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}]];
+
+    function renderItem(bounding_box_id: number, page_id: number, text: string): any {
+        const itemCfg = Object.assign(
+            {},
+            cfg,
+            {highlight_bounding_box_id: bounding_box_id});
+        
+        const href=`/renderPageEditor(${page_id}, ${JSON.stringify(itemCfg)})`;
+        return [
+            ['li', {},
+             ['a', {href}, 
+              text, ['br', {}],
+              renderStandaloneBoxes([
+                  selectBoundingBox().required({bounding_box_id})])]]];
+    }
     
     let renderedResults: any = undefined;
     if(searchText.length < 2) {
@@ -462,18 +511,16 @@ export function renderTextSearchResults(layer_id: number, searchText?: string) {
             renderedResults =
                 ['code', {}, JSON.stringify(results, undefined, 2)];
             renderedResults =
-                ['ul', {}, 
-                 results.map(({bounding_box_id, text})=>
-                     ['li', {}, text, ['br', {}],
-                      renderStandaloneBoxes([
-                          selectBoundingBox().required({bounding_box_id})])])
+                ['ul', {},
+                 results.map(({bounding_box_id, page_id, text})=>
+                     renderItem(bounding_box_id, page_id, text))
                 ]; // ul
         }
     }
 
     const body= [
         ['h2', {}, title],
-        renderTextSearchForm(layer_id, searchText??''),
+        renderTextSearchForm(layer_id, cfg, searchText??''),
         renderedResults,
     ];
         

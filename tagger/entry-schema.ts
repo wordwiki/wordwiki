@@ -186,7 +186,7 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'ref',
                 document_reference_id: {$type: 'primary_key'},
-                layer_id: {$type: 'integer', $bind: 'attr1'},
+                bounding_box_id: {$type: 'integer', $bind: 'attr1'},
                 transcription: {
                     $type: 'relation',
                     $tag: 'rtr',
@@ -349,7 +349,7 @@ export interface Attr {
 
 export interface DocumentReference {
     document_reference_id: number,
-    layer_id: number,
+    bounding_box_id: number,
     transcription: RefTranscription[],
     expanded_transcription: RefExpandedTranscription[],
     text: RefText[],

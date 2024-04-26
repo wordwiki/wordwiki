@@ -98,7 +98,7 @@ export class Db {
      * free sqlite resources.
      */
     unmemoizedPrepare<O extends RowObject, P extends QueryParameterSet>(sql: string): PreparedQuery<O,P> {
-        console.info('preparing ', sql);
+        //console.info('preparing ', sql);
         return new PreparedQuery<O,P>(this.db.prepareQuery<Row,O,P>(sql));
     }
 

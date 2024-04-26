@@ -29,8 +29,7 @@ import {awsCmdPath} from './config.ts';
  * Can only be run in an environment with a logged-in aws CLI (which will
  * be used to upload images to s3, then run the though textract).
  */
-export async function textractDocument(document_id: number) {
-
+export async function textractDocument(document_id: number, kind: 'WORD'|'LINE' = 'LINE') {
     const friendly_document_id = selectScannedDocument().required({document_id}).friendly_document_id;
                                                                   
     await syncScannedBookToS3(`content/${friendly_document_id}`);
@@ -44,20 +43,16 @@ export async function textractDocument(document_id: number) {
     console.info('begin textractDocument');
     //console.info('pages are', pages);
 
-    const textractPageLayerId = getOrCreateNamedLayer(document_id, 'TextractPage', 1);
-    const textractLineLayerId = getOrCreateNamedLayer(document_id, 'TextractLine', 1);
-    const textractWordLayerId = getOrCreateNamedLayer(document_id, 'TextractWord', 1);
+    const textractPageLayerId = getOrCreateNamedLayer(document_id, 'PageBox', 1);
+    const textractLayerId = getOrCreateNamedLayer(document_id, 'Text', 1);
 
-    console.info('textracting pages ', textractPageLayerId, textractLineLayerId, textractWordLayerId);
+    console.info('textracting pages ', textractPageLayerId, textractLayerId, kind);
     for(const page of pages) {
         if(!haveTextractPageBoxForPage(page.page_id, textractPageLayerId) /*&& page.page_number <= 25*/) {
             const blocks = await textractPage(page.page_id);
             db().transaction(()=>{
-                blocks.filter(b=>b.type === 'WORD').map(b=>
-                    insertTextractBlock(document_id, textractWordLayerId, page.page_id,
-                                        b.x, b.y, b.w, b.h, b.text));
-                blocks.filter(b=>b.type === 'LINE').map(b=>
-                    insertTextractBlock(document_id, textractLineLayerId, page.page_id,
+                blocks.filter(b=>b.type === kind).map(b=>
+                    insertTextractBlock(document_id, textractLayerId, page.page_id,
                                         b.x, b.y, b.w, b.h, b.text));
                 blocks.filter(b=>b.type === 'PAGE').map(b=>
                     insertTextractBlock(document_id, textractPageLayerId, page.page_id,
@@ -65,17 +60,45 @@ export async function textractDocument(document_id: number) {
             });
         }
     }
-//     console.info(db().all<BoundingBox, {}>(
-//         block`
-// /**/       SELECT ${boundingBoxFieldNames.join()} FROM bounding_box`, {}));
-
-//     // Sample FTS query
-//     console.info(db().all<{text:string, bounding_box_id: number}, {query: string}>(
-//         block`
-// /**/    SELECT bounding_box_id, text FROM bounding_box_fts
-// /**/        WHERE text match :query`,
-//         {query: 'pene*'}));
 }
+
+// export async function textractDocument(document_id: number) {
+
+//     const friendly_document_id = selectScannedDocument().required({document_id}).friendly_document_id;
+                                                                  
+//     await syncScannedBookToS3(`content/${friendly_document_id}`);
+    
+//     const pages = db().all<ScannedPage, {document_id: number}>(block`
+// /**/      SELECT ${scannedPageFieldNames.join()}
+// /**/         FROM scanned_page
+// /**/         WHERE document_id = :document_id
+// /**/         ORDER BY page_number`, {document_id});
+    
+//     console.info('begin textractDocument');
+//     //console.info('pages are', pages);
+
+//     const textractPageLayerId = getOrCreateNamedLayer(document_id, 'TextractPage', 1);
+//     const textractLineLayerId = getOrCreateNamedLayer(document_id, 'TextractLine', 1);
+//     const textractWordLayerId = getOrCreateNamedLayer(document_id, 'TextractWord', 1);
+
+//     console.info('textracting pages ', textractPageLayerId, textractLineLayerId, textractWordLayerId);
+//     for(const page of pages) {
+//         if(!haveTextractPageBoxForPage(page.page_id, textractPageLayerId) /*&& page.page_number <= 25*/) {
+//             const blocks = await textractPage(page.page_id);
+//             db().transaction(()=>{
+//                 blocks.filter(b=>b.type === 'WORD').map(b=>
+//                     insertTextractBlock(document_id, textractWordLayerId, page.page_id,
+//                                         b.x, b.y, b.w, b.h, b.text));
+//                 blocks.filter(b=>b.type === 'LINE').map(b=>
+//                     insertTextractBlock(document_id, textractLineLayerId, page.page_id,
+//                                         b.x, b.y, b.w, b.h, b.text));
+//                 blocks.filter(b=>b.type === 'PAGE').map(b=>
+//                     insertTextractBlock(document_id, textractPageLayerId, page.page_id,
+//                                         b.x, b.y, b.w, b.h, b.text));
+//             });
+//         }
+//     }
+// }
 
 function insertTextractBlock(document_id: number, layer_id: number, page_id: number,
                              x: number, y: number, w: number, h: number,
@@ -276,9 +299,12 @@ async function main() {
             const book = args[1];
             if(!book)
                 throw new Error('usage: textract [bookName]');
+            const kind = args[2];
+            if(![undefined, 'LINE', 'WORD'].includes(kind))
+                throw new Error('kind must be LINE WORD or undefined');
             console.info(`--- textracting "${book}"`);
             textractDocument(selectScannedDocumentByFriendlyId().
-                required({friendly_document_id: book}).document_id);
+                required({friendly_document_id: book}).document_id, kind as any);
             break;
         };
         default:

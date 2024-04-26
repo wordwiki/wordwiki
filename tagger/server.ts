@@ -26,7 +26,7 @@ export function allRoutes() {
 
 // Proto request handler till we figure out how we want our urls etc to workc
 async function taggerRequestHandler(request: server.Request): Promise<server.Response> {
-    console.info('tagger request', request);
+    //console.info('tagger request', request);
     const requestUrl = new URL(request.url);
     const filepath = decodeURIComponent(requestUrl.pathname);
     const searchParams: Record<string,string> = {};

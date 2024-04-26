@@ -1336,7 +1336,7 @@ export function launchAddNewDocumentReference(entry_id: number, subentry_id: num
     // When the RPC returns, navigate to the URL that is returned.
     (async ()=>{
         const editorUrl = await rpc`wordwiki.addNewDocumentReference(${entry_id}, ${subentry_id}, ${friendly_document_id})`;
-        window.location = editorUrl.location;
+        window.open(editorUrl.location, '_blank');
     })();
 }
 
