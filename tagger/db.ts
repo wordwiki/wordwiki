@@ -219,8 +219,11 @@ export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParamet
 
     // TODO: query printing in this error message is borked.
     required(params?: P): O {
-        return unwrap(this.first(params),
-                      `expected result for query '${this}' with parameters ${params}`);
+        const first = this.first(params);
+        if(first == undefined) {
+            throw new Error(`expected non-empty result for query ${this.preparedQuery.expandSql(params)}`);
+        }
+        return first;
     }
         
     execute(params?: P) {

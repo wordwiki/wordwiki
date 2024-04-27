@@ -21,7 +21,7 @@ import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedD
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
-import {friendlyRenderPageEditor} from './render-page-editor.ts';
+import {friendlyRenderPageEditor, PageEditorConfig} from './render-page-editor.ts';
 import {rpcUrl} from '../utils/rpc.ts';
 
 export interface WordWikiConfig {
@@ -207,8 +207,8 @@ export class WordWiki {
     }
 
     // XXX THIS IS UTTER GARBAGE - JUST GET IT OUT THE DOOR FIX FIX TODO XXX
-    addNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string): any {
-        console.info('Add new document reference', entry_id, subentry_id, friendly_document_id);
+    addNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string): any {
+        console.info('*** Add new document reference', entry_id, subentry_id, friendly_document_id, title);
 
         // --- Create new layer in the specified document id.  
         const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
@@ -220,7 +220,7 @@ export class WordWiki {
         console.info('new bounding group id is', bounding_group_id);
 
         // --- Add a new document reference to the subentry that references this new
-        //     document id
+        //     bounding_group_id
         // XXX Seems safest to do all mutes though a workspace - this is a hack fest for now.
         // TODO make this less weird
         const ws = new VersionedDb([model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson)]);
@@ -252,7 +252,6 @@ export class WordWiki {
         
         this.applyTransaction([newAssertion]);
 
-
         const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
         // XXX Note: if a entry has bounding boxes on muiltiple pages, we are
         //     picking the first page by page_id, not page number.
@@ -262,8 +261,15 @@ export class WordWiki {
             : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
 
         const reference_layer_id = getOrCreateNamedLayer(document_id, 'Text', 1);
-        const title = 'TITLE'; // XXX
-        const taggerUrl = `/renderPageEditor(${page_id}, ${layer_id}, ${JSON.stringify([reference_layer_id])}, ${JSON.stringify(title)}, 1, ${bounding_group_id})`;
+        //const title = 'TITLE'; // XXX
+        const pageEditorConfig: PageEditorConfig = {
+            layer_id,
+            reference_layer_ids: [reference_layer_id],
+            title,
+            is_popup_editor: true,
+            locked_bounding_group_id: bounding_group_id,
+        };
+        const taggerUrl = `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
         
         // --- Redirect the browser to the image tagger on this layer.
         return {location: taggerUrl};

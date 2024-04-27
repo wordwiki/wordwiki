@@ -782,7 +782,7 @@ export class ActiveView {
     }
     
     rerender() {
-        const renderer = new Renderer(this.viewTree, this.tupleIdsWithHistoryOpen, this.id);
+        const renderer = new EditorRenderer(this.viewTree, this.tupleIdsWithHistoryOpen, this.id);
         const queryResults = this.query();
 
         let markup;
@@ -884,7 +884,7 @@ export function dropActiveViewsAndWorkspace() {
 /**
  *
  */
-export class Renderer {
+export class EditorRenderer {
     readonly uiColCount = 3;
     
     constructor(public viewTree: SchemaView,
@@ -892,6 +892,11 @@ export class Renderer {
                 public renderRootId: string) {
     }
 
+    getViewForRelation(schema: RelationField): RelationView {
+        return this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+    }
+    
     // renderRelation0(r: CurrentRelationQuery): Markup {
     //     const schema = r.schema;
     //     // TODO somehow change this to find tuple editor targeting an insert into
@@ -922,9 +927,7 @@ export class Renderer {
         const refKind = currentlyOpenTupleEditor?.ref_kind;
         const refRelation = currentlyOpenTupleEditor?.ref_relation;
         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
-        
-        const view = this.viewTree.relationViewForRelation.get(schema)
-            ?? panic('unable find relation view for relation', schema.name);
+        const view = this.getViewForRelation(schema);
         return (
             // This table has the number of cols in the schema for 'r'
             ['table', {class: `relation relation-${schema.name}`},
@@ -960,8 +963,7 @@ export class Renderer {
     
     renderTuple(r: CurrentTupleQuery): Markup {
         const schema = r.schema;
-        const view = this.viewTree.relationViewForRelation.get(schema)
-            ?? panic('unable find relation view for relation', schema.name);
+        const view = this.getViewForRelation(schema);
         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
 
         return [
@@ -999,8 +1001,7 @@ export class Renderer {
      */
     renderCurrentTupleRow(r: CurrentTupleQuery): Markup {
         const schema = r.schema;
-        const view = this.viewTree.relationViewForRelation.get(schema)
-            ?? panic('unable find relation view for relation', schema.name);
+        const view = this.getViewForRelation(schema);
         const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
         const current = r.mostRecentTupleVersion;
         const tupleJson = JSON.stringify(current?.assertion);
@@ -1026,8 +1027,7 @@ export class Renderer {
      */
     renderHistoryTable(r: CurrentTupleQuery): Markup {
         const schema = r.schema;
-        const view = this.viewTree.relationViewForRelation.get(schema)
-            ?? panic('unable find relation view for relation', schema.name);
+        const view = this.getViewForRelation(schema);
         const historicalTupleVersions = r.historicalTupleVersions.toReversed();
         if(historicalTupleVersions.length === 0)
             return ['strong', {}, 'No history'];
@@ -1064,8 +1064,7 @@ export class Renderer {
     }
 
     renderTupleEditor(schema: RelationField, t: TupleEditor): Markup {
-        const view = this.viewTree.relationViewForRelation.get(schema)
-            ?? panic('unable find relation view for relation', schema.name);
+        const view = this.getViewForRelation(schema);
         //const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
         return [
             ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
@@ -1137,6 +1136,168 @@ export class Renderer {
              ]]);
     }
 }
+
+// ---------------------------------------------------------------------------------
+// --- View Renderer ---------------------------------------------------------------
+// ---------------------------------------------------------------------------------
+
+/**
+ *
+ */
+export class ViewRenderer {
+    readonly uiColCount = 3;
+    
+    constructor(public viewTree: SchemaView,
+                public tupleIdsWithHistoryOpen: Set<number>,                
+                public renderRootId: string) {
+    }
+
+    getViewForRelation(schema: RelationField): RelationView {
+        return this.viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+    }
+    
+    renderRelation(r: CurrentRelationQuery): Markup {
+        const schema = r.schema;
+        const view = this.getViewForRelation(schema);
+        return (
+            // This table has the number of cols in the schema for 'r'
+            ['table', {class: `relation relation-${schema.name}`},
+
+             [...r.tuples.values()].map(t=>{
+                 const tuple_id = t.src.id;
+                 return [
+                     this.renderTuple(t),
+                 ];
+             }),
+            ]);
+    }
+
+    renderTable(r: CurrentTupleQuery): Markup {
+        return (
+            ['table', {class: `relation relation-${r.schema.name}`},
+             this.renderTuple(r),
+            ]);
+    }
+    
+    renderTuple(r: CurrentTupleQuery): Markup {
+        const schema = r.schema;
+        const view = this.getViewForRelation(schema);
+
+        return [
+            this.renderCurrentTupleRow(r),
+
+            // --- Render child relations
+            schema.relationFields.length > 0 ? [
+                ['tr', {},
+                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+this.uiColCount},
+                  Object.values(r.childRelations).map(
+                      childRelation=>this.renderRelation(childRelation))
+                 ]]
+            ]: undefined
+        ];
+    }
+
+    /**
+     *
+     */
+    renderCurrentTupleRow(r: CurrentTupleQuery): Markup {
+        const schema = r.schema;
+        const view = this.getViewForRelation(schema);
+        const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
+        const current = r.mostRecentTupleVersion;
+        const tupleJson = JSON.stringify(current?.assertion);
+        return [
+            ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
+                    class: 'tuple'},
+             ['th', {}, view.prompt],
+             current ? [  // current is undefined for deleted tuples - more work here TODO
+                 view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
+             ]: undefined,
+             ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews().viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
+             ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]],
+            isHistoryOpen
+                ? ['tr', {},
+                   ['td', {}],
+                   ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
+                : undefined,
+            ];
+    }    
+
+    /**
+     *
+     */
+    renderHistoryTable(r: CurrentTupleQuery): Markup {
+        const schema = r.schema;
+        const view = this.getViewForRelation(schema);
+        const historicalTupleVersions = r.historicalTupleVersions.toReversed();
+        if(historicalTupleVersions.length === 0)
+            return ['strong', {}, 'No history'];
+        else
+            return ['table', {},
+                    historicalTupleVersions.map(h=>
+                        ['tr', {},
+                         ['td', {}],  // Empty header col
+                         ['td', {},
+                          timestamp.formatTimestampAsLocalTime(h.assertion.valid_from)],
+                         ['td', {},
+                          timestamp.formatTimestampAsLocalTime(h.assertion.valid_to)],
+                         view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
+                         ['td', {},
+                          h.assertion.change_by_username],
+                        ])
+                   ];
+    }
+    
+    renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
+        const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
+        return (
+            ['td', {class: `field field-${v.field.schemaTypename()}`,
+                    onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
+                   },
+             v.renderView(value)
+            ]);
+    }
+
+    // TODO: the event handlers should not be literal onclick scripts on each
+    //       item (bloat).
+    renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
+        const insertChildMenuItems = 
+            r.schema.relationFields.map(c=>
+                ['li', {},
+                 ['a', {class:'dropdown-item', href:'#',
+                        onclick:`activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
+                  `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
+                 ]]);
+
+        // 'true||undefined' type is convenient for eliding sections of markup.
+        const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
+        
+        return (
+            ['div', {class:'dropdown'},
+             ['button',
+              {class:'btn btn-secondary dropdown-toggle',
+               type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+              '≡'],
+             ['ul', {class:'dropdown-menu'},
+              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
+              isLeaf && [
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#',
+                                    onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
+                  insertChildMenuItems,
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
+              ], // isLeaf
+              //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
+             ]]);
+    }
+}
+
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 /**
  *
@@ -1330,12 +1491,13 @@ export async function popupEntryEditor(title: string,
 /**
  * XXX todo this is panic written proto crap that should be redone and moved!
  */
-export function launchAddNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string) {
-    console.info('Launching add new document reference', entry_id, subentry_id, friendly_document_id);
+export function launchAddNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string) {
+    console.info('*** Launching add new document reference', entry_id, subentry_id, friendly_document_id, title);
     // Await an RPC that does the data changes.
     // When the RPC returns, navigate to the URL that is returned.
     (async ()=>{
-        const editorUrl = await rpc`wordwiki.addNewDocumentReference(${entry_id}, ${subentry_id}, ${friendly_document_id})`;
+        const editorUrl = await rpc`wordwiki.addNewDocumentReference(${entry_id}, ${subentry_id}, ${friendly_document_id}, ${title})`;
+        console.info('*** Editor URL is', editorUrl);
         window.open(editorUrl.location, '_blank');
     })();
 }

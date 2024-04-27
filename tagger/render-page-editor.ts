@@ -32,16 +32,26 @@ export interface PageEditorConfig {
     title?: string,
     is_popup_editor?: boolean,
     locked_bounding_group_id?: number,
-    highlight_bounding_box_id?: number,
+    highlight_ref_bounding_box_ids?: number[],
     total_pages_in_document?: number,
     scale_factor?:number
 }
 
-export function renderPageEditor(page_id: number,
-                                 cfg: PageEditorConfig): any {
-    const page = selectScannedPage().required({page_id});
-    const document = selectScannedDocument().required({document_id: page.document_id});
+export function renderPageEditorByPageNumber(document_id: number,
+                                             page_number: number,
+                                             cfg: PageEditorConfig): any {
+    const document = selectScannedDocument().required({document_id});
+    const page = selectScannedPageByPageNumber().required({document_id, page_number});
+    return renderPageEditorByPageId(page.page_id, cfg);
+}
 
+export function renderPageEditorByPageId(page_id: number,
+                                         cfg: PageEditorConfig): any {
+
+    const page = selectScannedPage().required({page_id});
+    const document_id = page.document_id;
+    const document = selectScannedDocument().required({document_id});
+    
     const title = cfg.title || document.title;
     
     const total_pages_in_document = cfg.total_pages_in_document
@@ -60,7 +70,7 @@ export function renderPageEditor(page_id: number,
     //     render it anyway as an empty group
     const emptyLockedGroupSvg =
         (cfg.locked_bounding_group_id && !boxesByGroup.has(cfg.locked_bounding_group_id))
-        ? [renderGroup(page, cfg.locked_bounding_group_id, [])]
+        ? [renderEmptyGroup(page, cfg.locked_bounding_group_id)]
         : undefined;
     
     // --- We don't render reference boxes that have been imported to user
@@ -85,7 +95,7 @@ export function renderPageEditor(page_id: number,
     const body = [
         ['div', {},
          ['h1', {}, 'PDM Textract preview page', page.page_number],
-         renderPageJumper(page.page_number, total_pages_in_document)],
+         renderPageJumper(cfg, document_id, page.page_number, total_pages_in_document)],
 
         ['ul', {},
          ['li', {}, 'page_id: ', page_id],
@@ -110,7 +120,11 @@ export function renderPageEditor(page_id: number,
                   onmouseup: 'pageEditorMouseUp(event)',
                   'data-layer-id': cfg.layer_id,
                   'data-page-id': page_id,
-                  'data-scale-factor': cfg.scale_factor,
+                  'data-scale-factor': scale_factor,
+                  ...(cfg.locked_bounding_group_id
+                      ? {'data-locked-bounding-group-id':
+                         `bg_${cfg.locked_bounding_group_id}`}
+                      : {}),
                  },
           ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
           refBlocksSvg,
@@ -122,10 +136,13 @@ export function renderPageEditor(page_id: number,
              renderStandaloneGroup(bounding_group_id)]
                                            ),
           
-        config.bootstrapScriptTag,
+        //config.bootstrapScriptTag,
           
     ]; // body
 
+
+    //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
+    
     return templates.pageTemplate({title, head, body});
 }
 
@@ -206,7 +223,9 @@ export function renderPageEditor(page_id: number,
 //}
 
 export function renderGroup(page: ScannedPage,
-                            groupId: number, boxes: BoxGroupJoin[], refLayer: boolean=false): any {
+                            groupId: number, boxes: BoxGroupJoin[],
+                            isRefLayer: boolean=false,
+                            highlightBoxIds:Set<number>=new Set()): any {
     utils.assert(boxes.length > 0, 'Cannot render an empty group');
     const group: GroupJoinPartial = boxes[0];
 
@@ -216,13 +235,29 @@ export function renderGroup(page: ScannedPage,
     const groupY = Math.max(Math.min(...boxes.map(b=>b.y)) - groupMargin, 0);
     const groupLeft = Math.min(Math.max(...boxes.map(b=>b.x+b.w)) + groupMargin, page.width);
     const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, page.height);
-    const stroke = (refLayer ? 'grey' : group.color) ?? 'yellow';
+    const stroke = (isRefLayer ? 'grey' : group.color) ?? 'yellow';
     return (
-        ['svg', {class:`group ${refLayer?'ref':''}`, id:`bg_${groupId}`, stroke},
+        ['svg', {class:`group ${isRefLayer?'ref':''}`, id:`bg_${groupId}`, stroke},
          ['rect', {class:"group-frame", x:groupX, y:groupY,
                    width:groupLeft-groupX,
                    height:groupBottom-groupY}],
-         boxes.map(b=>renderBox(b, refLayer))
+         boxes.map(b=>renderBox(b, isRefLayer, highlightBoxIds))
+        ]);
+}
+
+export function renderEmptyGroup(page: ScannedPage,
+                                 groupId: number): any {
+    const groupMargin = 10;
+    const groupX = 0;
+    const groupY = 0;
+    const groupLeft = 0;
+    const groupBottom = 0;
+    const stroke = 'yellow';
+    return (
+        ['svg', {class:`group`, id:`bg_${groupId}`, stroke},
+         ['rect', {class:"group-frame", x:groupX, y:groupY,
+                   width:groupLeft-groupX,
+                   height:groupBottom-groupY}],
         ]);
 }
 
@@ -230,8 +265,15 @@ export function renderBoxOld(box: BoxGroupJoin): any {
     return ['rect', {class:"segment", x:box.x, y:box.y, width:box.w, height:box.h}];
 }
 
-export function renderBox(box: BoxGroupJoin, refLayer: boolean=false): any {
-    return ['svg', {class:`box ${refLayer?'ref':''}`, x:box.x, y:box.y, width:box.w, height:box.h, id: `bb_${box.bounding_box_id}`},
+export function renderBox(box: BoxGroupJoin,
+                          isRefLayer: boolean=false,
+                          highlightBoxIds:Set<number>=new Set()): any {
+    const boxClass = ['box',
+                      isRefLayer?'ref':'',
+                      highlightBoxIds.has(box.bounding_box_id)?'highlight':''].join(' ');
+    return ['svg', {class:boxClass,
+                    x:box.x, y:box.y, width:box.w, height:box.h,
+                    id: `bb_${box.bounding_box_id}`},
             ['rect', {class:"frame", x:0, y:0, width:'100%', height:'100%'}],
             //['rect', {class:"frame2", x:0, y:0, width:'100%', height:'100%'}],
             ['circle', {class:"grabber", cx:0, cy:0, r:12}],
@@ -240,7 +282,7 @@ export function renderBox(box: BoxGroupJoin, refLayer: boolean=false): any {
             ['circle', {class:"grabber", cx:'100%', cy:'100%', r:12}]];
 }
 
-export function renderPageJumper(current_page_num: number, total_pages: number): any {
+export function renderPageJumper(cfg: PageEditorConfig, document_id: number, current_page_num: number, total_pages: number): any {
     const targetPageNumbers = Array.from(new Set(
         [1,
          ...range(1, Math.floor(total_pages/100)+1).map(v=>v*100),
@@ -253,25 +295,25 @@ export function renderPageJumper(current_page_num: number, total_pages: number):
         .toSorted((a, b) => a - b);
     
     return targetPageNumbers.map(n=>
-        [['a', {href:`./${n}.html`,
+        [['a', {href:`/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
                 class: n===current_page_num?'current-page-jump':'page-jump'}, n],
          ' ']);
 }
 
 export async function friendlyRenderPageEditor(friendly_document_id: string,
                                                page_number: number,
-                                               layer_name: string = 'Text'): Promise<any> {
-    const pdm = selectScannedDocumentByFriendlyId().required({friendly_document_id});
-    //const
-    const pdmTaggingLayer = getOrCreateNamedLayer(pdm.document_id, 'Tagging', 0);
-    const pdmWordLayer = selectLayerByLayerName().required({document_id: pdm.document_id, layer_name});
-    const pdmSamplePage = selectScannedPageByPageNumber().required(
-        {document_id: pdm.document_id, page_number});
-    const totalPagesInDocument = maxPageNumberForDocument().required({document_id: pdm.document_id}).max_page_number;
+                                               reference_layer_name: string = 'Text'): Promise<any> {
+    const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
+    const document_id = document.document_id;
+    const taggingLayer = getOrCreateNamedLayer(document_id, 'Tagging', 0);
+    const referenceLayer = selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
+    // const page = selectScannedPageByPageNumber().required(
+    //     {document_id, page_number});
+    // const totalPagesInDocument = maxPageNumberForDocument().required({document_id: document_id}).max_page_number;
     //console.info('max_page_number', totalPagesInDocument);
-    return renderPageEditor(pdmSamplePage.page_id,
-                            {layer_id: pdmTaggingLayer,
-                             reference_layer_ids: [pdmWordLayer.layer_id]});
+    return renderPageEditorByPageNumber(document_id, page_number,
+                                        {layer_id: taggingLayer,
+                                         reference_layer_ids: [referenceLayer.layer_id]});
 }
 
 
@@ -285,7 +327,8 @@ async function samplePageRender(friendly_document_id: string, page_number: numbe
 // --------------------------------------------------------------------------------
 
 export const routes = ()=> ({
-    renderPageEditor: renderPageEditor,
+    renderPageEditorByPageNumber,
+    renderPageEditorByPageId,
     updateBoundingBoxShape,
     newBoundingBoxInNewGroup,
     newBoundingBoxInExistingGroup,
@@ -485,12 +528,12 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
         ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}]];
 
     function renderItem(bounding_box_id: number, page_id: number, text: string): any {
-        const itemCfg = Object.assign(
+        const itemCfg: PageEditorConfig = Object.assign(
             {},
             cfg,
-            {highlight_bounding_box_id: bounding_box_id});
+            {highlight_ref_bounding_box_ids: [bounding_box_id]});
         
-        const href=`/renderPageEditor(${page_id}, ${JSON.stringify(itemCfg)})`;
+        const href=`/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
         return [
             ['li', {},
              ['a', {href}, 

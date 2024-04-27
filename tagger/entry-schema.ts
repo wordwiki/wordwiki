@@ -422,7 +422,7 @@ export function renderEntry(e: Entry): any {
     ];
 }
 
-export function renderEntrySpellings(e: Entry, spellings: Spelling[]): any {
+export function renderEntrySpellings(e: Entry, spellings: Spelling[]): string {
     return spellings.map(s=>s.text).join('/') || 'No Spellings';
 }
 
@@ -541,7 +541,7 @@ export function renderDocumentReferences(e: Entry, s: Subentry,
              ? ['li', {}, 'No references']
              : documentReferences.map(ref=>['li', {}, renderDocumentReference(e, ref)]),
           ['li', {},
-           ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, 'PDM')`}, 'Add new PDM doc reference']]
+           ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, 'PDM', ${JSON.stringify(renderEntrySpellings(e, e.spelling))})`}, 'Add new PDM doc reference']]
          ]
         ]
     ];

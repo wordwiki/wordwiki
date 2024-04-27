@@ -613,9 +613,18 @@ function getWidgetKind(elem: Element) {
  *
  * (to fix this, we will need to scope all our box, box-group and scanned-page
  * ids)
+ *
+ * I no longer think this is worth it (supporting multiple editors per
+ * page) - so I will be stripping this rather than pushing the support
+ * the rest of the way through. XXX
  */
 function getScannedPageForElement(e: Element) {
-    return document.getElementById('scanned-page') ?? panic();
+    return getScannedPage();
+}
+
+function getScannedPage() {
+    return document.getElementById('scanned-page')
+        ?? panic('unable to find scanned page');
 }
 
 function getContainingLayerId(e: Element): number {
@@ -628,6 +637,14 @@ function getContainingPageId(e: Element): number {
 
 function getContainingScaleFactor(e: Element): number {
     return getIntAttribute(getScannedPageForElement(e), 'data-scale-factor');
+}
+
+function getLockedBoundingGroupId(): string|null {
+    return getScannedPage().getAttribute('data-locked-bounding-group-id');
+}
+
+function getHighlightRefBoundingBoxId(): string|null {
+    return getScannedPage().getAttribute('data-highlight-ref-bounding-box-id');
 }
 
 // ------------------------------------------------------------------------
