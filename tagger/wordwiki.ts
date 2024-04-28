@@ -343,11 +343,11 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
     
-    samplePage(query: {searchText?: string}): any {
+    samplePage(query?: {searchText?: string}): any {
 
         //console.info('ENTRIES', this.entriesJSON);
 
-        const search = String(query.searchText ?? '');
+        const search = String(query?.searchText ?? '');
 
         // replace ' '* with .*\w
         //const searchRegexSrc = `\\b${search.replaceAll(/ /g, ' .*\\b')}`;
