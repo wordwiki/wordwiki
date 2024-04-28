@@ -503,7 +503,7 @@ export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
          ['b', {}, 'Meanings:'],
           ['ul', {},
            glosses.length === 0
-              ? ['li', 'No glosses']
+              ? ['li', {}, 'No glosses']
               : glosses.map(g=>['li', {}, g.gloss])]
          ]
      ];
@@ -516,7 +516,7 @@ export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any 
          ['b', {}, 'Example of word used in a sentence:'],
          ['ul', {},
           examples.length === 0
-             ? ['li', 'No examples']
+             ? ['li', {}, 'No examples']
              : examples.map(example=>['li', {}, renderExample(e, example)])]
         ]
     ];
@@ -541,7 +541,7 @@ export function renderDocumentReferences(e: Entry, s: Subentry,
              ? ['li', {}, 'No references']
              : documentReferences.map(ref=>['li', {}, renderDocumentReference(e, ref)]),
           ['li', {},
-           ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, 'PDM', ${JSON.stringify(renderEntrySpellings(e, e.spelling))})`}, 'Add new PDM doc reference']]
+           ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, 'PDM', ${JSON.stringify("Editing reference for "+renderEntrySpellings(e, e.spelling))})`}, 'Add new PDM doc reference']]
          ]
         ]
     ];

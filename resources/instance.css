@@ -1,5 +1,10 @@
 /**/
 
+table.history-table {
+  border-collapse: collapse;
+  border: 1px solid black;
+}
+
 table.relation {
   width: 100%;
   border-collapse: collapse;

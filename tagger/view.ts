@@ -1,5 +1,3 @@
-
-
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, VariantField, BlobField, AudioField, ImageField,
@@ -921,6 +919,7 @@ export class EditorRenderer {
     // - the order of the temporary relation should probably be based on order id
     // - hoist the same tuple editing to here as well.
     renderRelation(r: CurrentRelationQuery): Markup {
+
         const schema = r.schema;
 
         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
@@ -928,29 +927,52 @@ export class EditorRenderer {
         const refRelation = currentlyOpenTupleEditor?.ref_relation;
         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
         const view = this.getViewForRelation(schema);
-        return (
+        
+        const tuples = [...r.tuples.values()];
+
+        const firstChildEditor =
+            (refId === r.src.parent.id && refKind === 'firstChild' && refRelation === schema.tag)
+                ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
+            : undefined;
+
+        const lastChildEditor =
+            (refId === r.src.parent.id && refKind === 'lastChild' && refRelation === schema.tag)
+            ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
+            : undefined;
+
+        const renderedTuples =
+            tuples.map(t=>{
+                const tuple_id = t.src.id;
+                // if(tuple_id === refId && refKind === 'replaceSelf')
+                //     return this.renderTupleEditor(t.schema, currentlyOpenTupleEditor!);
+                return [
+                    [tuple_id === refId && refKind === 'before'
+                        ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
+                        : undefined],
+                    this.renderTuple(t),
+                    [tuple_id === refId && refKind === 'after'
+                        ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
+                        : undefined]
+                ];
+            });
+
+        // console.info('FOR RELATION', r.schema.name,
+        //              'renderedTuplesLength', renderedTuples.length,
+        //              'firstChildEditor', firstChildEditor,
+        //              'lastChildEditor', lastChildEditor);
+        if(renderedTuples.length === 0 && !firstChildEditor && !lastChildEditor) {
+            const addTupleAction = 
+                `activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.parent.id}, '${r.src.schema.tag}')`;
+        return ['button', {onclick: addTupleAction},
+                `Insert Child ${view.prompt}`];
+    }
+        
+    return (
             // This table has the number of cols in the schema for 'r'
             ['table', {class: `relation relation-${schema.name}`},
-             [(refId === r.src.parent.id && refKind === 'firstChild'
-                 && refRelation === schema.tag)
-                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!) : undefined],
-             [...r.tuples.values()].map(t=>{
-                 const tuple_id = t.src.id;
-                 // if(tuple_id === refId && refKind === 'replaceSelf')
-                 //     return this.renderTupleEditor(t.schema, currentlyOpenTupleEditor!);
-                 return [
-                     [tuple_id === refId && refKind === 'before'
-                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
-                         : undefined],
-                     this.renderTuple(t),
-                     [tuple_id === refId && refKind === 'after'
-                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
-                         : undefined]
-                 ];
-             }),
-             [(refId === r.src.parent.id && refKind === 'lastChild'
-                 && refRelation === schema.tag)
-                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!) : undefined],
+             firstChildEditor,
+             renderedTuples,
+             lastChildEditor,
             ]);
     }
 
@@ -1032,7 +1054,7 @@ export class EditorRenderer {
         if(historicalTupleVersions.length === 0)
             return ['strong', {}, 'No history'];
         else
-            return ['table', {},
+            return ['table', {class: 'history-table'},
                     historicalTupleVersions.map(h=>
                         ['tr', {},
                          ['td', {}],  // Empty header col
@@ -1502,6 +1524,18 @@ export function launchAddNewDocumentReference(entry_id: number, subentry_id: num
     })();
 }
 
+// XXX XXX KIWLL ME!!! I AM bAD
+export function launchNewLexeme() {
+    console.info('*** Launching new lexeme');
+    // Await an RPC that does the data changes.
+    // When the RPC returns, navigate to the URL that is returned.
+    (async ()=>{
+        const lexemeUrl = (await rpc`wordwiki.addNewLexeme()`).location;
+        console.info('*** Lexeme URL is', lexemeUrl);
+        window.location = lexemeUrl;
+    })();
+}
+
 
 /**
  *
@@ -1542,6 +1576,7 @@ export const exportToBrowser = ()=> ({
     run,
     popupEntryEditor,
     launchAddNewDocumentReference,
+    launchNewLexeme,
     //popupRelationEditor,
     //beginFieldEdit,
 });

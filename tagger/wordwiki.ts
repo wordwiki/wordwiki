@@ -13,6 +13,7 @@ import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as timestamp from '../utils/timestamp.ts';
 import * as templates from './templates.ts';
+import * as orderkey from '../utils/orderkey.ts';
 import {block} from "../utils/strings.ts";
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
@@ -276,6 +277,60 @@ export class WordWiki {
     }
 
 
+    // XXX THIS IS UTTER GARBAGE - JUST GET IT OUT THE DOOR FIX FIX TODO XXX
+    addNewLexeme(): any {
+        console.info('*** Add new lexeme');
+
+        // --- Add a new entry
+        // TODO make this less weird
+        const ws = new VersionedDb([model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson)]);
+
+        // This is wrong - but it is overridden
+        const tx_time = timestamp.nextTime(timestamp.BEGINNING_OF_TIME);
+        
+        const entry_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        // TODO more thinking about order_key here
+        const order_key = orderkey.new_range_start_string;
+        const newEntryAssertion: Assertion = {
+            assertion_id: entry_id,
+            valid_from: tx_time,  // This is wrong - but it is overridden
+            valid_to: timestamp.END_OF_TIME,
+            id: entry_id,
+            ty: 'ent',
+            ty0: 'dct',
+            ty1: 'ent',
+            id1: entry_id,
+            order_key,
+        };
+
+        const subentry_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        const newSubEntryAssertion: Assertion = {
+            assertion_id: subentry_id,
+            valid_from: timestamp.nextTime(tx_time),
+            valid_to: timestamp.END_OF_TIME,
+            id: subentry_id,
+            ty: 'sub',
+            ty0: 'dct',
+            ty1: 'ent',
+            id1: entry_id,
+            ty2: 'sub',
+            id2: subentry_id,
+            order_key: orderkey.new_range_start_string,
+        };
+
+        const assertions = [
+            newEntryAssertion, newSubEntryAssertion];
+        
+        console.info('applying assertions', JSON.stringify(assertions, undefined, 2));
+        
+        this.applyTransactions(assertions);
+        console.info('created new assertion with id', entry_id);
+
+        // --- Redirect the browser to the image tagger on this layer.
+        return {location: `/wordwiki.entry(${entry_id})`};
+    }
+
+    
     entry(entryId: number): any {
 
         const e = this.entriesJSON
@@ -294,30 +349,57 @@ export class WordWiki {
 
         const search = String(query.searchText ?? '');
 
-        console.info('SEARCH IS', search, 'QUERY IS', query);
+        // replace ' '* with .*\w
+        //const searchRegexSrc = `\\b${search.replaceAll(/ /g, ' .*\\b')}`;
+        const searchRegexSrc =
+            search.startsWith('^') || search.startsWith('\\B') || search.startsWith('\\b')
+            ? search
+            : `\\b${search}`;
+        const searchRegex = new RegExp(searchRegexSrc, 'i');
+        console.info('SEARCH IS', search, 'REGEX IS', searchRegexSrc);
 
+        const matchesSet:Set<entry.Entry> = new Set();
+        if(search !== '') {
+            for(const entry of this.entriesJSON) {
+                for(const spelling of entry.spelling) {
+                    if(searchRegex.test(spelling.text))
+                        matchesSet.add(entry);
+                }
+                for(const subentry of entry.subentry) {
+                    for(const gloss of subentry.gloss) {
+                        if(searchRegex.test(gloss.gloss))
+                            matchesSet.add(entry);
+                    }
+                }
+            }
+        }
+        const matches = Array.from(matchesSet.values());
         
-        const entriesWithHouseGloss = search === '' ? [] :
-            this.entriesJSON.filter(
-            entry=>entry.subentry.some(
-                subentry=>subentry.gloss.some(
-                    gloss=>gloss.gloss.includes(search))));
+        // const entriesWithHouseGloss = search === '' ? [] :
+        //     this.entriesJSON.filter(
+        //         entry=>entry.subentry.some(
+        //             subentry=>subentry.gloss.some(
+        //                 gloss=>gloss.gloss.startsWith(search))));
 
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
         const title = ['Query for ', search];
 
         const queryForm = [
-            ['form', {name: 'search', method: 'get', action:'/wordwiki.samplePage(query)'},
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki.samplePage(query)'},
 
              // --- Search text row
-             ['div', {class:'row mb-3'},
-              ['label', {for:'searchText', class:'col-sm-2 col-form-label'}, 'Search Text'],
-              ['div', {class:'col-sm-10'},
-               ['input', {type:'text', class:'form-control', id:'searchText', name:'searchText', value:search}]]
+             ['div', {class:'col-12'},
+              ['label', {for:'searchText', class:'visually-hidden'}, 'Search Text'],
+              ['div', {class:'input-group'},
+               ['input', {type:'text',
+                          class:'form-control',
+                          id:'searchText', name:'searchText',
+                          value:search}]]
              ], // row
 
-             ['button', {type:'submit', class:'btn btn-primary'}, 'Search'],
+             ['div', {class:'col-12'},
+              ['button', {type:'submit', class:'btn btn-primary'}, 'Search']],
             ], // form
         ];
         
@@ -339,9 +421,12 @@ export class WordWiki {
             // --- Query form
             queryForm,
 
+            // --- Add new entry button
+            ['div', {},
+             ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
             // --- Results
             ['ul', {},
-             entriesWithHouseGloss.map(e=>['li', {}, renderEntryItem(e)]),
+             matches.map(e=>['li', {}, renderEntryItem(e)]),
             ]
         ];
         

@@ -94,16 +94,21 @@ export function renderPageEditorByPageId(page_id: number,
     const scale_factor = cfg.scale_factor ?? 4;
     const body = [
         ['div', {},
-         ['h1', {}, 'PDM Textract preview page', page.page_number],
+         ['h1', {}, `${document.title} - Page ${page.page_number}`],
+         cfg.title && ['h2', {}, cfg.title],
+         cfg.locked_bounding_group_id && [
+             ['div', {},
+              ['button', {onclick:'window.opener.location.reload(); window.close();'}, 'Done editing reference']]
+         ],
          renderPageJumper(cfg, document_id, page.page_number, total_pages_in_document)],
 
-        ['ul', {},
-         ['li', {}, 'page_id: ', page_id],
-         ['li', {}, 'layer_id: ', cfg.layer_id],
-         ['li', {}, 'reference_layer_ids: ', cfg.reference_layer_ids],
-         ['li', {}, 'title: ', cfg.title],
-         ['li', {}, 'is_popup_editor: ', cfg.is_popup_editor],
-         ['li', {}, 'locked_bounding_group_id: ', cfg.locked_bounding_group_id]],
+        // ['ul', {},
+        //  ['li', {}, 'page_id: ', page_id],
+        //  ['li', {}, 'layer_id: ', cfg.layer_id],
+        //  ['li', {}, 'reference_layer_ids: ', cfg.reference_layer_ids],
+        //  ['li', {}, 'title: ', cfg.title],
+        //  ['li', {}, 'is_popup_editor: ', cfg.is_popup_editor],
+        //  ['li', {}, 'locked_bounding_group_id: ', cfg.locked_bounding_group_id]],
         
         cfg.reference_layer_ids.length === 1
             ? renderTextSearchForm(cfg.reference_layer_ids[0], cfg)
@@ -135,11 +140,9 @@ export function renderPageEditorByPageId(page_id: number,
             ['p', {},
              renderStandaloneGroup(bounding_group_id)]
                                            ),
-          
-        //config.bootstrapScriptTag,
+            //config.bootstrapScriptTag,
           
     ]; // body
-
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
     
@@ -294,10 +297,14 @@ export function renderPageJumper(cfg: PageEditorConfig, document_id: number, cur
         .filter(p=>p>=1 && p<=total_pages)
         .toSorted((a, b) => a - b);
     
-    return targetPageNumbers.map(n=>
-        [['a', {href:`/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
-                class: n===current_page_num?'current-page-jump':'page-jump'}, n],
-         ' ']);
+    return [
+        ['div', {}, 'Pages: ',
+         targetPageNumbers.map(n=>
+             [['a', {href:`/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
+                     class: n===current_page_num?'current-page-jump':'page-jump'}, n],
+              ' '])
+        ]
+    ];
 }
 
 export async function friendlyRenderPageEditor(friendly_document_id: string,
@@ -501,6 +508,25 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
 export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
+        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+         
+         ['div', {class:'col-12'},
+          ['label', {class:'visually-hidden', for:'searchText'}, 'Search'],
+          ['div', {class: 'input-group'},
+           ['input', {type:'text', class:'form-control',
+                      id:'searchText', name:'searchText', placeholder:'Search',
+                      value:searchText}]]],
+
+         ['div', {class:'col-12'},
+          ['button', {type:'submit', class:'btn btn-primary'}, 'Search']],
+         
+        ] // form
+    ];
+}
+
+export function renderTextSearchForm2(layer_id: number, cfg: PageEditorConfig,
+                                     searchText: string=''): any {
+    return [
         ['form', {class:'form-inline', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
          ['label', {class:'sr-only', for:'searchText'}, 'Search'],
          ['input', {type:'text', class:'form-control mb-2 mr-sm-2',
@@ -577,7 +603,13 @@ export function renderStandaloneGroup(bounding_group_id: number,
                                       scale_factor:number=4,
                                       box_stroke:string = 'green'): any {
     const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
-    return renderStandaloneBoxes(boxes, scale_factor, box_stroke);
+    if(boxes.length === 0) {
+        //console.info('STANDALONE GROUP IS EMPTY');
+        return ['div', {}, 'Empty Group'];
+    }
+    const boxesByPage = utils.groupToMap(boxes, b=>b.page_id);
+    return Array.from(boxesByPage.values()).map(
+        boxes=>['div', {}, renderStandaloneBoxes(boxes, scale_factor, box_stroke)]);
 }
 
 /**
@@ -593,7 +625,7 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
         return ['div', {}, 'Empty Group'];
     }
     
-    // --- We don't currently support groups that span pages
+    // --- This is handled at the 'renderStandaloneGroup' level
     const page_id = boxes[0].page_id;
     boxes.forEach(b=>b.page_id === page_id
         || utils.panic('all boxes in a group must be on a single page'));

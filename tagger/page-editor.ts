@@ -1,8 +1,21 @@
 function onContentLoaded() {
+    
+    const lockedBoundingGroupId = getLockedBoundingGroupId();
+    if(lockedBoundingGroupId) {
+        selectGroup(document.getElementById(lockedBoundingGroupId)
+            ?? panic('unable to find locked bounding group'));
+    }
+    
     updateDerivedDom(
         document.getElementById('scanned-page')
             ?? panic('cannot bind to page editor'));
+
+
+    console.info('Done onContentLoaded');
 }
+
+// Having this be top level code is gross XXX FIX
+addEventListener("DOMContentLoaded", event=>onContentLoaded());
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -10,6 +23,18 @@ function onContentLoaded() {
 
 function pageEditorMouseDown(event: MouseEvent) {
 
+    // --- We are building exactly one group when in single group edit mode.
+    const lockedBoundingGroupId = getLockedBoundingGroupId();
+    const selectedGroup = getSelectedGroup();
+    const singleGroupMode =
+        (lockedBoundingGroupId != null && selectedGroup != null &&
+            selectedGroup.id === lockedBoundingGroupId);
+
+    console.info('pageEditorMouseDown', {
+        lockedBoundingGroupId,
+        selectedGroup: selectedGroup && selectedGroup.id,
+        singleGroupMode});
+    
     // --- Adjust event target to be ancestor or self element of application interest.
     const target = adjustEventTarget(event.target);
     if(!target) return;
@@ -23,7 +48,8 @@ function pageEditorMouseDown(event: MouseEvent) {
         // --- Holding down shift allows drawing new boxes even
         //     if the click action would normally be interpreted
         //     by another widget in that space.
-        newBoxMouseDown(event, target, event.ctrlKey);
+        // ZZZ - ctrlKey adds to current box
+        newBoxMouseDown(event, target, event.ctrlKey || singleGroupMode);
         break;
     }
 
@@ -31,9 +57,10 @@ function pageEditorMouseDown(event: MouseEvent) {
         // --- Dispatch the click based on widget kind
         switch(widgetKind) {
         case 'box': {
-            if(event.ctrlKey) {
+            if(event.ctrlKey || singleGroupMode) {
                 // --- Ctrl click on a box adds the clicked on box to the
                 //     currently selected group
+                // ZZZ always have a currently selected group
                 const currentlySelectedGroup = getSelectedGroup();
                 if(currentlySelectedGroup) {
                     // This changes based on whether in group already - removes if is
@@ -78,7 +105,7 @@ function pageEditorMouseDown(event: MouseEvent) {
             break;
         };
         case 'ref-box': {
-            const addToCurrentGroup = event.ctrlKey;
+            const addToCurrentGroup = event.ctrlKey || singleGroupMode
             if(addToCurrentGroup) {
                 const currentlySelectedGroup = getSelectedGroup();
                 if(currentlySelectedGroup) {
@@ -92,7 +119,7 @@ function pageEditorMouseDown(event: MouseEvent) {
             break;
         }
         case 'grabber': grabberMouseDown(event, target); break;
-        default: newBoxMouseDown(event, target, event.ctrlKey); break;
+        default: newBoxMouseDown(event, target, event.ctrlKey || singleGroupMode); break;
         }
         break;
     }}
@@ -548,7 +575,7 @@ function selectBoxGrabber(grabber: Element) {
  * will reduce the blast radius if we need to make
  * structural changes to the markup.
  */
-function getSelectedGroup() {
+function getSelectedGroup(): Element|null {
     const group = document.querySelector('svg.group.active');
     if(group && group.classList.contains('ref'))
         throw new Error('A reference group should never be the selected group');
@@ -947,6 +974,7 @@ function copyRefBoxToExistingGroup(box: Element, group: Element) {
     isRef(group) && panic('expected non-ref group');
 
     // TODO roll this back if RPC fails!
+    // TODO try just copying the ref box for now.
     group.appendChild(box);
     box.classList.remove('ref');
     updateGroupDimensions(group);
