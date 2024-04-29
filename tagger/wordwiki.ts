@@ -18,7 +18,7 @@ import {block} from "../utils/strings.ts";
 import {db} from "./db.ts";
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer} from './schema.ts';
+import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
@@ -354,7 +354,7 @@ export class WordWiki {
             ['br', {}],
             ['h3', {}, 'Reports'],
             ['ul', {},
-             ['li', {}, ['a', {href:'/wordwiki.entriesByPDMPage()'}, 'Entries by PDM Page']]
+             ['li', {}, ['a', {href:'/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
             ],
             
             ['br', {}],
@@ -462,47 +462,107 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
 
-    entriesByPDMPage(): any {
-        const title = 'Entries by PDM Page';
+    entriesByPDMPageDirectory(): any {
+        const title = `Entries by PDM Page Directory`;
 
         const pdmDocumentId =
             selectScannedDocumentByFriendlyId()
                 .required({friendly_document_id: 'PDM'})
                 .document_id;
 
-        console.time('entriesInDocRefOrder');
-        const entriesInDocRefOrder = db().
-            all<{page_number: number, x: number, bounding_group_id: number, entry_id: number}, {document_id:number}>(
+        console.time('entryCountByPage');
+        const entryCountByPage = db().
+            all<{page_number: number, entry_count: number}>(
                 block`
-/**/     SELECT DISTINCT pg.page_number AS page_number, bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
+/**/     SELECT pg.page_number AS page_number, COUNT(DISTINCT bg.bounding_group_id) as entry_count
 /**/       FROM dict AS ref
 /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
 /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
 /**/       WHERE ref.ty = 'ref' AND
 /**/             bg.document_id = :document_id
-/**/       ORDER BY pg.page_number, bb.y, bb.x, ref.id1`, {document_id: pdmDocumentId});
+/**/       GROUP BY pg.page_number`, {document_id: pdmDocumentId});
+        console.timeEnd('entryCountByPage');
+
+        console.info('entryCountByPage', entryCountByPage);
+        
+        const body = [
+            ['h1', {}, title],
+            ['ul', {},
+             entryCountByPage.map(c=>
+                 ['li', {},
+                  ['a', {href:`wordwiki.entriesByPDMPage(${c.page_number})`},
+                   `PDM page ${c.page_number} has ${c.entry_count} entries`]
+                 ])
+            ]
+        ];
+
+        return templates.pageTemplate({title, body});
+    }
+    
+    entriesByPDMPage(page_number: number): any {
+        typeof page_number === 'number' || panic('expected page number');
+        
+        const title = `Entries for PDM Page ${page_number}`;
+
+        const pdmDocumentId =
+            selectScannedDocumentByFriendlyId()
+                .required({friendly_document_id: 'PDM'})
+                .document_id;
+
+        const pdmPageId =
+            selectScannedPageByPageNumber()
+                .required({document_id: pdmDocumentId, page_number}).page_id;
+        
+        console.time('entriesInDocRefOrder');
+        // TODO XXX the page_number returned here is pointless now that this
+        //          is locked to a single page.
+        const entriesInDocRefOrder = db().
+            all<{x: number, bounding_group_id: number, entry_id: number}, {page_id: number}>(
+                block`
+/**/     SELECT DISTINCT bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
+/**/       FROM dict AS ref
+/**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
+/**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
+/**/       WHERE ref.ty = 'ref' AND
+/**/             bb.page_id = :page_id
+/**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id: pdmPageId});
+
+
+//         const entriesInDocRefOrder = db().
+//             all<{page_number: number, x: number, bounding_group_id: number, entry_id: number}, {document_id:number}>(
+//                 block`
+// /**/     SELECT DISTINCT pg.page_number AS page_number, bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
+// /**/       FROM dict AS ref
+// /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
+// /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
+// /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
+// /**/       WHERE ref.ty = 'ref' AND
+// /**/             pg.page_number = :page_number AND
+// /**/             bg.document_id = :document_id
+// /**/       ORDER BY pg.page_number, bb.y, bb.x, ref.id1`, {document_id: pdmDocumentId});
         console.timeEnd('entriesInDocRefOrder');
 
-        console.info(entriesInDocRefOrder);
+        console.info('entriesInDocRefOrder', entriesInDocRefOrder);
 
         const entriesById = new Map(this.entriesJSON.map(entry=>[entry.entry_id, entry]));
 
-        function renderRef(ref: {page_number: number, bounding_group_id: number, entry_id: number}): any {
+        function renderRef(ref: {bounding_group_id: number, entry_id: number}): any {
             const e = entriesById.get(ref.entry_id)
                 ?? panic('unable to find entry with id', ref.entry_id);
             return [
                 renderStandaloneGroup(ref.bounding_group_id),
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e), ` - ref on PDM page ${ref.page_number}`]
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];            
         }
         
-        const body = entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)]);
+        const body = [
+            ['h1', {}, title],
+            entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)])
+        ];
 
         return templates.pageTemplate({title, body});
     }
-
-
     
     /**
      *

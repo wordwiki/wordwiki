@@ -631,7 +631,7 @@ export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
         ref.text.length === 0 &&
         ref.note.length === 0;
     return [
-        ['a', {href:refUrl, target:''}, standaloneGroupRender],
+        ['a', {href:refUrl, target:'_blank', rel:'opener'}, standaloneGroupRender],
         noBody ? ['b', {}, 'No Transcription']: undefined,
         ['table', {},
          ['tbody', {},
