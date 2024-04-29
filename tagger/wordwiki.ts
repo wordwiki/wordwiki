@@ -1,6 +1,6 @@
 import * as markup from '../utils/markup.ts';
 import * as model from './model.ts';
-import * as pageEditor from './render-page-editor.ts';
+import * as renderPageEditor from './render-page-editor.ts';
 import * as schema from "./schema.ts";
 import * as server from '../utils/http-server.ts';
 import * as strings from "../utils/strings.ts";
@@ -22,9 +22,8 @@ import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedD
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
-import {friendlyRenderPageEditor, PageEditorConfig} from './render-page-editor.ts';
+import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
 import {rpcUrl} from '../utils/rpc.ts';
-
 export interface WordWikiConfig {
     hostname: string,
     port: number,
@@ -53,7 +52,7 @@ export class WordWiki {
         this.routes = Object.assign(
             {},
             {wordwiki: this},
-            pageEditor.routes(),
+            renderPageEditor.routes(),
             schema.routes(),
             workspace.routes(),
             view.routes(),
@@ -342,8 +341,56 @@ export class WordWiki {
         
         return templates.pageTemplate({title, body});
     }
+
+    home(): any {
+        const title = "Dictionary Editor";
+        const body = [
+            ['h1', {}, title],
+
+            ['br', {}],
+            ['h3', {}, 'Search'],
+            this.searchForm(),
+
+            ['br', {}],
+            ['h3', {}, 'Reports'],
+            ['ul', {},
+             ['li', {}, ['a', {href:'/wordwiki.entriesByPDMPage()'}, 'Entries by PDM Page']]
+            ],
+            
+            ['br', {}],
+            ['h3', {}, 'Reference Books'],
+            ['ul', {},
+             ['li', {}, ['a', {href:`/pageEditor("PDM")`}, 'PDM']],
+             ['li', {}, ['a', {href:`/pageEditor("Rand")`}, 'Rand']],
+             ['li', {}, ['a', {href:`/pageEditor("Clark")`}, 'Clark']],
+             ['li', {}, ['a', {href:`/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
+        ];
+
+        return templates.pageTemplate({title, body});
+    }
+
+    searchForm(search?: string): any {
+        return [
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki.searchPage(query)'},
+
+             // --- Search text row
+             ['div', {class:'col-12'},
+              ['label', {for:'searchText', class:'visually-hidden'}, 'Search Text'],
+              ['div', {class:'input-group'},
+               ['input', {type:'text',
+                          class:'form-control',
+                          id:'searchText', name:'searchText',
+                          value:search ?? ''}]]
+             ], // row
+
+             ['div', {class:'col-12'},
+              ['button', {type:'submit', class:'btn btn-primary'}, 'Search']],
+            ], // form
+        ];
+    }
+        
     
-    samplePage(query?: {searchText?: string}): any {
+    searchPage(query?: {searchText?: string}): any {
 
         //console.info('ENTRIES', this.entriesJSON);
 
@@ -384,24 +431,6 @@ export class WordWiki {
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
         const title = ['Query for ', search];
-
-        const queryForm = [
-            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki.samplePage(query)'},
-
-             // --- Search text row
-             ['div', {class:'col-12'},
-              ['label', {for:'searchText', class:'visually-hidden'}, 'Search Text'],
-              ['div', {class:'input-group'},
-               ['input', {type:'text',
-                          class:'form-control',
-                          id:'searchText', name:'searchText',
-                          value:search}]]
-             ], // row
-
-             ['div', {class:'col-12'},
-              ['button', {type:'submit', class:'btn btn-primary'}, 'Search']],
-            ], // form
-        ];
         
         function renderEntryItem_OFF(e: entry.Entry): any {
             return [
@@ -419,7 +448,7 @@ export class WordWiki {
             ['h2', {}, title],
 
             // --- Query form
-            queryForm,
+            this.searchForm(search),
 
             // --- Add new entry button
             ['div', {},
@@ -433,6 +462,48 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
 
+    entriesByPDMPage(): any {
+        const title = 'Entries by PDM Page';
+
+        const pdmDocumentId =
+            selectScannedDocumentByFriendlyId()
+                .required({friendly_document_id: 'PDM'})
+                .document_id;
+
+        console.time('entriesInDocRefOrder');
+        const entriesInDocRefOrder = db().
+            all<{page_number: number, x: number, bounding_group_id: number, entry_id: number}, {document_id:number}>(
+                block`
+/**/     SELECT DISTINCT pg.page_number AS page_number, bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
+/**/       FROM dict AS ref
+/**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
+/**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
+/**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
+/**/       WHERE ref.ty = 'ref' AND
+/**/             bg.document_id = :document_id
+/**/       ORDER BY pg.page_number, bb.y, bb.x, ref.id1`, {document_id: pdmDocumentId});
+        console.timeEnd('entriesInDocRefOrder');
+
+        console.info(entriesInDocRefOrder);
+
+        const entriesById = new Map(this.entriesJSON.map(entry=>[entry.entry_id, entry]));
+
+        function renderRef(ref: {page_number: number, bounding_group_id: number, entry_id: number}): any {
+            const e = entriesById.get(ref.entry_id)
+                ?? panic('unable to find entry with id', ref.entry_id);
+            return [
+                renderStandaloneGroup(ref.bounding_group_id),
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e), ` - ref on PDM page ${ref.page_number}`]
+            ];            
+        }
+        
+        const body = entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)]);
+
+        return templates.pageTemplate({title, body});
+    }
+
+
+    
     /**
      *
      */
@@ -474,7 +545,7 @@ export class WordWiki {
             if(typeof PageNumber !== 'string') throw new Error('missing page number');
             const page_number = parseInt(PageNumber);
 
-            const body = await friendlyRenderPageEditor(book, page_number);
+            const body = await pageEditor(book, page_number);
             const html = await asyncRenderToStringViaLinkeDOM(body);
             return Promise.resolve({status: 200, headers: {}, body: html});
         } else if (filepath === '/favicon.ico') {
@@ -484,7 +555,12 @@ export class WordWiki {
             const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
             return workspace.workspaceRpcAndSync(bodyParms as workspace.WorkspaceRpcAndSyncRequest);
         } else {
-            const jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
+            let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
+            switch(jsExprSrc) { // XXX HACK - move to better place
+                case '':
+                    jsExprSrc = 'wordwiki.home()';
+                    break;
+            }
             const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
             return this.rpcHandler(jsExprSrc, searchParams, bodyParms);
         }
@@ -580,7 +656,6 @@ async function findResourceDir(resourceDirName: string = 'resources') {
 
     return resourceDir;
 }
-
 
 if (import.meta.main) {
     const args = Deno.args;

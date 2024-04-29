@@ -73,6 +73,10 @@ svg.group.active > svg.box > rect.frame {
   visibility: visible;
 }
 
+svg.group:not(.active) > svg.box.highlight > rect.frame {
+  stroke: purple;
+}
+
 svg.group:not(.active) > svg.box.multi > rect.frame {
   stroke: red;
 }

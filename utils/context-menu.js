@@ -8,10 +8,43 @@
 const instances = [];
 let nextId = 0;
 
-// Tiny polyfill for Element.matches() for IE
-if (!Element.prototype.matches) {
-  Element.prototype.matches = Element.prototype.msMatchesSelector;
+let contextMenuSystemInitialized = false;
+function initializeContextMenuSystem() {
+    
+  if(contextMenuSystemInitialized)
+      return;
+    
+  // Listen for contextmenu event to show menu
+  document.addEventListener('contextmenu', (e) => {
+      instances.forEach((menu) => {
+          if (e.target.matches(menu.selector)) {
+              menu.show(e);
+          }
+      });
+  });
+
+  // Listen for click event to hide menu
+  document.addEventListener('click', (e) => {
+      instances.forEach((menu) => {
+          if (
+              !e.target.matches(
+                  `[data-contextmenu="${menu.id}"], [data-contextmenu="${menu.id}"] *`,
+              )
+          ) {
+              menu.hide();
+          }
+      });
+  });
+
+
+  contextMenuSystemInitialized = true;
 }
+
+
+// Tiny polyfill for Element.matches() for IE
+//if (!Element.prototype.matches) {
+//  Element.prototype.matches = Element.prototype.msMatchesSelector;
+//}
 
 // Gets an element's next/previous sibling that matches the given selector
 function getSibling(el, selector, direction = 1) {
@@ -50,12 +83,14 @@ export default class ContextMenu {
     this.id = nextId++;
     this.target = null;
 
+    initializeContextMenuSystem();
     this.create();
     instances.push(this);
   }
 
   // Creates DOM elements, sets up event listeners
-  create() {
+    create() {
+        
     // Create root <ul>
     this.menu = document.createElement('ul');
     this.menu.className = 'ContextMenu';
@@ -184,24 +219,3 @@ export default class ContextMenu {
   }
 }
 
-// Listen for contextmenu event to show menu
-document.addEventListener('contextmenu', (e) => {
-  instances.forEach((menu) => {
-    if (e.target.matches(menu.selector)) {
-      menu.show(e);
-    }
-  });
-});
-
-// Listen for click event to hide menu
-document.addEventListener('click', (e) => {
-  instances.forEach((menu) => {
-    if (
-      !e.target.matches(
-        `[data-contextmenu="${menu.id}"], [data-contextmenu="${menu.id}"] *`,
-      )
-    ) {
-      menu.hide();
-    }
-  });
-});

@@ -1,4 +1,4 @@
-import * as pageEditor from './page-editor.ts';
+import * as pageEditorModule from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import { selectLayer, selectLayerByLayerName } from "./schema.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, selectBoundingBoxesForGroup, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
@@ -6,7 +6,7 @@ import * as schema from './schema.ts';
 import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
-import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
+//import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
@@ -35,6 +35,18 @@ export interface PageEditorConfig {
     highlight_ref_bounding_box_ids?: number[],
     total_pages_in_document?: number,
     scale_factor?:number
+}
+
+export async function pageEditor(friendly_document_id: string,
+                                 page_number: number=1,
+                                 reference_layer_name: string = 'Text'): Promise<any> {
+    const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
+    const document_id = document.document_id;
+    const taggingLayer = getOrCreateNamedLayer(document_id, 'Tagging', 0);
+    const referenceLayer = selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
+    return renderPageEditorByPageNumber(document_id, page_number,
+                                        {layer_id: taggingLayer,
+                                         reference_layer_ids: [referenceLayer.layer_id]});
 }
 
 export function renderPageEditorByPageNumber(document_id: number,
@@ -84,7 +96,9 @@ export function renderPageEditorByPageId(page_id: number,
             .filter(b=>!importedFromBoundingBoxIds.has(b.bounding_box_id));
         const refBoxesByGroup = utils.groupToMap(refBoxes, box=>box.bounding_group_id);
         return [...refBoxesByGroup.entries()].
-            map(([groupId, boxes])=>renderGroup(page, groupId, boxes, true));
+            map(([groupId, boxes])=>renderGroup(
+                page, groupId, boxes, true,
+                new Set(cfg.highlight_ref_bounding_box_ids??[])));
     });
     
     const head = [
@@ -307,25 +321,10 @@ export function renderPageJumper(cfg: PageEditorConfig, document_id: number, cur
     ];
 }
 
-export async function friendlyRenderPageEditor(friendly_document_id: string,
-                                               page_number: number,
-                                               reference_layer_name: string = 'Text'): Promise<any> {
-    const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
-    const document_id = document.document_id;
-    const taggingLayer = getOrCreateNamedLayer(document_id, 'Tagging', 0);
-    const referenceLayer = selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
-    // const page = selectScannedPageByPageNumber().required(
-    //     {document_id, page_number});
-    // const totalPagesInDocument = maxPageNumberForDocument().required({document_id: document_id}).max_page_number;
-    //console.info('max_page_number', totalPagesInDocument);
-    return renderPageEditorByPageNumber(document_id, page_number,
-                                        {layer_id: taggingLayer,
-                                         reference_layer_ids: [referenceLayer.layer_id]});
-}
 
 
 async function samplePageRender(friendly_document_id: string, page_number: number) {
-    const markup = await friendlyRenderPageEditor(friendly_document_id, page_number);
+    const markup = await pageEditor(friendly_document_id, page_number);
     console.info(renderToStringViaLinkeDOM(markup));
 }
 
@@ -334,6 +333,7 @@ async function samplePageRender(friendly_document_id: string, page_number: numbe
 // --------------------------------------------------------------------------------
 
 export const routes = ()=> ({
+    pageEditor,
     renderPageEditorByPageNumber,
     renderPageEditorByPageId,
     updateBoundingBoxShape,
@@ -498,6 +498,35 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
     });
 }
 
+/**
+ *
+ */
+export function singleBoundingGroupEditorURL(bounding_group_id: number, title: string) {
+    const bounding_group = schema.selectBoundingGroup().required({bounding_group_id});
+    const document_id = bounding_group.document_id;
+    const layer_id = bounding_group.layer_id;
+    const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+    // XXX Note: if a entry has bounding boxes on muiltiple pages, we are
+    //     picking the first page by page_id, not page number.
+    // XXX this is wrong.
+    const page_id =
+        bounding_boxes.length > 0
+        ? bounding_boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0]
+        : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
+
+    const reference_layer_id = getOrCreateNamedLayer(document_id, 'Text', 1);
+    //const title = 'TITLE'; // XXX
+    const pageEditorConfig: PageEditorConfig = {
+        layer_id,
+        reference_layer_ids: [reference_layer_id],
+        title,
+        is_popup_editor: true,
+        locked_bounding_group_id: bounding_group_id,
+    };
+    return `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
+    
+}
+
 // --------------------------------------------------------------------------------
 // --- Standalone group render ----------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -550,8 +579,7 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
         {document_id: layer.document_id});
 
     const title = `Search for '${searchText}' in layer ${layer.layer_name} of ${document.title}`;
-    const head = [
-        ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}]];
+    const head:any = [];
 
     function renderItem(bounding_box_id: number, page_id: number, text: string): any {
         const itemCfg: PageEditorConfig = Object.assign(

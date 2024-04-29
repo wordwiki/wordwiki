@@ -21,4 +21,8 @@ cp utils/context-menu.js web-build/utils/context-menu.js
 # probably should do this with an import map instead of this.
 sed -i 's/"..\/..\/deno-sqlite\/mod.js"/".\/fake-deno-sqlite.js"/g' web-build/tagger/db.js
 
+# a way of removing an import that is causing us problems when the
+# module loads on the client. XXX MAKE THIS BETTER XXX
+sed -i '/REMOVE_FOR_WEB/d' web-build/tagger/entry-schema.js
+
 #echo 'END SWC'

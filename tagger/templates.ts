@@ -18,6 +18,8 @@ export function pageTemplate(content: PageContent): any {
           content.title !== undefined ? ['title', {}, content.title] : undefined,
           config.bootstrapCssLink,
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+          ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
+          ['link', {href: '/resources/context-menu.css', rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
 /**/           let imports = {};
 /**/           let activeViews = undefined`],

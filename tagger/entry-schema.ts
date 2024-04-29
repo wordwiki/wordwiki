@@ -9,6 +9,8 @@ import * as utils from "../utils/utils.ts";
 import * as timestamp from '../utils/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
+import ContextMenu from '../utils/context-menu.js';
+import { renderStandaloneGroup, singleBoundingGroupEditorURL } from './render-page-editor.ts'; // REMOVE_FOR_WEB
 
 export const dictSchemaJson = {
     $type: 'schema',
@@ -19,34 +21,63 @@ export const dictSchemaJson = {
         $tag: 'ent',
         $prompt: 'Entry',
         entry_id: {$type: 'primary_key'},
+        $style: { $shape: 'container' },
+        status: {
+            $type: 'relation',
+            $tag: 'sta',
+            //$style: { $prompt: 'SPELLING!' },
+            status_id: {$type: 'primary_key'},
+            status: {$type: 'string', $bind: 'attr1'},
+            variant: {$type: 'variant'},
+            $style: { $shape: 'titledValue' },
+        },
         spelling: {
             $type: 'relation',
             $tag: 'spl',
             //$style: { $prompt: 'SPELLING!' },
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
-            variant: {$type: 'variant'}
+            variant: {$type: 'variant'},
+            $style: { $shape: 'titledValue' },
         },
         subentry: {
             $type: 'relation',
             $tag: 'sub',
             subentry_id: {$type: 'primary_key'},
             part_of_speech: {$type: 'string', $bind: 'attr1'},
+            $style: { $shape: 'container' },
             // probably should have variant here TODO
             // translation TODO
+            todo: {
+                $type: 'relation',
+                $tag: 'tdo',
+                ref_note_id: {$type: 'primary_key'},
+                todo: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
+                done: {$type: 'boolean', $bind: 'attr2'},
+                $style: { $shape: 'titledValue' },
+            },
+            note: {
+                $type: 'relation',
+                $tag: 'nte',
+                note_id: {$type: 'primary_key'},
+                note: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
+                $style: { $shape: 'titledValue' },
+            },
             translation: {
                 $type: 'relation',
                 $tag: 'tra',
                 translation_id: {$type: 'primary_key'},
                 translation: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
-                variant: {$type: 'variant'}
+                variant: {$type: 'variant'},
+                $style: { $shape: 'titledValue' },
             },
             definition: {
                 $type: 'relation',
                 $tag: 'def',
                 definition_id: {$type: 'primary_key'},
                 definition: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
-                variant: {$type: 'variant'}
+                variant: {$type: 'variant'},
+                $style: { $shape: 'titledValue' },
                 //variant: {$type: 'string'}
                 // same issue as for gloss variant!!!
                 // - need two locales for definition - where it is applicable,
@@ -68,15 +99,18 @@ export const dictSchemaJson = {
                 $tag: 'gls',
                 gloss_id: {$type: 'primary_key'},
                 gloss: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
-                variant: {$type: 'variant'}
+                variant: {$type: 'variant'},
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
+                $style: { $shape: 'valueList' },                
             },
             example: {
                 $type: 'relation',
                 $tag: 'exa',
                 example_id: {$type: 'primary_key'},
+                $style: { $shape: 'container' },
+
                 //translation: {$type: 'string', $bind: 'attr1'},
                 // Probably move translation into a sub relation (so can have variants)
                 // Thiunk about pairings of tranlation and example.
@@ -98,7 +132,8 @@ export const dictSchemaJson = {
                     $tag: 'etx',
                     example_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
-                    variant: {$type: 'variant'}
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'titledValue' },
                 },
 
                 example_translation: {
@@ -106,7 +141,8 @@ export const dictSchemaJson = {
                     $tag: 'etr',
                     example_translation_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
-                    variant: {$type: 'variant'}
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'titledValue' },
                 },
                 
                 // Recordings of example sentence need to be pulled out of the
@@ -121,7 +157,8 @@ export const dictSchemaJson = {
                     example_recording_id: {$type: 'primary_key'},
                     recording: {$type: 'audio', $bind: 'attr1'},
                     speaker: {$type: 'string', $bind: 'attr2'},
-                    variant: {$type: 'variant'}
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'titledValue' },
                 },
             },
 
@@ -137,6 +174,7 @@ export const dictSchemaJson = {
                 pronunciation_guide_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
+                $style: { $shape: 'titledValue' },
             },
             category: {
                 $type: 'relation',
@@ -144,12 +182,14 @@ export const dictSchemaJson = {
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
                 category: {$type: 'string', $bind: 'attr1'},
+                $style: { $shape: 'titledValue' },
             },
             related_entry: {
                 $type: 'relation',
                 $tag: 'rel',
                 related_entry_id: {$type: 'primary_key'},
                 unresolved_text: {$type: 'string', $bind: 'attr1'},
+                $style: { $shape: 'valueList' },
             },
 
             // Probably same variant treatment here as we are doing for examples
@@ -159,12 +199,14 @@ export const dictSchemaJson = {
                 alternate_grammatical_form_id: {$type: 'primary_key'},
                 gloss: {$type: 'string', $bind: 'attr1'},
                 grammatical_form: {$type: 'string', $bind: 'attr2'},
+                $style: { $shape: 'container' },
                 alternate_form_text: {
                     $type: 'relation',
                     $tag: 'alx',
                     alternate_form_text_id: {$type: 'primary_key'},
                     text: {$type: 'string', $bind: 'attr1'},
-                    variant: {$type: 'variant'}
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'valueList' },
                 },
             },
             other_regional_form: {
@@ -173,6 +215,7 @@ export const dictSchemaJson = {
                 other_regional_form_id: {$type: 'primary_key'},
                 text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
+                $style: { $shape: 'valueList' },
             },
             attr: {
                 $type: 'relation',
@@ -181,44 +224,51 @@ export const dictSchemaJson = {
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
+                $style: { $shape: 'valueList' },
             },
             document_reference: {
                 $type: 'relation',
                 $tag: 'ref',
                 document_reference_id: {$type: 'primary_key'},
-                bounding_box_id: {$type: 'integer', $bind: 'attr1'},
+                bounding_group_id: {$type: 'integer', $bind: 'attr1'},
+                $style: { $shape: 'container' },
                 transcription: {
                     $type: 'relation',
                     $tag: 'rtr',
                     ref_transcription_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    $style: { $shape: 'titledValue' },
                 },
                 expanded_transcription: {
                     $type: 'relation',
                     $tag: 'rex',
                     ref_expanded_transcription_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    $style: { $shape: 'titledValue' },
                 },
                 text: {
                     $type: 'relation',
                     $tag: 'rtx',
                     ref_text_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
+                    $style: { $shape: 'titledValue' },
                 },
                 note: {
                     $type: 'relation',
                     $tag: 'rnt',
                     ref_note_id: {$type: 'primary_key'},
-                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
+                    text: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    $style: { $shape: 'titledValue' },
                 },
             },
             supporting_evidence: {
                 $type: 'relation',
                 $tag: 'eve',
                 supporting_evidence_id: {$type: 'primary_key'},
-                text: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
-                variant: {$type: 'variant'}
+                text: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                variant: {$type: 'variant'},
+                $style: { $shape: 'valueList' },
             },
         },
         recording: {
@@ -227,7 +277,8 @@ export const dictSchemaJson = {
             recording_id: {$type: 'primary_key'},
             recording: {$type: 'audio', $bind: 'attr1'},
             speaker: {$type: 'string', $bind: 'attr2'},
-            variant: {$type: 'variant'}
+            variant: {$type: 'variant'},
+            $style: { $shape: 'valueList' },
         },
     },
 };
@@ -349,7 +400,7 @@ export interface Attr {
 
 export interface DocumentReference {
     document_reference_id: number,
-    bounding_box_id: number,
+    bounding_group_id: number,
     transcription: RefTranscription[],
     expanded_transcription: RefExpandedTranscription[],
     text: RefText[],
@@ -409,6 +460,21 @@ function test() {
 // TODO Generizise the entry rendering, then do the whole lexeme.
 // TODO Figure out research section.
 
+
+function contextMenuPlay(): any {
+    var items = [
+        { name: 'Cut', fn: function(target:Element) { console.log('Cut!', target); }},
+        { name: 'Copy', fn: function(target:Element) { console.log('Copy!', target); }},
+        { name: 'Paste', fn: function(target:Element) { console.log('Paste!', target); }},
+        {},
+        { name: 'Select All', fn: function(target:Element) { console.log('Select All!', target); }},
+    ];
+
+    var cm1 = new ContextMenu('.has-context-menu', items);
+
+    return ['div', {class: 'has-context-menu'}, 'CTX ME!'];
+}
+
 /**
  *
  * Switch to mm-li query for now.
@@ -417,6 +483,7 @@ export function renderEntry(e: Entry): any {
     const editSpellings = `imports.popupEntryEditor('Edit Spellings', ${e.entry_id}, 'ent', ${e.entry_id}, 'spl')`;
     const editEntry = `imports.popupEntryEditor('Edit Entry', ${e.entry_id}, 'ent', ${e.entry_id})`;    
     return [
+        //contextMenuPlay(),
         ['h1', {class: 'editable', onclick: editEntry}, renderEntrySpellings(e, e.spelling)],
         renderSubentriesCompact(e, e.subentry),
     ];
@@ -541,19 +608,42 @@ export function renderDocumentReferences(e: Entry, s: Subentry,
              ? ['li', {}, 'No references']
              : documentReferences.map(ref=>['li', {}, renderDocumentReference(e, ref)]),
           ['li', {},
-           ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, 'PDM', ${JSON.stringify("Editing reference for "+renderEntrySpellings(e, e.spelling))})`}, 'Add new PDM doc reference']]
+           ['PDM', 'Rand', 'Clark', 'RandFirstReadingBook'].map(b=>
+               ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, ${JSON.stringify(b)}, ${JSON.stringify("Editing reference for "+renderEntrySpellings(e, e.spelling))})`}, 'Add ', b])
+          ]
          ]
         ]
     ];
 }
 
 export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
+    // XXX BAD THIS BIT OF FACTORING IS A CRAP HACK TO GET OUT THE DOOR.
+    // XXX THE LINE with REMOVE_FOR_WEB is removed by transpile.sh so
+    //     we don't try to pull client-side only deps on the web.
+    let standaloneGroupRender: any = [];
+    standaloneGroupRender = renderStandaloneGroup(ref.bounding_group_id); // REMOVE_FOR_WEB
+    const title = 'Title';
+    let refUrl: string;
+    refUrl = singleBoundingGroupEditorURL(ref.bounding_group_id, title); // REMOVE_FOR_WEB
+    const noBody =
+        ref.transcription.length === 0 &&
+        ref.expanded_transcription.length === 0 &&
+        ref.text.length === 0 &&
+        ref.note.length === 0;
     return [
-        ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
-        ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
-        ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),
-        ref.note.map(t=>['div', {}, ['b', {}, 'Note: '], t.text]),
-    ];
+        ['a', {href:refUrl, target:''}, standaloneGroupRender],
+        noBody ? ['b', {}, 'No Transcription']: undefined,
+        ['table', {},
+         ['tbody', {},
+          ref.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.text]]),
+          ref.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.text]]),
+          ref.text.map(t=>['tr', {}, ['th', {}, 'Text:'], ['td', {}, t.text]]),
+          ref.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.text]]),
+          //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
+          //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
+          //ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),
+          //ref.note.map(t=>['div', {}, ['b', {}, 'Note: '], t.text]),
+    ]]];
 }
 
 

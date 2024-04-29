@@ -26,12 +26,26 @@ export class DenoHttpServer extends HttpServer {
     }
 
     async serveConnection(conn: Deno.Conn) {
-        // This "upgrades" a network connection into an HTTP connection.
-        const httpConn = Deno.serveHttp(conn);
-        // Each request sent over the HTTP connection will be yielded as an async
-        // iterator from the HTTP connection.
-        for await (const requestEvent of httpConn) {
-            await this.serveRequest(requestEvent);
+        try {
+            // This "upgrades" a network connection into an HTTP connection.
+            const httpConn = Deno.serveHttp(conn);
+            // Each request sent over the HTTP connection will be yielded as an async
+            // iterator from the HTTP connection.
+            for await (const requestEvent of httpConn) {
+                await this.serveRequest(requestEvent);
+            }
+        } catch (e) {
+            console.info('ERROR SERVING CONNECTION:', e);
+        } finally {
+            try {
+                // I don't think I need to do this (I think it
+                // happens automatically when out of events) - doesn't
+                // matter anyway - need to upgrade all of this to new
+                // http api.
+                //conn.close();
+            } catch (e) {
+                console.info('ERROR CLOSING CONNECTION:', e);
+            }
         }
     }
 
