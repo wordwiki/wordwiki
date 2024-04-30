@@ -22,10 +22,28 @@ import * as content from "../utils/content-store.ts";
 async function importMMO() {
     // XXX TODO move this file/path into our import tree.
     //const entries = JSON.parse(await Deno.readTextFile("/home/dziegler/wordwiki/importer/mikmaq/entry-tuples.json")) as Entry[];
-    const entries = JSON.parse(await Deno.readTextFile("/home/dziegler/wordwiki/importer/mikmaq/entries.json")) as Entry[];
-
+    const entries = JSON.parse(await Deno.readTextFile("imports/LegacyMmo/entries.json")) as Entry[];
     console.info('entry count', entries.length);
 
+    // We need to load the recordings into our content store - which has
+    // an async api - so we pre-do the loading here so the main transform
+    // passes don't have to be async.
+    for(const e of entries) {
+        const spelling = e.spelling[0]?.text;
+        for(const r of e.recording) {
+            r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+        }
+        for(const s of e.subentry) {
+            for(const e of s.example) {
+                for(const r of e.example_recording) {
+                    r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+                }
+            }
+        }
+    }
+
+    return;
+    
     //console.info(entries.map(e=>e.entry_id).toSorted());
 
     db().beginTransaction();
@@ -391,6 +409,62 @@ function importAttr(parent: Assertion, attr: Attr, order_key: string, published:
 //             locale_expr: status.variant,
 //         }));
 // }
+
+
+// CRAP CRAP - BUT rUN ONCE ONLY - SO PROBABLY OK
+async function importAudioContent(root: string, relPath: string, speaker: string, altSpelling: string): Promise<string> {
+    //console.info('*** Importing audio from ', path);
+    let path = root+'/'+relPath;
+    try {
+        if(!await fs.exists(path, {isFile: true})) {
+            let new_path =
+                path.slice(0, 'imports/LegacyMmo/media/'.length)
+                +altSpelling.toLowerCase().slice(0,1)+'/'
+                +altSpelling.toLowerCase()
+                +path.slice(path.lastIndexOf('/'));
+            new_path = new_path.replaceAll('*', '');
+            
+            if(new_path !== path && await fs.exists(new_path, {isFile: true})) {
+                //console.info('new path is', new_path);
+                path = new_path;
+            } else {
+                // XXX this is a failure !!!XXX
+                let msg = 'Missing '+path.slice('imports/LegacyMmo/media/'.length);
+                if(new_path != path)
+                    msg += ' or '+new_path.slice('imports/LegacyMmo/media/'.length);
+                msg += ' for lexeme '+altSpelling;
+                msg += ' by speaker '+speaker;
+                console.info(msg);
+                // console.info(path, await fs.exists(path, {isFile: true}));
+                // if(new_path !== path)
+                //     console.info(new_path, await fs.exists(new_path, {isFile: true}));
+                return path;
+            }
+        }
+    } catch(e) {
+        console.info('XXX failed to import ', path, e);
+    }
+
+    try {
+        const fileSize = await (await Deno.stat(path)).size;
+        if(fileSize === 44)
+            console.info('Empty recording ', path.slice('imports/LegacyMmo/media/'.length), 'for lexeme', altSpelling,
+                         'by speaker', speaker);
+    } catch(e) {
+        console.info('failed to stat', path, e);
+    }
+    
+    try {
+        const audio_ref = 'content/'+
+            await content.addFile('content/Recordings', path);
+        return audio_ref;
+    } catch(e) {
+        console.info('XXX failed to import ', path, e);
+        // RETURNING STOCK PATH IS WRONG HERE
+        return path;
+    }
+}
+
 
 async function main(args: string[]) {
     const [command, ...commandArgs] = args;
