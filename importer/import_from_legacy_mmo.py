@@ -164,6 +164,7 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     #    print('picture', picture)
     # TODO status map
     status = src_lexeme.pop('status')
+    print('STATUS', status)
     is_published = status == 'done' or status == 'post'
     #assert len(src_lexeme.pop('errors')) == 0 # TODO
     assert not src_lexeme.pop('explicitSfGloss')
@@ -202,7 +203,15 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     #entry['last_modified_date'] = date
     entry['internal_note'] = note
     entry['public_note'] = ''
-            
+
+    entry['status'] = [{
+        'status_id': id_allocator.alloc_next_id(),
+        'variant': 'mm-li',
+        'status': status,
+        'details': ''
+    }]            
+    
+    
     return [entry]
 
 # for pacific: picture of reference - what refer to
@@ -215,14 +224,6 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     #entry['lexeme'] = lex_text
     # remodel status TODO: skip/done ???
     #assert status=='done' or status=='skip', 'unknown status {status}'
-    if True: 
-        entry['status'] = [{
-            'status_id': id_allocator.alloc_next_id(),
-            'variant': 'mm-li',
-            'status': status,
-            'details': ''
-        }]            
-    
     if borrowed_word:
         attrs['borrowed_word'] = borrowed_word
     
@@ -260,17 +261,21 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     entry['translation'] = [convert_translation(id_allocator, sense.pop('definition'))]
     #assert not sense.pop('label')
     notes = [n['text'] for n in sense.pop('notes')]
-    if note:
-        print('entry notes:', note)
-    if notes:
-        print('sense notes:', notes)
-    # TODO NOTES:
+    #if note:
+    #    print('entry notes:', note)
+    #if notes:
+    #    print('sense notes:', notes)
+
     if note:
         notes.append(note)
     if notes:
         print('all notes:', notes)
-    
-    sense.pop('picture')
+
+    entry['note'] = [convert_note(id_allocator, n) for n in notes]
+    picture = sense.pop('picture')
+    if picture:
+        entry['picture'] = [convert_picture(id_allocator, picture)]
+
     scientific_name = sense.pop('scientificName')
     if scientific_name:
         attrs['scientific_name'] = scientific_name
@@ -316,7 +321,19 @@ def convert_alternate_form(id_allocator, src):
     out['grammatical_form'] = src.pop('label')
     out['alternate_form_text'] = ortho_text('alternate_form_text_id', id_allocator, src.pop('lexeme'), src.pop('sfGloss'))
     return out
-    
+
+def convert_note(id_allocator, note):
+    out = dict()
+    out['note_id'] = id_allocator.alloc_next_id()
+    out['note'] = note
+    return out
+
+def convert_picture(id_allocator, picture):
+    out = dict()
+    out['picture_id'] = id_allocator.alloc_next_id()
+    out['picture'] = picture
+    return out
+
 
 #          "examples" : [ {
 #            "exampleEnglish" : "It's sitting on the bare ground, lay something under it.",

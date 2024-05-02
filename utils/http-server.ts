@@ -33,7 +33,14 @@ export interface Request {
     body: any;
 }
 
+export const ResponseMarker = Symbol('ResponseMarker');
+
+export function isMarkedResponse(v: any): v is Response  {
+    return v?.marker === ResponseMarker;
+}
+    
 export interface Response {
+    marker?: typeof ResponseMarker;
     status: number;
     headers: {[key: string]: string};
     //url: string;

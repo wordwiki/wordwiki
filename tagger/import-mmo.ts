@@ -15,6 +15,13 @@ import * as config from "./config.ts";
 import * as timestamp from "../utils/timestamp.ts";
 import * as orderkey from '../utils/orderkey.ts';
 import * as content from "../utils/content-store.ts";
+import {DictTag, EntryTag, StatusTag, SpellingTag, SubentryTag, TodoTag,
+        NoteTag, TranslationTag, DefinitionTag, GlossTag, ExampleTag,
+        ExampleTextTag, ExampleTranslationTag, ExampleRecordingTag,
+        PronunciationGuideTag, CategoryTag, RelatedEntryTag, AlternateGrammaticalFormTag,
+        AlternateFormTextTag, OtherRegionalFormTag, PictureTag, AttrTag,
+        DocumentReferenceTag, RefTranscriptionTag, RefExpandedTranscriptionTag,
+        RefTransliterationTag, RefNoteTag, SupportingEvidenceTag, RecordingTag} from './entry-schema.ts';
 
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
@@ -25,24 +32,25 @@ async function importMMO() {
     const entries = JSON.parse(await Deno.readTextFile("imports/LegacyMmo/entries.json")) as Entry[];
     console.info('entry count', entries.length);
 
-    // We need to load the recordings into our content store - which has
-    // an async api - so we pre-do the loading here so the main transform
-    // passes don't have to be async.
-    for(const e of entries) {
-        const spelling = e.spelling[0]?.text;
-        for(const r of e.recording) {
-            r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
-        }
-        for(const s of e.subentry) {
-            for(const e of s.example) {
-                for(const r of e.example_recording) {
-                    r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+    if(true) {
+        // We need to load the recordings into our content store - which has
+        // an async api - so we pre-do the loading here so the main transform
+        // passes don't have to be async.
+        for(const e of entries) {
+            const spelling = e.spelling[0]?.text;
+            for(const r of e.recording) {
+                r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+            }
+            for(const s of e.subentry) {
+                for(const e of s.example) {
+                    for(const r of e.example_recording) {
+                        r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+                    }
                 }
             }
         }
     }
-
-    return;
+    //return;
     
     //console.info(entries.map(e=>e.entry_id).toSorted());
 
@@ -50,7 +58,7 @@ async function importMMO() {
     db().execute('DELETE FROM dict', {});
 
     // Add the top level 'dct' assertion.
-    const dictAssertion = createAssertion(undefined, 0, 0, 'dct', orderkey.new_range_start_string, true, {});
+    const dictAssertion = createAssertion(undefined, 0, 0, DictTag, orderkey.new_range_start_string, true, {});
     console.info('dict assertion', JSON.stringify(dictAssertion, undefined, 2));
     insertAssertion(dictAssertion);
     
@@ -119,6 +127,7 @@ function createAssertion(parent: Assertion|undefined, depth: number,
 interface Entry {
     entry_id: number;
     published: boolean;
+    status: Status[];
     spelling: Spelling[];
     recording: Recording[];
     subentry: Subentry[];
@@ -131,7 +140,7 @@ function importEntry(entry: Entry, order_key: string) {
         throw new Error('expected published to be boolean');
     const published: boolean = entry.published;
     const entryAssertion = insertAssertion(createAssertion(
-        undefined, 1, entry.entry_id, 'ent', order_key, published,
+        undefined, 1, entry.entry_id, EntryTag, order_key, published,
         {
             // TODO: audit this
             note: entry.internal_note + entry.public_note,
@@ -139,6 +148,9 @@ function importEntry(entry: Entry, order_key: string) {
     importEach(entry.spelling, (s,k)=>importSpelling(entryAssertion, s, k, published));
     importEach(entry.recording, (s,k)=>importRecording(entryAssertion, s, k, published));
     importEach(entry.subentry, (s,k)=>importSubentry(entryAssertion, s, k, published));
+    // console.info('STATUS', subentry);
+    importEach(entry.status, (s,k)=>importStatus(entryAssertion, s, k, published));
+    
 }
 
 interface Spelling {
@@ -149,7 +161,7 @@ interface Spelling {
 
 function importSpelling(parent: Assertion, spelling: Spelling, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 2, spelling.spelling_id, 'spl', order_key, published,
+        parent, 2, spelling.spelling_id, SpellingTag, order_key, published,
         {
             attr1: spelling.text,
             locale_expr: spelling.variant,
@@ -164,7 +176,7 @@ interface Recording {
 
 function importRecording(parent: Assertion, recording: Recording, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 2, recording.recording_id, 'rec', order_key, published,
+        parent, 2, recording.recording_id, RecordingTag, order_key, published,
         {
             attr1: recording.recording,
             attr2: recording.speaker,
@@ -183,12 +195,13 @@ interface Subentry {
     alternate_grammatical_form: AlternateGrammaticalForm[];
     other_regional_form: OtherRegionalForm[];
     attr: Attr[];
-    //status: Status[];
+    note: Note[],
+    picture: Picture[],
 }
 
 function importSubentry(parent: Assertion, subentry: Subentry, order_key: string, published: boolean) {
     const subentryAssertion = insertAssertion(createAssertion(
-        parent, 2, subentry.subentry_id, 'sub', order_key, published,
+        parent, 2, subentry.subentry_id, SubentryTag, order_key, published,
         {
             attr1: subentry.part_of_speech,
         }));
@@ -200,9 +213,8 @@ function importSubentry(parent: Assertion, subentry: Subentry, order_key: string
     importEach(subentry.related_entry, (s,k)=>importRelatedEntry(subentryAssertion, s, k, published));
     importEach(subentry.alternate_grammatical_form, (s,k)=>importAlternateGrammaticalForm(subentryAssertion, s, k, published));
     importEach(subentry.other_regional_form, (s,k)=>importOtherRegionalForm(subentryAssertion, s, k, published));
+    //importEach(subentry.picture, (s,k)=>importPicture(subentryAssertion, s, k, published));    
     importEach(subentry.attr, (s,k)=>importAttr(subentryAssertion, s, k, published));
-    // console.info('STATUS', subentry);
-    // importEach(subentry.status, (s,k)=>importStatus(subentryAssertion, s, k));
 }
 
 interface Translation {
@@ -212,7 +224,7 @@ interface Translation {
 
 function importTranslation(parent: Assertion, translation: Translation, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, translation.translation_id, 'tra', order_key, published,
+        parent, 3, translation.translation_id, TranslationTag, order_key, published,
         {
             attr1: translation.translation,
         }));
@@ -225,7 +237,7 @@ interface Gloss {
 
 function importGloss(parent: Assertion, gloss: Gloss, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, gloss.gloss_id, 'gls', order_key, published,
+        parent, 3, gloss.gloss_id, GlossTag, order_key, published,
         {
             attr1: gloss.gloss,
         }));
@@ -240,7 +252,7 @@ interface Example {
 
 function importExample(parent: Assertion, example: Example, order_key: string, published: boolean) {
     const exampleAssertion = insertAssertion(createAssertion(
-        parent, 3, example.example_id, 'exa', order_key, published,
+        parent, 3, example.example_id, ExampleTag, order_key, published,
         {
         }));
     importEach(example.example_text, (s,k)=>importExampleText(exampleAssertion, s, k, published));
@@ -256,7 +268,7 @@ interface ExampleText {
 
 function importExampleText(parent: Assertion, exampleText: ExampleText, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 4, exampleText.example_text_id, 'etx', order_key, published,
+        parent, 4, exampleText.example_text_id, ExampleTextTag, order_key, published,
         {
             attr1: exampleText.text,
             locale_expr: exampleText.variant,
@@ -270,7 +282,7 @@ interface ExampleTranslation {
 
 function importExampleTranslation(parent: Assertion, exampleTranslation: ExampleTranslation, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 4, exampleTranslation.example_translation_id, 'etr', order_key, published,
+        parent, 4, exampleTranslation.example_translation_id, ExampleTranslationTag, order_key, published,
         {
             attr1: exampleTranslation.text,
         }));
@@ -285,7 +297,7 @@ interface ExampleRecording {
 
 function importExampleRecording(parent: Assertion, exampleRecording: ExampleRecording, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 4, exampleRecording.example_recording_id, 'erc', order_key, published,
+        parent, 4, exampleRecording.example_recording_id, ExampleRecordingTag, order_key, published,
         {
             attr1: exampleRecording.recording,
             attr2: exampleRecording.speaker,
@@ -300,7 +312,7 @@ interface PronunciationGuide {
 
 function importPronunciationGuide(parent: Assertion, pronunciationGuide: PronunciationGuide, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, pronunciationGuide.pronunciation_guide_id, 'prn', order_key, published,
+        parent, 3, pronunciationGuide.pronunciation_guide_id, PronunciationGuideTag, order_key, published,
         {
             attr1: pronunciationGuide.text,
             locale_expr: pronunciationGuide.variant,
@@ -314,7 +326,7 @@ interface Category {
 
 function importCategory(parent: Assertion, category: Category, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, category.category_id, 'cat', order_key, published,
+        parent, 3, category.category_id, CategoryTag, order_key, published,
         {
             attr1: category.category,
         }));
@@ -327,7 +339,7 @@ interface RelatedEntry {
 
 function importRelatedEntry(parent: Assertion, relatedEntry: RelatedEntry, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, relatedEntry.related_entry_id, 'rel', order_key, published,
+        parent, 3, relatedEntry.related_entry_id, RelatedEntryTag, order_key, published,
         {
             attr1: relatedEntry.unresolved_text, // ??? ??? TODO WTF ??? XXX ???
         }));
@@ -342,7 +354,7 @@ interface AlternateGrammaticalForm {
 
 function importAlternateGrammaticalForm(parent: Assertion, alternateGrammaticalForm: AlternateGrammaticalForm, order_key: string, published: boolean) {
     const alternateGrammaticalFormAssertion = insertAssertion(createAssertion(
-        parent, 3, alternateGrammaticalForm.alternate_grammatical_form_id, 'alt', order_key, published,
+        parent, 3, alternateGrammaticalForm.alternate_grammatical_form_id, AlternateGrammaticalFormTag, order_key, published,
         {
             attr1: alternateGrammaticalForm.grammatical_form,
             attr2: alternateGrammaticalForm.gloss,
@@ -358,7 +370,7 @@ interface AlternateFormText {
 
 function importAlternateFormText(parent: Assertion, alternateFormText: AlternateFormText, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 4, alternateFormText.alternate_form_text_id, 'alx', order_key, published,
+        parent, 4, alternateFormText.alternate_form_text_id, AlternateFormTextTag, order_key, published,
         {
             attr1: alternateFormText.text,
             locale_expr: alternateFormText.variant,
@@ -372,7 +384,7 @@ interface OtherRegionalForm {
 
 function importOtherRegionalForm(parent: Assertion, otherRegionalForm: OtherRegionalForm, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, otherRegionalForm.other_regional_form_id, 'orf', order_key, published,
+        parent, 3, otherRegionalForm.other_regional_form_id, OtherRegionalFormTag, order_key, published,
         {
             attr1: otherRegionalForm.text,
         }));
@@ -386,29 +398,55 @@ interface Attr {
 
 function importAttr(parent: Assertion, attr: Attr, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, attr.attr_id, 'att', order_key, published,
+        parent, 3, attr.attr_id, AttrTag, order_key, published,
         {
             attr1: attr.attr,
             attr2: attr.value,
         }));
 }
 
-// interface Status {
-//     status_id: number;
-//     variant: string;
-//     status: string;
-//     details: string;
-// }
+interface Status {
+    status_id: number;
+    variant: string;
+    status: string;
+    details: string;
+}
 
-// function importStatus(parent: Assertion, status: Status) {
-//     insertAssertion(createAssertion(
-//         parent, 3, status.status_id, 'st',
-//         {
-//             attr1: status.status,
-//             attr2: status.details,
-//             locale_expr: status.variant,
-//         }));
-// }
+function importStatus(parent: Assertion, status: Status, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 2, status.status_id, StatusTag, order_key, published,
+        {
+            attr1: status.status,
+            attr2: status.details,
+            locale_expr: status.variant,
+        }));
+}
+
+interface Note {
+    note_id: number;
+    note: string;
+}
+
+function importNote(parent: Assertion, note: Note, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 3, note.note_id, NoteTag, order_key, published,
+        {
+            attr1: note.note,
+        }));
+}
+
+interface Picture {
+    picture_id: number;
+    picture: string;
+}
+
+function importPicture(parent: Assertion, picture: Picture, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 3, picture.picture_id, PictureTag, order_key, published,
+        {
+            attr1: picture.picture,
+        }));
+}
 
 
 // CRAP CRAP - BUT rUN ONCE ONLY - SO PROBABLY OK

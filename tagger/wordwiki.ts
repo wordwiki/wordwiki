@@ -462,6 +462,31 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
 
+    searchDocumentsForm(search?: string): any {
+        return [
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki.searchDocumentsPage(query)'},
+
+             // --- Search text row
+             ['div', {class:'col-12'},
+              ['label', {for:'searchText', class:'visually-hidden'}, 'Search Text'],
+              ['div', {class:'input-group'},
+               ['input', {type:'text',
+                          class:'form-control',
+                          id:'searchText', name:'searchText',
+                          value:search ?? ''}]]
+             ], // row
+
+             ['div', {class:'col-12'},
+              ['button', {type:'submit', class:'btn btn-primary'}, 'Search Documents']],
+            ], // form
+        ];
+    }
+        
+    
+    searchDocumentsPage(query?: {searchText?: string}): any {
+        throw new Error('not impl yetc');
+    }
+
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;
 
@@ -659,13 +684,21 @@ export class WordWiki {
             return server.jsonResponse({error: String(e)}, 400)
         }
 
-        if(typeof result === 'string')
+        if(server.isMarkedResponse(result)) {
+            return result;
+        } else if(typeof result === 'string') {
             return server.htmlResponse(result);
-        else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') { // this squigs me - but is is soooo convenient!
+        } else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') { // this squigs me - but is is soooo convenient!
             let htmlText: string = 'cat';
             try {
                 // Note: we allow markup to contain Promises, which we force
-                //       at render time.
+                //       at render time (inside asyncRenderToStringViaLinkeDOM)
+                // TODO: we may want to make this opt-in per request after
+                //       profiling how much extra cpu we are spending using
+                //       the async version fo renderToStringvialinkedom.
+                //       If the sync one is way faster, we could even consider
+                //       having it throw if it finds a promise, then re rendering
+                //       with the async one.
                 htmlText = await markup.asyncRenderToStringViaLinkeDOM(result);
             } catch(e) {
                 console.info('request failed during content force', e);
@@ -674,6 +707,7 @@ export class WordWiki {
             return server.htmlResponse(htmlText);
         } else {
             return server.jsonResponse(result);
+        }
 
         // result can be a command - like forward
         // result can be json, a served page, etc

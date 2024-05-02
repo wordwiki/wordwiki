@@ -1,6 +1,7 @@
 // TODO: move this to a config file.
 export const imageMagickPath = '/usr/bin/convert';
 export const awsCmdPath = '/usr/local/bin/aws';
+export const lameEncPath = '/usr/bin/lame';
 
 export const defaultTileWidth = 1024;
 export const defaultTileHeight = 128;

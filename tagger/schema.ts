@@ -1107,6 +1107,13 @@ export const selectAllAssertions = (tableName: string)=>db().prepare<Assertion>(
 /**/          FROM ${tableName}
 /**/          ORDER BY valid_from, id`);
 
+export const selectCurrentAssertionsByType = (tableName: string)=>db().prepare<Assertion, {ty: number}>(block`
+/**/   SELECT ${assertionFieldNames.join()}
+/**/          FROM ${tableName}
+/**/          WHERE ty = :ty AND
+/**/                published_to = 9007199254740991 OR
+/**/                valid_to = 9007199254740991`);
+
 export function updateAssertion<T extends Partial<Assertion>>(tableName: string, assertion_id: number,fieldNames:Array<keyof T>, fields: T) {
     return db().update<T>(tableName, 'assertion_id', fieldNames, assertion_id, fields);
 }
