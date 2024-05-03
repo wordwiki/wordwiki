@@ -7,6 +7,7 @@
  */
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../utils/utils.ts";
+import * as strings from "../utils/strings.ts";
 import {unwrap} from "../utils/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import {block} from "../utils/strings.ts";
@@ -26,6 +27,18 @@ import {DictTag, EntryTag, StatusTag, SpellingTag, SubentryTag, TodoTag,
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
 
+
+function dirTree(root: string, out: string[]): string[] {
+    const entries = Deno.readDirSync(root);
+    for(const e of entries) {
+        if(e.isFile)
+            out.push(root+'/'+e.name);
+        else
+            dirTree(root+'/'+e.name, out);
+    }
+    return out;
+}
+
 async function importMMO() {
     // XXX TODO move this file/path into our import tree.
     //const entries = JSON.parse(await Deno.readTextFile("/home/dziegler/wordwiki/importer/mikmaq/entry-tuples.json")) as Entry[];
@@ -33,21 +46,66 @@ async function importMMO() {
     console.info('entry count', entries.length);
 
     if(true) {
+
+        const allWavFiles = dirTree('imports/LegacyMmo/media', [])
+            .filter(f=>f.endsWith('.wav'))
+            .filter(f=>Deno.statSync(f).size !== 44)
+            .filter(f=>!f.includes('('))
+            .map(f=>strings.stripRequiredPrefix(f, 'imports/LegacyMmo/'));
+        console.info(allWavFiles);
+        const unusedWavFiles = new Set(allWavFiles);
+        
         // We need to load the recordings into our content store - which has
         // an async api - so we pre-do the loading here so the main transform
         // passes don't have to be async.
+        const importedPaths = [];
         for(const e of entries) {
             const spelling = e.spelling[0]?.text;
             for(const r of e.recording) {
-                r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+                if(!unusedWavFiles.delete(r.recording))
+                    console.info(`missing ${r.recording} (1)`);
+                r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling) ?? '';
+                if(r.recording !== '')
+                    importedPaths.push(r.recording);
             }
             for(const s of e.subentry) {
                 for(const e of s.example) {
                     for(const r of e.example_recording) {
-                        r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling);
+                        if(!unusedWavFiles.delete(r.recording))
+                            console.info(`missing ${r.recording}`);
+                        r.recording = await importAudioContent('imports/LegacyMmo', r.recording, r.speaker, spelling) ?? ''
+                        if(r.recording !== '')
+                            importedPaths.push(r.recording);
                     }
                 }
             }
+        }
+
+        console.info('Imported recording paths', importedPaths);
+        const importedHashes = [];
+        for(const p of importedPaths)
+            importedHashes.push(await content.digestFileUsingExternalCmd(p));
+        console.info('IMPORTED HASHES', importedHashes);
+        const importedHashesSet = new Set(importedHashes);
+        
+        console.info('UNUSED wav files:');
+        const recovered = new Set();
+        const missing = [];
+        for(const p of unusedWavFiles) {
+            const hash = await content.digestFileUsingExternalCmd('imports/LegacyMmo/'+p);
+            if(importedHashesSet.has(hash))
+                recovered.add(p);
+            else
+                missing.push(p);
+        }
+        
+        console.info('RECOVERED', recovered.size);
+        console.info('UNBOUND FILES', missing.length);
+        for(const f of missing.toSorted()) {
+            console.info('***', f);
+            const p = 'imports/LegacyMmo/'+f;
+            if(!await fs.exists(p, {isFile: true}))
+                throw new Error('expected '+p+' to exist');
         }
     }
     //return;
@@ -146,7 +204,7 @@ function importEntry(entry: Entry, order_key: string) {
             note: entry.internal_note + entry.public_note,
         }));
     importEach(entry.spelling, (s,k)=>importSpelling(entryAssertion, s, k, published));
-    importEach(entry.recording, (s,k)=>importRecording(entryAssertion, s, k, published));
+    importEach(entry.recording.filter(r=>r.recording!==''), (s,k)=>importRecording(entryAssertion, s, k, published));
     importEach(entry.subentry, (s,k)=>importSubentry(entryAssertion, s, k, published));
     // console.info('STATUS', subentry);
     importEach(entry.status, (s,k)=>importStatus(entryAssertion, s, k, published));
@@ -257,7 +315,7 @@ function importExample(parent: Assertion, example: Example, order_key: string, p
         }));
     importEach(example.example_text, (s,k)=>importExampleText(exampleAssertion, s, k, published));
     importEach(example.example_translation, (s,k)=>importExampleTranslation(exampleAssertion, s, k, published));
-    importEach(example.example_recording, (s,k)=>importExampleRecording(exampleAssertion, s, k, published));
+    importEach(example.example_recording.filter(r=>r.recording!==''), (s,k)=>importExampleRecording(exampleAssertion, s, k, published));
 }
 
 interface ExampleText {
@@ -476,7 +534,7 @@ async function importAudioContent(root: string, relPath: string, speaker: string
                 // console.info(path, await fs.exists(path, {isFile: true}));
                 // if(new_path !== path)
                 //     console.info(new_path, await fs.exists(new_path, {isFile: true}));
-                return path;
+                return '';
             }
         }
     } catch(e) {
@@ -499,7 +557,7 @@ async function importAudioContent(root: string, relPath: string, speaker: string
     } catch(e) {
         console.info('XXX failed to import ', path, e);
         // RETURNING STOCK PATH IS WRONG HERE
-        return path;
+        return '';
     }
 }
 

@@ -443,7 +443,7 @@ export interface DocumentReference {
     bounding_group_id: number,
     transcription: RefTranscription[],
     expanded_transcription: RefExpandedTranscription[],
-    text: RefText[],
+    transliteration: RefTransliteration[],
     note: RefNote[],
 }
 
@@ -457,9 +457,9 @@ export interface RefExpandedTranscription {
     text: string,
 }
 
-export interface RefText {
+export interface RefTransliteration {
     ref_text_id: number,
-    text: string,
+    transliteration: string,
 }
 
 export interface RefNote {
@@ -668,16 +668,21 @@ export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
     const noBody =
         ref.transcription.length === 0 &&
         ref.expanded_transcription.length === 0 &&
-        ref.text.length === 0 &&
+        ref.transcription.length === 0 &&
         ref.note.length === 0;
     return [
         ['a', {href:refUrl, target:'_blank', rel:'opener'}, standaloneGroupRender],
+        ['div', {},
+         ['object', {data:`/renderStandaloneGroupAsSvgResponse(${ref.bounding_group_id})`, 'type':'image/svg+xml'}]],
+        ['div', {},
+         ['img', {src:`/renderStandaloneGroupAsSvgResponse(${ref.bounding_group_id})`}]],
+        ['div', {'background-image': `/renderStandaloneGroupAsSvgResponse(${ref.bounding_group_id})`}],
         noBody ? ['b', {}, 'No Transcription']: undefined,
         ['table', {},
          ['tbody', {},
           ref.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.text]]),
           ref.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.text]]),
-          ref.text.map(t=>['tr', {}, ['th', {}, 'Text:'], ['td', {}, t.text]]),
+          ref.transliteration.map(t=>['tr', {}, ['th', {}, 'Text:'], ['td', {}, t.transliteration]]),
           ref.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.text]]),
           //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
           //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),

@@ -48,8 +48,9 @@ def import_legacy_mmo(i_realize_that_this_will_nuke_the_working_mmo_db=False):
         #print(l)
         subentries = l['subentries']
         if len(subentries) != 1:
-            #print(lexeme_id, 'has', len(subentries), 'subentries')
-            assert len(subentries) == 1, "Only one subentry per word supported"
+            print(lexeme_id, 'has', len(subentries), 'subentries')
+            print('*** DROPPING EXTRA SUBENTRIES::', json.dumps(subentries[1:], indent=2, ensure_ascii=False))
+            #assert len(subentries) == 1, "Only one subentry per word supported"
         subentry = subentries[0]
         parts_of_speech = subentry['partsOfSpeech']
         if len(parts_of_speech) != 1:
@@ -170,7 +171,9 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     assert not src_lexeme.pop('explicitSfGloss')
     
     src_subentries = src_lexeme['subentries']
-    assert len(src_subentries)==1, "Only one subentry per lexeme supported"
+    if(len(src_subentries) > 1):
+        print('*** DROPPING EXTRA SUBENTRIES for lexeme', lexeme, '::', json.dumps(src_subentries[1:], indent=2, ensure_ascii=False))
+    assert len(src_subentries)>0, "Must have at least one subentry"
     #assert len(src_subentries)>=1, "Only one subentry per lexeme supported"
     #if len(src_subentries)!=1:
     #    print ('*** Ignoring extra subentries for', lexeme)

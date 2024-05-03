@@ -717,7 +717,6 @@ export class WordWiki {
         // have shortcuts for returning other things:
 
         //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
-        }
     }
 }
 

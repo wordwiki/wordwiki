@@ -439,12 +439,12 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
  * Probably quite a bit slower than the sync one - so keeping that one around as
  * well.
  */
-export async function asyncRenderToStringViaLinkeDOM(markup: any): Promise<string> {
-    return (await asyncToLinkeDOM(markup)).toString();
+export async function asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<string> {
+    return (await asyncToLinkeDOM(markup, wrapInHtmlDocument)).toString();
 }
 
-export async function asyncToLinkeDOM(markup: any): Promise<any> {
-    return linkedom.parseJSON(await asyncRenderToJSDON(markup));
+export async function asyncToLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<any> {
+    return linkedom.parseJSON(await asyncRenderToJSDON(markup, wrapInHtmlDocument));
 }
 
 export async function asyncRenderToJSDON(item: any, wrapInHtmlDocument: boolean=true): Promise<JSDON> {

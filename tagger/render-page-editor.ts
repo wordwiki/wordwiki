@@ -7,10 +7,11 @@ import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
 //import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
-import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
+import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM } from '../utils/markup.ts';
 import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
 import * as templates from './templates.ts';
+import {Response, ResponseMarker} from '../utils/http-server.ts';
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -332,21 +333,6 @@ async function samplePageRender(friendly_document_id: string, page_number: numbe
 // --- RPCs -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-export const routes = ()=> ({
-    pageEditor,
-    renderPageEditorByPageNumber,
-    renderPageEditorByPageId,
-    updateBoundingBoxShape,
-    newBoundingBoxInNewGroup,
-    newBoundingBoxInExistingGroup,
-    copyRefBoxToNewGroup,
-    copyRefBoxToExistingGroup,
-    copyBoxToExistingGroup,
-    removeBoxFromGroup,
-    migrateBoxToGroup,
-    renderTextSearchResults,
-});
-
 export function updateBoundingBoxShape(bounding_box_id: number, shape: Shape) {
     db().transaction(()=>
         updateBoundingBox(bounding_box_id, ['x', 'y', 'w', 'h'], shape));
@@ -624,12 +610,19 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
     return templates.pageTemplate({title, head, body});
 }
 
+// A bit of extra typing for svg markup with a declared size.
+export type SizedSvgMarkup =  ['svg',
+                               {width:number, height:number,
+                                x?: number, y?:number,
+                                [index: string]: any},
+                               ...any];
+
 /**
  *
  */
-export function renderStandaloneGroup(bounding_group_id: number,
-                                      scale_factor:number=4,
-                                      box_stroke:string = 'green'): any {
+export function renderStandaloneGroupAsHtml(bounding_group_id: number,
+                                            scale_factor:number=4,
+                                            box_stroke:string = 'green'): any {
     const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
     if(boxes.length === 0) {
         //console.info('STANDALONE GROUP IS EMPTY');
@@ -640,17 +633,81 @@ export function renderStandaloneGroup(bounding_group_id: number,
         boxes=>['div', {}, renderStandaloneBoxes(boxes, scale_factor, box_stroke)]);
 }
 
+export async function renderStandaloneGroupAsSvgResponse(bounding_group_id: number,
+                                                         scale_factor:number=4,
+                                                         box_stroke:string = 'green'): Promise<Response> {
+    const svgMarkup = renderStandaloneGroup(bounding_group_id, scale_factor, box_stroke);
+    const svgText = await asyncRenderToStringViaLinkeDOM(svgMarkup, false);
+    const body = block`
+/**/<?xml version="1.0"?>
+/**/<?xml-stylesheet href="resources/page-editor.css" ?>
+/**/${svgText}`;
+    console.info('SVG BODY', body);
+    return {
+        marker: ResponseMarker,
+        status: 200,
+        headers: {"content-type": "image/svg+xml;charset=utf-8"},
+        body
+    };
+}
+
+/**
+ *
+ *
+ * ISSUE: the entire standalone group is a single click target now - so
+ *        for group spanning pages it is hard for the user to find all
+ *        the parts of the group (does not come up much at present)
+ */
+export function renderStandaloneGroup(bounding_group_id: number,
+                                      scale_factor:number=4,
+                                      box_stroke:string = 'green'): SizedSvgMarkup {
+    const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+    if(boxes.length === 0) {
+        return renderWarningMessageAsSvg('Empty Group');
+    }
+
+    // --- Do per-page tiled SVG renderings
+    //     (TODO: consider breaking up a single page render if there is a big
+    //     space between clusters on the same page)
+    const boxesByPage = utils.groupToMap(boxes, b=>b.page_id);
+    const svgsByPage = Array.from(boxesByPage.values()).map(
+        boxes=>renderStandaloneBoxes(boxes, scale_factor, box_stroke));
+
+    // --- Layout the group renderings in a larger SVG
+    //     (we are using SVG instead of html for this because when embedding
+    //     on client-rendered pages, it is nicer to have the group served as a SVG).
+    const margin = 10;
+    const totalHeight = svgsByPage.reduce((total, svg)=>total+svg[1].height+margin*2, 0);
+    const maxWidth = Math.max(...svgsByPage.map(svg=>svg[1].width))+margin*2;
+
+    const groupSvgs: SizedSvgMarkup[] = [];
+    let y = 0;
+    for(const s of svgsByPage) {
+        s[1].y = y+margin;
+        s[1].x = margin;
+        y += s[1].height + margin;
+        groupSvgs.push(s);
+    }
+    
+    return ['svg', {width:maxWidth, height:totalHeight,
+                    viewBox: `0 0 ${maxWidth} ${totalHeight}`
+                   },
+            groupSvgs,
+           ]; // svg
+    
+    throw new Error();
+}
+
 /**
  *
  */
 export function renderStandaloneBoxes(boxes: BoundingBox[],
                                       scale_factor:number=4,
-                                      box_stroke:string = 'green'): any {
+                                      box_stroke:string = 'green'): SizedSvgMarkup {
 
     // --- If no boxes in group, render as empty.
     if(boxes.length === 0) {
-        //console.info('STANDALONE GROUP IS EMPTY');
-        return ['div', {}, 'Empty Group'];
+        return renderWarningMessageAsSvg('Empty Group');
     }
     
     // --- This is handled at the 'renderStandaloneGroup' level
@@ -695,6 +752,11 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
             image,
             groupSvg,
            ]; // svg
+}
+
+export function renderWarningMessageAsSvg(message: string, width:number=240, height:number=30): SizedSvgMarkup {
+    return ['svg', {width, height, viewBox:'0 0 ${width} ${height}', xmlns:'http://www.w3.org/2000/svg'},
+            ['text', {x:0, y:20, class: 'warning'}, message]];
 }
 
 export async function renderTiledImage(srcImagePath: string,
@@ -772,6 +834,30 @@ function sampleTextSearch(search: string, layer_id: number = 5) {
     console.info(JSON.stringify(results, undefined, 2));
     
 }
+
+// ---------------------------------------------------------------------------------
+// --- Routes ----------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
+
+
+export const routes = ()=> ({
+    pageEditor,
+    renderStandaloneGroupAsSvgResponse,
+    renderPageEditorByPageNumber,
+    renderPageEditorByPageId,
+    updateBoundingBoxShape,
+    newBoundingBoxInNewGroup,
+    newBoundingBoxInExistingGroup,
+    copyRefBoxToNewGroup,
+    copyRefBoxToExistingGroup,
+    copyBoxToExistingGroup,
+    removeBoxFromGroup,
+    migrateBoxToGroup,
+    renderTextSearchResults,
+});
+
+
+
 
 // --------------------------------------------------------------------------------
 // --- CLI ------------------------------------------------------------------------

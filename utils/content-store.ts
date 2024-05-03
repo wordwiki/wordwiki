@@ -293,7 +293,7 @@ function arrayBufferToHexString(hashArray: ArrayBuffer): string {
  * at returning that whack of memory back to the OS - maybe we just permanently
  * bloat that service worker?
  */
-async function digestFileUsingExternalCmd(path:string): Promise<string> {
+export async function digestFileUsingExternalCmd(path:string): Promise<string> {
     const executable = "sha256sum";
     const args = ["-b", path];
     const command = new Deno.Command(executable, {args});
