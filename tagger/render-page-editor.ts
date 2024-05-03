@@ -637,6 +637,7 @@ export async function renderStandaloneGroupAsSvgResponse(bounding_group_id: numb
                                                          scale_factor:number=4,
                                                          box_stroke:string = 'green'): Promise<Response> {
     const svgMarkup = renderStandaloneGroup(bounding_group_id, scale_factor, box_stroke);
+    svgMarkup[1].xmlns="http://www.w3.org/2000/svg";
     const svgText = await asyncRenderToStringViaLinkeDOM(svgMarkup, false);
     const body = block`
 /**/<?xml version="1.0"?>

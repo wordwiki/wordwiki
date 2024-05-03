@@ -23,7 +23,7 @@ import {DictTag, EntryTag, StatusTag, SpellingTag, SubentryTag, TodoTag,
         AlternateFormTextTag, OtherRegionalFormTag, PictureTag, AttrTag,
         DocumentReferenceTag, RefTranscriptionTag, RefExpandedTranscriptionTag,
         RefTransliterationTag, RefNoteTag, SupportingEvidenceTag, RecordingTag} from './entry-schema.ts';
-
+import { dirname } from "https://deno.land/std@0.224.0/path/posix/dirname.ts";
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
 
@@ -45,6 +45,14 @@ async function importMMO() {
     const entries = JSON.parse(await Deno.readTextFile("imports/LegacyMmo/entries.json")) as Entry[];
     console.info('entry count', entries.length);
 
+
+    const legacyMmoTxt = (await Deno.readTextFile("imports/LegacyMmo/mmo.txt")).replaceAll('\r\n', '\n');
+    const lexemes = legacyMmoTxt.split('\n\\lx ');
+    const lexemesBySpelling = new Map(lexemes.map(l=>[l.split('\n')[0], l]));
+    //console.info('LEGACY LEXEMES', lexemes);
+    //console.info('LEXEMES BY SPELLING', lexemesBySpelling);
+
+    
     if(true) {
 
         const allWavFiles = dirTree('imports/LegacyMmo/media', [])
@@ -102,10 +110,33 @@ async function importMMO() {
         console.info('RECOVERED', recovered.size);
         console.info('UNBOUND FILES', missing.length);
         for(const f of missing.toSorted()) {
-            console.info('***', f);
+            console.info('<h1>Unbound Recording:', f, '</h1>');
+            console.info(`<a href="https://www.mikmaqonline.org/words-mp3/${f.replace('.wav', '.mp3')}">${f}</a>`);
+            const lexemeSpelling = f.match(/^media[/].[/]([^/]+)[/][^.]*[.]wav$/)?.[1];
             const p = 'imports/LegacyMmo/'+f;
             if(!await fs.exists(p, {isFile: true}))
                 throw new Error('expected '+p+' to exist');
+            if(lexemeSpelling) {
+                console.info(`<h2>Apparent Lexeme: ${lexemeSpelling}</h2>`);
+
+                const lexemeMarkup = lexemesBySpelling.get(lexemeSpelling);
+                if(lexemeMarkup) {
+                    console.info(`<pre>\n${lexemeMarkup}\n</pre>`);
+                }
+            }
+            
+            // const mediaDir = dirname(f);
+            // console.info(`<h2>Media in ${mediaDir}</h2>`);
+            // try {
+            //     const media = Deno.readDirSync('imports/LegacyMmo/'+mediaDir);
+            //     console.info('<ul>');
+            //     for(const m of media) {
+            //         console.info('<li>', `<a href="https://www.mikmaqonline.org/words-mp3/${f.replace('.wav', '.mp3')}">${m.name}</a>`);
+            //     }
+            //     console.info('</ul>');
+            // } catch(e) {
+            //     console.info(`<div>unable to read media dir ${mediaDir} - ${e}</div>`);
+            // }
         }
     }
     //return;
