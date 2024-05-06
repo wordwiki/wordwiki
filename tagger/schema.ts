@@ -792,13 +792,13 @@ export interface Assertion {
     /**
      * Locale expression for which this assertion hosts.
      */
-    locale_expr?: string;
+    variant?: string;
 
     /**
      * Locale expression for which this assertion hosts if this is an
      * assertion expressed in the target language.
      */
-    target_locale_expr?: string;
+    target_variant?: string;
     
     /**
      * Expression of the level of confidence we have that this assertion is true.
@@ -991,7 +991,7 @@ export const assertionFieldNames: Array<keyof Assertion> = [
 
     "tags",
 
-    "order_key", "locale_expr", "target_locale_expr", "confidence_expr",
+    "order_key", "variant", "target_variant", "confidence_expr",
 
     "note",
     
@@ -1044,8 +1044,8 @@ const createAssertionDml = (tableName:string)=>block`
 /**/
 /**/       order_key TEXT,
 /**/
-/**/       locale_expr TEXT,
-/**/       target_locale_expr TEXT,
+/**/       variant TEXT,
+/**/       target_variant TEXT,
 /**/       confidence_expr TEXT,
 /**/
 /**/       note TEXT,
@@ -1147,7 +1147,7 @@ const allSchemaDml =
     createAssertionDml('dict');
 
 export function createAllTables() {
-    console.info('ALL SCHEMA DML', allSchemaDml);
+    //console.info('ALL SCHEMA DML', allSchemaDml);
     db().executeStatements(allSchemaDml);
     console.info('db created');
 }

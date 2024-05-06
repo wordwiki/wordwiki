@@ -394,7 +394,8 @@ export class VariantField extends StringField {
     sqlTypename(): string { return 'TEXT'; }
 
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
-        const {$type, $bind, $style, $optional, ...extra} = schema;
+        let {$type, $bind, $style, $optional, ...extra} = schema;
+        $bind ??= 'variant';
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
         return new VariantField(name, $bind, !!$optional);
     }

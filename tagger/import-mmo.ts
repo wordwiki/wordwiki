@@ -22,12 +22,16 @@ import {DictTag, EntryTag, StatusTag, SpellingTag, SubentryTag, TodoTag,
         PronunciationGuideTag, CategoryTag, RelatedEntryTag, AlternateGrammaticalFormTag,
         AlternateFormTextTag, OtherRegionalFormTag, PictureTag, AttrTag,
         DocumentReferenceTag, RefTranscriptionTag, RefExpandedTranscriptionTag,
-        RefTransliterationTag, RefNoteTag, SupportingEvidenceTag, RecordingTag} from './entry-schema.ts';
+        RefTransliterationTag, RefNoteTag, SourceTag, RecordingTag} from './entry-schema.ts';
 import { dirname } from "https://deno.land/std@0.224.0/path/posix/dirname.ts";
+import { WordWiki } from './wordwiki.ts';
+
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
 
+const importRecordings = false;
 
+// Should have used the Deno walk function.
 function dirTree(root: string, out: string[]): string[] {
     const entries = Deno.readDirSync(root);
     for(const e of entries) {
@@ -53,7 +57,7 @@ async function importMMO() {
     //console.info('LEXEMES BY SPELLING', lexemesBySpelling);
 
     
-    if(true) {
+    if(importRecordings) {
 
         const allWavFiles = dirTree('imports/LegacyMmo/media', [])
             .filter(f=>f.endsWith('.wav'))
@@ -249,11 +253,12 @@ interface Spelling {
 }
 
 function importSpelling(parent: Assertion, spelling: Spelling, order_key: string, published: boolean) {
+    //console.info('IMPORT SPELLING', spelling);
     insertAssertion(createAssertion(
         parent, 2, spelling.spelling_id, SpellingTag, order_key, published,
         {
             attr1: spelling.text,
-            locale_expr: spelling.variant,
+            variant: spelling.variant,
         }));
 }
 
@@ -283,6 +288,7 @@ interface Subentry {
     related_entry: RelatedEntry[];
     alternate_grammatical_form: AlternateGrammaticalForm[];
     other_regional_form: OtherRegionalForm[];
+    source: Source[];
     attr: Attr[];
     note: Note[],
     picture: Picture[],
@@ -304,6 +310,8 @@ function importSubentry(parent: Assertion, subentry: Subentry, order_key: string
     importEach(subentry.other_regional_form, (s,k)=>importOtherRegionalForm(subentryAssertion, s, k, published));
     //importEach(subentry.picture, (s,k)=>importPicture(subentryAssertion, s, k, published));    
     importEach(subentry.attr, (s,k)=>importAttr(subentryAssertion, s, k, published));
+    importEach(subentry.source, (s,k)=>importSource(subentryAssertion, s, k, published));
+    importEach(subentry.note, (s,k)=>importNote(subentryAssertion, s, k, published));
 }
 
 interface Translation {
@@ -360,7 +368,7 @@ function importExampleText(parent: Assertion, exampleText: ExampleText, order_ke
         parent, 4, exampleText.example_text_id, ExampleTextTag, order_key, published,
         {
             attr1: exampleText.text,
-            locale_expr: exampleText.variant,
+            variant: exampleText.variant,
         }));
 }
 
@@ -404,7 +412,7 @@ function importPronunciationGuide(parent: Assertion, pronunciationGuide: Pronunc
         parent, 3, pronunciationGuide.pronunciation_guide_id, PronunciationGuideTag, order_key, published,
         {
             attr1: pronunciationGuide.text,
-            locale_expr: pronunciationGuide.variant,
+            variant: pronunciationGuide.variant,
         }));
 }
 
@@ -462,7 +470,7 @@ function importAlternateFormText(parent: Assertion, alternateFormText: Alternate
         parent, 4, alternateFormText.alternate_form_text_id, AlternateFormTextTag, order_key, published,
         {
             attr1: alternateFormText.text,
-            locale_expr: alternateFormText.variant,
+            variant: alternateFormText.variant,
         }));
 }
 
@@ -494,6 +502,19 @@ function importAttr(parent: Assertion, attr: Attr, order_key: string, published:
         }));
 }
 
+interface Source {
+    source_id: number;
+    source: string;
+}
+
+function importSource(parent: Assertion, source: Source, order_key: string, published: boolean) {
+    insertAssertion(createAssertion(
+        parent, 3, source.source_id, SourceTag, order_key, published,
+        {
+            attr1: source.source,
+        }));
+}
+
 interface Status {
     status_id: number;
     variant: string;
@@ -507,7 +528,7 @@ function importStatus(parent: Assertion, status: Status, order_key: string, publ
         {
             attr1: status.status,
             attr2: status.details,
-            locale_expr: status.variant,
+            variant: status.variant,
         }));
 }
 
@@ -540,6 +561,8 @@ function importPicture(parent: Assertion, picture: Picture, order_key: string, p
 
 // CRAP CRAP - BUT rUN ONCE ONLY - SO PROBABLY OK
 async function importAudioContent(root: string, relPath: string, speaker: string, altSpelling: string): Promise<string> {
+    if(!importRecordings)
+        return relPath;
     //console.info('*** Importing audio from ', path);
     let path = root+'/'+relPath;
     try {
@@ -592,11 +615,121 @@ async function importAudioContent(root: string, relPath: string, speaker: string
     }
 }
 
+/**
+ *
+ */
+async function verifyImportMMO() {
+    const legacyMmoTxt = (await Deno.readTextFile("imports/LegacyMmo/mmo-utf8.txt")).replaceAll('\r\n', '\n');
+    const srcLexemes = legacyMmoTxt.split('\n\\lx ');
+    const srcLexemesBySpelling = new Map(srcLexemes.map(l=>[l.split('\n')[0], l]));
+
+    const wordwiki = new WordWiki({hostname: 'localhost', port: 9000});
+    const wordwikiJson = wordwiki.entriesJSON;
+    //console.info('WORD WIKI JSON', JSON.stringify(wordwikiJson, undefined, 2));
+    
+    const okDrops = new Set([]);
+
+    const wordsWithDroppedSubentry = new Set(
+        ['atelg', 'atupigej', "ejiglateja'sit", "gmu'jmin", "pemims'gi'ga'sit",  'pepueget']);
+    const manuallyVerifiedWords = new Set(
+        ['nigoqol', , "eli-", "-tul", "-tus"]);
+    const dmmTodoWords = new Map([]);
+        // [['meluijoqo', 'change \\na to \\nt'],
+        //  ['algopit', 'dup \\lv under a \\lf'],
+        //  ['nujumu', 'change \\ns to \\nt']]);
+    
+    let doc = block`
+/**/<!DOCTYPE html>
+/**/<html>
+/**/  <head>
+/**/    <meta charset="utf-8">
+/**/  </head>
+/**/<body>
+/**/  <h1>MMO Import Verification Report</h1>
+`;
+    
+    for(const [srcSpelling, srcLexeme] of srcLexemesBySpelling.entries()) {
+        // Drop the recording lines
+        let lexeme = srcLexeme
+            .replaceAll(/\\ws .*/g, '')   // OK we alredy do these (word sound)
+            .replaceAll(/\\xs .*/g, '')   // OK already deal with these
+            .replaceAll(/\\csf .*/g, '')  // OK used on one lexeme (sf cross ref)
+            .replaceAll(/\\vsf .*/g, '')  // maybe ok to drop?
+            .replaceAll(/\\lsf .*/g, '')  // maybe ok to drop?
+            .replaceAll(/\\pc .*/g, '');  // OK will be fixed in diffent layer.
+            //.replaceAll(/\\ps .*/g, '');   
+
+
+        if(manuallyVerifiedWords.has(srcSpelling)) {
+            console.info('*** Ignoring', srcSpelling, 'because has been manually verified');
+            continue;
+        }
+        if(wordsWithDroppedSubentry.has(srcSpelling)) {
+            console.info('*** Ignoring', srcSpelling, 'because is on multiple entry list');
+            continue;
+        }
+        if(dmmTodoWords.has(srcSpelling)) {
+            console.info('*** Ignoring', srcSpelling, 'because dmm will fix');
+            continue;
+        }
+
+        
+        let gotErr = false;
+        let out = `<h2>${srcSpelling}</h2>\n`;
+
+        let lexemeWithoutTags = lexeme.replaceAll(/\\[a-z]+/g, '');
+        let lexemeWithoutTagsAndUnderscores = lexemeWithoutTags.replaceAll('_', ' ');
+        const lexemeWords = strings.splitIntoWords(lexemeWithoutTagsAndUnderscores);
+        //console.info('lexeme words', JSON.stringify(lexemeWords));
+
+        const importedLexemeMatches = wordwikiJson.filter(
+            entry=>entry.spelling.some(
+                spelling=>spelling.text === srcSpelling))
+        switch(importedLexemeMatches.length) {
+            case 0:
+                out += `<h3 class='error'>ERROR: could not find imported lexeme ${srcSpelling}</h3>`;
+                gotErr = true;
+                continue;
+            case 1: break;                
+            default: throw new Error('found multiple imports for lexeme '+srcSpelling);
+        }
+        const importedLexeme = importedLexemeMatches[0];
+        //console.info('importedLexeme', importedLexeme);
+        const importedLexemeJSONText = JSON.stringify(importedLexeme, undefined, 2);
+        const processedImportedLexemeJSONText = importedLexemeJSONText.replaceAll('_', ' ').replaceAll("\\n", "\n")+' and 1 2 3';
+        const importedLexemeWords = new Set(strings.splitIntoWords(processedImportedLexemeJSONText));
+        
+        //console.info('imported lexeme words', JSON.stringify(importedLexemeWords));
+
+        let nonImportedWords = new Set(lexemeWords).difference(importedLexemeWords);
+        nonImportedWords = new Set(Array.from(nonImportedWords).filter(w=>!w.startsWith('media')));
+
+        const lexemeWithMissingHighlighted = Array.from(nonImportedWords).reduce((a, c)=>a.replaceAll(new RegExp(`\\b${strings.escapeRegExp(c)}\\b`, 'g'), `[[${c}]]`), srcLexeme);
+        out += `<pre>${lexemeWithMissingHighlighted}</pre>\n`
+        
+        if(nonImportedWords.size) {
+            out += `<h3 class='error'>ERROR: some words were not imported</h3>`;
+            out += `<b>Non imported words are:</b>${Array.from(nonImportedWords).join(', ')}`;
+            out += `<pre>${JSON.stringify(importedLexeme, undefined, 2)}</pre>`;
+            gotErr = true;
+        }
+
+        if(gotErr)
+            doc += out;
+    }
+
+    doc += block`
+/**/  </body>
+/**/</html>`;
+
+    Deno.writeTextFile("missing-report.html", doc);    
+}
 
 async function main(args: string[]) {
     const [command, ...commandArgs] = args;
     switch(command) {
         case 'ImportMMO': await importMMO(); break;
+        case 'VerifyImportMMO': await verifyImportMMO(); break;
         default: throw new Error('bad usage');
     }
 }

@@ -911,7 +911,7 @@ export abstract class VersionedTupleQuery {
         return this.src.tupleVersions; //.filter(t=>t!==this.mostRecentTupleVersion);
     }
 
-    toJSON(): any {
+    toJSON(includeHistory: boolean = false): any {
         return this.#json ??= (()=>{
             // if(!this.mostRecentTupleVersion)
             //     return ['DELETED'];
@@ -923,17 +923,19 @@ export abstract class VersionedTupleQuery {
 
                 //(this.mostRecentTupleVersion ?? panic('no most recent tuple version')).toJSON();
             const controlFields = {};
-            const historicalVersions = this.historicalTupleVersions.map(h=>h.toJSON());
             const childRelations = Object.fromEntries(schema.relationFields.map(r=>
-                [r.name, this.childRelations[r.tag].toJSON()]));
+                [r.name, this.childRelations[r.tag].toJSON(includeHistory)]));
             //console.info('CHILD RELATIONS', JSON.stringify(childRelations, undefined, 2));
             const json: any = {
                 ...controlFields,
                 ...entityFields
             };
             // const json: any = entityFields;
-            if(historicalVersions.length > 0)
-                json['history'] = historicalVersions;
+            if(includeHistory) {
+                const historicalVersions = this.historicalTupleVersions.map(h=>h.toJSON());
+                if(historicalVersions.length > 0)
+                    json['history'] = historicalVersions;
+            }
             if(schema.relationFields.length > 0)
                 Object.assign(json, childRelations);
 
@@ -993,8 +995,8 @@ export abstract class VersionedRelationQuery {
 
     abstract computeTuples(): Map<number, VersionedTupleQuery>;
 
-    toJSON(): any {
-        return Array.from(this.tuples.values()).map(t=>t.toJSON());
+    toJSON(includeHistory: boolean = false): any {
+        return Array.from(this.tuples.values()).map(t=>t.toJSON(includeHistory));
     }
                                
     dump(): any {

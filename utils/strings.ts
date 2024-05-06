@@ -7,6 +7,13 @@ import * as characters from './characters.ts';
 
 // @deno-types='https://deno.land/x/xregexp/types/index.d.ts'
 import XRegExp from  'https://deno.land/x/xregexp/src/index.js'
+
+// Escape a string to allow it to be used as a literal component of a new regex.
+// From: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions
+export function escapeRegExp(s: string) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+}
+
 /**
  *
  */
@@ -40,6 +47,16 @@ export function parseBoolean(s: string): boolean|undefined {
     default:
       return undefined;
   }
+}
+
+/**
+ * Split a string into words the posh way (using unicode segmenter - handles
+ * complex punctuation, the apostrophe, multiple languages etc).
+ */
+export function splitIntoWords(text: string): string[] {
+    const segmenter = new Intl.Segmenter([], { granularity: 'word' });
+    const segmentedText = segmenter.segment(text);
+    return [...segmentedText].filter(s=>s.isWordLike).map(s=>s.segment);    
 }
 
 /*

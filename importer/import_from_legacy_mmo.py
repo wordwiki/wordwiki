@@ -54,7 +54,7 @@ def import_legacy_mmo(i_realize_that_this_will_nuke_the_working_mmo_db=False):
         subentry = subentries[0]
         parts_of_speech = subentry['partsOfSpeech']
         if len(parts_of_speech) != 1:
-            print(lexeme_id, 'has', len(parts_of_speech), 'parts of speech')
+            #print(lexeme_id, 'has', len(parts_of_speech), 'parts of speech')
             assert len(parts_of_speech) <= 3, "No more than 3 parts of speech"
             assert len(parts_of_speech) != 0, "word has no parts of speech"
             lexemes_with_multiple_parts_of_speech = lexemes_with_multiple_parts_of_speech + 1
@@ -149,13 +149,15 @@ class LocalIdAllocator_OFF:
         
 def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
 
-    attrs = dict()
+    #attrs = dict()
     # Local ids should not be entirely predictable, but should
     # be consistent from import to import - so we base them on hash(name)
     #initial_local_id = 100 + hash(src_lexeme['name']) % 50
     #id_allocator = LocalIdAllocator(next_id = initial_local_id)
     
     date = src_lexeme.pop('date') # TODO put date in.
+    
+    
     lexeme = src_lexeme.pop('name')
     derived_id = src_lexeme.pop('id')
     assert derived_id == lexeme_to_id(lexeme), f"id rederivation inconsistency lex:{lexeme} lex_to_id:{lexeme_to_id(lexeme)} imported_derived_id:{derived_id}"
@@ -165,41 +167,48 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     #    print('picture', picture)
     # TODO status map
     status = src_lexeme.pop('status')
-    print('STATUS', status)
+    #print('STATUS', status)
     is_published = status == 'done' or status == 'post'
     #assert len(src_lexeme.pop('errors')) == 0 # TODO
-    assert not src_lexeme.pop('explicitSfGloss')
+
+    
     
     src_subentries = src_lexeme['subentries']
     if(len(src_subentries) > 1):
         print('*** DROPPING EXTRA SUBENTRIES for lexeme', lexeme, '::', json.dumps(src_subentries[1:], indent=2, ensure_ascii=False))
     assert len(src_subentries)>0, "Must have at least one subentry"
-    #assert len(src_subentries)>=1, "Only one subentry per lexeme supported"
+    assert len(src_subentries)>=1, "Only one subentry per lexeme supported"
     #if len(src_subentries)!=1:
     #    print ('*** Ignoring extra subentries for', lexeme)
     src_subentry = src_subentries[0]
     src_parts_of_speech = src_subentry['partsOfSpeech']
     assert len(src_parts_of_speech) > 0, "Each lexeme must have at least one part of speech"
     watsonSpelling = src_lexeme.pop('watsonSpelling')
-    if watsonSpelling and watsonSpelling != lexeme:
-        attrs['watson_spelling'] = watsonSpelling
-        
     borrowed_word = src_subentry.pop('borrowedWord')
     assert not src_subentry.pop('label')
     phonetic_form = src_subentry.pop('phoneticForm')
-
+    twitter_post = src_subentry.pop('twitterPost')
+    
     sub_entries = []
     for (idx, pos) in enumerate(src_parts_of_speech):
         part_of_speech_label = pos.pop('label')
         attrs = dict()
+        # TODO perhaps have lexeme level attrs as well?
+        if date:
+            attrs['shoebox-date'] = date
+        if twitter_post:
+            attrs['twitter-post'] = twitter_post
+        if watsonSpelling and watsonSpelling != lexeme:
+            attrs['watson-spelling'] = watsonSpelling
         for sense in pos['senses']:
             sub_entries.extend(convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, status, borrowed_word, phonetic_form, part_of_speech_label, [], sense, attrs, derived_id, len(sub_entries)))
 
     entry = dict()
     entry['entry_id'] = id_allocator.alloc_next_id()
     entry['published'] = is_published
-    entry['spelling'] = ortho_text('spelling_id', id_allocator, lexeme)
-    entry['recording'] = [convert_recording('recording_id', id_allocator, r) for r in src_subentry.pop('recordings')  if r['filename'] != '']
+    explicitSfGloss = src_lexeme.pop('explicitSfGloss')
+    entry['spelling'] = ortho_text('spelling_id', id_allocator, lexeme, explicitSfGloss)
+    entry['recording'] = [convert_recording('recording_id', id_allocator, r, lexeme) for r in src_subentry.pop('recordings')  if r['filename'] != '']
     entry['subentry'] = sub_entries
     # remodel date TODO toolbox last edit date.
     # TODO: change date format from "31/Jul/2019", to "2019-07-31"
@@ -207,11 +216,32 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     entry['internal_note'] = note
     entry['public_note'] = ''
 
+    # TODO WHAT TO DO WITH THIS?
+    pdm_only = 'PDM' in status
+
+    # done, skip, hold, WWSD
+    
+    status_code = ''
+    if 'done' in status:
+        status_code = 'done'
+    elif 'skip' in status:
+        status_code = 'skip'
+    elif 'return' in status or 'revisit' in status or 'lookagain' in status or 'tba' in status:
+        status_code = 'in-process'
+    elif 'ready' in status or 'check' in status:
+        status_code = 'check'
+    else:
+        #print('STATUS', status)
+        status_code = 'unknown'
+
+    details = status # if status != status_code else ''
+    #print('for status', status, 'code is', status_code, 'and details are', details)
+    
     entry['status'] = [{
         'status_id': id_allocator.alloc_next_id(),
         'variant': 'mm-li',
-        'status': status,
-        'details': ''
+        'status': status, #_code,
+        'details': details
     }]            
     
     
@@ -228,12 +258,32 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     # remodel status TODO: skip/done ???
     #assert status=='done' or status=='skip', 'unknown status {status}'
     if borrowed_word:
-        attrs['borrowed_word'] = borrowed_word
+        attrs['borrowed-word'] = borrowed_word
     
     # TODO is phonetic_form a li/sf thing as well?
     # - maybe different by ortho ...
     # - copy li to  ...
     entry['pronunciation_guide'] = ortho_text('pronunciation_guide_id', id_allocator, phonetic_form);
+
+    partOfSpeechDescriptions = {
+        "na": "noun animate",
+        "ni": "noun inanimate",
+        "vii": "verb inanimate intransitive",
+        "vai": "verb animate intransitive",
+        "vit": "verb inanimate transitive",
+        "vat": "verb animate transitive",
+        "PTCL": "particle",
+        "adv": "adverb",
+        "n": "noun",
+        "pn": "pronoun",
+        "pna": "pronoun animate",
+        "pni": "pronoun inanimate",
+        "unclassified": "unclassified",
+        "": "unclassified"
+    }
+    if not part_of_speech_label in partOfSpeechDescriptions:
+        print('ERROR: unknown part of speech "'+part_of_speech_label+'" for lexeme "'+lexeme+'"')
+
     entry['part_of_speech'] = part_of_speech_label
 
     # TODO should cross_ref resolve?  Try to resolve?
@@ -271,8 +321,8 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
 
     if note:
         notes.append(note)
-    if notes:
-        print('all notes:', notes)
+    #if notes:
+    #    print('all notes:', notes)
 
     entry['note'] = [convert_note(id_allocator, n) for n in notes]
     picture = sense.pop('picture')
@@ -281,24 +331,24 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
 
     scientific_name = sense.pop('scientificName')
     if scientific_name:
-        attrs['scientific_name'] = scientific_name
+        attrs['scientific-name'] = scientific_name
 
     table = sense.pop('table')
     if table:
-        attrs['legacy_alternate_grammatical_forms'] = table
+        attrs['legacy-alternate-grammatical-forms'] = table
     literally = sense.pop('literally')
     if literally:
         attrs['literally'] = literally
     
     #entry['recordings'] = recordings
 
-    entry['example'] = [convert_example(id_allocator, ex) for ex in sense['examples']]
+    entry['example'] = [convert_example(id_allocator, ex, lexeme) for ex in sense['examples']]
         
     entry['gloss'] = [convert_gloss(id_allocator, g) for g in sense.pop('glosses')]
 
     # Example conjugations
     # TODO rename to Alternate Forms
-    entry['alternate_grammatical_form'] = [convert_alternate_form(id_allocator, af) for af in sense['lexicalFunctions']]
+    entry['alternate_grammatical_form'] = [convert_alternate_form(id_allocator, af, lexeme) for af in sense['lexicalFunctions']]
 
     # TODO can I rename to categories?
     entry['category'] = [convert_category(id_allocator, c) for c in sense.pop('semanticDomains')]
@@ -307,9 +357,56 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     entry['other_regional_form'] = [convert_other_regional_form(id_allocator, f) for f in sense.pop('variantForms')]
     # - text, region, gloss
 
+    source = sense.pop('source')
+    if source: 
+        entry['source'] = [convert_source(id_allocator, source)]
+    else:
+        entry['source'] = []
+    
     entry['attr'] = convert_attrs(id_allocator, attrs)
     
     return [entry]
+
+
+grammatical_form_descriptions = {
+    "d": "dual",
+    "p": "plural",
+    "4n": "fourth person",
+    "loc": "locative",
+    "tem": "temporal",
+    "1": "first person singular animate",
+    "1d": "first person dual exclusive animate",
+    "1p": "first person plural exclusive animate",
+    "3id": "third person dual inanimate",
+    "3ip": "third person plural inanimate",
+    "1-3i": "first person singular animate subject, third person singular inanimate object",
+    "1d-3i": "first person dual exclusive animate subject, third person singular inanimate object",
+    "1p-3i": "first person plural exclusive animate subject, third person singular inanimate object",
+    "3-3ip": "third person singular animate subject, third person plural inanimate object",
+    "1-3": "first person singular animate subject, third person singular animate object",
+    "1-3p": "first person singular animate subject, third person plural animate object",
+    "1-2": "first person singular animate subject, second person singular animate object",
+    "3-1": "third person singular animate subject, first person singular animate object",
+    "1s-1s": "first person singular reflexive",
+    "1d-1d": "first person dual reflexive",
+    "1p-1p": "first person plural reflexive",
+    "1dr-1d": "first person exclusive dual reciprocal",
+    "1pr-1p": "first person exclusive plural reciprocal",
+    "3pr-3p": "third person plural reciprocal",
+
+    "3d": "third person dual animate",
+    "3p": "third person plural animate",
+    "imp": "imperative",
+    "ani": "animate",
+    "inan": "inanimate",
+
+    "1-3ip": "first person singular animate subject, third person plural inanimate object",
+    "s": "singular",
+    "n": "noun",
+    "pn": "pronoun"
+}
+
+#"cat", "small furry animal",
 
 # "lexicalFunctions" : [ {
 #     "gloss" : "I'm hanging around",
@@ -317,11 +414,16 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
 #     "lexeme" : "alei",
 #     "sfGloss" : ""
 #     }, { ... } ]
-def convert_alternate_form(id_allocator, src):
+def convert_alternate_form(id_allocator, src, lexeme):
     out = dict()
     out['alternate_grammatical_form_id'] = id_allocator.alloc_next_id()
     out['gloss'] = src.pop('gloss')
-    out['grammatical_form'] = src.pop('label')
+    grammatical_form = src.pop('label')
+    #if not grammatical_form in grammatical_form_descriptions:
+        #print('ERROR: unknown grammatical form "'+grammatical_form+'" for lexeme "'+lexeme+'"')
+        #print('UNGRAMFORM:', grammatical_form)
+
+    out['grammatical_form'] = grammatical_form
     out['alternate_form_text'] = ortho_text('alternate_form_text_id', id_allocator, src.pop('lexeme'), src.pop('sfGloss'))
     return out
 
@@ -373,13 +475,13 @@ def puppy(v):
     return True
     
 
-def convert_example(id_allocator, src):
+def convert_example(id_allocator, src, lexeme):
     out = dict()
     out['example_id'] = id_allocator.alloc_next_id()
     out['example_text'] = ortho_text('example_text_id', id_allocator, src.pop('exampleSentence'), src.pop('exampleSf'))
     #out['translation'] = src.pop('exampleEnglish')
     out['example_translation'] = [convert_example_translation(id_allocator, src.pop('exampleEnglish'))]
-    out['example_recording'] = [convert_recording('example_recording_id', id_allocator, r) for r in src.pop('recordings') if r['filename'] != '']
+    out['example_recording'] = [convert_recording('example_recording_id', id_allocator, r, lexeme) for r in src.pop('recordings') if r['filename'] != '']
     #out['recordings'] = src.pop('recordings')
     return out
 
@@ -389,7 +491,16 @@ def convert_example_translation(id_allocator, translation_txt):
     out['text'] = translation_txt
     return out
 
-def convert_recording(id_field, id_allocator, src):
+speakers = {
+    "dmm": "Diane (Listuguj)",
+    "ewm": "Eunice (Listuguj)",
+    "jnw": "Joe (Listuguj)",
+    "mch": "Michel (Listuguj)",
+    "mjp": "Josephine (Wagmatcook)",
+    "kjd": "Kirsten (Eskasoni)"
+};
+
+def convert_recording(id_field, id_allocator, src, lexeme):
     out = dict()
     out[id_field] = id_allocator.alloc_next_id()
     #print(src)
@@ -401,7 +512,12 @@ def convert_recording(id_field, id_allocator, src):
     #assert filename.startswith('media/')
     #out['recording'] = 'content/LegacyMmoRecordings/'+filename[len('media/'):]
     out['recording'] = filename
-    out['speaker'] = src['recordedBy']
+    speaker = src['recordedBy'];
+    out['speaker'] = speaker
+
+    if not speaker in speakers:
+        print('ERROR: speaker "'+speaker+'" for lexeme "'+lexeme+'"')
+
     return out
 
 def convert_gloss(id_allocator, src):
@@ -414,6 +530,12 @@ def convert_category(id_allocator, category):
     out = dict()
     out['category_id'] = id_allocator.alloc_next_id()
     out['category'] = category
+    return out
+
+def convert_source(id_allocator, source):
+    out = dict()
+    out['source_id'] = id_allocator.alloc_next_id()
+    out['source'] = source
     return out
 
 def convert_other_regional_form(id_allocator, regional_form):

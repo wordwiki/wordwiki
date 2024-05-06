@@ -39,7 +39,7 @@ export const RefTranscriptionTag = 'rtr';    // rftr
 export const RefExpandedTranscriptionTag = 'rex';  // rf
 export const RefTransliterationTag = 'rtl';
 export const RefNoteTag = 'rnt';
-export const SupportingEvidenceTag = 'eve';
+export const SourceTag = 'src';
 export const RecordingTag = 'rec';
 
 
@@ -303,11 +303,11 @@ export const dictSchemaJson = {
                     $style: { $shape: 'titledValue' },
                 },
             },
-            supporting_evidence: {
+            source: {
                 $type: 'relation',
-                $tag: SupportingEvidenceTag,
-                supporting_evidence_id: {$type: 'primary_key'},
-                supporting_evidence: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                $tag: SourceTag,
+                source_id: {$type: 'primary_key'},
+                source: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                 variant: {$type: 'variant'},
                 $style: { $shape: 'valueList' },
             },
@@ -354,7 +354,7 @@ export interface Subentry {
     other_regional_form: OtherRegionalForm[],
     attr: Attr[],
     document_reference: DocumentReference[],
-    supporting_evidence: SupportingEvidence[],
+    source: Source[],
 }
 
 export interface Translation {
@@ -468,8 +468,8 @@ export interface RefNote {
     text: string,
 }
 
-export interface SupportingEvidence {
-    supporting_evidence_id: number,
+export interface Source {
+    source_id: number,
     text: string,
     variant: string,
 }
@@ -561,7 +561,7 @@ export function renderSubentry(e: Entry, s: Subentry): any {
     console.info('cat', Object.entries(s));
     return [
         renderDocumentReferences(e, s, s.document_reference),
-        // renderSupportingEvidence(e, s, s.supporting_evidence),
+        // renderSource(e, s, s.source),
         renderPronunciationGuides(e, s, s.pronunciation_guide),
         renderTranslations(e, s, s.translation),
         //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
