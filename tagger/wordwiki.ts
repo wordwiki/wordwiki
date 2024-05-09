@@ -404,8 +404,18 @@ export class WordWiki {
 
         //console.info('ENTRIES', this.entriesJSON);
 
-        const search = String(query?.searchText ?? '');
+        const rawSearch = String(query?.searchText ?? '');
 
+
+        // Extract and remove all #\B* terms (they are treated as filters and
+        // handled separately)
+        const filters:string[] = [];
+        const search = rawSearch.replaceAll(/#c[^ ]*/g, filter=>{
+            filters.push(filter);
+            return ' ';
+        });
+        console.info('got filters', filters, 'reduced search is', search);
+        
         // replace ' '* with .*\w
         //const searchRegexSrc = `\\b${search.replaceAll(/ /g, ' .*\\b')}`;
         const searchRegexSrc =
@@ -415,8 +425,9 @@ export class WordWiki {
         const searchRegex = new RegExp(searchRegexSrc, 'i');
         console.info('SEARCH IS', search, 'REGEX IS', searchRegexSrc);
 
-        const matchesSet:Set<entry.Entry> = new Set();
-        if(search !== '') {
+        let matches: entry.Entry[] = [];
+        if (search !== '') {
+            const matchesSet:Set<entry.Entry> = new Set();
             for(const entry of this.entriesJSON) {
                 for(const spelling of entry.spelling) {
                     if(searchRegex.test(spelling.text))
@@ -429,8 +440,17 @@ export class WordWiki {
                     }
                 }
             }
+            matches = Array.from(matchesSet.values());
+        } else {
+            matches = this.entriesJSON;
         }
-        const matches = Array.from(matchesSet.values());
+
+        // if(filters.length > 0) {
+        //     for(const entry of matches) {
+                
+        //     }
+        // }
+
         
         // const entriesWithHouseGloss = search === '' ? [] :
         //     this.entriesJSON.filter(
@@ -465,7 +485,7 @@ export class WordWiki {
              ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
             // --- Results
             ['ul', {},
-             matches.map(e=>['li', {}, renderEntryItem(e)]),
+             matches.slice(0, 500).map(e=>['li', {}, renderEntryItem(e)]),
             ]
         ];
         

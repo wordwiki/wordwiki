@@ -44,7 +44,7 @@ export const RecordingTag = 'rec';
 
 // XXX HACK HACK 
 export const users = {
-    '___': 'Unknown User',
+    '___': 'No User Selected',
     'ecm': 'Emma Metallic',
     'ewm': 'Eunice Metallic',
     'dmm': 'Diane Mitchell',
@@ -114,8 +114,10 @@ export const dictSchemaJson = {
             ref_note_id: {$type: 'primary_key'},
             todo: {$type: 'enum', $bind: 'attr1',
                    $style: { $options: todos}},
-            details: {$type: 'string', $bind: 'attr2', $style: { $width: 60 }},
-            done: {$type: 'boolean', $bind: 'attr3'},
+            details: {$type: 'string', $bind: 'attr2', $style: { $width: 30 }},
+            assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
+            done: {$type: 'boolean', $bind: 'attr4'},
+            variant: {$type: 'variant'},
             $style: { $shape: 'titledValue' },
         },
         note: {

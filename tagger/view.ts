@@ -1801,7 +1801,7 @@ export function renderModalEditorSkeleton() {
                  'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
                  tabindex:'-1', 'aria-labelledby':'modalEditorLabel',
                  'aria-hidden':'true'},
-         ['div', {class:'modal-dialog modal-dialog-scrollable modal-xl'},
+         ['div', {class:'modal-dialog modal-dialog-scrollable modal-fullscreen'},
           
           ['div', {class:'modal-content'},
            
