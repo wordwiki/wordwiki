@@ -77,7 +77,15 @@ export const todos = {
     'NeedsSpeakerGroupReview': 'Needs Speaker Group Review',
     'NeedsRecording': 'Needs Recording',
     'NeedsApproval': 'Needs Approval',
-}
+};
+
+export const variants = {
+    'mm-li': 'Listuguj',
+    'mm-sf': 'Smith-Francis',
+    'mm-mp': 'Modified Pacifique',
+    'mm-pm': 'Pacifique Manuscript',
+    'mm': "All Mig'maq-Mi'kmaq",
+};
 
 export const dictSchemaJson = {
     $type: 'schema',
@@ -725,7 +733,7 @@ export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
          ['tbody', {},
           ref.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),
           ref.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
-          ref.transliteration.map(t=>['tr', {}, ['th', {}, 'Text:'], ['td', {}, t.transliteration]]),
+          ref.transliteration.map(t=>['tr', {}, ['th', {}, 'Transliteration:'], ['td', {}, t.transliteration]]),
           ref.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.note]]),
           //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
           //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),

@@ -19,14 +19,15 @@ import {getImageSize} from "./get-image-size.ts";
  */
 export async function importScannedDocument(fields: ScannedDocumentOpt,
                                             pageFiles: string[],
-                                            rotationFn: (pageNum: number)=>number|undefined = (x: number)=>undefined) {
+                                            rotationFn: (pageNum: number)=>number|undefined = (x: number)=>undefined, magnification:number=0) {
     const document_id = db().insert<ScannedDocumentOpt, 'document_id'>(
         'scanned_document', fields, 'document_id');
     console.info('document_id is', document_id);
     //console.info(selectScannedDocument().required({document_id}));
     for(let page_number=1; page_number<pageFiles.length+1; page_number++)
         await importScannedPage(document_id, unwrap(fields.friendly_document_id),
-                                page_number, pageFiles[page_number-1], rotationFn);
+                                page_number, pageFiles[page_number-1], rotationFn,
+                                magnification);
 }
 
 /**
@@ -37,7 +38,8 @@ async function importScannedPage(document_id: number,
                                  friendly_document_id: string,
                                  page_number: number,
                                  import_path: string,
-                                 rotationFn: (pageNum: number)=>number|undefined = (x: number)=>undefined): Promise<number> {
+                                 rotationFn: (pageNum: number)=>number|undefined = (x: number)=>undefined,
+                                 magnification: number=0): Promise<number> {
 
     const sourceImagePath = `imports/${friendly_document_id}/${import_path}`;
     if(!await fileExists(sourceImagePath))
@@ -50,7 +52,8 @@ async function importScannedPage(document_id: number,
     const image_ref = 'content/'+
             await content.getDerived(pageImagesRoot, {importPageImage},
                                      ['importPageImage', sourceImagePath,
-                                      rotation], 'jpg');
+                                      rotation,
+                                      ...(magnification?[magnification]:[])], 'jpg');
     const {width, height} = await getImageSize(image_ref);
     const pageId = db().insert<ScannedPage, 'page_id'>(
         'scanned_page', {document_id, page_number, import_path,
@@ -66,11 +69,11 @@ async function importScannedPage(document_id: number,
  * (things like quality should be in the parameter list, and thereby in the
  * content store closure)
  */
-async function importPageImage(targetImagePath: string, sourceImagePath: string, rotation?: number) {
+async function importPageImage(targetImagePath: string, sourceImagePath: string, rotation: number=0, magnification:number=0) {
     //const sourceImagePath = contentRoot+'/'+sourceImageRef;
     if(!await fileExists(sourceImagePath))
         throw new Error(`expected source image ${sourceImagePath} to exist`);
-
+    
     const quality = 80;
     const { code, stdout, stderr } = await new Deno.Command(
         config.imageMagickPath, {
@@ -78,6 +81,7 @@ async function importPageImage(targetImagePath: string, sourceImagePath: string,
                 sourceImagePath,
                 "-quality", String(quality),
                 ...(rotation ? ["-rotate", String(rotation)]:[]),
+                ...utils.repeat(()=>'-magnify', magnification),
                 targetImagePath
             ],
         }).output();

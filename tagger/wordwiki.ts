@@ -360,10 +360,14 @@ export class WordWiki {
             ['br', {}],
             ['h3', {}, 'Search'],
             this.searchForm(),
+            // --- Add new entry button
+            ['div', {},
+             ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
 
             ['br', {}],
             ['h3', {}, 'Reports'],
             ['ul', {},
+             ['li', {}, ['a', {href:'/wordwiki.categoriesDirectory()'}, 'Entries by Category']],             
              ['li', {}, ['a', {href:'/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
             ],
             
@@ -415,6 +419,7 @@ export class WordWiki {
             return ' ';
         });
         console.info('got filters', filters, 'reduced search is', search);
+
         
         // replace ' '* with .*\w
         //const searchRegexSrc = `\\b${search.replaceAll(/ /g, ' .*\\b')}`;
@@ -517,6 +522,29 @@ export class WordWiki {
         throw new Error('not impl yetc');
     }
 
+    categoriesDirectory(): any {
+        const title = `Categories Directory`;
+
+        const cats: [string, number][] = Array.from(Map.groupBy(this.entriesJSON.
+            flatMap(e=>
+                e.subentry.flatMap(s=>
+                    s.category.flatMap(c=>
+                        c.category))), e=>e)
+            .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
+            .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
+                        
+        
+        const body = [
+            ['h1', {}, title],
+            ['ul', {},
+             cats.map(cat=>
+                 ['li', {}, cat[0], ` (${cat[1]} entries)`]),
+            ]
+        ];
+
+        return templates.pageTemplate({title, body});
+    }
+        
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;
 
@@ -605,10 +633,20 @@ export class WordWiki {
         function renderRef(ref: {bounding_group_id: number, entry_id: number}): any {
             const e = entriesById.get(ref.entry_id)
                 ?? panic('unable to find entry with id', ref.entry_id);
+            const r = e.subentry.flatMap(s=>s.document_reference)
+                .find(r=>ref.bounding_group_id === r.bounding_group_id)
+                ?? panic('unable to find reference', ref.bounding_group_id);
             return [
                 renderStandaloneGroup(ref.bounding_group_id),
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
-            ];            
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)],
+                ['table', {},
+                 ['tbody', {},
+                  r.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),
+                  r.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
+                  r.transliteration.map(t=>['tr', {}, ['th', {}, 'Transliteration:'], ['td', {}, t.transliteration]]),
+                  r.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.note]]),
+                 ]]
+            ];
         }
         
         const body = [

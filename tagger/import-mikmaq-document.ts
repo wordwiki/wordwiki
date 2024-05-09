@@ -100,7 +100,7 @@ async function importClark() {
         friendly_document_id,
         title: "Rand's Micmac dictionary from phonographic word-lists - transcribed and alphabetically arranged, with a grammar and list of place-names by Jeremiah S. Clark",
         source_url: 'https://www.islandlives.ca/islandora/object/ilives%3A230896',
-    }, pageFiles);
+    }, pageFiles, (x: number)=>undefined, 1);
 }
 
 /**
