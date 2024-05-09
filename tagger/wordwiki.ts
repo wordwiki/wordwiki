@@ -5,6 +5,7 @@ import * as schema from "./schema.ts";
 import * as server from '../utils/http-server.ts';
 import * as strings from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
+import * as random from "../utils/random.ts";
 import {panic} from '../utils/utils.ts';
 import * as view from './view.ts';
 import * as workspace from './workspace.ts';
@@ -23,6 +24,8 @@ import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
+import * as pageEditorModule from './page-editor.ts';
+
 import {rpcUrl} from '../utils/rpc.ts';
 export interface WordWikiConfig {
     hostname: string,
@@ -210,12 +213,19 @@ export class WordWiki {
     addNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string): any {
         console.info('*** Add new document reference', entry_id, subentry_id, friendly_document_id, title);
 
+        // XXX copying these colors form pageeditor.ts is BAD.
+        const groupColors = [
+            'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
+            'seagreen', 'steelblue', /*'dodgerblue',*/ 'peru', /*'tan',*/ 'rebeccapurple'];
+
+        
         // --- Create new layer in the specified document id.  
         const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
         const document_id = document.document_id;
         const layer_id = schema.getOrCreateNamedLayer(document.document_id, 'Tagging', 0);
+        const color = groupColors[random.randomInt(0, groupColors.length-1)];
         const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
-            'bounding_group', {document_id, layer_id}, 'bounding_group_id');
+            'bounding_group', {document_id, layer_id, color}, 'bounding_group_id');
 
         console.info('new bounding group id is', bounding_group_id);
 

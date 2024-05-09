@@ -48,7 +48,7 @@ export interface Response {
 }
 
 export function htmlResponse(htmlText: string, status:number=200): Response {
-    return {status, headers: {}, body: htmlText};            
+    return {marker: ResponseMarker, status, headers: {}, body: htmlText};            
 }
 
 export function jsonResponse(json:any, status:number=200): Response {

@@ -5,11 +5,16 @@ function onContentLoaded() {
         selectGroup(document.getElementById(lockedBoundingGroupId)
             ?? panic('unable to find locked bounding group'));
     }
-    
-    updateDerivedDom(
-        document.getElementById('scanned-page')
-            ?? panic('cannot bind to page editor'));
 
+    const scannedPage = document.getElementById('scanned-page')
+        ?? panic('failed to bind to page editor');
+
+    updateDerivedDom(scannedPage);
+
+    // XXX we should not be doing this here - but we don't have a user
+    //     session yet, and setting the cookie on the server would be
+    //     more work - remove remove REMOVE
+    document.cookie = `page-for-doc-${scannedPage.getAttribute('data-document-id')}=${scannedPage.getAttribute('data-page-number')}`;
 
     console.info('Done onContentLoaded');
 }
@@ -435,7 +440,8 @@ function chooseNewGroupColor(x: number, y: number) {
     if(unusedGroupColors.size > 0) {
         const unusedGroupColorsArray = Array.from(unusedGroupColors);
         const unusedColor =  unusedGroupColorsArray[randomInt(unusedGroupColorsArray.length)];
-        console.info('choosing unused color', unusedColor);
+        console.info('choosing unused color', unusedColor,
+                     'from', unusedGroupColorsArray);
         return unusedColor;
     } else {
         const colorsByDistance = Array.from(distanceByColor.entries())

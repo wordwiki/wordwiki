@@ -21,6 +21,7 @@ export interface Style {
     $prompt?: string,
     $style?: string,
     $width?: number,
+    $shape?: string,
 }
 
 export function validateStyle(locus:string, style: any): Style {
@@ -44,6 +45,7 @@ export interface FieldVisitorI<A,R> {
     visitIntegerField(f: IntegerField, a: A): R;
     visitFloatField(f: FloatField, a: A): R;
     visitStringField(f: StringField, a: A): R;
+    visitEnumField(f: EnumField, a: A): R;
     visitVariantField(f: VariantField, a: A): R;
     visitBlobField(f: BlobField, v: A): R;
     visitAudioField(f: AudioField, v: A): R;
@@ -63,6 +65,7 @@ export class DataVisitor implements FieldVisitorI<any,void> {
     visitIntegerField(f: IntegerField, v: any) { this.visitField(f, v); }
     visitFloatField(f: FloatField, v: any) { this.visitField(f, v); }
     visitStringField(f: StringField, v: any) { this.visitField(f, v); }
+    visitEnumField(f: EnumField, v: any) { this.visitField(f, v); }
     visitVariantField(f: VariantField, v: any) { this.visitField(f, v); }
     visitBlobField(f: BlobField, v: any) { this.visitField(f, v); }
     visitAudioField(f: AudioField, v: any) { this.visitBlobField(f, v); }
@@ -299,7 +302,7 @@ export class IntegerField extends ScalarField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IntegerField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'integer');
-        return new IntegerField(name, $bind, !!$optional);
+        return new IntegerField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -340,7 +343,7 @@ export class FloatField extends ScalarField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): FloatField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'float');
-        return new FloatField(name, $bind, !!$optional);
+        return new FloatField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -378,6 +381,29 @@ export class StringField extends ScalarField {
 }
 
 /**
+ * Enum Field
+ *
+ * 
+ */
+export class EnumField extends StringField {
+    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+        super(name, bind, optional, StringFormat.Text, style);
+    }
+
+    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitEnumField(this, a); }
+    
+    jsTypename(): string { return 'string'; }
+    schemaTypename(): string { return 'enum'; }
+    sqlTypename(): string { return 'TEXT'; }
+
+    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): EnumField {
+        const {$type, $bind, $style, $optional, ...extra} = schema;
+        ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'enum');
+        return new EnumField(name, $bind, !!$optional, $style);
+    }
+}
+
+/**
  * Variant Field
  *
  * 
@@ -397,7 +423,7 @@ export class VariantField extends StringField {
         let {$type, $bind, $style, $optional, ...extra} = schema;
         $bind ??= 'variant';
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
-        return new VariantField(name, $bind, !!$optional);
+        return new VariantField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -420,7 +446,7 @@ export class BlobField extends StringField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BlobField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'blob');
-        return new BlobField(name, $bind, !!$optional);
+        return new BlobField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -442,7 +468,7 @@ export class AudioField extends BlobField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): AudioField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'audio');
-        return new AudioField(name, $bind, !!$optional);
+        return new AudioField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -464,7 +490,7 @@ export class ImageField extends BlobField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): ImageField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'image');
-        return new ImageField(name, $bind, !!$optional);
+        return new ImageField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -822,6 +848,8 @@ export function parse_field(locus: string, name: string, schema: any): Field {
             return PrimaryKeyField.parseSchemaFromCompactJson(locus, name, schema);
         case 'string':
             return StringField.parseSchemaFromCompactJson(locus, name, schema);
+        case 'enum':
+            return EnumField.parseSchemaFromCompactJson(locus, name, schema);
         case 'variant':
             return VariantField.parseSchemaFromCompactJson(locus, name, schema);
         case 'blob':

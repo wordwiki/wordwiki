@@ -42,6 +42,42 @@ export const RefNoteTag = 'rnt';
 export const SourceTag = 'src';
 export const RecordingTag = 'rec';
 
+// XXX HACK HACK 
+export const users = {
+    '___': 'Unknown User',
+    'ecm': 'Emma Metallic',
+    'ewm': 'Eunice Metallic',
+    'dmm': 'Diane Mitchell',
+    'gml': 'Gmarie Laroque',
+    'jnw': 'Joe Wilmot',
+    'kam': 'Karen Martin',
+    'mmm': 'Maddie Metallic',
+    'yli': 'Yasmine Isaac',
+    'mch': 'Michel (Listuguj)',
+    'mjp': 'Josephine (Wagmatcook)',
+    'kjd': 'Kirsten (Eskasoni)',
+    'djz': 'David Ziegler'
+};
+
+export const states = {
+    'Unknown': 'Unknown Status',
+    'Completed': 'Completed',
+    'CompletedAsPDMOnly': 'Completed As PDM Only',
+    'InProcess': 'In Process',
+    'InProcessPDMOnly': 'In Process - For PDM Only',
+    'OnHold': 'On Hold - To Be Processed',
+    'Archived': 'Archived',
+    'ArchivedIncomplete': 'Archived - Incomplete',
+    'ArchivedNotAWord': 'Archived - Not A Word',
+};
+
+export const todos = {
+    'Todo': 'Todo',
+    'NeedsResearchGroupReview': 'Needs Research Group Review',
+    'NeedsSpeakerGroupReview': 'Needs Speaker Group Review',
+    'NeedsRecording': 'Needs Recording',
+    'NeedsApproval': 'Needs Approval',
+}
 
 export const dictSchemaJson = {
     $type: 'schema',
@@ -53,15 +89,6 @@ export const dictSchemaJson = {
         $prompt: 'Entry',
         entry_id: {$type: 'primary_key'},
         $style: { $shape: 'container' },
-        status: {
-            $type: 'relation',
-            $tag: StatusTag,
-            //$style: { $prompt: 'SPELLING!' },
-            status_id: {$type: 'primary_key'},
-            status: {$type: 'string', $bind: 'attr1'},
-            variant: {$type: 'variant'},
-            $style: { $shape: 'titledValue' },
-        },
         spelling: {
             $type: 'relation',
             $tag: SpellingTag,
@@ -69,6 +96,33 @@ export const dictSchemaJson = {
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
             variant: {$type: 'variant'},
+            $style: { $shape: 'titledValue' },
+        },
+        status: {
+            $type: 'relation',
+            $tag: StatusTag,
+            //$style: { $prompt: 'SPELLING!' },
+            status_id: {$type: 'primary_key'},
+            status: {$type: 'enum', $bind: 'attr1', $style: { $options: states} },
+            details: {$type: 'string', $bind: 'attr2' },
+            variant: {$type: 'variant'},
+            $style: { $shape: 'titledValue' },
+        },
+        todo: {
+            $type: 'relation',
+            $tag: TodoTag,
+            ref_note_id: {$type: 'primary_key'},
+            todo: {$type: 'enum', $bind: 'attr1',
+                   $style: { $options: todos}},
+            details: {$type: 'string', $bind: 'attr2', $style: { $width: 60 }},
+            done: {$type: 'boolean', $bind: 'attr3'},
+            $style: { $shape: 'titledValue' },
+        },
+        note: {
+            $type: 'relation',
+            $tag: NoteTag,
+            note_id: {$type: 'primary_key'},
+            note: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
             $style: { $shape: 'titledValue' },
         },
         subentry: {
@@ -79,21 +133,6 @@ export const dictSchemaJson = {
             $style: { $shape: 'container' },
             // probably should have variant here TODO
             // translation TODO
-            todo: {
-                $type: 'relation',
-                $tag: TodoTag,
-                ref_note_id: {$type: 'primary_key'},
-                todo: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
-                done: {$type: 'boolean', $bind: 'attr2'},
-                $style: { $shape: 'titledValue' },
-            },
-            note: {
-                $type: 'relation',
-                $tag: NoteTag,
-                note_id: {$type: 'primary_key'},
-                note: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
-                $style: { $shape: 'titledValue' },
-            },
             translation: {
                 $type: 'relation',
                 $tag: TranslationTag,
@@ -102,7 +141,7 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'},
                 $style: { $shape: 'titledValue' },
             },
-            definition: {
+            /*definition: {
                 $type: 'relation',
                 $tag: DefinitionTag,
                 definition_id: {$type: 'primary_key'},
@@ -124,7 +163,7 @@ export const dictSchemaJson = {
                 //    - for most dictionaries, the target can be defaulted (for
                 //      example to 'en', - so user does not need to be aware of this).
                 // - this is a low confusion item (the hard part is appling to example)
-            },
+            },*/
             gloss: {
                 $type: 'relation',
                 $tag: GlossTag,
@@ -187,7 +226,7 @@ export const dictSchemaJson = {
                     $tag: ExampleRecordingTag,
                     example_recording_id: {$type: 'primary_key'},
                     recording: {$type: 'audio', $bind: 'attr1'},
-                    speaker: {$type: 'string', $bind: 'attr2'},
+                    speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'titledValue' },
                 },
@@ -317,7 +356,7 @@ export const dictSchemaJson = {
             $tag: RecordingTag,
             recording_id: {$type: 'primary_key'},
             recording: {$type: 'audio', $bind: 'attr1'},
-            speaker: {$type: 'string', $bind: 'attr2'},
+            speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
             variant: {$type: 'variant'},
             $style: { $shape: 'valueList' },
         },
@@ -382,13 +421,13 @@ export interface Example {
 
 export interface ExampleText {
     example_text_id: number,
-    text: string,
+    example_text: string,
     variant: string,
 }
 
 export interface ExampleTranslation {
     example_translation_id: number,
-    text: string,
+    example_translation: string,
     variant: string,
 }
 
@@ -450,12 +489,12 @@ export interface DocumentReference {
 
 export interface RefTranscription {
     ref_transcription_id: number,
-    text: string,
+    transcription: string,
 }
 
 export interface RefExpandedTranscription {
     ref_expanded_transcription_id: number,
-    text: string,
+    expanded_transcription: string,
 }
 
 export interface RefTransliteration {
@@ -465,7 +504,7 @@ export interface RefTransliteration {
 
 export interface RefNote {
     ref_note_id: number,
-    text: string,
+    note: string,
 }
 
 export interface Source {
@@ -632,8 +671,8 @@ export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any 
 
 export function renderExample(e: Entry, example: Example): any {
     return [
-        example.example_text.map(t=>['div', {}, t.text]),
-        example.example_translation.map(t=>['div', {}, ['i', {}, t.text]]),
+        example.example_text.map(t=>['div', {}, t.example_text]),
+        example.example_translation.map(t=>['div', {}, ['i', {}, t.example_translation]]),
         // TODO add recording here
     ];
 }
@@ -665,7 +704,11 @@ export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
     standaloneGroupRender = renderStandaloneGroup(ref.bounding_group_id); // REMOVE_FOR_WEB
     const title = 'Title';
     let refUrl: string;
-    refUrl = singleBoundingGroupEditorURL(ref.bounding_group_id, title); // REMOVE_FOR_WEB
+    try {
+        refUrl = singleBoundingGroupEditorURL(ref.bounding_group_id, title); // REMOVE_FOR_WEB
+    } catch(ex) {
+        refUrl = '';
+    }
     const noBody =
         ref.transcription.length === 0 &&
         ref.expanded_transcription.length === 0 &&
@@ -674,17 +717,14 @@ export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
     return [
         ['a', {href:refUrl, target:'_blank', rel:'opener'}, standaloneGroupRender],
         ['div', {},
-         ['object', {data:`/renderStandaloneGroupAsSvgResponse(${ref.bounding_group_id})`, 'type':'image/svg+xml'}]],
-        // ['div', {},
-        //  ['img', {src:`/renderStandaloneGroupAsSvgResponse(${ref.bounding_group_id})`}]],
-        // ['div', {'background-image': `/renderStandaloneGroupAsSvgResponse(${ref.bounding_group_id})`}],
-        noBody ? ['b', {}, 'No Transcription']: undefined,
+         noBody ? ['b', {}, 'No Transcription']: undefined,
+        ],
         ['table', {},
          ['tbody', {},
-          ref.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.text]]),
-          ref.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.text]]),
+          ref.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),
+          ref.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
           ref.transliteration.map(t=>['tr', {}, ['th', {}, 'Text:'], ['td', {}, t.transliteration]]),
-          ref.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.text]]),
+          ref.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.note]]),
           //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
           //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
           //ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),

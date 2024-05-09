@@ -1,6 +1,6 @@
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
-        StringField, VariantField, BlobField, AudioField, ImageField,
+        StringField, EnumField, VariantField, BlobField, AudioField, ImageField,
         IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from './schema.ts';
 import {unwrap, panic} from "../utils/utils.ts";
@@ -51,6 +51,7 @@ export abstract class ScalarView extends View {
 
     /*abstract*/ renderEditor(relation_id: number, v: any): Markup {
         //throw new Error(`renderEditor not implemented on ${utils.className(this)}`);
+        
         return String(v);
     }
 
@@ -67,11 +68,29 @@ export class BooleanView extends ScalarView {
     constructor(field: BooleanField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBooleanView(this, a); }
 
+    renderView(v: any): Markup {
+        // This should be values on the style $
+        return String(v);
+    }
+
     renderEditor(relation_id: number, v: any): Markup {
-        const checkboxAttrs: Record<string,string> = {type: 'checkbox'};
+        const checkboxAttrs: Record<string,string> = {
+            type: 'checkbox',
+            id: `input-${relation_id}-${this.field.name}`};
         if(v) checkboxAttrs['checked'] = '';
         return ['input', checkboxAttrs];
     }
+
+    loadFromEditor(relation_id: number): any {
+        const inputId = `input-${relation_id}-${this.field.name}`;
+        const checkboxElement = document.getElementById(inputId) as HTMLInputElement;
+        if(!checkboxElement)
+            throw new Error(`failed to find checkbox element ${inputId}`); // TODO fix error
+        const checkboxValue = checkboxElement.checked;
+        console.info('Checkbox value', checkboxValue);
+        return checkboxValue;
+    }
+    
 }
 
 /**
@@ -81,6 +100,22 @@ export class IntegerView extends ScalarView {
     declare field: IntegerField;
     constructor(field: IntegerField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitIntegerView(this, a); }
+
+    renderView(v: any): Markup {
+        console.info('in IntegerView.renderView();');
+        console.info('  style is ', this.field.style);
+        console.info('  shape is ', this.field.style.$shape, 'for', this.field.name);
+        // XXX this very much does not belong here XXX FIX FIX FIX XXX
+        switch(this.field.style.$shape) {
+            case 'boundingGroup': // XXX MASSIVE HACK FOR DEMO - DO THIS RIGHT
+                console.info('ding the thing');
+                return (
+                    ['div', {},
+                     ['object', {data:`/renderStandaloneGroupAsSvgResponse(${v})`, 'type':'image/svg+xml'}]]);
+            default:
+                return super.renderView(v);
+        }
+    }
 }
 
 /**
@@ -120,6 +155,47 @@ export class StringView extends ScalarView {
         const value = (inputElement as HTMLInputElement).value; //getAttribute('value');
         // TODO more checking here.
         return value;
+    }
+}
+
+/**
+ *
+ */
+export class EnumView extends StringView {
+    declare field: EnumField;
+    constructor(field: EnumField) { super(field); }
+    accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitEnumView(this, a); }
+
+    get choices(): Record<string, string> {
+        // XXX Fix this garbage typing
+        return (((this.field.style as any).$options
+            ?? panic(`enum ${this.field.name} missing options`)) as Record<string, string>);
+    }
+    
+    renderView(v: any): Markup {
+        return this.choices[v] ?? String(v);
+    }
+    
+    renderEditor(relation_id: number, val: any): Markup {
+        //size: this.field.style.$width ?? 30,
+
+
+        return ['select', {type: 'text', placeholder: this.prompt,
+                           id: `input-${relation_id}-${this.field.name}`},
+                Object.entries(this.choices).map(([k,v])=>
+                    ['option',
+                     {value: k, ...(val===k?{selected:''}:{})}, v])
+               ];
+    }
+
+    loadFromEditor(relation_id: number): any {
+        const inputId = `input-${relation_id}-${this.field.name}`;
+        const selectElement = document.getElementById(inputId) as HTMLSelectElement;
+        if(!selectElement)
+            throw new Error(`failed to find select element ${inputId}`); // TODO fix error
+        const selectValue = selectElement.options[selectElement.selectedIndex].value;
+        console.info('Select value', selectValue);
+        return selectValue;
     }
 }
 
@@ -279,6 +355,7 @@ export interface ViewVisitorI<A,R> {
     visitIntegerView(f: IntegerView, a: A): R;
     visitFloatView(f: FloatView, a: A): R;
     visitStringView(f: StringView, a: A): R;
+    visitEnumView(f: EnumView, a: A): R;
     visitVariantView(f: VariantView, a: A): R;
     visitBlobView(f: BlobView, a: A): R;
     visitAudioView(f: AudioView, a: A): R;
@@ -316,10 +393,14 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
         return this.visitView(f, v);
     }
 
-    visitVariantView(f: VariantView, v: any): Markup {
+    visitEnumView(f: EnumView, v: any): Markup {
         return this.visitView(f, v);
     }
 
+    visitVariantView(f: VariantView, v: any): Markup {
+        return this.visitView(f, v);
+    }
+    
     visitBlobView(f: BlobView, v: any): Markup {
         return this.visitView(f, v);
     }
@@ -404,6 +485,24 @@ export class ActiveViews {
         // of all the timestamps in the current workspace.  Once we are live
         // following, this will need redoing XXX
         return timestamp.nextTime(this.workspace.mostRecentLocalTimestamp);        
+    }
+
+    applyAssertion(assertion: Assertion) {
+        // TODO Should check if differnt than prev tuple TODO TODO
+        // - what from and to times to use for new assertions.
+        //newAssertion =
+        this.workspace.applyProposedAssertion(assertion);
+
+
+        // THIS IS JUST FOR TEST - IT IS BAD!!! - WE ARE bAD !!!
+        (async ()=>{
+            try {
+                await rpc`wordwiki.applyTransactions(${[assertion]})`;
+            } catch (e) {
+                alert(`Failed to save change - got error ${e}`);
+                throw e;
+            }
+        })();
     }
     
     /**
@@ -629,6 +728,42 @@ export class ActiveViews {
     //                        new_assertion);
     // }
 
+    deleteTuple(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
+        console.info('--- Delete', renderRootId, refTupleId);
+
+        alert('Delete not implemented');
+        return;
+        
+        // --- Find the reference tuple
+        const refTuple = this.workspace.getVersionedTupleById(
+            refDbTag, refTupleTag, refTupleId)
+            ?? panic('cannot find ref tuple for delete', refTupleId);
+
+        console.info('FOUND THE TUPLE TO DELETE! SOOO HAPPY', refTuple);
+
+        // --- Find the parent of the reference tuple
+        const parentTuple = this.workspace.getVersionedTupleByPath(
+            parentAssertionPath(getAssertionPath(refTuple.currentAssertion ??
+                panic("can't move up tuple with no parent"))));
+
+        console.info('FOUND THE PARENT OF tHE TUPLE TO DELETE! SOOO HAPPY', parentTuple);
+        const parentRelation = parentTuple.childRelations[refTupleTag]
+            ?? panic("failed to find parent relation for move up");
+
+        const newAssertion: Assertion = Object.assign(
+            {},
+            refTuple.currentAssertion,
+            {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+             valid_from: this.nextTime(),
+             valid_to: this.nextTime(),
+            }
+        );
+        
+        this.applyAssertion(newAssertion);
+
+        this.rerenderViewById(renderRootId);
+    }
+
     moveUp(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
         console.info('--- Move up', renderRootId, refTupleId);
         alert('move up is not implemented yet');
@@ -670,7 +805,7 @@ export class ActiveViews {
             }
         );
         
-        this.workspace.applyProposedAssertion(newAssertion);
+        this.applyAssertion(newAssertion);
 
         this.rerenderViewById(renderRootId);
     }
@@ -748,11 +883,8 @@ export class ActiveViews {
         newAssertion.valid_from = this.nextTime();
         newAssertion.valid_to = timestamp.END_OF_TIME;
 
-        // TODO Should check if differnt than prev tuple TODO TODO
-        // - what from and to times to use for new assertions.
-        //newAssertion =
-        this.workspace.applyProposedAssertion(newAssertion);
-
+        this.applyAssertion(newAssertion);
+        
         this.currentlyOpenTupleEditor = undefined;
         
         this.rerenderViewById(renderRootId);
@@ -1123,7 +1255,7 @@ export class EditorRenderer {
                                     onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
                   insertChildMenuItems,
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
+                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().deleteTuple('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Delete']],
               ], // isLeaf
               //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
              ]]);
@@ -1580,6 +1712,7 @@ export class FieldToView implements FieldVisitorI<any,View> {
     visitIntegerField(f: IntegerField, v: any): View { return new IntegerView(f); }
     visitFloatField(f: FloatField, v: any): View { return new FloatView(f); }
     visitStringField(f: StringField, v: any): View { return new StringView(f); }
+    visitEnumField(f: EnumField, v: any): View { return new EnumView(f); }
     visitVariantField(f: VariantField, v: any): View { return new VariantView(f); }
     visitBlobField(f: BlobField, v: any): View { return new BlobView(f); }
     visitAudioField(f: AudioField, v: any): View { return new AudioView(f); }
@@ -1687,7 +1820,8 @@ export function renderModalEditorSkeleton() {
            ['div', {class:'modal-footer'},
             ['button', {type:'button', class:'btn btn-secondary',
                         'data-bs-dismiss':'modal',
-                        onclick:'activeViews().saveChanges()'}, 'Save']
+                        //onclick:'activeViews().saveChanges()'}, 'Save']
+                        onclick:'location.reload()'}, 'Close']
            ], // div.modal-footer
          
           ] // div.modal-content

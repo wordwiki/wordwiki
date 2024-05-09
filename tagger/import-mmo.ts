@@ -22,14 +22,15 @@ import {DictTag, EntryTag, StatusTag, SpellingTag, SubentryTag, TodoTag,
         PronunciationGuideTag, CategoryTag, RelatedEntryTag, AlternateGrammaticalFormTag,
         AlternateFormTextTag, OtherRegionalFormTag, PictureTag, AttrTag,
         DocumentReferenceTag, RefTranscriptionTag, RefExpandedTranscriptionTag,
-        RefTransliterationTag, RefNoteTag, SourceTag, RecordingTag} from './entry-schema.ts';
+        RefTransliterationTag, RefNoteTag, SourceTag, RecordingTag, users,
+        states} from './entry-schema.ts';
 import { dirname } from "https://deno.land/std@0.224.0/path/posix/dirname.ts";
 import { WordWiki } from './wordwiki.ts';
 
 // TODO: CLI, read the json in.
 // TODO: recursively build structure
 
-const importRecordings = false;
+const importRecordings = true;
 
 // Should have used the Deno walk function.
 function dirTree(root: string, out: string[]): string[] {
@@ -113,34 +114,36 @@ async function importMMO() {
         
         console.info('RECOVERED', recovered.size);
         console.info('UNBOUND FILES', missing.length);
-        for(const f of missing.toSorted()) {
-            console.info('<h1>Unbound Recording:', f, '</h1>');
-            console.info(`<a href="https://www.mikmaqonline.org/words-mp3/${f.replace('.wav', '.mp3')}">${f}</a>`);
-            const lexemeSpelling = f.match(/^media[/].[/]([^/]+)[/][^.]*[.]wav$/)?.[1];
-            const p = 'imports/LegacyMmo/'+f;
-            if(!await fs.exists(p, {isFile: true}))
-                throw new Error('expected '+p+' to exist');
-            if(lexemeSpelling) {
-                console.info(`<h2>Apparent Lexeme: ${lexemeSpelling}</h2>`);
+        if(false) {  // Turned off because dmm has audited the results.
+            for(const f of missing.toSorted()) {
+                console.info('<h1>Unbound Recording:', f, '</h1>');
+                console.info(`<a href="https://www.mikmaqonline.org/words-mp3/${f.replace('.wav', '.mp3')}">${f}</a>`);
+                const lexemeSpelling = f.match(/^media[/].[/]([^/]+)[/][^.]*[.]wav$/)?.[1];
+                const p = 'imports/LegacyMmo/'+f;
+                if(!await fs.exists(p, {isFile: true}))
+                    throw new Error('expected '+p+' to exist');
+                if(lexemeSpelling) {
+                    console.info(`<h2>Apparent Lexeme: ${lexemeSpelling}</h2>`);
 
-                const lexemeMarkup = lexemesBySpelling.get(lexemeSpelling);
-                if(lexemeMarkup) {
-                    console.info(`<pre>\n${lexemeMarkup}\n</pre>`);
+                    const lexemeMarkup = lexemesBySpelling.get(lexemeSpelling);
+                    if(lexemeMarkup) {
+                        console.info(`<pre>\n${lexemeMarkup}\n</pre>`);
+                    }
                 }
+
+                // const mediaDir = dirname(f);
+                // console.info(`<h2>Media in ${mediaDir}</h2>`);
+                // try {
+                //     const media = Deno.readDirSync('imports/LegacyMmo/'+mediaDir);
+                //     console.info('<ul>');
+                //     for(const m of media) {
+                //         console.info('<li>', `<a href="https://www.mikmaqonline.org/words-mp3/${f.replace('.wav', '.mp3')}">${m.name}</a>`);
+                //     }
+                //     console.info('</ul>');
+                // } catch(e) {
+                //     console.info(`<div>unable to read media dir ${mediaDir} - ${e}</div>`);
+                // }
             }
-            
-            // const mediaDir = dirname(f);
-            // console.info(`<h2>Media in ${mediaDir}</h2>`);
-            // try {
-            //     const media = Deno.readDirSync('imports/LegacyMmo/'+mediaDir);
-            //     console.info('<ul>');
-            //     for(const m of media) {
-            //         console.info('<li>', `<a href="https://www.mikmaqonline.org/words-mp3/${f.replace('.wav', '.mp3')}">${m.name}</a>`);
-            //     }
-            //     console.info('</ul>');
-            // } catch(e) {
-            //     console.info(`<div>unable to read media dir ${mediaDir} - ${e}</div>`);
-            // }
         }
     }
     //return;
@@ -220,8 +223,9 @@ function createAssertion(parent: Assertion|undefined, depth: number,
 interface Entry {
     entry_id: number;
     published: boolean;
-    status: Status[];
     spelling: Spelling[];
+    status: Status[];
+    note: Note[],
     recording: Recording[];
     subentry: Subentry[];
     internal_note: string;
@@ -239,6 +243,7 @@ function importEntry(entry: Entry, order_key: string) {
             note: entry.internal_note + entry.public_note,
         }));
     importEach(entry.spelling, (s,k)=>importSpelling(entryAssertion, s, k, published));
+    importEach(entry.note, (s,k)=>importNote(entryAssertion, s, k, published));
     importEach(entry.recording.filter(r=>r.recording!==''), (s,k)=>importRecording(entryAssertion, s, k, published));
     importEach(entry.subentry, (s,k)=>importSubentry(entryAssertion, s, k, published));
     // console.info('STATUS', subentry);
@@ -269,6 +274,8 @@ interface Recording {
 }
 
 function importRecording(parent: Assertion, recording: Recording, order_key: string, published: boolean) {
+    if(!Object.hasOwn(users, recording.speaker))
+        throw new Error(`unknown speaker ${recording.speaker} for recording ${recording}`);
     insertAssertion(createAssertion(
         parent, 2, recording.recording_id, RecordingTag, order_key, published,
         {
@@ -290,7 +297,6 @@ interface Subentry {
     other_regional_form: OtherRegionalForm[];
     source: Source[];
     attr: Attr[];
-    note: Note[],
     picture: Picture[],
 }
 
@@ -311,7 +317,6 @@ function importSubentry(parent: Assertion, subentry: Subentry, order_key: string
     //importEach(subentry.picture, (s,k)=>importPicture(subentryAssertion, s, k, published));    
     importEach(subentry.attr, (s,k)=>importAttr(subentryAssertion, s, k, published));
     importEach(subentry.source, (s,k)=>importSource(subentryAssertion, s, k, published));
-    importEach(subentry.note, (s,k)=>importNote(subentryAssertion, s, k, published));
 }
 
 interface Translation {
@@ -393,6 +398,8 @@ interface ExampleRecording {
 }
 
 function importExampleRecording(parent: Assertion, exampleRecording: ExampleRecording, order_key: string, published: boolean) {
+    if(!Object.hasOwn(users, exampleRecording.speaker))
+        throw new Error(`unknown speaker ${exampleRecording.speaker} for recording ${exampleRecording}`);
     insertAssertion(createAssertion(
         parent, 4, exampleRecording.example_recording_id, ExampleRecordingTag, order_key, published,
         {
@@ -523,6 +530,9 @@ interface Status {
 }
 
 function importStatus(parent: Assertion, status: Status, order_key: string, published: boolean) {
+    if(!Object.hasOwn(states, status.status))
+        throw new Error(`unknown status ${status.status}`);
+    
     insertAssertion(createAssertion(
         parent, 2, status.status_id, StatusTag, order_key, published,
         {
@@ -539,7 +549,7 @@ interface Note {
 
 function importNote(parent: Assertion, note: Note, order_key: string, published: boolean) {
     insertAssertion(createAssertion(
-        parent, 3, note.note_id, NoteTag, order_key, published,
+        parent, 2, note.note_id, NoteTag, order_key, published,
         {
             attr1: note.note,
         }));
@@ -696,7 +706,7 @@ async function verifyImportMMO() {
         const importedLexeme = importedLexemeMatches[0];
         //console.info('importedLexeme', importedLexeme);
         const importedLexemeJSONText = JSON.stringify(importedLexeme, undefined, 2);
-        const processedImportedLexemeJSONText = importedLexemeJSONText.replaceAll('_', ' ').replaceAll("\\n", "\n")+' and 1 2 3';
+        const processedImportedLexemeJSONText = importedLexemeJSONText.replaceAll('_', ' ').replaceAll("\\n", "\n")+' and 1 2 3 done';
         const importedLexemeWords = new Set(strings.splitIntoWords(processedImportedLexemeJSONText));
         
         //console.info('imported lexeme words', JSON.stringify(importedLexemeWords));

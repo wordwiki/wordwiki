@@ -13,6 +13,7 @@ import pytomlpp
 from pathlib import Path
 import gzip
 import nanoid
+import itertools
 
 sys.stdin.reconfigure(encoding='utf-8')
 sys.stdout.reconfigure(encoding='utf-8')
@@ -215,6 +216,7 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     #entry['last_modified_date'] = date
     entry['internal_note'] = note
     entry['public_note'] = ''
+    entry['note'] = list(itertools.chain.from_iterable([se['note'] for se in sub_entries]))
 
     # TODO WHAT TO DO WITH THIS?
     pdm_only = 'PDM' in status
@@ -222,28 +224,38 @@ def convert_lexeme_to_entries(id_allocator, legacy_lexemes_by_name, src_lexeme):
     # done, skip, hold, WWSD
     
     status_code = ''
-    if 'done' in status:
-        status_code = 'done'
-    elif 'skip' in status:
-        status_code = 'skip'
-    elif 'return' in status or 'revisit' in status or 'lookagain' in status or 'tba' in status:
-        status_code = 'in-process'
+    details = status
+    if 'PDM' in status:
+        status_code = 'InProcess'
+    elif 'skip' in status or 'tba' in status or status == '':
+        status_code = 'Archived'
     elif 'ready' in status or 'check' in status:
-        status_code = 'check'
+        status_code = 'InProcess'
+    elif 'done' == status:
+        status_code = 'Completed'
+        details = ''
+    elif 'done' in status:
+        status_code = 'Archived'
+        print('ARCHIVING "done" lexeme with status', status)
     else:
-        #print('STATUS', status)
-        status_code = 'unknown'
+        status_code = 'Archived'
 
-    details = status # if status != status_code else ''
-    #print('for status', status, 'code is', status_code, 'and details are', details)
-    
+    #print('STATUS', status_code, '::', details);
+        
     entry['status'] = [{
         'status_id': id_allocator.alloc_next_id(),
         'variant': 'mm-li',
-        'status': status, #_code,
+        'status': status_code,
         'details': details
     }]            
     
+    # PDM = 'In Process'
+    # 330 blank = 'Archived'
+    # skip = 'Archived', anything with skip, no matter what else.
+    # tba = 'Archived'
+    # ready = 'In Process'
+    # check = 'In Process'
+    # done = 'Completed'
     
     return [entry]
 
@@ -313,7 +325,7 @@ def convert_sense(id_allocator, legacy_lexemes_by_name, date, lexeme, note, stat
     #entry['related_entries'] = sense.pop('crossRef')  # TODO should be list of lexes
     entry['translation'] = [convert_translation(id_allocator, sense.pop('definition'))]
     #assert not sense.pop('label')
-    notes = [n['text'] for n in sense.pop('notes')]
+    notes = [n['text'] for n in sense.pop('notes') if n['text'] != '']
     #if note:
     #    print('entry notes:', note)
     #if notes:

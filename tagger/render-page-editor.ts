@@ -138,8 +138,10 @@ export function renderPageEditorByPageId(page_id: number,
                   onmousedown: 'pageEditorMouseDown(event)',
                   onmousemove: 'pageEditorMouseMove(event)',
                   onmouseup: 'pageEditorMouseUp(event)',
-                  'data-layer-id': cfg.layer_id,
+                  'data-document-id': document_id,
                   'data-page-id': page_id,
+                  'data-page-number': page.page_number,
+                  'data-layer-id': cfg.layer_id,
                   'data-scale-factor': scale_factor,
                   ...(cfg.locked_bounding_group_id
                       ? {'data-locked-bounding-group-id':
@@ -160,7 +162,6 @@ export function renderPageEditorByPageId(page_id: number,
     ]; // body
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
-    
     return templates.pageTemplate({title, head, body});
 }
 
@@ -303,6 +304,7 @@ export function renderBox(box: BoxGroupJoin,
 export function renderPageJumper(cfg: PageEditorConfig, document_id: number, current_page_num: number, total_pages: number): any {
     const targetPageNumbers = Array.from(new Set(
         [1,
+         ...[10, 37, 210],  // XXX tmp hack for dmm
          ...range(1, Math.floor(total_pages/100)+1).map(v=>v*100),
          ...range(0, 10).map(v=>Math.floor(current_page_num/100)*100+v*10),
          ...range(0, 10).map(v=>Math.floor(current_page_num/10)*10+v),
@@ -647,7 +649,9 @@ export async function renderStandaloneGroupAsSvgResponse(bounding_group_id: numb
     return {
         marker: ResponseMarker,
         status: 200,
-        headers: {"content-type": "image/svg+xml;charset=utf-8"},
+        headers: {"content-type": "image/svg+xml;charset=utf-8",
+                  "date": (new Date() as any).toGMTString(),
+                  "Cache-Control": "public, max-age=120"},
         body
     };
 }
