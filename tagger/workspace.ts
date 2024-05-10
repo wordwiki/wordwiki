@@ -555,7 +555,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     readonly childRelations: Record<Tag,VersionedRelation>;
     //readonly childRelations: ChildRelationsType<NodeT>;
     //proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
-    #currentTuple: TupleVersion|undefined = undefined;
+    //#currentTuple: TupleVersion|undefined = undefined;
     //[name: string]: RelationField;
     
     constructor(schema: RelationField, id: number) {
@@ -568,17 +568,38 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     reset() {
         throw new Error('not impl yet');
         //this.tupleVersions = [];
-        this.#currentTuple = undefined;
+        //this.#currentTuple = undefined;
         //this.childRelations.forEach(r=>r.reset());
     }
 
+    get mostRecentTuple(): TupleVersion|undefined {
+        // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
+        return this.tupleVersions[this.tupleVersions.length-1];
+    }
+
+    /**
+     * In some ways of traversing the versioned tuple store we will never
+     * ask for the most recent version of a tuple if that tuple has been
+     * deleted (because it will have been filtered out at a higher level) -
+     * this version of requiredMostRecentTuple avoid putting these 'deleted'
+     * checks everywhere.
+     */
+    get requiredMostRecentTuple(): TupleVersion {
+        // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
+        const mostRecent = this.tupleVersions[this.tupleVersions.length-1]
+        if(!mostRecent)
+            throw new Error(`Missing required most recent tuple for ${this.schema.tag}.${this.id}`);
+        return mostRecent;
+    }
     
     get current(): TupleVersion|undefined {
-        return this.#currentTuple;
+        //return this.#currentTuple;
+        return this.mostRecentTuple;
     }
 
     get currentAssertion(): Assertion|undefined {
-        return this.#currentTuple?.assertion;
+        //return this.#currentTuple?.assertion;
+        return this.current?.assertion;
     }
     
     // untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
@@ -642,6 +663,17 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             throw new Error(`failed to find required versioned tuple for id ${id}`);
         return tuple;
     }
+
+    findNonDeletedChildTuples(): VersionedTuple[] {
+        let nonDeletedChildTuples: VersionedTuple[] = [];
+        this.forEachVersionedTuple(t=>{
+            if(t!==this && t.current?.isCurrent === true) {
+                //console.info('Found non deleted child tuple', t, t.current, t.current?.isCurrent);
+                nonDeletedChildTuples.push(t);
+            }
+        });
+        return nonDeletedChildTuples;
+    }
     
     untrackedApplyAssertion(assertion: Assertion) {
         const tuple = new TupleVersion(this, assertion);
@@ -665,8 +697,8 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         
         this.tupleVersions.push(tuple);
         
-        if(tuple.isCurrent)
-            this.#currentTuple = tuple;
+        // if(tuple.isCurrent)
+        //     this.#currentTuple = tuple;
     }
 
     applyProposedAssertion(assertion: Assertion): Assertion|undefined {
@@ -717,8 +749,8 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         this.tupleVersions.push(tuple);
         console.info('applied proposed assertion', assertion);
         
-        if(tuple.isCurrent)
-            this.#currentTuple = tuple;
+        // if(tuple.isCurrent)
+        //     this.#currentTuple = tuple;
 
         return updatedPrevAssertion;
     }
@@ -743,14 +775,10 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         this.tupleVersions.push(tuple);
         console.info('applied proposed assertion', assertion);
         
-        if(tuple.isCurrent)
-            this.#currentTuple = tuple;
+        // if(tuple.isCurrent)
+        //     this.#currentTuple = tuple;
     }
 
-    get mostRecentTuple() {
-        // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
-        return this.tupleVersions[this.tupleVersions.length-1];
-    }
 
     
     // forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
@@ -1017,8 +1045,15 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
     }
 
     computeTuples(): Map<number, CurrentTupleQuery> {
-        const currentTupleQuerys = [...this.src.tuples.entries()].
-            map(([id,tup]: [number, VersionedTuple]): [number, CurrentTupleQuery]=>
+        // TODO we are grabbing all src.tuples.entries() here - don't think
+        //      that is removing deleted tuples (ie. behind a tombstone)
+        //      src is a VersionedRelation
+        // TODO need to know if current version of VersionedTuple is deleted -
+        //      can tell because will have end date that is not end of time.
+        
+        const currentTupleQuerys = [...this.src.tuples.entries()]
+            .filter(([id,tup]: [number, VersionedTuple]) => tup.current?.isCurrent)
+            .map(([id,tup]: [number, VersionedTuple]): [number, CurrentTupleQuery]=>
                 [id, new CurrentTupleQuery(tup)]);
         
         const currentTupleQuerysByRecentness =

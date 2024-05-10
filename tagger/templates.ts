@@ -39,13 +39,25 @@ export function pageTemplate(content: PageContent): any {
 /**/             console.log("DOM fully loaded and parsed");
 /**/             view.run();
 /**/             //workspace.renderSample(document.getElementById('root'))
-/**/           });`
+/**/           });
+/**/
+/**/           function playAudio(src) {
+/**/             const audioPlayer = document.getElementById("audioPlayer");
+/**/             if(!audioPlayer) throw new Error('could not find audio player');
+/**/             audioPlayer.src = src;
+/**/             audioPlayer.play ();
+/**/          }
+`
           ],
           content.head,
          ], // head
 
          ['body', {},
 
+          // TODO probably move this somewhere else
+          ['audio', {id:'audioPlayer', preload:'none'},
+           ['source', {src:'', type:'audio/mpeg'}]],
+          
           content.body,
 
           view.renderModalEditorSkeleton(),

@@ -14,6 +14,9 @@ import {getImageSize} from "./get-image-size.ts";
  *
  */
 export async function getCompressedRecordingPath(audioPath: string): Promise<string> {
+    // XXX todo add safe check of audioPath (must be relative, no .., also
+    //     for this APIs peers.
+    // XXX may insist in in content/ or derived/
     return content.getDerived(`derived/compressed-audio`,
                               {compressAudioCmd},
                               ['compressAudioCmd', audioPath], 'mp3');

@@ -667,6 +667,7 @@ export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
 }
 
 export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any {
+    console.info('IN RENDER EXAMPLES', examples);
     const edit = `imports.popupEntryEditor('Edit Examples', ${e.entry_id}, 'sub', ${s.subentry_id}, 'exa')`;
     return [
         ['div', {class: 'editable', onclick: edit},
@@ -683,7 +684,13 @@ export function renderExample(e: Entry, example: Example): any {
     return [
         example.example_text.map(t=>['div', {}, t.example_text]),
         example.example_translation.map(t=>['div', {}, ['i', {}, t.example_translation]]),
-        // TODO add recording here
+        // example.example_recording.map(r=>{
+        //     const mp3Promise = 
+
+
+        //     ['a', {
+        //     onclick: `playAudio(&quot;a/ajoqlue'j/recording3.mp3&quot;); event.preventDefault();` href="a/ajoqlue'j/recording3.mp3"}, 'PLAY']),
+        // // TODO add recording here
     ];
 }
 

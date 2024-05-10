@@ -592,7 +592,7 @@ export class ActiveViews {
 
         //const activeView = this.activeViews.get(renderRootId)
         const parent = this.workspace.getVersionedTupleParentRelation(
-            getAssertionPath(refTuple.mostRecentTuple.assertion));
+            getAssertionPath(refTuple.requiredMostRecentTuple.assertion));
         const order_key = refKind === 'before'
             ? generateBeforeOrderKey(parent, refTupleId)
             : generateAfterOrderKey(parent, refTupleId);
@@ -675,7 +675,7 @@ export class ActiveViews {
         const mostRecentTupleVersion = refTuple.mostRecentTuple;
         const new_assertion: Assertion = Object.assign(
             {},
-            mostRecentTupleVersion.assertion,
+            (mostRecentTupleVersion ?? panic('unexpected missing source tuple')).assertion,
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
 
         this.openFieldEdit(renderRootId, 'replaceSelf', undefined, refDbTag, refTupleTag, refTupleId,
@@ -731,8 +731,8 @@ export class ActiveViews {
     deleteTuple(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
         console.info('--- Delete', renderRootId, refTupleId);
 
-        alert('Delete not implemented');
-        return;
+        // alert('Delete not implemented');
+        // return;
         
         // --- Find the reference tuple
         const refTuple = this.workspace.getVersionedTupleById(
@@ -741,6 +741,11 @@ export class ActiveViews {
 
         console.info('FOUND THE TUPLE TO DELETE! SOOO HAPPY', refTuple);
 
+        if(refTuple.findNonDeletedChildTuples().length > 0) {
+            alert('Cannot delete a item with non-deleted children - please delete all children first');
+            throw new Error('cannot delete tuple with non-deleted children');
+        }
+        
         // --- Find the parent of the reference tuple
         const parentTuple = this.workspace.getVersionedTupleByPath(
             parentAssertionPath(getAssertionPath(refTuple.currentAssertion ??
