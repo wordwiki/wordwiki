@@ -343,13 +343,16 @@ export class WordWiki {
     entry(entryId: number): any {
 
         const e = this.entriesJSON
-            .filter(entry=>entry.entry_id === entryId)[0]
-            ?? panic('Unable to find entry', entryId);
-        
-        const title = entry.renderEntrySpellings(e, e.spelling);
-        const body = entry.renderEntry(e);
-        
-        return templates.pageTemplate({title, body});
+            .filter(entry=>entry.entry_id === entryId)[0];
+
+        if(!e) {
+            const title = `Missing or deleted entry ${entryId}`;
+            return templates.pageTemplate({title, body: ['h1', {}, title]});
+        } else {
+            const title = entry.renderEntrySpellings(e, e.spelling);
+            const body = entry.renderEntry(e);
+            return templates.pageTemplate({title, body});
+        }
     }
 
     home(): any {
@@ -361,8 +364,8 @@ export class WordWiki {
             ['h3', {}, 'Search'],
             this.searchForm(),
             // --- Add new entry button
-            ['div', {},
-             ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
+            // ['div', {},
+            //  ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
 
             ['br', {}],
             ['h3', {}, 'Reports'],
@@ -486,8 +489,8 @@ export class WordWiki {
             this.searchForm(search),
 
             // --- Add new entry button
-            ['div', {},
-             ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
+            // ['div', {},
+            //  ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
             // --- Results
             ['ul', {},
              matches.slice(0, 500).map(e=>['li', {}, renderEntryItem(e)]),
@@ -538,12 +541,46 @@ export class WordWiki {
             ['h1', {}, title],
             ['ul', {},
              cats.map(cat=>
-                 ['li', {}, cat[0], ` (${cat[1]} entries)`]),
+                 ['li', {}, ['a',
+                             {href:`/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
+                             cat[0], ` (${cat[1]} entries)`]]),
             ]
         ];
 
         return templates.pageTemplate({title, body});
     }
+
+    entriesForCategory(category?: string): any {
+        category = String(category ?? '');
+
+        const entriesForCategory = category === '' ? [] :
+            this.entriesJSON.filter(
+                entry=>entry.subentry.some(
+                    subentry=>subentry.category.some(
+                        cat=>cat.category === category)));
+        const title = ['Entries for category ', category];
+        
+        function renderEntryItem(e: entry.Entry): any {
+            return [
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+            ];
+        }
+        
+        const body = [
+            ['h2', {}, title],
+
+            // --- Add new entry button
+            ['div', {},
+             ['ul', {},
+              entriesForCategory
+                  .map(e=>['li', {}, renderEntryItem(e)]),
+             ] // ul
+            ] // div
+        ];
+        
+        return templates.pageTemplate({title, body});
+    }
+    
         
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;

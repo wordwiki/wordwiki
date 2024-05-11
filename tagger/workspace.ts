@@ -678,18 +678,21 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     untrackedApplyAssertion(assertion: Assertion) {
         const tuple = new TupleVersion(this, assertion);
         // TODO lots of validation here + index updating etc.
-        const mostRecentTuple = this.mostRecentTuple;
+        const prevTuple = this.mostRecentTuple;
 
-        if(mostRecentTuple) {
-            if(mostRecentTuple.assertion.valid_to) {
-                if(tuple.assertion.valid_from !== mostRecentTuple.assertion.valid_to) {
-                    throw new Error(`FIX ERROR: valid_from chain broken`);
+        if(prevTuple) {
+            const prevAssertion = prevTuple.assertion;
+            if(assertion.replaces_assertion_id !== prevAssertion.assertion_id)
+                throw new Error(`FIX ERROR: replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(tuple.assertion)}`);
+            if(prevAssertion.valid_to) {
+                if(assertion.valid_from !== prevAssertion.valid_to) {
+                    throw new Error(`FIX ERROR: valid_from chain broken - ${JSON.stringify(prevAssertion, undefined, 2)} TO ${JSON.stringify(assertion, undefined, 2)}`);
                 }
             } else {
                 // This is tricky - we should probably mute the valid_to on the previous
                 //  most current tuple - but this complicates undo etc.  The fact that
                 //  valid_to with a non-null value is also used for undo complicates things.
-                if(mostRecentTuple.assertion.valid_from <= tuple.assertion.valid_from) {
+                if(prevTuple.assertion.valid_from <= tuple.assertion.valid_from) {
                     throw new Error(`FIX ERROR: time travel prolbem`);
                 }
             }
@@ -704,43 +707,67 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     applyProposedAssertion(assertion: Assertion): Assertion|undefined {
 
         const tuple = new TupleVersion(this, assertion);
-        const mostRecentTuple = this.mostRecentTuple;
+        const prevTuple = this.mostRecentTuple;
         let updatedPrevAssertion: Assertion|undefined = undefined;
 
         const assertAtTime = assertion.valid_from;
 
-        // --- New assertions must be either valid till the end of time
+        // --- New proposed assertions must be either valid till the end of time
         //     OR have valid_from === valid_to === assertAtTime (which
         //     is a tombstone).
         utils.assert(assertion.valid_to === timestamp.END_OF_TIME ||
             assertion.valid_to === assertion.valid_from);
         
-        if(mostRecentTuple) {
+        if(prevTuple) {
+            const prevAssertion = prevTuple.assertion;
+
+            console.info('applying proposed assertion',
+                         JSON.stringify(assertion, undefined, 2), ' on top of ',
+                         JSON.stringify(prevAssertion, undefined, 2));
+
+            if(assertion.replaces_assertion_id !== prevAssertion.assertion_id)
+                throw new Error(`FIX ERROR: replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(tuple.assertion)}`);
+            
             switch(true) {
                     
-                case mostRecentTuple.assertion.valid_to === timestamp.END_OF_TIME: {
+                case prevAssertion.valid_to === timestamp.END_OF_TIME: {
                     // --- We are replacing a tuple that was valid to the end of time,
                     //     this is a normal update - set the valid_to of the
                     //     replaced assertion with the start time of the new
                     //     assertion.
-                    mostRecentTuple.assertion.valid_to = assertAtTime;
-                    updatedPrevAssertion = mostRecentTuple.assertion;
+
+                    if(!(assertAtTime > prevAssertion.valid_from)) {
+                        throw new Error(`Attempt to assert a tuple in the past (3)`);
+                    }
+                    
+                    prevAssertion.valid_to = assertAtTime;
+                    updatedPrevAssertion = prevAssertion;
                     break;
                 }
                     
-                case mostRecentTuple.assertion.valid_to < assertAtTime: {
+                case prevAssertion.valid_to < assertAtTime: {
                     // --- Assertion we are replacing is deleted, so our new assertion
                     //     is starting a new valid period.
+                    //     NOT SUPPORTED YET!
+                    throw new Error(`no operations are currently supported on top of a deleted assertion - deleted assertion is ${JSON.stringify(prevAssertion, undefined, 2)}`);
                     break;
                 }
                     
-                case mostRecentTuple.assertion.valid_to >= assertAtTime: {
+                case prevAssertion.valid_to >= assertAtTime: {
                     // --- Tuple we are replacing has an end of life in our future
                     //     (and not the end of time), something is wrong.
                     throw new Error(`Attempt to assert a tuple in the past`);
                 }
+
+                case prevAssertion.valid_from >= assertAtTime: {
+                    // --- Tuple we are replacing has an begin of life in our future
+                    //     (and not the end of time), something is wrong.
+                    throw new Error(`Attempt to assert a tuple in the past (2)`);
+                }
+                    
                 default: {
                     // --- Tuple we are replacing
+                    throw new Error(`unexpected tuple assertion ${JSON.stringify(assertion)} OVER ${JSON.stringify(prevAssertion)}`);
                     break;
                 }
             }
@@ -762,13 +789,13 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         //      confirm they are the same and do minor touchups (time)
         
         const tuple = new TupleVersion(this, assertion);
-        const mostRecentTuple = this.mostRecentTuple;
+        const prevTuple = this.mostRecentTuple;
 
         // TODO lots of validation here + index updating etc.
         // TODO update current.
         // TODO tie into speculative mechanism.
 
-        if(mostRecentTuple) {
+        if(prevTuple) {
             
         }
 

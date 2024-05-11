@@ -11,6 +11,7 @@ import * as timestamp from '../utils/timestamp.ts';
 //import * as templates from './templates.ts';
 import ContextMenu from '../utils/context-menu.js';
 import { renderStandaloneGroup, singleBoundingGroupEditorURL } from './render-page-editor.ts'; // REMOVE_FOR_WEB
+import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 
 export const DictTag = 'dct';          // dict
 export const EntryTag = 'ent';         // entr
@@ -450,7 +451,7 @@ export interface ExampleRecording {
 
 export interface PronunciationGuide {
     pronunciation_guide_id: number,
-    text: string,
+    pronunciation_guide: string,
     variant: string,
 }
 
@@ -575,6 +576,7 @@ export function renderEntry(e: Entry): any {
     return [
         //contextMenuPlay(),
         ['h1', {class: 'editable', onclick: editEntry}, renderEntrySpellings(e, e.spelling)],
+        renderEntryRecordings(e, e.recording),
         renderSubentriesCompact(e, e.subentry),
     ];
 }
@@ -583,6 +585,20 @@ export function renderEntrySpellings(e: Entry, spellings: Spelling[]): string {
     return spellings.map(s=>s.text).join('/') || 'No Spellings';
 }
 
+export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
+    const edit = `imports.popupEntryEditor('Edit Recordings', ${e.entry_id}, 'ent', ${e.entry_id}, 'rec')`;
+    return [
+        ['div', {class: 'editable', onclick: edit},
+         ['b', {}, 'Recordings:'],
+         ['ul', {},
+          recordings.length === 0
+             ? ['li', {}, 'No recordings']
+             : recordings.map(r=>['li', {},
+                                  renderAudio(r.recording, `Recording by ${r.speaker}`)])
+         ] // ul
+        ]
+    ];
+}
 
 export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
     const editSubentries = `imports.popupEntryEditor('Edit Subentries', ${e.entry_id}, 'ent', ${e.entry_id}, 'sub')`;        
@@ -598,8 +614,9 @@ export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
 
 export function renderSubentries(e: Entry, s: Subentry[]): any {
     return [
-        ['ol', {},
-         s.map(s=>['li', {}, renderSubentry(e, s)])]];
+        ['ul', {}, 
+         s.map((s, idx)=>['li', {}, [
+             ['h3', {}, `Subentry ${idx+1}`], renderSubentry(e, s)]])]];
 }
 
 export function renderSubentry(e: Entry, s: Subentry): any {
@@ -609,7 +626,6 @@ export function renderSubentry(e: Entry, s: Subentry): any {
                                           
     console.info('cat', Object.entries(s));
     return [
-        renderDocumentReferences(e, s, s.document_reference),
         // renderSource(e, s, s.source),
         renderPronunciationGuides(e, s, s.pronunciation_guide),
         renderTranslations(e, s, s.translation),
@@ -617,6 +633,7 @@ export function renderSubentry(e: Entry, s: Subentry): any {
         renderGlosses(e, s, s.gloss),
         //s.example.map(x=>renderExample(e, x)),
         renderExamples(e, s, s.example),
+        renderDocumentReferences(e, s, s.document_reference),
     ];
 }
 
@@ -631,7 +648,7 @@ export function renderPronunciationGuides(e: Entry, s: Subentry,
 }
 
 export function renderPronunciationGuide(e: Entry, s: Subentry, p: PronunciationGuide): any {
-    return [['div', {},  ['b', {}, 'Pronunciation Guide: '], p.text]];
+    return [['div', {},  ['b', {}, 'Pronunciation Guide: '], p.pronunciation_guide]];
 }
 
 export function renderTranslations(e: Entry, s: Subentry, translations: Translation[]): any {
@@ -684,14 +701,23 @@ export function renderExample(e: Entry, example: Example): any {
     return [
         example.example_text.map(t=>['div', {}, t.example_text]),
         example.example_translation.map(t=>['div', {}, ['i', {}, t.example_translation]]),
-        // example.example_recording.map(r=>{
-        //     const mp3Promise = 
-
-
-        //     ['a', {
-        //     onclick: `playAudio(&quot;a/ajoqlue'j/recording3.mp3&quot;); event.preventDefault();` href="a/ajoqlue'j/recording3.mp3"}, 'PLAY']),
-        // // TODO add recording here
+        example.example_recording.map(r=>['div', {}, renderAudio(r.recording, `Recording by ${r.speaker}`)])
     ];
+}
+
+export function renderAudio(recording: string, label: string): any {
+    return (async ()=>{
+        try {
+            let audioUrl = '';
+            audioUrl = await audio.getCompressedRecordingPath(recording);  // REMOVE_FOR_WEB
+            return ['a',
+                    {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`, href: audioUrl},
+                    label]
+        } catch(ex) {
+            // DO better here TODO
+            return ['b', {}, 'Failed to load recording: ', ex];
+        }
+    })();
 }
 
 export function renderDocumentReferences(e: Entry, s: Subentry,

@@ -17,9 +17,10 @@ export async function getCompressedRecordingPath(audioPath: string): Promise<str
     // XXX todo add safe check of audioPath (must be relative, no .., also
     //     for this APIs peers.
     // XXX may insist in in content/ or derived/
-    return content.getDerived(`derived/compressed-audio`,
-                              {compressAudioCmd},
-                              ['compressAudioCmd', audioPath], 'mp3');
+    return 'derived/'+
+        await content.getDerived(`derived/compressed-audio`,
+                                 {compressAudioCmd},
+                                 ['compressAudioCmd', audioPath], 'mp3');
 }
 
 /**
@@ -27,7 +28,7 @@ export async function getCompressedRecordingPath(audioPath: string): Promise<str
  */
 async function compressAudioCmd(targetAudioPath: string, sourceAudioPath: string) {
     if(!await fileExists(sourceAudioPath))
-        throw new Error(`expected source audio ${sourceImagePath} to exist`);
+        throw new Error(`expected source audio ${sourceAudioPath} to exist`);
 
     const { code, stdout, stderr } = await new Deno.Command(
         config.lameEncPath, {

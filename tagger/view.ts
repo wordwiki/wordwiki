@@ -672,11 +672,13 @@ export class ActiveViews {
         // NEXT populate assertion better!
         // CReating the assertion is a job for the global workspace.
         // USING TUPLE FOR THIS - this needs to factor
-        const mostRecentTupleVersion = refTuple.mostRecentTuple;
+        const mostRecentTupleVersion = refTuple.mostRecentTuple
+            ?? panic('unexpected missing source tuple');
         const new_assertion: Assertion = Object.assign(
             {},
-            (mostRecentTupleVersion ?? panic('unexpected missing source tuple')).assertion,
-            {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
+            mostRecentTupleVersion.assertion,
+            {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+             replaces_assertion_id: mostRecentTupleVersion.assertion_id });
 
         this.openFieldEdit(renderRootId, 'replaceSelf', undefined, refDbTag, refTupleTag, refTupleId,
                            new_assertion);
@@ -759,6 +761,7 @@ export class ActiveViews {
             {},
             refTuple.currentAssertion,
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+             replaces_assertion_id: refTuple?.currentAssertion?.assertion_id,
              valid_from: this.nextTime(),
              valid_to: this.nextTime(),
             }
@@ -804,6 +807,7 @@ export class ActiveViews {
             {},
             refTuple.currentAssertion,
             {assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+             replaces_assertion_id: refTuple?.currentAssertion?.assertion_id,
              valid_from: this.nextTime(),
              valid_to: timestamp.END_OF_TIME,
              order_key: updatedOrderKey

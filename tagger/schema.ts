@@ -700,7 +700,8 @@ assertDmlContainsAllFields(createChangeLogDml, changeLogFieldNames);
  */
 export interface Assertion {
     assertion_id: number;
-
+    replaces_assertion_id?: number;
+    
     /**
      * The timestamp at which this assertion was made.
      *
@@ -973,6 +974,7 @@ export function getAssertionIdN(a: Assertion, n: number): number|undefined {
 export type AssertionPartial = Partial<Assertion>;
 export const assertionFieldNames: Array<keyof Assertion> = [
     "assertion_id",
+    "replaces_assertion_id",
 
     "valid_from", "valid_to",
     "published_from", "published_to",
@@ -1002,6 +1004,8 @@ export const assertionFieldNames: Array<keyof Assertion> = [
 const createAssertionDml = (tableName:string)=>block`
 /**/   CREATE TABLE IF NOT EXISTS ${tableName}(
 /**/       assertion_id INTEGER PRIMARY KEY ASC,
+/**/
+/**/       replaces_assertion_id INTEGER,
 /**/
 /**/       valid_from INTEGER NOT NULL,
 /**/       valid_to INTEGER NOT NULL,
