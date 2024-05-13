@@ -580,7 +580,95 @@ export class WordWiki {
         
         return templates.pageTemplate({title, body});
     }
+
+    // entriesByStatusDirectory(): any {
+    //     const title = `Entries By Status`;
+
+    //     const cats: [string, number][] = Array.from(Map.groupBy(this.entriesJSON.
+    //         flatMap(e=>
+    //             e.status.flatMap(s=>s.status))), e=>e)
+    //             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
+                        
+        
+    //     const body = [
+    //         ['h1', {}, title],
+    //         ['ul', {},
+    //          cats.map(cat=>
+    //              ['li', {}, ['a',
+    //                          {href:`/wordwiki.entriesForStatus(${JSON.stringify(cat[0])})`},
+    //                          cat[0], ` (${cat[1]} entries)`]]),
+    //         ]
+    //     ];
+
+    //     return templates.pageTemplate({title, body});
+    // }
+
+    entriesForStatus(status?: string): any {
+        status = String(status ?? '');
+
+        const entriesForStatus = status === '' ? [] :
+            this.entriesJSON.filter(
+                entry=>entry.status.some(
+                    s=>s.status === status));
+        const title = ['Entries for status ', status];
+        
+        function renderEntryItem(e: entry.Entry): any {
+            return [
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+            ];
+        }
+        
+        const body = [
+            ['h2', {}, title],
+
+            // --- Add new entry button
+            ['div', {},
+             ['ul', {},
+              entriesForStatus
+                  .map(e=>['li', {}, renderEntryItem(e)]),
+             ] // ul
+            ] // div
+        ];
+        
+        return templates.pageTemplate({title, body});
+    }
+
+
+    emptyBoundingBoxes(): any {
+        
+    }
     
+    entriesWithProblem(): any {
+        const title = `Entries With empty example translation`;
+
+        const entriesWithProblem = 
+            this.entriesJSON.filter(
+                entry=>entry.subentry.some(
+                    subentry=>subentry.example.some(
+                        example=>example.example_translation.some(
+                            example_translation=>example_translation.example_translation === ''))));
+        
+        function renderEntryItem(e: entry.Entry): any {
+            return [
+                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+            ];
+        }
+        
+        const body = [
+            ['h2', {}, title],
+
+            // --- Add new entry button
+            ['div', {},
+             ['ul', {},
+              entriesWithProblem
+                  .map(e=>['li', {}, renderEntryItem(e)]),
+             ] // ul
+            ] // div
+        ];
+        
+        return templates.pageTemplate({title, body});
+    }
+
         
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;
@@ -600,7 +688,8 @@ export class WordWiki {
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
 /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
 /**/       WHERE ref.ty = 'ref' AND
-/**/             bg.document_id = :document_id
+/**/             bg.document_id = :document_id AND
+/**/             bb.page_id IS NOT NULL
 /**/       GROUP BY pg.page_number`, {document_id: pdmDocumentId});
         console.timeEnd('entryCountByPage');
 
@@ -644,7 +733,8 @@ export class WordWiki {
 /**/       FROM dict AS ref
 /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
-/**/       WHERE ref.ty = 'ref' AND
+/**/       WHERE ref.valid_to = 9007199254740991 AND 
+/**/             ref.ty = 'ref' AND
 /**/             bb.page_id = :page_id
 /**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id: pdmPageId});
 
@@ -663,7 +753,7 @@ export class WordWiki {
 // /**/       ORDER BY pg.page_number, bb.y, bb.x, ref.id1`, {document_id: pdmDocumentId});
         console.timeEnd('entriesInDocRefOrder');
 
-        console.info('entriesInDocRefOrder', entriesInDocRefOrder);
+        console.info('entriesForPageInDocRefOrder', entriesInDocRefOrder);
 
         const entriesById = new Map(this.entriesJSON.map(entry=>[entry.entry_id, entry]));
 

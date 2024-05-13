@@ -380,8 +380,16 @@ export const dictSchemaJson = {
 export interface Entry {
     entry_id: number,
     spelling: Spelling[],
+    status: Status[],
     subentry: Subentry[],
     recording: Recording[],
+}
+
+export interface Status {
+    status_id: number,
+    status: string,
+    details: string,
+    variant: string,
 }
 
 export interface Spelling {
