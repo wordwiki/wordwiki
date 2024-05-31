@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as pageEditorModule from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import { selectLayer, selectLayerByLayerName } from "./schema.ts";
@@ -64,9 +65,9 @@ export function renderPageEditorByPageId(page_id: number,
     const page = selectScannedPage().required({page_id});
     const document_id = page.document_id;
     const document = selectScannedDocument().required({document_id});
-    
+
     const title = cfg.title || document.title;
-    
+
     const total_pages_in_document = cfg.total_pages_in_document
         ?? maxPageNumberForDocument().required({document_id: page.document_id}).max_page_number;
 
@@ -75,7 +76,7 @@ export function renderPageEditorByPageId(page_id: number,
     // --- Render user blocks
     const boxes = boxesForPageLayer().all({page_id, layer_id: cfg.layer_id});
     const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
-    const blocksSvg = 
+    const blocksSvg =
         [...boxesByGroup.entries()].
         map(([groupId, boxes])=>renderGroup(page, groupId, boxes));
 
@@ -85,12 +86,12 @@ export function renderPageEditorByPageId(page_id: number,
         (cfg.locked_bounding_group_id && !boxesByGroup.has(cfg.locked_bounding_group_id))
         ? [renderEmptyGroup(page, cfg.locked_bounding_group_id)]
         : undefined;
-    
+
     // --- We don't render reference boxes that have been imported to user
     //     boxes that are still active on the page.
     const importedFromBoundingBoxIds =
         new Set(boxes.map(b=>b.imported_from_bounding_box_id).filter(b=>b!==null));
-    
+
     // --- Render reference layers
     let refBlocksSvg:any = cfg.reference_layer_ids.flatMap(layer_id=> {
         const refBoxes = boxesForPageLayer().all({page_id, layer_id})
@@ -101,7 +102,7 @@ export function renderPageEditorByPageId(page_id: number,
                 page, groupId, boxes, true,
                 new Set(cfg.highlight_ref_bounding_box_ids??[])));
     });
-    
+
     const head = [
         ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],        ['script', {src:'/scripts/tagger/page-editor.js'}],
     ];
@@ -124,11 +125,11 @@ export function renderPageEditorByPageId(page_id: number,
         //  ['li', {}, 'title: ', cfg.title],
         //  ['li', {}, 'is_popup_editor: ', cfg.is_popup_editor],
         //  ['li', {}, 'locked_bounding_group_id: ', cfg.locked_bounding_group_id]],
-        
+
         cfg.reference_layer_ids.length === 1
             ? renderTextSearchForm(cfg.reference_layer_ids[0], cfg)
             : [],
-        
+
         ['div', {id: 'annotatedPage'},
          //['img', {src:pageImageUrl, width:page.width, height:page.height}],
          ['svg', {id: 'scanned-page',
@@ -152,20 +153,20 @@ export function renderPageEditorByPageId(page_id: number,
           refBlocksSvg,
           blocksSvg,
           emptyLockedGroupSvg]],
-          
+
         Array.from(boxesByGroup.keys()).map(bounding_group_id =>
             ['p', {},
              renderStandaloneGroup(bounding_group_id)]
                                            ),
             //config.bootstrapScriptTag,
-          
+
     ]; // body
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
     return templates.pageTemplate({title, head, body});
 }
 
-    
+
 //     return (
 //         ['html', {},
 //          ['head', {},
@@ -175,12 +176,12 @@ export function renderPageEditorByPageId(page_id: number,
 //           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
 //           //['script', {src:'/resources/page-editor.js'}]],
 //           ['script', {src:'/scripts/tagger/page-editor.js'}],
-          
+
 //           ['script', {}, block`
 //  /**/           let imports = {};
 //  /**/           let activeViews = undefined`],
 //           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
-          
+
 //  //          ['script', {type: 'module'}, block`
 //  // /**/           import * as workspace from '/scripts/tagger/workspace.js';
 //  // /**/           import * as view from '/scripts/tagger/view.js';
@@ -205,13 +206,13 @@ export function renderPageEditorByPageId(page_id: number,
 // /**/        addEventListener("DOMContentLoaded", event => onContentLoaded());
 // /**/        `
 // /**/     ],
-         
+
 //          ['body', {},
 
 //           ['div', {},
 //            ['h1', {}, 'PDM Textract preview page', page.page_number],
 //            renderPageJumper(page.page_number, total_pages_in_document)],
-          
+
 //           ['div', {id: 'annotatedPage'},
 //            //['img', {src:pageImageUrl, width:page.width, height:page.height}],
 //            ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
@@ -227,14 +228,14 @@ export function renderPageEditorByPageId(page_id: number,
 //             refBlocksSvg,
 //             blocksSvg]],
 
-          
+
 //           Array.from(boxesByGroup.keys()).map(bounding_group_id =>
 //               ['p', {},
 //                renderStandaloneGroup(bounding_group_id)]
 //               ),
-          
+
 //           config.bootstrapScriptTag,
-          
+
 //          ] // body,
 
 //         ] // html
@@ -313,7 +314,7 @@ export function renderPageJumper(cfg: PageEditorConfig, document_id: number, cur
          total_pages]))
         .filter(p=>p>=1 && p<=total_pages)
         .toSorted((a, b) => a - b);
-    
+
     return [
         ['div', {}, 'Pages: ',
          targetPageNumbers.map(n=>
@@ -349,7 +350,7 @@ export function newBoundingBoxInNewGroup(page_id: number, layer_id: number,
         const layer = selectLayer().required({layer_id});
         utils.assert(page.document_id === layer.document_id);
         const document_id = page.document_id;
-        
+
         const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
             'bounding_group', {
                 document_id,
@@ -391,7 +392,7 @@ export function copyRefBoxToNewGroup(ref_box_id: number, layer_id: number, color
 
         if(typeof ref_box_id !== 'number')
             throw new Error('invalid ref_box_id parameter in call to copyRefToNewGroup');
-        
+
         const refBox = selectBoundingBox().required({bounding_box_id: ref_box_id});
 
         const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
@@ -400,7 +401,7 @@ export function copyRefBoxToNewGroup(ref_box_id: number, layer_id: number, color
                 layer_id,
                 color,
             }, 'bounding_group_id');
-        
+
         const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
             'bounding_box', {
                 imported_from_bounding_box_id: refBox.bounding_box_id,
@@ -469,7 +470,7 @@ export function removeBoxFromGroup(bounding_box_id: number) {
 
         // Consider removing empty groups as well (but need to figure out how
         // our binding onto dict stuff works first).
-        
+
         db().execute('DELETE FROM bounding_box WHERE bounding_box_id=:bounding_box_id',
                      {bounding_box_id});
     });
@@ -479,7 +480,7 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
     return db().transaction(()=>{
 
         // TODO add more paranoia here.
-        
+
         updateBoundingBox(bounding_box_id, ['bounding_group_id'], {bounding_group_id});
 
         return {};
@@ -512,7 +513,7 @@ export function singleBoundingGroupEditorURL(bounding_group_id: number, title: s
         locked_bounding_group_id: bounding_group_id,
     };
     return `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
-    
+
 }
 
 // --------------------------------------------------------------------------------
@@ -526,7 +527,7 @@ export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
         ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
-         
+
          ['div', {class:'col-12'},
           ['label', {class:'visually-hidden', for:'searchText'}, 'Search'],
           ['div', {class: 'input-group'},
@@ -536,7 +537,7 @@ export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
 
          ['div', {class:'col-12'},
           ['button', {type:'submit', class:'btn btn-primary'}, 'Search']],
-         
+
         ] // form
     ];
 }
@@ -561,7 +562,7 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
     searchText = searchText ?? '';
 
     console.info('CFG', JSON.stringify(cfg, undefined, 2));
-    
+
     const layer = schema.selectLayer().required({layer_id});
     const document = schema.selectScannedDocument().required(
         {document_id: layer.document_id});
@@ -574,16 +575,16 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
             {},
             cfg,
             {highlight_ref_bounding_box_ids: [bounding_box_id]});
-        
+
         const href=`/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
         return [
             ['li', {},
-             ['a', {href}, 
+             ['a', {href},
               text, ['br', {}],
               renderStandaloneBoxes([
                   selectBoundingBox().required({bounding_box_id})])]]];
     }
-    
+
     let renderedResults: any = undefined;
     if(searchText.length < 2) {
         renderedResults = ['p', {}, 'Search string must be at least 2 characters long'];
@@ -608,7 +609,7 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
         renderTextSearchForm(layer_id, cfg, searchText??''),
         renderedResults,
     ];
-        
+
     return templates.pageTemplate({title, head, body});
 }
 
@@ -693,13 +694,13 @@ export function renderStandaloneGroup(bounding_group_id: number,
         y += s[1].height + margin;
         groupSvgs.push(s);
     }
-    
+
     return ['svg', {width:maxWidth, height:totalHeight,
                     viewBox: `0 0 ${maxWidth} ${totalHeight}`
                    },
             groupSvgs,
            ]; // svg
-    
+
     throw new Error();
 }
 
@@ -714,7 +715,7 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
     if(boxes.length === 0) {
         return renderWarningMessageAsSvg('Empty Group');
     }
-    
+
     // --- This is handled at the 'renderStandaloneGroup' level
     const page_id = boxes[0].page_id;
     boxes.forEach(b=>b.page_id === page_id
@@ -739,7 +740,7 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
          ['rect', {class:"group-frame", x:groupX, y:groupY,
                    width:groupRight-groupX,
                    height:groupBottom-groupY}],
-         
+
          boxes.map(box=>
              ['svg', {class:`box`, x:box.x-groupX, y:box.y-groupY, width:box.w, height:box.h, id: `bb_${box.bounding_box_id}`},
               ['rect', {class:"frame", x:0, y:0, width:'100%', height:'100%'}]
@@ -748,7 +749,7 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
 
     const image = renderTiledImage(page.image_ref, page.width, page.height,
         -groupX, -groupY, groupWidth, groupHeight);
-    
+
     return ['svg', {width:groupWidth/scale_factor, height:groupHeight/scale_factor,
                     viewBox: `0 0 ${groupWidth} ${groupHeight}`,
                     'data-page-id': page_id,
@@ -769,11 +770,11 @@ export async function renderTiledImage(srcImagePath: string,
                                        x: number, y: number, w: number, h: number,
                                        maxTileWidth=config.defaultTileWidth,
                                        maxTileHeight=config.defaultTileHeight): Promise<any> {
-    
+
     const tilesPath = await derivedPageImages.getTilesForImage(srcImagePath, maxTileWidth, maxTileHeight);
     const srcImageWidthInTiles = Math.ceil(srcImageWidth / maxTileWidth);
     const srcImageHeightInTiles = Math.ceil(srcImageHeight / maxTileHeight);
-    
+
     const tiles = [];
     for(let yidx=0; yidx<srcImageHeightInTiles; yidx++) {
         for(let xidx=0; xidx<srcImageWidthInTiles; xidx++) {
@@ -819,7 +820,7 @@ function intersect(a: Rect, b: Rect): boolean {
         a.top <= b.bottom &&
         b.top <= a.bottom)
 }
-    
+
 export async function renderTiledImageOff(srcImagePath: string,
                                        srcImageWidth: number, srcImageHeight: number,
                                        x: number, y: number, w: number, h: number,
@@ -837,7 +838,7 @@ function sampleTextSearch(search: string, layer_id: number = 5) {
     // Want document id in here as well.
     const results = db().all<any, {search:string, layer_id: number}>(`SELECT * FROM bounding_box_fts WHERE text MATCH :search AND layer_id = :layer_id ORDER BY rank`, {search, layer_id});
     console.info(JSON.stringify(results, undefined, 2));
-    
+
 }
 
 // ---------------------------------------------------------------------------------

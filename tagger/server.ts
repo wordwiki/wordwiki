@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as server from '../utils/http-server.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
 import {friendlyRenderPageEditor} from './render-page-editor.ts';
@@ -43,7 +44,7 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
         const book = Book;
         if(typeof PageNumber !== 'string') throw new Error('missing page number');
         const page_number = parseInt(PageNumber);
-        
+
         const body = await friendlyRenderPageEditor(book, page_number);
         const html = renderToStringViaLinkeDOM(body);
         return Promise.resolve({status: 200, headers: {}, body: html});
@@ -103,7 +104,7 @@ export async function taggerRpcHandler(jsExprSrc: string,
     // this mech is part of our deno server stuff.
     // have shortcuts for returning other things:
 
-    //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+    //return Promise.resolve({status: 200, headers: {}, body: 'not found'});
 }
 
 
@@ -132,7 +133,7 @@ class Facade {
 
 class DbRecordFacade<T> extends Facade {
     #record: T|undefined;
-    
+
     constructor(public id: number, record: T|undefined) {
         super();
         this.#record = record;
@@ -158,7 +159,7 @@ class ScannedPageFacade extends DbRecordFacade<ScannedPage> {
 
 export async function taggerServer(port: number = 9000, hostname: string = 'localhost') {
     console.info('Starting tagger server');
-    
+
     const contentdirs = {
         '/resources/': await findResourceDir('resources')+'/',
         '/scripts/': await findResourceDir('web-build')+'/',
@@ -217,7 +218,7 @@ function sqlPlay() {
     db().execute<{}>(`UPDATE bounding_box SET x=7 WHERE bounding_box_id = 39969`, {});
     console.info('B');
     //db().execute<{}>(`UPDATE TABLE bounding_box SET x, y, w, h = (1,2,3,4) WHERE bounding_box_id = 39969`, {});
-    
+
 }
 
 if (import.meta.main) {

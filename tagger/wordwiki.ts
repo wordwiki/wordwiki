@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as markup from '../utils/markup.ts';
 import * as model from './model.ts';
 import * as renderPageEditor from './render-page-editor.ts';
@@ -48,7 +49,7 @@ export class WordWiki {
      */
     constructor(config: WordWikiConfig) {
         this.config = config;
-        
+
         // --- Load schema and create an empty workspace
         this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
         // --- Set up our routes
@@ -59,7 +60,7 @@ export class WordWiki {
             schema.routes(),
             workspace.routes(),
             view.routes(),
-        );        
+        );
     }
 
     get lastAllocatedTxTimestamp() {
@@ -78,7 +79,7 @@ export class WordWiki {
 
     get workspace() {
         return this.#workspace ??= (()=>{
-            
+
             // --- Create workspace
             const workspace = new VersionedDb([this.dictSchema]);
 
@@ -127,7 +128,7 @@ export class WordWiki {
             throw e;
         }
     }
-    
+
     /**
      * This should probaly move to workspace.
      *
@@ -136,11 +137,11 @@ export class WordWiki {
 
         console.info('Applying TX',
                      JSON.stringify(assertions, undefined, 2));
-        
+
         // --- Allocate a new server timestamp for this tx
         //     TODO we may want to allocate multiple here to give client new base.
         const serverTimestamp = this.allocTxTimestamps(1);
-        
+
         // --- No assertions can be trivially applied (we check this
         //     because our consistency checks can't handle this case)
         if(assertions.length === 0)
@@ -158,7 +159,7 @@ export class WordWiki {
         //    just break it down into multiple Txes and apply them separately.
         //  - this is probably fine for now (we can wrap the whole outer thing in a DB tx
         //    to ...)
-        
+
         const clientTimestamp = assertions[0].valid_from;
         assertions.forEach(a=>{
             if(a.valid_from !== clientTimestamp)
@@ -166,7 +167,7 @@ export class WordWiki {
             if(!(a.valid_to === timestamp.END_OF_TIME || a.valid_to === clientTimestamp))
                 throw new Error(`Assertions can either be valid to the tx time (a delete tombstone) or valid till the end of time`);
         });
-        
+
         try {
             // --- Rewrite client timestamps to our newly allocated server timestamp
             assertions.forEach(a=>{
@@ -179,13 +180,13 @@ export class WordWiki {
             console.info('Applying TX after advancing to server timestamp',
                          serverTimestamp,
                          JSON.stringify(assertions, undefined, 2));
-            
+
             // --- Apply assertions to workspace (throwing exception if incompatible)
             // TODO swith to an apply method that gives us enough info to update the valid_to
             //      on the prev record.
             const updatedPrevAssertions =
                 assertions.map(a=>this.workspace.applyProposedAssertion(a));
-            
+
             // --- Apply assertions to DB (in a TX) doing some confirmation as we go.
             db().transaction(()=>{
                 // Trick here is that we need prev txids - workspace can give us those.
@@ -218,8 +219,8 @@ export class WordWiki {
             'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
             'seagreen', 'steelblue', /*'dodgerblue',*/ 'peru', /*'tan',*/ 'rebeccapurple'];
 
-        
-        // --- Create new layer in the specified document id.  
+
+        // --- Create new layer in the specified document id.
         const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
         const document_id = document.document_id;
         const layer_id = schema.getOrCreateNamedLayer(document.document_id, 'Tagging', 0);
@@ -259,7 +260,7 @@ export class WordWiki {
             });
 
         console.info('applying assertion', JSON.stringify(newAssertion, undefined, 2));
-        
+
         this.applyTransaction([newAssertion]);
 
         const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
@@ -280,7 +281,7 @@ export class WordWiki {
             locked_bounding_group_id: bounding_group_id,
         };
         const taggerUrl = `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
-        
+
         // --- Redirect the browser to the image tagger on this layer.
         return {location: taggerUrl};
     }
@@ -296,7 +297,7 @@ export class WordWiki {
 
         // This is wrong - but it is overridden
         const tx_time = timestamp.nextTime(timestamp.BEGINNING_OF_TIME);
-        
+
         const entry_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         // TODO more thinking about order_key here
         const order_key = orderkey.new_range_start_string;
@@ -329,9 +330,9 @@ export class WordWiki {
 
         const assertions = [
             newEntryAssertion, newSubEntryAssertion];
-        
+
         console.info('applying assertions', JSON.stringify(assertions, undefined, 2));
-        
+
         this.applyTransactions(assertions);
         console.info('created new assertion with id', entry_id);
 
@@ -339,7 +340,7 @@ export class WordWiki {
         return {location: `/wordwiki.entry(${entry_id})`};
     }
 
-    
+
     entry(entryId: number): any {
 
         const e = this.entriesJSON
@@ -370,10 +371,10 @@ export class WordWiki {
             ['br', {}],
             ['h3', {}, 'Reports'],
             ['ul', {},
-             ['li', {}, ['a', {href:'/wordwiki.categoriesDirectory()'}, 'Entries by Category']],             
+             ['li', {}, ['a', {href:'/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
              ['li', {}, ['a', {href:'/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
             ],
-            
+
             ['br', {}],
             ['h3', {}, 'Reference Books'],
             ['ul', {},
@@ -405,8 +406,8 @@ export class WordWiki {
             ], // form
         ];
     }
-        
-    
+
+
     searchPage(query?: {searchText?: string}): any {
 
         //console.info('ENTRIES', this.entriesJSON);
@@ -423,7 +424,7 @@ export class WordWiki {
         });
         console.info('got filters', filters, 'reduced search is', search);
 
-        
+
         // replace ' '* with .*\w
         //const searchRegexSrc = `\\b${search.replaceAll(/ /g, ' .*\\b')}`;
         const searchRegexSrc =
@@ -455,11 +456,11 @@ export class WordWiki {
 
         // if(filters.length > 0) {
         //     for(const entry of matches) {
-                
+
         //     }
         // }
 
-        
+
         // const entriesWithHouseGloss = search === '' ? [] :
         //     this.entriesJSON.filter(
         //         entry=>entry.subentry.some(
@@ -469,7 +470,7 @@ export class WordWiki {
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
         const title = ['Query for ', search];
-        
+
         function renderEntryItem_OFF(e: entry.Entry): any {
             return [
                 ['span', {onclick: `imports.popupEntryEditor('Edit Entry', ${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
@@ -481,7 +482,7 @@ export class WordWiki {
                 ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
-        
+
         const body = [
             ['h2', {}, title],
 
@@ -496,7 +497,7 @@ export class WordWiki {
              matches.slice(0, 500).map(e=>['li', {}, renderEntryItem(e)]),
             ]
         ];
-        
+
         return templates.pageTemplate({title, body});
     }
 
@@ -519,8 +520,8 @@ export class WordWiki {
             ], // form
         ];
     }
-        
-    
+
+
     searchDocumentsPage(query?: {searchText?: string}): any {
         throw new Error('not impl yetc');
     }
@@ -535,8 +536,8 @@ export class WordWiki {
                         c.category))), e=>e)
             .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
-                        
-        
+
+
         const body = [
             ['h1', {}, title],
             ['ul', {},
@@ -559,13 +560,13 @@ export class WordWiki {
                     subentry=>subentry.category.some(
                         cat=>cat.category === category)));
         const title = ['Entries for category ', category];
-        
+
         function renderEntryItem(e: entry.Entry): any {
             return [
                 ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
-        
+
         const body = [
             ['h2', {}, title],
 
@@ -577,7 +578,7 @@ export class WordWiki {
              ] // ul
             ] // div
         ];
-        
+
         return templates.pageTemplate({title, body});
     }
 
@@ -588,8 +589,8 @@ export class WordWiki {
     //         flatMap(e=>
     //             e.status.flatMap(s=>s.status))), e=>e)
     //             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
-                        
-        
+
+
     //     const body = [
     //         ['h1', {}, title],
     //         ['ul', {},
@@ -611,13 +612,13 @@ export class WordWiki {
                 entry=>entry.status.some(
                     s=>s.status === status));
         const title = ['Entries for status ', status];
-        
+
         function renderEntryItem(e: entry.Entry): any {
             return [
                 ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
-        
+
         const body = [
             ['h2', {}, title],
 
@@ -629,31 +630,31 @@ export class WordWiki {
              ] // ul
             ] // div
         ];
-        
+
         return templates.pageTemplate({title, body});
     }
 
 
     emptyBoundingBoxes(): any {
-        
+
     }
-    
+
     entriesWithProblem(): any {
         const title = `Entries With empty example translation`;
 
-        const entriesWithProblem = 
+        const entriesWithProblem =
             this.entriesJSON.filter(
                 entry=>entry.subentry.some(
                     subentry=>subentry.example.some(
                         example=>example.example_translation.some(
                             example_translation=>example_translation.example_translation === ''))));
-        
+
         function renderEntryItem(e: entry.Entry): any {
             return [
                 ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
-        
+
         const body = [
             ['h2', {}, title],
 
@@ -665,11 +666,11 @@ export class WordWiki {
              ] // ul
             ] // div
         ];
-        
+
         return templates.pageTemplate({title, body});
     }
 
-        
+
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;
 
@@ -694,7 +695,7 @@ export class WordWiki {
         console.timeEnd('entryCountByPage');
 
         console.info('entryCountByPage', entryCountByPage);
-        
+
         const body = [
             ['h1', {}, title],
             ['ul', {},
@@ -708,10 +709,10 @@ export class WordWiki {
 
         return templates.pageTemplate({title, body});
     }
-    
+
     entriesByPDMPage(page_number: number): any {
         typeof page_number === 'number' || panic('expected page number');
-        
+
         const title = `Entries for PDM Page ${page_number}`;
 
         const pdmDocumentId =
@@ -722,7 +723,7 @@ export class WordWiki {
         const pdmPageId =
             selectScannedPageByPageNumber()
                 .required({document_id: pdmDocumentId, page_number}).page_id;
-        
+
         console.time('entriesInDocRefOrder');
         // TODO XXX the page_number returned here is pointless now that this
         //          is locked to a single page.
@@ -733,7 +734,7 @@ export class WordWiki {
 /**/       FROM dict AS ref
 /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
-/**/       WHERE ref.valid_to = 9007199254740991 AND 
+/**/       WHERE ref.valid_to = 9007199254740991 AND
 /**/             ref.ty = 'ref' AND
 /**/             bb.page_id = :page_id
 /**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id: pdmPageId});
@@ -775,7 +776,7 @@ export class WordWiki {
                  ]]
             ];
         }
-        
+
         const body = [
             ['h1', {}, title],
             entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)])
@@ -783,13 +784,13 @@ export class WordWiki {
 
         return templates.pageTemplate({title, body});
     }
-    
+
     /**
      *
      */
     async startServer() {
         console.info('Starting wordwiki server');
-        
+
         const contentdirs = {
             '/resources/': await findResourceDir('resources')+'/',
             '/scripts/': await findResourceDir('web-build')+'/',
@@ -911,7 +912,7 @@ export class WordWiki {
         // this mech is part of our deno server stuff.
         // have shortcuts for returning other things:
 
-        //return Promise.resolve({status: 200, headers: {}, body: 'not found'});        
+        //return Promise.resolve({status: 200, headers: {}, body: 'not found'});
     }
 }
 

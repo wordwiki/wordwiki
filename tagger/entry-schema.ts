@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-unused-vars
+
 //import { DB, PreparedQuery, QueryParameter, QueryParameterSet } from "https://deno.land/x/sqlite/mod.ts";
 //import { DbSystem, Db, PreparedQuery } from "./db.ts";
 //import {startRpcDbServer} from './rpc-db.ts';
@@ -43,7 +45,7 @@ export const RefNoteTag = 'rnt';
 export const SourceTag = 'src';
 export const RecordingTag = 'rec';
 
-// XXX HACK HACK 
+// XXX HACK HACK
 export const users = {
     '___': 'No User Selected',
     'ecm': 'Emma Metallic',
@@ -184,7 +186,7 @@ export const dictSchemaJson = {
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
-                $style: { $shape: 'valueList' },                
+                $style: { $shape: 'valueList' },
             },
             example: {
                 $type: 'relation',
@@ -225,7 +227,7 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'},
                     $style: { $shape: 'titledValue' },
                 },
-                
+
                 // Recordings of example sentence need to be pulled out of the
                 // varianted examples because often is just spelling difference, or
                 // is good enough.
@@ -580,7 +582,7 @@ function contextMenuPlay(): any {
  */
 export function renderEntry(e: Entry): any {
     const editSpellings = `imports.popupEntryEditor('Edit Spellings', ${e.entry_id}, 'ent', ${e.entry_id}, 'spl')`;
-    const editEntry = `imports.popupEntryEditor('Edit Entry', ${e.entry_id}, 'ent', ${e.entry_id})`;    
+    const editEntry = `imports.popupEntryEditor('Edit Entry', ${e.entry_id}, 'ent', ${e.entry_id})`;
     return [
         //contextMenuPlay(),
         ['h1', {class: 'editable', onclick: editEntry}, renderEntrySpellings(e, e.spelling)],
@@ -609,7 +611,7 @@ export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
 }
 
 export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
-    const editSubentries = `imports.popupEntryEditor('Edit Subentries', ${e.entry_id}, 'ent', ${e.entry_id}, 'sub')`;        
+    const editSubentries = `imports.popupEntryEditor('Edit Subentries', ${e.entry_id}, 'ent', ${e.entry_id}, 'sub')`;
     switch(subentries.length) {
         case 0:
             return ['p', {class: 'editable', onclick: editSubentries}, 'No entries'];
@@ -622,7 +624,7 @@ export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
 
 export function renderSubentries(e: Entry, s: Subentry[]): any {
     return [
-        ['ul', {}, 
+        ['ul', {},
          s.map((s, idx)=>['li', {}, [
              ['h3', {}, `Subentry ${idx+1}`], renderSubentry(e, s)]])]];
 }
@@ -631,7 +633,7 @@ export function renderSubentry(e: Entry, s: Subentry): any {
     console.info('SUBENTRY', JSON.stringify(s, undefined, 2))
     console.info('PRON', JSON.stringify(s.pronunciation_guide, undefined, 2));
     //                                    pronunciation_guide
-                                          
+
     console.info('cat', Object.entries(s));
     return [
         // renderSource(e, s, s.source),
@@ -672,9 +674,9 @@ export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
 // export function renderCompactList(e: Entry,
 //                                   parentId: number,
 //                                   parentRelationTag: string,
-                                  
-                                  
-                                  
+
+
+
 
 
 

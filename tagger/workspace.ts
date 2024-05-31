@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
@@ -25,7 +26,7 @@ export type Tag = string;
 //   operation.   maybe add a nanoid to every fact.  Or pool of reserved ids for
 //   remote - but hard to do with partitioning (can use a rename pass instead?)
 
-// TODO 
+// TODO
 
 // Perhaps the versioned relation tree should be forced??
 
@@ -51,7 +52,7 @@ export type Tag = string;
   - don't want to use proxies
   - can take advantage of the relative immutability.
   - the shape below is wrong anyway for a multi-versioned tree.
-  - 
+  -
  */
 
 // Maybe variant is universal?  --- PROBABLY!  --- CAN JUST BURY EVERYWHERE THEN!
@@ -123,7 +124,7 @@ export class RemoteDb {
     constructor(versionedDb: VersionedDb) {
         this.versionedDb = versionedDb;
     }
-    
+
     // - does a larger RPC that:
     //  - pushed proposed assertions to server
     //  - with updates applied, runs the supplied (possibly nop) rpc
@@ -160,7 +161,7 @@ export class RemoteDb {
     // - also rpc collapsing (which also helps with data faulting)
     // - rpc collapsing could reduce our queue depth to max 1 pending.
 
-    // - having a queue depth of 1 
+    // - having a queue depth of 1
 
     // - rpc's can be db queries - somehow want to take rpc results and send
     //   the data only if we don't have it etc.
@@ -193,7 +194,7 @@ export class RemoteDb {
      *
      */
     async rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]): Promise<any> {
-        
+
         // --- Replace ${} in this tagged template expr with arg
         //     references, and hoist the args into an arg {}.
         let rpcExpr = rpcExprSegments[0];
@@ -226,7 +227,7 @@ export class RemoteDb {
         //     will be triggered when the in flight request returns.
         if(!this.requestInFlight)
             return;
-        
+
         // --- Take all changes to the workspace since our last request returned
         //     XXX NOTE: yes, this means that user changes can time travel ahead
         //     of RPCs.  This will do for now, but needs to be fixed.  We have
@@ -239,10 +240,10 @@ export class RemoteDb {
         //     (a nop RPC is used for our periodic sync requests)
         if(proposedAssertions.length === 0 && pendingRpcs.length === 0)
             return;
-            
+
         // The inflight stuff is broken here - how are we tracking the
         //  that we are in flight.
-        
+
         // --- Request object will have all proposed assertions, followed by all rpcs
         const requestArgs = {
             lastUpdateTimestamp: this.versionedDb.mostRecentSourceDbTimestamp,
@@ -387,9 +388,9 @@ export async function workspaceRpcAndSync(request: WorkspaceRpcAndSyncRequest): 
     (Array.isArray(request?.proposedAssertions) && Array.isArray(request?.rpcs))
         || panic('malformed worksplace rpc and sync request');
 
-    // --- 
+    // ---
 
-    
+
     // // --- Top level of root scope is active routes
     // const routes = allRoutes();
     // let rootScope = routes;
@@ -447,7 +448,7 @@ export class VersionedDb {
         //this.tables.forEach(t=>t.reset());
         throw new Error('not impl');
     }
-    
+
     addTable(schema: Schema): VersionedTable {
         if(this.tables.has(schema.tag))
             throw new Error(`attempting to add schema with duplicate tag ${schema.tag}`);
@@ -464,9 +465,9 @@ export class VersionedDb {
     // we cannot implement nextTime here because we don't neccisareily have the
     // whole db (incuding all tables) which particpate in one global time scheme.
     // nextTime(): number {
-    //     return timestamp.nextTime(this.mostRecentLocalTimestamp);        
+    //     return timestamp.nextTime(this.mostRecentLocalTimestamp);
     // }
-    
+
     applyProposedAssertion(assertion: Assertion): Assertion|undefined  {
         // This is a bit problemattic - we can insert mulitple assertions at the
         // same timestamp - but we are not doing that now so leave this XXX TODO
@@ -481,7 +482,7 @@ export class VersionedDb {
         this.proposedAssertions.push(assertion);
         return updatedPrevAssertion;
     }
-    
+
     takeProposedAssertions(): Assertion[] {
         try {
             return this.proposedAssertions;
@@ -493,13 +494,13 @@ export class VersionedDb {
     untrackedApplyAssertion(assertion: Assertion) {
         this.untrackedApplyAssertionByPath(getAssertionPath(assertion), assertion);
     }
-    
+
     untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion) {
         const versionedTuple = this.getVersionedTupleByPath(path);
         versionedTuple.untrackedApplyAssertion(assertion);
         this.mostRecentLocalTimestamp = assertion.valid_from;
     }
-    
+
     getTable(tag: string): VersionedTuple {
         return this.tables.get(tag) ?? panic('unable to find table', tag);
     }
@@ -511,7 +512,7 @@ export class VersionedDb {
     getVersionedTupleById(tableTag:string, typeTag:string, id:number): VersionedTuple|undefined {
         return this.tables.get(tableTag)?.getVersionedTupleById(typeTag, id);
     }
-    
+
     getVersionedTupleByPath(path: AssertionPath): VersionedTuple {
         //console.info('ROOT PATH is', path);
 
@@ -538,7 +539,7 @@ export class VersionedDb {
         utils.assert(parentRelation.schema.tag === parentRelationTag);
         return parentRelation;
     }
-    
+
     dump(): any {
         return [...this.tables.entries()].map(([tag, table])=>
             [tag, table.dump()]);
@@ -557,7 +558,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     //proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
     //#currentTuple: TupleVersion|undefined = undefined;
     //[name: string]: RelationField;
-    
+
     constructor(schema: RelationField, id: number) {
         this.schema = schema;
         this.childRelations = Object.fromEntries(
@@ -591,7 +592,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             throw new Error(`Missing required most recent tuple for ${this.schema.tag}.${this.id}`);
         return mostRecent;
     }
-    
+
     get current(): TupleVersion|undefined {
         //return this.#currentTuple;
         return this.mostRecentTuple;
@@ -601,7 +602,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         //return this.#currentTuple?.assertion;
         return this.current?.assertion;
     }
-    
+
     // untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
     //     const versionedTuple = this.getVersionedTupleByPath(path, index);
     //     versionedTuple.untrackedApplyAssertion(assertion);
@@ -623,7 +624,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
              versionedRelation.tuples.set(id, versionedTuple);
         }
         utils.assert(versionedTuple.schema.tag === ty);
-        
+
         if(index+1 === path.length)
             return versionedTuple;
         else
@@ -674,7 +675,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         });
         return nonDeletedChildTuples;
     }
-    
+
     untrackedApplyAssertion(assertion: Assertion) {
         const tuple = new TupleVersion(this, assertion);
         // TODO lots of validation here + index updating etc.
@@ -697,9 +698,9 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                 }
             }
         }
-        
+
         this.tupleVersions.push(tuple);
-        
+
         // if(tuple.isCurrent)
         //     this.#currentTuple = tuple;
     }
@@ -717,7 +718,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         //     is a tombstone).
         utils.assert(assertion.valid_to === timestamp.END_OF_TIME ||
             assertion.valid_to === assertion.valid_from);
-        
+
         if(prevTuple) {
             const prevAssertion = prevTuple.assertion;
 
@@ -727,9 +728,9 @@ export class VersionedTuple/*<T extends NodeT>*/ {
 
             if(assertion.replaces_assertion_id !== prevAssertion.assertion_id)
                 throw new Error(`FIX ERROR: replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(tuple.assertion)}`);
-            
+
             switch(true) {
-                    
+
                 case prevAssertion.valid_to === timestamp.END_OF_TIME: {
                     // --- We are replacing a tuple that was valid to the end of time,
                     //     this is a normal update - set the valid_to of the
@@ -739,12 +740,12 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                     if(!(assertAtTime > prevAssertion.valid_from)) {
                         throw new Error(`Attempt to assert a tuple in the past (3)`);
                     }
-                    
+
                     prevAssertion.valid_to = assertAtTime;
                     updatedPrevAssertion = prevAssertion;
                     break;
                 }
-                    
+
                 case prevAssertion.valid_to < assertAtTime: {
                     // --- Assertion we are replacing is deleted, so our new assertion
                     //     is starting a new valid period.
@@ -752,7 +753,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                     throw new Error(`no operations are currently supported on top of a deleted assertion - deleted assertion is ${JSON.stringify(prevAssertion, undefined, 2)}`);
                     break;
                 }
-                    
+
                 case prevAssertion.valid_to >= assertAtTime: {
                     // --- Tuple we are replacing has an end of life in our future
                     //     (and not the end of time), something is wrong.
@@ -764,7 +765,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                     //     (and not the end of time), something is wrong.
                     throw new Error(`Attempt to assert a tuple in the past (2)`);
                 }
-                    
+
                 default: {
                     // --- Tuple we are replacing
                     throw new Error(`unexpected tuple assertion ${JSON.stringify(assertion)} OVER ${JSON.stringify(prevAssertion)}`);
@@ -772,10 +773,10 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                 }
             }
         }
-                
+
         this.tupleVersions.push(tuple);
         console.info('applied proposed assertion', assertion);
-        
+
         // if(tuple.isCurrent)
         //     this.#currentTuple = tuple;
 
@@ -787,7 +788,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         // TODO MORE VALIDATION HERE.
         // TODO If already have same assertion as a proposed assertion,
         //      confirm they are the same and do minor touchups (time)
-        
+
         const tuple = new TupleVersion(this, assertion);
         const prevTuple = this.mostRecentTuple;
 
@@ -796,18 +797,18 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         // TODO tie into speculative mechanism.
 
         if(prevTuple) {
-            
+
         }
 
         this.tupleVersions.push(tuple);
         console.info('applied proposed assertion', assertion);
-        
+
         // if(tuple.isCurrent)
         //     this.#currentTuple = tuple;
     }
 
 
-    
+
     // forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
     //     f(this);
     //     super.forEachVersionedTuple(f);
@@ -879,7 +880,7 @@ export class VersionedRelation/*<T extends NodeT>*/ {
 export class TupleVersion {
     readonly relation: VersionedTuple;
     readonly assertion: Assertion;
-    
+
     #domainFields: Record<string,any>|undefined = undefined;
     #json: Record<string,any>|undefined = undefined;
     //#changeRegistrations
@@ -892,11 +893,11 @@ export class TupleVersion {
     get assertion_id(): number {
         return this.assertion.assertion_id;
     }
-    
+
     get isCurrent(): boolean {
         return this.assertion.valid_to === timestamp.END_OF_TIME;
     }
-    
+
     get domainFields(): Record<string,any> {
         // TODO: consider checking type of domain fields.
         // TODO: fix the 'as any' below
@@ -912,7 +913,7 @@ export class TupleVersion {
             ...this.domainFields,
         };
     }
-    
+
     dump(): any {
         const a = this.assertion;
         return {
@@ -944,7 +945,7 @@ export abstract class VersionedTupleQuery {
     readonly tupleVersions: TupleVersion[];
     readonly childRelations: Record<Tag,VersionedRelationQuery> = {};
     #json: Record<string,any>|undefined = undefined;
-    
+
     constructor(src: VersionedTuple) {
         this.src = src;
         this.schema = src.schema;
@@ -997,7 +998,7 @@ export abstract class VersionedTupleQuery {
             return json;
         })();
     }
-    
+
     dump(): any {
         return {
             //type: this.schema.name,
@@ -1014,11 +1015,11 @@ export abstract class VersionedTupleQuery {
  */
 export class CurrentTupleQuery extends VersionedTupleQuery {
     declare childRelations: Record<Tag, CurrentRelationQuery>;
-    
+
     constructor(src: VersionedTuple) {
         super(src);
     }
-    
+
     // Note: we will probably switch VersionTuple to have a ordered by
     //       recentness query, in which case we should remove the sort from here.
     computeTuples(): TupleVersion[] {
@@ -1041,7 +1042,7 @@ export abstract class VersionedRelationQuery {
     readonly src: VersionedRelation;
     readonly schema: RelationField;
     readonly tuples: Map<number,VersionedTupleQuery>;
-    
+
     constructor(src: VersionedRelation) {
         this.src = src;
         this.schema = src.schema;
@@ -1053,20 +1054,20 @@ export abstract class VersionedRelationQuery {
     toJSON(includeHistory: boolean = false): any {
         return Array.from(this.tuples.values()).map(t=>t.toJSON(includeHistory));
     }
-                               
+
     dump(): any {
         return Object.fromEntries([...this.tuples.entries()].map(([id, child])=>
             [id, child.dump()]));
     }
 }
-    
+
 /**
  *
  * TODO: hook up versioned parent.
  */
 export class CurrentRelationQuery extends VersionedRelationQuery {
     declare tuples: Map<number,CurrentTupleQuery>;
-    
+
     constructor(src: VersionedRelation) {
         super(src);
     }
@@ -1077,12 +1078,12 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
         //      src is a VersionedRelation
         // TODO need to know if current version of VersionedTuple is deleted -
         //      can tell because will have end date that is not end of time.
-        
+
         const currentTupleQuerys = [...this.src.tuples.entries()]
             .filter(([id,tup]: [number, VersionedTuple]) => tup.current?.isCurrent)
             .map(([id,tup]: [number, VersionedTuple]): [number, CurrentTupleQuery]=>
                 [id, new CurrentTupleQuery(tup)]);
-        
+
         const currentTupleQuerysByRecentness =
             currentTupleQuerys.toSorted(([aId, aTup]: [number, CurrentTupleQuery], [bId, bTup]: [number, CurrentTupleQuery]) => {
                 const aMostRecent = aTup.mostRecentTupleVersion;
@@ -1110,7 +1111,7 @@ export function currentTuplesForVersionedRelation(relation: VersionedRelation): 
 //     if(refIndex === 0)
 //         throw new Error('aldready ab begining'); // XXX
 //     const targetIndex = refIndex + offset;
-    
+
 //     const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
 //     const refTuple = orderedTuplesById.get(refTupleId);
 //     if(refTuple===undefined)
@@ -1186,9 +1187,9 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
 //  */
 // export class VersionedDatabaseWorkspace extends VersionedRelationContainer {
 //     declare schema: Schema;
-    
+
 //     //readonly factsById: Map<number, FactCollection> = new Map();
-    
+
 //     constructor(schema: Schema) {
 //         super(schema);
 //     }
@@ -1215,7 +1216,7 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
 //     //     return Object.values(this.childRelations).map(child=>({
 //     //         type: child.schema.name: child.dump()}));
 //     // }
-    
+
 // }
 
 
@@ -1223,7 +1224,7 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
  * 9:45 Wed haircut
  */
 // export function testRenderEntry(assertions: Assertion[]): any {
-    
+
 //     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
 
 //     console.info('Sample entry assertions', assertions);
@@ -1232,14 +1233,14 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
 //     const mmoDb = new VersionedDb([dictSchema]);
 //     assertions.forEach(a=>mmoDb.untrackedApplyAssertionByPath(getAssertionPath(a), a));
 //     //console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
-    
+
 //     // const mmoDb = new VersionedTuple/*<DictionaryNode>*/(dictSchema, 0);
 //     // assertions.forEach(a=>mmoDb.untrackedApplyAssertionByPath(getAssertionPath(a), a));
 //     // console.info('MMODB', JSON.stringify(mmoDb.dump(), undefined, 2));
 
 //     //const entries = mmoDb.childRelations['en'];
 //     //console.info('entries', entries);
-    
+
 //     // --- Navigate to definition
 //     // let definition = mmoDb.findRequiredVersionedTupleById(992);
 //     // console.info('definition', definition.dump());
@@ -1301,21 +1302,21 @@ function clientRenderTest(entry_id: number): any {
 /**/           });`
           ]
         ],
-        
+
          ['body', {},
-          
+
           ['div', {id: 'root'}, entry_id],
 
           ['button', {onclick:'imports.popupEntryEditor(1000)'}, 'GO DOG GO'],
 
 
-          
+
           view.renderModalEditorSkeleton(),
 
-          
+
           config.bootstrapScriptTag,
          ] // body
-         
+
         ]);
 
 }
@@ -1330,7 +1331,7 @@ function renderEntryListTest(): any {
           ['meta', {charset:"utf-8"}],
           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
           ['title', {}, 'Wordwiki'],
-          
+
           config.bootstrapCssLink,
 
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
@@ -1356,15 +1357,15 @@ function renderEntryListTest(): any {
 /**/           });`
           ]
         ],
-        
+
          ['body', {},
-          
+
           //['div', {id: 'root'}, entry_id],
 
           config.bootstrapScriptTag,
 
          ] // body
-         
+
         ]);
 
 }
@@ -1393,7 +1394,7 @@ function renderEntryListTest(): any {
 //     const rendered = testRenderEntry(assertions);
 
 //     root.innerHTML = renderToStringViaLinkeDOM(rendered);
-    
+
 // }
 
 export function getAssertionsForEntry(entry_id: number): any {
@@ -1454,9 +1455,9 @@ export function fullLoadTest() {
     const entriesRelation: VersionedRelation = dictionaryTuple.childRelations['ent'];
 
 
-    // THIS IS AN ABSOLUTELY HORRIBLE SEARCH - FACTOR TO MAKE NICE.  
+    // THIS IS AN ABSOLUTELY HORRIBLE SEARCH - FACTOR TO MAKE NICE.
 
-    
+
     // Entry tuples is Map<number,VersionedTuple>
     const entryTuples = entriesRelation.tuples;
     console.info(`tuple count ${entryTuples.size}`);
@@ -1481,8 +1482,8 @@ export function fullLoadTest() {
 
 
 
-    
-    
+
+
     /*
       - off a VersionedTuple,
       - re-api to make this nice, then maybe try for typing.
@@ -1506,12 +1507,12 @@ export function fullLoadTest() {
       - this identity chucked for a tree when any sub changes thing can allow for
       efficient caching as well (though don't want for now).
 
-      SO: rethink is wanting nice JSON dumps of subtree/trees bound with 
-      
+      SO: rethink is wanting nice JSON dumps of subtree/trees bound with
+
      */
-    
+
     //console.info(`matching tuple count ${matchingTuples.length}`);
-    
+
     console.info('end');
 }
 

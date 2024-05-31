@@ -1,10 +1,12 @@
+// deno-lint-ignore-file no-unused-vars
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
 import * as utils from "../utils/utils.ts";
 import {unwrap} from "../utils/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import * as content from "../utils/content-store.ts";
-import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+//import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './schema.ts';
 import * as config from "./config.ts";
@@ -60,7 +62,7 @@ async function importScannedPage(document_id: number,
                          image_ref, width, height}, 'page_id');
 
     console.info('imported pageId is', pageId);
-    
+
     return pageId;
 }
 
@@ -73,7 +75,7 @@ async function importPageImage(targetImagePath: string, sourceImagePath: string,
     //const sourceImagePath = contentRoot+'/'+sourceImageRef;
     if(!await fileExists(sourceImagePath))
         throw new Error(`expected source image ${sourceImagePath} to exist`);
-    
+
     const quality = 80;
     const { code, stdout, stderr } = await new Deno.Command(
         config.imageMagickPath, {

@@ -1,10 +1,12 @@
+// deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
+
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
 import * as utils from "../utils/utils.ts";
 import {unwrap} from "../utils/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import * as content from "../utils/content-store.ts";
-import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 import * as orderkey from '../utils/orderkey.ts';
 import * as timestamp from '../utils/timestamp.ts';
@@ -31,7 +33,7 @@ export interface User {
      * email to some anon string on semantic 'delete'.
      */
     disabled?: boolnum;
-    
+
     password_salt: string;
     password_hash: string;
 }
@@ -50,7 +52,7 @@ const createUserDml = block`
 /**/       disabled NUMBER,
 /**/       password_salt TEXT,
 /**/       password_hash TEXT);
-/**/   
+/**/
 /**/   CREATE UNIQUE INDEX IF NOT EXISTS user_by_username ON user(username);
 /**/   CREATE UNIQUE INDEX IF NOT EXISTS user_by_email ON user(email);
 /**/   `
@@ -218,7 +220,7 @@ export interface ScannedPage {
 export type ScannedPageOpt = Partial<ScannedPage>;
 export const scannedPageFieldNames: Array<keyof ScannedPage> = [
     'page_id', 'document_id', 'page_number',
-    'source_url', 'import_path', 'image_ref', 
+    'source_url', 'import_path', 'image_ref',
     'width', 'height',
     'description'];
 
@@ -399,7 +401,7 @@ export interface BoundingGroup {
      *
      */
     color?: string;
-    
+
     /**
      * The order of a bounding group within a document is based on the order of
      * (page_number_of_first_box, column_number, x_of_first_box, y_of_first_box).
@@ -504,7 +506,7 @@ export interface BoundingBox {
      * because the user has edited the dimensions).
      */
     imported_from_bounding_box_id?: number;
-    
+
     /**
      * Bounding always exist within a group.
      */
@@ -518,7 +520,7 @@ export interface BoundingBox {
      */
     document_id: number;
     layer_id: number;
-    
+
     /**
      * Bounding boxes are entirely in one page (though a group may
      * have boxes from muliple pages).
@@ -577,7 +579,7 @@ export interface BoundingBox {
 export type BoundingBoxOpt = Partial<BoundingBox>;
 export const boundingBoxFieldNames: Array<keyof BoundingBox> = [
     'bounding_box_id', 'imported_from_bounding_box_id', 'bounding_group_id',
-    'document_id', 'layer_id', 
+    'document_id', 'layer_id',
     'page_id', 'x', 'y', 'w', 'h', 'color', 'tags', 'text', 'notes'];
 
 export interface Shape {
@@ -650,7 +652,7 @@ export const selectBoundingBoxesForGroup = ()=>db().prepare<BoundingBox, {boundi
 // --------------------------------------------------------------------------------
 
 /**
- * 
+ *
  */
 interface ChangeLog {
     change_log_id: number;
@@ -701,7 +703,7 @@ assertDmlContainsAllFields(createChangeLogDml, changeLogFieldNames);
 export interface Assertion {
     assertion_id: number;
     replaces_assertion_id?: number;
-    
+
     /**
      * The timestamp at which this assertion was made.
      *
@@ -728,7 +730,7 @@ export interface Assertion {
      * (either because it was deleted, or it was replaced with a newer publish)
      */
     published_to?: number;
-    
+
     /**
      * Parent fact id (not assertion id).
      */
@@ -743,7 +745,7 @@ export interface Assertion {
      * Fact type
      */
     ty: string;
-    
+
     /**
      * (Denormalized) Flattening of the ancestor and self ids and types.
      */
@@ -782,7 +784,7 @@ export interface Assertion {
      * User tags.
      */
     tags?: string;
-    
+
     /**
      * Key used to order this assertion within its peers (same parent_id and ty).
      *
@@ -800,17 +802,17 @@ export interface Assertion {
      * assertion expressed in the target language.
      */
     target_variant?: string;
-    
+
     /**
      * Expression of the level of confidence we have that this assertion is true.
      */
     confidence_expr?: string;
-    
+
     /**
      * Notes on this assertion
      */
     note?: string;
-    
+
     /**
      * Our present level of confidence (0-10) in this fact.
      *
@@ -820,7 +822,7 @@ export interface Assertion {
      */
     //confidence?: number;
     //confidence_note?: string;
-    
+
     /**
      * More thought here about approval, priorities, discussion etc.
      */
@@ -996,7 +998,7 @@ export const assertionFieldNames: Array<keyof Assertion> = [
     "order_key", "variant", "target_variant", "confidence_expr",
 
     "note",
-    
+
     "change_by_username", "change_action", "change_arg", "change_note",
     ];
 
@@ -1165,7 +1167,7 @@ export function createAllTables() {
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-async function main(args: string[]) {
+/*async*/ function main(args: string[]) {
     const cmd = args[0];
     switch(cmd) {
         case 'createDb': // TODO REMOVE THIS ONCE WE ARE MORE STABLE (TOO DANGER!)
@@ -1176,7 +1178,7 @@ async function main(args: string[]) {
         default:
             console.info('BAD COMMAND!');
             break;
-    }    
+    }
 }
 
 if (import.meta.main)

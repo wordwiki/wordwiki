@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 import {block} from "../utils/strings.ts";
 import {unwrap} from "../utils/utils.ts";
 
@@ -70,7 +71,7 @@ export class Db {
             return false;
         }
     }
-    
+
     constructor(public db: denoSqlite.DB) {
     }
 
@@ -87,7 +88,7 @@ export class Db {
 
         const preparedQuery = this.unmemoizedPrepare<O,P>(sql);
         this.memoizedPreparedQueries.set(sql, preparedQuery);
-        
+
         return preparedQuery;
     }
 
@@ -114,11 +115,11 @@ export class Db {
         return unwrap(this.prepare<O,P>(sql).first(params),
                       `expected result for query '${sql}' with parameters ${params}`);
     }
-    
+
     exists<P extends QueryParameterSet={}>(sql: string, params?: P): boolean {
         return this.first<{},P>(sql) !== undefined;
     }
-    
+
     execute<P extends QueryParameters={}>(sql: string, params?: P) {
         return this.prepare<{},P>(sql).execute(params);
     }
@@ -141,7 +142,7 @@ export class Db {
                 paramsCopy[k] = params[k];
         }
         params = paramsCopy as P;
-        
+
         const fieldNames = Object.keys(paramsCopy);
         //console.info('fieldNames', fieldNames);
         const sql = `INSERT INTO ${table_name} (${fieldNames.join(',')}) VALUES (${fieldNames.map(f=>':'+f).join(',')}) RETURNING ${String(id_field_name)} AS id`;
@@ -159,7 +160,7 @@ export class Db {
     //     const updateSql = `UPDATE ${table_name} SET ${setTerms.join(', ')} WHERE ${id_field_name} = :__id__`;
     //     this.execute<T & {__id__: number}>(updateSql, Object.assign({'__id__': id}, params));
     // }
-    
+
     /**
      * Run multiple semicolon-separated statements from a single
      * string.
@@ -183,11 +184,11 @@ export class Db {
     rollbackTransaction() {
         this.db.execute('ROLLBACK TRANSACTION;');
     }
-    
+
     endTransaction() {
         this.db.execute('END TRANSACTION;');
     }
-    
+
     rawQuery(sql: string, params: QueryParameterSet={}): Array<Row> {
         return this.db.query(sql, params);
     }
@@ -202,7 +203,7 @@ export class Db {
  */
 export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParameterSet=QueryParameterSet> {
     columnNames: string[];
-    
+
     constructor(public preparedQuery: denoSqlite.PreparedQuery<Row,O,P>) {
         this.columnNames = this.preparedQuery.columns().map(c=>c.name);
     }
@@ -225,11 +226,11 @@ export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParamet
         }
         return first;
     }
-        
+
     execute(params?: P) {
         this.preparedQuery.execute(params);
     }
-    
+
     rowToObject(row: Row): O {
         const columnNames = this.columnNames;
         if(row.length !== columnNames.length) {
@@ -258,7 +259,7 @@ function example() {
     console.info(db.rawQuery('select 1+1'));
     console.info(db.rawQuery('PRAGMA main.cache_size = -100000'));
     console.info(db.rawQuery('PRAGMA main.cache_size'));
-    
+
     db.execute(block`
 /**/   CREATE TABLE person(
 /**/      person_id INTEGER PRIMARY KEY ASC,
@@ -277,11 +278,9 @@ function example() {
         'SELECT person_id, name FROM person WHERE happy=:happy',
         {happy: 1});
     console.info(happyPeople);
-    
+
     db.close();
 }
 
 if (import.meta.main)
     example();
-
-

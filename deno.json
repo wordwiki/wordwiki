@@ -1,13 +1,14 @@
 {
     "imports": {
-        "kysely": "npm:kysely@^0.27.0"
-    },    
+        "kysely": "npm:kysely@^0.27.0",
+        "std/": "https://deno.land/std@0.224.0/"
+    },
     "compilerOptions": {
         "strictNullChecks": true,
         "lib": [
             "deno.ns",
             "esnext",
             "dom",
-            "dom.iterable"],        
+            "dom.iterable"]
     }
 }

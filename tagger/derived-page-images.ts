@@ -1,10 +1,12 @@
-import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
+// deno-lint-ignore-file no-unused-vars
+
+import * as fs from "std/fs/mod.ts";
 
 import * as utils from "../utils/utils.ts";
 import {unwrap} from "../utils/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import * as content from "../utils/content-store.ts";
-import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../utils/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPagesForDocument} from './schema.ts';
 import * as config from "./config.ts";
@@ -25,7 +27,7 @@ export async function getTilesForImage(imagePath: string, tileWidth: number, til
  *
  */
 async function getTilesForImageCmd(targetResultPath: string, sourceImagePath: string, tileWidth: number, tileHeight: number) {
-    
+
     // --- Make output directory, splatting if it already exists.
     await Deno.mkdir(targetResultPath);
 

@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-unused-vars
+
 import {CustomError} from "../utils/errors.ts";
 import {typeof_extended} from "../utils/utils.ts";
 import * as utils from "../utils/utils.ts";
@@ -21,7 +23,7 @@ import { FieldKind, RelationField, ValidationError } from "./schema.ts";
  * XXX ideally, don't have a connection between RelationField and this, tree
  *     should live just here.
  * XXX NEXT Build this tree.
- * 
+ *
  */
 
 
@@ -48,16 +50,16 @@ export function buildRelationSQLDriver(db: Db, relationField: RelationField): Re
  */
 export class RelationSQLDriver {
     name: string;
-    
+
     // Automatically set when a field is added to a relation.
     // Note: synthetic fields are not model children, and thus do not have parent set.
     parent: RelationSQLDriver|undefined = undefined;
-    
+
     #ancestorRelations_: RelationSQLDriver[]|undefined;
     #descendantAndSelfRelations_: RelationSQLDriver[]|undefined;
 
     #childRelationsByName: {[name:string]:RelationSQLDriver};
-    
+
     /**
      * Putting a separate PreparedQueryCache on each relation makes
      * the debugging dumps of the queries the system uses more readable.
@@ -67,9 +69,9 @@ export class RelationSQLDriver {
     constructor(public db: Db,
                 public relationField: RelationField,
                 public childRelations: RelationSQLDriver[]) {
-        
+
         this.name = relationField.name;
-        
+
         // Set parent on all children.
         let nextDbColumnIndex = 0;
         for(const f of childRelations) {
@@ -125,7 +127,7 @@ export class RelationSQLDriver {
     //                         (tuple:any[])=>relation.parentIdColIndex?tuple[relation.parentIdColIndex]:undefined);
     //                     return [relation.name, partition];
     //                 }));
-    
+
     //     //console.info('allTuplesInTree', allTuplesInTreeByRelation);
 
     //     const rootTuples =
@@ -173,7 +175,7 @@ export class RelationSQLDriver {
 
         if(opts.verbose)
             console.info('rootTuples', rootTuples);
-        
+
         if(rootTuples.length>1)
             throw new Error(`Expected a unique tuple for rootId ${this.name}::${rootId}`);
 
@@ -191,7 +193,7 @@ export class RelationSQLDriver {
             default: throw new Error(`Expected one root for ${this.name} - found ${roots.length}`);
         }
     }
-    
+
     /**
      *
      */
@@ -204,10 +206,10 @@ export class RelationSQLDriver {
                 (tuple:any[])=>relation.parentIdColIndex?tuple[relation.parentIdColIndex]:undefined);
             allTuplesInTreeByRelation.set(relation.name, partition);
         }
-            
+
         return this.reconstituteChildRelation(allTuplesInTreeByRelation, undefined, opts);
     }
-    
+
     /**
      * Given an id list, return the corresponding records.
      *
@@ -223,7 +225,7 @@ export class RelationSQLDriver {
                 (tuple:any[])=>relation.parentIdColIndex?tuple[relation.parentIdColIndex]:undefined);
             allTuplesInTreeByRelation.set(relation.name, partition);
         }
-        
+
         const records = this.reconstituteChildRelation(allTuplesInTreeByRelation, undefined, opts);
         const recordsById = new Map(records.map(
             record=>[getPrimaryKey(record, this.relationField.primaryKeyField.name), record]));
@@ -242,15 +244,15 @@ export class RelationSQLDriver {
             if(!requestIdSet.has(recordId))
                 throw new Error(`internal error - read unexpected record in getByIds: ${this.name}:${recordId}`);
         });
-        
+
         return recordsById;
     }
-    
+
     reconstituteTree(allTuplesInTreeByRelation: Map<string, Map<string|undefined, any[][]>>,
                      tuple: any[], opts:ReconstituteOpts): Record {
-              
+
         const id = tuple[this.relationField.primaryKeyColIndex] as string; // XXX FIX Typing
-        
+
         const record = this.reconstituteCurrentShallow(tuple, opts);
         for(let childRelationField of this.childRelations)
             record[childRelationField.name] = childRelationField.reconstituteChildRelation(
@@ -273,7 +275,7 @@ export class RelationSQLDriver {
             console.info(`allTuplesInTreeByRelation.get(${this.name})`,
                          allTuplesInTreeByRelation.get(this.name));
         }
-        
+
         let childRelationTuples: any[][];
         if(parentId === undefined) {
             childRelationTuples =
@@ -288,7 +290,7 @@ export class RelationSQLDriver {
         if(opts.verbose && parentId === undefined) {
             console.info('CHILD RELATION tUPELS for undefined parent', childRelationTuples);
         }
-        
+
         if(opts.verbose)
             console.info('childRelationTuples', childRelationTuples);
         const orderedChildRelationTuples = childRelationTuples.toSorted((a:any[], b:any[]) =>
@@ -328,11 +330,11 @@ export class RelationSQLDriver {
                 record['_versions'] = versionHistory;
             if(isDeleted)
                 record['_deleted'] = isDeleted;
-            
+
             return record;
         }).filter(record=>opts.includeVersionHistory || !record['_deleted']);
-    }  
-    
+    }
+
     reconstituteFieldsShallow(tuple: any[], includeOrder: boolean, includeVersioning: boolean, opts:ReconstituteOpts): Record {
         const record: Record = {};
 
@@ -354,7 +356,7 @@ export class RelationSQLDriver {
 
         return record;
     }
-    
+
     reconstituteCurrentShallow(tuple: any[], opts:ReconstituteOpts): Record {
         const record = this.reconstituteFieldsShallow(tuple, !!opts.includeOrder, false, opts);
         if(record[this.relationField.validToColIndex])
@@ -362,11 +364,11 @@ export class RelationSQLDriver {
         record['_source'] = tuple[this.relationField.validFromColIndex];
         return record;
     }
-    
+
     reconstituteVersionShallow(tuple: any[], opts:ReconstituteOpts): Record {
         return this.reconstituteFieldsShallow(tuple, true, true, opts);
     }
-    
+
     /**
      *
      */
@@ -394,14 +396,14 @@ export class RelationSQLDriver {
 
     /**
      *
-     * 
+     *
      */
     async updateFromCurrent(timestamp: number, to: Record) {
 
         // --- Extract id from supplied updated record
         const rootFieldName = this.relationField.primaryKeyField.name;
         const rootId = getPrimaryKey(to, rootFieldName);
-        
+
         // --- Read current version (in the current TX)
         const from = await this.getById(rootId,
                                         {includeVersionHistory:false, includeOrder: true});
@@ -417,7 +419,7 @@ export class RelationSQLDriver {
             parentKeyNames.map((name, idx)=>[name, from[name] as string]));
         //console.info('PARENT PKS', parentPks);
         //console.info('FROM is', from);
-        
+
         // --- Update changed local fields.
         this.update(timestamp, from, to, parentPks);
     }
@@ -434,7 +436,7 @@ export class RelationSQLDriver {
 
         //console.info('fromRoot', JSON.stringify(fromRoot, undefined, '  '));
         //console.info('toRoot', JSON.stringify(toRoot, undefined, '  '));
-        
+
         // If _order not given in 'toRoot', default from 'fromRoot'.
         // (we are presently allowing _order == null)
         const to:Record = {
@@ -443,7 +445,7 @@ export class RelationSQLDriver {
                 panic("No _order in 'from' or 'to' in top level update") };
 
         const from = fromRoot;
-        
+
         await this.updateLocalFields(updateTimestamp, from, to, parentPks);
 
         // --- Make a version of the parentPks map with our PK added for inserting descendant
@@ -458,7 +460,7 @@ export class RelationSQLDriver {
                 updateTimestamp,
                 from[childRelation.name] as Record[]|undefined??[],
                 to[childRelation.name] as Record[]|undefined??[],
-                parentAndSelfPks));        
+                parentAndSelfPks));
     }
 
     /**
@@ -468,12 +470,12 @@ export class RelationSQLDriver {
                       parentPks: {[key: string]: string}) {
 
         const id = getPrimaryKey(from, this.relationField.primaryKeyField.name);
-        
+
         // --- Find local fields with changed values.
         // XXX should do value access though getter on field.
         const changedFields = this.relationField.nonRelationFields.filter(f=>
             from[f.name] !== to[f.name]);
-        
+
         // --- If no changed fields, no local updates have been made - we are done.
         if(changedFields.length === 0)
             return;
@@ -486,7 +488,7 @@ export class RelationSQLDriver {
 
         const order = to['_order'] ?? panic('missing order');
         const valid_to = to['_deleted'] ? updateTimestamp : null;
-        
+
         // --- Insert new version
         // TODO: clean this up - rationalize along with insert!  THIS IS UGLY!
         const fieldValues: any[] = [
@@ -501,7 +503,7 @@ export class RelationSQLDriver {
             null, // _change_reason
             null, // _change_arg
             "change_note", // _change_note
-            ...Object.values(parentPks) // TODO: these need to 
+            ...Object.values(parentPks) // TODO: these need to
         ];
         //console.info('KKK FIELD VALUES', fieldValues);
         await (await this.getInsertPreparedStmt(true)).execute(fieldValues);
@@ -529,7 +531,7 @@ export class RelationSQLDriver {
               parentPks: {[key: string]: string}={}) {
 
         const pkName = this.relationField.primaryKeyField.name;
-        
+
         // Pairing:
         // - to can add a new record - can tell from _source: -1.
         // - from can add a new record - will have to be newer that timestamp that
@@ -549,7 +551,7 @@ export class RelationSQLDriver {
             ...r,
             _order: fromsById.get(getPrimaryKey(r, pkName))?._order??null
         }));
-        
+
         const toById = new Map(to.map(r=>[getPrimaryKey(r, pkName), r]));
 
         // TODO shallow clone the to's adding the order from the matching
@@ -558,13 +560,13 @@ export class RelationSQLDriver {
         // order does need to also be updated in normal update.  Top level
         // is tricky case - either need to pre-read, or make version of update
         // that does not update order (probably pre-read)
-        
+
         const fromIds = new Set(from.map(r=>getPrimaryKey(r, pkName)));
         const toIds = new Set(to.map(r=>getPrimaryKey(r, pkName)));
         const continuingIds = utils.intersection(fromIds, toIds);
         const newIds = utils.difference(toIds, fromIds);
         const missingIds = utils.difference(fromIds, toIds);
-        
+
         if(missingIds.size > 0) {
             // Missing ids may be tuples that have been added since the to
             // copy was read.  They also could be tuples that the client did
@@ -580,7 +582,7 @@ export class RelationSQLDriver {
 
         // WHAT ABOUT DELETED AND ORDER:
         // - we
-        
+
         // --- Compute _order changes (and _order for new records)
         // WOULD LIKE RESULT TO BE IN TERMS OF to indexes.  (and if not
         // convert to that).
@@ -589,9 +591,9 @@ export class RelationSQLDriver {
         // - maybe just zero out the other orders.
         // - rather than trying to evenly divide for now, just use between
         //   repeatedly.
-        
+
         // WOULD LIKE SEQ TO BE IN TERMS OF toIds - so run against to[]
-        // 
+        //
         // -
         // let longestIncreasingSequence = longestIncreasingSequenceUsingCompareFn(
         //     toRecords.filter(r=>r._order);
@@ -605,7 +607,7 @@ export class RelationSQLDriver {
         // - B = same records, sorted by _order field
         // - find LCS(A,B).  These get to keep their order field.
         // - for all others, compute intermeidate orders.
-        
+
         // --- Insert new records
         for(const newId of newIds) {
             const newRecord = toById.get(newId) ?? panic();
@@ -681,15 +683,15 @@ export class RelationSQLDriver {
             return queryStr;
         });
     }
-    
+
     async insert(timestamp: number, value: any, versioned: boolean=true, order: string|null=null, parentPks: {[key: string]: string} = {}) {
         //console.info(parentPks);
 
         // Default order to middle of range.
         order ??= '0.5';
-        
+
         //this.getInsertPreparedStmt(this.db, versioned);
-        
+
         // TODO: clean this up - use new dbFields model.
         // XXX FIX FIX FIX XXX
         // ISSUE confused about connection between db field names and fields!
@@ -719,7 +721,7 @@ export class RelationSQLDriver {
         try {
             await (await this.getInsertPreparedStmt(versioned)).execute(fieldValues);
         } catch(e) {
-            
+
             console.info(`SPLAT FIELD VALUES for ${utils.className(this)}`, fieldValues, fieldValues.length);
             throw e;
         }
@@ -777,12 +779,12 @@ export class RelationSQLDriver {
     }
 
     /*
-      
+
      */
     updateFrom(from: Record, to: Record) {
         throw new Error('not implemented');
     }
-    
+
     // update(db:DB, value: Record) {
     //     // - Update only requres id of tuple + to fields.
     //     // - Cannot update parent ids (or self id)
@@ -808,7 +810,7 @@ export class RelationSQLDriver {
             await this.db.execute(dml);
         }
     }
-    
+
     /**
      *
      */
@@ -818,7 +820,7 @@ export class RelationSQLDriver {
         //       is this SQL string does not pose a query injection risk.
 
         const tableName = prefix+this.name;
-        
+
         const dropTable = `DROP TABLE IF EXISTS ${tableName};\n`
 
         const fieldDecls = this.relationField.fields.flatMap(f => f.createDbFields(versioned));
@@ -832,15 +834,15 @@ export class RelationSQLDriver {
         if (versioned) {
             constraints.push(`CONSTRAINT ww_primary_key PRIMARY KEY(${this.relationField.primaryKeyField.name}, _valid_from)`);
         }
-                
+
         const createTable =
             `CREATE TABLE ${tableName} (\n  ${fieldDecls.concat(constraints).join(',\n  ')}) STRICT;\n`
 
         const ancestorIdIndexes = this.relationField.ancestorRelations.map(r=>
             `CREATE INDEX ${tableName}_${r.primaryKeyField.name} ON ${tableName}(${r.primaryKeyField.name})\n`);
-        
+
         const childCreateTables = this.childRelations.flatMap(r => r.getCreateDML(prefix, versioned));
-        
+
         return [dropTable, createTable, ...ancestorIdIndexes, ...childCreateTables];
     }
 }

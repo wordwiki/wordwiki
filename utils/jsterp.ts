@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars, no-explicit-any
 import * as acorn from "npm:acorn@8.11.3";
 import {Node, Expression, Identifier, Literal, ArrayExpression,
         ObjectExpression, UnaryExpression,
@@ -60,7 +61,7 @@ function loggedMethod(originalMethod: any, context: ClassMethodDecoratorContext)
 }
 
 class Foo {
-    
+
 }
 
 /**
@@ -82,7 +83,7 @@ class Foo {
  * we often do want to allow it.  We will probably introduce some invocation
  * limit feature to allow map to be used with less risk of resource exhaustion
  * attacks.
- * 
+ *
  * We will probably want to have a version of this that allows 'await' -
  * but that would require making all the methods 'async', which would
  * add a lot of overhead.  So we will probably have to maintain two
@@ -91,7 +92,7 @@ class Foo {
 export class Eval {
     constructor(readonly safeMode: boolean = false) {
     }
-    
+
     eval(s: Scope, e: JsNode): any {
         switch(e.type) {
             case 'Identifier':
@@ -128,9 +129,9 @@ export class Eval {
                 throw new Error(`jsterp: unsupported node type ${e.type}`);
         }
     }
-    
+
     evalIdentifier(s: Scope, e: Identifier): any {
-        let v = s[e.name];
+        const v = s[e.name];
         // TODO: probably remove the boundnames from the error unless in
         //       dev mode - exceptions will be shown on client and having
         //       list of names ... hackers ... etc ... security by obscurity ???
@@ -144,8 +145,8 @@ export class Eval {
     }
 
     evalArrayExpression(s: Scope, e: ArrayExpression): any {
-        let array: any[] = [];
-        for(let v of e.elements) {
+        const array: any[] = [];
+        for(const v of e.elements) {
             if(v === null)
                 throw new Error('jsterp: sparse arrays are not supported');
             array.push(this.eval(s, v));
@@ -154,8 +155,8 @@ export class Eval {
     }
 
     evalObjectExpression(s: Scope, e: ObjectExpression): any {
-        let obj: Record<PropertyKey,any> = {};//Object = {};
-        for(let p of e.properties) {
+        const obj: Record<PropertyKey,any> = {};//Object = {};
+        for(const p of e.properties) {
             if(p.type !== 'Property')
                 throw new Error('jsterp: only property members of object expressions are supported');
             const prop = p as Property;
@@ -182,7 +183,7 @@ export class Eval {
             default: throw new Error(`jsterp: unexpected unary operator ${e.operator}`);
         }
     }
-    
+
     evalBinaryExpression(s: Scope, e: BinaryExpression): any {
         switch(e.operator) {
             case "==": return this.eval(s, e.left) + this.eval(s, e.right);
@@ -221,7 +222,7 @@ export class Eval {
     }
 
     evalMemberExpression(s: Scope, e: MemberExpression): any {
-        let propertyKey = this.evalProperty(s, e.property, e.computed) as PropertyKey;
+        const propertyKey = this.evalProperty(s, e.property, e.computed) as PropertyKey;
 
         // TODO this is a crappy version of safe mode.
         // probably switch to a decorator based scheme.
@@ -247,7 +248,7 @@ export class Eval {
 
         if(member instanceof Function)
             member = member.bind(obj);
-        
+
         return member;
     }
 
@@ -268,10 +269,10 @@ export class Eval {
         const obj = new callee(...args);
         return obj;
     }
-    
+
     evalSequenceExpression(s: Scope, e: SequenceExpression): any {
         let r: any = undefined;
-        for(let x of e.expressions)
+        for(const x of e.expressions)
             r = this.eval(s, x);
         return r;
     }
@@ -279,7 +280,7 @@ export class Eval {
     evalArrowFunctionExpression(s: Scope, e: ArrowFunctionExpression): any {
         if(!e.expression)
             throw new Error('jsterp: only expr arrow functions are supported');
-        let paramNames:string[] = [];
+        const paramNames:string[] = [];
         for(const param of e.params) {
             if(param.type !== 'Identifier')
                 throw new Error('jsterp: only supports simple argument lists for arrow functions');
@@ -313,8 +314,8 @@ export class Eval {
     }
 
     evalArguments(s: Scope, args: Array<Expression|SpreadElement>): any[] {
-        let evaluatedArgs: any[] = [];
-        for(let a of args) {
+        const evaluatedArgs: any[] = [];
+        for(const a of args) {
             if(a.type === 'SpreadElement')
                 throw new Error('jsterp: spread element is not supported');
             evaluatedArgs.push(this.eval(s, a));
@@ -332,7 +333,7 @@ export class Eval {
                         return (key as Identifier).name;
                     case 'Literal':
                         return this.evalLiteral(s, key);
-                    default: 
+                    default:
                         throw new Error(`jsterp: expected property key - type is ${key.type}`);
                 }
             }
@@ -366,7 +367,7 @@ export function jsPlay() {
 }
 
 function dumpDeep(o: any) {
-    for(let k of Object.getOwnPropertyNames(o))
+    for(const k of Object.getOwnPropertyNames(o))
         console.info('--', k);
     const oProto = Object.getPrototypeOf(o);
     if(oProto)
@@ -395,11 +396,11 @@ export function expectJSON(s: Scope, jsExprStr: string, expectResultStr: any, sa
 
 class Test {
     puppy: string = 'Rover';
-    
+
     static mul(a: number, b: number): number {
         return a*b;
     }
-    
+
     add(a: number, b: number): number {
         return a+b;
     }
@@ -408,11 +409,11 @@ class Test {
     safeAdd(a: number, b: number): number {
         return a+b;
     }
-    
+
     toString() {
         return 'TEST '+this.puppy;
     }
-    
+
     greet() {
         console.info('hello');
         return 7;
@@ -424,6 +425,3 @@ class Test {
 
 if (import.meta.main)
     jsPlay();
-
-
-

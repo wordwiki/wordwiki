@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
 import * as utils from "../utils/utils.ts";
@@ -31,15 +32,15 @@ import {awsCmdPath} from './config.ts';
  */
 export async function textractDocument(document_id: number, kind: 'WORD'|'LINE' = 'LINE') {
     const friendly_document_id = selectScannedDocument().required({document_id}).friendly_document_id;
-                                                                  
+
     await syncScannedBookToS3(`content/${friendly_document_id}`);
-    
+
     const pages = db().all<ScannedPage, {document_id: number}>(block`
 /**/      SELECT ${scannedPageFieldNames.join()}
 /**/         FROM scanned_page
 /**/         WHERE document_id = :document_id
 /**/         ORDER BY page_number`, {document_id});
-    
+
     console.info('begin textractDocument');
     //console.info('pages are', pages);
 
@@ -65,15 +66,15 @@ export async function textractDocument(document_id: number, kind: 'WORD'|'LINE' 
 // export async function textractDocument(document_id: number) {
 
 //     const friendly_document_id = selectScannedDocument().required({document_id}).friendly_document_id;
-                                                                  
+
 //     await syncScannedBookToS3(`content/${friendly_document_id}`);
-    
+
 //     const pages = db().all<ScannedPage, {document_id: number}>(block`
 // /**/      SELECT ${scannedPageFieldNames.join()}
 // /**/         FROM scanned_page
 // /**/         WHERE document_id = :document_id
 // /**/         ORDER BY page_number`, {document_id});
-    
+
 //     console.info('begin textractDocument');
 //     //console.info('pages are', pages);
 
@@ -142,7 +143,7 @@ async function syncScannedBookToS3(contentDir: string) {
 function haveTextractPageBoxForPage(page_id: number, layer_id: number): boolean {
     return db().exists<{page_id: number, layer_id: number}>(block`
 /**/     SELECT bounding_box_id
-/**/         FROM bounding_box 
+/**/         FROM bounding_box
 /**/         WHERE layer_id = :layer_id AND page_id = :page_id`,
 /**/         {layer_id, page_id});
 }
@@ -151,7 +152,7 @@ function haveTextractPageBoxForPage(page_id: number, layer_id: number): boolean 
 
 //     const layer_id = db.first(<document_id: number, layer_name: string>, block`
 // /**/    SELECT layer_id FROM bounding_box WHERE page_id = 'page_id'
-                              
+
 //     db.first(<{bounding_box_id: number}, {page_id: number, layer_name: string}>(
 //         `SELECT bounding_box_id FROM bounding_box
 // WHERE page_id = :page_id AND layer
@@ -165,10 +166,10 @@ function haveTextractPageBoxForPage(page_id: number, layer_id: number): boolean 
  * by the source image contents).
  */
 async function textractPage(page_id: number): Promise<Block[]> {
-    
+
     const page = selectScannedPage().required({page_id});
     const document = selectScannedDocument().required({document_id: page.document_id});
-    
+
     const textractJsonFilename =
         await content.getDerived(`derived/${document.friendly_document_id}-textract`,
                                  {textract: textractPageImpl},
@@ -188,7 +189,7 @@ async function textractPage(page_id: number): Promise<Block[]> {
  *
  * The image (at that path) will have been uploaded by
  * 'syncScannedBookToS3'.
- * 
+ *
  * Note the textract source image is (as of Mar 2024) restricted to a max size
  * of 5MB.  We are not hitting this limit with our present images, but if it
  * becomes an issue, we will need to make a secondary derived version of the
@@ -237,7 +238,7 @@ export interface Block {
  * Also converts the coordinate system to pixels.
  */
 function extractBlocksFromTextract(textract: TextractDocument, pageWidth: number, pageHeight: number): Block[] {
-    
+
     const textractBlocks = textract.Blocks;
     if(!textractBlocks)
         throw new Error('unable to find Blocks in textract');

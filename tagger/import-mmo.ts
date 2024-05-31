@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 /**
  * 'Raw' importer for the MMO legacy format.
  *
@@ -57,7 +58,7 @@ async function importMMO() {
     //console.info('LEGACY LEXEMES', lexemes);
     //console.info('LEXEMES BY SPELLING', lexemesBySpelling);
 
-    
+
     if(importRecordings) {
 
         const allWavFiles = dirTree('imports/LegacyMmo/media', [])
@@ -67,7 +68,7 @@ async function importMMO() {
             .map(f=>strings.stripRequiredPrefix(f, 'imports/LegacyMmo/'));
         console.info(allWavFiles);
         const unusedWavFiles = new Set(allWavFiles);
-        
+
         // We need to load the recordings into our content store - which has
         // an async api - so we pre-do the loading here so the main transform
         // passes don't have to be async.
@@ -100,7 +101,7 @@ async function importMMO() {
             importedHashes.push(await content.digestFileUsingExternalCmd(p));
         console.info('IMPORTED HASHES', importedHashes);
         const importedHashesSet = new Set(importedHashes);
-        
+
         console.info('UNUSED wav files:');
         const recovered = new Set();
         const missing = [];
@@ -111,7 +112,7 @@ async function importMMO() {
             else
                 missing.push(p);
         }
-        
+
         console.info('RECOVERED', recovered.size);
         console.info('UNBOUND FILES', missing.length);
         if(false) {  // Turned off because dmm has audited the results.
@@ -147,7 +148,7 @@ async function importMMO() {
         }
     }
     //return;
-    
+
     //console.info(entries.map(e=>e.entry_id).toSorted());
 
     db().beginTransaction();
@@ -157,11 +158,11 @@ async function importMMO() {
     const dictAssertion = createAssertion(undefined, 0, 0, DictTag, orderkey.new_range_start_string, true, {});
     console.info('dict assertion', JSON.stringify(dictAssertion, undefined, 2));
     insertAssertion(dictAssertion);
-    
+
     //entries.forEach(e=>true ? importEntry(e) : undefined);
 
-    importEach(entries, (s,k)=>importEntry(s, k));    
-    
+    importEach(entries, (s,k)=>importEntry(s, k));
+
     db().endTransaction();
 }
 
@@ -216,7 +217,7 @@ function createAssertion(parent: Assertion|undefined, depth: number,
         utils.assert(id === 0, 'root assertion has fixed id 0');
     else
         (assertion as any)[`id${depth}`] = id;
-    
+
     return assertion;
 }
 
@@ -248,7 +249,7 @@ function importEntry(entry: Entry, order_key: string) {
     importEach(entry.subentry, (s,k)=>importSubentry(entryAssertion, s, k, published));
     // console.info('STATUS', subentry);
     importEach(entry.status, (s,k)=>importStatus(entryAssertion, s, k, published));
-    
+
 }
 
 interface Spelling {
@@ -314,7 +315,7 @@ function importSubentry(parent: Assertion, subentry: Subentry, order_key: string
     importEach(subentry.related_entry, (s,k)=>importRelatedEntry(subentryAssertion, s, k, published));
     importEach(subentry.alternate_grammatical_form, (s,k)=>importAlternateGrammaticalForm(subentryAssertion, s, k, published));
     importEach(subentry.other_regional_form, (s,k)=>importOtherRegionalForm(subentryAssertion, s, k, published));
-    //importEach(subentry.picture, (s,k)=>importPicture(subentryAssertion, s, k, published));    
+    //importEach(subentry.picture, (s,k)=>importPicture(subentryAssertion, s, k, published));
     importEach(subentry.attr, (s,k)=>importAttr(subentryAssertion, s, k, published));
     importEach(subentry.source, (s,k)=>importSource(subentryAssertion, s, k, published));
 }
@@ -532,7 +533,7 @@ interface Status {
 function importStatus(parent: Assertion, status: Status, order_key: string, published: boolean) {
     if(!Object.hasOwn(states, status.status))
         throw new Error(`unknown status ${status.status}`);
-    
+
     insertAssertion(createAssertion(
         parent, 2, status.status_id, StatusTag, order_key, published,
         {
@@ -583,7 +584,7 @@ async function importAudioContent(root: string, relPath: string, speaker: string
                 +altSpelling.toLowerCase()
                 +path.slice(path.lastIndexOf('/'));
             new_path = new_path.replaceAll('*', '');
-            
+
             if(new_path !== path && await fs.exists(new_path, {isFile: true})) {
                 //console.info('new path is', new_path);
                 path = new_path;
@@ -613,7 +614,7 @@ async function importAudioContent(root: string, relPath: string, speaker: string
     } catch(e) {
         console.info('failed to stat', path, e);
     }
-    
+
     try {
         const audio_ref = 'content/'+
             await content.addFile('content/Recordings', path);
@@ -636,7 +637,7 @@ async function verifyImportMMO() {
     const wordwiki = new WordWiki({hostname: 'localhost', port: 9000});
     const wordwikiJson = wordwiki.entriesJSON;
     //console.info('WORD WIKI JSON', JSON.stringify(wordwikiJson, undefined, 2));
-    
+
     const okDrops = new Set([]);
 
     const wordsWithDroppedSubentry = new Set(
@@ -647,7 +648,7 @@ async function verifyImportMMO() {
         // [['meluijoqo', 'change \\na to \\nt'],
         //  ['algopit', 'dup \\lv under a \\lf'],
         //  ['nujumu', 'change \\ns to \\nt']]);
-    
+
     let doc = block`
 /**/<!DOCTYPE html>
 /**/<html>
@@ -657,7 +658,7 @@ async function verifyImportMMO() {
 /**/<body>
 /**/  <h1>MMO Import Verification Report</h1>
 `;
-    
+
     for(const [srcSpelling, srcLexeme] of srcLexemesBySpelling.entries()) {
         // Drop the recording lines
         let lexeme = srcLexeme
@@ -667,7 +668,7 @@ async function verifyImportMMO() {
             .replaceAll(/\\vsf .*/g, '')  // maybe ok to drop?
             .replaceAll(/\\lsf .*/g, '')  // maybe ok to drop?
             .replaceAll(/\\pc .*/g, '');  // OK will be fixed in diffent layer.
-            //.replaceAll(/\\ps .*/g, '');   
+            //.replaceAll(/\\ps .*/g, '');
 
 
         if(manuallyVerifiedWords.has(srcSpelling)) {
@@ -683,7 +684,7 @@ async function verifyImportMMO() {
             continue;
         }
 
-        
+
         let gotErr = false;
         let out = `<h2>${srcSpelling}</h2>\n`;
 
@@ -700,7 +701,7 @@ async function verifyImportMMO() {
                 out += `<h3 class='error'>ERROR: could not find imported lexeme ${srcSpelling}</h3>`;
                 gotErr = true;
                 continue;
-            case 1: break;                
+            case 1: break;
             default: throw new Error('found multiple imports for lexeme '+srcSpelling);
         }
         const importedLexeme = importedLexemeMatches[0];
@@ -708,7 +709,7 @@ async function verifyImportMMO() {
         const importedLexemeJSONText = JSON.stringify(importedLexeme, undefined, 2);
         const processedImportedLexemeJSONText = importedLexemeJSONText.replaceAll('_', ' ').replaceAll("\\n", "\n")+' and 1 2 3 done';
         const importedLexemeWords = new Set(strings.splitIntoWords(processedImportedLexemeJSONText));
-        
+
         //console.info('imported lexeme words', JSON.stringify(importedLexemeWords));
 
         let nonImportedWords = new Set(lexemeWords).difference(importedLexemeWords);
@@ -716,7 +717,7 @@ async function verifyImportMMO() {
 
         const lexemeWithMissingHighlighted = Array.from(nonImportedWords).reduce((a, c)=>a.replaceAll(new RegExp(`\\b${strings.escapeRegExp(c)}\\b`, 'g'), `[[${c}]]`), srcLexeme);
         out += `<pre>${lexemeWithMissingHighlighted}</pre>\n`
-        
+
         if(nonImportedWords.size) {
             out += `<h3 class='error'>ERROR: some words were not imported</h3>`;
             out += `<b>Non imported words are:</b>${Array.from(nonImportedWords).join(', ')}`;
@@ -732,7 +733,7 @@ async function verifyImportMMO() {
 /**/  </body>
 /**/</html>`;
 
-    Deno.writeTextFile("missing-report.html", doc);    
+    Deno.writeTextFile("missing-report.html", doc);
 }
 
 async function main(args: string[]) {

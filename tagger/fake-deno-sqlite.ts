@@ -200,7 +200,7 @@ export class PreparedQuery<
    * See `QueryParameter` for documentation on how
    * values are returned from the database.
    */
-    all(params?: P): Array<R> {
+    all(_params?: P): Array<R> {
         throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -216,7 +216,7 @@ export class PreparedQuery<
    * // rows = [{ id: 1, name: "Peter" }, ...]
    * ```
    */
-    allEntries(params?: P): Array<O> {
+    allEntries(_params?: P): Array<O> {
         throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -260,7 +260,7 @@ export class PreparedQuery<
    * See `QueryParameter` for documentation on how
    * values are returned from the database.
    */
-  first(params?: P): R | undefined {
+  first(_params?: P): R | undefined {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -276,21 +276,21 @@ export class PreparedQuery<
    * // person = { id: 1, name: "Peter" }
    * ```
    */
-  firstEntry(params?: P): O | undefined {
+  firstEntry(_params?: P): O | undefined {
       throw new Error('sqlite not imported - using fake stub');
   }
 
   /**
    * **Deprecated:** prefer `first`.
    */
-    one(params?: P): R {
+    one(_params?: P): R {
         throw new Error('sqlite not imported - using fake stub');
   }
 
   /**
    * **Deprecated:** prefer `firstEntry`.
    */
-    oneEntry(params?: P): O {
+    oneEntry(_params?: P): O {
         throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -321,7 +321,7 @@ export class PreparedQuery<
    * See `QueryParameter` for documentation on how
    * values are returned from the database.
    */
-  execute(params?: P) {
+  execute(_params?: P) {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -362,7 +362,7 @@ export class PreparedQuery<
    * See `QueryParameterSet` for documentation on
    * how values can be bound to SQL statements.
    */
-  expandSql(params?: P): string {
+  expandSql(_params?: P): string {
       throw new Error('sqlite not imported - using fake stub');
   }
 }
@@ -516,7 +516,7 @@ export class DB {
    * const db = new DB("path/to/database.sqlite", { mode: "read" });
    * ```
    */
-    constructor(path: string = ":memory:", options: SqliteOptions = {}) {
+    constructor(_path: string = ":memory:", _options: SqliteOptions = {}) {
         throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -559,8 +559,8 @@ export class DB {
    * ```
    */
   query<R extends Row = Row>(
-    sql: string,
-    params?: QueryParameterSet,
+    _sql: string,
+    _params?: QueryParameterSet,
   ): Array<R> {
       throw new Error('sqlite not imported - using fake stub');
   }
@@ -585,8 +585,8 @@ export class DB {
    * ```
    */
   queryEntries<O extends RowObject = RowObject>(
-    sql: string,
-    params?: QueryParameterSet,
+    _sql: string,
+    _params?: QueryParameterSet,
   ): Array<O> {
       throw new Error('sqlite not imported - using fake stub');
   }
@@ -642,7 +642,7 @@ export class DB {
     O extends RowObject = RowObject,
     P extends QueryParameterSet = QueryParameterSet,
   >(
-    sql: string,
+    _sql: string,
   ): PreparedQuery<R, O, P> {
       throw new Error('sqlite not imported - using fake stub');
   }
@@ -669,7 +669,7 @@ export class DB {
    * `);
    * ```
    */
-  execute(sql: string) {
+  execute(_sql: string) {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -694,7 +694,7 @@ export class DB {
    * });
    * ```
    */
-  transaction<V>(closure: () => V): V {
+  transaction<V>(_closure: () => V): V {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -721,7 +721,7 @@ export class DB {
    * const temp = db.serialize("temp");
    * ```
    */
-  serialize(schema: "main" | "temp" | string = "main"): Uint8Array {
+  serialize(_schema: "main" | "temp" | string = "main"): Uint8Array {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -768,7 +768,7 @@ export class DB {
    * For more details see https://www.sqlite.org/c3ref/deserialize.html
    * and https://www.sqlite.org/lang_attach.html.
    */
-  deserialize(data: Uint8Array, options?: SqliteDeserializeOptions) {
+  deserialize(_data: Uint8Array, _options?: SqliteDeserializeOptions) {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -815,7 +815,7 @@ export class DB {
   createFunction<
     A extends Array<SqlFunctionArgument> = Array<SqlFunctionArgument>,
     R extends SqlFunctionResult = SqlFunctionResult,
-  >(func: (...args: A) => R, options?: SqliteFunctionOptions) {
+  >(_func: (...args: A) => R, _options?: SqliteFunctionOptions) {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -835,7 +835,7 @@ export class DB {
    * db.deleteFunction("double");
    * ```
    */
-  deleteFunction(name: string) {
+  deleteFunction(_name: string) {
       throw new Error('sqlite not imported - using fake stub');
   }
 
@@ -851,7 +851,7 @@ export class DB {
    * `close` may safely be called multiple
    * times.
    */
-  close(force = false) {
+  close(_force = false) {
       throw new Error('sqlite not imported - using fake stub');
   }
 

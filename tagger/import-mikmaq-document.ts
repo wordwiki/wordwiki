@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import { db } from "./db.ts";
 import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
@@ -11,7 +12,7 @@ import {stripRequiredPrefix, stripRequiredSuffix} from '../utils/strings.ts';
  */
 async function importPDM() {
     const friendly_document_id = 'PDM'
-    
+
     // --- Find the page files for the PDM manuscript project
     const pageFiles = [];
     for (const volume of ['P1', 'P2', 'P3', 'P4']) {
@@ -46,7 +47,7 @@ async function importRand() {
         slice(1);  // Drop test page at the beginning.
 
     console.info('Rand page files', pageFiles);
-    
+
     await importScannedDocument({
         friendly_document_id,
         title: 'Dictionary of the language of the Micmac Indians : who reside in Nova Scotia, New Brunswick, Prince Edward Island, Cape Breton and Newfoundland',
@@ -70,7 +71,7 @@ async function importRandFirstReadingBook() {
         slice(8);  // Drop test page at the beginning.
 
     console.info('Rand first reading book page files', pageFiles);
-    
+
     await importScannedDocument({
         friendly_document_id,
         title: 'A first reading book in the Micmac language: comprising the Micmac numerals, and the names of the different kinds of beasts, birds, fishes, trees, &c. of the maritime provinces of Canada',
@@ -95,7 +96,7 @@ async function importClark() {
     if(pageFiles.length !== 234)
         throw new Error(`Expected 234 page files for Clark, found ${pageFiles.length}`);
     //console.info('Clark page files', pageFiles.length, pageFiles);
-    
+
     await importScannedDocument({
         friendly_document_id,
         title: "Rand's Micmac dictionary from phonographic word-lists - transcribed and alphabetically arranged, with a grammar and list of place-names by Jeremiah S. Clark",
@@ -129,7 +130,7 @@ async function importPDF(friendly_document_id: string,
             parseInt(stripRequiredPrefix(stripRequiredSuffix(a, pageExtension), pageNamePrefix)) -
             parseInt(stripRequiredPrefix(stripRequiredSuffix(b, pageExtension), pageNamePrefix)));
     console.info('PDF page files', pageFiles);
-    
+
     await importScannedDocument({
         friendly_document_id,
         title,

@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, EnumField, VariantField, BlobField, AudioField, ImageField,
@@ -29,7 +30,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 export abstract class View {
 
     prompt: string|undefined;
-    
+
     constructor(public field: Field) {
         this.prompt = field.style.$prompt ??
             strings.capitalize(field.name).replaceAll('_', ' ');
@@ -51,7 +52,7 @@ export abstract class ScalarView extends View {
 
     /*abstract*/ renderEditor(relation_id: number, v: any): Markup {
         //throw new Error(`renderEditor not implemented on ${utils.className(this)}`);
-        
+
         return String(v);
     }
 
@@ -90,7 +91,7 @@ export class BooleanView extends ScalarView {
         console.info('Checkbox value', checkboxValue);
         return checkboxValue;
     }
-    
+
 }
 
 /**
@@ -171,11 +172,11 @@ export class EnumView extends StringView {
         return (((this.field.style as any).$options
             ?? panic(`enum ${this.field.name} missing options`)) as Record<string, string>);
     }
-    
+
     renderView(v: any): Markup {
         return this.choices[v] ?? String(v);
     }
-    
+
     renderEditor(relation_id: number, val: any): Markup {
         //size: this.field.style.$width ?? 30,
 
@@ -286,7 +287,7 @@ export class RelationView extends View {
         return this.#scalarViews??=
             this.scalarViews.filter(f=>!(f instanceof PrimaryKeyView));
     }
-    
+
     get relationViews(): RelationView[] {
         return this.#relationViews??=
             this.views.filter(f=>f instanceof RelationView).map(f=>f as RelationView);
@@ -307,7 +308,7 @@ export class RelationView extends View {
         return ([] as RelationView[]).concat(
             ...this.relationViews.map(r=>r.descendantAndSelfRelationViews));
     }
-    
+
     // get relationViewForRelation(): Map<RelationView, RelationView> {
     //     return this.#relationViewForRelation = (()=>{
     //         return new Map();
@@ -334,11 +335,11 @@ export class RelationView extends View {
 export class SchemaView extends RelationView {
     declare field: Schema;
     #relationViewForRelation: Map<RelationField, RelationView>|undefined = undefined;
-    
+
     constructor(public schema: Schema, views: View[]) {
         super(schema, views);
     }
-    
+
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitSchemaView(this, a); }
 
     get relationViewForRelation(): Map<RelationField, RelationView> {
@@ -371,24 +372,24 @@ export interface ViewVisitorI<A,R> {
  * Need multiple versions of render visitor.
  */
 export class RenderVisitor implements ViewVisitorI<any,Markup> {
-    
+
     visitView(f: View, v: any): Markup {
         // TODO this will be an exception later.
         return `[[Unrendered field kind ${utils.className(f)}]]`;
     }
-    
+
     visitBooleanView(f: BooleanView, v: any): Markup {
         return this.visitView(f, v);
     }
-    
+
     visitIntegerView(f: IntegerView, v: any): Markup {
         return this.visitView(f, v);
     }
-    
+
     visitFloatView(f: FloatView, v: any): Markup {
         return this.visitView(f, v);
     }
-    
+
     visitStringView(f: StringView, v: any): Markup {
         return this.visitView(f, v);
     }
@@ -400,7 +401,7 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
     visitVariantView(f: VariantView, v: any): Markup {
         return this.visitView(f, v);
     }
-    
+
     visitBlobView(f: BlobView, v: any): Markup {
         return this.visitView(f, v);
     }
@@ -412,19 +413,19 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
     visitImageView(f: ImageView, v: any): Markup {
         return this.visitView(f, v);
     }
-    
+
     visitIdView(f: IdView, v: any): Markup {
         return this.visitView(f, v);
     }
-    
+
     visitPrimaryKeyView(f: PrimaryKeyView, v: any) {
         return this.visitView(f, v);
     }
-    
+
     visitRelationView(r: RelationView, v: CurrentRelationQuery): Markup {
         //r.modelFields.forEach(f=>f.accept(this, v[f.name]));
     }
-    
+
     visitSchemaView(schema: SchemaView, v: any): Markup {
         return this.visitRelationView(schema, v);
     }
@@ -484,7 +485,7 @@ export class ActiveViews {
         // This is not necc ahead of all the server timestamps, just ahead
         // of all the timestamps in the current workspace.  Once we are live
         // following, this will need redoing XXX
-        return timestamp.nextTime(this.workspace.mostRecentLocalTimestamp);        
+        return timestamp.nextTime(this.workspace.mostRecentLocalTimestamp);
     }
 
     applyAssertion(assertion: Assertion) {
@@ -504,7 +505,7 @@ export class ActiveViews {
             }
         })();
     }
-    
+
     /**
      * Note: this is part of a temporary saving model for the proto versin -
      * the workspace must be droppped after saving changes in this manner.
@@ -523,12 +524,12 @@ export class ActiveViews {
         // TODO do something nicer!!!
         location.reload();
     }
-    
+
     viewByName(viewName: string): ActiveView {
         return this.activeViews.get(viewName)
             ?? panic('unable to find active view', viewName);
     }
-    
+
     registerActiveView(activeView: ActiveView) {
         this.activeViews.set(activeView.id, activeView);
     }
@@ -541,7 +542,7 @@ export class ActiveViews {
     rerenderViewById(viewId: string) {
         this.activeViews.get(viewId)?.rerender();
     }
-    
+
     getCurrentlyOpenTupleEditorForTupleId(renderRootId: string, tuple_id: number): TupleEditor|undefined {
         return (this.currentlyOpenTupleEditor !== undefined &&
             this.currentlyOpenTupleEditor.renderRootId === renderRootId &&
@@ -560,7 +561,7 @@ export class ActiveViews {
     editNewAbove(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number) {
         this.editNewPeer(renderRootId, db_tag, tuple_tag, tuple_id, 'before');
     }
-    
+
     editNewBelow(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number) {
         this.editNewPeer(renderRootId, db_tag, tuple_tag, tuple_id, 'after');
     }
@@ -571,7 +572,7 @@ export class ActiveViews {
 
     editNewLastChild(renderRootId: string, db_tag: string, tuple_tag: string, tuple_id: number, child_tag: string) {
         this.editNewChild(renderRootId, db_tag, tuple_tag, tuple_id, 'lastChild', child_tag);
-        
+
     }
 
     editNewPeer(renderRootId: string,
@@ -586,7 +587,7 @@ export class ActiveViews {
         const refAssertion = refTuple.mostRecentTuple?.assertion
             ?? panic('cannot use ref tuple', refTupleId);
         const newTupleSchema = refTuple.schema;
-        
+
         //const mostRecentTupleVersion = refTuple.mostRecentTuple;
         const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
@@ -596,7 +597,7 @@ export class ActiveViews {
         const order_key = refKind === 'before'
             ? generateBeforeOrderKey(parent, refTupleId)
             : generateAfterOrderKey(parent, refTupleId);
-        
+
         // TODO make this new assertion making less raw.
         const newAssertion: Assertion = Object.assign(
             {},
@@ -613,7 +614,7 @@ export class ActiveViews {
 
         console.info('REF assertion', refAssertion);
         console.info('NEW assertion', newAssertion);
-        
+
         this.openFieldEdit(renderRootId, refKind, undefined, refDbTag, refTupleTag, refTupleId, newAssertion);
     }
 
@@ -651,17 +652,17 @@ export class ActiveViews {
             });
 
         console.info('NEW assertion', newAssertion);
-        
+
         this.openFieldEdit(renderRootId, refKind, parentRelation.schema.tag, refDbTag, refTupleTag, refTupleId, newAssertion);
     }
 
     editNew(renderRootId: string,
             refDbTag: string, refTupleTag: string, refTupleId: number,
             refKind: TupleRefKind, schema: RelationField) {
-        
-        
+
+
     }
-        
+
     editTupleUpdate(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
 
         // --- Find the reference tuple
@@ -718,7 +719,7 @@ export class ActiveViews {
     //     for(const k in new_assertion) {
     //         console.info('k', k);
     //     }
-        
+
     //     // const new_assertion2: Assertion = Object.assign(
     //     //     {},
     //     //     mostRecentTupleVersion.assertion,
@@ -735,7 +736,7 @@ export class ActiveViews {
 
         // alert('Delete not implemented');
         // return;
-        
+
         // --- Find the reference tuple
         const refTuple = this.workspace.getVersionedTupleById(
             refDbTag, refTupleTag, refTupleId)
@@ -747,7 +748,7 @@ export class ActiveViews {
             alert('Cannot delete a item with non-deleted children - please delete all children first');
             throw new Error('cannot delete tuple with non-deleted children');
         }
-        
+
         // --- Find the parent of the reference tuple
         const parentTuple = this.workspace.getVersionedTupleByPath(
             parentAssertionPath(getAssertionPath(refTuple.currentAssertion ??
@@ -766,7 +767,7 @@ export class ActiveViews {
              valid_to: this.nextTime(),
             }
         );
-        
+
         this.applyAssertion(newAssertion);
 
         this.rerenderViewById(renderRootId);
@@ -793,10 +794,10 @@ export class ActiveViews {
         const parentRelation = parentTuple.childRelations[refTupleTag]
             ?? panic("failed to find parent relation for move up");
 
-        // --- 
+        // ---
 
 
-        
+
         // --- If this tuple is already the first tuple in its parent, nothing to do
         const updatedOrderKey = workspace.generateBeforeOrderKey(
             parentRelation, refTuple.id);
@@ -813,7 +814,7 @@ export class ActiveViews {
              order_key: updatedOrderKey
             }
         );
-        
+
         this.applyAssertion(newAssertion);
 
         this.rerenderViewById(renderRootId);
@@ -823,7 +824,7 @@ export class ActiveViews {
         console.info('--- Move down', renderRootId, refTupleId);
         alert('move down is not implemented yet');
     }
-    
+
     /**
      *
      */
@@ -842,7 +843,7 @@ export class ActiveViews {
             alert('A field editor is already open');
             return;
         }
-        
+
         // --- Find the view
         const tupleSchema =
             this.workspace.tables.get(refDbTag)?.schema
@@ -854,7 +855,7 @@ export class ActiveViews {
                 .viewTree;
         const tupleView = viewTree.relationViewForRelation.get(tupleSchema) ??
             panic('unable to find relation view for relation', tupleSchema.tag);
-        
+
         // --- Instantiate a field editor
         this.currentlyOpenTupleEditor = new TupleEditor(
             renderRootId, tupleView, refKind, refRelation, refTupleId, new_assertion);
@@ -875,7 +876,7 @@ export class ActiveViews {
         return viewTree.relationViewForRelation.get(tupleSchema) ??
             panic('unable to find relation view for relation', tupleSchema.tag);
     }
-    
+
     endFieldEdit() {
         if(!this.currentlyOpenTupleEditor) {
             alert('No field editor is currently open');
@@ -885,17 +886,17 @@ export class ActiveViews {
         const tupleEditor = this.currentlyOpenTupleEditor;
 
         tupleEditor.endFieldEdit();
-        
+
         const renderRootId = tupleEditor.renderRootId;
         const newAssertion = tupleEditor.assertion;
-        
+
         newAssertion.valid_from = this.nextTime();
         newAssertion.valid_to = timestamp.END_OF_TIME;
 
         this.applyAssertion(newAssertion);
-        
+
         this.currentlyOpenTupleEditor = undefined;
-        
+
         this.rerenderViewById(renderRootId);
     }
 }
@@ -905,7 +906,7 @@ export class ActiveViews {
  */
 export class ActiveView {
     tupleIdsWithHistoryOpen: Set<number> = new Set();
-    
+
     constructor(public id: string,
                 public title: string,
                 public viewTree: SchemaView, // This is restricting view to be from one schema XXX revisit
@@ -919,7 +920,7 @@ export class ActiveView {
             this.tupleIdsWithHistoryOpen.add(tupleId);
         this.rerender();
     }
-    
+
     rerender() {
         const renderer = new EditorRenderer(this.viewTree, this.tupleIdsWithHistoryOpen, this.id);
         const queryResults = this.query();
@@ -937,7 +938,7 @@ export class ActiveView {
             ?? panic('unable to find modal editor title for dialog', this.id);
 
         modalTitle.innerHTML = this.title;
-        
+
         const modalBody = document.querySelector(`#${this.id} div.modal-body`)
             ?? panic('unable to find modal editor body for dialog', this.id);
 
@@ -956,7 +957,7 @@ type TupleRefKind = 'replaceSelf' | 'firstChild' | 'lastChild' | 'before' | 'aft
  *
  */
 export class TupleEditor {
-    
+
     constructor(public renderRootId: string,
                 public view: RelationView,
                 public ref_kind: TupleRefKind,
@@ -964,7 +965,7 @@ export class TupleEditor {
                 public ref_tuple_id: number,
                 public assertion: Assertion) {
     }
-    
+
     endFieldEdit() {
         // We need the schema here to do the reload.
         // Copy field values from form into assertion.
@@ -1025,9 +1026,9 @@ export function dropActiveViewsAndWorkspace() {
  */
 export class EditorRenderer {
     readonly uiColCount = 3;
-    
+
     constructor(public viewTree: SchemaView,
-                public tupleIdsWithHistoryOpen: Set<number>,                
+                public tupleIdsWithHistoryOpen: Set<number>,
                 public renderRootId: string) {
     }
 
@@ -1092,7 +1093,7 @@ export class EditorRenderer {
                    ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
                 : undefined,
             ];
-    }    
+    }
 
     /**
      *
@@ -1106,7 +1107,7 @@ export class EditorRenderer {
         const refRelation = currentlyOpenTupleEditor?.ref_relation;
         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
         const view = this.getViewForRelation(schema);
-        
+
         const tuples = [...r.tuples.values()];
 
         const firstChildEditor =
@@ -1134,12 +1135,12 @@ export class EditorRenderer {
             });
 
         if(renderedTuples.length === 0 && !firstChildEditor && !lastChildEditor) {
-            const addTupleAction = 
+            const addTupleAction =
                 `activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.parent.id}, '${r.src.schema.tag}')`;
         return ['button', {onclick: addTupleAction},
                 `Insert ${view.prompt}`];
     }
-        
+
     return (
             // This table has the number of cols in the schema for 'r'
             ['table', {class: `relation relation-${schema.name}`},
@@ -1155,7 +1156,7 @@ export class EditorRenderer {
              this.renderTupleAndChildRelations(r),
             ]);
     }
-    
+
     /**
      *
      */
@@ -1180,7 +1181,7 @@ export class EditorRenderer {
                         ])
                    ];
     }
-    
+
     // ??? What happens if the tuple is rendered twice on the same screen - this current id scheme implies both should be under
     // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
     // somehow.
@@ -1227,7 +1228,7 @@ export class EditorRenderer {
     }
 
     renderScalarCellEditor(v: ScalarView, t: TupleEditor): Markup {
-        const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here; 
+        const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here;
         return (
             ['td', {class: `fieldedit`},
              v.renderEditor(t.assertion.assertion_id, value)
@@ -1238,7 +1239,7 @@ export class EditorRenderer {
     //       item (bloat).
     // TODO: add an 'Insert Child XXX' for each child relation kind.
     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
-        const insertChildMenuItems = 
+        const insertChildMenuItems =
             r.schema.relationFields.map(c=>
                 ['li', {},
                  ['a', {class:'dropdown-item', href:'#',
@@ -1248,7 +1249,7 @@ export class EditorRenderer {
 
         // 'true||undefined' type is convenient for eliding sections of markup.
         const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
-        
+
         return (
             ['div', {class:'dropdown'},
              ['button',
@@ -1276,9 +1277,9 @@ export class EditorRenderer {
 //  */
 // export class EditorRenderer {
 //     readonly uiColCount = 3;
-    
+
 //     constructor(public viewTree: SchemaView,
-//                 public tupleIdsWithHistoryOpen: Set<number>,                
+//                 public tupleIdsWithHistoryOpen: Set<number>,
 //                 public renderRootId: string) {
 //     }
 
@@ -1286,7 +1287,7 @@ export class EditorRenderer {
 //         return this.viewTree.relationViewForRelation.get(schema)
 //             ?? panic('unable find relation view for relation', schema.name);
 //     }
-    
+
 //     // renderRelation0(r: CurrentRelationQuery): Markup {
 //     //     const schema = r.schema;
 //     //     // TODO somehow change this to find tuple editor targeting an insert into
@@ -1319,7 +1320,7 @@ export class EditorRenderer {
 //         const refRelation = currentlyOpenTupleEditor?.ref_relation;
 //         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
 //         const view = this.getViewForRelation(schema);
-        
+
 //         const tuples = [...r.tuples.values()];
 
 //         const firstChildEditor =
@@ -1353,12 +1354,12 @@ export class EditorRenderer {
 //         //              'firstChildEditor', firstChildEditor,
 //         //              'lastChildEditor', lastChildEditor);
 //         if(renderedTuples.length === 0 && !firstChildEditor && !lastChildEditor) {
-//             const addTupleAction = 
+//             const addTupleAction =
 //                 `activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.parent.id}, '${r.src.schema.tag}')`;
 //         return ['button', {onclick: addTupleAction},
 //                 `Insert Child ${view.prompt}`];
 //     }
-        
+
 //     return (
 //             // This table has the number of cols in the schema for 'r'
 //             ['table', {class: `relation relation-${schema.name}`},
@@ -1374,7 +1375,7 @@ export class EditorRenderer {
 //              this.renderTuple(r),
 //             ]);
 //     }
-    
+
 //     renderTuple(r: CurrentTupleQuery): Markup {
 //         const schema = r.schema;
 //         const view = this.getViewForRelation(schema);
@@ -1434,7 +1435,7 @@ export class EditorRenderer {
 //                    ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
 //                 : undefined,
 //             ];
-//     }    
+//     }
 
 //     /**
 //      *
@@ -1460,7 +1461,7 @@ export class EditorRenderer {
 //                         ])
 //                    ];
 //     }
-    
+
 //     // ??? What happens if the tuple is rendered twice on the same screen - this current id scheme implies both should be under
 //     // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
 //     // somehow.
@@ -1507,7 +1508,7 @@ export class EditorRenderer {
 //     }
 
 //     renderScalarCellEditor(v: ScalarView, t: TupleEditor): Markup {
-//         const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here; 
+//         const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here;
 //         return (
 //             ['td', {class: `fieldedit`},
 //              v.renderEditor(t.assertion.assertion_id, value)
@@ -1518,7 +1519,7 @@ export class EditorRenderer {
 //     //       item (bloat).
 //     // TODO: add an 'Insert Child XXX' for each child relation kind.
 //     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
-//         const insertChildMenuItems = 
+//         const insertChildMenuItems =
 //             r.schema.relationFields.map(c=>
 //                 ['li', {},
 //                  ['a', {class:'dropdown-item', href:'#',
@@ -1528,7 +1529,7 @@ export class EditorRenderer {
 
 //         // 'true||undefined' type is convenient for eliding sections of markup.
 //         const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
-        
+
 //         return (
 //             ['div', {class:'dropdown'},
 //              ['button',
@@ -1560,9 +1561,9 @@ export class EditorRenderer {
 //  */
 // export class ViewRenderer {
 //     readonly uiColCount = 3;
-    
+
 //     constructor(public viewTree: SchemaView,
-//                 public tupleIdsWithHistoryOpen: Set<number>,                
+//                 public tupleIdsWithHistoryOpen: Set<number>,
 //                 public renderRootId: string) {
 //     }
 
@@ -1570,7 +1571,7 @@ export class EditorRenderer {
 //         return this.viewTree.relationViewForRelation.get(schema)
 //             ?? panic('unable find relation view for relation', schema.name);
 //     }
-    
+
 //     renderRelation(r: CurrentRelationQuery): Markup {
 //         const schema = r.schema;
 //         const view = this.getViewForRelation(schema);
@@ -1593,7 +1594,7 @@ export class EditorRenderer {
 //              this.renderTuple(r),
 //             ]);
 //     }
-    
+
 //     renderTuple(r: CurrentTupleQuery): Markup {
 //         const schema = r.schema;
 //         const view = this.getViewForRelation(schema);
@@ -1636,7 +1637,7 @@ export class EditorRenderer {
 //                    ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
 //                 : undefined,
 //             ];
-//     }    
+//     }
 
 //     /**
 //      *
@@ -1662,7 +1663,7 @@ export class EditorRenderer {
 //                         ])
 //                    ];
 //     }
-    
+
 //     renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
 //         const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
 //         return (
@@ -1676,7 +1677,7 @@ export class EditorRenderer {
 //     // TODO: the event handlers should not be literal onclick scripts on each
 //     //       item (bloat).
 //     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
-//         const insertChildMenuItems = 
+//         const insertChildMenuItems =
 //             r.schema.relationFields.map(c=>
 //                 ['li', {},
 //                  ['a', {class:'dropdown-item', href:'#',
@@ -1686,7 +1687,7 @@ export class EditorRenderer {
 
 //         // 'true||undefined' type is convenient for eliding sections of markup.
 //         const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
-        
+
 //         return (
 //             ['div', {class:'dropdown'},
 //              ['button',
@@ -1765,8 +1766,8 @@ export function renderEditor(r: RelationView): any {
 //     const rendered = workspace.testRenderEntry(assertions);
 
 //     root.innerHTML = renderToStringViaLinkeDOM(rendered);
-    
-    
+
+
 // }
 
 // export async function run() {
@@ -1776,18 +1777,18 @@ export function renderEditor(r: RelationView): any {
 //     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
 //     views.workspace.addTable(dictSchema);
 
-    
 
 
 
-    
+
+
 //     const dictView = schemaView(dictSchema);
-    
+
 //     views.registerActiveView(
 //         new ActiveView('root',
 //                        dictView,
 //                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('dct'))));
-    
+
 //     const root = document.getElementById('root') ?? panic();
 //     root.innerHTML = 'POW!';
 
@@ -1798,32 +1799,32 @@ export function renderEditor(r: RelationView): any {
 //     const rendered = workspace.testRenderEntry(assertions);
 
 //     root.innerHTML = renderToStringViaLinkeDOM(rendered);
-    
-    
+
+
 // }
 
 
 export function renderModalEditorSkeleton() {
-    
+
     return [
         ['div', {class: 'modal fade',  id:'modalEditor',
                  'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
                  tabindex:'-1', 'aria-labelledby':'modalEditorLabel',
                  'aria-hidden':'true'},
          ['div', {class:'modal-dialog modal-dialog-scrollable modal-fullscreen'},
-          
+
           ['div', {class:'modal-content'},
-           
+
            ['div', {class:'modal-header'},
             ['h1', {class:'modal-title fs-5', id:'modalEditorLabel'},
              'Edit'],
             ['button', {type:'button', class:'btn-close', 'data-bs-dismiss':'modal',
                         'aria-label':'Close'}]
-           
+
            ], // div.modal-header
-         
+
            ['div', {class:'modal-body', id:'modalEditorBody'}
-            
+
            ], // div.modal-body
 
            ['div', {class:'modal-footer'},
@@ -1832,21 +1833,21 @@ export function renderModalEditorSkeleton() {
                         //onclick:'activeViews().saveChanges()'}, 'Save']
                         onclick:'location.reload()'}, 'Close']
            ], // div.modal-footer
-         
+
           ] // div.modal-content
 
          ] // div.modal-dialog
 
         ] // div.modal
     ];
-    
+
 }
 
 /**
  *
  */
 export function initPopupEntryEditor() {
-    
+
 }
 
 /**
@@ -1872,16 +1873,16 @@ export async function popupEntryEditor(title: string,
 
     // TODO make this less weird
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
-    
+
     dropActiveViewsAndWorkspace();
-    
+
     const views = activeViews();
 
     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
     views.workspace.addTable(dictSchema);
 
     assertions.forEach((a:Assertion)=>views.workspace.untrackedApplyAssertion(a));
-    
+
     const dictView = schemaView(dictSchema);
 
     let query: ()=>CurrentTupleQuery|CurrentRelationQuery;
@@ -1893,7 +1894,7 @@ export async function popupEntryEditor(title: string,
     else
         query = ()=>new CurrentTupleQuery(
             views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId));
-    
+
     views.registerActiveView(new ActiveView('modalEditor', title, dictView, query));
 
     views.rerenderAllViews();
@@ -1901,7 +1902,7 @@ export async function popupEntryEditor(title: string,
     getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').show();
 
     //console.info('Assertions', JSON.stringify(assertions, undefined, 2));
-    
+
 }
 
 /**
@@ -1936,21 +1937,21 @@ export function launchNewLexeme() {
  */
 export async function run() {
     return;
-    
+
     console.info('rendering sample 2');
     const views = activeViews();
 
     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
     views.workspace.addTable(dictSchema);
-    
+
     const dictView = schemaView(dictSchema);
-    
+
     views.registerActiveView(
         new ActiveView('root',
                        'Edit ENTRY',
                        dictView,
                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('dct'))));
-    
+
     // const root = document.getElementById('root') ?? panic();
     // root.innerHTML = 'POW!';
 
@@ -1960,9 +1961,9 @@ export async function run() {
     //console.info('Assertions', JSON.stringify(assertions, undefined, 2));
     assertions.forEach((a:Assertion)=>views.workspace.untrackedApplyAssertion(a));
 
-    
+
     activeViews().rerenderAllViews();
-    
+
 }
 
 export const exportToBrowser = ()=> ({
@@ -1977,4 +1978,3 @@ export const exportToBrowser = ()=> ({
 
 export const routes = ()=> ({
 });
-

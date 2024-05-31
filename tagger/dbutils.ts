@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await, no-unused-vars
 //import { DB, PreparedQuery } from "https://deno.land/x/sqlite/mod.ts";
 import { Db, PreparedQuery } from "./db.ts";
 import * as utils from "../utils/utils.ts";
@@ -23,4 +24,3 @@ export class PreparedQueryCache {
         return utils.getOrCreate(queriesForDb, '#'+name, (name:string)=>db.prepareQuery(query()));
     }
 }
-

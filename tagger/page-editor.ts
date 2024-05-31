@@ -1,5 +1,7 @@
+// deno-lint-ignore-file no-unused-vars, no-unreachable, no-explicit-any
+
 function onContentLoaded() {
-    
+
     const lockedBoundingGroupId = getLockedBoundingGroupId();
     if(lockedBoundingGroupId) {
         selectGroup(document.getElementById(lockedBoundingGroupId)
@@ -20,7 +22,7 @@ function onContentLoaded() {
 }
 
 // Having this be top level code is gross XXX FIX
-addEventListener("DOMContentLoaded", event=>onContentLoaded());
+addEventListener("DOMContentLoaded", _event=>onContentLoaded());
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -39,7 +41,7 @@ function pageEditorMouseDown(event: MouseEvent) {
         lockedBoundingGroupId,
         selectedGroup: selectedGroup && selectedGroup.id,
         singleGroupMode});
-    
+
     // --- Adjust event target to be ancestor or self element of application interest.
     const target = adjustEventTarget(event.target);
     if(!target) return;
@@ -184,7 +186,7 @@ function grabberMouseDown(event: MouseEvent, grabber: Element, extraAbortAction:
     // --- Store the drag start mouse X and Y
     const dragStartClientX = event.clientX;
     const dragStartClientY = event.clientY;
-    
+
     // --- Select the grabber (and containing box and group).
     selectBoxGrabber(grabber);
 
@@ -208,7 +210,7 @@ function grabberMouseDown(event: MouseEvent, grabber: Element, extraAbortAction:
     // --- Add 'drag-in-progress' class to #annotatedPage to disable some
     //     hover behaviour that would be annoying during a drag.
     document.getElementById('annotatedPage')?.classList.add('drag-in-progress');
-    
+
     // --- Register the drag tx - handles mouseMove events until the mouseDown (or abort)
     dragTxBegin({
         onMouseMove(event: MouseEvent, target: Element) {
@@ -261,7 +263,7 @@ function grabberMouseDown(event: MouseEvent, grabber: Element, extraAbortAction:
             }
 
             document.getElementById('annotatedPage')?.classList.remove('drag-in-progress');
-            
+
             const x = getIntAttribute(box, 'x');
             const y = getIntAttribute(box, 'y');
             const w = getIntAttribute(box, 'width');
@@ -294,11 +296,11 @@ function grabberMouseDown(event: MouseEvent, grabber: Element, extraAbortAction:
  *
  */
 function newBoxMouseDown(event:MouseEvent, target:Element, addToCurrentGroup:boolean) {
-    
+
     const scannedPageSvg = document.getElementById('scanned-page') ??
           panic('unable to find scanned page element');
     const scannedPageSvgLocation = scannedPageSvg.getBoundingClientRect();
-    
+
     // --- Compute initial size and position for box
     const scaleFactor = getContainingScaleFactor(target);
     const x = (event.clientX - scannedPageSvgLocation.x) * scaleFactor;
@@ -335,7 +337,7 @@ function newBoxMouseDown(event:MouseEvent, target:Element, addToCurrentGroup:boo
 
         // --- Start a resize on our new box, dropping the whole group on abort
         grabberMouseDown(event, lowerLeftGrabber, ()=>boundingGroup.remove());
-    }    
+    }
 }
 
 // ---------------------------------------------------------------------------------
@@ -376,7 +378,7 @@ function createNewBoundingBox(x:number, y:number, width:number, height:number): 
     boundingBox.setAttribute('y', String(y))
     boundingBox.setAttribute('width', String(width))
     boundingBox.setAttribute('height', String(height))
-    
+
     // --- Add the frame rect
     const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     frame.classList.add('frame');
@@ -385,7 +387,7 @@ function createNewBoundingBox(x:number, y:number, width:number, height:number): 
     frame.setAttribute('width', '100%')
     frame.setAttribute('height', '100%')
     boundingBox.appendChild(frame);
-    
+
     // --- Add the four corner grabber circles
     const grabbers = [];
     for(const cx of ['0', '100%']) {
@@ -400,7 +402,7 @@ function createNewBoundingBox(x:number, y:number, width:number, height:number): 
     }
 
     return boundingBox;
-}    
+}
 
 const groupColors = [
     'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
@@ -429,7 +431,7 @@ function chooseNewGroupColor(x: number, y: number) {
         for(const box of group.children) {
             // Skip the group frame
             if(!box.classList.contains('box')) continue;
-            
+
             const distance = Math.hypot(x-getIntAttribute(box, 'x'), y-getIntAttribute(box, 'y'));
             if(distance < (distanceByColor.get(groupColor)??Number.MAX_SAFE_INTEGER)) {
                 distanceByColor.set(groupColor, distance);
@@ -492,7 +494,7 @@ function getGroupId(group: Element): number {
  * having the highest z-index - thus being non occluded by any other element
  * so that they can be interacted with.
  */
-  
+
 /**
  * Clear the group, box and grabber selections.
  */
@@ -538,7 +540,7 @@ const idCollator = Intl.Collator('en');
 
 function selectBoxOrRotateSelectionIfAlreadySelectedMultiselect(box: Element) {
     const group = getGroupForBox(box);
-    
+
     // --- If the group this box is in is not already selected, do a normal selection
     if(getSelectedGroup() !== group) {
         selectBox(box);
@@ -596,7 +598,7 @@ function getBoxesForGroup(group: Element) {
 function getGroupForBox(box: Element) {
     return box.parentElement;
 }
-    
+
 function getSelectedBox() {
     return document.querySelector('svg.box.active');
 }
@@ -700,14 +702,14 @@ function updateGroupDimensions(group: Element) {
     const pageImage = getScannedPageForElement(group);
     const pageWidth = getIntAttribute(pageImage, 'width');
     const pageHeight = getIntAttribute(pageImage, 'height');
-    
+
     // --- Query the dimensions for all boxes in this group.
     const boxDimensions = getBoxesForGroup(group).
           map(box=>({x: getIntAttribute(box, 'x'),
                      y: getIntAttribute(box, 'y'),
                      w: getIntAttribute(box, 'width'),
                      h: getIntAttribute(box, 'height')}));
-    
+
     // --- Group frame contains all boxes + a margin.
     const groupMargin = 10;
     const groupX = Math.max(Math.min(...boxDimensions.map(b=>b.x)) - groupMargin, 0);
@@ -766,7 +768,7 @@ interface MultiBoxes {
  *
  */
 function findBoxesWithSharedLocation(page: Element): MultiBoxes {
-    
+
     // --- Partition bounding boxes by their complete coordinates
     const boundingBoxes = page.querySelectorAll('svg.box:not(.ref)');
     const groupedByLocation = Map.groupBy(
@@ -888,7 +890,7 @@ function newBoundingBoxInNewGroup(group: Element, box: Element,
             if(!Object.hasOwn(response, 'bounding_group_id') ||
                 !Object.hasOwn(response, 'bounding_box_id'))
                 throw new Error(`new bounding box rpc had malformed response`);
-            if(box.id || group.id) 
+            if(box.id || group.id)
                 throw new Error(`bounding box has already been added to another group`);
             group.setAttribute('id', `bg_${response.bounding_group_id}`);
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
@@ -920,7 +922,7 @@ function newBoundingBoxInExistingGroup(group: Element, box: Element,
             console.info('added new box to existing group', response);
             if(!Object.hasOwn(response, 'bounding_box_id'))
                 throw new Error(`new bounding box in existing group rpc had malformed response`);
-            if(box.id) 
+            if(box.id)
                 throw new Error(`bounding box has already been added to another group`);
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
@@ -948,7 +950,7 @@ function copyRefBoxToNewGroup(box: Element) {
     getScannedPageForElement(box).appendChild(newGroup);
     selectBox(box);
     updateDerivedDom(box);
-    
+
     (async() => {
         try {
             const refBoxId = getBoxId(box);
@@ -958,7 +960,7 @@ function copyRefBoxToNewGroup(box: Element) {
             if(!Object.hasOwn(response, 'bounding_group_id') ||
                 !Object.hasOwn(response, 'bounding_box_id'))
                 throw new Error(`copy ref box to new group rpc had malformed response`);
-            
+
             newGroup.setAttribute('id', `bg_${response.bounding_group_id}`);
             box.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
@@ -986,7 +988,7 @@ function copyRefBoxToExistingGroup(box: Element, group: Element) {
     updateGroupDimensions(group);
     selectBox(box);
     updateDerivedDom(box);
-    
+
     (async() => {
         try {
             const response = await rpc`copyRefBoxToExistingGroup(${getGroupId(group)}, ${getBoxId(box)})`;
@@ -1013,7 +1015,7 @@ function copyBoxToGroup(toGroup: Element, srcBox: Element) {
     isRefBox(srcBox) && panic("use copyRefBoxToGroup for ref boxes");
     const srcGroup = srcBox.parentElement || panic();
     isGroup(srcGroup) || panic();
-    
+
     // TODO roll this back if RPC fails!
     const newBox =
         createNewBoundingBox(
@@ -1049,7 +1051,7 @@ function copyBoxToGroup(toGroup: Element, srcBox: Element) {
  */
 function removeBoxFromGroup(group: Element, box: Element) {
     isBox(box) && isGroup(group) || panic();
-    
+
     // TODO roll this back if RPC fails!
     group.removeChild(box);
     updateGroupDimensions(group);
@@ -1076,11 +1078,11 @@ function migrateBoxToGroup(box: Element, group: Element) {
     isBox(box) && isGroup(group) || panic();
     const fromGroup = box.parentElement || panic();
     isGroup(fromGroup) || panic();
-    
+
     // TODO roll this back if RPC fails!
     group.appendChild(box);
     updateGroupDimensions(group);
-    
+
     if(getBoxesForGroup(fromGroup).length === 0) {
         fromGroup.remove();
     } else {
@@ -1126,7 +1128,7 @@ function getIntAttribute(elem: Element, name: string) {
  * Moves an element to be the last child of the containing element.
  *
  * Does nothing if already last element (so cheap to repeatedly call).
- * 
+ *
  * This is used for z-order reasons in our svg based editor (ie. we
  * want the selected item to have the highest z-order so that it is
  * fully interactive)
@@ -1152,7 +1154,7 @@ function moveElementToEndOfParent(elem: Element) {
  * nulls.
  *
  * For example:
- * 
+ *
  * document.getElementById('scanned-page') ?? panic('unable to find scanned page');
  */
 function panic(message: string = 'internal error'): never {
@@ -1188,7 +1190,7 @@ function setAttributeIfChanged(elem: Element, attrName: string, newValue: string
 async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]) {
 
     console.info('RPC', rpcExprSegments, args);
-    
+
     // --- Replace ${} in this tagged template expr with arg
     //     references, and hoist the args into an arg {}.
     let rpcExpr = rpcExprSegments[0];
@@ -1207,7 +1209,7 @@ async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]) {
         body: JSON.stringify(argsObj)});
 
     const response = await fetch(request);
-    
+
     console.info('RPC response', response);
 
     if(!response.ok) {
