@@ -1,7 +1,9 @@
+// deno-lint-ignore-file no-explicit-any
+
 import {customAlphabet} from "../utils/nanoid.ts";
 
 /**
- * 
+ *
  * https://zelark.github.io/nano-id-cc/
  *
  * Using this 52 char alphabet and a length of 20,
@@ -25,7 +27,7 @@ export type Value = null|boolean|number|string|RecordValue[];
 
 /**
  * Dumps a record as a json string - replacing non-empty arrays with
- * the array ['...']. 
+ * the array ['...'].
  */
 export function recordTopLevelDump(record: any): string {
     const shallow = Object.fromEntries(

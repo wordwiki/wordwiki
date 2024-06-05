@@ -1,4 +1,5 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, require-await, no-explicit-any, no-unreachable, ban-types
+
 import * as pageEditorModule from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import { selectLayer, selectLayerByLayerName } from "./schema.ts";
@@ -93,7 +94,7 @@ export function renderPageEditorByPageId(page_id: number,
         new Set(boxes.map(b=>b.imported_from_bounding_box_id).filter(b=>b!==null));
 
     // --- Render reference layers
-    let refBlocksSvg:any = cfg.reference_layer_ids.flatMap(layer_id=> {
+    const refBlocksSvg:any = cfg.reference_layer_ids.flatMap(layer_id=> {
         const refBoxes = boxesForPageLayer().all({page_id, layer_id})
             .filter(b=>!importedFromBoundingBoxIds.has(b.bounding_box_id));
         const refBoxesByGroup = utils.groupToMap(refBoxes, box=>box.bounding_group_id);

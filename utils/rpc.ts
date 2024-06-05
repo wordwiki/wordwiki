@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-explicit-any
+
 /**
  *
  * usually used with jsterp.
@@ -25,14 +27,14 @@ export async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]
         body: JSON.stringify(argsObj)});
 
     const response = await fetch(request);
-    
+
     console.info('RPC response', response);
 
     if(!response.ok) {
         let errorJson = undefined;
         try {
             errorJson = await response.json();
-        } catch (e) {
+        } catch (_e) {
             console.info('failed to read error json');
         }
         throw new Error(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed - ${JSON.stringify(errorJson)}`);
@@ -44,7 +46,7 @@ export async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]
 export function rpcUrl(rpcExprSegments: ReadonlyArray<string>, ...args: any[]): { rpcExpr: string, argsObj: Record<string, any>} {
 
     console.info('RPC', rpcExprSegments, args);
-    
+
     // --- Replace ${} in this tagged template expr with arg
     //     references, and hoist the args into an arg {}.
     let rpcExpr = rpcExprSegments[0];

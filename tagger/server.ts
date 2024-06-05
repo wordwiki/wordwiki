@@ -1,13 +1,13 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
+
 import * as server from '../utils/http-server.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
-import {friendlyRenderPageEditor} from './render-page-editor.ts';
 import * as pageEditor from './render-page-editor.ts';
 import {ScannedDocument, ScannedPage} from './schema.ts';
 import * as schema from './schema.ts';
 import {evalJsExprSrc} from '../utils/jsterp.ts';
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
-import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import {exists as fileExists} from "std/fs/mod.ts"
 import * as utils from "../utils/utils.ts";
 import * as strings from "../utils/strings.ts";
 import { db } from "./db.ts";
@@ -45,7 +45,7 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
         if(typeof PageNumber !== 'string') throw new Error('missing page number');
         const page_number = parseInt(PageNumber);
 
-        const body = await friendlyRenderPageEditor(book, page_number);
+        const body = await pageEditor.pageEditor(book, page_number);
         const html = renderToStringViaLinkeDOM(body);
         return Promise.resolve({status: 200, headers: {}, body: html});
     } else if (filepath === '/favicon.ico') {

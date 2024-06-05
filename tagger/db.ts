@@ -136,8 +136,8 @@ export class Db {
         // be sometimes introuding a {"undefined": ""} property.  I really should track this down more, but need to get this working now, thus
         // this hack:
 
-        let paramsCopy: Record<string, any> = {};
-        for(let k in params as Record<string, any>) {
+        const paramsCopy: Record<string, any> = {};
+        for(const k in params as Record<string, any>) {
             if(k != 'undefined')
                 paramsCopy[k] = params[k];
         }
@@ -236,7 +236,7 @@ export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParamet
         if(row.length !== columnNames.length) {
             throw new Error(`expected ${columnNames.length} columns, got ${row.length} columns`);
         }
-        let obj: RowObject = {};
+        const obj: RowObject = {};
         for(let i=0; i<columnNames.length; i++) {
             obj[columnNames[i]] = row[i];
         }

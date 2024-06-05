@@ -1,7 +1,7 @@
 // deno-lint-ignore-file no-unused-vars
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import { db } from "./db.ts";
-import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import {exists as fileExists} from "std/fs/mod.ts"
 import {importScannedDocument} from "./import-scanned-document.ts";
 import {stripRequiredPrefix, stripRequiredSuffix} from '../utils/strings.ts';
 

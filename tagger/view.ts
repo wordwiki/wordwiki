@@ -1,4 +1,5 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, no-explicit-any, no-unreachable, no-window
+
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, EnumField, VariantField, BlobField, AudioField, ImageField,

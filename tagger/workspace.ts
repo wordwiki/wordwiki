@@ -1,4 +1,5 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, no-explicit-any, require-await
+
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
@@ -87,7 +88,7 @@ type FilterConditionally<Source, Condition> = Pick<Source, {[K in keyof Source]:
 
 type ArrayElemType<T extends any[]> = T[number];
 
-let k: number[] = [1,2,3];
+const k: number[] = [1,2,3];
 type FFF = ArrayElemType<typeof k>;
 
 
@@ -666,7 +667,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     }
 
     findNonDeletedChildTuples(): VersionedTuple[] {
-        let nonDeletedChildTuples: VersionedTuple[] = [];
+        const nonDeletedChildTuples: VersionedTuple[] = [];
         this.forEachVersionedTuple(t=>{
             if(t!==this && t.current?.isCurrent === true) {
                 //console.info('Found non deleted child tuple', t, t.current, t.current?.isCurrent);
@@ -751,7 +752,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                     //     is starting a new valid period.
                     //     NOT SUPPORTED YET!
                     throw new Error(`no operations are currently supported on top of a deleted assertion - deleted assertion is ${JSON.stringify(prevAssertion, undefined, 2)}`);
-                    break;
+                    //break;
                 }
 
                 case prevAssertion.valid_to >= assertAtTime: {
@@ -769,7 +770,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                 default: {
                     // --- Tuple we are replacing
                     throw new Error(`unexpected tuple assertion ${JSON.stringify(assertion)} OVER ${JSON.stringify(prevAssertion)}`);
-                    break;
+                    //break;
                 }
             }
         }
@@ -797,6 +798,7 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         // TODO tie into speculative mechanism.
 
         if(prevTuple) {
+            // nop
 
         }
 
@@ -1138,7 +1140,7 @@ export function generateBeforeOrderKey(parent: VersionedRelation,
     if(refTuple===undefined)
         throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key`);
     let prev: CurrentTupleQuery|undefined = undefined;
-    for(let t of orderedTuplesById.values()) {
+    for(const t of orderedTuplesById.values()) {
         if(t.src.id === refTupleId) {
             const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.begin_string;
             const after_key = refTuple.mostRecentTupleVersion?.assertion.order_key
@@ -1159,7 +1161,7 @@ export function generateAfterOrderKey(parent: VersionedRelation,
     if(refTuple===undefined)
         throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute after order key`);
     let prev: CurrentTupleQuery|undefined = undefined;
-    for(let t of [...orderedTuplesById.values()].toReversed()) {
+    for(const t of [...orderedTuplesById.values()].toReversed()) {
         if(t.src.id === refTupleId) {
             const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.end_string;
             return orderkey.between(

@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-explicit-any
+
 import * as config from './config.ts';
 import {block} from "../utils/strings.ts";
 import * as view from './view.ts';
@@ -59,11 +61,11 @@ export function pageTemplate(content: PageContent): any {
          ['body', {},
 
           navBar(),
-          
+
           // TODO probably move this somewhere else
           ['audio', {id:'audioPlayer', preload:'none'},
            ['source', {src:'', type:'audio/mpeg'}]],
-          
+
           content.body,
 
           view.renderModalEditorSkeleton(),
@@ -122,19 +124,19 @@ export function navBar(): any {
            //   ['a', {class:"nav-link disabled", 'aria-disabled':"true"}, 'Disabled'],
            //  ], //li
 
-            
+
             ['li', {class:"nav-item"},
              ['a', {class:"nav-link", 'aria-current':"page", href:"#", onclick:'imports.launchNewLexeme()'}, 'Add New Entry'],
             ], //li
-           
+
            ], //ul
-           
+
            // Search form
            ['form', {class:"d-flex", role:"search", method:'get', action:'/wordwiki.searchPage(query)'},
             ['input', {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
             ['button', {class:"btn btn-outline-success", type:"submit"}, 'Search'],
            ], //form
-             
+
           ], //div navbar-collaplse
 
          ], //div container

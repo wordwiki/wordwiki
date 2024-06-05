@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-unused-vars, no-explicit-any
+
 import {CustomError} from "../utils/errors.ts";
 import {typeof_extended} from "../utils/utils.ts";
 import * as utils from "../utils/utils.ts";
@@ -27,7 +29,7 @@ export interface Style {
 export function validateStyle(locus:string, style: any): Style {
     return {
         $prompt: validateOptionalStringProperty(locus, '$prompt', style.$prompt),
-        $style: validateOptionalStringProperty(locus, '$style', style.$style), 
+        $style: validateOptionalStringProperty(locus, '$style', style.$style),
     };
 }
 
@@ -108,11 +110,11 @@ export abstract class Field {
     // marked with a kind that drives things like when they are
     // serialized.
     kind: FieldKind = FieldKind.Model;
-    
+
     // Automatically set when a field is added to a relation.
     parentRelation: RelationField|undefined = undefined;
     colIdx: number = -1;
-    
+
     constructor(public name: string, public style: Style) {
         if(!Field.FieldNameRegex.test(name)) {
             throw new Error(`invalid field names '${name}' - field names must start with a letter, then be followed by letters, numbers and _`);
@@ -149,7 +151,7 @@ export abstract class Field {
 
     // abstract renderAsTomlValueString(): string {
     // }
-    
+
     /*abstract*/ makeRandomChange() {
     }
 }
@@ -228,7 +230,7 @@ export abstract class ScalarField extends Field {
         return json;
     }
 
-    
+
     createDbFields(versioned: boolean): string[] {
         return [`${this.name} ${this.sqlTypename()}${this.optional?'':' NOT NULL'}`];
     }
@@ -252,12 +254,12 @@ export class BooleanField extends ScalarField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitBooleanField(this, a); }
-    
+
     jsTypename(): string { return 'boolean'; }
     schemaTypename(): string { return 'boolean'; }
     // sqlite has no bool type - one has to use 0/1 instead
     sqlTypename(): string { return 'INTEGER'; }
-    
+
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BooleanField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'boolean');
@@ -282,7 +284,7 @@ export class IntegerField extends ScalarField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitIntegerField(this, a); }
-    
+
     jsTypename(): string { return 'number'; }
     schemaTypename(): string { return 'integer'; }
     sqlTypename(): string { return 'INTEGER'; }
@@ -321,7 +323,7 @@ export class FloatField extends ScalarField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitFloatField(this, a); }
-    
+
     jsTypename(): string { return 'number'; }
     schemaTypename(): string { return 'float'; }
     sqlTypename(): string { return 'REAL'; }
@@ -329,7 +331,7 @@ export class FloatField extends ScalarField {
     /**
      * We ban NaN and +/- Infinity because they are not supported
      * by JSON.
-     * 
+     *
      * (If we find a need to support them, we can extend our JSON
      * serializer/deserializer to represent them as string values, and
      * remove this restriction)
@@ -339,7 +341,7 @@ export class FloatField extends ScalarField {
         if(!Number.isFinite(value))
             throw new ValidationError(locus, `NaN and Inf float values not allowed - ${locus}`);
     }
-    
+
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): FloatField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'float');
@@ -368,7 +370,7 @@ export class StringField extends ScalarField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitStringField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'string'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -383,7 +385,7 @@ export class StringField extends ScalarField {
 /**
  * Enum Field
  *
- * 
+ *
  */
 export class EnumField extends StringField {
     constructor(name: string, bind: string, optional: boolean, style: Style={}) {
@@ -391,7 +393,7 @@ export class EnumField extends StringField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitEnumField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'enum'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -406,7 +408,7 @@ export class EnumField extends StringField {
 /**
  * Variant Field
  *
- * 
+ *
  */
 export class VariantField extends StringField {
     constructor(name: string, bind: string, optional: boolean, style: Style={}) {
@@ -414,7 +416,7 @@ export class VariantField extends StringField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitVariantField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'variant'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -438,7 +440,7 @@ export class BlobField extends StringField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitBlobField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'blob'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -460,7 +462,7 @@ export class AudioField extends BlobField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitAudioField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'audio'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -482,7 +484,7 @@ export class ImageField extends BlobField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitImageField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'image'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -509,7 +511,7 @@ export class IdField extends ScalarField {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitIdField(this, a); }
-    
+
     jsTypename(): string { return 'string'; }
     schemaTypename(): string { return 'id'; }
     sqlTypename(): string { return 'TEXT'; }
@@ -522,7 +524,7 @@ export class IdField extends ScalarField {
         if(!IdField.IdRegex.test(valueStr))
             throw new ValidationError(locus, `Id may only contain the characters a-z and A-Z - ${valueStr}`);
     }
-    
+
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IdField {
         const {$type, $bind, $style, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'id');
@@ -541,7 +543,7 @@ export class PrimaryKeyField extends IdField {
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitPrimaryKeyField(this, a); }
 
     schemaTypename(): string { return 'primary_key'; }
-    
+
     createDbFields(versioned: boolean): string[] {
         return [`${this.name} TEXT NOT NULL${versioned?'':' PRIMARY KEY'}`];
     }
@@ -578,7 +580,7 @@ export class RelationField extends Field {
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitRelationField(this, a); }
-    
+
     resolve() {
 
         if(this.isForced())
@@ -630,7 +632,7 @@ export class RelationField extends Field {
         // Assign colIds
         this.nonRelationFields.reduce((nextColIdx, field) =>
             (field.colIdx = nextColIdx, nextColIdx+1), 0);
-        
+
         // Recurse
         this.relationFields.forEach(r=>r.resolve());
     }
@@ -646,7 +648,7 @@ export class RelationField extends Field {
             !!this.#descendantAndSelfRelations_||
             !!this.#primaryKeyColIndex_;
     }
-    
+
     get fieldsByName(): {[name: string]: Field} {
         return this.#fieldsByName??=Object.fromEntries(this.fields.map(f=>[f.name, f]));
     }
@@ -659,7 +661,7 @@ export class RelationField extends Field {
         return this.#scalarFields??=
             this.fields.filter(f=>f instanceof ScalarField).map(f=>f as ScalarField);
     }
-    
+
     get relationFields(): RelationField[] {
         return this.#relationFields??=
             this.fields.filter(f=>f instanceof RelationField).map(f=>f as RelationField);
@@ -723,7 +725,7 @@ export class RelationField extends Field {
 
     get validFromColIndex(): number { return this.syntheticFieldsColIndex+1; }
     get validToColIndex(): number { return this.syntheticFieldsColIndex+2; }
-    
+
     get ancestorRelations():RelationField[] {
         return this.#ancestorRelations_??=
             this.parentRelation?[...this.parentRelation.ancestorRelations,this.parentRelation]:[];
@@ -753,7 +755,7 @@ export class RelationField extends Field {
         return this.#descendantAndSelfRelationsByTag??=
             Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.tag, r]));
     }
-        
+
     validateSchema(locus: string) {
         if(this.fields.length !== Object.getOwnPropertyNames(this.fieldsByName).length) {
             throw new ValidationError(locus,
@@ -761,12 +763,12 @@ export class RelationField extends Field {
         }
         this.relationFields.forEach(r=>r.validateSchema(locus + '/' + this.name));
     }
-    
+
     validateValue(locus: string, value: Value, opts: ValidateOpts) {
         // A missing child relation (Array) field is treated as an empty child relation.
         if(value === undefined)
             value = [];
-        
+
         if (!Array.isArray(value))
             throw new ValidationError(locus, `relations must be arrays got ${typeof value}`);
         for(const elem of value) {
@@ -802,7 +804,7 @@ export class RelationField extends Field {
     createDbFields(versioned: boolean): string[] {
         return [];
     }
-    
+
     /**
      * Returns this schema node in it's JSON serialization.
      */
@@ -815,7 +817,7 @@ export class RelationField extends Field {
         }
         return json;
     }
-    
+
     static parseSchemaFromCompactJson(locus: string, name: string, schemaJson: any): RelationField {
         const {$type, $tag, $prompt, $style, ...field_schema} = schemaJson;
         if($type !== 'relation')
@@ -826,7 +828,7 @@ export class RelationField extends Field {
         // We are presently allowing $prompt to be specified as top level instead
         // of in $style - not sure we should have this shortcut?
         const style = { $prompt, ...$style };
-        
+
         // TODO: locus needs asjusting here
         const fields = Object.entries(field_schema).map(([field_name, field_body]) =>
             parse_field(locus, field_name, field_body));
@@ -861,7 +863,7 @@ export function parse_field(locus: string, name: string, schema: any): Field {
         case 'integer':
             return IntegerField.parseSchemaFromCompactJson(locus, name, schema);
         case 'float':
-            return FloatField.parseSchemaFromCompactJson(locus, name, schema);            
+            return FloatField.parseSchemaFromCompactJson(locus, name, schema);
         case 'boolean':
             return BooleanField.parseSchemaFromCompactJson(locus, name, schema);
         default:
@@ -880,7 +882,7 @@ export function parse_field(locus: string, name: string, schema: any): Field {
 export class Schema extends RelationField {
     #relationsByName: Record<string,RelationField>|undefined = undefined;
     #relationsByTag: Record<string,RelationField>|undefined = undefined;
-    
+
     constructor(name: string, tag: string, public rootRelations: RelationField[]) {
         super(name, tag, rootRelations, {});
     }
@@ -891,7 +893,7 @@ export class Schema extends RelationField {
         this.resolve();
         this.validateSchema(locus);
     }
-    
+
     get relationsByName(): Record<string,RelationField> {
         return this.#relationsByName??=(()=>{
             const duplicateNames =
@@ -911,7 +913,7 @@ export class Schema extends RelationField {
             return Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.tag, r]));
         })();
     }
-        
+
     static parseSchemaFromCompactJson(locus: string, schemaJson: any): Schema {
         const {$type, $name, $tag, ...field_schema} = schemaJson;
         if($type !== 'schema')
@@ -920,14 +922,14 @@ export class Schema extends RelationField {
             throw new ValidationError(locus, `missing required $name on schema ${name}`);
         if(typeof $tag !== 'string')
             throw new ValidationError(locus, `missing required $tag on schema ${name}`);
-        
+
         //console.info('field_schema', field_schema);
         const rootRelations = Object.entries(field_schema).map(([field_name, field_body]:[string,any]) => {
             if(field_body?.$type !== 'relation')
                 throw new ValidationError(locus, `all top level items in a schema must be relations - item named ${field_name} is not a relation`);
             return RelationField.parseSchemaFromCompactJson(locus, field_name, field_body);
         });
-        
+
         const schema = new Schema($name, $tag, rootRelations);
         schema.resolveAndValidate(locus);
         return schema;
@@ -943,5 +945,3 @@ export class ValidationError extends CustomError {
         super(`${locus}: ${message}`);
     }
 }
-
-

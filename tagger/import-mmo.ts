@@ -1,4 +1,5 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, no-constant-condition, no-explicit-any
+
 /**
  * 'Raw' importer for the MMO legacy format.
  *
@@ -661,7 +662,7 @@ async function verifyImportMMO() {
 
     for(const [srcSpelling, srcLexeme] of srcLexemesBySpelling.entries()) {
         // Drop the recording lines
-        let lexeme = srcLexeme
+        const lexeme = srcLexeme
             .replaceAll(/\\ws .*/g, '')   // OK we alredy do these (word sound)
             .replaceAll(/\\xs .*/g, '')   // OK already deal with these
             .replaceAll(/\\csf .*/g, '')  // OK used on one lexeme (sf cross ref)
@@ -688,8 +689,8 @@ async function verifyImportMMO() {
         let gotErr = false;
         let out = `<h2>${srcSpelling}</h2>\n`;
 
-        let lexemeWithoutTags = lexeme.replaceAll(/\\[a-z]+/g, '');
-        let lexemeWithoutTagsAndUnderscores = lexemeWithoutTags.replaceAll('_', ' ');
+        const lexemeWithoutTags = lexeme.replaceAll(/\\[a-z]+/g, '');
+        const lexemeWithoutTagsAndUnderscores = lexemeWithoutTags.replaceAll('_', ' ');
         const lexemeWords = strings.splitIntoWords(lexemeWithoutTagsAndUnderscores);
         //console.info('lexeme words', JSON.stringify(lexemeWords));
 

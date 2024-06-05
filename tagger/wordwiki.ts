@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, no-explicit-any
 import * as markup from '../utils/markup.ts';
 import * as model from './model.ts';
 import * as renderPageEditor from './render-page-editor.ts';
@@ -23,7 +23,7 @@ import {DenoHttpServer} from '../utils/deno-http-server.ts';
 import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {evalJsExprSrc} from '../utils/jsterp.ts';
-import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
+import {exists as fileExists} from "std/fs/mod.ts"
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
 import * as pageEditorModule from './page-editor.ts';
 

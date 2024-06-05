@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-unused-vars
+// deno-lint-ignore-file no-unused-vars, no-explicit-any
 
 //import { DB, PreparedQuery, QueryParameter, QueryParameterSet } from "https://deno.land/x/sqlite/mod.ts";
 //import { DbSystem, Db, PreparedQuery } from "./db.ts";
@@ -552,9 +552,9 @@ export function renderEntryCompactSummary(e: Entry): any {
 }
 
 function test() {
-    let dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
     console.info('Schema', dictSchema);
-    let dumpedEntrySchemaJson = dictSchema.schemaToCompactJson();
+    const dumpedEntrySchemaJson = dictSchema.schemaToCompactJson();
     console.info('Schema again', dumpedEntrySchemaJson);
 }
 
@@ -563,7 +563,7 @@ function test() {
 
 
 function contextMenuPlay(): any {
-    var items = [
+    const items = [
         { name: 'Cut', fn: function(target:Element) { console.log('Cut!', target); }},
         { name: 'Copy', fn: function(target:Element) { console.log('Copy!', target); }},
         { name: 'Paste', fn: function(target:Element) { console.log('Paste!', target); }},
@@ -571,7 +571,7 @@ function contextMenuPlay(): any {
         { name: 'Select All', fn: function(target:Element) { console.log('Select All!', target); }},
     ];
 
-    var cm1 = new ContextMenu('.has-context-menu', items);
+    const cm1 = new ContextMenu('.has-context-menu', items);
 
     return ['div', {class: 'has-context-menu'}, 'CTX ME!'];
 }
