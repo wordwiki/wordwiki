@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
 import * as acorn from "npm:acorn@8.11.3";
+import acorn_jsx from "npm:acorn@8.11.3";
 import {Node, Expression, Identifier, Literal, ArrayExpression,
         ObjectExpression, UnaryExpression,
         BinaryExpression, LogicalExpression, MemberExpression, ConditionalExpression,
@@ -20,6 +21,13 @@ import {panic} from './utils.ts';
 export type JsNode = Node;
 
 export type Scope = Record<string, any>;
+
+// export function parseJsExpr(jsExprSrc: string): JsNode {
+//     const MyParser = acorn.Parser.extend(
+//         acorn_jsx);
+//     console.log(MyParser.parse("// Some bigint + JSX code"))
+//     return acorn.parseExpressionAt(jsExprSrc, 0, {ecmaVersion: 2023})
+// }
 
 export function parseJsExpr(jsExprSrc: string): JsNode {
     return acorn.parseExpressionAt(jsExprSrc, 0, {ecmaVersion: 2023})
@@ -363,7 +371,7 @@ export function jsPlay() {
                  'v1:v2:v1:v1:v1:v1:v2:v2:v2:v1:v2:v2:v1:v1:v1:v1:v2:v1:v1:v1:v1:v1:v1:v1:v2:v1:v2:v1:v2:v1:v1:v2:v2:v2:v2:v1:v2:v2:v2:v1:v2:v1:v1:v2:v1:v2:v2:v2:v2:v2:v1:v2:v2:v2');
     expectJSON({info: console.info}, 'info(`done tests`)', undefined);
     expectValue({Test}, 'Test.mul(2,2)', 4);
-
+    //expectValue({}, `<div/>`, 0);
 }
 
 function dumpDeep(o: any) {

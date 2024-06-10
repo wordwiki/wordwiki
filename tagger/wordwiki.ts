@@ -356,6 +356,19 @@ export class WordWiki {
         }
     }
 
+    startPublish(): any {
+        // How to tell people that a publish is in process, and have them wait for completion ???
+        // - Run publish as a series of async actions (would want to do anyway)
+        // - forward to the publishStatus page that re-renders with the current state, and has an autorefresh as long as not done.
+        // - if publish already in progress, maybe forward to publishStatus with a message that am joining already init publish.
+        
+        return server.forwardResponse('/wordwiki.publishStatus(JSON.stringify(title))');
+    }
+
+    publishStatus(): any {
+        return 'Done';
+    }
+    
     home(): any {
         const title = "Dictionary Editor";
         const body = [

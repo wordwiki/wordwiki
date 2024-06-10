@@ -47,6 +47,10 @@ export interface Response {
     body: string,
 }
 
+export function forwardResponse(forwardToUrl: string, status:number=302): Response {
+    return {marker: ResponseMarker, status, headers: {Location: forwardToUrl}, body: forwardToUrl};            
+}
+
 export function htmlResponse(htmlText: string, status:number=200): Response {
     return {marker: ResponseMarker, status, headers: {}, body: htmlText};            
 }
