@@ -1273,6 +1273,257 @@ export class EditorRenderer {
     }
 }
 
+// /**
+//  *
+//  */
+// export class EditorRenderer {
+//     readonly uiColCount = 3;
+
+//     constructor(public viewTree: SchemaView,
+//                 public tupleIdsWithHistoryOpen: Set<number>,
+//                 public renderRootId: string) {
+//     }
+
+//     /**
+//      *
+//      */
+//     getViewForRelation(schema: RelationField): RelationView {
+//         return this.viewTree.relationViewForRelation.get(schema)
+//             ?? panic('unable find relation view for relation', schema.name);
+//     }
+
+//     /**
+//      *
+//      */
+//     renderTupleAndChildRelations(r: CurrentTupleQuery): Markup {
+//         const schema = r.schema;
+//         const view = this.getViewForRelation(schema);
+//         const currentlyOpenTupleEditor =
+//             activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
+
+//         return [
+//             // --- If this tuple a proposed new tuple under edit, render the editor,
+//             //     otherwise render the current row.
+//             (currentlyOpenTupleEditor?.ref_kind === 'replaceSelf'
+//                 && currentlyOpenTupleEditor?.ref_tuple_id === r.src.id)
+//                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor)
+//                 : this.renderTuple(r),
+
+//             // --- Render child relations
+//             schema.relationFields.length > 0 ? [
+//                 ['tr', {},
+//                  ['td', {class: 'relation-container', colspan: view.userScalarViews.length+this.uiColCount},
+//                   Object.values(r.childRelations).map(
+//                       childRelation=>this.renderRelation(childRelation))
+//                  ]]
+//             ]: undefined
+//         ];
+//     }
+
+//     /**
+//      *
+//      */
+//     renderTuple(r: CurrentTupleQuery): Markup {
+//         const schema = r.schema;
+//         const view = this.getViewForRelation(schema);
+//         const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
+//         const current = r.mostRecentTupleVersion;
+//         const tupleJson = JSON.stringify(current?.assertion);
+
+//         return [
+//             ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
+//                     class: 'tuple'},
+//              ['th', {}, view.prompt],
+//              current ? [  // current is undefined for deleted tuples - more work here TODO
+//                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
+//              ]: undefined,
+//              ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews().viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
+//              ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]],
+//             isHistoryOpen
+//                 ? ['tr', {},
+//                    ['td', {}],
+//                    ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
+//                 : undefined,
+//             ];
+//     }
+
+//     /**
+//      *
+//      */
+//     renderRelation(r: CurrentRelationQuery): Markup {
+
+//         const schema = r.schema;
+
+//         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
+//         const refKind = currentlyOpenTupleEditor?.ref_kind;
+//         const refRelation = currentlyOpenTupleEditor?.ref_relation;
+//         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
+//         const view = this.getViewForRelation(schema);
+
+//         const tuples = [...r.tuples.values()];
+
+//         const firstChildEditor =
+//             (refId === r.src.parent.id && refKind === 'firstChild' && refRelation === schema.tag)
+//                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
+//             : undefined;
+
+//         const lastChildEditor =
+//             (refId === r.src.parent.id && refKind === 'lastChild' && refRelation === schema.tag)
+//             ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
+//             : undefined;
+
+//         const renderedTuples =
+//             tuples.map(t=>{
+//                 const tuple_id = t.src.id;
+//                 return [
+//                     [tuple_id === refId && refKind === 'before'
+//                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
+//                         : undefined],
+//                     this.renderTupleAndChildRelations(t),
+//                     [tuple_id === refId && refKind === 'after'
+//                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
+//                         : undefined]
+//                 ];
+//             });
+
+//         if(renderedTuples.length === 0 && !firstChildEditor && !lastChildEditor) {
+//             const addTupleAction =
+//                 `activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.parent.id}, '${r.src.schema.tag}')`;
+//         return ['button', {onclick: addTupleAction},
+//                 `Insert ${view.prompt}`];
+//     }
+
+//     return (
+//             // This table has the number of cols in the schema for 'r'
+//             ['table', {class: `relation relation-${schema.name}`},
+//              firstChildEditor,
+//              renderedTuples,
+//              lastChildEditor,
+//             ]);
+//     }
+
+//     renderTable(r: CurrentTupleQuery): Markup {
+//         return (
+//             ['table', {class: `relation relation-${r.schema.name}`},
+//              this.renderTupleAndChildRelations(r),
+//             ]);
+//     }
+
+//     /**
+//      *
+//      */
+//     renderHistoryTable(r: CurrentTupleQuery): Markup {
+//         const schema = r.schema;
+//         const view = this.getViewForRelation(schema);
+//         const historicalTupleVersions = r.historicalTupleVersions.toReversed();
+//         if(historicalTupleVersions.length === 0)
+//             return ['strong', {}, 'No history'];
+//         else
+//             return ['table', {class: 'history-table'},
+//                     historicalTupleVersions.map(h=>
+//                         ['tr', {},
+//                          ['td', {}],  // Empty header col
+//                          ['td', {},
+//                           timestamp.formatTimestampAsLocalTime(h.assertion.valid_from)],
+//                          ['td', {},
+//                           timestamp.formatTimestampAsLocalTime(h.assertion.valid_to)],
+//                          view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
+//                          ['td', {},
+//                           h.assertion.change_by_username],
+//                         ])
+//                    ];
+//     }
+
+//     // ??? What happens if the tuple is rendered twice on the same screen - this current id scheme implies both should be under
+//     // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
+//     // somehow.
+//     // We need to scope our render trees!
+//     // - Probably better to move tuple under edit into this view class? (it really does belong to it - not to the
+//     //   shared global thing)
+//     renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
+//         const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
+//         return (
+//             ['td', {class: `field field-${v.field.schemaTypename()}`,
+//                     onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
+//                    },
+//              v.renderView(value)
+//             ]);
+//     }
+
+//     renderTupleEditor(schema: RelationField, t: TupleEditor): Markup {
+//         const view = this.getViewForRelation(schema);
+//         //const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
+//         return [
+//             ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
+//              ['th', {}, view.prompt],
+//              view.userScalarViews.map(v=>this.renderScalarCellEditor(v, t))
+//             ],
+
+//             ['tr', {},
+//              ['th', {}, ''],
+//              ['td', {colspan: view.userScalarViews.length+this.uiColCount},
+//               ['button', {type:'button', class:'btn btn-primary',
+//                           onclick:'activeViews().endFieldEdit()'}, 'Update'],
+//              ],
+
+//              // TODO: add history when under edit.  Not so simple because need
+//              //       to find tuple by id - so need to add that index first.
+//              // isHistoryOpen
+//              //    ? ['tr', {},
+//              //       ['td', {}],
+//              //       ['td',  {colspan: view.userScalarViews.length+this.uiColCount}, this.renderHistoryTable(r)]]
+//              //    : undefined,
+
+
+//             ]
+//         ];
+//     }
+
+//     renderScalarCellEditor(v: ScalarView, t: TupleEditor): Markup {
+//         const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here;
+//         return (
+//             ['td', {class: `fieldedit`},
+//              v.renderEditor(t.assertion.assertion_id, value)
+//             ]);
+//     }
+
+//     // TODO: the event handlers should not be literal onclick scripts on each
+//     //       item (bloat).
+//     // TODO: add an 'Insert Child XXX' for each child relation kind.
+//     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
+//         const insertChildMenuItems =
+//             r.schema.relationFields.map(c=>
+//                 ['li', {},
+//                  ['a', {class:'dropdown-item', href:'#',
+//                         onclick:`activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
+//                   `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
+//                  ]]);
+
+//         // 'true||undefined' type is convenient for eliding sections of markup.
+//         const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
+
+//         return (
+//             ['div', {class:'dropdown'},
+//              ['button',
+//               {class:'btn btn-secondary dropdown-toggle',
+//                type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+//               '≡'],
+//              ['ul', {class:'dropdown-menu'},
+//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
+//               isLeaf && [
+//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
+//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
+//                   ['li', {}, ['a', {class:'dropdown-item', href:'#',
+//                                     onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
+//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
+//                   insertChildMenuItems,
+//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().deleteTuple('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Delete']],
+//               ], // isLeaf
+//               //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
+//              ]]);
+//     }
+// }
+
 // ---------------------------------------------------------------------------------
 // --- View Renderer ---------------------------------------------------------------
 // ---------------------------------------------------------------------------------
