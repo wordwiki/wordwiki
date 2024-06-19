@@ -709,9 +709,9 @@ export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any 
 
 export function renderExample(e: Entry, example: Example): any {
     return [
-        example.example_text.map(t=>['div', {}, t.example_text]),
-        example.example_translation.map(t=>['div', {}, ['i', {}, t.example_translation]]),
-        example.example_recording.map(r=>['div', {}, renderAudio(r.recording, `Recording by ${r.speaker}`)])
+        example.example_text.map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
+        example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
+        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], renderAudio(r.recording, `Recording by ${r.speaker}`)])
     ];
 }
 
