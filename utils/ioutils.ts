@@ -1,13 +1,13 @@
 //let fsPromises = require ('fsPromises');  // importing 'fs/promises' the ES6 way in typescript is borked today.
 //import * as fsPromises from 'fsPromises';
-const fs = require('fs');
-const fsPromises = fs.promises;
+//const fs = require('fs');
+//const fsPromises = fs.promises;
 
-const { resolve } = require('path');
-const { readdir } = require('fs').promises;
+//const { resolve } = require('path');
+//const { readdir } = require('fs').promises;
 
-import {TextEncoder} from 'text-encoding';
-import * as utils from './utils';
+//import {TextEncoder} from 'text-encoding';
+import * as utils from './utils.ts';
 
 /**
  * Async sleep.
@@ -20,8 +20,6 @@ export async function sleep(ms: number) {
  * Rewrites a utf-8 encoded file if the contents have changed.
  */
 export async function writeUTF8FileIfContentsChanged (filename: string, updatedUtf8Contents: string): Promise<boolean> {
-  // THIS AS ANY IS A HACK UNTIL TYPESCRIPT GETS FIXED TEXTENCODER SIGNATURE - REMOVE ME.
-  //const updatedContents = new (TextEncoder as any)('utf8').encode (updatedUtf8Contents);
   const updatedContents = new TextEncoder ().encode (updatedUtf8Contents);
   return writeFileIfContentsChanged (filename, updatedContents);
 }
@@ -49,7 +47,7 @@ export async function writeFileIfContentsChanged (filename: string, updatedConte
   //     check means we will avoid the extra read most of the time.
   let stat = null;
   try {
-    stat = await fsPromises.stat (filename);
+    stat = await Deno.stat (filename);
   } catch (e) {
     // If we can't stat the file - we want to go ahead with the
     // write semantics (and write error messages) - so we ignore this
@@ -57,14 +55,14 @@ export async function writeFileIfContentsChanged (filename: string, updatedConte
   }
   if (stat != null) {
     if (stat.size == updatedContents.length) {
-      const currentContents = await fsPromises.readFile (filename);
+      const currentContents = await Deno.readFile (filename);
       if (utils.isEqualsUint8Array (currentContents, updatedContents))
         return false;
     }
   }
 
   // --- Write the faile
-  await fsPromises.writeFile (filename, updatedContents);
+  await Deno.writeFile (filename, updatedContents);
 
   return true;
 }

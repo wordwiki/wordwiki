@@ -126,7 +126,7 @@ export function navBar(): any {
               'Admin'
              ], //a
              ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki.startPublish()'}, 'Publish']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/startPublish()'}, 'Publish']],
              ], //ul
             ], //li
             

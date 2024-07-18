@@ -19,11 +19,12 @@ import * as timestamp from "../utils/timestamp.ts";
 import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import { BEGINNING_OF_TIME, END_OF_TIME } from "../utils/timestamp.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-// export function buildView(schema: Schema): SchemaView {
-//     // return new RelationSQLDriver(db, relationField,
-//     //                              relationField.relationFields.map(r=>buildRelationSQLDriver(db, r)));
-//     throw new Error();
-// }
+import ContextMenu from '../utils/context-menu.js';
+
+
+interface RenderCtx {
+    renderRootId: string;
+}
 
 /**
  *
@@ -32,12 +33,23 @@ export abstract class View {
 
     prompt: string|undefined;
 
+    // Set when a view is added as a child to a RelationView
+    parent: RelationView|undefined = undefined;
+
+    // Computed on first access based on parent
+    root_: SchemaView|undefined = undefined;
+
     constructor(public field: Field) {
         this.prompt = field.style.$prompt ??
             strings.capitalize(field.name).replaceAll('_', ' ');
     }
 
     abstract accept<A,R>(v: ViewVisitorI<A,R>, a: A): R;
+
+    get root(): SchemaView {
+        // upwards recursion ends on override on SchemaView
+        return this.root_ ??= unwrap(this.parent).root;
+    }
 }
 
 /**
@@ -47,17 +59,29 @@ export abstract class ScalarView extends View {
     declare field: ScalarField;
     constructor(field: ScalarField) { super(field); }
 
-    renderView(v: any): Markup {
+    renderView(ctx: RenderCtx, v: any): Markup {
         return String(v);
     }
 
-    /*abstract*/ renderEditor(relation_id: number, v: any): Markup {
-        //throw new Error(`renderEditor not implemented on ${utils.className(this)}`);
-
-        return String(v);
+    /*abstract*/ renderEditor(ctx: RenderCtx, editor: TupleEditor, relation_id: number, v: any): Markup {
+        const inputId = `input-${relation_id}-${this.field.name}`;
+        return (
+            ['div', {class:'row mb-3'},
+             ['label', {
+                 for:inputId, class:'col-sm-3 col-form-label'},
+              this.prompt],
+             ['div', {class:'col-sm-9'},
+              this.renderEditorInput(ctx, editor, relation_id, inputId, v)
+              //['input', {type:'email' class:'form-control' id:'inputEmail3'}]
+             ]
+            ]);
     }
 
-    loadFromEditor(relation_id: number): any {
+    /*abstract*/ renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, inputId: string, v: any): Markup {
+        return String(v);
+    }
+    
+    loadFromEditor(relation_id: number, input_id: string): any {
         return undefined;
     }
 }
@@ -70,21 +94,21 @@ export class BooleanView extends ScalarView {
     constructor(field: BooleanField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBooleanView(this, a); }
 
-    renderView(v: any): Markup {
+    renderView(ctx: RenderCtx, v: any): Markup {
         // This should be values on the style $
         return String(v);
     }
 
-    renderEditor(relation_id: number, v: any): Markup {
+    renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relationId: number, inputId: string, v: any): Markup {
         const checkboxAttrs: Record<string,string> = {
             type: 'checkbox',
-            id: `input-${relation_id}-${this.field.name}`};
+            id: inputId,
+            class: 'form-control'};
         if(v) checkboxAttrs['checked'] = '';
         return ['input', checkboxAttrs];
     }
 
-    loadFromEditor(relation_id: number): any {
-        const inputId = `input-${relation_id}-${this.field.name}`;
+    loadFromEditor(relationId: number, inputId: string): any {
         const checkboxElement = document.getElementById(inputId) as HTMLInputElement;
         if(!checkboxElement)
             throw new Error(`failed to find checkbox element ${inputId}`); // TODO fix error
@@ -92,7 +116,6 @@ export class BooleanView extends ScalarView {
         console.info('Checkbox value', checkboxValue);
         return checkboxValue;
     }
-
 }
 
 /**
@@ -103,7 +126,7 @@ export class IntegerView extends ScalarView {
     constructor(field: IntegerField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitIntegerView(this, a); }
 
-    renderView(v: any): Markup {
+    renderView(ctx: RenderCtx, v: any): Markup {
         console.info('in IntegerView.renderView();');
         console.info('  style is ', this.field.style);
         console.info('  shape is ', this.field.style.$shape, 'for', this.field.name);
@@ -112,12 +135,81 @@ export class IntegerView extends ScalarView {
             case 'boundingGroup': // XXX MASSIVE HACK FOR DEMO - DO THIS RIGHT
                 console.info('ding the thing');
                 return (
-                    ['div', {},
-                     ['object', {data:`/renderStandaloneGroupAsSvgResponse(${v})`, 'type':'image/svg+xml'}]]);
+                    
+                    ['div', {onclick:`event.stopPropagation(); window.open('/forwardToSingleBoundingGroupEditorURL(${v}, null)')`},
+                     ['object', {style: 'pointer-events: none;', data:`/renderStandaloneGroupAsSvgResponse(${v})`, 'type':'image/svg+xml', 'id': `bounding-group-${v}`}]]);
             default:
-                return super.renderView(v);
+                return super.renderView(ctx, v);
         }
     }
+
+    renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relationId: number, inputId: string, v: any): Markup {
+
+        // XXX this very much does not belong here XXX FIX FIX FIX XXX
+        // - If we are going to hack this in here, we are going to
+        //   need to figure out how to get entry_id and subentry_id here.
+        // - the ctx used here is created in openFieldEdit - we don't
+        //   currently have subentry_id and entry_id at that point.
+        // - BUT: here we do have enough info to find the parent tuple
+        //   etc in the workspace .. so maybe that is the winning move.
+
+
+        // From the renderRootId, we can get the workspace.
+        
+        switch(this.field.style.$shape) {
+            case 'boundingGroup':
+                const workspace = activeViews().workspace;
+                //const activeView = activeViews().activeViews.get(ctx.renderRootId);
+                // if(!activeView)
+                //     throw new Error('unable to find active view');
+                const assertion = editor.assertion;
+                utils.assert(assertion.ty1 === 'ent');
+                const entry_id = assertion.id1;
+                const subentry_id = assertion.id2;
+
+                return ['PDM', 'Rand', 'Clark', 'RandFirstReadingBook'].map(b=>
+                    ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference2(${entry_id}, ${subentry_id}, ${JSON.stringify(b)}, 'Edit New Reference')`}, 'Add ', b]);
+                
+                break;
+            default:
+                return super.renderView(ctx, v);
+                
+        }
+    }
+    
+}
+
+/**
+ *
+ */ 
+export function reloadBoundingGroup(boundingGroupId: number) {
+    console.info('reloading bounding group', boundingGroupId);
+
+    const boundingGroup =
+        document.getElementById(`bounding-group-${boundingGroupId}`);
+
+    if(!boundingGroup) {
+        console.info('unable to find bounding group', boundingGroup);
+        return;
+    }
+
+    // (async() => {
+    //     try {
+    //         const boundingGroupSvgUrl = boundingGroup.getAttribute('data') ?? panic('failed to get bounding group URL'); 
+
+    //         console.info('Refreshing bounding group svg', boundingGroupSvgUrl);
+    //         await fetch(boundingGroupSvgUrl, { cache: "reload" });
+
+    //         console.info('Refreshing DOM node');
+    //         boundingGroup.outerHTML = boundingGroup.outerHTML;
+    //     } catch (e) {
+    //         alert(`Failed to update bounding group image: ${boundingGroupId}`);
+    //         throw e;
+    //     }
+    // })();
+
+
+    boundingGroup.outerHTML = boundingGroup.outerHTML;
 }
 
 /**
@@ -142,14 +234,16 @@ export class StringView extends ScalarView {
     // -- give id.
     // -- write a loader that can get the value based on id.
     // -- before writing this, do the other end
-    renderEditor(relation_id: number, v: any): Markup {
-        return ['input', {type: 'text', placeholder: this.prompt,
+    renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, input_id: string, v: any): Markup {
+        return ['input', {type: 'text', /*placeholder: this.prompt,*/
                           size: this.field.style.$width ?? 30,
                           value: String(v??''),
+                          autofocus: '',
+                          class: 'form-control',
                           id: `input-${relation_id}-${this.field.name}`}];
     }
 
-    loadFromEditor(relation_id: number): any {
+    loadFromEditor(relation_id: number, input_id: string): any {
         const inputId = `input-${relation_id}-${this.field.name}`;
         const inputElement = document.getElementById(inputId);
         if(!inputElement)
@@ -157,6 +251,7 @@ export class StringView extends ScalarView {
         const value = (inputElement as HTMLInputElement).value; //getAttribute('value');
         // TODO more checking here.
         return value;
+        //return undefined;
     }
 }
 
@@ -174,23 +269,24 @@ export class EnumView extends StringView {
             ?? panic(`enum ${this.field.name} missing options`)) as Record<string, string>);
     }
 
-    renderView(v: any): Markup {
+    renderView(ctx: RenderCtx, v: any): Markup {
         return this.choices[v] ?? String(v);
     }
 
-    renderEditor(relation_id: number, val: any): Markup {
+    renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, input_id: string, val: any): Markup {
         //size: this.field.style.$width ?? 30,
 
 
         return ['select', {type: 'text', placeholder: this.prompt,
-                           id: `input-${relation_id}-${this.field.name}`},
+                           id: `input-${relation_id}-${this.field.name}`,
+                           class: 'form-control'},
                 Object.entries(this.choices).map(([k,v])=>
                     ['option',
                      {value: k, ...(val===k?{selected:''}:{})}, v])
                ];
     }
 
-    loadFromEditor(relation_id: number): any {
+    loadFromEditor(relation_id: number, input_id: string): any {
         const inputId = `input-${relation_id}-${this.field.name}`;
         const selectElement = document.getElementById(inputId) as HTMLSelectElement;
         if(!selectElement)
@@ -208,6 +304,10 @@ export class VariantView extends StringView {
     declare field: VariantField;
     constructor(field: VariantField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitVariantView(this, a); }
+
+    renderView(ctx: RenderCtx, v: any): Markup {
+        return v == null || v == '' ? '' : `(${String(v)})`;
+    }
 }
 
 /**
@@ -226,6 +326,35 @@ export class AudioView extends StringView {
     declare field: AudioField;
     constructor(field: AudioField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitAudioView(this, a); }
+
+    renderView(ctx: RenderCtx, v: any): Markup {
+        // This should be values on the style $
+        //return
+        const label = 'Audio'; // XXX fix
+        const compressedAudioUrl = `/forwardToCompressedRecording("${v}")`;
+        return ['a',
+                {onclick: `event.preventDefault(); event.stopPropagation(); playAudio(${JSON.stringify(compressedAudioUrl).replaceAll('"', "'")});`, href: compressedAudioUrl.replaceAll('"', "'")},
+                label]
+    }
+
+    renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, input_id: string, v: any): Markup {
+        return ['input', {type: 'file', /*placeholder: this.prompt,*/
+                          size: this.field.style.$width ?? 30,
+                          value: '', //String(v??''),
+                          autofocus: '',
+                          class: 'form-control',
+                          id: `input-${relation_id}-${this.field.name}`}];
+    }
+
+    loadFromEditor(relation_id: number, input_id: string): any {
+        const inputId = `input-${relation_id}-${this.field.name}`;
+        const inputElement = document.getElementById(inputId);
+        if(!inputElement)
+            throw new Error(`failed to find input element ${inputId}`); // TODO fix error
+        const value = (inputElement as HTMLInputElement).value; //getAttribute('value');
+        // TODO more checking here.
+        return value;
+    }
 }
 
 /**
@@ -270,7 +399,11 @@ export class RelationView extends View {
 
     constructor(field: RelationField, public views: View[]) {
         super(field);
-        //field.fields.map(new FieldVisitor<never,View>
+        for(const v of views) {
+            if(v.parent !== undefined)
+                throw new Error(`Child view ${v} already has a parent`);
+            v.parent = this;
+        }
     }
 
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitRelationView(this, a); }
@@ -328,6 +461,150 @@ export class RelationView extends View {
     //         ?? panic();
     // }
 
+   
+    renderRelation_(ctx: RenderCtx, r: CurrentRelationQuery): Markup {
+        const markup = this.renderRelation(ctx, r);
+        console.info('Relation ', r, 'with shape', this.field.style.$shape, 'rendered markup', JSON.stringify(markup, undefined, 2));
+        return markup;
+    }
+    
+    // Renders a relation of this view kind.  This includes the title for the
+    // relation, structure (like list), controls for inserting etc.
+    renderRelation(ctx: RenderCtx, r: CurrentRelationQuery): Markup {
+        const shape = this.field.style.$shape;
+        switch(shape) {
+            case 'inlineListRelation':
+                return this.renderInlineListRelation(ctx, r);
+            case 'compactInlineListRelation':
+                return this.renderCompactInlineListRelation(ctx, r);
+            case 'containerRelation':
+                return this.renderContainerRelation(ctx, r);
+            default:
+                throw new Error(`invalid or missing $shape '${shape}' for relation field '{f.name}'`);
+                
+        }
+    }
+
+    renderInlineListRelation(ctx: RenderCtx, r: CurrentRelationQuery): Markup {
+        const parentTuple = r.src.parent ?? panic('expected parent tuple');
+        if(this.field.relationFields.length > 0)
+            throw new Error(`inlineListRelation fields must not have child relations: ${this.field.name}`);
+
+        return [
+            ['div', {}, /*{class: 'editable
+                          ', onclick: edit},*/
+             ['b', {}, this.field.prompt+':'],
+             ['ul', {style: 'margin-bottom: 0em'},
+              r.tuples.length === 0
+                 ? ['li', {class: 'editable',
+                           onclick:`activeViews().editNewLastChild('${ctx.renderRootId}', '${r.schema.schema.tag}', '${parentTuple.schema.tag}', ${parentTuple.id}, '${r.schema.tag}')`},
+                    'No ', this.field.prompt]
+                 : r.tuples.map(t=>['li',
+                                    {class: 'editable tuple-context-menu',
+                                     'data-render-root-id': ctx.renderRootId,
+                                     'data-db-tag': t.schema.schema.tag,
+                                     'data-tuple-tag': t.schema.tag,
+                                     'data-tuple-id': t.src.id,
+                                     onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${t.schema.schema.tag}', '${t.schema.tag}', ${t.src.id})`},
+                                    this.renderTuple(ctx, t)])
+             ]
+            ]
+        ];
+    }
+
+    renderCompactInlineListRelation(ctx: RenderCtx, r: CurrentRelationQuery): Markup {
+        const parentTuple = r.src.parent ?? panic('expected parent tuple');
+        if(this.field.relationFields.length > 0)
+            throw new Error(`compactInlineListRelation fields must not have child relations: ${this.field.name}`);
+        return [
+            r.tuples.length === 0
+                ? ['div', {class: 'editable',
+                           onclick:`activeViews().editNewLastChild('${ctx.renderRootId}', '${r.schema.schema.tag}', '${parentTuple.schema.tag}', ${parentTuple.id}, '${r.schema.tag}')`}, ['b', {}, this.field.prompt, ': '], 'None']
+                : r.tuples.map(t=>
+                    ['div', {class: 'editable tuple-context-menu',
+                             'data-render-root-id': ctx.renderRootId,
+                             'data-db-tag': t.schema.schema.tag,
+                             'data-tuple-tag': t.schema.tag,
+                             'data-tuple-id': t.src.id,
+                             onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${t.schema.schema.tag}', '${t.schema.tag}', ${t.src.id})`},
+                     ['b', {}, this.field.prompt, ': '],
+                     this.renderTuple(ctx, t)])
+        ];
+    }
+
+    renderContainerRelation(ctx: RenderCtx, r: CurrentRelationQuery): Markup {
+        const parentTuple = r.src.parent ?? panic('expected parent tuple');
+        return [
+            r.tuples.length === 0
+                ? ['div', {class: 'editable',
+                           onclick:`activeViews().editNewLastChild('${ctx.renderRootId}', '${r.schema.schema.tag}', '${parentTuple.schema.tag}', ${parentTuple.id}, '${r.schema.tag}')`},
+                   ['b', {}, this.field.prompt, ': '], 'None']
+                : r.tuples.map(t=>
+                    ['div', {},
+                     ['div', {class: 'editable tuple-context-menu',
+                              'data-render-root-id': ctx.renderRootId,
+                              'data-db-tag': t.schema.schema.tag,
+                              'data-tuple-tag': t.schema.tag,
+                              'data-tuple-id': t.src.id,
+                              onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${t.schema.schema.tag}', '${t.schema.tag}', ${t.src.id})`
+                             },
+                      ['b', {}, this.field.prompt, ': '],
+                      this.renderTuple(ctx, t)],
+                     ['div', {style: 'margin-left: 2em'},
+                      Object.values(t.childRelations).map(childRelation=>
+                          ['div', {},
+                           unwrap(this.root.relationViewForRelation.get(childRelation.schema)).renderRelation(ctx, childRelation)])
+                     ]
+                    ])
+        ];
+    }
+    
+    // Renders a tuple as a root editor.
+    renderRootTuple(ctx: RenderCtx, t: CurrentTupleQuery): Markup {
+        return [
+            ['h3', {}, this.field.prompt],
+            ['div', {},
+             this.renderTuple(ctx, t),
+             [
+                 Object.values(t.childRelations).map(childRelation=>
+                     ['div', {},
+                      unwrap(this.root.relationViewForRelation.get(childRelation.schema)).renderRelation(ctx, childRelation)])
+             ]
+            ]];
+    }
+
+    renderRootRelation(ctx: RenderCtx, r: CurrentRelationQuery): Markup {
+        return this.renderRelation(ctx, r);
+    }
+    
+    // Renders a single tuple of this view kind.  This is called by render relation,
+    // but is also used by renderRoot (when we are trying to render a single top
+    // level tuple - that is perhaps also a member of a relation)
+    renderTuple(ctx: RenderCtx, r: CurrentTupleQuery): Markup {
+        //const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
+        const current = r.mostRecentTupleVersion;
+        const tupleJson = JSON.stringify(current?.assertion);
+        // current is undefined for deleted tuples - more work here TODO
+        const body = (!current) ? [] : this.userScalarViews.map(v=>[
+            this.renderScalarCell(ctx, r, v, current), ' ']);
+        return body;
+        // const menu = renderCurrentTupleMenu(ctx.renderRootId, r);
+        // return [body, ' ', menu];
+    }
+
+    renderScalarCell(ctx: RenderCtx, r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
+        const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
+        return v.renderView(ctx, value);
+        // return ['span', {
+        //     onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`},
+        //         v.renderView(ctx, value)];
+        // return (
+        //     ['td', {class: `field field-${v.field.schemaTypename()}`,
+        //             onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
+        //            },
+        //      v.renderView(ctx, value)
+        //     ]);
+    }
 }
 
 /**
@@ -347,7 +624,12 @@ export class SchemaView extends RelationView {
         return this.#relationViewForRelation ??=
             new Map(this.descendantAndSelfRelationViews.map(v=>[v.field, v]));
     }
+
+    get root(): SchemaView {
+        return this.root_ ??= this;
+    }
 }
+
 
 /**
  *
@@ -370,7 +652,8 @@ export interface ViewVisitorI<A,R> {
 
 /**
  *
- * Need multiple versions of render visitor.
+ * Currently, rendering is done by renderView() methods on the actual
+ * nodes, so this is not presently used.
  */
 export class RenderVisitor implements ViewVisitorI<any,Markup> {
 
@@ -432,43 +715,34 @@ export class RenderVisitor implements ViewVisitorI<any,Markup> {
     }
 }
 
-// export function renderRelation(r: CurrentRelationQuery): Markup {
-//     const id=`relation-${r.schema.name}-${r.src.parent?.id ?? 0}`;
-//     return (
-//         ['table', {class: 'relation relation-${r.src.schema.name}', id},
-//          [...r.tuples.values()].map(t=>
-//              ['tr', {},
-//               ['th', {}, t.schema.name],
-//               //tv.schema.[lookup view for schema].map()
-//              ])
-//         ]);
-// }
 
-// For example, called on a dictionary entry (or root)
-// What is a nice rendering?
+// -----------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------
+
 /**
- * Tuple is rendered as a table with two options:
- * - show history - multi-rows with one per history item.
- * - edit mode - editor for current item (with prev value
- *   shown in history if history is open)
- * - later, may add more control of what items are displayed
- *   in history.
- * - no labels on fields for now (dictionary entries are simple enough).
+ *
  */
-// - history should have a different font/weight etc - but need to
-//   be in same table for layout.
-// - editing of current uses same table (also for layout)
-// - nested tuples are separate tables.
-// - COMPLICATION: multiple tuples in a relation should be on one table (will
-//   look ragged otherwise).
-// - this will force the prompts into the table.
-// - so use a colspan to embed the child items table in the parent table.
-// - so the scope of render needs to be larger that a single tuple.
-// - the scope of the entity that is rendered is a relation (recursively)
+// TODO somewhere we want a workspace.  - probably assoc with active views
+// makes more sense for views to own workspace than the other way around.
+// difficulty
+let activeViews_: ActiveViews|undefined = undefined;
+export function activeViews(): ActiveViews {
+    return activeViews_ ??= (()=> {
+        console.info('*** creating new active view');
+        return new ActiveViews(new VersionedDb([]));
+    })();
+}
 
-
-// XXX Also need to refactor this to allow rendering starting at any subtree.
-//     (for post change rerender).
+/**
+ * We have changed how we are doing views (we have switched to transient, single
+ * item editors).  This hack is used to put off the deeper refactoring to
+ * come if we stick with this change.
+ */
+export function dropActiveViewsAndWorkspace() {
+    console.info('*** dropping active views');
+    activeViews_ = undefined;
+}
 
 /**
  *
@@ -544,6 +818,10 @@ export class ActiveViews {
         this.activeViews.get(viewId)?.rerender();
     }
 
+    // rerenderViewTupleEditorById(ctx: RenderCtx, viewId: string) {
+    //     this.activeViews.get(viewId)?.rerenderTupleEditor(ctx);
+    // }
+    
     getCurrentlyOpenTupleEditorForTupleId(renderRootId: string, tuple_id: number): TupleEditor|undefined {
         return (this.currentlyOpenTupleEditor !== undefined &&
             this.currentlyOpenTupleEditor.renderRootId === renderRootId &&
@@ -686,52 +964,6 @@ export class ActiveViews {
                            new_assertion);
     }
 
-    // editTupleUpdateOFF(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
-
-    //     // --- Find the reference tuple
-    //     const refTuple = this.workspace.getVersionedTupleById(
-    //         refDbTag, refTupleTag, refTupleId)
-    //         ?? panic('cannot find ref tuple for edit', refTupleId);
-
-    //     // NEXT populate assertion better!
-    //     // CReating the assertion is a job for the global workspace.
-    //     // USING TUPLE FOR THIS - this needs to factor
-    //     const mostRecentTupleVersion = refTuple.mostRecentTuple;
-    //     // const new_assertion: Assertion = Object.assign(
-    //     //     {},
-    //     //     mostRecentTupleVersion.assertion);
-    //     let new_assertion_: Record<string, any> = {};
-    //     for(const k in mostRecentTupleVersion.assertion) {
-    //         new_assertion_[k] = (mostRecentTupleVersion.assertion as any)[k];
-    //     }
-    //     const new_assertion: Assertion = new_assertion_ as Assertion;
-    //     console.info('new_assertion["undefined"]', (new_assertion as any)['undefined']);
-    //     for(const k in new_assertion) {
-    //         console.info('k', k);
-    //     }
-    //     delete (new_assertion as any)['undefined'];
-    //         // TODO: change_by fields clear, from/to
-    //     //{assertion_id: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
-    //     console.info('mostRecentTupleVersion.assertion', mostRecentTupleVersion.assertion);
-    //     console.info('CAT NEW Assertion A', new_assertion);
-    //     new_assertion.assertion_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-    //     console.info('CAT NEW Assertion B', new_assertion);
-
-    //     for(const k in new_assertion) {
-    //         console.info('k', k);
-    //     }
-
-    //     // const new_assertion2: Assertion = Object.assign(
-    //     //     {},
-    //     //     mostRecentTupleVersion.assertion,
-    //     //     // TODO: change_by fields clear, from/to
-    //     //     {assertion_id3: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)});
-    //     // console.info('CAT NEW Assertion 2', new_assertion2);
-
-    //     this.openFieldEdit(renderRootId, 'replaceSelf', undefined, refDbTag, refTupleTag, refTupleId,
-    //                        new_assertion);
-    // }
-
     deleteTuple(renderRootId: string, refDbTag: string, refTupleTag: string, refTupleId: number) {
         console.info('--- Delete', renderRootId, refTupleId);
 
@@ -838,11 +1070,14 @@ export class ActiveViews {
                   new_assertion: Assertion) {
         console.info('begin field edit', refKind, refRelation, refTupleTag, refTupleId);
 
+        const ctx:RenderCtx = { renderRootId };
+        
         // --- Only one tuple editor can be open at a time
         //     (later will get fancier and close open ones or something TODO)
         if(this.currentlyOpenTupleEditor) {
-            alert('A field editor is already open');
-            return;
+            //alert('A field editor is already open');
+            this.currentlyOpenTupleEditor = undefined;
+            getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').hide();
         }
 
         // --- Find the view
@@ -865,7 +1100,22 @@ export class ActiveViews {
         // - we can use the global workspace to find the tuple by tuple_id ???
         // - figure out how this works for the first tuple in a relation (but sounds
         //   patchable)
-        this.rerenderViewById(renderRootId);
+        //this.rerenderViewById(renderRootId);
+
+
+        const modalTitle = (document.querySelector(`#modalEditorLabel`)
+            ?? panic('unable to find modal editor label for dialog')) as HTMLElement;
+        modalTitle.innerText = `Edit ${tupleView.prompt ?? ''}`;
+
+        const modalBody = document.querySelector(`#modalEditorBody`)
+            ?? panic('unable to find modal editor body for dialog');
+
+        const activeView = (this.activeViews.get(renderRootId) ??
+            panic('unable to find active view for openFieldEdit'));
+
+        modalBody.innerHTML = renderToStringViaLinkeDOM(this.currentlyOpenTupleEditor.renderTupleEditor(ctx, viewTree, tupleSchema));
+
+        getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').show();
     }
 
     relationViewForRelation(renderRootId: string,
@@ -887,7 +1137,6 @@ export class ActiveViews {
         const tupleEditor = this.currentlyOpenTupleEditor;
 
         tupleEditor.endFieldEdit();
-
         const renderRootId = tupleEditor.renderRootId;
         const newAssertion = tupleEditor.assertion;
 
@@ -896,10 +1145,13 @@ export class ActiveViews {
 
         this.applyAssertion(newAssertion);
 
+        
         this.currentlyOpenTupleEditor = undefined;
 
+        getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').hide();
         this.rerenderViewById(renderRootId);
     }
+
 }
 
 /**
@@ -923,30 +1175,68 @@ export class ActiveView {
     }
 
     rerender() {
-        const renderer = new EditorRenderer(this.viewTree, this.tupleIdsWithHistoryOpen, this.id);
+
+        // FIX FIX
+        const ctx:RenderCtx = { renderRootId: this.id };
+        
         const queryResults = this.query();
+        // if(!(queryResults instanceof CurrentRelationQuery))
+        //     throw new Error(`internal error: new render model only supports relation queries`);
+
+        const resultsSchema = queryResults.schema;
+        const resultsView = this.viewTree.relationViewForRelation.get(resultsSchema)
+            ?? panic('unable find relation view for relation', resultsSchema.name);
 
         let markup;
         if(queryResults instanceof CurrentTupleQuery) {
-            markup = renderer.renderTable(queryResults);
+            markup = resultsView.renderRootTuple(ctx, queryResults);
         } else if(queryResults instanceof CurrentRelationQuery) {
-            markup = renderer.renderRelation(queryResults);
+            markup = resultsView.renderRootRelation(ctx, queryResults);
         } else {
             panic('unexpected active view query');
         }
 
-        const modalTitle = document.querySelector(`#${this.id} h1.modal-title`)
-            ?? panic('unable to find modal editor title for dialog', this.id);
+        //console.info('RENDERED TO MARKUP', JSON.stringify(markup, undefined, 2));
 
-        modalTitle.innerHTML = this.title;
+        
+        const modalTitle = document.querySelector(`#${this.id}Label`);
+        if(modalTitle)
+            modalTitle.innerHTML = this.title;
 
-        const modalBody = document.querySelector(`#${this.id} div.modal-body`)
+        const modalBody = document.querySelector(`#${this.id}Body`)
             ?? panic('unable to find modal editor body for dialog', this.id);
 
         console.info(`rendering ${this.id}`);
 
         modalBody.innerHTML = renderToStringViaLinkeDOM(markup);
     }
+    
+    // rerenderTupleEditor(ctx: RenderCtx) {
+    //     //throw new Error('no');
+    //     const renderer = new EditorRenderer(this.viewTree, this.tupleIdsWithHistoryOpen, this.id);
+    //     const queryResults = this.query();
+
+    //     let markup;
+    //     if(queryResults instanceof CurrentTupleQuery) {
+    //         markup = renderer.renderTable(ctx, queryResults);
+    //     } else if(queryResults instanceof CurrentRelationQuery) {
+    //         markup = renderer.renderRelation(ctx, queryResults);
+    //     } else {
+    //         panic('unexpected active view query');
+    //     }
+
+    //     const modalTitle = document.querySelector(`#${this.id}Label`);
+    //     if(modalTitle)
+    //         modalTitle.innerHTML = this.title;
+
+    //     const modalBody = document.querySelector(`#${this.id}Body`)
+    //         ?? panic('unable to find modal editor body for dialog', this.id);
+
+    //     console.info(`rendering ${this.id}`);
+
+    //     modalBody.innerHTML = renderToStringViaLinkeDOM(markup);
+    // }
+    
 }
 
 
@@ -967,29 +1257,81 @@ export class TupleEditor {
                 public assertion: Assertion) {
     }
 
+    // TODO: render as a proper bootstrap form.
+    renderTupleEditor(ctx: RenderCtx, viewTree: SchemaView, schema: RelationField): Markup {
+        const view = viewTree.relationViewForRelation.get(schema)
+            ?? panic('unable find relation view for relation', schema.name);
+    
+        //const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
+        return [
+            //['h3', {}, view.prompt],
+
+            ['form',
+             {onsubmit:'activeViews().endFieldEdit(); event.preventDefault();',
+              id: `tuple-${ctx.renderRootId}-${this.assertion.assertion_id}`},
+
+             view.userScalarViews.map(v=>
+                 this.renderScalarCellEditor(ctx, v)),
+            
+             ['button', {type:'submit',
+                         class:'btn btn-primary',
+                         onclickOff:'activeViews().endFieldEdit()'}, 'Save'],
+            ]
+        ];
+    }
+
+    renderScalarCellEditor(ctx: RenderCtx, v: ScalarView): Markup {
+        const value = (this.assertion as any)[v.field.bind];     // XXX be fancy here;
+
+        return v.renderEditor(ctx, this, this.assertion.assertion_id, value);
+        
+        // return (
+        //     ['div', {class:'row mb-3'},
+        //      ['label', {for:'inputEmail3', class:'col-sm-2 col-form-label'},
+        //       Email],
+        //      ['div', {class:'col-sm-10'},
+        //       ['input', {type:'email' class:'form-control' id:'inputEmail3'}]
+        //      ]
+        //     ]);
+
+
+            
+        //     ['td', {class: `fieldedit`},
+        //      v.renderEditorInput(ctx, this.assertion.assertion_id, value)
+        //     ]);
+        // NEXT NEXT TODO
+    }
+
+    // /**
+    //  *
+    //  */
+    // renderHistoryTable(ctx: RenderCtx, r: CurrentTupleQuery): Markup {
+    //     const schema = r.schema;
+    //     const view = this.getViewForRelation(schema);
+    //     const historicalTupleVersions = r.historicalTupleVersions.toReversed();
+    //     if(historicalTupleVersions.length === 0)
+    //         return ['strong', {}, 'No history'];
+    //     else
+    //         return ['table', {class: 'history-table'},
+    //                 historicalTupleVersions.map(h=>
+    //                     ['tr', {},
+    //                      ['td', {}],  // Empty header col
+    //                      ['td', {},
+    //                       timestamp.formatTimestampAsLocalTime(h.assertion.valid_from)],
+    //                      ['td', {},
+    //                       timestamp.formatTimestampAsLocalTime(h.assertion.valid_to)],
+    //                      view.userScalarViews.map(v=>this.renderScalarCell(ctx, r, v, h, true)),
+    //                      ['td', {},
+    //                       h.assertion.change_by_username],
+    //                     ])
+    //                ];
+    // }
+
     endFieldEdit() {
-        // We need the schema here to do the reload.
-        // Copy field values from form into assertion.
-        // field values are named.
-
-        // const view = this.viewTree.relationViewForRelation.get(schema)
-        //     ?? panic('unable find relation view for relation', schema.name);
-        // return [
-        //     ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
-        //      ['th', {}, view.prompt],
-        //      view.userScalarViews.map(v=>this.renderScalarCellEditor(r, v, t))
-        //     ],
-        //     ['tr', {},
-        //      ['th', {}, ''],
-        //      ['td', {colspan: view.userScalarViews.length+3},
-        //       ['button', {type:'button', class:'btn btn-primary',
-        //                   onclick:'activeViews.endFieldEdit()'}, 'Save'],
-        //      ]]
-        // ];
-
         console.info('in endFieldEdit');
         for(const fieldView of this.view.userScalarViews) {
-            const formValue = fieldView.loadFromEditor(this.assertion.assertion_id);
+            const inputId = `input-${this.assertion.assertion_id}-${fieldView.field.name}`;
+            const formValue = fieldView.loadFromEditor(this.assertion.assertion_id, inputId);
             console.info('formValue is', formValue);
             if(formValue !== undefined) {
                 (this.assertion as any)[fieldView.field.bind] = formValue;
@@ -998,688 +1340,142 @@ export class TupleEditor {
     }
 }
 
-/**
- *
- */
-// TODO somewhere we want a workspace.  - probably assoc with active views
-// makes more sense for views to own workspace than the other way around.
-// difficulty
-let activeViews_: ActiveViews|undefined = undefined;
-export function activeViews(): ActiveViews {
-    return activeViews_ ??= (()=> {
-        console.info('*** creating new active view');
-        return new ActiveViews(new VersionedDb([]));
-    })();
-}
-
-/**
- * We have changed how we are doing views (we have switched to transient, single
- * item editors).  This hack is used to put off the deeper refactoring to
- * come if we stick with this change.
- */
-export function dropActiveViewsAndWorkspace() {
-    console.info('*** dropping active views');
-    activeViews_ = undefined;
-}
-
-/**
- *
- */
-export class EditorRenderer {
-    readonly uiColCount = 3;
-
-    constructor(public viewTree: SchemaView,
-                public tupleIdsWithHistoryOpen: Set<number>,
-                public renderRootId: string) {
-    }
-
-    /**
-     *
-     */
-    getViewForRelation(schema: RelationField): RelationView {
-        return this.viewTree.relationViewForRelation.get(schema)
-            ?? panic('unable find relation view for relation', schema.name);
-    }
-
-    /**
-     *
-     */
-    renderTupleAndChildRelations(r: CurrentTupleQuery): Markup {
-        const schema = r.schema;
-        const view = this.getViewForRelation(schema);
-        const currentlyOpenTupleEditor =
-            activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
-
-        return [
-            // --- If this tuple a proposed new tuple under edit, render the editor,
-            //     otherwise render the current row.
-            (currentlyOpenTupleEditor?.ref_kind === 'replaceSelf'
-                && currentlyOpenTupleEditor?.ref_tuple_id === r.src.id)
-                ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor)
-                : this.renderTuple(r),
-
-            // --- Render child relations
-            schema.relationFields.length > 0 ? [
-                ['tr', {},
-                 ['td', {class: 'relation-container', colspan: view.userScalarViews.length+this.uiColCount},
-                  Object.values(r.childRelations).map(
-                      childRelation=>this.renderRelation(childRelation))
-                 ]]
-            ]: undefined
-        ];
-    }
-
-    /**
-     *
-     */
-    renderTuple(r: CurrentTupleQuery): Markup {
-        const schema = r.schema;
-        const view = this.getViewForRelation(schema);
-        const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
-        const current = r.mostRecentTupleVersion;
-        const tupleJson = JSON.stringify(current?.assertion);
-
-        return [
-            ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
-                    class: 'tuple'},
-             ['th', {}, view.prompt],
-             current ? [  // current is undefined for deleted tuples - more work here TODO
-                 view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
-             ]: undefined,
-             ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews().viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
-             ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]],
-            isHistoryOpen
-                ? ['tr', {},
-                   ['td', {}],
-                   ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
-                : undefined,
-            ];
-    }
-
-    /**
-     *
-     */
-    renderRelation(r: CurrentRelationQuery): Markup {
-
-        const schema = r.schema;
-
-        const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
-        const refKind = currentlyOpenTupleEditor?.ref_kind;
-        const refRelation = currentlyOpenTupleEditor?.ref_relation;
-        const refId = currentlyOpenTupleEditor?.ref_tuple_id;
-        const view = this.getViewForRelation(schema);
-
-        const tuples = [...r.tuples.values()];
-
-        const firstChildEditor =
-            (refId === r.src.parent.id && refKind === 'firstChild' && refRelation === schema.tag)
-                ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
-            : undefined;
-
-        const lastChildEditor =
-            (refId === r.src.parent.id && refKind === 'lastChild' && refRelation === schema.tag)
-            ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
-            : undefined;
-
-        const renderedTuples =
-            tuples.map(t=>{
-                const tuple_id = t.src.id;
-                return [
-                    [tuple_id === refId && refKind === 'before'
-                        ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
-                        : undefined],
-                    this.renderTupleAndChildRelations(t),
-                    [tuple_id === refId && refKind === 'after'
-                        ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
-                        : undefined]
-                ];
-            });
-
-        if(renderedTuples.length === 0 && !firstChildEditor && !lastChildEditor) {
-            const addTupleAction =
-                `activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.parent.id}, '${r.src.schema.tag}')`;
-        return ['button', {onclick: addTupleAction},
-                `Insert ${view.prompt}`];
-    }
-
-    return (
-            // This table has the number of cols in the schema for 'r'
-            ['table', {class: `relation relation-${schema.name}`},
-             firstChildEditor,
-             renderedTuples,
-             lastChildEditor,
-            ]);
-    }
-
-    renderTable(r: CurrentTupleQuery): Markup {
-        return (
-            ['table', {class: `relation relation-${r.schema.name}`},
-             this.renderTupleAndChildRelations(r),
-            ]);
-    }
-
-    /**
-     *
-     */
-    renderHistoryTable(r: CurrentTupleQuery): Markup {
-        const schema = r.schema;
-        const view = this.getViewForRelation(schema);
-        const historicalTupleVersions = r.historicalTupleVersions.toReversed();
-        if(historicalTupleVersions.length === 0)
-            return ['strong', {}, 'No history'];
-        else
-            return ['table', {class: 'history-table'},
-                    historicalTupleVersions.map(h=>
-                        ['tr', {},
-                         ['td', {}],  // Empty header col
-                         ['td', {},
-                          timestamp.formatTimestampAsLocalTime(h.assertion.valid_from)],
-                         ['td', {},
-                          timestamp.formatTimestampAsLocalTime(h.assertion.valid_to)],
-                         view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
-                         ['td', {},
-                          h.assertion.change_by_username],
-                        ])
-                   ];
-    }
-
-    // ??? What happens if the tuple is rendered twice on the same screen - this current id scheme implies both should be under
-    // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
-    // somehow.
-    // We need to scope our render trees!
-    // - Probably better to move tuple under edit into this view class? (it really does belong to it - not to the
-    //   shared global thing)
-    renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
-        const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
-        return (
-            ['td', {class: `field field-${v.field.schemaTypename()}`,
-                    onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
-                   },
-             v.renderView(value)
-            ]);
-    }
-
-    renderTupleEditor(schema: RelationField, t: TupleEditor): Markup {
-        const view = this.getViewForRelation(schema);
-        //const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
-        return [
-            ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
-             ['th', {}, view.prompt],
-             view.userScalarViews.map(v=>this.renderScalarCellEditor(v, t))
-            ],
-
-            ['tr', {},
-             ['th', {}, ''],
-             ['td', {colspan: view.userScalarViews.length+this.uiColCount},
-              ['button', {type:'button', class:'btn btn-primary',
-                          onclick:'activeViews().endFieldEdit()'}, 'Update'],
-             ],
-
-             // TODO: add history when under edit.  Not so simple because need
-             //       to find tuple by id - so need to add that index first.
-             // isHistoryOpen
-             //    ? ['tr', {},
-             //       ['td', {}],
-             //       ['td',  {colspan: view.userScalarViews.length+this.uiColCount}, this.renderHistoryTable(r)]]
-             //    : undefined,
-
-
-            ]
-        ];
-    }
-
-    renderScalarCellEditor(v: ScalarView, t: TupleEditor): Markup {
-        const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here;
-        return (
-            ['td', {class: `fieldedit`},
-             v.renderEditor(t.assertion.assertion_id, value)
-            ]);
-    }
-
-    // TODO: the event handlers should not be literal onclick scripts on each
-    //       item (bloat).
-    // TODO: add an 'Insert Child XXX' for each child relation kind.
-    renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
-        const insertChildMenuItems =
-            r.schema.relationFields.map(c=>
-                ['li', {},
-                 ['a', {class:'dropdown-item', href:'#',
-                        onclick:`activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
-                  `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
-                 ]]);
-
-        // 'true||undefined' type is convenient for eliding sections of markup.
-        const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
-
-        return (
-            ['div', {class:'dropdown'},
-             ['button',
-              {class:'btn btn-secondary dropdown-toggle',
-               type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
-              '≡'],
-             ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
-              isLeaf && [
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#',
-                                    onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
-                  insertChildMenuItems,
-                  ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().deleteTuple('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Delete']],
-              ], // isLeaf
-              //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
-             ]]);
+let taggerChangeListenerInstalled: boolean = false;
+function installTaggerChangeListener() {
+    if(!taggerChangeListenerInstalled) {
+        window.addEventListener('message', taggerChangeListener, false);
+        taggerChangeListenerInstalled = true;
     }
 }
 
-// /**
-//  *
-//  */
-// export class EditorRenderer {
-//     readonly uiColCount = 3;
+function taggerChangeListener(e: Event) {
+    if((e as any).origin !== window.origin) {
+        console.info(`ignoring message from wrong origin ${(e as any).origin}`);
+        return;
+    }
+    const message = (e as any).data;
 
-//     constructor(public viewTree: SchemaView,
-//                 public tupleIdsWithHistoryOpen: Set<number>,
-//                 public renderRootId: string) {
-//     }
+    console.info('TAGGER CHANGE LISTENER FIRED!', e);
+    console.info('message', message);
 
-//     /**
-//      *
-//      */
-//     getViewForRelation(schema: RelationField): RelationView {
-//         return this.viewTree.relationViewForRelation.get(schema)
-//             ?? panic('unable find relation view for relation', schema.name);
-//     }
+    switch(message.action) {
+        case 'reloadBoundingGroup':
+            reloadBoundingGroup(message.boundingGroupId);
+            break;
+        default:
+            throw new Error(`unknown message action ${message.action}`);
+    }
+}
 
-//     /**
-//      *
-//      */
-//     renderTupleAndChildRelations(r: CurrentTupleQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-//         const currentlyOpenTupleEditor =
-//             activeViews().getCurrentlyOpenTupleEditorForTupleId(this.renderRootId, r.src.id);
+let entryEditorTupleContextMenu: any|undefined = undefined;
+let entryEditorEmptyTupleContextMenu: any|undefined = undefined;
 
-//         return [
-//             // --- If this tuple a proposed new tuple under edit, render the editor,
-//             //     otherwise render the current row.
-//             (currentlyOpenTupleEditor?.ref_kind === 'replaceSelf'
-//                 && currentlyOpenTupleEditor?.ref_tuple_id === r.src.id)
-//                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor)
-//                 : this.renderTuple(r),
+function initEntryEditorContextMenus() {
+    entryEditorTupleContextMenu ??= createEntryEditorTupleContextMenu();
+    entryEditorEmptyTupleContextMenu ??= createEntryEditorEmptyTupleContextMenu();
+}
 
-//             // --- Render child relations
-//             schema.relationFields.length > 0 ? [
-//                 ['tr', {},
-//                  ['td', {class: 'relation-container', colspan: view.userScalarViews.length+this.uiColCount},
-//                   Object.values(r.childRelations).map(
-//                       childRelation=>this.renderRelation(childRelation))
-//                  ]]
-//             ]: undefined
-//         ];
-//     }
+function createEntryEditorTupleContextMenu(): any {
+    const menuItems = [
+        { name: 'Edit', fn: (target:Element) => invokeTupleMenuEvent(target, 'edit', 'Edit') },
+        {},
+        { name: 'Insert Above', fn: (target:Element) => invokeTupleMenuEvent(target, 'insertAbove', 'Insert Above') },
+        { name: 'Insert Below', fn: (target:Element) => invokeTupleMenuEvent(target, 'insertBelow', 'Insert Below') },
+        {},
+        { name: 'Move Up', fn: (target:Element) => invokeTupleMenuEvent(target, 'moveUp', 'Move Up') },
+        { name: 'Move Down', fn: (target:Element) => invokeTupleMenuEvent(target, 'moveDown', 'Move Down') },
+        {},
+        { name: 'Delete', fn: (target:Element) => invokeTupleMenuEvent(target, 'delete', 'Delete') },
+    ];
+    console.info('Installing TupleContextMenu');
+    return new ContextMenu('.tuple-context-menu', menuItems);
+}
 
-//     /**
-//      *
-//      */
-//     renderTuple(r: CurrentTupleQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-//         const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
-//         const current = r.mostRecentTupleVersion;
-//         const tupleJson = JSON.stringify(current?.assertion);
+function createEntryEditorEmptyTupleContextMenu(): any {
+    const menuItems = [
+        { name: 'Edit', fn: (target:Element) => invokeTupleMenuEvent(target, 'edit', 'Edit') },
+    ];
+    console.info('Installing EmptyTupleContextMenu');
+    return new ContextMenu('.empty-tuple-context-menu', menuItems);
+}
 
-//         return [
-//             ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
-//                     class: 'tuple'},
-//              ['th', {}, view.prompt],
-//              current ? [  // current is undefined for deleted tuples - more work here TODO
-//                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
-//              ]: undefined,
-//              ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews().viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
-//              ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]],
-//             isHistoryOpen
-//                 ? ['tr', {},
-//                    ['td', {}],
-//                    ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
-//                 : undefined,
-//             ];
-//     }
+function invokeTupleMenuEvent(target:Element, name: string, label: string) {
+    console.info('invoke tuple menu on', target);
+    const renderRootId = target.getAttribute('data-render-root-id') ?? panic('missing render-root-id');
+    const dbTag = target.getAttribute('data-db-tag') ?? panic('missing db-tag');
+    const tupleTag = target.getAttribute('data-tuple-tag') ?? panic('missing tuple-tag');
+    const tupleId = parseInt(target.getAttribute('data-tuple-id') ?? panic('missing tuple-id'));
 
-//     /**
-//      *
-//      */
-//     renderRelation(r: CurrentRelationQuery): Markup {
+    console.info('Invoking', {name, label, renderRootId, dbTag, tupleTag, tupleId});
 
-//         const schema = r.schema;
+    switch(name) {
+        case 'edit':
+            activeViews().editTupleUpdate(renderRootId, dbTag, tupleTag, tupleId);
+            break;
+        case 'insertAbove':
+            activeViews().editNewAbove(renderRootId, dbTag, tupleTag, tupleId);
+            break;
+        case 'insertBelow':
+            activeViews().editNewBelow(renderRootId, dbTag, tupleTag, tupleId);
+            break;
+        case 'moveUp':
+            activeViews().moveUp(renderRootId, dbTag, tupleTag, tupleId);
+            break;
+        case 'moveDown':
+            activeViews().moveDown(renderRootId, dbTag, tupleTag, tupleId);
+            break;
+        case 'delete':
+            activeViews().deleteTuple(renderRootId, dbTag, tupleTag, tupleId);
+            break;
+        default:
+            throw new Error(`unexpected menu item ${name}`);
+    }
 
-//         const currentlyOpenTupleEditor = activeViews().getCurrentlyOpenTupleEditorForRenderRootId(this.renderRootId);
-//         const refKind = currentlyOpenTupleEditor?.ref_kind;
-//         const refRelation = currentlyOpenTupleEditor?.ref_relation;
-//         const refId = currentlyOpenTupleEditor?.ref_tuple_id;
-//         const view = this.getViewForRelation(schema);
+    
+    // these cannot (naturally) be fns (attr values are stringified in our current pipeline -
+    // for on* fields, this turns into invokable ..., but not here.
 
-//         const tuples = [...r.tuples.values()];
+    // look at the events - we didn't like repeating all the stuff anyway.
 
-//         const firstChildEditor =
-//             (refId === r.src.parent.id && refKind === 'firstChild' && refRelation === schema.tag)
-//                 ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
-//             : undefined;
+    // renderRootId, schemaTag, 
+    
+}
 
-//         const lastChildEditor =
-//             (refId === r.src.parent.id && refKind === 'lastChild' && refRelation === schema.tag)
-//             ? this.renderTupleEditor(r.src.schema, currentlyOpenTupleEditor!)
-//             : undefined;
-
-//         const renderedTuples =
-//             tuples.map(t=>{
-//                 const tuple_id = t.src.id;
-//                 return [
-//                     [tuple_id === refId && refKind === 'before'
-//                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
-//                         : undefined],
-//                     this.renderTupleAndChildRelations(t),
-//                     [tuple_id === refId && refKind === 'after'
-//                         ? this.renderTupleEditor(t.schema,  currentlyOpenTupleEditor!)
-//                         : undefined]
-//                 ];
-//             });
-
-//         if(renderedTuples.length === 0 && !firstChildEditor && !lastChildEditor) {
-//             const addTupleAction =
-//                 `activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.parent.id}, '${r.src.schema.tag}')`;
-//         return ['button', {onclick: addTupleAction},
-//                 `Insert ${view.prompt}`];
-//     }
-
-//     return (
-//             // This table has the number of cols in the schema for 'r'
-//             ['table', {class: `relation relation-${schema.name}`},
-//              firstChildEditor,
-//              renderedTuples,
-//              lastChildEditor,
-//             ]);
-//     }
-
-//     renderTable(r: CurrentTupleQuery): Markup {
-//         return (
-//             ['table', {class: `relation relation-${r.schema.name}`},
-//              this.renderTupleAndChildRelations(r),
-//             ]);
-//     }
-
-//     /**
-//      *
-//      */
-//     renderHistoryTable(r: CurrentTupleQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-//         const historicalTupleVersions = r.historicalTupleVersions.toReversed();
-//         if(historicalTupleVersions.length === 0)
-//             return ['strong', {}, 'No history'];
-//         else
-//             return ['table', {class: 'history-table'},
-//                     historicalTupleVersions.map(h=>
-//                         ['tr', {},
-//                          ['td', {}],  // Empty header col
-//                          ['td', {},
-//                           timestamp.formatTimestampAsLocalTime(h.assertion.valid_from)],
-//                          ['td', {},
-//                           timestamp.formatTimestampAsLocalTime(h.assertion.valid_to)],
-//                          view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
-//                          ['td', {},
-//                           h.assertion.change_by_username],
-//                         ])
-//                    ];
-//     }
-
-//     // ??? What happens if the tuple is rendered twice on the same screen - this current id scheme implies both should be under
-//     // edit.   We either have to disallow having the renderer twice (which seems like an unreasonable restriction) - or scope this
-//     // somehow.
-//     // We need to scope our render trees!
-//     // - Probably better to move tuple under edit into this view class? (it really does belong to it - not to the
-//     //   shared global thing)
-//     renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
-//         const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
-//         return (
-//             ['td', {class: `field field-${v.field.schemaTypename()}`,
-//                     onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
-//                    },
-//              v.renderView(value)
-//             ]);
-//     }
-
-//     renderTupleEditor(schema: RelationField, t: TupleEditor): Markup {
-//         const view = this.getViewForRelation(schema);
-//         //const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
-//         return [
-//             ['tr', {id: `tuple-${this.renderRootId}-${t.assertion.assertion_id}`},
-//              ['th', {}, view.prompt],
-//              view.userScalarViews.map(v=>this.renderScalarCellEditor(v, t))
-//             ],
-
-//             ['tr', {},
-//              ['th', {}, ''],
-//              ['td', {colspan: view.userScalarViews.length+this.uiColCount},
-//               ['button', {type:'button', class:'btn btn-primary',
-//                           onclick:'activeViews().endFieldEdit()'}, 'Update'],
-//              ],
-
-//              // TODO: add history when under edit.  Not so simple because need
-//              //       to find tuple by id - so need to add that index first.
-//              // isHistoryOpen
-//              //    ? ['tr', {},
-//              //       ['td', {}],
-//              //       ['td',  {colspan: view.userScalarViews.length+this.uiColCount}, this.renderHistoryTable(r)]]
-//              //    : undefined,
-
-
-//             ]
-//         ];
-//     }
-
-//     renderScalarCellEditor(v: ScalarView, t: TupleEditor): Markup {
-//         const value = (t.assertion as any)[v.field.bind];     // XXX be fancy here;
-//         return (
-//             ['td', {class: `fieldedit`},
-//              v.renderEditor(t.assertion.assertion_id, value)
-//             ]);
-//     }
-
-//     // TODO: the event handlers should not be literal onclick scripts on each
-//     //       item (bloat).
-//     // TODO: add an 'Insert Child XXX' for each child relation kind.
-//     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
-//         const insertChildMenuItems =
-//             r.schema.relationFields.map(c=>
-//                 ['li', {},
-//                  ['a', {class:'dropdown-item', href:'#',
-//                         onclick:`activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
-//                   `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
-//                  ]]);
-
-//         // 'true||undefined' type is convenient for eliding sections of markup.
-//         const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
-
-//         return (
-//             ['div', {class:'dropdown'},
-//              ['button',
-//               {class:'btn btn-secondary dropdown-toggle',
-//                type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
-//               '≡'],
-//              ['ul', {class:'dropdown-menu'},
-//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
-//               isLeaf && [
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#',
-//                                     onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
-//                   insertChildMenuItems,
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().deleteTuple('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Delete']],
-//               ], // isLeaf
-//               //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
-//              ]]);
-//     }
+//     return ['div', {class: 'has-context-menu'}, 'CTX ME!'];
 // }
 
-// ---------------------------------------------------------------------------------
-// --- View Renderer ---------------------------------------------------------------
-// ---------------------------------------------------------------------------------
+// function renderCurrentTupleMenu(renderRootId: string, r: CurrentTupleQuery): Markup {
+//     // const insertChildMenuItems =
+//     //     r.schema.relationFields.map(c=>
+//     //         ['li', {},
+//     //          ['a', {class:'dropdown-item', href:'#',
+//     //                 onclick:`activeViews().editNewLastChild('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
+//     //           `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
+//     //          ]]);
+//     const insertChildMenuItems: any[] = [];
 
-// /**
-//  *
-//  */
-// export class ViewRenderer {
-//     readonly uiColCount = 3;
+//     // 'true||undefined' type is convenient for eliding sections of markup.
+//     const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
 
-//     constructor(public viewTree: SchemaView,
-//                 public tupleIdsWithHistoryOpen: Set<number>,
-//                 public renderRootId: string) {
-//     }
-
-//     getViewForRelation(schema: RelationField): RelationView {
-//         return this.viewTree.relationViewForRelation.get(schema)
-//             ?? panic('unable find relation view for relation', schema.name);
-//     }
-
-//     renderRelation(r: CurrentRelationQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-//         return (
-//             // This table has the number of cols in the schema for 'r'
-//             ['table', {class: `relation relation-${schema.name}`},
-
-//              [...r.tuples.values()].map(t=>{
-//                  const tuple_id = t.src.id;
-//                  return [
-//                      this.renderTuple(t),
-//                  ];
-//              }),
-//             ]);
-//     }
-
-//     renderTable(r: CurrentTupleQuery): Markup {
-//         return (
-//             ['table', {class: `relation relation-${r.schema.name}`},
-//              this.renderTuple(r),
-//             ]);
-//     }
-
-//     renderTuple(r: CurrentTupleQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-
-//         return [
-//             this.renderCurrentTupleRow(r),
-
-//             // --- Render child relations
-//             schema.relationFields.length > 0 ? [
-//                 ['tr', {},
-//                  ['td', {class: 'relation-container', colspan: view.userScalarViews.length+this.uiColCount},
-//                   Object.values(r.childRelations).map(
-//                       childRelation=>this.renderRelation(childRelation))
-//                  ]]
-//             ]: undefined
-//         ];
-//     }
-
-//     /**
-//      *
-//      */
-//     renderCurrentTupleRow(r: CurrentTupleQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-//         const isHistoryOpen = this.tupleIdsWithHistoryOpen.has(r.src.id);
-//         const current = r.mostRecentTupleVersion;
-//         const tupleJson = JSON.stringify(current?.assertion);
-//         return [
-//             ['tr', {id: `tuple-${this.renderRootId}-${current?.assertion_id}`,
-//                     class: 'tuple'},
-//              ['th', {}, view.prompt],
-//              current ? [  // current is undefined for deleted tuples - more work here TODO
-//                  view.userScalarViews.map(v=>this.renderScalarCell(r, v, current))
-//              ]: undefined,
-//              ['td', {class: 'tuple-history', title: tupleJson, onclick: `activeViews().viewByName('${this.renderRootId}').toggleHistory(${r.src.id})`}, '↶'], // style different if have history etc.
-//              ['td', {class: 'tuple-menu'}, this.renderCurrentTupleMenu(r)]],
-//             isHistoryOpen
-//                 ? ['tr', {},
-//                    ['td', {}],
-//                    ['td',  {colspan: view.userScalarViews.length+this.uiColCount-1}, this.renderHistoryTable(r)]]
-//                 : undefined,
-//             ];
-//     }
-
-//     /**
-//      *
-//      */
-//     renderHistoryTable(r: CurrentTupleQuery): Markup {
-//         const schema = r.schema;
-//         const view = this.getViewForRelation(schema);
-//         const historicalTupleVersions = r.historicalTupleVersions.toReversed();
-//         if(historicalTupleVersions.length === 0)
-//             return ['strong', {}, 'No history'];
-//         else
-//             return ['table', {},
-//                     historicalTupleVersions.map(h=>
-//                         ['tr', {},
-//                          ['td', {}],  // Empty header col
-//                          ['td', {},
-//                           timestamp.formatTimestampAsLocalTime(h.assertion.valid_from)],
-//                          ['td', {},
-//                           timestamp.formatTimestampAsLocalTime(h.assertion.valid_to)],
-//                          view.userScalarViews.map(v=>this.renderScalarCell(r, v, h, true)),
-//                          ['td', {},
-//                           h.assertion.change_by_username],
-//                         ])
-//                    ];
-//     }
-
-//     renderScalarCell(r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
-//         const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
-//         return (
-//             ['td', {class: `field field-${v.field.schemaTypename()}`,
-//                     onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`,
-//                    },
-//              v.renderView(value)
-//             ]);
-//     }
-
-//     // TODO: the event handlers should not be literal onclick scripts on each
-//     //       item (bloat).
-//     renderCurrentTupleMenu(r: CurrentTupleQuery): Markup {
-//         const insertChildMenuItems =
-//             r.schema.relationFields.map(c=>
-//                 ['li', {},
-//                  ['a', {class:'dropdown-item', href:'#',
-//                         onclick:`activeViews().editNewLastChild('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id}, '${c.tag}')`},
-//                   `Insert Child ${this.viewTree.relationViewForRelation.get(c)?.prompt}`
-//                  ]]);
-
-//         // 'true||undefined' type is convenient for eliding sections of markup.
-//         const isLeaf = workspace.isRootTupleId(r.src.id) ? undefined : true;
-
-//         return (
-//             ['div', {class:'dropdown'},
-//              ['button',
-//               {class:'btn btn-secondary dropdown-toggle',
-//                type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
-//               '≡'],
-//              ['ul', {class:'dropdown-menu'},
-//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
-//               isLeaf && [
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#',
-//                                     onclick:`activeViews().editNewAbove('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${this.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
-//                   insertChildMenuItems,
-//                   ['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Delete']],
-//               ], // isLeaf
-//               //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
-//              ]]);
-//     }
+//     return (
+//         ['span', {class:'dropdown'},
+//          ['button',
+//           {class:'btn btn-secondary dropdown-toggle',
+//            type:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+//           '≡'],
+//          ['ul', {class:'dropdown-menu'},
+//           ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editTupleUpdate('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Edit']],
+//           isLeaf && [
+//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveUp('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Up']],
+//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().moveDown('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Move Down']],
+//               ['li', {}, ['a', {class:'dropdown-item', href:'#',
+//                                 onclick:`activeViews().editNewAbove('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Above']],
+//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().editNewBelow('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Insert Below']],
+//               insertChildMenuItems,
+//               ['li', {}, ['a', {class:'dropdown-item', href:'#', onclick:`activeViews().deleteTuple('${renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`}, 'Delete']],
+//           ], // isLeaf
+//           //['li', {}, ['a', {class:'dropdown-item', href:'#'}, 'Show History']],
+//          ]]);
 // }
 
 // ----------------------------------------------------------------------------------
@@ -1702,7 +1498,19 @@ export class FieldToView implements FieldVisitorI<any,View> {
     visitIdField(f: IdField, v: any): View { return new IdView(f); }
     visitPrimaryKeyField(f: PrimaryKeyField, v: any): View { return new PrimaryKeyView(f); }
     visitRelationField(f: RelationField, v: any): View {
-        return new RelationView(f, f.fields.map(fieldToView));
+        const fieldViews = f.fields.map(fieldToView);
+        return new RelationView(f, fieldViews);
+        // const shape = f.style.$shape;
+        // switch(f.style.$shape) {
+        //     case 'inlineListRelation':
+        //         return new InlineListRelationView(f, fieldViews);
+        //     case 'compactInlineListRelation':
+        //         return new CompactInlineListRelationView(f, fieldViews);
+        //     case 'containerRelation':
+        //         return new ContainerRelationView(f, fieldViews);
+        //     default:
+        //         throw new Error(`invalid or missing $shape '${shape}' for relation field '{f.name}'`);
+        // }
     }
     visitSchema(f: Schema, v: any): View {
         return new SchemaView(f, f.fields.map(fieldToView));
@@ -1719,71 +1527,16 @@ export function schemaView(f: Schema): SchemaView {
     return new SchemaView(f, f.fields.map(fieldToView));
 }
 
-/**
- *
- */
-export function renderEditor(r: RelationView): any {
-}
-
-// export async function run0() {
-//     console.info('rendering sample');
-
-//     const root = document.getElementById('root') ?? panic();
-//     root.innerHTML = 'POW!';
-
-//     const entryId = 1000;
-//     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
-//     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
-
-//     const rendered = workspace.testRenderEntry(assertions);
-
-//     root.innerHTML = renderToStringViaLinkeDOM(rendered);
-
-
-// }
-
-// export async function run() {
-//     console.info('rendering sample 2');
-//     const views = activeViews();
-
-//     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
-//     views.workspace.addTable(dictSchema);
-
-
-
-
-
-
-//     const dictView = schemaView(dictSchema);
-
-//     views.registerActiveView(
-//         new ActiveView('root',
-//                        dictView,
-//                        ()=>new CurrentTupleQuery(views.workspace.getTableByTag('dct'))));
-
-//     const root = document.getElementById('root') ?? panic();
-//     root.innerHTML = 'POW!';
-
-//     const entryId = 1000;
-//     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
-//     console.info('Assertions', JSON.stringify(assertions, undefined, 2));
-
-//     const rendered = workspace.testRenderEntry(assertions);
-
-//     root.innerHTML = renderToStringViaLinkeDOM(rendered);
-
-
-// }
-
-
 export function renderModalEditorSkeleton() {
 
     return [
-        ['div', {class: 'modal fade',  id:'modalEditor',
+        // Add 'fade' to class list for modal fade effect
+        ['div', {class: 'modal',  id:'modalEditor',
                  'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
                  tabindex:'-1', 'aria-labelledby':'modalEditorLabel',
                  'aria-hidden':'true'},
-         ['div', {class:'modal-dialog modal-dialog-scrollable modal-fullscreen'},
+         //['div', {class:'modal-dialog modal-dialog-scrollable modal-fullscreen'},
+          ['div', {class:'modal-dialog modal-dialog-scrollable modal-lg'},
 
           ['div', {class:'modal-content'},
 
@@ -1799,12 +1552,12 @@ export function renderModalEditorSkeleton() {
 
            ], // div.modal-body
 
-           ['div', {class:'modal-footer'},
-            ['button', {type:'button', class:'btn btn-secondary',
-                        'data-bs-dismiss':'modal',
-                        //onclick:'activeViews().saveChanges()'}, 'Save']
-                        onclick:'location.reload()'}, 'Close']
-           ], // div.modal-footer
+           // ['div', {class:'modal-footer'},
+           //  ['button', {type:'button', class:'btn btn-secondary',
+           //              'data-bs-dismiss':'modal',
+           //              //onclick:'activeViews().saveChanges()'}, 'Save']
+           //              onclick:'location.reload()'}, 'Close']
+           // ], // div.modal-footer
 
           ] // div.modal-content
 
@@ -1834,15 +1587,31 @@ export function getGlobalBoostrapInst() {
 
 /**
  *
- * TODO: firing this again while it is loading will (like on a slow connection) needs
- *       some protection.
  */
 export async function popupEntryEditor(title: string,
                                        entryId: number,
                                        nestedTypeTag:string='ent',
                                        nestedId:number=entryId,
                                        restrictToRelation:string|undefined = undefined) {
+    await entryEditor(title, entryId, nestedTypeTag, nestedId, restrictToRelation);
+    getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').show();
+}
 
+/**
+ *
+ * TODO: firing this again while it is loading will (like on a slow connection) needs
+ *       some protection.
+ */
+export async function entryEditor(title: string,
+                                  entryId: number,
+                                  nestedTypeTag:string='ent',
+                                  nestedId:number=entryId,
+                                  restrictToRelation:string|undefined = undefined,
+                                  viewId:string = 'modalEditor') {
+
+    initEntryEditorContextMenus();
+    installTaggerChangeListener();
+    
     // TODO make this less weird
     const assertions = await rpc`getAssertionsForEntry(${entryId})`;
 
@@ -1867,11 +1636,22 @@ export async function popupEntryEditor(title: string,
         query = ()=>new CurrentTupleQuery(
             views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId));
 
-    views.registerActiveView(new ActiveView('modalEditor', title, dictView, query));
+    // query = ()=>new CurrentRelationQuery(
+    //     views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId));        
+
+
+    // const dictQuery = ()=>new CurrentTupleQuery(
+    //     views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId));
+    // const entriesQuery = ()=>{
+    //     const dict = views.workspace.getVersionedTupleById('dct', nestedTypeTag, nestedId) ?? panic('unable to find entry', entryId));
+
+    // };
+    // HERE WORKING HERE HERE WORKING HERE !!!
+    
+    views.registerActiveView(new ActiveView(viewId, title, dictView, query));
 
     views.rerenderAllViews();
 
-    getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor').show();
 
     //console.info('Assertions', JSON.stringify(assertions, undefined, 2));
 
@@ -1882,6 +1662,26 @@ export async function popupEntryEditor(title: string,
  */
 export function launchAddNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string) {
     console.info('*** Launching add new document reference', entry_id, subentry_id, friendly_document_id, title);
+    // Await an RPC that does the data changes.
+    // When the RPC returns, navigate to the URL that is returned.
+    (async ()=>{
+        const editorUrl = await rpc`wordwiki.addNewDocumentReference(${entry_id}, ${subentry_id}, ${friendly_document_id}, ${title})`;
+        console.info('*** Editor URL is', editorUrl);
+        window.open(editorUrl.location, '_blank');
+    })();
+}
+
+/**
+ * XXX todo this is panic written proto crap that should be redone and moved!
+ */
+export function launchAddNewDocumentReference2(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string) {
+    console.info('*** Launching add new document reference 2', entry_id, subentry_id, friendly_document_id, title);
+
+
+    // 
+
+
+    
     // Await an RPC that does the data changes.
     // When the RPC returns, navigate to the URL that is returned.
     (async ()=>{
@@ -1935,13 +1735,14 @@ export async function run() {
 
 
     activeViews().rerenderAllViews();
-
 }
 
 export const exportToBrowser = ()=> ({
     activeViews,
     run,
     popupEntryEditor,
+    entryEditor,
+    //entryEditor2,
     launchAddNewDocumentReference,
     launchNewLexeme,
     //popupRelationEditor,

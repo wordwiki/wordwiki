@@ -99,7 +99,7 @@ export const dictSchemaJson = {
         $tag: EntryTag,
         $prompt: 'Entry',
         entry_id: {$type: 'primary_key'},
-        $style: { $shape: 'container' },
+        $style: { $shape: 'containerRelation' },
         spelling: {
             $type: 'relation',
             $tag: SpellingTag,
@@ -107,7 +107,7 @@ export const dictSchemaJson = {
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
             variant: {$type: 'variant'},
-            $style: { $shape: 'titledValue' },
+            $style: { $shape: 'compactInlineListRelation' },
         },
         status: {
             $type: 'relation',
@@ -117,7 +117,7 @@ export const dictSchemaJson = {
             status: {$type: 'enum', $bind: 'attr1', $style: { $options: states} },
             details: {$type: 'string', $bind: 'attr2' },
             variant: {$type: 'variant'},
-            $style: { $shape: 'titledValue' },
+            $style: { $shape: 'compactInlineListRelation' },
         },
         todo: {
             $type: 'relation',
@@ -129,21 +129,21 @@ export const dictSchemaJson = {
             assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
             done: {$type: 'boolean', $bind: 'attr4'},
             variant: {$type: 'variant'},
-            $style: { $shape: 'titledValue' },
+            $style: { $shape: 'compactInlineListRelation' },
         },
         note: {
             $type: 'relation',
             $tag: NoteTag,
             note_id: {$type: 'primary_key'},
             note: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
-            $style: { $shape: 'titledValue' },
+            $style: { $shape: 'compactInlineListRelation' },
         },
         subentry: {
             $type: 'relation',
             $tag: SubentryTag,
             subentry_id: {$type: 'primary_key'},
             part_of_speech: {$type: 'string', $bind: 'attr1'},
-            $style: { $shape: 'container' },
+            $style: { $shape: 'containerRelation' },
             // probably should have variant here TODO
             // translation TODO
             translation: {
@@ -152,7 +152,7 @@ export const dictSchemaJson = {
                 translation_id: {$type: 'primary_key'},
                 translation: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'titledValue' },
+                $style: { $shape: 'compactInlineListRelation' },
             },
             /*definition: {
                 $type: 'relation',
@@ -160,7 +160,7 @@ export const dictSchemaJson = {
                 definition_id: {$type: 'primary_key'},
                 definition: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'titledValue' },
+                $style: { $shape: 'compactInlineListRelation' },
                 //variant: {$type: 'string'}
                 // same issue as for gloss variant!!!
                 // - need two locales for definition - where it is applicable,
@@ -186,13 +186,13 @@ export const dictSchemaJson = {
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
-                $style: { $shape: 'valueList' },
+                $style: { $shape: 'inlineListRelation' },
             },
             example: {
                 $type: 'relation',
                 $tag: ExampleTag,
                 example_id: {$type: 'primary_key'},
-                $style: { $shape: 'container' },
+                $style: { $shape: 'containerRelation' },
 
                 //translation: {$type: 'string', $bind: 'attr1'},
                 // Probably move translation into a sub relation (so can have variants)
@@ -216,7 +216,7 @@ export const dictSchemaJson = {
                     example_text_id: {$type: 'primary_key'},
                     example_text: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
 
                 example_translation: {
@@ -225,7 +225,7 @@ export const dictSchemaJson = {
                     example_translation_id: {$type: 'primary_key'},
                     example_translation: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
 
                 // Recordings of example sentence need to be pulled out of the
@@ -241,7 +241,7 @@ export const dictSchemaJson = {
                     recording: {$type: 'audio', $bind: 'attr1'},
                     speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
             },
 
@@ -257,7 +257,7 @@ export const dictSchemaJson = {
                 pronunciation_guide_id: {$type: 'primary_key'},
                 pronunciation_guide: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'titledValue' },
+                $style: { $shape: 'compactInlineListRelation' },
             },
             category: {
                 $type: 'relation',
@@ -265,14 +265,14 @@ export const dictSchemaJson = {
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
                 category: {$type: 'string', $bind: 'attr1'},
-                $style: { $shape: 'titledValue' },
+                $style: { $shape: 'compactInlineListRelation' },
             },
             related_entry: {
                 $type: 'relation',
                 $tag: RelatedEntryTag,
                 related_entry_id: {$type: 'primary_key'},
                 unresolved_text: {$type: 'string', $bind: 'attr1'},
-                $style: { $shape: 'valueList' },
+                $style: { $shape: 'inlineListRelation' },
             },
 
             // Probably same variant treatment here as we are doing for examples
@@ -282,14 +282,14 @@ export const dictSchemaJson = {
                 alternate_grammatical_form_id: {$type: 'primary_key'},
                 gloss: {$type: 'string', $bind: 'attr1'},
                 grammatical_form: {$type: 'string', $bind: 'attr2'},
-                $style: { $shape: 'container' },
+                $style: { $shape: 'containerRelation' },
                 alternate_form_text: {
                     $type: 'relation',
                     $tag: AlternateFormTextTag,
                     alternate_form_text_id: {$type: 'primary_key'},
                     alternate_form_text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'valueList' },
+                    $style: { $shape: 'inlineListRelation' },
                 },
             },
             other_regional_form: {
@@ -298,7 +298,7 @@ export const dictSchemaJson = {
                 other_regional_form_id: {$type: 'primary_key'},
                 other_regional_form_text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'valueList' },
+                $style: { $shape: 'inlineListRelation' },
             },
             picture: {
                 $type: 'relation',
@@ -307,7 +307,7 @@ export const dictSchemaJson = {
                 picture: {$type: 'image', $bind: 'attr1'},
                 title: {$type: 'string', $bind: 'attr2'},
                 credit: {$type: 'string', $bind: 'attr3'},
-                $style: { $shape: 'valueList' },
+                $style: { $shape: 'inlineListRelation' },
             },
             attr: {
                 $type: 'relation',
@@ -316,7 +316,7 @@ export const dictSchemaJson = {
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'valueList' },
+                $style: { $shape: 'inlineListRelation' },
             },
             document_reference: {
                 $type: 'relation',
@@ -324,20 +324,20 @@ export const dictSchemaJson = {
                 document_reference_id: {$type: 'primary_key'},
                 bounding_group_id: {$type: 'integer', $bind: 'attr1',
                                     $style: { $shape: 'boundingGroup'}},
-                $style: { $shape: 'container' },
+                $style: { $shape: 'containerRelation' },
                 transcription: {
                     $type: 'relation',
                     $tag: RefTranscriptionTag,
                     ref_transcription_id: {$type: 'primary_key'},
                     transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
                 expanded_transcription: {
                     $type: 'relation',
                     $tag: RefExpandedTranscriptionTag,
                     ref_expanded_transcription_id: {$type: 'primary_key'},
                     expanded_transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
                 transliteration: {
                     $type: 'relation',
@@ -345,14 +345,14 @@ export const dictSchemaJson = {
                     ref_text_id: {$type: 'primary_key'},
                     transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
                 note: {
                     $type: 'relation',
                     $tag: RefNoteTag,
                     ref_note_id: {$type: 'primary_key'},
                     note: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
-                    $style: { $shape: 'titledValue' },
+                    $style: { $shape: 'compactInlineListRelation' },
                 },
             },
             source: {
@@ -361,7 +361,7 @@ export const dictSchemaJson = {
                 source_id: {$type: 'primary_key'},
                 source: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'valueList' },
+                $style: { $shape: 'inlineListRelation' },
             },
         },
         recording: {
@@ -371,7 +371,7 @@ export const dictSchemaJson = {
             recording: {$type: 'audio', $bind: 'attr1'},
             speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
             variant: {$type: 'variant'},
-            $style: { $shape: 'valueList' },
+            $style: { $shape: 'inlineListRelation' },
         },
     },
 };
@@ -604,7 +604,7 @@ export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
           recordings.length === 0
              ? ['li', {}, 'No recordings']
              : recordings.map(r=>['li', {},
-                                  renderAudio(r.recording, `Recording by ${r.speaker}`)])
+                                  audio.renderAudio(r.recording, `Recording by ${r.speaker}`)])
          ] // ul
         ]
     ];
@@ -711,23 +711,8 @@ export function renderExample(e: Entry, example: Example): any {
     return [
         example.example_text.map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
         example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
-        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], renderAudio(r.recording, `Recording by ${r.speaker}`)])
+        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker}`)])
     ];
-}
-
-export function renderAudio(recording: string, label: string): any {
-    return (async ()=>{
-        try {
-            let audioUrl = '';
-            audioUrl = await audio.getCompressedRecordingPath(recording);  // REMOVE_FOR_WEB
-            return ['a',
-                    {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`, href: audioUrl},
-                    label]
-        } catch(ex) {
-            // DO better here TODO
-            return ['b', {}, 'Failed to load recording: ', ex];
-        }
-    })();
 }
 
 export function renderDocumentReferences(e: Entry, s: Subentry,

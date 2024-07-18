@@ -346,6 +346,7 @@ export const NODE_END = -1;
 // }
 
 export function renderToStringViaLinkeDOM(markup: any): string {
+    //console.info('MARKUP', jsonStrIfPossible(markup));
     return toLinkeDOM(markup).toString();
 }
 
@@ -405,13 +406,30 @@ function renderItemToJSDON(out: JSDON, item: any) {
                     break;
                 }
             } else {
-                throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
+                throw new Error(`unhandled content object ${strIfPossible(item)} of type ${utils.className(item)} - ${utils.className(item)} - ${jsonStrIfPossible(item)}`);
             }
 
         default:
-            throw new Error(`unhandled content item ${item} of type ${typeof item}`);
+            throw new Error(`unhandled content item ${strIfPossible(item)} of type ${typeof item} - ${utils.className(item)} - ${jsonStrIfPossible(item)}`);
     }
 }
+
+function strIfPossible(v: any): string {
+    try {
+        return String(v);
+    } catch(e) {
+        return '--';
+    }
+}
+
+function jsonStrIfPossible(v: any): string {
+    try {
+        return JSON.stringify(v);
+    } catch(e) {
+        return '--';
+    }
+}
+
 
 function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
     const [tag, {...attrs}, ...content] = e;

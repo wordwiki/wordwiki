@@ -1,5 +1,4 @@
-// Forked from: https://github.com/mturco/context-menu
-// By: Matt Turco - https://mturco.com/
+// Forked from: https://github.com/mturco/context-men// By: Matt Turco - https://mturco.com/
 // License: MIT
 
 //import './styles.less';
@@ -16,9 +15,16 @@ function initializeContextMenuSystem() {
     
   // Listen for contextmenu event to show menu
   document.addEventListener('contextmenu', (e) => {
+      //console.info('Got context menu event');
       instances.forEach((menu) => {
-          if (e.target.matches(menu.selector)) {
-              menu.show(e);
+          // We bubble to find a match.
+          for(let target=e.target; target; target=target.parentElement) {
+              // console.info('Checking target for context menu', target);
+              if (target.matches(menu.selector)) {
+                  // console.info(target, 'matches', menu.selector);
+                  menu.show(e, target);
+                  break;
+              }
           }
       });
   });
@@ -151,11 +157,11 @@ export default class ContextMenu {
   }
 
   // Shows context menu
-  show(e) {
+    show(e, updatedTarget=undefined) {
     this.menu.style.left = `${e.pageX}px`;
     this.menu.style.top = `${e.pageY}px`;
     this.menu.classList.add('is-open');
-    this.target = e.target;
+    this.target = updatedTarget ?? e.target;
     // Give context menu focus
     this.menu.focus();
     // Disable native context menu

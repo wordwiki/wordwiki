@@ -13,7 +13,7 @@ import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM } from '../ut
 import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
 import * as templates from './templates.ts';
-import {Response, ResponseMarker} from '../utils/http-server.ts';
+import {Response, ResponseMarker, forwardResponse} from '../utils/http-server.ts';
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -115,6 +115,7 @@ export function renderPageEditorByPageId(page_id: number,
          cfg.title && ['h2', {}, cfg.title],
          cfg.locked_bounding_group_id && [
              ['div', {},
+              ['button', {onclick:`window.opener.postMessage({action: 'reloadBoundingGroup', boundingGroupId: ${cfg.locked_bounding_group_id}}); window.close();`}, 'Done editing reference NEW'],
               ['button', {onclick:'window.opener.location.reload(); window.close();'}, 'Done editing reference']]
          ],
          renderPageJumper(cfg, document_id, page.page_number, total_pages_in_document)],
@@ -488,6 +489,7 @@ export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: nu
     });
 }
 
+
 /**
  *
  */
@@ -516,6 +518,13 @@ export function singleBoundingGroupEditorURL(bounding_group_id: number, title: s
     return `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
 
 }
+
+export function forwardToSingleBoundingGroupEditorURL(bounding_group_id: number, title: string): Response {
+    const editorURL = singleBoundingGroupEditorURL(bounding_group_id, title);
+    console.info({editorURL});
+    return forwardResponse(editorURL);
+}
+
 
 // --------------------------------------------------------------------------------
 // --- Standalone group render ----------------------------------------------------
@@ -653,7 +662,8 @@ export async function renderStandaloneGroupAsSvgResponse(bounding_group_id: numb
         status: 200,
         headers: {"content-type": "image/svg+xml;charset=utf-8",
                   "date": (new Date() as any).toGMTString(),
-                  "Cache-Control": "public, max-age=120"},
+                  //"Cache-Control": "public, max-age=120"},
+                  "Cache-Control": "no-store"},
         body
     };
 }
@@ -762,7 +772,7 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
 }
 
 export function renderWarningMessageAsSvg(message: string, width:number=240, height:number=30): SizedSvgMarkup {
-    return ['svg', {width, height, viewBox:'0 0 ${width} ${height}', xmlns:'http://www.w3.org/2000/svg'},
+    return ['svg', {width, height, viewBox:`0 0 ${width} ${height}`, xmlns:'http://www.w3.org/2000/svg'},
             ['text', {x:0, y:20, class: 'warning'}, message]];
 }
 
@@ -861,6 +871,7 @@ export const routes = ()=> ({
     removeBoxFromGroup,
     migrateBoxToGroup,
     renderTextSearchResults,
+    forwardToSingleBoundingGroupEditorURL,
 });
 
 

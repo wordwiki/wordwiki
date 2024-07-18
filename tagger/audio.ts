@@ -10,6 +10,37 @@ import {block} from "../utils/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './schema.ts';
 import * as config from "./config.ts";
 import {getImageSize} from "./get-image-size.ts";
+import * as server from '../utils/http-server.ts';
+
+
+/**
+ * Given a source audio path, creates the compressed version if it does not
+ * yet exist, then does a 302 redirect to the compressed version.
+ */
+export async function forwardToCompressedRecording(srcRecordingPath: string): Promise<server.Response> {
+    const compressedAudioPath = await getCompressedRecordingPath(srcRecordingPath);  // REMOVE_FOR_WEB
+    console.info('compressedAudioPath', compressedAudioPath);
+    return server.forwardResponse('/'+compressedAudioPath);
+}
+
+
+/**
+ *
+ */
+export function renderAudio(recording: string, label: string): any {
+    return (async ()=>{
+        try {
+            let audioUrl = '';
+            audioUrl = await getCompressedRecordingPath(recording);  // REMOVE_FOR_WEB
+            return ['a',
+                    {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`, href: audioUrl},
+                    label]
+        } catch(ex) {
+            // DO better here TODO
+            return ['b', {}, 'Failed to load recording: ', ex];
+        }
+    })();
+}
 
 /**
  *
@@ -61,3 +92,7 @@ async function preCompressDictionaryAudio() {
 
 
 }
+
+export const routes = ()=> ({
+    forwardToCompressedRecording,
+});

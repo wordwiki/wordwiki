@@ -17,6 +17,7 @@ import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import {block} from "../utils/strings.ts";
 import { rpc } from '../utils/rpc.ts';
 import * as config from './config.ts';
+import * as templates from './templates.ts';
 
 export type Tag = string;
 
@@ -1043,22 +1044,24 @@ export class CurrentTupleQuery extends VersionedTupleQuery {
 export abstract class VersionedRelationQuery {
     readonly src: VersionedRelation;
     readonly schema: RelationField;
-    readonly tuples: Map<number,VersionedTupleQuery>;
+    readonly tuplesById: Map<number,VersionedTupleQuery>;
+    readonly tuples: VersionedTupleQuery[];
 
     constructor(src: VersionedRelation) {
         this.src = src;
         this.schema = src.schema;
-        this.tuples = this.computeTuples();
+        this.tuplesById = this.computeCurrentTuplesById();
+        this.tuples = Array.from(this.tuplesById.values());
     }
 
-    abstract computeTuples(): Map<number, VersionedTupleQuery>;
+    abstract computeCurrentTuplesById(): Map<number, VersionedTupleQuery>;
 
     toJSON(includeHistory: boolean = false): any {
-        return Array.from(this.tuples.values()).map(t=>t.toJSON(includeHistory));
+        return Array.from(this.tuples).map(t=>t.toJSON(includeHistory));
     }
 
     dump(): any {
-        return Object.fromEntries([...this.tuples.entries()].map(([id, child])=>
+        return Object.fromEntries([...this.tuplesById.entries()].map(([id, child])=>
             [id, child.dump()]));
     }
 }
@@ -1068,13 +1071,14 @@ export abstract class VersionedRelationQuery {
  * TODO: hook up versioned parent.
  */
 export class CurrentRelationQuery extends VersionedRelationQuery {
-    declare tuples: Map<number,CurrentTupleQuery>;
+    declare tuplesById: Map<number,CurrentTupleQuery>;
+    declare tuples: CurrentTupleQuery[];
 
     constructor(src: VersionedRelation) {
         super(src);
     }
 
-    computeTuples(): Map<number, CurrentTupleQuery> {
+    computeCurrentTuplesById(): Map<number, CurrentTupleQuery> {
         // TODO we are grabbing all src.tuples.entries() here - don't think
         //      that is removing deleted tuples (ie. behind a tombstone)
         //      src is a VersionedRelation
@@ -1101,7 +1105,7 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
 }
 
 export function currentTuplesForVersionedRelation(relation: VersionedRelation): CurrentTupleQuery[] {
-    return Array.from(new CurrentRelationQuery(relation).tuples.values());
+    return Array.from(new CurrentRelationQuery(relation).tuples);
 }
 
 // export function generateRelativeOrderKey(parent: VersionedRelation,
@@ -1135,7 +1139,7 @@ export function currentTuplesForVersionedRelation(relation: VersionedRelation): 
 
 export function generateBeforeOrderKey(parent: VersionedRelation,
                                        refTupleId: number): string {
-    const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
+    const orderedTuplesById = new CurrentRelationQuery(parent).tuplesById;
     const refTuple = orderedTuplesById.get(refTupleId);
     if(refTuple===undefined)
         throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key`);
@@ -1156,7 +1160,7 @@ export function generateBeforeOrderKey(parent: VersionedRelation,
 
 export function generateAfterOrderKey(parent: VersionedRelation,
                                       refTupleId: number): string {
-    const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
+    const orderedTuplesById = new CurrentRelationQuery(parent).tuplesById;
     const refTuple = orderedTuplesById.get(refTupleId);
     if(refTuple===undefined)
         throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute after order key`);
@@ -1175,7 +1179,7 @@ export function generateAfterOrderKey(parent: VersionedRelation,
 }
 
 export function generateAtEndOrderKey(parent: VersionedRelation): string {
-    const childrenInOrder = Array.from(new CurrentRelationQuery(parent).tuples.values());
+    const childrenInOrder = Array.from(new CurrentRelationQuery(parent).tuplesById.values());
     const lastExistingChild = childrenInOrder[childrenInOrder.length-1];
     return lastExistingChild === undefined
         ? orderkey.new_range_start_string
@@ -1274,54 +1278,76 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
  *
  */
 function clientRenderTest(entry_id: number): any {
-    return (
-        ['html', {},
-         ['head', {},
-          ['meta', {charset:"utf-8"}],
-          ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-          ['title', {}, 'Wordwiki'],
-          config.bootstrapCssLink,
-          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          ['script', {}, block`
-/**/           let imports = {};
-/**/           let activeViews = undefined`],
-          //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
-          ['script', {type: 'module'}, block`
-/**/           import * as workspace from '/scripts/tagger/workspace.js';
-/**/           import * as view from '/scripts/tagger/view.js';
-/**/
-/**/           imports = Object.assign(
-/**/                        {},
-/**/                        view.exportToBrowser(),
-/**/                        workspace.exportToBrowser());
-/**/
-/**/           activeViews = imports.activeViews;
-/**/
+    return templates.pageTemplate({
+        body: [
+            ['div', {id: 'root'}, entry_id],
+            ['button', {onclick:`imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor')`}, 'GO DOG GO'],
+
+            ['div', {id: 'entryEditorBody'}],
+            ['script', {type: 'module'}, block`
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");
-/**/             view.run();
-/**/             //workspace.renderSample(document.getElementById('root'))
+/**///              imports.entryEditor2('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor');
+/**/              imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor');
+/**/ //            imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, 'entry', 'entryEditor');
 /**/           });`
-          ]
+            ]
         ],
-
-         ['body', {},
-
-          ['div', {id: 'root'}, entry_id],
-
-          ['button', {onclick:'imports.popupEntryEditor(1000)'}, 'GO DOG GO'],
-
-
-
-          view.renderModalEditorSkeleton(),
-
-
-          config.bootstrapScriptTag,
-         ] // body
-
-        ]);
-
+    });
 }
+
+// /**
+//  *
+//  */
+// function clientRenderTest(entry_id: number): any {
+//     return (
+//         ['html', {},
+//          ['head', {},
+//           ['meta', {charset:"utf-8"}],
+//           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+//           ['title', {}, 'Wordwiki'],
+//           config.bootstrapCssLink,
+//           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
+//           ['script', {}, block`
+// /**/           let imports = {};
+// /**/           let activeViews = undefined`],
+//           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
+//           ['script', {type: 'module'}, block`
+// /**/           import * as workspace from '/scripts/tagger/workspace.js';
+// /**/           import * as view from '/scripts/tagger/view.js';
+// /**/
+// /**/           imports = Object.assign(
+// /**/                        {},
+// /**/                        view.exportToBrowser(),
+// /**/                        workspace.exportToBrowser());
+// /**/
+// /**/           activeViews = imports.activeViews;
+// /**/
+// /**/           document.addEventListener("DOMContentLoaded", (event) => {
+// /**/             console.log("DOM fully loaded and parsed");
+// /**/             view.run();
+// /**/             //workspace.renderSample(document.getElementById('root'))
+// /**/           });`
+//           ]
+//         ],
+
+//          ['body', {},
+
+//           ['div', {id: 'root'}, entry_id],
+
+//           ['button', {onclick:'imports.popupEntryEditor(1000)'}, 'GO DOG GO'],
+
+
+
+//           view.renderModalEditorSkeleton(),
+
+
+//           config.bootstrapScriptTag,
+//          ] // body
+
+//         ]);
+
+// }
 
 /**
  *

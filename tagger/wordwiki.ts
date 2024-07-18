@@ -16,8 +16,10 @@ import * as entry from './entry-schema.ts';
 import * as timestamp from '../utils/timestamp.ts';
 import * as templates from './templates.ts';
 import * as orderkey from '../utils/orderkey.ts';
-import {block} from "../utils/strings.ts";
+import * as audio from './audio.ts';
+import {block} from '../utils/strings.ts';
 import {db} from "./db.ts";
+import * as publish from './publish.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 import {DenoHttpServer} from '../utils/deno-http-server.ts';
 import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
@@ -28,7 +30,7 @@ import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page
 import * as pageEditorModule from './page-editor.ts';
 
 import {rpcUrl} from '../utils/rpc.ts';
-export interface WordWikiConfig {
+export interface WordWikiServerConfig {
     hostname: string,
     port: number,
 }
@@ -37,7 +39,6 @@ export interface WordWikiConfig {
  *
  */
 export class WordWiki {
-    config: WordWikiConfig;
     routes: Record<string, any>;
     dictSchema: model.Schema;
     #workspace: VersionedDb|undefined = undefined;
@@ -47,8 +48,7 @@ export class WordWiki {
     /**
      *
      */
-    constructor(config: WordWikiConfig) {
-        this.config = config;
+    constructor() {
 
         // --- Load schema and create an empty workspace
         this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
@@ -60,6 +60,8 @@ export class WordWiki {
             schema.routes(),
             workspace.routes(),
             view.routes(),
+            audio.routes(),
+            publish.routes(),
         );
     }
 
@@ -356,19 +358,6 @@ export class WordWiki {
         }
     }
 
-    startPublish(): any {
-        // How to tell people that a publish is in process, and have them wait for completion ???
-        // - Run publish as a series of async actions (would want to do anyway)
-        // - forward to the publishStatus page that re-renders with the current state, and has an autorefresh as long as not done.
-        // - if publish already in progress, maybe forward to publishStatus with a message that am joining already init publish.
-        
-        return server.forwardResponse('/wordwiki.publishStatus(JSON.stringify(title))');
-    }
-
-    publishStatus(): any {
-        return 'Done';
-    }
-    
     home(): any {
         const title = "Dictionary Editor";
         const body = [
@@ -801,7 +790,7 @@ export class WordWiki {
     /**
      *
      */
-    async startServer() {
+    async startServer(config: WordWikiServerConfig) {
         console.info('Starting wordwiki server');
 
         const contentdirs = {
@@ -809,8 +798,8 @@ export class WordWiki {
             '/scripts/': await findResourceDir('web-build')+'/',
             '/content/': 'content/',
             '/derived/': 'derived/'};
-        await new DenoHttpServer({port: this.config.port,
-                                  hostname: this.config.hostname,
+        await new DenoHttpServer({port: config.port,
+                                  hostname: config.hostname,
                                   contentdirs},
                                  request=>this.requestHandler(request)).run();
     }
@@ -959,12 +948,18 @@ async function findResourceDir(resourceDirName: string = 'resources') {
     return resourceDir;
 }
 
+export let wordwiki: WordWiki|undefined = undefined;
+
+export function getWordWiki(): WordWiki {
+    return wordwiki ??= new WordWiki();
+}
+
 if (import.meta.main) {
     const args = Deno.args;
     const command = args[0];
     switch(command) {
         case 'serve':
-            new WordWiki({hostname: 'localhost', port: 9000}).startServer();
+            getWordWiki().startServer({hostname: 'localhost', port: 9000});
             break;
         default:
             throw new Error(`incorrect usage: unknown command "${command}"`);

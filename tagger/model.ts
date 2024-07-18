@@ -11,6 +11,7 @@ import * as orderkey from '../utils/orderkey.ts';
 import * as timestamp from '../utils/timestamp.ts';
 //import { longestIncreasingSequenceUsingCompareFn } from '../utils/longest-increasing-sequence.js';
 import {RecordValue, Value, getPrimaryKey, getString, getOptionalString, idCollator } from './record.ts';
+import * as strings from '../utils/strings.ts';
 
 export enum FieldKind {
     Model=0,
@@ -115,10 +116,14 @@ export abstract class Field {
     parentRelation: RelationField|undefined = undefined;
     colIdx: number = -1;
 
+    prompt: string;
+    
     constructor(public name: string, public style: Style) {
         if(!Field.FieldNameRegex.test(name)) {
             throw new Error(`invalid field names '${name}' - field names must start with a letter, then be followed by letters, numbers and _`);
         }
+
+        this.prompt = style.$prompt ?? strings.capitalize(name.replaceAll('_', ' '));
     }
 
     abstract accept<A,R>(v: FieldVisitorI<A,R>, a: A): R;
