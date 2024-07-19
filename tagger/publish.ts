@@ -5,11 +5,13 @@ import * as config from './config.ts';
 import * as templates from './templates.ts';
 import {db} from "./db.ts";
 import {panic} from '../utils/utils.ts';
+import * as utils from '../utils/utils.ts';
 import {block} from '../utils/strings.ts';
 import * as server from '../utils/http-server.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
-import * as entry from './entry-schema.ts';
 import { writeUTF8FileIfContentsChanged } from '../utils/ioutils.ts';
+import * as entry from './entry-schema.ts';
+import {Entry} from './entry-schema.ts';
 
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 
@@ -246,8 +248,11 @@ export function startPublish(): any {
         (async ()=>{
             publishStatusSingleton.start();
             try {
-                const ctx = new PublishCtx(publishStatusSingleton, getWordWiki());
-                await publish(ctx);
+                const wordWiki = getWordWiki();
+                const publish = new Publish(publishStatusSingleton,
+                                            wordWiki,
+                                            wordWiki.entriesJSON);
+                await publish.publish();
             } catch (e) {
                 publishStatusSingleton.errors.push(e.toString());
                 console.info('ERROR WHILE PUBLISHING', e.toString());
@@ -259,50 +264,110 @@ export function startPublish(): any {
     }
 }
 
-class PublishCtx {
-    #entryPublicIds: Map<number, string>|undefined;
+
+/**
+ *
+ */
+export class Publish {
+    entryToPublicId: Map<Entry, string>;
+    defaultVariant: string = 'mm-li';
 
     constructor(public status: PublishStatus, public wordWiki: WordWiki,
+                public entries: Entry[],
                 public publishRoot: string = 'published') {
+        this.entryToPublicId = this.computeEntryPublicIds(entries, this.defaultVariant);
     }
 
-    get entryPublicIds(): Map<number, string> {
-        return this.#entryPublicIds ??= new Map();
+    async publish(): Promise<void> {
+        // --- If publish root dir does not exist, create it.
+        await Deno.mkdir(this.publishRoot, {recursive: true});
+
+        // --- Publish all entries
+        await this.publishEntries();
     }
-}
 
-
-export async function publish(ctx: PublishCtx): Promise<void> {
-    // --- If publish root dir does not exist, create it.
-    await Deno.mkdir(ctx.publishRoot, {recursive: true});
-    await publishWords(ctx);
-
-    // --- Publish all words
-    await publishWords(ctx);
-}
-
-export async function publishWords(ctx: PublishCtx): Promise<void> {
-    // TODO: filter for only published words
-    for(const entry of ctx.wordWiki.entriesJSON) {
-        await publishWord(ctx,  entry);
+    async publishEntries(): Promise<void> {
+        // TODO: filter for only published words
+        for(const entry of this.entries) {
+            await this.publishEntry(entry);
+        }
     }
-}
 
-/*
--
+    /*
+     */
 
+    async publishEntry(entry: Entry): Promise<void> {
+        const entryDir = this.dirForEntry(entry);
+        await Deno.mkdir(entryDir, {recursive: true});
+        const entryPath = this.pathForEntry(entry);
+        const title = 'title';
+        const body:any[] = [];
 
- */
+        const wordMarkup = publicPageTemplate({title, body});
+        //const wordMarkup = ['h1', {}, title];
+        await writePageFromMarkupIfChanged(entryPath, wordMarkup);
+    }
 
+    dirForEntry(entry: Entry): string {
+        const publicId = this.getPublicIdForEntry(entry);
+        const cluster = this.clusterForEntry(entry);
+        return `${this.publishRoot}/entries/${cluster}/${publicId}`;
+    }
 
-export async function publishWord(ctx: PublishCtx, entry: entry.Entry): Promise<void> {
-    const path = `${ctx.publishRoot}/entry-${entry.entry_id}.html`;
-    const title = 'title';
-    const body:any[] = [];
+    clusterForEntry(entry: Entry): string {
+        return (this.getPublicIdForEntry(entry)[0]??'_').toLowerCase();
+    }
     
-    const wordMarkup = publicPageTemplate({title, body});
-    //const wordMarkup = ['h1', {}, title];
-    await writePageFromMarkupIfChanged(path, wordMarkup);
+    pathForEntry(entry: Entry): string {
+        const publicId = this.getPublicIdForEntry(entry);
+        return `${this.dirForEntry(entry)}/${publicId}.html`;
+    }
+
+    getPublicIdForEntry(entry: Entry): string {
+        const publicId = this.entryToPublicId.get(entry);
+        return publicId || `-${entry.entry_id}`;
+    }
+
+    computeEntryPublicIds(entries: Entry[], defaultVariant: string): Map<Entry, string> {
+        const entryIdToDefaultPublicId = new Map(
+            entries.map(e=>[e, this.computeDefaultPublicIdForEntry(e, defaultVariant)]));
+        const duplicateIds = utils.duplicateItems([...entryIdToDefaultPublicId.values()]);
+        return new Map(
+            entries.map(entry=>{
+                const defaultId = entryIdToDefaultPublicId.get(entry) ?? panic();
+                if(duplicateIds.has(defaultId))
+                    return [entry, `${defaultId}-${entry.entry_id}`]; // Note '-' is reserved for this
+                else
+                    return [entry, defaultId];
+            }));
+    }
+
+    computeDefaultPublicIdForEntry(entry: Entry, defaultVariant: string): string {
+        const publicIdBase = this.getDefaultPublicIdBase(entry, defaultVariant);
+        // TODO: make this fancier if we want to support other languages.
+        const urlSafePublicIdBase = publicIdBase.replaceAll(/[^a-zA-Z0-9']/g, '_');
+        return urlSafePublicIdBase;
+    }
+
+    getDefaultPublicIdBase(entry: Entry, defaultVariant: string): string {
+
+        // --- If the entry has spellings in the default variant, use the first
+        //     such spelling as the base for the public id.
+        const firstSpellingInDefaultVariant =
+            entry.spelling.filter(s=>s.variant === defaultVariant)[0]?.text;
+        if(firstSpellingInDefaultVariant)
+            return firstSpellingInDefaultVariant;
+
+        // --- Otherwise, if the entry has a spelling in any variant, use the first
+        //     such spelling as the base for the public id.
+        const firstSpellingInAnyVariant = entry.spelling[0];
+        if(firstSpellingInAnyVariant)
+            return firstSpellingInAnyVariant.text
+
+        // --- Otherwise, use the entryId converted to a string as the base for the
+        //     public id.
+        return String(entry.entry_id);
+    }
 }
 
 export async function writePageFromMarkupIfChanged(path: string, pageMarkup: any): Promise<boolean> {
