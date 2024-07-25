@@ -20,6 +20,7 @@ import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
 import { BEGINNING_OF_TIME, END_OF_TIME } from "../utils/timestamp.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
 import ContextMenu from '../utils/context-menu.js';
+import { PageEditorConfig } from './render-page-editor.ts';
 
 
 interface RenderCtx {
@@ -134,10 +135,15 @@ export class IntegerView extends ScalarView {
         switch(this.field.style.$shape) {
             case 'boundingGroup': // XXX MASSIVE HACK FOR DEMO - DO THIS RIGHT
                 console.info('ding the thing');
+                if(v === null || v === undefined)
+                    return ['div', {}, 'ERROR: undefined bounding group'];
+                if(typeof v !== 'number')
+                    return ['div', {}, `ERROR: malformed bounding group ${v}`];
+                const boundingGroup: number = v;
                 return (
-                    
-                    ['div', {onclick:`event.stopPropagation(); window.open('/forwardToSingleBoundingGroupEditorURL(${v}, null)')`},
-                     ['object', {style: 'pointer-events: none;', data:`/renderStandaloneGroupAsSvgResponse(${v})`, 'type':'image/svg+xml', 'id': `bounding-group-${v}`}]]);
+                    ['div', {onclick:`event.stopPropagation(); window.open('/forwardToSingleBoundingGroupEditorURL(${boundingGroup}, null)')`},
+                     //['div', {}, `bounding group id ${boundingGroup} ${typeof boundingGroup}`],
+                     ['object', {style: 'pointer-events: none;', data:`/renderStandaloneGroupAsSvgResponse(${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}]]);
             default:
                 return super.renderView(ctx, v);
         }
@@ -168,7 +174,7 @@ export class IntegerView extends ScalarView {
                 const subentry_id = assertion.id2;
 
                 return ['PDM', 'Rand', 'Clark', 'RandFirstReadingBook'].map(b=>
-                    ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference2(${entry_id}, ${subentry_id}, ${JSON.stringify(b)}, 'Edit New Reference')`}, 'Add ', b]);
+                    ['button', {onclick:`event.preventDefault(); event.stopPropagation(); imports.launchAddNewDocumentReference2(${entry_id}, ${subentry_id}, ${JSON.stringify(this.field.name)}, ${JSON.stringify(b)}, 'Edit New Reference')`}, 'Add ', b]);
                 
                 break;
             default:
@@ -190,6 +196,7 @@ export function reloadBoundingGroup(boundingGroupId: number) {
 
     if(!boundingGroup) {
         console.info('unable to find bounding group', boundingGroup);
+        alert(`Internal error: unable to find bounding group to reload ${boundingGroup}`);
         return;
     }
 
@@ -491,16 +498,15 @@ export class RelationView extends View {
             throw new Error(`inlineListRelation fields must not have child relations: ${this.field.name}`);
 
         return [
-            ['div', {}, /*{class: 'editable
-                          ', onclick: edit},*/
-             ['b', {}, this.field.prompt+':'],
-             ['ul', {style: 'margin-bottom: 0em'},
+            ['div', {class: 'inline-list-relation'},
+             ['span', {class: 'prompt'}, this.field.prompt+':'],
+             ['ul',{},
               r.tuples.length === 0
                  ? ['li', {class: 'editable',
                            onclick:`activeViews().editNewLastChild('${ctx.renderRootId}', '${r.schema.schema.tag}', '${parentTuple.schema.tag}', ${parentTuple.id}, '${r.schema.tag}')`},
                     'No ', this.field.prompt]
                  : r.tuples.map(t=>['li',
-                                    {class: 'editable tuple-context-menu',
+                                    {class: 'tuple-context-menu editable',
                                      'data-render-root-id': ctx.renderRootId,
                                      'data-db-tag': t.schema.schema.tag,
                                      'data-tuple-tag': t.schema.tag,
@@ -518,16 +524,16 @@ export class RelationView extends View {
             throw new Error(`compactInlineListRelation fields must not have child relations: ${this.field.name}`);
         return [
             r.tuples.length === 0
-                ? ['div', {class: 'editable',
+                ? ['div', {class: 'compact-inline-list-relation editable',
                            onclick:`activeViews().editNewLastChild('${ctx.renderRootId}', '${r.schema.schema.tag}', '${parentTuple.schema.tag}', ${parentTuple.id}, '${r.schema.tag}')`}, ['b', {}, this.field.prompt, ': '], 'None']
                 : r.tuples.map(t=>
-                    ['div', {class: 'editable tuple-context-menu',
+                    ['div', {class: 'tuple-context-menu editable',
                              'data-render-root-id': ctx.renderRootId,
                              'data-db-tag': t.schema.schema.tag,
                              'data-tuple-tag': t.schema.tag,
                              'data-tuple-id': t.src.id,
                              onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${t.schema.schema.tag}', '${t.schema.tag}', ${t.src.id})`},
-                     ['b', {}, this.field.prompt, ': '],
+                     ['span', {class: 'prompt'}, this.field.prompt, ': '],
                      this.renderTuple(ctx, t)])
         ];
     }
@@ -536,9 +542,9 @@ export class RelationView extends View {
         const parentTuple = r.src.parent ?? panic('expected parent tuple');
         return [
             r.tuples.length === 0
-                ? ['div', {class: 'editable',
+                ? ['div', {class: 'editable container-relation',
                            onclick:`activeViews().editNewLastChild('${ctx.renderRootId}', '${r.schema.schema.tag}', '${parentTuple.schema.tag}', ${parentTuple.id}, '${r.schema.tag}')`},
-                   ['b', {}, this.field.prompt, ': '], 'None']
+                   ['span', {class: 'prompt'}, this.field.prompt, ': '], 'None']
                 : r.tuples.map(t=>
                     ['div', {},
                      ['div', {class: 'editable tuple-context-menu',
@@ -548,11 +554,11 @@ export class RelationView extends View {
                               'data-tuple-id': t.src.id,
                               onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${t.schema.schema.tag}', '${t.schema.tag}', ${t.src.id})`
                              },
-                      ['b', {}, this.field.prompt, ': '],
+                      ['span', {class: 'prompt'}, this.field.prompt, ': '],
                       this.renderTuple(ctx, t)],
                      ['div', {style: 'margin-left: 2em'},
                       Object.values(t.childRelations).map(childRelation=>
-                          ['div', {},
+                          ['div', {class: 'child-relation'},
                            unwrap(this.root.relationViewForRelation.get(childRelation.schema)).renderRelation(ctx, childRelation)])
                      ]
                     ])
@@ -1647,6 +1653,7 @@ export async function entryEditor(title: string,
 
     // };
     // HERE WORKING HERE HERE WORKING HERE !!!
+    // WE need 
     
     views.registerActiveView(new ActiveView(viewId, title, dictView, query));
 
@@ -1674,21 +1681,50 @@ export function launchAddNewDocumentReference(entry_id: number, subentry_id: num
 /**
  * XXX todo this is panic written proto crap that should be redone and moved!
  */
-export function launchAddNewDocumentReference2(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string) {
-    console.info('*** Launching add new document reference 2', entry_id, subentry_id, friendly_document_id, title);
+export function launchAddNewDocumentReference2(entry_id: number, subentry_id: number, referenceFieldName: string, friendly_document_id: string, title?: string) {
+    console.info('LA2', activeViews().currentlyOpenTupleEditor);
+    (async ()=>
+        launchAddNewDocumentReference3(entry_id, subentry_id, referenceFieldName, friendly_document_id, title))();
+}
+
+export async function launchAddNewDocumentReference3(entry_id: number, subentry_id: number, referenceFieldName: string, friendly_document_id: string, title?: string) {
+
+    // --- Create a new empty bounding group on the specified document.
+    const {group_id, layer_id, reference_layer_id, first_page_id} = await rpc`createNewEmptyBoundingGroupForFriendlyDocumentId(${friendly_document_id})` as {group_id: number, layer_id: number, reference_layer_id: number, first_page_id: number};
+    console.info('got new group id', group_id, 'in layer', layer_id);
+
+    // --- FIX
+    // We are directly updating the assertion in the tuple editor, then
+    // triggering endFieldEdit (which will save the assertion under edit, then
+    // remove the trigger editor).  This is backdoor hacky stuff and should
+    // be refactored to be something more reasonable.
+    // WE are also relying on the fact that we don't reload the assertion value
+    //    for boundingGroup fields (in fact for any integer at present!!!) - so
+    //    this is a minefield!
+    const currentlyOpenTupleEditor = activeViews().currentlyOpenTupleEditor ?? panic('no currently open tuple editor');
+    // WOW INTO THE SEWER WITH THE ATTR1 HERE!!! BAD BAD BAD
+    // (THIS IS BYPASSING OUR SCHEMA LAYERS AND WRITING DIRECTLY TO THE ASSERTION)
+    // NO END OF EASY DOOM FROM DOING STUFF LIKE THIS.
+    (currentlyOpenTupleEditor.assertion as any)['attr1'] = group_id;
+
+    activeViews().endFieldEdit();
 
 
-    // 
+    // --- Launch the bounding box editor on the new bounding box.
+    const pageEditorConfig: PageEditorConfig = {
+        layer_id,
+        reference_layer_ids: [reference_layer_id],
+        title,
+        is_popup_editor: true,
+        locked_bounding_group_id: group_id,
+    };
 
 
+    // TODO TRIGGER EDTIOR SAVE - WE ARE NOT PRESENTLY SAVING !!@
     
-    // Await an RPC that does the data changes.
-    // When the RPC returns, navigate to the URL that is returned.
-    (async ()=>{
-        const editorUrl = await rpc`wordwiki.addNewDocumentReference(${entry_id}, ${subentry_id}, ${friendly_document_id}, ${title})`;
-        console.info('*** Editor URL is', editorUrl);
-        window.open(editorUrl.location, '_blank');
-    })();
+    const taggerUrl = `/renderPageEditorByPageId(${first_page_id}, ${JSON.stringify(pageEditorConfig)})`;
+    console.info('*** Editor URL is', taggerUrl);
+    window.open(taggerUrl, '_blank');
 }
 
 // XXX XXX KIWLL ME!!! I AM bAD
@@ -1744,6 +1780,7 @@ export const exportToBrowser = ()=> ({
     entryEditor,
     //entryEditor2,
     launchAddNewDocumentReference,
+    launchAddNewDocumentReference2,
     launchNewLexeme,
     //popupRelationEditor,
     //beginFieldEdit,

@@ -549,7 +549,7 @@ function selectBoxOrRotateSelectionIfAlreadySelectedMultiselect(box: Element) {
 
     // --- If we are doing a second select on a selected multi-select box,
     //     rotate to the next group that selected that box
-    if(isMultiSeletedBox(box)) {
+    if(isMultiSelectedBox(box)) {
         const page = getScannedPageForElement(box);
         const boxesInGroup =
             Array.from(findBoxesWithSharedLocation(page).boxesWithSharedLocation.values())
@@ -615,7 +615,7 @@ function isBox(elem: Element): boolean {
     return elem.classList.contains('box');
 }
 
-function isMultiSeletedBox(elem: Element): boolean {
+function isMultiSelectedBox(elem: Element): boolean {
     return isBox(elem) && elem.classList.contains('multi');
 }
 

@@ -10,7 +10,7 @@ import {block} from '../utils/strings.ts';
 import * as server from '../utils/http-server.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
 import { writeUTF8FileIfContentsChanged } from '../utils/ioutils.ts';
-import * as entry from './entry-schema.ts';
+import * as entryschema from './entry-schema.ts';
 import {Entry} from './entry-schema.ts';
 
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
@@ -90,17 +90,10 @@ export function publishStatus(joiningExistingPublish: boolean=false,
 
     const autoRefreshScript = ['script', {}, block`
 /**/  window.addEventListener("load", e => {
-/**/     setTimeout(()=>location.reload(), 2000);
+/**/     setTimeout(()=>location.reload(), 5000);
 /**/  });`];
 
     return templates.pageTemplate({title, body, head: autoRefreshScript});
-}
-
-export async function publishc(): Promise<void> {
-    // Compute promises for all pages we want to publish (one per word, one per category, one per home page etc).
-    // - If we await them all, then the server will be swamped with work, and may be unresponsive to outside requests until
-    //   publish done (but will not be very long anyway - just a few 10's of thousands of pages).
-    // - do one at a time to avoid this.
 }
 
 /**
@@ -297,17 +290,54 @@ export class Publish {
      */
 
     async publishEntry(entry: Entry): Promise<void> {
-        const entryDir = this.dirForEntry(entry);
-        await Deno.mkdir(entryDir, {recursive: true});
-        const entryPath = this.pathForEntry(entry);
-        const title = 'title';
-        const body:any[] = [];
-
-        const wordMarkup = publicPageTemplate({title, body});
-        //const wordMarkup = ['h1', {}, title];
-        await writePageFromMarkupIfChanged(entryPath, wordMarkup);
+        try {
+            const entryPath = this.pathForEntry(entry);
+            const entryDir = this.dirForEntry(entry);
+            await Deno.mkdir(entryDir, {recursive: true});
+            const title = 'title';
+            const body:any[] = entryschema.renderEntry(entry);
+            const wordMarkup = publicPageTemplate({title, body});
+            //const wordMarkup = ['h1', {}, title];
+            await writePageFromMarkupIfChanged(entryPath, wordMarkup);
+        } catch(e) {
+            // TODO add entry here
+            this.status.errors.push(e.toString());
+        }
     }
 
+
+    // public ArrayList<String> getAllSearchTerms() {
+    //     LinkedHashSet<String> termSet = new LinkedHashSet<String>();
+    //     for (Lexeme l: lexemes) {
+    //         termSet.addAll(l.getNormalizedSearchTerms());
+    //     }
+    //     return new ArrayList<String>(termSet);
+    // }
+
+    // public String getAllSearchTermsJson() {
+    //     return "["+String.join(", ", getAllSearchTerms().stream().map(t->"'"+t+"'").collect(Collectors.toList()))+"]";
+    // }
+
+    // public ArrayList<String> getNormalizedSearchTerms() {
+    //     final ArrayList<String> terms = new ArrayList<String>();
+
+    //     // XXX this is crappy - do more work here.
+
+    //     // --- Add mikmaq word (with ' normalized to _)
+    //     terms.add(toId(lowerName));
+
+    //     if(lowerSfGloss != null && !lowerName.equals(lowerSfGloss))
+    //         terms.add(toId(lowerSfGloss));
+
+    //     // --- Add individual words in english gloss
+    //     for(String g: getGlosses()) {
+    //         for(String w: g.split("[ ().,!?/]+"))
+    //             terms.add(toId(w.toLowerCase()));
+    //     }
+
+    //     return terms;
+    // }
+    
     dirForEntry(entry: Entry): string {
         const publicId = this.getPublicIdForEntry(entry);
         const cluster = this.clusterForEntry(entry);

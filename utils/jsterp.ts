@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
 import * as acorn from "npm:acorn@8.11.3";
-import acorn_jsx from "npm:acorn@8.11.3";
+import acorn_jsx from "npm:acorn-jsx@5.3.2";
 import {Node, Expression, Identifier, Literal, ArrayExpression,
         ObjectExpression, UnaryExpression,
         BinaryExpression, LogicalExpression, MemberExpression, ConditionalExpression,
@@ -22,16 +22,54 @@ export type JsNode = Node;
 
 export type Scope = Record<string, any>;
 
-// export function parseJsExpr(jsExprSrc: string): JsNode {
-//     const MyParser = acorn.Parser.extend(
-//         acorn_jsx);
-//     console.log(MyParser.parse("// Some bigint + JSX code"))
-//     return acorn.parseExpressionAt(jsExprSrc, 0, {ecmaVersion: 2023})
-// }
+
+interface JSXElement extends JsNode {
+    openingElement: JSXOpeningElement;
+    closingElement: JSXClosingElement;
+    children: Array<JsNode>; // maybe more specific typing?
+}
+
+interface JSXOpeningElement extends JsNode {
+    attributes: Array<JSXAttribute|JSXSpreadAttribute>; // TODO
+    name: JSXIdentifier|any; // TODO
+    selfClosing: boolean;
+}
+
+interface JSXClosingElement extends JsNode {
+    name: JSXIdentifier|any; // TODO
+}
+
+interface JSXIdentifier extends JsNode {
+    // TODO
+}
+
+interface JSXNamespacedName extends JsNode {
+}
+
+interface JSXMemberExpression extends JsNode {
+}
+
+interface JSXText extends JsNode {
+    // TODO
+}
+
+interface JSXAttribute extends JsNode {
+}
+
+interface JSXSpreadAttribute extends JsNode {
+}
+
+//inter
 
 export function parseJsExpr(jsExprSrc: string): JsNode {
-    return acorn.parseExpressionAt(jsExprSrc, 0, {ecmaVersion: 2023})
+    const acornWithJsx = acorn.Parser.extend(acorn_jsx());
+    //console.log(acornWithJsx.parse("<span size='12' size2={12+2}>cat</span>", {ecmaVersion: 2023}));
+    return acornWithJsx.parseExpressionAt(jsExprSrc, 0, {ecmaVersion: 2023})
 }
+
+// export function parseJsExpr(jsExprSrc: string): JsNode {
+//     return acorn.parseExpressionAt(jsExprSrc, 0, {ecmaVersion: 2023})
+// }
 
 export function dumpJsExpr(jsExprSrc: string): string {
     return JSON.stringify(parseJsExpr(jsExprSrc), undefined, 2);
@@ -133,11 +171,47 @@ export class Eval {
                 return this.evalTemplateLiteral(s, e as TemplateLiteral);
             case 'ParenthesizedExpression':
                 return this.evalParenthesizedExpression(s, e as ParenthesizedExpression);
+            case 'JSXElement':
+                return this.evalJSXElement(s, e as JSXElement);
+            case 'JSXOpeningElement':
+                return this.evalJSXOpeningElement(s, e as JSXOpeningElement);
+            case 'JSXClosingElement':
+                return this.evalJSXClosingElement(s, e as JSXClosingElement);
+            case 'JSXIdentifier':
+                return this.evalJSXIdentifier(s, e as JSXIdentifier);
+            case 'JSXText':
+                return this.evalJSXText(s, e as JSXText);
             default:
                 throw new Error(`jsterp: unsupported node type ${e.type}`);
         }
     }
 
+    evalJSXElement(s: Scope, e: JSXElement): any {
+        console.info(JSON.stringify(e, undefined, 2));
+        console.info('attrs', JSON.stringify(e.children, undefined, 2));
+        throw new Error('todo evalJSXElement');
+    }
+
+    evalJSXOpeningElement(s: Scope, e: JSXOpeningElement): any {
+        console.info(JSON.stringify(e, undefined, 2));
+        throw new Error('todo evalJSXElement');
+    }
+
+    evalJSXClosingElement(s: Scope, e: JSXClosingElement): any {
+        console.info(JSON.stringify(e, undefined, 2));
+        throw new Error('todo evalJSXElement');
+    }
+
+    evalJSXIdentifier(s: Scope, e: JSXIdentifier): any {
+        console.info(JSON.stringify(e, undefined, 2));
+        throw new Error('todo evalJSXIdentifier');
+    }
+    
+    evalJSXText(s: Scope, e: JSXText): any {
+        console.info(JSON.stringify(e, undefined, 2));
+        throw new Error('todo evalJSXText');
+    }
+    
     evalIdentifier(s: Scope, e: Identifier): any {
         const v = s[e.name];
         // TODO: probably remove the boundnames from the error unless in
@@ -371,7 +445,8 @@ export function jsPlay() {
                  'v1:v2:v1:v1:v1:v1:v2:v2:v2:v1:v2:v2:v1:v1:v1:v1:v2:v1:v1:v1:v1:v1:v1:v1:v2:v1:v2:v1:v2:v1:v1:v2:v2:v2:v2:v1:v2:v2:v2:v1:v2:v1:v1:v2:v1:v2:v2:v2:v2:v2:v1:v2:v2:v2');
     expectJSON({info: console.info}, 'info(`done tests`)', undefined);
     expectValue({Test}, 'Test.mul(2,2)', 4);
-    //expectValue({}, `<div/>`, 0);
+    console.info(evalJsExprSrc({}, '2+2'));
+    //console.info(evalJsExprSrc({}, '<div>cat</div>'));
 }
 
 function dumpDeep(o: any) {

@@ -14,6 +14,7 @@ import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
 import * as templates from './templates.ts';
 import {Response, ResponseMarker, forwardResponse} from '../utils/http-server.ts';
+import * as random from "../utils/random.ts";
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -27,7 +28,6 @@ export const boxesForPageLayer = ()=>db().
 /**/         WHERE bb.page_id = :page_id AND
 /**/               bb.layer_id = :layer_id
 /**/         ORDER BY bb.x, bb.y, bb.bounding_box_id`);
-
 
 export interface PageEditorConfig {
     layer_id: number,
@@ -62,7 +62,7 @@ export function renderPageEditorByPageNumber(document_id: number,
 
 export function renderPageEditorByPageId(page_id: number,
                                          cfg: PageEditorConfig): any {
-
+    
     const page = selectScannedPage().required({page_id});
     const document_id = page.document_id;
     const document = selectScannedDocument().required({document_id});
@@ -79,7 +79,9 @@ export function renderPageEditorByPageId(page_id: number,
     const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
     const blocksSvg =
         [...boxesByGroup.entries()].
-        map(([groupId, boxes])=>renderGroup(page, groupId, boxes));
+        map(([groupId, boxes])=>renderGroup(
+            page, groupId, boxes,
+            {lockedGroupId: cfg.locked_bounding_group_id}));
 
     // --- If the locked bounding group has no boxes in this page,
     //     render it anyway as an empty group
@@ -100,8 +102,8 @@ export function renderPageEditorByPageId(page_id: number,
         const refBoxesByGroup = utils.groupToMap(refBoxes, box=>box.bounding_group_id);
         return [...refBoxesByGroup.entries()].
             map(([groupId, boxes])=>renderGroup(
-                page, groupId, boxes, true,
-                new Set(cfg.highlight_ref_bounding_box_ids??[])));
+                page, groupId, boxes, {isRefLayer: true,
+                                       highlightBoxIds: new Set(cfg.highlight_ref_bounding_box_ids??[])}));
     });
 
     const head = [
@@ -246,8 +248,15 @@ export function renderPageEditorByPageId(page_id: number,
 
 export function renderGroup(page: ScannedPage,
                             groupId: number, boxes: BoxGroupJoin[],
-                            isRefLayer: boolean=false,
-                            highlightBoxIds:Set<number>=new Set()): any {
+                            opts: {
+                                lockedGroupId?: number,
+                                isRefLayer?: boolean,
+                                highlightBoxIds?: Set<number> } = {}): any {
+
+    const isRefLayer = opts.isRefLayer ?? false;
+    const lockedGroupId = opts.lockedGroupId;
+    const highlightBoxIds = opts.highlightBoxIds ?? new Set<number>();
+    
     utils.assert(boxes.length > 0, 'Cannot render an empty group');
     const group: GroupJoinPartial = boxes[0];
 
@@ -257,7 +266,21 @@ export function renderGroup(page: ScannedPage,
     const groupY = Math.max(Math.min(...boxes.map(b=>b.y)) - groupMargin, 0);
     const groupLeft = Math.min(Math.max(...boxes.map(b=>b.x+b.w)) + groupMargin, page.width);
     const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, page.height);
-    const stroke = (isRefLayer ? 'grey' : group.color) ?? 'yellow';
+
+    //const stroke = (isRefLayer ? 'grey' : group.color) ?? 'yellow';
+
+    // --- Compute group color based on whether we are in locked group mode, are
+    //     a ref group etc.
+    let stroke: string = 'purple';
+    switch(true) {
+        case isRefLayer: stroke = 'grey'; break;
+        case lockedGroupId !== undefined && groupId === lockedGroupId: stroke = 'green'; break;
+        case lockedGroupId !== undefined && groupId !== lockedGroupId: stroke = 'yellow'; break;
+        case group.color !== undefined: stroke = group.color; break;
+        default: stroke = 'yellow'; break;
+    }
+    //console.info('stroke color', stroke);
+    
     return (
         ['svg', {class:`group ${isRefLayer?'ref':''}`, id:`bg_${groupId}`, stroke},
          ['rect', {class:"group-frame", x:groupX, y:groupY,
@@ -342,6 +365,31 @@ export function updateBoundingBoxShape(bounding_box_id: number, shape: Shape) {
     db().transaction(()=>
         updateBoundingBox(bounding_box_id, ['x', 'y', 'w', 'h'], shape));
 }
+
+// TERRIBLE TERRIBLE TERRIBLE
+export async function createNewEmptyBoundingGroupForFriendlyDocumentId(friendly_document_id: string): Promise<{group_id: number, layer_id: number, reference_layer_id: number, first_page_id: number}> {
+    return db().transaction(()=>{
+
+        // XXX copying these colors form pageeditor.ts is BAD.
+        const groupColors = [
+            'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
+            'seagreen', 'steelblue', /*'dodgerblue',*/ 'peru', /*'tan',*/ 'rebeccapurple'];
+        // --- Create new layer in the specified document id.
+        const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
+        const document_id = document.document_id;
+        const layer_id = schema.getOrCreateNamedLayer(document.document_id, 'Tagging', 0);
+        const reference_layer_id = schema.getOrCreateNamedLayer(document.document_id, 'Text', 1);
+        const color = groupColors[random.randomInt(0, groupColors.length-1)];
+        const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
+            'bounding_group', {document_id, layer_id, color}, 'bounding_group_id');
+
+        console.info('new bounding group id is', bounding_group_id);
+
+        const first_page_id = selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
+        return {group_id: bounding_group_id, layer_id, reference_layer_id, first_page_id};
+    });
+}
+
 
 export function newBoundingBoxInNewGroup(page_id: number, layer_id: number,
                                          shape: {x:number, y:number, w:number, h:number},
@@ -863,6 +911,7 @@ export const routes = ()=> ({
     renderPageEditorByPageNumber,
     renderPageEditorByPageId,
     updateBoundingBoxShape,
+    createNewEmptyBoundingGroupForFriendlyDocumentId,
     newBoundingBoxInNewGroup,
     newBoundingBoxInExistingGroup,
     copyRefBoxToNewGroup,

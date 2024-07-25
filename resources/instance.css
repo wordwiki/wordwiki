@@ -1,5 +1,37 @@
 /**/
 
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+
+div.inline-list-relation {
+}
+
+div.inline-list-relation > ul {
+  margin-bottom: 0em;
+}
+
+div.compact-inline-list-relation {
+}
+
+div.container-relation {
+}
+
+div.container-relation > div.child-relations {
+  margin-left: 2em;
+}
+
+div.container-relation > div.child-relations > div.child-relation {
+}
+
+span.prompt {
+  font-weight: bold;
+}
+
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+
 table.history-table {
   border-collapse: collapse;
   border: 1px solid black;

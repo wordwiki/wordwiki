@@ -581,11 +581,9 @@ function contextMenuPlay(): any {
  * Switch to mm-li query for now.
  */
 export function renderEntry(e: Entry): any {
-    const editSpellings = `imports.popupEntryEditor('Edit Spellings', ${e.entry_id}, 'ent', ${e.entry_id}, 'spl')`;
-    const editEntry = `imports.popupEntryEditor('Edit Entry', ${e.entry_id}, 'ent', ${e.entry_id})`;
     return [
         //contextMenuPlay(),
-        ['h1', {class: 'editable', onclick: editEntry}, renderEntrySpellings(e, e.spelling)],
+        ['h1', {class: 'editable'}, renderEntrySpellings(e, e.spelling)],
         renderEntryRecordings(e, e.recording),
         renderSubentriesCompact(e, e.subentry),
     ];
@@ -596,9 +594,8 @@ export function renderEntrySpellings(e: Entry, spellings: Spelling[]): string {
 }
 
 export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
-    const edit = `imports.popupEntryEditor('Edit Recordings', ${e.entry_id}, 'ent', ${e.entry_id}, 'rec')`;
     return [
-        ['div', {class: 'editable', onclick: edit},
+        ['div', {class: 'editable'},
          ['b', {}, 'Recordings:'],
          ['ul', {},
           recordings.length === 0
@@ -611,10 +608,9 @@ export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
 }
 
 export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
-    const editSubentries = `imports.popupEntryEditor('Edit Subentries', ${e.entry_id}, 'ent', ${e.entry_id}, 'sub')`;
     switch(subentries.length) {
         case 0:
-            return ['p', {class: 'editable', onclick: editSubentries}, 'No entries'];
+            return ['p', {class: 'editable'}, 'No entries'];
         case 1:
             return renderSubentry(e, subentries[0]);
         default:
@@ -630,11 +626,6 @@ export function renderSubentries(e: Entry, s: Subentry[]): any {
 }
 
 export function renderSubentry(e: Entry, s: Subentry): any {
-    console.info('SUBENTRY', JSON.stringify(s, undefined, 2))
-    console.info('PRON', JSON.stringify(s.pronunciation_guide, undefined, 2));
-    //                                    pronunciation_guide
-
-    console.info('cat', Object.entries(s));
     return [
         // renderSource(e, s, s.source),
         renderPronunciationGuides(e, s, s.pronunciation_guide),
@@ -651,8 +642,7 @@ export function renderPronunciationGuides(e: Entry, s: Subentry,
                                           pronunciationGuides: PronunciationGuide[]): any {
     if(!pronunciationGuides)
         throw new Error('missing pron guides');
-    const onclick = `imports.popupEntryEditor('Edit Pronunciations', ${e.entry_id}, 'sub', ${s.subentry_id}, 'prn')`;
-    return [['div', {class: 'editable', onclick},
+    return [['div', {class: 'editable'},
              pronunciationGuides.map(p=>renderPronunciationGuide(e, s, p))
             ]];
 }
@@ -662,8 +652,7 @@ export function renderPronunciationGuide(e: Entry, s: Subentry, p: Pronunciation
 }
 
 export function renderTranslations(e: Entry, s: Subentry, translations: Translation[]): any {
-    const onclick = `imports.popupEntryEditor('Edit Translations', ${e.entry_id}, 'sub', ${s.subentry_id}, 'tra')`;
-    return [['div', {class: 'editable', onclick},
+    return [['div', {class: 'editable'},
              translations.map(t=>renderTranslation(e, s, t))
             ]];
 }
@@ -681,9 +670,8 @@ export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
 
 
 export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
-    const edit = `imports.popupEntryEditor('Edit Glosses', ${e.entry_id}, 'sub', ${s.subentry_id}, 'gls')`;
     return [
-        ['div', {class: 'editable', onclick: edit},
+        ['div', {class: 'editable'},
          ['b', {}, 'Meanings:'],
           ['ul', {},
            glosses.length === 0
@@ -694,10 +682,8 @@ export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
 }
 
 export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any {
-    console.info('IN RENDER EXAMPLES', examples);
-    const edit = `imports.popupEntryEditor('Edit Examples', ${e.entry_id}, 'sub', ${s.subentry_id}, 'exa')`;
     return [
-        ['div', {class: 'editable', onclick: edit},
+        ['div', {class: 'editable'},
          ['b', {}, 'Example of word used in a sentence:'],
          ['ul', {},
           examples.length === 0
@@ -717,18 +703,13 @@ export function renderExample(e: Entry, example: Example): any {
 
 export function renderDocumentReferences(e: Entry, s: Subentry,
                                          documentReferences: DocumentReference[]): any {
-    const edit = `imports.popupEntryEditor('Edit Document References', ${e.entry_id}, 'sub', ${s.subentry_id}, 'ref')`;
     return [
-        ['div', {class: 'editable', onclick: edit},
+        ['div', {class: 'editable'},
          ['b', {}, 'Document References:'],
          ['ul', {},
           documentReferences.length === 0
              ? ['li', {}, 'No references']
              : documentReferences.map(ref=>['li', {}, renderDocumentReference(e, ref)]),
-          ['li', {},
-           ['PDM', 'Rand', 'Clark', 'RandFirstReadingBook'].map(b=>
-               ['button', {onclick:`event.stopPropagation(); imports.launchAddNewDocumentReference(${e.entry_id}, ${s.subentry_id}, ${JSON.stringify(b)}, ${JSON.stringify("Editing reference for "+renderEntrySpellings(e, e.spelling))})`}, 'Add ', b])
-          ]
          ]
         ]
     ];
