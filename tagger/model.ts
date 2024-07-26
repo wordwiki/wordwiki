@@ -415,9 +415,9 @@ export class EnumField extends StringField {
  *
  *
  */
-export class VariantField extends StringField {
+export class VariantField extends EnumField {
     constructor(name: string, bind: string, optional: boolean, style: Style={}) {
-        super(name, bind, optional, StringFormat.Text, style);
+        super(name, bind, optional, style);
     }
 
     accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitVariantField(this, a); }

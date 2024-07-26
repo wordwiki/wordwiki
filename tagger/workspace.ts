@@ -1280,16 +1280,11 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
 function clientRenderTest(entry_id: number): any {
     return templates.pageTemplate({
         body: [
-            ['div', {id: 'root'}, entry_id],
-            ['button', {onclick:`imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor')`}, 'GO DOG GO'],
-
             ['div', {id: 'entryEditorBody'}],
             ['script', {type: 'module'}, block`
 /**/           document.addEventListener("DOMContentLoaded", (event) => {
 /**/             console.log("DOM fully loaded and parsed");
-/**///              imports.entryEditor2('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor');
 /**/              imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor');
-/**/ //            imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, 'entry', 'entryEditor');
 /**/           });`
             ]
         ],

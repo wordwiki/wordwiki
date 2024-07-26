@@ -343,7 +343,7 @@ export class WordWiki {
     }
 
 
-    entry(entryId: number): any {
+    entry_old(entryId: number): any {
 
         const e = this.entriesJSON
             .filter(entry=>entry.entry_id === entryId)[0];
@@ -356,6 +356,20 @@ export class WordWiki {
             const body = entry.renderEntry(e);
             return templates.pageTemplate({title, body});
         }
+    }
+
+    entry(entry_id: number): any {
+        return templates.pageTemplate({
+            body: [
+                ['div', {id: 'entryEditorBody'}],
+                ['script', {type: 'module'}, block`
+/**/           document.addEventListener("DOMContentLoaded", (event) => {
+/**/             console.log("DOM fully loaded and parsed");
+/**/              imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor');
+/**/           });`
+                ]
+            ],
+        });
     }
 
     home(): any {
@@ -550,6 +564,39 @@ export class WordWiki {
             ]
         ];
 
+        return templates.pageTemplate({title, body});
+    }
+
+    variantReport(): any {
+        
+        function findAllVariantFieldValues(entry: Record<string, any>,
+                                           v: Record<string, any>,
+                                           variants: Set<string>) {
+            const variant = v['variant'];
+            if(variant) {
+                variants.add(variant);
+                if(variant !== 'mm-li' && variant !== 'mm-sf')
+                    console.info('VARIANT:', variant, typeof variant, entry);
+            }
+            for(const [key, val] of Object.entries(v)) {
+                //console.info('CONSIDERING', key, val);
+                if(Array.isArray(val))
+                    val.forEach(a=>findAllVariantFieldValues(entry, a, variants));
+                else if(val != null && utils.isObjectLiteral(val))
+                    findAllVariantFieldValues(entry, val, variants);
+            }
+        }
+
+        const variants = new Set<string>();
+        this.entriesJSON.forEach(entry=>findAllVariantFieldValues(entry, entry, variants));
+        
+        const title = 'Variant Report';
+        const body = ['div', {}, 'Variant report',
+                      ['ul', {},
+                       Array.from(variants.values()).map(v=>['li', {}, v])
+                      ],
+                     ];
+        
         return templates.pageTemplate({title, body});
     }
 

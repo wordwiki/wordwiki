@@ -307,14 +307,24 @@ export class EnumView extends StringView {
 /**
  *
  */
-export class VariantView extends StringView {
+export class VariantView extends EnumView {
     declare field: VariantField;
     constructor(field: VariantField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitVariantView(this, a); }
 
-    renderView(ctx: RenderCtx, v: any): Markup {
-        return v == null || v == '' ? '' : `(${String(v)})`;
+    get choices(): Record<string, string> {
+        // XXX Fix this garbage typing.
+        // TODO don't embed mm stuff here directly.
+        return {
+            '':'',
+            'mm': 'mm',
+            'mm-li': 'mm-li',
+            'mm-sf': 'mm-sf' };
     }
+    
+    // renderView(ctx: RenderCtx, v: any): Markup {
+    //     return v == null || v == '' ? '' : `(${String(v)})`;
+    // }
 }
 
 /**

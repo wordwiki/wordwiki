@@ -277,6 +277,31 @@ export class Publish {
 
         // --- Publish all entries
         await this.publishEntries();
+
+        // --- Publish home page
+        await this.publishHomePage();
+    }
+
+    get homePath(): string {
+        return this.publishRoot+'/index.html';
+    }
+    
+    async publishHomePage(): Promise<void> {
+        try {
+            const title = 'Home';
+            const body = ['div', {},
+                          ['h1', {}, title]];
+
+
+
+
+
+            
+            await writePageFromMarkupIfChanged(this.homePath, publicPageTemplate({title, body}));
+        } catch(e) {
+            // TODO add entry here
+            this.status.errors.push(e.toString());
+        }
     }
 
     async publishEntries(): Promise<void> {
@@ -286,9 +311,9 @@ export class Publish {
         }
     }
 
-    /*
+    /**
+     *
      */
-
     async publishEntry(entry: Entry): Promise<void> {
         try {
             const entryPath = this.pathForEntry(entry);

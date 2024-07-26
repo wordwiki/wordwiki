@@ -117,8 +117,8 @@ export function renderPageEditorByPageId(page_id: number,
          cfg.title && ['h2', {}, cfg.title],
          cfg.locked_bounding_group_id && [
              ['div', {},
-              ['button', {onclick:`window.opener.postMessage({action: 'reloadBoundingGroup', boundingGroupId: ${cfg.locked_bounding_group_id}}); window.close();`}, 'Done editing reference NEW'],
-              ['button', {onclick:'window.opener.location.reload(); window.close();'}, 'Done editing reference']]
+              ['button', {onclick:`window.opener.postMessage({action: 'reloadBoundingGroup', boundingGroupId: ${cfg.locked_bounding_group_id}}); window.close();`}, 'Done editing reference']],
+              //['button', {onclick:'window.opener.location.reload(); window.close();'}, 'Done editing reference']]
          ],
          renderPageJumper(cfg, document_id, page.page_number, total_pages_in_document)],
 
