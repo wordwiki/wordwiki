@@ -110,115 +110,6 @@ export interface PublicPageContent {
     body?: any;
 }
 
-export function publicPageTemplate(content: PublicPageContent): any {
-    return (
-        ['html', {},
-
-         ['head', {},
-          ['meta', {charset:"utf-8"}],
-          ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-          content.title !== undefined ? ['title', {}, content.title] : undefined,
-          config.bootstrapCssLink,
-          // TODO remove most of these css for the public side
-          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/context-menu.css', rel:'stylesheet', type:'text/css'}],
-          ['script', {}, block`
-/**/           let imports = {};
-/**/           let activeViews = undefined`],
-
-
-          ['script', {}, block`
-/**/           function playAudio(src) {
-/**/             const audioPlayer = document.getElementById("audioPlayer");
-/**/             if(!audioPlayer) throw new Error('could not find audio player');
-/**/             audioPlayer.src = src;
-/**/             audioPlayer.play ();
-/**/          }`],
-
-          content.head,
-         ], // head
-
-         ['body', {},
-
-          publicNavBar(),
-
-          // TODO probably move this somewhere else
-          ['audio', {id:'audioPlayer', preload:'none'},
-           ['source', {src:'', type:'audio/mpeg'}]],
-
-          content.body,
-
-          //view.renderModalEditorSkeleton(),
-
-          config.bootstrapScriptTag
-
-         ] // body
-        ] // html
-    );
-}
-
-
-export function publicNavBar(): any {
-    return [
-        ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
-         ['div', {class:"container-fluid"},
-          ['a', {class:"navbar-brand", href:"/"}, 'MMO'],
-          ['button', {class:"navbar-toggler", type:"button", 'data-bs-toggle':"collapse", 'data-bs-target':"#navbarSupportedContent", 'aria-controls':"navbarSupportedContent", 'aria-expanded':"false", 'aria-label':"Toggle navigation"},
-           ['span', {class:"navbar-toggler-icon"}],
-          ], //button
-
-          ['div', {class:"collapse navbar-collapse", id:"navbarSupportedContent"},
-           ['ul', {class:"navbar-nav me-auto mb-2 mb-lg-0"},
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", href:"/wordwiki.categoriesDirectory()"}, 'Categories'],
-            ], //li
-
-            // --- Reference Books
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Reference Books'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("PDM")'}, 'PDM']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("Rand")'}, 'Rand']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("Clark")'}, 'Clark']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
-              //['li', {}, ['hr', {class:"dropdown-divider"}]],
-              //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
-             ], //ul
-            ], //li
-
-            // Reports
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Reports'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-             ], //ul
-            ], //li
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", 'aria-current':"page", href:"#", onclick:'imports.launchNewLexeme()'}, 'Add New Entry'],
-            ], //li
-
-           ], //ul
-
-           // Search form
-           ['form', {class:"d-flex", role:"search", method:'get', action:'/wordwiki.searchPage(query)'},
-            ['input', {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
-            ['button', {class:"btn btn-outline-success", type:"submit"}, 'Search'],
-           ], //form
-
-          ], //div navbar-collaplse
-
-         ], //div container
-        ], //nav
-    ];
-}
 
 export function startPublish(): any {
     if(publishStatusSingleton.isRunning) {
@@ -267,6 +158,10 @@ export class Publish {
         // --- Publish all entries
         await this.publishEntries();
 
+        // --- Publish categories
+        await this.publishCategoriesDirectory();
+        await this.publishCategories();
+
     }
 
     async publishItem(itemDesc: string, itemPromise: Promise<void>): Promise<void> {
@@ -300,7 +195,7 @@ export class Publish {
 /**/                allSearchTerms = ${JSON.stringify(allSearchTerms)};
 /**/                `],
         ];
-        const title = 'Home';
+        const title = "Mi'gmaq/Mi'kmaq Online Talking Dictionary";
         const body =
             ['div', {},
              ['h1', {}, title],
@@ -324,7 +219,7 @@ export class Publish {
               ['ul', {},
                ['li', {}, "You can search in Mi'gmaq/Mi'kmaq or English."],
                ['li', {}, "Search results will update as you type (after the first 3 letters)."],
-               ['li', {}, "Click on &#x1F509; to hear a recording of the word."],
+               ['li', {}, "Click on 🔉 to hear a recording of the word."],
                ['li', {}, "To do an exact word search, end the word with a space."],
                ['li', {}, "You can use a * for parts of a word you do not want to spell."],
                ['li', {}, "You can do searches with multiple words.  For example 'wild cat'."],
@@ -340,7 +235,7 @@ export class Publish {
              ],
             ];
         
-        await writePageFromMarkupIfChanged(this.homePath, publicPageTemplate({title, head, body}));
+        await writePageFromMarkupIfChanged(this.homePath, this.publicPageTemplate('', {title, head, body}));
     }
 
     /**
@@ -353,7 +248,7 @@ export class Publish {
         const sampleRecording = entryschema.getStableFeaturedRecording(e);
         //console.info('SAMPLE RECORDING IS', spellings, sampleRecording);
         return [
-            ['a', {href: this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
+            ['a', {href: rootPath+this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
             sampleRecording ?
                 audio.renderAudio(sampleRecording.recording, '🔉', undefined, rootPath) : [],
         ];
@@ -373,71 +268,81 @@ export class Publish {
      *
      */
     async publishEntry(entry: Entry): Promise<void> {
+        const rootPath = '../../../';
         const entryPath = this.pathForEntry(entry);
         const entryDir = this.dirForEntry(entry);
         await Deno.mkdir(entryDir, {recursive: true});
         const title = 'title';
-        const body:any[] = entryschema.renderEntry(entry);
-        const wordMarkup = publicPageTemplate({title, body});
+        const body:any[] = entryschema.renderEntry({rootPath}, entry);
+        const wordMarkup = this.publicPageTemplate(rootPath, {title, body});
         //const wordMarkup = ['h1', {}, title];
         await writePageFromMarkupIfChanged(entryPath, wordMarkup);
+    }
+
+
+    get categoriesDir(): string {
+        return 'categories';
+    }
+    
+    get categoriesDirectoryPath(): string {
+        return 'categories.html';
+    }
+
+    pathForCategory(category: string): string {
+        return `${this.categoriesDir}/${category.replaceAll(/[^a-zA-Z0-9-']/g, '_')}.html`;
+    }
+    
+    /**
+     *
+     */
+    async publishCategoriesDirectory(): Promise<void> {
+        const title = `Categories Directory`;
+
+        const body = [
+            ['h1', {}, title],
+            ['ul', {},
+             Array.from(this.wordWiki.getCategories().entries()).map(cat=>
+                 ['li', {}, ['a',
+                             {href:this.pathForCategory(cat[0])},
+                             cat[0], ` (${cat[1]} entries)`]]),
+            ]
+        ];
+        await writePageFromMarkupIfChanged(this.categoriesDirectoryPath, this.publicPageTemplate('', {title, body}));
     }
 
     /**
      *
      */
     async publishCategories(): Promise<void> {
-        // for(const entry of this.entries) {
-        //     this.publishCategory(`Category ${this.getPublicIdForEntry(entry)}`, this.publishCategory(entry));
-        // }
+        await Deno.mkdir(this.categoriesDir, {recursive: true});
+        for(const category of this.wordWiki.getCategories().keys()) {
+            this.publishItem(`Category ${category}`, this.publishCategory(category));
+        }
     }
     
     /**
      *
      */
     async publishCategory(category: string): Promise<void> {
-        // const categoryPath = this.pathForCategory(category);
-        // const entryDir = this.dirForEntry(entry);
-        // await Deno.mkdir(entryDir, {recursive: true});
-        // const title = 'title';
-        // const body:any[] = entryschema.renderEntry(entry);
-        // const wordMarkup = publicPageTemplate({title, body});
-        // //const wordMarkup = ['h1', {}, title];
-        // await writePageFromMarkupIfChanged(entryPath, categoryMarkup);
+
+        const entriesForCategory = this.wordWiki.getEntriesForCategory(category);
+        const title = ['Entries for category ', category];
+        
+        const body = [
+            ['h2', {}, title],
+
+            // --- Add new entry button
+            ['div', {},
+             ['ul', {},
+              entriesForCategory
+                  .map(e=>['li', {}, this.renderEntryPublicLink('../../', e)]),
+             ] // ul
+            ] // div
+        ];
+
+        await writePageFromMarkupIfChanged(this.pathForCategory(category), this.publicPageTemplate('../../', {title, body}));
     }
-    
-    // public ArrayList<String> getAllSearchTerms() {
-    //     LinkedHashSet<String> termSet = new LinkedHashSet<String>();
-    //     for (Lexeme l: lexemes) {
-    //         termSet.addAll(l.getNormalizedSearchTerms());
-    //     }
-    //     return new ArrayList<String>(termSet);
-    // }
-
-    // public String getAllSearchTermsJson() {
-    //     return "["+String.join(", ", getAllSearchTerms().stream().map(t->"'"+t+"'").collect(Collectors.toList()))+"]";
-    // }
-
-    // public ArrayList<String> getNormalizedSearchTerms() {
-    //     final ArrayList<String> terms = new ArrayList<String>();
-
-    //     // XXX this is crappy - do more work here.
-
-    //     // --- Add mikmaq word (with ' normalized to _)
-    //     terms.add(toId(lowerName));
-
-    //     if(lowerSfGloss != null && !lowerName.equals(lowerSfGloss))
-    //         terms.add(toId(lowerSfGloss));
-
-    //     // --- Add individual words in english gloss
-    //     for(String g: getGlosses()) {
-    //         for(String w: g.split("[ ().,!?/]+"))
-    //             terms.add(toId(w.toLowerCase()));
-    //     }
-
-    //     return terms;
-    // }
-    
+        
     dirForEntry(entry: Entry): string {
         const publicId = this.getPublicIdForEntry(entry);
         const cluster = this.clusterForEntry(entry);
@@ -497,6 +402,119 @@ export class Publish {
         // --- Otherwise, use the entryId converted to a string as the base for the
         //     public id.
         return String(entry.entry_id);
+    }
+
+    /**
+     *
+     */
+    publicPageTemplate(rootPath: string, content: PublicPageContent): any {
+        return (
+            ['html', {},
+
+             ['head', {},
+              ['meta', {charset:"utf-8"}],
+              ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
+              content.title !== undefined ? ['title', {}, content.title] : undefined,
+              config.bootstrapCssLink,
+              // TODO remove most of these css for the public side
+              ['link', {href: `${rootPath}resources/instance.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}resources/page-editor.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}resources/context-menu.css`, rel:'stylesheet', type:'text/css'}],
+              ['script', {}, block`
+    /**/           let imports = {};
+    /**/           let activeViews = undefined`],
+
+
+              ['script', {}, block`
+    /**/           function playAudio(src) {
+    /**/             const audioPlayer = document.getElementById("audioPlayer");
+    /**/             if(!audioPlayer) throw new Error('could not find audio player');
+    /**/             audioPlayer.src = src;
+    /**/             audioPlayer.play ();
+    /**/          }`],
+
+              content.head,
+             ], // head
+
+             ['body', {},
+
+              this.publicNavBar(rootPath),
+
+              // TODO probably move this somewhere else
+              ['audio', {id:'audioPlayer', preload:'none'},
+               ['source', {src:'', type:'audio/mpeg'}]],
+
+              content.body,
+
+              //view.renderModalEditorSkeleton(),
+
+              config.bootstrapScriptTag
+
+             ] // body
+            ] // html
+        );
+    }
+
+
+    publicNavBar(rootPath: string): any {
+        return [
+            ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
+             ['div', {class:"container-fluid"},
+              ['a', {class:"navbar-brand", href:rootPath+this.homePath}, 'MMO'],
+              ['button', {class:"navbar-toggler", type:"button", 'data-bs-toggle':"collapse", 'data-bs-target':"#navbarSupportedContent", 'aria-controls':"navbarSupportedContent", 'aria-expanded':"false", 'aria-label':"Toggle navigation"},
+               ['span', {class:"navbar-toggler-icon"}],
+              ], //button
+
+              ['div', {class:"collapse navbar-collapse", id:"navbarSupportedContent"},
+               ['ul', {class:"navbar-nav me-auto mb-2 mb-lg-0"},
+
+                ['li', {class:"nav-item"},
+                 ['a', {class:"nav-link", href:rootPath+this.homePath}, 'Home'],
+                ], //li
+
+                ['li', {class:"nav-item"},
+                 ['a', {class:"nav-link", href:rootPath+this.categoriesDirectoryPath}, 'Categories'],
+                ], //li
+
+                ['li', {class:"nav-item"},
+                 ['a', {class:"nav-link", href:rootPath+this.homePath}, 'All Words'], // XXX FIX PATH XXX
+                ], //li
+
+                ['li', {class:"nav-item"},
+                 ['a', {class:"nav-link", href:rootPath}, 'About Us'], // FIX PATH XXX
+                ], //li
+
+
+
+
+                // // --- Reference Books
+                // ['li', {class:"nav-item dropdown"},
+                //  ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
+                //   'Reference Books'
+                //  ], //a
+                //  ['ul', {class:"dropdown-menu"},
+                //   ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("PDM")'}, 'PDM']],
+                //   ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("Rand")'}, 'Rand']],
+                //   ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("Clark")'}, 'Clark']],
+                //   ['li', {}, ['a', {class:"dropdown-item", href:'/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
+                //   //['li', {}, ['hr', {class:"dropdown-divider"}]],
+                //   //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
+                //  ], //ul
+                // ], //li
+
+               ], //ul
+
+               // // Search form
+               // ['form', {class:"d-flex", role:"search", method:'get', action:'/wordwiki.searchPage(query)'},
+               //  ['input', {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
+               //  ['button', {class:"btn btn-outline-success", type:"submit"}, 'Search'],
+               // ], //form
+
+              ], //div navbar-collaplse
+
+             ], //div container
+            ], //nav
+        ];
     }
 }
 

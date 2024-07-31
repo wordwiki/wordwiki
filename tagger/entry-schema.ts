@@ -630,24 +630,29 @@ function contextMenuPlay(): any {
     return ['div', {class: 'has-context-menu'}, 'CTX ME!'];
 }
 
+// later, will add dialect.
+interface RenderCtx {
+    rootPath: string;
+}
+
 /**
  *
  * Switch to mm-li query for now.
  */
-export function renderEntry(e: Entry): any {
+export function renderEntry(ctx: RenderCtx, e: Entry): any {
     return [
         //contextMenuPlay(),
-        ['h1', {class: 'entry-scope'}, renderEntrySpellings(e, e.spelling)],
-        renderEntryRecordings(e, e.recording),
-        renderSubentriesCompact(e, e.subentry),
+        ['h1', {class: 'entry-scope'}, renderEntrySpellings(ctx, e, e.spelling)],
+        renderEntryRecordings(ctx, e, e.recording),
+        renderSubentriesCompact(ctx, e, e.subentry),
     ];
 }
 
-export function renderEntrySpellings(e: Entry, spellings: Spelling[]): string {
+export function renderEntrySpellings(ctx: RenderCtx, e: Entry, spellings: Spelling[]): string {
     return spellings.map(s=>s.text).join('/') || 'No Spellings';
 }
 
-export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
+export function renderEntryRecordings(ctx: RenderCtx, e: Entry, recordings: Recording[]): any {
     return [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Recordings:'],
@@ -655,63 +660,63 @@ export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
           recordings.length === 0
              ? ['li', {}, 'No recordings']
              : recordings.map(r=>['li', {},
-                                  audio.renderAudio(r.recording, `Recording by ${r.speaker}`)])
+                                  audio.renderAudio(r.recording, `Recording by ${r.speaker}`, undefined, ctx.rootPath)])
          ] // ul
         ]
     ];
 }
 
-export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
+export function renderSubentriesCompact(ctx: RenderCtx, e: Entry, subentries: Subentry[]): any {
     switch(subentries.length) {
         case 0:
             return ['p', {class: 'entry-scope'}, 'No entries'];
         case 1:
-            return renderSubentry(e, subentries[0]);
+            return renderSubentry(ctx, e, subentries[0]);
         default:
-            return renderSubentries(e, subentries);
+            return renderSubentries(ctx, e, subentries);
     }
 }
 
-export function renderSubentries(e: Entry, s: Subentry[]): any {
+export function renderSubentries(ctx: RenderCtx, e: Entry, s: Subentry[]): any {
     return [
         ['ul', {},
          s.map((s, idx)=>['li', {}, [
-             ['h3', {}, `Subentry ${idx+1}`], renderSubentry(e, s)]])]];
+             ['h3', {}, `Subentry ${idx+1}`], renderSubentry(ctx, e, s)]])]];
 }
 
-export function renderSubentry(e: Entry, s: Subentry): any {
+export function renderSubentry(ctx: RenderCtx, e: Entry, s: Subentry): any {
     return [
         // renderSource(e, s, s.source),
-        renderPronunciationGuides(e, s, s.pronunciation_guide),
-        renderTranslations(e, s, s.translation),
+        renderPronunciationGuides(ctx, e, s, s.pronunciation_guide),
+        renderTranslations(ctx, e, s, s.translation),
         //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
-        renderGlosses(e, s, s.gloss),
+        renderGlosses(ctx, e, s, s.gloss),
         //s.example.map(x=>renderExample(e, x)),
-        renderExamples(e, s, s.example),
-        renderDocumentReferences(e, s, s.document_reference),
+        renderExamples(ctx, e, s, s.example),
+        renderDocumentReferences(ctx, e, s, s.document_reference),
     ];
 }
 
-export function renderPronunciationGuides(e: Entry, s: Subentry,
+export function renderPronunciationGuides(ctx: RenderCtx, e: Entry, s: Subentry,
                                           pronunciationGuides: PronunciationGuide[]): any {
     if(!pronunciationGuides)
         throw new Error('missing pron guides');
     return [['div', {class: 'entry-scope'},
-             pronunciationGuides.map(p=>renderPronunciationGuide(e, s, p))
+             pronunciationGuides.map(p=>renderPronunciationGuide(ctx, e, s, p))
             ]];
 }
 
-export function renderPronunciationGuide(e: Entry, s: Subentry, p: PronunciationGuide): any {
+export function renderPronunciationGuide(ctx: RenderCtx, e: Entry, s: Subentry, p: PronunciationGuide): any {
     return [['div', {},  ['b', {}, 'Pronunciation Guide: '], p.pronunciation_guide]];
 }
 
-export function renderTranslations(e: Entry, s: Subentry, translations: Translation[]): any {
+export function renderTranslations(ctx: RenderCtx, e: Entry, s: Subentry, translations: Translation[]): any {
     return [['div', {class: 'entry-scope'},
-             translations.map(t=>renderTranslation(e, s, t))
+             translations.map(t=>renderTranslation(ctx, e, s, t))
             ]];
 }
 
-export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
+export function renderTranslation(ctx: RenderCtx, e: Entry, s: Subentry, t: Translation): any {
     return [['div', {},  ['b', {}, 'Translation: '], t.translation]];
 }
 // export function renderCompactList(e: Entry,
@@ -723,7 +728,7 @@ export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
 
 
 
-export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
+export function renderGlosses(ctx: RenderCtx, e: Entry, s: Subentry, glosses: Gloss[]): any {
     return [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Meanings:'],
@@ -735,27 +740,27 @@ export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
      ];
 }
 
-export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any {
+export function renderExamples(ctx: RenderCtx, e: Entry, s: Subentry, examples: Example[]): any {
     return [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Example of word used in a sentence:'],
          ['ul', {},
           examples.length === 0
              ? ['li', {}, 'No examples']
-             : examples.map(example=>['li', {}, renderExample(e, example)])]
+             : examples.map(example=>['li', {}, renderExample(ctx, e, example)])]
         ]
     ];
 }
 
-export function renderExample(e: Entry, example: Example): any {
+export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
     return [
         example.example_text.map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
         example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
-        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker}`)])
+        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker}`, undefined, ctx.rootPath)])
     ];
 }
 
-export function renderDocumentReferences(e: Entry, s: Subentry,
+export function renderDocumentReferences(ctx: RenderCtx, e: Entry, s: Subentry,
                                          documentReferences: DocumentReference[]): any {
     return [
         ['div', {class: 'entry-scope'},
@@ -763,13 +768,13 @@ export function renderDocumentReferences(e: Entry, s: Subentry,
          ['ul', {},
           documentReferences.length === 0
              ? ['li', {}, 'No references']
-             : documentReferences.map(ref=>['li', {}, renderDocumentReference(e, ref)]),
+             : documentReferences.map(ref=>['li', {}, renderDocumentReference(ctx, e, ref)]),
          ]
         ]
     ];
 }
 
-export function renderDocumentReference(e: Entry, ref: DocumentReference): any {
+export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentReference): any {
     // XXX BAD THIS BIT OF FACTORING IS A CRAP HACK TO GET OUT THE DOOR.
     // XXX THE LINE with REMOVE_FOR_WEB is removed by transpile.sh so
     //     we don't try to pull client-side only deps on the web.

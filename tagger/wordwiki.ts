@@ -343,20 +343,20 @@ export class WordWiki {
     }
 
 
-    entry_old(entryId: number): any {
+    // entry_old(entryId: number): any {
 
-        const e = this.entriesJSON
-            .filter(entry=>entry.entry_id === entryId)[0];
+    //     const e = this.entriesJSON
+    //         .filter(entry=>entry.entry_id === entryId)[0];
 
-        if(!e) {
-            const title = `Missing or deleted entry ${entryId}`;
-            return templates.pageTemplate({title, body: ['h1', {}, title]});
-        } else {
-            const title = entry.renderEntrySpellings(e, e.spelling);
-            const body = entry.renderEntry(e);
-            return templates.pageTemplate({title, body});
-        }
-    }
+    //     if(!e) {
+    //         const title = `Missing or deleted entry ${entryId}`;
+    //         return templates.pageTemplate({title, body: ['h1', {}, title]});
+    //     } else {
+    //         const title = entry.renderEntrySpellings(ctx, e, e.spelling);
+    //         const body = entry.renderEntry(e);
+    //         return templates.pageTemplate({title, body});
+    //     }
+    // }
 
     entry(entry_id: number): any {
         return templates.pageTemplate({
@@ -542,22 +542,24 @@ export class WordWiki {
         throw new Error('not impl yetc');
     }
 
-    categoriesDirectory(): any {
-        const title = `Categories Directory`;
 
-        const cats: [string, number][] = Array.from(Map.groupBy(this.entriesJSON.
+    getCategories(): Map<string, number> {
+        return new Map(Array.from(Map.groupBy(this.entriesJSON.
             flatMap(e=>
                 e.subentry.flatMap(s=>
                     s.category.flatMap(c=>
                         c.category))), e=>e)
             .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
-            .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
-
+            .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]));
+    }
+    
+    categoriesDirectory(): any {
+        const title = `Categories Directory`;
 
         const body = [
             ['h1', {}, title],
             ['ul', {},
-             cats.map(cat=>
+             Array.from(this.getCategories().entries()).map(cat=>
                  ['li', {}, ['a',
                              {href:`/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
                              cat[0], ` (${cat[1]} entries)`]]),
@@ -600,16 +602,20 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
 
-    entriesForCategory(category?: string): any {
-        category = String(category ?? '');
-
-        const entriesForCategory = category === '' ? [] :
+    getEntriesForCategory(category: string): entry.Entry[] {
+        return category === '' ? [] :
             this.entriesJSON.filter(
                 entry=>entry.subentry.some(
                     subentry=>subentry.category.some(
-                        cat=>cat.category === category)));
-        const title = ['Entries for category ', category];
+                        cat=>cat.category === category)));        
+    }
 
+    entriesForCategory(category?: string): any {
+        category = String(category ?? '');
+
+        const entriesForCategory = this.getEntriesForCategory(category);
+        const title = ['Entries for category ', category];
+        
         function renderEntryItem(e: entry.Entry): any {
             return [
                 ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
@@ -850,6 +856,7 @@ export class WordWiki {
 
         const contentfiles = {
             '/index.html': 'index.html',
+            '/categories.html': 'categories.html',
         };
         await new DenoHttpServer({port: config.port,
                                   hostname: config.hostname,
