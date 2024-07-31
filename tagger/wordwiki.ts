@@ -843,11 +843,17 @@ export class WordWiki {
         const contentdirs = {
             '/resources/': await findResourceDir('resources')+'/',
             '/scripts/': await findResourceDir('web-build')+'/',
+            '/entries/': 'entries/',
+            '/categories/': 'categories/',
             '/content/': 'content/',
             '/derived/': 'derived/'};
+
+        const contentfiles = {
+            '/index.html': 'index.html',
+        };
         await new DenoHttpServer({port: config.port,
                                   hostname: config.hostname,
-                                  contentdirs},
+                                  contentdirs, contentfiles},
                                  request=>this.requestHandler(request)).run();
     }
 

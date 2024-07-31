@@ -12,13 +12,14 @@ import {getWordWiki, WordWiki} from './wordwiki.ts';
 import { writeUTF8FileIfContentsChanged } from '../utils/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
 import {Entry} from './entry-schema.ts';
+import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
 
 export class PublishStatus {
     startTime?: number = undefined;
     endTime?: number = undefined;
-    completedTasks: string[] = [];
+    log: string[] = [];
     errors: string[] = [];
 
     constructor() {
@@ -33,7 +34,7 @@ export class PublishStatus {
             throw new Error('publish is already running');
         this.startTime = +new Date();
         this.endTime = undefined;
-        this.completedTasks = [];
+        this.log = [];
         this.errors = [];
     }
 
@@ -79,10 +80,10 @@ export function publishStatus(joiningExistingPublish: boolean=false,
              ])
             ]] : [],
 
-        (publishStatus.completedTasks.length > 0) ? [
-            ['h2', 'Recent Tasks'],
+        (publishStatus.log.length > 0) ? [
+            ['h2', {}, 'Recent Tasks'],
             ['ul', {},
-             publishStatus.completedTasks.slice(-20).map(e=>[
+             publishStatus.log.slice(-20).map(e=>[
                  ['li', {}, e]
              ])
             ]] : [],
@@ -200,21 +201,6 @@ export function publicNavBar(): any {
              ], //ul
             ], //li
 
-            // Reports
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Admin'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki.startPublish()'}, 'Publish']],
-             ], //ul
-            ], //li
-            
-           //  ['li', {class:"nav-item"},
-           //   ['a', {class:"nav-link disabled", 'aria-disabled':"true"}, 'Disabled'],
-           //  ], //li
-
-
             ['li', {class:"nav-item"},
              ['a', {class:"nav-link", 'aria-current':"page", href:"#", onclick:'imports.launchNewLexeme()'}, 'Add New Entry'],
             ], //li
@@ -267,7 +253,7 @@ export class Publish {
 
     constructor(public status: PublishStatus, public wordWiki: WordWiki,
                 public entries: Entry[],
-                public publishRoot: string = 'published') {
+                public publishRoot: string = '.') {
         this.entryToPublicId = this.computeEntryPublicIds(entries, this.defaultVariant);
     }
 
@@ -275,62 +261,151 @@ export class Publish {
         // --- If publish root dir does not exist, create it.
         await Deno.mkdir(this.publishRoot, {recursive: true});
 
+        // --- Publish home page
+        await this.publishItem('Home Page', this.publishHomePage());
+
         // --- Publish all entries
         await this.publishEntries();
 
-        // --- Publish home page
-        await this.publishHomePage();
     }
 
+    async publishItem(itemDesc: string, itemPromise: Promise<void>): Promise<void> {
+        let error: Error|undefined = undefined;
+        try {
+            await itemPromise;
+        } catch(e) {
+            error = e;
+        }
+        if(error)
+            this.status.errors.push(`${itemDesc}: ${error.toString()}`);
+        else
+            this.status.log.push(itemDesc);
+    }
+    
     get homePath(): string {
         return this.publishRoot+'/index.html';
     }
     
     async publishHomePage(): Promise<void> {
-        try {
-            const title = 'Home';
-            const body = ['div', {},
-                          ['h1', {}, title]];
 
+        const allSearchTerms = Array.from(new Set(
+            this.entries.flatMap(entry=>entryschema.computeNormalizedSearchTerms(entry))));
+        
+        const head = [
+            ['style', {}, block`
+/**/                .def { display:none; }
+/**/                _search_ { display: list-item; }`],
+            ['script', {src:'resources/search.js'}],
+            ['script', {}, block`
+/**/                allSearchTerms = ${JSON.stringify(allSearchTerms)};
+/**/                `],
+        ];
+        const title = 'Home';
+        const body =
+            ['div', {},
+             ['h1', {}, title],
 
+             // --- Search Box
+             ['form', {onsubmit:"updateCurrentSearchFromInput(); event.preventDefault();"},
+              ['label', {for:"search"}, 'Search:'],
+              ['input', {type:"text", size:"20",
+                         name:"search", id:"search", label:"Search", autofocus:"",
+                         placeholder:"Mi'gmaq or English Search",
+                         oninput:"updateCurrentSearchFromInput();"}],
+             ], // /form      
 
+             // --- If we are returning to this page - restore the search from the fragment id in the URL
+             ['script', {}, block`
+/**/              updateCurrentSearchFromDocumentHash();
+/**/         `],
 
+             // --- Search instructions display until user starts typing a search
+             ['div', {id:"searchInstructions"},
+              ['ul', {},
+               ['li', {}, "You can search in Mi'gmaq/Mi'kmaq or English."],
+               ['li', {}, "Search results will update as you type (after the first 3 letters)."],
+               ['li', {}, "Click on &#x1F509; to hear a recording of the word."],
+               ['li', {}, "To do an exact word search, end the word with a space."],
+               ['li', {}, "You can use a * for parts of a word you do not want to spell."],
+               ['li', {}, "You can do searches with multiple words.  For example 'wild cat'."],
+              ],
+             ],
 
-            
-            await writePageFromMarkupIfChanged(this.homePath, publicPageTemplate({title, body}));
-        } catch(e) {
-            // TODO add entry here
-            this.status.errors.push(e.toString());
-        }
-    }
-
-    async publishEntries(): Promise<void> {
-        // TODO: filter for only published words
-        for(const entry of this.entries) {
-            await this.publishEntry(entry);
-        }
+             ['ul', {},
+              this.entries.map(entry=>[
+                  ['li', {class:entryschema.computeNormalizedSearchTerms(entry).join(' ')+' def'},
+                   this.renderEntryPublicLink('./', entry)
+                  ]
+              ])
+             ],
+            ];
+        
+        await writePageFromMarkupIfChanged(this.homePath, publicPageTemplate({title, head, body}));
     }
 
     /**
      *
      */
-    async publishEntry(entry: Entry): Promise<void> {
-        try {
-            const entryPath = this.pathForEntry(entry);
-            const entryDir = this.dirForEntry(entry);
-            await Deno.mkdir(entryDir, {recursive: true});
-            const title = 'title';
-            const body:any[] = entryschema.renderEntry(entry);
-            const wordMarkup = publicPageTemplate({title, body});
-            //const wordMarkup = ['h1', {}, title];
-            await writePageFromMarkupIfChanged(entryPath, wordMarkup);
-        } catch(e) {
-            // TODO add entry here
-            this.status.errors.push(e.toString());
-        }
+    renderEntryPublicLink(rootPath: string, e: Entry): any {
+        // TODO handle dialects here.
+        const spellings = e.spelling.map(s=>s.text);
+        const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+        const sampleRecording = entryschema.getStableFeaturedRecording(e);
+        //console.info('SAMPLE RECORDING IS', spellings, sampleRecording);
+        return [
+            ['a', {href: this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
+            sampleRecording ?
+                audio.renderAudio(sampleRecording.recording, '🔉', undefined, rootPath) : [],
+        ];
     }
 
+    /**
+     *
+     */
+    async publishEntries(): Promise<void> {
+        // TODO: filter for only published words
+        for(const entry of this.entries) {
+            this.publishItem(`Entry ${this.getPublicIdForEntry(entry)}`, this.publishEntry(entry));
+        }
+    }
+    
+    /**
+     *
+     */
+    async publishEntry(entry: Entry): Promise<void> {
+        const entryPath = this.pathForEntry(entry);
+        const entryDir = this.dirForEntry(entry);
+        await Deno.mkdir(entryDir, {recursive: true});
+        const title = 'title';
+        const body:any[] = entryschema.renderEntry(entry);
+        const wordMarkup = publicPageTemplate({title, body});
+        //const wordMarkup = ['h1', {}, title];
+        await writePageFromMarkupIfChanged(entryPath, wordMarkup);
+    }
 
+    /**
+     *
+     */
+    async publishCategories(): Promise<void> {
+        // for(const entry of this.entries) {
+        //     this.publishCategory(`Category ${this.getPublicIdForEntry(entry)}`, this.publishCategory(entry));
+        // }
+    }
+    
+    /**
+     *
+     */
+    async publishCategory(category: string): Promise<void> {
+        // const categoryPath = this.pathForCategory(category);
+        // const entryDir = this.dirForEntry(entry);
+        // await Deno.mkdir(entryDir, {recursive: true});
+        // const title = 'title';
+        // const body:any[] = entryschema.renderEntry(entry);
+        // const wordMarkup = publicPageTemplate({title, body});
+        // //const wordMarkup = ['h1', {}, title];
+        // await writePageFromMarkupIfChanged(entryPath, categoryMarkup);
+    }
+    
     // public ArrayList<String> getAllSearchTerms() {
     //     LinkedHashSet<String> termSet = new LinkedHashSet<String>();
     //     for (Lexeme l: lexemes) {

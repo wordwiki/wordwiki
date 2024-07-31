@@ -14,6 +14,7 @@ import * as timestamp from '../utils/timestamp.ts';
 import ContextMenu from '../utils/context-menu.js';
 import { renderStandaloneGroup, singleBoundingGroupEditorURL } from './render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
+import * as random from '../utils/random.ts';
 
 export const DictTag = 'dct';          // dict
 export const EntryTag = 'ent';         // entr
@@ -41,6 +42,9 @@ export const DocumentReferenceTag = 'ref';   // ref
 export const RefTranscriptionTag = 'rtr';    // rftr
 export const RefExpandedTranscriptionTag = 'rex';  // rf
 export const RefTransliterationTag = 'rtl';
+export const RefSourceAsEntryTag = 'rse';
+export const RefNormalizedSourceAsEntryTag = 'rne';
+export const RefForeignReferenceTag = 'rfr';
 export const RefNoteTag = 'rnt';
 export const SourceTag = 'src';
 export const RecordingTag = 'rec';
@@ -347,6 +351,30 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+                source_as_entry: {
+                    $type: 'relation',
+                    $tag: RefSourceAsEntryTag,
+                    ref_text_id: {$type: 'primary_key'},
+                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'compactInlineListRelation' },
+                },
+                normalized_source_as_entry: {
+                    $type: 'relation',
+                    $tag: RefNormalizedSourceAsEntryTag,
+                    ref_text_id: {$type: 'primary_key'},
+                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'compactInlineListRelation' },
+                },
+                foreign_reference: {
+                    $type: 'relation',
+                    $tag: RefForeignReferenceTag,
+                    ref_text_id: {$type: 'primary_key'},
+                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    variant: {$type: 'variant'},
+                    $style: { $shape: 'compactInlineListRelation' },
+                },
                 note: {
                     $type: 'relation',
                     $tag: RefNoteTag,
@@ -544,11 +572,37 @@ export interface Recording {
 /**
  *
  */
+export function computeNormalizedSearchTerms(e: Entry): string[] {
+    // XXX crap - fix, think harder etc.
+    const spellings = e.spelling.map(s=>s.text).map(s=>s.replaceAll(/[^A-Za-z0-9_]/g, "_"));
+    const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss.replaceAll(/[^A-Za-z0-9_]/g, "_")));
+    const allTermsAsAString = (spellings.join(' ')+' '+glosses.join(' ')).toLowerCase();
+    const allTerms = allTermsAsAString.split(' ');
+    return allTerms;
+}
+
+/**
+ *
+ */
 export function renderEntryCompactSummary(e: Entry): any {
     // TODO handle dialects here.
     const spellings = e.spelling.map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
     return ['div', {}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')];
+}
+
+/**
+ * Pick one recording to feature in situations where there is only space
+ * to render one recording link.
+ * 
+ * Choice is based on entry_id so that choice is stable.
+ * 
+ * Currently ignoring variant + should have other controls.  XXX TODO
+ */
+export function getStableFeaturedRecording(e: Entry): Recording|undefined {
+    return e.recording.length === 0
+        ? undefined
+        : e.recording[e.entry_id % e.recording.length];
 }
 
 function test() {
@@ -583,7 +637,7 @@ function contextMenuPlay(): any {
 export function renderEntry(e: Entry): any {
     return [
         //contextMenuPlay(),
-        ['h1', {class: 'editable'}, renderEntrySpellings(e, e.spelling)],
+        ['h1', {class: 'entry-scope'}, renderEntrySpellings(e, e.spelling)],
         renderEntryRecordings(e, e.recording),
         renderSubentriesCompact(e, e.subentry),
     ];
@@ -595,7 +649,7 @@ export function renderEntrySpellings(e: Entry, spellings: Spelling[]): string {
 
 export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
     return [
-        ['div', {class: 'editable'},
+        ['div', {class: 'entry-scope'},
          ['b', {}, 'Recordings:'],
          ['ul', {},
           recordings.length === 0
@@ -610,7 +664,7 @@ export function renderEntryRecordings(e: Entry, recordings: Recording[]): any {
 export function renderSubentriesCompact(e: Entry, subentries: Subentry[]): any {
     switch(subentries.length) {
         case 0:
-            return ['p', {class: 'editable'}, 'No entries'];
+            return ['p', {class: 'entry-scope'}, 'No entries'];
         case 1:
             return renderSubentry(e, subentries[0]);
         default:
@@ -642,7 +696,7 @@ export function renderPronunciationGuides(e: Entry, s: Subentry,
                                           pronunciationGuides: PronunciationGuide[]): any {
     if(!pronunciationGuides)
         throw new Error('missing pron guides');
-    return [['div', {class: 'editable'},
+    return [['div', {class: 'entry-scope'},
              pronunciationGuides.map(p=>renderPronunciationGuide(e, s, p))
             ]];
 }
@@ -652,7 +706,7 @@ export function renderPronunciationGuide(e: Entry, s: Subentry, p: Pronunciation
 }
 
 export function renderTranslations(e: Entry, s: Subentry, translations: Translation[]): any {
-    return [['div', {class: 'editable'},
+    return [['div', {class: 'entry-scope'},
              translations.map(t=>renderTranslation(e, s, t))
             ]];
 }
@@ -671,7 +725,7 @@ export function renderTranslation(e: Entry, s: Subentry, t: Translation): any {
 
 export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
     return [
-        ['div', {class: 'editable'},
+        ['div', {class: 'entry-scope'},
          ['b', {}, 'Meanings:'],
           ['ul', {},
            glosses.length === 0
@@ -683,7 +737,7 @@ export function renderGlosses(e: Entry, s: Subentry, glosses: Gloss[]): any {
 
 export function renderExamples(e: Entry, s: Subentry, examples: Example[]): any {
     return [
-        ['div', {class: 'editable'},
+        ['div', {class: 'entry-scope'},
          ['b', {}, 'Example of word used in a sentence:'],
          ['ul', {},
           examples.length === 0
@@ -704,7 +758,7 @@ export function renderExample(e: Entry, example: Example): any {
 export function renderDocumentReferences(e: Entry, s: Subentry,
                                          documentReferences: DocumentReference[]): any {
     return [
-        ['div', {class: 'editable'},
+        ['div', {class: 'entry-scope'},
          ['b', {}, 'Document References:'],
          ['ul', {},
           documentReferences.length === 0

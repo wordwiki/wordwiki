@@ -60,8 +60,8 @@ export abstract class ScalarView extends View {
     declare field: ScalarField;
     constructor(field: ScalarField) { super(field); }
 
-    renderView(ctx: RenderCtx, v: any): Markup {
-        return String(v);
+    renderView(ctx: RenderCtx, containingTuple: TupleVersion, fieldValue: any): Markup {
+        return String(fieldValue);
     }
 
     /*abstract*/ renderEditor(ctx: RenderCtx, editor: TupleEditor, relation_id: number, v: any): Markup {
@@ -95,7 +95,7 @@ export class BooleanView extends ScalarView {
     constructor(field: BooleanField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBooleanView(this, a); }
 
-    renderView(ctx: RenderCtx, v: any): Markup {
+    renderView(ctx: RenderCtx, t: TupleVersion, v: any): Markup {
         // This should be values on the style $
         return String(v);
     }
@@ -127,7 +127,7 @@ export class IntegerView extends ScalarView {
     constructor(field: IntegerField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitIntegerView(this, a); }
 
-    renderView(ctx: RenderCtx, v: any): Markup {
+    renderView(ctx: RenderCtx, t: TupleVersion, v: any): Markup {
         console.info('in IntegerView.renderView();');
         console.info('  style is ', this.field.style);
         console.info('  shape is ', this.field.style.$shape, 'for', this.field.name);
@@ -143,9 +143,11 @@ export class IntegerView extends ScalarView {
                 return (
                     ['div', {onclick:`event.stopPropagation(); window.open('/forwardToSingleBoundingGroupEditorURL(${boundingGroup}, null)')`},
                      //['div', {}, `bounding group id ${boundingGroup} ${typeof boundingGroup}`],
-                     ['object', {style: 'pointer-events: none;', data:`/renderStandaloneGroupAsSvgResponse(${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}]]);
+                     ['object', {style: 'pointer-events: none;', data:`/renderStandaloneGroupAsSvgResponse(${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}],
+                     //[['b', {}, 'Reference Id:'], t.domai], HERE WORKING HERE
+                    ]);
             default:
-                return super.renderView(ctx, v);
+                return super.renderView(ctx, t, v);
         }
     }
 
@@ -178,7 +180,8 @@ export class IntegerView extends ScalarView {
                 
                 break;
             default:
-                return super.renderView(ctx, v);
+                return ['div', {}, 'Integer editor not implemented yet'];
+                //return super.renderView(ctx, v);
                 
         }
     }
@@ -276,7 +279,7 @@ export class EnumView extends StringView {
             ?? panic(`enum ${this.field.name} missing options`)) as Record<string, string>);
     }
 
-    renderView(ctx: RenderCtx, v: any): Markup {
+    renderView(ctx: RenderCtx, t: TupleVersion, v: any): Markup {
         return this.choices[v] ?? String(v);
     }
 
@@ -322,7 +325,7 @@ export class VariantView extends EnumView {
             'mm-sf': 'mm-sf' };
     }
     
-    // renderView(ctx: RenderCtx, v: any): Markup {
+    // renderView(ctx: RenderCtx, t: TupleVersion, v: any): Markup {
     //     return v == null || v == '' ? '' : `(${String(v)})`;
     // }
 }
@@ -344,7 +347,7 @@ export class AudioView extends StringView {
     constructor(field: AudioField) { super(field); }
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitAudioView(this, a); }
 
-    renderView(ctx: RenderCtx, v: any): Markup {
+    renderView(ctx: RenderCtx, t: TupleVersion, v: any): Markup {
         // This should be values on the style $
         //return
         const label = 'Audio'; // XXX fix
@@ -610,7 +613,7 @@ export class RelationView extends View {
 
     renderScalarCell(ctx: RenderCtx, r: CurrentTupleQuery, v: ScalarView, t: TupleVersion, history: boolean=false): Markup {
         const value = (t.assertion as any)[v.field.bind]; // XXX fix typing
-        return v.renderView(ctx, value);
+        return v.renderView(ctx, t, value);
         // return ['span', {
         //     onclick:`activeViews().editTupleUpdate('${ctx.renderRootId}', '${r.schema.schema.tag}', '${r.schema.tag}', ${r.src.id})`},
         //         v.renderView(ctx, value)];

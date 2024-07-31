@@ -314,7 +314,7 @@ export class Eval {
         // }
         const obj = this.eval(s, e.object);
         let member = obj[propertyKey];
-
+        
         if(this.safeMode && !member[pubMarker])
             throw new Error(`attempt to access non-public property ${String(propertyKey)}`);
 
@@ -342,6 +342,8 @@ export class Eval {
     evalCallExpression(s: Scope, e: CallExpression): any {
         const callee = this.eval(s, e.callee)
         const args = this.evalArguments(s, e.arguments);
+        if(!(callee instanceof Function))
+            console.info('expected callee to be a function', typeof callee, callee, e);
         return callee(...args);
     }
 

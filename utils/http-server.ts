@@ -75,6 +75,7 @@ interface HttpServerConfig {
     port?: number,
     hostname?: string,
     contentdirs?: Record<string,string>;
+    contentfiles?: Record<string,string>;
 }
 
 /**

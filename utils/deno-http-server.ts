@@ -135,6 +135,12 @@ export class DenoHttpServer extends HttpServer {
      * up having lots of content directories.
      */
     matchContentFilePath(filepath: string): string|undefined {
+        //console.info('mapping content path', filepath, 'from', this.config.contentfiles);
+        if(this.config.contentfiles) {
+            const mappedPath = this.config.contentfiles[filepath];
+            if(mappedPath)
+                return mappedPath;
+        }
         if(this.config.contentdirs) {
             //console.info(this.config.contentdirs);
             for(const maybeFilePrefix of Object.keys(this.config.contentdirs)) {

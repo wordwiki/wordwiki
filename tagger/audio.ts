@@ -27,11 +27,13 @@ export async function forwardToCompressedRecording(srcRecordingPath: string): Pr
 /**
  *
  */
-export function renderAudio(recording: string, label: string): any {
+export function renderAudio(recording: string, label: string, hoverText: string|undefined=undefined, rootPath: string=''): any {
     return (async ()=>{
+        //console.info('in render audio', recording, label);
         try {
             let audioUrl = '';
             audioUrl = await getCompressedRecordingPath(recording);  // REMOVE_FOR_WEB
+            audioUrl = rootPath+audioUrl;
             return ['a',
                     {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`, href: audioUrl},
                     label]
