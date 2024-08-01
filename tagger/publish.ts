@@ -153,7 +153,7 @@ export class Publish {
         await Deno.mkdir(this.publishRoot, {recursive: true});
 
         // --- Publish home page
-        await this.publishItem('Home Page', this.publishHomePage());
+        await this.publishItem('Home Page', ()=>this.publishHomePage());
 
         // --- Publish all entries
         await this.publishEntries();
@@ -164,12 +164,15 @@ export class Publish {
 
     }
 
-    async publishItem(itemDesc: string, itemPromise: Promise<void>): Promise<void> {
+    async publishItem(itemDesc: string, itemPromise: ()=>Promise<void>): Promise<void> {
         let error: Error|undefined = undefined;
+        console.info(`publish ${itemDesc}`);
         try {
-            await itemPromise;
+            await (itemPromise());
         } catch(e) {
             error = e;
+        } finally {
+            console.timeEnd(`publish ${itemDesc}`);
         }
         if(error)
             this.status.errors.push(`${itemDesc}: ${error.toString()}`);
@@ -241,7 +244,7 @@ export class Publish {
     /**
      *
      */
-    renderEntryPublicLink(rootPath: string, e: Entry): any {
+    renderEntryPublicLink(rootPath: string, e: Entry, includeAudioLink: boolean=true): any {
         // TODO handle dialects here.
         const spellings = e.spelling.map(s=>s.text);
         const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
@@ -249,7 +252,7 @@ export class Publish {
         //console.info('SAMPLE RECORDING IS', spellings, sampleRecording);
         return [
             ['a', {href: rootPath+this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
-            sampleRecording ?
+            (includeAudioLink && sampleRecording) ?
                 audio.renderAudio(sampleRecording.recording, '🔉', undefined, rootPath) : [],
         ];
     }
@@ -260,7 +263,7 @@ export class Publish {
     async publishEntries(): Promise<void> {
         // TODO: filter for only published words
         for(const entry of this.entries) {
-            this.publishItem(`Entry ${this.getPublicIdForEntry(entry)}`, this.publishEntry(entry));
+            await this.publishItem(`Entry ${this.getPublicIdForEntry(entry)}`, ()=>this.publishEntry(entry));
         }
     }
     
@@ -273,10 +276,27 @@ export class Publish {
         const entryDir = this.dirForEntry(entry);
         await Deno.mkdir(entryDir, {recursive: true});
         const title = 'title';
-        const body:any[] = entryschema.renderEntry({rootPath}, entry);
-        const wordMarkup = this.publicPageTemplate(rootPath, {title, body});
-        //const wordMarkup = ['h1', {}, title];
-        await writePageFromMarkupIfChanged(entryPath, wordMarkup);
+        const entryMarkup:any[] = entryschema.renderEntry({rootPath}, entry);
+        // renderCategoriesForEntry here.
+
+        const entryCategories = entry.subentry.flatMap(s=>s.category.flatMap(c=>c.category));
+        const relatedCategoryMarkup =
+            entryCategories.map(category=>[
+                ['h3', {}, `Related entries for category "${category}"`],
+                ['div', {},
+                 ['ul', {},
+                  (this.wordWiki.entriesByCategory.get(category)??[])
+                      .map(e=>['li', {}, this.renderEntryPublicLink(rootPath, e, false)]),
+                 ] // ul
+                ] // div
+            ]);
+
+        const body = [
+            entryMarkup,
+            relatedCategoryMarkup,
+        ];
+                                
+        await writePageFromMarkupIfChanged(entryPath, this.publicPageTemplate(rootPath, {title, body}));
     }
 
 
@@ -316,7 +336,7 @@ export class Publish {
     async publishCategories(): Promise<void> {
         await Deno.mkdir(this.categoriesDir, {recursive: true});
         for(const category of this.wordWiki.getCategories().keys()) {
-            this.publishItem(`Category ${category}`, this.publishCategory(category));
+            await this.publishItem(`Category ${category}`, ()=>this.publishCategory(category));
         }
     }
     
@@ -325,7 +345,9 @@ export class Publish {
      */
     async publishCategory(category: string): Promise<void> {
 
-        const entriesForCategory = this.wordWiki.getEntriesForCategory(category);
+        //const entriesForCategory = this.wordWiki.getEntriesForCategory(category);
+        const entriesForCategory = this.wordWiki.entriesByCategory.get(category)??[];
+        
         const title = ['Entries for category ', category];
         
         const body = [

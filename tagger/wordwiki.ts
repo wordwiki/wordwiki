@@ -43,8 +43,10 @@ export class WordWiki {
     dictSchema: model.Schema;
     #workspace: VersionedDb|undefined = undefined;
     #entriesJSON: any|undefined = undefined;
+    #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
     #lastAllocatedTxTimestamp: number|undefined;
-
+    sourceLangCollator = Intl.Collator('en'); // TODO make configurable XXX
+    
     /**
      *
      */
@@ -108,9 +110,8 @@ export class WordWiki {
 
     requestEntriesJSONReload() {
         this.#entriesJSON = undefined;
+        this.#entriesByCategory = undefined;
     }
-
-
 
     applyTransactions(assertions: Assertion[]) {
 
@@ -542,13 +543,46 @@ export class WordWiki {
         throw new Error('not impl yetc');
     }
 
+    get entriesByCategory(): Map<string, entry.Entry[]> {
+        return this.#entriesByCategory ??= (()=>{
+            console.time('computing entriesByCategory');
+            const entriesByCategoryArray: [string, entry.Entry][]  = 
+                this.entriesJSON.flatMap(e=>e.subentry.flatMap(s=>
+                    s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
+
+            const entriesByCategory1: Map<string, [string, entry.Entry][]> =
+                Map.groupBy(entriesByCategoryArray, a=>a[0])
+
+            const entriesByCategory2: [string, entry.Entry[]][] =
+                Array.from(entriesByCategory1.entries()).map(([category, ent])=>
+                    [category, ent.map(e=>e[1])
+                        .toSorted((a: entry.Entry, b: entry.Entry) =>
+                            // TODO: pick spelling for sort better! (+locale etc)
+                            this.sourceLangCollator
+                                .compare((a.spelling[0]?.text)??'',
+                                         (b.spelling[0]?.text)??''))]);
+            
+            const entriesByCategory = new Map(entriesByCategory2);
+            
+            console.timeEnd('computing entriesByCategory');
+            return entriesByCategory;
+        })();
+    }
+
+    getEntriesForCategory(category: string): entry.Entry[] {
+        return category === '' ? [] :
+            this.entriesJSON.filter(
+                entry=>entry.subentry.some(
+                    subentry=>subentry.category.some(
+                        cat=>cat.category === category)));        
+    }
 
     getCategories(): Map<string, number> {
         return new Map(Array.from(Map.groupBy(this.entriesJSON.
             flatMap(e=>
                 e.subentry.flatMap(s=>
                     s.category.flatMap(c=>
-                        c.category))), e=>e)
+                        c.category))), category=>category)
             .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]));
     }
@@ -600,14 +634,6 @@ export class WordWiki {
                      ];
         
         return templates.pageTemplate({title, body});
-    }
-
-    getEntriesForCategory(category: string): entry.Entry[] {
-        return category === '' ? [] :
-            this.entriesJSON.filter(
-                entry=>entry.subentry.some(
-                    subentry=>subentry.category.some(
-                        cat=>cat.category === category)));        
     }
 
     entriesForCategory(category?: string): any {
