@@ -63,7 +63,8 @@ export const users = {
     'mch': 'Michel (Listuguj)',
     'mjp': 'Josephine (Wagmatcook)',
     'kjd': 'Kirsten (Eskasoni)',
-    'djz': 'David Ziegler'
+    'djz': 'David Ziegler',
+    'mmo': 'MMO Team',
 };
 
 export const states = {
@@ -98,6 +99,7 @@ export const dictSchemaJson = {
     $type: 'schema',
     $name: 'dict',
     $tag: DictTag,
+
     entry: {
         $type: 'relation',
         $tag: EntryTag,
@@ -113,6 +115,7 @@ export const dictSchemaJson = {
             variant: {$type: 'variant'},
             $style: { $shape: 'compactInlineListRelation' },
         },
+
         status: {
             $type: 'relation',
             $tag: StatusTag,
@@ -123,6 +126,7 @@ export const dictSchemaJson = {
             variant: {$type: 'variant'},
             $style: { $shape: 'compactInlineListRelation' },
         },
+
         todo: {
             $type: 'relation',
             $tag: TodoTag,
@@ -135,6 +139,7 @@ export const dictSchemaJson = {
             variant: {$type: 'variant'},
             $style: { $shape: 'compactInlineListRelation' },
         },
+
         note: {
             $type: 'relation',
             $tag: NoteTag,
@@ -142,6 +147,7 @@ export const dictSchemaJson = {
             note: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
             $style: { $shape: 'compactInlineListRelation' },
         },
+
         subentry: {
             $type: 'relation',
             $tag: SubentryTag,
@@ -150,6 +156,7 @@ export const dictSchemaJson = {
             $style: { $shape: 'containerRelation' },
             // probably should have variant here TODO
             // translation TODO
+
             translation: {
                 $type: 'relation',
                 $tag: TranslationTag,
@@ -158,6 +165,7 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'},
                 $style: { $shape: 'compactInlineListRelation' },
             },
+
             /*definition: {
                 $type: 'relation',
                 $tag: DefinitionTag,
@@ -181,6 +189,7 @@ export const dictSchemaJson = {
                 //      example to 'en', - so user does not need to be aware of this).
                 // - this is a low confusion item (the hard part is appling to example)
             },*/
+
             gloss: {
                 $type: 'relation',
                 $tag: GlossTag,
@@ -192,6 +201,7 @@ export const dictSchemaJson = {
                 // a different gloss for SF than LI?  How to model?
                 $style: { $shape: 'inlineListRelation' },
             },
+
             example: {
                 $type: 'relation',
                 $tag: ExampleTag,
@@ -214,6 +224,7 @@ export const dictSchemaJson = {
                 // Add target_loccale to the top level translatoin, and we are fine.
                 // (having one be privledged is a win to prevent drift, and have
                 // a more understandable model - can still to NxN pariings).
+
                 example_text: {
                     $type: 'relation',
                     $tag: ExampleTextTag,
@@ -263,6 +274,7 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'},
                 $style: { $shape: 'compactInlineListRelation' },
             },
+
             category: {
                 $type: 'relation',
                 $tag: CategoryTag,
@@ -271,6 +283,7 @@ export const dictSchemaJson = {
                 category: {$type: 'string', $bind: 'attr1'},
                 $style: { $shape: 'compactInlineListRelation' },
             },
+
             related_entry: {
                 $type: 'relation',
                 $tag: RelatedEntryTag,
@@ -287,6 +300,7 @@ export const dictSchemaJson = {
                 gloss: {$type: 'string', $bind: 'attr1'},
                 grammatical_form: {$type: 'string', $bind: 'attr2'},
                 $style: { $shape: 'containerRelation' },
+
                 alternate_form_text: {
                     $type: 'relation',
                     $tag: AlternateFormTextTag,
@@ -296,6 +310,7 @@ export const dictSchemaJson = {
                     $style: { $shape: 'inlineListRelation' },
                 },
             },
+
             other_regional_form: {
                 $type: 'relation',
                 $tag: OtherRegionalFormTag,
@@ -304,6 +319,7 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'},
                 $style: { $shape: 'inlineListRelation' },
             },
+
             picture: {
                 $type: 'relation',
                 $tag: PictureTag,
@@ -313,6 +329,7 @@ export const dictSchemaJson = {
                 credit: {$type: 'string', $bind: 'attr3'},
                 $style: { $shape: 'inlineListRelation' },
             },
+
             attr: {
                 $type: 'relation',
                 $tag: AttrTag,
@@ -322,6 +339,7 @@ export const dictSchemaJson = {
                 variant: {$type: 'variant'},
                 $style: { $shape: 'inlineListRelation' },
             },
+
             document_reference: {
                 $type: 'relation',
                 $tag: DocumentReferenceTag,
@@ -329,6 +347,7 @@ export const dictSchemaJson = {
                 bounding_group_id: {$type: 'integer', $bind: 'attr1',
                                     $style: { $shape: 'boundingGroup'}},
                 $style: { $shape: 'containerRelation' },
+
                 transcription: {
                     $type: 'relation',
                     $tag: RefTranscriptionTag,
@@ -336,6 +355,7 @@ export const dictSchemaJson = {
                     transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
                 expanded_transcription: {
                     $type: 'relation',
                     $tag: RefExpandedTranscriptionTag,
@@ -343,6 +363,7 @@ export const dictSchemaJson = {
                     expanded_transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
                 transliteration: {
                     $type: 'relation',
                     $tag: RefTransliterationTag,
@@ -351,6 +372,7 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
                 source_as_entry: {
                     $type: 'relation',
                     $tag: RefSourceAsEntryTag,
@@ -359,6 +381,7 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
                 normalized_source_as_entry: {
                     $type: 'relation',
                     $tag: RefNormalizedSourceAsEntryTag,
@@ -367,6 +390,7 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
                 foreign_reference: {
                     $type: 'relation',
                     $tag: RefForeignReferenceTag,
@@ -375,6 +399,7 @@ export const dictSchemaJson = {
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
                 note: {
                     $type: 'relation',
                     $tag: RefNoteTag,
@@ -383,6 +408,7 @@ export const dictSchemaJson = {
                     $style: { $shape: 'compactInlineListRelation' },
                 },
             },
+
             source: {
                 $type: 'relation',
                 $tag: SourceTag,
@@ -392,6 +418,7 @@ export const dictSchemaJson = {
                 $style: { $shape: 'inlineListRelation' },
             },
         },
+
         recording: {
             $type: 'relation',
             $tag: RecordingTag,
@@ -569,13 +596,17 @@ export interface Recording {
     variant: string,
 }
 
+export function isPublished(e: Entry): boolean {
+    return e.status.some(s=>s.status === 'Completed' || s.status === 'CompletedAsPDMOnly');
+}
+
 /**
  *
  */
 export function computeNormalizedSearchTerms(e: Entry): string[] {
     // XXX crap - fix, think harder etc.
     const spellings = e.spelling.map(s=>s.text).map(s=>s.replaceAll(/[^A-Za-z0-9_]/g, "_"));
-    const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss.replaceAll(/[^A-Za-z0-9_]/g, "_")));
+    const glosses = e.subentry.flatMap(se=>se.gloss.flatMap(gl=>gl.gloss.split(' ').map(word=>word.replaceAll(/[^A-Za-z0-9_]/g, "_"))));
     const allTermsAsAString = (spellings.join(' ')+' '+glosses.join(' ')).toLowerCase();
     const allTerms = allTermsAsAString.split(' ');
     return allTerms;
@@ -756,7 +787,7 @@ export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
     return [
         example.example_text.map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
         example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
-        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker}`, undefined, ctx.rootPath)])
+        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker} 🔉`, undefined, ctx.rootPath)])
     ];
 }
 
@@ -779,7 +810,7 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
     // XXX THE LINE with REMOVE_FOR_WEB is removed by transpile.sh so
     //     we don't try to pull client-side only deps on the web.
     let standaloneGroupRender: any = [];
-    standaloneGroupRender = renderStandaloneGroup(ref.bounding_group_id); // REMOVE_FOR_WEB
+    standaloneGroupRender = renderStandaloneGroup(ctx.rootPath, ref.bounding_group_id); // REMOVE_FOR_WEB
     const title = 'Title';
     let refUrl: string;
     try {

@@ -160,7 +160,7 @@ export function renderPageEditorByPageId(page_id: number,
 
         Array.from(boxesByGroup.keys()).map(bounding_group_id =>
             ['p', {},
-             renderStandaloneGroup(bounding_group_id)]
+             renderStandaloneGroup('/', bounding_group_id)]
                                            ),
             //config.bootstrapScriptTag,
 
@@ -343,7 +343,7 @@ export function renderPageJumper(cfg: PageEditorConfig, document_id: number, cur
     return [
         ['div', {}, 'Pages: ',
          targetPageNumbers.map(n=>
-             [['a', {href:`/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
+             [['a', {href:`/wordwiki/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
                      class: n===current_page_num?'current-page-jump':'page-jump'}, n],
               ' '])
         ]
@@ -634,12 +634,12 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
             cfg,
             {highlight_ref_bounding_box_ids: [bounding_box_id]});
 
-        const href=`/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
+        const href=`/wordwiki/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
         return [
             ['li', {},
              ['a', {href},
               text, ['br', {}],
-              renderStandaloneBoxes([
+              renderStandaloneBoxes('/', [
                   selectBoundingBox().required({bounding_box_id})])]]];
     }
 
@@ -681,7 +681,8 @@ export type SizedSvgMarkup =  ['svg',
 /**
  *
  */
-export function renderStandaloneGroupAsHtml(bounding_group_id: number,
+export function renderStandaloneGroupAsHtml(rootPath: string,
+                                            bounding_group_id: number,
                                             scale_factor:number=4,
                                             box_stroke:string = 'green'): any {
     const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
@@ -691,13 +692,14 @@ export function renderStandaloneGroupAsHtml(bounding_group_id: number,
     }
     const boxesByPage = utils.groupToMap(boxes, b=>b.page_id);
     return Array.from(boxesByPage.values()).map(
-        boxes=>['div', {}, renderStandaloneBoxes(boxes, scale_factor, box_stroke)]);
+        boxes=>['div', {}, renderStandaloneBoxes(rootPath, boxes, scale_factor, box_stroke)]);
 }
 
-export async function renderStandaloneGroupAsSvgResponse(bounding_group_id: number,
+export async function renderStandaloneGroupAsSvgResponse(rootPath: string,
+                                                         bounding_group_id: number,
                                                          scale_factor:number=4,
                                                          box_stroke:string = 'green'): Promise<Response> {
-    const svgMarkup = renderStandaloneGroup(bounding_group_id, scale_factor, box_stroke);
+    const svgMarkup = renderStandaloneGroup(rootPath, bounding_group_id, scale_factor, box_stroke);
     svgMarkup[1].xmlns="http://www.w3.org/2000/svg";
     const svgText = await asyncRenderToStringViaLinkeDOM(svgMarkup, false);
     const body = block`
@@ -723,7 +725,8 @@ export async function renderStandaloneGroupAsSvgResponse(bounding_group_id: numb
  *        for group spanning pages it is hard for the user to find all
  *        the parts of the group (does not come up much at present)
  */
-export function renderStandaloneGroup(bounding_group_id: number,
+export function renderStandaloneGroup(rootPath: string='',
+                                      bounding_group_id: number,
                                       scale_factor:number=4,
                                       box_stroke:string = 'green'): SizedSvgMarkup {
     const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
@@ -736,7 +739,7 @@ export function renderStandaloneGroup(bounding_group_id: number,
     //     space between clusters on the same page)
     const boxesByPage = utils.groupToMap(boxes, b=>b.page_id);
     const svgsByPage = Array.from(boxesByPage.values()).map(
-        boxes=>renderStandaloneBoxes(boxes, scale_factor, box_stroke));
+        boxes=>renderStandaloneBoxes(rootPath, boxes, scale_factor, box_stroke));
 
     // --- Layout the group renderings in a larger SVG
     //     (we are using SVG instead of html for this because when embedding
@@ -766,7 +769,8 @@ export function renderStandaloneGroup(bounding_group_id: number,
 /**
  *
  */
-export function renderStandaloneBoxes(boxes: BoundingBox[],
+export function renderStandaloneBoxes(rootPath: string,
+                                      boxes: BoundingBox[],
                                       scale_factor:number=4,
                                       box_stroke:string = 'green'): SizedSvgMarkup {
 
@@ -806,7 +810,7 @@ export function renderStandaloneBoxes(boxes: BoundingBox[],
              ])
         ];
 
-    const image = renderTiledImage(page.image_ref, page.width, page.height,
+    const image = renderTiledImage(rootPath, page.image_ref, page.width, page.height,
         -groupX, -groupY, groupWidth, groupHeight);
 
     return ['svg', {width:groupWidth/scale_factor, height:groupHeight/scale_factor,
@@ -824,7 +828,7 @@ export function renderWarningMessageAsSvg(message: string, width:number=240, hei
             ['text', {x:0, y:20, class: 'warning'}, message]];
 }
 
-export async function renderTiledImage(srcImagePath: string,
+export async function renderTiledImage(rootPath: string, srcImagePath: string,
                                        srcImageWidth: number, srcImageHeight: number,
                                        x: number, y: number, w: number, h: number,
                                        maxTileWidth=config.defaultTileWidth,
@@ -851,7 +855,7 @@ export async function renderTiledImage(srcImagePath: string,
                           top: tileY, bottom: tileY+tileHeight},
                          {left: -x, right: -x+w,
                           top: -y, bottom: -y+h})) {
-                const tileUrl = `/${tilesPath}/tile-${xidx}-${yidx}.jpg`
+                const tileUrl = `${rootPath}${tilesPath}/tile-${xidx}-${yidx}.jpg`
                 const tile = ['image',
                               {href: tileUrl,
                                x: x+tileX,

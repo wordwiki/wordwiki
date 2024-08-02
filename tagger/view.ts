@@ -245,6 +245,15 @@ export class StringView extends ScalarView {
     // -- write a loader that can get the value based on id.
     // -- before writing this, do the other end
     renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, input_id: string, v: any): Markup {
+        // if(this.field.name === 'transcription') {
+        //     const parentAssertionPath =
+        //         schema.parentAssertionPath(schema.getAssertionPath(editor.assertion));
+        //     const boundingGroup = editor.assertion.0; //ctx; // QUERY TO FIND BOUINDING GRUPO ID IN PARENT
+        //     return ['div', {}, 'TRANSSCRPTION'
+        //             ['object', {style: 'pointer-events: none;', data:`/wordwiki/renderStandaloneGroupAsSvgResponse(${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}]
+        //            ];
+        // }
+        
         return ['input', {type: 'text', /*placeholder: this.prompt,*/
                           size: this.field.style.$width ?? 30,
                           value: String(v??''),

@@ -62,7 +62,7 @@ export async function getCompressedRecordingPath(audioPath: string): Promise<str
  */
 async function compressAudioCmd(targetAudioPath: string, sourceAudioPath: string) {
     if(!await fileExists(sourceAudioPath))
-        throw new Error(`expected source audio ${sourceAudioPath} to exist`);
+        throw new Error(`expected source audio '${sourceAudioPath}' to exist`);
 
     const { code, stdout, stderr } = await new Deno.Command(
         config.lameEncPath, {

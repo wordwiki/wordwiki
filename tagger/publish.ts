@@ -83,7 +83,7 @@ export function publishStatus(joiningExistingPublish: boolean=false,
         (publishStatus.log.length > 0) ? [
             ['h2', {}, 'Recent Tasks'],
             ['ul', {},
-             publishStatus.log.slice(-20).map(e=>[
+             publishStatus.log.slice(-500).map(e=>[
                  ['li', {}, e]
              ])
             ]] : [],
@@ -113,7 +113,7 @@ export interface PublicPageContent {
 
 export function startPublish(): any {
     if(publishStatusSingleton.isRunning) {
-        return server.forwardResponse('/publishStatus(true)');
+        return server.forwardResponse('/wordwiki/publishStatus(true)');
     } else {
         (async ()=>{
             publishStatusSingleton.start();
@@ -121,7 +121,7 @@ export function startPublish(): any {
                 const wordWiki = getWordWiki();
                 const publish = new Publish(publishStatusSingleton,
                                             wordWiki,
-                                            wordWiki.entriesJSON);
+                                            wordWiki.publishedEntries);
                 await publish.publish();
             } catch (e) {
                 publishStatusSingleton.errors.push(e.toString());
@@ -130,7 +130,7 @@ export function startPublish(): any {
             }
             publishStatusSingleton.end();
         })();
-        return server.forwardResponse('/publishStatus(false)');
+        return server.forwardResponse('/wordwiki/publishStatus(false)');
     }
 }
 
@@ -154,25 +154,25 @@ export class Publish {
 
         // --- Publish home page
         await this.publishItem('Home Page', ()=>this.publishHomePage());
-
-        // --- Publish all entries
-        await this.publishEntries();
+        await this.publishItem('All Words Page', ()=>this.publishAllWordsPage());
+        await this.publishItem('About Us', ()=>this.publishAboutUsPage());
 
         // --- Publish categories
         await this.publishCategoriesDirectory();
         await this.publishCategories();
-
+        
+        // --- Publish all entries
+        await this.publishEntries();
     }
 
     async publishItem(itemDesc: string, itemPromise: ()=>Promise<void>): Promise<void> {
         let error: Error|undefined = undefined;
-        console.info(`publish ${itemDesc}`);
+        //console.info(`publish ${itemDesc}`);
         try {
             await (itemPromise());
         } catch(e) {
             error = e;
         } finally {
-            console.timeEnd(`publish ${itemDesc}`);
         }
         if(error)
             this.status.errors.push(`${itemDesc}: ${error.toString()}`);
@@ -204,13 +204,15 @@ export class Publish {
              ['h1', {}, title],
 
              // --- Search Box
-             ['form', {onsubmit:"updateCurrentSearchFromInput(); event.preventDefault();"},
-              ['label', {for:"search"}, 'Search:'],
-              ['input', {type:"text", size:"20",
-                         name:"search", id:"search", label:"Search", autofocus:"",
-                         placeholder:"Mi'gmaq or English Search",
-                         oninput:"updateCurrentSearchFromInput();"}],
-             ], // /form      
+             ['div', {class: 'public-search-box'},
+              ['form', {onsubmit:"updateCurrentSearchFromInput(); event.preventDefault();"},
+               ['label', {for:"search"}, ['strong', {}, 'Search: ']],
+               ['input', {type:"text", size:"20",
+                          name:"search", id:"search", label:"Search", autofocus:"",
+                          placeholder:"Mi'gmaq or English Search",
+                          oninput:"updateCurrentSearchFromInput();"}],
+              ], // /form
+             ], // /div
 
              // --- If we are returning to this page - restore the search from the fragment id in the URL
              ['script', {}, block`
@@ -224,8 +226,8 @@ export class Publish {
                ['li', {}, "Search results will update as you type (after the first 3 letters)."],
                ['li', {}, "Click on 🔉 to hear a recording of the word."],
                ['li', {}, "To do an exact word search, end the word with a space."],
-               ['li', {}, "You can use a * for parts of a word you do not want to spell."],
-               ['li', {}, "You can do searches with multiple words.  For example 'wild cat'."],
+               ['li', {}, "You can use a * for parts of a word you do not want to spell or are unsure of the spelling of."],
+               ['li', {}, "You can do searches that must match multiple words.  For example 'wild cat'."],
               ],
              ],
 
@@ -241,6 +243,109 @@ export class Publish {
         await writePageFromMarkupIfChanged(this.homePath, this.publicPageTemplate('', {title, head, body}));
     }
 
+    get allWordsPath(): string {
+        return this.publishRoot+'/all-words.html';
+    }
+    
+    async publishAllWordsPage(): Promise<void> {
+
+        const title = "All Words - Mi'gmaq/Mi'kmaq Online Talking Dictionary";
+        const body =
+            ['div', {},
+             ['h1', {}, title],
+
+             ['ul', {},
+              this.entries.map(entry=>[
+                  ['li', {class: 'def'},
+                   this.renderEntryPublicLink('./', entry)
+                  ]
+              ])
+             ]
+            ];
+        
+        await writePageFromMarkupIfChanged(this.allWordsPath,
+                                           this.publicPageTemplate('', {title, body}));
+    }
+
+    get aboutUsPath(): string {
+        return this.publishRoot+'/about-us.html';
+    }
+    
+    async publishAboutUsPage(): Promise<void> {
+
+        const title = "About Us - Mi'gmaq/Mi'kmaq Online Talking Dictionary";
+        const body =
+            ['div', {},
+             ['h1', {}, title],
+
+
+             // --- MMO info
+             ['h3', {}, 'The Project'],
+             
+             ['p', {}, "The talking dictionary project is developing an Internet resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase."],
+              
+             ['p', {}, "Thus far we have posted 6500 headwords, a majority of these entries include two to three additional forms."],
+
+             ['p', {}, "The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available."],
+
+             ['p', {}, "Each word is presented using the Listuguj orthography. The Smith-Francis orthography will be included in the future. Some spellings are speculative."],
+
+             ['p', {}, "Listuguj is in the Gespe'g territory of the Mi'gmaw; located on the southwest shore of the Gaspè peninsula."],
+
+             ['p', {}, "Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton."],
+             
+             ['h3', {}, 'Contact Us'],
+             ['p', {},
+              'Email:', ['a', {href:'mailto:info@mikmaqonline.org'}, 'info@mikmaqonline.org']],
+
+             ['h3', {}, 'Thanks'],
+
+             ['p', {}, "Ta'n te'sijig mimajuinu'g apoqonmugsieg ula ntlugowaqannen wesgo'tmeg we'gwiwela'lieg aq we'gwimi'watmuleg."],
+
+             ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
+
+             ['h3', {}, "We gratefully acknowledge the financial support of"],
+             ['ul', {},
+
+              ['li', {}, "Listuguj Mi'gmaq Government ",
+               ['a', {href: "https://www.listuguj.ca/"}, "https://www.listuguj.ca/"]],
+
+              ['li', {}, "Government of Canada ",
+               ['a', {href:"https://www.canada.ca/"}, "https://www.canada.ca/"]],
+              
+              ['li', {}, "Listuguj Education, Training & Employment (LED & LMDC) ",
+               ['a', {href:"https://www.lete.listuguj.ca/"}, "https://www.lete.listuguj.ca/"]],
+
+              ['li', {}, "First Nation's Educations Council (AFN, ALI) ",
+               ['a', {href:"https://www.cepn-fnec.ca/en"}, "https://www.cepn-fnec.ca/en"]],
+
+              ['li', {}, "The Canada Council ",
+               ['a', {href:"http://www.canadacouncil.ca"}, "http://www.canadacouncil.ca"]],
+
+              ['li', {}, "Atlantic Canada's First Nation Help Desk ",
+               ['a', {href:"http://firstnationhelp.com/"}, "http://firstnationhelp.com/"]]
+             ],
+
+             ['h3', {}, 'License'],
+             ['p', {}, ['a', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, "Creative Commons Attribution-NonCommercial 4.0 International"]],
+
+             ['h4', {},  'You are free to'],
+             ['ul', {},
+              ['li', {}, "Share — copy and redistribute the material in any medium or format"],
+              ['li', {}, "Adapt — remix, transform, and build upon the material"]],
+             ['p', {}, "The licensor cannot revoke these freedoms as long as you follow the license terms."],
+
+             ['h4', {}, 'Under the following terms'],
+             ['ul', {},
+              ['li', {}, "Attribution — You must give appropriate credit , provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use."],
+              ['li', {}, "NonCommercial — You may not use the material for commercial purposes."]
+             ]
+            ];
+        
+        await writePageFromMarkupIfChanged(this.aboutUsPath,
+                                           this.publicPageTemplate('', {title, body}));
+    }
+    
     /**
      *
      */
@@ -439,6 +544,7 @@ export class Publish {
               content.title !== undefined ? ['title', {}, content.title] : undefined,
               config.bootstrapCssLink,
               // TODO remove most of these css for the public side
+              ['link', {href: `${rootPath}resources/public.css`, rel:'stylesheet', type:'text/css'}],
               ['link', {href: `${rootPath}resources/instance.css`, rel:'stylesheet', type:'text/css'}],
               ['link', {href: `${rootPath}resources/page-editor.css`, rel:'stylesheet', type:'text/css'}],
               ['link', {href: `${rootPath}resources/context-menu.css`, rel:'stylesheet', type:'text/css'}],
@@ -499,13 +605,18 @@ export class Publish {
                 ], //li
 
                 ['li', {class:"nav-item"},
-                 ['a', {class:"nav-link", href:rootPath+this.homePath}, 'All Words'], // XXX FIX PATH XXX
+                 ['a', {class:"nav-link", href:rootPath+this.allWordsPath}, 'All Words'], // XXX FIX PATH XXX
                 ], //li
 
                 ['li', {class:"nav-item"},
-                 ['a', {class:"nav-link", href:rootPath}, 'About Us'], // FIX PATH XXX
+                 ['a', {class:"nav-link", href:'/wordwiki/'}, 'Editor'], // FIX PATH XXX
+                ], //li
+                
+                ['li', {class:"nav-item"},
+                 ['a', {class:"nav-link", href:rootPath+this.aboutUsPath}, 'About Us'], // FIX PATH XXX
                 ], //li
 
+                
 
 
 

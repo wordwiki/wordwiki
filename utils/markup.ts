@@ -415,6 +415,8 @@ function renderItemToJSDON(out: JSDON, item: any) {
 }
 
 function strIfPossible(v: any): string {
+    if(v instanceof Error)
+        return v.message;
     try {
         return String(v);
     } catch(e) {
@@ -424,7 +426,11 @@ function strIfPossible(v: any): string {
 
 function jsonStrIfPossible(v: any): string {
     try {
-        return JSON.stringify(v);
+        const jsonStr = JSON.stringify(v);
+        if(jsonStr.length > 500)
+            return jsonStr.substr(0, 500)+'...';
+        else
+            return jsonStr;
     } catch(e) {
         return '--';
     }

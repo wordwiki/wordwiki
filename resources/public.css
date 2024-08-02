@@ -1,0 +1,10 @@
+div.public-search-box {
+  /*margin-top: 1em;*/
+  /*margin-bottom: 1em;*/
+  margin: 1em;
+}
+
+div.public-search-box > form > label {
+  /*font-weight: heavy;*/
+  margin-right: 1em;
+}

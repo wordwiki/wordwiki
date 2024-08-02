@@ -42,8 +42,10 @@ export class WordWiki {
     routes: Record<string, any>;
     dictSchema: model.Schema;
     #workspace: VersionedDb|undefined = undefined;
-    #entriesJSON: any|undefined = undefined;
+    #entries: entry.Entry[]|undefined = undefined;
     #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
+    #publishedEntries: any|undefined = undefined;
+    #publishedEntriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
     #lastAllocatedTxTimestamp: number|undefined;
     sourceLangCollator = Intl.Collator('en'); // TODO make configurable XXX
     
@@ -100,19 +102,27 @@ export class WordWiki {
         this.requestEntriesJSONReload();
     }
 
+    requestEntriesJSONReload() {
+        this.#entries = undefined;
+        this.#entriesByCategory = undefined;
+        // This needs to be more complicated when publishing multiple dialects.
+        this.#publishedEntries = undefined;
+        this.#publishedEntriesByCategory = undefined;
+    }
+
     /**
      *
      */
-    get entriesJSON(): entry.Entry[] {
-        return this.#entriesJSON ??=
+    get entries(): entry.Entry[] {
+        return this.#entries ??=
             new workspace.CurrentTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry;
     }
 
-    requestEntriesJSONReload() {
-        this.#entriesJSON = undefined;
-        this.#entriesByCategory = undefined;
+    get publishedEntries(): entry.Entry[] {
+        return this.#publishedEntries ??=
+            Array.from(this.entries.filter(e=>entry.isPublished(e)));
     }
-
+    
     applyTransactions(assertions: Assertion[]) {
 
         // --- Partition assertions into txes by valid_from
@@ -283,7 +293,7 @@ export class WordWiki {
             is_popup_editor: true,
             locked_bounding_group_id: bounding_group_id,
         };
-        const taggerUrl = `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
+        const taggerUrl = `/wordwiki/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
 
         // --- Redirect the browser to the image tagger on this layer.
         return {location: taggerUrl};
@@ -340,13 +350,13 @@ export class WordWiki {
         console.info('created new assertion with id', entry_id);
 
         // --- Redirect the browser to the image tagger on this layer.
-        return {location: `/wordwiki.entry(${entry_id})`};
+        return {location: `/wordwiki/wordwiki.entry(${entry_id})`};
     }
 
 
     // entry_old(entryId: number): any {
 
-    //     const e = this.entriesJSON
+    //     const e = this.entries
     //         .filter(entry=>entry.entry_id === entryId)[0];
 
     //     if(!e) {
@@ -388,17 +398,17 @@ export class WordWiki {
             ['br', {}],
             ['h3', {}, 'Reports'],
             ['ul', {},
-             ['li', {}, ['a', {href:'/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-             ['li', {}, ['a', {href:'/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
+             ['li', {}, ['a', {href:'/wordwiki/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
+             ['li', {}, ['a', {href:'/wordwiki/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
             ],
 
             ['br', {}],
             ['h3', {}, 'Reference Books'],
             ['ul', {},
-             ['li', {}, ['a', {href:`/pageEditor("PDM")`}, 'PDM']],
-             ['li', {}, ['a', {href:`/pageEditor("Rand")`}, 'Rand']],
-             ['li', {}, ['a', {href:`/pageEditor("Clark")`}, 'Clark']],
-             ['li', {}, ['a', {href:`/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
+             ['li', {}, ['a', {href:`/wordwiki/pageEditor("PDM")`}, 'PDM']],
+             ['li', {}, ['a', {href:`/wordwiki/pageEditor("Rand")`}, 'Rand']],
+             ['li', {}, ['a', {href:`/wordwiki/pageEditor("Clark")`}, 'Clark']],
+             ['li', {}, ['a', {href:`/wordwiki/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
         ];
 
         return templates.pageTemplate({title, body});
@@ -406,7 +416,7 @@ export class WordWiki {
 
     searchForm(search?: string): any {
         return [
-            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki.searchPage(query)'},
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki/wordwiki.searchPage(query)'},
 
              // --- Search text row
              ['div', {class:'col-12'},
@@ -427,7 +437,7 @@ export class WordWiki {
 
     searchPage(query?: {searchText?: string}): any {
 
-        //console.info('ENTRIES', this.entriesJSON);
+        //console.info('ENTRIES', this.entries);
 
         const rawSearch = String(query?.searchText ?? '');
 
@@ -454,7 +464,7 @@ export class WordWiki {
         let matches: entry.Entry[] = [];
         if (search !== '') {
             const matchesSet:Set<entry.Entry> = new Set();
-            for(const entry of this.entriesJSON) {
+            for(const entry of this.entries) {
                 for(const spelling of entry.spelling) {
                     if(searchRegex.test(spelling.text))
                         matchesSet.add(entry);
@@ -468,7 +478,7 @@ export class WordWiki {
             }
             matches = Array.from(matchesSet.values());
         } else {
-            matches = this.entriesJSON;
+            matches = this.entries;
         }
 
         // if(filters.length > 0) {
@@ -479,7 +489,7 @@ export class WordWiki {
 
 
         // const entriesWithHouseGloss = search === '' ? [] :
-        //     this.entriesJSON.filter(
+        //     this.entries.filter(
         //         entry=>entry.subentry.some(
         //             subentry=>subentry.gloss.some(
         //                 gloss=>gloss.gloss.startsWith(search))));
@@ -496,7 +506,7 @@ export class WordWiki {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -520,7 +530,7 @@ export class WordWiki {
 
     searchDocumentsForm(search?: string): any {
         return [
-            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki.searchDocumentsPage(query)'},
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki/wordwiki.searchDocumentsPage(query)'},
 
              // --- Search text row
              ['div', {class:'col-12'},
@@ -547,7 +557,7 @@ export class WordWiki {
         return this.#entriesByCategory ??= (()=>{
             console.time('computing entriesByCategory');
             const entriesByCategoryArray: [string, entry.Entry][]  = 
-                this.entriesJSON.flatMap(e=>e.subentry.flatMap(s=>
+                this.publishedEntries.flatMap(e=>e.subentry.flatMap(s=>
                     s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
 
             const entriesByCategory1: Map<string, [string, entry.Entry][]> =
@@ -571,14 +581,14 @@ export class WordWiki {
 
     getEntriesForCategory(category: string): entry.Entry[] {
         return category === '' ? [] :
-            this.entriesJSON.filter(
+            this.publishedEntries.filter(
                 entry=>entry.subentry.some(
                     subentry=>subentry.category.some(
                         cat=>cat.category === category)));        
     }
 
     getCategories(): Map<string, number> {
-        return new Map(Array.from(Map.groupBy(this.entriesJSON.
+        return new Map(Array.from(Map.groupBy(this.publishedEntries.
             flatMap(e=>
                 e.subentry.flatMap(s=>
                     s.category.flatMap(c=>
@@ -595,7 +605,7 @@ export class WordWiki {
             ['ul', {},
              Array.from(this.getCategories().entries()).map(cat=>
                  ['li', {}, ['a',
-                             {href:`/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
+                             {href:`/wordwiki/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
                              cat[0], ` (${cat[1]} entries)`]]),
             ]
         ];
@@ -624,7 +634,7 @@ export class WordWiki {
         }
 
         const variants = new Set<string>();
-        this.entriesJSON.forEach(entry=>findAllVariantFieldValues(entry, entry, variants));
+        this.entries.forEach(entry=>findAllVariantFieldValues(entry, entry, variants));
         
         const title = 'Variant Report';
         const body = ['div', {}, 'Variant report',
@@ -644,7 +654,7 @@ export class WordWiki {
         
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -666,7 +676,7 @@ export class WordWiki {
     // entriesByStatusDirectory(): any {
     //     const title = `Entries By Status`;
 
-    //     const cats: [string, number][] = Array.from(Map.groupBy(this.entriesJSON.
+    //     const cats: [string, number][] = Array.from(Map.groupBy(this.entries.
     //         flatMap(e=>
     //             e.status.flatMap(s=>s.status))), e=>e)
     //             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
@@ -677,7 +687,7 @@ export class WordWiki {
     //         ['ul', {},
     //          cats.map(cat=>
     //              ['li', {}, ['a',
-    //                          {href:`/wordwiki.entriesForStatus(${JSON.stringify(cat[0])})`},
+    //                          {href:`/wordwiki/wordwiki.entriesForStatus(${JSON.stringify(cat[0])})`},
     //                          cat[0], ` (${cat[1]} entries)`]]),
     //         ]
     //     ];
@@ -689,14 +699,14 @@ export class WordWiki {
         status = String(status ?? '');
 
         const entriesForStatus = status === '' ? [] :
-            this.entriesJSON.filter(
+            this.entries.filter(
                 entry=>entry.status.some(
                     s=>s.status === status));
         const title = ['Entries for status ', status];
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -724,7 +734,7 @@ export class WordWiki {
         const title = `Entries With empty example translation`;
 
         const entriesWithProblem =
-            this.entriesJSON.filter(
+            this.entries.filter(
                 entry=>entry.subentry.some(
                     subentry=>subentry.example.some(
                         example=>example.example_translation.some(
@@ -732,7 +742,7 @@ export class WordWiki {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -782,7 +792,7 @@ export class WordWiki {
             ['ul', {},
              entryCountByPage.map(c=>
                  ['li', {},
-                  ['a', {href:`wordwiki.entriesByPDMPage(${c.page_number})`},
+                  ['a', {href:`/wordwiki/wordwiki.entriesByPDMPage(${c.page_number})`},
                    `PDM page ${c.page_number} has ${c.entry_count} entries`]
                  ])
             ]
@@ -837,7 +847,7 @@ export class WordWiki {
 
         console.info('entriesForPageInDocRefOrder', entriesInDocRefOrder);
 
-        const entriesById = new Map(this.entriesJSON.map(entry=>[entry.entry_id, entry]));
+        const entriesById = new Map(this.entries.map(entry=>[entry.entry_id, entry]));
 
         function renderRef(ref: {bounding_group_id: number, entry_id: number}): any {
             const e = entriesById.get(ref.entry_id)
@@ -846,8 +856,8 @@ export class WordWiki {
                 .find(r=>ref.bounding_group_id === r.bounding_group_id)
                 ?? panic('unable to find reference', ref.bounding_group_id);
             return [
-                renderStandaloneGroup(ref.bounding_group_id),
-                ['a', {href: `/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)],
+                renderStandaloneGroup('/', ref.bounding_group_id),
+                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)],
                 ['table', {},
                  ['tbody', {},
                   r.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),
@@ -873,8 +883,10 @@ export class WordWiki {
         console.info('Starting wordwiki server');
 
         const contentdirs = {
-            '/resources/': await findResourceDir('resources')+'/',
-            '/scripts/': await findResourceDir('web-build')+'/',
+            // '/resources/': await findResourceDir('resources')+'/',
+            // '/scripts/': await findResourceDir('web-build')+'/',
+            '/resources/': 'resources/', 
+            '/scripts/': 'scripts/',
             '/entries/': 'entries/',
             '/categories/': 'categories/',
             '/content/': 'content/',
@@ -882,6 +894,8 @@ export class WordWiki {
 
         const contentfiles = {
             '/index.html': 'index.html',
+            '/all-words.html': 'all-words.html',
+            '/about-us.html': 'about-us.html',
             '/categories.html': 'categories.html',
         };
         await new DenoHttpServer({port: config.port,
@@ -925,6 +939,7 @@ export class WordWiki {
             return workspace.workspaceRpcAndSync(bodyParms as workspace.WorkspaceRpcAndSyncRequest);
         } else {
             let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
+            jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'wordwiki/')
             switch(jsExprSrc) { // XXX HACK - move to better place
                 case '':
                     jsExprSrc = 'wordwiki.home()';
