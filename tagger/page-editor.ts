@@ -1204,7 +1204,7 @@ async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]) {
 
     // --- Make the request with expr as the URL and the
     //     args json as the post body.
-    const request = await new Request('/wordwiki/'+rpcExpr, {
+    const request = await new Request('/ww/'+rpcExpr, {
         method: "POST",
         body: JSON.stringify(argsObj)});
 

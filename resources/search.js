@@ -126,11 +126,11 @@ function computeSelectorForSearch(search) {
         selector = 'li';
     
         if(fullWordTerms.length > 0)
-            selector += '.'+fullWordTerms.map(t=>normalizeSearchWord(t)).join('.');
+            selector += '._'+fullWordTerms.map(t=>normalizeSearchWord(t)).join('._');
 
         if(finalTerm != null) {
             let expandedFinalTerm = expandSearch(finalTerm, fullWordTerms.length>0?1:3);
-            selector = expandedFinalTerm.map(s=>selector+'.'+s).join(', ');
+            selector = expandedFinalTerm.map(s=>selector+'._'+s).join(', ');
         }
     
         if(!selector)

@@ -161,6 +161,31 @@ export class DenoHttpServer extends HttpServer {
         }
         return undefined;
     }
+
+    /**
+     * Returns a request handler if the request path matches one of
+     * the configured request handler prefixes.
+     *
+     * Uses a linear search - will have to do something fancier if we end
+     * up having lots of request directories.
+     */
+    matchRequestHandlerPath(path: string): ((request: server.Request) => Promise<server.Response>)|undefined {
+        //console.info('mapping content path', filepath, 'from', this.config.contentfiles);
+        if(!this.config.requestHandlerPaths)
+            return undefined;
+        
+        //console.info(this.config.contentdirs);
+        for(const maybeFilePrefix of Object.keys(this.config.requestHandlerPaths)) {
+            if(path.startsWith(maybeFilePrefix)) {
+
+                if(!maybeFilePrefix.endsWith('/'))
+                    throw new Error(`request dir paths must end in / : "${maybeFilePrefix}"`);
+                return this.config.requestHandlerPaths[maybeFilePrefix];
+            }
+        }
+
+        return undefined;
+    }
     
     async serveFileRequest(requestEvent: Deno.RequestEvent, filepath: string) {
         //console.info('serving file request', filepath);

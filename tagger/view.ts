@@ -141,9 +141,9 @@ export class IntegerView extends ScalarView {
                     return ['div', {}, `ERROR: malformed bounding group ${v}`];
                 const boundingGroup: number = v;
                 return (
-                    ['div', {onclick:`event.stopPropagation(); window.open('/forwardToSingleBoundingGroupEditorURL(${boundingGroup}, null)')`},
+                    ['div', {onclick:`event.stopPropagation(); window.open('/ww/forwardToSingleBoundingGroupEditorURL(${boundingGroup}, null)')`},
                      //['div', {}, `bounding group id ${boundingGroup} ${typeof boundingGroup}`],
-                     ['object', {style: 'pointer-events: none;', data:`/renderStandaloneGroupAsSvgResponse(${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}],
+                     ['object', {style: 'pointer-events: none;', data:`/ww/renderStandaloneGroupAsSvgResponse('/', ${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}],
                      //[['b', {}, 'Reference Id:'], t.domai], HERE WORKING HERE
                     ]);
             default:
@@ -250,7 +250,7 @@ export class StringView extends ScalarView {
         //         schema.parentAssertionPath(schema.getAssertionPath(editor.assertion));
         //     const boundingGroup = editor.assertion.0; //ctx; // QUERY TO FIND BOUINDING GRUPO ID IN PARENT
         //     return ['div', {}, 'TRANSSCRPTION'
-        //             ['object', {style: 'pointer-events: none;', data:`/wordwiki/renderStandaloneGroupAsSvgResponse(${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}]
+        //             ['object', {style: 'pointer-events: none;', data:`/ww/renderStandaloneGroupAsSvgResponse('', ${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}]
         //            ];
         // }
         

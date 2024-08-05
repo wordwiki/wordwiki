@@ -113,7 +113,7 @@ export interface PublicPageContent {
 
 export function startPublish(): any {
     if(publishStatusSingleton.isRunning) {
-        return server.forwardResponse('/wordwiki/publishStatus(true)');
+        return server.forwardResponse('/ww/publishStatus(true)');
     } else {
         (async ()=>{
             publishStatusSingleton.start();
@@ -130,7 +130,7 @@ export function startPublish(): any {
             }
             publishStatusSingleton.end();
         })();
-        return server.forwardResponse('/wordwiki/publishStatus(false)');
+        return server.forwardResponse('/ww/publishStatus(false)');
     }
 }
 
@@ -233,7 +233,7 @@ export class Publish {
 
              ['ul', {},
               this.entries.map(entry=>[
-                  ['li', {class:entryschema.computeNormalizedSearchTerms(entry).join(' ')+' def'},
+                  ['li', {class:entryschema.computeNormalizedSearchTerms(entry).map(term=>'_'+term).join(' ')+' def'},
                    this.renderEntryPublicLink('./', entry)
                   ]
               ])
@@ -327,19 +327,19 @@ export class Publish {
              ],
 
              ['h3', {}, 'License'],
-             ['p', {}, ['a', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, "Creative Commons Attribution-NonCommercial 4.0 International"]],
+             ['p', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, "Creative Commons Attribution-NonCommercial 4.0 International"],
 
-             ['h4', {},  'You are free to'],
-             ['ul', {},
-              ['li', {}, "Share — copy and redistribute the material in any medium or format"],
-              ['li', {}, "Adapt — remix, transform, and build upon the material"]],
-             ['p', {}, "The licensor cannot revoke these freedoms as long as you follow the license terms."],
+             // ['h4', {},  'You are free to'],
+             // ['ul', {},
+             //  ['li', {}, "Share — copy and redistribute the material in any medium or format"],
+             //  ['li', {}, "Adapt — remix, transform, and build upon the material"]],
+             // ['p', {}, "The licensor cannot revoke these freedoms as long as you follow the license terms."],
 
-             ['h4', {}, 'Under the following terms'],
-             ['ul', {},
-              ['li', {}, "Attribution — You must give appropriate credit , provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use."],
-              ['li', {}, "NonCommercial — You may not use the material for commercial purposes."]
-             ]
+             // ['h4', {}, 'Under the following terms'],
+             // ['ul', {},
+             //  ['li', {}, "Attribution — You must give appropriate credit , provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use."],
+             //  ['li', {}, "NonCommercial — You may not use the material for commercial purposes."]
+             // ]
             ];
         
         await writePageFromMarkupIfChanged(this.aboutUsPath,
@@ -609,7 +609,7 @@ export class Publish {
                 ], //li
 
                 ['li', {class:"nav-item"},
-                 ['a', {class:"nav-link", href:'/wordwiki/'}, 'Editor'], // FIX PATH XXX
+                 ['a', {class:"nav-link", href:'/ww/'}, 'Editor'], // FIX PATH XXX
                 ], //li
                 
                 ['li', {class:"nav-item"},
@@ -638,7 +638,7 @@ export class Publish {
                ], //ul
 
                // // Search form
-               // ['form', {class:"d-flex", role:"search", method:'get', action:'/wordwiki.searchPage(query)'},
+               // ['form', {class:"d-flex", role:"search", method:'get', action:'/ww/wordwiki.searchPage(query)'},
                //  ['input', {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
                //  ['button', {class:"btn btn-outline-success", type:"submit"}, 'Search'],
                // ], //form

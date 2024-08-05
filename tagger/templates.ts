@@ -82,7 +82,7 @@ export function navBar(): any {
     return [
         ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
          ['div', {class:"container-fluid"},
-          ['a', {class:"navbar-brand", href:"/wordwiki/"}, 'MMO Editor'],
+          ['a', {class:"navbar-brand", href:"/ww/"}, 'MMO Editor'],
           ['button', {class:"navbar-toggler", type:"button", 'data-bs-toggle':"collapse", 'data-bs-target':"#navbarSupportedContent", 'aria-controls':"navbarSupportedContent", 'aria-expanded':"false", 'aria-label':"Toggle navigation"},
            ['span', {class:"navbar-toggler-icon"}],
           ], //button
@@ -91,7 +91,7 @@ export function navBar(): any {
            ['ul', {class:"navbar-nav me-auto mb-2 mb-lg-0"},
 
             ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", href:"/wordwiki/wordwiki.categoriesDirectory()"}, 'Categories'],
+             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Categories'],
             ], //li
 
             // --- Reference Books
@@ -100,10 +100,10 @@ export function navBar(): any {
               'Reference Books'
              ], //a
              ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/pageEditor("PDM")'}, 'PDM']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/pageEditor("Rand")'}, 'Rand']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/pageEditor("Clark")'}, 'Clark']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PDM")'}, 'PDM']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Rand")'}, 'Rand']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Clark")'}, 'Clark']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
               //['li', {}, ['hr', {class:"dropdown-divider"}]],
               //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
              ], //ul
@@ -115,8 +115,8 @@ export function navBar(): any {
               'Reports'
              ], //a
              ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
              ], //ul
             ], //li
 
@@ -126,7 +126,7 @@ export function navBar(): any {
               'Admin'
              ], //a
              ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/wordwiki/startPublish()'}, 'Publish']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/startPublish()'}, 'Publish']],
              ], //ul
             ], //li
             
@@ -146,7 +146,7 @@ export function navBar(): any {
            ], //ul
 
            // Search form
-           ['form', {class:"d-flex", role:"search", method:'get', action:'/wordwiki.searchPage(query)'},
+           ['form', {class:"d-flex", role:"search", method:'get', action:'/ww/wordwiki.searchPage(query)'},
             ['input', {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
             ['button', {class:"btn btn-outline-success", type:"submit"}, 'Search'],
            ], //form

@@ -343,7 +343,7 @@ export function renderPageJumper(cfg: PageEditorConfig, document_id: number, cur
     return [
         ['div', {}, 'Pages: ',
          targetPageNumbers.map(n=>
-             [['a', {href:`/wordwiki/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
+             [['a', {href:`/ww/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
                      class: n===current_page_num?'current-page-jump':'page-jump'}, n],
               ' '])
         ]
@@ -634,7 +634,7 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
             cfg,
             {highlight_ref_bounding_box_ids: [bounding_box_id]});
 
-        const href=`/wordwiki/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
+        const href=`/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
         return [
             ['li', {},
              ['a', {href},
@@ -704,7 +704,7 @@ export async function renderStandaloneGroupAsSvgResponse(rootPath: string,
     const svgText = await asyncRenderToStringViaLinkeDOM(svgMarkup, false);
     const body = block`
 /**/<?xml version="1.0"?>
-/**/<?xml-stylesheet href="resources/page-editor.css" ?>
+/**/<?xml-stylesheet href="/resources/page-editor.css" ?>
 /**/${svgText}`;
     console.info('SVG BODY', body);
     return {

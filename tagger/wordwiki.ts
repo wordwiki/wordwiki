@@ -293,7 +293,7 @@ export class WordWiki {
             is_popup_editor: true,
             locked_bounding_group_id: bounding_group_id,
         };
-        const taggerUrl = `/wordwiki/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
+        const taggerUrl = `/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
 
         // --- Redirect the browser to the image tagger on this layer.
         return {location: taggerUrl};
@@ -350,7 +350,7 @@ export class WordWiki {
         console.info('created new assertion with id', entry_id);
 
         // --- Redirect the browser to the image tagger on this layer.
-        return {location: `/wordwiki/wordwiki.entry(${entry_id})`};
+        return {location: `/ww/wordwiki.entry(${entry_id})`};
     }
 
 
@@ -398,17 +398,17 @@ export class WordWiki {
             ['br', {}],
             ['h3', {}, 'Reports'],
             ['ul', {},
-             ['li', {}, ['a', {href:'/wordwiki/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-             ['li', {}, ['a', {href:'/wordwiki/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
+             ['li', {}, ['a', {href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
             ],
 
             ['br', {}],
             ['h3', {}, 'Reference Books'],
             ['ul', {},
-             ['li', {}, ['a', {href:`/wordwiki/pageEditor("PDM")`}, 'PDM']],
-             ['li', {}, ['a', {href:`/wordwiki/pageEditor("Rand")`}, 'Rand']],
-             ['li', {}, ['a', {href:`/wordwiki/pageEditor("Clark")`}, 'Clark']],
-             ['li', {}, ['a', {href:`/wordwiki/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
+             ['li', {}, ['a', {href:`/ww/pageEditor("PDM")`}, 'PDM']],
+             ['li', {}, ['a', {href:`/ww/pageEditor("Rand")`}, 'Rand']],
+             ['li', {}, ['a', {href:`/ww/pageEditor("Clark")`}, 'Clark']],
+             ['li', {}, ['a', {href:`/ww/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
         ];
 
         return templates.pageTemplate({title, body});
@@ -416,7 +416,7 @@ export class WordWiki {
 
     searchForm(search?: string): any {
         return [
-            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki/wordwiki.searchPage(query)'},
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/ww/wordwiki.searchPage(query)'},
 
              // --- Search text row
              ['div', {class:'col-12'},
@@ -506,7 +506,7 @@ export class WordWiki {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -530,7 +530,7 @@ export class WordWiki {
 
     searchDocumentsForm(search?: string): any {
         return [
-            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/wordwiki/wordwiki.searchDocumentsPage(query)'},
+            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/ww/wordwiki.searchDocumentsPage(query)'},
 
              // --- Search text row
              ['div', {class:'col-12'},
@@ -605,7 +605,7 @@ export class WordWiki {
             ['ul', {},
              Array.from(this.getCategories().entries()).map(cat=>
                  ['li', {}, ['a',
-                             {href:`/wordwiki/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
+                             {href:`/ww/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
                              cat[0], ` (${cat[1]} entries)`]]),
             ]
         ];
@@ -654,7 +654,7 @@ export class WordWiki {
         
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -687,7 +687,7 @@ export class WordWiki {
     //         ['ul', {},
     //          cats.map(cat=>
     //              ['li', {}, ['a',
-    //                          {href:`/wordwiki/wordwiki.entriesForStatus(${JSON.stringify(cat[0])})`},
+    //                          {href:`/ww/wordwiki.entriesForStatus(${JSON.stringify(cat[0])})`},
     //                          cat[0], ` (${cat[1]} entries)`]]),
     //         ]
     //     ];
@@ -706,7 +706,7 @@ export class WordWiki {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -742,7 +742,7 @@ export class WordWiki {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
             ];
         }
 
@@ -792,7 +792,7 @@ export class WordWiki {
             ['ul', {},
              entryCountByPage.map(c=>
                  ['li', {},
-                  ['a', {href:`/wordwiki/wordwiki.entriesByPDMPage(${c.page_number})`},
+                  ['a', {href:`/ww/wordwiki.entriesByPDMPage(${c.page_number})`},
                    `PDM page ${c.page_number} has ${c.entry_count} entries`]
                  ])
             ]
@@ -857,7 +857,7 @@ export class WordWiki {
                 ?? panic('unable to find reference', ref.bounding_group_id);
             return [
                 renderStandaloneGroup('/', ref.bounding_group_id),
-                ['a', {href: `/wordwiki/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)],
+                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)],
                 ['table', {},
                  ['tbody', {},
                   r.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),
@@ -939,7 +939,7 @@ export class WordWiki {
             return workspace.workspaceRpcAndSync(bodyParms as workspace.WorkspaceRpcAndSyncRequest);
         } else {
             let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-            jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'wordwiki/')
+            jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'ww/')
             switch(jsExprSrc) { // XXX HACK - move to better place
                 case '':
                     jsExprSrc = 'wordwiki.home()';

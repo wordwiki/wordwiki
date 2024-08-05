@@ -76,6 +76,7 @@ interface HttpServerConfig {
     hostname?: string,
     contentdirs?: Record<string,string>;
     contentfiles?: Record<string,string>;
+    requestHandlerPaths?: Record<string, (request: Request) => Promise<Response>>;
 }
 
 /**
