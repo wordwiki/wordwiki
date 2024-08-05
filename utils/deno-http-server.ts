@@ -50,13 +50,17 @@ export class DenoHttpServer extends HttpServer {
     }
 
     async serveRequest(requestEvent: Deno.RequestEvent) {
-        let denoRequest = requestEvent.request;
-        const headers = Object.fromEntries(denoRequest.headers.entries());
-        const contentType = headers['content-type'];
+        //let denoRequest = requestEvent.request;
+        //const headers = Object.fromEntries(denoRequest.headers.entries());
+        //const contentType = headers['content-type'];
         //console.info(headers);
-
         const url = new URL(requestEvent.request.url);
         const filepath = decodeURIComponent(url.pathname);
+
+        const requestHandler = this.matchRequestHandlerPath(filepath);
+        if(requestHandler)
+            return this.serveHandlerRequest(requestEvent, requestHandler);
+        
 
         // --- If the path resolves to a content file path, serve that directly
         const resolvedContentFilePath = this.matchContentFilePath(filepath);
@@ -64,7 +68,17 @@ export class DenoHttpServer extends HttpServer {
             //console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
             return this.serveFileRequest(requestEvent, resolvedContentFilePath);
         }
-    
+
+        return server.htmlResponse(`No handler for path: ${String(filepath)}`, 404);
+    }
+
+    async serveHandlerRequest(requestEvent: Deno.RequestEvent,
+                              requestHandler: (request: server.Request) => Promise<server.Response>) {
+   
+        let denoRequest = requestEvent.request;
+        const headers = Object.fromEntries(denoRequest.headers.entries());
+        const contentType = headers['content-type'];
+
         let body: any;
         switch (true) {
             // case !denoRequest.bodyUsed:
@@ -97,7 +111,7 @@ export class DenoHttpServer extends HttpServer {
         };
         let titan1cResponse: server.Response;
         try {
-            titan1cResponse = await this.requestHandler(titan1cRequest);
+            titan1cResponse = await requestHandler(titan1cRequest);
         } catch(e) {
             // Want error response to be dependent on the desired content type XXX
             console.info('ERROR', e);
@@ -125,8 +139,33 @@ export class DenoHttpServer extends HttpServer {
 //                 status: 200,
 //             }),
 //         );
-    }
+    }        
+    
+    /**
+     * Returns a request handler if the request path matches one of
+     * the configured request handler prefixes.
+     *
+     * Uses a linear search - will have to do something fancier if we end
+     * up having lots of request directories.
+     */
+    matchRequestHandlerPath(path: string): ((request: server.Request) => Promise<server.Response>)|undefined {
+        //console.info('mapping content path', filepath, 'from', this.config.contentfiles);
+        if(!this.config.requestHandlerPaths)
+            return undefined;
+        
+        //console.info(this.config.contentdirs);
+        for(const maybeFilePrefix of Object.keys(this.config.requestHandlerPaths)) {
+            if(path.startsWith(maybeFilePrefix)) {
 
+                if(!maybeFilePrefix.endsWith('/'))
+                    throw new Error(`request dir paths must end in / : "${maybeFilePrefix}"`);
+                return this.config.requestHandlerPaths[maybeFilePrefix];
+            }
+        }
+
+        return undefined;
+    }
+    
     /**
      * Returns the translated filepath if the request path matches one of
      * the configured content path rewrites.
@@ -162,31 +201,6 @@ export class DenoHttpServer extends HttpServer {
         return undefined;
     }
 
-    /**
-     * Returns a request handler if the request path matches one of
-     * the configured request handler prefixes.
-     *
-     * Uses a linear search - will have to do something fancier if we end
-     * up having lots of request directories.
-     */
-    matchRequestHandlerPath(path: string): ((request: server.Request) => Promise<server.Response>)|undefined {
-        //console.info('mapping content path', filepath, 'from', this.config.contentfiles);
-        if(!this.config.requestHandlerPaths)
-            return undefined;
-        
-        //console.info(this.config.contentdirs);
-        for(const maybeFilePrefix of Object.keys(this.config.requestHandlerPaths)) {
-            if(path.startsWith(maybeFilePrefix)) {
-
-                if(!maybeFilePrefix.endsWith('/'))
-                    throw new Error(`request dir paths must end in / : "${maybeFilePrefix}"`);
-                return this.config.requestHandlerPaths[maybeFilePrefix];
-            }
-        }
-
-        return undefined;
-    }
-    
     async serveFileRequest(requestEvent: Deno.RequestEvent, filepath: string) {
         //console.info('serving file request', filepath);
 
@@ -249,6 +263,6 @@ async function log_request(request: server.Request): Promise<server.Response> {
     return Promise.resolve({status: 200, headers: {}, url: 'foo', body: 'foo'});
 }
 
-if (import.meta.main) {
-    await new DenoHttpServer({port: 9000, contentdirs: {'/puppies/': './PUPPIES/'}}, log_request).run();
-}
+// if (import.meta.main) {
+//     await new DenoHttpServer({port: 9000, contentdirs: {'/puppies/': './PUPPIES/'}}, log_request).run();
+// }

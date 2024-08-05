@@ -90,8 +90,7 @@ interface HttpServerConfig {
  * (see server.ts for details).
  */
 export class HttpServer {
-    constructor(public config: HttpServerConfig,
-                public requestHandler: (request: Request) => Promise<Response>) {
+    constructor(public config: HttpServerConfig) {
     }
 
     async run(): Promise<void> {

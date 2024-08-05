@@ -882,26 +882,36 @@ export class WordWiki {
     async startServer(config: WordWikiServerConfig) {
         console.info('Starting wordwiki server');
 
+        // const contentdirs = {
+        //     // '/resources/': await findResourceDir('resources')+'/',
+        //     // '/scripts/': await findResourceDir('web-build')+'/',
+        //     '/resources/': 'resources/', 
+        //     '/scripts/': 'scripts/',
+        //     '/entries/': 'entries/',
+        //     '/categories/': 'categories/',
+        //     '/content/': 'content/',
+        //     '/derived/': 'derived/'};
+
         const contentdirs = {
             // '/resources/': await findResourceDir('resources')+'/',
             // '/scripts/': await findResourceDir('web-build')+'/',
-            '/resources/': 'resources/', 
-            '/scripts/': 'scripts/',
-            '/entries/': 'entries/',
-            '/categories/': 'categories/',
-            '/content/': 'content/',
-            '/derived/': 'derived/'};
+            '/': './'};
+        
+        // const contentfiles = {
+        //     '/index.html': 'index.html',
+        //     '/all-words.html': 'all-words.html',
+        //     '/about-us.html': 'about-us.html',
+        //     '/categories.html': 'categories.html',
+        // };
 
-        const contentfiles = {
-            '/index.html': 'index.html',
-            '/all-words.html': 'all-words.html',
-            '/about-us.html': 'about-us.html',
-            '/categories.html': 'categories.html',
+        const contentfiles = {};
+        const requestHandlerPaths: Record<string, (request: server.Request) => Promise<server.Response>> = {
+            '/ww/': request=>this.requestHandler(request),
         };
         await new DenoHttpServer({port: config.port,
                                   hostname: config.hostname,
-                                  contentdirs, contentfiles},
-                                 request=>this.requestHandler(request)).run();
+                                  contentdirs, contentfiles, requestHandlerPaths}
+                                 ).run();
     }
 
     /**
