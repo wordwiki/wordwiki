@@ -13,8 +13,9 @@ import { writeUTF8FileIfContentsChanged } from '../utils/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
 import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
-
+import * as schema from './schema.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
+import * as renderPageEditor from './render-page-editor.ts';
 
 export class PublishStatus {
     startTime?: number = undefined;
@@ -152,11 +153,15 @@ export class Publish {
         // --- If publish root dir does not exist, create it.
         await Deno.mkdir(this.publishRoot, {recursive: true});
 
-        // --- Publish home page
+        // --- Publish top level pages
         await this.publishItem('Home Page', ()=>this.publishHomePage());
         await this.publishItem('All Words Page', ()=>this.publishAllWordsPage());
         await this.publishItem('About Us', ()=>this.publishAboutUsPage());
 
+        // --- Publish books
+        for(const book of ['PDM'])
+            await this.publishBook(book);
+        
         // --- Publish categories
         await this.publishCategoriesDirectory();
         await this.publishCategories();
@@ -531,6 +536,50 @@ export class Publish {
         return String(entry.entry_id);
     }
 
+    dirForBookPage(publicBookId: string, pageNum: number): string {
+        return `${this.publishRoot}/books/${publicBookId}/page-${String(pageNum).padStart(4, '0')}`;
+    }
+
+    pathForBookPage(publicBookId: string, pageNum: number): string {
+        return this.dirForBookPage(publicBookId, pageNum)+'/index.html';
+    }
+
+    /**
+     *
+     */
+    async publishBook(publicBookId: string) {
+        const document = schema.selectScannedDocumentByFriendlyId().required({friendly_document_id: publicBookId});
+        const pagesInDocument = schema.maxPageNumberForDocument().
+            required({document_id: document.document_id}).max_page_number;
+        for(let pageNum=1; pageNum<=pagesInDocument; pageNum++) {
+            await this.publishItem(`Book ${publicBookId} page ${pageNum}`,
+                                   ()=>this.publishBookPage(publicBookId, pageNum));
+        }
+    }
+    
+    /**
+     *
+     */
+    async publishBookPage(publicBookId: string, page_number: number) {
+        const reference_layer_name = 'Text';
+        
+        const document = schema.selectScannedDocumentByFriendlyId().required({friendly_document_id: publicBookId});
+        const document_id = document.document_id;
+        const taggingLayer = schema.getOrCreateNamedLayer(document_id, 'Tagging', 0);
+
+        const referenceLayer = schema.selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
+        const page = schema.selectScannedPageByPageNumber().required({document_id, page_number});
+
+        const content = renderPageEditor.renderPageEditorCoreByPageId(page.page_id,
+                                                                      {layer_id: taggingLayer,
+                                                                       reference_layer_ids: [referenceLayer.layer_id]});
+        
+        await Deno.mkdir(this.dirForBookPage(publicBookId, page_number), {recursive: true});
+
+        await writePageFromMarkupIfChanged(this.pathForBookPage(publicBookId, page_number),
+                                           this.publicPageTemplate('../../../../', content));
+    }
+    
     /**
      *
      */

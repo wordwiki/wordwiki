@@ -1744,7 +1744,7 @@ export async function launchAddNewDocumentReference3(entry_id: number, subentry_
 
     // TODO TRIGGER EDTIOR SAVE - WE ARE NOT PRESENTLY SAVING !!@
     
-    const taggerUrl = `/renderPageEditorByPageId(${first_page_id}, ${JSON.stringify(pageEditorConfig)})`;
+    const taggerUrl = `/ww/renderPageEditorByPageId(${first_page_id}, ${JSON.stringify(pageEditorConfig)})`;
     console.info('*** Editor URL is', taggerUrl);
     window.open(taggerUrl, '_blank');
 }

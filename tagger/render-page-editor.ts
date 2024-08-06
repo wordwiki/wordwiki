@@ -60,8 +60,14 @@ export function renderPageEditorByPageNumber(document_id: number,
     return renderPageEditorByPageId(page.page_id, cfg);
 }
 
+
 export function renderPageEditorByPageId(page_id: number,
                                          cfg: PageEditorConfig): any {
+    return templates.pageTemplate(renderPageEditorCoreByPageId(page_id, cfg));
+}
+
+export function renderPageEditorCoreByPageId(page_id: number,
+                                             cfg: PageEditorConfig): templates.PageContent {
     
     const page = selectScannedPage().required({page_id});
     const document_id = page.document_id;
@@ -107,7 +113,8 @@ export function renderPageEditorByPageId(page_id: number,
     });
 
     const head = [
-        ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],        ['script', {src:'/scripts/tagger/page-editor.js'}],
+        ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
+        ['script', {src:'/scripts/tagger/page-editor.js'}],
     ];
 
     const scale_factor = cfg.scale_factor ?? 4;
@@ -167,7 +174,7 @@ export function renderPageEditorByPageId(page_id: number,
     ]; // body
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
-    return templates.pageTemplate({title, head, body});
+    return {title, head, body};
 }
 
 
@@ -327,6 +334,9 @@ export function renderBox(box: BoxGroupJoin,
             ['circle', {class:"grabber", cx:'100%', cy:'100%', r:12}]];
 }
 
+// TODO parameterize this so can also be used for public site urls..
+// TODO method of parametreization should be consistent with what we are doing for other public/internal config,
+//      so figure that out first.
 export function renderPageJumper(cfg: PageEditorConfig, document_id: number, current_page_num: number, total_pages: number): any {
     const targetPageNumbers = Array.from(new Set(
         [1,
