@@ -830,6 +830,7 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
     } catch(ex) {
         refUrl = '';
     }
+    //refUrl = ''; // REMOVE REMOVE REMOVE
     const noBody =
         ref.transcription.length === 0 &&
         ref.expanded_transcription.length === 0 &&

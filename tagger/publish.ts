@@ -652,7 +652,8 @@ export class Publish {
         if(!entry)
             return (`Unknown group id ${groupId}`);
         const entryMarkup:any[] = entryschema.renderEntry({rootPath, suppressReferenceImages: true}, entry);
-        const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
+        const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, true);
+        //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
         if(entry.entry_id === 145979) {  // ugsuguni
             console.info('SPECIAL ENTRY MARKUP STRING', entryMarkupString, 'for', JSON.stringify(entry, undefined, 2));
             console.info('MARKUP IS', JSON.stringify(entryMarkup, undefined, 2));

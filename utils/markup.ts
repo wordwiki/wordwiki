@@ -107,12 +107,11 @@ export class MarkupRenderer {
                     else
                         return this.renderContentMarkupArray(item, indent);
                 }
-
                 
                 return `unhandled content object ${item} of type ${utils.className(item)}`;
                 
             default:
-                throw new Error(`unhandled content item ${item} of type ${typeof item}`);
+                throw new Error(`unhandled content item ${item} of type ${typeof item} (0)`);
         }
     }
 
@@ -345,13 +344,13 @@ export const NODE_END = -1;
 //     return linkedom.parseJSON(jsdon);
 // }
 
-export function renderToStringViaLinkeDOM(markup: any): string {
+export function renderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true, debug: boolean=false): string {
     //console.info('MARKUP', jsonStrIfPossible(markup));
-    return toLinkeDOM(markup).toString();
+    return toLinkeDOM(markup, wrapInHtmlDocument, debug).toString();
 }
 
-export function toLinkeDOM(markup: any): any {
-    return linkedom.parseJSON(renderToJSDON(markup));
+export function toLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true, debug: boolean=false): any {
+    return linkedom.parseJSON(renderToJSDON(markup, wrapInHtmlDocument, debug));
 }
 
 /**
@@ -368,20 +367,20 @@ export function toLinkeDOM(markup: any): any {
  */
 type JSDON = Array<number|string>;
 
-export function renderToJSDON(item: any, wrapInHtmlDocument: boolean=true): JSDON {
+export function renderToJSDON(item: any, wrapInHtmlDocument: boolean=true, debug: boolean=false): JSDON {
     const out: JSDON = [];
     if(wrapInHtmlDocument) {
         out.push(DOCUMENT_NODE);
         out.push(DOCUMENT_TYPE_NODE, "html");
     }        
-    renderItemToJSDON(out, item);
+    renderItemToJSDON(out, item, debug);
     if(wrapInHtmlDocument) {
         out.push(NODE_END, NODE_END);
     }
     return out;
 }
 
-function renderItemToJSDON(out: JSDON, item: any) {
+function renderItemToJSDON(out: JSDON, item: any, debug: boolean=false) {
     switch(typeof item) {
         case 'undefined':
             break;
@@ -395,22 +394,27 @@ function renderItemToJSDON(out: JSDON, item: any) {
             break;
         case 'object':
             if(item == null)
-                break;
+                void 0;
             else if(Array.isArray(item)) {
                 if(isElemMarkup(item)) {
-                    renderElementToJSDON(out, item as ElemExprLiteral);
-                    break;
+                    if(debug)
+                        console.info('renderElementToJSDON', item);
+                    renderElementToJSDON(out, item as ElemExprLiteral, debug);
                 } else {
+                    if(debug)
+                        console.info('renderArrayToJSDON', item);
                     for(const i of item)
-                        renderItemToJSDON(out, i);
-                    break;
+                        renderItemToJSDON(out, i, debug);
                 }
+            } else if(true && item instanceof Promise) {
+                out.push(TEXT_NODE, '*** UNRESOLVED PROMISE ***')
             } else {
-                throw new Error(`unhandled content object ${strIfPossible(item)} of type ${utils.className(item)} - ${utils.className(item)} - ${jsonStrIfPossible(item)}`);
+                throw new Error(`unhandled content object ${strIfPossible(item)} of type ${utils.className(item)} - ${utils.className(item)} - ${jsonStrIfPossible(item)} - ${typeof item}`);
             }
+            break;
 
         default:
-            throw new Error(`unhandled content item ${strIfPossible(item)} of type ${typeof item} - ${utils.className(item)} - ${jsonStrIfPossible(item)}`);
+            throw new Error(`unhandled content item ${strIfPossible(item)} of type ${typeof item} - ${utils.className(item)} - ${jsonStrIfPossible(item)} (1)`);
     }
 }
 
@@ -437,7 +441,7 @@ function jsonStrIfPossible(v: any): string {
 }
 
 
-function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
+function renderElementToJSDON(out: JSDON, e: ElemExprLiteral, debug: boolean = false) {
     const [tag, {...attrs}, ...content] = e;
     const tagName = tag instanceof Function ? tag.name : String(tag);
 
@@ -451,7 +455,7 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
         }
     }
     for(const c of content)
-        renderItemToJSDON(out, c);
+        renderItemToJSDON(out, c, debug);
     out.push(NODE_END);
 }
 
@@ -514,7 +518,7 @@ async function asyncRenderItemToJSDON(out: JSDON, item: any) {
             break;
 
         default:
-            throw new Error(`unhandled content item ${item} of type ${typeof item}`);
+            throw new Error(`unhandled content item ${item} of type ${typeof item} (2)`);
     }
 }
 
@@ -527,7 +531,7 @@ async function asyncRenderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
     for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
         if(name !== '') {
             out.push(ATTRIBUTE_NODE, name);
-            if(value instanceof Promise)
+            while(value instanceof Promise)
                 value = await value;
             if(value != undefined)
                 out.push(String(value));
