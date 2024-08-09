@@ -360,7 +360,7 @@ export class AudioView extends StringView {
         // This should be values on the style $
         //return
         const label = 'Audio'; // XXX fix
-        const compressedAudioUrl = `/forwardToCompressedRecording("${v}")`;
+        const compressedAudioUrl = `/ww/forwardToCompressedRecording("${v}")`;
         return ['a',
                 {onclick: `event.preventDefault(); event.stopPropagation(); playAudio(${JSON.stringify(compressedAudioUrl).replaceAll('"', "'")});`, href: compressedAudioUrl.replaceAll('"', "'")},
                 label]

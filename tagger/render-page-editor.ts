@@ -9,7 +9,7 @@ import {block} from "../utils/strings.ts";
 import * as utils from "../utils/utils.ts";
 import {range} from "../utils/utils.ts";
 //import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
-import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM } from '../utils/markup.ts';
+import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, Markup } from '../utils/markup.ts';
 import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
 import * as templates from './templates.ts';
@@ -29,27 +29,48 @@ export const boxesForPageLayer = ()=>db().
 /**/               bb.layer_id = :layer_id
 /**/         ORDER BY bb.x, bb.y, bb.bounding_box_id`);
 
-export interface PageEditorConfig {
+
+// export interface PageRef {
+//     by_page_id: { page_id: number } | undefined;
+//     by_document_id: { document_id: string, page_number: number; } | undefined;
+//     by_friendly_id: { friendly_document_id: string, page_number: number; } | undefined;
+// }
+
+
+
+export interface PageRenderConfig {
+    title?: string,
     layer_id: number,
     reference_layer_ids: number[],
-    title?: string,
-    is_popup_editor?: boolean,
     locked_bounding_group_id?: number,
     highlight_ref_bounding_box_ids?: number[],
-    total_pages_in_document?: number,
     scale_factor?:number
+    total_pages_in_document?: number,
 }
+
+export interface PageEditorConfig extends PageRenderConfig {
+    is_popup_editor?: boolean,
+}
+
+export interface PageViewerConfig extends PageRenderConfig {
+}
+
+// TODO: somewhat random set of entry points here - we refactored the
+//       PageRenderer, and these shim methods allow code based on the old
+//       API to still work.
 
 export async function pageEditor(friendly_document_id: string,
                                  page_number: number=1,
                                  reference_layer_name: string = 'Text'): Promise<any> {
+
     const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
     const document_id = document.document_id;
     const taggingLayer = getOrCreateNamedLayer(document_id, 'Tagging', 0);
     const referenceLayer = selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
-    return renderPageEditorByPageNumber(document_id, page_number,
-                                        {layer_id: taggingLayer,
-                                         reference_layer_ids: [referenceLayer.layer_id]});
+    return renderPageEditorByPageNumber(
+        document_id, page_number,
+        {layer_id: taggingLayer,
+         reference_layer_ids: [referenceLayer.layer_id]});
 }
 
 export function renderPageEditorByPageNumber(document_id: number,
@@ -60,7 +81,6 @@ export function renderPageEditorByPageNumber(document_id: number,
     return renderPageEditorByPageId(page.page_id, cfg);
 }
 
-
 export function renderPageEditorByPageId(page_id: number,
                                          cfg: PageEditorConfig): any {
     return templates.pageTemplate(renderPageEditorCoreByPageId(page_id, cfg));
@@ -68,7 +88,14 @@ export function renderPageEditorByPageId(page_id: number,
 
 export function renderPageEditorCoreByPageId(page_id: number,
                                              cfg: PageEditorConfig): templates.PageContent {
-    
+    return renderPageEditor(cfg, page_id);
+}
+
+/**
+ *
+ */
+export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templates.PageContent {
+
     const page = selectScannedPage().required({page_id});
     const document_id = page.document_id;
     const document = selectScannedDocument().required({document_id});
@@ -78,6 +105,116 @@ export function renderPageEditorCoreByPageId(page_id: number,
     const total_pages_in_document = cfg.total_pages_in_document
         ?? maxPageNumberForDocument().required({document_id: page.document_id}).max_page_number;
 
+    const annotatedPage = renderAnnotatedPage(cfg, page_id).markup;
+
+    const head = [
+        // this CSS is loaded on all pages of the site.
+        //['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
+        ['script', {src:'/scripts/tagger/page-editor.js'}],
+    ];
+
+    const body = [
+        ['div', {},
+         ['h1', {}, `${document.title} - Page ${page.page_number}`],
+         cfg.title && ['h2', {}, cfg.title],
+         cfg.locked_bounding_group_id && [
+             ['div', {},
+              ['button', {onclick:`window.opener.postMessage({action: 'reloadBoundingGroup', boundingGroupId: ${cfg.locked_bounding_group_id}}); window.close();`}, 'Done editing reference']],
+         ],
+
+         renderPageJumper(page.page_number, total_pages_in_document,
+                          (page_number: number) =>
+             `/ww/renderPageEditorByPageNumber(${document_id}, ${page_number}, ${JSON.stringify(cfg)})`),
+        ], // /div
+
+        (cfg.reference_layer_ids.length === 1
+            ? renderTextSearchForm(cfg.reference_layer_ids[0], cfg)
+            : []),
+
+        annotatedPage,
+
+        // Array.from(boxesByGroup.keys()).map(bounding_group_id =>
+        //     ['p', {},
+        //      renderStandaloneGroup('/', bounding_group_id)]
+                                           // ),
+        //config.bootstrapScriptTag,
+
+    ]; // body
+
+    //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
+    return {title, head, body};
+}
+
+/**
+ *
+ */
+export function renderPageViewer(cfg: PageViewerConfig, page_id: number, pageJumpUrlFn: (page_number:number)=>string): templates.PageContent {
+
+    const page = selectScannedPage().required({page_id});
+    const document_id = page.document_id;
+    const document = selectScannedDocument().required({document_id});
+
+    const title = cfg.title || document.title;
+
+    const total_pages_in_document = cfg.total_pages_in_document
+        ?? maxPageNumberForDocument().required({document_id: page.document_id}).max_page_number;
+
+    const {markup, groupIds} = renderAnnotatedPage(cfg, page_id);
+
+    const head = [
+        //['link', {href: '/resources/page-viewer.css', rel:'stylesheet', type:'text/css'}],
+        ['script', {src:'/scripts/tagger/page-viewer.js'}],
+    ];
+
+    const body = [
+        ['div', {},
+         ['h1', {}, `${document.title} - Page ${page.page_number}`],
+         cfg.title && ['h2', {}, cfg.title],
+         renderPageJumper(page.page_number, total_pages_in_document, pageJumpUrlFn),
+        ], // /div
+
+        markup,
+    
+    ]; // body
+
+    //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
+    return {title, head, body};
+}
+
+/**
+ *
+ */
+export function renderPageJumper(current_page_num: number, total_pages: number,
+                                 pageJumpUrlFn: (page_number:number)=>string): any {
+    const targetPageNumbers = Array.from(new Set(
+        [1,
+         ...[10, 37, 210],  // XXX tmp hack for dmm
+         ...range(1, Math.floor(total_pages/100)+1).map(v=>v*100),
+         ...range(0, 10).map(v=>Math.floor(current_page_num/100)*100+v*10),
+         ...range(0, 10).map(v=>Math.floor(current_page_num/10)*10+v),
+         current_page_num-1, current_page_num-2,
+         current_page_num+1, current_page_num+2,
+         total_pages]))
+        .filter(p=>p>=1 && p<=total_pages)
+        .toSorted((a, b) => a - b);
+
+    return [
+        ['div', {}, 'Pages: ',
+         targetPageNumbers.map(n=>
+             [['a', {href:pageJumpUrlFn(n),
+                     class: n===current_page_num?'current-page-jump':'page-jump'}, n],
+              ' '])
+        ]
+    ];
+}
+
+async function samplePageRender(friendly_document_id: string, page_number: number) {
+    const markup = await pageEditor(friendly_document_id, page_number);
+    console.info(renderToStringViaLinkeDOM(markup));
+}
+
+export function renderAnnotatedPage(cfg: PageRenderConfig, page_id: number): { markup: Markup, groupIds: number[] } {
+    const page = selectScannedPage().required({page_id});
     const pageImageUrl = '/'+page.image_ref;
 
     // --- Render user blocks
@@ -112,45 +249,18 @@ export function renderPageEditorCoreByPageId(page_id: number,
                                        highlightBoxIds: new Set(cfg.highlight_ref_bounding_box_ids??[])}));
     });
 
-    const head = [
-        ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-        ['script', {src:'/scripts/tagger/page-editor.js'}],
-    ];
-
     const scale_factor = cfg.scale_factor ?? 4;
-    const body = [
-        ['div', {},
-         ['h1', {}, `${document.title} - Page ${page.page_number}`],
-         cfg.title && ['h2', {}, cfg.title],
-         cfg.locked_bounding_group_id && [
-             ['div', {},
-              ['button', {onclick:`window.opener.postMessage({action: 'reloadBoundingGroup', boundingGroupId: ${cfg.locked_bounding_group_id}}); window.close();`}, 'Done editing reference']],
-              //['button', {onclick:'window.opener.location.reload(); window.close();'}, 'Done editing reference']]
-         ],
-         renderPageJumper(cfg, document_id, page.page_number, total_pages_in_document)],
-
-        // ['ul', {},
-        //  ['li', {}, 'page_id: ', page_id],
-        //  ['li', {}, 'layer_id: ', cfg.layer_id],
-        //  ['li', {}, 'reference_layer_ids: ', cfg.reference_layer_ids],
-        //  ['li', {}, 'title: ', cfg.title],
-        //  ['li', {}, 'is_popup_editor: ', cfg.is_popup_editor],
-        //  ['li', {}, 'locked_bounding_group_id: ', cfg.locked_bounding_group_id]],
-
-        cfg.reference_layer_ids.length === 1
-            ? renderTextSearchForm(cfg.reference_layer_ids[0], cfg)
-            : [],
-
+    const annotatedPage =
         ['div', {id: 'annotatedPage'},
          //['img', {src:pageImageUrl, width:page.width, height:page.height}],
          ['svg', {id: 'scanned-page',
-                  width:page.width/scale_factor,
+                  width:page.width/scale_factor,  // add Math.floor ???
                   height:page.height/scale_factor,
                   viewBox: `0 0 ${page.width} ${page.height}`,
-                  onmousedown: 'pageEditorMouseDown(event)',
-                  onmousemove: 'pageEditorMouseMove(event)',
-                  onmouseup: 'pageEditorMouseUp(event)',
-                  'data-document-id': document_id,
+                  onmousedown: 'scannedPageMouseDown(event)',
+                  onmousemove: 'scannedPageMouseMove(event)',
+                  onmouseup: 'scannedPageMouseUp(event)',
+                  'data-document-id': page.document_id,
                   'data-page-id': page_id,
                   'data-page-number': page.page_number,
                   'data-layer-id': cfg.layer_id,
@@ -163,107 +273,22 @@ export function renderPageEditorCoreByPageId(page_id: number,
           ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
           refBlocksSvg,
           blocksSvg,
-          emptyLockedGroupSvg]],
+          emptyLockedGroupSvg]];
 
-        Array.from(boxesByGroup.keys()).map(bounding_group_id =>
-            ['p', {},
-             renderStandaloneGroup('/', bounding_group_id)]
-                                           ),
-            //config.bootstrapScriptTag,
-
-    ]; // body
-
-    //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
-    return {title, head, body};
+    return {markup: annotatedPage, groupIds: Array.from(new Set(boxesByGroup.keys()))};
 }
 
-
-//     return (
-//         ['html', {},
-//          ['head', {},
-//           ['meta', {charset:"utf-8"}],
-//           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
-//           config.bootstrapCssLink,
-//           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-//           //['script', {src:'/resources/page-editor.js'}]],
-//           ['script', {src:'/scripts/tagger/page-editor.js'}],
-
-//           ['script', {}, block`
-//  /**/           let imports = {};
-//  /**/           let activeViews = undefined`],
-//           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
-
-//  //          ['script', {type: 'module'}, block`
-//  // /**/           import * as workspace from '/scripts/tagger/workspace.js';
-//  // /**/           import * as view from '/scripts/tagger/view.js';
-//  // /**/
-//  // /**/           imports = Object.assign(
-//  // /**/                        {},
-//  // /**/                        view.exportToBrowser(),
-//  // /**/                        workspace.exportToBrowser());
-//  // /**/
-//  // /**/           activeViews = imports.activeViews();
-//  // /**/
-//  // /**/           document.addEventListener("DOMContentLoaded", (event) => {
-//  // /**/             console.log("DOM fully loaded and parsed");
-//  // /**/             view.run();
-//  // /**/             //workspace.renderSample(document.getElementById('root'))
-//  // /**/           });`
-//  //          ]
-//          ], // head
-
-
-//          ['script', {}, block`
-// /**/        addEventListener("DOMContentLoaded", event => onContentLoaded());
-// /**/        `
-// /**/     ],
-
-//          ['body', {},
-
-//           ['div', {},
-//            ['h1', {}, 'PDM Textract preview page', page.page_number],
-//            renderPageJumper(page.page_number, total_pages_in_document)],
-
-//           ['div', {id: 'annotatedPage'},
-//            //['img', {src:pageImageUrl, width:page.width, height:page.height}],
-//            ['svg', {id: 'scanned-page', width:page.width/scale_factor, height:page.height/scale_factor,
-//                     viewBox: `0 0 ${page.width} ${page.height}`,
-//                     onmousedown: 'pageEditorMouseDown(event)',
-//                     onmousemove: 'pageEditorMouseMove(event)',
-//                     onmouseup: 'pageEditorMouseUp(event)',
-//                     'data-layer-id': layer_id,
-//                     'data-page-id': page_id,
-//                     'data-scale-factor': scale_factor,
-//                    },
-//             ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
-//             refBlocksSvg,
-//             blocksSvg]],
-
-
-//           Array.from(boxesByGroup.keys()).map(bounding_group_id =>
-//               ['p', {},
-//                renderStandaloneGroup(bounding_group_id)]
-//               ),
-
-//           config.bootstrapScriptTag,
-
-//          ] // body,
-
-//         ] // html
-//     );
-//}
-
-export function renderGroup(page: ScannedPage,
-                            groupId: number, boxes: BoxGroupJoin[],
-                            opts: {
-                                lockedGroupId?: number,
-                                isRefLayer?: boolean,
-                                highlightBoxIds?: Set<number> } = {}): any {
+function renderGroup(page: ScannedPage,
+                     groupId: number, boxes: BoxGroupJoin[],
+                     opts: {
+                         lockedGroupId?: number,
+                         isRefLayer?: boolean,
+                         highlightBoxIds?: Set<number> } = {}): any {
 
     const isRefLayer = opts.isRefLayer ?? false;
     const lockedGroupId = opts.lockedGroupId;
     const highlightBoxIds = opts.highlightBoxIds ?? new Set<number>();
-    
+
     utils.assert(boxes.length > 0, 'Cannot render an empty group');
     const group: GroupJoinPartial = boxes[0];
 
@@ -287,7 +312,7 @@ export function renderGroup(page: ScannedPage,
         default: stroke = 'yellow'; break;
     }
     //console.info('stroke color', stroke);
-    
+
     return (
         ['svg', {class:`group ${isRefLayer?'ref':''}`, id:`bg_${groupId}`, stroke},
          ['rect', {class:"group-frame", x:groupX, y:groupY,
@@ -297,8 +322,8 @@ export function renderGroup(page: ScannedPage,
         ]);
 }
 
-export function renderEmptyGroup(page: ScannedPage,
-                                 groupId: number): any {
+function renderEmptyGroup(page: ScannedPage,
+                          groupId: number): any {
     const groupMargin = 10;
     const groupX = 0;
     const groupY = 0;
@@ -313,13 +338,9 @@ export function renderEmptyGroup(page: ScannedPage,
         ]);
 }
 
-export function renderBoxOld(box: BoxGroupJoin): any {
-    return ['rect', {class:"segment", x:box.x, y:box.y, width:box.w, height:box.h}];
-}
-
-export function renderBox(box: BoxGroupJoin,
-                          isRefLayer: boolean=false,
-                          highlightBoxIds:Set<number>=new Set()): any {
+function renderBox(box: BoxGroupJoin,
+                   isRefLayer: boolean=false,
+                   highlightBoxIds:Set<number>=new Set()): any {
     const boxClass = ['box',
                       isRefLayer?'ref':'',
                       highlightBoxIds.has(box.bounding_box_id)?'highlight':''].join(' ');
@@ -334,38 +355,6 @@ export function renderBox(box: BoxGroupJoin,
             ['circle', {class:"grabber", cx:'100%', cy:'100%', r:12}]];
 }
 
-// TODO parameterize this so can also be used for public site urls..
-// TODO method of parametreization should be consistent with what we are doing for other public/internal config,
-//      so figure that out first.
-export function renderPageJumper(cfg: PageEditorConfig, document_id: number, current_page_num: number, total_pages: number): any {
-    const targetPageNumbers = Array.from(new Set(
-        [1,
-         ...[10, 37, 210],  // XXX tmp hack for dmm
-         ...range(1, Math.floor(total_pages/100)+1).map(v=>v*100),
-         ...range(0, 10).map(v=>Math.floor(current_page_num/100)*100+v*10),
-         ...range(0, 10).map(v=>Math.floor(current_page_num/10)*10+v),
-         current_page_num-1, current_page_num-2,
-         current_page_num+1, current_page_num+2,
-         total_pages]))
-        .filter(p=>p>=1 && p<=total_pages)
-        .toSorted((a, b) => a - b);
-
-    return [
-        ['div', {}, 'Pages: ',
-         targetPageNumbers.map(n=>
-             [['a', {href:`/ww/renderPageEditorByPageNumber(${document_id}, ${n}, ${JSON.stringify(cfg)})`,
-                     class: n===current_page_num?'current-page-jump':'page-jump'}, n],
-              ' '])
-        ]
-    ];
-}
-
-
-
-async function samplePageRender(friendly_document_id: string, page_number: number) {
-    const markup = await pageEditor(friendly_document_id, page_number);
-    console.info(renderToStringViaLinkeDOM(markup));
-}
 
 // --------------------------------------------------------------------------------
 // --- RPCs -----------------------------------------------------------------------
@@ -573,7 +562,7 @@ export function singleBoundingGroupEditorURL(bounding_group_id: number, title: s
         is_popup_editor: true,
         locked_bounding_group_id: bounding_group_id,
     };
-    return `/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
+    return `/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
 
 }
 
@@ -594,7 +583,7 @@ export function forwardToSingleBoundingGroupEditorURL(bounding_group_id: number,
 export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
-        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/ww/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
 
          ['div', {class:'col-12'},
           ['label', {class:'visually-hidden', for:'searchText'}, 'Search'],
@@ -613,7 +602,7 @@ export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
 export function renderTextSearchForm2(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
-        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/ww/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
          ['label', {class:'sr-only', for:'searchText'}, 'Search'],
          ['input', {type:'text', class:'form-control mb-2 mr-sm-2',
                     id:'searchText', name:'searchText', placeholder:'Search',

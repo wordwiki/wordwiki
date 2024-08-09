@@ -623,6 +623,21 @@ export function renderEntryCompactSummary(e: Entry): any {
 }
 
 /**
+ *
+ */
+export function renderEntryTitle(e: Entry): string {
+    // TODO handle dialects here.
+    const spellings = e.spelling.map(s=>s.text);
+    const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+    // TODO mikmaq online text here should come from config XXXX
+    return `${spellings.join(', ')} :: ${glosses.join(' / ')} -- Mi'gmaq/Mi'kmaq Online`;
+}
+
+export function renderEntrySpellingsSummary(e: Entry): string {
+    return e.spelling.map(s=>s.text).join('/');
+}
+
+/**
  * Pick one recording to feature in situations where there is only space
  * to render one recording link.
  * 
@@ -664,6 +679,7 @@ function contextMenuPlay(): any {
 // later, will add dialect.
 interface RenderCtx {
     rootPath: string;
+    suppressReferenceImages?: boolean;
 }
 
 /**
@@ -684,7 +700,7 @@ export function renderEntrySpellings(ctx: RenderCtx, e: Entry, spellings: Spelli
 }
 
 export function renderEntryRecordings(ctx: RenderCtx, e: Entry, recordings: Recording[]): any {
-    return [
+    return recordings.length === 0 ? [] : [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Recordings:'],
          ['ul', {},
@@ -754,13 +770,8 @@ export function renderTranslation(ctx: RenderCtx, e: Entry, s: Subentry, t: Tran
 //                                   parentId: number,
 //                                   parentRelationTag: string,
 
-
-
-
-
-
 export function renderGlosses(ctx: RenderCtx, e: Entry, s: Subentry, glosses: Gloss[]): any {
-    return [
+    return glosses.length === 0 ? [] : [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Meanings:'],
           ['ul', {},
@@ -772,7 +783,7 @@ export function renderGlosses(ctx: RenderCtx, e: Entry, s: Subentry, glosses: Gl
 }
 
 export function renderExamples(ctx: RenderCtx, e: Entry, s: Subentry, examples: Example[]): any {
-    return [
+    return examples.length === 0 ? [] : [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Example of word used in a sentence:'],
          ['ul', {},
@@ -793,7 +804,7 @@ export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
 
 export function renderDocumentReferences(ctx: RenderCtx, e: Entry, s: Subentry,
                                          documentReferences: DocumentReference[]): any {
-    return [
+    return documentReferences.length === 0 ? [] : [
         ['div', {class: 'entry-scope'},
          ['b', {}, 'Document References:'],
          ['ul', {},
@@ -810,7 +821,8 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
     // XXX THE LINE with REMOVE_FOR_WEB is removed by transpile.sh so
     //     we don't try to pull client-side only deps on the web.
     let standaloneGroupRender: any = [];
-    standaloneGroupRender = renderStandaloneGroup(ctx.rootPath, ref.bounding_group_id); // REMOVE_FOR_WEB
+    if(!ctx.suppressReferenceImages)
+        standaloneGroupRender = renderStandaloneGroup(ctx.rootPath, ref.bounding_group_id); // REMOVE_FOR_WEB
     const title = 'Title';
     let refUrl: string;
     try {

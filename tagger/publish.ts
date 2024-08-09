@@ -84,7 +84,7 @@ export function publishStatus(joiningExistingPublish: boolean=false,
         (publishStatus.log.length > 0) ? [
             ['h2', {}, 'Recent Tasks'],
             ['ul', {},
-             publishStatus.log.slice(-500).map(e=>[
+             publishStatus.log.slice(-500).toReversed().map(e=>[
                  ['li', {}, e]
              ])
             ]] : [],
@@ -96,13 +96,6 @@ export function publishStatus(joiningExistingPublish: boolean=false,
 /**/  });`];
 
     return templates.pageTemplate({title, body, head: autoRefreshScript});
-}
-
-/**
- *
- */
-export async function publishWordPage(publishRoot: string): Promise<void> {
-    
 }
 
 export interface PublicPageContent {
@@ -186,7 +179,7 @@ export class Publish {
     }
     
     get homePath(): string {
-        return this.publishRoot+'/index.html';
+        return 'index.html';
     }
     
     async publishHomePage(): Promise<void> {
@@ -211,18 +204,13 @@ export class Publish {
              // --- Search Box
              ['div', {class: 'public-search-box'},
               ['form', {onsubmit:"updateCurrentSearchFromInput(); event.preventDefault();"},
-               ['label', {for:"search"}, ['strong', {}, 'Search: ']],
+               ['label', {for:"search"}, ['strong', {}, 'Dictionary Search: ']],
                ['input', {type:"text", size:"20",
-                          name:"search", id:"search", label:"Search", autofocus:"",
+                          name:"search", id:"search", label:"Dictionary Search", autofocus:"",
                           placeholder:"Mi'gmaq or English Search",
                           oninput:"updateCurrentSearchFromInput();"}],
               ], // /form
              ], // /div
-
-             // --- If we are returning to this page - restore the search from the fragment id in the URL
-             ['script', {}, block`
-/**/              updateCurrentSearchFromDocumentHash();
-/**/         `],
 
              // --- Search instructions display until user starts typing a search
              ['div', {id:"searchInstructions"},
@@ -234,8 +222,15 @@ export class Publish {
                ['li', {}, "You can use a * for parts of a word you do not want to spell or are unsure of the spelling of."],
                ['li', {}, "You can do searches that must match multiple words.  For example 'wild cat'."],
               ],
+
+              this.renderAboutUsBody(),
              ],
 
+             // --- If we are returning to this page - restore the search from the fragment id in the URL
+             ['script', {}, block`
+/**/              updateCurrentSearchFromDocumentHash();
+/**/         `],
+             
              ['ul', {},
               this.entries.map(entry=>[
                   ['li', {class:entryschema.computeNormalizedSearchTerms(entry).map(term=>'_'+term).join(' ')+' def'},
@@ -273,82 +268,78 @@ export class Publish {
     }
 
     get aboutUsPath(): string {
-        return this.publishRoot+'/about-us.html';
+        return 'about-us.html';
     }
     
     async publishAboutUsPage(): Promise<void> {
 
         const title = "About Us - Mi'gmaq/Mi'kmaq Online Talking Dictionary";
-        const body =
+        const body = 
             ['div', {},
              ['h1', {}, title],
 
-
-             // --- MMO info
-             ['h3', {}, 'The Project'],
-             
-             ['p', {}, "The talking dictionary project is developing an Internet resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase."],
-              
-             ['p', {}, "Thus far we have posted 6500 headwords, a majority of these entries include two to three additional forms."],
-
-             ['p', {}, "The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available."],
-
-             ['p', {}, "Each word is presented using the Listuguj orthography. The Smith-Francis orthography will be included in the future. Some spellings are speculative."],
-
-             ['p', {}, "Listuguj is in the Gespe'g territory of the Mi'gmaw; located on the southwest shore of the Gaspè peninsula."],
-
-             ['p', {}, "Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton."],
-             
-             ['h3', {}, 'Contact Us'],
-             ['p', {},
-              'Email:', ['a', {href:'mailto:info@mikmaqonline.org'}, 'info@mikmaqonline.org']],
-
-             ['h3', {}, 'Thanks'],
-
-             ['p', {}, "Ta'n te'sijig mimajuinu'g apoqonmugsieg ula ntlugowaqannen wesgo'tmeg we'gwiwela'lieg aq we'gwimi'watmuleg."],
-
-             ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
-
-             ['h3', {}, "We gratefully acknowledge the financial support of"],
-             ['ul', {},
-
-              ['li', {}, "Listuguj Mi'gmaq Government ",
-               ['a', {href: "https://www.listuguj.ca/"}, "https://www.listuguj.ca/"]],
-
-              ['li', {}, "Government of Canada ",
-               ['a', {href:"https://www.canada.ca/"}, "https://www.canada.ca/"]],
-              
-              ['li', {}, "Listuguj Education, Training & Employment (LED & LMDC) ",
-               ['a', {href:"https://www.lete.listuguj.ca/"}, "https://www.lete.listuguj.ca/"]],
-
-              ['li', {}, "First Nation's Educations Council (AFN, ALI) ",
-               ['a', {href:"https://www.cepn-fnec.ca/en"}, "https://www.cepn-fnec.ca/en"]],
-
-              ['li', {}, "The Canada Council ",
-               ['a', {href:"http://www.canadacouncil.ca"}, "http://www.canadacouncil.ca"]],
-
-              ['li', {}, "Atlantic Canada's First Nation Help Desk ",
-               ['a', {href:"http://firstnationhelp.com/"}, "http://firstnationhelp.com/"]]
-             ],
-
-             ['h3', {}, 'License'],
-             ['p', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, "Creative Commons Attribution-NonCommercial 4.0 International"],
-
-             // ['h4', {},  'You are free to'],
-             // ['ul', {},
-             //  ['li', {}, "Share — copy and redistribute the material in any medium or format"],
-             //  ['li', {}, "Adapt — remix, transform, and build upon the material"]],
-             // ['p', {}, "The licensor cannot revoke these freedoms as long as you follow the license terms."],
-
-             // ['h4', {}, 'Under the following terms'],
-             // ['ul', {},
-             //  ['li', {}, "Attribution — You must give appropriate credit , provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use."],
-             //  ['li', {}, "NonCommercial — You may not use the material for commercial purposes."]
-             // ]
+             this.renderAboutUsBody()
             ];
         
         await writePageFromMarkupIfChanged(this.aboutUsPath,
                                            this.publicPageTemplate('', {title, body}));
+    }
+
+    /**
+     *
+     */
+    renderAboutUsBody(): any {
+        return [
+            // --- MMO info
+            ['h3', {}, 'The Project'],
+             
+            ['p', {}, "The talking dictionary project is developing an Internet resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase."],
+              
+            ['p', {}, "Thus far we have posted 6500 headwords, a majority of these entries include two to three additional forms."],
+
+            ['p', {}, "The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available."],
+
+            ['p', {}, "Each word is presented using the Listuguj orthography. The Smith-Francis orthography will be included in the future. Some spellings are speculative."],
+
+            ['p', {}, "Listuguj is in the Gespe'g territory of the Mi'gmaw; located on the southwest shore of the Gaspè peninsula."],
+
+            ['p', {}, "Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton."],
+             
+            ['h3', {}, 'Contact Us'],
+            ['p', {},
+              'Email:', ['a', {href:'mailto:info@mikmaqonline.org'}, 'info@mikmaqonline.org']],
+
+            ['h3', {}, 'Thanks'],
+
+            ['p', {}, "Ta'n te'sijig mimajuinu'g apoqonmugsieg ula ntlugowaqannen wesgo'tmeg we'gwiwela'lieg aq we'gwimi'watmuleg."],
+
+            ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
+
+            ['h3', {}, "We gratefully acknowledge the financial support of"],
+            ['ul', {},
+
+             ['li', {}, "Listuguj Mi'gmaq Government ",
+              ['a', {href: "https://www.listuguj.ca/"}, "https://www.listuguj.ca/"]],
+
+             ['li', {}, "Government of Canada ",
+              ['a', {href:"https://www.canada.ca/"}, "https://www.canada.ca/"]],
+              
+             ['li', {}, "Listuguj Education, Training & Employment (LED & LMDC) ",
+              ['a', {href:"https://www.lete.listuguj.ca/"}, "https://www.lete.listuguj.ca/"]],
+
+             ['li', {}, "First Nation's Educations Council (AFN, ALI) ",
+              ['a', {href:"https://www.cepn-fnec.ca/en"}, "https://www.cepn-fnec.ca/en"]],
+
+             ['li', {}, "The Canada Council ",
+              ['a', {href:"http://www.canadacouncil.ca"}, "http://www.canadacouncil.ca"]],
+
+             ['li', {}, "Atlantic Canada's First Nation Help Desk ",
+              ['a', {href:"http://firstnationhelp.com/"}, "http://firstnationhelp.com/"]]
+            ],
+
+            ['h3', {}, 'License'],
+            ['p', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, "Creative Commons Attribution-NonCommercial 4.0 International"],
+        ];
     }
     
     /**
@@ -371,9 +362,15 @@ export class Publish {
      *
      */
     async publishEntries(): Promise<void> {
-        // TODO: filter for only published words
+
         for(const entry of this.entries) {
             await this.publishItem(`Entry ${this.getPublicIdForEntry(entry)}`, ()=>this.publishEntry(entry));
+        }
+
+        // Generate .html files that forward our old URLS to our new ones (using meta refresh)
+        await Deno.mkdir('servlet/words', {recursive: true});
+        for(const entry of this.entries) {
+            await this.publishItem(`Entry Forwarder ${this.getPublicIdForEntry(entry)}`, ()=>this.publishEntryForwarder(entry));
         }
     }
     
@@ -385,7 +382,8 @@ export class Publish {
         const entryPath = this.pathForEntry(entry);
         const entryDir = this.dirForEntry(entry);
         await Deno.mkdir(entryDir, {recursive: true});
-        const title = 'title';
+        const spellingsSummary = entryschema.renderEntrySpellingsSummary(entry);
+        const title = entryschema.renderEntryTitle(entry);
         const entryMarkup:any[] = entryschema.renderEntry({rootPath}, entry);
         // renderCategoriesForEntry here.
 
@@ -409,6 +407,43 @@ export class Publish {
         await writePageFromMarkupIfChanged(entryPath, this.publicPageTemplate(rootPath, {title, body}));
     }
 
+    // <meta http-equiv="refresh" content="3;url=https://www.mozilla.org" />
+    // https://www.mikmaqonline.org/servlet/words/gajuewj.html
+
+    get publicSiteDomain() {
+        return 'staging.mikmaqonline.org';
+    }
+    
+    /**
+     *
+     */
+    async publishEntryForwarder(entry: Entry): Promise<void> {
+        const entryForwarderPath = `servlet/words/${this.getPublicIdForEntry(entry)}.html`;
+        
+        const siteUrl = `https://${this.publicSiteDomain}`;
+        const entryPath = this.pathForEntry(entry);
+        const newEntryUrl = `${siteUrl}/${entryPath}`;
+        
+        const head = ['meta', {'http-equiv': 'refresh',
+                               'content': `0;url=${newEntryUrl}`}];
+
+        const spellingsSummary = entryschema.renderEntrySpellingsSummary(entry);
+        
+        const title = `Forwarding to entry ${spellingsSummary}`;
+
+        const body = [
+            ['p', {}, 'The entry for ${spellingsSummary} has moved to ',
+             ['a', {href:newEntryUrl}, newEntryUrl],
+             'You should be automatically forwarded.'
+            ],
+
+            ['p', {},
+             'If this does not work, please search for your word on ',
+             ['a', {href: siteUrl}, siteUrl]]
+        ];
+                                
+        await writePageFromMarkupIfChanged(entryForwarderPath, this.publicPageTemplate('../../', {title/*, head*/, body}));
+    }
 
     get categoriesDir(): string {
         return 'categories';
@@ -467,12 +502,12 @@ export class Publish {
             ['div', {},
              ['ul', {},
               entriesForCategory
-                  .map(e=>['li', {}, this.renderEntryPublicLink('../../', e)]),
+                  .map(e=>['li', {}, this.renderEntryPublicLink('../', e)]),
              ] // ul
             ] // div
         ];
 
-        await writePageFromMarkupIfChanged(this.pathForCategory(category), this.publicPageTemplate('../../', {title, body}));
+        await writePageFromMarkupIfChanged(this.pathForCategory(category), this.publicPageTemplate('../', {title, body}));
     }
         
     dirForEntry(entry: Entry): string {
@@ -553,14 +588,15 @@ export class Publish {
             required({document_id: document.document_id}).max_page_number;
         for(let pageNum=1; pageNum<=pagesInDocument; pageNum++) {
             await this.publishItem(`Book ${publicBookId} page ${pageNum}`,
-                                   ()=>this.publishBookPage(publicBookId, pageNum));
+                                   ()=>this.publishBookPage(publicBookId, pageNum, pagesInDocument));
         }
     }
-    
+
     /**
      *
      */
-    async publishBookPage(publicBookId: string, page_number: number) {
+    async publishBookPage(publicBookId: string, page_number: number, total_pages_in_document: number) {
+        const rootPath = '../../../../';
         const reference_layer_name = 'Text';
         
         const document = schema.selectScannedDocumentByFriendlyId().required({friendly_document_id: publicBookId});
@@ -570,14 +606,59 @@ export class Publish {
         const referenceLayer = schema.selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
         const page = schema.selectScannedPageByPageNumber().required({document_id, page_number});
 
-        const content = renderPageEditor.renderPageEditorCoreByPageId(page.page_id,
-                                                                      {layer_id: taggingLayer,
-                                                                       reference_layer_ids: [referenceLayer.layer_id]});
+        const cfg: renderPageEditor.PageViewerConfig = {
+            layer_id: taggingLayer,
+            reference_layer_ids: [referenceLayer.layer_id],
+            total_pages_in_document,
+        };
+
+        const {markup, groupIds} = renderPageEditor.renderAnnotatedPage(cfg, page.page_id);
+
+        const infoBoxesById: Record<string, string> = {};
+        for(const groupId of groupIds) {
+            infoBoxesById[`bg_${groupId}`] = await this.renderDocumentReferenceInfoBox(rootPath, groupId);
+        }
+                
+        const head = [
+            //['link', {href: '/resources/page-viewer.css', rel:'stylesheet', type:'text/css'}],
+            ['script', {src:'/scripts/tagger/page-viewer.js'}],
+        ];
+
+        const body = [
+            ['div', {},
+             ['h1', {}, `${document.title} - Page ${page.page_number}`],
+             cfg.title && ['h2', {}, cfg.title],
+             renderPageEditor.renderPageJumper(page.page_number, total_pages_in_document,
+                                               (page_number:number) => `${rootPath}${this.pathForBookPage(publicBookId, page_number)}`),
+            ], // /div
+
+            markup,
+
+            ['script', {}, `infoBoxesById = ${JSON.stringify(infoBoxesById, undefined, 2)};`],
+
+        ]; // body
+        
+        // 'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216685'
+
         
         await Deno.mkdir(this.dirForBookPage(publicBookId, page_number), {recursive: true});
 
         await writePageFromMarkupIfChanged(this.pathForBookPage(publicBookId, page_number),
-                                           this.publicPageTemplate('../../../../', content));
+                                           this.publicPageTemplate(rootPath, {head, body}));
+    }
+
+    async renderDocumentReferenceInfoBox(rootPath: string, groupId: number): Promise<string> {
+        const entry = this.wordWiki.entriesByReferenceGroupId.get(groupId);
+        if(!entry)
+            return (`Unknown group id ${groupId}`);
+        const entryMarkup:any[] = entryschema.renderEntry({rootPath, suppressReferenceImages: true}, entry);
+        const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
+        if(entry.entry_id === 145979) {  // ugsuguni
+            console.info('SPECIAL ENTRY MARKUP STRING', entryMarkupString, 'for', JSON.stringify(entry, undefined, 2));
+            console.info('MARKUP IS', JSON.stringify(entryMarkup, undefined, 2));
+        }
+        return entryMarkupString;
+        //return `<b>GROUP ${groupId} </b>`;
     }
     
     /**
@@ -655,6 +736,11 @@ export class Publish {
 
                 ['li', {class:"nav-item"},
                  ['a', {class:"nav-link", href:rootPath+this.allWordsPath}, 'All Words'], // XXX FIX PATH XXX
+                ], //li
+
+                ['li', {class:"nav-item"},
+                 // XXX hack - starting at P307 for reasons ...
+                 ['a', {class:"nav-link", href:rootPath+'books/PDM/page-0307/index.html'}, 'Pacifique Manuscript'],
                 ], //li
 
                 ['li', {class:"nav-item"},

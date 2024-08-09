@@ -28,7 +28,7 @@ addEventListener("DOMContentLoaded", _event=>onContentLoaded());
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-function pageEditorMouseDown(event: MouseEvent) {
+function scannedPageMouseDown(event: MouseEvent) {
 
     // --- We are building exactly one group when in single group edit mode.
     const lockedBoundingGroupId = getLockedBoundingGroupId();
@@ -132,13 +132,13 @@ function pageEditorMouseDown(event: MouseEvent) {
     }}
 }
 
-function pageEditorMouseMove(event: MouseEvent) {
+function scannedPageMouseMove(event: MouseEvent) {
     const target = adjustEventTarget(event.target);
     if(!target) return;
     dragTxOnMouseMove(event, target);
 }
 
-function pageEditorMouseUp(event: MouseEvent) {
+function scannedPageMouseUp(event: MouseEvent) {
     const target = adjustEventTarget(event.target);
     if(!target) return;
     dragTxCommit(event, target);

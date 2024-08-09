@@ -28,6 +28,7 @@ import {evalJsExprSrc} from '../utils/jsterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
 import * as pageEditorModule from './page-editor.ts';
+import * as pageViewerModule from './page-viewer.ts';
 
 import {rpcUrl} from '../utils/rpc.ts';
 export interface WordWikiServerConfig {
@@ -43,9 +44,11 @@ export class WordWiki {
     dictSchema: model.Schema;
     #workspace: VersionedDb|undefined = undefined;
     #entries: entry.Entry[]|undefined = undefined;
+    #entriesById: Map<number, entry.Entry>|undefined = undefined;
     #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
     #publishedEntries: any|undefined = undefined;
     #publishedEntriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
+    #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
     #lastAllocatedTxTimestamp: number|undefined;
     sourceLangCollator = Intl.Collator('en'); // TODO make configurable XXX
     
@@ -105,9 +108,11 @@ export class WordWiki {
     requestEntriesJSONReload() {
         this.#entries = undefined;
         this.#entriesByCategory = undefined;
+        this.#entriesById = undefined;
         // This needs to be more complicated when publishing multiple dialects.
         this.#publishedEntries = undefined;
         this.#publishedEntriesByCategory = undefined;
+        this.#entriesByReferenceGroupId = undefined;
     }
 
     /**
@@ -121,6 +126,19 @@ export class WordWiki {
     get publishedEntries(): entry.Entry[] {
         return this.#publishedEntries ??=
             Array.from(this.entries.filter(e=>entry.isPublished(e)));
+    }
+
+    get entriesByReferenceGroupId(): Map<number, entry.Entry> {
+        return this.#entriesByReferenceGroupId ??= (()=>{
+            const refToEntry: Array<[number, entry.Entry]> = this.entries.flatMap(e=>e.subentry.flatMap(s=>
+                s.document_reference.map(d=>[d.bounding_group_id, e] as [number, entry.Entry])));
+            return new Map(refToEntry);
+        })();
+    }
+
+    get entriesById(): Map<number, entry.Entry> {
+        return this.#entriesById ??= (()=>
+            new Map(this.entries.map(e=>[e.entry_id, e])))();
     }
     
     applyTransactions(assertions: Assertion[]) {

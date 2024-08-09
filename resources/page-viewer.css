@@ -24,7 +24,7 @@ text.warning {
 
 svg.group > rect.group-frame {
   fill-opacity: 10%;
-  stroke-width:4;
+  stroke-width:3;
   stroke:yellow;
   display: none;
 }
@@ -37,7 +37,6 @@ svg.group > rect.group-frame:hover {
 /** Shadow the group for the hovered box */
 svg.group:has(> .box:hover) rect.group-frame {
   stroke:orange;
-  display: inline;
 }
 
 /** Highlight the frame surrounding the active group */
@@ -60,7 +59,7 @@ svg.box {
 
 svg.box > rect.frame {
     fill-opacity: 0%;
-    stroke-width: 4;
+    stroke-width:3;
     /*stroke:grey;*/
     visibility: visible;
     pointer-events: all;
@@ -89,7 +88,7 @@ svg.group:not(.active) > svg.box.multi > rect.frame {
 #annotatedPage:not(.drag-in-progress) svg.group:not(.active):has(> .box:hover) > svg.box > rect.frame {
   visibility: visible;
   /*stroke: purple;*/
-  stroke-width:10;
+  stroke-width:4;
   visibility: visible;
 }
 
