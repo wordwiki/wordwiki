@@ -547,8 +547,26 @@ function linkeDOMPlay() {
     console.info(renderToStringViaLinkeDOM(
         ['div', {class: 'top', style: 'none', 'cat': null}, 'hello',
          ['img', {width: 7, height: 9}]]));
+    attrEscapePlay(`cat`);
+    attrEscapePlay(`"cat"`);
+    attrEscapePlay(`'"cat"'`);
+    attrEscapePlay(`"'cat'"`);
+    attrEscapePlay("`cat`");
+    attrEscapePlay("ca\nt"); // This one generates broken html (newline is not escaped)
+    scriptEscapePlay(`"'cat'"`);
 }
 
+function attrEscapePlay(s: string) {
+    const markup = ['div', {onclick: s, 'data-s': s}];
+    const asText = renderToStringViaLinkeDOM(markup, false);
+    console.info('ATTR ESCAPE PLAY', s, asText);
+}
+
+function scriptEscapePlay(s: string) {
+    const markup = ['script', {}, s];
+    const asText = renderToStringViaLinkeDOM(markup, false);
+    console.info('SCRIPT ESCAPE PLAY', s, asText);
+}
 
 
 // ----------------------------------------------------------------------------

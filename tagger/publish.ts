@@ -636,6 +636,10 @@ export class Publish {
 
             ['script', {}, `infoBoxesById = ${JSON.stringify(infoBoxesById, undefined, 2)};`],
 
+            // HACK to allow scrolling of info boxes even at end of document
+            // TODO do something classier!
+            ['div', {style: 'height: 50em;'}],
+            
         ]; // body
         
         // 'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216685'
@@ -651,8 +655,10 @@ export class Publish {
         const entry = this.wordWiki.entriesByReferenceGroupId.get(groupId);
         if(!entry)
             return (`Unknown group id ${groupId}`);
-        const entryMarkup:any[] = entryschema.renderEntry({rootPath, suppressReferenceImages: true}, entry);
-        const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, true);
+        const entryMarkup:any[] = [
+            'div', {style: 'overflow: auto;'},
+            entryschema.renderEntry({rootPath, noTargetOnRefImages: true, docRefsFirst: true}, entry)];
+        const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
         //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
         if(entry.entry_id === 145979) {  // ugsuguni
             console.info('SPECIAL ENTRY MARKUP STRING', entryMarkupString, 'for', JSON.stringify(entry, undefined, 2));

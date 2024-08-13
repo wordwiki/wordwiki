@@ -78,6 +78,54 @@ export async function addFile(contentStorePath: string,
     return Promise.resolve(contentId);
 }
 
+/**
+ * Add a file to a content store.
+ *
+ */
+export async function addFileAsData(contentStorePath: string,
+                                    data: Uint8Array,
+                                    extension: string|undefined): Promise<string> {
+    
+    // --- Extract content store parent and name from contentStorePath
+    const contentStoreParent = posix.dirname(contentStorePath);
+    const contentStore = posix.basename(contentStorePath);
+
+    // --- Compute hash of src data
+    const hash = await digestBytes(data);
+
+    // --- Compute content id and path
+    const parsedContentId = { contentStore, hash, extension };
+    const contentId = formatContentId(parsedContentId);
+    const contentPath = posix.join(contentStoreParent, contentId);
+    
+    if(await fs.exists(contentPath)) {
+        // --- File is already in store, confirm file size as a sanity check.
+        const storedFileStat = await Deno.stat(contentPath);
+        if(storedFileStat.size !== data.length)
+            throw new Error(`internal error: data is already interned in content store ${contentStorePath} - as ${contentPath} but has a different size`);
+        //console.info('confirmed that existing content', srcFilePath, 'stored as', contentPath, 'is correct');
+    } else {
+        // --- Make content parent dir if it does not exist
+        await fs.ensureDir(posix.dirname(contentPath));
+        
+        // --- Add file to content store (using copy, then move to make atomic)
+        const tmpTargetName = contentPath+'.~';
+        if(await fs.exists(tmpTargetName)) {
+            await Deno.remove(tmpTargetName);
+            if(await fs.exists(tmpTargetName))
+                throw new Error(`failed to erase existing tmp target name ${tmpTargetName}`);
+        }
+        //await fs.copy(srcFilePath, tmpTargetName, {overwrite: true}); //, preserveTimestamps: true});
+        await Deno.writeFile(tmpTargetName, data);
+        await fs.move(tmpTargetName, contentPath);
+        console.info('added data as', contentPath);
+    }
+
+    
+    return Promise.resolve(contentId);
+}
+
+
 function contentStorePlay() {
     //addFile('dogs', 'content.ts');
 }
@@ -263,6 +311,14 @@ export function formatContentId({contentStore, hash, extension}: ContentId): str
 async function digestString(message:string): Promise<string> {
     return arrayBufferToHexString(await crypto.subtle.digest(
         "SHA-256", new TextEncoder().encode(message)));
+}
+
+/**
+ * Computes the sha256 of the supplied bytes.
+ */
+async function digestBytes(message:Uint8Array): Promise<string> {
+    return arrayBufferToHexString(await crypto.subtle.digest(
+        "SHA-256", message));
 }
 
 /**

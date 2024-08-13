@@ -20,32 +20,40 @@ addEventListener("DOMContentLoaded", _event=>onContentLoaded());
 
 function scannedPageMouseDown(event: MouseEvent) {
 
-    // --- We are building exactly one group when in single group edit mode.
-    const lockedBoundingGroupId = getLockedBoundingGroupId();
-    const selectedGroup = getSelectedGroup();
+    const prevSelectedGroupId = getSelectedGroup()?.id;
+    console.info('pageEditorMouseDown', new Date(), {
+        prevSelectedGroupId: prevSelectedGroupId});
 
-    console.info('pageEditorMouseDown', {
-        lockedBoundingGroupId,
-        selectedGroup: selectedGroup && selectedGroup.id});
-
-    // --- If the info box is up, remove it.
-    dismissInfoBox();
-    
     // --- Adjust event target to be ancestor or self element of application interest.
     const target = adjustEventTarget(event.target);
     if(!target) return;
     const widgetKind = getWidgetKind(target);
 
-    // --- Maybe popup a new info box.
-    if(widgetKind !== 'box')
+    // --- If not clicking on a box, dismiss current popup
+    if(widgetKind !== 'box') {
+        dismissInfoBox();
         return;
+    };
 
+    // --- Select the box (which will also select the group)
     selectBox(target);
     const selectedGroupId = getSelectedGroup()?.id;
-    if(!selectedGroupId)
-        return;
 
-    console.info('SELECTED GROUP IS', selectedGroup);
+    // --- If no group selected, dismiss the info box and done.
+    if(!selectedGroupId) {
+        dismissInfoBox();
+        return;
+    }
+
+    // --- If the selected group has changed, dismiss the current one.
+    //     (these two operations will race if we do it for the same group)
+    // if(prevSelectedGroupId !== selectedGroupId) {
+    //     // --- If the info box is up, remove it.
+    //     dismissInfoBox();
+    // }
+
+    // --- Popup the new info box (dismisses existing info box if there is one)
+    console.info('SELECTED GROUP IS', selectedGroupId);
     popupInfoBox(selectedGroupId);
 }
 
@@ -322,6 +330,7 @@ function getHighlightRefBoundingBoxId(): string|null {
 // -----------------------------------------------------------------------
 
 let infoBoxesById: Record<string, any> = {};
+let currentInfoBoxId: string|undefined = undefined;
 let currentInfoBox: any = undefined;
 
 function initInfoBoxes() {
@@ -330,10 +339,13 @@ function initInfoBoxes() {
     infoBoxesById = new Map(groups.map(group => {
         const popover = new bootstrap.Popover(group, {
             container:'body',
-            toggle:'popover',
+            //toggle:'popover',
+            trigger: 'manual',
             placement:'bottom',
             html: true,
-            content: infoBoxesById[group.id] ?? undefined});
+            content: infoBoxesById[group.id] ?? undefined,
+            sanitizeFn(content: string) { return content; },
+        });
         //popover.toggleEnabled(false);
         return [group.id, popover];
     }));
@@ -341,23 +353,32 @@ function initInfoBoxes() {
 
 function dismissInfoBox() {
     if(currentInfoBox != undefined) {
-        console.info('dismissing info box ', currentInfoBox?.id);
+        console.info('  dismissing info box ', currentInfoBox?.id);
         currentInfoBox.hide();
         currentInfoBox = undefined;
+        currentInfoBoxId = undefined;
     }
 }
 
 function popupInfoBox(id: string) {
-    dismissInfoBox();
+    console.info('popup info box', {id, currentInfoBoxId, currentInfoBox});
+    if(currentInfoBoxId === id) {
+        console.info('  already has correct id popped up');
+        return;
+    }
+    if(currentInfoBox !== undefined) {
+        dismissInfoBox();
+    }
     const infoBox = infoBoxesById.get(id);
     if(infoBox === undefined) {
         const error = `Error: failed to find info box for id ${id}`;
         alert(error);
         throw new Error(error);
     }
-    console.info('showing info box ', id);
+    console.info('  showing info box ', id);
     infoBox.show();
     currentInfoBox = infoBox;
+    currentInfoBoxId = id;
 }
 
 /**

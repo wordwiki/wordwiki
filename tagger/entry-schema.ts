@@ -680,6 +680,8 @@ function contextMenuPlay(): any {
 interface RenderCtx {
     rootPath: string;
     suppressReferenceImages?: boolean;
+    noTargetOnRefImages?: boolean;
+    docRefsFirst?: boolean;
 }
 
 /**
@@ -734,13 +736,14 @@ export function renderSubentries(ctx: RenderCtx, e: Entry, s: Subentry[]): any {
 export function renderSubentry(ctx: RenderCtx, e: Entry, s: Subentry): any {
     return [
         // renderSource(e, s, s.source),
+        ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
         renderPronunciationGuides(ctx, e, s, s.pronunciation_guide),
         renderTranslations(ctx, e, s, s.translation),
         //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
         renderGlosses(ctx, e, s, s.gloss),
         //s.example.map(x=>renderExample(e, x)),
         renderExamples(ctx, e, s, s.example),
-        renderDocumentReferences(ctx, e, s, s.document_reference),
+        !ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
     ];
 }
 
@@ -837,16 +840,19 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
         ref.transcription.length === 0 &&
         ref.note.length === 0;
     return [
-        ['a', {href:refUrl, target:'_blank', rel:'opener'}, standaloneGroupRender],
+        ctx.noTargetOnRefImages
+            ? standaloneGroupRender
+            : ['a', {href:refUrl, target:'_blank', rel:'opener'}, standaloneGroupRender],
         ['div', {},
-         noBody ? ['b', {}, 'No Transcription']: undefined,
+         /*noBody ? ['b', {}, 'No Transcription']:*/ undefined,
         ],
         ['table', {},
          ['tbody', {},
-          ref.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),
-          ref.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
-          ref.transliteration.map(t=>['tr', {}, ['th', {}, 'Transliteration:'], ['td', {}, t.transliteration]]),
-          ref.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.note]]),
+          // TODO move this style stuff to the stylesheet
+          ref.transcription.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Transcription:'], ['td', {}, t.transcription]]),
+          ref.expanded_transcription.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
+          ref.transliteration.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Transliteration:'], ['td', {}, t.transliteration]]),
+          ref.note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Note:'], ['td', {}, t.note]]),
           //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
           //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
           //ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),

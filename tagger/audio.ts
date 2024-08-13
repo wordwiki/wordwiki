@@ -11,13 +11,44 @@ import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage,
 import * as config from "./config.ts";
 import {getImageSize} from "./get-image-size.ts";
 import * as server from '../utils/http-server.ts';
+import {
+    encodeBase64,
+    decodeBase64,
+} from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
+export async function uploadRecording(args: {recordingBytesAsBase64: string}): Promise<{audioPath: string}> {
+    const recordingBytesAsBase64 = args.recordingBytesAsBase64;
+    if(typeof recordingBytesAsBase64 !== 'string')
+        throw new Error('missing/malformed recordingBytesAsBase64 in uploadRecording RPC');
+    if(recordingBytesAsBase64.length === 0)
+        throw new Error('recording bytes is empty in uploadRecording RPC');
+    const recordingBytes = decodeBase64(recordingBytesAsBase64);
+
+    // TODO: more work on this verififcation (+ we want to switch to a
+    //       lossless compressed format anyway - so do later)
+    //       (+ we will spat on the encode step anyway).
+    //       (+ we want to enforce audio settings - which will require more fancy)
+    if(recordingBytes[0] !== 'R'.charCodeAt(0) ||
+        recordingBytes[1] !== 'I'.charCodeAt(0) ||
+        recordingBytes[2] !== 'F'.charCodeAt(0) ||
+        recordingBytes[3] !== 'F'.charCodeAt(0))
+        throw new Error('expected uploaded recording to be a .wav file');
+    
+    // Write the audio to disk
+    // TODO having embedded content/Recordings here is BAD
+    const audio_ref = 'content/'+
+        await content.addFileAsData('content/Recordings', recordingBytes, 'wav');
+
+    console.info('new audio_ref is', audio_ref);
+    
+    return {audioPath: audio_ref};
+}
 
 /**
  * Given a source audio path, creates the compressed version if it does not
  * yet exist, then does a 302 redirect to the compressed version.
  */
-export async function forwardToCompressedRecording(srcRecordingPath: string): Promise<server.Response> {
+ export async function forwardToCompressedRecording(srcRecordingPath: string): Promise<server.Response> {
     const compressedAudioPath = await getCompressedRecordingPath(srcRecordingPath);  // REMOVE_FOR_WEB
     console.info('compressedAudioPath', compressedAudioPath);
     return server.forwardResponse('/'+compressedAudioPath);
@@ -96,5 +127,6 @@ async function preCompressDictionaryAudio() {
 }
 
 export const routes = ()=> ({
+    uploadRecording,
     forwardToCompressedRecording,
 });

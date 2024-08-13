@@ -81,8 +81,14 @@ export abstract class ScalarView extends View {
     /*abstract*/ renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, inputId: string, v: any): Markup {
         return String(v);
     }
-    
-    loadFromEditor(relation_id: number, input_id: string): any {
+
+    /**
+     *
+     *
+     * Note: async so that we can load the data from input type=file fields.
+     * (+ probably needed for submitting web audio recording when we get that done)
+     */
+    async loadFromEditor(relation_id: number, input_id: string): Promise<any> {
         return undefined;
     }
 }
@@ -109,7 +115,7 @@ export class BooleanView extends ScalarView {
         return ['input', checkboxAttrs];
     }
 
-    loadFromEditor(relationId: number, inputId: string): any {
+    async loadFromEditor(relationId: number, inputId: string): Promise<any> {
         const checkboxElement = document.getElementById(inputId) as HTMLInputElement;
         if(!checkboxElement)
             throw new Error(`failed to find checkbox element ${inputId}`); // TODO fix error
@@ -262,7 +268,7 @@ export class StringView extends ScalarView {
                           id: `input-${relation_id}-${this.field.name}`}];
     }
 
-    loadFromEditor(relation_id: number, input_id: string): any {
+    async loadFromEditor(relation_id: number, input_id: string): Promise<any> {
         const inputId = `input-${relation_id}-${this.field.name}`;
         const inputElement = document.getElementById(inputId);
         if(!inputElement)
@@ -305,7 +311,7 @@ export class EnumView extends StringView {
                ];
     }
 
-    loadFromEditor(relation_id: number, input_id: string): any {
+    async loadFromEditor(relation_id: number, input_id: string): Promise<any> {
         const inputId = `input-${relation_id}-${this.field.name}`;
         const selectElement = document.getElementById(inputId) as HTMLSelectElement;
         if(!selectElement)
@@ -348,6 +354,18 @@ export class BlobView extends StringView {
     accept<A,R>(v: ViewVisitorI<A,R>, a: A): R { return v.visitBlobView(this, a); }
 }
 
+async function encodeBlobAsBase64(blob: Blob) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event: any) => {
+            const dataUrl = event.target.result;
+            const [_, base64] = dataUrl.split(',');
+            resolve(base64);
+        };
+        reader.readAsDataURL(blob);
+    });
+}
+
 /**
  *
  */
@@ -369,20 +387,53 @@ export class AudioView extends StringView {
     renderEditorInput(ctx: RenderCtx, editor: TupleEditor, relation_id: number, input_id: string, v: any): Markup {
         return ['input', {type: 'file', /*placeholder: this.prompt,*/
                           size: this.field.style.$width ?? 30,
+                          accept: '.wav',
                           value: '', //String(v??''),
                           autofocus: '',
                           class: 'form-control',
                           id: `input-${relation_id}-${this.field.name}`}];
     }
 
-    loadFromEditor(relation_id: number, input_id: string): any {
+    async loadFromEditor(relation_id: number, input_id: string): Promise<any> {
         const inputId = `input-${relation_id}-${this.field.name}`;
         const inputElement = document.getElementById(inputId);
         if(!inputElement)
             throw new Error(`failed to find input element ${inputId}`); // TODO fix error
-        const value = (inputElement as HTMLInputElement).value; //getAttribute('value');
-        // TODO more checking here.
-        return value;
+        if(!(inputElement instanceof HTMLInputElement))
+            throw new Error(`audio input element of wrong type ${inputId}`);
+        const value = inputElement.value; //(inputElement as HTMLInputElement).value; //getAttribute('value');
+        console.info(`Audio filename is ${value}`);
+        
+        //const file = inputElement.files?.item(0);
+        const file = inputElement?.files?.[0];
+        if(!file) {
+            console.info('audio input did not get a new file - not updating value');
+            return undefined;
+        }
+        console.info('FILE is:', file);
+
+        const recordingBytesAsBase64 = await encodeBlobAsBase64(file);
+        console.info('recordingBytesAsBase64', recordingBytesAsBase64);
+        
+        // (async ()=>{
+        //     console.info('text is', await file.text());
+        // })();
+
+        // Change this to be a RPC to write the wav and get back a path.
+        // Deal with non-change case somehow.
+        // const data = await file.arrayBuffer();
+        // console.info('bytes is', data);
+        // const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+        // const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+        // const hashHex = hashArray
+        //     .map((b) => b.toString(16).padStart(2, "0"))
+        //     .join(""); // convert bytes to hex string
+        // console.info('digest is', hashHex);
+
+        const {audioPath}: {audioPath: string} = await rpc`uploadRecording({recordingBytesAsBase64: ${recordingBytesAsBase64}})`;
+        console.info('AUDIO PATH IS', audioPath);
+        
+        return audioPath;
     }
 }
 
@@ -1156,7 +1207,7 @@ export class ActiveViews {
             panic('unable to find relation view for relation', tupleSchema.tag);
     }
 
-    endFieldEdit() {
+    async endFieldEdit() {
         if(!this.currentlyOpenTupleEditor) {
             alert('No field editor is currently open');
             return;
@@ -1164,7 +1215,7 @@ export class ActiveViews {
 
         const tupleEditor = this.currentlyOpenTupleEditor;
 
-        tupleEditor.endFieldEdit();
+        await tupleEditor.endFieldEdit();
         const renderRootId = tupleEditor.renderRootId;
         const newAssertion = tupleEditor.assertion;
 
@@ -1355,11 +1406,11 @@ export class TupleEditor {
     //                ];
     // }
 
-    endFieldEdit() {
+    async endFieldEdit() {
         console.info('in endFieldEdit');
         for(const fieldView of this.view.userScalarViews) {
             const inputId = `input-${this.assertion.assertion_id}-${fieldView.field.name}`;
-            const formValue = fieldView.loadFromEditor(this.assertion.assertion_id, inputId);
+            const formValue = await fieldView.loadFromEditor(this.assertion.assertion_id, inputId);
             console.info('formValue is', formValue);
             if(formValue !== undefined) {
                 (this.assertion as any)[fieldView.field.bind] = formValue;
@@ -1729,6 +1780,7 @@ export async function launchAddNewDocumentReference3(entry_id: number, subentry_
     // NO END OF EASY DOOM FROM DOING STUFF LIKE THIS.
     (currentlyOpenTupleEditor.assertion as any)['attr1'] = group_id;
 
+    // Note: we are not awaiting this promise - that is fine.
     activeViews().endFieldEdit();
 
 
