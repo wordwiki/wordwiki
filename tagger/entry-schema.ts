@@ -298,8 +298,8 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'alt',
                 alternate_grammatical_form_id: {$type: 'primary_key'},
-                gloss: {$type: 'string', $bind: 'attr1'},
-                grammatical_form: {$type: 'string', $bind: 'attr2'},
+                grammatical_form: {$type: 'string', $bind: 'attr1'},
+                gloss: {$type: 'string', $bind: 'attr2'},
                 $style: { $shape: 'containerRelation' },
 
                 alternate_form_text: {
