@@ -152,7 +152,7 @@ export class Publish {
         await this.publishItem('About Us', ()=>this.publishAboutUsPage());
 
         // --- Publish books
-        for(const book of ['PDM'])
+        for(const book of ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'])
             await this.publishBook(book);
         
         // --- Publish categories
@@ -657,13 +657,13 @@ export class Publish {
             return (`Unknown group id ${groupId}`);
         const entryMarkup:any[] = [
             'div', {style: 'overflow: auto;'},
-            entryschema.renderEntry({rootPath, noTargetOnRefImages: true, docRefsFirst: true}, entry)];
+            entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true}, entry)];
         const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
         //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
-        if(entry.entry_id === 145979) {  // ugsuguni
-            console.info('SPECIAL ENTRY MARKUP STRING', entryMarkupString, 'for', JSON.stringify(entry, undefined, 2));
-            console.info('MARKUP IS', JSON.stringify(entryMarkup, undefined, 2));
-        }
+        // if(entry.entry_id === 145979) {  // ugsuguni
+        //     console.info('SPECIAL ENTRY MARKUP STRING', entryMarkupString, 'for', JSON.stringify(entry, undefined, 2));
+        //     console.info('MARKUP IS', JSON.stringify(entryMarkup, undefined, 2));
+        // }
         return entryMarkupString;
         //return `<b>GROUP ${groupId} </b>`;
     }
@@ -750,6 +750,24 @@ export class Publish {
                  ['a', {class:"nav-link", href:rootPath+'books/PDM/page-0307/index.html'}, 'Pacifique Manuscript'],
                 ], //li
 
+                // --- Reference Books
+                ['li', {class:"nav-item dropdown"},
+                 ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
+                  'Reference Books'
+                 ], //a
+                 ['ul', {class:"dropdown-menu"},
+                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/PDM/page-0001/index.html'}, 'Pacifique Manuscript']],
+                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/Rand/page-0001/index.html'}, "Rand's Dictionary"]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/Clark/page-0001/index.html'}, "Clark's Dictionary"]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/PacifiquesGeography/page-0001/index.html'}, "Pacifique's Geography"]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/RandFirstReadingBook/page-0001/index.html'}, "Rand's First Reading Book"]],
+                  //['li', {}, ['hr', {class:"dropdown-divider"}]],
+                  //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
+                 ], //ul
+                ], //li
+
+
+                
                 ['li', {class:"nav-item"},
                  ['a', {class:"nav-link", href:'/ww/'}, 'Editor'], // FIX PATH XXX
                 ], //li

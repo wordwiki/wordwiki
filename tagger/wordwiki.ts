@@ -417,7 +417,8 @@ export class WordWiki {
             ['h3', {}, 'Reports'],
             ['ul', {},
              ['li', {}, ['a', {href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']]
+             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']]
             ],
 
             ['br', {}],
@@ -426,6 +427,7 @@ export class WordWiki {
              ['li', {}, ['a', {href:`/ww/pageEditor("PDM")`}, 'PDM']],
              ['li', {}, ['a', {href:`/ww/pageEditor("Rand")`}, 'Rand']],
              ['li', {}, ['a', {href:`/ww/pageEditor("Clark")`}, 'Clark']],
+             ['li', {}, ['a', {href:`/ww/pageEditor("PacifiquesGeography")`}, 'PacifiquesGeography']],
              ['li', {}, ['a', {href:`/ww/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
         ];
 
@@ -631,6 +633,44 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
 
+    todoReport(restrictToUser: string|null, restrictToTask: string|null): any {
+        const userSummary = restrictToUser ? `for user "${entry.users[restrictToUser] ?? restrictToUser}"` : 'for all users';
+        const taskSummary = restrictToTask ? `for task "${entry.todos[restrictToTask] ?? restrictToTask}"` : 'for all tasks';
+        const title = `TODO report ${userSummary} ${taskSummary}`;
+
+        const userPicker = ['div', {}, ['b', {}, 'Assigned To: '],
+                            Object.entries(entry.users).map(([user_id, user_name])=>
+                                [['a', {href:`/ww/wordwiki.todoReport(${JSON.stringify(user_id)}, ${JSON.stringify(restrictToTask)})`}, user_id], ' / ']),
+                            ['a', {href:`/ww/wordwiki.todoReport(null, ${JSON.stringify(restrictToTask)})`}, 'ALL USERS']];
+
+        const taskPicker = ['div', {}, ['b', {}, 'Task Kind: '],
+                            Object.entries(entry.todos).map(([todo_id, todo_name])=>
+                                [['a', {href:`/ww/wordwiki.todoReport(${JSON.stringify(restrictToUser)}, ${JSON.stringify(todo_id)})`}, todo_name], ' / ']),
+                            ['a', {href:`/ww/wordwiki.todoReport(${JSON.stringify(restrictToUser)}, null)`}, 'ALL TASKS']];
+
+        const entriesForTODO = this.getEntriesForTODO(restrictToUser, restrictToTask);
+        
+        const body = [
+            ['h1', {}, title],
+            userPicker,
+            taskPicker,
+            ['br', {}],
+            ['ul', {},
+             entriesForTODO.map(e=>
+                 ['li', {},
+                  ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]])]];
+
+        return templates.pageTemplate({title, body});
+    }
+
+    getEntriesForTODO(restrictToUser: string|null, restrictToTask: string|null): entry.Entry[] {
+        return this.entries.filter(
+            entry=>
+                entry.todo.some(todo=>
+                    (restrictToTask == null || todo.todo === restrictToTask) &&
+                    (restrictToUser == null || todo.assigned_to === restrictToUser)));
+    }
+    
     variantReport(): any {
         
         function findAllVariantFieldValues(entry: Record<string, any>,
@@ -882,6 +922,11 @@ export class WordWiki {
                   r.expanded_transcription.map(t=>['tr', {}, ['th', {}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
                   r.transliteration.map(t=>['tr', {}, ['th', {}, 'Transliteration:'], ['td', {}, t.transliteration]]),
                   r.note.map(t=>['tr', {}, ['th', {}, 'Note:'], ['td', {}, t.note]]),
+                  r.source_as_entry.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Source as entry:'], ['td', {}, t.source_as_entry]]),          
+                  r.normalized_source_as_entry.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Normalized source as entry:'], ['td', {}, t.normalized_source_as_entry]]),
+                  r.foreign_reference.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Foreign reference:'], ['td', {}, t.foreign_reference]]),
+                  
+                  
                  ]]
             ];
         }

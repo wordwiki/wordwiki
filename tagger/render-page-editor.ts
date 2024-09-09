@@ -115,7 +115,7 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
 
     const body = [
         ['div', {},
-         ['h1', {}, `${document.title} - Page ${page.page_number}`],
+         ['h1', {}, `${document.title} - Page Image #${page.page_number}`],
          cfg.title && ['h2', {}, cfg.title],
          cfg.locked_bounding_group_id && [
              ['div', {},
@@ -565,6 +565,61 @@ export function singleBoundingGroupEditorURL(bounding_group_id: number, title: s
     return `/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
 
 }
+
+/**
+ *
+ */
+export function singlePublicBoundingGroupEditorURL(rootPath: string,
+                                                   bounding_group_id: number,
+                                                   title: string) {
+    const bounding_group = schema.selectBoundingGroup().required({bounding_group_id});
+    const document_id = bounding_group.document_id;
+    const layer_id = bounding_group.layer_id;
+    const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+
+    // XXX Note: if a entry has bounding boxes on muiltiple pages, we are
+    //     picking the first page by page_id, not page number.
+    // XXX this is wrong.
+    const page_id =
+        bounding_boxes.length > 0
+        ? bounding_boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0]
+        : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
+
+    const document = schema.selectScannedDocument().required({document_id});
+    
+    const page = schema.selectScannedPage().required({page_id});
+    const page_number = page.page_number;
+    
+    return `${rootPath}books/${document.friendly_document_id}/page-${String(page_number).padStart(4, '0')}/index.html`;
+}
+
+/**
+ *
+ */
+export function imageRefDescription(bounding_group_id: number): string {
+    const bounding_group = schema.selectBoundingGroup().required({bounding_group_id});
+    const document_id = bounding_group.document_id;
+    const layer_id = bounding_group.layer_id;
+    const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+
+    // XXX Note: if a entry has bounding boxes on muiltiple pages, we are
+    //     picking the first page by page_id, not page number.
+    // XXX this is wrong.
+    const page_id =
+        bounding_boxes.length > 0
+        ? bounding_boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0]
+        : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
+
+    const document = schema.selectScannedDocument().required({document_id});
+    
+    const page = schema.selectScannedPage().required({page_id});
+    const page_number = page.page_number;
+    
+    return `${document.title}, Page Image #${page_number}`;
+}
+
+
+
 
 export function forwardToSingleBoundingGroupEditorURL(bounding_group_id: number, title: string): Response {
     const editorURL = singleBoundingGroupEditorURL(bounding_group_id, title);

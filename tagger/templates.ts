@@ -103,6 +103,7 @@ export function navBar(): any {
               ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PDM")'}, 'PDM']],
               ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Rand")'}, 'Rand']],
               ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Clark")'}, 'Clark']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
               ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
               //['li', {}, ['hr', {class:"dropdown-divider"}]],
               //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
@@ -117,6 +118,7 @@ export function navBar(): any {
              ['ul', {class:"dropdown-menu"},
               ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
               ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
+              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']]              
              ], //ul
             ], //li
 

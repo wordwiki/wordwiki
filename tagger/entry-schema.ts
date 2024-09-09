@@ -12,7 +12,7 @@ import * as timestamp from '../utils/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
 import ContextMenu from '../utils/context-menu.js';
-import { renderStandaloneGroup, singleBoundingGroupEditorURL } from './render-page-editor.ts'; // REMOVE_FOR_WEB
+import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from './render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as random from '../utils/random.ts';
 
@@ -46,11 +46,12 @@ export const RefSourceAsEntryTag = 'rse';
 export const RefNormalizedSourceAsEntryTag = 'rne';
 export const RefForeignReferenceTag = 'rfr';
 export const RefNoteTag = 'rnt';
+export const RefPublicNoteTag = 'rnp';
 export const SourceTag = 'src';
 export const RecordingTag = 'rec';
 
 // XXX HACK HACK
-export const users = {
+export const users: Record<string, string> = {
     '___': 'No User Selected',
     'ecm': 'Emma Metallic',
     'ewm': 'Eunice Metallic',
@@ -67,7 +68,7 @@ export const users = {
     'mmo': 'MMO Team',
 };
 
-export const states = {
+export const states: Record<string, string> = {
     'Unknown': 'Unknown Status',
     'Completed': 'Completed',
     'CompletedAsPDMOnly': 'Completed As PDM Only',
@@ -79,7 +80,7 @@ export const states = {
     'ArchivedNotAWord': 'Archived - Not A Word',
 };
 
-export const todos = {
+export const todos: Record<string, string> = {
     'Todo': 'Todo',
     'NeedsResearchGroupReview': 'Needs Research Group Review',
     'NeedsSpeakerGroupReview': 'Needs Speaker Group Review',
@@ -87,7 +88,7 @@ export const todos = {
     'NeedsApproval': 'Needs Approval',
 };
 
-export const variants = {
+export const variants: Record<string, string> = {
     'mm-li': 'Listuguj',
     'mm-sf': 'Smith-Francis',
     'mm-mp': 'Modified Pacifique',
@@ -130,7 +131,7 @@ export const dictSchemaJson = {
         todo: {
             $type: 'relation',
             $tag: TodoTag,
-            ref_note_id: {$type: 'primary_key'},
+            todo_id: {$type: 'primary_key'},
             todo: {$type: 'enum', $bind: 'attr1',
                    $style: { $options: todos}},
             details: {$type: 'string', $bind: 'attr2', $style: { $width: 30 }},
@@ -351,7 +352,7 @@ export const dictSchemaJson = {
                 transcription: {
                     $type: 'relation',
                     $tag: RefTranscriptionTag,
-                    ref_transcription_id: {$type: 'primary_key'},
+                    transcription_id: {$type: 'primary_key'},
                     transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -359,7 +360,7 @@ export const dictSchemaJson = {
                 expanded_transcription: {
                     $type: 'relation',
                     $tag: RefExpandedTranscriptionTag,
-                    ref_expanded_transcription_id: {$type: 'primary_key'},
+                    expanded_transcription_id: {$type: 'primary_key'},
                     expanded_transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -367,7 +368,7 @@ export const dictSchemaJson = {
                 transliteration: {
                     $type: 'relation',
                     $tag: RefTransliterationTag,
-                    ref_text_id: {$type: 'primary_key'},
+                    transliteration_id: {$type: 'primary_key'},
                     transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
@@ -376,8 +377,8 @@ export const dictSchemaJson = {
                 source_as_entry: {
                     $type: 'relation',
                     $tag: RefSourceAsEntryTag,
-                    ref_text_id: {$type: 'primary_key'},
-                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    source_as_entry_id: {$type: 'primary_key'},
+                    source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -385,8 +386,8 @@ export const dictSchemaJson = {
                 normalized_source_as_entry: {
                     $type: 'relation',
                     $tag: RefNormalizedSourceAsEntryTag,
-                    ref_text_id: {$type: 'primary_key'},
-                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    normalized_source_as_entry_id: {$type: 'primary_key'},
+                    normalized_source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -394,8 +395,8 @@ export const dictSchemaJson = {
                 foreign_reference: {
                     $type: 'relation',
                     $tag: RefForeignReferenceTag,
-                    ref_text_id: {$type: 'primary_key'},
-                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    foreign_reference_id: {$type: 'primary_key'},
+                    foreign_reference: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -403,10 +404,26 @@ export const dictSchemaJson = {
                 note: {
                     $type: 'relation',
                     $tag: RefNoteTag,
-                    ref_note_id: {$type: 'primary_key'},
+                    note_id: {$type: 'primary_key'},
                     note: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
+
+                public_note: {
+                    $type: 'relation',
+                    $tag: RefPublicNoteTag,
+                    public_note_id: {$type: 'primary_key'},
+                    public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    $style: { $shape: 'compactInlineListRelation' },
+                },
+                
+                // note: {
+                //     $type: 'relation',
+                //     $tag: RefNoteTag,
+                //     ref_note_id: {$type: 'primary_key'},
+                //     note: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                //     $style: { $shape: 'compactInlineListRelation' },
+                // },
             },
 
             source: {
@@ -438,6 +455,7 @@ export interface Entry {
     entry_id: number,
     spelling: Spelling[],
     status: Status[],
+    todo: Todo[],
     subentry: Subentry[],
     recording: Recording[],
 }
@@ -449,6 +467,15 @@ export interface Status {
     variant: string,
 }
 
+export interface Todo {
+    todo_id: number,
+    todo: string,
+    details: string,
+    assigned_to: string,
+    done: number,
+    variant: string,
+}
+
 export interface Spelling {
     spelling_id: number,
     text: string,
@@ -457,6 +484,7 @@ export interface Spelling {
 
 export interface Subentry {
     subentry_id: number,
+    part_of_speech: string,
     translation: Translation[],
     definition: Definition[],
     gloss: Gloss[],
@@ -560,27 +588,51 @@ export interface DocumentReference {
     transcription: RefTranscription[],
     expanded_transcription: RefExpandedTranscription[],
     transliteration: RefTransliteration[],
+    source_as_entry: RefSourceAsEntry[],
+    normalized_source_as_entry: RefNormalizedSourceAsEntry[],
+    foreign_reference: RefForeignReference[],
     note: RefNote[],
+    public_note: RefPublicNote[],
 }
 
 export interface RefTranscription {
-    ref_transcription_id: number,
+    transcription_id: number,
     transcription: string,
 }
 
 export interface RefExpandedTranscription {
-    ref_expanded_transcription_id: number,
+    expanded_transcription_id: number,
     expanded_transcription: string,
 }
 
 export interface RefTransliteration {
-    ref_text_id: number,
+    transliteration_id: number,
     transliteration: string,
 }
 
+export interface RefSourceAsEntry {
+    source_as_entry_id: number,
+    source_as_entry: string,
+}
+
+export interface RefNormalizedSourceAsEntry {
+    normalized_source_as_entry_id: number,
+    normalized_source_as_entry: string,
+}
+
+export interface RefForeignReference {
+    foreign_reference_id: number,
+    foreign_reference: string,
+}
+
 export interface RefNote {
-    ref_note_id: number,
+    note_id: number,
     note: string,
+}
+
+export interface RefPublicNote {
+    public_note_id: number,
+    public_note: string,
 }
 
 export interface Source {
@@ -680,6 +732,7 @@ function contextMenuPlay(): any {
 interface RenderCtx {
     rootPath: string;
     suppressReferenceImages?: boolean;
+    renderInternalNotes?: boolean,
     noTargetOnRefImages?: boolean;
     docRefsFirst?: boolean;
 }
@@ -737,14 +790,39 @@ export function renderSubentry(ctx: RenderCtx, e: Entry, s: Subentry): any {
     return [
         // renderSource(e, s, s.source),
         ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
+        renderPartOfSpeech(ctx, e, s, s.part_of_speech),
         renderPronunciationGuides(ctx, e, s, s.pronunciation_guide),
         renderTranslations(ctx, e, s, s.translation),
         //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
         renderGlosses(ctx, e, s, s.gloss),
         //s.example.map(x=>renderExample(e, x)),
         renderExamples(ctx, e, s, s.example),
+        renderRelatedEntries(ctx, e, s, s.related_entry),
+        renderBorrowedWords(ctx, e, s, s.attr),
         !ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
     ];
+}
+
+export const partsOfSpeech: Record<string, string> = {
+    "na": "noun animate",
+    "ni": "noun inanimate",
+    "vii": "verb inanimate intransitive",
+    "vai": "verb animate intransitive",
+    "vit": "verb inanimate transitive",
+    "vat": "verb animate transitive",
+    "PTCL": "particle",
+    "PCTL": "particle",
+    "adv": "adverb",
+    "n": "noun",
+    "pn": "pronoun",
+    "pna": "pronoun animate",
+    "pni": "pronoun inanimate",
+    "unclassified": "unclassified part of speech",
+};
+
+
+export function renderPartOfSpeech(ctx: RenderCtx, e: Entry, s: Subentry, part_of_speech: string): any {
+    return ['div', {},  ['b', {}, 'Part of Speech: '], partsOfSpeech[part_of_speech] ?? part_of_speech];
 }
 
 export function renderPronunciationGuides(ctx: RenderCtx, e: Entry, s: Subentry,
@@ -805,6 +883,34 @@ export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
     ];
 }
 
+export function renderRelatedEntries(ctx: RenderCtx, e: Entry, s: Subentry,
+                                     relatedEntries: RelatedEntry[]): any {
+    if(!relatedEntries)
+        throw new Error('missing related entries');
+    return [['div', {class: 'entry-scope'},
+             relatedEntries.map(r=>renderRelatedEntry(ctx, e, s, r))
+            ]];
+}
+
+export function renderRelatedEntry(ctx: RenderCtx, e: Entry, s: Subentry, r: RelatedEntry): any {
+    return [['div', {},  ['b', {}, 'Related Entry: '], r.unresolved_text]];
+}
+
+export function renderBorrowedWords(ctx: RenderCtx, e: Entry, s: Subentry,
+                                    attrs: Attr[]): any {
+    if(!attrs)
+        throw new Error('missing attrs');
+    return [['div', {class: 'entry-scope'},
+             attrs
+             .filter(a=>a.attr === 'borrowed-word')
+                 .map(r=>renderBorrowedWord(ctx, e, s, r))
+            ]];
+}
+
+export function renderBorrowedWord(ctx: RenderCtx, e: Entry, s: Subentry, b: Attr): any {
+    return [['div', {},  ['b', {}, 'Borrowed Word: '], b.value]];
+}
+
 export function renderDocumentReferences(ctx: RenderCtx, e: Entry, s: Subentry,
                                          documentReferences: DocumentReference[]): any {
     return documentReferences.length === 0 ? [] : [
@@ -829,20 +935,35 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
     const title = 'Title';
     let refUrl: string;
     try {
-        refUrl = singleBoundingGroupEditorURL(ref.bounding_group_id, title); // REMOVE_FOR_WEB
+        refUrl = singlePublicBoundingGroupEditorURL(ctx.rootPath, ref.bounding_group_id, title); // REMOVE_FOR_WEB
     } catch(ex) {
         refUrl = '';
     }
     //refUrl = ''; // REMOVE REMOVE REMOVE
+
+    let refDescription: string;
+    try {
+        refDescription = imageRefDescription(ref.bounding_group_id); // REMOVE_FOR_WEB
+    } catch(ex) {
+        refDescription = '';
+    }
+
     const noBody =
         ref.transcription.length === 0 &&
         ref.expanded_transcription.length === 0 &&
         ref.transcription.length === 0 &&
         ref.note.length === 0;
     return [
-        ctx.noTargetOnRefImages
+        ['div', {},
+         ctx.noTargetOnRefImages
             ? standaloneGroupRender
-            : ['a', {href:refUrl, target:'_blank', rel:'opener'}, standaloneGroupRender],
+            : ['a', {href:refUrl /*, target:'_blank', rel:'opener'*/}, standaloneGroupRender]],
+
+        ['div', {},
+         ctx.noTargetOnRefImages
+            ? refDescription
+            : ['a', {href:refUrl /*, target:'_blank', rel:'opener'*/}, refDescription]],
+
         ['div', {},
          /*noBody ? ['b', {}, 'No Transcription']:*/ undefined,
         ],
@@ -852,7 +973,12 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
           ref.transcription.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Transcription:'], ['td', {}, t.transcription]]),
           ref.expanded_transcription.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Expanded:'], ['td', {}, t.expanded_transcription]]),
           ref.transliteration.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Transliteration:'], ['td', {}, t.transliteration]]),
-          ref.note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Note:'], ['td', {}, t.note]]),
+          ref.source_as_entry.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Source as entry:'], ['td', {}, t.source_as_entry]]),          
+          ref.normalized_source_as_entry.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Normalized source as entry:'], ['td', {}, t.normalized_source_as_entry]]),
+          ref.foreign_reference.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Foreign reference:'], ['td', {}, t.foreign_reference]]),
+          
+          ctx.renderInternalNotes ? ref.note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Note:'], ['td', {}, t.note]]) : [],
+          ref.public_note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Public Note:'], ['td', {}, t.public_note]]),
           //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
           //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
           //ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),
