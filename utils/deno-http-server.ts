@@ -1,6 +1,7 @@
 import * as mime_types from './mime-types.ts';
 import * as server from './http-server.ts';
 import {HttpServer} from './http-server.ts';
+import { serveDir, serveFile } from "jsr:@std/http/file-server";
 
 /**
  * Deno Http server implemenation for titan1c.
@@ -11,71 +12,82 @@ export class DenoHttpServer extends HttpServer {
         if (!this.config.port) {
             throw new Error('config must include port for a DenoHttpServer');
         }
-        let deno_config: Deno.ListenOptions = { port: this.config.port };
-        deno_config.port = this.config.port;
-        if (this.config.hostname) deno_config.hostname = this.config.hostname;
+
+
+
         
-        const server = Deno.listen(deno_config);
-        console.log(`HTTP webserver running.  Access it at:  http://${deno_config.hostname||'localhost'}:${deno_config.port}/`);
 
-        for await (const conn of server) {
-            // In order to not be blocking, we need to handle each connection individually
-            // without awaiting the function
-            this.serveConnection(conn);
-        }
+        
+        let serve_config: Deno.ServeTcpOptions = { port: this.config.port };
+        serve_config.port = this.config.port;
+        if (this.config.hostname) serve_config.hostname = this.config.hostname;
+        
+        console.log(`Starting HTTP webserver.  Access it at:  http://${serve_config.hostname||'localhost'}:${serve_config.port}/`);        
+        Deno.serve(serve_config, async (req) => this.serveRequest(req));
+        
+
+        // for await (const conn of server) {
+        //     // In order to not be blocking, we need to handle each connection individually
+        //     // without awaiting the function
+        //     this.serveConnection(conn);
+        // }
     }
 
-    async serveConnection(conn: Deno.Conn) {
-        try {
-            // This "upgrades" a network connection into an HTTP connection.
-            const httpConn = Deno.serveHttp(conn);
-            // Each request sent over the HTTP connection will be yielded as an async
-            // iterator from the HTTP connection.
-            for await (const requestEvent of httpConn) {
-                await this.serveRequest(requestEvent);
-            }
-        } catch (e) {
-            console.info('ERROR SERVING CONNECTION:', e);
-        } finally {
-            try {
-                // I don't think I need to do this (I think it
-                // happens automatically when out of events) - doesn't
-                // matter anyway - need to upgrade all of this to new
-                // http api.
-                //conn.close();
-            } catch (e) {
-                console.info('ERROR CLOSING CONNECTION:', e);
-            }
-        }
-    }
+    // async serveConnection(conn: Deno.Conn) {
+    //     try {
+    //         // This "upgrades" a network connection into an HTTP connection.
+    //         const httpConn = Deno.serveHttp(conn);
+    //         // Each request sent over the HTTP connection will be yielded as an async
+    //         // iterator from the HTTP connection.
+    //         for await (const requestEvent of httpConn) {
+    //             await this.serveRequest(requestEvent);
+    //         }
+    //     } catch (e) {
+    //         console.info('ERROR SERVING CONNECTION:', e);
+    //     } finally {
+    //         try {
+    //             // I don't think I need to do this (I think it
+    //             // happens automatically when out of events) - doesn't
+    //             // matter anyway - need to upgrade all of this to new
+    //             // http api.
+    //             //conn.close();
+    //         } catch (e) {
+    //             console.info('ERROR CLOSING CONNECTION:', e);
+    //         }
+    //     }
+    // }
 
-    async serveRequest(requestEvent: Deno.RequestEvent) {
+    async requestHandler(request: Request): Promise<Response> {
+        return new Response("Hello, world!!")
+    }
+    
+    async serveRequest(request: Request): Promise<Response> {
         //let denoRequest = requestEvent.request;
         //const headers = Object.fromEntries(denoRequest.headers.entries());
         //const contentType = headers['content-type'];
         //console.info(headers);
-        const url = new URL(requestEvent.request.url);
+        const url = new URL(request.url);
         const filepath = decodeURIComponent(url.pathname);
 
+        // --- If the path matches a registered request handler, use that.
         const requestHandler = this.matchRequestHandlerPath(filepath);
         if(requestHandler)
-            return this.serveHandlerRequest(requestEvent, requestHandler);
-        
+            return this.serveHandlerRequest(request, requestHandler);
 
         // --- If the path resolves to a content file path, serve that directly
         const resolvedContentFilePath = this.matchContentFilePath(filepath);
         if(resolvedContentFilePath) {
             //console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
-            return this.serveFileRequest(requestEvent, resolvedContentFilePath);
+            return this.serveFileRequest(request, resolvedContentFilePath);
         }
 
-        return server.htmlResponse(`No handler for path: ${String(filepath)}`, 404);
+        // Wrong kind of response returned here !!! XXX
+        return new Response(`No handler for path: ${String(filepath)}`); //, 404);
     }
 
-    async serveHandlerRequest(requestEvent: Deno.RequestEvent,
-                              requestHandler: (request: server.Request) => Promise<server.Response>) {
+    async serveHandlerRequest(denoRequest: Request,
+                              requestHandler: (request: server.Request) => Promise<server.Response>): Promise<Response> {
    
-        let denoRequest = requestEvent.request;
         const headers = Object.fromEntries(denoRequest.headers.entries());
         const contentType = headers['content-type'];
 
@@ -125,10 +137,11 @@ export class DenoHttpServer extends HttpServer {
         const responseHeaders = Object.assign({}, titan1cResponse.headers);
         responseHeaders["content-type"] ??= "text/html; charset=utf-8";
         //console.info('RESPONSE HEADERS', responseHeaders, 'BODY', titan1cResponse.body);
-        return requestEvent.respondWith(new Response(titan1cResponse.body, {
+
+        return new Response(titan1cResponse.body, {
             status: titan1cResponse.status,
             headers: responseHeaders,
-        }));
+        });
 //         const body_out = `Your user-agent is:\n\n${
 // requestEvent.request.headers.get("user-agent") ?? "Unknown"
 // }`;
@@ -201,48 +214,51 @@ export class DenoHttpServer extends HttpServer {
         return undefined;
     }
 
-    async serveFileRequest(requestEvent: Deno.RequestEvent, filepath: string) {
+    async serveFileRequest(request: Request, filepath: string) {
         //console.info('serving file request', filepath);
+        return serveFile(request, filepath);
 
-        let extension = filepath.match(/\.([^./]+)$/)?.[1];
-        let mime_type = (extension ? mime_types.extension_to_mime_type[extension] : null)
-            || 'text/plain';
-        //console.info('extension', extension, 'mime_type', mime_type);
+        // let extension = filepath.match(/\.([^./]+)$/)?.[1];
+        // let mime_type = (extension ? mime_types.extension_to_mime_type[extension] : null)
+        //     || 'text/plain';
+        // //console.info('extension', extension, 'mime_type', mime_type);
+
+
         
-        // Try opening the file
-        let file;
-        try {
-            file = await Deno.open(filepath, { read: true });
-        } catch {
-            // If the file cannot be opened, return a "404 Not Found" response
-            const notFoundResponse = new Response("404 Not Found", { status: 404 });
-            await requestEvent.respondWith(notFoundResponse);
-            return;
-        }
+        // // Try opening the file
+        // let file;
+        // try {
+        //     file = await Deno.open(filepath, { read: true });
+        // } catch {
+        //     // If the file cannot be opened, return a "404 Not Found" response
+        //     const notFoundResponse = new Response("404 Not Found", { status: 404 });
+        //     await requestEvent.respondWith(notFoundResponse);
+        //     return;
+        // }
 
-        // Build a readable stream so the file doesn't have to be fully loaded into
-        // memory while we send it
-        const readableStream = file.readable;
+        // // Build a readable stream so the file doesn't have to be fully loaded into
+        // // memory while we send it
+        // const readableStream = file.readable;
 
-        //"text/html; charset=utf-8",
-        //"image/svg+xml"
-        // Build and send the response
+        // //"text/html; charset=utf-8",
+        // //"image/svg+xml"
+        // // Build and send the response
 
-        let responseHeaders = new Headers();
-        responseHeaders.append("Content-Type", mime_type);
-        responseHeaders.append("cross-origin-embedder-policy", "require-corp");
-        responseHeaders.append("cross-origin-opener-policy", "same-origin");
+        // let responseHeaders = new Headers();
+        // responseHeaders.append("Content-Type", mime_type);
+        // responseHeaders.append("cross-origin-embedder-policy", "require-corp");
+        // responseHeaders.append("cross-origin-opener-policy", "same-origin");
         
-        const response = new Response(readableStream, { headers: responseHeaders });
-                                     //  { headers: {
-                                     //      "content-type": mime_type,
-                                     //      // NOTE: these CORS things are here for a test. XXX
-                                     //      "cross-origin-embedder-policy": "require-corp",
-                                     //      "cross-origin-opener-policy:": "same-origin"
-                                     //  }},
-                                     // );
-        await requestEvent.respondWith(response);
-        return;
+        // const response = new Response(readableStream, { headers: responseHeaders });
+        //                              //  { headers: {
+        //                              //      "content-type": mime_type,
+        //                              //      // NOTE: these CORS things are here for a test. XXX
+        //                              //      "cross-origin-embedder-policy": "require-corp",
+        //                              //      "cross-origin-opener-policy:": "same-origin"
+        //                              //  }},
+        //                              // );
+        // await requestEvent.respondWith(response);
+        // return;
     }
 }
 

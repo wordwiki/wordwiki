@@ -669,9 +669,18 @@ export function computeNormalizedSearchTerms(e: Entry): string[] {
  */
 export function renderEntryCompactSummary(e: Entry): any {
     // TODO handle dialects here.
+    // const spellings = e.spelling.map(s=>s.text);
+    // const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+    return ['div', {}, renderEntryCompactSummaryCore(e)];
+}
+
+// Note the factoring into Summary/SummaryCore should be replaced, this is
+// just done for compat.
+export function renderEntryCompactSummaryCore(e: Entry): any {
+    // TODO handle dialects here.
     const spellings = e.spelling.map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
-    return ['div', {}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')];
+    return [['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')];
 }
 
 /**

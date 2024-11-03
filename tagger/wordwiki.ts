@@ -418,7 +418,10 @@ export class WordWiki {
             ['ul', {},
              ['li', {}, ['a', {href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']]
+             ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],
+             //['li', {}, ['a', {href:'/ww/wordwiki.entriesByEnglishGloss()'}, 'Entries by English Gloss']],
             ],
 
             ['br', {}],
@@ -607,7 +610,7 @@ export class WordWiki {
                         cat=>cat.category === category)));        
     }
 
-    getCategories(): Map<string, number> {
+    getCategories0(): Map<string, number> {
         return new Map(Array.from(Map.groupBy(this.publishedEntries.
             flatMap(e=>
                 e.subentry.flatMap(s=>
@@ -616,7 +619,24 @@ export class WordWiki {
             .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]));
     }
+
+    getCategories(): Map<string, number> {
+        return new Map(Array.from(Map.groupBy(this.publishedEntries.
+            flatMap(e=>
+                e.subentry.flatMap(s=>
+                    s.category.flatMap(c=>
+                        c.category))), category=>category)
+            .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
+            .toSorted((a: [string, number], b: [string, number])=>
+                this.sourceLangCollator
+                    .compare(a[0]??'', b[0]??'')));
+    }
     
+
+
+
+    
+
     categoriesDirectory(): any {
         const title = `Categories Directory`;
 
@@ -667,6 +687,7 @@ export class WordWiki {
         return this.entries.filter(
             entry=>
                 entry.todo.some(todo=>
+                    !todo.done &&
                     (restrictToTask == null || todo.todo === restrictToTask) &&
                     (restrictToUser == null || todo.assigned_to === restrictToUser)));
     }
@@ -730,7 +751,92 @@ export class WordWiki {
 
         return templates.pageTemplate({title, body});
     }
+    
+    entriesByTwitterPostStatus(): any {
+        
+        function getTwitterPostStatusForEntry(e: entry.Entry): string|undefined {
+            return e.subentry.flatMap(s=>
+                s.attr.filter(a=>a.attr=='twitter-post').map(a=>a.value))[0];
+        }
+        
+        function renderEntryItem(e: entry.Entry): any {
+            return [
+                (getTwitterPostStatusForEntry(e) ?? 'Not posted on twitter'),
+                ' -- ', 
+                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummaryCore(e)]
+            ];
+        }
 
+        const entriesByTwitterPostStatus =
+            this.entries.toSorted((a: entry.Entry, b: entry.Entry)=> {
+                const atwit = getTwitterPostStatusForEntry(a);
+                const btwit = getTwitterPostStatusForEntry(b);
+                if(atwit == btwit)
+                    return 0
+                if(atwit == undefined)
+                    return 1;
+                if(btwit == undefined)
+                    return -1;
+                return this.sourceLangCollator
+                    .compare(atwit, btwit)
+            });
+
+        const title = "Entries by Twitter Post Status";
+        const body = [
+            ['h2', {}, title],
+
+            ['div', {},
+             ['ul', {},
+              entriesByTwitterPostStatus
+                  .map(e=>['li', {}, renderEntryItem(e)]),
+             ] // ul
+            ] // div
+        ];
+
+        return templates.pageTemplate({title, body});
+    }
+
+    entriesByPronunciation(): any {
+        throw new Error('no working yet');
+       const entriesByPronunciation = utils.multi_partition_by(
+           this.entries,
+           e=>e.subentry.flatMap(s=>s.pronunciation_guide.flatMap(p=>p.pronunciation_guide)));
+                                             
+       const entriesByPronunciationSorted =
+           new Map(Array.from(entriesByPronunciation.entries()).
+           toSorted((a, b) =>
+               this.sourceLangCollator.compare(a[0], b[0])));
+           
+       
+
+       //console.info('SORTED', entriesByPronunciationSorted);
+       Array.from(entriesByPronunciationSorted.entries()).forEach((pronunciation, entries) => console.info('pron', pronunciation, 'entries', entries));
+        // function renderEntryItem(e: entry.Entry): any {
+        //     return [
+        //         (getTwitterPostStatusForEntry(e) ?? 'Not posted on twitter'),
+        //         ' -- ', 
+        //         ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummaryCore(e)]
+        //     ];
+        // }
+
+        const title = "Entries by Pronunciation";
+        const body = [
+            ['h2', {}, title],
+
+            ['div', {},
+             ['ul', {},
+              Array.from(entriesByPronunciationSorted.entries()).map((pronunciation, entries) => ['li', {}, pronunciation])
+             ], // ul
+            ] // div
+        ];
+
+        return templates.pageTemplate({title, body});
+    }
+    
+    entriesByEnglishGloss(): any {
+    }
+    
+    
     // entriesByStatusDirectory(): any {
     //     const title = `Entries By Status`;
 

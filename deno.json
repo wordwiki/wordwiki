@@ -5,6 +5,7 @@
     },
     "compilerOptions": {
         "strictNullChecks": true,
+        "noImplicitOverride": false,
         "lib": [
             "deno.ns",
             "esnext",

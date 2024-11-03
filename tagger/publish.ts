@@ -118,9 +118,14 @@ export function startPublish(): any {
                                             wordWiki.publishedEntries);
                 await publish.publish();
             } catch (e) {
-                publishStatusSingleton.errors.push(e.toString());
-                console.info('ERROR WHILE PUBLISHING', e.toString());
-                console.info(e.stack);
+                if(e instanceof Error) {
+                    publishStatusSingleton.errors.push(e.toString());
+                    console.info('ERROR WHILE PUBLISHING', e.toString());
+                    console.info(e.stack);
+                } else {
+                    console.info('XXX non error thrown !!! ???');
+                    publishStatusSingleton.errors.push(String(e));
+                }
             }
             publishStatusSingleton.end();
         })();
@@ -128,6 +133,45 @@ export function startPublish(): any {
     }
 }
 
+/**
+ * Normally, publish done by users with the above interface, this
+ * function is to allow publish to also be done from CLI or a partial
+ * publish on every compile etc.
+ */
+export async function publish(publishOptions: PublishOptions) {
+    if(publishStatusSingleton.isRunning)
+        throw new Error('A publish is already running');
+    try {
+        const wordWiki = getWordWiki();
+        const publish = new Publish(publishStatusSingleton,
+                                    wordWiki,
+                                    wordWiki.publishedEntries,
+                                    ".",
+                                    publishOptions);
+        await publish.publish();
+    } catch (e) {
+        if(e instanceof Error) {
+            publishStatusSingleton.errors.push(e.toString());
+            console.info('ERROR WHILE PUBLISHING', e.toString());
+            console.info(e.stack);
+        } else {
+            console.info('XXX non error thrown !!! ???');
+            publishStatusSingleton.errors.push(String(e));
+        }
+        throw e;
+    }
+    if(publishStatusSingleton.errors.length > 0) {
+        console.info('*** PUBLISH ERRORS');
+        publishStatusSingleton.errors.forEach(e=>console.info(e));
+        throw new Error('Publish failed');
+    }
+ }
+
+interface PublishOptions {
+    suppressPublishBooks?: boolean;
+    suppressPublishCategories?: boolean;
+    suppressPublishEntries?: boolean;
+}
 
 /**
  *
@@ -138,7 +182,8 @@ export class Publish {
 
     constructor(public status: PublishStatus, public wordWiki: WordWiki,
                 public entries: Entry[],
-                public publishRoot: string = '.') {
+                public publishRoot: string = '.',
+                public options: PublishOptions = {}) {
         this.entryToPublicId = this.computeEntryPublicIds(entries, this.defaultVariant);
     }
 
@@ -152,15 +197,21 @@ export class Publish {
         await this.publishItem('About Us', ()=>this.publishAboutUsPage());
 
         // --- Publish books
-        for(const book of ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'])
-            await this.publishBook(book);
-        
+        if(!this.options.suppressPublishBooks) {
+            for(const book of ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'])
+                await this.publishBook(book);
+        }
+
         // --- Publish categories
-        await this.publishCategoriesDirectory();
-        await this.publishCategories();
-        
+        if(!this.options.suppressPublishCategories) {
+            await this.publishCategoriesDirectory();
+            await this.publishCategories();
+        }
+
         // --- Publish all entries
-        await this.publishEntries();
+        if(!this.options.suppressPublishEntries) {
+            await this.publishEntries();
+        }
     }
 
     async publishItem(itemDesc: string, itemPromise: ()=>Promise<void>): Promise<void> {
@@ -169,7 +220,7 @@ export class Publish {
         try {
             await (itemPromise());
         } catch(e) {
-            error = e;
+            error = e as Error; // bad cast XXX
         } finally {
         }
         if(error)
@@ -201,11 +252,23 @@ export class Publish {
             ['div', {},
              ['h1', {}, title],
 
+             ['p', {}, `Pjilasi & Welcome to Mi’gmaq-Mikmaq Online & our latest venture, the `,
+              ['a', {href:'./books/PDM/page-0307/index.html'},
+               'Pacifique Dictionary Manuscripts project']],
+             
+             // --- Bead image
+             ['div', {},
+              ['img', {id:'headerImage', class: 'img-fluid', src: 'resources/mmo-bead-image-1080x360.jpg'}]],
+             
              // --- Search Box
              ['div', {class: 'public-search-box'},
               ['form', {onsubmit:"updateCurrentSearchFromInput(); event.preventDefault();"},
-               ['label', {for:"search"}, ['strong', {}, 'Dictionary Search: ']],
-               ['input', {type:"text", size:"20",
+
+               ['h3', {}, 'Dictionary Search'],
+
+               
+               ['label', {for:"search", style:"font-size: larger; font-weight: bold;"}, 'Search: '],
+               ['input', {type:"text", size:"30",
                           name:"search", id:"search", label:"Dictionary Search", autofocus:"",
                           placeholder:"Mi'gmaq or English Search",
                           oninput:"updateCurrentSearchFromInput();"}],
@@ -291,20 +354,36 @@ export class Publish {
     renderAboutUsBody(): any {
         return [
             // --- MMO info
-            ['h3', {}, 'The Project'],
-             
-            ['p', {}, "The talking dictionary project is developing an Internet resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase."],
-              
-            ['p', {}, "Thus far we have posted 6500 headwords, a majority of these entries include two to three additional forms."],
+            ['h3', {}, 'The Talking Dictionary'],
 
-            ['p', {}, "The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available."],
+            ['p', {}, `The talking dictionary (Nnuigtug Ugsituna’tas’g Glusuaqanei) is a resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase.`],
 
-            ['p', {}, "Each word is presented using the Listuguj orthography. The Smith-Francis orthography will be included in the future. Some spellings are speculative."],
+            ['p', {}, 'Thus far we have posted ', ['a', {href: './all-words.html'}, `${this.entries.length} headwords`], ', a majority of these entries include two to three additional forms.'],
+            ['p', {}, `The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available. `,
+             `Listuguj is in the Gespe'g territory of the Mi'gmaw, located on the southwest shore of the Gaspè peninsula. Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton.`],
 
-            ['p', {}, "Listuguj is in the Gespe'g territory of the Mi'gmaw; located on the southwest shore of the Gaspè peninsula."],
+            ['p', {}, `Follow our word of the day posts in three orthographies at `,
+             ['a', {href:'https://x.com/Pemaptoq'}, 'https://x.com/Pemaptoq']],
+            
+            ['h3', {}, 'Pacifique Dictionary Manuscripts project'],
+            
+            ['img', {class: 'img-fluid', src: 'resources/pdm-sample.png'}],
+            
+            ['p', {}, `The `,
+             ['a', {href:'./books/PDM/page-0307/index.html'},
+             'Pacifique Dictionary Manuscripts project'],
+             ` is the current source of words for the Mi’gmaq Online Talking Dictionary (MMO).`],
 
-            ['p', {}, "Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton."],
-             
+            ['p', {}, `These words from our ancestors are from a time when the language was robust and part of everyday life in all Mi’gmaw/Mi’kmaw communities.`],
+
+            ['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are transcribed, transliterated to the contemporary Listuguj orthography and translated to English. Historic written materials are consulted to find related entries. These related entries are particularly useful as a context for words that have gone out of use. Terms that have gone out of use are a rich part of the information provided by these manuscripts. All material is reviewed with local Listuguj speakers. From there a collective decision is made on whether to record the word and add it to the online talking dictionary. `,
+
+             `Pacifique was the parish priest in Listuguj, he became a speaker of the language.`],
+
+            ['h3', {}, 'Watch Us Working'],
+            ['iframe',  {width:"560", height:"315", src:"https://www.youtube.com/embed/8Sq4Z_5xdUw?si=eIFs7BqZQ8-WkA8B", title:"YouTube video player", frameborder:"0", allow:"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy:"strict-origin-when-cross-origin", allowfullscreen:''}],
+            ['br', {}],
+            
             ['h3', {}, 'Contact Us'],
             ['p', {},
               'Email:', ['a', {href:'mailto:info@mikmaqonline.org'}, 'info@mikmaqonline.org']],
@@ -314,7 +393,7 @@ export class Publish {
             ['p', {}, "Ta'n te'sijig mimajuinu'g apoqonmugsieg ula ntlugowaqannen wesgo'tmeg we'gwiwela'lieg aq we'gwimi'watmuleg."],
 
             ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
-
+            
             ['h3', {}, "We gratefully acknowledge the financial support of"],
             ['ul', {},
 
@@ -337,10 +416,95 @@ export class Publish {
               ['a', {href:"http://firstnationhelp.com/"}, "http://firstnationhelp.com/"]]
             ],
 
+            ['h3', {}, "We gratefully acknowledge material support from:"],
+
+            ['ul', {},
+             ['li', {}, 'Bibliothèque et Archives nationales du Québec, ',
+              ['a', {href:'https://www.banq.qc.ca/'}, 'https://www.banq.qc.ca/']],
+
+             ['li', {}, 'University of Prince Edward Island, Robertson Library, ',
+              ['a', {href:'https://islandlives.ca/'}, 'https://islandlives.ca/']],
+            ],
+            
             ['h3', {}, 'License'],
-            ['p', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, "Creative Commons Attribution-NonCommercial 4.0 International"],
+            ['p', {}, 'This work is licensed under the ',
+             ['a', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, 'Creative Commons Attribution-NonCommercial 4.0 International license']],
+             
+            ['p', {},
+             ` You are free to
+share copy and redistribute the material in any medium or format
+including remixing, transforming, and building upon the material, for any non-commercial purpose as long as you give appropriate credit.  `,
+            ]
         ];
     }
+
+//     /**
+//      *
+//      */
+//     renderAboutUsBody(): any {
+//         return [
+//             // --- MMO info
+//             ['h3', {}, 'The Project'],
+             
+//             ['p', {}, "The talking dictionary project is developing an Internet resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase."],
+              
+//             ['p', {}, 'Thus far we have posted ', ['a', {href: './all-words.html'}, `${this.entries.length} headwords`], ', a majority of these entries include two to three additional forms.'],
+
+//             ['p', {}, "The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available."],
+
+//             ['p', {}, "Each word is presented using the Listuguj orthography. The Smith-Francis orthography will be included in the future. Some spellings are speculative."],
+
+//             ['p', {}, "Listuguj is in the Gespe'g territory of the Mi'gmaw; located on the southwest shore of the Gaspè peninsula."],
+
+//             ['p', {}, "Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton."],
+
+//             ['h3', {}, 'Watch Us Working'],
+//             ['iframe',  {width:"560", height:"315", src:"https://www.youtube.com/embed/8Sq4Z_5xdUw?si=eIFs7BqZQ8-WkA8B", title:"YouTube video player", frameborder:"0", allow:"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy:"strict-origin-when-cross-origin", allowfullscreen:''}],
+//             ['br', {}],
+            
+//             ['h3', {}, 'Contact Us'],
+//             ['p', {},
+//               'Email:', ['a', {href:'mailto:info@mikmaqonline.org'}, 'info@mikmaqonline.org']],
+
+//             ['h3', {}, 'Thanks'],
+
+//             ['p', {}, "Ta'n te'sijig mimajuinu'g apoqonmugsieg ula ntlugowaqannen wesgo'tmeg we'gwiwela'lieg aq we'gwimi'watmuleg."],
+
+//             ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
+
+//             ['h3', {}, "We gratefully acknowledge the financial support of"],
+//             ['ul', {},
+
+//              ['li', {}, "Listuguj Mi'gmaq Government ",
+//               ['a', {href: "https://www.listuguj.ca/"}, "https://www.listuguj.ca/"]],
+
+//              ['li', {}, "Government of Canada ",
+//               ['a', {href:"https://www.canada.ca/"}, "https://www.canada.ca/"]],
+              
+//              ['li', {}, "Listuguj Education, Training & Employment (LED & LMDC) ",
+//               ['a', {href:"https://www.lete.listuguj.ca/"}, "https://www.lete.listuguj.ca/"]],
+
+//              ['li', {}, "First Nation's Educations Council (AFN, ALI) ",
+//               ['a', {href:"https://www.cepn-fnec.ca/en"}, "https://www.cepn-fnec.ca/en"]],
+
+//              ['li', {}, "The Canada Council ",
+//               ['a', {href:"http://www.canadacouncil.ca"}, "http://www.canadacouncil.ca"]],
+
+//              ['li', {}, "Atlantic Canada's First Nation Help Desk ",
+//               ['a', {href:"http://firstnationhelp.com/"}, "http://firstnationhelp.com/"]]
+//             ],
+
+//             ['h3', {}, 'License'],
+//             ['p', {}, 'This work is licensed under the ',
+//              ['a', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, 'Creative Commons Attribution-NonCommercial 4.0 International license']],
+             
+//             ['p', {},
+//              ` You are free to
+// share copy and redistribute the material in any medium or format
+// including remixing, transforming, and building upon the material, for any non-commercial purpose as long as you give appropriate credit.  `
+//             ]
+//         ];
+//     }
     
     /**
      *
@@ -591,7 +755,7 @@ export class Publish {
                                    ()=>this.publishBookPage(publicBookId, pageNum, pagesInDocument));
         }
     }
-
+    
     /**
      *
      */
@@ -608,7 +772,8 @@ export class Publish {
 
         const cfg: renderPageEditor.PageViewerConfig = {
             layer_id: taggingLayer,
-            reference_layer_ids: [referenceLayer.layer_id],
+            //reference_layer_ids: [referenceLayer.layer_id],
+            reference_layer_ids: [],
             total_pages_in_document,
         };
 
@@ -628,6 +793,8 @@ export class Publish {
             ['div', {},
              ['h1', {}, `${document.title} - Page ${page.page_number}`],
              cfg.title && ['h2', {}, cfg.title],
+             this.renderBookPageTopNote(publicBookId, document),
+             this.renderBookPageCredit(publicBookId, document),
              renderPageEditor.renderPageJumper(page.page_number, total_pages_in_document,
                                                (page_number:number) => `${rootPath}${this.pathForBookPage(publicBookId, page_number)}`),
             ], // /div
@@ -651,6 +818,29 @@ export class Publish {
                                            this.publicPageTemplate(rootPath, {head, body}));
     }
 
+    async renderBookPageTopNote(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
+        switch(publicBookId) {
+            case 'PDM':
+                return (
+                    ['p', {}, 'PDM Credit']);
+                break;
+            default:
+                return [];
+        }
+    }
+    
+    async renderBookPageCredit(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
+        switch(publicBookId) {
+            case 'PDM':
+                return (
+                ['p', {}, 'PDM Credit']);
+                break;
+            default:
+                return [];
+        }
+        //return ['p', {}, 'BOOK CREDIT for book ${publicBookId}'];
+    }
+    
     async renderDocumentReferenceInfoBox(rootPath: string, groupId: number): Promise<string> {
         const entry = this.wordWiki.entriesByReferenceGroupId.get(groupId);
         if(!entry)
@@ -822,3 +1012,22 @@ export const routes = ()=> ({
     startPublish,
     publishStatus,
 });
+
+if (import.meta.main) {
+    const args = Deno.args;
+    const command = args[0];
+    switch(command) {
+        case 'publishHomePages':
+            console.time('publishHomePages');
+            publish({
+                suppressPublishBooks: true,
+                suppressPublishCategories: true,
+                suppressPublishEntries: true
+            });
+            console.timeEnd('publishHomePages');
+            break;
+        default:
+            throw new Error(`incorrect usage: unknown command "${command}"`);
+    }
+    
+}
