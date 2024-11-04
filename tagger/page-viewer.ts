@@ -343,6 +343,7 @@ function initInfoBoxes() {
             trigger: 'manual',
             placement:'bottom',
             html: true,
+            title: `<button onclick='dismissInfoBox()'>Close</button>`,
             content: infoBoxesById[group.id] ?? undefined,
             sanitizeFn(content: string) { return content; },
         });

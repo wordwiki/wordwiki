@@ -252,7 +252,7 @@ export class Publish {
             ['div', {},
              ['h1', {}, title],
 
-             ['p', {}, `Pjilasi & Welcome to Mi’gmaq-Mikmaq Online & our latest venture, the `,
+             ['p', {}, `Pjilasi & Welcome to Mi’gmaq-Mikmaq Online & current undertaking, the `,
               ['a', {href:'./books/PDM/page-0307/index.html'},
                'Pacifique Dictionary Manuscripts project']],
              
@@ -794,12 +794,13 @@ including remixing, transforming, and building upon the material, for any non-co
              ['h1', {}, `${document.title} - Page ${page.page_number}`],
              cfg.title && ['h2', {}, cfg.title],
              this.renderBookPageTopNote(publicBookId, document),
-             this.renderBookPageCredit(publicBookId, document),
              renderPageEditor.renderPageJumper(page.page_number, total_pages_in_document,
                                                (page_number:number) => `${rootPath}${this.pathForBookPage(publicBookId, page_number)}`),
             ], // /div
 
             markup,
+
+            this.renderBookPageCredit(publicBookId, document),
 
             ['script', {}, `infoBoxesById = ${JSON.stringify(infoBoxesById, undefined, 2)};`],
 
@@ -821,8 +822,12 @@ including remixing, transforming, and building upon the material, for any non-co
     async renderBookPageTopNote(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
         switch(publicBookId) {
             case 'PDM':
-                return (
-                    ['p', {}, 'PDM Credit']);
+                return [
+                    ['p', {},
+                     `This is a page from the Pacifique Dictionary Manuscripts, a handwritten Mi'gmaq - French dictionary written in the first half of the 1900’s. `],
+                    ['p', {},
+                     `Click on a colored box to see the worked through construction (transcription, transliteration, transcription and research) of a modern dictionary entry from a source entry.`],
+                ];
                 break;
             default:
                 return [];
@@ -832,8 +837,18 @@ including remixing, transforming, and building upon the material, for any non-co
     async renderBookPageCredit(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
         switch(publicBookId) {
             case 'PDM':
-                return (
-                ['p', {}, 'PDM Credit']);
+                return [
+                    ['p', {}, 'The original manuscripts are housed at the Bibliothèque et Archives nationales du Québec (BAnQ), Rimouski. BAnQ provided these high quality tiff images to the project at no cost.'],
+
+                    // Etudes Historiques et Geographiques https://numerique.banq.qc.ca/patrimoine/details/52327/2561563
+                    //['p', {}, 'Pacifique Dictionary Manuscripts:'],
+
+                    ['ul', {},
+                     ['li', {}, ['a', {href:'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216685'}, 'Pacifique Dictionary Manuscript Volume I at BANQ']],
+                     ['li', {}, ['a', {href:'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216686'}, 'Pacifique Dictionary Manuscript Volume II at BANQ']],
+                     ['li', {}, ['a', {href:'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216687'}, 'Pacifique Dictionary Manuscript Volume III at BANQ']],
+                     ['li', {}, ['a', {href:'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216688'}, 'Pacifique Dictionary Manuscript Volume IV at BANQ']]]
+                ];
                 break;
             default:
                 return [];
