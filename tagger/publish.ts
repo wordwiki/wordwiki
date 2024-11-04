@@ -356,7 +356,7 @@ export class Publish {
             // --- MMO info
             ['h3', {}, 'The Talking Dictionary'],
 
-            ['p', {}, `The talking dictionary (Nnuigtug Ugsituna’tas’g Glusuaqanei) is a resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the difficult skill of distinguishing individual words when they are spoken in a phrase.`],
+            ['p', {}, `The talking dictionary (Nnuigtug Ugsituna’tas’g Glusuaqanei) is a resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the important skill of distinguishing individual words when they are spoken in a phrase.`],
 
             ['p', {}, 'Thus far we have posted ', ['a', {href: './all-words.html'}, `${this.entries.length} headwords`], ', a majority of these entries include two to three additional forms.'],
             ['p', {}, `The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available. `,
@@ -374,11 +374,11 @@ export class Publish {
              'Pacifique Dictionary Manuscripts project'],
              ` is the current source of words for the Mi’gmaq Online Talking Dictionary (MMO).`],
 
-            ['p', {}, `These words from our ancestors are from a time when the language was robust and part of everyday life in all Mi’gmaw/Mi’kmaw communities.`],
+            ['p', {}, `These words from our ancestors are from a time when the language was robust and part of everyday life in all Mi’gmaw/Mi’kmaw communities. `,
+             `Père Pacifique de Valigny was the parish priest in Listuguj, he became a speaker of the language.`],
 
-            ['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are transcribed, transliterated to the contemporary Listuguj orthography and translated to English. Historic written materials are consulted to find related entries. These related entries are particularly useful as a context for words that have gone out of use. Terms that have gone out of use are a rich part of the information provided by these manuscripts. All material is reviewed with local Listuguj speakers. From there a collective decision is made on whether to record the word and add it to the online talking dictionary. `,
-
-             `Pacifique was the parish priest in Listuguj, he became a speaker of the language.`],
+            ['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are transcribed, transliterated to the contemporary Listuguj orthography and translated to English. Historic written materials are consulted to find related entries. These related entries are particularly useful as a context for words that have gone out of use. Terms that have gone out of use are a rich part of the information provided by these manuscripts. All material is reviewed with local Listuguj speakers. From there a collective decision is made on whether to record the word and add it to the online talking dictionary.`,
+             ],
 
             ['h3', {}, 'Watch Us Working'],
             ['iframe',  {width:"560", height:"315", src:"https://www.youtube.com/embed/8Sq4Z_5xdUw?si=eIFs7BqZQ8-WkA8B", title:"YouTube video player", frameborder:"0", allow:"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy:"strict-origin-when-cross-origin", allowfullscreen:''}],
@@ -394,7 +394,7 @@ export class Publish {
 
             ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
             
-            ['h3', {}, "We gratefully acknowledge the financial support of"],
+            ['h3', {}, "We gratefully acknowledge the financial support of:"],
             ['ul', {},
 
              ['li', {}, "Listuguj Mi'gmaq Government ",
