@@ -320,7 +320,7 @@ export class Publish {
              ['h1', {}, title],
              ['h2', {}, 'Page not Found'],
              ['p', {}, `Sorry, we were unable to find the page you requested.`],
-             ['p', {}, 'You can ', ['a', {href:this.publicSiteDomain},  'start again at our home page.']],
+             ['p', {}, 'You can ', ['a', {href:`https://${this.publicSiteDomain}`},  'start again at our home page.']],
             ];
         
         await writePageFromMarkupIfChanged(this.fourOhFourPath, this.publicPageTemplate('', {title, body}));
