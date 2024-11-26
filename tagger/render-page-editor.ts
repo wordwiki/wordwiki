@@ -188,7 +188,7 @@ export function renderPageJumper(current_page_num: number, total_pages: number,
                                  pageJumpUrlFn: (page_number:number)=>string): any {
     const targetPageNumbers = Array.from(new Set(
         [1,
-         ...[10, 37, 210],  // XXX tmp hack for dmm
+         ...[], //[10, 37, 210],  // XXX tmp hack for dmm
          ...range(1, Math.floor(total_pages/100)+1).map(v=>v*100),
          ...range(0, 10).map(v=>Math.floor(current_page_num/100)*100+v*10),
          ...range(0, 10).map(v=>Math.floor(current_page_num/10)*10+v),

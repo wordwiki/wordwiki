@@ -49,6 +49,7 @@ export class WordWiki {
     #publishedEntries: any|undefined = undefined;
     #publishedEntriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
     #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
+    #entryCountByPage: Array<[number, number]>|undefined = undefined;
     #lastAllocatedTxTimestamp: number|undefined;
     sourceLangCollator = Intl.Collator('en'); // TODO make configurable XXX
     
@@ -113,6 +114,7 @@ export class WordWiki {
         this.#publishedEntries = undefined;
         this.#publishedEntriesByCategory = undefined;
         this.#entriesByReferenceGroupId = undefined;
+        this.#entryCountByPage = undefined;
     }
 
     /**
@@ -925,19 +927,17 @@ export class WordWiki {
         return templates.pageTemplate({title, body});
     }
 
+    get entryCountByPage(): Array<[number, number]> {
+        return this.#entryCountByPage ??= (()=>{
+            const pdmDocumentId =
+                selectScannedDocumentByFriendlyId()
+                    .required({friendly_document_id: 'PDM'})
+                    .document_id;
 
-    entriesByPDMPageDirectory(): any {
-        const title = `Entries by PDM Page Directory`;
-
-        const pdmDocumentId =
-            selectScannedDocumentByFriendlyId()
-                .required({friendly_document_id: 'PDM'})
-                .document_id;
-
-        console.time('entryCountByPage');
-        const entryCountByPage = db().
-            all<{page_number: number, entry_count: number}>(
-                block`
+            console.timeEnd('entryCountByPage');
+            const entryCountByPage = db().
+                all<{page_number: number, entry_count: number}>(
+                    block`
 /**/     SELECT pg.page_number AS page_number, COUNT(DISTINCT bg.bounding_group_id) as entry_count
 /**/       FROM dict AS ref
 /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
@@ -946,18 +946,51 @@ export class WordWiki {
 /**/       WHERE ref.ty = 'ref' AND
 /**/             bg.document_id = :document_id AND
 /**/             bb.page_id IS NOT NULL
-/**/       GROUP BY pg.page_number`, {document_id: pdmDocumentId});
-        console.timeEnd('entryCountByPage');
+/**/       GROUP BY pg.page_number ORDER BY pg.page_number`, {document_id: pdmDocumentId});
+            console.timeEnd('entryCountByPage');
 
-        console.info('entryCountByPage', entryCountByPage);
+            console.info('entryCountByPage', entryCountByPage);
+            return entryCountByPage.map(e=>[e.page_number, e.entry_count]);
+        })();
+    }
+    
+    entriesByPDMPageDirectory(): any {
+        const title = `Entries by PDM Page Directory`;
 
+//         const pdmDocumentId =
+//             selectScannedDocumentByFriendlyId()
+//                 .required({friendly_document_id: 'PDM'})
+//                 .document_id;
+
+//         console.time('entryCountByPage');
+//         const entryCountByPage = db().
+//             all<{page_number: number, entry_count: number}>(
+//                 block`
+// /**/     SELECT pg.page_number AS page_number, COUNT(DISTINCT bg.bounding_group_id) as entry_count
+// /**/       FROM dict AS ref
+// /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
+// /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
+// /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
+// /**/       WHERE ref.ty = 'ref' AND
+// /**/             bg.document_id = :document_id AND
+// /**/             bb.page_id IS NOT NULL
+// /**/       GROUP BY pg.page_number ORDER BY pg.page_number`, {document_id: pdmDocumentId});
+//         console.timeEnd('entryCountByPage');
+
+        //const entryCountByPageMap = Map.fromEntr
+
+        
+        // console.info('entryCountByPage', entryCountByPage);
+
+        const entryCountByPage = this.entryCountByPage;
+        
         const body = [
             ['h1', {}, title],
             ['ul', {},
-             entryCountByPage.map(c=>
+             entryCountByPage.map(([page_number, entry_count])=>
                  ['li', {},
-                  ['a', {href:`/ww/wordwiki.entriesByPDMPage(${c.page_number})`},
-                   `PDM page ${c.page_number} has ${c.entry_count} entries`]
+                  ['a', {href:`/ww/wordwiki.entriesByPDMPage(${page_number})`},
+                   `PDM page ${page_number} has ${entry_count} entries`]
                  ])
             ]
         ];

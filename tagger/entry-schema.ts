@@ -65,6 +65,7 @@ export const users: Record<string, string> = {
     'mjp': 'Josephine (Wagmatcook)',
     'kjd': 'Kirsten (Eskasoni)',
     'djz': 'David Ziegler',
+    'rem': 'Roger Metallic',
     'mmo': 'MMO Team',
 };
 

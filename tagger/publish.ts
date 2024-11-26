@@ -6,6 +6,7 @@ import * as templates from './templates.ts';
 import {db} from "./db.ts";
 import {panic} from '../utils/utils.ts';
 import * as utils from '../utils/utils.ts';
+import * as strings from '../utils/strings.ts';
 import {block} from '../utils/strings.ts';
 import * as server from '../utils/http-server.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
@@ -193,6 +194,7 @@ export class Publish {
 
         // --- Publish top level pages
         await this.publishItem('Home Page', ()=>this.publishHomePage());
+        await this.publishItem('404 Page', ()=>this.publish404Page());
         await this.publishItem('All Words Page', ()=>this.publishAllWordsPage());
         await this.publishItem('About Us', ()=>this.publishAboutUsPage());
 
@@ -231,6 +233,10 @@ export class Publish {
     
     get homePath(): string {
         return 'index.html';
+    }
+
+    get fourOhFourPath(): string {
+        return '404.html';
     }
     
     async publishHomePage(): Promise<void> {
@@ -306,6 +312,20 @@ export class Publish {
         await writePageFromMarkupIfChanged(this.homePath, this.publicPageTemplate('', {title, head, body}));
     }
 
+    async publish404Page(): Promise<void> {
+
+        const title = "Mi'gmaq/Mi'kmaq Online Talking Dictionary";
+        const body =
+            ['div', {},
+             ['h1', {}, title],
+             ['h2', {}, 'Page not Found'],
+             ['p', {}, `Sorry, we were unable to find the page you requested.`],
+             ['p', {}, 'You can ', ['a', {href:this.publicSiteDomain},  'start again at our home page.']],
+            ];
+        
+        await writePageFromMarkupIfChanged(this.fourOhFourPath, this.publicPageTemplate('', {title, body}));
+    }
+    
     get allWordsPath(): string {
         return this.publishRoot+'/all-words.html';
     }
@@ -374,10 +394,48 @@ export class Publish {
              'Pacifique Dictionary Manuscripts project'],
              ` is the current source of words for the Mi’gmaq Online Talking Dictionary (MMO).`],
 
-            ['p', {}, `These words from our ancestors are from a time when the language was robust and part of everyday life in all Mi’gmaw/Mi’kmaw communities. `,
-             `Père Pacifique de Valigny was the parish priest in Listuguj, he became a speaker of the language.`],
+            ['p', {}, `These words from our ancestors are from a time when the language was robust and part of everyday life in all Mi’gmaw/Mi’kmaw communities. `],
 
-            ['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are transcribed, transliterated to the contemporary Listuguj orthography and translated to English. Historic written materials are consulted to find related entries. These related entries are particularly useful as a context for words that have gone out of use. Terms that have gone out of use are a rich part of the information provided by these manuscripts. All material is reviewed with local Listuguj speakers. From there a collective decision is made on whether to record the word and add it to the online talking dictionary.`,
+            ['p', {},
+             `Père Pacifique de Valigny, a parish priest in Listuguj, handwrote a Mi'gmaq - French dictionary in the first half of the 1900s.`],
+
+            //['p', {} 'These words from our ancestors are from a time when the language was robust and part of everyday life in all Mi’gmaw/Mi’kmaw communities.'],
+
+//(I don’t have the latest edit we discussed for this line) Père Pacifique de Valigny was the parish priest in Listuguj, he became a speaker of the language.
+
+            ['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are:`,
+                 
+             ['ul', {},
+
+              ['li', {}, 'transcribed'],
+              ['ul', {},
+               ['li', {}, 'abbreviations are expanded (unless not legible)'],
+
+               ['li', {}, 'references available online are displayed in the Document References section of corresponding headwords']],
+              ['li', {}, 'transliterated to contemporary Listuguj orthography'],
+
+              ['li', {}, 'translated to English'],
+
+              ['li', {}, 'researched'],
+              ['ul', {},
+
+               ['li', {}, 'historic written materials are consulted to find related entries.  These related entries are particularly useful as a context for words that have gone out of use'],
+
+               ['li', {}, 'the list of reference books consulted and shared are listed in the Reference Books tab'],
+
+               ['li', {}, 'in instances when there is no online access to a referenced work, it is cited (if legible) in the text of the Pacifique page entry']],
+
+              ['li', {}, 'reviewed and discussed with speakers'],
+              ['ul', {}, 
+               ['li', {}, 'all material is reviewed with local Listuguj speakers; from there a collective decision is made on whether to record the word and add it to the online talking dictionary.'],
+
+               ['li', {}, 'words not selected to be recorded remain accessible in the Pacifique Dictionary Manuscript pages data']]],
+
+              ['p', {}, 'Terms that have gone out of use are a rich part of the information provided by these manuscripts.'],
+
+              ['p', {}, 'Naturally, the manuscripts also contain well known, still-used words that have not yet been added to the dictionary, as they are found, they are added.']
+            
+            //['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are transcribed, transliterated to the contemporary Listuguj orthography and translated to English.  Historic written materials are consulted to find related entries. These related entries are particularly useful as a context for words that have gone out of use. Terms that have gone out of use are a rich part of the information provided by these manuscripts, naturally the manuscripts also contain well-known still used words, that have not yet been added to the dictionary. All material is reviewed with local Listuguj speakers. From there a collective decision is made on whether to record the word and add it to the online talking dictionary.`,
              ],
 
             ['h3', {}, 'Watch Us Working'],
@@ -586,7 +644,7 @@ including remixing, transforming, and building upon the material, for any non-co
         
         const siteUrl = `https://${this.publicSiteDomain}`;
         const entryPath = this.pathForEntry(entry);
-        const newEntryUrl = `${siteUrl}/${entryPath}`;
+        const newEntryUrl = `${siteUrl}/${strings.stripOptionalPrefix(entryPath, './')}`;
         
         const head = ['meta', {'http-equiv': 'refresh',
                                'content': `0;url=${newEntryUrl}`}];
@@ -596,7 +654,7 @@ including remixing, transforming, and building upon the material, for any non-co
         const title = `Forwarding to entry ${spellingsSummary}`;
 
         const body = [
-            ['p', {}, 'The entry for ${spellingsSummary} has moved to ',
+            ['p', {}, `The entry for ${spellingsSummary} has moved to `,
              ['a', {href:newEntryUrl}, newEntryUrl],
              'You should be automatically forwarded.'
             ],
@@ -606,7 +664,7 @@ including remixing, transforming, and building upon the material, for any non-co
              ['a', {href: siteUrl}, siteUrl]]
         ];
                                 
-        await writePageFromMarkupIfChanged(entryForwarderPath, this.publicPageTemplate('../../', {title/*, head*/, body}));
+        await writePageFromMarkupIfChanged(entryForwarderPath, this.publicPageTemplate('../../', {title, head, body}));
     }
 
     get categoriesDir(): string {
@@ -820,14 +878,19 @@ including remixing, transforming, and building upon the material, for any non-co
     }
 
     async renderBookPageTopNote(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
+        const rootPath = '../../../../';
         switch(publicBookId) {
             case 'PDM':
                 return [
                     ['p', {},
                      `This is a page from the Pacifique Dictionary Manuscripts, a handwritten Mi'gmaq - French dictionary written in the first half of the 1900’s. `],
-                    ['p', {},
-                     `Click on a colored box to see the worked through construction (transcription, transliteration, transcription and research) of a modern dictionary entry from a source entry.`],
-                ];
+                    ['p', {}, `Click on a colored box to see the worked through construction of a modern dictionary entry from a source entry.`],
+                    ['p', {}, 'The project is newly underway, pages that we have worked on are: ',
+                     this.wordWiki.entryCountByPage.
+                        filter(([pageNumber, entryCount]) => entryCount > 1).
+                        map(([pageNumber, entryCount])=>
+                            [['a', {href:`${rootPath}${this.pathForBookPage(publicBookId, pageNumber)}`}, `${pageNumber}`], ' '])
+                ]];
                 break;
             default:
                 return [];
