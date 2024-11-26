@@ -633,7 +633,7 @@ including remixing, transforming, and building upon the material, for any non-co
     // https://www.mikmaqonline.org/servlet/words/gajuewj.html
 
     get publicSiteDomain() {
-        return 'staging.mikmaqonline.org';
+        return 'mikmaqonline.org';
     }
     
     /**
