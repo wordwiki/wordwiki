@@ -580,7 +580,7 @@ export class WordWiki {
 
     get entriesByCategory(): Map<string, entry.Entry[]> {
         return this.#entriesByCategory ??= (()=>{
-            console.time('computing entriesByCategory');
+            //console.time('computing entriesByCategory');
             const entriesByCategoryArray: [string, entry.Entry][]  = 
                 this.publishedEntries.flatMap(e=>e.subentry.flatMap(s=>
                     s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
@@ -599,7 +599,7 @@ export class WordWiki {
             
             const entriesByCategory = new Map(entriesByCategory2);
             
-            console.timeEnd('computing entriesByCategory');
+            //console.timeEnd('computing entriesByCategory');
             return entriesByCategory;
         })();
     }
@@ -934,7 +934,7 @@ export class WordWiki {
                     .required({friendly_document_id: 'PDM'})
                     .document_id;
 
-            console.timeEnd('entryCountByPage');
+            //console.time('entryCountByPage');
             const entryCountByPage = db().
                 all<{page_number: number, entry_count: number}>(
                     block`
@@ -947,9 +947,9 @@ export class WordWiki {
 /**/             bg.document_id = :document_id AND
 /**/             bb.page_id IS NOT NULL
 /**/       GROUP BY pg.page_number ORDER BY pg.page_number`, {document_id: pdmDocumentId});
-            console.timeEnd('entryCountByPage');
+            //console.timeEnd('entryCountByPage');
 
-            console.info('entryCountByPage', entryCountByPage);
+            //console.info('entryCountByPage', entryCountByPage);
             return entryCountByPage.map(e=>[e.page_number, e.entry_count]);
         })();
     }
@@ -1121,14 +1121,15 @@ export class WordWiki {
      */
     // Proto request handler till we figure out how we want our urls etc to workc
     async requestHandler(request: server.Request): Promise<server.Response> {
-        if(!request?.url?.endsWith('/favicon.ico'))
+        if(false && !request?.url?.endsWith('/favicon.ico'))
             console.info('tagger request', request);
         const requestUrl = new URL(request.url);
         const filepath = decodeURIComponent(requestUrl.pathname);
         const searchParams: Record<string,string> = {};
+        const user = request.headers["x-webauth-user"];
         requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
-        if(Object.keys(searchParams).length > 0)
-            console.info('Search params are:', searchParams);
+        // if(Object.keys(searchParams).length > 0)
+        //     console.info('Search params are:', searchParams);
 
         // TEMPORARY MANUAL HANDING OF THE ONE VANITY URL WE ARE CURRENTLY SUPPORTING
         const pageRequest = /^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+)[.]html)$/.exec(filepath);
@@ -1158,7 +1159,7 @@ export class WordWiki {
                     break;
             }
             const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-            return this.rpcHandler(jsExprSrc, searchParams, bodyParms);
+            return this.rpcHandler(jsExprSrc, searchParams, bodyParms, user);
         }
     }
 
@@ -1167,7 +1168,8 @@ export class WordWiki {
      */
     async rpcHandler(jsExprSrc: string,
                      searchParams: Record<string, any>,
-                     bodyParms: Record<string, any>): Promise<any> {
+                     bodyParms: Record<string, any>,
+                     user: string|undefined): Promise<any> {
 
         // --- Top level of root scope is active routes
         let rootScope = this.routes;
@@ -1181,8 +1183,9 @@ export class WordWiki {
         //     a json {} - push on scope.
         rootScope = Object.assign(Object.create(rootScope), bodyParms);
 
-        console.info('about to eval', jsExprSrc, 'with root scope ',
-                     JSON.stringify(utils.getAllPropertyNames(rootScope)));
+        console.info("***", new Date().toLocaleString(), '::', user, '::', jsExprSrc);
+        // console.info('about to eval', jsExprSrc, 'with root scope ',
+        //              JSON.stringify(utils.getAllPropertyNames(rootScope)));
 
         let result = null;
         try {

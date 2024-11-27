@@ -779,7 +779,7 @@ including remixing, transforming, and building upon the material, for any non-co
     getDefaultPublicIdBase(entry: Entry, defaultVariant: string): string {
         const id = this.getDefaultPublicIdBase_(entry, defaultVariant);
         if(!id)
-            throw new Error(`For entry #${entry.entry_id} got default public id base '${id}'`);
+            throw new Error(`For entry #${entry.entry_id} got empty default public id base '${id}'`);
         return id;
     }
     

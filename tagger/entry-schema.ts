@@ -66,6 +66,8 @@ export const users: Record<string, string> = {
     'kjd': 'Kirsten (Eskasoni)',
     'djz': 'David Ziegler',
     'rem': 'Roger Metallic',
+    'pjw': 'Pernell Wysote',
+    'djb': 'Dolly Barnaby',
     'mmo': 'MMO Team',
 };
 
@@ -568,9 +570,49 @@ export interface AlternateGrammaticalForm {
 
 export interface AlternateFormText {
     alternate_form_text_id: number,
-    text: string,
+    alternate_form_text: string,
     variant: string,
 }
+
+const GrammaticalFormDescriptions: Record<string,string> = {
+    "d": "dual",
+    "p": "plural",
+    "4n": "fourth person",
+    "loc": "locative",
+    "tem": "temporal",
+    "1": "first person singular animate",
+    "1d": "first person dual exclusive animate",
+    "1p": "first person plural exclusive animate",
+    "3id": "third person dual inanimate",
+    "3ip": "third person plural inanimate",
+    "1-3i": "first person singular animate subject, third person singular inanimate object",
+    "1d-3i": "first person dual exclusive animate subject, third person singular inanimate object",
+    "1p-3i": "first person plural exclusive animate subject, third person singular inanimate object",
+    "3-3ip": "third person singular animate subject, third person plural inanimate object",
+    "1-3": "first person singular animate subject, third person singular animate object",
+    "1-3p": "first person singular animate subject, third person plural animate object",
+    "1-2": "first person singular animate subject, second person singular animate object",
+    "3-1": "third person singular animate subject, first person singular animate object",
+    "1s-1s": "first person singular reflexive",
+    "1d-1d": "first person dual reflexive",
+    "1p-1p": "first person plural reflexive",
+    "1dr-1d": "first person exclusive dual reciprocal",
+    "1pr-1p": "first person exclusive plural reciprocal",
+    "3pr-3p": "third person plural reciprocal",
+
+    "3d": "third person dual animate",
+    "3p": "third person plural animate",
+    "imp": "imperative",
+    "ani": "animate",
+    "inan": "inanimate",
+
+    "1-3ip": "first person singular animate subject, third person plural inanimate object",
+    "s": "singular",
+    "n": "noun",
+    "pn": "pronoun"
+};
+
+
 
 export interface OtherRegionalForm {
     other_regional_form_id: number,
@@ -808,6 +850,7 @@ export function renderSubentry(ctx: RenderCtx, e: Entry, s: Subentry): any {
         //s.example.map(x=>renderExample(e, x)),
         renderExamples(ctx, e, s, s.example),
         renderRelatedEntries(ctx, e, s, s.related_entry),
+        renderAlternateGrammaticalForms(ctx, e, s, s.alternate_grammatical_form),
         renderBorrowedWords(ctx, e, s, s.attr),
         !ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
     ];
@@ -904,6 +947,26 @@ export function renderRelatedEntries(ctx: RenderCtx, e: Entry, s: Subentry,
 
 export function renderRelatedEntry(ctx: RenderCtx, e: Entry, s: Subentry, r: RelatedEntry): any {
     return [['div', {},  ['b', {}, 'Related Entry: '], r.unresolved_text]];
+}
+
+export function renderAlternateGrammaticalForms(ctx: RenderCtx, e: Entry, s: Subentry,
+                                                alternateForms: AlternateGrammaticalForm[]): any {
+    return alternateForms.length === 0 ? [] : [
+        ['div', {class: 'entry-scope'},
+         ['b', {}, 'Alternate Grammatical Forms:'],
+         ['ul', {},
+          alternateForms.length === 0
+             ? ['li', {}, 'No alternate forms']
+             : alternateForms.map(a=>['li', {}, renderAlternateGrammaticalForm(ctx, e, s, a)])]
+        ]
+    ];
+}
+
+export function renderAlternateGrammaticalForm(ctx: RenderCtx, e: Entry, s: Subentry, a: AlternateGrammaticalForm): any {
+    return [a.alternate_form_text.map(t=>[t.alternate_form_text, " -- "]),
+            ['i', {}, a.gloss], " -- ",
+            '(', GrammaticalFormDescriptions[a.grammatical_form] ?? a.grammatical_form, ')'
+           ];
 }
 
 export function renderBorrowedWords(ctx: RenderCtx, e: Entry, s: Subentry,

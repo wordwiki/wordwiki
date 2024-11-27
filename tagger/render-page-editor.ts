@@ -470,7 +470,7 @@ export function copyRefBoxToExistingGroup(bounding_group_id: number, ref_box_id:
             throw new Error('invalid ref_box_id parameter in call to copyRefBoxToExistingGroup');
 
         const group = selectBoundingGroup().required({bounding_group_id});
-        console.info('target group layer id is', group.layer_id);
+        //console.info('target group layer id is', group.layer_id);
         const refBox = selectBoundingBox().required({bounding_box_id: ref_box_id});
 
         const bounding_box_id = db().insert<BoundingBox, 'bounding_box_id'>(
@@ -623,7 +623,7 @@ export function imageRefDescription(bounding_group_id: number): string {
 
 export function forwardToSingleBoundingGroupEditorURL(bounding_group_id: number, title: string): Response {
     const editorURL = singleBoundingGroupEditorURL(bounding_group_id, title);
-    console.info({editorURL});
+    //console.info({editorURL});
     return forwardResponse(editorURL);
 }
 
@@ -673,7 +673,7 @@ export function renderTextSearchForm2(layer_id: number, cfg: PageEditorConfig,
 export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig, searchText?: string) {
     searchText = searchText ?? '';
 
-    console.info('CFG', JSON.stringify(cfg, undefined, 2));
+    //console.info('CFG', JSON.stringify(cfg, undefined, 2));
 
     const layer = schema.selectLayer().required({layer_id});
     const document = schema.selectScannedDocument().required(
@@ -760,7 +760,7 @@ export async function renderStandaloneGroupAsSvgResponse(rootPath: string,
 /**/<?xml version="1.0"?>
 /**/<?xml-stylesheet href="/resources/page-editor.css" ?>
 /**/${svgText}`;
-    console.info('SVG BODY', body);
+    //console.info('SVG BODY', body);
     return {
         marker: ResponseMarker,
         status: 200,

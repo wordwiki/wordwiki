@@ -106,7 +106,7 @@ export class DenoHttpServer extends HttpServer {
                 console.info('got request body', body);
                 break;
             default:
-                console.info('ignoring request body');
+                //console.info('ignoring request body');
                 body = undefined;
                 break;
         }

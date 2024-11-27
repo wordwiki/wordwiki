@@ -25,15 +25,17 @@ export function allRoutes() {
     ))();
 }
 
+
 // Proto request handler till we figure out how we want our urls etc to workc
 async function taggerRequestHandler(request: server.Request): Promise<server.Response> {
     //console.info('tagger request', request);
     const requestUrl = new URL(request.url);
     const filepath = decodeURIComponent(requestUrl.pathname);
     const searchParams: Record<string,string> = {};
+    const user = request.headers.get("x-webauth-user");
     requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
-    if(Object.keys(searchParams).length > 0)
-        console.info('Search params are:', searchParams);
+    // if(Object.keys(searchParams).length > 0)
+    //     console.info('Search params are:', searchParams);
 
     // TEMPORARY MANUAL HANDING OF THE ONE VANITY URL WE ARE CURRENTLY SUPPORTING
     const pageRequest = /^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+)[.]html)$/.exec(filepath);
@@ -57,13 +59,14 @@ async function taggerRequestHandler(request: server.Request): Promise<server.Res
     } else {
         const jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
         const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-        return taggerRpcHandler(jsExprSrc, searchParams, bodyParms);
+        return taggerRpcHandler(jsExprSrc, searchParams, bodyParms, user);
     }
 }
 
 export async function taggerRpcHandler(jsExprSrc: string,
                                        searchParams: Record<string, any>,
-                                       bodyParms: Record<string, any>): Promise<any> {
+                                       bodyParms: Record<string, any>,
+                                       user: string|undefined): Promise<any> {
     // --- Top level of root scope is active routes
     const routes = allRoutes();
     let rootScope = routes;
@@ -76,8 +79,7 @@ export async function taggerRpcHandler(jsExprSrc: string,
     //     a json {} - push on scope.
     rootScope = Object.assign(Object.create(rootScope), bodyParms);
 
-    console.info('about to eval', jsExprSrc, 'with root scope ',
-                 utils.getAllPropertyNames(rootScope));
+    console.info(new Date().toLocaleString(), user, 'eval', jsExprSrc);
 
     let result = null;
     try {
