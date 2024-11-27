@@ -977,6 +977,7 @@ including remixing, transforming, and building upon the material, for any non-co
     /**/          }`],
 
               content.head,
+              this.googleTag()
              ], // head
 
              ['body', {},
@@ -998,6 +999,18 @@ including remixing, transforming, and building upon the material, for any non-co
         );
     }
 
+    googleTag(): any {
+        return config.googleTagId ? [
+            ['script', {'async':'', src:`https://www.googletagmanager.com/gtag/js?id=${config.googleTagId}`}],
+
+            ['script', {}, block`
+/**/          window.dataLayer = window.dataLayer || [];
+/**/          function gtag(){dataLayer.push(arguments);}
+/**/          gtag('js', new Date());
+/**/          gtag('config', '${config.googleTagId}');`
+            ]
+        ] : [];
+    }
 
     publicNavBar(rootPath: string): any {
         return [

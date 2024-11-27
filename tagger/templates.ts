@@ -77,7 +77,6 @@ export function pageTemplate(content: PageContent): any {
     );
 }
 
-
 export function navBar(): any {
     return [
         ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},

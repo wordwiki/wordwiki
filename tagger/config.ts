@@ -6,6 +6,9 @@ export const lameEncPath = '/usr/bin/lame';
 export const defaultTileWidth = 1024;
 export const defaultTileHeight = 128;
 
+
+export const googleTagId = "G-XSLP5DBR7L";
+
 export const bootstrapCssLink =
     ['link',
      {href:"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
