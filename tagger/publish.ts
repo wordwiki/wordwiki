@@ -144,12 +144,15 @@ export async function publish(publishOptions: PublishOptions) {
         throw new Error('A publish is already running');
     try {
         const wordWiki = getWordWiki();
+        wordWiki.requestWorkspaceReload();
         const publish = new Publish(publishStatusSingleton,
                                     wordWiki,
                                     wordWiki.publishedEntries,
                                     ".",
                                     publishOptions);
         await publish.publish();
+        if(publish.entries !== wordWiki.publishedEntries)
+            throw new Error(`The dictionary was changed during the publish process - data may be inconsistent - please republish`);
     } catch (e) {
         if(e instanceof Error) {
             publishStatusSingleton.errors.push(e.toString());
@@ -774,6 +777,13 @@ including remixing, transforming, and building upon the material, for any non-co
     }
 
     getDefaultPublicIdBase(entry: Entry, defaultVariant: string): string {
+        const id = this.getDefaultPublicIdBase_(entry, defaultVariant);
+        if(!id)
+            throw new Error(`For entry #${entry.entry_id} got default public id base '${id}'`);
+        return id;
+    }
+    
+    getDefaultPublicIdBase_(entry: Entry, defaultVariant: string): string {
 
         // --- If the entry has spellings in the default variant, use the first
         //     such spelling as the base for the public id.
@@ -785,7 +795,7 @@ including remixing, transforming, and building upon the material, for any non-co
         // --- Otherwise, if the entry has a spelling in any variant, use the first
         //     such spelling as the base for the public id.
         const firstSpellingInAnyVariant = entry.spelling[0];
-        if(firstSpellingInAnyVariant)
+        if(firstSpellingInAnyVariant?.text)
             return firstSpellingInAnyVariant.text
 
         // --- Otherwise, use the entryId converted to a string as the base for the
