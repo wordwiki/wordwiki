@@ -24,6 +24,7 @@ export interface Style {
     $prompt?: string,
     $style?: string,
     $width?: number,
+    $height?: number,
     $shape?: string,
 }
 

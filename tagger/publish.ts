@@ -385,8 +385,9 @@ export class Publish {
             ['p', {}, `The project was initiated in Listuguj, therefore all entries have Listuguj speakers and Listuguj spellings. In collaboration with Unama'ki, the site now includes a number of recordings from Unama'ki speakers. More will be added as they become available. `,
              `Listuguj is in the Gespe'g territory of the Mi'gmaw, located on the southwest shore of the Gaspè peninsula. Unama'ki is a Mi’gmaw territory; in English it is known as Cape Breton.`],
 
-            ['p', {}, `Follow our word of the day posts in three orthographies at `,
-             ['a', {href:'https://x.com/Pemaptoq'}, 'https://x.com/Pemaptoq']],
+            ['p', {}, `Follow our word of the day posts in three orthographies on `,
+             ['a', {href:'https://x.com/Pemaptoq'}, 'X'], ' or on ',
+             ['a', {href:'https://bsky.app/profile/pemaptoq.bsky.social'}, 'Bluesky']],
             
             ['h3', {}, 'Pacifique Dictionary Manuscripts project'],
             
@@ -572,7 +573,7 @@ including remixing, transforming, and building upon the material, for any non-co
      */
     renderEntryPublicLink(rootPath: string, e: Entry, includeAudioLink: boolean=true): any {
         // TODO handle dialects here.
-        const spellings = e.spelling.map(s=>s.text);
+        const spellings = entryschema.getSpellings(e).map(s=>s.text);
         const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
         const sampleRecording = entryschema.getStableFeaturedRecording(e);
         //console.info('SAMPLE RECORDING IS', spellings, sampleRecording);
@@ -988,7 +989,9 @@ including remixing, transforming, and building upon the material, for any non-co
               ['audio', {id:'audioPlayer', preload:'none'},
                ['source', {src:'', type:'audio/mpeg'}]],
 
-              content.body,
+              ['div', {class: 'page-content'},
+               content.body,
+              ],
 
               //view.renderModalEditorSkeleton(),
 
@@ -1063,9 +1066,9 @@ including remixing, transforming, and building upon the material, for any non-co
                  ['a', {class:"nav-link", href:'/ww/'}, 'Editor'], // FIX PATH XXX
                 ], //li
                 
-                ['li', {class:"nav-item"},
-                 ['a', {class:"nav-link", href:rootPath+this.aboutUsPath}, 'About Us'], // FIX PATH XXX
-                ], //li
+                // ['li', {class:"nav-item"},
+                //  ['a', {class:"nav-link", href:rootPath+this.aboutUsPath}, 'About Us'], // FIX PATH XXX
+                // ], //li
 
                 
 
@@ -1114,6 +1117,16 @@ export const routes = ()=> ({
     publishStatus,
 });
 
+
+// function makeJsonForCategoryPlay() {
+//     const wordWiki = getWordWiki();
+//     const publishedEntries = wordWiki.publishedEntries;
+//     const jsonForCats = publishedEntries.map(e=>
+//         ({
+//             entry_id: e.entry_id,
+//         }));
+// }
+
 if (import.meta.main) {
     const args = Deno.args;
     const command = args[0];
@@ -1127,6 +1140,9 @@ if (import.meta.main) {
             });
             console.timeEnd('publishHomePages');
             break;
+        // case 'makeJsonForCategoryPlay':
+        //     makeJsonForCategoryPlay();
+        //     break;
         default:
             throw new Error(`incorrect usage: unknown command "${command}"`);
     }

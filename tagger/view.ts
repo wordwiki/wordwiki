@@ -259,24 +259,35 @@ export class StringView extends ScalarView {
         //             ['object', {style: 'pointer-events: none;', data:`/ww/renderStandaloneGroupAsSvgResponse('', ${boundingGroup})`, 'type':'image/svg+xml', 'id': `bounding-group-${boundingGroup}`}]
         //            ];
         // }
-        
-        return ['input', {type: 'text', /*placeholder: this.prompt,*/
-                          size: this.field.style.$width ?? 30,
-                          value: String(v??''),
-                          autofocus: '',
-                          class: 'form-control',
-                          id: `input-${relation_id}-${this.field.name}`}];
-    }
 
+        if (this.field.style.$height) {
+            return ['textarea', {cols: this.field.style.$width ?? 30,
+                                 rows: this.field.style.$height,
+                                 class: 'form-control',
+                                 id: `input-${relation_id}-${this.field.name}`},
+                    String(v??'')];
+        } else {
+            return ['input', {type: 'text', /*placeholder: this.prompt,*/
+                              size: this.field.style.$width ?? 30,
+                              value: String(v??''),
+                              autofocus: '',
+                              class: 'form-control',
+                              id: `input-${relation_id}-${this.field.name}`}];
+        }
+    }
+    
     async loadFromEditor(relation_id: number, input_id: string): Promise<any> {
         const inputId = `input-${relation_id}-${this.field.name}`;
         const inputElement = document.getElementById(inputId);
         if(!inputElement)
             throw new Error(`failed to find input element ${inputId}`); // TODO fix error
-        const value = (inputElement as HTMLInputElement).value; //getAttribute('value');
-        // TODO more checking here.
-        return value;
-        //return undefined;
+
+        if(inputElement instanceof HTMLTextAreaElement)
+            return (inputElement as HTMLTextAreaElement).value
+        else if (inputElement instanceof HTMLInputElement)
+            return (inputElement as HTMLInputElement).value
+        else
+            throw new Error(`unexpected type of input element ${inputId}`);
     }
 }
 
@@ -335,9 +346,10 @@ export class VariantView extends EnumView {
         // TODO don't embed mm stuff here directly.
         return {
             '':'',
-            'mm': 'mm',
+            'mm': `mm`,
             'mm-li': 'mm-li',
-            'mm-sf': 'mm-sf' };
+            'mm-sf': 'mm-sf',
+            'mm-pm': 'mm-pm' };
     }
     
     // renderView(ctx: RenderCtx, t: TupleVersion, v: any): Markup {

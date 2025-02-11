@@ -53,23 +53,29 @@ export const RecordingTag = 'rec';
 // XXX HACK HACK
 export const users: Record<string, string> = {
     '___': 'No User Selected',
+    'djb': 'Dolly Barnaby',
+    'dmm': 'Diane Mitchell',
     'ecm': 'Emma Metallic',
     'ewm': 'Eunice Metallic',
-    'dmm': 'Diane Mitchell',
     'gml': 'Gmarie Laroque',
     'jnw': 'Joe Wilmot',
     'kam': 'Karen Martin',
-    'mmm': 'Maddie Metallic',
-    'yli': 'Yasmine Isaac',
+    'kjd': 'Kirsten (Eskasoni)',
     'mch': 'Michel (Listuguj)',
     'mjp': 'Josephine (Wagmatcook)',
-    'kjd': 'Kirsten (Eskasoni)',
-    'djz': 'David Ziegler',
-    'rem': 'Roger Metallic',
-    'pjw': 'Pernell Wysote',
-    'djb': 'Dolly Barnaby',
+    'mmm': 'Maddie Metallic',
     'mmo': 'MMO Team',
+    'pjw': 'Pernell Wysote',
+    'rem': 'Roger Metallic',
+    'rjs': 'Ronald Joseph Swasson',
+    'yli': 'Yasmine Isaac',
+    'djz': 'David Ziegler',
 };
+
+// XXX MORE HACK
+export function canUserPublish(userId: string): boolean {
+    return userId === 'djz' || userId === 'dmm';
+}
 
 export const states: Record<string, string> = {
     'Unknown': 'Unknown Status',
@@ -148,7 +154,7 @@ export const dictSchemaJson = {
             $type: 'relation',
             $tag: NoteTag,
             note_id: {$type: 'primary_key'},
-            note: {$type: 'string', $bind: 'attr1', $style: { $width: 80 }},
+            note: {$type: 'string', $bind: 'attr1', $style: { $width: 80, $height: 5 }},
             $style: { $shape: 'compactInlineListRelation' },
         },
 
@@ -232,8 +238,9 @@ export const dictSchemaJson = {
                 example_text: {
                     $type: 'relation',
                     $tag: ExampleTextTag,
+                    $prompt: `Example Mig'maq-Mi'kmaq Text`,
                     example_text_id: {$type: 'primary_key'},
-                    example_text: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
+                    example_text: {$type: 'string', $bind: 'attr1', $style: { $width: 70, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -242,7 +249,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: ExampleTranslationTag,
                     example_translation_id: {$type: 'primary_key'},
-                    example_translation: {$type: 'string', $bind: 'attr1', $style: { $width: 70 }},
+                    example_translation: {$type: 'string', $bind: 'attr1', $style: { $width: 70, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -356,7 +363,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefTranscriptionTag,
                     transcription_id: {$type: 'primary_key'},
-                    transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
 
@@ -364,7 +371,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefExpandedTranscriptionTag,
                     expanded_transcription_id: {$type: 'primary_key'},
-                    expanded_transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    expanded_transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
 
@@ -372,7 +379,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefTransliterationTag,
                     transliteration_id: {$type: 'primary_key'},
-                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -381,7 +388,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefSourceAsEntryTag,
                     source_as_entry_id: {$type: 'primary_key'},
-                    source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -390,7 +397,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefNormalizedSourceAsEntryTag,
                     normalized_source_as_entry_id: {$type: 'primary_key'},
-                    normalized_source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    normalized_source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
@@ -408,7 +415,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefNoteTag,
                     note_id: {$type: 'primary_key'},
-                    note: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
 
@@ -416,7 +423,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefPublicNoteTag,
                     public_note_id: {$type: 'primary_key'},
-                    public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
+                    public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
                 
@@ -707,6 +714,13 @@ export function computeNormalizedSearchTerms(e: Entry): string[] {
     return allTerms;
 }
 
+// XXX DO THIS PROPERLY!!!!
+const defaultVariant = 'mm-li';
+
+export function getSpellings(e: Entry): Spelling[] {
+    return e.spelling.filter(s=>s.variant == defaultVariant || !s.variant);
+}
+
 /**
  *
  */
@@ -721,7 +735,7 @@ export function renderEntryCompactSummary(e: Entry): any {
 // just done for compat.
 export function renderEntryCompactSummaryCore(e: Entry): any {
     // TODO handle dialects here.
-    const spellings = e.spelling.map(s=>s.text);
+    const spellings = getSpellings(e).map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
     return [['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')];
 }
@@ -731,14 +745,14 @@ export function renderEntryCompactSummaryCore(e: Entry): any {
  */
 export function renderEntryTitle(e: Entry): string {
     // TODO handle dialects here.
-    const spellings = e.spelling.map(s=>s.text);
+    const spellings = getSpellings(e).map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
     // TODO mikmaq online text here should come from config XXXX
     return `${spellings.join(', ')} :: ${glosses.join(' / ')} -- Mi'gmaq/Mi'kmaq Online`;
 }
 
 export function renderEntrySpellingsSummary(e: Entry): string {
-    return e.spelling.map(s=>s.text).join('/');
+    return getSpellings(e).map(s=>s.text).join('/');
 }
 
 /**
@@ -796,7 +810,7 @@ interface RenderCtx {
 export function renderEntry(ctx: RenderCtx, e: Entry): any {
     return [
         //contextMenuPlay(),
-        ['h1', {class: 'entry-scope'}, renderEntrySpellings(ctx, e, e.spelling)],
+        ['h1', {class: 'entry-scope'}, renderEntrySpellings(ctx, e, getSpellings(e))],
         renderEntryRecordings(ctx, e, e.recording),
         renderSubentriesCompact(ctx, e, e.subentry),
     ];
@@ -835,20 +849,23 @@ export function renderSubentries(ctx: RenderCtx, e: Entry, s: Subentry[]): any {
     return [
         ['ul', {},
          s.map((s, idx)=>['li', {}, [
-             ['h3', {}, `Subentry ${idx+1}`], renderSubentry(ctx, e, s)]])]];
+             ['h3', {}, `${idx+1}.`], renderSubentry(ctx, e, s)]])]];
 }
 
 export function renderSubentry(ctx: RenderCtx, e: Entry, s: Subentry): any {
     return [
         // renderSource(e, s, s.source),
         ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
-        renderPartOfSpeech(ctx, e, s, s.part_of_speech),
-        renderPronunciationGuides(ctx, e, s, s.pronunciation_guide),
+
         renderTranslations(ctx, e, s, s.translation),
+        renderPartOfSpeech(ctx, e, s, s.part_of_speech),
         //s.definition.map(t=>[['div', {}, ['b', {}, 'Definition: '], t.definition]]),
         renderGlosses(ctx, e, s, s.gloss),
         //s.example.map(x=>renderExample(e, x)),
         renderExamples(ctx, e, s, s.example),
+
+        renderPronunciationGuides(ctx, e, s, s.pronunciation_guide),
+        ['br', {}],
         renderRelatedEntries(ctx, e, s, s.related_entry),
         renderAlternateGrammaticalForms(ctx, e, s, s.alternate_grammatical_form),
         renderBorrowedWords(ctx, e, s, s.attr),
@@ -930,7 +947,7 @@ export function renderExamples(ctx: RenderCtx, e: Entry, s: Subentry, examples: 
 
 export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
     return [
-        example.example_text.map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
+        example.example_text.filter(t=>t.variant==defaultVariant || !t.variant).map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
         example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
         example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker} 🔉`, undefined, ctx.rootPath)])
     ];
