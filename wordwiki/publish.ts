@@ -1,22 +1,22 @@
 // deno-lint-ignore-file no-unused-vars
 
-import * as markup from '../utils/markup.ts';
+import * as markup from '../server/markup.ts';
 import * as config from './config.ts';
 import * as templates from './templates.ts';
-import {db} from "./db.ts";
-import {panic} from '../utils/utils.ts';
-import * as utils from '../utils/utils.ts';
-import * as strings from '../utils/strings.ts';
-import {block} from '../utils/strings.ts';
-import * as server from '../utils/http-server.ts';
+import {db} from "../server/db.ts";
+import {panic} from '../server/utils.ts';
+import * as utils from '../server/utils.ts';
+import * as strings from '../server/strings.ts';
+import {block} from '../server/strings.ts';
+import * as server from '../server/http-server.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
-import { writeUTF8FileIfContentsChanged } from '../utils/ioutils.ts';
+import { writeUTF8FileIfContentsChanged } from '../server/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
 import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as schema from './schema.ts';
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
-import * as renderPageEditor from './render-page-editor.ts';
+import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../server/markup.ts';
+import * as renderPageEditor from '../scannedpage/render-page-editor.ts';
 
 export class PublishStatus {
     startTime?: number = undefined;
@@ -855,7 +855,7 @@ including remixing, transforming, and building upon the material, for any non-co
                 
         const head = [
             //['link', {href: '/resources/page-viewer.css', rel:'stylesheet', type:'text/css'}],
-            ['script', {src:'/scripts/tagger/page-viewer.js'}],
+            ['script', {src:'/scripts/scannedpage/page-viewer.js'}],
         ];
 
         const body = [

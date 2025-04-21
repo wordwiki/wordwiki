@@ -1,8 +1,8 @@
 // deno-lint-ignore-file no-explicit-any
 
 import * as config from './config.ts';
-import {block} from "../utils/strings.ts";
-import * as view from './view.ts';
+import {block} from "../server/strings.ts";
+import * as view from '../datawiki/view.ts';
 
 export interface PageContent {
     title?: any;
@@ -35,10 +35,9 @@ export function pageTemplate(content: PageContent): any {
 /**/             audioPlayer.play ();
 /**/          }`],
 
-          //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
           ['script', {type: 'module'}, block`
-/**/           import * as workspace from '/scripts/tagger/workspace.js';
-/**/           import * as view from '/scripts/tagger/view.js';
+/**/           import * as workspace from '/scripts/datawiki/workspace.js';
+/**/           import * as view from '/scripts/datawiki/view.js';
 /**/
 /**/           imports = Object.assign(
 /**/                        {},

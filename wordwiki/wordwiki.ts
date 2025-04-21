@@ -1,36 +1,36 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
-import * as markup from '../utils/markup.ts';
-import * as model from './model.ts';
-import * as renderPageEditor from './render-page-editor.ts';
+import * as markup from '../server/markup.ts';
+import * as model from '../datawiki/model.ts';
+import * as renderPageEditor from '../scannedpage/render-page-editor.ts';
 import * as schema from "./schema.ts";
-import * as server from '../utils/http-server.ts';
-import * as strings from "../utils/strings.ts";
-import * as utils from "../utils/utils.ts";
-import * as random from "../utils/random.ts";
-import {panic} from '../utils/utils.ts';
-import * as view from './view.ts';
-import * as workspace from './workspace.ts';
-import {VersionedDb} from  './workspace.ts';
+import * as server from '../server/http-server.ts';
+import * as strings from "../server/strings.ts";
+import * as utils from "../server/utils.ts";
+import * as random from "../server/random.ts";
+import {panic} from '../server/utils.ts';
+import * as view from '../datawiki/view.ts';
+import * as workspace from '../datawiki/workspace.ts';
+import {VersionedDb} from  '../datawiki/workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
-import * as timestamp from '../utils/timestamp.ts';
+import * as timestamp from '../server/timestamp.ts';
 import * as templates from './templates.ts';
-import * as orderkey from '../utils/orderkey.ts';
+import * as orderkey from '../server/orderkey.ts';
 import * as audio from './audio.ts';
-import {block} from '../utils/strings.ts';
-import {db} from "./db.ts";
+import {block} from '../server/strings.ts';
+import {db} from "../server/db.ts";
 import * as publish from './publish.ts';
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../utils/markup.ts';
-import {DenoHttpServer} from '../utils/deno-http-server.ts';
+import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../server/markup.ts';
+import {DenoHttpServer} from '../server/deno-http-server.ts';
 import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
-import {evalJsExprSrc} from '../utils/jsterp.ts';
+import {evalJsExprSrc} from '../server/jsterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
-import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
-import * as pageEditorModule from './page-editor.ts';
-import * as pageViewerModule from './page-viewer.ts';
+import {pageEditor, PageEditorConfig, renderStandaloneGroup} from '../scannedpage/render-page-editor.ts';
+import * as pageEditorModule from '../scannedpage/page-editor.ts';
+import * as pageViewerModule from '../scannedpage/page-viewer.ts';
 
-import {rpcUrl} from '../utils/rpc.ts';
+import {rpcUrl} from '../server/rpc.ts';
 export interface WordWikiServerConfig {
     hostname: string,
     port: number,
@@ -1257,7 +1257,7 @@ async function findResourceDir(resourceDirName: string = 'resources') {
     if(serverFileUrl.protocol !== 'file:')
         throw new Error(`wordwiki server can only be run (for now) with it's code on the local filesystem (to allow access to resource files) - got server file url - ${serverFileUrl} with protocol ${serverFileUrl.protocol}`);
     const serverFilePath = decodeURIComponent(serverFileUrl.pathname);
-    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/tagger/wordwiki.ts')+'/'+resourceDirName;
+    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/wordwiki/wordwiki.ts')+'/'+resourceDirName;
     const resourceMarkerPath = resourceDir+'/'+'resource_dir_marker.txt';
     if(!await fileExists(resourceMarkerPath))
         throw new Error(`resource directory ${resourceDir} is missing marker file ${resourceMarkerPath}`);

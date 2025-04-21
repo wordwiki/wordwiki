@@ -9,9 +9,9 @@ mkdir -p $SCRIPTS
 # probably switch to turbopack or similar instead?
 
 cp resources/resource_dir_marker.txt $SCRIPTS
-swc compile --config-file .swcrc utils/*.ts tagger/*.ts --out-dir $SCRIPTS
-cp utils/big.mjs $SCRIPTS/utils/big.mjs
-cp utils/context-menu.js $SCRIPTS/utils/context-menu.js
+swc compile --config-file .swcrc server/*.ts datawiki/*.ts scannedpage/*.ts wordwiki/*.ts --out-dir $SCRIPTS
+cp server/big.mjs $SCRIPTS/server/big.mjs
+cp server/context-menu.js $SCRIPTS/server/context-menu.js
 
 # deno insists on typscript imports having a .ts extension (for good reasons), and I
 # can't figure out how to get SWC to transpile these to .js extensions - so I am doing
@@ -23,11 +23,11 @@ cp utils/context-menu.js $SCRIPTS/utils/context-menu.js
 # but refactoring so that no client imports/code transitively cause this to
 # import is too much work or results in awkward code).
 # probably should do this with an import map instead of this.
-sed -i 's/"..\/..\/deno-sqlite\/mod.js"/".\/fake-deno-sqlite.js"/g' $SCRIPTS/tagger/db.js
+sed -i 's/"..\/..\/deno-sqlite\/mod.js"/".\/fake-deno-sqlite.js"/g' $SCRIPTS/server/db.js
 
 # a way of removing an import that is causing us problems when the
 # module loads on the client. XXX MAKE THIS BETTER XXX
-sed -i '/REMOVE_FOR_WEB/d' $SCRIPTS/tagger/entry-schema.js
+sed -i '/REMOVE_FOR_WEB/d' $SCRIPTS/wordwiki/entry-schema.js
 
 rsync -a resources/ ../mmo/resources/
 

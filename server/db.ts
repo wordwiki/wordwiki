@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
-import {block} from "../utils/strings.ts";
-import {unwrap} from "../utils/utils.ts";
+import {block} from "./strings.ts";
+import {unwrap} from "./utils.ts";
 
 // NOTE: we are using a local checkout of deno-sqlite (master
 //       from https://github.com/dyedgreen/deno-sqlite) because the last

@@ -2,14 +2,14 @@
 
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
-import * as utils from "../utils/utils.ts";
-import {unwrap} from "../utils/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-import * as content from "../utils/content-store.ts";
+import * as utils from "../server/utils.ts";
+import {unwrap} from "../server/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../server/db.ts";
+import * as content from "../server/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
-import {block} from "../utils/strings.ts";
-import * as orderkey from '../utils/orderkey.ts';
-import * as timestamp from '../utils/timestamp.ts';
+import {block} from "../server/strings.ts";
+import * as orderkey from '../server/orderkey.ts';
+import * as timestamp from '../server/timestamp.ts';
 
 export const routes = ()=> ({
 });

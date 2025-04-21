@@ -2,15 +2,16 @@
 
 import * as fs from "std/fs/mod.ts";
 
-import * as utils from "../utils/utils.ts";
-import {unwrap} from "../utils/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-import * as content from "../utils/content-store.ts";
+import * as utils from "../server/utils.ts";
+import {unwrap} from "../server/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../server/db.ts";
+import * as content from "../server/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
-import {block} from "../utils/strings.ts";
-import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPagesForDocument} from './schema.ts';
-import * as config from "./config.ts";
-import {getImageSize} from "./get-image-size.ts";
+import {block} from "../server/strings.ts";
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPagesForDocument} from '../wordwiki/schema.ts';
+import * as config from "../wordwiki/config.ts";
+import * as utils_config from "../server/utils-config.ts";
+import {getImageSize} from "../server/get-image-size.ts";
 
 /**
  * Returns a dir path containing the specified image sliced into tiles
@@ -33,7 +34,7 @@ async function getTilesForImageCmd(targetResultPath: string, sourceImagePath: st
 
     // --- Exec imagemagick to do the actual tiling
     const { code, stdout, stderr } = await new Deno.Command(
-        config.imageMagickPath, {
+        utils_config.imageMagickPath, {
             args: [
                 sourceImagePath, '+gravity',
                 '-crop', `${tileWidth}x${tileHeight}`,

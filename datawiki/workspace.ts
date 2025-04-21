@@ -3,21 +3,21 @@
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
-import {unwrap, panic} from "../utils/utils.ts";
-import * as utils from "../utils/utils.ts";
-import {dictSchemaJson} from "./entry-schema.ts";
-import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, updateAssertion, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
-import * as schema from "./schema.ts";
-import * as timestamp from "../utils/timestamp.ts";
-import {BEGINNING_OF_TIME, END_OF_TIME} from '../utils/timestamp.ts';
-import {assert} from '../utils/utils.ts';
+import {unwrap, panic} from "../server/utils.ts";
+import * as utils from "../server/utils.ts";
+import {dictSchemaJson} from "../wordwiki/entry-schema.ts";
+import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, updateAssertion, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "../wordwiki/schema.ts";
+import * as schema from "../wordwiki/schema.ts";
+import * as timestamp from "../server/timestamp.ts";
+import {BEGINNING_OF_TIME, END_OF_TIME} from '../server/timestamp.ts';
+import {assert} from '../server/utils.ts';
 import * as view from './view.ts';
-import * as orderkey from '../utils/orderkey.ts';
-import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
-import {block} from "../utils/strings.ts";
-import { rpc } from '../utils/rpc.ts';
-import * as config from './config.ts';
-import * as templates from './templates.ts';
+import * as orderkey from '../server/orderkey.ts';
+import { renderToStringViaLinkeDOM } from '../server/markup.ts';
+import {block} from "../server/strings.ts";
+import { rpc } from '../server/rpc.ts';
+import * as config from '../wordwiki/config.ts';
+import * as templates from '../wordwiki/templates.ts';
 
 export type Tag = string;
 
@@ -1363,8 +1363,8 @@ function renderEntryListTest(): any {
 /**/           let activeViews = undefined`],
           //['script', {src:'/scripts/tagger/instance.js', type: 'module'}],
           ['script', {type: 'module'}, block`
-/**/           import * as workspace from '/scripts/tagger/workspace.js';
-/**/           import * as view from '/scripts/tagger/view.js';
+/**/           import * as workspace from '/scripts/datawiki/workspace.js';
+/**/           import * as view from '/scripts/datawikig/view.js';
 /**/
 /**/           imports = Object.assign(
 /**/                        {},

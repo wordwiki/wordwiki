@@ -1,18 +1,18 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 
-import * as server from '../utils/http-server.ts';
-import {DenoHttpServer} from '../utils/deno-http-server.ts';
+import * as server from '../server/http-server.ts';
+import {DenoHttpServer} from '../server/deno-http-server.ts';
 import * as pageEditor from './render-page-editor.ts';
 import {ScannedDocument, ScannedPage} from './schema.ts';
 import * as schema from './schema.ts';
-import {evalJsExprSrc} from '../utils/jsterp.ts';
-import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
+import {evalJsExprSrc} from '../server/jsterp.ts';
+import { renderToStringViaLinkeDOM } from '../server/markup.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
-import * as utils from "../utils/utils.ts";
-import * as strings from "../utils/strings.ts";
+import * as utils from "../server/utils.ts";
+import * as strings from "../server/strings.ts";
 import { db } from "./db.ts";
 import * as workspace from './workspace.ts';
-import * as markup from '../utils/markup.ts';
+import * as markup from '../server/markup.ts';
 
 let allRoutes_: Record<string, any>|undefined = undefined;
 
@@ -191,7 +191,7 @@ async function findResourceDir(resourceDirName: string = 'resources') {
     if(serverFileUrl.protocol !== 'file:')
         throw new Error(`wordwiki server can only be run (for now) with it's code on the local filesystem (to allow access to resource files) - got server file url - ${serverFileUrl} with protocol ${serverFileUrl.protocol}`);
     const serverFilePath = decodeURIComponent(serverFileUrl.pathname);
-    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/tagger/server.ts')+'/'+resourceDirName;
+    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/wordwiki/server.ts')+'/'+resourceDirName;
     const resourceMarkerPath = resourceDir+'/'+'resource_dir_marker.txt';
     if(!await fileExists(resourceMarkerPath))
         throw new Error(`resource directory ${resourceDir} is missing marker file ${resourceMarkerPath}`);

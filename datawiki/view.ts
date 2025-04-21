@@ -4,23 +4,23 @@ import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, EnumField, VariantField, BlobField, AudioField, ImageField,
         IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
-import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from './schema.ts';
-import {unwrap, panic} from "../utils/utils.ts";
-import {Markup} from '../utils/markup.ts';
+import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from '../wordwiki/schema.ts';
+import {unwrap, panic} from "../server/utils.ts";
+import {Markup} from '../server/markup.ts';
 import {VersionedDb, CurrentTupleQuery, CurrentRelationQuery, TupleVersion, generateBeforeOrderKey, generateAfterOrderKey} from './workspace.ts';
 import * as workspace from './workspace.ts';
 import {getAssertionsForEntry} from './workspace.ts';
-import * as utils from '../utils/utils.ts';
-import * as strings from '../utils/strings.ts';
-import { rpc } from '../utils/rpc.ts';
-import {block} from "../utils/strings.ts";
-import {dictSchemaJson} from "./entry-schema.ts";
-import * as timestamp from "../utils/timestamp.ts";
-import { renderToStringViaLinkeDOM } from '../utils/markup.ts';
-import { BEGINNING_OF_TIME, END_OF_TIME } from "../utils/timestamp.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-import ContextMenu from '../utils/context-menu.js';
-import { PageEditorConfig } from './render-page-editor.ts';
+import * as utils from '../server/utils.ts';
+import * as strings from '../server/strings.ts';
+import { rpc } from '../server/rpc.ts';
+import {block} from "../server/strings.ts";
+import {dictSchemaJson} from "../wordwiki/entry-schema.ts";
+import * as timestamp from "../server/timestamp.ts";
+import { renderToStringViaLinkeDOM } from '../server/markup.ts';
+import { BEGINNING_OF_TIME, END_OF_TIME } from "../server/timestamp.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../server/db.ts";
+import ContextMenu from '../server/context-menu.js';
+import { PageEditorConfig } from '../scannedpage/render-page-editor.ts';
 
 
 interface RenderCtx {

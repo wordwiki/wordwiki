@@ -1,9 +1,9 @@
 // deno-lint-ignore-file no-unused-vars
 
 //import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
-import * as content from "../utils/content-store.ts";
+import * as content from "./content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
-import * as config from "./config.ts";
+import * as config from "./utils-config.ts";
 
 /**
  * Given an imagePath, return its size, persistently caching the result based

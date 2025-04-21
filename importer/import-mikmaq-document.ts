@@ -3,7 +3,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import { db } from "./db.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {importScannedDocument} from "./import-scanned-document.ts";
-import {stripRequiredPrefix, stripRequiredSuffix} from '../utils/strings.ts';
+import {stripRequiredPrefix, stripRequiredSuffix} from '../server/strings.ts';
 
 /**
  * Custom importer for the slightly idiosyncratic layout of the PDM manuscript project.

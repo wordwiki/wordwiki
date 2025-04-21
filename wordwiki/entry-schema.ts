@@ -5,16 +5,16 @@
 //import {startRpcDbServer} from './rpc-db.ts';
 
 //import * as denoSqliteDb from "./denoSqliteDb.ts";
-import * as model from './model.ts';
+import * as model from '../datawiki/model.ts';
 //import * as persistence from './persistence.ts';
-import * as utils from "../utils/utils.ts";
-import * as timestamp from '../utils/timestamp.ts';
+import * as utils from "../server/utils.ts";
+import * as timestamp from '../server/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
-import ContextMenu from '../utils/context-menu.js';
-import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from './render-page-editor.ts'; // REMOVE_FOR_WEB
+import ContextMenu from '../server/context-menu.js';
+import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from '../scannedpage/render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
-import * as random from '../utils/random.ts';
+import * as random from '../server/random.ts';
 
 export const DictTag = 'dct';          // dict
 export const EntryTag = 'ent';         // entr
