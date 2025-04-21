@@ -181,7 +181,7 @@ export class IntegerView extends ScalarView {
                 const entry_id = assertion.id1;
                 const subentry_id = assertion.id2;
 
-                return ['PDM', 'Rand', 'Clark', 'RandFirstReadingBook'].map(b=>
+                return ['PDM', 'Rand', 'Clark', 'RandFirstReadingBook', 'PacifiquesGeography'].map(b=>
                     ['button', {onclick:`event.preventDefault(); event.stopPropagation(); imports.launchAddNewDocumentReference2(${entry_id}, ${subentry_id}, ${JSON.stringify(this.field.name)}, ${JSON.stringify(b)}, 'Edit New Reference')`}, 'Add ', b]);
                 
                 break;
