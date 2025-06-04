@@ -1,36 +1,36 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
-import * as markup from '../server/markup.ts';
+import * as markup from '../tabula/markup.ts';
 import * as model from '../datawiki/model.ts';
 import * as renderPageEditor from '../scannedpage/render-page-editor.ts';
 import * as schema from "./schema.ts";
-import * as server from '../server/http-server.ts';
-import * as strings from "../server/strings.ts";
-import * as utils from "../server/utils.ts";
-import * as random from "../server/random.ts";
-import {panic} from '../server/utils.ts';
+import * as server from '../tabula/http-server.ts';
+import * as strings from "../tabula/strings.ts";
+import * as utils from "../tabula/utils.ts";
+import * as random from "../tabula/random.ts";
+import {panic} from '../tabula/utils.ts';
 import * as view from '../datawiki/view.ts';
 import * as workspace from '../datawiki/workspace.ts';
 import {VersionedDb} from  '../datawiki/workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
-import * as timestamp from '../server/timestamp.ts';
+import * as timestamp from '../tabula/timestamp.ts';
 import * as templates from './templates.ts';
-import * as orderkey from '../server/orderkey.ts';
+import * as orderkey from '../tabula/orderkey.ts';
 import * as audio from './audio.ts';
-import {block} from '../server/strings.ts';
-import {db} from "../server/db.ts";
+import {block} from '../tabula/strings.ts';
+import {db} from "../tabula/db.ts";
 import * as publish from './publish.ts';
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../server/markup.ts';
-import {DenoHttpServer} from '../server/deno-http-server.ts';
+import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../tabula/markup.ts';
+import {DenoHttpServer} from '../tabula/deno-http-server.ts';
 import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
-import {evalJsExprSrc} from '../server/jsterp.ts';
+import {evalJsExprSrc} from '../tabula/jsterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from '../scannedpage/render-page-editor.ts';
 import * as pageEditorModule from '../scannedpage/page-editor.ts';
 import * as pageViewerModule from '../scannedpage/page-viewer.ts';
 
-import {rpcUrl} from '../server/rpc.ts';
+import {rpcUrl} from '../tabula/rpc.ts';
 export interface WordWikiServerConfig {
     hostname: string,
     port: number,

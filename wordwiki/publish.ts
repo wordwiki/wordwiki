@@ -1,21 +1,21 @@
 // deno-lint-ignore-file no-unused-vars
 
-import * as markup from '../server/markup.ts';
+import * as markup from '../tabula/markup.ts';
 import * as config from './config.ts';
 import * as templates from './templates.ts';
-import {db} from "../server/db.ts";
-import {panic} from '../server/utils.ts';
-import * as utils from '../server/utils.ts';
-import * as strings from '../server/strings.ts';
-import {block} from '../server/strings.ts';
-import * as server from '../server/http-server.ts';
+import {db} from "../tabula/db.ts";
+import {panic} from '../tabula/utils.ts';
+import * as utils from '../tabula/utils.ts';
+import * as strings from '../tabula/strings.ts';
+import {block} from '../tabula/strings.ts';
+import * as server from '../tabula/http-server.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
-import { writeUTF8FileIfContentsChanged } from '../server/ioutils.ts';
+import { writeUTF8FileIfContentsChanged } from '../tabula/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
 import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as schema from './schema.ts';
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../server/markup.ts';
+import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../tabula/markup.ts';
 import * as renderPageEditor from '../scannedpage/render-page-editor.ts';
 
 export class PublishStatus {

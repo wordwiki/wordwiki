@@ -1,17 +1,17 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
 
-import {CustomError} from "../server/errors.ts";
-import {typeof_extended} from "../server/utils.ts";
-import * as utils from "../server/utils.ts";
-import {panic, assert, assertNever} from "../server/utils.ts";
+//import {CustomError} from "../tabula/errors.ts";
+import {typeof_extended} from "../tabula/utils.ts";
+import * as utils from "../tabula/utils.ts";
+import {panic, assert, assertNever} from "../tabula/utils.ts";
 //import { DB, PreparedQuery, QueryParameter, QueryParameterSet } from "https://deno.land/x/sqlite/mod.ts";
 //import { PreparedQueryCache } from "./dbutils.ts";
 //import * as dbutils from "./dbutils.ts";
-import * as orderkey from '../server/orderkey.ts';
-import * as timestamp from '../server/timestamp.ts';
-//import { longestIncreasingSequenceUsingCompareFn } from '../server/longest-increasing-sequence.js';
-import {RecordValue, Value, getPrimaryKey, getString, getOptionalString, idCollator } from '../server/record.ts';
-import * as strings from '../server/strings.ts';
+import * as orderkey from '../tabula/orderkey.ts';
+import * as timestamp from '../tabula/timestamp.ts';
+//import { longestIncreasingSequenceUsingCompareFn } from '../tabula/longest-increasing-sequence.js';
+import {RecordValue, Value, getPrimaryKey, getString, getOptionalString, idCollator } from './record.ts';
+import * as strings from '../tabula/strings.ts';
 
 export enum FieldKind {
     Model=0,
@@ -946,7 +946,7 @@ export class Schema extends RelationField {
 /**
  * Thrown by validate methods to report a validation error.
  */
-export class ValidationError extends CustomError {
+export class ValidationError extends Error {
     constructor(locus: string, message: string) {
         super(`${locus}: ${message}`);
     }

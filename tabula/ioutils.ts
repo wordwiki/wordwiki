@@ -1,3 +1,7 @@
+/**
+ * I/O Related utility functions.
+ * 
+ */
 //let fsPromises = require ('fsPromises');  // importing 'fs/promises' the ES6 way in typescript is borked today.
 //import * as fsPromises from 'fsPromises';
 //const fs = require('fs');

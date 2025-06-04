@@ -1,3 +1,7 @@
+/**
+ * Random random number utility functions.
+ *
+ */
 import * as utils from './utils.ts';
 
 /**
@@ -45,7 +49,7 @@ export function rollRandomDie (dieSpecs: number[]) {
 export function randomSequenceGenerator (length: number, faces: number): number[] {
   if (faces === 0)
     return randomSequenceGeneratorNoDups (length);
-  var vals: number[] = [];
+  const vals: number[] = [];
   for (var i=0; i<length; i++)
     vals.push (randomInt (0, faces-1));
   return vals;
@@ -63,8 +67,8 @@ export function randomSequenceGeneratorNoDups (length: number): number[] {
  */
 export function shuffle<T> (vals: T[]): T[] {
   for (var i=0; i<vals.length; i++) {
-    var peer = randomInt (0, vals.length-1)
-    var tmp = vals[i];
+    const peer = randomInt (0, vals.length-1)
+    const tmp = vals[i];
     vals[i] = vals[peer];
     vals[peer] = tmp;
   }

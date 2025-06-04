@@ -1,8 +1,14 @@
-// This is an inlining of the portions of the Deno port of nanoid
-// that we are using.
-
-// Original is here: https://github.com/ianfabs/nanoid
-// 
+/**
+ * This is an inlining of the portions of the Deno port of nanoid
+ * that we are using.
+ * 
+ * nanoid is a UUID alternative that with the right alphabet is:
+ * - more compact than UUID's
+ * - URL safe without encoding.
+ * - can be used as an identifier without encoding.
+ * 
+ * Original is here: https://github.com/ianfabs/nanoid
+ */
 
 /**
  * Low-level function to change alphabet and ID size.
@@ -53,3 +59,14 @@ export type RandomValueFunction = (bytes: number) => Uint8Array;
 
 export const random: RandomValueFunction = bytes => crypto.getRandomValues(new Uint8Array(bytes));
 
+/**
+ *
+ * https://zelark.github.io/nano-id-cc/
+ *
+ * Using this 52 char alphabet and a length of 20,
+ *
+ * At 1000 IDs per hour: ~2 billion years or 20,494T IDs needed, in
+ * order to have a 1% probability of at least one collision.
+ */
+export const newId: ()=>string =
+    customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 20);

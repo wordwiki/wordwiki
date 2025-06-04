@@ -1,9 +1,10 @@
 'use strict';
 
-import * as characters from './characters.ts';
+/**
+ * Misc string utilities.
+ *
+ */
 
-//import * as XRegExp from 'xregexp';
-//const XRegExp = require('xregexp');
 
 // @deno-types='https://deno.land/x/xregexp/types/index.d.ts'
 import XRegExp from  'https://deno.land/x/xregexp/src/index.js'
@@ -15,41 +16,6 @@ export function escapeRegExp(s: string) {
 }
 
 /**
- *
- */
-//const isES2016IdentifierRegex = XRegExp (`^\\p{ID_Start}\\p{ID_Continue}*$`, 'x');
-// WRONG: the above version should work as XRegExp is updated to unicode 9 (+ similar
-//        syntax is coming to ES native)
-const isES2016IdentifierRegex = XRegExp (`^[A-Za-z_$][A-Za-z_$0-9]*$`, 'x');
-
-export function isES2016Identifier (id: string) {
-  return id != null && typeof id == 'string' && isES2016IdentifierRegex.test (id);
-};
-
-/**
- * Parse a string to a boolean supporting the most common conventions.
- */
-export function parseBoolean(s: string): boolean|undefined {
-  let l = s.toLowerCase();
-  switch(l) {
-    case '1':
-    case 'true':
-    case 't':
-    case 'yes':
-    case 'y':
-      return true;
-    case '0':
-    case 'false':
-    case 'f':
-    case 'no':
-    case 'n':
-      return true;
-    default:
-      return undefined;
-  }
-}
-
-/**
  * Split a string into words the posh way (using unicode segmenter - handles
  * complex punctuation, the apostrophe, multiple languages etc).
  */
@@ -58,6 +24,84 @@ export function splitIntoWords(text: string): string[] {
     const segmentedText = segmenter.segment(text);
     return [...segmentedText].filter(s=>s.isWordLike).map(s=>s.segment);    
 }
+
+export function stripOptionalPrefix (s: string, prefix: string) {
+  if (s.startsWith (prefix))
+    return s.substring (prefix.length);
+  else
+    return s;
+}
+
+export function stripRequiredPrefix (s: string, prefix: string) {
+    if (s.startsWith (prefix))
+        return s.substring (prefix.length);
+    else
+        throw new Error(`expected string "${s}" to have prefix "${prefix}"`);
+}
+
+export function replaceOptionalPrefix (s: string, prefix: string, replacement:string):string {
+  if (s.startsWith (prefix))
+    return replacement+s.substring (prefix.length);
+  else
+    return s;
+}
+
+export function stripOptionalSuffix (s: string, suffix: string): string {
+    if (s.endsWith (suffix))
+        return s.substring (0, s.length-suffix.length);
+    else
+        return s;
+}
+
+export function stripRequiredSuffix (s: string, suffix: string): string {
+    if (s.endsWith (suffix))
+        return s.substring (0, s.length-suffix.length);
+    else
+        throw new Error(`expected string "${s}" to have suffix "${suffix}"`);
+}
+
+export function replaceOptionalSuffix (s: string, suffix: string, replacement:string): string {
+  if (s.endsWith (suffix))
+    return s.substring (0, s.length-suffix.length)+replacement;
+  else
+    return s;
+}
+
+export function capitalize (s: string) {
+  if (!s) return s;
+  return s.substring (0, 1).toUpperCase ()+s.substring (1);
+}
+
+export function uncapitalize (s: string) {
+  if (!s) return s;
+  return s.substring (0, 1).toLowerCase ()+s.substring (1);
+}
+
+/**
+ * Compares two strings in a way that is compatible with the compareFunction
+ * argument to Array.sort
+ */
+export function stringCompare (a: string, b: string) {
+    if (a < b)
+        return -1;
+    else if (a > b)
+        return 1;
+    else
+        return 0;
+}
+
+/**
+ * Returns whether an object is either a string or a boxed string (a String () object)
+ */
+export function isString (s: any) {
+    return typeof (s) === 'string' || s instanceof String;
+}
+
+
+// ----------------------------------------------------------------------------------
+// --- Upper/Lower case stuff -------------------------------------------------------
+// ----------------------------------------------------------------------------------
+
 
 /*
 
@@ -133,79 +177,9 @@ export function startsWithUpperCaseChar (s: string) {
     isUpperCaseChar (s.charAt (0));
 }
 
-/**
- *
- */
-function cachedCharTest (f: (c: number)=>boolean, cacheArray:any, cacheObj:any): (c: number)=>boolean {
-  return function (c: number): boolean {
-
-    // --- Look for cached value in cache array
-    if (cacheArray && c>0 && c<cacheArray.length) {
-      let v = cacheArray[c];
-      if (v !== undefined)
-	return v;
-    }
-
-    // --- Look for cached value in cache obj
-    if (cacheObj) {
-      let v = cacheObj[c];
-      if (v !== undefined)
-	return v;
-    }
-
-    // --- Not found in cache - do test
-    let result = f (c);
-
-    // --- Cache
-    if (cacheArray && c>0 && c<cacheArray.length) {
-      cacheArray[c] = result;
-    } else if (cacheObj) {
-      cacheObj[c] = result;
-    }
-
-    return result;
-  }
-}
-
-
-/**
- * Replace every dash-letter pair with an upcased letter.
- *
- * i.e.:
- *    hello-there -> helloThere
- *
- * This is a common requirement of XML/Java systems, where XML names
- * often may contain dash characters, while Java systems can not.
- *
- * If the source material contains an uppercase letter, it is copied through.
- *
- * @param s - the string to be camel-cased
- * @param capitalize - true iff the resulting string should be capitalized.
- **/
-export function dashedToCamelCaseReversably (s: string,
-					     firstLetterIsConventionallyUpcased: boolean=false): string {
-  // let out = '';
-  // let sLen = s.length;
-  // for (let j=0; j<sLen; j++) {
-  //   let c = s.charAt (j);
-  //   if (c === '-') {
-  //     upcaseNext = true;
-  //   } else {
-  //     if (upcaseNext)
-  // 	c = c.toUpperCase ();
-  //     upcaseNext = false;
-  //     out += c;
-  //   }
-					       // }
-					      // return out;
-					       throw new Error ();
-}
-
-/*
-Want the extra property that real names can also be used.
-FOrget it for now - NOT WORTH it.
-*/
-
+// ---------------------------------------------------------------------------------
+// --- Camel casing and identifiers ------------------------------------------------
+// ---------------------------------------------------------------------------------
 
 /**
  * Camel case to dashed.
@@ -335,77 +309,9 @@ export function camelCasedToDashedFancily (s: string): string {
   return out;
 }
 
-/**
- * Compares two strings in a way that is compatible with the compareFunction
- * argument to Array.sort
- */
-export function stringCompare (a: string, b: string) {
-  if (a < b)
-    return -1;
-  else if (a > b)
-    return 1;
-  else
-    return 0;
-}
-
-/**
- * Returns whether an object is either a string or a boxed string (a String () object)
- */
-export function isString (s: any) {
-  return typeof (s) === 'string' || s instanceof String;
-}
-
-export function stripOptionalPrefix (s: string, prefix: string) {
-  if (s.startsWith (prefix))
-    return s.substring (prefix.length);
-  else
-    return s;
-}
-
-export function stripRequiredPrefix (s: string, prefix: string) {
-    if (s.startsWith (prefix))
-        return s.substring (prefix.length);
-    else
-        throw new Error(`expected string "${s}" to have prefix "${prefix}"`);
-}
-
-export function replaceOptionalPrefix (s: string, prefix: string, replacement:string):string {
-  if (s.startsWith (prefix))
-    return replacement+s.substring (prefix.length);
-  else
-    return s;
-}
-
-export function stripOptionalSuffix (s: string, suffix: string): string {
-    if (s.endsWith (suffix))
-        return s.substring (0, s.length-suffix.length);
-    else
-        return s;
-}
-
-export function stripRequiredSuffix (s: string, suffix: string): string {
-    if (s.endsWith (suffix))
-        return s.substring (0, s.length-suffix.length);
-    else
-        throw new Error(`expected string "${s}" to have suffix "${suffix}"`);
-}
-
-export function replaceOptionalSuffix (s: string, suffix: string, replacement:string): string {
-  if (s.endsWith (suffix))
-    return s.substring (0, s.length-suffix.length)+replacement;
-  else
-    return s;
-}
-
-export function capitalize (s: string) {
-  if (!s) return s;
-  return s.substring (0, 1).toUpperCase ()+s.substring (1);
-}
-
-export function uncapitalize (s: string) {
-  if (!s) return s;
-  return s.substring (0, 1).toLowerCase ()+s.substring (1);
-}
+// ----------------------------------------------------------------------------------
+// --- Escaping ---------------------------------------------------------------------
+// ----------------------------------------------------------------------------------
 
 // encode64 - base64 encoding
 export function encode64 (s: string) {
@@ -463,47 +369,9 @@ export function escapeHtmlText (v: string): string {
   else return v.replace(unsafeHtmlTextCharRegex, (c) => unsafeHtmlTextCharToEscaped[c]);
 }
 
-// Simple tokenizer: tokens are names or individual non-name characters.
-// All whitespace is ignored.  Name characters are currently as defined by XML.
-// For example 'cat(@dog)' tokenizes to ['cat', '(', '@', 'dog', ')']
-export function simpleTokenizer (src: string) {
-  var tokens = [];
-  var srclen = src.length;
-  var pos = 0;
-  while (pos<srclen) {
-    var c = src.charCodeAt(pos);
-    if (characters.isSpaceCharCode(c)) {
-      // Ignore all whitespace
-      pos++;
-    } else if (characters.isXmlNameStartCharCode(c)) {
-      // Got the start of a name, collect the rest and add the token
-      var namestart = pos;
-      pos++;
-      while (pos<srclen && characters.isXmlNameCharCode(src.charCodeAt(pos)))
-	pos++;
-      tokens.push(src.substring(namestart, pos));
-    } else {
-      // Add non-name character as an individual token
-      tokens.push(src.charAt(pos++));
-    }
-  }
-
-  return tokens;
-}
-
-export function isSimpleTokenizerNameToken (t: string) { 
-  return t && characters.isXmlNameStartCharCode(t.charCodeAt(0)); 
-}
-
-export function extractPackage (path: string) {
-  var lastSeparator = path.lastIndexOf ('.');
-  return lastSeparator == -1 ? null : path.substring (0, lastSeparator);
-}
-
-export function extractName (path: string) {
-  var lastSeparator = path.lastIndexOf ('.');
-  return lastSeparator == -1 ? path : path.substring (lastSeparator+1);
-}
+// --------------------------------------------------------------------------
+// --- Identifiers ----------------------------------------------------------
+// --------------------------------------------------------------------------
 
 /**
  *
@@ -519,198 +387,24 @@ export function isIdentifier (name: string) {
   return !!name.match (/^[A-Za-z_][A-Za-z_0-9]*$/);
 }
 
-// Count the number of (non overlapping) matches of a string within a string.
-export function countMatches (s: string, match: string) {
-  var count = 0;
-  var pos = 0;
-  var len = s.length;
-  while (pos != -1 && pos < len) {
-    pos = s.indexOf (match, pos);
-    if (pos != -1) {
-      count++;
-      pos = pos+match.length;
-    }
-  }
-  return count;
-}
+/**
+ *
+ */
+//const isES2016IdentifierRegex = XRegExp (`^\\p{ID_Start}\\p{ID_Continue}*$`, 'x');
+// WRONG: the above version should work as XRegExp is updated to unicode 9 (+ similar
+//        syntax is coming to ES native), our current impl is only supporting
+//        ASCII identifiers.
+const isES2016IdentifierRegex = XRegExp (`^[A-Za-z_$][A-Za-z_$0-9]*$`, 'x');
 
-// Counts (non overlapping) matches of a regex in a string.  Regex must be global.
-export function countRegexMatches (s: string, match: string|RegExp) {
-  if (!(match instanceof RegExp) || !match.global)
-    throw new Error('countMatches regexp must be global (/g) regex');
-  // Do counting by abusing function parameters to replace () - forced to do
-  // this because javascript regex api does not allow searching starting at an
-  // index.
-  var counter = 0;
-  // XXX some of the other regex methods return array of matches - switch to them XXX
-  s.replace(match, () => { counter++; return '';});
-  return counter;
-}
-
-// Collects (non overlapping) matches of a regex in a string.  Regex must be global.
-export function collectRegexMatches (s: string, match: string|RegExp): string[] {
-  if (!(match instanceof RegExp) || !match.global)
-    throw new Error('collectMatches regexp must be global (/g) regex');
-  // Do counting by abusing function parameters to replace () - forced to do
-  // this because javascript regex api does not allow searching starting at an
-  // index.
-    var out: string[] = [];
-  s.replace (match, (hit) => { out.push (hit); return '';});
-  return out;
-}
-
+export function isES2016Identifier (id: string) {
+    return id != null && typeof id == 'string' && isES2016IdentifierRegex.test (id);
+};
 
 // ------------------------------------------------------------------------
-// --- Simple moustache-style template mechanism
+// --- Fun with whitespace ------------------------------------------------
 // ------------------------------------------------------------------------
 
-// Default nodes used to represent the result of a moustache block parse (below)
-export class MoustacheBlock {
-  constructor (public text: string, public line: number) {}
-}
-export class MoustacheText extends MoustacheBlock {
-  toString () { return this.text; }
-}
-
-export class MoustacheExpr extends MoustacheBlock {
-  toString () { return "{{"+this.text+"}}"; }
-}
-
-function moustacheTextFactory (t: string, l: number) { return new MoustacheText(t,l); }
-function moustacheExprFactory (t: string, l: number) { return new MoustacheExpr(t,l); }
-
-// Quickly determines whether a string contains moustache blocks.
-export function containsMoustacheBlocks (s: string) { return s.indexOf('{{') !== -1; }
-
-export function moustacheBlockParser (s: string, 
-				      textFactory: (s:string, l:number)=>any = moustacheTextFactory, 
-				      exprFactory: (s:string, l:number)=>any = moustacheExprFactory): any[] {
-  // Lex into array of "tokens" - "{{", "}}" and arbitrary strings.
-  var tokens = s.split(/({{|}})/);
-  var tokenCount = tokens.length;
-  //console.info('TOKENS', tokens, tokenCount)
-  var blocks = [];
-  var pos = 0;
-  var line = 1;
-  while (pos<tokenCount) {
-    var token = tokens[pos++];
-    //console.info(token)
-
-    switch (token) {
-    case '{{': // top level open block
-
-      if (pos === tokenCount) throw new Error('Unmatched {{');
-      token = tokens[pos++];
-
-      switch (token) {
-	case '{{': 
-	  throw new Error('Unexpected nested {{');
-	case '}}':
-	  break;
-	default: // regular string
-	  var body = token;
-	  if (pos === tokenCount) throw new Error('Unmatched {{');
-	  token = tokens[pos++];
-	  if (token !== '}}') throw new Error('Expecting }}, got '+token);
-	  blocks.push(exprFactory(body, line));
-	  line += countNewlines(body);
-	  break;
-      }
-      break;
-
-    case '}}': // top level close blocks should not occur
-      throw new Error('Unexpected }}');
-
-    default: // regular string
-      if (token) {
-	blocks.push(textFactory(token, line));
-	line += countNewlines(token);
-      }
-      break;
-    }
-  }
-  return blocks;
-}
-
-// // Default nodes used to represent the result of a moustache block parse (below)
-// export class MoustacheBlock {
-
-//   text: string;
-//   line: number;
-
-//   constructor (text: string, line: number) {
-//     this.text = text;
-//     this.line = line;
-//   }
-// }
-// export class MoustacheText extends MoustacheBlock {
-//   toString () { return this.text; }
-// }
-
-// export class MoustacheExpr extends MoustacheBlock {
-//   toString () { return "{{"+this.text+"}}"; }
-// }
-
-// function moustacheTextFactory (t, l) { return new MoustacheText(t,l); }
-// function moustacheExprFactory (t, l) { return new MoustacheExpr(t,l); }
-
-// // Quickly determines whether a string contains moustache blocks.
-// export function containsMoustacheBlocks (s: string) { return s.indexOf('{{') !== -1; };
-
-// export function moustacheBlockParser (s: string, 
-// 				      textFactory: (t:string, l:number)=>MoustacheText, 
-// 				      exprFactory: (t:string, l:number)=>MoustacheExpr) {
-//   // Lex into array of "tokens" - "{{", "}}" and arbitrary strings.
-//   var tokens = s.split(/({{|}})/);
-//   var tokenCount = tokens.length;
-//   //console.info('TOKENS', tokens, tokenCount)
-//   var blocks = [];
-//   var pos = 0;
-//   var line = 1;
-//   while (pos<tokenCount) {
-//     var token = tokens[pos++];
-//     //console.info(token)
-
-//     switch (token) {
-//     case '{{': // top level open block
-
-//       if (pos === tokenCount) throw new Error('Unmatched {{');
-//       token = tokens[pos++];
-
-//       switch (token) {
-// 	case '{{': 
-// 	  throw new Error('Unexpected nested {{');
-// 	case '}}':
-// 	  break;
-// 	default: // regular string
-// 	  var body = token;
-// 	  if (pos === tokenCount) throw new Error('Unmatched {{');
-// 	  token = tokens[pos++];
-// 	  if (token !== '}}') throw new Error('Expecting }}, got '+token);
-// 	  blocks.push(exprFactory(body, line));
-// 	  line += countNewlines(body);
-// 	  break;
-//       }
-//       break;
-
-//     case '}}': // top level close blocks should not occur
-//       throw new Error('Unexpected }}');
-
-//     default: // regular string
-//       if (token) {
-// 	blocks.push(textFactory(token, line));
-// 	line += countNewlines(token);
-//       }
-//       break;
-//     }
-//   }
-//   return blocks;
-// }
-
-
-// ------------------------------------------------------------------------
-// --- Fun with whitespace
-// ------------------------------------------------------------------------
+export function ord (c:string) { return c.charCodeAt (0); }
 
 export function removeEndOfLineSpaces (s: string) { 
   return s.replace(/[ \t]*\n/g, '\n');
@@ -744,9 +438,9 @@ export function normalizeNewlines (s: string) {
   return s;
 }
 
-// Efficiently count the number of newline characters in a string.  If the string
-// is \r delimited, this will not work (DOS style \r\n will be fine however).
-export function countNewlines (s: string) { return countMatches (s, '\n'); }
+// // Efficiently count the number of newline characters in a string.  If the string
+// // is \r delimited, this will not work (DOS style \r\n will be fine however).
+// export function countNewlines (s: string) { return countMatches (s, '\n'); }
 
 /**
  * Returns whether a string is all whitespace.
@@ -756,6 +450,14 @@ export function countNewlines (s: string) { return countMatches (s, '\n'); }
 export function isAllWhitespace (s: string) {
   return s === '' || /^[ \r\n\t]*$/m.test (s);
 }
+
+const whitespaceRegex = new RegExp('^[ \r\n\t]*$');
+
+// Returns whether the string consists entirely of whitespace characters (or is the empty string).
+export function isWhitespaceString (s:string) {
+    return whitespaceRegex.test (s);
+}
+
 
 /**
  * Simple tab expansion that replaces each tab with 8 space characters.
@@ -905,4 +607,34 @@ export function mergeTemplate (tmplStrs: ReadonlyArray<string>, substs: any[]) :
  */
 export function indentString (text: string, indent: string) {
   return text.split ('\n').map (l=>indent+l).join ('\n') + '\n';
+}
+
+
+// ---------------------------------------------------------------------------------
+// --- Misc Junk -------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
+
+/**
+ * Parse a string to a boolean supporting the most common conventions.
+ *
+ * (Used for crappy situations like parsing CSV)
+ */
+export function parseBoolean(s: string): boolean|undefined {
+    let l = s.toLowerCase();
+    switch(l) {
+        case '1':
+        case 'true':
+        case 't':
+        case 'yes':
+        case 'y':
+            return true;
+        case '0':
+        case 'false':
+        case 'f':
+        case 'no':
+        case 'n':
+            return true;
+        default:
+            return undefined;
+    }
 }

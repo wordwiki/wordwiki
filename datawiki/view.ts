@@ -5,21 +5,21 @@ import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatFiel
         StringField, EnumField, VariantField, BlobField, AudioField, ImageField,
         IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from '../wordwiki/schema.ts';
-import {unwrap, panic} from "../server/utils.ts";
-import {Markup} from '../server/markup.ts';
+import {unwrap, panic} from "../tabula/utils.ts";
+import {Markup} from '../tabula/markup.ts';
 import {VersionedDb, CurrentTupleQuery, CurrentRelationQuery, TupleVersion, generateBeforeOrderKey, generateAfterOrderKey} from './workspace.ts';
 import * as workspace from './workspace.ts';
 import {getAssertionsForEntry} from './workspace.ts';
-import * as utils from '../server/utils.ts';
-import * as strings from '../server/strings.ts';
-import { rpc } from '../server/rpc.ts';
-import {block} from "../server/strings.ts";
+import * as utils from '../tabula/utils.ts';
+import * as strings from '../tabula/strings.ts';
+import { rpc } from '../tabula/rpc.ts';
+import {block} from "../tabula/strings.ts";
 import {dictSchemaJson} from "../wordwiki/entry-schema.ts";
-import * as timestamp from "../server/timestamp.ts";
-import { renderToStringViaLinkeDOM } from '../server/markup.ts';
-import { BEGINNING_OF_TIME, END_OF_TIME } from "../server/timestamp.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../server/db.ts";
-import ContextMenu from '../server/context-menu.js';
+import * as timestamp from "../tabula/timestamp.ts";
+import { renderToStringViaLinkeDOM } from '../tabula/markup.ts';
+import { BEGINNING_OF_TIME, END_OF_TIME } from "../tabula/timestamp.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
+import ContextMenu from '../tabula/context-menu.js';
 import { PageEditorConfig } from '../scannedpage/render-page-editor.ts';
 
 

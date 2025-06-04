@@ -1,4 +1,16 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
+
+/**
+ * A small JS interpreter.
+ *
+ * Implemented as a simple parse tree interpreter on the AST returned by
+ * the acorn JS parser.
+ *
+ * Includes safety features so that, for example, only explicitly
+ * 'blessed' functions/methods can be invoked.
+ *
+ * We use this as a router.
+ */
 import * as acorn from "npm:acorn@8.11.3";
 import acorn_jsx from "npm:acorn-jsx@5.3.2";
 import {Node, Expression, Identifier, Literal, ArrayExpression,
@@ -22,7 +34,8 @@ export type JsNode = Node;
 
 export type Scope = Record<string, any>;
 
-
+// NOTE: We have not completed the JSXElement stuff yet.  When we do, it will
+// be possible to use jsterp as a template language using JSX syntax.
 interface JSXElement extends JsNode {
     openingElement: JSXOpeningElement;
     closingElement: JSXClosingElement;
@@ -59,8 +72,6 @@ interface JSXAttribute extends JsNode {
 interface JSXSpreadAttribute extends JsNode {
 }
 
-//inter
-
 export function parseJsExpr(jsExprSrc: string): JsNode {
     const acornWithJsx = acorn.Parser.extend(acorn_jsx());
     //console.log(acornWithJsx.parse("<span size='12' size2={12+2}>cat</span>", {ecmaVersion: 2023}));
@@ -77,6 +88,18 @@ export function dumpJsExpr(jsExprSrc: string): string {
 
 export function evalJsExprSrc(s: Scope, jsExprSrc: string, safeMode:boolean=false): any {
     return new Eval(safeMode).eval(s, parseJsExpr(jsExprSrc));
+}
+
+/**
+ * JsTerp is not presently async (so 'await' is not supported).  As a workaround
+ * in situations where async is required, the caller can use this jsterm entry point
+ * which forces top level promised returned by the evaluator.
+ */
+export async function evalJsExprSrcForcingTopLevelPromises(s: Scope, jsExprSrc: string, safeMode:boolean=false): Promise<any> {
+    let result = evalJsExprSrc(s, jsExprSrc, safeMode);
+    while(result instanceof Promise)
+        result = await result;
+    return result;
 }
 
 export const pubMarker = Symbol('pub');
@@ -136,10 +159,17 @@ class Foo {
  * copies of this.
  */
 export class Eval {
-    constructor(readonly safeMode: boolean = false) {
+    ticksUsed: number = 0;
+    
+    constructor(readonly safeMode: boolean = false, readonly maxTicks: number = 50) {
     }
 
     eval(s: Scope, e: JsNode): any {
+        
+        if(this.ticksUsed++ > this.maxTicks) {
+            throw new Error(`Excess computation in jsterp - please adjust maxTicks`);
+        }
+        
         switch(e.type) {
             case 'Identifier':
                 return this.evalIdentifier(s, e as Identifier);

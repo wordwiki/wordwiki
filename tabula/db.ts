@@ -1,3 +1,17 @@
+/**
+ * A lightweight wrapper around denoSqlite that adapts it for this applications
+ * particular style of ORM-less usage.
+ *
+ * Some features:
+ * - Uses TS typing to catch many query errors at compile time.
+ * - Automatically memoized prepared queries.
+ * - We try not to let the underlying denoSqlite interface leak
+ *   out of here to make it easier if we ever want to port the application
+ *   to a different JS sqlite interface (for example 'better sqlite3' if we
+ *   want to run on node.js, or deno-sqlite3 (the ffi version) if we
+ *   have trouble with deno-sqlite (the wasm vesion we are using)).
+ */
+
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 import {block} from "./strings.ts";
 import {unwrap} from "./utils.ts";
@@ -6,22 +20,20 @@ import {unwrap} from "./utils.ts";
 //       from https://github.com/dyedgreen/deno-sqlite) because the last
 //       release (3.8) was cut just before they enabled full text search.
 //       Once another release happens we can go back to importing from deno.land.
-import * as denoSqlite from "../../deno-sqlite/mod.ts";
+//import * as denoSqlite from "../../deno-sqlite/mod.ts";
 //import * as denoSqlite from "./fake-deno-sqlite.ts";
-//import * as denoSqlite from "https://deno.land/x/sqlite@v3.8/mod.ts";
+import * as denoSqlite from "https://deno.land/x/sqlite/mod.ts";
 
 export type Row = denoSqlite.Row;
-//export type RowObject = denoSqlite.RowObject;
 export type RowObject = Record<string, any>;
 export type QueryParameter = denoSqlite.QueryParameter;
 export type QueryParameterSet = denoSqlite.QueryParameterSet;
 
 export type QueryParameters = Record<string, any>;
-//export type QueryParameters2 = Record<string, any>;
 type ToRecord<T> = {[Property in keyof T]: T[Property]};
 
 /**
- * SQLite uses 'number' (0/1) to represent booleans.
+ * SQLite uses 'integer' (0/1) to represent booleans.
  * (we call it a boolnum so users know what semantics
  * to expect, which true/false literals to use etc).
  */
@@ -43,16 +55,6 @@ export function db(): Db {
     return dbByPath(defaultDbPath);
 }
 
-/**
- * A wrapper around denoSqlite that adapts it for this applications
- * particular style of ORM-less usage.
- *
- * Also: We try not to let the underlying denoSqlite interface leak
- * out of here to make it easier if we ever want to port the application
- * to a different JS sqlite interface (for example 'better sqlite3' if we
- * want to run on node.js, or deno-sqlite3 (the ffi version) if we
- * have trouble with deno-sqlite (the wasm vesion we are using)).
- */
 export class Db {
     memoizedPreparedQueries: Map<string, PreparedQuery> = new Map();
 
@@ -170,7 +172,13 @@ export class Db {
      * of raw SQL; for example, to initialize a database.
      */
     executeStatements(sql: string) {
-        return this.db.execute(sql);
+        try {
+            return this.db.execute(sql);
+        } catch (e) {
+            console.info('--- WHILE EXECUTING SQL ', sql);
+            console.info(e);
+            throw e;
+        }
     }
 
     transaction<V>(closure: () => V): V {

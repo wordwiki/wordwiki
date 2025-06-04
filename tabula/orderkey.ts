@@ -4,16 +4,16 @@
  * pair of keys.
  *
  * This is used to represent explicitly ordered data in a relational
- * database (where tuples are inheranly unordered).
+ * database (where tuples are inherently unordered).
  *
  * Doing this using an order key is much more multi-transaction friendly and cheaper
  * than just using item numbers.
  *
  * Some trouble is taken to keep the keys short, but if you repeatedly insert
- * in one interval (for example at the top or bottom), they will grow by
+ * in one interval (for example at the top or bottom), the keys will grow by
  * a character for every few inserts.
  * 
- * A periodic renumber (unsing initial()) can be used to recover from this.
+ * A periodic renumber (using initial()) can be used to recover from this.
  *
  * Example of the user inserting definitions for the word 'cat' in specific orders:
  *
@@ -36,7 +36,6 @@ import Big from './big.mjs';
  */
 export const orderKeyCollator = Intl.Collator('en');
 
-
 /**
  * Compare two order keys.
  *
@@ -47,7 +46,6 @@ export function compareOrderKeys(a: string|undefined|null, b: string|undefined|n
     if(b == undefined) return -1;
     return orderKeyCollator.compare(a, b);
 }
-
 
 export const new_range_start_key = new Big('0.5');
 export const begin_key = new Big('0.1');

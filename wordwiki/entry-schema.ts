@@ -7,14 +7,14 @@
 //import * as denoSqliteDb from "./denoSqliteDb.ts";
 import * as model from '../datawiki/model.ts';
 //import * as persistence from './persistence.ts';
-import * as utils from "../server/utils.ts";
-import * as timestamp from '../server/timestamp.ts';
+import * as utils from "../tabula/utils.ts";
+import * as timestamp from '../tabula/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
-import ContextMenu from '../server/context-menu.js';
+import ContextMenu from '../tabula/context-menu.js';
 import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from '../scannedpage/render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
-import * as random from '../server/random.ts';
+import * as random from '../tabula/random.ts';
 
 export const DictTag = 'dct';          // dict
 export const EntryTag = 'ent';         // entr

@@ -1,15 +1,17 @@
+// Johansen 11:10 Ziegler - - leave 10:45
+
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
-import * as utils from "../server/utils.ts";
-import {unwrap} from "../server/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../server/db.ts";
-import * as content from "../server/content-store.ts";
+import * as utils from "../tabula/utils.ts";
+import {unwrap} from "../tabula/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
+import * as content from "../tabula/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
-import {block} from "../server/strings.ts";
-import * as orderkey from '../server/orderkey.ts';
-import * as timestamp from '../server/timestamp.ts';
+import {block} from "../tabula/strings.ts";
+import * as orderkey from '../tabula/orderkey.ts';
+import * as timestamp from '../tabula/timestamp.ts';
 
 export const routes = ()=> ({
 });
@@ -1170,7 +1172,7 @@ export function createAllTables() {
 /*async*/ function main(args: string[]) {
     const cmd = args[0];
     switch(cmd) {
-        case 'createDb': // TODO REMOVE THIS ONCE WE ARE MORE STABLE (TOO DANGER!)
+        case 'createDb-no-no-no': // TODO REMOVE THIS ONCE WE ARE MORE STABLE (TOO DANGER!)
             console.info('DELETING DB');
             Db.deleteDb(defaultDbPath);
             createAllTables();

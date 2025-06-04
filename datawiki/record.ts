@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 
-import {customAlphabet} from "./nanoid.ts";
+import {customAlphabet} from "../tabula/nanoid.ts";
 
 /**
  *

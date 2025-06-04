@@ -1,8 +1,26 @@
 /**
+ * A content addressable store that also supports addressing content by
+ * the closure used to generate that content (for example resized versions
+ * of images).
  *
+ * If you add a .jpg that sha256's to
+ * '0043e2ef7fbd43a1d430ababbcc980a85284f0e2a58368c4fe4cbfec84c2151c' it will get
+ * stored in this file (if the same content has not already been added):
  *
+ * "content/004/0043e2ef7fbd43a1d430ababbcc980a85284f0e2a58368c4fe4cbfec84c2151c.jpg"
  *
+ * We use the first three hex digits of the hash for to cluster content in up
+ * to 4096 directories (so, for example if your filesystem is happy with 10,000
+ * files per directory, we will hit this with 40M items).
+ *
+ * Note that the original file extension is preserved.  This is to allow items
+ * to be served as files by http servers directly out of the content store.
+ *
+ * In addition to addressing content by the content value, you can use
+ * getDerived to address content by the closure used to generate that content.
+ * (TODO: finish documenting this)
  */
+
 // 3ba8d02b16fd2a01c1a8ba1a1f036d7ce386ed953696fa57331c2ac48a80b255
 // 64 byte hex string
 // Sample content id:
@@ -282,28 +300,6 @@ export function formatContentId({contentStore, hash, extension}: ContentId): str
     verifyContentId(contentId);
     return contentId;
 }
-
-
-// function contentIdPlay() {
-//     console.info(parseContentId('pdm/3ba/3ba8d02b16fd2a01c1a8ba1a1f036d7ce386ed953696fa57331c2ac48a80b255.jpg'));
-//     console.info(parseContentId('pdm/3ba/3ba8d02b16fd2a01c1a8ba1a1f036d7ce386ed953696fa57331c2ac48a80b255'));
-// }
-
-//contentIdPlay();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Computes the sha256 of the supplied string.

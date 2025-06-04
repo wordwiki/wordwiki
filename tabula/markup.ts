@@ -1,5 +1,46 @@
+/**
+ * A system for representing markup as JS values.
+ *
+ * Elements are represented as:
+ *   [tagName: string, attrs: Record<string, any>, content: ...any]
+ *
+ * The only position that a JS Object can appear is as in the attrs position
+ * of an elem, so we can use the presense of the {} in the second position to
+ * identify an element.
+ * 
+ * All other arrays are flattened inline.
+ *
+ * Primitive values are converted to strings, escaped and serialized as text.
+ *
+ * Null and undefined are elided.
+ *
+ * If the async renderer is used, promise values are awaited and the results
+ * are rendered.  This saves a massive amount of function coloring and also
+ * removes the awkwardness of generating async content using 'map' and friends.
+ *
+ * Example usage:
+ 
+ * ['table', {'class': 'numbers'},
+ *    ['tr', {},
+ *       [1,2,3].map(n=>['td', {}, n])]
+ * ]
+ *
+ * A TS compatible JSX interface is also provided so that this structure can
+ * be generated TSX for those that prefer that syntax.
+ *
+ * Note that there are two serializers to text here - use the LinkeDOM versions for
+ * now - we haven't gotten the other one HTML spec compliant yet.
+ *
+ * The jsterp integration here is diseased and disabled at the moment.  Please
+ * ignore it until I get around to removing it.
+ */
+
+
+// 
+
 import * as utils from './utils.ts';
-import * as linkedom from "https://esm.sh/linkedom@0.16.8";
+import * as linkedom from "https://esm.sh/linkedom@0.18.10/worker";
+import * as jsterp from './jsterp.ts'; // REMOVE_FOR_WEB
 
 export type DumpOpts = Record<string, any>;
 
@@ -467,83 +508,106 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral, debug: boolean = f
  * Probably quite a bit slower than the sync one - so keeping that one around as
  * well.
  */
-export async function asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<string> {
-    return (await asyncToLinkeDOM(markup, wrapInHtmlDocument)).toString();
+export async function asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true, jsTerpEnabled:boolean=false, jsTerpScope: jsterp.Scope = {}, jsTerpSafeMode: boolean = false): Promise<string> {
+    return (new AsyncRenderToJSDON(jsTerpEnabled, jsTerpScope, jsTerpSafeMode)).
+        asyncRenderToStringViaLinkeDOM(markup, wrapInHtmlDocument);
 }
 
-export async function asyncToLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<any> {
-    return linkedom.parseJSON(await asyncRenderToJSDON(markup, wrapInHtmlDocument));
-}
+class AsyncRenderToJSDON {
 
-export async function asyncRenderToJSDON(item: any, wrapInHtmlDocument: boolean=true): Promise<JSDON> {
-    const out: JSDON = [];
-    if(wrapInHtmlDocument) {
-        out.push(DOCUMENT_NODE);
-        out.push(DOCUMENT_TYPE_NODE, "html");
-    }        
-    await asyncRenderItemToJSDON(out, item);
-    if(wrapInHtmlDocument) {
-        out.push(NODE_END, NODE_END);
+    constructor(public jsTerpEnabled: boolean = false,
+                public jsTerpScope: jsterp.Scope = {},
+                public jsTerpSafeMode: boolean = false) {
     }
-    return out;
-}
 
-async function asyncRenderItemToJSDON(out: JSDON, item: any) {
-    switch(typeof item) {
-        case 'undefined':
-            break;
-        case 'number':
-        case 'boolean':
-        case 'bigint':
-            out.push(TEXT_NODE, String(item));
-            break;
-        case 'string':
-            out.push(TEXT_NODE, item);
-            break;
-        case 'object':
-            if(item == null)
-                void 0;
-            else if(Array.isArray(item)) {
-                if(isElemMarkup(item)) {
-                    await asyncRenderElementToJSDON(out, item as ElemExprLiteral);
+    async asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<string> {
+        return (await this.asyncToLinkeDOM(markup, wrapInHtmlDocument)).toString();
+    }
+
+    async asyncToLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<any> {
+        return linkedom.parseJSON(await this.asyncRenderToJSDON(markup, wrapInHtmlDocument));
+    }
+
+    async asyncRenderToJSDON(item: any, wrapInHtmlDocument: boolean=true): Promise<JSDON> {
+        const out: JSDON = [];
+        if(wrapInHtmlDocument) {
+            out.push(DOCUMENT_NODE);
+            out.push(DOCUMENT_TYPE_NODE, "html");
+        }        
+        await this.asyncRenderItemToJSDON(out, item);
+        if(wrapInHtmlDocument) {
+            out.push(NODE_END, NODE_END);
+        }
+        return out;
+    }
+
+    async asyncRenderItemToJSDON(out: JSDON, item: any) {
+        switch(typeof item) {
+            case 'undefined':
+                break;
+            case 'number':
+            case 'boolean':
+            case 'bigint':
+                out.push(TEXT_NODE, String(item));
+                break;
+            case 'string':
+                out.push(TEXT_NODE, item);
+                break;
+            case 'object':
+                if(item == null)
+                    void 0;
+                else if(Array.isArray(item)) {
+                    if(isElemMarkup(item)) {
+                        await this.asyncRenderElementToJSDON(out, item as ElemExprLiteral);
+                    } else {
+                        for(const i of item)
+                            await this.asyncRenderItemToJSDON(out, i);
+                    }
+                } else if(item instanceof Promise) {
+                    await this.asyncRenderItemToJSDON(out, await item);
                 } else {
-                    for(const i of item)
-                        await asyncRenderItemToJSDON(out, i);
+                    throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
                 }
-            } else if(item instanceof Promise) {
-                await asyncRenderItemToJSDON(out, await item);
-            } else {
-                throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
-            }
-            break;
+                break;
 
-        default:
-            throw new Error(`unhandled content item ${item} of type ${typeof item} (2)`);
-    }
-}
-
-async function asyncRenderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
-    const [tag, {...attrs}, ...content] = e;
-    const tagName = tag instanceof Function ? tag.name : String(tag);
-
-    out.push(ELEMENT_NODE);
-    out.push(tagName);
-    for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
-        if(name !== '') {
-            out.push(ATTRIBUTE_NODE, name);
-            while(value instanceof Promise)
-                value = await value;
-            if(value != undefined)
-                out.push(String(value));
+            default:
+                throw new Error(`unhandled content item ${item} of type ${typeof item} (2)`);
         }
     }
-    for(const c of content)
-        await asyncRenderItemToJSDON(out, c);
-    out.push(NODE_END);
+
+    async asyncRenderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
+        let [tag, {...attrs}, ...content] = e;
+        const tagName = tag instanceof Function ? tag.name : String(tag);
+
+        out.push(ELEMENT_NODE);
+        out.push(tagName);
+        for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
+            if(name !== '') {
+                out.push(ATTRIBUTE_NODE, name);
+                while(value instanceof Promise)
+                    value = await value;
+                if(value != undefined)
+                    out.push(String(value));
+            }
+        }
+
+        // --- If we have hx-trigger='server', eval hx-get in jsTerp and inline
+        //     the results.  This 
+        const hxTrigger = attrs['hx-trigger'];
+        const hxGet = attrs['hx-get'];
+        if(this.jsTerpEnabled &&
+            hxTrigger.split(/[ ]*,[ ]*/).indexOf('server') !== -1 &&
+            typeof hxGet === 'string') {
+            content = await jsterp.evalJsExprSrcForcingTopLevelPromises(this.jsTerpScope, hxGet, this.jsTerpSafeMode);
+        }
+
+         await this.asyncRenderItemToJSDON(out, content);
+
+        out.push(NODE_END);
+    }
 }
 
-
-function linkeDOMPlay() {
+async function linkeDOMPlay() {
     console.info(renderToStringViaLinkeDOM(
         ['div', {class: 'top', style: 'none', 'cat': null}, 'hello',
          ['img', {width: 7, height: 9}]]));
@@ -554,7 +618,17 @@ function linkeDOMPlay() {
     attrEscapePlay("`cat`");
     attrEscapePlay("ca\nt"); // This one generates broken html (newline is not escaped)
     scriptEscapePlay(`"'cat'"`);
+    await jsterpPlay(
+        ['div',
+         ['div', {'hx-get': '1+1', 'hx-trigger': 'server'}]]);
 }
+
+async function jsterpPlay(markup: any) {
+    const out = await (new AsyncRenderToJSDON(true, {'size': 7}, false)).
+        asyncRenderToStringViaLinkeDOM(markup, false);
+    console.info('Markup', markup, 'terp renders to', out);
+}
+
 
 function attrEscapePlay(s: string) {
     const markup = ['div', {onclick: s, 'data-s': s}];
@@ -660,7 +734,7 @@ function diffContent(aParent: ElemExprLiteral, bParent: ElemExprLiteral,
 
 
 if (import.meta.main)
-    linkeDOMPlay();
+    await linkeDOMPlay();
 
 
 

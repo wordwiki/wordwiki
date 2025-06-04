@@ -1,12 +1,12 @@
 // deno-lint-ignore-file no-unused-vars, require-await, no-explicit-any
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
-import * as utils from "../server/utils.ts";
-import {unwrap} from "../server/utils.ts";
+import * as utils from "../tabula/utils.ts";
+import {unwrap} from "../tabula/utils.ts";
 import { db, Db, PreparedQuery, boolnum } from "./db.ts";
-import * as content from "../server/content-store.ts";
+import * as content from "../tabula/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
-import {block} from "../server/strings.ts";
+import {block} from "../tabula/strings.ts";
 //import * as scannedDocument from "./scanned-document.ts";
 import {selectScannedDocument, selectScannedDocumentByFriendlyId, selectScannedPage, ScannedPage, scannedPageFieldNames, Layer, selectLayerByLayerName, BoundingBox, BoundingGroup, boundingBoxFieldNames, selectLayer, getOrCreateNamedLayer} from  "./schema.ts";
 import {awsCmdPath} from './config.ts';

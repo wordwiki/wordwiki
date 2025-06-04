@@ -1,13 +1,19 @@
 /**
+ * A hybrid logical clock implementation.
+ *
+ * Hands out monotonically increasing time stamps.  These time stamps
+ * are closely related to wall clock time. (the differ from wall clock time
+ * only when one allocates more than 1 million stamps in a second, or when you
+ * are approaching the end times).
+ */
+
+/**
  * 2^53-1 == JS Maxint
  * We allocate 33 bits for the time since local epoch start in seconds ~= 270 years.
  * We allocate the remaining 20 bits to updates per second ~= 1 million updates per second.
  * - if we run out of updates in a second, we will just start using the next second.
  * - as we approach the end of time, we switch to a fixed clock time ...
  */
-
-
-
 
 // We use a newer epoch start than the default "January 1, 1970,
 // 00:00:00 UTC" so we can go longer before we run out of time bits
@@ -24,10 +30,8 @@ export const RAPTURE_TIME = (LOCAL_EPOCH_START + 2**33) - (1024*1024);
 // second, we will just advance to the next second).
 const COUNTER_MASK = 0x0FFFFF;
 
-// TODO rename to beinning_of_time, END_OF_TIME
 export const BEGINNING_OF_TIME = LOCAL_EPOCH_START;
 export const END_OF_TIME = Number.MAX_SAFE_INTEGER;
-
 
 /**
  * Given an existing timestamp, return a higher timestamp.

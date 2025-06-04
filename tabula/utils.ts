@@ -1,4 +1,8 @@
 /**
+ * Random utility functions.
+ */
+
+/**
  * The builting JS typeof operator returns one of "undefined",
  * "boolean", "number", "bigint", "string", "symbol", "function", or
  * "object".
@@ -229,6 +233,17 @@ export function assert(condition: any, msg?: string): asserts condition {
 //   // --- Return descriptor that uses cachingGetter rather than original getter
 //   return {get: cachingGetter, enumerable: false, configurable: true};
 // }
+
+/**
+ * Wrapper for parseInt that throws an exception on parse failure
+ * (rather than returning NaN)
+ */
+export function parseIntOrError(s: string): number {
+    let i = parseInt(s);
+    if(Number.isNaN(i))
+        throw new Error(`Failed to parse ${s} as an integer`);
+    return i;
+}
 
 /**
  * Partitions an array by key as defined by a supplied keyfn.
