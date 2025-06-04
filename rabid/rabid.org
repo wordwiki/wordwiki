@@ -1,0 +1,174 @@
+* TODO 
+* TODAY get new url scheme working + public
+- /resources/foo.jpg
+  user.get(7)
+  raccoon.home()
+  
+
+
+* TODAY
+- get list + form rendering + form reloading running from new model.
+
+
+
+* What
+rabid.redraccoon.org (or rabid.rrbr.org will 301 to rabid.redraccoon.org)
+
+* Sched for Board
+- cannot be Tue, Wed, Thu, Fri evening (programming all these times)
+- cannot be Sun, Mon (staff 2 day weekend)
+- cannot be Sat during day.
+- When?
+  - Sat 4pm (after cleanup)???
+- also, nobody wants to come in for more times in the summer.
+
+
+PROPOSAL:
+- we are already cancelling volunteer nights on first tue of month, and most
+  board members are already coming in for that.
+- how about 6:30->7:00 is this period on the first Tue of every month, and if
+  we need extra time, can do after meeting.
+- All staff available in this shift.
+
+* Model
+
+Home page
+
+
+
+￼
+Bike Shop Hours:
+
+Tuesday:   2 PM - 6 PM
+
+Thursday: 2 PM - 6 PM
+
+Friday:     2 PM - 8 PM
+
+Saturday:  10 AM - 3 PM
+
+On Saturday, we are behind the building.
+
+- a few member details, click to edit.
+- upcoming events
+- tasks you have committed to
+- news_items
+- your recent timesheet entries
+
+- member
+  - password_hash
+  - member_session
+
+- timesheet_entry
+
+- session
+  - session_commitment
+
+- bike_sale
+
+- committee
+  - committee_member
+  - committee_task (inc recurring)
+    - one level of subtask (self join, but only one level)
+  - task_discussion
+
+- upcoming_meetings
+  - including by committee
+
+- announcements
+  - including by committee
+
+- service
+  - whole bike status system here
+  - version that includes lots of text that people can follow though with
+    (and links to videos) - intermixed with the controls.
+  - so 'grasp the wheel ..., try to ...'  then the checkbox.
+    - can do these not using popups to avoid the reload wait (can use
+      alternative model for this system)
+      
+  - status_wheel
+    
+  - status_v_brake
+  - status_bottom_bracket
+  - status_headset
+
+  - status_wheel
+    - cones_too_tight
+    - cones_too_loose
+    - missing_spoke
+    - tru
+    - replace_wheel
+    - 
+
+  - status_tire
+    - flat_tire
+    - replace_tire
+  - status_change_history
+    
+
+  - v_brake
+    - pads_worn_out
+    - pads_not_centered
+    - pads_not_aligned
+    - does_not_move_well
+      - high_friction_in_cable
+      - high_friction_in_arms
+    - arm_missing
+    - wrong_pull_brake_lever
+
+* PROPOSAL
+- [ ] TableMetadata would migrate to be a wrapper over the table, jsterp would
+  dispatch into here for stuff.
+- [ ] Similar wrapper on item, also jsterp reachable.
+- [ ] Field is similarly dispatchable by jsterp
+- [ ] tables need not be physical - can be parameters to a tx, a view, or the
+  output of a join (more thinking about addressing in this case).
+- [ ] have concrete bases + typed specifics.
+- [ ] master-detail support.
+- [ ] not the whole show, can just do SQL and render as html.
+* NEXT
+- [ ] switch to generic table renderer
+- [ ] start building user as a class to allow more reuse.
+- [ ] 
+
+
+* NEXT
+- [ ] make more field types render.
+- [ ] make generic reload work.
+- [ ] make list render generic.
+- [ ] make pages for editing all types.
+
+- [ ] make good sample data.
+- [ ] make schema generated from fields.
+- [ ] make event calendar work
+- [ ] consider rendering schema from fields.
+
+* Model for bike state
+- component_v_brake
+  - position (front/rear)
+  - cable damaged
+  - centering off
+  - pads worn
+  - washers in wrong position + detail
+
+- every change also logged WRT the component (so see change log for each
+  component + each bike)
+
+- top level queries the 20 tables
+  - shows current issues as text (and changes)
+  - click to bring up the editor for that item.
+  - at bottom have buttons list for introducing new issues.
+    - so scroll to brake section, and choose 'new front v-brake issue'.
+      (works even if already have front v-brake issues, just brings up
+      editor).
+
+
+* NEXT Make editor, render etc driven by field metadata
+- goal is generic list editing does not require repeating everything.
+- configurable for extension.
+* NEXT make work with other tables
+* NEXT fill with fake data and make some reports
+* NEXT document well enough for claude to start being productive.
+* NEXT add login and user adding
+* NEXT Play with NFC sticker
+* NEXT Experiment with adding/dropping fields
