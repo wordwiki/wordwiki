@@ -3,7 +3,8 @@
 import * as utils from "../tabula/utils.ts";
 import {unwrap} from "../tabula/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum } from "../tabula/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, reloadableItemProps, editButtonProps } from "../tabula/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, reloadableItemProps, editButtonProps, PublicViewable } from "../tabula/table.ts";
+import {setSerialized} from "../tabula/serializable.ts";
 
 import {block} from "../tabula/strings.ts";
 import {Markup} from "../tabula/markup.ts";
@@ -36,15 +37,18 @@ export class VolunteerTable extends Table<Volunteer> {
     constructor() {
         super ('volunteer', [
             new PrimaryKeyField('volunteer_id', {prompt: 'Id'}),
-            new StringField('name', {indexed: true}),
-            new EmailField('email', {indexed: true, unique: true}),
-            new PhoneField('phone', {nullable: true}),
-            new StringField('permissions', {}),
+            new StringField('name', {indexed: true, permissions: PublicViewable}),
+            new EmailField('email', {indexed: true, unique: true, permissions: PublicViewable}),
+            new PhoneField('phone', {nullable: true, permissions: PublicViewable}),
+            new StringField('permissions', {nullable: true}),
             new BooleanField('deleted', {default: 0}),
         ], [
         ])
     };
 
+    // TODO want a form of queries that return a query object, that then needs to be forced for the result.
+    //      including the closure (email in this case).  The purpose is that these could then be serialized
+    //      and used components of other jsexpr expressions etc.
     getByEmail(email: string): Volunteer {
         return db().prepare<Volunteer, {email: string}>(block`
 /**/   SELECT ${this.allFields}
@@ -66,6 +70,11 @@ export class VolunteerTable extends Table<Volunteer> {
 /**/          FROM event LEFT JOIN volunteer
 /**/          WHERE event.volunteer_id = volunteer.volunteer_id
 /**/          ORDER BY name`).all();
+    }
+
+    volunteerTableEditor(): TableRenderer<Volunteer> {
+        const fields = this.fieldsByName;
+        return setSerialized(new TableRenderer(this, [fields.name, fields.email, fields.phone]), 'volunteer.volunteerTableEditor');
     }
     
 }
@@ -174,6 +183,12 @@ export interface TimesheetEntry {
 }
 
 export type TimesheetEntryOpt = Partial<TimesheetEntry>;
+
+
+// Add time that timesheet entry was created.
+// Add time that timesheet entry was last edited.
+// Add bool to indicate that paid time has been processed
+// Add bool to indicat that km_driven has been processed.
 
 export class TimesheetEntryTable extends Table<TimesheetEntry> {
     

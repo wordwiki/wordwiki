@@ -11,6 +11,7 @@ import {block} from "../tabula/strings.ts";
 // --------------------------------------------------------------------------------
 
 // TODO Change to be generic sale + more support for free.
+// USE enum for sale kind (to support arbitrary bike VS other kinds of sales).
 
 export interface BikeSale {
     bike_sale_id: number;

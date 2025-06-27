@@ -19,6 +19,11 @@ export const routes = ()=> ({
 // --- Service --------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
+// TODO Add support for end of of day pickup VS regular pickup (maybe use enum for pickup?)
+// TODO DIY vs regular?
+// TODO Number of people served should default to 1 (and not be nullable)
+// TODO Postal maybe should be renamed to indicate that it is a postal prefix?
+
 export interface Service {
     service_id: number;
 

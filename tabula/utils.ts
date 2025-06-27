@@ -418,6 +418,16 @@ export function repeat<T>(f: ()=>T, n: number): T[] {
     
 }
 
+// checks if a value is an instance of any JS class by verifying it's an
+// object with a constructor that's not Object or Array.
+export function isClassInstance(value: any): boolean {
+    return typeof value === 'object' && 
+           value !== null && 
+           value.constructor && 
+           value.constructor !== Object && 
+           value.constructor !== Array;
+}
+
 export function isEqualsUint8Array (a: Uint8Array, b: Uint8Array): boolean {
     if (a.length != b.length)
         return false;

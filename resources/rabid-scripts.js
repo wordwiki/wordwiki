@@ -93,15 +93,18 @@ function removeContainedRoots(roots) {
  *
  */
 async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
-    const response = await rpc(rpcExprSegments, ...args);
-    console.info('GOT RPC2 response', response);
-
+    let response;
+    try {
+        response = await rpc(rpcExprSegments, ...args);
+        console.info('GOT RPC2 response', response);
+    } catch(e) {
+        alert(String(e));
+        return;
+    }        
+    
     if(typeof response.action !== 'string')
         throw new Error('Expected rpc response with an action');
     const action = response.action;
-
-    
-
 
     
     switch(action) {
@@ -110,6 +113,12 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
             throw new Error('Expected "reload" targets to be an array');
         hideModalEditor(); // XXX TODO BETTER FACTORING.
         reload(response.targets);
+        break;
+    }
+
+    case 'alert': {
+        const message = response.message ?? "Unknown error while processing request";
+        alert(message);
         break;
     }
 

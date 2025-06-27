@@ -16,6 +16,7 @@ export class Table<T extends Tuple> {
     
     pkField: PrimaryKeyField;
     pkName: string;
+    fieldsByName: Record<string, Field>;
     fieldNames: string[];
     allFields: string;
     url: string;
@@ -25,7 +26,8 @@ export class Table<T extends Tuple> {
             this.fields.filter(f=>f instanceof PrimaryKeyField)[0],
             'missing primary key field');
         this.pkName = this.pkField.name;
-        this.fieldNames = this.fields.map(field=>field.name);
+        this.fieldsByName = Object.fromEntries(this.fields.map(field=>[field.name, field]));
+        this.fieldNames = Object.keys(this.fieldsByName);
         this.allFields = this.fieldNames.join(',');
         this.url = `/rabid/${this.name}`;
     }
@@ -94,12 +96,16 @@ export class Table<T extends Tuple> {
      *
      * TODO: add options like whether is editable, or subset of fields.
      */
-    tableRenderer(): TableRenderer<T> {
-        return new TableRenderer(this, this.fields);        
+    tableRenderer(fields: Field[]|undefined = undefined, options: TableRendererOptions={}): TableRenderer<T> {
+        return new TableRenderer(this, fields ?? this.fields, options);        
     }
     
     /**
-     *
+     * INCONSISTENT INSTANTIATION OF TABLE RENDERER XXX XXX A BIT TRICKY.
+     * RELATED PROBLEM: configuration of table renderer also needs to flow throw to editForm invocation
+     * in tableRenderer.
+     * ALSO HAS SECURITY IMPLICATIONS.
+     * possibly unify into declared on table view/security profiles (perhaps not on fields, but names on tables).
      */
     renderTable(tuples: T[]): Markup {
         return this.tableRenderer().renderTable(tuples);
@@ -239,7 +245,11 @@ export interface FieldOptions {
     style?: FieldStyle,
 
     prompt?: string,
+
+    permissions?: any,
 }
+
+export const PublicViewable = Object.freeze({});
 
 export interface FieldStyle {
     width?: number,
@@ -255,7 +265,7 @@ export class Field {
     prompt: string;
     
     constructor(public name: string, public options: FieldOptions) {
-        this.prompt = options.prompt ?? strings.capitalize(name);
+        this.prompt = options.prompt ?? strings.capitalize(name.replaceAll('_', ' '));
     }
 
     // Returns the SQLite DML to create this field.
@@ -352,8 +362,8 @@ export class StringField extends Field {
         return [
             ['div', {'class':'col-12'},
              ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
-             ['input', {type:'text', class:'form-control', name:this.name, id:'input-'+this.name,
-                        value: value ?? '', required: ''}],
+             ['input', Object.assign({type:'text', class:'form-control', name:this.name, id:'input-'+this.name, value: value ?? ''},
+                                     this.options.nullable ? {} : {required: ''})],
              ['input', {type:'hidden', name:'before-'+this.name, value: value}]
             ] // div
         ];
@@ -496,16 +506,36 @@ export class DateTimeField extends Field {
         return 'TEXT';
     }
 
+
+    render(value: any): Markup {
+        // TODO may choose to render with AM/PM or such.
+        return value;
+    }
+
     // BAD RENDERING
     renderInput(value: any): Markup {
         return [
             ['div', {'class':'col-12'},
              ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
-             ['input', {type:'text', class:'form-control', name:this.name, id:'input-'+this.name,
-                        value: value ?? '', required: ''}],
+             // TODO make non-nullable fields required.
+             ['input', {type:'datetime-local', class:'form-control', name:this.name, id:'input-'+this.name,
+                        value: value ?? ''/*, required: ''*/}],
              ['input', {type:'hidden', name:'before-'+this.name, value: value}]
             ] // div
         ];
+    }
+
+    parseSimpleInput(value: string): any {
+        if (!value) return value;
+        console.info('GOT date', value);
+        
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+        if (!match) {
+            throw new Error(`Invalid date format. Expected format like "2026-02-19T09:32", got "${value}"`);
+        }
+        
+        const [, year, month, day, hour, minute] = match;
+        return `${year}-${month}-${day} ${hour}:${minute}`;
     }
 }
 
@@ -594,13 +624,23 @@ export class TableEditForm<T extends Tuple> {
     }
 }
 
+interface TableRendererOptions {
+    editable?: boolean,
+}
+
 /**
  *
+ * - If the configured table renderer is attached somewhere to the dispatch tree, it will
+ *   have a URL, and can have methods called on it (and can be part of expressions that
+ *   reference multiple things - for example a table and a result query).
+ * - but where to put this?
+ * - probably hanging off VolunteerTable along with the queries.
+ * - constructing a new each time is so theap, that is fine.
+ * - expr
  */
 export class TableRenderer<T extends Tuple> {
 
-    constructor(public table: Table<T>, public fields: Field[], public editable:boolean=true) {
-        // TODO change so can nicely specify subset of fields to render.
+    constructor(public table: Table<T>, public fields: Field[], public options: TableRendererOptions = {}) {
     }
 
     renderTable(rows: Array<T>): Markup {
@@ -638,6 +678,13 @@ export class TableRenderer<T extends Tuple> {
             ['td', {},
              ['button', editButtonProps(`${this.table.url}.renderForm(${this.table.name}.getById(${rowid}))`), 'EDIT']];
 
+        // TODO this.table.url needs to change - renderRowById is doing a generic (non-configred) table configuration,
+        //      furthermore containing a generic (non configured) form invocation.
+        // - Easiest would be to serialize teh table renderer configuration (including field editor configuration) out for
+        //   each of these.  Issue is mostly size of the expressions we will be sending.  Note also that render row by id
+        //   is not redoing the query - so does not have the serialized query.
+        // - one solution would be to put named field sets in the global scope?  This would shorten it with less magic.
+        // - the instantiation will need to include the table URL, the table field names, and the form field names.
         const rowProps = this.table.reloadableItemProps(rowid, `${this.table.url}.renderRowById(${rowid})`);
         return ['tr', rowProps,
                 this.fields.map(f=>this.renderFieldCell(f, row[f.name])),

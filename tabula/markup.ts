@@ -35,9 +35,6 @@
  * ignore it until I get around to removing it.
  */
 
-
-// 
-
 import * as utils from './utils.ts';
 import * as linkedom from "https://esm.sh/linkedom@0.18.10/worker";
 import * as jsterp from './jsterp.ts'; // REMOVE_FOR_WEB

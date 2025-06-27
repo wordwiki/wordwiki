@@ -1,89 +1,49 @@
 import * as markup from '../tabula/markup.ts';
 import * as templates from './templates.ts';
-import {Rabid} from './rabid.ts';
+import {Rabid, rabid} from './rabid.ts';
 import {Markup} from '../tabula/markup.ts';
 import {Page} from './page.ts';
 import {Event} from './event.ts';
 
-/**
- *
- */
-export class Home extends Page {
-    constructor(rabid: Rabid) {
-        super(rabid);
-    }
+export function home(): Markup {
+    const title = "Rabid - The Red Raccoon Volunteer System"
+    return [
+        ['h1', {}, title],
 
-    title(): string {
-        return "Rabid - The Red Raccoon Volunteer System";
-    }
+        ['br', {}],
 
-    body(): Markup {
-        return [
-            ['h1', {}, this.title()],
+        ['h3', {}, 'Volunteers'],
+        rabid.volunteer.tableRenderer([rabid.volunteer.fieldsByName.name, rabid.volunteer.fieldsByName.email, rabid.volunteer.fieldsByName.phone]).renderTable(rabid.volunteer.volunteersByName()),
 
-            ['br', {}],
+        ['h3', {}, 'Events'],
+        rabid.event.tableRenderer().renderTable(rabid.event.allEvents()),
+        ['h3', {}, 'Event List'],
 
-            ['h3', {}, 'Volunteers'],
-            this.rabid.volunteer.tableRenderer().renderTable(this.rabid.volunteer.volunteersByName()),
+        renderEventList(),
+    ];
+}
 
-            ['h3', {}, 'Events'],
-            this.rabid.event.tableRenderer().renderTable(this.rabid.event.allEvents()),
-            ['h3', {}, 'Event List'],
+export function renderEventList(): Markup {
+    const events = rabid.event.allEvents();
+    return [
+        ['ul', {'class': '-event-'},
+         events.map(event=>[
 
-            this.renderEventList(),
-            
-            //this.rabid.volunteer.renderAllVolunteers(),
-            
-            //['h3', {}, 'Search'],
-            //this.searchForm(),
-            // --- Add new entry button
-            // ['div', {},
-            //  ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
+             ['li', {'class': `-event-${event.event_id}-`},
+              event.description, ' - ', event.start_time,
+              renderCommittmentsForEvent(event.event_id),
+             ] // li
+             
+         ])
+        ] // ul
+    ];
+}
 
-            ['br', {}],
-            ['h3', {}, 'Reports'],
-            ['ul', {},
-             ['li', {}, ['a', {href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],
-             //['li', {}, ['a', {href:'/ww/wordwiki.entriesByEnglishGloss()'}, 'Entries by English Gloss']],
-            ],
+export function renderCommittmentsForEvent(event_id: number): Markup {
+    const committments =
+        rabid.event_commitment.getCommitmentsForEventWithVolunteerName(event_id);
 
-            ['br', {}],
-            ['h3', {}, 'Reference Books'],
-            ['ul', {},
-             ['li', {}, ['a', {href:`/ww/pageEditor("PDM")`}, 'PDM']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("Rand")`}, 'Rand']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("Clark")`}, 'Clark']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("PacifiquesGeography")`}, 'PacifiquesGeography']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
-        ];
-    }
-
-    renderEventList(): Markup {
-        const events = this.rabid.event.allEvents();
-        return [
-            ['ul', {'class': '-event-'},
-             events.map(event=>[
-
-                 ['li', {'class': `-event-${event.event_id}-`},
-                  event.description, ' - ', event.start_time,
-                  this.renderCommittmentsForEvent(event.event_id),
-                 ] // li
-                 
-             ])
-            ] // ul
-        ];
-    }
-
-    renderCommittmentsForEvent(event_id: number): Markup {
-        const committments =
-            this.rabid.event_commitment.getCommitmentsForEventWithVolunteerName(event_id);
-
-        // Add menu to add/remove from 
-        
-        return committments.map(v=>v.volunteer_name).join(', ');
-    }
+    // Add menu to add/remove from 
+    
+    return committments.map(v=>v.volunteer_name).join(', ');
 }

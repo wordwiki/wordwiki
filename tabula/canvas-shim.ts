@@ -1,5 +1,6 @@
 // Simple canvas shim for Deno
 // This provides a minimal implementation to prevent errors when LinkedOM tries to use canvas
+// during server side rendering.
 
 export default {
   // Provide minimal implementations of required canvas functionality

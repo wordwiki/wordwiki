@@ -16,7 +16,8 @@ import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../tabu
 import {DenoHttpServer} from '../tabula/deno-http-server.ts';
 import {evalJsExprSrc} from '../tabula/jsterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
-import {Home} from './home-page.ts';
+//import {Home} from './home-page.ts';
+import * as home from './home-page.ts';
 import {Page} from './page.ts';
 import * as volunteer from './volunteer.ts';
 import * as event from './event.ts';
@@ -36,7 +37,7 @@ export class Rabid {
     
     routes: Record<string, any>;
     tables: Record<string, Table<Tuple>>;
-    pages: Record<string, Page>;
+    pages: Record<string, any>;
 
     volunteer = new volunteer.VolunteerTable();
     event = new event.EventTable();
@@ -54,14 +55,15 @@ export class Rabid {
         };
 
         this.pages = {
-            home: new Home(this),
+            home:()=>templates.pageTemplate({title: 'home', body: home.home()}),
         };
         
         this.routes = Object.assign(
             {},
             {rabid: this},
-            Object.fromEntries(Object.entries(this.pages).map(([name, page])=>
-                [name, page.render.bind(page)])),
+            // Object.fromEntries(Object.entries(this.pages).map(([name, page])=>
+            //     [name, page.render.bind(page)])),
+            this.pages,
             this.tables,
         );
     }
@@ -152,6 +154,12 @@ export class Rabid {
             return server.jsonResponse({error: String(e)}, 400)
         }
 
+        // If the render expr evaluates to a function, call that function (this allows render
+        // functions or closure constructors etc to be called without "()" at the end).
+        if(typeof result === 'function') {
+            result = result.apply(null);
+        }
+
         if(server.isMarkedResponse(result)) {
             return result;
         } else if(typeof result === 'string') {
@@ -218,18 +226,25 @@ async function findResourceDir(resourceDirName: string = 'resources') {
     return resourceDir;
 }
 
-export let rabid: Rabid|undefined = undefined;
+// export let globalRabidInst: Rabid|undefined = undefined;
+
+// export function getRabid(): Rabid {
+//     return globalRabidInst ??= new Rabid();
+// }
+
+export let rabid: Rabid = undefined as unknown as Rabid;
 
 export function getRabid(): Rabid {
     return rabid ??= new Rabid();
 }
 
 if (import.meta.main) {
+    let rabid = getRabid();
     const args = Deno.args;
     const command = args[0];
     switch(command) {
         case 'serve':
-            getRabid().startServer({hostname: 'localhost', port: 8888});
+            rabid.startServer({hostname: 'localhost', port: 8888});
             break;
         default:
             throw new Error(`incorrect usage: unknown command "${command}"`);

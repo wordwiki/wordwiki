@@ -47,16 +47,16 @@ export class EventTable extends Table<Event> {
     constructor() {
         super ('event', [
             new PrimaryKeyField('event_id', {}),
-            new StringField('description', {}),
-            new StringField('location_description', {}),
-            new StringField('location_url', {}),
+            new StringField('description', {nullable: true}),
+            new StringField('location_description', {nullable: true}),
+            new StringField('location_url', {nullable: true}),
             new EnumField('event_kind', event_kind_enum, {}),
             new DateTimeField('shop_load_time', {nullable: true}),
             new DateTimeField('on_location_setup_time', {nullable: true}),
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
             new BooleanField('volunteer_only', {nullable: true}),
-            new BooleanField('is_visible_on_website', {nullable: true})
+            new BooleanField('is_visible_on_website', {nullable: true}) // REMOVE ME
         ])
     };
 

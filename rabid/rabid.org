@@ -1,9 +1,157 @@
+* There are so many exploits possible if we allow client to send raw jsterp.
+- can either use encryption, or stash.
+- stash solves 2 problems.
+- issue with stash is that we can't have 
+* Stash
+- key: password, offset
+- in stashed value, have session password, on unstash verify that in session with
+  the same session password.
+* rpc``
+- text is a JS expr, the parameters are supplied as $1, $2 etc.
+- can pass arbitrary client state into these parameters (like form submit data)
+- we want the JS text (including constant parameters) to be immutable on the client.
+- if there are nested calls, that also works with the $1, $2 etc scheme - it is an entire program
+  with the specific $arg$1.
+- the JS is not a compile time constant, it includes the serialization of arbitrary
+  data.
+- a single JS expr can have multple embedded rpc``'s. (and the rpc`` may be captured
+  by a closure, used in a loop etc).
+- script`alert('hello'); ${rpc`saveUser(8, ${getFormFields('cat-form')})`}; event.cancel();`
+- the templates for the RPC sections are per-session stashed.
+
+* All stash goes to one file, roll
+
+
+
+
+
+* Stash can be used in subexprs of jsexpr, (resolve(id)).
+- don't have session at this point
+  - so can't be session bound
+- thing must be JSON serializable
+- anti cross-session stuff needs to be done in general with JS urls, so
+  just use encryption with per session password in emit anyway.
+- will have to know the attrs that need this treatment - can wrap to trigger
+  it (and only accept encrypted on rpc calls)
+- don't need stash for now.  Small items can just repeat, and large can
+  often just be given names.
+
+
+* Objects can have an 'expr' field.
+- if populated, it contains a JSEXPR string that can be evaluated to rebind
+  (or a new) instance of the same obj (so can rerender etc).
+- maybe nice if can also be a function or method or something, so
+  don't have to pre-attach and manually name everything (and to allow things
+  like altering column sort order)
+- expr () property.  Can be presuppiled by caller, com
+- for some things this will be a path to a const that is registered in the
+  routes.  This particularly helps with large things, or things that
+  cannot be serialized.
+- for some things, you will get a new inst every time - and it should be
+  computed as a serialization of self (to avoid having to express the thing
+  twice at construction time - once as a jsexpr and once as real data).
+- a proper persistent stash (with deduping of recent) helps by reducing
+  redundancy.  For the table configuration thing this would also work.
+** What is the Serializable interface called?
+- Serializable??
+  - serialize() -> JsExpr string
+- may be appropriate to stash intermediate values - who decides whether to stash?
+- some objects have fixed JSExprs (based on names registred in jsscope) - we can
+  make the property for this be part of the Serializable interface.
+- the interface means we will have the 'serailizabe' method (or better name), can
+  use this (or a symbol) as a marker for instnaceof.
+* Not safe to serialize the SQL inside a prepared query
+- for now, these can always be named.
+* Reverse lookup of stuff in routes
+- just build a map.
+- how to package this - the routes (for rabid) currently live in the Rabid instance -
+  so no easy way to get to from random point while serializing.
+- and this is not just for top-level routes anyway - also want these names for
+  stuff that is reachable by traversing an obj, or though a call.
+- so do need to pass in at object creation.
+- cleanest might be to use symbol approach.
+- 
+    
+
+
+
+
+* New remote fns - THIS IS REALLY GOOD!
+- can have closures in markup.
+- these get stashed and turned into an rpc.
+- the form args are passed as an arg + other stuff.
+- probably mostly replaces our JS terp stuff.
+- user session stash is passed into serializer - bypassing async issues with thread locals.
+
+- proposal: function args are turned into JS.
+- ['div', {onclick:(name)=>console.info(name), onclick-args='[client-JS-expr]'}}
+- ['div', {onclick:()=>console.info(name)}
+- OR
+
+- ['div', {onclick=rpc`${console.info}(getFormJSON(event.target))`}
+the rpc`` template cooks to new Rpc(...) (so can be made manually, and so the that stashing can happen
+at serialization time).
+- need a different name than Rpc - we are already using that name, and this is blending local and
+  remote compuation.
+- ['div', {onclick=rpc`${console.info}(getFormJSON(event.target))`}
+- RpcTemplate([new RemoteFnRef(console.info), new ClientScriptFragment('(getFormJSON(event.target))')])
+- ->
+- onclick='remoteFn('138998347akdkkdkakdjfafdddddd')(getFormJSON(event.target))'
+
+Also need to support remote values - they travel around client land as closures, and get rehydrated
+on the server.   Can do same with RemoteFnRefs.
+- these can be remoteVals(), which can then get handled as part of RPC mechanism.
+
+
+- mostly use friedly URLs for pages, and save these for events etc - then will have little consequence to
+restarts.
+
+- GOAL: migrate MMO lexeme editor over to new form and rendering model.  (and direct SQL for accessing,  with the
+  workspace stuff saved for special occasions) - HUGE simplification.
+- ANOTHER GOAL: remove extra round trip on these updates.
+
+- GOAL: 'serializable' stash as a way of limiting size (so can be used for public as well).
+
+- keep the closures small (or pointing to long lived stuff) and all is good.
+* Maybe go back to JS scheme with 2 additions:
+- persistent stash for large or repeating values (can use our memory stash as a prototype)
+- per-session encription passwords (applied during serialization) for terp JS.
+- an addition/alternative: could stash the rpc template?  (which, if done right, will also dedup shared portions).
+  
+* Issue
+- table configuration needs to persist across calls (for row re-render)
+- table configuration also needs to include form config.
+- could do this all as serializable table configuration?
+- main issue is allows users to edit - but does remove a lot of magic.
+- can fix edit issues by handling using visibility system - this seems the win.
+- looks like jsterp supports new expressions - so probably can just do.
+- will need to 
+
+* TODO
+- add way of marking fields as part of the default render.
+- will also want markers for part of default editor.
+- default_render default_edit
+
+
+* TODO
+- fixup various kinds of widget editors.
+- add permission tags.
+- add login
+- make pages render using new model.
+- make 
+
 * TODO 
 * TODAY get new url scheme working + public
 - /resources/foo.jpg
   user.get(7)
   raccoon.home()
-  
+* TODO New - non class based page scheme (compositional)
+-
+* TODO add login (so can make public)
+* TODO make table editor work nice
+* TODO make nice sample data (with events, perhaps real volunteers)
+* TODO make nice reports
+* TODO make so AI can help
 
 
 * TODAY

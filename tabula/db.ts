@@ -10,6 +10,7 @@
  *   to a different JS sqlite interface (for example 'better sqlite3' if we
  *   want to run on node.js, or deno-sqlite3 (the ffi version) if we
  *   have trouble with deno-sqlite (the wasm vesion we are using)).
+ * - probably should be async (so can use with async sqlite wrappers), but is not.
  */
 
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
@@ -101,7 +102,7 @@ export class Db {
      * free sqlite resources.
      */
     unmemoizedPrepare<O extends RowObject, P extends QueryParameterSet>(sql: string): PreparedQuery<O,P> {
-        //console.info('preparing ', sql);
+        console.info('preparing ', sql);
         return new PreparedQuery<O,P>(this.db.prepareQuery<Row,O,P>(sql));
     }
 
@@ -152,6 +153,8 @@ export class Db {
     }
 
     update<T extends QueryParameters>(table_name: string, id_field_name: string, fieldNames: Array<keyof T>, id: number, fields: T) {
+        if(fieldNames.length == 0)
+            return;
         const setTerms = fieldNames.map(name=>`${String(name)} = :${String(name)}`);
         const updateSql = `UPDATE ${table_name} SET ${setTerms.join(', ')} WHERE ${id_field_name} = :__id__`;
         this.execute<T & {__id__: number}>(updateSql, Object.assign({'__id__': id}, fields));
