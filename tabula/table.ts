@@ -3,8 +3,9 @@ import * as strings from '../tabula/strings.ts';
 import * as utils from '../tabula/utils.ts';
 import {unwrap} from '../tabula/utils.ts';
 import {block} from "../tabula/strings.ts";
+import {serialize, serializeAny} from "../tabula/serializable.ts";
 
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
+import { db, Db, PreparedQuery, QueryClosure, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
 
 export type Tuple = Record<string, any>;
 
@@ -19,7 +20,6 @@ export class Table<T extends Tuple> {
     fieldsByName: Record<string, Field>;
     fieldNames: string[];
     allFields: string;
-    url: string;
     
     constructor(public name: string, public fields: Field[], public extraDML: string[]=[]) {
         this.pkField = unwrap(
@@ -29,9 +29,12 @@ export class Table<T extends Tuple> {
         this.fieldsByName = Object.fromEntries(this.fields.map(field=>[field.name, field]));
         this.fieldNames = Object.keys(this.fieldsByName);
         this.allFields = this.fieldNames.join(',');
-        this.url = `/rabid/${this.name}`;
     }
 
+    toString(): string {
+        return serializeAny(this);
+    }
+    
     greet() {
         console.info('hello');
         return 7;
@@ -87,43 +90,43 @@ export class Table<T extends Tuple> {
                              extraProps);
     }
     
-    // ---------------------------------------------------------------------------
-    // --- Table Rendering -------------------------------------------------------
-    // ---------------------------------------------------------------------------
+    // // ---------------------------------------------------------------------------
+    // // --- Table Rendering -------------------------------------------------------
+    // // ---------------------------------------------------------------------------
 
-    /**
-     * Hook to allow replacing the default table renderer with a subclass.
-     *
-     * TODO: add options like whether is editable, or subset of fields.
-     */
-    tableRenderer(fields: Field[]|undefined = undefined, options: TableRendererOptions={}): TableRenderer<T> {
-        return new TableRenderer(this, fields ?? this.fields, options);        
-    }
+    // /**
+    //  * Hook to allow replacing the default table renderer with a subclass.
+    //  *
+    //  * TODO: add options like whether is editable, or subset of fields.
+    //  */
+    // tableRenderer(fields: Field[]|undefined = undefined, options: TableRendererOptions={}): TableRenderer<T> {
+    //     return new TableRenderer(this, fields ?? this.fields, options);        
+    // }
     
-    /**
-     * INCONSISTENT INSTANTIATION OF TABLE RENDERER XXX XXX A BIT TRICKY.
-     * RELATED PROBLEM: configuration of table renderer also needs to flow throw to editForm invocation
-     * in tableRenderer.
-     * ALSO HAS SECURITY IMPLICATIONS.
-     * possibly unify into declared on table view/security profiles (perhaps not on fields, but names on tables).
-     */
-    renderTable(tuples: T[]): Markup {
-        return this.tableRenderer().renderTable(tuples);
-    }
+    // /**
+    //  * INCONSISTENT INSTANTIATION OF TABLE RENDERER XXX XXX A BIT TRICKY.
+    //  * RELATED PROBLEM: configuration of table renderer also needs to flow throw to editForm invocation
+    //  * in tableRenderer.
+    //  * ALSO HAS SECURITY IMPLICATIONS.
+    //  * possibly unify into declared on table view/security profiles (perhaps not on fields, but names on tables).
+    //  */
+    // renderTable(tuples: T[]): Markup {
+    //     return this.tableRenderer().renderTable(tuples);
+    // }
 
-    /**
-     * Convenience function for single row re-render.
-     */
-    renderRow(row: T): Markup {
-        return this.tableRenderer().renderRow(row);
-    }
+    // /**
+    //  * Convenience function for single row re-render.
+    //  */
+    // renderRow(row: T): Markup {
+    //     return this.tableRenderer().renderRow(row);
+    // }
     
-    /**
-     * Convenience function for single row re-render.
-     */
-    renderRowById(rowId: number): Markup {
-        return this.renderRow(this.getById(rowId));
-    }
+    // /**
+    //  * Convenience function for single row re-render.
+    //  */
+    // renderRowById(rowId: number): Markup {
+    //     return this.renderRow(this.getById(rowId));
+    // }
 
     // ----------------------------------------------------------------------------
     // --- Default Edit Forms -----------------------------------------------------
@@ -135,7 +138,7 @@ export class Table<T extends Tuple> {
      * For more customization subclass EditForm and call directly.
      */
     renderForm(record: T, onsubmit?: string): Markup {
-        onsubmit ??= 'tx`'+this.url+'.saveForm(${getFormJSON(event.target)})`'
+        onsubmit ??= 'tx`'+this+'.saveForm(${getFormJSON(event.target)})`'
         return new TableEditForm(this, this.fields, onsubmit).render(record);
     }
     
@@ -643,6 +646,14 @@ export class TableRenderer<T extends Tuple> {
     constructor(public table: Table<T>, public fields: Field[], public options: TableRendererOptions = {}) {
     }
 
+    // TODO Probably add [serialize] impl to serialized depending on table, fields and options being serializable.
+    // Works for now because we are setSerialized() on on all our TableRenderers.
+
+    
+    toString(): string {
+        return serializeAny(this);
+    }
+    
     renderTable(rows: Array<T>): Markup {
         return [
             ['table', {'class': 'table'},
@@ -676,20 +687,20 @@ export class TableRenderer<T extends Tuple> {
 
         const editRow = 
             ['td', {},
-             ['button', editButtonProps(`${this.table.url}.renderForm(${this.table.name}.getById(${rowid}))`), 'EDIT']];
+             ['button', editButtonProps(`${this.table}.renderForm(${this.table}.getById(${rowid}))`), 'EDIT']];
 
-        // TODO this.table.url needs to change - renderRowById is doing a generic (non-configred) table configuration,
-        //      furthermore containing a generic (non configured) form invocation.
-        // - Easiest would be to serialize teh table renderer configuration (including field editor configuration) out for
-        //   each of these.  Issue is mostly size of the expressions we will be sending.  Note also that render row by id
-        //   is not redoing the query - so does not have the serialized query.
-        // - one solution would be to put named field sets in the global scope?  This would shorten it with less magic.
-        // - the instantiation will need to include the table URL, the table field names, and the form field names.
-        const rowProps = this.table.reloadableItemProps(rowid, `${this.table.url}.renderRowById(${rowid})`);
+        const rowProps = this.table.reloadableItemProps(rowid, `${this}.renderRowById(${rowid})`);
         return ['tr', rowProps,
                 this.fields.map(f=>this.renderFieldCell(f, row[f.name])),
                 editRow
                ];
+    }
+
+    /**
+     * Convenience function for single row re-render.
+     */
+    renderRowById(rowId: number): Markup {
+        return this.renderRow(this.table.getById(rowId));
     }
 
     renderFieldCell(field: Field, value: any): Markup {
@@ -698,6 +709,26 @@ export class TableRenderer<T extends Tuple> {
 
     renderFieldContent(field: Field, value: any): Markup {
         return field.render(value);
+    }
+}
+
+export class TableView<T extends Tuple> {
+    constructor(public tableRenderer: TableRenderer<T>, public query: QueryClosure<T>) {
+    }
+
+    [serialize]() {
+        return `new TableView(${this.tableRenderer}, ${this.query}`;
+    }
+
+    render() {
+        return this.tableRenderer.renderTable(this.query.all());
+    }
+
+    /**
+     * Convenience function for single row re-render.
+     */
+    renderRowById(rowId: number): Markup {
+        return this.tableRenderer.renderRow(this.tableRenderer.table.getById(rowId));
     }
 }
 

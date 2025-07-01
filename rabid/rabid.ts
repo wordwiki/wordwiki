@@ -22,6 +22,9 @@ import {Page} from './page.ts';
 import * as volunteer from './volunteer.ts';
 import * as event from './event.ts';
 import {Table, Tuple} from '../tabula/table.ts';
+import * as table from '../tabula/table.ts';
+import {serialize, serializeAs, setSerialized, path} from "../tabula/serializable.ts";
+import {lazy} from '../tabula/lazy.ts';
 
 import {rpcUrl} from '../tabula/rpc.ts';
 
@@ -30,30 +33,32 @@ export interface RabidServerConfig {
     port: number,
 }
 
+const constructorRoutes: Record<any, any> = {
+    TableView: table.TableView,
+};
+
 /**
  *
  */
 export class Rabid {
     
     routes: Record<string, any>;
-    tables: Record<string, Table<Tuple>>;
     pages: Record<string, any>;
 
-    volunteer = new volunteer.VolunteerTable();
-    event = new event.EventTable();
-    event_commitment = new event.EventCommitmentTable();
+    @path get volunteer() { return new volunteer.VolunteerTable(); }
+    @path get event() { return new event.EventTable(); }
+    @path get event_commitment() { return new event.EventCommitmentTable(); }
+
+    @lazy
+    get tables() {
+        return [this.volunteer, this.event, this.event_commitment];
+    }
     
     /**
      *
      */
     constructor() {
         
-        this.tables = {
-            volunteer: this.volunteer,
-            event: this.event,
-            event_commitment: this.event_commitment,
-        };
-
         this.pages = {
             home:()=>templates.pageTemplate({title: 'home', body: home.home()}),
         };
@@ -61,11 +66,13 @@ export class Rabid {
         this.routes = Object.assign(
             {},
             {rabid: this},
-            // Object.fromEntries(Object.entries(this.pages).map(([name, page])=>
-            //     [name, page.render.bind(page)])),
             this.pages,
-            this.tables,
+            constructorRoutes,
         );
+    }
+
+    [serialize](): string {
+        return 'rabid';
     }
 
     /**
@@ -81,6 +88,7 @@ export class Rabid {
         const contentfiles = {};
         const requestHandlerPaths: Record<string, (request: server.Request) => Promise<server.Response>> = {
             '/rabid/': request=>this.requestHandler(request),
+            '/': request=>this.requestHandler(request),
         };
         await new DenoHttpServer({port: config.port,
                                   hostname: config.hostname,
@@ -101,7 +109,7 @@ export class Rabid {
         const volunteer = request.headers["x-webauth-volunteer"];
         requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
         console.info("FILE PATH", filepath);
-        if (filepath === '/favicon.ico') {
+        if (filepath === '/favicon.ico' || filepath === '/.well-known/appspecific/com.chrome.devtools.json') {
             return Promise.resolve({status: 200, headers: {}, body: 'not found'});
         } else {
             let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
@@ -109,7 +117,7 @@ export class Rabid {
             jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'rabid/')
             switch(jsExprSrc) { // XXX HACK - move to better place
                 case '':
-                    jsExprSrc = 'wordwiki.home()';
+                    jsExprSrc = 'home';
                     break;
             }
             const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};

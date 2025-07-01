@@ -34,17 +34,17 @@ export class DenoHttpServer extends HttpServer {
         const url = new URL(request.url);
         const filepath = decodeURIComponent(url.pathname);
 
-        // --- If the path matches a registered request handler, use that.
-        const requestHandler = this.matchRequestHandlerPath(filepath);
-        if(requestHandler)
-            return this.serveHandlerRequest(request, requestHandler);
-
         // --- If the path resolves to a content file path, serve that directly
         const resolvedContentFilePath = this.matchContentFilePath(filepath);
         if(resolvedContentFilePath) {
             //console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
             return this.serveFileRequest(request, resolvedContentFilePath);
         }
+
+        // --- If the path matches a registered request handler, use that.
+        const requestHandler = this.matchRequestHandlerPath(filepath);
+        if(requestHandler)
+            return this.serveHandlerRequest(request, requestHandler);
 
         // Wrong kind of response returned here !!! XXX
         return new Response(`No handler for path: ${String(filepath)}`); //, 404);

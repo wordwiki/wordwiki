@@ -3,8 +3,9 @@
 import * as utils from "../tabula/utils.ts";
 import {unwrap} from "../tabula/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../tabula/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../tabula/table.ts";
 import {block} from "../tabula/strings.ts";
+import {serializeAs, setSerialized, path} from "../tabula/serializable.ts";
 
 export const routes = ()=> ({
 });
@@ -36,7 +37,8 @@ export interface Event {
     end_time?: string;
 
     volunteer_only: boolnum;
-    
+
+    // TODO Rename or remove this field
     is_visible_on_website: boolnum;
 }
 
@@ -60,32 +62,44 @@ export class EventTable extends Table<Event> {
         ])
     };
 
-    allEvents(): Event[] {
+    @path
+    get allEvents() {
         return db().prepare<Event, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM event
-/**/          ORDER BY start_time`).all();
+/**/          ORDER BY start_time`);
     }
-}
-export const eventMetaData = new EventTable();
 
-export function insertEvent(event: EventOpt): number {
-    return db().insert<EventOpt, 'event_id'>('event', event, 'event_id');
-}
+    @path
+    get tableRenderer(): TableRenderer<Event> {
+        return new TableRenderer(this, this.fields);
+    }
 
-export function updateEvent<T extends Partial<Event>>(event_id: number, fieldNames:Array<keyof T>, fields: T) {
-    return db().update<T>('event', 'event_id', fieldNames, event_id, fields);
+    @path
+    get tableView(): TableView<Event> {
+        return new TableView<Event>(this.tableRenderer, this.allEvents.closure());
+    }
+    
 }
+//export const eventMetaData = new EventTable();
 
-export const selectEvent = ()=>db().prepare<Event, {event_id: number}>(block`
-/**/   SELECT ${eventMetaData.allFields}
-/**/          FROM event
-/**/          WHERE event_id = :event_id`);
+// export function insertEvent(event: EventOpt): number {
+//     return db().insert<EventOpt, 'event_id'>('event', event, 'event_id');
+// }
 
-export function deleteEvent(event_id: number) {
-    db().execute<{event_id: number}>
-        ('DELETE FROM TABLE event WHERE event_id = :event_id', {event_id});
-}
+// export function updateEvent<T extends Partial<Event>>(event_id: number, fieldNames:Array<keyof T>, fields: T) {
+//     return db().update<T>('event', 'event_id', fieldNames, event_id, fields);
+// }
+
+// export const selectEvent = ()=>db().prepare<Event, {event_id: number}>(block`
+// /**/   SELECT ${eventMetaData.allFields}
+// /**/          FROM event
+// /**/          WHERE event_id = :event_id`);
+
+// export function deleteEvent(event_id: number) {
+//     db().execute<{event_id: number}>
+//         ('DELETE FROM TABLE event WHERE event_id = :event_id', {event_id});
+// }
 
 // --------------------------------------------------------------------------------
 // --- EventCommitment -------------------------------------------------------------
@@ -132,23 +146,19 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         ])
     };
 
-    getCommitmentsForEvent(event_id: number): EventCommitment[] {
+    @path
+    get commitmentsForEvent() {
         return db().prepare<EventCommitment, {event_id: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM event_commitment
-/**/          WHERE event_id = :event_id`).all({event_id});
+/**/          WHERE event_id = :event_id`);
     }
 
-    getCommitmentsForEventWithVolunteerName(event_id: number): (EventCommitment&{volunteer_name: string})[] {
+    @path
+    get commitmentsForEventWithVolunteerName() {
         return db().prepare<(EventCommitment&{volunteer_name: string}), {event_id: number}>(block`
 /**/   SELECT ${this.allFields}, volunteer.name AS volunteer_name
 /**/          FROM event_commitment LEFT JOIN volunteer USING (volunteer_id)
-/**/          WHERE event_id = :event_id`).all({event_id});
-    }
+/**/          WHERE event_id = :event_id`);
+    }    
 }
-export const eventCommitmentMetaData = new EventCommitmentTable();
-
-export const allDml =
-    eventMetaData.createDMLString() +
-    eventCommitmentMetaData.createDMLString();
-

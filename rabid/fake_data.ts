@@ -11,7 +11,7 @@ import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../tabula/strings.ts";
 import * as orderkey from '../tabula/orderkey.ts';
 import * as timestamp from '../tabula/timestamp.ts';
-import * as schema from './schema.ts';
+//import * as schema from './schema.ts';
 
 import * as volunteer from './volunteer.ts';
 import * as event from './event.ts';
@@ -61,8 +61,8 @@ function createFakeEvents(rabid: Rabid) {
 }
 
 function createFakeEventCommitments(rabid: Rabid) {
-    const volunteers = rabid.volunteer.volunteersByName();
-    const events = rabid.event.allEvents();
+    const volunteers = rabid.volunteer.volunteersByName.all();
+    const events = rabid.event.allEvents.all();
     if(volunteers.length < 2)
         throw new Error('Must be at least 2 volunteers');
     if(events.length < 2)
@@ -79,7 +79,7 @@ function createFakeEventCommitments(rabid: Rabid) {
     }
 
     console.info('COMMITMENTS');
-    console.info(rabid.event_commitment.getCommitmentsForEventWithVolunteerName(events[0].event_id));
+    console.info(rabid.event_commitment.commitmentsForEventWithVolunteerName.all());
     console.info('--');
 
     
@@ -89,16 +89,25 @@ function createFakeEventCommitments(rabid: Rabid) {
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
+function createAllTables() {
+}
+
+
 function destroyAllAndFillWithFakeData(rabid: Rabid) {
     console.info("*** DESTROYING ALL AND FILLING WITH FAKE DATA ***");
     Db.deleteDb(defaultDbPath);
-    schema.createAllTables();
+    //schema.createAllTables();
+
+    rabid.tables.forEach(table=>{
+        console.info(`--- creating ${table.name}`);
+        db().executeStatements(table.createDMLString());
+    });
 
     createFakeVolunteerData(rabid);
     createFakeEvents(rabid);
     createFakeEventCommitments(rabid);
 
-    console.info(rabid.volunteer.volunteersByName());
+    console.info(rabid.volunteer.volunteersByName.all());
 
     //volunteer.updateVolunteer(1, ['name', 'email'], {name: 'DAVID', email: 'dz@mudchicken.com'});
 

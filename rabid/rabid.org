@@ -1,3 +1,11 @@
+* TODO Use new setup to serialized configured table renderer
+- should fix the table shape morf on update issue.
+- using new format for seraializing query as well.
+* TODO 
+
+
+
+
 * There are so many exploits possible if we allow client to send raw jsterp.
 - can either use encryption, or stash.
 - stash solves 2 problems.

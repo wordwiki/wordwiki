@@ -16,6 +16,7 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 import {block} from "./strings.ts";
 import {unwrap} from "./utils.ts";
+import {serialize, serializeAny} from './serializable.ts';
 
 // NOTE: we are using a local checkout of deno-sqlite (master
 //       from https://github.com/dyedgreen/deno-sqlite) because the last
@@ -219,6 +220,10 @@ export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParamet
         this.columnNames = this.preparedQuery.columns().map(c=>c.name);
     }
 
+    closure(params?: P): QueryClosure<O> {
+        return new QueryClosure(this, params);
+    }
+    
     all(params?: P): Array<O> {
         const allRows = this.preparedQuery.all(params);
         return allRows.map(row=>this.rowToObject(row));
@@ -252,6 +257,41 @@ export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParamet
             obj[columnNames[i]] = row[i];
         }
         return obj as O;
+    }
+}
+
+// A PreparedQuery can be converted to a QueryClosure by applying parameters with the
+// preparedQuery.closure(P) method.  This closure can be invoked to do the actual query.
+// QueryClosures are Serializable (as long as the PreparedQuery is Serailizable - in practice
+// by making the preparedquery a global object).
+// Having query closures be serializable allows for the many objects that embed
+// query results to be easily serializable themselves.
+export class QueryClosure<O extends RowObject=RowObject, P extends QueryParameterSet=QueryParameterSet> {
+    constructor(public preparedQuery: PreparedQuery<O,P>, public params?: P) {
+    }
+
+    all(): Array<O> {
+        return this.preparedQuery.all(this.params);
+    }
+
+    first(): O|undefined {
+        return this.preparedQuery.first(this.params);
+    }
+
+    required(): O {
+        return this.preparedQuery.required(this.params);
+    }
+
+    execute() {
+        this.preparedQuery.execute(this.params);
+    }
+
+    [serialize](): string {
+        return `${serializeAny(this.preparedQuery)}.closure(${JSON.stringify(this.params)})`;
+    }
+
+    toString(): string {
+        return this[serialize]();
     }
 }
 

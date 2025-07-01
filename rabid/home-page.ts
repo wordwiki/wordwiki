@@ -4,6 +4,8 @@ import {Rabid, rabid} from './rabid.ts';
 import {Markup} from '../tabula/markup.ts';
 import {Page} from './page.ts';
 import {Event} from './event.ts';
+import {serializeAny} from '../tabula/serializable.ts';
+import {TableView} from '../tabula/table.ts';
 
 export function home(): Markup {
     const title = "Rabid - The Red Raccoon Volunteer System"
@@ -13,10 +15,12 @@ export function home(): Markup {
         ['br', {}],
 
         ['h3', {}, 'Volunteers'],
-        rabid.volunteer.tableRenderer([rabid.volunteer.fieldsByName.name, rabid.volunteer.fieldsByName.email, rabid.volunteer.fieldsByName.phone]).renderTable(rabid.volunteer.volunteersByName()),
+        rabid.volunteer.tableView.render(),
 
         ['h3', {}, 'Events'],
-        rabid.event.tableRenderer().renderTable(rabid.event.allEvents()),
+        rabid.event.tableView.render(),
+        //rabid.event.
+        //rabid.event.tableRenderer().renderTable(rabid.event.allEvents()),
         ['h3', {}, 'Event List'],
 
         renderEventList(),
@@ -24,7 +28,7 @@ export function home(): Markup {
 }
 
 export function renderEventList(): Markup {
-    const events = rabid.event.allEvents();
+    const events = rabid.event.allEvents.all();
     return [
         ['ul', {'class': '-event-'},
          events.map(event=>[
@@ -40,10 +44,17 @@ export function renderEventList(): Markup {
 }
 
 export function renderCommittmentsForEvent(event_id: number): Markup {
-    const committments =
-        rabid.event_commitment.getCommitmentsForEventWithVolunteerName(event_id);
+    // const committments =
+    //     rabid.event_commitment.getCommitmentsForEventWithVolunteerName(event_id);
+    const commitmentsClosure =
+        rabid.event_commitment.commitmentsForEventWithVolunteerName.closure({event_id});
 
+    console.info('CC SER', serializeAny(commitmentsClosure));
+    const commitments = commitmentsClosure.all();
+    console.info('COMMITMENTS', serializeAny(commitments));
+    
+    //console.info(rabid.event_commitment.cat);
     // Add menu to add/remove from 
     
-    return committments.map(v=>v.volunteer_name).join(', ');
+    return commitments.map(v=>v.volunteer_name).join(', ');
 }

@@ -3,11 +3,12 @@
 import * as utils from "../tabula/utils.ts";
 import {unwrap} from "../tabula/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum } from "../tabula/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, reloadableItemProps, editButtonProps, PublicViewable } from "../tabula/table.ts";
-import {setSerialized} from "../tabula/serializable.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../tabula/table.ts";
+import {serializeAs, setSerialized, path} from "../tabula/serializable.ts";
 
 import {block} from "../tabula/strings.ts";
 import {Markup} from "../tabula/markup.ts";
+import {lazy} from '../tabula/lazy.ts';
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -46,40 +47,44 @@ export class VolunteerTable extends Table<Volunteer> {
         ])
     };
 
-    // TODO want a form of queries that return a query object, that then needs to be forced for the result.
-    //      including the closure (email in this case).  The purpose is that these could then be serialized
-    //      and used components of other jsexpr expressions etc.
-    getByEmail(email: string): Volunteer {
+    @path
+    get getByEmail() {
         return db().prepare<Volunteer, {email: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
-/**/          WHERE email = :email`).required({email});
+/**/          WHERE email = :email`);
     }
 
-    volunteersByName(): Volunteer[] {
+    @path
+    get volunteersByName() {
         return db().prepare<Volunteer, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE deleted = 0
-/**/          ORDER BY name`).all();
+/**/          ORDER BY name`);
     }
 
-    volunteersForEvent(event_id: number): Volunteer[] {
-        return db().prepare<Volunteer, {}>(block`
+    @path
+    get volunteersForEvent() {
+        return db().prepare<Volunteer, {event_id: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM event LEFT JOIN volunteer
 /**/          WHERE event.volunteer_id = volunteer.volunteer_id
-/**/          ORDER BY name`).all();
+/**/          ORDER BY name`);
     }
 
-    volunteerTableEditor(): TableRenderer<Volunteer> {
+    @path
+    get tableRenderer(): TableRenderer<Volunteer> {
         const fields = this.fieldsByName;
-        return setSerialized(new TableRenderer(this, [fields.name, fields.email, fields.phone]), 'volunteer.volunteerTableEditor');
+        return new TableRenderer(this, [fields.name, fields.email, fields.phone]);
+    }
+
+    @path
+    get tableView(): TableView<Volunteer> {
+        return new TableView<Volunteer>(this.tableRenderer, this.volunteersByName.closure());
     }
     
 }
-export const volunteerMetaData = new VolunteerTable();
-
 
 // --------------------------------------------------------------------------------
 // --- PasswordHash ----------------------------------------------------------------
@@ -224,7 +229,7 @@ export const timesheetEntryMetaData = new TimesheetEntryTable();
 // });
 
 export const allVolunteerDml =
-    volunteerMetaData.createDMLString() +
+    new VolunteerTable().createDMLString() +
     passwordHashMetaData.createDMLString() +
     volunteerLoginSessionMetaData.createDMLString() +
     timesheetEntryMetaData.createDMLString();

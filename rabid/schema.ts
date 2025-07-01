@@ -17,8 +17,8 @@ import * as sale from './sale.ts';
 // --------------------------------------------------------------------------------
 
 const allSchemaDml =
-    volunteer.allVolunteerDml +
-    event.allDml +
+    //volunteer.allVolunteerDml +
+    //event.allDml +
     service.allDml +
     sale.allDml;
 
