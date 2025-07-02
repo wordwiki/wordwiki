@@ -3,19 +3,19 @@
 import * as model from "./model.ts";
 import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
         StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
-import {unwrap, panic} from "../tabula/utils.ts";
-import * as utils from "../tabula/utils.ts";
+import {unwrap, panic} from "../liminal/utils.ts";
+import * as utils from "../liminal/utils.ts";
 import {dictSchemaJson} from "../wordwiki/entry-schema.ts";
 import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, updateAssertion, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "../wordwiki/schema.ts";
 import * as schema from "../wordwiki/schema.ts";
-import * as timestamp from "../tabula/timestamp.ts";
-import {BEGINNING_OF_TIME, END_OF_TIME} from '../tabula/timestamp.ts';
-import {assert} from '../tabula/utils.ts';
+import * as timestamp from "../liminal/timestamp.ts";
+import {BEGINNING_OF_TIME, END_OF_TIME} from '../liminal/timestamp.ts';
+import {assert} from '../liminal/utils.ts';
 import * as view from './view.ts';
-import * as orderkey from '../tabula/orderkey.ts';
-import { renderToStringViaLinkeDOM } from '../tabula/markup.ts';
-import {block} from "../tabula/strings.ts";
-import { rpc } from '../tabula/rpc.ts';
+import * as orderkey from '../liminal/orderkey.ts';
+import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
+import {block} from "../liminal/strings.ts";
+import { rpc } from '../liminal/rpc.ts';
 import * as config from '../wordwiki/config.ts';
 import * as templates from '../wordwiki/templates.ts';
 

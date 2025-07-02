@@ -5,21 +5,21 @@ import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatFiel
         StringField, EnumField, VariantField, BlobField, AudioField, ImageField,
         IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
 import {Assertion, getAssertionPath, parentAssertionPath, getAssertionPathFields, assertionPathToFields} from '../wordwiki/schema.ts';
-import {unwrap, panic} from "../tabula/utils.ts";
-import {Markup} from '../tabula/markup.ts';
+import {unwrap, panic} from "../liminal/utils.ts";
+import {Markup} from '../liminal/markup.ts';
 import {VersionedDb, CurrentTupleQuery, CurrentRelationQuery, TupleVersion, generateBeforeOrderKey, generateAfterOrderKey} from './workspace.ts';
 import * as workspace from './workspace.ts';
 import {getAssertionsForEntry} from './workspace.ts';
-import * as utils from '../tabula/utils.ts';
-import * as strings from '../tabula/strings.ts';
-import { rpc } from '../tabula/rpc.ts';
-import {block} from "../tabula/strings.ts";
+import * as utils from '../liminal/utils.ts';
+import * as strings from '../liminal/strings.ts';
+import { rpc } from '../liminal/rpc.ts';
+import {block} from "../liminal/strings.ts";
 import {dictSchemaJson} from "../wordwiki/entry-schema.ts";
-import * as timestamp from "../tabula/timestamp.ts";
-import { renderToStringViaLinkeDOM } from '../tabula/markup.ts';
-import { BEGINNING_OF_TIME, END_OF_TIME } from "../tabula/timestamp.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
-import ContextMenu from '../tabula/context-menu.js';
+import * as timestamp from "../liminal/timestamp.ts";
+import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
+import { BEGINNING_OF_TIME, END_OF_TIME } from "../liminal/timestamp.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import ContextMenu from '../liminal/context-menu.js';
 import { PageEditorConfig } from '../scannedpage/render-page-editor.ts';
 
 

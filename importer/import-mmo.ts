@@ -8,16 +8,16 @@
  * working yet.
  */
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
-import * as utils from "../tabula/utils.ts";
-import * as strings from "../tabula/strings.ts";
-import {unwrap} from "../tabula/utils.ts";
+import * as utils from "../liminal/utils.ts";
+import * as strings from "../liminal/strings.ts";
+import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-import {block} from "../tabula/strings.ts";
+import {block} from "../liminal/strings.ts";
 import { ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt, Assertion, assertionFieldNames } from './schema.ts';
 import * as config from "./config.ts";
-import * as timestamp from "../tabula/timestamp.ts";
-import * as orderkey from '../tabula/orderkey.ts';
-import * as content from "../tabula/content-store.ts";
+import * as timestamp from "../liminal/timestamp.ts";
+import * as orderkey from '../liminal/orderkey.ts';
+import * as content from "../liminal/content-store.ts";
 import {DictTag, EntryTag, StatusTag, SpellingTag, SubentryTag, TodoTag,
         NoteTag, TranslationTag, DefinitionTag, GlossTag, ExampleTag,
         ExampleTextTag, ExampleTranslationTag, ExampleRecordingTag,

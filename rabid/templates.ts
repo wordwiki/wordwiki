@@ -1,7 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 
 import * as config from './config.ts';
-import {block} from "../tabula/strings.ts";
+import {block} from "../liminal/strings.ts";
 import * as view from '../datawiki/view.ts';
 
 export interface PageContent {

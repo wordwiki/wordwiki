@@ -1,18 +1,18 @@
 // // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 
-// import * as server from '../tabula/http-server.ts';
-// import {DenoHttpServer} from '../tabula/deno-http-server.ts';
+// import * as server from '../liminal/http-server.ts';
+// import {DenoHttpServer} from '../liminal/deno-http-server.ts';
 // import * as pageEditor from './render-page-editor.ts';
 // import {ScannedDocument, ScannedPage} from './schema.ts';
 // import * as schema from './schema.ts';
-// import {evalJsExprSrc} from '../tabula/jsterp.ts';
-// import { renderToStringViaLinkeDOM } from '../tabula/markup.ts';
+// import {evalJsExprSrc} from '../liminal/jsterp.ts';
+// import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 // import {exists as fileExists} from "std/fs/mod.ts"
-// import * as utils from "../tabula/utils.ts";
-// import * as strings from "../tabula/strings.ts";
+// import * as utils from "../liminal/utils.ts";
+// import * as strings from "../liminal/strings.ts";
 // import { db } from "./db.ts";
 // import * as workspace from './workspace.ts';
-// import * as markup from '../tabula/markup.ts';
+// import * as markup from '../liminal/markup.ts';
 
 // let allRoutes_: Record<string, any>|undefined = undefined;
 

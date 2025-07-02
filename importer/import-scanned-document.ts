@@ -1,13 +1,13 @@
 // deno-lint-ignore-file no-unused-vars
 import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 
-import * as utils from "../tabula/utils.ts";
-import {unwrap} from "../tabula/utils.ts";
+import * as utils from "../liminal/utils.ts";
+import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "./db.ts";
-import * as content from "../tabula/content-store.ts";
+import * as content from "../liminal/content-store.ts";
 //import {exists as fileExists} from "https://deno.land/std/fs/mod.ts"
 import {exists as fileExists} from "std/fs/mod.ts"
-import {block} from "../tabula/strings.ts";
+import {block} from "../liminal/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './schema.ts';
 import * as config from "./config.ts";
 import {getImageSize} from "./get-image-size.ts";

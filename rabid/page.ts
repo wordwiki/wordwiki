@@ -1,7 +1,7 @@
-import * as markup from '../tabula/markup.ts';
+import * as markup from '../liminal/markup.ts';
 import * as templates from './templates.ts';
 import {Rabid} from './rabid.ts';
-import {Markup} from '../tabula/markup.ts';
+import {Markup} from '../liminal/markup.ts';
 
 /**
  *

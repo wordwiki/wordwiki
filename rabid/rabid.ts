@@ -1,32 +1,32 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
-import * as markup from '../tabula/markup.ts';
+import * as markup from '../liminal/markup.ts';
 import * as schema from "./schema.ts";
-import * as server from '../tabula/http-server.ts';
-import * as strings from "../tabula/strings.ts";
-import * as utils from "../tabula/utils.ts";
-import * as random from "../tabula/random.ts";
-import {panic} from '../tabula/utils.ts';
+import * as server from '../liminal/http-server.ts';
+import * as strings from "../liminal/strings.ts";
+import * as utils from "../liminal/utils.ts";
+import * as random from "../liminal/random.ts";
+import {panic} from '../liminal/utils.ts';
 import * as config from './config.ts';
-import * as timestamp from '../tabula/timestamp.ts';
+import * as timestamp from '../liminal/timestamp.ts';
 import * as templates from './templates.ts';
-import * as orderkey from '../tabula/orderkey.ts';
-import {block} from '../tabula/strings.ts';
-import {db} from "../tabula/db.ts";
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../tabula/markup.ts';
-import {DenoHttpServer} from '../tabula/deno-http-server.ts';
-import {evalJsExprSrc} from '../tabula/jsterp.ts';
+import * as orderkey from '../liminal/orderkey.ts';
+import {block} from '../liminal/strings.ts';
+import {db} from "../liminal/db.ts";
+import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
+import {DenoHttpServer} from '../liminal/deno-http-server.ts';
+import {evalJsExprSrc} from '../liminal/jsterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
 //import {Home} from './home-page.ts';
 import * as home from './home-page.ts';
 import {Page} from './page.ts';
 import * as volunteer from './volunteer.ts';
 import * as event from './event.ts';
-import {Table, Tuple} from '../tabula/table.ts';
-import * as table from '../tabula/table.ts';
-import {serialize, serializeAs, setSerialized, path} from "../tabula/serializable.ts";
-import {lazy} from '../tabula/lazy.ts';
+import {Table, Tuple} from '../liminal/table.ts';
+import * as table from '../liminal/table.ts';
+import {serialize, serializeAs, setSerialized, path} from "../liminal/serializable.ts";
+import {lazy} from '../liminal/lazy.ts';
 
-import {rpcUrl} from '../tabula/rpc.ts';
+import {rpcUrl} from '../liminal/rpc.ts';
 
 export interface RabidServerConfig {
     hostname: string,

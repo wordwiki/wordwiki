@@ -1,8 +1,8 @@
-import * as utils from "../tabula/utils.ts";
-import {unwrap} from "../tabula/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
-import { Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../tabula/table.ts";
-import {block} from "../tabula/strings.ts";
+import * as utils from "../liminal/utils.ts";
+import {unwrap} from "../liminal/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import { Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../liminal/table.ts";
+import {block} from "../liminal/strings.ts";
 
 import * as volunteer from './volunteer.ts';
 import * as event from './event.ts';

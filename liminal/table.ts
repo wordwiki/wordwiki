@@ -1,11 +1,11 @@
-import {Markup} from '../tabula/markup.ts';
-import * as strings from '../tabula/strings.ts';
-import * as utils from '../tabula/utils.ts';
-import {unwrap} from '../tabula/utils.ts';
-import {block} from "../tabula/strings.ts";
-import {serialize, serializeAny} from "../tabula/serializable.ts";
+import {Markup} from '../liminal/markup.ts';
+import * as strings from '../liminal/strings.ts';
+import * as utils from '../liminal/utils.ts';
+import {unwrap} from '../liminal/utils.ts';
+import {block} from "../liminal/strings.ts";
+import {serialize, serializeAny} from "../liminal/serializable.ts";
 
-import { db, Db, PreparedQuery, QueryClosure, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
+import { db, Db, PreparedQuery, QueryClosure, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 
 export type Tuple = Record<string, any>;
 

@@ -1,11 +1,11 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 
-import * as utils from "../tabula/utils.ts";
-import {unwrap} from "../tabula/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../tabula/table.ts";
-import {block} from "../tabula/strings.ts";
-import {serializeAs, setSerialized, path} from "../tabula/serializable.ts";
+import * as utils from "../liminal/utils.ts";
+import {unwrap} from "../liminal/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../liminal/table.ts";
+import {block} from "../liminal/strings.ts";
+import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 export const routes = ()=> ({
 });

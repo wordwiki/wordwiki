@@ -1,20 +1,20 @@
 // deno-lint-ignore-file no-unused-vars, require-await, no-explicit-any, no-unreachable, ban-types
 
 import * as pageEditorModule from './page-editor.ts';
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import { selectLayer, selectLayerByLayerName } from "../wordwiki/schema.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, selectBoundingBoxesForGroup, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from '../wordwiki/schema.ts';
 import * as schema from '../wordwiki/schema.ts';
-import {block} from "../tabula/strings.ts";
-import * as utils from "../tabula/utils.ts";
-import {range} from "../tabula/utils.ts";
+import {block} from "../liminal/strings.ts";
+import * as utils from "../liminal/utils.ts";
+import {range} from "../liminal/utils.ts";
 //import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
-import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, Markup } from '../tabula/markup.ts';
+import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, Markup } from '../liminal/markup.ts';
 import * as config from '../wordwiki/config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
 import * as templates from '../wordwiki/templates.ts';
-import {Response, ResponseMarker, forwardResponse} from '../tabula/http-server.ts';
-import * as random from "../tabula/random.ts";
+import {Response, ResponseMarker, forwardResponse} from '../liminal/http-server.ts';
+import * as random from "../liminal/random.ts";
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;

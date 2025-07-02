@@ -2,16 +2,16 @@
 
 import * as fs from "std/fs/mod.ts";
 
-import * as utils from "../tabula/utils.ts";
-import {unwrap} from "../tabula/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../tabula/db.ts";
-import * as content from "../tabula/content-store.ts";
+import * as utils from "../liminal/utils.ts";
+import {unwrap} from "../liminal/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
-import {block} from "../tabula/strings.ts";
+import {block} from "../liminal/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPagesForDocument} from '../wordwiki/schema.ts';
 import * as config from "../wordwiki/config.ts";
-import * as utils_config from "../tabula/utils-config.ts";
-import {getImageSize} from "../tabula/get-image-size.ts";
+import * as utils_config from "../liminal/utils-config.ts";
+import {getImageSize} from "../liminal/get-image-size.ts";
 
 /**
  * Returns a dir path containing the specified image sliced into tiles

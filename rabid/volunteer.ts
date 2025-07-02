@@ -1,14 +1,14 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
 
-import * as utils from "../tabula/utils.ts";
-import {unwrap} from "../tabula/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum } from "../tabula/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../tabula/table.ts";
-import {serializeAs, setSerialized, path} from "../tabula/serializable.ts";
+import * as utils from "../liminal/utils.ts";
+import {unwrap} from "../liminal/utils.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum } from "../liminal/db.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
+import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
-import {block} from "../tabula/strings.ts";
-import {Markup} from "../tabula/markup.ts";
-import {lazy} from '../tabula/lazy.ts';
+import {block} from "../liminal/strings.ts";
+import {Markup} from "../liminal/markup.ts";
+import {lazy} from '../liminal/lazy.ts';
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------

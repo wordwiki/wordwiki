@@ -1,11 +1,11 @@
-import * as markup from '../tabula/markup.ts';
+import * as markup from '../liminal/markup.ts';
 import * as templates from './templates.ts';
 import {Rabid, rabid} from './rabid.ts';
-import {Markup} from '../tabula/markup.ts';
+import {Markup} from '../liminal/markup.ts';
 import {Page} from './page.ts';
 import {Event} from './event.ts';
-import {serializeAny} from '../tabula/serializable.ts';
-import {TableView} from '../tabula/table.ts';
+import {serializeAny} from '../liminal/serializable.ts';
+import {TableView} from '../liminal/table.ts';
 
 export function home(): Markup {
     const title = "Rabid - The Red Raccoon Volunteer System"

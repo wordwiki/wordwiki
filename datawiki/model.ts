@@ -1,17 +1,17 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
 
-//import {CustomError} from "../tabula/errors.ts";
-import {typeof_extended} from "../tabula/utils.ts";
-import * as utils from "../tabula/utils.ts";
-import {panic, assert, assertNever} from "../tabula/utils.ts";
+//import {CustomError} from "../liminal/errors.ts";
+import {typeof_extended} from "../liminal/utils.ts";
+import * as utils from "../liminal/utils.ts";
+import {panic, assert, assertNever} from "../liminal/utils.ts";
 //import { DB, PreparedQuery, QueryParameter, QueryParameterSet } from "https://deno.land/x/sqlite/mod.ts";
 //import { PreparedQueryCache } from "./dbutils.ts";
 //import * as dbutils from "./dbutils.ts";
-import * as orderkey from '../tabula/orderkey.ts';
-import * as timestamp from '../tabula/timestamp.ts';
-//import { longestIncreasingSequenceUsingCompareFn } from '../tabula/longest-increasing-sequence.js';
+import * as orderkey from '../liminal/orderkey.ts';
+import * as timestamp from '../liminal/timestamp.ts';
+//import { longestIncreasingSequenceUsingCompareFn } from '../liminal/longest-increasing-sequence.js';
 import {RecordValue, Value, getPrimaryKey, getString, getOptionalString, idCollator } from './record.ts';
-import * as strings from '../tabula/strings.ts';
+import * as strings from '../liminal/strings.ts';
 
 export enum FieldKind {
     Model=0,
