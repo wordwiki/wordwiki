@@ -83,24 +83,25 @@ export function navBar(): any {
            ['ul', {class:"navbar-nav me-auto mb-2 mb-lg-0"},
 
             ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Categories'],
+             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Home'],
             ], //li
 
-            // --- Reference Books
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Reference Books'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PDM")'}, 'PDM']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Rand")'}, 'Rand']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Clark")'}, 'Clark']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
-              //['li', {}, ['hr', {class:"dropdown-divider"}]],
-              //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
-             ], //ul
+            ['li', {class:"nav-item"},
+             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Volunteers'],
             ], //li
+
+            ['li', {class:"nav-item"},
+             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Events'],
+            ], //li
+
+            ['li', {class:"nav-item"},
+             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Service'],
+            ], //li
+
+            ['li', {class:"nav-item"},
+             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Sales'],
+            ], //li
+            
 
             // Reports
             ['li', {class:"nav-item dropdown"},
@@ -117,7 +118,7 @@ export function navBar(): any {
              ], //ul
             ], //li
 
-            // Reports
+            // Admin
             ['li', {class:"nav-item dropdown"},
              ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
               'Admin'
@@ -131,14 +132,6 @@ export function navBar(): any {
            //   ['a', {class:"nav-link disabled", 'aria-disabled':"true"}, 'Disabled'],
            //  ], //li
 
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", 'aria-current':"page", href:"#", onclick:'imports.launchNewLexeme()'}, 'Add New Entry'],
-            ], //li
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", 'aria-current':"page", href:"/index.html"}, 'Public Site'],
-            ], //li
             
            ], //ul
 
