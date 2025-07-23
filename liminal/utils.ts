@@ -404,14 +404,14 @@ export function getAllPropertyNames(o: Object): string[] {
  * Returns array of numbers from 'from' up to 'to' (exclusive of 'to');
  */
 export function range(from: number, to: number): number[] {
-    const out = [];
+    const out: number[] = [];
     for(let i=from; i<to; i++)
         out.push(i);
     return out;
 }
 
 export function repeat<T>(f: ()=>T, n: number): T[] {
-    const out = [];
+    const out: T[] = [];
     for(let i=0; i<n; i++)
         out.push(f());
     return out;

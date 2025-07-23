@@ -7,38 +7,53 @@ import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringFie
 import {block} from "../liminal/strings.ts";
 
 // --------------------------------------------------------------------------------
-// --- Bike Sale ------------------------------------------------------------------
+// --- Sale -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-// TODO Change to be generic sale + more support for free.
-// USE enum for sale kind (to support arbitrary bike VS other kinds of sales).
+export const sale_kind_enum: Record<string, string> = {
+    'bike': 'Bike',
+    'free-bike': 'Free Adult Bike',
+    'free-kids-bike': 'Free Kids Bike',
+    'parts': 'Parts',
+    'other': 'Other',
+};
 
-export interface BikeSale {
-    bike_sale_id: number;
+export const payment_method_enum: Record<string, string> = {
+    'cash': 'Cash',
+    'square': 'Square',
+    'etransfer': 'Etransfer',
+    'other': 'Other',
+};
 
-    bike_description: string;
-    is_kids_bike: number;
+export interface Sale {
+    sale_id: number;
+    sale_time: string;
+    sale_kind: string;
+    sale_recorded_by: number;
+    description: string;
     amount: number;
     payment_method: string;
     notes?: string;
 }
 
-export type BikeSaleOpt = Partial<BikeSale>;
+export type SaleOpt = Partial<Sale>;
 
-export class BikeSaleTable extends Table<BikeSale> {
+export class SaleTable extends Table<Sale> {
     
     constructor() {
         super ('bike_sale', [
-            new PrimaryKeyField('bike_sale_id', {}),
-            new StringField('bike_description', {}),
-            new BooleanField('is_kids_bike', {}),
+            new PrimaryKeyField('sale_id', {}),
+            new DateTimeField('sale_time', {}),
+            new EnumField('sale_kind', sale_kind_enum, {}),
+            new ForeignKeyField('sale_recorded_by', 'volunteer', 'volunteer_id', {indexed: true, unique: true}),
+            new StringField('description', {}),
             new FloatingPointField('amount', {}),
-            new StringField('payment_method', {}),
+            new EnumField('payment_method', payment_method_enum, {default: 'cash'}),
             new StringField('notes', {nullable: true})
         ])
     };
 }
-export const bikeSaleMetaData = new BikeSaleTable();
+export const saleMetaData = new SaleTable();
 
-export const allDml = bikeSaleMetaData.createDMLString();
+export const allDml = saleMetaData.createDMLString();
 

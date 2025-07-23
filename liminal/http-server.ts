@@ -67,6 +67,18 @@ export function jsonTextResponse(jsonText: string, status:number=200): Response 
             body: jsonText};            
 }
 
+export function parseCookies(cookieHeader: string | null | undefined): { [key: string]: string } {
+    const cookies: { [key: string]: string } = {};
+    if (cookieHeader) {
+        const cookieArray = cookieHeader.split(';');
+        for (const cookie of cookieArray) {
+            const [name, value] = cookie.trim().split('=').map(s => decodeURIComponent(s));
+            cookies[name] = value;
+        }
+    }
+    return cookies;
+}
+
 //export function forwardResponse(url: 
 
 //export type RequestHandler = (request: Request) => Response;

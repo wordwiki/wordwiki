@@ -41,6 +41,9 @@ type ToRecord<T> = {[Property in keyof T]: T[Property]};
  */
 export type boolnum = number;
 
+export type sqldatetime = string;
+export type sqldate = string;
+
 const openDbs: Record<string,Db> = {};
 
 export function dbByPath(path: string): Db {
@@ -300,6 +303,58 @@ export function assertDmlContainsAllFields(dml: string, fieldNames: string[]) {
         if(!new RegExp("\\b"+fieldName+"\\b").test(dml))
             throw new Error(`DML '${dml}' is missing reference to required field name '${fieldName}'`);
     }
+}
+
+// --------------------------------------------------------------------------------
+// Date/Time formatting utilities for SQLite datetime strings
+// --------------------------------------------------------------------------------
+
+/**
+ * Format a SQLite datetime string to a human-readable date and time.
+ * @param dateStr - SQLite datetime string (YYYY-MM-DD HH:MM:SS)
+ * @returns Formatted string like "Sat, May 4, 3:30 PM"
+ */
+export function formatDateTime(dateStr?: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+/**
+ * Format a SQLite datetime string to just the time portion.
+ * @param dateStr - SQLite datetime string (YYYY-MM-DD HH:MM:SS)
+ * @returns Formatted string like "3:30 PM"
+ */
+export function formatTime(dateStr?: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+/**
+ * Format a SQLite datetime string to just the date portion.
+ * @param dateStr - SQLite datetime string (YYYY-MM-DD HH:MM:SS)
+ * @returns Formatted string like "May 4, 2025"
+ */
+export function formatDate(dateStr?: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
 }
 
 function example() {

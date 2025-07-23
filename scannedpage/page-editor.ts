@@ -422,13 +422,13 @@ function chooseNewGroupColor(x: number, y: number) {
     const unusedGroupColors = new Set(groupColors);
     const distanceByColor: Map<string, number> = new Map();
     // TODO this shold be scoped to the single svg page under edit - not whole document
-    const nonRefGroups = document.querySelectorAll('svg.group:not(.ref)');
+    const nonRefGroups = Array.from(document.querySelectorAll('svg.group:not(.ref)'));
     for(const group of nonRefGroups) {
         const groupColor = group.getAttribute('stroke');
         if(!groupColor)
             continue;
         unusedGroupColors.delete(groupColor);
-        for(const box of group.children) {
+        for(const box of Array.from(group.children)) {
             // Skip the group frame
             if(!box.classList.contains('box')) continue;
 
@@ -772,7 +772,7 @@ function findBoxesWithSharedLocation(page: Element): MultiBoxes {
     // --- Partition bounding boxes by their complete coordinates
     const boundingBoxes = page.querySelectorAll('svg.box:not(.ref)');
     const groupedByLocation = Map.groupBy(
-        boundingBoxes,
+        Array.from(boundingBoxes),
         box => `${getIntAttribute(box, 'x')}_${getIntAttribute(box, 'y')}_${getIntAttribute(box, 'width')}_${getIntAttribute(box, 'height')}`);
     const boxesWithNonSharedLocation = Array.from(groupedByLocation.entries())
         .filter(([id, boxes]) => boxes.length === 1).map(([id, boxes]) => boxes[0]);

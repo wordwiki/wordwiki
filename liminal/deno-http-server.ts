@@ -55,6 +55,7 @@ export class DenoHttpServer extends HttpServer {
    
         const headers = Object.fromEntries(denoRequest.headers.entries());
         const contentType = headers['content-type'];
+        console.info('REQUEST HEADERS', headers);
 
         let body: any;
         switch (true) {
@@ -101,6 +102,7 @@ export class DenoHttpServer extends HttpServer {
         // XXX THIS HARD WIRED text/html utf-8 is BORKED - JUST TILL WE GET THINGS WORKING
         const responseHeaders = Object.assign({}, titan1cResponse.headers);
         responseHeaders["content-type"] ??= "text/html; charset=utf-8";
+        responseHeaders['Set-Cookie'] ??= `puppy=${+new Date()}; Max-Age=2592000`;
         //console.info('RESPONSE HEADERS', responseHeaders, 'BODY', titan1cResponse.body);
 
         return new Response(titan1cResponse.body, {

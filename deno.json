@@ -1,5 +1,6 @@
 {
     "imports": {
+        "@faker-js/faker": "npm:@faker-js/faker@^9.9.0",
         "kysely": "npm:kysely@^0.27.0",
         "std/": "https://deno.land/std@0.224.0/",
         "canvas": "./server/canvas-shim.ts",

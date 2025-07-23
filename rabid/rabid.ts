@@ -12,8 +12,9 @@ import * as templates from './templates.ts';
 import * as orderkey from '../liminal/orderkey.ts';
 import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
+import {Markup, renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, h} from '../liminal/markup.ts';
 import {DenoHttpServer} from '../liminal/deno-http-server.ts';
+import {parseCookies} from '../liminal/http-server.ts';
 import {evalJsExprSrc} from '../liminal/jsterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
 //import {Home} from './home-page.ts';
@@ -46,14 +47,26 @@ export class Rabid {
     pages: Record<string, any>;
 
     @path get volunteer() { return new volunteer.VolunteerTable(); }
+    @path get passwordHash() { return new volunteer.PasswordHashTable(); }
+    @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
+    @path get timesheet_entry() { return new volunteer.TimesheetEntryTable(); }
     @path get event() { return new event.EventTable(); }
     @path get event_commitment() { return new event.EventCommitmentTable(); }
 
     @lazy
     get tables() {
-        return [this.volunteer, this.event, this.event_commitment];
+        return [this.volunteer, this.passwordHash, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment];
     }
-    
+
+
+    // TODO having this just be a method is much nicer, but did like having the
+    //      internal stuff (like tables) separted?  or not?  If not, then can
+    //      put views (and fragments) on the tables, and they can also be
+    //      bound with @path, which will make them automatically rerenderable
+    //      in a particularly clean way (if we can figure out the ARGS)
+    //      But this is worth investigating.
+    home() { return templates.pageTemplate({title: 'home', body: home.home()}); }
+
     /**
      *
      */
@@ -96,41 +109,59 @@ export class Rabid {
                                  ).run();
     }
 
+    ignorePaths = new Set(['/favicon.ico', '/.well-known/appspecific/com.chrome.devtools.json']);
+    
     /**
      *
      */
     // Proto request handler till we figure out how we want our urls etc to workc
     async requestHandler(request: server.Request): Promise<server.Response> {
+        
         if(false && !request?.url?.endsWith('/favicon.ico'))
             console.info('tagger request', request);
+        
         const requestUrl = new URL(request.url);
         const filepath = decodeURIComponent(requestUrl.pathname);
-        const searchParams: Record<string,string> = {};
+
+        // 
         const volunteer = request.headers["x-webauth-volunteer"];
+        
+        const searchParams: Record<string,string> = {};
         requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
-        console.info("FILE PATH", filepath);
-        if (filepath === '/favicon.ico' || filepath === '/.well-known/appspecific/com.chrome.devtools.json') {
+        
+        if (this.ignorePaths.has(filepath)) {
             return Promise.resolve({status: 200, headers: {}, body: 'not found'});
-        } else {
-            let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-            // XXX HACK - factor properly (shame! shame!)
-            jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'rabid/')
-            switch(jsExprSrc) { // XXX HACK - move to better place
-                case '':
-                    jsExprSrc = 'home';
-                    break;
-            }
-            const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-            return this.rpcHandler(jsExprSrc, searchParams, bodyParms, volunteer);
         }
+
+        console.info("FILE PATH", filepath);
+        let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
+        // XXX HACK - factor properly (shame! shame!)
+        jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'rabid/')
+        switch(jsExprSrc) { // XXX HACK - move to better place
+            case '':
+                jsExprSrc = 'home';
+                break;
+        }
+
+        const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
+
+        const cookies = parseCookies(request.headers['cookie']);
+        const session_token = cookies['RABID_SESSION_TOKEN'];
+        
+        // TODO PRINT COOKIES HERE.
+        // TODO EXPERIMENT WITH ADDING A COOKIE.
+        
+        return this.rpcHandler(request.url, jsExprSrc, searchParams, bodyParms, session_token, volunteer);
     }
 
     /**
      *
      */
-    async rpcHandler(jsExprSrc: string,
-                     searchParams: Record<string, any>,
+    async rpcHandler(requestUrl: string,
+                     jsExprSrc: string,
+                     queryParms: Record<string, any>,
                      bodyParms: Record<string, any>,
+                     session_token: string|undefined,
                      volunteer: string|undefined): Promise<any> {
 
         // --- Top level of root scope is active routes
@@ -140,18 +171,29 @@ export class Rabid {
         // --- Push (possibly empty) URL search parameters as a scope
         //     with the single binding 'query'.  Later we may add more stuff
         //     from the request to this scope.
-        rootScope = Object.assign({}, rootScope, {query: searchParams});
+        rootScope = Object.assign({}, rootScope, {queryParms, bodyParms});
         //console.info('rootScope', rootScope);
 
         // --- If the query request body is a {}, then it is form parms or
         //     a json {} - push on scope.
-        rootScope = Object.assign(Object.create(rootScope), bodyParms);
+        //     TODO: move body parms out of the root scope
+        //rootScope = Object.assign(Object.create(rootScope), bodyParms);
 
         console.info("***", new Date().toLocaleString(), '::', volunteer, '::', jsExprSrc);
         // console.info('about to eval', jsExprSrc, 'with root scope ',
         //              JSON.stringify(utils.getAllPropertyNames(rootScope)));
 
-        let result = null;
+
+        // Lookup session token to get session
+        const session: volunteer.VolunteerLoginSession|undefined =
+            session_token ? this.volunteerLoginSession.getBySessionToken.first({session_token}) : undefined;
+
+        // If no session found, render login page instead of the requested page.
+        if(false && !session) {
+            jsExprSrc = `rabid.login(${JSON.stringify(requestUrl)})`;
+        }
+        
+        let result: any = null;
         try {
             result = evalJsExprSrc(rootScope, jsExprSrc);
             while(result instanceof Promise)
@@ -202,6 +244,47 @@ export class Rabid {
 
         //return Promise.resolve({status: 200, headers: {}, body: 'not found'});
     }
+
+    login(targetUrl: string): Markup {
+
+        // TODO: rendering the login page while already logged in is confusing - probably 301 to the
+        //       home page if already logged in.
+        // TODO: I think our scheme may be wrong - if the actual login is done by RPC, then we don't need the
+        //       targetUrl thing, the 301, the confusion as to whether to render if logged in etc etc -
+        //       much better.
+        
+        const body = [
+            [h.h1, {}, 'Login to Rabid - The Red Raccoon Volunteer System'],
+            
+            [h.form, {name: 'login', method: 'post', action:'rabid.loginRequest(bodyParms.email, bodyParms.password, bodyParms.targetUrl)'},
+
+
+             [h.div, {class:"form-group"},
+              [h.label, {for:"email"}, 'Email address'],
+              [h.input, {type:"email", class:"form-control", name:"email", 'aria-describedby':"emailHelp", placeholder:"Enter email"}],
+              //[h.small, {id:"emailHelp", class:"form-text text-muted"}, "We'll never share your email with anyone else."],
+             ], // div
+
+             [h.div, {class:"form-group"},
+              [h.label, {for:"password"}, 'Password'],
+              [h.input, {type:"password", class:"form-control", name:"password", placeholder:"Password"}]
+             ], // div
+
+             [h.input, {type:'hidden', name: 'targetUrl', value: targetUrl}],
+             
+             [h.button, {type:"submit", class:"btn btn-primary"}, 'Login'],
+            ] // form
+        ];
+        
+        return templates.pageTemplate({title: 'Login', body});
+    }
+        
+
+    // This should probably be a RPC rather than a page request??
+    loginRequest(email: string, password: string, targetUrl: string) {
+        // --- Attempt to authenticate
+    }
+              
 }
 
 

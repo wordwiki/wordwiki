@@ -19,24 +19,41 @@ export const routes = ()=> ({
 // --- Service --------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-// TODO Add support for end of of day pickup VS regular pickup (maybe use enum for pickup?)
-// TODO DIY vs regular?
-// TODO Number of people served should default to 1 (and not be nullable)
-// TODO Postal maybe should be renamed to indicate that it is a postal prefix?
+export const service_kind_enum: Record<string, string> = {
+    'diy': 'DIY',
+    'full': 'We Repair',
+    'adult-learn': 'Adult Learn to Ride',
+    'kid-learn': 'Kid Learn to Ride',
+    'vocational': 'Vocational Training',
+    'other': 'Other',
+};
 
 export interface Service {
     service_id: number;
 
-    time?: string;
+    // Nullable because Can do service outside of an event.
+    event_id?: number;
 
-    name: string;
-    postal?: string;
-    phone?: string;
+    client_name: string;
+    client_postal?: string;
+    client_phone?: string;
+    client_number_of_people_served: number;
 
-    service_kind?: string;
-    number_of_people_served?: number;
+    service_kind: string;
+    service_description: string;
+    service_check_in_time?: string;
+    service_done: boolnum;
+    // Will often be quite a bit after service is complete so should not
+    // be used to compute total service time.  For example will be closed
+    // when the customer
+    service_record_closed_time?: string;
 
-    will_pick_up?: number;
+    will_pick_up: boolnum;
+    scheduled_pick_up_time?: string;
+
+    work_start_time?: string;
+    work_end_time?: string;
+    work_stand_id?: number;
 
     notes?: string;
 }
@@ -48,13 +65,26 @@ export class ServiceTable extends Table<Service> {
     constructor() {
         super ('service', [
             new PrimaryKeyField('service_id', {}),
-            new DateTimeField('time', {nullable: true}),
-            new StringField('name', {}),
-            new StringField('postal', {nullable: true}),
-            new StringField('phone', {nullable: true}),
-            new StringField('service_kind', {nullable: true}),
-            new IntegerField('number_of_people_served', {nullable: true}),
-            new BooleanField('will_pick_up', {nullable: true}),
+            new ForeignKeyField('event_id', "event", "event_id", {indexed: true, nullable: true}),
+            
+            new StringField('client_name', {}),
+            new StringField('client_postal', {nullable: true}),
+            new StringField('client_phone', {nullable: true}),
+            new IntegerField('client_number_of_people_served', {default: 1}),
+            
+            new EnumField('service_kind', service_kind_enum, {default: 'diy'}),
+            new StringField('service_description', {}),
+            new DateTimeField('service_check_in_time', {nullable: true}),
+            new BooleanField('service_done', {default: 0}),
+            new DateTimeField('service_record_closed_time', {nullable: true}),
+            
+            new BooleanField('will_pick_up', {default: 0}),
+            new DateTimeField('scheduled_pick_up_time', {nullable: true}),
+            
+            new DateTimeField('work_start_time', {nullable: true}),
+            new DateTimeField('work_end_time', {nullable: true}),
+            new IntegerField('work_stand_id', {nullable: true}),
+            
             new StringField('notes', {nullable: true})
         ])
     };

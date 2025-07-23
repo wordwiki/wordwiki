@@ -892,7 +892,7 @@ export async function renderTiledImage(rootPath: string, srcImagePath: string,
     const srcImageWidthInTiles = Math.ceil(srcImageWidth / maxTileWidth);
     const srcImageHeightInTiles = Math.ceil(srcImageHeight / maxTileHeight);
 
-    const tiles = [];
+    const tiles:any[] = [];
     for(let yidx=0; yidx<srcImageHeightInTiles; yidx++) {
         for(let xidx=0; xidx<srcImageWidthInTiles; xidx++) {
 

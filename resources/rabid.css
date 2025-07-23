@@ -1,0 +1,270 @@
+/* RABID - Red Raccoon Volunteer System Styles */
+
+/* ============================= */
+/* Event Summary Styles          */
+/* ============================= */
+
+.event-summary {
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+}
+
+.event-not-found {
+    color: #666;
+    font-style: italic;
+    padding: 10px;
+}
+
+/* Event Header */
+.event-header {
+    margin-bottom: 12px;
+}
+
+.event-name {
+    text-decoration: none;
+    color: #2c5aa0;
+    font-size: 1.1em;
+}
+
+.event-name:hover {
+    color: #1e3d6f;
+    text-decoration: underline;
+}
+
+.event-name strong {
+    font-weight: 600;
+}
+
+/* Event Type Badges */
+.event-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.event-badge.event-public {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.event-badge.event-training {
+    background-color: #2196F3;
+    color: white;
+}
+
+.event-badge.event-shopTime {
+    background-color: #FF9800;
+    color: white;
+}
+
+.volunteer-only-badge {
+    display: inline-block;
+    background-color: #9C27B0;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+.remote-event-badge {
+  display: inline-block;
+  background-color: #344193;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-left: 5px;
+}
+
+
+
+/* Event Details Grid */
+.event-details-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 15px;
+    font-size: 0.95em;
+}
+
+.event-detail-row {
+    display: contents;
+}
+
+.event-prompt {
+    color: #666;
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.event-value {
+    color: #333;
+}
+
+/* Specific value styles */
+.location-link {
+    color: #2c5aa0;
+    text-decoration: none;
+}
+
+.location-link:hover {
+    text-decoration: underline;
+}
+
+.location-link[target="_blank"]::after {
+    content: " ↗";
+    font-size: 0.8em;
+    vertical-align: super;
+}
+
+.event-no-volunteers {
+    color: #666;
+}
+
+.event-no-volunteers em {
+    font-style: italic;
+}
+
+.event-notes {
+    font-style: italic;
+    color: #555;
+}
+
+/* ============================= */
+/* Upcoming Events Styles        */
+/* ============================= */
+
+.upcoming-events {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.upcoming-events h2 {
+    color: #333;
+    font-size: 1.8em;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #2c5aa0;
+    padding-bottom: 10px;
+}
+
+.no-upcoming-events {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.event-count {
+    color: #666;
+    font-size: 0.95em;
+    margin-bottom: 20px;
+}
+
+.week-header {
+    color: #2c5aa0;
+    font-size: 1.3em;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.event-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 25px 0;
+}
+
+.event-item {
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* ============================= */
+/* Responsive Design             */
+/* ============================= */
+
+@media (max-width: 768px) {
+    .upcoming-events {
+        padding: 10px;
+    }
+    
+    .event-summary {
+        padding: 12px;
+    }
+    
+    .event-header {
+        font-size: 0.95em;
+    }
+    
+    .event-badge,
+    .volunteer-only-badge {
+        display: inline-block;
+        margin: 2px 0;
+    }
+    
+    /* Stack grid on mobile for better readability */
+    .event-details-grid {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+    
+    .event-prompt {
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .event-prompt::after {
+        content: ":";
+    }
+    
+    .location-link[target="_blank"]::after {
+        content: "";  /* Remove external link indicator on mobile */
+    }
+}
+
+/* ============================= */
+/* Utility Animations            */
+/* ============================= */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================= */
+/* Print Styles                  */
+/* ============================= */
+
+@media print {
+    .event-summary {
+        border: 1px solid #000;
+        background-color: white;
+        page-break-inside: avoid;
+    }
+    
+    .event-badge {
+        border: 1px solid #000;
+        background-color: white !important;
+        color: black !important;
+    }
+    
+    .location-link[target="_blank"]::after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+    }
+}

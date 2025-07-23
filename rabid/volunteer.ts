@@ -2,7 +2,7 @@
 
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum } from "../liminal/db.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
@@ -14,14 +14,41 @@ import {lazy} from '../liminal/lazy.ts';
 // --- Volunteer -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
+export const exit_reason_enum: Record<sqldate, string> = {
+    'moved': 'Moved',
+    'no-time': 'Not enough time to volunteer',
+    'other': 'Other',
+};
+
 export interface Volunteer {
     volunteer_id: number;
 
+    // Will be null if date is unknown (because the volunteer pre-dates this system
+    // and has not filled it out - for new volunteers, this will default to record
+    // creation date).
+    join_date?: string;
+    
     name: string;
     email: string;
     phone: string;
 
+    // Skills or Experience You'd Like to Share e.g., bike repair, event planning, fundraising, social media, etc
+    skills: string;
+    
+    emergency_contact_name: string;
+    emergency_contact_phone: string;
+
     permissions: string;
+
+    // Once a volunteer is manually marked inactive, they will not show up in the common
+    // lists etc.
+    inactive: boolnum;
+    marked_inactive_date: string;
+    
+    // For volunteers with long inactivity, we may request exit feedback.
+    exit_feedback_requested: boolnum;
+    exit_reason?: string;
+    exit_feedback?: string;
     
     /**
      * We disable volunteers rather than deleting them because they are
@@ -38,10 +65,19 @@ export class VolunteerTable extends Table<Volunteer> {
     constructor() {
         super ('volunteer', [
             new PrimaryKeyField('volunteer_id', {prompt: 'Id'}),
+            new DateTimeField('join_date', {nullable: true}),
             new StringField('name', {indexed: true, permissions: PublicViewable}),
             new EmailField('email', {indexed: true, unique: true, permissions: PublicViewable}),
             new PhoneField('phone', {nullable: true, permissions: PublicViewable}),
+            new StringField('skills', {default: ''}),
+            new StringField('emergency_contact_name', {default: ''}),
+            new StringField('emergency_contact_phone', {default: ''}),
             new StringField('permissions', {nullable: true}),
+            new BooleanField('inactive', {default: 0}),
+            new DateTimeField('marked_inactive_date', {nullable: true}),
+            new BooleanField('exit_feedback_requested', {default: 0}),
+            new EnumField('exit_reason', exit_reason_enum, {nullable: true}),
+            new StringField('exit_feedback', {nullable: true}),
             new BooleanField('deleted', {default: 0}),
         ], [
         ])
@@ -56,7 +92,16 @@ export class VolunteerTable extends Table<Volunteer> {
     }
 
     @path
-    get volunteersByName() {
+    get activeVolunteersByName() {
+        return db().prepare<Volunteer, {}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM volunteer
+/**/          WHERE deleted = 0 AND inactive = 0
+/**/          ORDER BY name`);
+    }
+
+    @path
+    get allVolunteersByName() {
         return db().prepare<Volunteer, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
@@ -81,9 +126,8 @@ export class VolunteerTable extends Table<Volunteer> {
 
     @path
     get tableView(): TableView<Volunteer> {
-        return new TableView<Volunteer>(this.tableRenderer, this.volunteersByName.closure());
+        return new TableView<Volunteer>(this.tableRenderer, this.activeVolunteersByName.closure());
     }
-    
 }
 
 // --------------------------------------------------------------------------------
@@ -127,7 +171,7 @@ export class PasswordHashTable extends Table<PasswordHash> {
 /**/          WHERE volunteer_id = :volunteer_id`).first({volunteer_id});
     }
 }
-export const passwordHashMetaData = new PasswordHashTable();
+//export const passwordHashMetaData = new PasswordHashTable();
 
 // --------------------------------------------------------------------------------
 // --- VolunteerLoginSession ------------------------------------------------------
@@ -156,13 +200,16 @@ export class VolunteerLoginSessionTable extends Table<VolunteerLoginSession> {
             new StringField('last_ip', {})
         ])
     };
-}
-export const volunteerLoginSessionMetaData = new VolunteerLoginSessionTable();
 
-export const selectLoginSessionByLoginSessionToken = ()=>db().prepare<VolunteerLoginSession, {loginSession_token: string}>(block`
-/**/   SELECT ${volunteerLoginSessionMetaData.allFields}
+    @path
+    get getBySessionToken() {
+        return db().prepare<VolunteerLoginSession, {session_token: string}>(block`
+/**/   SELECT ${this.allFields}
 /**/          FROM volunteer_session
-/**/          WHERE session_token = :loginSession_token`);
+/**/          WHERE session_token = :session_token`);
+    }
+}
+//export const volunteerLoginSessionMetaData = new VolunteerLoginSessionTable();
 
 // --------------------------------------------------------------------------------
 // --- TimesheetEntry -------------------------------------------------------------
@@ -173,7 +220,10 @@ export interface TimesheetEntry {
 
     volunteer_id: number;
 
-    // To allow for commit for partial event.
+    // Nullable because Can do volunteer time outside of an event.
+    event_id?: number;
+    
+    // To allow for commit for partial event.  
     start_time?: string;
     end_time?: string;
 
@@ -185,6 +235,8 @@ export interface TimesheetEntry {
 
     //
     is_paid_time: number;
+
+    entry_creation_time?: string;
 }
 
 export type TimesheetEntryOpt = Partial<TimesheetEntry>;
@@ -201,13 +253,27 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         super ('timesheet_entry', [
             new PrimaryKeyField('timesheet_entry_id', {}),
             new ForeignKeyField('volunteer_id', "volunteer", "volunteer_id", {indexed: true}),
+            new ForeignKeyField('event_id', "event", "event_id", {indexed: true, nullable: true}),
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
             new StringField('notes', {}),
             new FloatingPointField('km_driven_for_reimbursement', {}),
-            new BooleanField('is_paid_time', {})
+            new BooleanField('is_paid_time', {}),
+            new StringField('entry_creation_time', {nullable: true}),
         ])
     };
+
+    @path
+    get allTimesheetEntries() {
+        return db().prepare<TimesheetEntry, {}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM timesheet_entry
+/**/          ORDER BY start_time`);
+    }
+
+    all(): TimesheetEntry[] {
+        return this.allTimesheetEntries.all();
+    }
 }
 export const timesheetEntryMetaData = new TimesheetEntryTable();
 
@@ -228,8 +294,8 @@ export const timesheetEntryMetaData = new TimesheetEntryTable();
 //     //greet,
 // });
 
-export const allVolunteerDml =
-    new VolunteerTable().createDMLString() +
-    passwordHashMetaData.createDMLString() +
-    volunteerLoginSessionMetaData.createDMLString() +
-    timesheetEntryMetaData.createDMLString();
+// export const allVolunteerDml =
+//     new VolunteerTable().createDMLString() +
+//     passwordHashMetaData.createDMLString() +
+//     volunteerLoginSessionMetaData.createDMLString() +
+//     timesheetEntryMetaData.createDMLString(

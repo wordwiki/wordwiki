@@ -4,6 +4,8 @@
         "jsx": "react",
         "jsxFactory": "jsx",
         "jsxFragmentFactory": "jsxFragment",
+        "strictNullChecks": true,
+        "noImplicitOverride": false,
         "outDir": "dist", 
         "plugins": [
             {

@@ -295,7 +295,7 @@ export class IntegerField extends ScalarField {
     schemaTypename(): string { return 'integer'; }
     sqlTypename(): string { return 'INTEGER'; }
 
-    validateRequiredValue(locus: string, value: Value) {
+    override validateRequiredValue(locus: string, value: Value) {
         super.validateRequiredValue(locus, value);
         if(typeof value !== 'number')
             throw new ValidationError(locus, `Expected number - got ${value}`);
@@ -342,7 +342,7 @@ export class FloatField extends ScalarField {
      * serializer/deserializer to represent them as string values, and
      * remove this restriction)
      */
-    validateRequiredValue(locus: string, value: Value) {
+    override validateRequiredValue(locus: string, value: Value) {
         super.validateRequiredValue(locus, value);
         if(!Number.isFinite(value))
             throw new ValidationError(locus, `NaN and Inf float values not allowed - ${locus}`);
@@ -398,13 +398,13 @@ export class EnumField extends StringField {
         super(name, bind, optional, StringFormat.Text, style);
     }
 
-    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitEnumField(this, a); }
+    override accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitEnumField(this, a); }
 
-    jsTypename(): string { return 'string'; }
-    schemaTypename(): string { return 'enum'; }
-    sqlTypename(): string { return 'TEXT'; }
+    override jsTypename(): string { return 'string'; }
+    override schemaTypename(): string { return 'enum'; }
+    override sqlTypename(): string { return 'TEXT'; }
 
-    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): EnumField {
+    static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): EnumField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'enum');
         return new EnumField(name, $bind, !!$optional, $style);
@@ -421,13 +421,13 @@ export class VariantField extends EnumField {
         super(name, bind, optional, style);
     }
 
-    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitVariantField(this, a); }
+    override accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitVariantField(this, a); }
 
-    jsTypename(): string { return 'string'; }
-    schemaTypename(): string { return 'variant'; }
-    sqlTypename(): string { return 'TEXT'; }
+    override jsTypename(): string { return 'string'; }
+    override schemaTypename(): string { return 'variant'; }
+    override sqlTypename(): string { return 'TEXT'; }
 
-    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
+    static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
         let {$type, $bind, $style, $optional, ...extra} = schema;
         $bind ??= 'variant';
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
@@ -445,13 +445,13 @@ export class BlobField extends StringField {
         super(name, bind, optional, StringFormat.Text, style);
     }
 
-    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitBlobField(this, a); }
+    override accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitBlobField(this, a); }
 
-    jsTypename(): string { return 'string'; }
-    schemaTypename(): string { return 'blob'; }
-    sqlTypename(): string { return 'TEXT'; }
+    override jsTypename(): string { return 'string'; }
+    override schemaTypename(): string { return 'blob'; }
+    override sqlTypename(): string { return 'TEXT'; }
 
-    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BlobField {
+    static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): BlobField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'blob');
         return new BlobField(name, $bind, !!$optional, $style);
@@ -467,13 +467,13 @@ export class AudioField extends BlobField {
         super(name, bind, optional, style);
     }
 
-    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitAudioField(this, a); }
+    override accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitAudioField(this, a); }
 
-    jsTypename(): string { return 'string'; }
-    schemaTypename(): string { return 'audio'; }
-    sqlTypename(): string { return 'TEXT'; }
+    override jsTypename(): string { return 'string'; }
+    override schemaTypename(): string { return 'audio'; }
+    override sqlTypename(): string { return 'TEXT'; }
 
-    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): AudioField {
+    static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): AudioField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'audio');
         return new AudioField(name, $bind, !!$optional, $style);
@@ -489,13 +489,13 @@ export class ImageField extends BlobField {
         super(name, bind, optional, style);
     }
 
-    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitImageField(this, a); }
+    override accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitImageField(this, a); }
 
-    jsTypename(): string { return 'string'; }
-    schemaTypename(): string { return 'image'; }
-    sqlTypename(): string { return 'TEXT'; }
+    override jsTypename(): string { return 'string'; }
+    override schemaTypename(): string { return 'image'; }
+    override sqlTypename(): string { return 'TEXT'; }
 
-    static parseSchemaFromCompactJson(locus: string, name: string, schema: any): ImageField {
+    static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): ImageField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'image');
         return new ImageField(name, $bind, !!$optional, $style);
@@ -522,7 +522,7 @@ export class IdField extends ScalarField {
     schemaTypename(): string { return 'id'; }
     sqlTypename(): string { return 'TEXT'; }
 
-    validateRequiredValue(locus: string, value: Value) {
+    override validateRequiredValue(locus: string, value: Value) {
         super.validateRequiredValue(locus, value);
         const valueStr = value as string;
         if(valueStr === '')
@@ -546,9 +546,9 @@ export class PrimaryKeyField extends IdField {
         super(name, bind, false, style);
     }
 
-    accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitPrimaryKeyField(this, a); }
+    override accept<A,R>(v: FieldVisitorI<A,R>, a: A): R { return v.visitPrimaryKeyField(this, a); }
 
-    schemaTypename(): string { return 'primary_key'; }
+    override schemaTypename(): string { return 'primary_key'; }
 
     createDbFields(versioned: boolean): string[] {
         return [`${this.name} TEXT NOT NULL${versioned?'':' PRIMARY KEY'}`];

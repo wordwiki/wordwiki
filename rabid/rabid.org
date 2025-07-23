@@ -1,3 +1,28 @@
+* PROPOSAL: Vibe it until stalls!
+- turn off login for now
+
+
+* PROPOSAL: Timer function in rabid
+- once someone is put on a DIY stand, start timer with the stand #
+- have page that shows time on stand for all DIY clients.
+- TUE/WED/FRI - 3 days to working rabid?  Is it worth it?  Maybe?
+
+
+
+
+ 
+* TODO Login
+- on every request, if don't have session token that resolves to active session:
+- display login page instead (keeping URL).
+- on submit, with valid login, just refresh same URL, and will display.
+* TODO Account creation
+- for now, new volunteers are assigned a random password - which is emailed to them.
+- because passwords are not stored in the DB, creator will need to copy etc.
+- they can change the password.
+
+* TODO Write nice date library
+- convert to/from sqlite format into best JS format.
+- hopefully from there will get date aritmetic.
 * TODO Make nice sample data
 * TODO Make reports on sample data
 * TODO Make editors nicer
