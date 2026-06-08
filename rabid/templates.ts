@@ -94,7 +94,7 @@ export function navBar(): any {
             ], //li
 
             [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Volunteers'],
+             [h.a, {class:"nav-link", href:"/volunteers"}, 'Volunteers'],
             ], //li
 
             [h.li, {class:"nav-item"},

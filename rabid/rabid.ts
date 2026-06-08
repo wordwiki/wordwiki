@@ -111,6 +111,7 @@ export class Rabid {
     //      in a particularly clean way (if we can figure out the ARGS)
     //      But this is worth investigating.
     home() { return templates.pageTemplate({title: 'home', body: home.home()}); }
+    volunteers() { return templates.pageTemplate({title: 'Volunteers', body: this.volunteer.renderSearchableVolunteers()}); }
 
     /**
      *
@@ -119,6 +120,7 @@ export class Rabid {
         
         this.pages = {
             home:()=>templates.pageTemplate({title: 'home', body: home.home()}),
+            volunteers:()=>this.volunteers(),
             activityReport:()=>templates.pageTemplate({title: 'Activity Report', body: activityReport()}),
             dailyActivityReport:()=>templates.pageTemplate({
                 title: 'Daily Activity Report', 
