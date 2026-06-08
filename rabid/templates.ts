@@ -35,6 +35,14 @@ export function isPage(v: any): v is Page {
     return !!v && v[pageMarker] === true;
 }
 
+// A link that navigates to another page via htmx: it swaps just #content (so the
+// navbar, modal and scripts persist) and scrolls back to the top.  Centralising
+// the htmx attributes here keeps that complexity out of call sites, and in one
+// place to adjust across htmx versions.
+export function pageLink(href: string, ...content: any[]): any {
+    return [h.a, {href, 'hx-boost': 'true', 'hx-target': '#content', 'hx-swap': 'innerHTML show:window:top'}, ...content];
+}
+
 export function pageTemplate(content: PageContent): any {
     return (
         [h.html, {},

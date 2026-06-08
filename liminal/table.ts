@@ -90,6 +90,14 @@ export class Table<T extends Tuple> {
         },
                              extraProps);
     }
+
+    // A standard "edit" button for one row: opens the modal editor with this row's
+    // edit form.  Same wiring the default TableRenderer row uses, factored so
+    // hand-coded views can drop in an edit button without repeating the modal/hx
+    // details at every call site.
+    editButton(id: number, label: string = 'Edit'): Markup {
+        return ['button', editButtonProps(`${this}.renderForm(${this}.getById(${id}))`), label];
+    }
     
     // // ---------------------------------------------------------------------------
     // // --- Table Rendering -------------------------------------------------------

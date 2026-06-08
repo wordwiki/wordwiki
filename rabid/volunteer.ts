@@ -10,6 +10,7 @@ import {block} from "../liminal/strings.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import {lazy} from '../liminal/lazy.ts';
 import * as action from "../liminal/action.ts";
+import * as templates from './templates.ts';
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -176,8 +177,9 @@ export class VolunteerTable extends Table<Volunteer> {
         ];
     }
 
-    // Returns a fragment (a count line + the table).  rpcHandler now renders a
-    // top-level fragment, so render helpers no longer need a single root element.
+    // Hand-coded volunteer list.  The generic TableRenderer is only a quick
+    // default; a real view composes the pieces directly so we control the columns
+    // and the name-links-to-detail behaviour.
     renderVolunteerList(q: string, scope: string): Markup {
         const rows = this.searchByPrefix.all({q, scope});
         const scopeLabel = scope === 'all' ? 'all' : 'active';
@@ -185,8 +187,33 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.p, {class: 'text-muted small mb-2'},
              q ? `${rows.length} ${scopeLabel} volunteer(s) matching “${q}”`
                : `${rows.length} ${scopeLabel} volunteer(s)`],
-            this.tableRenderer.renderTable(rows),
+            [h.table, {class: 'table'},
+             [h.tbody, {},
+              [h.tr, {}, [h.th, {}, 'Name'], [h.th, {}, 'Email'], [h.th, {}, 'Phone'], [h.th, {}]],
+              rows.map(v => this.renderVolunteerRow(v)),
+             ],
+            ],
         ];
+    }
+
+    // One list row.  The name links to the volunteer's detail page; email/phone
+    // reuse the field render() helpers (mailto / tel); edit reuses the table's
+    // edit button.  reloadableItemProps tags the row so an edit save (which
+    // reloads `.-volunteer-<id>-`) re-renders just this row.
+    renderVolunteerRow(v: Volunteer): Markup {
+        const id = v.volunteer_id;
+        const f = this.fieldsByName;
+        return [h.tr, this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`),
+            [h.td, {}, templates.pageLink(`/rabid/rabid.volunteer.detailPage(${id})`, v.name)],
+            [h.td, {}, f.email.render(v.email)],
+            [h.td, {}, f.phone.render(v.phone)],
+            [h.td, {}, this.editButton(id)],
+        ];
+    }
+
+    // Reload target for a single list row (after an edit save).
+    renderVolunteerRowById(id: number): Markup {
+        return this.renderVolunteerRow(this.getById(id));
     }
 
     // Step 1 (generator): build the parameter dialog using the same Field
@@ -213,6 +240,50 @@ export class VolunteerTable extends Table<Volunteer> {
     // container.  Reads the typed `q` and the hidden `scope` from the form.
     searchResults(args: {q?: string, scope?: string}): Markup {
         return this.renderVolunteerList(String(args?.q ?? ''), args?.scope === 'all' ? 'all' : 'active');
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Volunteer detail page ----------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // Full page for one volunteer (navigated to by clicking the name in the list):
+    // contact info at the top.  Timesheet entries, committed tasks, etc. will be
+    // added below later.
+    detailPage(volunteer_id: number): templates.Page {
+        const v = this.getById(volunteer_id);
+        return templates.page(`${v.name} — Volunteer`, this.renderDetail(volunteer_id));
+    }
+
+    // The detail body, as a reloadable fragment (so an edit save re-renders it).
+    renderDetail(volunteer_id: number): Markup {
+        const v = this.getById(volunteer_id);
+        const f = this.fieldsByName;
+        const props = this.reloadableItemProps(volunteer_id, `rabid.volunteer.renderDetail(${volunteer_id})`);
+        props.class = 'container py-3 ' + props.class;
+
+        const emergency = [v.emergency_contact_name, v.emergency_contact_phone].filter(Boolean).join(' · ');
+
+        return [h.div, props,
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0'}, v.name],
+             v.inactive ? [h.span, {class: 'badge text-bg-secondary'}, 'Inactive'] : undefined,
+             this.editButton(volunteer_id)],
+
+            [h.dl, {class: 'row mb-0'},
+             [h.dt, {class: 'col-sm-3'}, 'Email'],
+             [h.dd, {class: 'col-sm-9'}, f.email.render(v.email) || '—'],
+             [h.dt, {class: 'col-sm-3'}, 'Phone'],
+             [h.dd, {class: 'col-sm-9'}, f.phone.render(v.phone) || '—'],
+             [h.dt, {class: 'col-sm-3'}, 'Skills'],
+             [h.dd, {class: 'col-sm-9'}, v.skills || '—'],
+             [h.dt, {class: 'col-sm-3'}, 'Emergency contact'],
+             [h.dd, {class: 'col-sm-9'}, emergency || '—'],
+             [h.dt, {class: 'col-sm-3'}, 'Joined'],
+             [h.dd, {class: 'col-sm-9'}, v.join_date || '—'],
+            ],
+
+            // TODO: timesheet entries, committed tasks, etc.
+        ];
     }
 }
 
