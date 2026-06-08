@@ -2,12 +2,12 @@
 
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime, formatDate } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
-import {Markup} from "../liminal/markup.ts";
+import {Markup, h} from "../liminal/markup.ts";
 import {lazy} from '../liminal/lazy.ts';
 import {SQLiteDateString, SQLiteDateTimeString} from '../liminal/date.ts';
 import * as date from '../liminal/date.ts';
@@ -123,8 +123,56 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
     all(): TimesheetEntry[] {
         return this.allTimesheetEntries.all();
     }
+
+    // A volunteer's entries, most recent first, with the event name (if any).
+    @path
+    get entriesForVolunteer() {
+        return db().prepare<TimesheetEntry & {event_description: string|null}, {volunteer_id: number}>(block`
+/**/   SELECT timesheet_entry.*, event.description AS event_description
+/**/          FROM timesheet_entry
+/**/          LEFT JOIN event ON timesheet_entry.event_id = event.event_id
+/**/          WHERE timesheet_entry.volunteer_id = :volunteer_id
+/**/          ORDER BY timesheet_entry.start_time DESC`);
+    }
+
+    // Renders a volunteer's timesheet as a section for the volunteer detail page.
+    renderForVolunteer(volunteer_id: number): Markup {
+        const entries = this.entriesForVolunteer.all({volunteer_id});
+        if(entries.length === 0)
+            return [h.p, {class: 'text-muted'}, 'No timesheet entries yet.'];
+
+        const totalHours = entries.reduce((sum, e) => sum + entryHours(e), 0);
+
+        return [h.table, {class: 'table table-sm'},
+            [h.tbody, {},
+             [h.tr, {},
+              [h.th, {}, 'Date'], [h.th, {}, 'Event'],
+              [h.th, {class: 'text-end'}, 'Hours'], [h.th, {}, 'Notes']],
+             entries.map(e => this.renderEntryRow(e)),
+             [h.tr, {},
+              [h.td, {colspan: '2', class: 'text-end fw-bold'}, 'Total'],
+              [h.td, {class: 'text-end fw-bold'}, totalHours.toFixed(1)],
+              [h.td, {}]],
+            ]];
+    }
+
+    renderEntryRow(e: TimesheetEntry & {event_description: string|null}): Markup {
+        const hrs = e.end_time ? entryHours(e) : null;
+        return [h.tr, {},
+            [h.td, {}, formatDate(e.start_time)],
+            [h.td, {}, e.event_description || '—'],
+            [h.td, {class: 'text-end'}, hrs == null ? '—' : hrs.toFixed(1)],
+            [h.td, {}, e.notes || ''],
+        ];
+    }
 }
 export const timesheetEntryMetaData = new TimesheetEntryTable();
+
+// Duration of a timesheet entry in hours (0 if not yet ended).
+function entryHours(e: TimesheetEntry): number {
+    if(!e.end_time) return 0;
+    return (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 3600000;
+}
 
 
 

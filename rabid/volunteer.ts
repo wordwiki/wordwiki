@@ -11,6 +11,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import {lazy} from '../liminal/lazy.ts';
 import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
+import {rabid} from './rabid.ts';
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -282,7 +283,10 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.dd, {class: 'col-sm-9'}, v.join_date || '—'],
             ],
 
-            // TODO: timesheet entries, committed tasks, etc.
+            [h.h4, {class: 'mt-4'}, 'Timesheet'],
+            rabid.timesheet_entry.renderForVolunteer(volunteer_id),
+
+            // TODO: committed tasks, etc.
         ];
     }
 }
