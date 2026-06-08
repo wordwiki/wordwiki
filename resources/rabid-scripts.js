@@ -98,9 +98,9 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
         response = await rpc(rpcExprSegments, ...args);
         console.info('GOT RPC2 response', response);
     } catch(e) {
-        alert(String(e));
+        alert(e instanceof Error ? e.message : String(e));
         return;
-    }        
+    }
     
     if(typeof response.action !== 'string')
         throw new Error('Expected rpc response with an action');
@@ -155,7 +155,14 @@ async function rpc(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]
         } catch (_e) {
             console.info('failed to read error json');
         }
-        throw new Error(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed - ${JSON.stringify(errorJson)}`);
+        // Log the full context for debugging, but throw a clean, user-facing
+        // message: prefer the server's error text, stripped of a leading
+        // "Error: " prefix (added by String(e) on the server), and fall back to
+        // the HTTP status if there is no message.
+        console.info(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed -`, errorJson);
+        const serverMessage = errorJson && typeof errorJson.error === 'string' ? errorJson.error : undefined;
+        const message = (serverMessage || `Request failed (${response.status})`).replace(/^Error:\s*/, '');
+        throw new Error(message);
     }
 
     return await response.json();
@@ -252,7 +259,52 @@ function getDepth(node, ancestor) {
     if (!current) {
         return Number.MAX_SAFE_INTEGER;
     }
-    
+
     return depth;
 }
+
+/**
+ * Enhance any not-yet-enhanced `select.ts-picker` elements into filterable
+ * Tom Select pickers.
+ *
+ * We run this on initial load and after every htmx swap, because edit dialogs
+ * (which is where foreign-key pickers live) are loaded into the modal by htmx
+ * and so do not exist at page load.  Tom Select keeps the underlying <select>
+ * in sync, so getFormJSON() still reads the selected id and the save path is
+ * unchanged.  The `el.tomselect` guard makes re-running this idempotent.
+ */
+function initPickers(root) {
+    if (typeof TomSelect === 'undefined') return;
+    (root || document).querySelectorAll('select.ts-picker').forEach(el => {
+        if (el.tomselect) return; // already enhanced
+        const config = {
+            allowEmptyOption: true,   // keep the blank option (to clear a nullable FK)
+            dropdownParent: 'body',   // avoid the dropdown being clipped inside the modal
+        };
+        // Remote mode: if the select carries a data-load-url, fetch matching
+        // options from the server as the user types (rather than shipping every
+        // row).  The selected option is already inline, so the current value shows
+        // immediately.  Server returns [{id, label}, ...].
+        const loadUrl = el.dataset.loadUrl;
+        if (loadUrl) {
+            config.valueField = 'id';
+            config.labelField = 'label';
+            config.searchField = 'label';
+            config.preload = true;         // load the initial option list when the picker initializes
+            config.load = (query, callback) => {
+                const url = loadUrl + (loadUrl.includes('?') ? '&' : '?') + 'q=' + encodeURIComponent(query);
+                fetch(url, {credentials: 'same-origin'})
+                    .then(r => r.json())
+                    .then(rows => callback(Array.isArray(rows) ? rows : []))
+                    .catch(() => callback());
+            };
+        }
+        new TomSelect(el, config);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => initPickers(document));
+// htmx:afterSwap fires after htmx replaces content (e.g. loading a form into the
+// modal); re-scan so freshly-inserted pickers get enhanced.
+document.body.addEventListener('htmx:afterSwap', () => initPickers(document));
 

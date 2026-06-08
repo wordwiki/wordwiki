@@ -3,12 +3,13 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableEditForm, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
-import {Markup} from "../liminal/markup.ts";
+import {Markup, h} from "../liminal/markup.ts";
 import {lazy} from '../liminal/lazy.ts';
+import * as action from "../liminal/action.ts";
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -31,6 +32,7 @@ export interface Volunteer {
     name: string;
     email: string;
     phone: string;
+    phone_number_visible_to_all_volunteers: boolnum;
 
     // Skills or Experience You'd Like to Share e.g., bike repair, event planning, fundraising, social media, etc
     skills: string;
@@ -69,6 +71,7 @@ export class VolunteerTable extends Table<Volunteer> {
             new StringField('name', {indexed: true, permissions: PublicViewable}),
             new EmailField('email', {indexed: true, unique: true, permissions: PublicViewable}),
             new PhoneField('phone', {nullable: true, permissions: PublicViewable}),
+            new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
             new StringField('emergency_contact_name', {default: ''}),
             new StringField('emergency_contact_phone', {default: ''}),
@@ -84,7 +87,7 @@ export class VolunteerTable extends Table<Volunteer> {
     };
 
     @path
-    get getByEmail() {
+    get byEmail() {
         return db().prepare<Volunteer, {email: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
@@ -128,6 +131,89 @@ export class VolunteerTable extends Table<Volunteer> {
     get tableView(): TableView<Volunteer> {
         return new TableView<Volunteer>(this.tableRenderer, this.activeVolunteersByName.closure());
     }
+
+    // ------------------------------------------------------------------------
+    // --- Search (a worked example of "an action with a parameter list") -----
+    // ------------------------------------------------------------------------
+    //
+    // Demonstrates the general popup-action model on something that is NOT a
+    // record edit: a button opens a dialog collecting a search term, and
+    // submitting it narrows the volunteer list in place.  The search `scope`
+    // (active-only vs. all) is a *hidden* parameter - fixed by whichever button
+    // opened the dialog, not editable by the user, but submitted along with the
+    // typed term.
+
+    // Matches volunteers whose email starts with the term, or whose name has a
+    // word starting with the term (the leading-space trick makes the term match
+    // at the start of any word).  An empty term matches everyone in scope.
+    // LIKE is case-insensitive for ASCII in SQLite, so no lower() is needed.
+    @path
+    get searchByPrefix() {
+        return db().prepare<Volunteer, {q: string, scope: string}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM volunteer
+/**/          WHERE deleted = 0
+/**/            AND (:scope = 'all' OR inactive = 0)
+/**/            AND ( email LIKE :q || '%'
+/**/                  OR (' ' || name) LIKE '% ' || :q || '%' )
+/**/          ORDER BY name`);
+    }
+
+    // The Volunteers section: buttons that open the search dialog with a fixed
+    // (hidden) scope, plus the results container (initially the full active list).
+    renderSearchableVolunteers(): Markup {
+        return [
+            [h.div, {class: 'mb-2 d-flex gap-2'},
+             action.actionButton('Search active volunteers',
+                 {kind: 'modal', dialogUrl: "/rabid/rabid.volunteer.searchDialog('active')"},
+                 'btn btn-outline-primary btn-sm'),
+             action.actionButton('Search all volunteers',
+                 {kind: 'modal', dialogUrl: "/rabid/rabid.volunteer.searchDialog('all')"},
+                 'btn btn-outline-secondary btn-sm'),
+            ],
+            [h.div, {id: 'volunteer-search-results'},
+             this.renderVolunteerList('', 'active')],
+        ];
+    }
+
+    // Returns a fragment (a count line + the table).  rpcHandler now renders a
+    // top-level fragment, so render helpers no longer need a single root element.
+    renderVolunteerList(q: string, scope: string): Markup {
+        const rows = this.searchByPrefix.all({q, scope});
+        const scopeLabel = scope === 'all' ? 'all' : 'active';
+        return [
+            [h.p, {class: 'text-muted small mb-2'},
+             q ? `${rows.length} ${scopeLabel} volunteer(s) matching “${q}”`
+               : `${rows.length} ${scopeLabel} volunteer(s)`],
+            this.tableRenderer.renderTable(rows),
+        ];
+    }
+
+    // Step 1 (generator): build the parameter dialog using the same Field
+    // widgets as the tables.  `scope` rides along as a hidden field.
+    searchDialog(scope: string): Markup {
+        const inScope = scope === 'all' ? 'all' : 'active';
+        return action.renderParamForm(
+            [new StringField('q', {prompt: 'Name or email starts with…', nullable: true})],
+            {},
+            {
+                title: inScope === 'all' ? 'Search all volunteers' : 'Search active volunteers',
+                submitLabel: 'Search',
+                hidden: {scope: inScope},
+                dispatch: {
+                    'hx-get': '/rabid/rabid.volunteer.searchResults(queryArgs)',
+                    'hx-target': '#volunteer-search-results',
+                    'hx-swap': 'innerHTML',
+                    'hx-on::after-request': 'hideModalEditor()',
+                },
+            });
+    }
+
+    // Step 2 (action): render the narrowed list to swap into the results
+    // container.  Reads the typed `q` and the hidden `scope` from the form.
+    searchResults(args: {q?: string, scope?: string}): Markup {
+        return this.renderVolunteerList(String(args?.q ?? ''), args?.scope === 'all' ? 'all' : 'active');
+    }
 }
 
 // --------------------------------------------------------------------------------
@@ -164,11 +250,12 @@ export class PasswordHashTable extends Table<PasswordHash> {
 
     ///**/   CREATE UNIQUE INDEX IF NOT EXISTS password_hash_by_volunteer ON password_hash(volunteer_id);
 
-    getByVolunteerId(volunteer_id: number): PasswordHash|undefined {
+    @path
+    get byVolunteerId() {
         return db().prepare<PasswordHash, {volunteer_id: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM password_hash
-/**/          WHERE volunteer_id = :volunteer_id`).first({volunteer_id});
+/**/          WHERE volunteer_id = :volunteer_id`);
     }
 }
 //export const passwordHashMetaData = new PasswordHashTable();
@@ -176,6 +263,9 @@ export class PasswordHashTable extends Table<PasswordHash> {
 // --------------------------------------------------------------------------------
 // --- VolunteerLoginSession ------------------------------------------------------
 // --------------------------------------------------------------------------------
+
+// These session tokens are dropped as cookies in browsers.  To end a session,
+// erase the VolunteerLoginSession record.
 
 export interface VolunteerLoginSession {
     session_id: number;
@@ -209,93 +299,3 @@ export class VolunteerLoginSessionTable extends Table<VolunteerLoginSession> {
 /**/          WHERE session_token = :session_token`);
     }
 }
-//export const volunteerLoginSessionMetaData = new VolunteerLoginSessionTable();
-
-// --------------------------------------------------------------------------------
-// --- TimesheetEntry -------------------------------------------------------------
-// --------------------------------------------------------------------------------
-
-export interface TimesheetEntry {
-    timesheet_entry_id: number;
-
-    volunteer_id: number;
-
-    // Nullable because Can do volunteer time outside of an event.
-    event_id?: number;
-    
-    // To allow for commit for partial event.  
-    start_time?: string;
-    end_time?: string;
-
-    //
-    notes: string;
-
-    // Driving information
-    km_driven_for_reimbursement: number;
-
-    //
-    is_paid_time: number;
-
-    entry_creation_time?: string;
-}
-
-export type TimesheetEntryOpt = Partial<TimesheetEntry>;
-
-
-// Add time that timesheet entry was created.
-// Add time that timesheet entry was last edited.
-// Add bool to indicate that paid time has been processed
-// Add bool to indicat that km_driven has been processed.
-
-export class TimesheetEntryTable extends Table<TimesheetEntry> {
-    
-    constructor() {
-        super ('timesheet_entry', [
-            new PrimaryKeyField('timesheet_entry_id', {}),
-            new ForeignKeyField('volunteer_id', "volunteer", "volunteer_id", {indexed: true}),
-            new ForeignKeyField('event_id', "event", "event_id", {indexed: true, nullable: true}),
-            new DateTimeField('start_time', {nullable: true}),
-            new DateTimeField('end_time', {nullable: true}),
-            new StringField('notes', {}),
-            new FloatingPointField('km_driven_for_reimbursement', {}),
-            new BooleanField('is_paid_time', {}),
-            new StringField('entry_creation_time', {nullable: true}),
-        ])
-    };
-
-    @path
-    get allTimesheetEntries() {
-        return db().prepare<TimesheetEntry, {}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM timesheet_entry
-/**/          ORDER BY start_time`);
-    }
-
-    all(): TimesheetEntry[] {
-        return this.allTimesheetEntries.all();
-    }
-}
-export const timesheetEntryMetaData = new TimesheetEntryTable();
-
-
-
-// ---------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------
-
-// export const routes = ()=> ({
-//     renderAllVolunteers,
-//     renderVolunteerRow,
-//     renderVolunteerEditor,
-//     getVolunteer,
-//     getVolunteers,
-//     saveVolunteer,
-//     //renderDate,
-//     //greet,
-// });
-
-// export const allVolunteerDml =
-//     new VolunteerTable().createDMLString() +
-//     passwordHashMetaData.createDMLString() +
-//     volunteerLoginSessionMetaData.createDMLString() +
-//     timesheetEntryMetaData.createDMLString(

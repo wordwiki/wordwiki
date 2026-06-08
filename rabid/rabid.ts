@@ -21,13 +21,18 @@ import {exists as fileExists} from "std/fs/mod.ts"
 import * as home from './home-page.ts';
 import {Page} from './page.ts';
 import * as volunteer from './volunteer.ts';
+import * as timesheet from './timesheet.ts';
 import * as event from './event.ts';
+import * as commitment from './commitment.ts';
 import {Table, Tuple} from '../liminal/table.ts';
 import * as table from '../liminal/table.ts';
 import {serialize, serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import {lazy} from '../liminal/lazy.ts';
-
+import {activityReport, dailyActivityReport} from './activity_report.ts';
+import { Temporal } from 'temporal-polyfill';
 import {rpcUrl} from '../liminal/rpc.ts';
+import * as passwordUtils from '../liminal/password.ts';
+import * as date from '../liminal/date.ts';
 
 export interface RabidServerConfig {
     hostname: string,
@@ -39,6 +44,40 @@ const constructorRoutes: Record<any, any> = {
 };
 
 /**
+ * Top-level response coercion only: should this evaluated route result be
+ * rendered as HTML markup (vs. returned as JSON)?
+ *
+ * We accept either a single element (`['div', {...}, ...]`) or a *fragment* - a
+ * bare list of markup items, e.g. `[['p',{},...], ['table',{},...]]` - so that
+ * render helpers can return a list of siblings without being forced to wrap them
+ * in a single root element.  A fragment is discriminated by its first non-null
+ * item being an element; a genuine JSON array (`[1,2]`, `[{...}]`) is not, and is
+ * returned as JSON.  The two cases are disjoint: a single element has a *string*
+ * tag at [0], a fragment has an element there.
+ *
+ * This is a deliberate, top-level-only kludge - markup.isElemMarkup, used inside
+ * the markup model, is exact and unchanged.
+ */
+function isTopLevelMarkup(result: any): boolean {
+    // A genuine element is `[tag, attrs, ...]` where tag is a string/function/
+    // symbol.  markup.isElemMarkup only checks that [1] is an object, which gives
+    // a false positive for an array of records (e.g. a query's `.all()` result),
+    // whose [1] is just another record object - so we additionally require a
+    // valid tag at [0].  (We keep this stricter check here, at the top level,
+    // rather than changing markup.isElemMarkup, which is exact within the model.)
+    const isElement = (n: any) =>
+        markup.isElemMarkup(n) &&
+        (typeof n[0] === 'string' || typeof n[0] === 'function' || typeof n[0] === 'symbol');
+    if(isElement(result))
+        return true;
+    if(!Array.isArray(result))
+        return false;
+    // A fragment: a list of markup items whose first non-null item is an element.
+    const firstMeaningful = result.find(item => item !== null && item !== undefined);
+    return isElement(firstMeaningful);
+}
+
+/**
  *
  */
 export class Rabid {
@@ -46,12 +85,18 @@ export class Rabid {
     routes: Record<string, any>;
     pages: Record<string, any>;
 
+    // The large random password (a decimal string) that authorises the
+    // rabid.shutdown(<password>) route, and the path of the pidfile we wrote at
+    // startup.  Both are populated by startServer().
+    shutdownPassword: string|undefined = undefined;
+    pidFilePath: string|undefined = undefined;
+
     @path get volunteer() { return new volunteer.VolunteerTable(); }
     @path get passwordHash() { return new volunteer.PasswordHashTable(); }
     @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
-    @path get timesheet_entry() { return new volunteer.TimesheetEntryTable(); }
+    @path get timesheet_entry() { return new timesheet.TimesheetEntryTable(); }
     @path get event() { return new event.EventTable(); }
-    @path get event_commitment() { return new event.EventCommitmentTable(); }
+    @path get event_commitment() { return new commitment.EventCommitmentTable(); }
 
     @lazy
     get tables() {
@@ -74,6 +119,14 @@ export class Rabid {
         
         this.pages = {
             home:()=>templates.pageTemplate({title: 'home', body: home.home()}),
+            activityReport:()=>templates.pageTemplate({title: 'Activity Report', body: activityReport()}),
+            dailyActivityReport:()=>templates.pageTemplate({
+                title: 'Daily Activity Report', 
+                body: dailyActivityReport(
+                    Temporal.Now.plainDateISO().subtract({ days: 30 }),
+                    Temporal.Now.plainDateISO()
+                )
+            }),
         };
         
         this.routes = Object.assign(
@@ -93,7 +146,21 @@ export class Rabid {
      */
     async startServer(config: RabidServerConfig) {
         console.info('Starting rabid server');
-        
+
+        // --- Write runtime files into the current working directory:
+        //     - rabid.pid: our process id, so a supervisor (or a human) can
+        //       check whether we are alive (modulo pid reuse) without grepping.
+        //     - rabid-shutdown-password.txt: a large random number that must be
+        //       supplied to the rabid.shutdown(<password>) route to ask this
+        //       process to exit cleanly (so e.g. systemd can restart it rather
+        //       than us being kill -9'd).  It is a secret, so we write it 0600.
+        this.shutdownPassword = generateShutdownPassword();
+        this.pidFilePath = 'rabid.pid';
+        const shutdownPasswordPath = 'rabid-shutdown-password.txt';
+        Deno.writeTextFileSync(this.pidFilePath, String(Deno.pid) + '\n');
+        Deno.writeTextFileSync(shutdownPasswordPath, this.shutdownPassword + '\n', {mode: 0o600});
+        console.info(`Wrote ${this.pidFilePath} (pid ${Deno.pid}) and ${shutdownPasswordPath} (mode 0600)`);
+
         const contentdirs = {
             '/resources/': await findResourceDir('resources')+'/',
         };
@@ -143,15 +210,37 @@ export class Rabid {
                 break;
         }
 
-        const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
+        const bodyArgs = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
 
         const cookies = parseCookies(request.headers['cookie']);
         const session_token = cookies['RABID_SESSION_TOKEN'];
         
         // TODO PRINT COOKIES HERE.
         // TODO EXPERIMENT WITH ADDING A COOKIE.
-        
-        return this.rpcHandler(request.url, jsExprSrc, searchParams, bodyParms, session_token, volunteer);
+
+        // --- Special-case the self-shutdown route.  We match it with a strict
+        //     digits-only regex and handle it directly rather than via jsterp so
+        //     that (a) the large numeric password is compared as an exact string
+        //     (a 40-digit number would lose precision if parsed as a JS number),
+        //     and (b) no attacker-supplied expression is ever evaluated on this
+        //     deliberately pre-login path - the only thing we accept is digits.
+        const shutdownMatch = jsExprSrc.match(/^rabid\.shutdown\((\d+)\)$/);
+        if(shutdownMatch)
+            return this.shutdown(shutdownMatch[1]);
+
+        const response = await this.rpcHandler(request.url, jsExprSrc, searchParams, bodyArgs, session_token, volunteer);
+
+        // If this request was issued by htmx (rather than a full-page navigation),
+        // translate any server-side redirect into an HX-Redirect so that htmx
+        // performs a real client-side navigation instead of swapping in the
+        // redirected page.  This lets stateful actions just return
+        // server.forwardResponse(url) and work correctly from both htmx and
+        // plain <form> posts.
+        const isHtmxRequest = request.headers['hx-request'] === 'true';
+        if(isHtmxRequest && server.isRedirectResponse(response))
+            return server.toHxRedirectResponse(response);
+
+        return response;
     }
 
     /**
@@ -159,8 +248,8 @@ export class Rabid {
      */
     async rpcHandler(requestUrl: string,
                      jsExprSrc: string,
-                     queryParms: Record<string, any>,
-                     bodyParms: Record<string, any>,
+                     queryArgs: Record<string, any>,
+                     bodyArgs: Record<string, any>,
                      session_token: string|undefined,
                      volunteer: string|undefined): Promise<any> {
 
@@ -171,13 +260,21 @@ export class Rabid {
         // --- Push (possibly empty) URL search parameters as a scope
         //     with the single binding 'query'.  Later we may add more stuff
         //     from the request to this scope.
-        rootScope = Object.assign({}, rootScope, {queryParms, bodyParms});
+        rootScope = Object.assign({}, rootScope, {queryArgs, bodyArgs, session_token});
         //console.info('rootScope', rootScope);
 
-        // --- If the query request body is a {}, then it is form parms or
-        //     a json {} - push on scope.
-        //     TODO: move body parms out of the root scope
-        //rootScope = Object.assign(Object.create(rootScope), bodyParms);
+        // --- Bind the positional rpc argument placeholders ($arg0, $arg1, ...)
+        //     that the client tx``/rpc`` mechanism posts in the request body, so
+        //     an expr like `rabid.volunteer.saveForm($arg0)` can resolve them.
+        //     We deliberately bind ONLY keys of the form $argN - not arbitrary
+        //     body keys - so a request body cannot inject or shadow other
+        //     bindings (routes, queryArgs, session_token) in the eval scope.
+        //     (This replaces the old, disabled "spread the whole body" approach.)
+        const rpcArgBindings: Record<string, any> = {};
+        for(const [k, v] of Object.entries(bodyArgs))
+            if(/^\$arg\d+$/.test(k))
+                rpcArgBindings[k] = v;
+        rootScope = Object.assign({}, rootScope, rpcArgBindings);
 
         console.info("***", new Date().toLocaleString(), '::', volunteer, '::', jsExprSrc);
         // console.info('about to eval', jsExprSrc, 'with root scope ',
@@ -188,8 +285,14 @@ export class Rabid {
         const session: volunteer.VolunteerLoginSession|undefined =
             session_token ? this.volunteerLoginSession.getBySessionToken.first({session_token}) : undefined;
 
-        // If no session found, render login page instead of the requested page.
-        if(false && !session) {
+        const allowedWithoutLoginJsExprsWhitelist = new Set([
+            'rabid.loginRequest(bodyArgs)'
+        ]);
+
+        const noLoginRequired = false;  // XXX this will be replaced with server CLI args to supply test userid/password.
+        const redirectToLoginPage = !(noLoginRequired || !!session || allowedWithoutLoginJsExprsWhitelist.has(jsExprSrc));
+        if(redirectToLoginPage) {
+            console.info('Redirecting to login');
             jsExprSrc = `rabid.login(${JSON.stringify(requestUrl)})`;
         }
         
@@ -214,7 +317,7 @@ export class Rabid {
             return result;
         } else if(typeof result === 'string') {
             return server.htmlResponse(result);
-        } else if(markup.isElemMarkup(result) && Array.isArray(result)/* && result[0] === 'html'*/) { // this squigs me - but is is soooo convenient!
+        } else if(isTopLevelMarkup(result)) {
             let htmlText: string = 'cat';
             try {
                 // Note: we allow markup to contain Promises, which we force
@@ -245,46 +348,190 @@ export class Rabid {
         //return Promise.resolve({status: 200, headers: {}, body: 'not found'});
     }
 
-    login(targetUrl: string): Markup {
+    login(targetUrl: string, errorMessage?: string): Markup {
 
         // TODO: rendering the login page while already logged in is confusing - probably 301 to the
         //       home page if already logged in.
         // TODO: I think our scheme may be wrong - if the actual login is done by RPC, then we don't need the
         //       targetUrl thing, the 301, the confusion as to whether to render if logged in etc etc -
         //       much better.
-        
+
         const body = [
-            [h.h1, {}, 'Login to Rabid - The Red Raccoon Volunteer System'],
-            
-            [h.form, {name: 'login', method: 'post', action:'rabid.loginRequest(bodyParms.email, bodyParms.password, bodyParms.targetUrl)'},
+            [h.div, {class: 'container mt-5'},
+                [h.div, {class: 'row justify-content-center'},
+                    [h.div, {class: 'col-md-6 col-lg-5'},
+                        [h.div, {class: 'card shadow'},
+                            [h.div, {class: 'card-body p-5'},
+                                [h.h1, {class: 'text-center mb-2'}, 'Welcome to Rabid'],
+                                [h.p, {class: 'text-center text-muted mb-4'}, 'The Red Raccoon Volunteer System'],
 
+                                errorMessage
+                                    ? [h.div, {class: 'alert alert-danger', role: 'alert'}, errorMessage]
+                                    : undefined,
 
-             [h.div, {class:"form-group"},
-              [h.label, {for:"email"}, 'Email address'],
-              [h.input, {type:"email", class:"form-control", name:"email", 'aria-describedby':"emailHelp", placeholder:"Enter email"}],
-              //[h.small, {id:"emailHelp", class:"form-text text-muted"}, "We'll never share your email with anyone else."],
-             ], // div
+                                [h.form, {name: 'login', method: 'post', action:'rabid.loginRequest(bodyArgs)'},
+                                    [h.div, {class:"form-group mb-3"},
+                                        [h.label, {for:"email"}, 'Email address'],
+                                        [h.input, {
+                                            type:"email", 
+                                            class:"form-control", 
+                                            name:"email", 
+                                            id:"email",
+                                            placeholder:"volunteer@example.com",
+                                            required: true
+                                        }],
+                                    ],
 
-             [h.div, {class:"form-group"},
-              [h.label, {for:"password"}, 'Password'],
-              [h.input, {type:"password", class:"form-control", name:"password", placeholder:"Password"}]
-             ], // div
+                                    [h.div, {class:"form-group mb-4"},
+                                        [h.label, {for:"password"}, 'Password'],
+                                        [h.input, {
+                                            type:"password", 
+                                            class:"form-control", 
+                                            name:"password", 
+                                            id:"password",
+                                            placeholder:"Enter your password",
+                                            required: true
+                                        }]
+                                    ],
 
-             [h.input, {type:'hidden', name: 'targetUrl', value: targetUrl}],
-             
-             [h.button, {type:"submit", class:"btn btn-primary"}, 'Login'],
-            ] // form
+                                    [h.input, {type:'hidden', name: 'targetUrl', value: targetUrl}],
+                                    
+                                    [h.button, {type:"submit", class:"btn btn-primary btn-block w-100"}, 'Sign In'],
+                                    
+                                    [h.div, {class: 'text-center mt-3'},
+                                       [h.a, {href: 'mailto:info@redraccoon.org', class: 'text-decoration-none'}, 'Contact info@redraccoon.org for password help']
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         ];
         
         return templates.pageTemplate({title: 'Login', body});
     }
         
 
-    // This should probably be a RPC rather than a page request??
-    loginRequest(email: string, password: string, targetUrl: string) {
-        // --- Attempt to authenticate
+    loginRequest(args: {email?: string, password?: string, targetUrl?: string}) {
+
+        const {email, password} = args;
+        const targetUrl = args.targetUrl || '/';
+
+        // On failure we re-render the login page with a specific, human-readable
+        // message (rather than throwing raw JSON).  The messages are intentionally
+        // specific so they are useful when diagnosing volunteer support requests.
+        const reRenderWithError = (message: string) =>
+            this.login(targetUrl, message);
+
+        if(!email)
+            return reRenderWithError('Please enter your email address');
+        if(!password)
+            return reRenderWithError('Please enter your password');
+
+        // --- Lookup volunteer by email
+        const volunteer = rabid.volunteer.byEmail.first({email});
+        if(!volunteer)
+            return reRenderWithError('No account was found for that email address');
+
+        // --- Lookup password record for volunteer
+        const passwordHashRecord = rabid.passwordHash.byVolunteerId.first({volunteer_id: volunteer.volunteer_id});
+        const {password_salt, password_hash} = passwordHashRecord ?? {};
+        if(!password_salt || !password_hash)
+            return reRenderWithError('No password has been set for this account');
+
+        // --- Hash supplied password with salt from password_hash_record
+        const hashedSuppliedPassword = passwordUtils.hashPassword(password, password_salt);
+
+        // --- Hashed password must match stored password
+        if(hashedSuppliedPassword !== password_hash)
+            return reRenderWithError('Incorrect password');
+
+        // --- Generate a new login session
+        const now = date.currentSqliteDateTime();
+        const session_token = passwordUtils.generateSessionToken();
+        const sessionId = rabid.volunteerLoginSession.insert({
+            session_token,
+            volunteer_id: volunteer.volunteer_id,
+            start_time: now,
+            last_resume_time: now,
+            last_ip: '', // TODO
+        });
+
+        // --- Set the RABID_SESSION_TOKEN cookie to the session_token and 302
+        //     redirect to the originally requested page.
+        const response = server.forwardResponse(targetUrl);
+        // Note: session tokens are base64 (no '=' padding for our 24-byte tokens),
+        //       so they are safe to use directly as a cookie value.
+        // Max-Age is set to 400 days, which is the longest lifetime modern
+        // browsers will honour (they hard-cap cookie expiry at 400 days per the
+        // cookie spec, so there is no such thing as a "forever" cookie).  The
+        // authoritative session lifetime lives in the volunteer_session table -
+        // deleting that row ends the session regardless of the cookie's age.
+        const fourHundredDaysInSeconds = 400 * 24 * 60 * 60;
+        response.headers['Set-Cookie'] =
+            `RABID_SESSION_TOKEN=${session_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${fourHundredDaysInSeconds}`;
+        return response;
     }
-              
+
+    /**
+     * Log out by clearing the current session (both server-side record and
+     * client cookie) and redirecting to the home page.
+     */
+    logout(session_token?: string): server.Response {
+        if(session_token) {
+            db().execute<{session_token: string}>(
+                'DELETE FROM volunteer_session WHERE session_token = :session_token',
+                {session_token});
+        }
+        const response = server.forwardResponse('/');
+        response.headers['Set-Cookie'] =
+            'RABID_SESSION_TOKEN=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+        return response;
+    }
+
+    /**
+     * Ask this server process to exit cleanly.  Authorised by the large random
+     * password written to rabid-shutdown-password.txt at startup (compared as an
+     * exact string).  Intended for restarts and for supervisors such as systemd
+     * (which can then start a fresh process) - cleaner than kill -9.
+     *
+     * Note: this route is intercepted in requestHandler (not evaluated by jsterp)
+     * and is reachable without a login session - the shutdown password is the
+     * only credential.
+     */
+    shutdown(password: string): server.Response {
+        if(this.shutdownPassword === undefined)
+            return server.jsonResponse({error: 'shutdown is not enabled on this server'}, 403);
+        if(password !== this.shutdownPassword)
+            return server.jsonResponse({error: 'invalid shutdown password'}, 403);
+
+        console.info('*** Shutdown requested with valid password - exiting.');
+
+        // --- Best-effort removal of the pidfile so a stale one is not left behind.
+        if(this.pidFilePath) {
+            try { Deno.removeSync(this.pidFilePath); } catch(_e) { /* already gone - ignore */ }
+        }
+
+        // --- Exit shortly after this response is flushed so the caller (and any
+        //     supervisor) sees a clean reply before the process dies.
+        setTimeout(() => Deno.exit(0), 100);
+
+        return server.htmlResponse('rabid: shutting down\n');
+    }
+
+}
+
+/**
+ * Generate a large random number (as a decimal string) for use as the
+ * shutdown password.  Two 64-bit random values are concatenated, giving ~38-40
+ * digits of entropy.  We keep it a string (and never parse it as a JS number)
+ * so the full value survives - a number this large exceeds Number.MAX_SAFE_INTEGER.
+ */
+function generateShutdownPassword(): string {
+    const buf = new BigUint64Array(2);
+    crypto.getRandomValues(buf);
+    return buf[0].toString() + buf[1].toString();
 }
 
 

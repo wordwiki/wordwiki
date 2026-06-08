@@ -6,6 +6,7 @@ import {block} from "../liminal/strings.ts";
 import {serialize, serializeAny} from "../liminal/serializable.ts";
 
 import { db, Db, PreparedQuery, QueryClosure, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import * as action from "./action.ts";
 
 export type Tuple = Record<string, any>;
 
@@ -45,7 +46,7 @@ export class Table<T extends Tuple> {
     // ---------------------------------------------------------------------------
     
     getById(id: number): T {
-        console.info("getById", id);
+        //console.info("getById", id);
         return db().prepare<T, {id: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM ${this.name}
@@ -133,13 +134,58 @@ export class Table<T extends Tuple> {
     // ----------------------------------------------------------------------------
     
     /**
-     * Default rendering of a form.
+     * Default rendering of an edit form.
      *
-     * For more customization subclass EditForm and call directly.
+     * Record editing is just an action whose parameters are the row's columns,
+     * so it is expressed through the generic renderParamForm (the same machinery
+     * a search dialog or any other parameterised action uses).  Two things are
+     * record-specific, and are passed as hidden parameters:
+     *
+     *  - the primary key, so saveForm knows which row to update;
+     *  - a 'before-<field>' snapshot of every editable field.  This is our
+     *    lock-free edit-conflict protection: parseInput only writes a field whose
+     *    submitted value differs from its snapshot, so two editors who change
+     *    different fields of the same row do not clobber each other.  Carrying
+     *    these as hidden params (rather than emitting them from renderInput) keeps
+     *    them out of the non-record param case.
      */
     renderForm(record: T, onsubmit?: string): Markup {
-        onsubmit ??= 'tx`'+this+'.saveForm(${getFormJSON(event.target)})`'
-        return new TableEditForm(this, this.fields, onsubmit).render(record);
+        onsubmit ??= 'tx`'+this+'.saveForm(${getFormJSON(event.target)})`';
+
+        const editableFields = this.fields.filter(f => f.isVisible());
+
+        const hidden: Record<string, any> = {};
+        const pk = record[this.pkName];
+        if(pk !== undefined && pk !== null)
+            hidden[this.pkName] = pk;
+        for(const f of editableFields)
+            hidden['before-'+f.name] = f.toFormValue(record[f.name]);
+
+        // The serialized route path of this table (e.g. 'rabid.event_commitment'),
+        // so foreign-key fields can build their remote picker route.  Falls back to
+        // undefined (inline option lists) if this table isn't on the dispatch tree.
+        let ownerPath: string|undefined;
+        try { ownerPath = serializeAny(this); } catch(_e) { ownerPath = undefined; }
+
+        return action.renderParamForm(editableFields, record, {
+            submitLabel: 'Save',
+            hidden,
+            fieldContext: { ownerPath },
+            dispatch: {id: 'edit-form', onsubmit: 'event.preventDefault(); '+onsubmit},
+        });
+    }
+
+    // Type-ahead option source for a foreign-key field on this table, reachable as
+    // a route (e.g. rabid.event_commitment.fieldPickerOptions('volunteer_id',
+    // queryArgs)).  We resolve the FK by its declared field name and use the
+    // field's own (target table, columns) - trusted server constants - so the
+    // client never supplies raw SQL identifiers; only the search term `q` and the
+    // (validated) field name come from the request.
+    fieldPickerOptions(fieldName: string, args: {q?: string}): Array<{id: any, label: any}> {
+        const field = this.fieldsByName[fieldName];
+        if(!(field instanceof ForeignKeyField))
+            throw new Error(`Field '${fieldName}' on table '${this.name}' is not a foreign key`);
+        return field.loadOptions(String(args?.q ?? ''), 50);
     }
     
     /**
@@ -164,7 +210,24 @@ export class Table<T extends Tuple> {
 
         const primaryKeyValue = form[this.pkName];
         const primaryKey = primaryKeyValue ? utils.parseIntOrError(primaryKeyValue) : undefined;
-        
+
+        // --- Server-side required-field validation.  HTML5 'required' is only a
+        //     client-side hint, so we enforce it here as well (a non-browser or
+        //     crafted request bypasses the browser check).  A visible required
+        //     field is violated when it is being set to an empty value, or - when
+        //     inserting a new record (no primary key) - when it is absent entirely.
+        //     On update, required fields the user did not change keep their
+        //     existing value and so are not checked.
+        const isInsert = primaryKey === undefined;
+        const isEmptyValue = (v: any) => v === null || v === undefined || v === '';
+        const missingRequired = this.fields.filter(field =>
+            field.isVisible() && field.isInputRequired() &&
+            (field.name in changedFieldValues
+                ? isEmptyValue(changedFieldValues[field.name])
+                : isInsert));
+        if(missingRequired.length > 0)
+            throw new Error(`Please provide a value for: ${missingRequired.map(f => f.prompt).join(', ')}`);
+
         return { primaryKey, changedFieldValues };
     }
 
@@ -262,6 +325,16 @@ export interface FieldStyle {
 }
 
 /**
+ * Optional context passed to Field.renderInput by the record editor.  Currently
+ * carries the serialized route path of the owning table (e.g.
+ * 'rabid.event_commitment'), which a ForeignKeyField uses to build the route its
+ * remote type-ahead picker queries.
+ */
+export interface FieldRenderContext {
+    ownerPath?: string,
+}
+
+/**
  *
  */
 export class Field {
@@ -307,21 +380,54 @@ export class Field {
     render(value: any): Markup {
         return value;
     }
-    
-    renderInput(value: any): Markup {
+
+    /**
+     * The string form of a stored value as it appears in this field's form input
+     * (and, crucially, its matching `before-<name>` hidden snapshot).  Defaults to
+     * the value unchanged; fields whose input uses a different representation than
+     * the stored value (e.g. DateTimeField's datetime-local) override this so the
+     * input value and the before-value match exactly - otherwise the field looks
+     * "changed" on every save even when the user didn't touch it.
+     */
+    toFormValue(value: any): any {
+        return value;
+    }
+
+    renderInput(value: any, _ctx?: FieldRenderContext): Markup {
         throw new Error(`renderInput not implemented on ${this.constructor.name}`);
     }
 
     parseInput(form: Record<string, string>, fieldsOut: Tuple) {
         if(form[this.name] !== undefined && form['before-'+this.name] !== undefined
-            && form[this.name] !== form['before-'+this.name])
-            fieldsOut[this.name] = this.parseSimpleInput(form[this.name]);
+            && form[this.name] !== form['before-'+this.name]) {
+            let parsed = this.parseSimpleInput(form[this.name]);
+            // A non-nullable field must never become NULL: an empty input falls
+            // back to the field's default (e.g. 0 for a numeric `default: 0`).
+            // Text fields parse '' to '' (not null), so they keep the empty
+            // string and are unaffected by this.
+            if(parsed == null && !this.options.nullable && this.options.default !== undefined)
+                parsed = this.options.default;
+            fieldsOut[this.name] = parsed;
+        }
     }
 
     parseSimpleInput(value: string): any {
         throw new Error(`parseSimpleInput not implemented on ${this.constructor.name}`);
     }
-    
+
+    /**
+     * Whether the form input should be marked HTML5 `required`.
+     *
+     * A field is required only when a value genuinely must be supplied: it is
+     * neither nullable (NULL is a meaningful "missing" state) nor has a default
+     * (a default - e.g. '' for an optional text field - means the system already
+     * supplies a fallback).  Note this is a UX requirement, not a DB-integrity
+     * one: an empty text input already submits '' which satisfies TEXT NOT NULL.
+     */
+    isInputRequired(): boolean {
+        return !this.options.nullable && this.options.default === undefined;
+    }
+
     // Set for fields that have no user-visible presentation to suppress
     // prompts etc.  Presently used for PrimaryKeyField.
     isVisible(): boolean {
@@ -340,10 +446,30 @@ export class BooleanField extends Field {
     dmlType(): string {
         return 'INTEGER';
     }
-    
+
+    render(value: any): Markup {
+        return value ? 'Yes' : 'No';
+    }
+
+    // Rendered as a Yes/No <select> rather than a checkbox: a checkbox submits
+    // nothing when unchecked, which would defeat the before-value change
+    // detection (you could never turn a true back to false).  A select always
+    // submits its value.  A boolean is effectively a two-value enum.
     renderInput(value: any): Markup {
-        //throw new Error('TODO implement me');
-        return "BOOLEAN";
+        const current = value ? '1' : '0';
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['select', {class:'form-control', name:this.name, id:'input-'+this.name},
+              ['option', {value:'0', ...(current==='0'?{selected:''}:{})}, 'No'],
+              ['option', {value:'1', ...(current==='1'?{selected:''}:{})}, 'Yes'],
+             ]
+            ] // div
+        ];
+    }
+
+    parseSimpleInput(value: string): any {
+        return (value === '1' || value === 'true') ? 1 : 0;
     }
 }
 
@@ -366,9 +492,12 @@ export class StringField extends Field {
             ['div', {'class':'col-12'},
              ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
              ['input', Object.assign({type:'text', class:'form-control', name:this.name, id:'input-'+this.name, value: value ?? ''},
-                                     this.options.nullable ? {} : {required: ''})],
-             ['input', {type:'hidden', name:'before-'+this.name, value: value}]
+                                     this.isInputRequired() ? {required: ''} : {})]
             ] // div
+            // Note: the 'before-<name>' snapshot used for edit-conflict detection
+            // is supplied by the record editor as a hidden parameter (see
+            // Table.renderForm), not emitted here - so it never appears when a
+            // field is used as a plain action parameter (e.g. a search box).
         ];
     }
 
@@ -443,23 +572,38 @@ export class EnumField extends Field {
     dmlType(): string {
         return 'TEXT';
     }
-    
+
+    // Show the human label for the stored key (e.g. 'moved' -> 'Moved').
+    render(value: any): Markup {
+        return value == null ? '' : (this.choices[value] ?? value);
+    }
+
     renderInput(value: any): Markup {
         return [
             ['div', {'class':'col-12'},
              ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
-             //['input', {type:'text', class:'form-control', name:this.name, id:'input-'+this.name,
-             //           value: value ?? '', required: ''}],
-             ['select', {type: 'text', placeholder: this.prompt,
-                         id: `input-${this.name}`,
-                         class: 'form-control'},
-              Object.entries(this.options).map(([k,v])=>
+             ['select', Object.assign({name: this.name, id: `input-${this.name}`, class: 'form-control'},
+                                      this.isInputRequired() ? {required: ''} : {}),
+              // A blank option for nullable enums so the value can be cleared.
+              this.options.nullable
+                  ? ['option', {value: '', ...((value==null||value==='')?{selected:''}:{})}, '']
+                  : undefined,
+              // Choices come from this.choices (key -> label), NOT this.options
+              // (which is the FieldOptions bag).
+              Object.entries(this.choices).map(([k,v])=>
                   ['option',
                    {value: k, ...(value===k?{selected:''}:{})}, v])
-             ],
-             ['input', {type:'hidden', name:'before-'+this.name, value: value}]
+             ]
             ] // div
+            // before-<name> snapshot is supplied as a hidden param by the record
+            // editor (Table.renderForm), not emitted here.
         ];
+    }
+
+    parseSimpleInput(value: string): any {
+        // Enum values are stored as TEXT keys; an empty selection clears a
+        // nullable enum.
+        return value === '' ? null : value;
     }
 }
 
@@ -474,9 +618,19 @@ export class IntegerField extends Field {
     dmlType(): string {
         return 'INTEGER';
     }
-    
+
     renderInput(value: any): Markup {
-        throw new Error('TODO implement me');
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['input', Object.assign({type:'number', step:'1', class:'form-control', name:this.name, id:'input-'+this.name, value: value ?? ''},
+                                     this.isInputRequired() ? {required: ''} : {})]
+            ] // div
+        ];
+    }
+
+    parseSimpleInput(value: string): any {
+        return value === '' ? null : utils.parseIntOrError(value);
     }
 }
 
@@ -491,9 +645,24 @@ export class FloatingPointField extends Field {
     dmlType(): string {
         return 'REAL';
     }
-    
+
     renderInput(value: any): Markup {
-        throw new Error('TODO implement me');
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             // step="any" allows decimal values in the browser's number input.
+             ['input', Object.assign({type:'number', step:'any', class:'form-control', name:this.name, id:'input-'+this.name, value: value ?? ''},
+                                     this.isInputRequired() ? {required: ''} : {})]
+            ] // div
+        ];
+    }
+
+    parseSimpleInput(value: string): any {
+        if(value === '') return null;
+        const n = Number(value);
+        if(Number.isNaN(n))
+            throw new Error(`Invalid number for field '${this.name}': '${value}'`);
+        return n;
     }
 }
 
@@ -515,30 +684,40 @@ export class DateTimeField extends Field {
         return value;
     }
 
-    // BAD RENDERING
+    // Stored as SQLite 'YYYY-MM-DD HH:MM:SS'; an <input type=datetime-local>
+    // value is 'YYYY-MM-DDTHH:MM:SS' (a 'T' in place of the space).  We convert
+    // here so both the input value and its before-<name> snapshot use the input
+    // form and thus compare equal when the user hasn't changed the field.
+    toFormValue(value: any): any {
+        if(value == null || value === '') return '';
+        return String(value).replace(' ', 'T');
+    }
+
     renderInput(value: any): Markup {
         return [
             ['div', {'class':'col-12'},
              ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
-             // TODO make non-nullable fields required.
-             ['input', {type:'datetime-local', class:'form-control', name:this.name, id:'input-'+this.name,
-                        value: value ?? ''/*, required: ''*/}],
-             ['input', {type:'hidden', name:'before-'+this.name, value: value}]
+             ['input', Object.assign({type:'datetime-local', step:'1', class:'form-control',
+                                      name:this.name, id:'input-'+this.name, value: this.toFormValue(value)},
+                                     this.isInputRequired() ? {required: ''} : {})]
             ] // div
+            // before-<name> snapshot is supplied as a hidden param by the record
+            // editor (Table.renderForm), not emitted here.
         ];
     }
 
     parseSimpleInput(value: string): any {
-        if (!value) return value;
-        console.info('GOT date', value);
-        
-        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+        if (!value) return null;
+
+        // Accept the datetime-local form with or without seconds, and normalize
+        // back to SQLite 'YYYY-MM-DD HH:MM:SS' (seconds default to 00).
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
         if (!match) {
             throw new Error(`Invalid date format. Expected format like "2026-02-19T09:32", got "${value}"`);
         }
         
-        const [, year, month, day, hour, minute] = match;
-        return `${year}-${month}-${day} ${hour}:${minute}`;
+        const [, year, month, day, hour, minute, second] = match;
+        return `${year}-${month}-${day} ${hour}:${minute}:${second ?? '00'}`;
     }
 }
 
@@ -571,17 +750,87 @@ export class PrimaryKeyField extends IntegerField {
  *
  */
 export class ForeignKeyField extends IntegerField {
-    constructor(name: string, public target_table: string, public target_field_name: string, options: FieldOptions = {}) {
+    // labelField is the column in the target table to show in the dropdown (e.g.
+    // 'name' or 'description').  It defaults to the target's id column, which is
+    // only useful as a fallback - real foreign keys should pass a human-readable
+    // column.  target_table/target_field_name/labelField are developer-supplied
+    // constants (never user input), so it is safe to interpolate them into SQL.
+    constructor(name: string, public target_table: string, public target_field_name: string,
+                options: FieldOptions = {}, public labelField: string = target_field_name) {
         super(name, options);
     }
 
     // createDMLCore(): string {
     //     return `FOREIGN KEY(${this.name}) REFERENCES ${this.target_table}(${this.target_field_name})`;
     // }
-    
-    renderInput(value: any): Markup {
-        throw new Error('TODO implement me');
+
+    // Load selectable (id, label) rows from the target table.  `q` filters by a
+    // word-prefix on the label (leading-space trick: matches the term at the
+    // start of any word; '' returns everything); results are capped at `limit`.
+    // Used for both the inline option list and remote (type-ahead) loading.
+    loadOptions(q: string = '', limit: number = 1000): Array<{id: any, label: any}> {
+        return db().all<{id: any, label: any}, {q: string, limit: number}>(block`
+/**/   SELECT ${this.target_field_name} AS id, ${this.labelField} AS label
+/**/          FROM ${this.target_table}
+/**/          WHERE :q = '' OR (' ' || ${this.labelField}) LIKE '% ' || :q || '%'
+/**/          ORDER BY label
+/**/          LIMIT :limit`, {q, limit});
     }
+
+    // The label for a single id - for display, and for the currently-selected
+    // option of a remote picker (which doesn't ship the whole option list).
+    loadLabel(value: any): any {
+        if(value == null) return null;
+        const row = db().first<{label: any}>(
+            block`SELECT ${this.labelField} AS label FROM ${this.target_table} WHERE ${this.target_field_name} = :id`,
+            {id: value});
+        return row ? row.label : value;
+    }
+
+    render(value: any): Markup {
+        // Show the target row's label rather than the raw id.
+        const label = this.loadLabel(value);
+        return label == null ? '' : label;
+    }
+
+    renderInput(value: any, ctx?: FieldRenderContext): Markup {
+        const blankOption = this.options.nullable
+            ? ['option', {value:'', ...(value==null?{selected:''}:{})}, '']
+            : undefined;
+
+        // ts-picker -> enhanced into a filterable Tom Select on the client.
+        const selectAttrs: Record<string, any> =
+            {name:this.name, id:'input-'+this.name, class:'form-control ts-picker'};
+
+        let optionEls: Markup;
+        if(ctx?.ownerPath) {
+            // Remote mode: we know the owning table's route path, so ship only the
+            // currently-selected option and a data-load-url the client picker
+            // queries as the user types - large target tables aren't fully shipped.
+            const label = this.loadLabel(value);
+            optionEls = value == null ? [] : [['option', {value, selected:''}, label]];
+            selectAttrs['data-load-url'] =
+                `/rabid/${ctx.ownerPath}.fieldPickerOptions('${this.name}',queryArgs)`;
+        } else {
+            // Fallback: list all options inline (used when there is no route path,
+            // e.g. a table not reachable on the dispatch tree).
+            optionEls = this.loadOptions().map(o =>
+                ['option', {value: o.id, ...(String(value)===String(o.id)?{selected:''}:{})}, o.label]);
+        }
+
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['select', Object.assign(selectAttrs, this.isInputRequired() ? {required: ''} : {}),
+              blankOption,
+              optionEls
+             ]
+            ] // div
+        ];
+    }
+
+    // parseSimpleInput is inherited from IntegerField (foreign keys are integer
+    // ids): '' -> null, otherwise parseIntOrError.
 
     createDMLExtraLines(): string[] {
         //return [`FOREIGN KEY(${this.name}) REFERENCES ${this.target_table}(${this.target_field_name})`];
@@ -589,43 +838,9 @@ export class ForeignKeyField extends IntegerField {
     }
 }
 
-
-/**
- * Generic form rendering.
- * 
- * Slightly customizable though overriding, but the intent is that
- * we will use hand-written forms for complex cases.
- */
-export class TableEditForm<T extends Tuple> {
-
-    constructor(public table: Table<T>, public fields: Array<Field>, public onsubmit: string) {
-    }
-
-    render(record: Tuple): Markup {
-        return (
-            ['form', {class:'row g-3',
-                      id: 'edit-form',
-                      onsubmit: 'event.preventDefault(); '+this.onsubmit},
-
-             // --- Render fields
-             this.fields.map(field=>[
-                 this.renderInput(field, record[field.name])
-             ]),
-
-             // -- Save Button
-             ['div', {class:'col-12'},
-              ['button', {type:'submit', class:'btn btn-primary'}, 'Save']],
-             
-            ] // form
-        );
-    }
-
-    // Override point for subclasses of EditForm that want to
-    // do custom rendering for one field etc.
-    renderInput(field: Field, value: any): Markup {
-        return field.renderInput(value);
-    }
-}
+// Note: the old TableEditForm class has been folded into Table.renderForm, which
+// now builds the edit form through the generic action.renderParamForm (record
+// editing being one instance of "an action with a parameter list").
 
 interface TableRendererOptions {
     editable?: boolean,

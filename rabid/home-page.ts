@@ -6,6 +6,7 @@ import {Page} from './page.ts';
 import {Event} from './event.ts';
 import {serializeAny} from '../liminal/serializable.ts';
 import {TableView} from '../liminal/table.ts';
+import * as passwordUtils from '../liminal/password.ts';
 
 export function home(): Markup {
     const title = "Rabid - The Red Raccoon Volunteer System"
@@ -14,14 +15,14 @@ export function home(): Markup {
 
         [h.br, {}],
 
-        [h.h3, {}, 'Upcoming Events'],
+        //[h.h3, {}, 'Upcoming Events'],
         rabid.event.renderUpcomingEvents(),
 
         [h.h3, {}, 'Your recent activity'],
         //rabid.volunteer.timesheet_entry.renderRecentActivity(0),
         
         [h.h3, {}, 'Volunteers'],
-        rabid.volunteer.tableView.render(),
+        rabid.volunteer.renderSearchableVolunteers(),
 
         [h.h3, {}, 'Events'],
         rabid.event.tableView.render(),
@@ -56,9 +57,9 @@ export function renderCommittmentsForEvent(event_id: number): Markup {
     const commitmentsClosure =
         rabid.event_commitment.commitmentsForEventWithVolunteerName.closure({event_id});
 
-    console.info('CC SER', serializeAny(commitmentsClosure));
+    //console.info('CC SER', serializeAny(commitmentsClosure));
     const commitments = commitmentsClosure.all();
-    console.info('COMMITMENTS', serializeAny(commitments));
+    //console.info('COMMITMENTS', serializeAny(commitments));
     
     //console.info(rabid.event_commitment.cat);
     // Add menu to add/remove from 

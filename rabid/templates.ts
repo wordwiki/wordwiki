@@ -24,6 +24,11 @@ export function pageTemplate(content: PageContent): any {
           [h.link, {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
           [h.link, {href: '/resources/context-menu.css', rel:'stylesheet', type:'text/css'}],
           [h.link, {href: '/resources/rabid.css', rel:'stylesheet', type:'text/css'}],
+          // Tom Select: a vanilla-JS filterable <select> picker with a Bootstrap 5
+          // theme.  Initialised on .ts-picker selects by rabid-scripts.js (after
+          // htmx swaps, so it works on modal-loaded forms).
+          [h.link, {href: 'https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css', rel:'stylesheet'}],
+          [h.script, {src: 'https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js'}],
           [h.script, {src: '/resources/context-menu.js'}],
           [h.script, {src: 'https://unpkg.com/htmx.org@2.0.4'}],
           [h.script, {}, block`
@@ -138,10 +143,20 @@ export function navBar(): any {
            ], //ul
 
            // Search form
-           [h.form, {class:"d-flex", role:"search", method:'get', action:'/ww/wordwiki.searchPage(query)'},
+           [h.form, {class:"d-flex me-3", role:"search", method:'get', action:'/ww/wordwiki.searchPage(query)'},
             [h.input, {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
             [h.button, {class:"btn btn-outline-success", type:"submit"}, 'Search'],
            ], //form
+
+           // Logout (session_token is bound in the route scope by rabid.rpcHandler).
+           // Uses hx-post so the state change is a POST (not a prefetchable GET);
+           // the server replies with an HX-Redirect that htmx follows to /.
+           [h.ul, {class:"navbar-nav"},
+            [h.li, {class:"nav-item"},
+             [h.button, {type:"button", class:"nav-link btn btn-link",
+                         'hx-post':"/rabid/rabid.logout(session_token)", 'hx-swap':"none"}, 'Logout'],
+            ], //li
+           ], //ul
 
           ], //div navbar-collaplse
 

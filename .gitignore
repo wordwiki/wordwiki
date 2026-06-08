@@ -1,1 +1,5 @@
 /web-build/*
+
+# Runtime files written by the rabid server at startup (see Rabid.startServer).
+/rabid.pid
+/rabid-shutdown-password.txt

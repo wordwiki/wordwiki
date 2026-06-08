@@ -1,10 +1,10 @@
 /* RABID - Red Raccoon Volunteer System Styles */
 
 /* ============================= */
-/* Event Summary Styles          */
+/* Card Summary Styles           */
 /* ============================= */
 
-.event-summary {
+.card-summary {
     padding: 15px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -12,34 +12,34 @@
     background-color: #f9f9f9;
 }
 
-.event-not-found {
+.card-not-found {
     color: #666;
     font-style: italic;
     padding: 10px;
 }
 
-/* Event Header */
-.event-header {
+/* Card Header */
+.card-header {
     margin-bottom: 12px;
 }
 
-.event-name {
+.card-title {
     text-decoration: none;
     color: #2c5aa0;
     font-size: 1.1em;
 }
 
-.event-name:hover {
+.card-title:hover {
     color: #1e3d6f;
     text-decoration: underline;
 }
 
-.event-name strong {
+.card-title strong {
     font-weight: 600;
 }
 
-/* Event Type Badges */
-.event-badge {
+/* Card Badges */
+.card-badge {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 4px;
@@ -48,17 +48,18 @@
     margin-left: 8px;
 }
 
-.event-badge.event-public {
+/* Event-specific badge colors */
+.card-badge.event-public {
     background-color: #4CAF50;
     color: white;
 }
 
-.event-badge.event-training {
+.card-badge.event-training {
     background-color: #2196F3;
     color: white;
 }
 
-.event-badge.event-shopTime {
+.card-badge.event-shopTime {
     background-color: #FF9800;
     color: white;
 }
@@ -85,28 +86,31 @@
 
 
 
-/* Event Details Grid */
-.event-details-grid {
+/* Card Details Grid */
+.card-details-grid {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 8px 15px;
     font-size: 0.95em;
 }
 
-.event-detail-row {
+.card-detail-row {
     display: contents;
 }
 
-.event-prompt {
+/* Automatically style the first div as prompt and second as value */
+.card-detail-row > div:first-child {
     color: #666;
     font-weight: 500;
     text-align: right;
     white-space: nowrap;
 }
 
-.event-value {
+.card-detail-row > div:last-child {
     color: #333;
 }
+
+
 
 /* Specific value styles */
 .location-link {
@@ -124,18 +128,19 @@
     vertical-align: super;
 }
 
-.event-no-volunteers {
+.card-empty-value {
     color: #666;
 }
 
-.event-no-volunteers em {
+.card-empty-value em {
     font-style: italic;
 }
 
-.event-notes {
+.card-notes {
     font-style: italic;
     color: #555;
 }
+
 
 /* ============================= */
 /* Upcoming Events Styles        */
@@ -212,17 +217,18 @@
     }
     
     /* Stack grid on mobile for better readability */
+    .card-details-grid,
     .event-details-grid {
         grid-template-columns: 1fr;
         gap: 5px;
     }
     
-    .event-prompt {
+    .card-detail-row > div:first-child {
         text-align: left;
         font-weight: 600;
     }
     
-    .event-prompt::after {
+    .card-detail-row > div:first-child::after {
         content: ":";
     }
     
@@ -251,12 +257,14 @@
 /* ============================= */
 
 @media print {
+    .card-summary,
     .event-summary {
         border: 1px solid #000;
         background-color: white;
         page-break-inside: avoid;
     }
     
+    .card-badge,
     .event-badge {
         border: 1px solid #000;
         background-color: white !important;
@@ -267,4 +275,14 @@
         content: " (" attr(href) ")";
         font-size: 0.8em;
     }
+}
+
+/* Tom Select pickers render their dropdown on <body> (dropdownParent: 'body')
+   to avoid being clipped by the scrollable modal.  Bootstrap modals sit at
+   z-index 1055, so the dropdown needs to sit above that to be visible when a
+   picker is used inside the edit modal.  The `body` qualifier raises specificity
+   so this wins over Tom Select's own `.ts-dropdown { z-index: 1000 }` (which is
+   loaded after rabid.css). */
+body .ts-dropdown {
+    z-index: 1060;
 }

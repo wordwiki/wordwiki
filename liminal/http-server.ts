@@ -48,7 +48,28 @@ export interface Response {
 }
 
 export function forwardResponse(forwardToUrl: string, status:number=302): Response {
-    return {marker: ResponseMarker, status, headers: {Location: forwardToUrl}, body: forwardToUrl};            
+    return {marker: ResponseMarker, status, headers: {Location: forwardToUrl}, body: forwardToUrl};
+}
+
+export const redirectStatuses = new Set([301, 302, 303, 307, 308]);
+
+export function isRedirectResponse(r: any): r is Response {
+    return isMarkedResponse(r) && redirectStatuses.has(r.status);
+}
+
+/**
+ * htmx issues its requests via XHR/fetch, which transparently follows normal
+ * HTTP redirects - so a 302 would cause htmx to swap in the *redirected* page's
+ * HTML rather than navigating to it.  Instead, htmx looks for an HX-Redirect
+ * response header and performs a full client-side navigation when it sees one.
+ *
+ * This converts one of our normal redirect Responses into the htmx form,
+ * preserving any other headers we set (notably Set-Cookie).
+ */
+export function toHxRedirectResponse(redirect: Response): Response {
+    const headers = Object.assign({}, redirect.headers, {'HX-Redirect': redirect.headers['Location']});
+    delete headers['Location'];
+    return {marker: ResponseMarker, status: 200, headers, body: ''};
 }
 
 export function htmlResponse(htmlText: string, status:number=200): Response {
@@ -72,7 +93,13 @@ export function parseCookies(cookieHeader: string | null | undefined): { [key: s
     if (cookieHeader) {
         const cookieArray = cookieHeader.split(';');
         for (const cookie of cookieArray) {
-            const [name, value] = cookie.trim().split('=').map(s => decodeURIComponent(s));
+            // Split on the first '=' only: cookie values may themselves contain
+            // '=' (e.g. base64 padding), so a naive split('=') would truncate them.
+            const trimmed = cookie.trim();
+            const eq = trimmed.indexOf('=');
+            if (eq === -1) continue;
+            const name = decodeURIComponent(trimmed.slice(0, eq));
+            const value = decodeURIComponent(trimmed.slice(eq + 1));
             cookies[name] = value;
         }
     }
