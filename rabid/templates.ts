@@ -42,6 +42,10 @@ export function pageTemplate(content: PageContent): any {
          [h.head, {},
           [h.meta, {charset:"utf-8"}],
           [h.meta, {name:"viewport", content:"width=device-width, initial-scale=1"}],
+          // hx-boost targets #content (not <body>), so htmx's default would scroll
+          // #content's top to the viewport top - hiding the navbar above it.  Turn
+          // that off so a boosted nav leaves the navbar in view.
+          [h.meta, {name:"htmx-config", content:'{"scrollIntoViewOnBoost":false}'}],
           content.title !== undefined ? [h.title, {}, content.title] : undefined,
           config.bootstrapCssLink,
           [h.link, {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
@@ -88,7 +92,11 @@ export function pageTemplate(content: PageContent): any {
           [h.audio, {id:'audioPlayer', preload:'none'},
            [h.source, {src:'', type:'audio/mpeg'}]],
 
-          content.body,
+          // The page body lives in #content, the swap target for hx-boosted nav
+          // links: a boosted navigation replaces just this region (the navbar,
+          // modal skeleton and scripts persist), while a full-page load renders
+          // the same content inside the document.
+          [h.main, {id:'content'}, content.body],
 
           renderModalEditorSkeleton(),
 
@@ -111,10 +119,14 @@ export function navBar(): any {
           ], //button
 
           [h.div, {class:"collapse navbar-collapse", id:"navbarSupportedContent"},
-           [h.ul, {class:"navbar-nav me-auto mb-2 mb-lg-0"},
+           // hx-boost: nav links navigate via htmx, swapping just #content (the
+           // server returns a body-only response for HX-Request - see page()).
+           // The browser tab title updates from the <title> in that response.
+           [h.ul, {class:"navbar-nav me-auto mb-2 mb-lg-0",
+                   'hx-boost':'true', 'hx-target':'#content', 'hx-swap':'innerHTML'},
 
             [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Home'],
+             [h.a, {class:"nav-link", href:"/"}, 'Home'],
             ], //li
 
             [h.li, {class:"nav-item"},
@@ -136,7 +148,7 @@ export function navBar(): any {
 
             // Reports
             [h.li, {class:"nav-item dropdown"},
-             [h.a, {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
+             [h.a, {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false", 'hx-boost':"false"},
               'Reports'
              ], //a
              [h.ul, {class:"dropdown-menu"},
@@ -151,7 +163,7 @@ export function navBar(): any {
 
             // Admin
             [h.li, {class:"nav-item dropdown"},
-             [h.a, {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
+             [h.a, {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false", 'hx-boost':"false"},
               'Admin'
              ], //a
              [h.ul, {class:"dropdown-menu"},
