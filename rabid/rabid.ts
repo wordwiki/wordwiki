@@ -110,8 +110,8 @@ export class Rabid {
     //      bound with @path, which will make them automatically rerenderable
     //      in a particularly clean way (if we can figure out the ARGS)
     //      But this is worth investigating.
-    home() { return templates.pageTemplate({title: 'home', body: home.home()}); }
-    volunteers() { return templates.pageTemplate({title: 'Volunteers', body: this.volunteer.renderSearchableVolunteers()}); }
+    home() { return templates.page('home', home.home()); }
+    volunteers() { return templates.page('Volunteers', this.volunteer.renderSearchableVolunteers()); }
 
     /**
      *
@@ -119,16 +119,16 @@ export class Rabid {
     constructor() {
         
         this.pages = {
-            home:()=>templates.pageTemplate({title: 'home', body: home.home()}),
+            home:()=>this.home(),
             volunteers:()=>this.volunteers(),
-            activityReport:()=>templates.pageTemplate({title: 'Activity Report', body: activityReport()}),
-            dailyActivityReport:()=>templates.pageTemplate({
-                title: 'Daily Activity Report', 
-                body: dailyActivityReport(
+            activityReport:()=>templates.page('Activity Report', activityReport()),
+            dailyActivityReport:()=>templates.page(
+                'Daily Activity Report',
+                dailyActivityReport(
                     Temporal.Now.plainDateISO().subtract({ days: 30 }),
                     Temporal.Now.plainDateISO()
                 )
-            }),
+            ),
         };
         
         this.routes = Object.assign(
@@ -220,6 +220,11 @@ export class Rabid {
         // TODO PRINT COOKIES HERE.
         // TODO EXPERIMENT WITH ADDING A COOKIE.
 
+        // Whether this request was issued by htmx (a partial swap) rather than a
+        // full-page navigation.  Used both to adapt redirects (below) and to
+        // decide whether a page() result is wrapped in the document template.
+        const isHtmxRequest = request.headers['hx-request'] === 'true';
+
         // --- Special-case the self-shutdown route.  We match it with a strict
         //     digits-only regex and handle it directly rather than via jsterp so
         //     that (a) the large numeric password is compared as an exact string
@@ -230,7 +235,7 @@ export class Rabid {
         if(shutdownMatch)
             return this.shutdown(shutdownMatch[1]);
 
-        const response = await this.rpcHandler(request.url, jsExprSrc, searchParams, bodyArgs, session_token, volunteer);
+        const response = await this.rpcHandler(request.url, jsExprSrc, searchParams, bodyArgs, session_token, volunteer, isHtmxRequest);
 
         // If this request was issued by htmx (rather than a full-page navigation),
         // translate any server-side redirect into an HX-Redirect so that htmx
@@ -238,7 +243,6 @@ export class Rabid {
         // redirected page.  This lets stateful actions just return
         // server.forwardResponse(url) and work correctly from both htmx and
         // plain <form> posts.
-        const isHtmxRequest = request.headers['hx-request'] === 'true';
         if(isHtmxRequest && server.isRedirectResponse(response))
             return server.toHxRedirectResponse(response);
 
@@ -253,7 +257,8 @@ export class Rabid {
                      queryArgs: Record<string, any>,
                      bodyArgs: Record<string, any>,
                      session_token: string|undefined,
-                     volunteer: string|undefined): Promise<any> {
+                     volunteer: string|undefined,
+                     isHtmxRequest: boolean = false): Promise<any> {
 
         // --- Top level of root scope is active routes
         let rootScope = this.routes;
@@ -313,6 +318,17 @@ export class Rabid {
         // functions or closure constructors etc to be called without "()" at the end).
         if(typeof result === 'function') {
             result = result.apply(null);
+        }
+
+        // A page() result (a navigable entry point) is wrapped in the site
+        // document template for a top-level navigation, or reduced to just its
+        // body for an htmx request - plus a <title> element so htmx still updates
+        // the browser tab on a partial swap.  Fragment routes don't return a
+        // page() and pass through here untouched (never wrapped).
+        if(templates.isPage(result)) {
+            result = isHtmxRequest
+                ? [[h.title, {}, result.title], result.body]
+                : templates.pageTemplate({title: result.title, body: result.body});
         }
 
         if(server.isMarkedResponse(result)) {
@@ -411,7 +427,7 @@ export class Rabid {
             ]
         ];
         
-        return templates.pageTemplate({title: 'Login', body});
+        return templates.page('Login', body);
     }
         
 

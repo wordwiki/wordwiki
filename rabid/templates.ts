@@ -11,6 +11,30 @@ export interface PageContent {
     body?: any;
 }
 
+// --- Page results -----------------------------------------------------------
+//
+// A route that is a full *page* (a navigable entry point) returns page(title,
+// body) rather than assembling a document itself.  The dispatcher then wraps it
+// in pageTemplate for a top-level navigation, or returns just the body for an
+// htmx request (see Rabid.rpcHandler).  Routes that produce *fragments* (the
+// common case - they replace part of a page) just return plain markup and are
+// never wrapped.
+export const pageMarker: unique symbol = Symbol('page');
+
+export interface Page {
+    [pageMarker]: true;
+    title: any;
+    body: any;
+}
+
+export function page(title: any, body: any): Page {
+    return {[pageMarker]: true, title, body};
+}
+
+export function isPage(v: any): v is Page {
+    return !!v && v[pageMarker] === true;
+}
+
 export function pageTemplate(content: PageContent): any {
     return (
         [h.html, {},
