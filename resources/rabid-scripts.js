@@ -123,10 +123,15 @@ function showAlert(message) {
         toastEl.setAttribute('role', 'alert');
         toastEl.setAttribute('aria-live', 'assertive');
         toastEl.setAttribute('aria-atomic', 'true');
+        // Larger than the Bootstrap default: errors are important and easy to miss
+        // at the default ~350px / small font (especially over an open modal).
+        toastEl.style.minWidth = '520px';
+        toastEl.style.maxWidth = '600px';
+        toastEl.style.fontSize = '1.2rem';
         toastEl.innerHTML =
             '<div class="d-flex">' +
-              '<div class="toast-body"></div>' +
-              '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
+              '<div class="toast-body" style="padding:1rem 1.25rem;"></div>' +
+              '<button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
             '</div>';
         // textContent (not innerHTML) so the message can't inject markup.
         toastEl.querySelector('.toast-body').textContent = text;
