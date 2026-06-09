@@ -35,6 +35,8 @@ import {rpcUrl} from '../liminal/rpc.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
+import * as browserAgent from '../liminal/browser-agent.ts';
+import {runBrowserDemo} from './browser_test_demo.ts';
 
 export interface RabidServerConfig {
     hostname: string,
@@ -560,6 +562,8 @@ export class Rabid {
      */
     logout(session_token?: string): server.Response {
         if(session_token) {
+            // If this session was a test client, drop its in-memory channel state.
+            try { this.testClientChannel.drop(session_token); } catch(_e) { /* ignore */ }
             db().execute<{session_token: string}>(
                 'DELETE FROM volunteer_session WHERE session_token = :session_token',
                 {session_token});
@@ -568,6 +572,135 @@ export class Rabid {
         response.headers['Set-Cookie'] =
             'RABID_SESSION_TOKEN=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
         return response;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Browser test bridge ------------------------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // A logged-in browser with the 'testing' permission opts in (by loading the
+    // test-client page), then long-polls for JS to run; server-side test code
+    // calls evalInBrowser() to push JS onto that loop and await the result.  This
+    // gives "run JS in a real browser and get the value back" with no separate
+    // puppeteer/CDP process - it reuses the app's own HTTP channel, session and
+    // auth.  See liminal/browser-agent.ts (the transient channel) and the
+    // last_test_client_* session columns (durable identity/liveness).
+
+    // The transient in-memory command channel (lost on restart - identity lives
+    // in the session row, so a reconnecting browser just re-parks a poll).
+    @lazy get testClientChannel() { return new browserAgent.BrowserAgentChannel(); }
+
+    // The harness is a remote-code-execution capability into a logged-in browser
+    // session, so it is gated twice: it is refused on a production-marked db
+    // (using the db_purpose marker that travels with the data), and every route
+    // requires the 'testing' permission.
+    #assertHarnessEnabled(): void {
+        const purpose = security.runSystem(() => this.config.getDbPurpose());
+        if(purpose === 'production')
+            throw new Error('the browser test harness is disabled on a production database');
+    }
+    #assertTestingRole(): void {
+        const ctx = security.current();
+        if(!ctx?.system && !ctx?.roles.has('testing'))
+            throw new Error("the 'testing' permission is required to use the browser test harness");
+    }
+    #requireSession(session_token: string|undefined): string {
+        if(!session_token) throw new Error('a login session is required to act as a test client');
+        return session_token;
+    }
+
+    // --- Routes the browser test client calls (all POST/GET via the rpc layer) ---
+
+    // Opt in as the test client: stamps last_test_client_opt_in (and heartbeat) on
+    // this session.  The most-recent opt-in is "the" test client; older clients are
+    // told (via testClientPoll) to stop.
+    testClientOptIn(session_token?: string) {
+        this.#assertHarnessEnabled();
+        this.#assertTestingRole();
+        const token = this.#requireSession(session_token);
+        security.runSystem(() =>
+            this.volunteerLoginSession.stampTestClientOptIn(token, date.currentSqliteDateTime()));
+        return {ok: true, pollTimeoutMs: 25_000};
+    }
+
+    // Long-poll for a command.  If this session is no longer the most-recent
+    // opt-in, it is told to stop (a newer client has taken over).  Otherwise it
+    // stamps a heartbeat and parks until a command arrives or the poll times out.
+    async testClientPoll(session_token?: string) {
+        this.#assertHarnessEnabled();
+        this.#assertTestingRole();
+        const token = this.#requireSession(session_token);
+        const current = security.runSystem(() => this.volunteerLoginSession.mostRecentTestClient.first({}));
+        if(!current || current.session_token !== token)
+            return {stale: true};
+        security.runSystem(() =>
+            this.volunteerLoginSession.stampTestClientHeartbeat(token, date.currentSqliteDateTime()));
+        const cmd = await this.testClientChannel.poll(token, {pollTimeoutMs: 25_000});
+        return {cmd};
+    }
+
+    // Deliver the result of a command (cmdId, result-envelope as positional args).
+    testClientResult(session_token: string|undefined, cmdId: string, result: browserAgent.BrowserResult) {
+        this.#assertHarnessEnabled();
+        this.#assertTestingRole();
+        const token = this.#requireSession(session_token);
+        const delivered = this.testClientChannel.deliverResult(token, String(cmdId), result);
+        return {ok: true, delivered};
+    }
+
+    /**
+     * Server-side seam: run `js` in the current test client's browser and return
+     * its (structured-cloned) value.  Throws if no client has opted in, if the
+     * browser eval threw, or if it did not answer in time (the timeout message
+     * includes the client's last heartbeat so a disconnected client is obvious).
+     *
+     * The target is always the most-recent opt-in - never an older client, even a
+     * silent one - so which browser runs the code is deterministic.
+     */
+    async evalInBrowser(js: string, opts: {timeoutMs?: number} = {}): Promise<any> {
+        this.#assertHarnessEnabled();
+        const current = security.runSystem(() => this.volunteerLoginSession.mostRecentTestClient.first({}));
+        if(!current)
+            throw new Error('no browser test client has opted in - open /rabid/rabid.testClientPage() in a logged-in browser with the \'testing\' permission');
+        let res: browserAgent.BrowserResult;
+        try {
+            res = await this.testClientChannel.enqueue(current.session_token, js, {timeoutMs: opts.timeoutMs ?? 30_000});
+        } catch(e) {
+            if(e instanceof browserAgent.BrowserEvalTimeout)
+                throw new Error(`browser eval timed out after ${e.ms}ms; the most-recent test client last sent a heartbeat at ${current.last_test_client_heartbeat ?? '(never)'} (opted in ${current.last_test_client_opt_in}) - it may be disconnected; reopen the test-client page`);
+            throw e;
+        }
+        if(!res.ok)
+            throw new browserAgent.BrowserEvalError(`browser eval threw: ${res.error?.name}: ${res.error?.message}`, res.error);
+        return res.value;
+    }
+
+    // The opt-in page: loads the test-client script (which opts in, then polls).
+    // Navigating here is the explicit opt-in - nothing else activates the harness.
+    testClientPage(): templates.Page {
+        const body = [
+            [h.div, {class: 'container py-3'},
+             [h.h2, {}, 'Browser test client'],
+             [h.p, {class: 'text-muted'},
+              'This browser is now acting as the test client: server-side tests can run JS here and read the result. Leave this tab open. Opening this page again (here or elsewhere) makes that tab the active client.'],
+             [h.div, {id: 'test-agent-status', class: 'alert alert-secondary'}, 'starting…'],
+             [h.button, {class: 'btn btn-outline-primary',
+                         'hx-get': '/rabid/rabid.runBrowserTests()',
+                         'hx-target': '#test-agent-results', 'hx-swap': 'innerHTML'},
+              'Run demo tests'],
+             [h.div, {id: 'test-agent-results', class: 'mt-3'}],
+             [h.script, {src: '/resources/test-agent.js'}],
+            ],
+        ];
+        return templates.page('Test client', body);
+    }
+
+    // Run the sample browser-test suite (mixes in-process and in-browser checks).
+    // Reachable from the test-client page's "Run demo tests" button.
+    async runBrowserTests(): Promise<Markup> {
+        this.#assertHarnessEnabled();
+        this.#assertTestingRole();
+        return await runBrowserDemo(this);
     }
 
     /**

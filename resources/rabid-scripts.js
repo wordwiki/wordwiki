@@ -90,6 +90,97 @@ function removeContainedRoots(roots) {
 }
 
 /**
+ * Non-blocking replacement for window.alert (used by tx()).
+ *
+ * Native alert() blocks the browser event loop until the user dismisses it,
+ * which stalls automation: neither puppeteer nor our own browser-test bridge can
+ * make progress while an alert is up.  Instead we show the message as a Bootstrap
+ * toast (non-blocking) and record it in window.current_alert while it is on
+ * screen, so a test can read/assert on the message.  If the toast cannot be shown
+ * (no Bootstrap, an exception, or it never actually becomes visible) we fall back
+ * to the native alert so a message is never silently lost.
+ */
+let alertSeq = 0;
+function showAlert(message) {
+    const text = message == null ? '' : String(message);
+
+    // Record immediately so a test can observe the message regardless of how it
+    // is ultimately displayed (toast or fallback).
+    window.current_alert = text;
+
+    let bootstrapInst;
+    try { bootstrapInst = getGlobalBoostrapInst(); } catch (_e) { bootstrapInst = undefined; }
+    if (!bootstrapInst || !bootstrapInst.Toast) {
+        fallbackAlert(text);
+        return;
+    }
+
+    try {
+        const container = getAlertContainer();
+        const toastEl = document.createElement('div');
+        toastEl.id = 'alert-toast-' + (++alertSeq);
+        toastEl.className = 'toast align-items-center text-bg-danger border-0';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML =
+            '<div class="d-flex">' +
+              '<div class="toast-body"></div>' +
+              '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
+            '</div>';
+        // textContent (not innerHTML) so the message can't inject markup.
+        toastEl.querySelector('.toast-body').textContent = text;
+        container.appendChild(toastEl);
+
+        const toast = bootstrapInst.Toast.getOrCreateInstance(toastEl, {autohide: false});
+
+        // Clear the global only while *this* message is the one still on screen.
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+            if (window.current_alert === text) window.current_alert = null;
+        });
+
+        let shown = false;
+        toastEl.addEventListener('shown.bs.toast', () => { shown = true; });
+        toast.show();
+
+        // Verify it actually displayed; if not (e.g. CSS missing), fall back to a
+        // native alert.  We watch the shown event and the .show class rather than
+        // offsetParent, which is always null for the position-fixed container.
+        setTimeout(() => {
+            if (!shown && !toastEl.classList.contains('show')) {
+                try { toast.dispose(); } catch (_e) { /* ignore */ }
+                toastEl.remove();
+                fallbackAlert(text);
+            }
+        }, 400);
+    } catch (_e) {
+        fallbackAlert(text);
+    }
+}
+
+// The fixed top-right container that holds alert toasts (created lazily so no
+// template change is needed).
+function getAlertContainer() {
+    let c = document.getElementById('alert-toast-container');
+    if (!c) {
+        c = document.createElement('div');
+        c.id = 'alert-toast-container';
+        c.className = 'toast-container position-fixed top-0 end-0 p-3';
+        c.style.zIndex = '2000';
+        document.body.appendChild(c);
+    }
+    return c;
+}
+
+// Last-resort native alert: blocks until confirmed, so clear the global right
+// after it returns (it only names a message while that message is on screen).
+function fallbackAlert(text) {
+    window.alert(text);
+    if (window.current_alert === text) window.current_alert = null;
+}
+
+/**
  *
  */
 async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
@@ -98,7 +189,7 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
         response = await rpc(rpcExprSegments, ...args);
         console.info('GOT RPC2 response', response);
     } catch(e) {
-        alert(e instanceof Error ? e.message : String(e));
+        showAlert(e instanceof Error ? e.message : String(e));
         return;
     }
     
@@ -118,7 +209,7 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
 
     case 'alert': {
         const message = response.message ?? "Unknown error while processing request";
-        alert(message);
+        showAlert(message);
         break;
     }
 

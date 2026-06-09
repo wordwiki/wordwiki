@@ -385,6 +385,14 @@ export interface VolunteerLoginSession {
     start_time: string;
     last_resume_time: string;
     last_ip: string;
+
+    // Browser-test bridge (see liminal/browser-agent.ts).  Stamped only when this
+    // session opts in as a test client.  Together they let the server pick "the"
+    // test client deterministically (most-recent opt-in) and report whether it is
+    // probably still alive (heartbeat freshness) - and, being in the row, they
+    // survive a server restart.  Null on ordinary sessions.
+    last_test_client_opt_in?: string;
+    last_test_client_heartbeat?: string;
 }
 
 export type VolunteerLoginSessionOpt = Partial<VolunteerLoginSession>;
@@ -398,7 +406,9 @@ export class VolunteerLoginSessionTable extends Table<VolunteerLoginSession> {
             new ForeignKeyField('volunteer_id', "volunteer", "volunteer_id", {indexed: true}),
             new DateTimeField('start_time', {}),
             new DateTimeField('last_resume_time', {}),
-            new StringField('last_ip', {})
+            new StringField('last_ip', {}),
+            new DateTimeField('last_test_client_opt_in', {nullable: true}),
+            new DateTimeField('last_test_client_heartbeat', {nullable: true}),
         ])
     };
 
@@ -409,4 +419,36 @@ export class VolunteerLoginSessionTable extends Table<VolunteerLoginSession> {
 /**/          FROM volunteer_session
 /**/          WHERE session_token = :session_token`);
     }
+
+    // The current test client: whichever session opted in most recently.  We
+    // always target the most-recent opt-in and never fall back to an older one,
+    // even if it has gone silent - deterministic, no surprise of a command landing
+    // in a stale tab.  Heartbeat is reported separately (freshness only).
+    @path
+    get mostRecentTestClient() {
+        return this.prepare<VolunteerLoginSession, {}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM volunteer_session
+/**/          WHERE last_test_client_opt_in IS NOT NULL
+/**/          ORDER BY last_test_client_opt_in DESC
+/**/          LIMIT 1`);
+    }
+
+    // Stamp opt-in (also stamps heartbeat - opting in is itself a sign of life).
+    stampTestClientOptIn(session_token: string, now: string): void {
+        db().execute<{session_token: string, now: string}>(block`
+/**/   UPDATE volunteer_session
+/**/          SET last_test_client_opt_in = :now, last_test_client_heartbeat = :now
+/**/          WHERE session_token = :session_token`, {session_token, now});
+    }
+
+    // Stamp heartbeat (called on every poll - cheap, indexed update by token).
+    stampTestClientHeartbeat(session_token: string, now: string): void {
+        db().execute<{session_token: string, now: string}>(block`
+/**/   UPDATE volunteer_session
+/**/          SET last_test_client_heartbeat = :now
+/**/          WHERE session_token = :session_token`, {session_token, now});
+    }
 }
+
+

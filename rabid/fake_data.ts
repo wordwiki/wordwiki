@@ -107,7 +107,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         skills: 'event planning, fundraising, social media',
         emergency_contact_name: 'The Beatles',
         emergency_contact_phone: '(555) 010-0011',
-        permissions: 'admin',
+        // 'testing' lets the canonical dev login drive the browser-test harness
+        // (the test-client page + evalInBrowser); see liminal/browser-agent.ts.
+        permissions: 'admin,testing',
         inactive: 0,
         marked_inactive_date: undefined,
         exit_feedback_requested: 0,
