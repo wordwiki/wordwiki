@@ -166,7 +166,7 @@ export function navBar(showTestClientLink: boolean = false): any {
             showTestClientLink
                 ? [h.li, {class:"nav-item"},
                    [h.button, {type:"button", class:"nav-link btn btn-link text-warning",
-                               onclick:"window.location.href='/rabid/rabid.testClientPage()'",
+                               onclick:"window.location.href='/rabid.testClientPage()'",
                                title:'Test-mode only: act as the browser test client'},
                     'Test client ',
                     [h.span, {class:'badge text-bg-warning'}, 'test']],

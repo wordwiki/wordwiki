@@ -193,7 +193,8 @@ beyond localhost while trusting only the password.
 3. Open the **test-client page** — a test-mode-only nav button labelled
    "Test client" (shown only on a non-production db; it's a `<button>`, not a
    prefetchable link, so prerender can't silently opt a tab in), or navigate to
-   `/rabid/rabid.testClientPage()` directly. Leave the tab open.
+   `/rabid.testClientPage()` directly (the `/rabid/` prefix is optional - it's
+   stripped by the handler and `/` catches everything). Leave the tab open.
 4. Run tests: the page's "Run demo tests" button, or `./rabid.sh test-run demo`.
 
 ## File map

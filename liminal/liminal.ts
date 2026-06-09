@@ -443,13 +443,17 @@ export abstract class LiminalApp {
     }
 
     // The route URLs the browser client posts to (injected into the page so the
-    // client is app-agnostic).  Default derives them from routePrefix + appName.
+    // client is app-agnostic).  We elide the routePrefix: requestHandler strips a
+    // leading '/' then '<appName>/', and the handler is also mounted at '/', so
+    // '/<appName>.method(...)' routes fine without depending on where the app
+    // mounts its prefix (e.g. wordwiki at /ww/).  Method routes keep the '()' -
+    // the auto-call of a bare function result loses `this` on a bound method.
     protected testClientRoutes(): {optIn: string, poll: string, result: string} {
-        const p = `${this.routePrefix}${this.appName}`;
+        const a = this.appName;
         return {
-            optIn:  `${p}.testClientOptIn(session_token)`,
-            poll:   `${p}.testClientPoll(session_token)`,
-            result: `${p}.testClientResult(session_token,$arg0,$arg1)`,
+            optIn:  `/${a}.testClientOptIn(session_token)`,
+            poll:   `/${a}.testClientPoll(session_token)`,
+            result: `/${a}.testClientResult(session_token,$arg0,$arg1)`,
         };
     }
 
@@ -492,7 +496,7 @@ export abstract class LiminalApp {
         this.assertHarnessEnabled();
         const current = security.runSystem(() => this.mostRecentTestClient());
         if(!current)
-            throw new Error(`no browser test client has opted in - open ${this.routePrefix}${this.appName}.testClientPage() in a logged-in browser with the 'testing' permission`);
+            throw new Error(`no browser test client has opted in - open /${this.appName}.testClientPage() in a logged-in browser with the 'testing' permission`);
         let res: browserAgent.BrowserResult;
         try {
             res = await this.testClientChannel.enqueue(current.session_token, js, {timeoutMs: opts.timeoutMs ?? 30_000});
@@ -510,7 +514,7 @@ export abstract class LiminalApp {
     // opts in, then polls).  Navigating here is the explicit opt-in.
     testClientPage(): any {
         const routes = this.testClientRoutes();
-        const runTestsUrl = `${this.routePrefix}${this.appName}.runBrowserTests()`;
+        const runTestsUrl = `/${this.appName}.runBrowserTests()`;
         const body = [
             [h.div, {class: 'container py-3'},
              [h.h2, {}, 'Browser test client'],
@@ -559,7 +563,7 @@ export abstract class LiminalApp {
             if(Date.now() >= deadline)
                 return false;
             if(!announced) {
-                console.info(`Waiting for a test client... open ${this.routePrefix}${this.appName}.testClientPage() in a logged-in browser (an already-open tab reconnects on its own).`);
+                console.info(`Waiting for a test client... open /${this.appName}.testClientPage() in a logged-in browser (an already-open tab reconnects on its own).`);
                 announced = true;
             }
             await new Promise(r => setTimeout(r, 500));
@@ -579,7 +583,7 @@ export abstract class LiminalApp {
             return 2;
         }
         if(!await this.#waitForTestClient(opts.waitMs ?? 60_000)) {
-            console.error(`No test client connected - open ${this.routePrefix}${this.appName}.testClientPage() in a logged-in browser with the 'testing' permission, leave the tab open, and re-run.`);
+            console.error(`No test client connected - open /${this.appName}.testClientPage() in a logged-in browser with the 'testing' permission, leave the tab open, and re-run.`);
             return 3;
         }
         console.info(`\nRunning test run '${name}' (${cases.length} test(s))...\n`);
