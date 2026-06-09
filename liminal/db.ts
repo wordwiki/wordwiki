@@ -56,8 +56,14 @@ export function closeAllDbs() {
 }
 
 export const defaultDbPath = 'database/db.db';
+
+// Tests (and tooling) can point the ambient db() at a throwaway database - e.g.
+// an in-memory one - without touching the on-disk default.  Unset in production.
+let defaultDbOverride: Db | undefined = undefined;
+export function setDefaultDb(db: Db | undefined): void { defaultDbOverride = db; }
+
 export function db(): Db {
-    return dbByPath(defaultDbPath);
+    return defaultDbOverride ?? dbByPath(defaultDbPath);
 }
 
 export class Db {
@@ -66,6 +72,12 @@ export class Db {
     static open(path: string): Db {
         console.info('opening ', path);
         return new Db(new denoSqlite.DB(path));
+    }
+
+    // A fresh, private in-memory database (each call is independent).  Not added
+    // to the dbByPath cache - intended for per-run test databases.
+    static openMemory(): Db {
+        return new Db(new denoSqlite.DB(':memory:'));
     }
 
     static deleteDb(path: string) {

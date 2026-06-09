@@ -281,6 +281,47 @@ export class Rabid {
     /**
      *
      */
+    /**
+     * Build the route eval scope and evaluate a route expression against it,
+     * returning the raw result (markup, a page(), an rpc result object, ...).
+     *
+     * This is the dispatch core shared by the HTTP request handler and the test
+     * harness.  It does NOT set up the security context - the caller does that
+     * (the server resolves it from the session; a test sets an explicit actor).
+     */
+    async dispatch(jsExprSrc: string,
+                   opts: {queryArgs?: Record<string, any>,
+                          bodyArgs?: Record<string, any>,
+                          session_token?: string} = {}): Promise<any> {
+        const queryArgs = opts.queryArgs ?? {};
+        const bodyArgs = opts.bodyArgs ?? {};
+
+        // Top of scope is the active routes, plus the request's query/body args.
+        let rootScope: Record<string, any> =
+            Object.assign({}, this.routes, {queryArgs, bodyArgs, session_token: opts.session_token});
+
+        // Bind the positional rpc argument placeholders ($arg0, $arg1, ...) the
+        // client tx``/rpc`` mechanism posts in the body, so `x.saveForm($arg0)`
+        // resolves.  We bind ONLY $argN keys - not arbitrary body keys - so a
+        // request body cannot inject or shadow other bindings in the eval scope.
+        const rpcArgBindings: Record<string, any> = {};
+        for(const [k, v] of Object.entries(bodyArgs))
+            if(/^\$arg\d+$/.test(k))
+                rpcArgBindings[k] = v;
+        rootScope = Object.assign({}, rootScope, rpcArgBindings);
+
+        let result: any = evalRoute(rootScope, jsExprSrc);
+        while(result instanceof Promise)
+            result = await result;
+
+        // If the expr evaluates to a function, call it (lets render functions /
+        // closure constructors be referenced without a trailing "()").
+        if(typeof result === 'function')
+            result = result.apply(null);
+
+        return result;
+    }
+
     async rpcHandler(requestUrl: string,
                      jsExprSrc: string,
                      queryArgs: Record<string, any>,
@@ -288,29 +329,6 @@ export class Rabid {
                      session_token: string|undefined,
                      volunteer: string|undefined,
                      isHtmxRequest: boolean = false): Promise<any> {
-
-        // --- Top level of root scope is active routes
-        let rootScope = this.routes;
-        //console.info('ROOTSCOPE', rootScope);
-
-        // --- Push (possibly empty) URL search parameters as a scope
-        //     with the single binding 'query'.  Later we may add more stuff
-        //     from the request to this scope.
-        rootScope = Object.assign({}, rootScope, {queryArgs, bodyArgs, session_token});
-        //console.info('rootScope', rootScope);
-
-        // --- Bind the positional rpc argument placeholders ($arg0, $arg1, ...)
-        //     that the client tx``/rpc`` mechanism posts in the request body, so
-        //     an expr like `rabid.volunteer.saveForm($arg0)` can resolve them.
-        //     We deliberately bind ONLY keys of the form $argN - not arbitrary
-        //     body keys - so a request body cannot inject or shadow other
-        //     bindings (routes, queryArgs, session_token) in the eval scope.
-        //     (This replaces the old, disabled "spread the whole body" approach.)
-        const rpcArgBindings: Record<string, any> = {};
-        for(const [k, v] of Object.entries(bodyArgs))
-            if(/^\$arg\d+$/.test(k))
-                rpcArgBindings[k] = v;
-        rootScope = Object.assign({}, rootScope, rpcArgBindings);
 
         console.info("***", new Date().toLocaleString(), '::', volunteer, '::', jsExprSrc);
         // console.info('about to eval', jsExprSrc, 'with root scope ',
@@ -344,19 +362,13 @@ export class Rabid {
         
         let result: any = null;
         try {
-            result = evalRoute(rootScope, jsExprSrc);
-            while(result instanceof Promise)
-                result = await result;
+            // Build the eval scope and evaluate the route (shared with the test
+            // harness via dispatch()); the security context set above stays active.
+            result = await this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token});
         } catch(e) {
             // TODO more fiddling here.
             console.info('request failed', e);
             return server.jsonResponse({error: String(e)}, 400)
-        }
-
-        // If the render expr evaluates to a function, call that function (this allows render
-        // functions or closure constructors etc to be called without "()" at the end).
-        if(typeof result === 'function') {
-            result = result.apply(null);
         }
 
         // A page() result (a navigable entry point) is wrapped in the site

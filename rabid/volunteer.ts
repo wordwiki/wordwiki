@@ -235,10 +235,11 @@ export class VolunteerTable extends Table<Volunteer> {
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
-        return [h.tr, this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`),
+        const row = this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
+        return [h.tr, {...row, 'data-testid': `volunteer-row-${id}`},
             [h.td, {}, templates.pageLink(`/rabid/rabid.volunteer.detailPage(${id})`, v.name)],
-            [h.td, {}, renderFieldValue(f.email, v.email)],
-            [h.td, {}, renderFieldValue(f.phone, v.phone)],
+            [h.td, {'data-testid': `volunteer-${id}-email`}, renderFieldValue(f.email, v.email)],
+            [h.td, {'data-testid': `volunteer-${id}-phone`}, renderFieldValue(f.phone, v.phone)],
             [h.td, {}, this.editButton(id)],
         ];
     }
@@ -307,13 +308,13 @@ export class VolunteerTable extends Table<Volunteer> {
 
             [h.dl, {class: 'row mb-0'},
              [h.dt, {class: 'col-sm-3'}, 'Email'],
-             [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.email, v.email) || '—'],
+             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-email'}, renderFieldValue(f.email, v.email) || '—'],
              [h.dt, {class: 'col-sm-3'}, 'Phone'],
-             [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.phone, v.phone) || '—'],
+             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-phone'}, renderFieldValue(f.phone, v.phone) || '—'],
              [h.dt, {class: 'col-sm-3'}, 'Skills'],
-             [h.dd, {class: 'col-sm-9'}, v.skills || '—'],
+             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-skills'}, v.skills || '—'],
              [h.dt, {class: 'col-sm-3'}, 'Emergency contact'],
-             [h.dd, {class: 'col-sm-9'}, emergency],
+             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-emergency'}, emergency],
              [h.dt, {class: 'col-sm-3'}, 'Joined'],
              [h.dd, {class: 'col-sm-9'}, v.join_date || '—'],
             ],
