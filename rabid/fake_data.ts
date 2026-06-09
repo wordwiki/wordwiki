@@ -102,7 +102,9 @@ function createFakeVolunteerData(rabid: Rabid) {
             emergency_contact_phone: faker.helpers.maybe(() => {
                 return faker.phone.number({ style: 'national' });
             }, { probability: 0.7 }) || '',
-            permissions: faker.helpers.arrayElement(['', 'basic', 'admin', 'coordinator']),
+            // Roles the security model understands: most volunteers have none,
+            // some are hosts (extra visibility), a few are admins.
+            permissions: faker.helpers.arrayElement(['', '', '', '', '', '', '', 'host', 'host', 'admin']),
             inactive: isInactive ? 1 : 0,
             marked_inactive_date: isInactive ? 
                 faker.date.between({ from: joinDate, to: new Date() }).toISOString().replace('T', ' ').slice(0, 19) : 

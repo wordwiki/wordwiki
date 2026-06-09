@@ -14,12 +14,20 @@ import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
 import * as security from "../liminal/security.ts";
 
-// A volunteer (or an admin) can see/edit a volunteer's more personal fields.
+// 'host' is a volunteer trusted with a bit more visibility - hosts run events
+// (e.g. volunteer nights) and are keyholders.  We deliberately use 'host' rather
+// than 'staff': Red Raccoon is volunteer-run and volunteer-controlled, and we
+// don't want elevated access framed as staff primacy.  'admin' (system control,
+// e.g. managing roles) carries this visibility too.
+const host = security.or(security.hasRole('host'), security.hasRole('admin'));
+const selfOrHost = security.or(security.isSelf, host);
+// Private contact fields are visible to self, hosts, or - per the volunteer's own
+// opt-in/opt-out flag - to everyone.  Phone defaults private (opt-in); email shared.
+const phoneViewable = security.or(selfOrHost, security.recordFlag('phone_number_visible_to_all_volunteers'));
+const emailViewable = security.or(selfOrHost, security.recordFlag('email_visible_to_all_volunteers'));
+// Editing a volunteer record is for the volunteer themselves or an admin - hosts
+// get extra visibility, not edit rights, by default.
 const selfOrAdmin = security.or(security.isSelf, security.hasRole('admin'));
-// Phone/email are visible to self, admins, or anyone if the volunteer opted that
-// field in.  Phone defaults to private (opt-in); email defaults to shared.
-const phoneViewable = security.or(selfOrAdmin, security.recordFlag('phone_number_visible_to_all_volunteers'));
-const emailViewable = security.or(selfOrAdmin, security.recordFlag('email_visible_to_all_volunteers'));
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -87,8 +95,8 @@ export class VolunteerTable extends Table<Volunteer> {
             // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
-            new StringField('emergency_contact_name', {default: '', view: selfOrAdmin, redact: true}),
-            new StringField('emergency_contact_phone', {default: '', view: selfOrAdmin, redact: true}),
+            new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
+            new StringField('emergency_contact_phone', {default: '', view: selfOrHost, redact: true}),
             new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
             new BooleanField('inactive', {default: 0}),
             new DateTimeField('marked_inactive_date', {nullable: true}),
@@ -105,7 +113,7 @@ export class VolunteerTable extends Table<Volunteer> {
 
     // Open books: any logged-in volunteer can see a field by default.  The few
     // private ones are locked down explicitly above (phone opt-in, email opt-out,
-    // emergency contact self-or-admin) and redacted to '***' rather than hidden.
+    // emergency contact self-or-host) and redacted to '***' rather than hidden.
     defaultFieldView: security.Permission = security.loggedIn;
     // A volunteer edits their own record; admins edit anyone.  (permissions is
     // admin-only to edit; other administrative fields could be tightened later.)

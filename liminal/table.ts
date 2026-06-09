@@ -1036,11 +1036,11 @@ export class TableRenderer<T extends Tuple> {
 
 // Render a (possibly redacted) field value for display.  A REDACTED value shows a
 // muted '***' with a hint - so the viewer knows the data is hidden (not absent)
-// and that a staff member can look it up; otherwise the field's normal render()
-// is used.  Hand-coded views use this for fields that may be redacted.
+// and that a host can look it up; otherwise the field's normal render() is used.
+// Hand-coded views use this for fields that may be redacted.
 export function renderFieldValue(field: Field, value: any): Markup {
     if(security.isRedacted(value))
-        return ['span', {class: 'text-muted', title: 'Hidden — ask a staff member to look this up'}, '***'];
+        return ['span', {class: 'text-muted', title: 'Hidden — ask a host to look this up'}, '***'];
     return field.render(value);
 }
 
