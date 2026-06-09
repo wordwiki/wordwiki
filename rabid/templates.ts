@@ -9,6 +9,9 @@ export interface PageContent {
     title?: any;
     head?: any;
     body?: any;
+    // Show the (test-only) "Test client" nav link.  Set by the dispatcher from
+    // rabid.isTestDb (memoized), so this never costs a per-render db query.
+    showTestClientLink?: boolean;
 }
 
 // --- Page results -----------------------------------------------------------
@@ -94,7 +97,7 @@ export function pageTemplate(content: PageContent): any {
 
          [h.body, {},
 
-          navBar(),
+          navBar(content.showTestClientLink),
 
           // TODO probably move this somewhere else
           [h.audio, {id:'audioPlayer', preload:'none'},
@@ -117,7 +120,7 @@ export function pageTemplate(content: PageContent): any {
     );
 }
 
-export function navBar(): any {
+export function navBar(showTestClientLink: boolean = false): any {
     return [
         [h.nav, {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
          [h.div, {class:"container-fluid"},
@@ -152,7 +155,24 @@ export function navBar(): any {
             [h.li, {class:"nav-item"},
              [h.a, {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Sales'],
             ], //li
-            
+
+            // Test client: only on a non-production db (the browser-test harness
+            // lives there).  It is a <button> doing a full navigation, NOT a GET
+            // <a href>: link prefetch - and especially Chrome prerender, which
+            // *runs scripts* - could otherwise load testClientPage() and silently
+            // opt this tab in (the opt-in lives in test-agent.js).  A button is
+            // never prefetched/prerendered, so the opt-in only happens on a real
+            // click.  Full load (not htmx swap) so the page's script runs cleanly.
+            showTestClientLink
+                ? [h.li, {class:"nav-item"},
+                   [h.button, {type:"button", class:"nav-link btn btn-link text-warning",
+                               onclick:"window.location.href='/rabid/rabid.testClientPage()'",
+                               title:'Test-mode only: act as the browser test client'},
+                    'Test client ',
+                    [h.span, {class:'badge text-bg-warning'}, 'test']],
+                  ] //li
+                : undefined,
+
 
             // Reports
             [h.li, {class:"nav-item dropdown"},

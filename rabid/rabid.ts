@@ -390,7 +390,7 @@ export class Rabid {
         if(templates.isPage(result)) {
             result = isHtmxRequest
                 ? [[h.title, {}, result.title], result.body]
-                : templates.pageTemplate({title: result.title, body: result.body});
+                : templates.pageTemplate({title: result.title, body: result.body, showTestClientLink: this.isTestDb});
         }
 
         if(server.isMarkedResponse(result)) {
@@ -589,6 +589,18 @@ export class Rabid {
     // The transient in-memory command channel (lost on restart - identity lives
     // in the session row, so a reconnecting browser just re-parks a poll).
     @lazy get testClientChannel() { return new browserAgent.BrowserAgentChannel(); }
+
+    // Whether this process is serving a non-production db - the browser-test
+    // harness (and its nav link) are available here.  Memoized: the db_purpose
+    // marker is fixed for a server run (changing it needs the server stopped, due
+    // to the SQLite write lock), so we read it ONCE rather than querying it on
+    // every page render.
+    @lazy get isTestDb(): boolean {
+        let purpose: config.DbPurpose | undefined;
+        try { purpose = security.runSystem(() => this.config.getDbPurpose()); }
+        catch { purpose = undefined; }   // config table may be absent on an older db
+        return purpose !== 'production';
+    }
 
     // The harness is a remote-code-execution capability into a logged-in browser
     // session, so it is gated twice: it is refused on a production-marked db
