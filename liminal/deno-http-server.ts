@@ -34,17 +34,26 @@ export class DenoHttpServer extends HttpServer {
         const url = new URL(request.url);
         const filepath = decodeURIComponent(url.pathname);
 
-        // --- If the path resolves to a content file path, serve that directly
-        const resolvedContentFilePath = this.matchContentFilePath(filepath);
-        if(resolvedContentFilePath) {
-            //console.info(`For request path ${filepath} serving file ${resolvedContentFilePath}`);
-            return this.serveFileRequest(request, resolvedContentFilePath);
-        }
+        // Most-specific (longest matching) prefix wins, across BOTH content dirs
+        // and request-handler mounts.  This lets a specific handler mount (e.g.
+        // '/ww/') take precedence over a catch-all content dir ('/'), while a
+        // specific content dir ('/resources/') still beats a catch-all handler
+        // ('/').  (A plain "content first" order would let a catch-all '/' content
+        // dir shadow every dynamic route.)
+        const contentPrefix = longestMatchingPrefix(filepath, this.config.contentdirs);
+        const handlerPrefix = longestMatchingPrefix(filepath, this.config.requestHandlerPaths);
 
-        // --- If the path matches a registered request handler, use that.
-        const requestHandler = this.matchRequestHandlerPath(filepath);
-        if(requestHandler)
-            return this.serveHandlerRequest(request, requestHandler, info);
+        const handlerWins = handlerPrefix !== undefined &&
+            (contentPrefix === undefined || handlerPrefix.length >= contentPrefix.length);
+
+        if(handlerWins)
+            return this.serveHandlerRequest(request, this.config.requestHandlerPaths![handlerPrefix!], info);
+
+        if(contentPrefix !== undefined) {
+            const resolvedContentFilePath = this.matchContentFilePath(filepath);
+            if(resolvedContentFilePath)
+                return this.serveFileRequest(request, resolvedContentFilePath);
+        }
 
         // Wrong kind of response returned here !!! XXX
         return new Response(`No handler for path: ${String(filepath)}`); //, 404);
@@ -182,6 +191,18 @@ export class DenoHttpServer extends HttpServer {
         //console.info('serving file request', filepath);
         return serveFile(request, filepath);
     }
+}
+
+// The longest key in `map` (a {prefix: value} of content/handler mount prefixes)
+// that `filepath` starts with, or undefined - used to route to the most specific
+// mount rather than the first one declared.
+function longestMatchingPrefix(filepath: string, map: Record<string, unknown> | undefined): string | undefined {
+    if(!map) return undefined;
+    let best: string | undefined;
+    for(const prefix of Object.keys(map))
+        if(filepath.startsWith(prefix) && (best === undefined || prefix.length > best.length))
+            best = prefix;
+    return best;
 }
 
 function extract_form_data(form_data: FormData): {[key: string]: any} {
