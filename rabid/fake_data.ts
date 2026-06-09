@@ -19,26 +19,93 @@ import * as event from './event.ts';
 import * as service from './service.ts';
 import * as sale from './sale.ts';
 import {Rabid} from './rabid.ts';
-import { faker } from "@faker-js/faker";
+import { faker, Faker, en } from "@faker-js/faker";
 import * as password from '../liminal/password.ts';
+
+// --------------------------------------------------------------------------------
+// --- Deterministic randomness ---------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// Test data should be stable: the same seed yields the same data, and adding a
+// column (or another builder) shouldn't churn unrelated values.  We get that with
+// *named* faker streams - each concern draws from its own seeded sequence, so a
+// new stream can't perturb an existing one - plus a tiny seeded PRNG for the few
+// spots that used rand().
+
+// Small stable string hash (cyrb53-ish) so streams can be named.
+function hashSeed(s: string): number {
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for(let i = 0; i < s.length; i++) {
+        const ch = s.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    return h1 >>> 0;
+}
+
+export type Streams = (name: string) => Faker;
+
+// A registry of independent, deterministically-seeded faker streams keyed by name.
+export function makeStreams(baseSeed: number): Streams {
+    const cache = new Map<string, Faker>();
+    return (name: string): Faker => {
+        let f = cache.get(name);
+        if(!f) {
+            f = new Faker({ locale: [en] });
+            f.seed((baseSeed ^ hashSeed(name)) >>> 0);
+            cache.set(name, f);
+        }
+        return f;
+    };
+}
+
+// Tiny deterministic PRNG (mulberry32) for the spots that used rand().
+function mulberry32(seed: number): () => number {
+    let a = seed >>> 0;
+    return () => {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+// Reset at the start of each builder that needs it (commitments / timesheets).
+let rand: () => number = mulberry32(1);
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-function createFakeVolunteerData(rabid: Rabid) {
-    // First, create Rocky Raccoon with a specific password
-    const rockyJoinDate = faker.date.past({ years: 2 });
-    const rockyVolunteerId = rabid.volunteer.insert({
-        join_date: rockyJoinDate.toISOString().replace('T', ' ').slice(0, 19),
+export interface VolunteerSeedOpts { count?: number; baseSeed?: number; }
+
+const isoDateTime = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+
+// Seed Rocky (the canonical admin login) plus `count` more volunteers.  Each
+// field is drawn from a per-concern stream (identity / contact / status / role /
+// account), so adding a column - or another builder - never shifts the others.
+export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { rockyId: number } {
+    const count = opts.count ?? 99;
+    const s = makeStreams(opts.baseSeed ?? 1);
+    const idS = s('volunteer.identity');      // name + email (kept correlated)
+    const contactS = s('volunteer.contact');  // phone + visibility + emergency contact
+    const skillS = s('volunteer.skills');
+    const statusS = s('volunteer.status');     // join / inactive / exit
+    const roleS = s('volunteer.role');         // permissions
+    const acctS = s('volunteer.account');      // whether a password is set
+
+    // Rocky uses fixed values so the canonical admin login is stable across runs.
+    const rockyJoin = '2023-01-07 10:00:00';
+    const rockyId = rabid.volunteer.insert({
+        join_date: rockyJoin,
         name: 'Rocky Raccoon',
         email: 'rocky@redraccoon.org',
-        email_visible_to_all_volunteers: 1, // Rocky shares their email
-        phone: faker.phone.number({ style: 'national' }),
-        phone_number_visible_to_all_volunteers: 1, // Rocky shares their phone
+        email_visible_to_all_volunteers: 1,  // Rocky shares their email
+        phone: '(555) 010-0010',
+        phone_number_visible_to_all_volunteers: 1,  // Rocky shares their phone
         skills: 'event planning, fundraising, social media',
         emergency_contact_name: 'The Beatles',
-        emergency_contact_phone: faker.phone.number({ style: 'national' }),
+        emergency_contact_phone: '(555) 010-0011',
         permissions: 'admin',
         inactive: 0,
         marked_inactive_date: undefined,
@@ -47,42 +114,31 @@ function createFakeVolunteerData(rabid: Rabid) {
         exit_feedback: undefined,
         deleted: 0,
     });
-    
-    // Create password hash for Rocky
-    const rockyPassword = 'rcky';
     const rockySalt = password.generateSalt();
-    const rockyHash = password.hashPassword(rockyPassword, rockySalt);
-    
     rabid.passwordHash.insert({
-        volunteer_id: rockyVolunteerId,
+        volunteer_id: rockyId,
         password_salt: rockySalt,
-        password_hash: rockyHash,
-        last_change_time: rockyJoinDate.toISOString().replace('T', ' ').slice(0, 19),
+        password_hash: password.hashPassword('rcky', rockySalt),
+        last_change_time: rockyJoin,
     });
-    
-    // Generate 99 more fake volunteers
-    for (let i = 0; i < 99; i++) {
-        const firstName = faker.person.firstName();
-        const lastName = faker.person.lastName();
-        const fullName = `${firstName} ${lastName}`;
-        
-        // Random join date within past 3 years
-        const joinDate = faker.date.past({ years: 3 });
-        const isInactive = faker.datatype.boolean({ probability: 0.15 });
-        const hasExitFeedback = isInactive && faker.datatype.boolean({ probability: 0.4 });
-        
+
+    for(let i = 0; i < count; i++) {
+        const firstName = idS.person.firstName();
+        const lastName = idS.person.lastName();
+        const joinDate = statusS.date.past({ years: 3 });
+        const isInactive = statusS.datatype.boolean({ probability: 0.15 });
+        const hasExitFeedback = isInactive && statusS.datatype.boolean({ probability: 0.4 });
+
         const newVolunteerId = rabid.volunteer.insert({
-            join_date: faker.helpers.maybe(() => 
-                joinDate.toISOString().replace('T', ' ').slice(0, 19), 
-                { probability: 0.9 }), // 10% have unknown join date
-            name: fullName,
-            email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-            email_visible_to_all_volunteers: faker.datatype.boolean({ probability: 0.85 }) ? 1 : 0, // 85% share their email (opt-out)
-            phone: faker.phone.number({ style: 'national' }),
-            phone_number_visible_to_all_volunteers: faker.datatype.boolean({ probability: 0.3 }) ? 1 : 0, // 30% make their phone visible
-            skills: faker.helpers.arrayElement([
+            join_date: statusS.helpers.maybe(() => isoDateTime(joinDate), { probability: 0.9 }), // 10% unknown
+            name: `${firstName} ${lastName}`,
+            email: idS.internet.email({ firstName, lastName }).toLowerCase(),
+            email_visible_to_all_volunteers: contactS.datatype.boolean({ probability: 0.85 }) ? 1 : 0, // opt-out
+            phone: contactS.phone.number({ style: 'national' }),
+            phone_number_visible_to_all_volunteers: contactS.datatype.boolean({ probability: 0.3 }) ? 1 : 0, // opt-in
+            skills: skillS.helpers.arrayElement([
                 'bike repair',
-                'electronics repair', 
+                'electronics repair',
                 'sewing',
                 'carpentry',
                 'event planning',
@@ -96,25 +152,21 @@ function createFakeVolunteerData(rabid: Rabid) {
                 'carpentry, welding',
                 ''
             ]),
-            emergency_contact_name: faker.helpers.maybe(() => {
-                return `${faker.person.firstName()} ${faker.person.lastName()}`;
-            }, { probability: 0.7 }) || '',
-            emergency_contact_phone: faker.helpers.maybe(() => {
-                return faker.phone.number({ style: 'national' });
-            }, { probability: 0.7 }) || '',
+            emergency_contact_name: contactS.helpers.maybe(
+                () => `${contactS.person.firstName()} ${contactS.person.lastName()}`, { probability: 0.7 }) || '',
+            emergency_contact_phone: contactS.helpers.maybe(
+                () => contactS.phone.number({ style: 'national' }), { probability: 0.7 }) || '',
             // Roles the security model understands: most volunteers have none,
             // some are hosts (extra visibility), a few are admins.
-            permissions: faker.helpers.arrayElement(['', '', '', '', '', '', '', 'host', 'host', 'admin']),
+            permissions: roleS.helpers.arrayElement(['', '', '', '', '', '', '', 'host', 'host', 'admin']),
             inactive: isInactive ? 1 : 0,
-            marked_inactive_date: isInactive ? 
-                faker.date.between({ from: joinDate, to: new Date() }).toISOString().replace('T', ' ').slice(0, 19) : 
-                undefined,
+            marked_inactive_date: isInactive
+                ? isoDateTime(statusS.date.between({ from: joinDate, to: new Date() }))
+                : undefined,
             exit_feedback_requested: hasExitFeedback ? 1 : 0,
-            exit_reason: hasExitFeedback ? 
-                faker.helpers.arrayElement(['moved', 'no-time', 'other']) : 
-                undefined,
-            exit_feedback: hasExitFeedback ? 
-                faker.helpers.arrayElement([
+            exit_reason: hasExitFeedback ? statusS.helpers.arrayElement(['moved', 'no-time', 'other']) : undefined,
+            exit_feedback: hasExitFeedback
+                ? statusS.helpers.arrayElement([
                     'Moving to another city',
                     'Work schedule changed',
                     'Family commitments increased',
@@ -122,32 +174,31 @@ function createFakeVolunteerData(rabid: Rabid) {
                     'Found volunteering elsewhere',
                     'No longer interested',
                     ''
-                ]) : 
-                undefined,
-            deleted: faker.datatype.boolean({ probability: 0.05 }) ? 1 : 0,
+                ])
+                : undefined,
+            deleted: statusS.datatype.boolean({ probability: 0.05 }) ? 1 : 0,
         });
-        
-        // Create PasswordHash record for each volunteer
-        // Most will have null password_salt and password_hash
-        // Only about 10% have passwords set (excluding Rocky who already has one)
-        const hasPassword = faker.datatype.boolean({ probability: 0.1 });
+
+        // Only ~10% have a password set (login 'volunteer123'); rest are null.
+        const hasPassword = acctS.datatype.boolean({ probability: 0.1 });
         const salt = hasPassword ? password.generateSalt() : undefined;
         const hash = hasPassword && salt ? password.hashPassword('volunteer123', salt) : undefined;
-        
         rabid.passwordHash.insert({
             volunteer_id: newVolunteerId,
             password_salt: salt,
             password_hash: hash,
-            last_change_time: (joinDate || new Date()).toISOString().replace('T', ' ').slice(0, 19),
+            last_change_time: isoDateTime(joinDate || new Date()),
         });
     }
+    return { rockyId };
 }
 
 // --------------------------------------------------------------------------------
 // --- Event ----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-function createFakeEventData(rabid: Rabid) {
+export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
+    faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('events')) >>> 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
     
@@ -274,7 +325,9 @@ function createFakeEventData(rabid: Rabid) {
 }
 
 
-function createFakeEventCommitments(rabid: Rabid) {
+export function seedEventCommitments(rabid: Rabid, opts: { baseSeed?: number } = {}) {
+    faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('commitments')) >>> 0);
+    rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('commitments.rand')) >>> 0);
     const volunteers = rabid.volunteer.allVolunteersByName.all();
     const events = rabid.event.allEvents.all();
     
@@ -293,21 +346,21 @@ function createFakeEventCommitments(rabid: Rabid) {
         // ~20% are regular volunteers (40-80% participation)
         // ~40% are occasional volunteers (10-40% participation)
         // ~30% rarely or never volunteer (0-10% participation)
-        const rand = Math.random();
+        const bucket = rand();
         let participationRate: number;
-        
-        if (rand < 0.1) {
+
+        if (bucket < 0.1) {
             // Super volunteers - attend almost everything
-            participationRate = 0.8 + Math.random() * 0.2;
-        } else if (rand < 0.3) {
+            participationRate = 0.8 + rand() * 0.2;
+        } else if (bucket < 0.3) {
             // Regular volunteers
-            participationRate = 0.4 + Math.random() * 0.4;
-        } else if (rand < 0.7) {
+            participationRate = 0.4 + rand() * 0.4;
+        } else if (bucket < 0.7) {
             // Occasional volunteers
-            participationRate = 0.1 + Math.random() * 0.3;
+            participationRate = 0.1 + rand() * 0.3;
         } else {
             // Rare volunteers
-            participationRate = Math.random() * 0.1;
+            participationRate = rand() * 0.1;
         }
         
         volunteerParticipationRates.set(volunteer.volunteer_id, participationRate);
@@ -357,13 +410,13 @@ function createFakeEventCommitments(rabid: Rabid) {
         let commitmentCount = 0;
         
         // First, let super volunteers sign up based on their participation rate
-        const shuffledVolunteers = [...volunteers].sort(() => Math.random() - 0.5);
+        const shuffledVolunteers = [...volunteers].sort(() => rand() - 0.5);
         
         for(const volunteer of shuffledVolunteers) {
             const participationRate = volunteerParticipationRates.get(volunteer.volunteer_id)!;
             
             // Higher participation rate volunteers get priority
-            if (Math.random() < participationRate) {
+            if (rand() < participationRate) {
                 rabid.event_commitment.insert({
                     event_id: event.event_id,
                     volunteer_id: volunteer.volunteer_id,
@@ -413,7 +466,9 @@ function createFakeEventCommitments(rabid: Rabid) {
     }
 }
 
-function createFakeTimesheetEntries(rabid: Rabid) {
+export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number } = {}) {
+    faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('timesheets')) >>> 0);
+    rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('timesheets.rand')) >>> 0);
     const currentDate = new Date();
     const events = rabid.event.allEvents.all();
     const volunteers = rabid.volunteer.allVolunteersByName.all();
@@ -446,7 +501,7 @@ function createFakeTimesheetEntries(rabid: Rabid) {
         
         // Convert 90% of commitments to timesheet entries
         for (const commitment of commitments) {
-            if (Math.random() < 0.9) {
+            if (rand() < 0.9) {
                 // Parse event times
                 const eventStart = new Date(event.start_time!);
                 const eventEnd = new Date(event.end_time!);
@@ -575,7 +630,7 @@ function createFakeTimesheetEntries(rabid: Rabid) {
         
         // For ongoing events, about 60-80% of committed volunteers have checked in
         for (const commitment of commitments) {
-            if (Math.random() < 0.7) {
+            if (rand() < 0.7) {
                 const eventStart = new Date(event.start_time!);
                 const eventEnd = new Date(event.end_time!);
                 const now = currentDate;
@@ -625,7 +680,7 @@ function createFakeTimesheetEntries(rabid: Rabid) {
             
             // About 10-20% of volunteers check in early for setup
             for (const commitment of commitments) {
-                if (Math.random() < 0.15) {
+                if (rand() < 0.15) {
                     const eventEnd = new Date(event.end_time!);
                     
                     // Use setup time or event start time
@@ -711,39 +766,73 @@ function createFakeTimesheetEntries(rabid: Rabid) {
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-function createAllTables() {
+// --------------------------------------------------------------------------------
+// --- Scenarios + composition ----------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// The builders self-fetch their inputs (events/commitments/timesheets read prior
+// data from the db), so composing a dataset is just choosing which slices to run
+// and how big.  Timesheets are the expensive slice and only the activity report
+// needs them, so most scenarios skip them.
+
+export interface Scenario {
+    volunteers: number;
+    events: boolean;
+    commitments: boolean;
+    timesheets: boolean;
+    baseSeed: number;
 }
 
-function createFakeData(rabid: Rabid) {
-    createFakeVolunteerData(rabid);
-    createFakeEventData(rabid);
-    createFakeEventCommitments(rabid);
-    createFakeTimesheetEntries(rabid);
+export type ScenarioName = 'minimal' | 'dev' | 'full' | 'activityReport';
+
+export const SCENARIOS: Record<ScenarioName, Scenario> = {
+    // tiny + fast, for a quick poke
+    minimal:        { volunteers: 8,  events: true, commitments: true, timesheets: false, baseSeed: 1 },
+    // the everyday dataset: people, events, who's coming - but NOT the bulk timesheets
+    dev:            { volunteers: 99, events: true, commitments: true, timesheets: false, baseSeed: 1 },
+    // everything, incl. the bulk timesheet entries the activity report needs
+    full:           { volunteers: 99, events: true, commitments: true, timesheets: true,  baseSeed: 1 },
+    activityReport: { volunteers: 99, events: true, commitments: true, timesheets: true,  baseSeed: 1 },
+};
+
+// Run the builders for a scenario (order matters: later builders read earlier data).
+export function seedScenario(rabid: Rabid, scenario: Scenario): void {
+    seedVolunteers(rabid, { count: scenario.volunteers, baseSeed: scenario.baseSeed });
+    if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
+    if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
+    if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed });
 }
 
-function destroyAllAndFillWithFakeData(rabid: Rabid) {
+// Create the schema from the table metadata (the on-disk db's schema-of-record).
+export function createAllTables(rabid: Rabid): void {
+    rabid.tables.forEach(table => {
+        console.info(`--- creating ${table.name}`);
+        db().executeStatements(table.createDMLString());
+    });
+}
+
+function destroyAllAndFillWithFakeData(rabid: Rabid, scenario: Scenario): void {
     console.info("*** DESTROYING ALL AND FILLING WITH FAKE DATA ***");
     Db.deleteDb(defaultDbPath);
-    //schema.createAllTables();
-
-    rabid.tables.forEach(table=>{
-        console.info(`--- creating ${table.name}`);
-        const tableDML = table.createDMLString();
-        console.info(tableDML);
-        db().executeStatements(tableDML);
-    });
-
-    createFakeData(rabid);
-
-    console.info(rabid.volunteer.allVolunteersByName.all());
+    createAllTables(rabid);
+    seedScenario(rabid, scenario);
+    console.info(rabid.volunteer.allVolunteersByName.all().length, 'volunteers created');
 }
 
 function main(args: string[]) {
     const cmd = args[0];
     switch(cmd) {
-        case 'destroy_all_and_fill_with_fake_data':
-            destroyAllAndFillWithFakeData(new Rabid());
+        case 'destroy_all_and_fill_with_fake_data': {
+            const name = (args[1] ?? 'dev') as ScenarioName;
+            const scenario = SCENARIOS[name];
+            if(!scenario) {
+                console.info(`unknown scenario '${name}'; known: ${Object.keys(SCENARIOS).join(', ')}`);
+                break;
+            }
+            console.info(`scenario '${name}':`, scenario);
+            destroyAllAndFillWithFakeData(new Rabid(), scenario);
             break;
+        }
         default:
             console.info('BAD COMMAND!');
             break;
