@@ -20,20 +20,15 @@ import * as audio from './audio.ts';
 import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
-import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import {DenoHttpServer} from '../liminal/deno-http-server.ts';
+import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
-import {evalJsExprSrc} from '../liminal/jsterp.ts';
-import {exists as fileExists} from "std/fs/mod.ts"
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from '../scannedpage/render-page-editor.ts';
 import * as pageEditorModule from '../scannedpage/page-editor.ts';
 import * as pageViewerModule from '../scannedpage/page-viewer.ts';
 
-import {rpcUrl} from '../liminal/rpc.ts';
-import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
+import {LiminalApp, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
 import * as security from '../liminal/security.ts';
-export type WordWikiServerConfig = LiminalServerConfig;
 
 /**
  *
@@ -1149,35 +1144,6 @@ export class WordWiki extends LiminalApp {
     }
 }
 
-
-/**
- * We want the site resources (.js, .css, images) to be part of the source tree
- * (ie. under revision control etc).  So we have a directory in the source tree
- * called 'resources'.  AFAICT Deno has no particular support for this (accessing
- * these files as part of it's normal package mechanism) - so for now we are
- * using import.meta to find this file, then locating the resource dir relative to that.
- *
- * The present issue is that we are only supporting file: urls for now.
- *
- * An additional complication to consider when improving this is that in the
- * public site, we will usually be running behind apache or nginx, so having the
- * resouces available as files in a known location is important.
- *
- * Also: once we start uploading resources to a CDN, we will want to make corresponding
- * changes to resources URLs.
- */
-async function findResourceDir(resourceDirName: string = 'resources') {
-    const serverFileUrl = new URL(import.meta.url);
-    if(serverFileUrl.protocol !== 'file:')
-        throw new Error(`wordwiki server can only be run (for now) with it's code on the local filesystem (to allow access to resource files) - got server file url - ${serverFileUrl} with protocol ${serverFileUrl.protocol}`);
-    const serverFilePath = decodeURIComponent(serverFileUrl.pathname);
-    const resourceDir = strings.stripRequiredSuffix(serverFilePath, '/wordwiki/wordwiki.ts')+'/'+resourceDirName;
-    const resourceMarkerPath = resourceDir+'/'+'resource_dir_marker.txt';
-    if(!await fileExists(resourceMarkerPath))
-        throw new Error(`resource directory ${resourceDir} is missing marker file ${resourceMarkerPath}`);
-
-    return resourceDir;
-}
 
 export let wordwiki: WordWiki|undefined = undefined;
 
