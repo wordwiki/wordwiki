@@ -28,8 +28,8 @@ export const payment_method_enum: Record<string, string> = {
 export interface Sale {
     sale_id: number;
     sale_time: string;
-    sale_kind: string;
     sale_recorded_by: number;
+    sale_kind: string;
     description: string;
     amount: number;
     payment_method: string;
@@ -44,8 +44,8 @@ export class SaleTable extends Table<Sale> {
         super ('bike_sale', [
             new PrimaryKeyField('sale_id', {}),
             new DateTimeField('sale_time', {}),
-            new EnumField('sale_kind', sale_kind_enum, {}),
             new ForeignKeyField('sale_recorded_by', 'volunteer', 'volunteer_id', {indexed: true, unique: true}),
+            new EnumField('sale_kind', sale_kind_enum, {}),
             new StringField('description', {}),
             new FloatingPointField('amount', {}),
             new EnumField('payment_method', payment_method_enum, {default: 'cash'}),

@@ -314,7 +314,7 @@ async function digestString(message:string): Promise<string> {
  */
 async function digestBytes(message:Uint8Array): Promise<string> {
     return arrayBufferToHexString(await crypto.subtle.digest(
-        "SHA-256", message));
+        "SHA-256", message as Uint8Array<ArrayBuffer>));
 }
 
 /**

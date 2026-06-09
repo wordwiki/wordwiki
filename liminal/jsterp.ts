@@ -161,7 +161,7 @@ class Foo {
 export class Eval {
     ticksUsed: number = 0;
     
-    constructor(readonly safeMode: boolean = false, readonly maxTicks: number = 50) {
+    constructor(readonly safeMode: boolean = false, readonly maxTicks: number = 1_000_000) {
     }
 
     eval(s: Scope, e: JsNode): any {
@@ -289,7 +289,12 @@ export class Eval {
             case "+": return + this.eval(s, e.argument);
             case "!": return ! this.eval(s, e.argument);
             case "~": return ~ this.eval(s, e.argument);
-            case "typeof": return typeof this.eval(s, e.argument);
+            case "typeof":
+                // In JS, `typeof undeclaredName` yields 'undefined' rather than throwing.
+                // Mirror that for bare identifiers that are not bound in scope.
+                if(e.argument.type === 'Identifier' && !((e.argument as Identifier).name in s))
+                    return 'undefined';
+                return typeof this.eval(s, e.argument);
             case "void": return void this.eval(s, e.argument);
             case "delete": throw new Error('jsterp: delete operator not allowed');
             default: throw new Error(`jsterp: unexpected unary operator ${e.operator}`);
@@ -298,7 +303,7 @@ export class Eval {
 
     evalBinaryExpression(s: Scope, e: BinaryExpression): any {
         switch(e.operator) {
-            case "==": return this.eval(s, e.left) + this.eval(s, e.right);
+            case "==": return this.eval(s, e.left) == this.eval(s, e.right);
             case "!=": return this.eval(s, e.left) != this.eval(s, e.right);
             case "===": return this.eval(s, e.left) === this.eval(s, e.right);
             case "!==": return this.eval(s, e.left) !== this.eval(s, e.right);
@@ -373,7 +378,7 @@ export class Eval {
         const callee = this.eval(s, e.callee)
         const args = this.evalArguments(s, e.arguments);
         if(!(callee instanceof Function))
-            console.info('expected callee to be a function', typeof callee, callee, e);
+            throw new Error(`jsterp: attempt to call non-function value of type ${typeof callee}`);
         return callee(...args);
     }
 

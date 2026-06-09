@@ -50,6 +50,7 @@ export interface Service {
 
     will_pick_up: boolnum;
     scheduled_pick_up_time?: string;
+    pick_up_done: boolnum;
 
     work_start_time?: string;
     work_end_time?: string;
@@ -80,6 +81,7 @@ export class ServiceTable extends Table<Service> {
             
             new BooleanField('will_pick_up', {default: 0}),
             new DateTimeField('scheduled_pick_up_time', {nullable: true}),
+            new BooleanField('pick_up_done', {default: 0}),
             
             new DateTimeField('work_start_time', {nullable: true}),
             new DateTimeField('work_end_time', {nullable: true}),

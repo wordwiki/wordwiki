@@ -89,7 +89,6 @@ export function path<T>(target: Function, context: ClassGetterDecoratorContext):
             return existingProp;
         
         const prop = target.call(this);
-
         
         const serialized = `${serializeAny(this)}.${strings.stripRequiredPrefix(target.name, 'get ')}`;
         serializeAs(serialized, prop);
