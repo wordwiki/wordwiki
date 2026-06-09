@@ -52,4 +52,12 @@ if [ -f "$PIDFILE" ]; then
     rm -f "$PIDFILE"
 fi
 
-deno run --check --allow-all rabid/rabid.ts serve
+# Default to `serve`; otherwise pass args straight through, e.g.
+#   ./rabid.sh test-run demo
+# which starts the server, runs a named browser test run against an already-open
+# test-client browser tab (it reconnects across this restart), and exits with a
+# pass/fail code.  The clean-shutdown-of-any-existing-rabid above IS that restart.
+if [ "$#" -eq 0 ]; then
+    set -- serve
+fi
+deno run --check --allow-all rabid/rabid.ts "$@"

@@ -17,8 +17,8 @@ import type {Rabid} from './rabid.ts';
 import {h, type Markup} from '../liminal/markup.ts';
 import * as security from '../liminal/security.ts';
 
-interface TestCase { name: string; run: (rabid: Rabid) => Promise<void>; }
-interface TestResult { name: string; ok: boolean; error?: string; }
+export interface TestCase { name: string; run: (rabid: Rabid) => Promise<void>; }
+export interface TestResult { name: string; ok: boolean; error?: string; }
 
 function assert(cond: any, msg: string): void {
     if(!cond) throw new Error(msg);
@@ -77,9 +77,17 @@ const TESTS: TestCase[] = [
     },
 ];
 
-export async function runBrowserDemo(rabid: Rabid): Promise<Markup> {
+// Registry of named test runs, launchable from the CLI: `./rabid.sh test-run <name>`.
+// (As real suites are added they register here alongside 'demo'.)
+export const TEST_RUNS: Record<string, TestCase[]> = {
+    demo: TESTS,
+};
+
+// Run a list of cases, capturing pass/fail per case.  Never throws - a thrown
+// assertion becomes a failed result so the rest of the run still executes.
+export async function runTests(rabid: Rabid, cases: TestCase[]): Promise<TestResult[]> {
     const results: TestResult[] = [];
-    for(const t of TESTS) {
+    for(const t of cases) {
         try {
             await t.run(rabid);
             results.push({name: t.name, ok: true});
@@ -87,7 +95,11 @@ export async function runBrowserDemo(rabid: Rabid): Promise<Markup> {
             results.push({name: t.name, ok: false, error: e instanceof Error ? e.message : String(e)});
         }
     }
+    return results;
+}
 
+// Markup summary for the test-client page's "Run demo tests" button.
+export function renderResults(results: TestResult[]): Markup {
     const passed = results.filter(r => r.ok).length;
     const allOk = passed === results.length;
     return [h.div, {},
@@ -100,4 +112,9 @@ export async function runBrowserDemo(rabid: Rabid): Promise<Markup> {
          ]),
         ],
     ];
+}
+
+// The "Run demo tests" button entry point: run the demo suite and render it.
+export async function runBrowserDemo(rabid: Rabid): Promise<Markup> {
+    return renderResults(await runTests(rabid, TESTS));
 }

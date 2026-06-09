@@ -36,7 +36,7 @@ import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
 import * as browserAgent from '../liminal/browser-agent.ts';
-import {runBrowserDemo} from './browser_test_demo.ts';
+import {runBrowserDemo, runTests, TEST_RUNS} from './browser_test_demo.ts';
 
 export interface RabidServerConfig {
     hostname: string,
@@ -715,6 +715,68 @@ export class Rabid {
         return await runBrowserDemo(this);
     }
 
+    // Seconds since a session's last heartbeat (undefined if it never sent one).
+    // Uses the existing Temporal helpers - both timestamps are local wall-clock.
+    #heartbeatAgeSeconds(heartbeat: string | undefined): number | undefined {
+        if(!heartbeat) return undefined;
+        const hb = date.sqliteDateTimeToTemporal(heartbeat);
+        return Temporal.Now.plainDateTimeISO().since(hb).total({unit: 'seconds'});
+    }
+
+    // Block until a live test client is connected (most-recent opt-in with a fresh
+    // heartbeat) or waitMs elapses.  An already-open tab reconnects on its own
+    // after a server restart, so this just covers that ~1-2s reconnect - no
+    // per-run browser interaction.  The freshness window is wider than the poll
+    // timeout, since a client mid-long-poll only re-stamps once per poll cycle.
+    async #waitForTestClient(waitMs: number): Promise<boolean> {
+        const freshSeconds = 35;
+        const deadline = Date.now() + waitMs;
+        let announced = false;
+        for(;;) {
+            const c = security.runSystem(() => this.volunteerLoginSession.mostRecentTestClient.first({}));
+            const age = this.#heartbeatAgeSeconds(c?.last_test_client_heartbeat);
+            if(c && age !== undefined && age <= freshSeconds)
+                return true;
+            if(Date.now() >= deadline)
+                return false;
+            if(!announced) {
+                console.info('Waiting for a test client... open /rabid/rabid.testClientPage() in a logged-in browser (an already-open tab reconnects on its own).');
+                announced = true;
+            }
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+
+    /**
+     * Launch a named browser test run (CLI: `rabid.ts test-run <name>`).  Waits
+     * for a live test client, runs the suite, prints a summary, and returns a
+     * process exit code: 0 all-passed, 1 failures, 2 unknown run, 3 no client.
+     *
+     * The edit→rerun loop is: leave a browser tab open at the test-client page
+     * once, then re-run this (e.g. via ./rabid.sh test-run <name>) after each code
+     * change - the tab reconnects across the restart, no clicking required.
+     */
+    async runNamedTestRun(name: string, opts: {waitMs?: number} = {}): Promise<number> {
+        this.#assertHarnessEnabled();
+        const cases = TEST_RUNS[name];
+        if(!cases) {
+            console.error(`Unknown test run '${name}'. Known runs: ${Object.keys(TEST_RUNS).join(', ') || '(none)'}`);
+            return 2;
+        }
+        if(!await this.#waitForTestClient(opts.waitMs ?? 60_000)) {
+            console.error("No test client connected - open /rabid/rabid.testClientPage() in a logged-in browser with the 'testing' permission, leave the tab open, and re-run.");
+            return 3;
+        }
+        console.info(`\nRunning test run '${name}' (${cases.length} test(s))...\n`);
+        const results = await runTests(this, cases);
+        for(const r of results)
+            console.info(r.ok ? `  ok    ${r.name}` : `  FAIL  ${r.name}\n          ${r.error}`);
+        const passed = results.filter(r => r.ok).length;
+        const allOk = passed === results.length;
+        console.info(`\nTest run '${name}': ${passed}/${results.length} passed${allOk ? '' : '  *** FAILURES ***'}`);
+        return allOk ? 0 : 1;
+    }
+
     /**
      * Ask this server process to exit cleanly.  Authorised by the large random
      * password written to rabid-shutdown-password.txt at startup (compared as an
@@ -809,6 +871,17 @@ if (import.meta.main) {
         case 'serve':
             rabid.startServer({hostname: 'localhost', port: 8888});
             break;
+        case 'test-run': {
+            // Start the server, run the named browser test run against a connected
+            // client, then exit with a pass/fail code.  startServer() resolves once
+            // Deno.serve is listening (it serves in the background), so the run and
+            // the server run concurrently.
+            const runName = args[1] ?? 'demo';
+            await rabid.startServer({hostname: 'localhost', port: 8888});
+            const code = await rabid.runNamedTestRun(runName);
+            Deno.exit(code);
+            break;
+        }
         default:
             throw new Error(`incorrect usage: unknown command "${command}"`);
     }

@@ -75,6 +75,12 @@ export class BrowserEvalTimeout extends Error {
 export class BrowserAgentChannel {
     #agents = new Map<string, AgentState>();
     #seq = 0;
+    // A per-process boot id, prefixed onto every cmdId.  The browser dedups by
+    // cmdId (to re-send a lost result rather than re-run), and #seq restarts at 0
+    // in a fresh process - so without the boot prefix, the first command after a
+    // server restart would collide with a pre-restart cmdId still cached in a
+    // reconnecting browser, and be wrongly treated as a duplicate.
+    #boot = (globalThis.crypto?.randomUUID?.() ?? String(Date.now())).slice(0, 8);
 
     #state(agentKey: string): AgentState {
         let s = this.#agents.get(agentKey);
@@ -95,7 +101,7 @@ export class BrowserAgentChannel {
         if(s.pending)
             return Promise.reject(new BrowserAgentBusyError(agentKey));
 
-        const cmdId = String(++this.#seq);
+        const cmdId = `${this.#boot}.${++this.#seq}`;
         const command: BrowserCommand = { cmdId, js };
 
         return new Promise<BrowserResult>((resolve, reject) => {
