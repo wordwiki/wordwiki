@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -12,6 +12,14 @@ import {lazy} from '../liminal/lazy.ts';
 import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
+import * as security from "../liminal/security.ts";
+
+// A volunteer (or an admin) can see/edit a volunteer's more personal fields.
+const selfOrAdmin = security.or(security.isSelf, security.hasRole('admin'));
+// Phone/email are visible to self, admins, or anyone if the volunteer opted that
+// field in.  Phone defaults to private (opt-in); email defaults to shared.
+const phoneViewable = security.or(selfOrAdmin, security.recordFlag('phone_number_visible_to_all_volunteers'));
+const emailViewable = security.or(selfOrAdmin, security.recordFlag('email_visible_to_all_volunteers'));
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -33,6 +41,7 @@ export interface Volunteer {
     
     name: string;
     email: string;
+    email_visible_to_all_volunteers: boolnum;
     phone: string;
     phone_number_visible_to_all_volunteers: boolnum;
 
@@ -70,14 +79,17 @@ export class VolunteerTable extends Table<Volunteer> {
         super ('volunteer', [
             new PrimaryKeyField('volunteer_id', {prompt: 'Id'}),
             new DateTimeField('join_date', {nullable: true}),
-            new StringField('name', {indexed: true, permissions: PublicViewable}),
-            new EmailField('email', {indexed: true, unique: true, permissions: PublicViewable}),
-            new PhoneField('phone', {nullable: true, permissions: PublicViewable}),
+            new StringField('name', {indexed: true}),
+            new EmailField('email', {indexed: true, unique: true, view: emailViewable, redact: true}),
+            // Volunteers may opt their email out of being shown to others (shared by default).
+            new BooleanField('email_visible_to_all_volunteers', {default: 1}),
+            new PhoneField('phone', {nullable: true, view: phoneViewable, redact: true}),
+            // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
-            new StringField('emergency_contact_name', {default: ''}),
-            new StringField('emergency_contact_phone', {default: ''}),
-            new StringField('permissions', {nullable: true}),
+            new StringField('emergency_contact_name', {default: '', view: selfOrAdmin, redact: true}),
+            new StringField('emergency_contact_phone', {default: '', view: selfOrAdmin, redact: true}),
+            new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
             new BooleanField('inactive', {default: 0}),
             new DateTimeField('marked_inactive_date', {nullable: true}),
             new BooleanField('exit_feedback_requested', {default: 0}),
@@ -88,9 +100,20 @@ export class VolunteerTable extends Table<Volunteer> {
         ])
     };
 
+    // A volunteer record belongs to itself (its volunteer_id is the owner).
+    ownerId(v: Volunteer): number|undefined { return v.volunteer_id; }
+
+    // Open books: any logged-in volunteer can see a field by default.  The few
+    // private ones are locked down explicitly above (phone opt-in, email opt-out,
+    // emergency contact self-or-admin) and redacted to '***' rather than hidden.
+    defaultFieldView: security.Permission = security.loggedIn;
+    // A volunteer edits their own record; admins edit anyone.  (permissions is
+    // admin-only to edit; other administrative fields could be tightened later.)
+    defaultFieldEdit: security.Permission = selfOrAdmin;
+
     @path
     get byEmail() {
-        return db().prepare<Volunteer, {email: string}>(block`
+        return this.prepare<Volunteer, {email: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE email = :email`);
@@ -98,7 +121,7 @@ export class VolunteerTable extends Table<Volunteer> {
 
     @path
     get activeVolunteersByName() {
-        return db().prepare<Volunteer, {}>(block`
+        return this.prepare<Volunteer, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE deleted = 0 AND inactive = 0
@@ -107,7 +130,7 @@ export class VolunteerTable extends Table<Volunteer> {
 
     @path
     get allVolunteersByName() {
-        return db().prepare<Volunteer, {}>(block`
+        return this.prepare<Volunteer, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE deleted = 0
@@ -116,7 +139,7 @@ export class VolunteerTable extends Table<Volunteer> {
 
     @path
     get volunteersForEvent() {
-        return db().prepare<Volunteer, {event_id: number}>(block`
+        return this.prepare<Volunteer, {event_id: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM event LEFT JOIN volunteer
 /**/          WHERE event.volunteer_id = volunteer.volunteer_id
@@ -151,7 +174,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // LIKE is case-insensitive for ASCII in SQLite, so no lower() is needed.
     @path
     get searchByPrefix() {
-        return db().prepare<Volunteer, {q: string, scope: string}>(block`
+        return this.prepare<Volunteer, {q: string, scope: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE deleted = 0
@@ -206,8 +229,8 @@ export class VolunteerTable extends Table<Volunteer> {
         const f = this.fieldsByName;
         return [h.tr, this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`),
             [h.td, {}, templates.pageLink(`/rabid/rabid.volunteer.detailPage(${id})`, v.name)],
-            [h.td, {}, f.email.render(v.email)],
-            [h.td, {}, f.phone.render(v.phone)],
+            [h.td, {}, renderFieldValue(f.email, v.email)],
+            [h.td, {}, renderFieldValue(f.phone, v.phone)],
             [h.td, {}, this.editButton(id)],
         ];
     }
@@ -262,7 +285,11 @@ export class VolunteerTable extends Table<Volunteer> {
         const props = this.reloadableItemProps(volunteer_id, `rabid.volunteer.renderDetail(${volunteer_id})`);
         props.class = 'container py-3 ' + props.class;
 
-        const emergency = [v.emergency_contact_name, v.emergency_contact_phone].filter(Boolean).join(' · ');
+        // Emergency contact is two redactable fields; if hidden, show one '***'.
+        const emergencyHidden = security.isRedacted(v.emergency_contact_name);
+        const emergency = emergencyHidden
+            ? renderFieldValue(f.emergency_contact_name, v.emergency_contact_name)
+            : ([v.emergency_contact_name, v.emergency_contact_phone].filter(Boolean).join(' · ') || '—');
 
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
@@ -272,13 +299,13 @@ export class VolunteerTable extends Table<Volunteer> {
 
             [h.dl, {class: 'row mb-0'},
              [h.dt, {class: 'col-sm-3'}, 'Email'],
-             [h.dd, {class: 'col-sm-9'}, f.email.render(v.email) || '—'],
+             [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.email, v.email) || '—'],
              [h.dt, {class: 'col-sm-3'}, 'Phone'],
-             [h.dd, {class: 'col-sm-9'}, f.phone.render(v.phone) || '—'],
+             [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.phone, v.phone) || '—'],
              [h.dt, {class: 'col-sm-3'}, 'Skills'],
              [h.dd, {class: 'col-sm-9'}, v.skills || '—'],
              [h.dt, {class: 'col-sm-3'}, 'Emergency contact'],
-             [h.dd, {class: 'col-sm-9'}, emergency || '—'],
+             [h.dd, {class: 'col-sm-9'}, emergency],
              [h.dt, {class: 'col-sm-3'}, 'Joined'],
              [h.dd, {class: 'col-sm-9'}, v.join_date || '—'],
             ],
@@ -368,7 +395,7 @@ export class VolunteerLoginSessionTable extends Table<VolunteerLoginSession> {
 
     @path
     get getBySessionToken() {
-        return db().prepare<VolunteerLoginSession, {session_token: string}>(block`
+        return this.prepare<VolunteerLoginSession, {session_token: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer_session
 /**/          WHERE session_token = :session_token`);

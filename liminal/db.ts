@@ -219,6 +219,13 @@ export class Db {
 export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParameterSet=QueryParameterSet> {
     columnNames: string[];
 
+    // Optional result guard, installed by Table.prepare for table-owned queries.
+    // Called with the result column names and rows after materialization; it may
+    // throw to refuse returning a column the current actor can't read.  Kept as an
+    // injected closure so this low-level wrapper stays decoupled from the field
+    // permission model.
+    guard?: (columnNames: string[], rows: RowObject[]) => void;
+
     constructor(public preparedQuery: denoSqlite.PreparedQuery<Row,O,P>) {
         this.columnNames = this.preparedQuery.columns().map(c=>c.name);
     }
@@ -226,15 +233,20 @@ export class PreparedQuery<O extends RowObject=RowObject, P extends QueryParamet
     closure(params?: P): QueryClosure<O> {
         return new QueryClosure(this, params);
     }
-    
+
     all(params?: P): Array<O> {
         const allRows = this.preparedQuery.all(params);
-        return allRows.map(row=>this.rowToObject(row));
+        const result = allRows.map(row=>this.rowToObject(row));
+        if(this.guard) this.guard(this.columnNames, result);
+        return result;
     }
 
     first(params?: P): O|undefined {
         const firstRow = this.preparedQuery.first(params);
-        return firstRow===undefined ? undefined : this.rowToObject(firstRow);
+        if(firstRow===undefined) return undefined;
+        const obj = this.rowToObject(firstRow);
+        if(this.guard) this.guard(this.columnNames, [obj]);
+        return obj;
     }
 
     // TODO: query printing in this error message is borked.

@@ -5,8 +5,9 @@ import {unwrap} from '../liminal/utils.ts';
 import {block} from "../liminal/strings.ts";
 import {serialize, serializeAny} from "../liminal/serializable.ts";
 
-import { db, Db, PreparedQuery, QueryClosure, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import { db, Db, PreparedQuery, QueryClosure, RowObject, QueryParameterSet, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as action from "./action.ts";
+import * as security from "./security.ts";
 
 export type Tuple = Record<string, any>;
 
@@ -47,10 +48,77 @@ export class Table<T extends Tuple> {
     
     getById(id: number): T {
         //console.info("getById", id);
-        return db().prepare<T, {id: number}>(block`
+        return this.prepare<T, {id: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM ${this.name}
 /**/          WHERE ${this.pkName} = :id`).required({id});
+    }
+
+    // ---------------------------------------------------------------------------
+    // --- Field-level read security ---------------------------------------------
+    // ---------------------------------------------------------------------------
+
+    // Override per table: the volunteer this record "belongs to" (drives isSelf).
+    ownerId(_record: T): number|undefined { return undefined; }
+
+    // View/edit permission for fields that don't declare one.  Permissive by
+    // default, so field-level security is opt-in per table (set these + per-field
+    // `view`/`edit`).
+    defaultFieldView: security.Permission = security.anyone;
+    defaultFieldEdit: security.Permission = security.anyone;
+
+    fieldView(field: Field): security.Permission { return field.options.view ?? this.defaultFieldView; }
+    fieldEdit(field: Field): security.Permission { return field.options.edit ?? this.defaultFieldEdit; }
+
+    private accessFor(record?: T): security.Access {
+        const ctx = security.current() ?? {actorId: undefined, roles: new Set<string>()};
+        return {ctx, record, ownerId: record ? this.ownerId(record) : undefined};
+    }
+
+    canView(field: Field, record?: T): boolean {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return true;
+        return this.fieldView(field)(this.accessFor(record));
+    }
+
+    // edit ⊆ view: you can never edit a field you can't see.
+    canEdit(field: Field, record?: T): boolean {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return true;
+        const a = this.accessFor(record);
+        return this.fieldView(field)(a) && this.fieldEdit(field)(a);
+    }
+
+    // Prepare a query *tagged with this table*, so its results are checked against
+    // the current actor's field-view permissions.  Table-owned queries (getById,
+    // the @path query getters) go through here.
+    prepare<O extends RowObject={}, P extends QueryParameterSet={}>(sql: string): PreparedQuery<O,P> {
+        const pq = db().prepare<O,P>(sql);
+        pq.guard = (cols, rows) => this.guardResult(cols, rows as Tuple[]);
+        return pq;
+    }
+
+    // Throw if any result row carries a column (that is one of this table's fields)
+    // the current actor may not view.  No-op outside a request (system context).
+    guardResult(columnNames: string[], rows: Tuple[]): void {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return;
+        for(const col of columnNames) {
+            const field = this.fieldsByName[col];
+            if(!field) continue;                     // computed column etc. - unprotected
+            const view = this.fieldView(field);
+            if(view === security.anyone) continue;   // fast path: public field
+            for(const row of rows) {
+                if(!view({ctx, record: row, ownerId: this.ownerId(row as T)})) {
+                    // Redactable fields are hidden in place ('***'); others throw
+                    // (the accidental-leak backstop).
+                    if(field.options.redact)
+                        row[col] = security.REDACTED;
+                    else
+                        throw new security.ReadPermissionError(this.name, col);
+                }
+            }
+        }
     }
 
     getIdForRow(row: T): number {
@@ -160,7 +228,11 @@ export class Table<T extends Tuple> {
     renderForm(record: T, onsubmit?: string): Markup {
         onsubmit ??= 'tx`'+this+'.saveForm(${getFormJSON(event.target)})`';
 
-        const editableFields = this.fields.filter(f => f.isVisible());
+        // Only fields the actor may edit become inputs.  Since edit ⊆ view, a
+        // field that was redacted in the fetched record (one the actor can't see)
+        // is also not editable, so its (sentinel) value never reaches an input or
+        // a before-value - it simply isn't in the form, and can't be clobbered.
+        const editableFields = this.fields.filter(f => f.isVisible() && this.canEdit(f, record));
 
         const hidden: Record<string, any> = {};
         const pk = record[this.pkName];
@@ -235,6 +307,21 @@ export class Table<T extends Tuple> {
                 : isInsert));
         if(missingRequired.length > 0)
             throw new Error(`Please provide a value for: ${missingRequired.map(f => f.prompt).join(', ')}`);
+
+        // --- Server-side edit-permission check (write-side counterpart to the
+        //     read guard).  renderForm only renders inputs for editable fields, but
+        //     a crafted POST could include any field - so reject changed fields the
+        //     actor may not edit.  We load the existing record (as a system op, to
+        //     get the true owner for isSelf) to evaluate ownership.
+        const existing = primaryKey !== undefined
+            ? security.runSystem(() => this.getById(primaryKey))
+            : undefined;
+        const notEditable = Object.keys(changedFieldValues).filter(name => {
+            const field = this.fieldsByName[name];
+            return field && !this.canEdit(field, existing);
+        });
+        if(notEditable.length > 0)
+            throw new Error(`Not permitted to edit: ${notEditable.map(n => this.fieldsByName[n].prompt).join(', ')}`);
 
         return { primaryKey, changedFieldValues };
     }
@@ -321,6 +408,18 @@ export interface FieldOptions {
     prompt?: string,
 
     permissions?: any,
+
+    // Field-level security (see liminal/security.ts).  `view` gates reading the
+    // field (enforced at the query layer + render); `edit` gates writing it.
+    // Unset falls back to the table's defaults.
+    view?: security.Permission,
+    edit?: security.Permission,
+
+    // When the actor can't `view` this field: if `redact` is set the value is
+    // replaced with the REDACTED sentinel (shown as '***') instead of throwing.
+    // Use for fields that may legitimately appear in a list of mixed visibility
+    // (e.g. a phone a volunteer chose not to share).
+    redact?: boolean,
 }
 
 export const PublicViewable = Object.freeze({});
@@ -931,8 +1030,18 @@ export class TableRenderer<T extends Tuple> {
     }
 
     renderFieldContent(field: Field, value: any): Markup {
-        return field.render(value);
+        return renderFieldValue(field, value);
     }
+}
+
+// Render a (possibly redacted) field value for display.  A REDACTED value shows a
+// muted '***' with a hint - so the viewer knows the data is hidden (not absent)
+// and that a staff member can look it up; otherwise the field's normal render()
+// is used.  Hand-coded views use this for fields that may be redacted.
+export function renderFieldValue(field: Field, value: any): Markup {
+    if(security.isRedacted(value))
+        return ['span', {class: 'text-muted', title: 'Hidden — ask a staff member to look this up'}, '***'];
+    return field.render(value);
 }
 
 export class TableView<T extends Tuple> {

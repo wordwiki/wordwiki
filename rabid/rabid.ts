@@ -16,6 +16,7 @@ import {Markup, renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, h} fr
 import {DenoHttpServer} from '../liminal/deno-http-server.ts';
 import {parseCookies} from '../liminal/http-server.ts';
 import {evalJsExprSrc} from '../liminal/jsterp.ts';
+import {evalRouteExprSrc} from '../liminal/routeterp.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
 //import {Home} from './home-page.ts';
 import * as home from './home-page.ts';
@@ -33,10 +34,38 @@ import { Temporal } from 'temporal-polyfill';
 import {rpcUrl} from '../liminal/rpc.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
+import * as security from '../liminal/security.ts';
 
 export interface RabidServerConfig {
     hostname: string,
     port: number,
+}
+
+// Which interpreter evaluates route expressions.  Selected once at startup via
+// the RABID_ROUTE_EVAL env var:
+//   (unset) / 'jsterp'  - the legacy full JS-expression interpreter (current,
+//                         unchanged behavior).
+//   'routeterp'         - the restricted, default-deny route interpreter
+//                         (liminal/routeterp.ts).  Only @safe-decorated
+//                         members/methods and explicitly-bound scope names are
+//                         reachable.
+// Run a staging instance (or replay logged route exprs) with
+// RABID_ROUTE_EVAL=routeterp to find which routes still need @safe annotations
+// before flipping the default.  We deliberately do NOT offer an in-process
+// "shadow" that evaluates both, because that would double-execute
+// side-effecting routes (e.g. saveForm would run twice).
+const routeEvalMode = (Deno.env.get('RABID_ROUTE_EVAL') ?? 'jsterp').toLowerCase();
+
+function evalRoute(scope: Record<string, any>, jsExprSrc: string): any {
+    switch(routeEvalMode) {
+        case 'routeterp':
+            return evalRouteExprSrc(scope, jsExprSrc);
+        case 'jsterp':
+        case '':
+            return evalJsExprSrc(scope, jsExprSrc);
+        default:
+            throw new Error(`rabid: unknown RABID_ROUTE_EVAL mode '${routeEvalMode}' (expected 'jsterp' or 'routeterp')`);
+    }
 }
 
 const constructorRoutes: Record<any, any> = {
@@ -292,6 +321,16 @@ export class Rabid {
         const session: volunteer.VolunteerLoginSession|undefined =
             session_token ? this.volunteerLoginSession.getBySessionToken.first({session_token}) : undefined;
 
+        // Resolve the actor's security context once per request (one unguarded
+        // lookup of the actor's own record - we're not inside a context yet), then
+        // make it ambiently active for the rest of this request so the data layer
+        // can enforce field-level read permissions on every query.
+        const actor = session ? this.volunteer.getById(session.volunteer_id) : undefined;
+        security.enterWith({
+            actorId: session?.volunteer_id,
+            roles: security.rolesFromPermissionsField(actor?.permissions),
+        });
+
         const allowedWithoutLoginJsExprsWhitelist = new Set([
             'rabid.loginRequest(bodyArgs)'
         ]);
@@ -305,7 +344,7 @@ export class Rabid {
         
         let result: any = null;
         try {
-            result = evalJsExprSrc(rootScope, jsExprSrc);
+            result = evalRoute(rootScope, jsExprSrc);
             while(result instanceof Promise)
                 result = await result;
         } catch(e) {
@@ -447,8 +486,10 @@ export class Rabid {
         if(!password)
             return reRenderWithError('Please enter your password');
 
-        // --- Lookup volunteer by email
-        const volunteer = rabid.volunteer.byEmail.first({email});
+        // --- Lookup volunteer by email.  This runs before the actor is known
+        //     (we're authenticating), so do it as a trusted system operation -
+        //     otherwise the field-read guard would block reading the email here.
+        const volunteer = security.runSystem(() => rabid.volunteer.byEmail.first({email}));
         if(!volunteer)
             return reRenderWithError('No account was found for that email address');
 
