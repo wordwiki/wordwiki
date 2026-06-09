@@ -130,7 +130,20 @@
             }
             if(resp && resp.cmd) {
                 setStatus('running command ' + resp.cmd.cmdId + '…', 'alert-info');
-                await runCommand(resp.cmd);
+                try {
+                    await runCommand(resp.cmd);
+                } catch(_e) {
+                    // The result POST failed - almost always because the server is
+                    // restarting (a `test-run` exits right after collecting the
+                    // last result).  Do NOT let this kill the loop: back off and
+                    // reconnect.  runCommand caches the result under lastExecuted,
+                    // so the next poll re-delivers this cmdId and we re-send it
+                    // without re-evaluating.  (This is what makes the edit->rerun
+                    // loop survive restarts with no page reload.)
+                    setStatus('reconnecting…', 'alert-warning');
+                    await sleep(1500);
+                    continue;
+                }
                 setStatus('connected', 'alert-success');
             } else {
                 setStatus('connected (idle)', 'alert-success');
