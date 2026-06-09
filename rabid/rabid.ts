@@ -836,8 +836,20 @@ export class Rabid {
             let value: any;
             if(target === 'browser')
                 value = await this.evalInBrowser(body.js, {timeoutMs});      // already serialized by the client
-            else if(target === 'server')
+            else if(target === 'server') {
+                // Even with the password, server-target eval (RCE on this host)
+                // must originate from the local machine.  We check the actual TCP
+                // peer, and refuse if any forwarding header is present: binding to
+                // localhost is not enough behind a reverse proxy, where every peer
+                // is loopback and a forwarding header carries the real (possibly
+                // remote) client.
+                const peer = request.remoteAddr;
+                const isLoopback = peer === '127.0.0.1' || peer === '::1' || peer === 'localhost';
+                const proxied = !!(request.headers['x-forwarded-for'] || request.headers['forwarded'] || request.headers['x-real-ip']);
+                if(!isLoopback || proxied)
+                    return fail(403, 'Forbidden', `server-target eval is only reachable from localhost (peer: ${peer ?? 'unknown'})`);
                 value = serializeValue(await this.#evalServer(body.js));
+            }
             else
                 return fail(400, 'BadRequest', `unknown target '${target}' (expected 'server' or 'browser')`);
             return server.jsonResponse({ok: true, target, value});

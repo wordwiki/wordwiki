@@ -23,14 +23,14 @@ export class DenoHttpServer extends HttpServer {
         
         console.log(`Starting HTTP webserver.  Access it at:  http://${serve_config.hostname||'localhost'}:${serve_config.port}/`);
         
-        Deno.serve(serve_config, async (req) => this.serveRequest(req));
+        Deno.serve(serve_config, async (req, info) => this.serveRequest(req, info));
     }
 
     async requestHandler(request: Request): Promise<Response> {
         return new Response("Hello, world!!")
     }
-    
-    async serveRequest(request: Request): Promise<Response> {
+
+    async serveRequest(request: Request, info?: Deno.ServeHandlerInfo): Promise<Response> {
         const url = new URL(request.url);
         const filepath = decodeURIComponent(url.pathname);
 
@@ -44,14 +44,15 @@ export class DenoHttpServer extends HttpServer {
         // --- If the path matches a registered request handler, use that.
         const requestHandler = this.matchRequestHandlerPath(filepath);
         if(requestHandler)
-            return this.serveHandlerRequest(request, requestHandler);
+            return this.serveHandlerRequest(request, requestHandler, info);
 
         // Wrong kind of response returned here !!! XXX
         return new Response(`No handler for path: ${String(filepath)}`); //, 404);
     }
 
     async serveHandlerRequest(denoRequest: Request,
-                              requestHandler: (request: server.Request) => Promise<server.Response>): Promise<Response> {
+                              requestHandler: (request: server.Request) => Promise<server.Response>,
+                              info?: Deno.ServeHandlerInfo): Promise<Response> {
    
         const headers = Object.fromEntries(denoRequest.headers.entries());
         const contentType = headers['content-type'];
@@ -77,6 +78,11 @@ export class DenoHttpServer extends HttpServer {
                 break;
         }
 
+        // The peer (TCP client) address, when the transport exposes it - used to
+        // restrict sensitive endpoints (the /eval server target) to localhost.
+        const remoteAddr = info?.remoteAddr && 'hostname' in info.remoteAddr
+            ? (info.remoteAddr as Deno.NetAddr).hostname : undefined;
+
         let titan1cRequest: server.Request = {
             method: denoRequest.method,
             url: denoRequest.url,
@@ -84,8 +90,9 @@ export class DenoHttpServer extends HttpServer {
             // ISSUE: the body can be parsed in mulitiple ways (for example as a form) - and while we could
             // forward the raw bytes though - we woulid rather parse here (because the various web servers
             // have support for that).   So somehow we need to know how to parse.
-            // USE Content-type: 
+            // USE Content-type:
             body,
+            remoteAddr,
         };
         let titan1cResponse: server.Response;
         try {

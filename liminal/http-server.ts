@@ -31,6 +31,11 @@ export interface Request {
     /** Returns the URL of request as a string. */
     url: string;
     body: any;
+    /** The peer (TCP client) address, if the concrete server exposes it - e.g.
+     *  '127.0.0.1' / '::1' for a local connection.  Used to restrict sensitive
+     *  endpoints (the /eval server target) to localhost.  Undefined when the
+     *  environment cannot supply it. */
+    remoteAddr?: string;
 }
 
 export const ResponseMarker = Symbol('ResponseMarker');
