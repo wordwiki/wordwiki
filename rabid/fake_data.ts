@@ -19,6 +19,7 @@ import * as event from './event.ts';
 import * as service from './service.ts';
 import * as sale from './sale.ts';
 import {Rabid} from './rabid.ts';
+import { assertSafeToWipe, type DbPurpose } from './config.ts';
 import { faker, Faker, en } from "@faker-js/faker";
 import * as password from '../liminal/password.ts';
 
@@ -813,8 +814,10 @@ export function createAllTables(rabid: Rabid): void {
 
 function destroyAllAndFillWithFakeData(rabid: Rabid, scenario: Scenario): void {
     console.info("*** DESTROYING ALL AND FILLING WITH FAKE DATA ***");
+    assertSafeToWipe(defaultDbPath);   // refuses if db_purpose='production'
     Db.deleteDb(defaultDbPath);
     createAllTables(rabid);
+    rabid.config.setDbPurpose('dev');  // this is a throwaway dev database
     seedScenario(rabid, scenario);
     console.info(rabid.volunteer.allVolunteersByName.all().length, 'volunteers created');
 }
@@ -831,6 +834,16 @@ function main(args: string[]) {
             }
             console.info(`scenario '${name}':`, scenario);
             destroyAllAndFillWithFakeData(new Rabid(), scenario);
+            break;
+        }
+        case 'set_db_purpose': {
+            const purpose = args[1] as DbPurpose;
+            if(!['production', 'dev', 'test'].includes(purpose)) {
+                console.info(`usage: set_db_purpose <production|dev|test>`);
+                break;
+            }
+            new Rabid().config.setDbPurpose(purpose);
+            console.info(`db_purpose set to '${purpose}'`);
             break;
         }
         default:

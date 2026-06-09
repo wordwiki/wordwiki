@@ -120,6 +120,7 @@ export class Rabid {
     shutdownPassword: string|undefined = undefined;
     pidFilePath: string|undefined = undefined;
 
+    @path get config() { return new config.ConfigTable(); }
     @path get volunteer() { return new volunteer.VolunteerTable(); }
     @path get passwordHash() { return new volunteer.PasswordHashTable(); }
     @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
@@ -129,7 +130,7 @@ export class Rabid {
 
     @lazy
     get tables() {
-        return [this.volunteer, this.passwordHash, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment];
+        return [this.config, this.volunteer, this.passwordHash, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment];
     }
 
 
@@ -191,6 +192,14 @@ export class Rabid {
         Deno.writeTextFileSync(this.pidFilePath, String(Deno.pid) + '\n');
         Deno.writeTextFileSync(shutdownPasswordPath, this.shutdownPassword + '\n', {mode: 0o600});
         console.info(`Wrote ${this.pidFilePath} (pid ${Deno.pid}) and ${shutdownPasswordPath} (mode 0600)`);
+
+        // Let the operator know if they're serving non-production data (the marker
+        // travels with the db; a real database should be marked 'production').
+        try {
+            const purpose = this.config.getDbPurpose();
+            if(purpose && purpose !== 'production')
+                console.warn(`NOTE: serving a '${purpose}' database (not production data).`);
+        } catch { /* config table may not exist on an older db; ignore */ }
 
         const contentdirs = {
             '/resources/': await findResourceDir('resources')+'/',
