@@ -6,11 +6,15 @@ puppeteer/CDP/WebDriver process. It reuses the app's own HTTP channel, session,
 and auth. The same machinery powers a dev-only `/eval` endpoint for poking at a
 running server or browser when things go off the rails.
 
-> Status / layering: the reusable pieces live in liminal
-> (`browser-agent.ts`, `http-server.ts`); the concrete wiring (routes, the
-> test-client page, the eval endpoint, the launcher) currently lives in
-> `rabid/rabid.ts` as the reference integration. That wiring is a candidate to
-> migrate into the framework once liminal is its own repo.
+> Layering: the whole mechanism lives in the framework. `liminal/liminal.ts`
+> defines an abstract `LiminalApp` base holding route dispatch, the HTTP handler,
+> server lifecycle, the browser-test bridge, the named-run launcher, and `/eval`.
+> An app (rabid, and later wordwiki) does `class App extends LiminalApp` and
+> supplies a small set of hooks: its `routes` scope, `resolveSecurityContext`,
+> `getDbPurpose`, the three `*TestClient*` session-persistence methods, `makePage`,
+> `resourceContentDirs`, `testRuns`, and (optionally) `coercePageResult`,
+> `rewriteUnauthenticatedRoute`, and `evalServer`. The transient channel is
+> `liminal/browser-agent.ts`; the client is `resources/test-agent.js`.
 
 ## Why
 
@@ -196,10 +200,11 @@ beyond localhost while trusting only the password.
 
 | Concern | File |
 |---|---|
+| Framework core: dispatch, HTTP handler, lifecycle, bridge, launcher, `/eval`, gates | `liminal/liminal.ts` (`LiminalApp`) |
 | Transient command channel | `liminal/browser-agent.ts` |
 | Peer address in the request abstraction | `liminal/http-server.ts`, `liminal/deno-http-server.ts` |
-| Routes, `evalInBrowser`, `/eval`, launcher, gates | `rabid/rabid.ts` |
+| App hooks (routes, auth, page template, `evalServer` scope, login) | `rabid/rabid.ts` (`class Rabid extends LiminalApp`) |
 | Durable identity (session columns + queries) | `rabid/volunteer.ts` |
-| Browser client | `resources/test-agent.js` |
+| Browser client (app-agnostic; reads `window.__liminalTestAgent`) | `resources/test-agent.js` |
 | Demo suite / `TEST_RUNS` registry | `rabid/browser_test_demo.ts` |
 | Launch passthrough | `rabid.sh` (`./rabid.sh test-run <name>`) |

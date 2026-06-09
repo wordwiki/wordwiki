@@ -1,132 +1,44 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
-import * as markup from '../liminal/markup.ts';
-import * as schema from "./schema.ts";
 import * as server from '../liminal/http-server.ts';
 import * as strings from "../liminal/strings.ts";
-import * as utils from "../liminal/utils.ts";
-import * as random from "../liminal/random.ts";
-import {panic} from '../liminal/utils.ts';
 import * as config from './config.ts';
-import * as timestamp from '../liminal/timestamp.ts';
 import * as templates from './templates.ts';
-import * as orderkey from '../liminal/orderkey.ts';
-import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
-import {Markup, renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, h} from '../liminal/markup.ts';
-import {DenoHttpServer} from '../liminal/deno-http-server.ts';
-import {parseCookies} from '../liminal/http-server.ts';
-import {evalJsExprSrc} from '../liminal/jsterp.ts';
-import {evalRouteExprSrc} from '../liminal/routeterp.ts';
+import {Markup, h} from '../liminal/markup.ts';
 import {exists as fileExists} from "std/fs/mod.ts"
-//import {Home} from './home-page.ts';
 import * as home from './home-page.ts';
-import {Page} from './page.ts';
 import * as volunteer from './volunteer.ts';
 import * as timesheet from './timesheet.ts';
 import * as event from './event.ts';
 import * as commitment from './commitment.ts';
-import {Table, Tuple} from '../liminal/table.ts';
 import * as table from '../liminal/table.ts';
-import {serialize, serializeAs, setSerialized, path} from "../liminal/serializable.ts";
+import {serialize, path} from "../liminal/serializable.ts";
 import {lazy} from '../liminal/lazy.ts';
 import {activityReport, dailyActivityReport} from './activity_report.ts';
 import { Temporal } from 'temporal-polyfill';
-import {rpcUrl} from '../liminal/rpc.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
-import * as browserAgent from '../liminal/browser-agent.ts';
-import {runBrowserDemo, runTests, TEST_RUNS} from './browser_test_demo.ts';
+import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
+import {TEST_RUNS} from './browser_test_demo.ts';
 
-export interface RabidServerConfig {
-    hostname: string,
-    port: number,
-}
-
-// Which interpreter evaluates route expressions.  Selected once at startup via
-// the RABID_ROUTE_EVAL env var:
-//   (unset) / 'jsterp'  - the legacy full JS-expression interpreter (current,
-//                         unchanged behavior).
-//   'routeterp'         - the restricted, default-deny route interpreter
-//                         (liminal/routeterp.ts).  Only @safe-decorated
-//                         members/methods and explicitly-bound scope names are
-//                         reachable.
-// Run a staging instance (or replay logged route exprs) with
-// RABID_ROUTE_EVAL=routeterp to find which routes still need @safe annotations
-// before flipping the default.  We deliberately do NOT offer an in-process
-// "shadow" that evaluates both, because that would double-execute
-// side-effecting routes (e.g. saveForm would run twice).
-const routeEvalMode = (Deno.env.get('RABID_ROUTE_EVAL') ?? 'jsterp').toLowerCase();
-
-function evalRoute(scope: Record<string, any>, jsExprSrc: string): any {
-    switch(routeEvalMode) {
-        case 'routeterp':
-            return evalRouteExprSrc(scope, jsExprSrc);
-        case 'jsterp':
-        case '':
-            return evalJsExprSrc(scope, jsExprSrc);
-        default:
-            throw new Error(`rabid: unknown RABID_ROUTE_EVAL mode '${routeEvalMode}' (expected 'jsterp' or 'routeterp')`);
-    }
-}
+// Kept for compatibility; the generic server config now lives in liminal.
+export type RabidServerConfig = LiminalServerConfig;
 
 const constructorRoutes: Record<any, any> = {
     TableView: table.TableView,
 };
 
 /**
- * Top-level response coercion only: should this evaluated route result be
- * rendered as HTML markup (vs. returned as JSON)?
- *
- * We accept either a single element (`['div', {...}, ...]`) or a *fragment* - a
- * bare list of markup items, e.g. `[['p',{},...], ['table',{},...]]` - so that
- * render helpers can return a list of siblings without being forced to wrap them
- * in a single root element.  A fragment is discriminated by its first non-null
- * item being an element; a genuine JSON array (`[1,2]`, `[{...}]`) is not, and is
- * returned as JSON.  The two cases are disjoint: a single element has a *string*
- * tag at [0], a fragment has an element there.
- *
- * This is a deliberate, top-level-only kludge - markup.isElemMarkup, used inside
- * the markup model, is exact and unchanged.
+ * The Red Raccoon volunteer app.  All the generic server/framework machinery -
+ * route dispatch, the HTTP handler, server lifecycle, the browser-test bridge and
+ * the /eval endpoint - lives in LiminalApp; Rabid supplies the app-specific bits
+ * (its tables, route scope, login/auth, page template) through the hooks below.
  */
-function isTopLevelMarkup(result: any): boolean {
-    // A genuine element is `[tag, attrs, ...]` where tag is a string/function/
-    // symbol.  markup.isElemMarkup only checks that [1] is an object, which gives
-    // a false positive for an array of records (e.g. a query's `.all()` result),
-    // whose [1] is just another record object - so we additionally require a
-    // valid tag at [0].  (We keep this stricter check here, at the top level,
-    // rather than changing markup.isElemMarkup, which is exact within the model.)
-    const isElement = (n: any) =>
-        markup.isElemMarkup(n) &&
-        (typeof n[0] === 'string' || typeof n[0] === 'function' || typeof n[0] === 'symbol');
-    if(isElement(result))
-        return true;
-    if(!Array.isArray(result))
-        return false;
-    // A fragment: a list of markup items whose first non-null item is an element.
-    const firstMeaningful = result.find(item => item !== null && item !== undefined);
-    return isElement(firstMeaningful);
-}
+export class Rabid extends LiminalApp {
 
-/**
- *
- */
-export class Rabid {
-    
     routes: Record<string, any>;
     pages: Record<string, any>;
-
-    // The large random password (a decimal string) that authorises the
-    // rabid.shutdown(<password>) route, and the path of the pidfile we wrote at
-    // startup.  Both are populated by startServer().
-    shutdownPassword: string|undefined = undefined;
-    pidFilePath: string|undefined = undefined;
-
-    // Authorises the dev-only /eval endpoint (arbitrary JS in this server or the
-    // test browser).  Generated by startServer ONLY on a non-production db;
-    // undefined (endpoint hard-off) otherwise.  Deliberately a SEPARATE secret
-    // from shutdownPassword so its (much larger) blast radius is its own.
-    evalPassword: string|undefined = undefined;
 
     @path get config() { return new config.ConfigTable(); }
     @path get volunteer() { return new volunteer.VolunteerTable(); }
@@ -141,21 +53,11 @@ export class Rabid {
         return [this.config, this.volunteer, this.passwordHash, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment];
     }
 
-
-    // TODO having this just be a method is much nicer, but did like having the
-    //      internal stuff (like tables) separted?  or not?  If not, then can
-    //      put views (and fragments) on the tables, and they can also be
-    //      bound with @path, which will make them automatically rerenderable
-    //      in a particularly clean way (if we can figure out the ARGS)
-    //      But this is worth investigating.
     home() { return templates.page('home', home.home()); }
     volunteers() { return templates.page('Volunteers', this.volunteer.renderSearchableVolunteers()); }
 
-    /**
-     *
-     */
     constructor() {
-        
+        super();
         this.pages = {
             home:()=>this.home(),
             volunteers:()=>this.volunteers(),
@@ -168,7 +70,7 @@ export class Rabid {
                 )
             ),
         };
-        
+
         this.routes = Object.assign(
             {},
             {rabid: this},
@@ -181,288 +83,82 @@ export class Rabid {
         return 'rabid';
     }
 
-    /**
-     *
-     */
-    async startServer(config: RabidServerConfig) {
-        console.info('Starting rabid server');
+    // ----- LiminalApp hooks --------------------------------------------------
 
-        // --- Write runtime files into the current working directory:
-        //     - rabid.pid: our process id, so a supervisor (or a human) can
-        //       check whether we are alive (modulo pid reuse) without grepping.
-        //     - rabid-shutdown-password.txt: a large random number that must be
-        //       supplied to the rabid.shutdown(<password>) route to ask this
-        //       process to exit cleanly (so e.g. systemd can restart it rather
-        //       than us being kill -9'd).  It is a secret, so we write it 0600.
-        this.shutdownPassword = generateShutdownPassword();
-        this.pidFilePath = 'rabid.pid';
-        const shutdownPasswordPath = 'rabid-shutdown-password.txt';
-        Deno.writeTextFileSync(this.pidFilePath, String(Deno.pid) + '\n');
-        Deno.writeTextFileSync(shutdownPasswordPath, this.shutdownPassword + '\n', {mode: 0o600});
-        console.info(`Wrote ${this.pidFilePath} (pid ${Deno.pid}) and ${shutdownPasswordPath} (mode 0600)`);
+    get appName(): string { return 'rabid'; }
 
-        // --- The /eval endpoint (dev-only god-mode: arbitrary JS in this server
-        //     or the test browser) is enabled ONLY on a non-production db, and
-        //     authorised by a large random password written 0600.  On production
-        //     we generate no password and the endpoint is hard-off.
-        const evalPasswordPath = 'rabid-eval-password.txt';
-        if(this.isTestDb) {
-            this.evalPassword = generateShutdownPassword();
-            Deno.writeTextFileSync(evalPasswordPath, this.evalPassword + '\n', {mode: 0o600});
-            console.info(`Wrote ${evalPasswordPath} (mode 0600) - /eval ENABLED (non-production db)`);
-        } else {
-            // Remove any stale password file so it can't be mistaken for live.
-            try { Deno.removeSync(evalPasswordPath); } catch(_e) { /* not there - fine */ }
-            console.info('/eval endpoint disabled (production db)');
-        }
-
-        // Let the operator know if they're serving non-production data (the marker
-        // travels with the db; a real database should be marked 'production').
-        try {
-            const purpose = this.config.getDbPurpose();
-            if(purpose && purpose !== 'production')
-                console.warn(`NOTE: serving a '${purpose}' database (not production data).`);
-        } catch { /* config table may not exist on an older db; ignore */ }
-
-        const contentdirs = {
-            '/resources/': await findResourceDir('resources')+'/',
-        };
-
-        const contentfiles = {};
-        const requestHandlerPaths: Record<string, (request: server.Request) => Promise<server.Response>> = {
-            '/rabid/': request=>this.requestHandler(request),
-            '/': request=>this.requestHandler(request),
-        };
-        await new DenoHttpServer({port: config.port,
-                                  hostname: config.hostname,
-                                  contentdirs, contentfiles, requestHandlerPaths}
-                                 ).run();
+    // Resolve the session token into the request's security context (one trusted
+    // lookup of the actor's own record, before any actor context exists).
+    resolveSecurityContext(session_token: string | undefined): security.SecurityContext {
+        return security.runSystem(() => {
+            const session = session_token ? this.volunteerLoginSession.getBySessionToken.first({session_token}) : undefined;
+            const actor = session ? this.volunteer.getById(session.volunteer_id) : undefined;
+            return {
+                actorId: session?.volunteer_id,
+                roles: security.rolesFromPermissionsField(actor?.permissions),
+            };
+        });
     }
 
-    ignorePaths = new Set(['/favicon.ico', '/.well-known/appspecific/com.chrome.devtools.json']);
-    
-    /**
-     *
-     */
-    // Proto request handler till we figure out how we want our urls etc to workc
-    async requestHandler(request: server.Request): Promise<server.Response> {
-        
-        if(false && !request?.url?.endsWith('/favicon.ico'))
-            console.info('tagger request', request);
-        
-        const requestUrl = new URL(request.url);
-        const filepath = decodeURIComponent(requestUrl.pathname);
-
-        // 
-        const volunteer = request.headers["x-webauth-volunteer"];
-        
-        const searchParams: Record<string,string> = {};
-        requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
-        
-        if (this.ignorePaths.has(filepath)) {
-            return Promise.resolve({status: 200, headers: {}, body: 'not found'});
-        }
-
-        console.info("FILE PATH", filepath);
-        let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-        // XXX HACK - factor properly (shame! shame!)
-        jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'rabid/')
-        switch(jsExprSrc) { // XXX HACK - move to better place
-            case '':
-                jsExprSrc = 'home';
-                break;
-        }
-
-        const bodyArgs = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-
-        const cookies = parseCookies(request.headers['cookie']);
-        const session_token = cookies['RABID_SESSION_TOKEN'];
-        
-        // TODO PRINT COOKIES HERE.
-        // TODO EXPERIMENT WITH ADDING A COOKIE.
-
-        // Whether this request was issued by htmx (a partial swap) rather than a
-        // full-page navigation.  Used both to adapt redirects (below) and to
-        // decide whether a page() result is wrapped in the document template.
-        const isHtmxRequest = request.headers['hx-request'] === 'true';
-
-        // --- Special-case the self-shutdown route.  We match it with a strict
-        //     digits-only regex and handle it directly rather than via jsterp so
-        //     that (a) the large numeric password is compared as an exact string
-        //     (a 40-digit number would lose precision if parsed as a JS number),
-        //     and (b) no attacker-supplied expression is ever evaluated on this
-        //     deliberately pre-login path - the only thing we accept is digits.
-        const shutdownMatch = jsExprSrc.match(/^rabid\.shutdown\((\d+)\)$/);
-        if(shutdownMatch)
-            return this.shutdown(shutdownMatch[1]);
-
-        // --- Dev-only eval endpoint.  Matched on the raw path and handled
-        //     directly (NOT via the route interpreter), so the posted JS is never
-        //     parsed as a route expression.  Authorised solely by the eval
-        //     password (a pre-login path, like shutdown).
-        if(filepath === '/eval' || filepath === '/rabid/eval')
-            return await this.evalEndpoint(request);
-
-        const response = await this.rpcHandler(request.url, jsExprSrc, searchParams, bodyArgs, session_token, volunteer, isHtmxRequest);
-
-        // If this request was issued by htmx (rather than a full-page navigation),
-        // translate any server-side redirect into an HX-Redirect so that htmx
-        // performs a real client-side navigation instead of swapping in the
-        // redirected page.  This lets stateful actions just return
-        // server.forwardResponse(url) and work correctly from both htmx and
-        // plain <form> posts.
-        if(isHtmxRequest && server.isRedirectResponse(response))
-            return server.toHxRedirectResponse(response);
-
-        return response;
+    // Always read the db_purpose marker as a trusted op (the config query must not
+    // be subject to the caller's field-read guards).
+    getDbPurpose(): string | undefined {
+        try { return security.runSystem(() => this.config.getDbPurpose()); }
+        catch { return undefined; }
     }
 
-    /**
-     *
-     */
-    /**
-     * Build the route eval scope and evaluate a route expression against it,
-     * returning the raw result (markup, a page(), an rpc result object, ...).
-     *
-     * This is the dispatch core shared by the HTTP request handler and the test
-     * harness.  It does NOT set up the security context - the caller does that
-     * (the server resolves it from the session; a test sets an explicit actor).
-     */
-    async dispatch(jsExprSrc: string,
-                   opts: {queryArgs?: Record<string, any>,
-                          bodyArgs?: Record<string, any>,
-                          session_token?: string} = {}): Promise<any> {
-        const queryArgs = opts.queryArgs ?? {};
-        const bodyArgs = opts.bodyArgs ?? {};
+    // Test-client durable identity lives on the login-session row.
+    stampTestClientOptIn(session_token: string, now: string): void {
+        this.volunteerLoginSession.stampTestClientOptIn(session_token, now);
+    }
+    stampTestClientHeartbeat(session_token: string, now: string): void {
+        this.volunteerLoginSession.stampTestClientHeartbeat(session_token, now);
+    }
+    mostRecentTestClient(): TestClientSession | undefined {
+        return this.volunteerLoginSession.mostRecentTestClient.first({});
+    }
 
-        // Top of scope is the active routes, plus the request's query/body args.
-        let rootScope: Record<string, any> =
-            Object.assign({}, this.routes, {queryArgs, bodyArgs, session_token: opts.session_token});
+    makePage(title: any, body: any): any { return templates.page(title, body); }
 
-        // Bind the positional rpc argument placeholders ($arg0, $arg1, ...) the
-        // client tx``/rpc`` mechanism posts in the body, so `x.saveForm($arg0)`
-        // resolves.  We bind ONLY $argN keys - not arbitrary body keys - so a
-        // request body cannot inject or shadow other bindings in the eval scope.
-        const rpcArgBindings: Record<string, any> = {};
-        for(const [k, v] of Object.entries(bodyArgs))
-            if(/^\$arg\d+$/.test(k))
-                rpcArgBindings[k] = v;
-        rootScope = Object.assign({}, rootScope, rpcArgBindings);
+    async resourceContentDirs(): Promise<Record<string, string>> {
+        return {'/resources/': await findResourceDir('resources') + '/'};
+    }
 
-        let result: any = evalRoute(rootScope, jsExprSrc);
-        while(result instanceof Promise)
-            result = await result;
+    testRuns(): Record<string, TestCase[]> { return TEST_RUNS; }
 
-        // If the expr evaluates to a function, call it (lets render functions /
-        // closure constructors be referenced without a trailing "()").
-        if(typeof result === 'function')
-            result = result.apply(null);
-
+    // Wrap a page() in the site document (full load) or reduce it to body-only +
+    // <title> (htmx partial swap).  The test-client nav link is gated on isTestDb.
+    protected override coercePageResult(result: any, isHtmxRequest: boolean): any {
+        if(templates.isPage(result))
+            return isHtmxRequest
+                ? [[h.title, {}, result.title], result.body]
+                : templates.pageTemplate({title: result.title, body: result.body, showTestClientLink: this.isTestDb});
         return result;
     }
 
-    async rpcHandler(requestUrl: string,
-                     jsExprSrc: string,
-                     queryArgs: Record<string, any>,
-                     bodyArgs: Record<string, any>,
-                     session_token: string|undefined,
-                     volunteer: string|undefined,
-                     isHtmxRequest: boolean = false): Promise<any> {
-
-        console.info("***", new Date().toLocaleString(), '::', volunteer, '::', jsExprSrc);
-        // console.info('about to eval', jsExprSrc, 'with root scope ',
-        //              JSON.stringify(utils.getAllPropertyNames(rootScope)));
-
-
-        // Lookup session token to get session
-        const session: volunteer.VolunteerLoginSession|undefined =
-            session_token ? this.volunteerLoginSession.getBySessionToken.first({session_token}) : undefined;
-
-        // Resolve the actor's security context once per request (one unguarded
-        // lookup of the actor's own record - we're not inside a context yet), then
-        // make it ambiently active for the rest of this request so the data layer
-        // can enforce field-level read permissions on every query.
-        const actor = session ? this.volunteer.getById(session.volunteer_id) : undefined;
-        security.enterWith({
-            actorId: session?.volunteer_id,
-            roles: security.rolesFromPermissionsField(actor?.permissions),
-        });
-
-        const allowedWithoutLoginJsExprsWhitelist = new Set([
-            'rabid.loginRequest(bodyArgs)'
-        ]);
-
-        const noLoginRequired = false;  // XXX this will be replaced with server CLI args to supply test userid/password.
-        const redirectToLoginPage = !(noLoginRequired || !!session || allowedWithoutLoginJsExprsWhitelist.has(jsExprSrc));
-        if(redirectToLoginPage) {
-            console.info('Redirecting to login');
-            jsExprSrc = `rabid.login(${JSON.stringify(requestUrl)})`;
-        }
-        
-        let result: any = null;
-        try {
-            // Build the eval scope and evaluate the route (shared with the test
-            // harness via dispatch()); the security context set above stays active.
-            result = await this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token});
-        } catch(e) {
-            // TODO more fiddling here.
-            console.info('request failed', e);
-            return server.jsonResponse({error: String(e)}, 400)
-        }
-
-        // A page() result (a navigable entry point) is wrapped in the site
-        // document template for a top-level navigation, or reduced to just its
-        // body for an htmx request - plus a <title> element so htmx still updates
-        // the browser tab on a partial swap.  Fragment routes don't return a
-        // page() and pass through here untouched (never wrapped).
-        if(templates.isPage(result)) {
-            result = isHtmxRequest
-                ? [[h.title, {}, result.title], result.body]
-                : templates.pageTemplate({title: result.title, body: result.body, showTestClientLink: this.isTestDb});
-        }
-
-        if(server.isMarkedResponse(result)) {
-            return result;
-        } else if(typeof result === 'string') {
-            return server.htmlResponse(result);
-        } else if(isTopLevelMarkup(result)) {
-            let htmlText: string = 'cat';
-            try {
-                // Note: we allow markup to contain Promises, which we force
-                //       at render time (inside asyncRenderToStringViaLinkeDOM)
-                // TODO: we may want to make this opt-in per request after
-                //       profiling how much extra cpu we are spending using
-                //       the async version fo renderToStringvialinkedom.
-                //       If the sync one is way faster, we could even consider
-                //       having it throw if it finds a promise, then re rendering
-                //       with the async one.
-                htmlText = await markup.asyncRenderToStringViaLinkeDOM(result);
-            } catch(e) {
-                console.info('request failed during content force', e);
-                return server.jsonResponse({error: String(e)}, 400);
-            }
-            return server.htmlResponse(htmlText);
-        } else {
-            return server.jsonResponse(result);
-        }
-
-        // result can be a command - like forward
-        // result can be json, a served page, etc
-        // so - want to define a result interface - and have the individualt mentods rethren tnat
-        // this can also be the opporthunity to allow streaming
-        // this mech is part of our deno server stuff.
-        // have shortcuts for returning other things:
-
-        //return Promise.resolve({status: 200, headers: {}, body: 'not found'});
+    // Unauthenticated requests are sent to the login page (except the login POST).
+    protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
+        const allowedWithoutLogin = new Set(['rabid.loginRequest(bodyArgs)']);
+        const loggedIn = ctx.actorId !== undefined;
+        if(loggedIn || allowedWithoutLogin.has(jsExprSrc)) return undefined;
+        return `rabid.login(${JSON.stringify(requestUrl)})`;
     }
+
+    // Override so /eval server-target code sees RABID's lexical scope (its tables
+    // etc.), not liminal's - direct eval only reaches names visible at this site.
+    protected override evalServer(js: string): Promise<any> {
+        const rabid = this; // exposed to the eval'd code
+        return security.runSystem(() =>
+            // deno-lint-ignore no-eval
+            eval(`(async () => { ${js}\n})()`));
+    }
+
+    // ----- Login / logout (app-specific auth) --------------------------------
 
     login(targetUrl: string, errorMessage?: string): Markup {
 
         // TODO: rendering the login page while already logged in is confusing - probably 301 to the
         //       home page if already logged in.
-        // TODO: I think our scheme may be wrong - if the actual login is done by RPC, then we don't need the
-        //       targetUrl thing, the 301, the confusion as to whether to render if logged in etc etc -
-        //       much better.
 
         const body = [
             [h.div, {class: 'container mt-5'},
@@ -481,9 +177,9 @@ export class Rabid {
                                     [h.div, {class:"form-group mb-3"},
                                         [h.label, {for:"email"}, 'Email address'],
                                         [h.input, {
-                                            type:"email", 
-                                            class:"form-control", 
-                                            name:"email", 
+                                            type:"email",
+                                            class:"form-control",
+                                            name:"email",
                                             id:"email",
                                             placeholder:"volunteer@example.com",
                                             required: true
@@ -493,9 +189,9 @@ export class Rabid {
                                     [h.div, {class:"form-group mb-4"},
                                         [h.label, {for:"password"}, 'Password'],
                                         [h.input, {
-                                            type:"password", 
-                                            class:"form-control", 
-                                            name:"password", 
+                                            type:"password",
+                                            class:"form-control",
+                                            name:"password",
                                             id:"password",
                                             placeholder:"Enter your password",
                                             required: true
@@ -503,9 +199,9 @@ export class Rabid {
                                     ],
 
                                     [h.input, {type:'hidden', name: 'targetUrl', value: targetUrl}],
-                                    
+
                                     [h.button, {type:"submit", class:"btn btn-primary btn-block w-100"}, 'Sign In'],
-                                    
+
                                     [h.div, {class: 'text-center mt-3'},
                                        [h.a, {href: 'mailto:info@redraccoon.org', class: 'text-decoration-none'}, 'Contact info@redraccoon.org for password help']
                                     ]
@@ -516,19 +212,16 @@ export class Rabid {
                 ]
             ]
         ];
-        
+
         return templates.page('Login', body);
     }
-        
+
 
     loginRequest(args: {email?: string, password?: string, targetUrl?: string}) {
 
         const {email, password} = args;
         const targetUrl = args.targetUrl || '/';
 
-        // On failure we re-render the login page with a specific, human-readable
-        // message (rather than throwing raw JSON).  The messages are intentionally
-        // specific so they are useful when diagnosing volunteer support requests.
         const reRenderWithError = (message: string) =>
             this.login(targetUrl, message);
 
@@ -537,27 +230,20 @@ export class Rabid {
         if(!password)
             return reRenderWithError('Please enter your password');
 
-        // --- Lookup volunteer by email.  This runs before the actor is known
-        //     (we're authenticating), so do it as a trusted system operation -
-        //     otherwise the field-read guard would block reading the email here.
+        // --- Lookup volunteer by email (before the actor is known - trusted op).
         const volunteer = security.runSystem(() => rabid.volunteer.byEmail.first({email}));
         if(!volunteer)
             return reRenderWithError('No account was found for that email address');
 
-        // --- Lookup password record for volunteer
         const passwordHashRecord = rabid.passwordHash.byVolunteerId.first({volunteer_id: volunteer.volunteer_id});
         const {password_salt, password_hash} = passwordHashRecord ?? {};
         if(!password_salt || !password_hash)
             return reRenderWithError('No password has been set for this account');
 
-        // --- Hash supplied password with salt from password_hash_record
         const hashedSuppliedPassword = passwordUtils.hashPassword(password, password_salt);
-
-        // --- Hashed password must match stored password
         if(hashedSuppliedPassword !== password_hash)
             return reRenderWithError('Incorrect password');
 
-        // --- Generate a new login session
         const now = date.currentSqliteDateTime();
         const session_token = passwordUtils.generateSessionToken();
         const sessionId = rabid.volunteerLoginSession.insert({
@@ -568,25 +254,17 @@ export class Rabid {
             last_ip: '', // TODO
         });
 
-        // --- Set the RABID_SESSION_TOKEN cookie to the session_token and 302
-        //     redirect to the originally requested page.
         const response = server.forwardResponse(targetUrl);
-        // Note: session tokens are base64 (no '=' padding for our 24-byte tokens),
-        //       so they are safe to use directly as a cookie value.
-        // Max-Age is set to 400 days, which is the longest lifetime modern
-        // browsers will honour (they hard-cap cookie expiry at 400 days per the
-        // cookie spec, so there is no such thing as a "forever" cookie).  The
-        // authoritative session lifetime lives in the volunteer_session table -
-        // deleting that row ends the session regardless of the cookie's age.
+        // Max-Age is the 400-day browser cap; the authoritative session lifetime is
+        // the volunteer_session row (deleting it ends the session regardless).
         const fourHundredDaysInSeconds = 400 * 24 * 60 * 60;
         response.headers['Set-Cookie'] =
-            `RABID_SESSION_TOKEN=${session_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${fourHundredDaysInSeconds}`;
+            `${this.sessionCookieName}=${session_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${fourHundredDaysInSeconds}`;
         return response;
     }
 
     /**
-     * Log out by clearing the current session (both server-side record and
-     * client cookie) and redirecting to the home page.
+     * Log out: clear the session (server record + client cookie) and redirect home.
      */
     logout(session_token?: string): server.Response {
         if(session_token) {
@@ -598,370 +276,14 @@ export class Rabid {
         }
         const response = server.forwardResponse('/');
         response.headers['Set-Cookie'] =
-            'RABID_SESSION_TOKEN=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+            `${this.sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
         return response;
     }
-
-    // ------------------------------------------------------------------------
-    // --- Browser test bridge ------------------------------------------------
-    // ------------------------------------------------------------------------
-    //
-    // A logged-in browser with the 'testing' permission opts in (by loading the
-    // test-client page), then long-polls for JS to run; server-side test code
-    // calls evalInBrowser() to push JS onto that loop and await the result.  This
-    // gives "run JS in a real browser and get the value back" with no separate
-    // puppeteer/CDP process - it reuses the app's own HTTP channel, session and
-    // auth.  See liminal/browser-agent.ts (the transient channel) and the
-    // last_test_client_* session columns (durable identity/liveness).
-
-    // The transient in-memory command channel (lost on restart - identity lives
-    // in the session row, so a reconnecting browser just re-parks a poll).
-    @lazy get testClientChannel() { return new browserAgent.BrowserAgentChannel(); }
-
-    // Whether this process is serving a non-production db - the browser-test
-    // harness (and its nav link) are available here.  Memoized: the db_purpose
-    // marker is fixed for a server run (changing it needs the server stopped, due
-    // to the SQLite write lock), so we read it ONCE rather than querying it on
-    // every page render.
-    @lazy get isTestDb(): boolean {
-        let purpose: config.DbPurpose | undefined;
-        try { purpose = security.runSystem(() => this.config.getDbPurpose()); }
-        catch { purpose = undefined; }   // config table may be absent on an older db
-        return purpose !== 'production';
-    }
-
-    // The harness is a remote-code-execution capability into a logged-in browser
-    // session, so it is gated twice: it is refused on a production-marked db
-    // (using the db_purpose marker that travels with the data), and every route
-    // requires the 'testing' permission.
-    #assertHarnessEnabled(): void {
-        const purpose = security.runSystem(() => this.config.getDbPurpose());
-        if(purpose === 'production')
-            throw new Error('the browser test harness is disabled on a production database');
-    }
-    #assertTestingRole(): void {
-        const ctx = security.current();
-        if(!ctx?.system && !ctx?.roles.has('testing'))
-            throw new Error("the 'testing' permission is required to use the browser test harness");
-    }
-    #requireSession(session_token: string|undefined): string {
-        if(!session_token) throw new Error('a login session is required to act as a test client');
-        return session_token;
-    }
-
-    // --- Routes the browser test client calls (all POST/GET via the rpc layer) ---
-
-    // Opt in as the test client: stamps last_test_client_opt_in (and heartbeat) on
-    // this session.  The most-recent opt-in is "the" test client; older clients are
-    // told (via testClientPoll) to stop.
-    testClientOptIn(session_token?: string) {
-        this.#assertHarnessEnabled();
-        this.#assertTestingRole();
-        const token = this.#requireSession(session_token);
-        security.runSystem(() =>
-            this.volunteerLoginSession.stampTestClientOptIn(token, date.currentSqliteDateTime()));
-        return {ok: true, pollTimeoutMs: 25_000};
-    }
-
-    // Long-poll for a command.  If this session is no longer the most-recent
-    // opt-in, it is told to stop (a newer client has taken over).  Otherwise it
-    // stamps a heartbeat and parks until a command arrives or the poll times out.
-    async testClientPoll(session_token?: string) {
-        this.#assertHarnessEnabled();
-        this.#assertTestingRole();
-        const token = this.#requireSession(session_token);
-        const current = security.runSystem(() => this.volunteerLoginSession.mostRecentTestClient.first({}));
-        if(!current || current.session_token !== token)
-            return {stale: true};
-        security.runSystem(() =>
-            this.volunteerLoginSession.stampTestClientHeartbeat(token, date.currentSqliteDateTime()));
-        const cmd = await this.testClientChannel.poll(token, {pollTimeoutMs: 25_000});
-        return {cmd};
-    }
-
-    // Deliver the result of a command (cmdId, result-envelope as positional args).
-    testClientResult(session_token: string|undefined, cmdId: string, result: browserAgent.BrowserResult) {
-        this.#assertHarnessEnabled();
-        this.#assertTestingRole();
-        const token = this.#requireSession(session_token);
-        const delivered = this.testClientChannel.deliverResult(token, String(cmdId), result);
-        return {ok: true, delivered};
-    }
-
-    /**
-     * Server-side seam: run `js` in the current test client's browser and return
-     * its (structured-cloned) value.  Throws if no client has opted in, if the
-     * browser eval threw, or if it did not answer in time (the timeout message
-     * includes the client's last heartbeat so a disconnected client is obvious).
-     *
-     * The target is always the most-recent opt-in - never an older client, even a
-     * silent one - so which browser runs the code is deterministic.
-     */
-    async evalInBrowser(js: string, opts: {timeoutMs?: number} = {}): Promise<any> {
-        this.#assertHarnessEnabled();
-        const current = security.runSystem(() => this.volunteerLoginSession.mostRecentTestClient.first({}));
-        if(!current)
-            throw new Error('no browser test client has opted in - open /rabid/rabid.testClientPage() in a logged-in browser with the \'testing\' permission');
-        let res: browserAgent.BrowserResult;
-        try {
-            res = await this.testClientChannel.enqueue(current.session_token, js, {timeoutMs: opts.timeoutMs ?? 30_000});
-        } catch(e) {
-            if(e instanceof browserAgent.BrowserEvalTimeout)
-                throw new Error(`browser eval timed out after ${e.ms}ms; the most-recent test client last sent a heartbeat at ${current.last_test_client_heartbeat ?? '(never)'} (opted in ${current.last_test_client_opt_in}) - it may be disconnected; reopen the test-client page`);
-            throw e;
-        }
-        if(!res.ok)
-            throw new browserAgent.BrowserEvalError(`browser eval threw: ${res.error?.name}: ${res.error?.message}`, res.error);
-        return res.value;
-    }
-
-    // The opt-in page: loads the test-client script (which opts in, then polls).
-    // Navigating here is the explicit opt-in - nothing else activates the harness.
-    testClientPage(): templates.Page {
-        const body = [
-            [h.div, {class: 'container py-3'},
-             [h.h2, {}, 'Browser test client'],
-             [h.p, {class: 'text-muted'},
-              'This browser is now acting as the test client: server-side tests can run JS here and read the result. Leave this tab open. Opening this page again (here or elsewhere) makes that tab the active client.'],
-             [h.div, {id: 'test-agent-status', class: 'alert alert-secondary'}, 'starting…'],
-             [h.button, {class: 'btn btn-outline-primary',
-                         'hx-get': '/rabid/rabid.runBrowserTests()',
-                         'hx-target': '#test-agent-results', 'hx-swap': 'innerHTML'},
-              'Run demo tests'],
-             [h.div, {id: 'test-agent-results', class: 'mt-3'}],
-             [h.script, {src: '/resources/test-agent.js'}],
-            ],
-        ];
-        return templates.page('Test client', body);
-    }
-
-    // Run the sample browser-test suite (mixes in-process and in-browser checks).
-    // Reachable from the test-client page's "Run demo tests" button.
-    async runBrowserTests(): Promise<Markup> {
-        this.#assertHarnessEnabled();
-        this.#assertTestingRole();
-        return await runBrowserDemo(this);
-    }
-
-    // Seconds since a session's last heartbeat (undefined if it never sent one).
-    // Uses the existing Temporal helpers - both timestamps are local wall-clock.
-    #heartbeatAgeSeconds(heartbeat: string | undefined): number | undefined {
-        if(!heartbeat) return undefined;
-        const hb = date.sqliteDateTimeToTemporal(heartbeat);
-        return Temporal.Now.plainDateTimeISO().since(hb).total({unit: 'seconds'});
-    }
-
-    // Block until a live test client is connected (most-recent opt-in with a fresh
-    // heartbeat) or waitMs elapses.  An already-open tab reconnects on its own
-    // after a server restart, so this just covers that ~1-2s reconnect - no
-    // per-run browser interaction.  The freshness window is wider than the poll
-    // timeout, since a client mid-long-poll only re-stamps once per poll cycle.
-    async #waitForTestClient(waitMs: number): Promise<boolean> {
-        const freshSeconds = 35;
-        const deadline = Date.now() + waitMs;
-        let announced = false;
-        for(;;) {
-            const c = security.runSystem(() => this.volunteerLoginSession.mostRecentTestClient.first({}));
-            const age = this.#heartbeatAgeSeconds(c?.last_test_client_heartbeat);
-            if(c && age !== undefined && age <= freshSeconds)
-                return true;
-            if(Date.now() >= deadline)
-                return false;
-            if(!announced) {
-                console.info('Waiting for a test client... open /rabid/rabid.testClientPage() in a logged-in browser (an already-open tab reconnects on its own).');
-                announced = true;
-            }
-            await new Promise(r => setTimeout(r, 500));
-        }
-    }
-
-    /**
-     * Launch a named browser test run (CLI: `rabid.ts test-run <name>`).  Waits
-     * for a live test client, runs the suite, prints a summary, and returns a
-     * process exit code: 0 all-passed, 1 failures, 2 unknown run, 3 no client.
-     *
-     * The edit→rerun loop is: leave a browser tab open at the test-client page
-     * once, then re-run this (e.g. via ./rabid.sh test-run <name>) after each code
-     * change - the tab reconnects across the restart, no clicking required.
-     */
-    async runNamedTestRun(name: string, opts: {waitMs?: number} = {}): Promise<number> {
-        this.#assertHarnessEnabled();
-        const cases = TEST_RUNS[name];
-        if(!cases) {
-            console.error(`Unknown test run '${name}'. Known runs: ${Object.keys(TEST_RUNS).join(', ') || '(none)'}`);
-            return 2;
-        }
-        if(!await this.#waitForTestClient(opts.waitMs ?? 60_000)) {
-            console.error("No test client connected - open /rabid/rabid.testClientPage() in a logged-in browser with the 'testing' permission, leave the tab open, and re-run.");
-            return 3;
-        }
-        console.info(`\nRunning test run '${name}' (${cases.length} test(s))...\n`);
-        const results = await runTests(this, cases);
-        for(const r of results)
-            console.info(r.ok ? `  ok    ${r.name}` : `  FAIL  ${r.name}\n          ${r.error}`);
-        const passed = results.filter(r => r.ok).length;
-        const allOk = passed === results.length;
-        console.info(`\nTest run '${name}': ${passed}/${results.length} passed${allOk ? '' : '  *** FAILURES ***'}`);
-        return allOk ? 0 : 1;
-    }
-
-    /**
-     * Dev-only eval endpoint: run arbitrary JS in this server process or in the
-     * test browser, for interactive exploration when things get off the rails.
-     * POST /eval  {password, target?: 'server'|'browser', js, timeoutMs?}.
-     * Returns a structured envelope {ok, value} | {ok:false, error}.
-     *
-     * Hard-gated: disabled on a production db (no password is ever generated
-     * there), and otherwise authorised solely by the eval password.  This is an
-     * RCE-by-design tool, kept to non-production dbs on purpose.
-     */
-    async evalEndpoint(request: server.Request): Promise<server.Response> {
-        const fail = (status: number, name: string, message: string) =>
-            server.jsonResponse({ok: false, error: {name, message}}, status);
-
-        if(!this.isTestDb)
-            return fail(403, 'Disabled', 'eval endpoint is disabled on a production database');
-        if(this.evalPassword === undefined)
-            return fail(403, 'Disabled', 'eval endpoint is not enabled on this server');
-
-        const body = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-        if(typeof body.password !== 'string' || body.password !== this.evalPassword)
-            return fail(403, 'Forbidden', 'invalid eval password');
-        if(typeof body.js !== 'string')
-            return fail(400, 'BadRequest', "missing 'js' (a string of code to evaluate)");
-
-        const target = body.target ?? 'server';
-        const timeoutMs = typeof body.timeoutMs === 'number' ? body.timeoutMs : 30_000;
-        try {
-            let value: any;
-            if(target === 'browser')
-                value = await this.evalInBrowser(body.js, {timeoutMs});      // already serialized by the client
-            else if(target === 'server') {
-                // Even with the password, server-target eval (RCE on this host)
-                // must originate from the local machine.  We check the actual TCP
-                // peer, and refuse if any forwarding header is present: binding to
-                // localhost is not enough behind a reverse proxy, where every peer
-                // is loopback and a forwarding header carries the real (possibly
-                // remote) client.
-                const peer = request.remoteAddr;
-                const isLoopback = peer === '127.0.0.1' || peer === '::1' || peer === 'localhost';
-                const proxied = !!(request.headers['x-forwarded-for'] || request.headers['forwarded'] || request.headers['x-real-ip']);
-                if(!isLoopback || proxied)
-                    return fail(403, 'Forbidden', `server-target eval is only reachable from localhost (peer: ${peer ?? 'unknown'})`);
-                value = serializeValue(await this.#evalServer(body.js));
-            }
-            else
-                return fail(400, 'BadRequest', `unknown target '${target}' (expected 'server' or 'browser')`);
-            return server.jsonResponse({ok: true, target, value});
-        } catch(e: any) {
-            return server.jsonResponse({ok: false, target,
-                error: {name: e?.name ?? 'Error', message: e?.message ?? String(e), stack: e?.stack}});
-        }
-    }
-
-    // Evaluate `js` in this server process.  Direct eval (not new Function) so the
-    // code sees this module's lexical scope - `rabid`, all the imports (security,
-    // db, table, markup, volunteer, event, commitment, templates, date, Temporal,
-    // ...), and globals (Deno, fetch, crypto) - plus `await import(...)` for
-    // anything else.  Wrapped in an async IIFE so the code can await/return, and
-    // run as a trusted system op so field-read guards don't block exploration.
-    #evalServer(js: string): Promise<any> {
-        const rabid = this; // exposed to the eval'd code (see comment above)
-        return security.runSystem(() =>
-            // deno-lint-ignore no-eval
-            eval(`(async () => { ${js}\n})()`));
-    }
-
-    /**
-     * Ask this server process to exit cleanly.  Authorised by the large random
-     * password written to rabid-shutdown-password.txt at startup (compared as an
-     * exact string).  Intended for restarts and for supervisors such as systemd
-     * (which can then start a fresh process) - cleaner than kill -9.
-     *
-     * Note: this route is intercepted in requestHandler (not evaluated by jsterp)
-     * and is reachable without a login session - the shutdown password is the
-     * only credential.
-     */
-    shutdown(password: string): server.Response {
-        if(this.shutdownPassword === undefined)
-            return server.jsonResponse({error: 'shutdown is not enabled on this server'}, 403);
-        if(password !== this.shutdownPassword)
-            return server.jsonResponse({error: 'invalid shutdown password'}, 403);
-
-        console.info('*** Shutdown requested with valid password - exiting.');
-
-        // --- Best-effort removal of the pidfile so a stale one is not left behind.
-        if(this.pidFilePath) {
-            try { Deno.removeSync(this.pidFilePath); } catch(_e) { /* already gone - ignore */ }
-        }
-
-        // --- Exit shortly after this response is flushed so the caller (and any
-        //     supervisor) sees a clean reply before the process dies.
-        setTimeout(() => Deno.exit(0), 100);
-
-        return server.htmlResponse('rabid: shutting down\n');
-    }
-
 }
 
 /**
- * Generate a large random number (as a decimal string) for use as the
- * shutdown password.  Two 64-bit random values are concatenated, giving ~38-40
- * digits of entropy.  We keep it a string (and never parse it as a JS number)
- * so the full value survives - a number this large exceeds Number.MAX_SAFE_INTEGER.
- */
-/**
- * Make an arbitrary server-side value JSON-safe for the /eval response, mirroring
- * the browser client's serializer: tag the awkward cases (undefined, NaN/Infinity,
- * bigint, function, symbol, Date) rather than letting JSON.stringify drop or choke
- * on them, prefer toJSON() (e.g. Temporal), and guard depth + cycles.
- */
-function serializeValue(v: any): any {
-    const seen = new WeakSet<object>();
-    function ser(x: any, depth: number): any {
-        if(x === undefined) return {__undefined: true};
-        if(x === null) return null;
-        const t = typeof x;
-        if(t === 'number') return Number.isFinite(x) ? x : {__number: String(x)};
-        if(t === 'string' || t === 'boolean') return x;
-        if(t === 'bigint') return {__bigint: x.toString()};
-        if(t === 'function') return {__function: x.name || '(anonymous)'};
-        if(t === 'symbol') return {__symbol: String(x)};
-        if(x instanceof Date) return {__date: x.toISOString()};
-        if(depth > 6) return {__truncated: true};
-        if(seen.has(x)) return {__circular: true};
-        seen.add(x);
-        if(Array.isArray(x)) return x.slice(0, 1000).map((e) => ser(e, depth + 1));
-        if(typeof x.toJSON === 'function') { try { return x.toJSON(); } catch(_e) { /* fall through */ } }
-        const out: Record<string, any> = {};
-        for(const k of Object.keys(x)) out[k] = ser(x[k], depth + 1);
-        return out;
-    }
-    return ser(v, 0);
-}
-
-function generateShutdownPassword(): string {
-    const buf = new BigUint64Array(2);
-    crypto.getRandomValues(buf);
-    return buf[0].toString() + buf[1].toString();
-}
-
-
-/**
- * We want the site resources (.js, .css, images) to be part of the source tree
- * (ie. under revision control etc).  So we have a directory in the source tree
- * called 'resources'.  AFAICT Deno has no particular support for this (accessing
- * these files as part of it's normal package mechanism) - so for now we are
- * using import.meta to find this file, then locating the resource dir relative to that.
- *
- * The present issue is that we are only supporting file: urls for now.
- *
- * An additional complication to consider when improving this is that in the
- * public site, we will usually be running behind apache or nginx, so having the
- * resouces available as files in a known location is important.
- *
- * Also: once we start uploading resources to a CDN, we will want to make corresponding
- * changes to resources URLs.
+ * Locate the in-source-tree resource directory (.js/.css/images) relative to this
+ * file, so it can be served as static content.  Only file: urls are supported.
  */
 async function findResourceDir(resourceDirName: string = 'resources') {
     const serverFileUrl = new URL(import.meta.url);
@@ -975,12 +297,6 @@ async function findResourceDir(resourceDirName: string = 'resources') {
 
     return resourceDir;
 }
-
-// export let globalRabidInst: Rabid|undefined = undefined;
-
-// export function getRabid(): Rabid {
-//     return globalRabidInst ??= new Rabid();
-// }
 
 export let rabid: Rabid = undefined as unknown as Rabid;
 
@@ -999,8 +315,7 @@ if (import.meta.main) {
         case 'test-run': {
             // Start the server, run the named browser test run against a connected
             // client, then exit with a pass/fail code.  startServer() resolves once
-            // Deno.serve is listening (it serves in the background), so the run and
-            // the server run concurrently.
+            // Deno.serve is listening, so the run and the server run concurrently.
             const runName = args[1] ?? 'demo';
             await rabid.startServer({hostname: 'localhost', port: 8888});
             const code = await rabid.runNamedTestRun(runName);

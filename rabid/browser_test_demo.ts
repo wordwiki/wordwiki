@@ -14,11 +14,12 @@
  * not create a runtime import cycle with rabid.ts.
  */
 import type {Rabid} from './rabid.ts';
-import {h, type Markup} from '../liminal/markup.ts';
+import type {TestCase} from '../liminal/liminal.ts';
 import * as security from '../liminal/security.ts';
 
-export interface TestCase { name: string; run: (rabid: Rabid) => Promise<void>; }
-export interface TestResult { name: string; ok: boolean; error?: string; }
+// Cases are written against the concrete app (so `rabid.volunteer` etc. typecheck);
+// they're handed to the framework as TestCase (run receives the app instance).
+interface RabidTestCase { name: string; run: (rabid: Rabid) => Promise<void>; }
 
 function assert(cond: any, msg: string): void {
     if(!cond) throw new Error(msg);
@@ -28,7 +29,7 @@ function assertEquals(actual: any, expected: any, msg?: string): void {
         throw new Error(`${msg ?? 'assertEquals'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 }
 
-const TESTS: TestCase[] = [
+const TESTS: RabidTestCase[] = [
     {
         name: 'browser evaluates arithmetic and returns the value',
         run: async (rabid) => {
@@ -78,43 +79,9 @@ const TESTS: TestCase[] = [
 ];
 
 // Registry of named test runs, launchable from the CLI: `./rabid.sh test-run <name>`.
-// (As real suites are added they register here alongside 'demo'.)
+// (As real suites are added they register here alongside 'demo'.)  Cast bridges
+// the case param type (Rabid) to the framework's TestCase (LiminalApp); at runtime
+// the app instance passed in IS a Rabid.
 export const TEST_RUNS: Record<string, TestCase[]> = {
-    demo: TESTS,
+    demo: TESTS as unknown as TestCase[],
 };
-
-// Run a list of cases, capturing pass/fail per case.  Never throws - a thrown
-// assertion becomes a failed result so the rest of the run still executes.
-export async function runTests(rabid: Rabid, cases: TestCase[]): Promise<TestResult[]> {
-    const results: TestResult[] = [];
-    for(const t of cases) {
-        try {
-            await t.run(rabid);
-            results.push({name: t.name, ok: true});
-        } catch(e) {
-            results.push({name: t.name, ok: false, error: e instanceof Error ? e.message : String(e)});
-        }
-    }
-    return results;
-}
-
-// Markup summary for the test-client page's "Run demo tests" button.
-export function renderResults(results: TestResult[]): Markup {
-    const passed = results.filter(r => r.ok).length;
-    const allOk = passed === results.length;
-    return [h.div, {},
-        [h.p, {class: allOk ? 'fw-bold text-success' : 'fw-bold text-danger'},
-         `${passed}/${results.length} browser tests passed`],
-        [h.ul, {class: 'list-group'},
-         results.map(r => [h.li, {class: 'list-group-item d-flex justify-content-between align-items-start'},
-             [h.span, {}, (r.ok ? '✓ ' : '✗ ') + r.name],
-             r.ok ? undefined : [h.code, {class: 'text-danger ms-2'}, r.error],
-         ]),
-        ],
-    ];
-}
-
-// The "Run demo tests" button entry point: run the demo suite and render it.
-export async function runBrowserDemo(rabid: Rabid): Promise<Markup> {
-    return renderResults(await runTests(rabid, TESTS));
-}

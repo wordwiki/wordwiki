@@ -10,6 +10,10 @@
  * session_token is resolved server-side from the cookie (it is a bound name in
  * the route scope), so it never appears in these URLs - we just name it.
  *
+ * App-agnostic: the route URLs are injected by the test-client page as
+ * window.__liminalTestAgent = {optIn, poll, result} (so this works for any
+ * liminal app, not just rabid).
+ *
  * Not a security hole: the server already authors and ships the JS this page
  * runs.  The new capability is gated server-side to the 'testing' permission and
  * to non-production databases.
@@ -17,9 +21,14 @@
 (function () {
     'use strict';
 
-    const OPT_IN  = '/rabid/rabid.testClientOptIn(session_token)';
-    const POLL    = '/rabid/rabid.testClientPoll(session_token)';
-    const RESULT  = '/rabid/rabid.testClientResult(session_token,$arg0,$arg1)';
+    const cfg = window.__liminalTestAgent;
+    if(!cfg || !cfg.optIn || !cfg.poll || !cfg.result) {
+        console.error('test-agent: window.__liminalTestAgent route config missing; not starting.');
+        return;
+    }
+    const OPT_IN  = cfg.optIn;
+    const POLL    = cfg.poll;
+    const RESULT  = cfg.result;
 
     let stopped = false;
     let lastExecuted = null;   // {cmdId, envelope} - for idempotent re-send if a result post is lost
