@@ -198,10 +198,10 @@ export class VolunteerTable extends Table<Volunteer> {
         return [
             [h.div, {class: 'mb-2 d-flex gap-2'},
              action.actionButton('Search active volunteers',
-                 {kind: 'modal', dialogUrl: "/rabid/rabid.volunteer.searchDialog('active')"},
+                 {kind: 'modal', dialogUrl: "/rabid.volunteer.searchDialog('active')"},
                  'btn btn-outline-primary btn-sm'),
              action.actionButton('Search all volunteers',
-                 {kind: 'modal', dialogUrl: "/rabid/rabid.volunteer.searchDialog('all')"},
+                 {kind: 'modal', dialogUrl: "/rabid.volunteer.searchDialog('all')"},
                  'btn btn-outline-secondary btn-sm'),
             ],
             [h.div, {id: 'volunteer-search-results'},
@@ -237,7 +237,7 @@ export class VolunteerTable extends Table<Volunteer> {
         const f = this.fieldsByName;
         const row = this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
         return [h.tr, {...row, 'data-testid': `volunteer-row-${id}`},
-            [h.td, {}, templates.pageLink(`/rabid/rabid.volunteer.detailPage(${id})`, v.name)],
+            [h.td, {}, templates.pageLink(`/rabid.volunteer.detailPage(${id})`, v.name)],
             [h.td, {'data-testid': `volunteer-${id}-email`}, renderFieldValue(f.email, v.email)],
             [h.td, {'data-testid': `volunteer-${id}-phone`}, renderFieldValue(f.phone, v.phone)],
             [h.td, {}, this.editButton(id)],
@@ -261,7 +261,7 @@ export class VolunteerTable extends Table<Volunteer> {
                 submitLabel: 'Search',
                 hidden: {scope: inScope},
                 dispatch: {
-                    'hx-get': '/rabid/rabid.volunteer.searchResults(queryArgs)',
+                    'hx-get': '/rabid.volunteer.searchResults(queryArgs)',
                     'hx-target': '#volunteer-search-results',
                     'hx-swap': 'innerHTML',
                     'hx-on::after-request': 'hideModalEditor()',

@@ -917,7 +917,7 @@ export class ForeignKeyField extends IntegerField {
             const label = this.loadLabel(value);
             optionEls = value == null ? [] : [['option', {value, selected:''}, label]];
             selectAttrs['data-load-url'] =
-                `/rabid/${ctx.ownerPath}.fieldPickerOptions('${this.name}',queryArgs)`;
+                `/${ctx.ownerPath}.fieldPickerOptions('${this.name}',queryArgs)`;
         } else {
             // Fallback: list all options inline (used when there is no route path,
             // e.g. a table not reachable on the dispatch tree).

@@ -218,7 +218,7 @@ export function navBar(showTestClientLink: boolean = false): any {
            [h.ul, {class:"navbar-nav"},
             [h.li, {class:"nav-item"},
              [h.button, {type:"button", class:"nav-link btn btn-link",
-                         'hx-post':"/rabid/rabid.logout(session_token)", 'hx-swap':"none"}, 'Logout'],
+                         'hx-post':"/rabid.logout(session_token)", 'hx-swap':"none"}, 'Logout'],
             ], //li
            ], //ul
 

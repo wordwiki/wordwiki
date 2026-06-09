@@ -172,8 +172,7 @@ export class EventTable extends Table<Event> {
         ];
     }
 
-    // TODO generalize card format so can use for other things.
-    // TODO make single line version for rendering in home page etc.
+       // TODO make single line version for rendering in home page etc.
     // TODO make volunteer names be clickable to volunteer page
     // TODO include whether a volunteer has said they will drive etc (also consider
     //      things like driver needed).
@@ -188,7 +187,7 @@ export class EventTable extends Table<Event> {
             WHERE event_id = :event_id`).first({event_id});
         
         if (!event) {
-            return [h.div, {class: 'event-not-found'}, `Event ${event_id} not found`];
+            return [h.div, {class: 'card-not-found'}, `Event ${event_id} not found`];
         }
         
         // Get commitments for this event
@@ -213,7 +212,7 @@ export class EventTable extends Table<Event> {
         
         // Event name as link to detail page
         headerElements.push(
-            [h.a, {href: `/rabid/event.renderEventDetail(${event_id})`, class: 'event-name'}, 
+            [h.a, {href: `/event.renderEventDetail(${event_id})`, class: 'card-title'}, 
                 [h.strong, {}, event.description || 'Untitled Event']
             ]
         );
@@ -222,7 +221,7 @@ export class EventTable extends Table<Event> {
         if (event.event_kind) {
             headerElements.push(' ');
             headerElements.push(
-                [h.span, {class: `event-badge event-${event.event_kind}`}, 
+                [h.span, {class: `card-badge event-${event.event_kind}`}, 
                     event_kind_enum[event.event_kind] || event.event_kind
                 ]
             );
@@ -250,9 +249,9 @@ export class EventTable extends Table<Event> {
         // Time row
         if (timeParts.length > 0) {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Time:'],
-                    [h.span, {class: 'event-value'}, timeParts.join('')]
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Time:'],
+                    [h.div, {}, timeParts.join('')]
                 ]
             );
         }
@@ -271,9 +270,9 @@ export class EventTable extends Table<Event> {
             }
             
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Location:'],
-                    [h.span, {class: 'event-value'}, ...locationValue]
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Location:'],
+                    [h.div, {}, ...locationValue]
                 ]
             );
         }
@@ -281,17 +280,17 @@ export class EventTable extends Table<Event> {
         // Special timing rows
         if (event.shop_load_time) {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Shop load:'],
-                    [h.span, {class: 'event-value'}, formatTime(event.shop_load_time)]
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Shop load:'],
+                    [h.div, {}, formatTime(event.shop_load_time)]
                 ]
             );
         }
         if (event.setup_time) {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Setup:'],
-                    [h.span, {class: 'event-value'}, formatTime(event.setup_time)]
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Setup:'],
+                    [h.div, {}, formatTime(event.setup_time)]
                 ]
             );
         }
@@ -299,18 +298,18 @@ export class EventTable extends Table<Event> {
         // Volunteer row
         if (commitments.length > 0) {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Volunteers:'],
-                    [h.span, {class: 'event-value'}, 
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Volunteers:'],
+                    [h.div, {}, 
                         `(${commitments.length}) ${commitments.map(c => c.volunteer_name).join(', ')}`
                     ]
                 ]
             );
         } else {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Volunteers:'],
-                    [h.span, {class: 'event-value event-no-volunteers'}, 
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Volunteers:'],
+                    [h.div, {class: 'card-empty-value'}, 
                         [h.em, {}, 'No volunteers signed up yet']
                     ]
                 ]
@@ -320,9 +319,9 @@ export class EventTable extends Table<Event> {
         // Cash collected row (only show if > 0)
         if (event.total_cash_collected && event.total_cash_collected > 0) {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Cash collected:'],
-                    [h.span, {class: 'event-value'}, `$${event.total_cash_collected.toFixed(2)}`]
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Cash collected:'],
+                    [h.div, {}, `$${event.total_cash_collected.toFixed(2)}`]
                 ]
             );
         }
@@ -330,16 +329,16 @@ export class EventTable extends Table<Event> {
         // Notes row (only show if present)
         if (event.notes && event.notes.trim()) {
             gridRows.push(
-                [h.div, {class: 'event-detail-row'},
-                    [h.span, {class: 'event-prompt'}, 'Notes:'],
-                    [h.span, {class: 'event-value event-notes'}, event.notes]
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Notes:'],
+                    [h.div, {class: 'card-notes'}, event.notes]
                 ]
             );
         }
         
-        return [h.div, {class: 'event-summary'}, 
-            [h.div, {class: 'event-header'}, ...headerElements],
-            [h.div, {class: 'event-details-grid'}, ...gridRows]
+        return [h.div, {class: 'card-summary'}, 
+            [h.div, {class: 'card-header'}, ...headerElements],
+            [h.div, {class: 'card-details-grid'}, ...gridRows]
         ];
     }
 }
@@ -363,63 +362,3 @@ export class EventTable extends Table<Event> {
 //         ('DELETE FROM TABLE event WHERE event_id = :event_id', {event_id});
 // }
 
-
-// --------------------------------------------------------------------------------
-// --- EventCommitment -------------------------------------------------------------
-// --------------------------------------------------------------------------------
-
-export interface EventCommitment {
-    event_commitment_id: number;
-
-    event_id: number;
-    volunteer_id: number;
-
-    requested_role: string;
-    notes: string;
-
-    // Driving information
-    will_drive_supplies: boolnum;
-    will_drive_passengers_count: number;
-
-    // To allow for commit for partial event.
-    start_time?: string;
-    end_time?: string;
-}
-
-export type EventCommitmentOpt = Partial<EventCommitment>;
-
-export class EventCommitmentTable extends Table<EventCommitment> {
-    
-    constructor() {
-        super ('event_commitment', [
-            new PrimaryKeyField('event_commitment_id', {}),
-            new ForeignKeyField('event_id', 'event', 'event_id', {}),
-            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}),
-            new StringField('requested_role', {default:''}),
-            new StringField('notes', {default:''}),
-            new BooleanField('will_drive_supplies', {default: 0}),
-            new IntegerField('will_drive_passengers_count', {default: 0}),
-            new DateTimeField('start_time', {nullable: true}),
-            new DateTimeField('end_time', {nullable: true})
-        ], [
-            'CREATE INDEX IF NOT EXISTS event_commitment_by_event_id ON event_commitment(event_id);',
-            'CREATE INDEX IF NOT EXISTS event_commitment_by_volunteer_id ON event_commitment(volunteer_id);',            
-        ])
-    };
-
-    @path
-    get commitmentsForEvent() {
-        return db().prepare<EventCommitment, {event_id: number}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM event_commitment
-/**/          WHERE event_id = :event_id`);
-    }
-
-    @path
-    get commitmentsForEventWithVolunteerName() {
-        return db().prepare<(EventCommitment&{volunteer_name: string}), {event_id: number}>(block`
-/**/   SELECT ${this.allFields}, volunteer.name AS volunteer_name
-/**/          FROM event_commitment LEFT JOIN volunteer USING (volunteer_id)
-/**/          WHERE event_id = :event_id`);
-    }    
-}
