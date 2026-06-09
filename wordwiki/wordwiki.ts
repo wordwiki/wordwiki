@@ -31,15 +31,14 @@ import * as pageEditorModule from '../scannedpage/page-editor.ts';
 import * as pageViewerModule from '../scannedpage/page-viewer.ts';
 
 import {rpcUrl} from '../liminal/rpc.ts';
-export interface WordWikiServerConfig {
-    hostname: string,
-    port: number,
-}
+import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
+import * as security from '../liminal/security.ts';
+export type WordWikiServerConfig = LiminalServerConfig;
 
 /**
  *
  */
-export class WordWiki {
+export class WordWiki extends LiminalApp {
     routes: Record<string, any>;
     dictSchema: model.Schema;
     #workspace: VersionedDb|undefined = undefined;
@@ -57,6 +56,7 @@ export class WordWiki {
      *
      */
     constructor() {
+        super();
 
         // --- Load schema and create an empty workspace
         this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
@@ -1082,156 +1082,70 @@ export class WordWiki {
     /**
      *
      */
-    async startServer(config: WordWikiServerConfig) {
-        console.info('Starting wordwiki server');
+    // ----- LiminalApp hooks --------------------------------------------------
 
-        // const contentdirs = {
-        //     // '/resources/': await findResourceDir('resources')+'/',
-        //     // '/scripts/': await findResourceDir('web-build')+'/',
-        //     '/resources/': 'resources/', 
-        //     '/scripts/': 'scripts/',
-        //     '/entries/': 'entries/',
-        //     '/categories/': 'categories/',
-        //     '/content/': 'content/',
-        //     '/derived/': 'derived/'};
+    get appName(): string { return 'wordwiki'; }
+    // URLs live under /ww/ even though the route-scope name is 'wordwiki'.
+    override get routeSegment(): string { return 'ww'; }
+    // The bare /ww/ path renders the dictionary home.
+    override get homeRouteExpr(): string { return 'wordwiki.home()'; }
 
-        const contentdirs = {
-            // '/resources/': await findResourceDir('resources')+'/',
-            // '/scripts/': await findResourceDir('web-build')+'/',
-            '/': './'};
-        
-        // const contentfiles = {
-        //     '/index.html': 'index.html',
-        //     '/all-words.html': 'all-words.html',
-        //     '/about-us.html': 'about-us.html',
-        //     '/categories.html': 'categories.html',
-        // };
-
-        const contentfiles = {};
-        const requestHandlerPaths: Record<string, (request: server.Request) => Promise<server.Response>> = {
-            '/ww/': request=>this.requestHandler(request),
-        };
-        await new DenoHttpServer({port: config.port,
-                                  hostname: config.hostname,
-                                  contentdirs, contentfiles, requestHandlerPaths}
-                                 ).run();
+    // Serve the published static site (and resources) from cwd; the longest-prefix
+    // router lets the handler mounts (/ww/, /page/, /workspace-rpc-and-sync) win
+    // over this catch-all.
+    async resourceContentDirs(): Promise<Record<string, string>> {
+        return {'/': './'};
     }
+    override requestHandlerPaths(): Record<string, (request: server.Request) => Promise<server.Response>> {
+        const handler = (request: server.Request) => this.requestHandler(request);
+        return {'/ww/': handler, '/page/': handler, '/workspace-rpc-and-sync': handler};
+    }
+
+    // No login/sessions yet: every request is anonymous.
+    resolveSecurityContext(_session_token: string | undefined): security.SecurityContext {
+        return {actorId: undefined, roles: new Set()};
+    }
+    getDbPurpose(): string | undefined { return undefined; }
+
+    // The browser-test bridge's durable identity has no persistent home yet (no
+    // sessions); keep it in memory so the abstract hooks are satisfied.  The
+    // bridge is effectively unused until wordwiki has sessions.
+    #testClient: TestClientSession | undefined = undefined;
+    stampTestClientOptIn(session_token: string, now: string): void {
+        this.#testClient = {session_token, last_test_client_opt_in: now, last_test_client_heartbeat: now};
+    }
+    stampTestClientHeartbeat(session_token: string, now: string): void {
+        if(this.#testClient?.session_token === session_token) this.#testClient.last_test_client_heartbeat = now;
+    }
+    mostRecentTestClient(): TestClientSession | undefined { return this.#testClient; }
+
+    makePage(title: any, body: any): any { return templates.pageTemplate({title, body}); }
+
+    testRuns(): Record<string, TestCase[]> { return {}; }
 
     /**
      *
      */
-    // Proto request handler till we figure out how we want our urls etc to workc
-    async requestHandler(request: server.Request): Promise<server.Response> {
-        if(false && !request?.url?.endsWith('/favicon.ico'))
-            console.info('tagger request', request);
-        const requestUrl = new URL(request.url);
-        const filepath = decodeURIComponent(requestUrl.pathname);
-        const searchParams: Record<string,string> = {};
-        const user = request.headers["x-webauth-user"];
-        requestUrl.searchParams.forEach((value: string, key: string) => searchParams[key] = value);
-        // if(Object.keys(searchParams).length > 0)
-        //     console.info('Search params are:', searchParams);
+    // Wordwiki keeps two root-level dynamic endpoints - the /page/<Book>/<N>.html
+    // vanity URL and the editor's /workspace-rpc-and-sync.  Everything else under
+    // /ww/ (plus shutdown/eval) is handled by the LiminalApp base, which also sets
+    // the (anonymous) security context and dispatches via the shared route eval.
+    override async requestHandler(request: server.Request): Promise<server.Response> {
+        const filepath = decodeURIComponent(new URL(request.url).pathname);
 
-        // TEMPORARY MANUAL HANDING OF THE ONE VANITY URL WE ARE CURRENTLY SUPPORTING
         const pageRequest = /^(?<Page>\/page\/(?<Book>[a-zA-Z]+)\/(?<PageNumber>[0-9]+)[.]html)$/.exec(filepath);
-        //console.info('pageRequest', pageRequest, 'for', filepath);
         if(pageRequest !== null) {
-            const {Book, PageNumber} = pageRequest.groups as any
+            const {Book, PageNumber} = pageRequest.groups as any;
             if(typeof Book !== 'string') throw new Error('missing book');
-            const book = Book;
             if(typeof PageNumber !== 'string') throw new Error('missing page number');
-            const page_number = parseInt(PageNumber);
-
-            const body = await pageEditor(book, page_number);
+            const body = await pageEditor(Book, parseInt(PageNumber));
             const html = await asyncRenderToStringViaLinkeDOM(body);
-            return Promise.resolve({status: 200, headers: {}, body: html});
-        } else if (filepath === '/favicon.ico') {
-            return Promise.resolve({status: 200, headers: {}, body: 'not found'});
-        } else if (filepath === '/workspace-rpc-and-sync') {
-            console.info('workspace sync request');
+            return {status: 200, headers: {}, body: html};
+        } else if(filepath === '/workspace-rpc-and-sync') {
             const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
             return workspace.workspaceRpcAndSync(bodyParms as workspace.WorkspaceRpcAndSyncRequest);
-        } else {
-            let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-            jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, 'ww/')
-            switch(jsExprSrc) { // XXX HACK - move to better place
-                case '':
-                    jsExprSrc = 'wordwiki.home()';
-                    break;
-            }
-            const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-            return this.rpcHandler(jsExprSrc, searchParams, bodyParms, user);
         }
-    }
-
-    /**
-     *
-     */
-    async rpcHandler(jsExprSrc: string,
-                     searchParams: Record<string, any>,
-                     bodyParms: Record<string, any>,
-                     user: string|undefined): Promise<any> {
-
-        // --- Top level of root scope is active routes
-        let rootScope = this.routes;
-
-        // --- Push (possibly empty) URL search parameters as a scope
-        //     with the single binding 'query'.  Later we may add more stuff
-        //     from the request to this scope.
-        rootScope = Object.assign(Object.create(rootScope), {query: searchParams});
-
-        // --- If the query request body is a {}, then it is form parms or
-        //     a json {} - push on scope.
-        rootScope = Object.assign(Object.create(rootScope), bodyParms);
-
-        console.info("***", new Date().toLocaleString(), '::', user, '::', jsExprSrc);
-        // console.info('about to eval', jsExprSrc, 'with root scope ',
-        //              JSON.stringify(utils.getAllPropertyNames(rootScope)));
-
-        let result = null;
-        try {
-            result = evalJsExprSrc(rootScope, jsExprSrc);
-            while(result instanceof Promise)
-                result = await result;
-        } catch(e) {
-            // TODO more fiddling here.
-            console.info('request failed', e);
-            return server.jsonResponse({error: String(e)}, 400)
-        }
-
-        if(server.isMarkedResponse(result)) {
-            return result;
-        } else if(typeof result === 'string') {
-            return server.htmlResponse(result);
-        } else if(markup.isElemMarkup(result) && Array.isArray(result) && result[0] === 'html') { // this squigs me - but is is soooo convenient!
-            let htmlText: string = 'cat';
-            try {
-                // Note: we allow markup to contain Promises, which we force
-                //       at render time (inside asyncRenderToStringViaLinkeDOM)
-                // TODO: we may want to make this opt-in per request after
-                //       profiling how much extra cpu we are spending using
-                //       the async version fo renderToStringvialinkedom.
-                //       If the sync one is way faster, we could even consider
-                //       having it throw if it finds a promise, then re rendering
-                //       with the async one.
-                htmlText = await markup.asyncRenderToStringViaLinkeDOM(result);
-            } catch(e) {
-                console.info('request failed during content force', e);
-                return server.jsonResponse({error: String(e)}, 400);
-            }
-            return server.htmlResponse(htmlText);
-        } else {
-            return server.jsonResponse(result);
-        }
-
-        // result can be a command - like forward
-        // result can be json, a served page, etc
-        // so - want to define a result interface - and have the individualt mentods rethren tnat
-        // this can also be the opporthunity to allow streaming
-        // this mech is part of our deno server stuff.
-        // have shortcuts for returning other things:
-
-        //return Promise.resolve({status: 200, headers: {}, body: 'not found'});
+        return super.requestHandler(request);
     }
 }
 

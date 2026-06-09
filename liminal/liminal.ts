@@ -193,8 +193,12 @@ export abstract class LiminalApp {
 
     // ----- Overridable hooks (sensible defaults) ----------------------------
 
-    /** URL prefix the route handler is mounted under (default `/<appName>/`). */
-    get routePrefix(): string { return `/${this.appName}/`; }
+    /** The URL path segment the routes live under, which may differ from the
+     *  scope name (e.g. wordwiki: segment 'ww', scope name 'wordwiki').  Default:
+     *  the appName.  requestHandler strips a leading '/<routeSegment>/'. */
+    get routeSegment(): string { return this.appName; }
+    /** URL prefix the route handler is mounted under (default `/<routeSegment>/`). */
+    get routePrefix(): string { return `/${this.routeSegment}/`; }
     /** Session cookie name (default `<APPNAME>_SESSION_TOKEN`). */
     get sessionCookieName(): string { return `${this.appName.toUpperCase()}_SESSION_TOKEN`; }
     /** Route expr used for the empty path. */
@@ -300,7 +304,7 @@ export abstract class LiminalApp {
 
         console.info('FILE PATH', filepath);
         let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-        jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, `${this.appName}/`);
+        jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, `${this.routeSegment}/`);
         if(jsExprSrc === '') jsExprSrc = this.homeRouteExpr;
 
         const bodyArgs = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
@@ -342,8 +346,11 @@ export abstract class LiminalApp {
         const queryArgs = opts.queryArgs ?? {};
         const bodyArgs = opts.bodyArgs ?? {};
 
+        // `query` is an alias for the URL search params (some apps - e.g. wordwiki
+        // - name the binding `query`; rabid uses `queryArgs`).  Both point at the
+        // same object.
         let rootScope: Record<string, any> =
-            Object.assign({}, this.routes, {queryArgs, bodyArgs, session_token: opts.session_token});
+            Object.assign({}, this.routes, {queryArgs, query: queryArgs, bodyArgs, session_token: opts.session_token});
 
         // Bind ONLY the positional rpc placeholders ($arg0, ...) from the body, so
         // a request body can't inject or shadow other bindings in the eval scope.
