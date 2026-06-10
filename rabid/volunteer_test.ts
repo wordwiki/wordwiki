@@ -4,7 +4,8 @@
 //   fixture: alice=host(hides own phone)  bob=regular(shares)  carol=regular(private)  dave=admin
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { withTestDb, renderRoute, invoke, asUser, asAnon } from "./testing.ts";
+import { withTestDb, renderRoute, invoke, asUser, asAnon, asSystem } from "./testing.ts";
+import { rabid } from "./rabid.ts";
 import { getByTestId, text, hasText, find, byClass, tagOf, attr } from "../liminal/testing/markup-assert.ts";
 
 const detail = (id: number) => renderRoute(`rabid.volunteer.detailPage(${id})`);
@@ -55,10 +56,10 @@ test("emergency contact is host/self only", async () => {
 
 test("admin sees everything; the list redacts per-row for a regular viewer", async () => {
     await withTestDb(async ({ bob, carol, dave }) => {
-        const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`));
+        const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`));
         assertStringIncludes(text(getByTestId(adminList, `volunteer-${carol}-email`)), "carol@test.example");
 
-        const regularList = await asUser(bob, () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`));
+        const regularList = await asUser(bob, () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`));
         assertEquals(text(getByTestId(regularList, `volunteer-${carol}-email`)).trim(), "***"); // opted out
         assertStringIncludes(text(getByTestId(regularList, `volunteer-${bob}-email`)), "bob@test.example"); // default-shared
     });
@@ -66,7 +67,7 @@ test("admin sees everything; the list redacts per-row for a regular viewer", asy
 
 test("the list view never shows phone numbers, even to an admin (detail-page-only)", async () => {
     await withTestDb(async ({ dave }) => {
-        const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`));
+        const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`));
         assert(!text(adminList).includes("(555)")); // fixture phones are all (555) ...
     });
 });
@@ -74,7 +75,7 @@ test("the list view never shows phone numbers, even to an admin (detail-page-onl
 // --- Row-level edit security (recordEdit): which row species does each viewer
 // --- get, and are renderForm/saveForm gated server-side to match?
 
-const listFor = () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`);
+const listFor = () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`);
 const rowIn = (list: any, id: number) => getByTestId(list, `volunteer-row-${id}`);
 const hasPencil = (list: any, id: number) => !!find(rowIn(list, id), byClass("lm-edit-pencil"));
 
@@ -133,6 +134,45 @@ test("saveForm is row-gated before the per-field check (host may, regular may no
 test("an anonymous viewer cannot read volunteer records (non-redactable field throws)", async () => {
     await withTestDb(async ({ bob }) => {
         await asAnon(() => assertRejects(() => detail(bob)));
+    });
+});
+
+// --- The search page (rabid.volunteer.search({text, only_active})) ----------
+
+test("search matches name-word/email prefixes case-insensitively, and filters by only_active", async () => {
+    await withTestDb(async ({ alice, bob, carol, dave }) => {
+        // Mark carol inactive so the only_active filter has something to filter.
+        asSystem(() => rabid.volunteer.updateNamedFields(carol, ["inactive"], {inactive: 1}));
+
+        // Case-insensitive prefix on a name word ('private' matches 'Carol Private'),
+        // only_active:false includes the inactive carol...
+        const all = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private", only_active:false})`));
+        assert(hasText(all, "Carol Private"));
+        assert(hasText(all, "1 volunteer(s) matching"));
+
+        // ...and the default (only_active absent -> true) excludes her.
+        const active = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private"})`));
+        assert(!hasText(active, "Carol Private"));
+        assert(hasText(active, "0 active volunteer(s) matching"));
+
+        // Email prefix works too.
+        const byEmail = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"BOB@"})`));
+        assert(hasText(byEmail, "Bob Shares"));
+    });
+});
+
+test("the search page's dialog pre-populates with the current search (refinement)", async () => {
+    await withTestDb(async ({ dave }) => {
+        const dialog = await asUser(dave, () =>
+            renderRoute(`rabid.volunteer.searchDialog({text:"Dav", only_active:false})`));
+        const textInput = find(dialog, n => tagOf(n) === "input" && attr(n, "name") === "text");
+        assertEquals(attr(textInput!, "value"), "Dav");
+        const checkbox = find(dialog, n => tagOf(n) === "input" && attr(n, "name") === "only_active");
+        assertEquals(attr(checkbox!, "checked"), undefined); // only_active:false -> unchecked
+        // and the page's own Search button carries the current search into the dialog url
+        const page = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"Dav", only_active:false})`));
+        const btn = find(page, n => tagOf(n) === "button" && String(attr(n, "hx-get") ?? "").includes("searchDialog"));
+        assertStringIncludes(String(attr(btn!, "hx-get")), `{text:"Dav",only_active:false}`);
     });
 });
 

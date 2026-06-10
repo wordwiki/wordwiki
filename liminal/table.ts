@@ -651,6 +651,46 @@ export class BooleanField extends Field {
 }
 
 /**
+ * A boolean rendered as an actual checkbox - for PARAMETER DIALOGS (search
+ * filters etc.), not record edits: an unchecked checkbox submits nothing,
+ * which would defeat the record editor's before-value change detection (use
+ * BooleanField's Yes/No select there).  Dialog dispatch that reads the form
+ * client-side (e.g. lmNavigateFormRoute) sees checkboxes as true/false.
+ */
+export class CheckboxField extends Field {
+    constructor(name: string, options: FieldOptions = {}) {
+        super(name, options);
+    }
+
+    dmlType(): string {
+        return 'INTEGER';
+    }
+
+    render(value: any): Markup {
+        return value ? 'Yes' : 'No';
+    }
+
+    renderInput(value: any): Markup {
+        const checked = (value === true || value === 1 || value === '1' || value === 'true');
+        return [
+            ['div', {'class':'col-12'},
+             ['div', {class:'form-check'},
+              ['input', Object.assign({type:'checkbox', class:'form-check-input',
+                                       name:this.name, id:'input-'+this.name},
+                                      checked ? {checked:''} : {})],
+              ['label', {for:'input-'+this.name, class:'form-check-label'}, this.prompt],
+             ]
+            ] // div
+        ];
+    }
+
+    // A checkbox posts 'on' when checked and is absent when unchecked.
+    parseSimpleInput(value: string): any {
+        return value ? 1 : 0;
+    }
+}
+
+/**
  *
  * TODO: consider adding a validation regex.
   * (is supported in browser via the pattern= attr + can do on server)

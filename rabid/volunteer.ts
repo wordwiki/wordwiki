@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -176,46 +176,69 @@ export class VolunteerTable extends Table<Volunteer> {
     }
 
     // ------------------------------------------------------------------------
-    // --- Search (a worked example of "an action with a parameter list") -----
+    // --- Search (a worked example of "an action that is a NAVIGATION") ------
     // ------------------------------------------------------------------------
     //
-    // Demonstrates the general popup-action model on something that is NOT a
-    // record edit: a button opens a dialog collecting a search term, and
-    // submitting it narrows the volunteer list in place.  The search `scope`
-    // (active-only vs. all) is a *hidden* parameter - fixed by whichever button
-    // opened the dialog, not editable by the user, but submitted along with the
-    // typed term.
+    // The popup-action model where the action's result is a PAGE: the dialog
+    // collects {text, only_active} and navigates to
+    //   /rabid.volunteer.search({text:"Dav",only_active:true})
+    // (lmNavigateFormRoute builds the route expression from the form), so a
+    // search has a real URL - sharable, back-button-able, refresh-stable - and
+    // both the page's own Search button and the dialog pre-populate from the
+    // current search, making refinement natural.
 
     // Matches volunteers whose email starts with the term, or whose name has a
     // word starting with the term (the leading-space trick makes the term match
     // at the start of any word).  An empty term matches everyone in scope.
-    // LIKE is case-insensitive for ASCII in SQLite, so no lower() is needed.
+    // Case-insensitive via LIKE (pinned by PRAGMA case_sensitive_like=OFF at
+    // connection open - ASCII folding only).
     @path
-    get searchByPrefix() {
-        return this.prepare<Volunteer, {q: string, scope: string}>(block`
+    get searchVolunteers() {
+        return this.prepare<Volunteer, {text: string, only_active: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE deleted = 0
-/**/            AND (:scope = 'all' OR inactive = 0)
-/**/            AND ( email LIKE :q || '%'
-/**/                  OR (' ' || name) LIKE '% ' || :q || '%' )
+/**/            AND (:only_active = 0 OR inactive = 0)
+/**/            AND ( email LIKE :text || '%'
+/**/                  OR (' ' || name) LIKE '% ' || :text || '%' )
 /**/          ORDER BY name`);
     }
 
-    // The Volunteers section: buttons that open the search dialog with a fixed
-    // (hidden) scope, plus the results container (initially the full active list).
+    // The search results page.  Args arrive from the URL's object literal,
+    // which our own dialog produced with these exact types (text fields as
+    // strings, checkboxes as booleans - see lmNavigateFormRoute); routes
+    // trust their forms, no per-route normalizers.  Absent only_active
+    // defaults to true (active volunteers are the common case).
+    search(args: {text?: string, only_active?: boolean} = {}): templates.Page {
+        const text = args.text ?? '';
+        const only_active = args.only_active ?? true;
+        return templates.page('Volunteers — Search', this.renderSearch(text, only_active));
+    }
+
+    renderSearch(text: string, only_active: boolean): Markup {
+        return [h.div, {class: 'container py-3'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.h2, {class: 'mb-0'}, 'Volunteers'],
+             this.searchButton(text, only_active)],
+            this.renderVolunteerList(text, only_active),
+        ];
+    }
+
+    // The Search button: opens the dialog pre-populated with the CURRENT
+    // search, so a search can be refined rather than retyped.
+    searchButton(text: string, only_active: boolean): Markup {
+        const dialogUrl =
+            `/rabid.volunteer.searchDialog({text:${JSON.stringify(text)},only_active:${only_active}})`;
+        return action.actionButton('Search', {kind: 'modal', dialogUrl},
+                                   'btn btn-outline-primary btn-sm');
+    }
+
+    // The Volunteers section of the home/volunteers pages (a standin - these
+    // will grow into structured summaries; search lives on its own page).
     renderSearchableVolunteers(): Markup {
         return [
-            [h.div, {class: 'mb-2 d-flex gap-2'},
-             action.actionButton('Search active volunteers',
-                 {kind: 'modal', dialogUrl: "/rabid.volunteer.searchDialog('active')"},
-                 'btn btn-outline-primary btn-sm'),
-             action.actionButton('Search all volunteers',
-                 {kind: 'modal', dialogUrl: "/rabid.volunteer.searchDialog('all')"},
-                 'btn btn-outline-secondary btn-sm'),
-            ],
-            [h.div, {id: 'volunteer-search-results'},
-             this.renderVolunteerList('', 'active')],
+            [h.div, {class: 'mb-2'}, this.searchButton('', true)],
+            this.renderVolunteerList('', true),
         ];
     }
 
@@ -226,13 +249,13 @@ export class VolunteerTable extends Table<Volunteer> {
     // and the accessible backstop.  Phone is deliberately NOT shown here - it
     // is on the detail page (keeps the list compact, and keeps the mostly-'***'
     // redacted column out of everyone's face).
-    renderVolunteerList(q: string, scope: string): Markup {
-        const rows = this.searchByPrefix.all({q, scope});
-        const scopeLabel = scope === 'all' ? 'all' : 'active';
+    renderVolunteerList(text: string, only_active: boolean): Markup {
+        const rows = this.searchVolunteers.all({text, only_active: only_active ? 1 : 0});
+        const scopeLabel = only_active ? 'active ' : '';
         return [
             [h.p, {class: 'text-muted small mb-2'},
-             q ? `${rows.length} ${scopeLabel} volunteer(s) matching “${q}”`
-               : `${rows.length} ${scopeLabel} volunteer(s)`],
+             text ? `${rows.length} ${scopeLabel}volunteer(s) matching “${text}”`
+                  : `${rows.length} ${scopeLabel}volunteer(s)`],
             [h.div, {class: 'list-group lm-list'},
              rows.map(v => this.renderVolunteerRow(v)),
             ],
@@ -283,30 +306,22 @@ export class VolunteerTable extends Table<Volunteer> {
         return this.renderVolunteerRow(this.getById(id));
     }
 
-    // Step 1 (generator): build the parameter dialog using the same Field
-    // widgets as the tables.  `scope` rides along as a hidden field.
-    searchDialog(scope: string): Markup {
-        const inScope = scope === 'all' ? 'all' : 'active';
+    // The search-parameter dialog, pre-populated with the current search so it
+    // refines rather than restarts.  Submitting navigates (lmNavigateFormRoute
+    // builds the route expression from the form: text fields as JSON-escaped
+    // strings, checkboxes as booleans) - the result is the search PAGE.
+    searchDialog(args: {text?: string, only_active?: boolean} = {}): Markup {
+        const text = args.text ?? '';
+        const only_active = args.only_active ?? true;
         return action.renderParamForm(
-            [new StringField('q', {prompt: 'Name or email starts with…', nullable: true})],
-            {},
+            [new StringField('text', {prompt: 'Name or email starts with…', nullable: true}),
+             new CheckboxField('only_active', {prompt: 'Only active volunteers'})],
+            {text, only_active},
             {
-                title: inScope === 'all' ? 'Search all volunteers' : 'Search active volunteers',
+                title: 'Search volunteers',
                 submitLabel: 'Search',
-                hidden: {scope: inScope},
-                dispatch: {
-                    'hx-get': '/rabid.volunteer.searchResults(queryArgs)',
-                    'hx-target': '#volunteer-search-results',
-                    'hx-swap': 'innerHTML',
-                    'hx-on::after-request': 'hideModalEditor()',
-                },
+                dispatch: {onsubmit: "lmNavigateFormRoute(event, 'rabid.volunteer.search')"},
             });
-    }
-
-    // Step 2 (action): render the narrowed list to swap into the results
-    // container.  Reads the typed `q` and the hidden `scope` from the form.
-    searchResults(args: {q?: string, scope?: string}): Markup {
-        return this.renderVolunteerList(String(args?.q ?? ''), args?.scope === 'all' ? 'all' : 'active');
     }
 
     // ------------------------------------------------------------------------

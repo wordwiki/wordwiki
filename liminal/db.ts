@@ -94,6 +94,12 @@ export class Db {
     }
 
     constructor(public db: denoSqlite.DB) {
+        // Case-insensitive LIKE (searches etc.).  OFF is SQLite's default; we
+        // pin it on every connection as drift protection (some wrappers flip
+        // it ON) and as documentation of intent.  Caveat: SQLite only
+        // case-folds ASCII - 'dav%' will not match 'Dávid' - full Unicode
+        // folding would need ICU or a normalized shadow column.
+        this.db.execute('PRAGMA case_sensitive_like=OFF;');
     }
 
     /**
