@@ -1,240 +1,778 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any, ban-types
-
-import * as utils from "../liminal/utils.ts";
-import {unwrap} from "../liminal/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
-import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
-
-import {block} from "../liminal/strings.ts";
-import {Markup, h} from "../liminal/markup.ts";
-import {lazy} from '../liminal/lazy.ts';
-import * as action from "../liminal/action.ts";
-
-
-/*
-Tasks have:
-- a title
-- possibly details
-- possibly progress
-- status (done, in-progress, ???)
-- assigned to: list of people
-
-- possibly priority
-- recurring tasks?  (like clean shop)
-- good starter task?
-
-- assigned by committees?
-
-Tasks are in a tree.
-PK is id path to a task 7/21/22
-This allows efficient reads of a subtree (PK is the physical order)
-
-Completed tasks are moved to a parallel DB with the same schema called completed_tasks - the
-purpose of this is that that set will keep growing forever, and we want to keep the working
-set small (current tasks) so we can read the whole thing with cost proportional to the
-number of currrent tasks (with completed loaded when looking at a particular subtree - still
-cheap becase of PK choice).
-
-
-
-
-
+/**
+ * Projects / Tasks / Subtasks - a lightweight integrated task tracker.
+ *
+ * The model is a FIXED three-level hierarchy of three separate tables, NOT a
+ * recursive tree.  The levels are different *meanings* (different fields,
+ * security, rendering), so separate tables is the natural relational modeling,
+ * and it dissolves the hard problems a uniform tree had:
+ *
+ *  - moves: a task changes project with one UPDATE of project_id (subtasks
+ *    follow by FK) - no path/PK rewriting;
+ *  - assignment inheritance: subtasks have NO assignees (they inherit by JOIN
+ *    through their task), so there is no cascade machinery;
+ *  - every query is a flat indexed join - no recursive CTEs.
+ *
+ * Decisions of record (see also assertion-model-style notes in git history):
+ *  - ONE task table: done-ness is `status` (no parallel completed_tasks table).
+ *    Live-set queries filter status != 'done'; completion is an UPDATE, so the
+ *    last_change_time poll can see it.  Deletion is soft (same reason).
+ *  - DEPTH IS FIXED FOREVER: no sub-subtasks.  If a subtask wants a due date or
+ *    an assignee, that is the signal it is actually a task.
+ *  - Subtasks are kept aggressively THIN: title + done + order, nothing else.
+ *    They are part of their task's change unit - every subtask mutation stamps
+ *    the parent task's last_change_time (a checklist tick IS a task change).
+ *  - assigned-to is an owned 'adhoc' volunteer_group created with the task
+ *    (non-nullable FK; "unassigned" = EMPTY group, never NULL - see group.ts).
+ *    Assignees may edit the task (and, via the owner backlink, its assignee
+ *    list); creating projects/tasks is host/admin.  Assigning a task to a
+ *    committee (referencing its NAMED group, + the explicit snapshot-convert
+ *    flow) is deferred until wanted.
+ *  - order_key (liminal/orderkey.ts) orders tasks within a project and
+ *    subtasks within a task; inserts append at the end.  Reorder UI later.
  */
 
+import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, DateField, DateTimeField, navigableItemProps, navChevron } from "../liminal/table.ts";
+import {block} from "../liminal/strings.ts";
+import {path} from "../liminal/serializable.ts";
+import {Markup, h} from "../liminal/markup.ts";
+import * as action from "../liminal/action.ts";
+import * as security from "../liminal/security.ts";
+import * as date from "../liminal/date.ts";
+import * as orderkey from "../liminal/orderkey.ts";
+import * as templates from './templates.ts';
+import {OwnedGroupField, createOwnedGroup} from './group.ts';
+import {rabid} from './rabid.ts';
 
+export const routes = ()=> ({
+});
 
+const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
+
+// Is the current actor a member of this volunteer_group?  (The "assignees may
+// edit their task" check.)  A plain indexed lookup - membership is live data,
+// never cached.
+function actorInGroup(group_id: number|undefined|null): boolean {
+    const actorId = security.current()?.actorId;
+    if(group_id == null || actorId === undefined) return false;
+    return !!security.runSystem(() => db().first<{x: number}>(
+        'SELECT 1 AS x FROM group_member WHERE group_id = :group_id AND volunteer_id = :volunteer_id',
+        {group_id, volunteer_id: actorId}));
+}
+
+// The cross-table hop for SubtaskTable's gates (mirrors canEditMembersOfGroup
+// in group.ts: load the parent row as a system op, evaluate the permission as
+// the current actor).
+export function canEditTask(task_id: number): boolean {
+    const t = security.runSystem(() => rabid.task.getById(task_id));
+    return rabid.task.canEditRecord(t);
+}
+
+// A column managed entirely by the table code (order keys, change stamps):
+// hidden from the generic record form, which also exempts it from required-
+// input validation - insert()/update() overrides supply it.
+class ManagedStringField extends StringField {
+    override isVisible(): boolean { return false; }
+}
+class ManagedDateTimeField extends DateTimeField {
+    override isVisible(): boolean { return false; }
+}
 
 // --------------------------------------------------------------------------------
-// --- Task -----------------------------------------------------------------------
+// --- Project ---------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-export interface Task {
-    task_id: string;
-  title: string
-  name: string;
-    email: string;
-    phone: string;
-    phone_number_visible_to_all_tasks: boolnum;
+export interface Project {
+    project_id: number;
+    name: string;
+    description: string;
 
-    // Skills or Experience You'd Like to Share e.g., bike repair, event planning, fundraising, social media, etc
-    skills: string;
-    
-    emergency_contact_name: string;
-    emergency_contact_phone: string;
+    // Optionally, the committee this project belongs to (a plain FK - the
+    // committee's group is NOT the project's assignee set; tasks carry their
+    // own assignees).
+    committee_id?: number;
 
-    permissions: string;
-
-    // Once a task is manually marked inactive, they will not show up in the common
-    // lists etc.
-    inactive: boolnum;
-    marked_inactive_date: string;
-    
-    // For tasks with long inactivity, we may request exit feedback.
-    exit_feedback_requested: boolnum;
-    exit_reason?: string;
-    exit_feedback?: string;
-    
-    /**
-     * We disable tasks rather than deleting them because they are
-     * needed to do historical statistics queries.  Depending on policy and
-     * situation, one may choose to change the task, taskname and
-     * email to some anon string on semantic 'delete'.
-     */
+    // Archived projects are soft-deleted: their tasks/history keep working.
     deleted: boolnum;
 }
-export type TaskOpt = Partial<Task>;
 
-export class TaskTable extends Table<Task> {
-    
+export type ProjectOpt = Partial<Project>;
+
+export class ProjectTable extends Table<Project> {
+
     constructor() {
-        super ('task', [
-            new PrimaryKeyField('task_id', {prompt: 'Id'}),
-            new DateTimeField('join_date', {nullable: true}),
-            new StringField('name', {indexed: true, permissions: PublicViewable}),
-            new EmailField('email', {indexed: true, unique: true, permissions: PublicViewable}),
-            new PhoneField('phone', {nullable: true, permissions: PublicViewable}),
-            new BooleanField('phone_number_visible_to_all_tasks', {default: 0}),
-            new StringField('skills', {default: ''}),
-            new StringField('emergency_contact_name', {default: ''}),
-            new StringField('emergency_contact_phone', {default: ''}),
-            new StringField('permissions', {nullable: true}),
-            new BooleanField('inactive', {default: 0}),
-            new DateTimeField('marked_inactive_date', {nullable: true}),
-            new BooleanField('exit_feedback_requested', {default: 0}),
-            new EnumField('exit_reason', exit_reason_enum, {nullable: true}),
-            new StringField('exit_feedback', {nullable: true}),
-            new BooleanField('deleted', {default: 0}),
+        super ('project', [
+            new PrimaryKeyField('project_id', {}),
+            new StringField('name', {}),
+            new StringField('description', {default: ''}),
+            new ForeignKeyField('committee_id', 'committee', 'committee_id',
+                                {nullable: true, prompt: 'Committee (optional)'}, 'name'),
+            new BooleanField('deleted', {default: 0, prompt: 'Archived'}),
         ], [
+            'CREATE INDEX IF NOT EXISTS project_by_committee ON project(committee_id);',
         ])
     };
 
-    @path
-    get byEmail() {
-        return db().prepare<Task, {email: string}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM task
-/**/          WHERE email = :email`);
+    // Hosts run the org: projects (like committees) are host/admin-managed.
+    defaultFieldEdit: security.Permission = hostOrAdmin;
+    override get recordEdit(): security.Permission { return hostOrAdmin; }
+
+    override formTitle(p: Project): string {
+        return p.project_id ? `Edit ${p.name || 'project'}` : 'New project';
     }
 
     @path
-    get activeTasksByName() {
-        return db().prepare<Task, {}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM task
-/**/          WHERE deleted = 0 AND inactive = 0
-/**/          ORDER BY name`);
-    }
-
-    @path
-    get allTasksByName() {
-        return db().prepare<Task, {}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM task
+    get activeProjects() {
+        return this.prepare<Project & {committee_name?: string, open_task_count: number}, {}>(block`
+/**/   SELECT ${this.allFields},
+/**/          (SELECT c.name FROM committee c WHERE c.committee_id = project.committee_id)
+/**/              AS committee_name,
+/**/          (SELECT COUNT(*) FROM task t
+/**/                  WHERE t.project_id = project.project_id
+/**/                    AND t.deleted = 0 AND t.status != 'done')
+/**/              AS open_task_count
+/**/          FROM project
 /**/          WHERE deleted = 0
 /**/          ORDER BY name`);
     }
 
-    @path
-    get tasksForEvent() {
-        return db().prepare<Task, {event_id: number}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM event LEFT JOIN task
-/**/          WHERE event.task_id = task.task_id
-/**/          ORDER BY name`);
-    }
-
-    @path
-    get tableRenderer(): TableRenderer<Task> {
-        const fields = this.fieldsByName;
-        return new TableRenderer(this, [fields.name, fields.email, fields.phone]);
-    }
-
-    @path
-    get tableView(): TableView<Task> {
-        return new TableView<Task>(this.tableRenderer, this.activeTasksByName.closure());
-    }
-
     // ------------------------------------------------------------------------
-    // --- Search (a worked example of "an action with a parameter list") -----
+    // --- Standard editable-item list -----------------------------------------
     // ------------------------------------------------------------------------
-    //
-    // Demonstrates the general popup-action model on something that is NOT a
-    // record edit: a button opens a dialog collecting a search term, and
-    // submitting it narrows the task list in place.  The search `scope`
-    // (active-only vs. all) is a *hidden* parameter - fixed by whichever button
-    // opened the dialog, not editable by the user, but submitted along with the
-    // typed term.
 
-    // Matches tasks whose email starts with the term, or whose name has a
-    // word starting with the term (the leading-space trick makes the term match
-    // at the start of any word).  An empty term matches everyone in scope.
-    // LIKE is case-insensitive for ASCII in SQLite, so no lower() is needed.
-    @path
-    get searchByPrefix() {
-        return db().prepare<Task, {q: string, scope: string}>(block`
-/**/   SELECT ${this.allFields}
-/**/          FROM task
-/**/          WHERE deleted = 0
-/**/            AND (:scope = 'all' OR inactive = 0)
-/**/            AND ( email LIKE :q || '%'
-/**/                  OR (' ' || name) LIKE '% ' || :q || '%' )
-/**/          ORDER BY name`);
+    // Self-fetching reloadable list wrapper: a "New project" insert reloads
+    // `.-project-` (the pk-less reload target the base saveForm emits).
+    renderProjectList(): Markup {
+        const projects = this.activeProjects.all({});
+        const props = this.reloadableItemProps(undefined, `rabid.project.renderProjectList()`);
+        return [h.div, props,
+            projects.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No projects yet.']
+                : [h.div, {class: 'list-group lm-list'},
+                   projects.map(p => this.renderProjectRow(p))]];
     }
 
-    // The Tasks section: buttons that open the search dialog with a fixed
-    // (hidden) scope, plus the results container (initially the full active list).
-    renderSearchableTasks(): Markup {
-        return [
-            [h.div, {class: 'mb-2 d-flex gap-2'},
-             action.actionButton('Search active tasks',
-                 {kind: 'modal', dialogUrl: "/rabid.task.searchDialog('active')"},
-                 'btn btn-outline-primary btn-sm'),
-             action.actionButton('Search all tasks',
-                 {kind: 'modal', dialogUrl: "/rabid.task.searchDialog('all')"},
-                 'btn btn-outline-secondary btn-sm'),
-            ],
-            [h.div, {id: 'task-search-results'},
-             this.renderTaskList('', 'active')],
+    renderProjectRow(p: Project & {committee_name?: string, open_task_count?: number}): Markup {
+        const id = p.project_id;
+        const count = p.open_task_count
+            ?? rabid.task.openCountForProject.required({project_id: id}).n;
+        const secondary = [`${count} open task${count === 1 ? '' : 's'}`,
+                           p.committee_name, p.description]
+            .filter(Boolean).join(' · ');
+
+        if(this.canEditRecord(p)) {
+            const item = this.editableItemProps(id, `rabid.project.renderProjectRowById(${id})`);
+            return [h.div, {...item, 'data-testid': `project-row-${id}`},
+                [h.div, {class: 'lm-item-body'},
+                 [h.div, {class: 'lm-item-primary'},
+                  templates.pageLink(`/rabid.project.detailPage(${id})`, p.name || 'Unnamed project')],
+                 [h.div, {class: 'lm-item-secondary'}, secondary]],
+                this.editPencil(id),
+            ];
+        }
+
+        return [h.a, {...navigableItemProps(`/rabid.project.detailPage(${id})`),
+                      'data-testid': `project-row-${id}`},
+            [h.div, {class: 'lm-item-body'},
+             [h.div, {class: 'lm-item-primary'}, p.name || 'Unnamed project'],
+             [h.div, {class: 'lm-item-secondary'}, secondary]],
+            navChevron(),
         ];
     }
 
-    // Returns a fragment (a count line + the table).  rpcHandler now renders a
-    // top-level fragment, so render helpers no longer need a single root element.
-    renderTaskList(q: string, scope: string): Markup {
-        const rows = this.searchByPrefix.all({q, scope});
-        const scopeLabel = scope === 'all' ? 'all' : 'active';
-        return [
-            [h.p, {class: 'text-muted small mb-2'},
-             q ? `${rows.length} ${scopeLabel} task(s) matching “${q}”`
-               : `${rows.length} ${scopeLabel} task(s)`],
-            this.tableRenderer.renderTable(rows),
+    // Reload target for a single list row (after an edit save).
+    renderProjectRowById(id: number): Markup {
+        return this.renderProjectRow(this.getById(id));
+    }
+
+    // The top-level Projects page body (dispatched from the navbar's /projects).
+    renderProjectsPage(): Markup {
+        const canCreate = this.canEditRecord({} as Project);
+        return [h.div, {class: 'container py-3'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.h2, {class: 'mb-0'}, 'Projects'],
+             canCreate
+                 ? action.actionButton('New project',
+                     {kind: 'modal', dialogUrl: '/rabid.project.newDialog()'},
+                     'btn btn-outline-primary btn-sm')
+                 : undefined],
+            this.renderProjectList(),
         ];
     }
 
-    // Step 1 (generator): build the parameter dialog using the same Field
-    // widgets as the tables.  `scope` rides along as a hidden field.
-    searchDialog(scope: string): Markup {
-        const inScope = scope === 'all' ? 'all' : 'active';
-        return action.renderParamForm(
-            [new StringField('q', {prompt: 'Name or email starts with…', nullable: true})],
-            {},
-            {
-                title: inScope === 'all' ? 'Search all tasks' : 'Search active tasks',
-                submitLabel: 'Search',
-                hidden: {scope: inScope},
-                dispatch: {
-                    'hx-get': '/rabid.task.searchResults(queryArgs)',
-                    'hx-target': '#task-search-results',
-                    'hx-swap': 'innerHTML',
-                    'hx-on::after-request': 'hideModalEditor()',
-                },
-            });
+    newDialog(): Markup {
+        return this.renderForm({} as Project);
     }
 
-    // Step 2 (action): render the narrowed list to swap into the results
-    // container.  Reads the typed `q` and the hidden `scope` from the form.
-    searchResults(args: {q?: string, scope?: string}): Markup {
-        return this.renderTaskList(String(args?.q ?? ''), args?.scope === 'all' ? 'all' : 'active');
+    // ------------------------------------------------------------------------
+    // --- Project detail page --------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    detailPage(project_id: number): templates.Page {
+        const p = this.getById(project_id);
+        return templates.page(`${p.name || 'Project'} — Project`, this.renderProjectDetail(project_id));
+    }
+
+    // Reloadable fragment (an edit save re-renders it); the task list below is
+    // its own fragment, so a new/edited task reloads just that.
+    renderProjectDetail(project_id: number): Markup {
+        const p = this.getById(project_id);
+        const committee = p.committee_id != null
+            ? security.runSystem(() => rabid.committee.getById(p.committee_id!))
+            : undefined;
+        const canCreateTask = rabid.task.canEditRecord({} as any);
+        const props = this.reloadableItemProps(project_id, `rabid.project.renderProjectDetail(${project_id})`);
+        props.class = 'container py-3 ' + props.class;
+        return [h.div, props,
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0'}, p.name || 'Unnamed project'],
+             p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
+             this.canEditRecord(p) ? this.editPencil(project_id) : undefined],
+            committee
+                ? [h.p, {class: 'text-muted mb-1'}, 'Committee: ',
+                   templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)]
+                : undefined,
+            p.description ? [h.p, {}, p.description] : undefined,
+            [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
+             [h.h4, {class: 'mb-0'}, 'Tasks'],
+             canCreateTask
+                 ? action.actionButton('New task',
+                     {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
+                     'btn btn-outline-primary btn-sm')
+                 : undefined],
+            rabid.task.renderProjectTasks(project_id),
+        ];
     }
 }
+
+// --------------------------------------------------------------------------------
+// --- Task ------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+export const task_status_enum: Record<string, string> = {
+    'open': 'Open',
+    'in-progress': 'In progress',
+    'done': 'Done',
+};
+
+export const task_priority_enum: Record<string, string> = {
+    'low': 'Low',
+    'normal': 'Normal',
+    'high': 'High',
+};
+
+export interface Task {
+    task_id: number;
+    project_id: number;        // visible in the edit form: moving a task IS editing this
+    title: string;
+    details: string;
+    priority: string;          // task_priority_enum
+    due?: string;              // 'YYYY-MM-DD' (day granularity)
+    status: string;            // task_status_enum - done-ness lives HERE (one table)
+
+    // The task's assignees: an owned 'adhoc' group (see group.ts; '' members =
+    // unassigned, never NULL).
+    group_id: number;
+
+    order_key: string;         // sibling order within the project (orderkey.ts)
+    last_change_time: string;  // stamped on every insert/update + subtask change
+    deleted: boolnum;
+}
+
+export type TaskOpt = Partial<Task>;
+
+// A task row carrying its list context (project name + the row counts) - the
+// shape the cross-project queries return.
+export type TaskWithContext = Task & {
+    project_name: string;
+    subtask_count: number;
+    subtask_done_count: number;
+    assignee_count: number;
+};
+
+export class TaskTable extends Table<Task> {
+
+    constructor() {
+        super ('task', [
+            new PrimaryKeyField('task_id', {}),
+            new ForeignKeyField('project_id', 'project', 'project_id', {prompt: 'Project'}, 'name'),
+            new StringField('title', {}),
+            new StringField('details', {default: ''}),
+            new EnumField('priority', task_priority_enum, {default: 'normal'}),
+            new DateField('due', {nullable: true, prompt: 'Due date'}),
+            new EnumField('status', task_status_enum, {default: 'open'}),
+            new OwnedGroupField('group_id'),
+            new ManagedStringField('order_key', {default: ''}),
+            new ManagedDateTimeField('last_change_time', {}),
+            new BooleanField('deleted', {default: 0}),
+        ], [
+            'CREATE INDEX IF NOT EXISTS task_by_project ON task(project_id);',
+            'CREATE INDEX IF NOT EXISTS task_by_group ON task(group_id);',
+            // The concurrent-change poll ("what changed since :t?") - covers
+            // completions and soft-deletes too, since both are UPDATEs.
+            'CREATE INDEX IF NOT EXISTS task_by_change ON task(last_change_time);',
+        ])
+    };
+
+    // Hosts/admins, OR the task's assignees: being assigned a task means being
+    // able to work it (status, checklist, and - via the group owner backlink -
+    // the assignee list itself).  Creation (no record yet) is host/admin only.
+    private canWorkTask: security.Permission = a =>
+        hostOrAdmin(a) || actorInGroup((a.record as Task|undefined)?.group_id);
+    defaultFieldEdit: security.Permission = a => this.canWorkTask(a);
+    override get recordEdit(): security.Permission { return this.canWorkTask; }
+
+    override formTitle(t: Task): string {
+        return t.task_id ? `Edit ${t.title || 'task'}` : 'New task';
+    }
+
+    // Creating a task creates its (empty) assignee group and appends the task
+    // at the end of its project's order.  Serves the generic saveForm insert
+    // path too (group_id/order_key/last_change_time are managed fields, absent
+    // from the form).
+    override insert<P extends Partial<Task>>(tuple: P): number {
+        const withManaged = {
+            order_key: this.nextOrderKey(tuple.project_id),
+            last_change_time: date.currentSqliteDateTime(),
+            ...tuple};
+        if(withManaged.group_id !== undefined)
+            return super.insert(withManaged);
+        const group_id = createOwnedGroup('adhoc', 'task');
+        const task_id = super.insert({...withManaged, group_id});
+        rabid.volunteer_group.update(group_id, {owner_id: task_id});
+        return task_id;
+    }
+
+    // Every update stamps last_change_time (both the generic saveForm path,
+    // which calls updateNamedFields, and direct update() calls).
+    override update<P extends Partial<Task>>(id: number, fields: P) {
+        super.update(id, {...fields, last_change_time: date.currentSqliteDateTime()});
+    }
+    override updateNamedFields<P extends Partial<Task>>(id: number, fieldNames: Array<keyof P>, fields: P) {
+        super.updateNamedFields(id,
+            [...fieldNames, 'last_change_time' as keyof P],
+            {...fields, last_change_time: date.currentSqliteDateTime()});
+    }
+
+    // A subtask mutation IS a change to its task (the poll watches tasks).
+    touch(task_id: number): void {
+        db().execute<{task_id: number, now: string}>(
+            'UPDATE task SET last_change_time = :now WHERE task_id = :task_id',
+            {task_id, now: date.currentSqliteDateTime()});
+    }
+
+    // Append after the project's current last task.  Order keys are decimal
+    // strings ('0.5...') whose lexicographic order is their numeric order, so
+    // SQL MAX finds the last one.
+    private nextOrderKey(project_id: number|undefined): string {
+        const last = project_id === undefined ? undefined :
+            db().first<{k: string|null}>(
+                'SELECT MAX(order_key) AS k FROM task WHERE project_id = :project_id',
+                {project_id});
+        return orderkey.between(last?.k ?? undefined, undefined);
+    }
+
+    @path
+    get tasksForProject() {
+        return this.prepare<Task & {subtask_count: number, subtask_done_count: number, assignee_count: number},
+                            {project_id: number}>(block`
+/**/   SELECT ${this.allFields},
+/**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
+/**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
+/**/              AS subtask_done_count,
+/**/          (SELECT COUNT(*) FROM group_member gm WHERE gm.group_id = task.group_id)
+/**/              AS assignee_count
+/**/          FROM task
+/**/          WHERE project_id = :project_id AND deleted = 0
+/**/          ORDER BY (status = 'done'), order_key`);
+    }
+
+    @path
+    get openCountForProject() {
+        return this.prepare<{n: number}, {project_id: number}>(block`
+/**/   SELECT COUNT(*) AS n FROM task
+/**/          WHERE project_id = :project_id AND deleted = 0 AND status != 'done'`);
+    }
+
+    // The cross-project work views (the queries the assigned-to group model
+    // exists for: task -> group_member is one flat indexed join).
+
+    // "My tasks": open tasks the volunteer is assigned to, most urgent first
+    // (overdue/dated before undated).
+    @path
+    get openTasksForVolunteer() {
+        return this.prepare<TaskWithContext, {volunteer_id: number}>(block`
+/**/   SELECT ${this.fieldNames.map(n => 'task.'+n).join(',')},
+/**/          (SELECT p.name FROM project p WHERE p.project_id = task.project_id) AS project_name,
+/**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
+/**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
+/**/              AS subtask_done_count,
+/**/          (SELECT COUNT(*) FROM group_member g2 WHERE g2.group_id = task.group_id)
+/**/              AS assignee_count
+/**/          FROM task JOIN group_member gm ON gm.group_id = task.group_id
+/**/          WHERE gm.volunteer_id = :volunteer_id
+/**/            AND task.deleted = 0 AND task.status != 'done'
+/**/          ORDER BY task.due IS NULL, task.due, project_name, task.order_key`);
+    }
+
+    // All open tasks, grouped by project (the render inserts the headings).
+    @path
+    get allOpenTasks() {
+        return this.prepare<TaskWithContext, {}>(block`
+/**/   SELECT ${this.allFields},
+/**/          (SELECT p.name FROM project p WHERE p.project_id = task.project_id) AS project_name,
+/**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
+/**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
+/**/              AS subtask_done_count,
+/**/          (SELECT COUNT(*) FROM group_member gm WHERE gm.group_id = task.group_id)
+/**/              AS assignee_count
+/**/          FROM task
+/**/          WHERE deleted = 0 AND status != 'done'
+/**/          ORDER BY project_name, order_key`);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Task list within a project -------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // Self-fetching reloadable fragment, tagged with the pk-less `-task-` class
+    // (the reload target a "New task" saveForm insert emits).  Done tasks sort
+    // to the bottom (the ORDER BY) and render muted.
+    renderProjectTasks(project_id: number): Markup {
+        const tasks = this.tasksForProject.all({project_id});
+        const props = this.reloadableItemProps(undefined, `rabid.task.renderProjectTasks(${project_id})`);
+        return [h.div, props,
+            tasks.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No tasks yet.']
+                : [h.div, {class: 'list-group lm-list'},
+                   tasks.map(t => this.renderTaskRow(t))]];
+    }
+
+    renderTaskRow(t: Task & Partial<TaskWithContext>): Markup {
+        const id = t.task_id;
+        const done = t.status === 'done';
+        const badges = [
+            t.status !== 'open'
+                ? [h.span, {class: `badge ms-2 ${done ? 'text-bg-secondary' : 'text-bg-info'}`},
+                   task_status_enum[t.status] ?? t.status]
+                : undefined,
+            t.priority === 'high' && !done
+                ? [h.span, {class: 'badge text-bg-danger ms-1'}, 'High'] : undefined,
+        ];
+        // Counts come with the list query; a single-row reload recomputes them.
+        const items = t.subtask_count === undefined ? rabid.subtask.forTask.all({task_id: id}) : undefined;
+        const subtotal = t.subtask_count ?? items!.length;
+        const subDone = t.subtask_done_count ?? items!.filter(s => s.done).length;
+        const assignees = t.assignee_count
+            ?? rabid.volunteer_group.members.all({group_id: t.group_id}).length;
+        const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
+        const parts: Markup[] = [
+            t.due
+                ? (overdue
+                   ? [h.span, {class: 'text-danger'}, `Due ${date.sqliteDateToString(t.due)}`]
+                   : `Due ${date.sqliteDateToString(t.due)}`)
+                : undefined,
+            // Cross-project lists say which project the task lives in.
+            t.project_name,
+            assignees ? `${assignees} assigned` : 'unassigned',
+            subtotal ? `${subDone}/${subtotal} done` : undefined,
+        ].filter(p => p !== undefined);
+        const secondary = parts.flatMap((p, i) => i ? [' · ', p] : [p]);
+        const titleClass = 'lm-item-primary' + (done ? ' text-decoration-line-through text-muted' : '');
+
+        if(this.canEditRecord(t)) {
+            const item = this.editableItemProps(id, `rabid.task.renderTaskRowById(${id})`);
+            // (the strike class rides on the <a> too: text-decoration on the
+            // wrapping div doesn't reach into the anchor's own decoration)
+            return [h.div, {...item, 'data-testid': `task-row-${id}`},
+                [h.div, {class: 'lm-item-body'},
+                 [h.div, {class: titleClass},
+                  [h.a, {...templates.pageLinkProps(`/rabid.task.detailPage(${id})`),
+                         class: done ? 'text-decoration-line-through' : ''},
+                   t.title || 'Untitled task'], badges],
+                 [h.div, {class: 'lm-item-secondary'}, secondary]],
+                this.editPencil(id),
+            ];
+        }
+
+        return [h.a, {...navigableItemProps(`/rabid.task.detailPage(${id})`),
+                      'data-testid': `task-row-${id}`},
+            [h.div, {class: 'lm-item-body'},
+             [h.div, {class: titleClass}, t.title || 'Untitled task', badges],
+             [h.div, {class: 'lm-item-secondary'}, secondary]],
+            navChevron(),
+        ];
+    }
+
+    // Reload target for a single list row (after an edit save).
+    renderTaskRowById(id: number): Markup {
+        return this.renderTaskRow(this.getById(id));
+    }
+
+    // The "new task in this project" dialog: the record form over a partial
+    // record carrying the project (renderForm's empty before-snapshots on
+    // inserts are what make the preset survive an untouched picker).
+    newDialog(project_id: number): Markup {
+        return this.renderForm({project_id} as Task);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- The top-level Tasks page (cross-project work view) -------------------
+    // ------------------------------------------------------------------------
+
+    // Dispatched from the navbar's /tasks: "My tasks" (assigned to the current
+    // actor, most urgent first), then all open tasks grouped by project.  New
+    // tasks are created from a project page (a task needs its project); rows
+    // here reload individually after an edit (`.-task-<id>-`).
+    renderTasksPage(): Markup {
+        const actorId = security.current()?.actorId;
+        const mine = actorId === undefined ? []
+            : this.openTasksForVolunteer.all({volunteer_id: actorId});
+        const all = this.allOpenTasks.all({});
+        return [h.div, {class: 'container py-3'},
+            [h.h2, {}, 'Tasks'],
+            mine.length > 0
+                ? [[h.h4, {class: 'mt-3'}, 'My tasks'],
+                   [h.div, {class: 'list-group lm-list', 'data-testid': 'my-tasks'},
+                    mine.map(t => this.renderTaskRow(t))]]
+                : undefined,
+            [h.h4, {class: 'mt-3'}, 'All open tasks'],
+            all.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No open tasks.']
+                : this.renderTasksGroupedByProject(all),
+        ];
+    }
+
+    // One heading + list per project (rows arrive ordered by project).
+    private renderTasksGroupedByProject(tasks: TaskWithContext[]): Markup {
+        const out: Markup[] = [];
+        let current: number|undefined;
+        let group: TaskWithContext[] = [];
+        const flush = () => {
+            if(group.length === 0) return;
+            out.push([h.h6, {class: 'mt-2 mb-1'},
+                      templates.pageLink(`/rabid.project.detailPage(${group[0].project_id})`,
+                                         group[0].project_name)]);
+            out.push([h.div, {class: 'list-group lm-list'},
+                      group.map(t => this.renderTaskRow({...t, project_name: undefined as any}))]);
+            group = [];
+        };
+        for(const t of tasks) {
+            if(t.project_id !== current) { flush(); current = t.project_id; }
+            group.push(t);
+        }
+        flush();
+        return out;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Task detail page ------------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    detailPage(task_id: number): templates.Page {
+        const t = this.getById(task_id);
+        return templates.page(`${t.title || 'Task'} — Task`, this.renderTaskDetail(task_id));
+    }
+
+    // Reloadable fragment; the assignee editor and the checklist below it are
+    // their own fragments (their mutations reload just themselves).
+    renderTaskDetail(task_id: number): Markup {
+        const t = this.getById(task_id);
+        const project = security.runSystem(() => rabid.project.getById(t.project_id));
+        const done = t.status === 'done';
+        const props = this.reloadableItemProps(task_id, `rabid.task.renderTaskDetail(${task_id})`);
+        props.class = 'container py-3 ' + props.class;
+        const row = (label: string, value: Markup) =>
+            [[h.dt, {class: 'col-sm-3'}, label], [h.dd, {class: 'col-sm-9'}, value]];
+        return [h.div, props,
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0' + (done ? ' text-decoration-line-through text-muted' : '')},
+              t.title || 'Untitled task'],
+             [h.span, {class: `badge ${done ? 'text-bg-secondary' : 'text-bg-info'}`},
+              task_status_enum[t.status] ?? t.status],
+             t.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Deleted'] : undefined,
+             this.canEditRecord(t) ? this.editPencil(task_id) : undefined],
+            [h.dl, {class: 'row mb-0'},
+             row('Project', templates.pageLink(`/rabid.project.detailPage(${project.project_id})`, project.name)),
+             row('Priority', task_priority_enum[t.priority] ?? t.priority),
+             row('Due', t.due ? date.sqliteDateToString(t.due) : '—'),
+             t.details ? row('Details', t.details) : undefined,
+            ],
+            [h.h4, {class: 'mt-3'}, 'Assigned to'],
+            rabid.volunteer_group.renderMemberEditor(t.group_id),
+            [h.h4, {class: 'mt-3'}, 'Checklist'],
+            rabid.subtask.renderChecklist(task_id),
+        ];
+    }
+}
+
+// --------------------------------------------------------------------------------
+// --- Subtask ---------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+// Thin BY DESIGN: a subtask is a checklist line on its task - title, done,
+// order.  No assignees, no due date, no details, no soft-delete (rows are
+// just deleted; the parent task's stamp records that something changed).
+export interface Subtask {
+    subtask_id: number;
+    task_id: number;
+    title: string;
+    done: boolnum;
+    order_key: string;
+}
+
+export type SubtaskOpt = Partial<Subtask>;
+
+export class SubtaskTable extends Table<Subtask> {
+
+    constructor() {
+        super ('subtask', [
+            new PrimaryKeyField('subtask_id', {}),
+            new ForeignKeyField('task_id', 'task', 'task_id', {}, 'title'),
+            new StringField('title', {}),
+            new BooleanField('done', {default: 0}),
+            new ManagedStringField('order_key', {default: ''}),
+        ], [
+            'CREATE INDEX IF NOT EXISTS subtask_by_task ON subtask(task_id);',
+        ])
+    };
+
+    // Subtask rows are managed by the checklist actions below; these delegating
+    // gates are the crafted-POST backstop for the generic saveForm path (no
+    // record -> can't resolve the task -> no).
+    defaultFieldEdit: security.Permission = a =>
+        a.record ? canEditTask((a.record as Subtask).task_id) : false;
+    override get recordEdit(): security.Permission {
+        return a => a.record ? canEditTask((a.record as Subtask).task_id) : false;
+    }
+
+    // Append at the end of the task's checklist; every insert stamps the task.
+    override insert<P extends Partial<Subtask>>(tuple: P): number {
+        const subtask_id = super.insert({order_key: this.nextOrderKey(tuple.task_id), ...tuple});
+        if(tuple.task_id !== undefined) rabid.task.touch(tuple.task_id);
+        return subtask_id;
+    }
+
+    private nextOrderKey(task_id: number|undefined): string {
+        const last = task_id === undefined ? undefined :
+            db().first<{k: string|null}>(
+                'SELECT MAX(order_key) AS k FROM subtask WHERE task_id = :task_id',
+                {task_id});
+        return orderkey.between(last?.k ?? undefined, undefined);
+    }
+
+    @path
+    get forTask() {
+        return this.prepare<Subtask, {task_id: number}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM subtask
+/**/          WHERE task_id = :task_id
+/**/          ORDER BY order_key`);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Checklist actions ----------------------------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // Each gated by the parent task's edit permission and reloading the task's
+    // checklist fragment (UI mutation model: toggle is immediate, remove is
+    // confirm, add is a modal-of-action-arguments).
+
+    // Args arrive from our own add-item dialog's form (strings, like every
+    // bodyArgs form - the same trust model as saveForm).
+    addItem(args: {task_id?: string|number, title?: string}): Markup {
+        const task_id = Number(args?.task_id);
+        const title = String(args?.title ?? '').trim();
+        if(!Number.isInteger(task_id) || !task_id) throw new Error('Missing task');
+        if(!title) throw new Error('Please enter a checklist item');
+        if(!canEditTask(task_id))
+            throw new Error('Not permitted to edit this task');
+        this.insert({task_id, title, done: 0});
+        return {action:'reload', targets:[`.-subtask-${task_id}-`]} as unknown as Markup;
+    }
+
+    toggle(subtask_id: number): Markup {
+        const s = this.getById(subtask_id);
+        if(!canEditTask(s.task_id))
+            throw new Error('Not permitted to edit this task');
+        this.update(subtask_id, {done: s.done ? 0 : 1});
+        rabid.task.touch(s.task_id);
+        return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
+    }
+
+    remove(subtask_id: number): Markup {
+        const s = this.getById(subtask_id);
+        if(!canEditTask(s.task_id))
+            throw new Error('Not permitted to edit this task');
+        db().execute<{subtask_id: number}>(
+            'DELETE FROM subtask WHERE subtask_id = :subtask_id', {subtask_id});
+        rabid.task.touch(s.task_id);
+        return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- The checklist fragment ------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // The reloadable checklist for one task.  Keyed by the TASK's id (like the
+    // member editor is keyed by its group's id): the fragment is "this task's
+    // checklist", so its mutations reload `.-subtask-<task_id>-`.
+    renderChecklist(task_id: number): Markup {
+        const items = this.forTask.all({task_id});
+        const canEdit = canEditTask(task_id);
+        const props = this.reloadableItemProps(task_id, `rabid.subtask.renderChecklist(${task_id})`);
+        return [h.div, props,
+            items.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No checklist items.']
+                : [h.div, {class: 'list-group lm-list mb-2'},
+                   items.map(s => this.renderChecklistRow(s, canEdit))],
+            canEdit
+                ? action.actionButton('Add item',
+                    {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`},
+                    'btn btn-outline-primary btn-sm')
+                : undefined,
+        ];
+    }
+
+    renderChecklistRow(s: Subtask, canEdit: boolean): Markup {
+        return [h.div, {class: 'list-group-item lm-item d-flex align-items-center gap-2',
+                        'data-testid': `subtask-row-${s.subtask_id}`},
+            [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
+                       ...(s.done ? {checked: ''} : {}),
+                       ...(canEdit
+                           ? {onclick: `tx\`rabid.subtask.toggle(${s.subtask_id})\``}
+                           : {disabled: ''})}],
+            [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
+             s.title],
+            canEdit
+                ? action.actionButton('Remove',
+                    {kind: 'confirm',
+                     expr: `rabid.subtask.remove(${s.subtask_id})`,
+                     message: `Remove "${s.title}"?`},
+                    'btn btn-outline-danger btn-sm')
+                : undefined,
+        ];
+    }
+
+    // The add-item parameter dialog: one title input + the task id riding hidden.
+    addItemDialog(task_id: number): Markup {
+        if(!canEditTask(task_id))
+            throw new Error('Not permitted to edit this task');
+        return action.renderParamForm(
+            [new StringField('title', {prompt: 'Item'})],
+            {},
+            {
+                title: 'Add checklist item',
+                submitLabel: 'Add',
+                hidden: {task_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.subtask.addItem(${getFormJSON(event.target)})`'},
+            });
+    }
+}
+
+export const allDml =
+    new ProjectTable().createDMLString() +
+    new TaskTable().createDMLString() +
+    new SubtaskTable().createDMLString();

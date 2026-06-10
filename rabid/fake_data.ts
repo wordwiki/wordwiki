@@ -847,6 +847,61 @@ export function seedCommittees(rabid: Rabid): void {
 }
 
 // --------------------------------------------------------------------------------
+// --- Projects / tasks / subtasks --------------------------------------------------
+// --------------------------------------------------------------------------------
+
+// A couple of projects with tasks in assorted states (assignees, due dates,
+// a checklist, a done task) so every affordance has something to show.
+// Deterministic membership, same style as seedCommittees.  Cheap, so seeded
+// in every scenario.
+export function seedProjects(rabid: Rabid): void {
+    const volunteers = rabid.volunteer.allVolunteersByName.all()
+        .filter(v => !v.inactive && !v.deleted);
+    const byEmail = (email: string) => volunteers.find(v => v.email === email);
+    const logistics = rabid.committee.activeCommittees.all({})
+        .find(c => c.name === 'Logistics Committee');
+
+    const assign = (task_id: number, ids: Array<number|undefined>) => {
+        const {group_id} = rabid.task.getById(task_id);
+        for(const volunteer_id of new Set(ids.filter((id): id is number => id !== undefined)))
+            rabid.group_member.insert({group_id, volunteer_id});
+    };
+
+    const drive = rabid.project.insert({
+        name: 'Spring Bike Drive',
+        description: 'Collect, refurbish, and distribute donated bikes.',
+        committee_id: logistics?.committee_id, deleted: 0});
+    const shop = rabid.project.insert({
+        name: 'Shop Improvements',
+        description: 'Small fixes and upgrades around the shop.', deleted: 0});
+
+    const truck = rabid.task.insert({
+        project_id: drive, title: 'Book pickup truck',
+        details: 'For collecting donation-day bikes from the three dropoff sites.',
+        priority: 'high', due: '2026-06-20', status: 'in-progress', deleted: 0});
+    assign(truck, [byEmail('hazel@redraccoon.org')?.volunteer_id]);
+    rabid.subtask.insert({task_id: truck, title: 'Get rental quotes', done: 1});
+    rabid.subtask.insert({task_id: truck, title: 'Confirm driver', done: 0});
+    rabid.subtask.insert({task_id: truck, title: 'Reserve for June 20', done: 0});
+
+    const posters = rabid.task.insert({
+        project_id: drive, title: 'Posters for donation day',
+        due: '2026-06-15', deleted: 0});
+    assign(posters, volunteers.filter((_, i) => i % 17 === 2).slice(0, 2).map(v => v.volunteer_id));
+
+    rabid.task.insert({
+        project_id: drive, title: 'Confirm dropoff sites',
+        status: 'done', deleted: 0});
+
+    const stand = rabid.task.insert({
+        project_id: shop, title: 'Fix wobbly repair stand #3',
+        priority: 'low', deleted: 0});
+    assign(stand, volunteers.filter((_, i) => i % 19 === 7).slice(0, 1).map(v => v.volunteer_id));
+
+    console.info('2 projects created');
+}
+
+// --------------------------------------------------------------------------------
 // --- Scenarios + composition ----------------------------------------------------
 // --------------------------------------------------------------------------------
 //
@@ -879,6 +934,7 @@ export const SCENARIOS: Record<ScenarioName, Scenario> = {
 export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     seedVolunteers(rabid, { count: scenario.volunteers, baseSeed: scenario.baseSeed });
     seedCommittees(rabid);
+    seedProjects(rabid);
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed });

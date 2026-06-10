@@ -172,6 +172,14 @@ export function navBar(showTestClientLink: boolean = false): any {
              [h.a, {class:"nav-link", href:"/committees"}, 'Committees'],
             ], //li
 
+            [h.li, {class:"nav-item"},
+             [h.a, {class:"nav-link", href:"/projects"}, 'Projects'],
+            ], //li
+
+            [h.li, {class:"nav-item"},
+             [h.a, {class:"nav-link", href:"/tasks"}, 'Tasks'],
+            ], //li
+
             // Test client: only on a non-production db (the browser-test harness
             // lives there).  It is a <button> doing a full navigation, NOT a GET
             // <a href>: link prefetch - and especially Chrome prerender, which

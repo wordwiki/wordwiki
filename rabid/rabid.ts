@@ -17,6 +17,7 @@ import * as sale from './sale.ts';
 import * as service from './service.ts';
 import * as group from './group.ts';
 import * as committee from './committee.ts';
+import * as task from './task.ts';
 import * as photo from '../liminal/photo.ts';
 import {ensureDir} from "std/fs/mod.ts";
 import * as table from '../liminal/table.ts';
@@ -61,6 +62,9 @@ export class Rabid extends LiminalApp {
     @path get volunteer_group() { return new group.VolunteerGroupTable(); }
     @path get group_member() { return new group.GroupMemberTable(); }
     @path get committee() { return new committee.CommitteeTable(); }
+    @path get project() { return new task.ProjectTable(); }
+    @path get task() { return new task.TaskTable(); }
+    @path get subtask() { return new task.SubtaskTable(); }
 
     // Photo upload + on-demand presentation sizing (liminal/photo.ts).  The
     // stores live beside the db: they are data, not code.
@@ -74,7 +78,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.sale, this.service, this.volunteer_group, this.group_member, this.committee];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
     }
 
     home() { return templates.page('home', home.home()); }
@@ -84,6 +88,8 @@ export class Rabid extends LiminalApp {
     servicePage() { return templates.page('Service', this.service.renderServicePage()); }
     timesheets() { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage()); }
     committees() { return templates.page('Committees', this.committee.renderCommitteesPage()); }
+    projects() { return templates.page('Projects', this.project.renderProjectsPage()); }
+    tasksPage() { return templates.page('Tasks', this.task.renderTasksPage()); }
 
     constructor() {
         super();
@@ -101,6 +107,10 @@ export class Rabid extends LiminalApp {
             service:()=>this.servicePage(),
             timesheets:()=>this.timesheets(),
             committees:()=>this.committees(),
+            projects:()=>this.projects(),
+            // ('tasks' the page vs this.task the table - same naming move as
+            // service/servicePage.)
+            tasks:()=>this.tasksPage(),
             activityReport:()=>templates.page('Activity Report', activityReport()),
             dailyActivityReport:()=>templates.page(
                 'Daily Activity Report',

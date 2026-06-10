@@ -301,8 +301,15 @@ export class Table<T extends Tuple> {
         const pk = record[this.pkName];
         if(pk !== undefined && pk !== null)
             hidden[this.pkName] = pk;
+        // For a NEW record (no pk) the before-snapshots are empty - on an insert
+        // EVERY supplied value is a change.  This is what lets a "new" dialog be
+        // rendered over a partial record (e.g. renderForm({project_id} as Task)
+        // to preset the project): the prefilled input differs from its empty
+        // snapshot, so parseInput includes it.  (Snapshotting the prefill would
+        // silently DROP any value the user accepts unchanged.)
+        const isNew = pk === undefined || pk === null;
         for(const f of editableFields)
-            hidden['before-'+f.name] = f.toFormValue(record[f.name]);
+            hidden['before-'+f.name] = isNew ? '' : f.toFormValue(record[f.name]);
 
         // The serialized route path of this table (e.g. 'rabid.event_commitment'),
         // so foreign-key fields can build their remote picker route.  Falls back to

@@ -127,10 +127,11 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
 
     // What to call this group in UI text: an owned group goes by its owner's
     // name (single source of truth - the group's own name stays '' there).
+    // 'name' then 'title' covers our owner tables (committee / task).
     displayName(g: VolunteerGroup): string {
         if(g.owner_table != null && g.owner_id != null) {
-            const owner = security.runSystem(() => tableByName(g.owner_table!).getById(g.owner_id!));
-            const name = (owner as Record<string, unknown>)['name'];
+            const owner = security.runSystem(() => tableByName(g.owner_table!).getById(g.owner_id!)) as Record<string, unknown>;
+            const name = owner['name'] ?? owner['title'];
             if(typeof name === 'string' && name) return name;
         }
         return g.name || `group ${g.group_id}`;
