@@ -154,7 +154,7 @@ export function navBar(showTestClientLink: boolean = false): any {
             ], //li
 
             [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Events'],
+             [h.a, {class:"nav-link", href:"/events"}, 'Events'],
             ], //li
 
             [h.li, {class:"nav-item"},

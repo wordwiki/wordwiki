@@ -58,6 +58,7 @@ export class Rabid extends LiminalApp {
 
     home() { return templates.page('home', home.home()); }
     volunteers() { return templates.page('Volunteers', this.volunteer.renderSearchableVolunteers()); }
+    events() { return templates.page('Events', this.event.renderEventsPage()); }
 
     constructor() {
         super();
@@ -68,6 +69,7 @@ export class Rabid extends LiminalApp {
         this.pages = {
             home:()=>this.home(),
             volunteers:()=>this.volunteers(),
+            events:()=>this.events(),
             activityReport:()=>templates.page('Activity Report', activityReport()),
             dailyActivityReport:()=>templates.page(
                 'Daily Activity Report',

@@ -133,6 +133,16 @@ export class EventTable extends Table<Event> {
                 events.map(e => this.renderEventRow(e))];
     }
 
+    // The top-level Events page body (dispatched from the navbar's /events).
+    // For now just the full standard list; about to grow more structured
+    // content (upcoming highlights, per-period summaries, etc).
+    renderEventsPage(): Markup {
+        return [h.div, {class: 'container py-3'},
+            [h.h2, {}, 'Events'],
+            this.renderEventList(this.allEvents.all()),
+        ];
+    }
+
     // "Sat, Jun 13, 2026, 7:00 PM - 9:30 PM" (year included: unlike the
     // upcoming-events cards, a full list spans years).
     timeRangeText(e: Event): string {
