@@ -140,9 +140,17 @@ export class Rabid extends LiminalApp {
         return result;
     }
 
-    // Unauthenticated requests are sent to the login page (except the login POST).
+    // Unauthenticated requests are sent to the login page (except the login POST -
+    // and, on NON-PRODUCTION dbs only, the GET form of the login, so a
+    // puppeteer/test session can log in with a single navigation:
+    //   /rabid.loginRequest(queryArgs)?email=rocky@redraccoon.org&password=rcky
+    // Kept off production because a GET puts the password in the URL, which
+    // transits the server log (the route interpreter logs each expr) and
+    // browser history.
     protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
         const allowedWithoutLogin = new Set(['rabid.loginRequest(bodyArgs)']);
+        if(this.getDbPurpose() !== 'production')
+            allowedWithoutLogin.add('rabid.loginRequest(queryArgs)');
         const loggedIn = ctx.actorId !== undefined;
         if(loggedIn || allowedWithoutLogin.has(jsExprSrc)) return undefined;
         return `rabid.login(${JSON.stringify(requestUrl)})`;
