@@ -151,3 +151,94 @@ function popupModalEditor(modalTitleText, modalBodyHtmlText) {
     getModalBodyElem().innerHTML = modalBodyHtmlText;
     showModalEditor();
 }
+
+/* ----------------------------------------------------------------------------
+   Photo field (liminal/table.ts ImageField).
+
+   On file pick: downscale/re-encode the image in the browser (canvas -> JPEG,
+   which also STRIPS EXIF incl. GPS and bakes in the EXIF orientation), upload
+   it to the app's PhotoService route, and set the field's hidden input to the
+   returned content path.  Saving the record is then a plain string-field save;
+   nothing is attached to the record until the user presses Save.
+---------------------------------------------------------------------------- */
+
+const LM_PHOTO_MAX_DIM = 1600;       // longest side of the stored original
+const LM_PHOTO_JPEG_QUALITY = 0.85;
+
+async function lmPhotoFieldChange(event, photoServicePath, fieldName) {
+    const fileInput = event.target;
+    const file = fileInput.files && fileInput.files[0];
+    if(!file) return;
+    const status = document.getElementById('photo-status-' + fieldName);
+    const setStatus = (t) => { if(status) status.textContent = t; };
+    try {
+        setStatus('Preparing photo…');
+        const jpegBlob = await lmDownscaleImageToJpeg(file, LM_PHOTO_MAX_DIM, LM_PHOTO_JPEG_QUALITY);
+        setStatus('Uploading…');
+        const imageBytesAsBase64 = await lmBlobToBase64(jpegBlob);
+        // rpc (resources/rabid-scripts.js) is a tagged template - call its
+        // (segments, ...args) convention directly since the route path is a
+        // runtime value here.
+        const result = await rpc([photoServicePath + '.upload(', ')'], {imageBytesAsBase64});
+        const photoPath = result.photoPath;
+
+        document.getElementById('input-' + fieldName).value = photoPath;
+        const preview = document.getElementById('photo-preview-' + fieldName);
+        if(preview) {
+            preview.src = '/' + photoServicePath + '.serve(' + JSON.stringify(photoPath) + ',256)';
+            preview.classList.remove('d-none');
+        }
+        const removeBtn = document.getElementById('photo-remove-' + fieldName);
+        if(removeBtn) removeBtn.classList.remove('d-none');
+        setStatus('Photo ready — press Save to keep it.');
+    } catch(e) {
+        console.error('photo upload failed', e);
+        setStatus('Photo upload failed: ' + ((e && e.message) || e));
+        fileInput.value = '';
+    }
+}
+
+function lmPhotoFieldClear(fieldName) {
+    document.getElementById('input-' + fieldName).value = '';
+    const preview = document.getElementById('photo-preview-' + fieldName);
+    if(preview) { preview.src = ''; preview.classList.add('d-none'); }
+    const removeBtn = document.getElementById('photo-remove-' + fieldName);
+    if(removeBtn) removeBtn.classList.add('d-none');
+    const fileInput = document.getElementById('photo-file-' + fieldName);
+    if(fileInput) fileInput.value = '';
+    const status = document.getElementById('photo-status-' + fieldName);
+    if(status) status.textContent = 'Photo removed — press Save to keep the change.';
+}
+
+// Decode + downscale to a JPEG blob.  imageOrientation:'from-image' bakes the
+// EXIF rotation into the pixels where supported (older Safari: fall back to a
+// plain decode).  A file the browser can't decode (e.g. HEIC on Chrome)
+// throws, surfacing as the field's failure status.
+async function lmDownscaleImageToJpeg(file, maxDim, quality) {
+    let bitmap;
+    try { bitmap = await createImageBitmap(file, {imageOrientation: 'from-image'}); }
+    catch(_e) { bitmap = await createImageBitmap(file); }
+    try {
+        const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+        const w = Math.max(1, Math.round(bitmap.width * scale));
+        const h = Math.max(1, Math.round(bitmap.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+        return await new Promise((resolve, reject) =>
+            canvas.toBlob(b => b ? resolve(b) : reject(new Error('image encode failed')),
+                          'image/jpeg', quality));
+    } finally {
+        if(bitmap.close) bitmap.close();
+    }
+}
+
+function lmBlobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        // result is a data: URL - strip the prefix to get plain base64.
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+    });
+}

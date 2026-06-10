@@ -4,12 +4,13 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navigableItemProps, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navigableItemProps, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
 import * as templates from './templates.ts';
+import {rabid} from './rabid.ts';
 
 // --------------------------------------------------------------------------------
 // --- Sale -----------------------------------------------------------------------
@@ -40,6 +41,8 @@ export interface Sale {
     sale_recorded_by: number;
     sale_kind: string;
     description: string;
+    // Optional photo of the bike (a content-store path - see liminal/photo.ts).
+    photo?: string;
     amount: number;
     payment_method: string;
     notes?: string;
@@ -58,6 +61,7 @@ export class SaleTable extends Table<Sale> {
             new ForeignKeyField('sale_recorded_by', 'volunteer', 'volunteer_id', {indexed: true}, 'name'),
             new EnumField('sale_kind', sale_kind_enum, {}),
             new StringField('description', {default: ''}),
+            new ImageField('photo', 'rabid.photo', {nullable: true, prompt: 'Photo'}),
             new FloatingPointField('amount', {}),
             new EnumField('payment_method', payment_method_enum, {default: 'cash'}),
             new StringField('notes', {nullable: true})
@@ -101,9 +105,13 @@ export class SaleTable extends Table<Sale> {
         const secondary = [date.sqliteDateTimeToString(s.sale_time), `$${(s.amount ?? 0).toFixed(2)}`]
             .filter(Boolean).join(' · ');
 
+        // A bike sale with a photo leads with a small thumbnail.
+        const thumb = s.photo ? rabid.photo.img(s.photo, 96, {class: 'lm-row-thumb'}) : undefined;
+
         if(this.canEditRecord(s)) {
             const item = this.editableItemProps(id, `rabid.sale.renderSaleRowById(${id})`);
             return [h.div, {...item, 'data-testid': `sale-row-${id}`},
+                thumb,
                 [h.div, {class: 'lm-item-body'},
                  [h.div, {class: 'lm-item-primary'},
                   templates.pageLink(`/rabid.sale.detailPage(${id})`, primaryText), badges],
@@ -114,6 +122,7 @@ export class SaleTable extends Table<Sale> {
 
         return [h.a, {...navigableItemProps(`/rabid.sale.detailPage(${id})`),
                       'data-testid': `sale-row-${id}`},
+            thumb,
             [h.div, {class: 'lm-item-body'},
              [h.div, {class: 'lm-item-primary'}, primaryText, badges],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
@@ -160,6 +169,7 @@ export class SaleTable extends Table<Sale> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, s.description || sale_kind_enum[s.sale_kind] || 'Sale'],
              this.canEditRecord(s) ? this.editPencil(sale_id) : undefined],
+            s.photo ? rabid.photo.img(s.photo, 512, {class: 'lm-photo-detail'}) : undefined,
             [h.dl, {class: 'row mb-0'},
              row('Kind', sale_kind_enum[s.sale_kind] ?? s.sale_kind),
              row('Time', date.sqliteDateTimeToString(s.sale_time, '—')),

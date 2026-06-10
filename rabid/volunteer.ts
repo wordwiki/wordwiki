@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -55,7 +55,12 @@ export interface Volunteer {
 
     // Skills or Experience You'd Like to Share e.g., bike repair, event planning, fundraising, social media, etc
     skills: string;
-    
+
+    // Optional photo: a content-store path ('content/photos/…' - see
+    // liminal/photo.ts).  Volunteer-supplied by choice.
+    photo?: string;
+
+
     emergency_contact_name: string;
     emergency_contact_phone: string;
 
@@ -97,6 +102,11 @@ export class VolunteerTable extends Table<Volunteer> {
             // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
+            // Optional photo (a content-store path - see liminal/photo.ts).
+            // Uploading one is the volunteer's own choice: the point is to help
+            // other volunteers on a shift learn each other's names.
+            new ImageField('photo', 'rabid.photo',
+                           {nullable: true, prompt: 'Photo (optional — helps other volunteers learn your name)'}),
             // Day-granularity facts are DateFields (date picker, no time noise).
             new DateField('join_date', {nullable: true}),
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
@@ -364,6 +374,8 @@ export class VolunteerTable extends Table<Volunteer> {
                      {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${volunteer_id})`},
                      'btn btn-outline-secondary btn-sm ms-auto')
                  : undefined],
+
+            v.photo ? rabid.photo.img(v.photo, 512, {class: 'lm-photo-detail'}) : undefined,
 
             [h.dl, {class: 'row mb-0'},
              [h.dt, {class: 'col-sm-3'}, 'Email'],

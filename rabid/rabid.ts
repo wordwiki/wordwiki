@@ -17,6 +17,8 @@ import * as sale from './sale.ts';
 import * as service from './service.ts';
 import * as group from './group.ts';
 import * as committee from './committee.ts';
+import * as photo from '../liminal/photo.ts';
+import {ensureDir} from "std/fs/mod.ts";
 import * as table from '../liminal/table.ts';
 import {serialize, path} from "../liminal/serializable.ts";
 import {lazy} from '../liminal/lazy.ts';
@@ -59,6 +61,16 @@ export class Rabid extends LiminalApp {
     @path get volunteer_group() { return new group.VolunteerGroupTable(); }
     @path get group_member() { return new group.GroupMemberTable(); }
     @path get committee() { return new committee.CommitteeTable(); }
+
+    // Photo upload + on-demand presentation sizing (liminal/photo.ts).  The
+    // stores live beside the db: they are data, not code.
+    @path get photo() {
+        return new photo.PhotoService({
+            contentDir: 'database/content',
+            derivedDir: 'database/derived',
+            mountPath: 'rabid.photo',
+        });
+    }
 
     @lazy
     get tables() {
@@ -149,7 +161,16 @@ export class Rabid extends LiminalApp {
     makePage(title: any, body: any): any { return templates.page(title, body); }
 
     async resourceContentDirs(): Promise<Record<string, string>> {
-        return {'/resources/': await findResourceDir('resources') + '/'};
+        // The photo stores are served as plain files: the sha256 path IS the
+        // capability (unguessable), and the authenticated rabid.photo.serve
+        // route is the only thing that hands the URLs out.
+        await ensureDir('database/content');
+        await ensureDir('database/derived');
+        return {
+            '/resources/': await findResourceDir('resources') + '/',
+            '/content/': 'database/content/',
+            '/derived/': 'database/derived/',
+        };
     }
 
     testRuns(): Record<string, TestCase[]> { return TEST_RUNS; }

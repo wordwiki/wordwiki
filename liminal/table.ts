@@ -986,6 +986,64 @@ export class DateField extends Field {
 }
 
 /**
+ * A photo stored by reference: the field VALUE is a content-store path string
+ * ('content/photos/3ab/<sha256>.jpg' - see liminal/photo.ts), so it diffs,
+ * snapshots (before-…) and saves exactly like any other string column.
+ *
+ * The input control is a hidden input carrying that path, plus a file picker
+ * (accept="image/*": on a phone this offers BOTH the camera and the photo
+ * library; on desktop, the file chooser) wired to lmPhotoFieldChange
+ * (resources/liminal-scripts.js), which downscales/re-encodes client-side
+ * (also stripping EXIF/GPS), uploads via the app's PhotoService route, and
+ * sets the hidden input - so by the time the form is saved, the photo is
+ * already content-addressed and the save is a plain string-field update.
+ *
+ * photoServicePath is the route path of the app's PhotoService instance
+ * (e.g. 'rabid.photo') - a developer-supplied constant, like ForeignKeyField's
+ * target table.
+ */
+export class ImageField extends StringField {
+    constructor(name: string, public photoServicePath: string, options: FieldOptions = {}) {
+        super(name, options);
+    }
+
+    private serveSrc(value: string, width: number): string {
+        return `/${this.photoServicePath}.serve(${JSON.stringify(value)},${width})`;
+    }
+
+    render(value: any): Markup {
+        if(typeof value !== 'string' || value === '') return '';
+        return ['img', {src: this.serveSrc(value, 256), class: 'lm-photo-thumb',
+                        loading: 'lazy', alt: ''}];
+    }
+
+    renderInput(value: any, _ctx?: FieldRenderContext): Markup {
+        const current = typeof value === 'string' ? value : '';
+        const has = current !== '';
+        return [
+            ['div', {'class': 'col-12'},
+             ['label', {for: `photo-file-${this.name}`, class: 'form-label'}, this.prompt],
+             // The actual field value (and what before-… snapshots): the path.
+             ['input', {type: 'hidden', name: this.name, id: 'input-'+this.name, value: current}],
+             ['img', {id: `photo-preview-${this.name}`,
+                      class: 'lm-photo-preview' + (has ? '' : ' d-none'),
+                      src: has ? this.serveSrc(current, 256) : '', alt: ''}],
+             ['input', {type: 'file', accept: 'image/*', class: 'form-control',
+                        id: `photo-file-${this.name}`,
+                        onchange: `lmPhotoFieldChange(event, ${JSON.stringify(this.photoServicePath)}, ${JSON.stringify(this.name)})`}],
+             ['div', {class: 'd-flex align-items-center gap-2 mt-1'},
+              ['button', {type: 'button',
+                          class: 'btn btn-outline-secondary btn-sm' + (has ? '' : ' d-none'),
+                          id: `photo-remove-${this.name}`,
+                          onclick: `lmPhotoFieldClear(${JSON.stringify(this.name)})`},
+               'Remove photo'],
+              ['span', {class: 'form-text m-0', id: `photo-status-${this.name}`}]],
+            ] // div
+        ];
+    }
+}
+
+/**
  *
  */
 export class PrimaryKeyField extends IntegerField {
