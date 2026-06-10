@@ -56,6 +56,23 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Parameter dialogs / edit forms
+--------------------------------------------------------------------------- */
+
+/* The dialog's submit row.  When the form is taller than the modal body (a
+   long edit form on a phone) the row sticks to the bottom of the scrollport,
+   so saving never requires scrolling to the end of the form.  The negative
+   bottom offset lets it sink into (and cover) the modal-body's own bottom
+   padding, so fields scrolling beneath it don't peek through the gap. */
+.modal-body .lm-form-actions {
+    position: sticky;
+    bottom: calc(-1 * var(--bs-modal-padding, 1rem));
+    background-color: var(--bs-body-bg);
+    padding: 0.75rem 0;
+    border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+/* ---------------------------------------------------------------------------
    Standard item list (the mobile-first replacement for column tables)
 
    A .list-group of .lm-item rows: body (primary line + muted secondary line)

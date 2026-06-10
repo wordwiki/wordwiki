@@ -125,7 +125,10 @@ export function renderParamForm(params: Field[], defaults: Tuple, opts: ParamFor
         // One input per visible parameter (reuses the record-field widgets).
         params.map(p => p.renderInput(defaults[p.name], opts.fieldContext)),
 
-        [h.div, {class: 'col-12'},
+        // lm-form-actions: when the dialog scrolls (long edit forms on a phone),
+        // this row sticks to the bottom of the scrollport so the submit is
+        // always reachable without scrolling (style in liminal.css).
+        [h.div, {class: 'lm-form-actions col-12'},
          [h.button, {type: 'submit', class: 'btn btn-primary'}, opts.submitLabel ?? 'Submit']],
     ];
 }

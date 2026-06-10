@@ -241,8 +241,10 @@ export function renderModalEditorSkeleton() {
                  'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
                  tabindex:'-1', 'aria-labelledby':'modalEditorLabel',
                  'aria-hidden':'true'},
-         //[h.div, {class:'modal-dialog modal-dialog-scrollable modal-fullscreen'},
-          [h.div, {class:'modal-dialog modal-dialog-scrollable modal-lg'},
+          // fullscreen-sm-down: on a phone the editor is a full-screen sheet
+          // (native edit-screen feel, and room for the soft keyboard); from sm
+          // up it is a regular centered dialog.
+          [h.div, {class:'modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down modal-lg'},
 
           [h.div, {class:'modal-content'},
 
