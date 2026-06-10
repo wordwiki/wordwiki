@@ -22,7 +22,7 @@ export interface Fixture {
 // A complete volunteer row with sensible defaults; override what a case cares about.
 function vol(over: Record<string, any>): any {
     return {
-        join_date: "2024-01-01 00:00:00",
+        join_date: "2024-01-01",
         name: "Unnamed",
         email: "unnamed@test.example",
         email_visible_to_all_volunteers: 1,

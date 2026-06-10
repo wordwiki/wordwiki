@@ -551,8 +551,11 @@ export abstract class LiminalApp {
     // Seconds since a session's last heartbeat (undefined if it never sent one).
     #heartbeatAgeSeconds(heartbeat: string | undefined): number | undefined {
         if(!heartbeat) return undefined;
+        // orgNow, not Temporal.Now: heartbeats are stamped via
+        // currentSqliteDateTime (org wall-clock) - comparing against the
+        // server's system zone would skew the age when the zones differ.
         const hb = date.sqliteDateTimeToTemporal(heartbeat);
-        return Temporal.Now.plainDateTimeISO().since(hb).total({unit: 'seconds'});
+        return date.orgNow().since(hb).total({unit: 'seconds'});
     }
 
     // Block until a live test client is connected (most-recent opt-in, fresh

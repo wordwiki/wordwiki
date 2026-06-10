@@ -58,6 +58,10 @@ export class Rabid extends LiminalApp {
 
     constructor() {
         super();
+        // Single-venue org (a durable assumption): all stored dates/times are
+        // wall-clock at the venue.  Pin the org zone so "now"/"today"
+        // (date.orgNow/orgToday) are right regardless of the server's zone.
+        date.setOrgTimeZone('America/Toronto');
         this.pages = {
             home:()=>this.home(),
             volunteers:()=>this.volunteers(),
@@ -65,8 +69,8 @@ export class Rabid extends LiminalApp {
             dailyActivityReport:()=>templates.page(
                 'Daily Activity Report',
                 dailyActivityReport(
-                    Temporal.Now.plainDateISO().subtract({ days: 30 }),
-                    Temporal.Now.plainDateISO()
+                    date.orgToday().subtract({ days: 30 }),
+                    date.orgToday()
                 )
             ),
         };

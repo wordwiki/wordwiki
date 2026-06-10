@@ -8,6 +8,7 @@ import {serialize, serializeAny} from "../liminal/serializable.ts";
 import { db, Db, PreparedQuery, QueryClosure, RowObject, QueryParameterSet, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as action from "./action.ts";
 import * as security from "./security.ts";
+import * as date from "./date.ts";
 
 export type Tuple = Record<string, any>;
 
@@ -854,26 +855,27 @@ export class DateTimeField extends Field {
         return 'TEXT';
     }
 
-
     render(value: any): Markup {
-        // TODO may choose to render with AM/PM or such.
-        return value;
+        // House style: "Jan 23, 2025, 2:30 PM".
+        return date.sqliteDateTimeToString(value == null ? null : String(value));
     }
 
     // Stored as SQLite 'YYYY-MM-DD HH:MM:SS'; an <input type=datetime-local>
-    // value is 'YYYY-MM-DDTHH:MM:SS' (a 'T' in place of the space).  We convert
-    // here so both the input value and its before-<name> snapshot use the input
-    // form and thus compare equal when the user hasn't changed the field.
+    // value is 'YYYY-MM-DDTHH:MM' (a 'T' in place of the space).  We edit at
+    // MINUTE precision - nobody schedules a shop load to the second - so the
+    // form value is truncated to minutes.  Both the input value and its
+    // before-<name> snapshot go through this, so an untouched field compares
+    // equal (and keeps its stored seconds: unchanged fields are not written).
     toFormValue(value: any): any {
         if(value == null || value === '') return '';
-        return String(value).replace(' ', 'T');
+        return String(value).replace(' ', 'T').slice(0, 16);
     }
 
     renderInput(value: any): Markup {
         return [
             ['div', {'class':'col-12'},
              ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
-             ['input', Object.assign({type:'datetime-local', step:'1', class:'form-control',
+             ['input', Object.assign({type:'datetime-local', class:'form-control',
                                       name:this.name, id:'input-'+this.name, value: this.toFormValue(value)},
                                      this.isInputRequired() ? {required: ''} : {})]
             ] // div
@@ -891,9 +893,52 @@ export class DateTimeField extends Field {
         if (!match) {
             throw new Error(`Invalid date format. Expected format like "2026-02-19T09:32", got "${value}"`);
         }
-        
+
         const [, year, month, day, hour, minute, second] = match;
         return `${year}-${month}-${day} ${hour}:${minute}:${second ?? '00'}`;
+    }
+}
+
+/**
+ * A date WITHOUT a time of day (join date, inactive-since, ...), stored as
+ * SQLite 'YYYY-MM-DD'.  Distinct from DateTimeField so day-granularity facts
+ * get a date picker (not a datetime picker with meaningless time noise) and
+ * render as "Jan 23, 2025".
+ */
+export class DateField extends Field {
+    constructor(name: string, options: FieldOptions = {}) {
+        super(name, options);
+    }
+
+    dmlType(): string {
+        return 'TEXT';
+    }
+
+    render(value: any): Markup {
+        return date.sqliteDateToString(value == null ? null : String(value));
+    }
+
+    // <input type=date> uses 'YYYY-MM-DD' directly - same as storage.
+    toFormValue(value: any): any {
+        return value == null ? '' : String(value);
+    }
+
+    renderInput(value: any): Markup {
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['input', Object.assign({type:'date', class:'form-control',
+                                      name:this.name, id:'input-'+this.name, value: this.toFormValue(value)},
+                                     this.isInputRequired() ? {required: ''} : {})]
+            ] // div
+        ];
+    }
+
+    parseSimpleInput(value: string): any {
+        if (!value) return null;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+            throw new Error(`Invalid date format. Expected "YYYY-MM-DD", got "${value}"`);
+        return value;
     }
 }
 

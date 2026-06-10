@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -97,12 +97,13 @@ export class VolunteerTable extends Table<Volunteer> {
             // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
-            new DateTimeField('join_date', {nullable: true}),
+            // Day-granularity facts are DateFields (date picker, no time noise).
+            new DateField('join_date', {nullable: true}),
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
             new StringField('emergency_contact_phone', {default: '', view: selfOrHost, redact: true}),
             new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
             new BooleanField('inactive', {default: 0}),
-            new DateTimeField('marked_inactive_date', {nullable: true}),
+            new DateField('marked_inactive_date', {nullable: true}),
             new BooleanField('exit_feedback_requested', {default: 0}),
             new EnumField('exit_reason', exit_reason_enum, {nullable: true}),
             new StringField('exit_feedback', {nullable: true}),
@@ -349,7 +350,7 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.dt, {class: 'col-sm-3'}, 'Emergency contact'],
              [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-emergency'}, emergency],
              [h.dt, {class: 'col-sm-3'}, 'Joined'],
-             [h.dd, {class: 'col-sm-9'}, v.join_date || '—'],
+             [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.join_date, v.join_date) || '—'],
             ],
 
             [h.h4, {class: 'mt-4'}, 'Timesheet'],

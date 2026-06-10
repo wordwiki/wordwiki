@@ -81,6 +81,7 @@ let rand: () => number = mulberry32(1);
 export interface VolunteerSeedOpts { count?: number; baseSeed?: number; }
 
 const isoDateTime = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);  // for DateField columns (YYYY-MM-DD)
 
 // Seed Rocky (the canonical admin login) plus `count` more volunteers.  Each
 // field is drawn from a per-concern stream (identity / contact / status / role /
@@ -96,9 +97,10 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     const acctS = s('volunteer.account');      // whether a password is set
 
     // Rocky uses fixed values so the canonical admin login is stable across runs.
-    const rockyJoin = '2023-01-07 10:00:00';
+    const rockyJoin = '2023-01-07 10:00:00';   // last_change_time (a datetime)
     const rockyId = rabid.volunteer.insert({
-        join_date: rockyJoin,
+        join_date: '2023-01-07',               // join_date is a DateField
+
         name: 'Rocky Raccoon',
         email: 'rocky@redraccoon.org',
         email_visible_to_all_volunteers: 1,  // Rocky shares their email
@@ -141,7 +143,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         const hasExitFeedback = isInactive && statusS.datatype.boolean({ probability: 0.4 });
 
         const newVolunteerId = rabid.volunteer.insert({
-            join_date: statusS.helpers.maybe(() => isoDateTime(joinDate), { probability: 0.9 }), // 10% unknown
+            join_date: statusS.helpers.maybe(() => isoDate(joinDate), { probability: 0.9 }), // 10% unknown
             name: `${firstName} ${lastName}`,
             email: idS.internet.email({ firstName, lastName }).toLowerCase(),
             email_visible_to_all_volunteers: contactS.datatype.boolean({ probability: 0.85 }) ? 1 : 0, // opt-out
@@ -172,7 +174,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
             permissions: roleS.helpers.arrayElement(['', '', '', '', '', '', '', 'host', 'host', 'admin']),
             inactive: isInactive ? 1 : 0,
             marked_inactive_date: isInactive
-                ? isoDateTime(statusS.date.between({ from: joinDate, to: new Date() }))
+                ? isoDate(statusS.date.between({ from: joinDate, to: new Date() }))
                 : undefined,
             exit_feedback_requested: hasExitFeedback ? 1 : 0,
             exit_reason: hasExitFeedback ? statusS.helpers.arrayElement(['moved', 'no-time', 'other']) : undefined,
@@ -209,9 +211,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
 // records are stable across runs.
 function seedFixedLogin(rabid: Rabid, name: string, email: string, pw: string,
                         permissions: string|undefined): number {
-    const join = '2023-02-01 10:00:00';
+    const join = '2023-02-01 10:00:00';        // last_change_time (a datetime)
     const id = rabid.volunteer.insert({
-        join_date: join,
+        join_date: '2023-02-01',               // join_date is a DateField
         name,
         email,
         email_visible_to_all_volunteers: 1,

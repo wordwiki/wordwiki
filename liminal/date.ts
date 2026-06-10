@@ -16,6 +16,59 @@ export type PlainTime = Temporal.PlainTime;
 export type SQLiteDateString = string;      // Format: YYYY-MM-DD
 export type SQLiteDateTimeString = string;  // Format: YYYY-MM-DD HH:MM:SS
 
+// The row-level aliases used in record interfaces (re-exported by db.ts).
+// THE MODEL: rows carry dates/datetimes as these strings - SQL-native,
+// lexicographically sortable, JSON/markup/form-safe, diffable in before-*
+// snapshots.  Convert to Temporal at the edge where you COMPUTE (add days,
+// compare ranges), and convert straight back; never store the object in a row.
+export type sqldate = SQLiteDateString;
+export type sqldatetime = SQLiteDateTimeString;
+
+// ============================================================================
+// ORG TIMEZONE, LOCALE AND CLOCK
+// ============================================================================
+//
+// SINGLE-VENUE MODEL (a durable assumption): everything in the system is
+// wall-clock time at the org's one venue, stored zoneless.  "Volunteer night
+// starts at 7 PM" stays 7 PM across DST transitions - which zoneless
+// PlainDateTime gives us and UTC instants would not.
+//
+// The org timezone exists for exactly ONE purpose: computing "now"/"today"
+// correctly no matter what zone the server happens to run in.  Never use
+// `new Date()` / `Temporal.Now.*ISO()` (system zone!) for org-time "now" -
+// use orgNow()/orgToday() below.
+
+let orgTimeZone: string | undefined = undefined;  // undefined -> system zone
+let orgLocale = 'en-US';
+
+/** Set once at app startup (e.g. 'America/Toronto' in rabid's constructor). */
+export function setOrgTimeZone(tz: string): void { orgTimeZone = tz; }
+export function setOrgLocale(locale: string): void { orgLocale = locale; }
+export function getOrgLocale(): string { return orgLocale; }
+
+// Test seam: freeze the clock ("render the upcoming-events page as if today
+// were a Tuesday in March").  Accepts a PlainDateTime or a sqlite-style
+// 'YYYY-MM-DD HH:MM:SS' string; pass null to unfreeze.
+let fixedNow: PlainDateTime | null = null;
+export function setFixedNow(dt: PlainDateTime | string | null): void {
+    fixedNow = typeof dt === 'string'
+        ? Temporal.PlainDateTime.from(dt.replace(' ', 'T'))
+        : dt;
+}
+
+/** The current wall-clock datetime at the org's venue. */
+export function orgNow(): PlainDateTime {
+    if (fixedNow) return fixedNow;
+    return orgTimeZone
+        ? Temporal.Now.plainDateTimeISO(orgTimeZone)
+        : Temporal.Now.plainDateTimeISO();
+}
+
+/** The current date at the org's venue. */
+export function orgToday(): PlainDate {
+    return orgNow().toPlainDate();
+}
+
 /**
  * Convert a SQLite date string (YYYY-MM-DD) to a Temporal.PlainDate
  * 
@@ -94,19 +147,17 @@ export function temporalToSqliteDateTimeOrUndefined(dateTime: PlainDateTime | nu
 }
 
 /**
- * Get current date as SQLite date string
+ * Get current date (at the org's venue - see orgToday) as SQLite date string
  */
 export function currentSqliteDate(): SQLiteDateString {
-    const now = Temporal.Now.plainDateISO();
-    return temporalToSqliteDate(now);
+    return temporalToSqliteDate(orgToday());
 }
 
 /**
- * Get current datetime as SQLite datetime string
+ * Get current datetime (at the org's venue - see orgNow) as SQLite datetime string
  */
 export function currentSqliteDateTime(): SQLiteDateTimeString {
-    const now = Temporal.Now.plainDateTimeISO();
-    return temporalToSqliteDateTime(now);
+    return temporalToSqliteDateTime(orgNow());
 }
 
 /**
@@ -162,10 +213,11 @@ export function temporalToSqliteTimeOrUndefined(time: PlainTime | null | undefin
  * @param nullValue - What to return if dateTime is null (default: "")
  * @returns Formatted string
  */
-export function dateTimeToString(dateTime: PlainDateTime | null, nullValue: string = ""): string {
+export function dateTimeToString(dateTime: PlainDateTime | null, nullValue: string = "",
+                                 options?: Intl.DateTimeFormatOptions): string {
     if (!dateTime) return nullValue;
-    
-    return dateTime.toLocaleString('en-US', {
+
+    return dateTime.toLocaleString(orgLocale, options ?? {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -182,9 +234,28 @@ export function dateTimeToString(dateTime: PlainDateTime | null, nullValue: stri
  * @param nullValue - What to return if sqliteDateTime is null/undefined (default: "")
  * @returns Formatted string
  */
-export function sqliteDateTimeToString(sqliteDateTime: SQLiteDateTimeString | null | undefined, nullValue: string = ""): string {
+export function sqliteDateTimeToString(sqliteDateTime: SQLiteDateTimeString | null | undefined, nullValue: string = "",
+                                       options?: Intl.DateTimeFormatOptions): string {
     const temporal = sqliteDateTimeToTemporalOrNull(sqliteDateTime);
-    return dateTimeToString(temporal, nullValue);
+    return dateTimeToString(temporal, nullValue, options);
+}
+
+/**
+ * Format just the DATE part of a SQLite datetime string ("Jan 23, 2025") -
+ * for views that show a datetime column at day granularity.
+ */
+export function sqliteDateTimeToDateString(sqliteDateTime: SQLiteDateTimeString | null | undefined, nullValue: string = ""): string {
+    const temporal = sqliteDateTimeToTemporalOrNull(sqliteDateTime);
+    return temporal ? dateToString(temporal.toPlainDate()) : nullValue;
+}
+
+/**
+ * Format just the TIME part of a SQLite datetime string ("2:30 PM") - for
+ * "7:00 PM - 9:30 PM" style ranges where repeating the date is noise.
+ */
+export function sqliteDateTimeToTimeString(sqliteDateTime: SQLiteDateTimeString | null | undefined, nullValue: string = ""): string {
+    const temporal = sqliteDateTimeToTemporalOrNull(sqliteDateTime);
+    return temporal ? timeToString(temporal.toPlainTime()) : nullValue;
 }
 
 /**
@@ -195,10 +266,11 @@ export function sqliteDateTimeToString(sqliteDateTime: SQLiteDateTimeString | nu
  * @param nullValue - What to return if date is null (default: "")
  * @returns Formatted string
  */
-export function dateToString(date: PlainDate | null, nullValue: string = ""): string {
+export function dateToString(date: PlainDate | null, nullValue: string = "",
+                             options?: Intl.DateTimeFormatOptions): string {
     if (!date) return nullValue;
-    
-    return date.toLocaleString('en-US', {
+
+    return date.toLocaleString(orgLocale, options ?? {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
@@ -212,9 +284,10 @@ export function dateToString(date: PlainDate | null, nullValue: string = ""): st
  * @param nullValue - What to return if sqliteDate is null/undefined (default: "")
  * @returns Formatted string
  */
-export function sqliteDateToString(sqliteDate: SQLiteDateString | null | undefined, nullValue: string = ""): string {
+export function sqliteDateToString(sqliteDate: SQLiteDateString | null | undefined, nullValue: string = "",
+                                   options?: Intl.DateTimeFormatOptions): string {
     const temporal = sqliteDateToTemporalOrNull(sqliteDate);
-    return dateToString(temporal, nullValue);
+    return dateToString(temporal, nullValue, options);
 }
 
 /**
@@ -227,8 +300,8 @@ export function sqliteDateToString(sqliteDate: SQLiteDateString | null | undefin
  */
 export function timeToString(time: PlainTime | null, nullValue: string = ""): string {
     if (!time) return nullValue;
-    
-    return time.toLocaleString('en-US', {
+
+    return time.toLocaleString(orgLocale, {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true

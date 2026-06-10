@@ -13,6 +13,7 @@ import {
     temporalToSqliteDate,
     extractDateFromDateTime,
     dateToString,
+    orgToday,
     type PlainDate,
     type PlainDateTime,
     type SQLiteDateString
@@ -335,7 +336,7 @@ export function dailyActivityReport(startDate: PlainDate, endDate: PlainDate): M
 
 export function activityReport(): Markup {
     // Get today's date and calculate 2 years back, snapped to month beginning
-    const endDate = Temporal.Now.plainDateISO();
+    const endDate = orgToday();
     const twoYearsAgo = endDate.subtract({ years: 2 });
     const startDate = twoYearsAgo.with({ day: 1 }); // Snap to beginning of month
 

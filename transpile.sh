@@ -37,6 +37,13 @@ sed -i 's/"https:\/\/deno.land\/x\/sqlite\/mod.ts"/"..\/datawiki\/fake-deno-sqli
 sed -i '/REMOVE_FOR_WEB/d' $SCRIPTS/wordwiki/entry-schema.js
 sed -i '/REMOVE_FOR_WEB/d' $SCRIPTS/liminal/markup.js
 
+# 'temporal-polyfill' is a bare npm specifier (resolved by deno.json on the
+# server); the browser can't resolve it.  Rewrite to the pinned CDN build so
+# liminal/date.js is loadable if it ever enters the browser import graph
+# (nothing imports it in the browser today, but table.js now imports date.js,
+# so this guards the whole graph).
+(cd $SCRIPTS && find . -name "*.js" -exec sed -i -E "s#(from[[:space:]]+['\"])temporal-polyfill(['\"])#\1https://esm.sh/temporal-polyfill@0.3.0\2#g" "{}" ";")
+
 rsync -a resources/ ../mmo/resources/
 
 #echo 'END SWC'

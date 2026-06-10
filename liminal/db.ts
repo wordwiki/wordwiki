@@ -41,8 +41,10 @@ type ToRecord<T> = {[Property in keyof T]: T[Property]};
  */
 export type boolnum = number;
 
-export type sqldatetime = string;
-export type sqldate = string;
+// Date/datetime string aliases now live in date.ts (with the format contract
+// and the Temporal conversion layer); re-exported here so record interfaces
+// can keep importing them alongside boolnum.
+export type {sqldate, sqldatetime} from './date.ts';
 
 const openDbs: Record<string,Db> = {};
 
@@ -333,53 +335,12 @@ export function assertDmlContainsAllFields(dml: string, fieldNames: string[]) {
 // Date/Time formatting utilities for SQLite datetime strings
 // --------------------------------------------------------------------------------
 
-/**
- * Format a SQLite datetime string to a human-readable date and time.
- * @param dateStr - SQLite datetime string (YYYY-MM-DD HH:MM:SS)
- * @returns Formatted string like "Sat, May 4, 3:30 PM"
- */
-export function formatDateTime(dateStr?: string): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    });
-}
-
-/**
- * Format a SQLite datetime string to just the time portion.
- * @param dateStr - SQLite datetime string (YYYY-MM-DD HH:MM:SS)
- * @returns Formatted string like "3:30 PM"
- */
-export function formatTime(dateStr?: string): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    });
-}
-
-/**
- * Format a SQLite datetime string to just the date portion.
- * @param dateStr - SQLite datetime string (YYYY-MM-DD HH:MM:SS)
- * @returns Formatted string like "May 4, 2025"
- */
-export function formatDate(dateStr?: string): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
+// (The old formatDate/formatTime/formatDateTime helpers are gone: they were
+// built on `new Date(string)`, which parses 'YYYY-MM-DD' as UTC midnight (an
+// off-by-one-day bug in any non-UTC zone) and 'YYYY-MM-DD HH:MM:SS' by
+// engine-specific luck.  Use the Temporal-based formatters in date.ts:
+// sqliteDateToString / sqliteDateTimeToString / sqliteDateTimeToTimeString /
+// sqliteDateTimeToDateString.)
 
 function example() {
 

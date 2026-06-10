@@ -2,7 +2,8 @@
 
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath, formatDateTime, formatTime, formatDate } from "../liminal/db.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
+import * as date from "../liminal/date.ts";
 import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
@@ -101,71 +102,65 @@ export class EventTable extends Table<Event> {
         // --- Query all events in the next 6 weeks, including all events today.
 
         // --- Render as a ul with the body given by renderEventSummary
-        
-        // Calculate date range
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of today
-        
-        const sixWeeksFromNow = new Date(today);
-        sixWeeksFromNow.setDate(sixWeeksFromNow.getDate() + 42); // 6 weeks = 42 days
-        
-        // Format dates for SQLite (YYYY-MM-DD HH:MM:SS)
-        const startDate = today.toISOString().replace('T', ' ').slice(0, 19);
-        const endDate = sixWeeksFromNow.toISOString().replace('T', ' ').slice(0, 19);
-        
+
+        // All date math in org wall-clock time via Temporal (the previous
+        // new Date()/toISOString() version computed its bounds and week labels
+        // through UTC, shifting both by a day depending on the server's zone).
+        const today = date.orgToday();
+        const startDate = `${today.toString()} 00:00:00`;
+        const endDate = `${today.add({days: 42}).toString()} 23:59:59`; // 6 weeks = 42 days
+
         // Query upcoming events
         const upcomingEvents = db().prepare<Event, {start_date: string, end_date: string}>(block`
             SELECT ${this.allFields}
             FROM event
-            WHERE start_time >= :start_date 
+            WHERE start_time >= :start_date
               AND start_time <= :end_date
             ORDER BY start_time`).all({start_date: startDate, end_date: endDate});
-        
+
         if (upcomingEvents.length === 0) {
-            return [h.div, {class: 'no-upcoming-events'}, 
+            return [h.div, {class: 'no-upcoming-events'},
                 [h.p, {}, 'No upcoming events scheduled in the next 6 weeks.']
             ];
         }
-        
-        // Group events by week for better organization
+
+        // Group events by week (Sunday-start; Temporal dayOfWeek is Mon=1..Sun=7)
         const eventsByWeek = new Map<string, Event[]>();
-        
+
         for (const event of upcomingEvents) {
             if (!event.start_time) continue;
-            
-            const eventDate = new Date(event.start_time);
-            const weekStart = new Date(eventDate);
-            weekStart.setDate(eventDate.getDate() - eventDate.getDay()); // Start of week (Sunday)
-            const weekKey = weekStart.toISOString().split('T')[0];
-            
+
+            const eventDay = date.sqliteDateToTemporal(date.extractDateFromDateTime(event.start_time));
+            const weekStart = eventDay.subtract({days: eventDay.dayOfWeek % 7});
+            const weekKey = weekStart.toString();
+
             if (!eventsByWeek.has(weekKey)) {
                 eventsByWeek.set(weekKey, []);
             }
             eventsByWeek.get(weekKey)!.push(event);
         }
-        
+
         // Build the markup
         const sections: Markup[] = [];
-        
-        for (const [weekStart, events] of eventsByWeek) {
-            const weekDate = new Date(weekStart);
-            const weekEndDate = new Date(weekDate);
-            weekEndDate.setDate(weekEndDate.getDate() + 6);
-            
+
+        for (const [weekKey, events] of eventsByWeek) {
+            const weekStart = date.sqliteDateToTemporal(weekKey);
+            const weekEnd = weekStart.add({days: 6});
+
             // Week header
-            sections.push([h.h3, {class: 'week-header'}, 
-                `Week of ${formatDate(weekStart)} - ${formatDate(weekEndDate.toISOString())}`
+            sections.push([h.h3, {class: 'week-header'},
+                `Week of ${date.dateToString(weekStart)} - ${date.dateToString(weekEnd)}`
             ]);
-            
+
             // Events for this week
-            const eventItems = events.map(event => 
+            const eventItems = events.map(event =>
                 [h.li, {class: 'event-item'}, this.renderEventSummary(event.event_id)]
             );
-            
+
             sections.push([h.ul, {class: 'event-list'}, ...eventItems]);
         }
-        
-        return [h.div, {class: 'upcoming-events'}, 
+
+        return [h.div, {class: 'upcoming-events'},
             [h.h2, {}, 'Upcoming Events'],
             [h.p, {class: 'event-count'}, `${upcomingEvents.length} events scheduled in the next 6 weeks`],
             ...sections
@@ -198,12 +193,14 @@ export class EventTable extends Table<Event> {
             WHERE event_id = :event_id
             ORDER BY volunteer.name`).all({event_id});
         
-        // Build time summary
+        // Build time summary ("Sat, May 4, 3:30 PM - 6:00 PM")
         const timeParts: string[] = [];
         if (event.start_time) {
-            timeParts.push(formatDateTime(event.start_time));
+            timeParts.push(date.sqliteDateTimeToString(event.start_time, '', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit', hour12: true}));
             if (event.end_time) {
-                timeParts.push(` - ${formatTime(event.end_time)}`);
+                timeParts.push(` - ${date.sqliteDateTimeToTimeString(event.end_time)}`);
             }
         }
         
@@ -282,7 +279,7 @@ export class EventTable extends Table<Event> {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Shop load:'],
-                    [h.div, {}, formatTime(event.shop_load_time)]
+                    [h.div, {}, date.sqliteDateTimeToTimeString(event.shop_load_time)]
                 ]
             );
         }
@@ -290,7 +287,7 @@ export class EventTable extends Table<Event> {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Setup:'],
-                    [h.div, {}, formatTime(event.setup_time)]
+                    [h.div, {}, date.sqliteDateTimeToTimeString(event.setup_time)]
                 ]
             );
         }

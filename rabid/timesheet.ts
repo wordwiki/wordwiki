@@ -2,7 +2,7 @@
 
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
-import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime, formatDate } from "../liminal/db.ts";
+import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
@@ -159,7 +159,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
     renderEntryRow(e: TimesheetEntry & {event_description: string|null}): Markup {
         const hrs = e.end_time ? entryHours(e) : null;
         return [h.tr, {},
-            [h.td, {}, formatDate(e.start_time)],
+            [h.td, {}, date.sqliteDateTimeToDateString(e.start_time)],
             [h.td, {}, e.event_description || '—'],
             [h.td, {class: 'text-end'}, hrs == null ? '—' : hrs.toFixed(1)],
             [h.td, {}, e.notes || ''],
