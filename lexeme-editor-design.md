@@ -169,10 +169,17 @@ db) applies to wordwiki's editor for the first time.
 4. ✅ History + restore/undo, show-deleted.
 5. ✅ Audio eager-upload widget (image upload + in-browser recorder still to do).
 6. ✅ Document references (server-create + popup tagger + fragment-reload message).
-7. Switch entry links to the new editor; retire view.ts + datawiki transpile.
+7. ✅ Switch entry links to the new editor; retire view.ts + datawiki transpile.
 
-Next step after parity: real sessions (rabid-style auth) replacing the
-user-selector hack for `change_by_username`.
+All phases complete (2026-06-10).  `wordwiki.entry()` IS the v2 editor (all
+existing links follow); "Add New Entry" is a navbar form POST →
+`newLexemeAction` → redirect into the editor; datawiki/view.ts and the
+workspace's client-sync scaffolding (RemoteDb, /workspace-rpc-and-sync,
+persistProposedAssertions) are deleted; transpile.sh now builds only the two
+standalone browser files (scannedpage/page-editor.ts for the tagger,
+page-viewer.ts for the public site) with none of the module-graph hackery.
+Sessions also landed (see wordwiki-toplevel upgrade): every assertion is
+stamped with change_by_username from the login session.
 
 ## Refresh scoping (implemented 2026-06-10)
 

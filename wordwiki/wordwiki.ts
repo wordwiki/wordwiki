@@ -8,7 +8,6 @@ import * as strings from "../liminal/strings.ts";
 import * as utils from "../liminal/utils.ts";
 import * as random from "../liminal/random.ts";
 import {panic} from '../liminal/utils.ts';
-import * as view from '../datawiki/view.ts';
 import * as workspace from '../datawiki/workspace.ts';
 import {VersionedDb} from  '../datawiki/workspace.ts';
 import * as config from './config.ts';
@@ -67,8 +66,6 @@ export class WordWiki extends LiminalApp {
             {wordwiki: this},
             renderPageEditor.routes(),
             schema.routes(),
-            workspace.routes(),
-            view.routes(),
             audio.routes(),
             publish.routes(),
         );
@@ -281,107 +278,26 @@ export class WordWiki extends LiminalApp {
         }
     }
 
-    // XXX THIS IS UTTER GARBAGE - JUST GET IT OUT THE DOOR FIX FIX TODO XXX
-    addNewDocumentReference(entry_id: number, subentry_id: number, friendly_document_id: string, title?: string): any {
-        console.info('*** Add new document reference', entry_id, subentry_id, friendly_document_id, title);
-
-        // XXX copying these colors form pageeditor.ts is BAD.
-        const groupColors = [
-            'crimson', 'palevioletred', 'darkorange', 'gold', 'darkkhaki',
-            'seagreen', 'steelblue', /*'dodgerblue',*/ 'peru', /*'tan',*/ 'rebeccapurple'];
-
-
-        // --- Create new layer in the specified document id.
-        const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
-        const document_id = document.document_id;
-        const layer_id = schema.getOrCreateNamedLayer(document.document_id, 'Tagging', 0);
-        const color = groupColors[random.randomInt(0, groupColors.length-1)];
-        const bounding_group_id = db().insert<BoundingGroup, 'bounding_group_id'>(
-            'bounding_group', {document_id, layer_id, color}, 'bounding_group_id');
-
-        console.info('new bounding group id is', bounding_group_id);
-
-        // --- Add a new document reference to the subentry that references this new
-        //     bounding_group_id
-        // XXX Seems safest to do all mutes though a workspace - this is a hack fest for now.
-        // TODO make this less weird
-        const ws = new VersionedDb([model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson)]);
-        workspace.getAssertionsForEntry(entry_id)
-            .forEach((a:Assertion)=>ws.untrackedApplyAssertion(a));
-        const subentry = ws.getVersionedTupleById('dct', 'sub', subentry_id)
-            ?? panic('unable to find subentry', subentry_id);
-        const refsRelation = subentry.childRelations['ref']
-            ?? panic("can't find doc refs?");
-        //console.info('refsRelation', refsRelation);
-
-        const id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        const order_key = workspace.generateAtEndOrderKey(refsRelation);
-
-        const newAssertion: Assertion = Object.assign(
-            {},
-            assertionPathToFields([...getAssertionPath(subentry.currentAssertion??panic()), ['ref', id]]),
-            {
-                ty: 'ref',
-                assertion_id: id,
-                valid_from: timestamp.nextTime(timestamp.BEGINNING_OF_TIME),  // This is wrong - but it is overridden
-                valid_to: timestamp.END_OF_TIME,
-                attr1: bounding_group_id,
-                id: id,
-                order_key,
-            });
-
-        console.info('applying assertion', JSON.stringify(newAssertion, undefined, 2));
-
-        this.applyTransaction([newAssertion]);
-
-        const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
-        // XXX Note: if a entry has bounding boxes on muiltiple pages, we are
-        //     picking the first page by page_id, not page number.
-        const page_id =
-            bounding_boxes.length > 0
-            ? bounding_boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0]
-            : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
-
-        const reference_layer_id = getOrCreateNamedLayer(document_id, 'Text', 1);
-        //const title = 'TITLE'; // XXX
-        const pageEditorConfig: PageEditorConfig = {
-            layer_id,
-            reference_layer_ids: [reference_layer_id],
-            title,
-            is_popup_editor: true,
-            locked_bounding_group_id: bounding_group_id,
-        };
-        const taggerUrl = `/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
-
-        // --- Redirect the browser to the image tagger on this layer.
-        return {location: taggerUrl};
-    }
-
-
-    // XXX THIS IS UTTER GARBAGE - JUST GET IT OUT THE DOOR FIX FIX TODO XXX
-    addNewLexeme(): any {
-        console.info('*** Add new lexeme');
-
-        // --- Add a new entry
-        // TODO make this less weird
-        const ws = new VersionedDb([model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson)]);
-
-        // This is wrong - but it is overridden
-        const tx_time = timestamp.nextTime(timestamp.BEGINNING_OF_TIME);
+    /**
+     * Create a new (empty) lexeme - an entry with one subentry - and redirect
+     * to it in the editor.  Reached by the navbar "Add New Entry" form POST
+     * (a POST so link prefetch/prerender can't create entries).
+     */
+    newLexemeAction(): server.Response {
+        const tx_time = timestamp.nextTime(timestamp.BEGINNING_OF_TIME);  // placeholder; applyTransaction allocates
 
         const entry_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-        // TODO more thinking about order_key here
-        const order_key = orderkey.new_range_start_string;
         const newEntryAssertion: Assertion = {
             assertion_id: entry_id,
-            valid_from: tx_time,  // This is wrong - but it is overridden
+            valid_from: tx_time,
             valid_to: timestamp.END_OF_TIME,
             id: entry_id,
             ty: 'ent',
             ty0: 'dct',
             ty1: 'ent',
             id1: entry_id,
-            order_key,
+            order_key: orderkey.new_range_start_string,
+            change_by_username: this.currentUsername(),
         };
 
         const subentry_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -397,48 +313,18 @@ export class WordWiki extends LiminalApp {
             ty2: 'sub',
             id2: subentry_id,
             order_key: orderkey.new_range_start_string,
+            change_by_username: this.currentUsername(),
         };
 
-        const assertions = [
-            newEntryAssertion, newSubEntryAssertion];
+        this.applyTransactions([newEntryAssertion, newSubEntryAssertion]);
 
-        console.info('applying assertions', JSON.stringify(assertions, undefined, 2));
-
-        this.applyTransactions(assertions);
-        console.info('created new assertion with id', entry_id);
-
-        // --- Redirect the browser to the image tagger on this layer.
-        return {location: `/ww/wordwiki.entry(${entry_id})`};
+        return server.forwardResponse(`/ww/wordwiki.entry(${entry_id})`);
     }
 
-
-    // entry_old(entryId: number): any {
-
-    //     const e = this.entries
-    //         .filter(entry=>entry.entry_id === entryId)[0];
-
-    //     if(!e) {
-    //         const title = `Missing or deleted entry ${entryId}`;
-    //         return templates.pageTemplate({title, body: ['h1', {}, title]});
-    //     } else {
-    //         const title = entry.renderEntrySpellings(ctx, e, e.spelling);
-    //         const body = entry.renderEntry(e);
-    //         return templates.pageTemplate({title, body});
-    //     }
-    // }
-
-    entry(entry_id: number): any {
-        return templates.pageTemplate({
-            body: [
-                ['div', {id: 'entryEditorBody'}],
-                ['script', {type: 'module'}, block`
-/**/           document.addEventListener("DOMContentLoaded", (event) => {
-/**/             console.log("DOM fully loaded and parsed");
-/**/              imports.entryEditor('Edit Entry', ${entry_id}, 'ent', ${entry_id}, undefined, 'entryEditor');
-/**/           });`
-                ]
-            ],
-        });
+    // The entry editor (the server-side htmx lexeme editor - the old
+    // client-side editor is retired).
+    entry(entry_id: number): templates.Page {
+        return this.lexeme.entryPage(entry_id);
     }
 
     home(): any {
@@ -560,12 +446,6 @@ export class WordWiki extends LiminalApp {
         //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
 
         const title = ['Query for ', search];
-
-        function renderEntryItem_OFF(e: entry.Entry): any {
-            return [
-                ['span', {onclick: `imports.popupEntryEditor('Edit Entry', ${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
-            ];
-        }
 
         function renderEntryItem(e: entry.Entry): any {
             return [
@@ -1129,14 +1009,13 @@ export class WordWiki extends LiminalApp {
     override get homeRouteExpr(): string { return 'wordwiki.home()'; }
 
     // Serve the published static site (and resources) from cwd; the longest-prefix
-    // router lets the handler mounts (/ww/, /page/, /workspace-rpc-and-sync) win
-    // over this catch-all.
+    // router lets the handler mounts (/ww/, /page/) win over this catch-all.
     async resourceContentDirs(): Promise<Record<string, string>> {
         return {'/': './'};
     }
     override requestHandlerPaths(): Record<string, (request: server.Request) => Promise<server.Response>> {
         const handler = (request: server.Request) => this.requestHandler(request);
-        return {'/ww/': handler, '/page/': handler, '/workspace-rpc-and-sync': handler};
+        return {'/ww/': handler, '/page/': handler};
     }
 
     // Resolve the session token into the request's security context (one trusted
@@ -1206,9 +1085,8 @@ export class WordWiki extends LiminalApp {
     // puppeteer/test session can log in with a single navigation:
     //   /ww/wordwiki.loginRequest(queryArgs)?username=djz&password=...
     // Kept off production because a GET puts the password in the URL.)
-    // NOTE the two root-level legacy endpoints (/page/<Book>/<N>.html and
-    // /workspace-rpc-and-sync) are handled before this gate in requestHandler -
-    // they remain ungated until the old editor is retired.
+    // NOTE the root-level /page/<Book>/<N>.html vanity endpoint is handled
+    // before this gate in requestHandler and remains ungated.
     protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
         const allowedWithoutLogin = new Set([
             'wordwiki.loginRequest(bodyArgs)',
@@ -1327,8 +1205,8 @@ export class WordWiki extends LiminalApp {
     /**
      *
      */
-    // Wordwiki keeps two root-level dynamic endpoints - the /page/<Book>/<N>.html
-    // vanity URL and the editor's /workspace-rpc-and-sync.  Everything else under
+    // Wordwiki keeps one root-level dynamic endpoint - the /page/<Book>/<N>.html
+    // vanity URL.  Everything else under
     // /ww/ (plus shutdown/eval) is handled by the LiminalApp base, which also sets
     // the (anonymous) security context and dispatches via the shared route eval.
     override async requestHandler(request: server.Request): Promise<server.Response> {
@@ -1342,9 +1220,6 @@ export class WordWiki extends LiminalApp {
             const body = await pageEditor(Book, parseInt(PageNumber));
             const html = await asyncRenderToStringViaLinkeDOM(body);
             return {status: 200, headers: {}, body: html};
-        } else if(filepath === '/workspace-rpc-and-sync') {
-            const bodyParms = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
-            return workspace.workspaceRpcAndSync(bodyParms as workspace.WorkspaceRpcAndSyncRequest);
         }
         return super.requestHandler(request);
     }

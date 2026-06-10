@@ -2,7 +2,6 @@
 
 import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
-import * as view from '../datawiki/view.ts';
 
 export interface PageContent {
     title?: any;
@@ -122,6 +121,11 @@ export function htmxNavBar(showTestClientLink: boolean = false): any {
            ['span', {class:'navbar-toggler-icon'}]],
           ['div', {class:'collapse navbar-collapse', id:'navbarSupportedContent'},
            ['ul', {class:'navbar-nav me-auto mb-2 mb-lg-0'},
+            // A mutation, so a POST (not a prefetchable GET link); the server
+            // redirects to the new entry in the editor.
+            ['li', {class:'nav-item'},
+             ['form', {method:'post', action:'/ww/wordwiki.newLexemeAction()', class:'m-0'},
+              ['button', {type:'submit', class:'nav-link btn btn-link'}, 'Add New Entry']]],
             ['li', {class:'nav-item'},
              ['a', {class:'nav-link', href:'/ww/wordwiki.usersPage()'}, 'Users']],
             showTestClientLink
@@ -154,12 +158,6 @@ export function pageTemplate(content: PageContent): any {
           config.bootstrapCssLink,
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/context-menu.css', rel:'stylesheet', type:'text/css'}],
-          ['script', {}, block`
-/**/           let imports = {};
-/**/           let activeViews = undefined`],
-
-
           ['script', {}, block`
 /**/           function playAudio(src) {
 /**/             const audioPlayer = document.getElementById("audioPlayer");
@@ -167,26 +165,6 @@ export function pageTemplate(content: PageContent): any {
 /**/             audioPlayer.src = src;
 /**/             audioPlayer.play ();
 /**/          }`],
-
-          ['script', {type: 'module'}, block`
-/**/           import * as workspace from '/scripts/datawiki/workspace.js';
-/**/           import * as view from '/scripts/datawiki/view.js';
-/**/
-/**/           imports = Object.assign(
-/**/                        {},
-/**/                        view.exportToBrowser(),
-/**/                        workspace.exportToBrowser());
-/**/
-/**/           activeViews = imports.activeViews;
-/**/
-/**/           document.addEventListener("DOMContentLoaded", (event) => {
-/**/             console.log("DOM fully loaded and parsed");
-/**/             view.run();
-/**/             //workspace.renderSample(document.getElementById('root'))
-/**/           });
-/**/
-`
-          ],
           content.head,
          ], // head
 
@@ -199,8 +177,6 @@ export function pageTemplate(content: PageContent): any {
            ['source', {src:'', type:'audio/mpeg'}]],
 
           content.body,
-
-          view.renderModalEditorSkeleton(),
 
           config.bootstrapScriptTag
 
@@ -271,8 +247,12 @@ export function navBar(): any {
            //  ], //li
 
 
+            // A mutation, so a POST (a GET link could be prefetched/prerendered
+            // into creating entries); the server responds with a redirect to
+            // the new entry in the editor.
             ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", 'aria-current':"page", href:"#", onclick:'imports.launchNewLexeme()'}, 'Add New Entry'],
+             ['form', {method:'post', action:'/ww/wordwiki.newLexemeAction()', class:'m-0'},
+              ['button', {type:'submit', class:"nav-link btn btn-link text-nowrap"}, 'Add New Entry']],
             ], //li
 
             ['li', {class:"nav-item"},

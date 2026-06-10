@@ -2,7 +2,6 @@
 
 import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
-import * as view from '../datawiki/view.ts';
 import {h} from '../liminal/markup.ts';
 
 export interface PageContent {
