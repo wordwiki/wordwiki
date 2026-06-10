@@ -53,6 +53,21 @@ function getModalEditor() {
     return getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor');
 }
 
+/* Discard protection: closing the dialog (the X) with unsaved edits asks
+   before throwing them away.  Guarded forms are exactly the record-edit ones -
+   they carry hidden before-* fields (the lock-free conflict snapshots), which
+   doubles as the marker that closing loses real work.  Parameter dialogs
+   (search etc.) have no before-* fields and close silently. */
+let lmModalInitialState = null;   // form snapshot at show; null = unguarded
+let lmModalDiscardOk = false;     // set while a clean (post-save) hide runs
+
+function lmModalFormState() {
+    const form = getModalBodyElem().querySelector('form');
+    if (!form || !form.querySelector('input[name^="before-"]'))
+        return null;
+    return JSON.stringify(Array.from(new FormData(form).entries()));
+}
+
 function showModalEditor() {
     // A dialog names itself inline (.lm-dialog-title, rendered by liminal's
     // renderParamForm).  Lift that into the modal's fixed header, where it
@@ -62,14 +77,32 @@ function showModalEditor() {
     getModalTitleElem().innerText = inlineTitle ? inlineTitle.textContent.trim() : '';
     if (inlineTitle)
         inlineTitle.remove();
+    lmModalInitialState = lmModalFormState();
     getModalEditor().show();
 }
 
 function hideModalEditor() {
-    getModalEditor().hide();
+    // A programmatic hide is a clean close (tx() calls this after a successful
+    // save) - the form is dirty relative to its snapshot by definition, so
+    // bypass the discard guard.
+    lmModalDiscardOk = true;
+    try { getModalEditor().hide(); } finally { lmModalDiscardOk = false; }
     getModalTitleElem().innerText = '';
     getModalBodyElem().innerHTML = '';
 }
+
+// Wire the discard guard.  hide.bs.modal is cancelable: preventDefault keeps
+// the dialog open.  (This script loads at the end of <body>, after the modal
+// skeleton; pages without a modal editor skip silently.)
+(() => {
+    const modal = document.getElementById('modalEditor');
+    if (modal) modal.addEventListener('hide.bs.modal', (event) => {
+        if (lmModalDiscardOk || lmModalInitialState === null)
+            return;
+        if (lmModalFormState() !== lmModalInitialState && !confirm('Discard changes?'))
+            event.preventDefault();
+    });
+})();
 
 function getModalTitleElem() {
     const modalTitleElem = document.querySelector(`#modalEditorLabel`);

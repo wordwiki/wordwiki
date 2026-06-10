@@ -86,7 +86,9 @@ export class VolunteerTable extends Table<Volunteer> {
     constructor() {
         super ('volunteer', [
             new PrimaryKeyField('volunteer_id', {prompt: 'Id'}),
-            new DateTimeField('join_date', {nullable: true}),
+            // Field order is also the edit-form order: identity first, then
+            // contact, then the incidentals (join_date was previously first,
+            // burying Name in the dialog).
             new StringField('name', {indexed: true}),
             new EmailField('email', {indexed: true, unique: true, view: emailViewable, redact: true}),
             // Volunteers may opt their email out of being shown to others (shared by default).
@@ -95,6 +97,7 @@ export class VolunteerTable extends Table<Volunteer> {
             // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
+            new DateTimeField('join_date', {nullable: true}),
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
             new StringField('emergency_contact_phone', {default: '', view: selfOrHost, redact: true}),
             new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
