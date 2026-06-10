@@ -235,7 +235,7 @@ test("apply: delete via tombstone removes the tuple from the current view", () =
     // The tuple itself still exists with its full history.
     const tuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(101);
     assertEquals(tuple.tupleVersions.length, 2);
-    assertEquals(tuple.current?.isCurrent, false);
+    assertEquals(tuple.mostRecentTuple?.isCurrent, false);
 });
 
 test("apply: restore after delete starts a new valid period (undo of a delete)", () => {
@@ -269,14 +269,6 @@ test("apply: restore must still chain through the tombstone", () => {
     // nothing ever bypasses the chain.
     const bad = mkEdit(spelling, 103, tl.next());
     assertThrows(() => ws.applyProposedAssertion(bad), Error, 'replaces_assertion_id chain broken');
-});
-
-test("apply: proposed assertions accumulate and drain via takeProposedAssertions", () => {
-    const ws = newWorkspace();
-    const tl = new TestTimeline();
-    apply(ws, mkEntry(100, tl.next()), mkEntry(200, tl.next()));
-    assertEquals(ws.takeProposedAssertions().map(a => a.id), [100, 200]);
-    assertEquals(ws.takeProposedAssertions(), []);
 });
 
 // ---------------------------------------------------------------------------
@@ -396,7 +388,8 @@ test("query: toJSON(includeHistory) carries the prior versions", () => {
     const tuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(101);
     const json = new CurrentTupleQuery(tuple).toJSON(true);
     assertEquals(json.text, 'caat');
-    assertEquals(json.history.map((h: any) => h.text), ['cat', 'caat']);
+    // History is the PRIOR versions; the current one is the record body.
+    assertEquals(json.history.map((h: any) => h.text), ['cat']);
 });
 
 test("query: findNonDeletedChildTuples sees through to live descendants only", () => {
@@ -471,42 +464,48 @@ test("variants: per-dialect facts live side by side on one relation", () => {
 // and unenforced invariants - so the planned cleanup changes them consciously
 // (the test updates in the same commit as the fix) rather than silently.
 
-test("AUDIT 2.2 pin: getVersionedTupleByPath is get-OR-CREATE (reads materialise ghosts)", () => {
+test("AUDIT 2.2 FIXED: path lookups never create; the apply path's variant does", () => {
     const ws = newWorkspace();
     const tl = new TestTimeline();
     apply(ws, mkEntry(100, tl.next()));
     const entryTuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(100);
     assertEquals(entryTuple.childRelations['sub'].tuples.size, 0);
 
-    // A pure LOOKUP of a nonexistent path plants a permanent empty node.
-    // After the planned get/getOrCreate split, this should THROW instead.
-    const ghost = ws.getVersionedTupleByPath([['dct', 0], ['ent', 100], ['sub', 999]]);
-    assertEquals(ghost.tupleVersions.length, 0);
-    assertEquals(entryTuple.childRelations['sub'].tuples.size, 1);
+    // A pure LOOKUP of a nonexistent path throws and plants nothing.
+    assertThrows(() => ws.getVersionedTupleByPath([['dct', 0], ['ent', 100], ['sub', 999]]),
+                 Error, 'no fact sub:999');
+    assertEquals(entryTuple.childRelations['sub'].tuples.size, 0);
+    assertEquals(entryTuple.findVersionedTupleById(999), undefined);
 
-    // Ghosts are invisible to the current view...
-    assertEquals(currentEntryJSON(ws, 100).subentry.length, 0);
-    // ...but findVersionedTupleById DOES see them (the downstream hazard).
-    assertExists(entryTuple.findVersionedTupleById(999));
+    // The apply-path variant creates (and registers the id).
+    const created = ws.getOrCreateVersionedTupleByPath([['dct', 0], ['ent', 100], ['sub', 999]]);
+    assertEquals(created.tupleVersions.length, 0);
+    assertEquals(entryTuple.childRelations['sub'].tuples.size, 1);
+    assertExists(ws.getTableByTag('dct').getTupleById(999));
 });
 
-test("AUDIT 2.1 pin: duplicate fact ids across relations are accepted, then poison lookup", () => {
+test("AUDIT 2.1 FIXED: a duplicate fact id is rejected at apply time", () => {
     const ws = newWorkspace();
     const tl = new TestTimeline();
     const entry = mkEntry(100, tl.next());
     apply(ws, entry);
-    // Same fact id under two different relations: nothing rejects this today.
     apply(ws, mkChild(entry, 'spl', 555, tl.next(), {attr1: 'cat'}));
-    apply(ws, mkChild(entry, 'sub', 555, tl.next()));
 
-    // ...and the entry is now broken for id-based addressing (the editor's
-    // (entry_id, fact_id) scheme).  After the planned uniqueness enforcement,
-    // the SECOND apply above should throw and this lookup stay unambiguous.
-    const entryTuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(100);
-    assertThrows(() => entryTuple.findVersionedTupleById(555), Error, 'multiple tuples');
+    // Same fact id under a DIFFERENT relation: refused (ids are unique per
+    // table - the editor's (entry_id, fact_id) addressing depends on it).
+    assertThrows(() => ws.applyProposedAssertion(mkChild(entry, 'sub', 555, tl.next())),
+                 Error, 'duplicate fact id 555');
+
+    // Subsequent VERSIONS of the existing fact are of course still fine.
+    const spelling = ws.getTableByTag('dct').findRequiredVersionedTupleById(555);
+    apply(ws, mkEdit(spelling.currentAssertion!, 556, tl.next(), {attr1: 'caat'}));
+    assertEquals(spelling.currentAssertion?.attr1, 'caat');
+
+    // And id-based addressing stays unambiguous.
+    assertEquals(ws.getTableByTag('dct').getTupleById(555), spelling);
 });
 
-test("AUDIT 1.2 pin: toJSON caches without keying on includeHistory", () => {
+test("AUDIT 1.2 FIXED: toJSON honours includeHistory regardless of call order", () => {
     const ws = newWorkspace();
     const tl = new TestTimeline();
     const entry = mkEntry(100, tl.next());
@@ -516,13 +515,11 @@ test("AUDIT 1.2 pin: toJSON caches without keying on includeHistory", () => {
 
     const tuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(101);
     const q = new CurrentTupleQuery(tuple);
-    const withoutHistory = q.toJSON(false);
-    assertEquals(withoutHistory.history, undefined);
-    // BUG (audit 1.2): the first call's flag is baked into the cache - this
-    // SHOULD have a history array.  Flip this assertion when fixing.
-    assertEquals(q.toJSON(true).history, undefined);
-    // A fresh query honours the flag.
-    assertEquals(new CurrentTupleQuery(tuple).toJSON(true).history.length, 2);
+    assertEquals(q.toJSON(false).history, undefined);
+    // The same query object now honours the flag (and history is the PRIOR
+    // versions only - the current one is the record body itself).
+    assertEquals(q.toJSON(true).history.map((h: any) => h.text), ['cat']);
+    assertEquals(q.toJSON(false).history, undefined);
 });
 
 test("lookup: missing ids are distinguishable from present ones", () => {

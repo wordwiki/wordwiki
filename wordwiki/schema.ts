@@ -1028,7 +1028,11 @@ const createAssertionDml = (tableName:string)=>block`
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_valid_from ON ${tableName}(valid_from);
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_valid_to ON ${tableName}(valid_to) WHERE valid_to != ${timestamp.END_OF_TIME};
 /**/
-/**/   CREATE UNIQUE INDEX IF NOT EXISTS current_${tableName}_by_id_ty ON ${tableName}(id, ty) WHERE valid_to = NULL;
+/**/   -- One CURRENT (END_OF_TIME) version per fact: the db-level backstop for
+/**/   -- the workspace's version-chain invariant.  (These partial indexes used
+/**/   -- to say 'valid_to = NULL', which never matches in SQLite - on a db that
+/**/   -- already has the old empty indexes, drop them to get the fixed ones.)
+/**/   CREATE UNIQUE INDEX IF NOT EXISTS current_${tableName}_by_id_ty ON ${tableName}(id, ty) WHERE valid_to = ${timestamp.END_OF_TIME};
 /**/
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty1 ON ${tableName}(ty1);
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_ty2 ON ${tableName}(ty2);
@@ -1042,11 +1046,11 @@ const createAssertionDml = (tableName:string)=>block`
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty4 ON ${tableName}(id4, ty4);
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_by_id_ty5 ON ${tableName}(id5, ty5);
 /**/
-/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE valid_to = NULL;
-/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE valid_to = NULL;
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty1 ON ${tableName}(id1, ty1) WHERE valid_to = ${timestamp.END_OF_TIME};
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty2 ON ${tableName}(id2, ty2) WHERE valid_to = ${timestamp.END_OF_TIME};
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty3 ON ${tableName}(id3, ty3) WHERE valid_to = ${timestamp.END_OF_TIME};
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty4 ON ${tableName}(id4, ty4) WHERE valid_to = ${timestamp.END_OF_TIME};
+/**/   CREATE INDEX IF NOT EXISTS current_${tableName}_by_id_ty5 ON ${tableName}(id5, ty5) WHERE valid_to = ${timestamp.END_OF_TIME};
 /**/
 /**/ -- NEED SOME MODEL CHANGE SO CAN INDEX LATEST PUBLISHED XXX TODO XXX TODO
 /**/

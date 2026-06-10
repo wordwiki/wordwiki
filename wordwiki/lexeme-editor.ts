@@ -690,9 +690,15 @@ export class LexemeEditor {
         if(tuple.findNonDeletedChildTuples().length > 0)
             return {action: 'alert',
                     message: 'Cannot delete an item that still has child items - please delete those first.'};
-        const current = tuple.currentAssertion;
-        if(!current)
-            return this.reload([this.rootTarget(entry_id)]);  // already deleted - just refresh
+        const mostRecent = tuple.mostRecentTuple;
+        // Already deleted (e.g. a stale dialog's delete racing another user's):
+        // deleting is idempotent - just refresh.  Without this check we would
+        // chain a tombstone onto a tombstone.
+        if(!mostRecent || !mostRecent.isCurrent)
+            return this.reload(mostRecent
+                ? this.mutationTargets(entry_id, mostRecent.assertion, 'parent')
+                : [this.rootTarget(entry_id)]);
+        const current = mostRecent.assertion;
 
         const t = placeholderTxTime();
         const tombstone: Assertion = {
@@ -711,8 +717,13 @@ export class LexemeEditor {
      *  order_key between the appropriate neighbours. */
     move(entry_id: number, fact_id: number, direction: 'up'|'down'): any {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
-        const current = tuple.currentAssertion
-            ?? panic('cannot move a deleted item');
+        const mostRecent = tuple.mostRecentTuple ?? panic('no versions for', String(fact_id));
+        // A stale dialog's move racing another user's delete: re-asserting a
+        // tombstoned fact would silently RESURRECT it - refuse instead.
+        if(!mostRecent.isCurrent)
+            return {action: 'alert',
+                    message: 'This item was deleted by someone else since you opened the editor.'};
+        const current = mostRecent.assertion;
 
         const parentRelation = this.app.workspace.getVersionedTupleParentRelation(
             getAssertionPath(current));

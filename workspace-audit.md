@@ -1,10 +1,29 @@
 # Audit: datawiki/workspace.ts
 
 *(2026-06-10, post old-editor retirement.  Line numbers refer to the file as
-of commit 756364f.  Companion docs: assertion-model.md, lexeme-editor-design.md.
-The 49-test suite — datawiki/workspace_test.ts + wordwiki/assertion_model_test.ts —
-pins down the behaviours described here; anything changed below should keep it
-green or consciously update it.)*
+of commit 756364f.  Companion docs: assertion-model.md, lexeme-editor-design.md.)*
+
+> **STATUS: the cleanup below was EXECUTED on 2026-06-10** (same day, after
+> first pinning every finding with tests).  Resolved: 1.1 (leak removed with
+> the whole proposed-assertion tracking), 1.2 (toJSON cache keyed per flag),
+> 1.3 (historicalTupleVersions now really is the PRIOR versions), 1.4/1.5
+> (dead scratch + naming/log fixes), 2.1 (per-table fact-id index with
+> uniqueness enforced at fact creation + the broken `valid_to = NULL` partial
+> indexes in schema.ts fixed — NOTE an existing db keeps its old empty indexes
+> until they are dropped by hand), 2.2 (lookups throw; only the apply paths'
+> getOrCreate variant creates), 2.3 (tuple-level applies are `_`-prefixed
+> internals; VersionedDb is the only guarded door), 2.4/2.5 (ownership and
+> load-order contracts documented on the methods), all of §3 (file went from
+> ~1030 to ~520 lines), and §4's import/logging trims (including the
+> per-call nextTime log in liminal/timestamp.ts).  A bonus demon found during
+> the naming pass: the editor's stale MOVE on a deleted tuple would silently
+> RESURRECT it (re-assert over the tombstone), and a stale DELETE would chain
+> a tombstone onto a tombstone — both now refused/idempotent, with tests.
+> Still open by choice: 2.6 (the global-time gate, the future fork/merge
+> seam), 2.7 (root-as-empty-record is now documented as the decision), the
+> §4.1 deep move of the Assertion type into datawiki, and `currentAssertion`'s
+> name (kept for its many callers; its may-be-a-tombstone semantics are now
+> documented on the getter).  Suite: 62 tests green.*
 
 ## Verdict
 

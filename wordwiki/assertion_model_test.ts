@@ -574,3 +574,32 @@ test("editor: the history dialog offers the way back to the edit dialog", async 
         assertStringIncludes(attr(back, 'hx-get'), 'editDialog(1000, 1001)');
     });
 });
+
+test("editor: a stale MOVE on a deleted tuple refuses (no silent resurrection)", async () => {
+    await withTestDb(async (fx) => {
+        seedEntry(fx.ww);
+        // Dialog open on spelling 1001; someone else deletes it.
+        await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.deleteTuple(1000, 1001)'));
+        const versionsBefore = dbVersions(1001).length;
+
+        const r = await as(fx, 'djz', () => invoke(fx.ww, "wordwiki.lexeme.move(1000, 1001, 'up')"));
+        assertEquals(r.action, 'alert');
+        // Nothing was written, and the fact is still deleted.
+        assertEquals(dbVersions(1001).length, versionsBefore);
+        const last = dbVersions(1001).at(-1)!;
+        assert(last.valid_from === last.valid_to, 'still a tombstone');
+    });
+});
+
+test("editor: a stale DELETE on a deleted tuple is an idempotent refresh", async () => {
+    await withTestDb(async (fx) => {
+        seedEntry(fx.ww);
+        await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.deleteTuple(1000, 1001)'));
+        const versionsBefore = dbVersions(1001).length;
+
+        // The second delete must not chain a tombstone onto the tombstone.
+        const r = await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.deleteTuple(1000, 1001)'));
+        assertEquals(r.action, 'reload');
+        assertEquals(dbVersions(1001).length, versionsBefore);
+    });
+});

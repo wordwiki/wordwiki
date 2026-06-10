@@ -1,131 +1,60 @@
-// deno-lint-ignore-file no-unused-vars, no-explicit-any, require-await
-
-import * as model from "./model.ts";
-import {FieldVisitorI, Field, ScalarField, BooleanField, IntegerField, FloatField,
-        StringField, IdField, PrimaryKeyField, RelationField, Schema} from "./model.ts";
-import {unwrap, panic} from "../liminal/utils.ts";
+// deno-lint-ignore-file no-explicit-any
+/**
+ * The versioned workspace: an in-RAM mirror of an assertion table, shaped as
+ * a tree of facts (see assertion-model.md at the repo root for the model).
+ *
+ *   VersionedDb                one workspace, holding one VersionedTable per
+ *                              assertion table (today: just 'dct')
+ *   VersionedTable             the tree root - a VersionedTuple with id 0 and
+ *                              NO versions of its own; queries deliberately
+ *                              treat it as an empty record.  Also keeps the
+ *                              per-table fact-id index (ids are unique per
+ *                              table, enforced at fact creation).
+ *   VersionedTuple             one fact: its versions (TupleVersion[], oldest
+ *                              first) and its child relations
+ *   VersionedRelation          one child relation of a fact: its facts by id
+ *   TupleVersion               one version of a fact = one Assertion row
+ *
+ * Mutation enters ONLY through the VersionedDb methods:
+ *
+ *   applyProposedAssertion     a live edit: validates and applies one new
+ *                              assertion (see the ownership contract on the
+ *                              method)
+ *   untrackedApplyAssertion    the load-from-db path: applies an already-
+ *                              persisted assertion, validating the chains
+ *
+ * The current view (deleted facts filtered, siblings ordered by order_key) is
+ * computed by the query layer (CurrentTupleQuery / CurrentRelationQuery),
+ * which is constructed per use and never mutates the workspace.
+ */
+import {RelationField, Schema} from "./model.ts";
+import {panic} from "../liminal/utils.ts";
 import * as utils from "../liminal/utils.ts";
-import {dictSchemaJson} from "../wordwiki/entry-schema.ts";
-import { Assertion, AssertionPath, getAssertionPath, selectAssertionsForTopLevelFact, updateAssertion, compareAssertionsByOrderKey, compareAssertionsByRecentness } from "../wordwiki/schema.ts";
-import * as schema from "../wordwiki/schema.ts";
+import { Assertion, AssertionPath, getAssertionPath, parentAssertionPath,
+         compareAssertionsByOrderKey, compareAssertionsByRecentness } from "../wordwiki/schema.ts";
 import * as timestamp from "../liminal/timestamp.ts";
-import {BEGINNING_OF_TIME, END_OF_TIME} from '../liminal/timestamp.ts';
-import {assert} from '../liminal/utils.ts';
+import {BEGINNING_OF_TIME} from '../liminal/timestamp.ts';
 import * as orderkey from '../liminal/orderkey.ts';
 
 export type Tag = string;
 
-// - Get working first, then refactor.
-// - write simple test stuff, probably also beaters, round trip MMO etc.
-// - make API be nice.
-// - figure out (client side) id allocator.  Also needs to support distributed
-//   operation.   maybe add a nanoid to every fact.  Or pool of reserved ids for
-//   remote - but hard to do with partitioning (can use a rename pass instead?)
-
-// TODO
-
-// Perhaps the versioned relation tree should be forced??
-
-// /**
-//  *
-//  */
-// export class VersionedRelationContainer {
-//     readonly schema: RelationField;
-//     readonly childRelations: Record<Tag,VersionedRelation>;
-
-//     constructor(schema: RelationField) {
-//         this.schema = schema;
-//         this.childRelations = Object.fromEntries(
-//             schema.relationFields.map(r=>[r.tag, new VersionedRelation(r, this)]));
-//     }
-
-// }
-
-
-/*
-  - would like typed access to the tree, including rich apis (meaning that
-  we don't want to have the typed access by doing a copy of the tree).
-  - don't want to use proxies
-  - can take advantage of the relative immutability.
-  - the shape below is wrong anyway for a multi-versioned tree.
-  -
- */
-
-// Maybe variant is universal?  --- PROBABLY!  --- CAN JUST BURY EVERYWHERE THEN!
-// interface VariantTupleVerisonT extends TupleVersionT {
-//     variant: string;
-// }
-
-// How does root work?
-// - the mode-consistent way would be to have a root tuple id (for example 0),
-//   and then normal model would work from there.
-// - there would be versioned data for this root tuple.
-// - the type and id would be fixed (by the schema).
-// - we could just forbid tuples at this level (and have an empty tuple
-//   at the top) so that we can have a more consistent model.
-// - problem is with lifetimes, which we need to figure out in general.
-// - specifically, we have decoupled child lifetimes from parent tuple lifetimes,
-//   but how do we handle children/decendants if the parent is deleted/not present.
-// - from a user perspective, deleting the parent should delete the children - which
-//   means the parent lifetime would effect the children.
-// - this means that usual tree access will need to be parameterized by when.
-// - anyway, this also means that if we want to have a unified root model,
-//   we probably want to make a record for it.
-// - not a bad thing to have for a dictionary anyway.
-// - not super bad for export.
-// - probably add to ty/id path thing just for consistency.
-
-
-// - how does visibility work with a locale view?
-// - if there is no tuple in the current locale, then we don't see children.
-
-type FilterConditionally<Source, Condition> = Pick<Source, {[K in keyof Source]: Source[K] extends Condition ? K : never}[keyof Source]>;
-
-type ArrayElemType<T extends any[]> = T[number];
-
-const k: number[] = [1,2,3];
-type FFF = ArrayElemType<typeof k>;
-
-
-//type TupleType<T extends {$tuples: any[]}> = T["$tuples"][0];
-type TupleType<T extends {$tuples: any[]}> = ArrayElemType<T["$tuples"]>;
-
-// type ChildRelationsType<T, F extends {[n:string]: NodeT[]}=FilterConditionally<Omit<T, '$tuples'>, NodeT[]>> = {
-//     [Property in keyof F]: VersionedRelation<ArrayElemType<F[Property]>>
-// };
-
-// type ChildRelationsType<T> =
-//     Pick<T, {[K in keyof T]: T[K] extends NodeT[] ? K : never}[keyof T]>;
-
-// type ChildRelationsType<T> = {
-//     [Property in keyof Pick<T, {[K in keyof T]: T[K] extends NodeT[] ? K : never}[keyof T]>]: VersionedRelation<T[Property] extends NodeT[] ? T[Property][number] : never>
-// };
-
-
-
-//     [Property in keyof T]: VersionedRelation<ArrayElemType<T[Property]>>
-// };
-
-
-
 // -------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------
+// --- VersionedDb ----------------------------------------------------------------
 // -------------------------------------------------------------------------------
 
 export class VersionedDb {
     readonly tables: Map<Tag, VersionedTable> = new Map();
 
-    mostRecentSourceDbTimestamp: number = BEGINNING_OF_TIME;
+    // The most recent timestamp applied to this workspace.  Imposes a TOTAL
+    // order on edits across the whole workspace - correct for a single
+    // server, and the exact gate that will have to relax when offline forks
+    // are merged (see assertion-model.md, design intent 4).  Also why two
+    // assertions cannot share a timestamp (applyTransactions sidesteps this
+    // by allocating a distinct server timestamp per tx group).
     mostRecentLocalTimestamp: number = BEGINNING_OF_TIME;
-    proposedAssertions: Assertion[] = [];
 
     constructor(schemas: Schema[]) {
         schemas.forEach(s=>this.addTable(s));
-    }
-
-    reset() {
-        //this.tables.forEach(t=>t.reset());
-        throw new Error('not impl');
     }
 
     addTable(schema: Schema): VersionedTable {
@@ -136,66 +65,73 @@ export class VersionedDb {
         return versionedTable;
     }
 
-    applyServerAssertion(assertion: Assertion)  {
-        const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
-        throw new Error('apply server assertion not implemented yet');
+    getTableByTag(tag: string): VersionedTable {
+        return this.tables.get(tag) ?? panic('unable to find table with tag', tag);
     }
 
-    // we cannot implement nextTime here because we don't neccisareily have the
-    // whole db (incuding all tables) which particpate in one global time scheme.
-    // nextTime(): number {
-    //     return timestamp.nextTime(this.mostRecentLocalTimestamp);
-    // }
-
+    /**
+     * Apply one new (proposed) assertion.  Returns the predecessor assertion
+     * if its valid_to was stamped (so the caller can persist that update), or
+     * undefined when no predecessor update is needed (first version of a
+     * fact, or a restore over an already-closed predecessor).
+     *
+     * OWNERSHIP CONTRACT: assertions handed to this method are owned by the
+     * workspace from then on, and a previously-applied assertion is MUTATED
+     * when a successor closes it (its valid_to is stamped - that same object
+     * is the return value).  Callers that need an unaliased copy must clone
+     * before applying.
+     */
     applyProposedAssertion(assertion: Assertion): Assertion|undefined  {
-        // This is a bit problemattic - we can insert mulitple assertions at the
-        // same timestamp - but we are not doing that now so leave this XXX TODO
         if(assertion.valid_from <= this.mostRecentLocalTimestamp)
             throw new Error(`Attempt to assert into the past - asserting at ${assertion.valid_from} most recent local timestamp is ${this.mostRecentLocalTimestamp} - ${assertion.valid_from - this.mostRecentLocalTimestamp} should be positive`);
         if(assertion.valid_to !== assertion.valid_from &&
             assertion.valid_to !== timestamp.END_OF_TIME)
             throw new Error('New assertions must either be true to the end of time, or be deletion tombstones');
-        const versionedTuple = this.getVersionedTupleByPath(getAssertionPath(assertion));
-        const updatedPrevAssertion = versionedTuple.applyProposedAssertion(assertion);
+        const versionedTuple = this.getOrCreateVersionedTupleByPath(getAssertionPath(assertion));
+        const updatedPrevAssertion = versionedTuple._applyProposedAssertion(assertion);
         this.mostRecentLocalTimestamp = assertion.valid_from;
-        this.proposedAssertions.push(assertion);
         return updatedPrevAssertion;
     }
 
-    takeProposedAssertions(): Assertion[] {
-        try {
-            return this.proposedAssertions;
-        } finally {
-            this.proposedAssertions = [];
-        }
-    }
-
+    /**
+     * Apply an already-persisted assertion (the load-from-db path).
+     *
+     * PRECONDITION: each fact's versions must be applied in valid_from order
+     * (the load queries say ORDER BY valid_from), and a fact's ancestors must
+     * have had their first version applied before the fact's (guaranteed
+     * because an ancestor is always asserted before its descendants).
+     */
     untrackedApplyAssertion(assertion: Assertion) {
-        this.untrackedApplyAssertionByPath(getAssertionPath(assertion), assertion);
-    }
-
-    untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion) {
-        const versionedTuple = this.getVersionedTupleByPath(path);
-        versionedTuple.untrackedApplyAssertion(assertion);
+        const versionedTuple = this.getOrCreateVersionedTupleByPath(getAssertionPath(assertion));
+        versionedTuple._untrackedApplyAssertion(assertion);
         this.mostRecentLocalTimestamp = assertion.valid_from;
     }
 
-    getTable(tag: string): VersionedTuple {
-        return this.tables.get(tag) ?? panic('unable to find table', tag);
-    }
-
-    getTableByTag(tag: string): VersionedTable {
-        return this.tables.get(tag) ?? panic('unable to find table with tag', tag);
-    }
-
-    getVersionedTupleById(tableTag:string, typeTag:string, id:number): VersionedTuple|undefined {
-        return this.tables.get(tableTag)?.getVersionedTupleById(typeTag, id);
-    }
-
+    /**
+     * Look up the fact at `path`.  Throws if any segment does not exist -
+     * lookups never create (the apply paths use the get-or-create variant
+     * below).
+     */
     getVersionedTupleByPath(path: AssertionPath): VersionedTuple {
-        //console.info('ROOT PATH is', path);
+        const table = this.#tableForPath(path);
+        if(path.length === 1)
+            return table;
+        return table._getVersionedTupleByPath(path, 1, undefined);
+    }
 
-        // --- Find table hosting root tag
+    /**
+     * Look up the fact at `path`, creating (empty) nodes for any missing
+     * segments.  Apply-paths only: creation registers each new fact id in the
+     * table's id index, which is where fact-id uniqueness is enforced.
+     */
+    getOrCreateVersionedTupleByPath(path: AssertionPath): VersionedTuple {
+        const table = this.#tableForPath(path);
+        if(path.length === 1)
+            return table;
+        return table._getVersionedTupleByPath(path, 1, table);
+    }
+
+    #tableForPath(path: AssertionPath): VersionedTable {
         const [ty, id] = path[0];
         if(id !== 0)
             throw new Error(`root elem in any table is always id 0 - path is ${JSON.stringify(path)}`);
@@ -203,20 +139,14 @@ export class VersionedDb {
         if(!table)
             throw new Error(`could not find table with tag ${ty} in workspace, active tables are ${[...this.tables.keys()].join()}`);
         utils.assert(table.schema.tag === ty);
-
-        // --- Recurse
-        if(path.length === 1)
-            return table;
-        else
-            return table.getVersionedTupleByPath(path, 1);
+        return table;
     }
 
     getVersionedTupleParentRelation(childTuplePath: AssertionPath): VersionedRelation {
-        const parentTuple = this.getVersionedTupleByPath(schema.parentAssertionPath(childTuplePath));
-        const parentRelationTag = childTuplePath[childTuplePath.length-1][0]
-        const parentRelation = parentTuple?.childRelations?.[parentRelationTag];
-        utils.assert(parentRelation.schema.tag === parentRelationTag);
-        return parentRelation;
+        const parentTuple = this.getVersionedTupleByPath(parentAssertionPath(childTuplePath));
+        const parentRelationTag = childTuplePath[childTuplePath.length-1][0];
+        return parentTuple.childRelations[parentRelationTag]
+            ?? panic('no child relation with tag', `${parentRelationTag} on ${parentTuple.schema.tag}`);
     }
 
     dump(): any {
@@ -225,18 +155,15 @@ export class VersionedDb {
     }
 }
 
-/**
- *
- */
-export class VersionedTuple/*<T extends NodeT>*/ {
+// -------------------------------------------------------------------------------
+// --- VersionedTuple --------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+export class VersionedTuple {
     readonly id: number;
     readonly schema: RelationField;
     readonly tupleVersions: TupleVersion[] = [];
     readonly childRelations: Record<Tag,VersionedRelation>;
-    //readonly childRelations: ChildRelationsType<NodeT>;
-    //proposedNewTupleUnderEdit: TupleVersion|undefined = undefined;
-    //#currentTuple: TupleVersion|undefined = undefined;
-    //[name: string]: RelationField;
 
     constructor(schema: RelationField, id: number) {
         this.schema = schema;
@@ -245,84 +172,60 @@ export class VersionedTuple/*<T extends NodeT>*/ {
         this.id = id;
     }
 
-    reset() {
-        throw new Error('not impl yet');
-        //this.tupleVersions = [];
-        //this.#currentTuple = undefined;
-        //this.childRelations.forEach(r=>r.reset());
-    }
-
+    /**
+     * The most recent version of this fact - which may be a deletion
+     * tombstone (check .isCurrent), and is undefined only for the table root
+     * and not-yet-asserted facts.
+     */
     get mostRecentTuple(): TupleVersion|undefined {
-        // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
         return this.tupleVersions[this.tupleVersions.length-1];
     }
 
     /**
-     * In some ways of traversing the versioned tuple store we will never
-     * ask for the most recent version of a tuple if that tuple has been
-     * deleted (because it will have been filtered out at a higher level) -
-     * this version of requiredMostRecentTuple avoid putting these 'deleted'
-     * checks everywhere.
+     * The most recent version's assertion.  NOTE despite the name this may be
+     * a tombstone - callers that need a LIVE fact must check
+     * mostRecentTuple.isCurrent (the current-view query layer does this for
+     * you).
      */
-    get requiredMostRecentTuple(): TupleVersion {
-        // Note: we are making use of the JS behaviour where out of bound index accesses return undefined.
-        const mostRecent = this.tupleVersions[this.tupleVersions.length-1]
-        if(!mostRecent)
-            throw new Error(`Missing required most recent tuple for ${this.schema.tag}.${this.id}`);
-        return mostRecent;
-    }
-
-    get current(): TupleVersion|undefined {
-        //return this.#currentTuple;
-        return this.mostRecentTuple;
-    }
-
     get currentAssertion(): Assertion|undefined {
-        //return this.#currentTuple?.assertion;
-        return this.current?.assertion;
+        return this.mostRecentTuple?.assertion;
     }
 
-    // untrackedApplyAssertionByPath(path: [string, number][], assertion: Assertion, index: number=0) {
-    //     const versionedTuple = this.getVersionedTupleByPath(path, index);
-    //     versionedTuple.untrackedApplyAssertion(assertion);
-    // }
-
-    getVersionedTupleByPath(path: [string, number][], index:number): VersionedTuple {
-        //console.info('PATH is', path, path[index], index, 'SELF is', this.schema.tag, 'child is', this.schema.relationFields.map(r=>r.tag), 'self type', utils.className(this));
+    /**
+     * Path-lookup recursion.  When `createInTable` is supplied (the apply
+     * paths), missing segments are created and their fact ids registered in
+     * the table's id index; otherwise a missing segment throws.
+     */
+    _getVersionedTupleByPath(path: [string, number][], index: number,
+                             createInTable: VersionedTable|undefined): VersionedTuple {
         const [ty, id] = path[index];
 
         const versionedRelation = this.childRelations[ty];
-        if(!versionedRelation) {
-            throw new Error(`unexpected tag ${ty} as child of ${this.schema.tag} -- FIX ERROR NEED LOCUS ETC`);
-        }
+        if(!versionedRelation)
+            throw new Error(`no child relation with tag ${ty} on ${this.schema.tag} - path ${JSON.stringify(path)}`);
         utils.assert(versionedRelation.schema.tag === ty);
 
         let versionedTuple = versionedRelation.tuples.get(id);
-         if(!versionedTuple) {
-             versionedTuple = new VersionedTuple(versionedRelation.schema, id);
-             versionedRelation.tuples.set(id, versionedTuple);
+        if(!versionedTuple) {
+            if(!createInTable)
+                throw new Error(`no fact ${ty}:${id} under ${this.schema.tag}:${this.id} - path ${JSON.stringify(path)}`);
+            createInTable._assertNewFactId(ty, id);
+            versionedTuple = new VersionedTuple(versionedRelation.schema, id);
+            versionedRelation.tuples.set(id, versionedTuple);
+            createInTable._registerTuple(versionedTuple);
         }
         utils.assert(versionedTuple.schema.tag === ty);
 
         if(index+1 === path.length)
             return versionedTuple;
         else
-            return versionedTuple.getVersionedTupleByPath(path, index+1);
+            return versionedTuple._getVersionedTupleByPath(path, index+1, createInTable);
     }
 
     forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
         f(this);
         for(const v of Object.values(this.childRelations))
             v.forEachVersionedTuple(f);
-    }
-
-    findVersionedTuples(filter: (r:VersionedTuple)=>boolean): Array<VersionedTuple> {
-        const collection: VersionedTuple[] = [];
-        this.forEachVersionedTuple(t=>{
-            if(filter(t))
-                collection.push(t);
-        });
-        return collection;
     }
 
     findVersionedTupleById(id: number): VersionedTuple|undefined {
@@ -347,164 +250,73 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     findNonDeletedChildTuples(): VersionedTuple[] {
         const nonDeletedChildTuples: VersionedTuple[] = [];
         this.forEachVersionedTuple(t=>{
-            if(t!==this && t.current?.isCurrent === true) {
-                //console.info('Found non deleted child tuple', t, t.current, t.current?.isCurrent);
+            if(t!==this && t.mostRecentTuple?.isCurrent === true)
                 nonDeletedChildTuples.push(t);
-            }
         });
         return nonDeletedChildTuples;
     }
 
-    untrackedApplyAssertion(assertion: Assertion) {
-        const tuple = new TupleVersion(this, assertion);
-        // TODO lots of validation here + index updating etc.
+    /**
+     * Load-path apply (see VersionedDb.untrackedApplyAssertion for the
+     * preconditions).  Internal: enter through the VersionedDb methods, which
+     * carry the workspace-level validations and bookkeeping.
+     */
+    _untrackedApplyAssertion(assertion: Assertion) {
         const prevTuple = this.mostRecentTuple;
-
         if(prevTuple) {
             const prevAssertion = prevTuple.assertion;
             if(assertion.replaces_assertion_id !== prevAssertion.assertion_id)
-                throw new Error(`FIX ERROR: replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(tuple.assertion)}`);
-            if(prevAssertion.valid_to) {
-                // A successor normally starts exactly when its predecessor ends; a
-                // LATER start is a valid-time gap, which is how a restore after a
-                // delete looks (the tuple did not exist during the gap).
-                if(assertion.valid_from < prevAssertion.valid_to) {
-                    throw new Error(`FIX ERROR: valid_from chain broken - ${JSON.stringify(prevAssertion, undefined, 2)} TO ${JSON.stringify(assertion, undefined, 2)}`);
-                }
-            } else {
-                // This is tricky - we should probably mute the valid_to on the previous
-                //  most current tuple - but this complicates undo etc.  The fact that
-                //  valid_to with a non-null value is also used for undo complicates things.
-                if(prevTuple.assertion.valid_from <= tuple.assertion.valid_from) {
-                    throw new Error(`FIX ERROR: time travel prolbem`);
-                }
-            }
+                throw new Error(`replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(assertion)}`);
+            // A successor normally starts exactly when its predecessor ends; a
+            // LATER start is a valid-time gap, which is how a restore after a
+            // delete looks (the fact did not exist during the gap).
+            if(assertion.valid_from < prevAssertion.valid_to)
+                throw new Error(`valid_from chain broken - ${JSON.stringify(prevAssertion, undefined, 2)} TO ${JSON.stringify(assertion, undefined, 2)}`);
         }
-
-        this.tupleVersions.push(tuple);
-
-        // if(tuple.isCurrent)
-        //     this.#currentTuple = tuple;
+        this.tupleVersions.push(new TupleVersion(this, assertion));
     }
 
-    applyProposedAssertion(assertion: Assertion): Assertion|undefined {
-
-        const tuple = new TupleVersion(this, assertion);
+    /**
+     * Live-edit apply (see VersionedDb.applyProposedAssertion for the
+     * validations and the ownership contract).  Internal: enter through the
+     * VersionedDb methods.
+     */
+    _applyProposedAssertion(assertion: Assertion): Assertion|undefined {
         const prevTuple = this.mostRecentTuple;
         let updatedPrevAssertion: Assertion|undefined = undefined;
-
         const assertAtTime = assertion.valid_from;
-
-        // --- New proposed assertions must be either valid till the end of time
-        //     OR have valid_from === valid_to === assertAtTime (which
-        //     is a tombstone).
-        utils.assert(assertion.valid_to === timestamp.END_OF_TIME ||
-            assertion.valid_to === assertion.valid_from);
 
         if(prevTuple) {
             const prevAssertion = prevTuple.assertion;
 
-            console.info('applying proposed assertion',
-                         JSON.stringify(assertion, undefined, 2), ' on top of ',
-                         JSON.stringify(prevAssertion, undefined, 2));
-
             if(assertion.replaces_assertion_id !== prevAssertion.assertion_id)
-                throw new Error(`FIX ERROR: replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(tuple.assertion)}`);
+                throw new Error(`replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(assertion)}`);
+            if(!(assertAtTime > prevAssertion.valid_from))
+                throw new Error(`Attempt to assert a tuple in the past`);
 
-            switch(true) {
-
-                case prevAssertion.valid_to === timestamp.END_OF_TIME: {
-                    // --- We are replacing a tuple that was valid to the end of time,
-                    //     this is a normal update - set the valid_to of the
-                    //     replaced assertion with the start time of the new
-                    //     assertion.
-
-                    if(!(assertAtTime > prevAssertion.valid_from)) {
-                        throw new Error(`Attempt to assert a tuple in the past (3)`);
-                    }
-
-                    prevAssertion.valid_to = assertAtTime;
-                    updatedPrevAssertion = prevAssertion;
-                    break;
-                }
-
-                case prevAssertion.valid_to < assertAtTime: {
-                    // --- Assertion we are replacing is deleted (closed valid_to in
-                    //     our past), so our new assertion starts a new valid period
-                    //     after a gap - this is a restore/undelete.  The replaced
-                    //     assertion is already closed, so it needs no valid_to
-                    //     update (updatedPrevAssertion stays undefined).
-                    if(!(assertAtTime > prevAssertion.valid_from)) {
-                        throw new Error(`Attempt to assert a tuple in the past (4)`);
-                    }
-                    break;
-                }
-
-                case prevAssertion.valid_to >= assertAtTime: {
-                    // --- Tuple we are replacing has an end of life in our future
-                    //     (and not the end of time), something is wrong.
-                    throw new Error(`Attempt to assert a tuple in the past`);
-                }
-
-                case prevAssertion.valid_from >= assertAtTime: {
-                    // --- Tuple we are replacing has an begin of life in our future
-                    //     (and not the end of time), something is wrong.
-                    throw new Error(`Attempt to assert a tuple in the past (2)`);
-                }
-
-                default: {
-                    // --- Tuple we are replacing
-                    throw new Error(`unexpected tuple assertion ${JSON.stringify(assertion)} OVER ${JSON.stringify(prevAssertion)}`);
-                    //break;
-                }
+            if(prevAssertion.valid_to === timestamp.END_OF_TIME) {
+                // Replacing the live version: a normal update.  Close the
+                // predecessor at our start time (THE one in-place mutation in
+                // the model - the caller persists the returned object).
+                prevAssertion.valid_to = assertAtTime;
+                updatedPrevAssertion = prevAssertion;
+            } else if(prevAssertion.valid_to < assertAtTime) {
+                // Predecessor is already closed in our past (deleted): this
+                // is a restore/undelete starting a new valid period after the
+                // gap.  No predecessor update needed.
+            } else {
+                // Predecessor's end-of-life is at/after our start (and not
+                // END_OF_TIME): asserting into the past.
+                throw new Error(`Attempt to assert a tuple in the past`);
             }
         }
 
-        this.tupleVersions.push(tuple);
-        console.info('applied proposed assertion', assertion);
-
-        // if(tuple.isCurrent)
-        //     this.#currentTuple = tuple;
-
+        this.tupleVersions.push(new TupleVersion(this, assertion));
         return updatedPrevAssertion;
     }
 
-    applyServerAssertion(assertion: Assertion) {
-
-        // TODO MORE VALIDATION HERE.
-        // TODO If already have same assertion as a proposed assertion,
-        //      confirm they are the same and do minor touchups (time)
-
-        const tuple = new TupleVersion(this, assertion);
-        const prevTuple = this.mostRecentTuple;
-
-        // TODO lots of validation here + index updating etc.
-        // TODO update current.
-        // TODO tie into speculative mechanism.
-
-        if(prevTuple) {
-            // nop
-
-        }
-
-        this.tupleVersions.push(tuple);
-        console.info('applied proposed assertion', assertion);
-
-        // if(tuple.isCurrent)
-        //     this.#currentTuple = tuple;
-    }
-
-
-
-    // forEachVersionedTuple(f: (r:VersionedTuple)=>void) {
-    //     f(this);
-    //     super.forEachVersionedTuple(f);
-    // }
-
     dump(): any {
         return {
-            //type: this.schema.name,
-            //id: this.id,
             versions: this.tupleVersions.map(a=>a.dump()),
             ...Object.fromEntries(Object.values(this.childRelations).map(c=>
                 [c.schema.name, c.dump()]))
@@ -512,38 +324,50 @@ export class VersionedTuple/*<T extends NodeT>*/ {
     }
 }
 
-/**
- *
- */
-export function isRootTupleId(tuple_id: number): boolean {
-    return tuple_id === 0;
-}
+// -------------------------------------------------------------------------------
+// --- VersionedTable --------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 /**
+ * The tree root for one assertion table: a VersionedTuple with id 0 that
+ * never has versions of its own (queries treat it as an empty record - the
+ * deliberate resolution of the "how does the root work" question).
  *
+ * Also owns the per-table fact-id index: fact ids must be unique per table
+ * (the editor addresses facts by id, and findVersionedTupleById assumes it),
+ * enforced when a fact is first created.
  */
 export class VersionedTable extends VersionedTuple {
+    readonly #tuplesById = new Map<number, VersionedTuple>();
+
     constructor(schema: RelationField) {
         super(schema, 0);
     }
 
-    getVersionedTupleById(typeTag:string, id:number): VersionedTuple|undefined {
-        // TODO this is doing a search every time - the intent is to have an index XXX
-        return this.findVersionedTupleById(id);
+    /** O(1) fact lookup by id (undefined for the root and unknown ids). */
+    getTupleById(id: number): VersionedTuple|undefined {
+        return this.#tuplesById.get(id);
+    }
+
+    _assertNewFactId(ty: string, id: number) {
+        const existing = this.#tuplesById.get(id);
+        if(existing)
+            throw new Error(`duplicate fact id ${id}: new ${ty} fact collides with existing ${existing.schema.tag} fact - fact ids must be unique per table`);
+    }
+
+    _registerTuple(tuple: VersionedTuple) {
+        this.#tuplesById.set(tuple.id, tuple);
     }
 }
 
-/**
- *
- *
- * - need to handle views of the content based on time + variant
- * - ordering of view needs to also be time based.
- * - need to track local (uncommitted) insertions etc.
- */
-export class VersionedRelation/*<T extends NodeT>*/ {
+// -------------------------------------------------------------------------------
+// --- VersionedRelation ------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+export class VersionedRelation {
     readonly schema: RelationField;
     readonly parent: VersionedTuple;
-    readonly tuples: Map<number,VersionedTuple/*<T>*/> = new Map();
+    readonly tuples: Map<number,VersionedTuple> = new Map();
 
     constructor(schema: RelationField, parent: VersionedTuple) {
         this.schema = schema;
@@ -561,19 +385,18 @@ export class VersionedRelation/*<T extends NodeT>*/ {
     }
 }
 
-/**
- *
- */
+// -------------------------------------------------------------------------------
+// --- TupleVersion -----------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
 export class TupleVersion {
-    readonly relation: VersionedTuple;
+    readonly tuple: VersionedTuple;
     readonly assertion: Assertion;
 
     #domainFields: Record<string,any>|undefined = undefined;
-    #json: Record<string,any>|undefined = undefined;
-    //#changeRegistrations
 
-    constructor(relation: VersionedTuple, assertion: Assertion) {
-        this.relation = relation;
+    constructor(tuple: VersionedTuple, assertion: Assertion) {
+        this.tuple = tuple;
         this.assertion = assertion;
     }
 
@@ -585,20 +408,18 @@ export class TupleVersion {
         return this.assertion.valid_to === timestamp.END_OF_TIME;
     }
 
+    // The version's domain values keyed by schema field NAME (the $bind
+    // mapping applied).  Memoization is safe because the only field the
+    // workspace ever mutates on an applied assertion is valid_to, which is
+    // not a domain field (it would become a stale-cache bug if a schema ever
+    // bound a field to 'valid_to').
     get domainFields(): Record<string,any> {
-        // TODO: consider checking type of domain fields.
-        // TODO: fix the 'as any' below
-        // TODO: consider droppiong memoization of this because have toJSON (below)
         return this.#domainFields ??= Object.fromEntries(
-            this.relation.schema.scalarFields.map(f=>[f.name, (this.assertion as any)[f.bind]]));
+            this.tuple.schema.scalarFields.map(f=>[f.name, (this.assertion as any)[f.bind]]));
     }
 
-    // This will have some time stuff added etc XXX TODO
     toJSON(): Record<string,any> {
-        const schema = this.relation.schema;
-        return this.#json ??= {
-            ...this.domainFields,
-        };
+        return {...this.domainFields};
     }
 
     dump(): any {
@@ -608,8 +429,6 @@ export class TupleVersion {
                 {valid_from: timestamp.formatTimestampAsUTCTime(a.valid_from)} : {}),
             ...(a.valid_to !== timestamp.END_OF_TIME ?
                 {valid_to: timestamp.formatTimestampAsUTCTime(a.valid_to)} : {}),
-            //id: this.relation.id,
-            //ty: this.relation.schema.tag,
             ...this.domainFields,
         };
     }
@@ -623,15 +442,16 @@ export function compareVersionedTupleAssertionByOrderKey(a: TupleVersion, b: Tup
     return compareAssertionsByOrderKey(a.assertion, b.assertion);
 }
 
-/**
- *
- */
+// -------------------------------------------------------------------------------
+// --- The current view (query layer) ------------------------------------------------
+// -------------------------------------------------------------------------------
+
 export abstract class VersionedTupleQuery {
     readonly src: VersionedTuple;
     readonly schema: RelationField;
     readonly tupleVersions: TupleVersion[];
     readonly childRelations: Record<Tag,VersionedRelationQuery> = {};
-    #json: Record<string,any>|undefined = undefined;
+    readonly #json: Record<string, any> = {};
 
     constructor(src: VersionedTuple) {
         this.src = src;
@@ -644,36 +464,25 @@ export abstract class VersionedTupleQuery {
     abstract computeChildRelations(): Record<Tag, VersionedRelationQuery>;
 
     get mostRecentTupleVersion(): TupleVersion|undefined {
-        // Note: we are using the spec behaviour where out of bound [] refs === undefined.
         return this.tupleVersions[this.tupleVersions.length-1];
     }
 
+    /** The PRIOR versions of this fact (every version except the one the
+     *  query presents as most recent; all versions for a deleted fact). */
     get historicalTupleVersions(): TupleVersion[] {
-        //if(this.src.tupleVersions.length !== 1)
-        //    console.info(`HAVE TUPLE VERSIONS ON`);
-        return this.src.tupleVersions; //.filter(t=>t!==this.mostRecentTupleVersion);
+        return this.src.tupleVersions.filter(tv => tv !== this.mostRecentTupleVersion);
     }
 
     toJSON(includeHistory: boolean = false): any {
-        return this.#json ??= (()=>{
-            // if(!this.mostRecentTupleVersion)
-            //     return ['DELETED'];
+        const cacheKey = includeHistory ? 'history' : 'plain';
+        return this.#json[cacheKey] ??= (()=>{
             const schema = this.schema;
-            const current = this.mostRecentTupleVersion;
-            // TODO what about no most recent tuple version??? XXX  (deleted tuples prob!)
-            const entityFields =
-                this.mostRecentTupleVersion?.toJSON() ?? {};
-
-                //(this.mostRecentTupleVersion ?? panic('no most recent tuple version')).toJSON();
-            const controlFields = {};
+            // The table root (and a not-yet-asserted fact) has no versions:
+            // present it as an empty record carrying only its child relations.
+            const entityFields = this.mostRecentTupleVersion?.toJSON() ?? {};
             const childRelations = Object.fromEntries(schema.relationFields.map(r=>
                 [r.name, this.childRelations[r.tag].toJSON(includeHistory)]));
-            //console.info('CHILD RELATIONS', JSON.stringify(childRelations, undefined, 2));
-            const json: any = {
-                ...controlFields,
-                ...entityFields
-            };
-            // const json: any = entityFields;
+            const json: any = {...entityFields};
             if(includeHistory) {
                 const historicalVersions = this.historicalTupleVersions.map(h=>h.toJSON());
                 if(historicalVersions.length > 0)
@@ -681,15 +490,12 @@ export abstract class VersionedTupleQuery {
             }
             if(schema.relationFields.length > 0)
                 Object.assign(json, childRelations);
-
             return json;
         })();
     }
 
     dump(): any {
         return {
-            //type: this.schema.name,
-            //id: this.id,
             versions: this.tupleVersions.map(a=>a.dump()),
             ...Object.fromEntries(Object.values(this.childRelations).map(c=>
                 [c.src.schema.name, c.dump()]))
@@ -697,18 +503,9 @@ export abstract class VersionedTupleQuery {
     }
 }
 
-/**
- *
- */
 export class CurrentTupleQuery extends VersionedTupleQuery {
     declare childRelations: Record<Tag, CurrentRelationQuery>;
 
-    constructor(src: VersionedTuple) {
-        super(src);
-    }
-
-    // Note: we will probably switch VersionTuple to have a ordered by
-    //       recentness query, in which case we should remove the sort from here.
     computeTuples(): TupleVersion[] {
         return this.src.tupleVersions.
             filter(tv=>tv.isCurrent).
@@ -722,9 +519,6 @@ export class CurrentTupleQuery extends VersionedTupleQuery {
     }
 }
 
-/**
- *
- */
 export abstract class VersionedRelationQuery {
     readonly src: VersionedRelation;
     readonly schema: RelationField;
@@ -750,41 +544,24 @@ export abstract class VersionedRelationQuery {
     }
 }
 
-/**
- *
- * TODO: hook up versioned parent.
- */
 export class CurrentRelationQuery extends VersionedRelationQuery {
     declare tuplesById: Map<number,CurrentTupleQuery>;
     declare tuples: CurrentTupleQuery[];
 
-    constructor(src: VersionedRelation) {
-        super(src);
-    }
-
     computeCurrentTuplesById(): Map<number, CurrentTupleQuery> {
-        // TODO we are grabbing all src.tuples.entries() here - don't think
-        //      that is removing deleted tuples (ie. behind a tombstone)
-        //      src is a VersionedRelation
-        // TODO need to know if current version of VersionedTuple is deleted -
-        //      can tell because will have end date that is not end of time.
-
+        // Live facts only, in user (order_key) order.  The non-null
+        // assertions are safe: the filter guarantees a current version.
         const currentTupleQuerys = [...this.src.tuples.entries()]
-            .filter(([id,tup]: [number, VersionedTuple]) => tup.current?.isCurrent)
-            .map(([id,tup]: [number, VersionedTuple]): [number, CurrentTupleQuery]=>
+            .filter(([_id, tup]) => tup.mostRecentTuple?.isCurrent)
+            .map(([id, tup]): [number, CurrentTupleQuery] =>
                 [id, new CurrentTupleQuery(tup)]);
 
-        const currentTupleQuerysByRecentness =
-            currentTupleQuerys.toSorted(([aId, aTup]: [number, CurrentTupleQuery], [bId, bTup]: [number, CurrentTupleQuery]) => {
-                const aMostRecent = aTup.mostRecentTupleVersion;
-                const bMostRecent = bTup.mostRecentTupleVersion;
-                if(aMostRecent === undefined && bMostRecent === undefined) return 0;
-                if(aMostRecent === undefined) return -1;
-                if(bMostRecent === undefined) return 1;
-                return compareVersionedTupleAssertionByOrderKey(aMostRecent, bMostRecent);
-            });
+        const inUserOrder =
+            currentTupleQuerys.toSorted(([_aId, aTup], [_bId, bTup]) =>
+                compareVersionedTupleAssertionByOrderKey(
+                    aTup.mostRecentTupleVersion!, bTup.mostRecentTupleVersion!));
 
-        return new Map(currentTupleQuerysByRecentness);
+        return new Map(inUserOrder);
     }
 }
 
@@ -792,34 +569,9 @@ export function currentTuplesForVersionedRelation(relation: VersionedRelation): 
     return Array.from(new CurrentRelationQuery(relation).tuples);
 }
 
-// export function generateRelativeOrderKey(parent: VersionedRelation,
-//                                          refTupleId: number): string {
-//     const peers = currentTuplesForVersionedRelation(parent);
-//     const refIndex = peers.findIndex(p=>p.src.id === refTupleId);
-//     if(refIndex === -1)
-//         throw new Error(`unable to find ref tuple with id ${refTupleId} for move operation`);
-//     if(refIndex === 0)
-//         throw new Error('aldready ab begining'); // XXX
-//     const targetIndex = refIndex + offset;
-
-//     const orderedTuplesById = new CurrentRelationQuery(parent).tuples;
-//     const refTuple = orderedTuplesById.get(refTupleId);
-//     if(refTuple===undefined)
-//         throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key`);
-//     let prev: CurrentTupleQuery|undefined = undefined;
-//     for(let t of orderedTuplesById.values()) {
-//         if(t.src.id === refTupleId) {
-//             const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.begin_string;
-//             const after_key = refTuple.mostRecentTupleVersion?.assertion.order_key
-//                 ?? panic('tuple is missing:: tuple_id is', refTupleId);
-//             const result_key = orderkey.between(before_key, after_key);
-//             console.info('generateBeforeOrderKey', {before_key, after_key, result_key});
-//             return result_key;
-//         }
-//         prev = t;
-//     }
-//     throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key (2)`);
-// }
+// -------------------------------------------------------------------------------
+// --- Order-key generation over a live relation --------------------------------------
+// -------------------------------------------------------------------------------
 
 export function generateBeforeOrderKey(parent: VersionedRelation,
                                        refTupleId: number): string {
@@ -832,10 +584,8 @@ export function generateBeforeOrderKey(parent: VersionedRelation,
         if(t.src.id === refTupleId) {
             const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.begin_string;
             const after_key = refTuple.mostRecentTupleVersion?.assertion.order_key
-                ?? panic('tuple is missing:: tuple_id is', refTupleId);
-            const result_key = orderkey.between(before_key, after_key);
-            console.info('generateBeforeOrderKey', {before_key, after_key, result_key});
-            return result_key;
+                ?? panic('tuple is missing:: tuple_id is', String(refTupleId));
+            return orderkey.between(before_key, after_key);
         }
         prev = t;
     }
@@ -851,15 +601,15 @@ export function generateAfterOrderKey(parent: VersionedRelation,
     let prev: CurrentTupleQuery|undefined = undefined;
     for(const t of [...orderedTuplesById.values()].toReversed()) {
         if(t.src.id === refTupleId) {
-            const before_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.end_string;
+            const after_key = prev?.mostRecentTupleVersion?.assertion?.order_key ?? orderkey.end_string;
             return orderkey.between(
                 refTuple.mostRecentTupleVersion?.assertion.order_key
-                    ?? panic('tuple is missing:: tuple_id is', refTupleId),
-                before_key);
+                    ?? panic('tuple is missing:: tuple_id is', String(refTupleId)),
+                after_key);
         }
         prev = t;
     }
-    throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute before order key (2)`);
+    throw new Error(`unable to find ref tuple with id ${refTupleId} when trying to compute after order key (2)`);
 }
 
 export function generateAtEndOrderKey(parent: VersionedRelation): string {
@@ -870,159 +620,4 @@ export function generateAtEndOrderKey(parent: VersionedRelation): string {
         : orderkey.between(
             lastExistingChild.mostRecentTupleVersion?.assertion?.order_key,
             orderkey.end_string);
-}
-
-// /**
-//  *
-//  */
-// export class VersionedDatabaseWorkspace extends VersionedRelationContainer {
-//     declare schema: Schema;
-
-//     //readonly factsById: Map<number, FactCollection> = new Map();
-
-//     constructor(schema: Schema) {
-//         super(schema);
-//     }
-
-//     apply(assertion: Assertion) {
-//         // We want to be able to apply assertions at any depth, in any order.
-//         // - Top level apply will lookup RelationField for ty (using index on schema),
-//         //   and then traversal will walk/create nodes, then apply to fact.
-//         // - top level is still a container even if we are only mirroring a single
-//         //   record.
-//         // const relationField = this.schema.relationsByTag[assertion.ty];
-//         // if(!relationField)
-//         //     throw new Error(`Failed to find relation with tag '${assertion.ty}' in schema ${this.schema.name}`);
-
-//         return this.untrackedApplyAssertionByPath(getAssertionPath(assertion), assertion);
-//     }
-
-//     dump(): any {
-//         return Object.fromEntries(Object.entries(this.childRelations).map(([id, child])=>
-//             [id, child.dump()]));
-//     }
-
-//     // dump(): any {
-//     //     return Object.values(this.childRelations).map(child=>({
-//     //         type: child.schema.name: child.dump()}));
-//     // }
-
-// }
-
-
-export function getAssertionsForEntry(entry_id: number): any {
-    return selectAssertionsForTopLevelFact('dict').all({id1: entry_id});
-}
-
-
-export function jsonTest() {
-    console.info('full load test');
-    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
-
-    const workspace = new VersionedDb([dictSchema]);
-    const assertions = schema.selectAllAssertions('dict').all();
-    assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
-
-    // Make a current query somehow.
-    // TOO SLOW. add some more caching.
-    for(let i=0; i<10; i++) {
-        console.time('Make JSON');
-        const current = new CurrentTupleQuery(workspace.getTableByTag('dct'));
-        const currentJSON = current.toJSON();
-        console.timeEnd('Make JSON');
-    }
-    //console.info(JSON.stringify(current.toJSON(), undefined, 2));
-}
-
-
-export function fullLoadTest() {
-    console.info('full load test');
-    const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
-
-    const workspace = new VersionedDb([dictSchema]);
-
-    console.time('load all assertions');
-    const assertions = schema.selectAllAssertions('dict').all();
-    console.timeEnd('load all assertions');
-    console.time('apply all assertions');
-    assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
-    console.timeEnd('apply all assertions');
-
-    // THAT WAS EASY!!!
-    // NOW TRY TO QUERY!!! (find recent changes etc)
-    // IDEALLY WOULD LIKE TO OVERLAY SOME TYPING!!!
-
-    // TODO switch so top level is not a tuple, but a relation.
-    const dictionaryTuple = workspace.getTableByTag('dct');
-    const entriesRelation: VersionedRelation = dictionaryTuple.childRelations['ent'];
-
-
-    // THIS IS AN ABSOLUTELY HORRIBLE SEARCH - FACTOR TO MAKE NICE.
-
-
-    // Entry tuples is Map<number,VersionedTuple>
-    const entryTuples = entriesRelation.tuples;
-    console.info(`tuple count ${entryTuples.size}`);
-
-    // Print all entries with a spelling that begins with 'matu'.
-    // - 1 ms per linear (approx).    So super fasty.
-    console.time('spelling search');
-    for(let i=0; i<100; i++) {
-        const matchingTuples = [...entryTuples.values()]
-                                   .filter((t:VersionedTuple)=>{
-                                       //console.info(t.schema.tag);
-                                       const matches =
-                                           [...t.childRelations['sp'].tuples.values()].filter(t=>
-                                               t.currentAssertion?.attr1.startsWith('matu'));
-                                       // if(matches.length > 0)
-                                       //     console.info(matches.length);
-                                       return false});
-    }
-    console.timeEnd('spelling search');
-
-
-
-
-
-
-
-    /*
-      - off a VersionedTuple,
-      - re-api to make this nice, then maybe try for typing.
-      - also think about current vs history.
-      - no caching needed - will be plenty fast enough to do raw on each search.
-      - then make some rendering for a lexeme, and make some searches etc.
-
-      - how is this related to current view?
-
-
-      - can't even know ordering without doing the currentRelationQuery.
-
-      - try how fast using that.  If so, may provide another way forward - may
-      be worth just making a JSON of tip each time?
-      - is not one-per request - is one per update.
-      - update freq is expected to be 1 per second etc etc.
-      - try to make a JSON version of current with history, informed by schema.
-      - this is generally useful anyway.
-      - if prohibit modification, can attach to workspace tree, and mostly reuse,
-      so can make very cost effective.
-      - this identity chucked for a tree when any sub changes thing can allow for
-      efficient caching as well (though don't want for now).
-
-      SO: rethink is wanting nice JSON dumps of subtree/trees bound with
-
-     */
-
-    //console.info(`matching tuple count ${matchingTuples.length}`);
-
-    console.info('end');
-}
-
-
-
-
-
-if (import.meta.main) {
-    //fullLoadTest();
-    jsonTest();
 }
