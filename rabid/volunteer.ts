@@ -349,11 +349,21 @@ export class VolunteerTable extends Table<Volunteer> {
             ? renderFieldValue(f.emergency_contact_name, v.emergency_contact_name)
             : ([v.emergency_contact_name, v.emergency_contact_phone].filter(Boolean).join(' · ') || '—');
 
+        // Host-only tools (issuing a password-reset link is a host/admin act).
+        const ctx = security.current();
+        const viewerIsHost = !!ctx && (ctx.system === true
+            || ctx.roles.has('host') || ctx.roles.has('admin'));
+
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, v.name],
              v.inactive ? [h.span, {class: 'badge text-bg-secondary'}, 'Inactive'] : undefined,
-             this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined],
+             this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined,
+             viewerIsHost
+                 ? action.actionButton('Reset password',
+                     {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${volunteer_id})`},
+                     'btn btn-outline-secondary btn-sm ms-auto')
+                 : undefined],
 
             [h.dl, {class: 'row mb-0'},
              [h.dt, {class: 'col-sm-3'}, 'Email'],
@@ -419,6 +429,62 @@ export class PasswordHashTable extends Table<PasswordHash> {
     }
 }
 //export const passwordHashMetaData = new PasswordHashTable();
+
+// --------------------------------------------------------------------------------
+// --- PasswordReset --------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+// Single-use, expiring password-reset tokens.  The row stores only the SHA-256
+// of the token (the usable token appears exactly once, in the generated link),
+// so a leaked db cannot be used to redeem outstanding resets.  Used rows are
+// kept (used_time set) as a simple audit trail of who issued resets for whom.
+
+export interface PasswordReset {
+    password_reset_id: number;
+    volunteer_id: number;
+    reset_token_hash: string;
+    created_time: sqldatetime;
+    expires_time: sqldatetime;
+    used_time?: sqldatetime;
+    // The host/admin who generated the link (null for batch/import-generated).
+    created_by_volunteer_id?: number;
+}
+export type PasswordResetOpt = Partial<PasswordReset>;
+
+export class PasswordResetTable extends Table<PasswordReset> {
+
+    constructor() {
+        super('password_reset', [
+            new PrimaryKeyField('password_reset_id', {}),
+            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {indexed: true}),
+            new SecretField('reset_token_hash', {}),
+            new DateTimeField('created_time', {}),
+            new DateTimeField('expires_time', {}),
+            new DateTimeField('used_time', {nullable: true}),
+            new ForeignKeyField('created_by_volunteer_id', 'volunteer', 'volunteer_id', {nullable: true}),
+        ], [
+            'CREATE UNIQUE INDEX IF NOT EXISTS password_reset_by_token_hash ON password_reset(reset_token_hash);'
+        ])
+    };
+
+    @path
+    get byTokenHash() {
+        return this.prepare<PasswordReset, {reset_token_hash: string}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM password_reset
+/**/          WHERE reset_token_hash = :reset_token_hash`);
+    }
+
+    // Setting a password consumes ALL of the volunteer's outstanding tokens
+    // (not just the one used) - a stale link in an old text message shouldn't
+    // still work after the volunteer has a working password.
+    markAllUsedForVolunteer(volunteer_id: number, now: string): void {
+        db().execute<{volunteer_id: number, now: string}>(block`
+/**/   UPDATE password_reset
+/**/          SET used_time = :now
+/**/          WHERE volunteer_id = :volunteer_id AND used_time IS NULL`, {volunteer_id, now});
+    }
+}
 
 // --------------------------------------------------------------------------------
 // --- VolunteerLoginSession ------------------------------------------------------

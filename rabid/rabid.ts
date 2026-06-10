@@ -1,6 +1,8 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
 import * as server from '../liminal/http-server.ts';
 import * as strings from "../liminal/strings.ts";
+import {block} from "../liminal/strings.ts";
+import * as action from "../liminal/action.ts";
 import * as config from './config.ts';
 import * as templates from './templates.ts';
 import {db} from "../liminal/db.ts";
@@ -43,6 +45,7 @@ export class Rabid extends LiminalApp {
     @path get config() { return new config.ConfigTable(); }
     @path get volunteer() { return new volunteer.VolunteerTable(); }
     @path get passwordHash() { return new volunteer.PasswordHashTable(); }
+    @path get passwordReset() { return new volunteer.PasswordResetTable(); }
     @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
     @path get timesheet_entry() { return new timesheet.TimesheetEntryTable(); }
     @path get event() { return new event.EventTable(); }
@@ -50,7 +53,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment];
     }
 
     home() { return templates.page('home', home.home()); }
@@ -148,11 +151,17 @@ export class Rabid extends LiminalApp {
     // transits the server log (the route interpreter logs each expr) and
     // browser history.
     protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
-        const allowedWithoutLogin = new Set(['rabid.loginRequest(bodyArgs)']);
+        const allowedWithoutLogin = new Set([
+            'rabid.loginRequest(bodyArgs)',
+            // The password-reset flow is reachable while logged out by design:
+            // the single-use token in the link IS the authentication.
+            'rabid.resetPasswordRequest(bodyArgs)',
+        ]);
         if(this.getDbPurpose() !== 'production')
             allowedWithoutLogin.add('rabid.loginRequest(queryArgs)');
         const loggedIn = ctx.actorId !== undefined;
-        if(loggedIn || allowedWithoutLogin.has(jsExprSrc)) return undefined;
+        if(loggedIn || allowedWithoutLogin.has(jsExprSrc)
+           || jsExprSrc.startsWith('rabid.resetPassword("')) return undefined;
         return `rabid.login(${JSON.stringify(requestUrl)})`;
     }
 
@@ -253,14 +262,28 @@ export class Rabid extends LiminalApp {
             return reRenderWithError('No password has been set for this account');
 
         const hashedSuppliedPassword = passwordUtils.hashPassword(password, password_salt);
-        if(hashedSuppliedPassword !== password_hash)
+        if(!passwordUtils.constantTimeEqual(hashedSuppliedPassword, password_hash))
             return reRenderWithError('Incorrect password');
 
+        return this.createSessionResponse(volunteer.volunteer_id, targetUrl);
+    }
+
+    // Cookie attributes for the session cookie.  Secure on a production db
+    // (which is served over HTTPS); dev runs on plain http://localhost, where
+    // Secure would make the cookie vanish.
+    private sessionCookieAttrs(): string {
+        const secure = this.getDbPurpose() === 'production' ? '; Secure' : '';
+        return `Path=/; HttpOnly; SameSite=Lax${secure}`;
+    }
+
+    // Start a fresh session for a volunteer and respond with the session
+    // cookie + a forward.  Shared by login and the password-reset flow.
+    private createSessionResponse(volunteer_id: number, targetUrl: string): server.Response {
         const now = date.currentSqliteDateTime();
         const session_token = passwordUtils.generateSessionToken();
-        const sessionId = rabid.volunteerLoginSession.insert({
+        rabid.volunteerLoginSession.insert({
             session_token,
-            volunteer_id: volunteer.volunteer_id,
+            volunteer_id,
             start_time: now,
             last_resume_time: now,
             last_ip: '', // TODO
@@ -271,7 +294,7 @@ export class Rabid extends LiminalApp {
         // the volunteer_session row (deleting it ends the session regardless).
         const fourHundredDaysInSeconds = 400 * 24 * 60 * 60;
         response.headers['Set-Cookie'] =
-            `${this.sessionCookieName}=${session_token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${fourHundredDaysInSeconds}`;
+            `${this.sessionCookieName}=${session_token}; ${this.sessionCookieAttrs()}; Max-Age=${fourHundredDaysInSeconds}`;
         return response;
     }
 
@@ -288,8 +311,196 @@ export class Rabid extends LiminalApp {
         }
         const response = server.forwardResponse('/');
         response.headers['Set-Cookie'] =
-            `${this.sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+            `${this.sessionCookieName}=; ${this.sessionCookieAttrs()}; Max-Age=0`;
         return response;
+    }
+
+    // ----- Password reset (host-issued, single-use links) --------------------
+    //
+    // The onboarding/recovery model for an org with no email-sending (yet):
+    // a host generates a reset link from the volunteer's detail page and
+    // delivers it out-of-band (text, in person, their own email).  For bulk
+    // onboarding ("import emails, no passwords") `./rabid.sh reset-links
+    // <baseUrl>` emits an email,name,link CSV for a mail merge.  The token in
+    // the link is the authentication: single-use, expiring, and stored only
+    // as a SHA-256 hash (see PasswordResetTable).
+
+    private assertHostOrSystem(): void {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return;
+        if(!(ctx.roles.has('host') || ctx.roles.has('admin')))
+            throw new Error('Not permitted: hosts/admins only');
+    }
+
+    // Mint a reset token and return the link PATH.  The caller supplies the
+    // origin: the host UI uses the browser's own location.origin (so no
+    // base-URL config is needed), the batch CSV takes a baseUrl parameter.
+    async makeResetLinkPath(volunteer_id: number, expiryDays: number = 7): Promise<string> {
+        this.assertHostOrSystem();
+        const createdBy = security.current()?.actorId;
+        const token = passwordUtils.generateUrlToken();
+        const reset_token_hash = await passwordUtils.sha256Hex(token);
+        const now = date.orgNow();
+        security.runSystem(() => rabid.passwordReset.insert({
+            volunteer_id,
+            reset_token_hash,
+            created_time: date.temporalToSqliteDateTime(now),
+            expires_time: date.temporalToSqliteDateTime(now.add({days: expiryDays})),
+            used_time: undefined,
+            created_by_volunteer_id: createdBy,
+        }));
+        return `/rabid.resetPassword(${JSON.stringify(token)})`;
+    }
+
+    // Step 1 (generator): confirmation dialog for issuing a reset link.
+    resetLinkDialog(volunteer_id: number): Markup {
+        this.assertHostOrSystem();
+        const v = rabid.volunteer.getById(volunteer_id);
+        return action.renderParamForm([], {}, {
+            title: `Password-reset link for ${v.name}`,
+            submitLabel: 'Generate link',
+            hidden: {volunteer_id},
+            dispatch: {
+                // POST: minting a token is a mutation - it must not live on a
+                // prefetchable GET.  The response (the link view) replaces the
+                // dialog in the modal.
+                'hx-post': '/rabid.resetLinkView(bodyArgs)',
+                'hx-target': '#modalEditorBody',
+                'hx-swap': 'innerHTML',
+            },
+        });
+    }
+
+    // Step 2 (action): mint the token and show the link - the ONE time it is
+    // visible (only its hash is stored).  The inline script (htmx runs scripts
+    // in swapped content) prepends the browser's origin to the path.
+    async resetLinkView(args: {volunteer_id?: string}): Promise<Markup> {
+        this.assertHostOrSystem();
+        const volunteer_id = Number(args?.volunteer_id);
+        const v = rabid.volunteer.getById(volunteer_id);
+        const path = await this.makeResetLinkPath(volunteer_id);
+        return [
+            [h.h2, {class: 'h5'}, `Password-reset link for ${v.name}`],
+            [h.p, {class: 'text-muted small'},
+             'Single use, expires in 7 days.  Copy it now - it is not stored and cannot be shown again.'],
+            [h.div, {class: 'input-group'},
+             [h.input, {type: 'text', readonly: '', class: 'form-control', id: 'reset-link-out',
+                        'data-path': path, 'data-testid': 'reset-link'}],
+             [h.button, {type: 'button', class: 'btn btn-outline-primary',
+                         onclick: "navigator.clipboard.writeText(document.getElementById('reset-link-out').value)"},
+              'Copy']],
+            [h.script, {},
+             "document.getElementById('reset-link-out').value = " +
+             "location.origin + document.getElementById('reset-link-out').dataset.path;"],
+        ];
+    }
+
+    // A reset record redeemable right now, or undefined.  One generic failure
+    // (invalid / expired / already used are deliberately indistinguishable).
+    private async validResetRecord(token: unknown): Promise<volunteer.PasswordReset | undefined> {
+        if(typeof token !== 'string' || !token) return undefined;
+        const reset_token_hash = await passwordUtils.sha256Hex(token);
+        const r = security.runSystem(() => rabid.passwordReset.byTokenHash.first({reset_token_hash}));
+        if(!r || r.used_time) return undefined;
+        if(r.expires_time <= date.currentSqliteDateTime()) return undefined;  // ISO strings compare correctly
+        return r;
+    }
+
+    // The volunteer-facing set-your-password page (unauthenticated: the token
+    // is the authentication).
+    async resetPassword(token: string, errorMessage?: string): Promise<templates.Page> {
+        const reset = await this.validResetRecord(token);
+        if(!reset) {
+            return templates.page('Password reset', [
+                [h.div, {class: 'container mt-5 text-center'},
+                 [h.h1, {class: 'mb-3'}, 'Password reset'],
+                 [h.p, {'data-testid': 'reset-invalid'},
+                  'This password-reset link is invalid, expired, or has already been used.'],
+                 [h.p, {class: 'text-muted'}, 'Ask a host to generate a new one for you.']],
+            ]);
+        }
+        const v = security.runSystem(() => rabid.volunteer.getById(reset.volunteer_id));
+        return templates.page('Set your password', [
+            [h.div, {class: 'container mt-5'},
+             [h.div, {class: 'row justify-content-center'},
+              [h.div, {class: 'col-md-6 col-lg-5'},
+               [h.div, {class: 'card shadow'},
+                [h.div, {class: 'card-body p-5'},
+                 [h.h1, {class: 'text-center mb-2'}, 'Set your password'],
+                 [h.p, {class: 'text-center text-muted mb-4'}, `for ${v.name}`],
+                 errorMessage
+                     ? [h.div, {class: 'alert alert-danger', role: 'alert'}, errorMessage]
+                     : undefined,
+                 [h.form, {name: 'reset', method: 'post', action: 'rabid.resetPasswordRequest(bodyArgs)'},
+                  [h.div, {class: 'form-group mb-3'},
+                   [h.label, {for: 'password'}, 'New password'],
+                   [h.input, {type: 'password', class: 'form-control', name: 'password', id: 'password',
+                              minlength: '8', required: true}]],
+                  [h.div, {class: 'form-group mb-4'},
+                   [h.label, {for: 'password2'}, 'New password again'],
+                   [h.input, {type: 'password', class: 'form-control', name: 'password2', id: 'password2',
+                              minlength: '8', required: true}]],
+                  [h.input, {type: 'hidden', name: 'token', value: token}],
+                  [h.button, {type: 'submit', class: 'btn btn-primary btn-block w-100'}, 'Set password'],
+                 ]]]]]],
+        ]);
+    }
+
+    // Redeem: set the password, consume ALL the volunteer's outstanding reset
+    // tokens, end any existing sessions, and log them straight in.
+    async resetPasswordRequest(args: {token?: string, password?: string, password2?: string}) {
+        const token = args?.token ?? '';
+        const reset = await this.validResetRecord(token);
+        if(!reset)
+            return this.resetPassword(token);  // renders the generic invalid page
+
+        const password = args?.password ?? '';
+        if(password.length < 8)
+            return this.resetPassword(token, 'Please choose a password of at least 8 characters');
+        if(password !== (args?.password2 ?? ''))
+            return this.resetPassword(token, 'The two passwords do not match');
+
+        const volunteer_id = reset.volunteer_id;
+        const now = date.currentSqliteDateTime();
+        const password_salt = passwordUtils.generateSalt();
+        const password_hash = passwordUtils.hashPassword(password, password_salt);
+        security.runSystem(() => {
+            const existing = rabid.passwordHash.byVolunteerId.first({volunteer_id});
+            if(existing)
+                rabid.passwordHash.updateNamedFields(existing.password_hash_id,
+                    ['password_salt', 'password_hash', 'last_change_time'],
+                    {password_salt, password_hash, last_change_time: now});
+            else
+                rabid.passwordHash.insert({volunteer_id, password_salt, password_hash, last_change_time: now});
+            rabid.passwordReset.markAllUsedForVolunteer(volunteer_id, now);
+            // A password change invalidates every existing session (a stolen or
+            // forgotten-open session shouldn't survive the reset).
+            db().execute<{volunteer_id: number}>(
+                'DELETE FROM volunteer_session WHERE volunteer_id = :volunteer_id', {volunteer_id});
+        });
+        return this.createSessionResponse(volunteer_id, '/');
+    }
+
+    // Bulk onboarding: mint reset links for every non-deleted volunteer with
+    // no working password and emit email,name,link CSV (for a mail merge from
+    // your own email account - no SMTP integration needed).
+    //   ./rabid.sh reset-links https://rabid.example.org [expiryDays]
+    // (Stop the server first: this writes tokens and SQLite has one writer.)
+    async resetLinksCsvForPasswordlessVolunteers(baseUrl: string, expiryDays: number = 7): Promise<string> {
+        this.assertHostOrSystem();
+        const passwordless = security.runSystem(() =>
+            db().prepare<{volunteer_id: number, name: string, email: string}, {}>(block`
+/**/   SELECT v.volunteer_id, v.name, v.email
+/**/          FROM volunteer v LEFT JOIN password_hash ph USING (volunteer_id)
+/**/          WHERE v.deleted = 0
+/**/            AND (ph.password_hash IS NULL OR ph.password_salt IS NULL)
+/**/          ORDER BY v.name`).all({}));
+        const lines = ['email,name,link'];
+        for(const v of passwordless) {
+            const path = await this.makeResetLinkPath(v.volunteer_id, expiryDays);
+            lines.push(`${v.email},${JSON.stringify(v.name)},${baseUrl}${path}`);
+        }
+        return lines.join('\n');
     }
 }
 
@@ -332,6 +543,22 @@ if (import.meta.main) {
             await rabid.startServer({hostname: 'localhost', port: 8888});
             const code = await rabid.runNamedTestRun(runName);
             Deno.exit(code);
+            break;
+        }
+        case 'reset-links': {
+            // Bulk onboarding: emit email,name,link CSV of password-reset links
+            // for every volunteer without a working password (mail-merge it from
+            // your own email account).  Written to a FILE because stdout is full
+            // of db logging.  Stop the server first (SQLite single writer).
+            // Usage: reset-links <baseUrl> <out.csv> [expiryDays]
+            const [baseUrl, outFile] = [args[1], args[2]];
+            if(!baseUrl || !outFile) throw new Error('usage: reset-links <baseUrl> <out.csv> [expiryDays]');
+            const expiryDays = args[3] ? Number(args[3]) : 7;
+            const csv = await security.runSystem(() =>
+                rabid.resetLinksCsvForPasswordlessVolunteers(baseUrl, expiryDays));
+            Deno.writeTextFileSync(outFile, csv + '\n');
+            console.info(`wrote ${csv.split('\n').length - 1} reset links to ${outFile}`);
+            Deno.exit(0);
             break;
         }
         default:
