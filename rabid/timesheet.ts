@@ -3,7 +3,9 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import * as security from "../liminal/security.ts";
+import * as templates from './templates.ts';
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -15,6 +17,10 @@ import * as date from '../liminal/date.ts';
 // --------------------------------------------------------------------------------
 // --- TimesheetEntry -------------------------------------------------------------
 // --------------------------------------------------------------------------------
+
+// A volunteer manages their own time; hosts/admins manage anyone's.
+const selfOrHost = security.or(security.isSelf,
+                               security.hasRole('host'), security.hasRole('admin'));
 
 export interface TimesheetEntry {
     timesheet_entry_id: number;
@@ -96,6 +102,19 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         ])
     };
 
+    // A timesheet entry belongs to its volunteer (drives isSelf).
+    ownerId(e: TimesheetEntry): number|undefined { return e.volunteer_id; }
+
+    defaultFieldEdit: security.Permission = selfOrHost;
+    override get recordEdit(): security.Permission { return selfOrHost; }
+
+    override formTitle(e: TimesheetEntry): string {
+        const v = security.runSystem(() =>
+            db().prepare<{name: string}, {id: number}>(
+                'SELECT name FROM volunteer WHERE volunteer_id = :id').first({id: e.volunteer_id}));
+        return `Edit time for ${v?.name ?? 'volunteer'}`;
+    }
+
     @path
     get allTimesheetEntries() {
         return db().prepare<TimesheetEntry, {}>(block`
@@ -165,13 +184,136 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             [h.td, {}, e.notes || ''],
         ];
     }
+
+    // ------------------------------------------------------------------------
+    // --- Standard editable-item list (the baseline; structured per-period
+    // --- views come later) ----------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // All entries with the volunteer and event names, most recent first.
+    @path
+    get allEntriesWithNames() {
+        return this.prepare<TimesheetEntry & {volunteer_name: string, event_description: string|null}, {}>(block`
+/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name,
+/**/          event.description AS event_description
+/**/          FROM timesheet_entry
+/**/          LEFT JOIN volunteer USING (volunteer_id)
+/**/          LEFT JOIN event ON timesheet_entry.event_id = event.event_id
+/**/          ORDER BY timesheet_entry.start_time DESC`);
+    }
+
+    @path
+    get entryWithNamesById() {
+        return this.prepare<TimesheetEntry & {volunteer_name: string, event_description: string|null},
+                            {timesheet_entry_id: number}>(block`
+/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name,
+/**/          event.description AS event_description
+/**/          FROM timesheet_entry
+/**/          LEFT JOIN volunteer USING (volunteer_id)
+/**/          LEFT JOIN event ON timesheet_entry.event_id = event.event_id
+/**/          WHERE timesheet_entry_id = :timesheet_entry_id`);
+    }
+
+    renderTimesheetList(entries: Array<TimesheetEntry & {volunteer_name: string, event_description: string|null}>): Markup {
+        if(entries.length === 0)
+            return [h.p, {class: 'text-muted'}, 'No timesheet entries yet.'];
+        return [h.div, {class: 'list-group lm-list'},
+                entries.map(e => this.renderTimesheetRow(e))];
+    }
+
+    renderTimesheetRow(e: TimesheetEntry & {volunteer_name: string, event_description: string|null}): Markup {
+        const id = e.timesheet_entry_id;
+        const hrs = e.end_time ? `${entryHours(e).toFixed(1)} hrs` : 'not checked out';
+        const secondary = [date.sqliteDateTimeToDateString(e.start_time), hrs,
+                           e.event_description ?? undefined].filter(Boolean).join(' · ');
+
+        if(this.canEditRecord(e)) {
+            const item = this.editableItemProps(id, `rabid.timesheet_entry.renderTimesheetRowById(${id})`);
+            return [h.div, {...item, 'data-testid': `timesheet-row-${id}`},
+                [h.div, {class: 'lm-item-body'},
+                 [h.div, {class: 'lm-item-primary'},
+                  templates.pageLink(`/rabid.timesheet_entry.detailPage(${id})`, e.volunteer_name)],
+                 [h.div, {class: 'lm-item-secondary'}, secondary]],
+                this.editPencil(id),
+            ];
+        }
+
+        return [h.a, {...navigableItemProps(`/rabid.timesheet_entry.detailPage(${id})`),
+                      'data-testid': `timesheet-row-${id}`},
+            [h.div, {class: 'lm-item-body'},
+             [h.div, {class: 'lm-item-primary'}, e.volunteer_name],
+             [h.div, {class: 'lm-item-secondary'}, secondary]],
+            navChevron(),
+        ];
+    }
+
+    // Reload target for a single list row (after an edit save).
+    renderTimesheetRowById(id: number): Markup {
+        const e = this.entryWithNamesById.first({timesheet_entry_id: id});
+        if(!e) throw new Error(`No timesheet entry ${id}`);
+        return this.renderTimesheetRow(e);
+    }
+
+    // The top-level Timesheets page body.  For now the full standard list;
+    // structured per-period views come later.
+    renderTimesheetsPage(): Markup {
+        return [h.div, {class: 'container py-3'},
+            [h.h2, {}, 'Timesheets'],
+            this.renderTimesheetList(this.allEntriesWithNames.all()),
+        ];
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Timesheet entry detail page -----------------------------------------
+    // ------------------------------------------------------------------------
+
+    detailPage(timesheet_entry_id: number): templates.Page {
+        const e = this.entryWithNamesById.first({timesheet_entry_id});
+        if(!e) throw new Error(`No timesheet entry ${timesheet_entry_id}`);
+        return templates.page(`${e.volunteer_name} — Timesheet entry`,
+                              this.renderTimesheetDetail(timesheet_entry_id));
+    }
+
+    // Reloadable fragment (an edit save re-renders it).
+    renderTimesheetDetail(timesheet_entry_id: number): Markup {
+        const e = this.entryWithNamesById.first({timesheet_entry_id});
+        if(!e) throw new Error(`No timesheet entry ${timesheet_entry_id}`);
+        const props = this.reloadableItemProps(timesheet_entry_id,
+            `rabid.timesheet_entry.renderTimesheetDetail(${timesheet_entry_id})`);
+        props.class = 'container py-3 ' + props.class;
+        const row = (label: string, value: Markup) =>
+            [[h.dt, {class: 'col-sm-3'}, label], [h.dd, {class: 'col-sm-9'}, value]];
+        const approx = (flag: boolnum) => flag ? ' (approximate)' : '';
+        return [h.div, props,
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0'}, `${e.volunteer_name} — time`],
+             this.canEditRecord(e) ? this.editPencil(timesheet_entry_id) : undefined],
+            [h.dl, {class: 'row mb-0'},
+             row('Volunteer', templates.pageLink(`/rabid.volunteer.detailPage(${e.volunteer_id})`, e.volunteer_name)),
+             row('Event', e.event_description || '—'),
+             row('Start', date.sqliteDateTimeToString(e.start_time, '—') + approx(e.start_time_is_approximate)),
+             row('End', e.end_time
+                 ? date.sqliteDateTimeToString(e.end_time) + approx(e.end_time_is_approximate)
+                   + (e.end_time_is_provisional ? ' (provisional)' : '')
+                 : 'not checked out'),
+             row('Hours', e.end_time ? entryHours(e).toFixed(1) : '—'),
+             row('Driving', e.km_driven_for_reimbursement
+                 ? `${e.km_driven_for_reimbursement} km${e.km_driven_processed ? ' (processed)' : ''}` : '—'),
+             row('Notes', e.notes || '—'),
+            ],
+        ];
+    }
 }
 export const timesheetEntryMetaData = new TimesheetEntryTable();
 
 // Duration of a timesheet entry in hours (0 if not yet ended).
 function entryHours(e: TimesheetEntry): number {
     if(!e.end_time) return 0;
-    return (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 3600000;
+    // Temporal, not new Date(): JS Date parsing of 'YYYY-MM-DD HH:MM:SS' is
+    // engine-specific luck (see liminal/date.ts).
+    return date.sqliteDateTimeToTemporal(e.end_time)
+        .since(date.sqliteDateTimeToTemporal(e.start_time))
+        .total({unit: 'hours'});
 }
 
 

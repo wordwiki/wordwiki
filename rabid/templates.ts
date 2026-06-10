@@ -158,11 +158,15 @@ export function navBar(showTestClientLink: boolean = false): any {
             ], //li
 
             [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Service'],
+             [h.a, {class:"nav-link", href:"/service"}, 'Service'],
             ], //li
 
             [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Sales'],
+             [h.a, {class:"nav-link", href:"/sales"}, 'Sales'],
+            ], //li
+
+            [h.li, {class:"nav-item"},
+             [h.a, {class:"nav-link", href:"/timesheets"}, 'Timesheets'],
             ], //li
 
             // Test client: only on a non-production db (the browser-test harness
