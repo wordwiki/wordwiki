@@ -9,7 +9,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertExists, assertThrows, assertRejects,
          assertNotEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { hasText, text, findAll, attr } from "../liminal/testing/markup-assert.ts";
+import { hasText, text, find, findAll, attr } from "../liminal/testing/markup-assert.ts";
 import { withTestDb, as, renderRoute, invoke,
          TestTimeline, mkEntry, mkChild, mkEdit, mkTombstone, type Fixture } from './testing.ts';
 import { WordWiki } from './wordwiki.ts';
@@ -431,5 +431,146 @@ test("login: correct password creates a session; wrong password does not", async
         // Logout revokes the session server-side.
         ww.logout(token);
         assertEquals(ww.resolveSecurityContext(token).actorId, undefined);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// --- Editor coverage gaps (workspace-audit.md follow-up) ----------------------
+// ---------------------------------------------------------------------------
+
+// A deeper entry: entry(2000) > subentry(2001) > example(2002) > example_text(2003)
+// - depth 5 in the assertion path, exercising the ty3/id3+ machinery through
+// the editor (the shallow seedEntry only reaches depth 3).
+function seedDeepEntry(ww: WordWiki) {
+    const tl = new TestTimeline();
+    const entry = mkEntry(2000, tl.next());
+    const spelling = mkChild(entry, 'spl', 2005, tl.next(), {attr1: 'deepword', variant: 'mm-li'});
+    const sub = mkChild(entry, 'sub', 2001, tl.next(), {attr1: 'v'});
+    const exa = mkChild(sub, 'exa', 2002, tl.next());
+    const etx = mkChild(exa, 'etx', 2003, tl.next(), {attr1: 'Example one', variant: 'mm-li', order_key: '0.5'});
+    for(const a of [entry, spelling, sub, exa, etx])
+        ww.applyTransaction([a]);
+}
+
+function deepExampleTexts(ww: WordWiki): string[] {
+    const e = JSON.parse(JSON.stringify(ww.entries)).find((e: any) => e.entry_id === 2000);
+    return e.subentry[0].example[0].example_text.map((t: any) => t.example_text);
+}
+
+test("editor deep: full insert/edit/move/delete/restore cycle at path depth 5", async () => {
+    await withTestDb(async (fx) => {
+        seedDeepEntry(fx.ww);
+        const djz = <T,>(fn: () => T) => as(fx, 'djz', fn);
+
+        // Insert a second example text under the example (parent fact 2002).
+        const rIns = await djz(() => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
+            entry_id: '2000', parent_fact_id: '2002', child_tag: 'etx',
+            'before-example_text': '', example_text: 'Example two',
+            'before-variant': '', variant: '',
+        }));
+        // Structural change scopes to the containing relation fragment.
+        assertEquals(rIns, {action: 'reload', targets: ['.-rel-2002-etx-']});
+        assertEquals(deepExampleTexts(fx.ww), ['Example one', 'Example two']);
+        const twoId = JSON.parse(JSON.stringify(fx.ww.entries))
+            .find((e: any) => e.entry_id === 2000)
+            .subentry[0].example[0].example_text[1].example_text_id;
+
+        // Field edit scopes to the tuple itself.
+        const rEdit = await djz(() => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
+            entry_id: '2000', fact_id: '2003', replaces_assertion_id: '2003',
+            'before-example_text': 'Example one', example_text: 'Example ONE',
+            'before-variant': 'mm-li', variant: 'mm-li',
+        }));
+        assertEquals(rEdit, {action: 'reload', targets: ['.-fact-2003-']});
+
+        // Move the new one up.
+        const rMove = await djz(() => invoke(fx.ww, `wordwiki.lexeme.move(2000, ${twoId}, 'up')`));
+        assertEquals(rMove.targets, ['.-rel-2002-etx-']);
+        assertEquals(deepExampleTexts(fx.ww), ['Example two', 'Example ONE']);
+
+        // Delete it, see it in the deleted dialog, restore it.
+        await djz(() => invoke(fx.ww, `wordwiki.lexeme.deleteTuple(2000, ${twoId})`));
+        assertEquals(deepExampleTexts(fx.ww), ['Example ONE']);
+        const deletedDialog = await djz(() => renderRoute(fx.ww, `wordwiki.lexeme.deletedDialog(2000, 2002, 'etx')`));
+        assert(hasText(deletedDialog, 'Example two'));
+        const lastReal = dbVersions(twoId).filter(v => v.valid_from !== v.valid_to).at(-1)!;
+        const rRestore = await djz(() => invoke(fx.ww, `wordwiki.lexeme.restoreVersion(2000, ${twoId}, ${lastReal.assertion_id})`));
+        assertEquals(rRestore.targets, ['.-rel-2002-etx-']);
+        assertEquals(deepExampleTexts(fx.ww).toSorted(), ['Example ONE', 'Example two']);
+
+        // The whole story reloads from the db identically.
+        const before = JSON.parse(JSON.stringify(fx.ww.entries));
+        fx.ww.requestWorkspaceReload();
+        assertEquals(JSON.parse(JSON.stringify(fx.ww.entries)), before);
+    });
+});
+
+test("editor: acting on a tuple someone else DELETED alerts instead of applying", async () => {
+    await withTestDb(async (fx) => {
+        seedEntry(fx.ww);
+        // User A has the edit dialog open on spelling 1001...
+        const staleReplaces = currentOf(fx.ww, 1001).assertion_id;
+        // ...user B deletes it.
+        await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.deleteTuple(1000, 1001)'));
+
+        // A's save must refuse - even with the (now tombstoned) chain intact.
+        const r = await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
+            entry_id: '1000', fact_id: '1001', replaces_assertion_id: String(staleReplaces),
+            'before-text': 'cat', text: 'ghost-write', 'before-variant': 'mm-li', variant: 'mm-li',
+        }));
+        assertEquals(r.action, 'alert');
+        // And nothing was written: the tombstone is still the latest version.
+        const versions = dbVersions(1001);
+        assert(versions.at(-1)!.valid_from === versions.at(-1)!.valid_to, 'tombstone still last');
+    });
+});
+
+test("editor: self and parent fragment routes render with their reload wiring", async () => {
+    await withTestDb(async (fx) => {
+        seedEntry(fx.ww);
+        const tupleFrag = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.renderTupleFragment(1000, 1003)'));
+        const tupleRoot = find(tupleFrag, n => String(attr(n, 'class') ?? '').includes('-fact-1003-'))!;
+        assertExists(tupleRoot, 'tuple fragment carries its reload tag');
+        assertEquals(attr(tupleRoot, 'hx-trigger'), 'reload');
+        assertStringIncludes(attr(tupleRoot, 'hx-get'), 'renderTupleFragment(1000, 1003)');
+        assert(hasText(tupleFrag, 'a cat'));
+
+        const relFrag = await as(fx, 'djz', () => renderRoute(fx.ww, `wordwiki.lexeme.renderRelationFragment(1000, 1000, 'spl')`));
+        const relRoot = find(relFrag, n => String(attr(n, 'class') ?? '').includes('-rel-1000-spl-'))!;
+        assertExists(relRoot, 'relation fragment carries its reload tag');
+        assertEquals(attr(relRoot, 'hx-trigger'), 'reload');
+        assert(hasText(relFrag, 'cat'));
+    });
+});
+
+test("editor: a freshly created (empty) entry renders and is editable", async () => {
+    await withTestDb(async (fx) => {
+        // The newLexemeAction shape: a bare entry with one empty subentry.
+        const tl = new TestTimeline();
+        const entry = mkEntry(3000, tl.next());
+        const sub = mkChild(entry, 'sub', 3001, tl.next());
+        fx.ww.applyTransactions([entry, sub]);
+
+        const markup = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.renderEntry(3000)'));
+        assert(hasText(markup, 'No spellings'), 'placeholder heading');
+        assert(hasText(markup, 'Spelling'), 'relation headers render for empty relations');
+
+        // And the first real edit works: add a spelling.
+        await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
+            entry_id: '3000', parent_fact_id: '3000', child_tag: 'spl',
+            'before-text': '', text: 'firstword', 'before-variant': '', variant: 'mm-li',
+        }));
+        const after = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.renderEntry(3000)'));
+        assert(hasText(after, 'firstword'));
+    });
+});
+
+test("editor: the history dialog offers the way back to the edit dialog", async () => {
+    await withTestDb(async (fx) => {
+        seedEntry(fx.ww);
+        const dialog = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.historyDialog(1000, 1001)'));
+        const back = find(dialog, n => n[0] === 'button' && text(n).includes('Back to edit'))!;
+        assertExists(back, 'history dialog has a Back to edit button');
+        assertStringIncludes(attr(back, 'hx-get'), 'editDialog(1000, 1001)');
     });
 });

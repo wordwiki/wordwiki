@@ -462,3 +462,124 @@ test("variants: per-dialect facts live side by side on one relation", () => {
     assertEquals(e.spelling.map((s: any) => [s.text, s.variant]),
                  [["agase'wa'latl", 'mm-li'], ["akase'wa'latl", 'mm-sf']]);
 });
+
+// ---------------------------------------------------------------------------
+// --- Audit pins (workspace-audit.md) -----------------------------------------
+// ---------------------------------------------------------------------------
+//
+// These tests PIN behaviours called out by the audit - including current bugs
+// and unenforced invariants - so the planned cleanup changes them consciously
+// (the test updates in the same commit as the fix) rather than silently.
+
+test("AUDIT 2.2 pin: getVersionedTupleByPath is get-OR-CREATE (reads materialise ghosts)", () => {
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    apply(ws, mkEntry(100, tl.next()));
+    const entryTuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(100);
+    assertEquals(entryTuple.childRelations['sub'].tuples.size, 0);
+
+    // A pure LOOKUP of a nonexistent path plants a permanent empty node.
+    // After the planned get/getOrCreate split, this should THROW instead.
+    const ghost = ws.getVersionedTupleByPath([['dct', 0], ['ent', 100], ['sub', 999]]);
+    assertEquals(ghost.tupleVersions.length, 0);
+    assertEquals(entryTuple.childRelations['sub'].tuples.size, 1);
+
+    // Ghosts are invisible to the current view...
+    assertEquals(currentEntryJSON(ws, 100).subentry.length, 0);
+    // ...but findVersionedTupleById DOES see them (the downstream hazard).
+    assertExists(entryTuple.findVersionedTupleById(999));
+});
+
+test("AUDIT 2.1 pin: duplicate fact ids across relations are accepted, then poison lookup", () => {
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    const entry = mkEntry(100, tl.next());
+    apply(ws, entry);
+    // Same fact id under two different relations: nothing rejects this today.
+    apply(ws, mkChild(entry, 'spl', 555, tl.next(), {attr1: 'cat'}));
+    apply(ws, mkChild(entry, 'sub', 555, tl.next()));
+
+    // ...and the entry is now broken for id-based addressing (the editor's
+    // (entry_id, fact_id) scheme).  After the planned uniqueness enforcement,
+    // the SECOND apply above should throw and this lookup stay unambiguous.
+    const entryTuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(100);
+    assertThrows(() => entryTuple.findVersionedTupleById(555), Error, 'multiple tuples');
+});
+
+test("AUDIT 1.2 pin: toJSON caches without keying on includeHistory", () => {
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    const entry = mkEntry(100, tl.next());
+    const spelling = mkChild(entry, 'spl', 101, tl.next(), {attr1: 'cat'});
+    apply(ws, entry, spelling);
+    apply(ws, mkEdit(spelling, 102, tl.next(), {attr1: 'caat'}));
+
+    const tuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(101);
+    const q = new CurrentTupleQuery(tuple);
+    const withoutHistory = q.toJSON(false);
+    assertEquals(withoutHistory.history, undefined);
+    // BUG (audit 1.2): the first call's flag is baked into the cache - this
+    // SHOULD have a history array.  Flip this assertion when fixing.
+    assertEquals(q.toJSON(true).history, undefined);
+    // A fresh query honours the flag.
+    assertEquals(new CurrentTupleQuery(tuple).toJSON(true).history.length, 2);
+});
+
+test("lookup: missing ids are distinguishable from present ones", () => {
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    apply(ws, mkEntry(100, tl.next()));
+    const entryTuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(100);
+    assertEquals(entryTuple.findVersionedTupleById(9999), undefined);
+    assertThrows(() => entryTuple.findRequiredVersionedTupleById(9999), Error,
+                 'failed to find required versioned tuple');
+});
+
+test("query: order-key TIES at the relation level sort stably by fact id", () => {
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    const entry = mkEntry(100, tl.next());
+    // Deliberately inserted in reverse-id order, all with the same key.
+    apply(ws, entry,
+          mkChild(entry, 'spl', 103, tl.next(), {attr1: 'c', order_key: '0.5'}),
+          mkChild(entry, 'spl', 101, tl.next(), {attr1: 'a', order_key: '0.5'}),
+          mkChild(entry, 'spl', 102, tl.next(), {attr1: 'b', order_key: '0.5'}));
+    assertEquals(currentEntryJSON(ws, 100).spelling.map((s: any) => s.text), ['a', 'b', 'c']);
+});
+
+test("deep tree: findNonDeletedChildTuples sees GRANDdescendants", () => {
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    const entry = mkEntry(100, tl.next());
+    const sub = mkChild(entry, 'sub', 101, tl.next());
+    const exa = mkChild(sub, 'exa', 102, tl.next());
+    const etx = mkChild(exa, 'etx', 103, tl.next(), {attr1: 'deep text'});
+    apply(ws, entry, sub, exa, etx);
+
+    const subTuple = ws.getTableByTag('dct').findRequiredVersionedTupleById(101);
+    // Both the child (exa) and the grandchild (etx) count as live descendants.
+    assertEquals(subTuple.findNonDeletedChildTuples().length, 2);
+
+    // Deleting the LEAF leaves the child still counted...
+    apply(ws, mkTombstone(etx, 104, tl.next()));
+    assertEquals(subTuple.findNonDeletedChildTuples().length, 1);
+    // ...and the deep value is out of the current JSON.
+    assertEquals(currentEntryJSON(ws, 100).subentry[0].example[0].example_text.length, 0);
+});
+
+test("ownership: the workspace returns the SAME prev-assertion object it stamped", () => {
+    // AUDIT 2.4: closing the predecessor mutates the caller-visible object;
+    // applyTransaction depends on receiving that same instance to persist its
+    // valid_to.  Pin the aliasing so a clone-on-ingest change is conscious.
+    const ws = newWorkspace();
+    const tl = new TestTimeline();
+    const entry = mkEntry(100, tl.next());
+    const spelling = mkChild(entry, 'spl', 101, tl.next(), {attr1: 'cat'});
+    ws.applyProposedAssertion(entry);
+    ws.applyProposedAssertion(spelling);   // NOT cloned: we check aliasing
+
+    const editTime = tl.next();
+    const updatedPrev = ws.applyProposedAssertion(mkEdit(spelling, 102, editTime));
+    assert(updatedPrev === spelling, 'stamped predecessor is the ingested object itself');
+    assertEquals(spelling.valid_to, editTime);
+});
