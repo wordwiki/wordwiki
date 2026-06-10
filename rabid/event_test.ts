@@ -3,7 +3,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
-import { find, byClass, tagOf, attr, hasText } from "../liminal/testing/markup-assert.ts";
+import { find, byClass, hasClass, tagOf, attr, hasText } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 
 function insertEvent(): number {
@@ -66,5 +66,19 @@ test("the event detail page shows the summary; the pencil only for hosts", async
 
         const aliceDetail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
         assert(!!find(aliceDetail, byClass("lm-edit-pencil")));
+    });
+});
+
+test("the summary-card title links to the detail page - except ON the detail page (no self-link)", async () => {
+    await withTestDb(async ({ bob }) => {
+        const id = insertEvent();
+        // standalone card (home upcoming-events): title is a working detail link
+        const card = await asUser(bob, () => renderRoute(`rabid.event.renderEventSummary(${id})`));
+        const link = find(card, n => tagOf(n) === "a" && hasClass(n, "card-title"));
+        assert(link, "card title is a link");
+        assertEquals(attr(link!, "href"), `/rabid.event.detailPage(${id})`);
+        // on the detail page: plain text, no anchor
+        const detail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assert(!find(detail, n => tagOf(n) === "a" && hasClass(n, "card-title")));
     });
 });

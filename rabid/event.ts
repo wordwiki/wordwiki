@@ -204,7 +204,7 @@ export class EventTable extends Table<Event> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
              this.canEditRecord(e) ? this.editPencil(event_id) : undefined],
-            this.renderEventSummary(event_id),
+            this.renderEventSummary(event_id, {titleLink: false}),
         ];
     }
 
@@ -283,8 +283,12 @@ export class EventTable extends Table<Event> {
     //      things like driver needed).
     // TODO generalize badges so don't need a CSS per badge.
     // TODO 
-    renderEventSummary(event_id: number): Markup {
-        
+    // The summary card.  titleLink: the title links to the event's detail page
+    // (the home upcoming-events cards) - the detail page itself passes false,
+    // since there it would be a pointless self-link.
+    renderEventSummary(event_id: number, opts: {titleLink?: boolean} = {}): Markup {
+        const titleLink = opts.titleLink ?? true;
+
         // Get the event
         const event = db().prepare<Event, {event_id: number}>(block`
             SELECT ${this.allFields}
@@ -317,11 +321,13 @@ export class EventTable extends Table<Event> {
         // Build the event summary markup
         const headerElements: Markup[] = [];
         
-        // Event name as link to detail page
+        // Event name, linking to the detail page (unless we ARE the detail page).
+        const title = [h.strong, {}, event.description || 'Untitled Event'];
         headerElements.push(
-            [h.a, {href: `/event.renderEventDetail(${event_id})`, class: 'card-title'}, 
-                [h.strong, {}, event.description || 'Untitled Event']
-            ]
+            titleLink
+                ? [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${event_id})`),
+                         class: 'card-title'}, title]
+                : [h.span, {class: 'card-title'}, title]
         );
         
         // Event kind badge

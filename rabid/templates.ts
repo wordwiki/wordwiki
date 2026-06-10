@@ -43,7 +43,12 @@ export function isPage(v: any): v is Page {
 // the htmx attributes here keeps that complexity out of call sites, and in one
 // place to adjust across htmx versions.
 export function pageLink(href: string, ...content: any[]): any {
-    return [h.a, {href, 'hx-boost': 'true', 'hx-target': '#content', 'hx-swap': 'innerHTML show:window:top'}, ...content];
+    return [h.a, {...pageLinkProps(href)}, ...content];
+}
+
+// The attrs alone, for call sites that need to add their own (e.g. a class).
+export function pageLinkProps(href: string): Record<string, string> {
+    return {href, 'hx-boost': 'true', 'hx-target': '#content', 'hx-swap': 'innerHTML show:window:top'};
 }
 
 export function pageTemplate(content: PageContent): any {
