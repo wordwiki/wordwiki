@@ -122,15 +122,17 @@ returns the predecessor needing its `valid_to` stamped, then everything
 persists via `applyTransactions`. The `RemoteDb` continuous-sync layer and
 `applyServerAssertion` are mostly aspirational scaffolding.
 
-## Known rough edges (as of 2026-06-10)
+## Known rough edges (updated after the 2026-06-10 workspace cleanup —
+## see workspace-audit.md for the full audit and what was fixed)
 
-- The `current_..._by_id_ty*` partial indexes use `WHERE valid_to = NULL`,
-  which in SQLite never matches (and the live convention is `END_OF_TIME`,
-  not NULL anyway) — they're vestigial.
 - New fact ids come from `Math.floor(Math.random() * MAX_SAFE_INTEGER)` (the
-  comments acknowledge the distributed-id question is open).
+  comments acknowledge the distributed-id question is open) — but id
+  uniqueness per table is now ENFORCED at fact creation, and the per-table id
+  index makes lookups O(1).
+- The `current_..._by_id_ty*` partial indexes are fixed in the DML
+  (`WHERE valid_to = END_OF_TIME`), but an existing db keeps its old empty
+  `valid_to = NULL` indexes until they are dropped by hand.
 - `'dict'` table name is hardcoded at the apply/persist sites despite the
   design intent of multiple attached dictionary tables.
-- `getVersionedTupleById` is a linear scan;
-  `addNewDocumentReference`/`addNewLexeme` are self-described hacks that build
-  throwaway workspaces.
+- The workspace's global-time gate (one total order of edits) is the seam the
+  future offline-fork/merge work must relax.
