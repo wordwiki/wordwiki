@@ -166,6 +166,36 @@ export class Table<T extends Tuple> {
     editButton(id: number, label: string = 'Edit'): Markup {
         return ['button', editButtonProps(`${this}.renderForm(${this}.getById(${id}))`), label];
     }
+
+    // The icon-only variant of editButton: a ghosted pencil, the standard
+    // affordance marker for an editable surface (see editableItemProps).  Still
+    // a real <button> (keyboard/screen-reader users get the same path), just
+    // quieter than a text button - so it can sit on every editable item without
+    // turning the page into a wall of buttons.
+    editPencil(id: number): Markup {
+        return ['button', {...editButtonProps(`${this}.renderForm(${this}.getById(${id}))`),
+                           class: 'edit lm-edit-pencil', type: 'button',
+                           'aria-label': 'Edit'},
+                pencilIcon()];
+    }
+
+    // Props for a record rendered as a whole-surface-tappable list item: the
+    // standard "editable surface" presentation.  Combines:
+    //   - reloadableItemProps (an edit save re-renders just this item);
+    //   - Bootstrap list-group classes (hover tint on desktop) + .lm-editable
+    //     (cursor, pressed tint on touch - styles in resources/liminal.css);
+    //   - a click handler that delegates anywhere-on-the-surface clicks to the
+    //     item's contained edit/pencil button (lmEditableClick in
+    //     resources/liminal-scripts.js declines clicks on inner links/buttons,
+    //     text-selection drags, and nested editable surfaces).
+    // The item should contain an editPencil(id) - it is both the visible cue
+    // that the surface is editable and the delegation target.
+    editableItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
+        const props = this.reloadableItemProps(id, reloadURL, extraProps);
+        props.class = 'list-group-item list-group-item-action lm-item lm-editable ' + props.class;
+        props.onclick = 'lmEditableClick(event)';
+        return props;
+    }
     
     // // ---------------------------------------------------------------------------
     // // --- Table Rendering -------------------------------------------------------
@@ -1087,4 +1117,12 @@ export function editButtonProps(editFormURL: string): Record<string, string> {
         'hx-swap': 'innerHTML',
         'hx-on::after-request': "showModalEditor()"
     };
+}
+
+// The pencil glyph used by editPencil (Bootstrap Icons "pencil", MIT).  Inlined
+// as markup (rather than an icon font/css dependency) so it renders anywhere
+// our markup does, sized by .lm-edit-pencil svg in liminal.css.
+export function pencilIcon(): Markup {
+    return ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true'},
+            ['path', {d: 'M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325'}]];
 }

@@ -62,6 +62,8 @@ export function pageTemplate(content: PageContent): any {
           [h.link, {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           [h.link, {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
           [h.link, {href: '/resources/context-menu.css', rel:'stylesheet', type:'text/css'}],
+          // Framework styles before app styles, so rabid.css can override.
+          [h.link, {href: '/resources/liminal.css', rel:'stylesheet', type:'text/css'}],
           [h.link, {href: '/resources/rabid.css', rel:'stylesheet', type:'text/css'}],
           // Tom Select: a vanilla-JS filterable <select> picker with a Bootstrap 5
           // theme.  Initialised on .ts-picker selects by rabid-scripts.js (after
@@ -113,6 +115,8 @@ export function pageTemplate(content: PageContent): any {
 
           config.bootstrapScriptTag,
 
+          // Framework scripts before app scripts (same ordering rule as the css).
+          [h.script, {src: '/resources/liminal-scripts.js'}],
           [h.script, {src: '/resources/rabid-scripts.js'}],
           
          ] // body

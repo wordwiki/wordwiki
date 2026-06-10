@@ -56,11 +56,18 @@ test("emergency contact is host/self only", async () => {
 test("admin sees everything; the list redacts per-row for a regular viewer", async () => {
     await withTestDb(async ({ bob, carol, dave }) => {
         const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`));
-        assertStringIncludes(text(getByTestId(adminList, `volunteer-${carol}-phone`)), "(555) 333-3333");
+        assertStringIncludes(text(getByTestId(adminList, `volunteer-${carol}-email`)), "carol@test.example");
 
         const regularList = await asUser(bob, () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`));
-        assertEquals(text(getByTestId(regularList, `volunteer-${carol}-phone`)).trim(), "***"); // private
-        assertStringIncludes(text(getByTestId(regularList, `volunteer-${bob}-phone`)), "(555) 222-2222"); // shared
+        assertEquals(text(getByTestId(regularList, `volunteer-${carol}-email`)).trim(), "***"); // opted out
+        assertStringIncludes(text(getByTestId(regularList, `volunteer-${bob}-email`)), "bob@test.example"); // default-shared
+    });
+});
+
+test("the list view never shows phone numbers, even to an admin (detail-page-only)", async () => {
+    await withTestDb(async ({ dave }) => {
+        const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`));
+        assert(!text(adminList).includes("(555)")); // fixture phones are all (555) ...
     });
 });
 

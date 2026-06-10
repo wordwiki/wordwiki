@@ -157,7 +157,8 @@ export class VolunteerTable extends Table<Volunteer> {
     @path
     get tableRenderer(): TableRenderer<Volunteer> {
         const fields = this.fieldsByName;
-        return new TableRenderer(this, [fields.name, fields.email, fields.phone]);
+        // Phone is detail-page-only by policy (see renderVolunteerList).
+        return new TableRenderer(this, [fields.name, fields.email]);
     }
 
     @path
@@ -209,9 +210,13 @@ export class VolunteerTable extends Table<Volunteer> {
         ];
     }
 
-    // Hand-coded volunteer list.  The generic TableRenderer is only a quick
-    // default; a real view composes the pieces directly so we control the columns
-    // and the name-links-to-detail behaviour.
+    // Hand-coded volunteer list, in the standard "editable item list" markup
+    // (mobile-first: a stacked list-group, not a column table).  Each item is a
+    // whole-surface-tappable editable surface (see Table.editableItemProps);
+    // the name links to the detail page; the pencil is the visible edit cue
+    // and the accessible backstop.  Phone is deliberately NOT shown here - it
+    // is on the detail page (keeps the list compact, and keeps the mostly-'***'
+    // redacted column out of everyone's face).
     renderVolunteerList(q: string, scope: string): Markup {
         const rows = this.searchByPrefix.all({q, scope});
         const scopeLabel = scope === 'all' ? 'all' : 'active';
@@ -219,28 +224,28 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.p, {class: 'text-muted small mb-2'},
              q ? `${rows.length} ${scopeLabel} volunteer(s) matching “${q}”`
                : `${rows.length} ${scopeLabel} volunteer(s)`],
-            [h.table, {class: 'table'},
-             [h.tbody, {},
-              [h.tr, {}, [h.th, {}, 'Name'], [h.th, {}, 'Email'], [h.th, {}, 'Phone'], [h.th, {}]],
-              rows.map(v => this.renderVolunteerRow(v)),
-             ],
+            [h.div, {class: 'list-group'},
+             rows.map(v => this.renderVolunteerRow(v)),
             ],
         ];
     }
 
-    // One list row.  The name links to the volunteer's detail page; email/phone
-    // reuse the field render() helpers (mailto / tel); edit reuses the table's
-    // edit button.  reloadableItemProps tags the row so an edit save (which
-    // reloads `.-volunteer-<id>-`) re-renders just this row.
+    // One list item.  editableItemProps makes the whole surface open the edit
+    // dialog (delegating to the contained pencil) and tags it so an edit save
+    // (which reloads `.-volunteer-<id>-`) re-renders just this item.  The email
+    // reuses the field render() helper (mailto, redaction).
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
-        const row = this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
-        return [h.tr, {...row, 'data-testid': `volunteer-row-${id}`},
-            [h.td, {}, templates.pageLink(`/rabid.volunteer.detailPage(${id})`, v.name)],
-            [h.td, {'data-testid': `volunteer-${id}-email`}, renderFieldValue(f.email, v.email)],
-            [h.td, {'data-testid': `volunteer-${id}-phone`}, renderFieldValue(f.phone, v.phone)],
-            [h.td, {}, this.editButton(id)],
+        const item = this.editableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
+            [h.div, {class: 'lm-item-body'},
+             [h.div, {class: 'lm-item-primary'},
+              templates.pageLink(`/rabid.volunteer.detailPage(${id})`, v.name),
+              v.inactive ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Inactive'] : undefined],
+             [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
+              renderFieldValue(f.email, v.email)]],
+            this.editPencil(id),
         ];
     }
 
@@ -304,7 +309,7 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, v.name],
              v.inactive ? [h.span, {class: 'badge text-bg-secondary'}, 'Inactive'] : undefined,
-             this.editButton(volunteer_id)],
+             this.editPencil(volunteer_id)],
 
             [h.dl, {class: 'row mb-0'},
              [h.dt, {class: 'col-sm-3'}, 'Email'],
