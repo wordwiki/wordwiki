@@ -224,7 +224,7 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.p, {class: 'text-muted small mb-2'},
              q ? `${rows.length} ${scopeLabel} volunteer(s) matching “${q}”`
                : `${rows.length} ${scopeLabel} volunteer(s)`],
-            [h.div, {class: 'list-group'},
+            [h.div, {class: 'list-group lm-list'},
              rows.map(v => this.renderVolunteerRow(v)),
             ],
         ];

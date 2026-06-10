@@ -63,6 +63,13 @@
    horizontal scroll.
 --------------------------------------------------------------------------- */
 
+/* The list container.  Capped: a tap-target row stretched across a wide
+   desktop window reads poorly (the pencil ends up a long mouse-travel away
+   from the text), so hold the list to a comfortable reading width. */
+.lm-list {
+    max-width: 42rem;
+}
+
 .lm-item {
     display: flex;
     align-items: center;
