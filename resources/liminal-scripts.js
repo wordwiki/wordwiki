@@ -30,3 +30,63 @@ function lmEditableClick(event) {
     if (button && button.closest('.lm-editable') === item)
         button.click();
 }
+
+/* ---------------------------------------------------------------------------
+   Modal editor (the shared dialog that hosts edit forms / parameter dialogs;
+   skeleton rendered by the app's page template, content loaded into
+   #modalEditorBody by editButtonProps / actionButton hx-gets).
+--------------------------------------------------------------------------- */
+
+/**
+ * Expects to run in an environment where the bootstrap JS code
+ * has been loaded as a script.  This function packages accessing the bootstrap
+ * global inst via the browser window object.
+ */
+function getGlobalBoostrapInst() {
+    const bootstrap = window?.bootstrap;
+    if(!bootstrap)
+        throw new Error("can't find global bootstrap inst");
+    return bootstrap;
+}
+
+function getModalEditor() {
+    return getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor');
+}
+
+function showModalEditor() {
+    // A dialog names itself inline (.lm-dialog-title, rendered by liminal's
+    // renderParamForm).  Lift that into the modal's fixed header, where it
+    // stays visible while the form scrolls - and where it replaces whatever
+    // the previous dialog left behind.
+    const inlineTitle = getModalBodyElem().querySelector('.lm-dialog-title');
+    getModalTitleElem().innerText = inlineTitle ? inlineTitle.textContent.trim() : '';
+    if (inlineTitle)
+        inlineTitle.remove();
+    getModalEditor().show();
+}
+
+function hideModalEditor() {
+    getModalEditor().hide();
+    getModalTitleElem().innerText = '';
+    getModalBodyElem().innerHTML = '';
+}
+
+function getModalTitleElem() {
+    const modalTitleElem = document.querySelector(`#modalEditorLabel`);
+    if(!modalTitleElem)
+        throw new Error('unable to find modal editor label for dialog');
+    return modalTitleElem;
+}
+
+function getModalBodyElem() {
+    const modalBodyElem = document.querySelector(`#modalEditorBody`);
+    if(!modalBodyElem)
+        throw new Error('unable to find modal editor body for dialog');
+    return modalBodyElem;
+}
+
+function popupModalEditor(modalTitleText, modalBodyHtmlText) {
+    getModalTitleElem().innerText = modalTitleText;
+    getModalBodyElem().innerHTML = modalBodyHtmlText;
+    showModalEditor();
+}

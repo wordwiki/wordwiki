@@ -111,8 +111,12 @@ export function renderParamForm(params: Field[], defaults: Tuple, opts: ParamFor
     return [
         h.form, Object.assign({class: 'row g-3'}, opts.dispatch),
 
+        // lm-dialog-title: when this form is shown in the shared modal editor,
+        // showModalEditor() lifts this element's text into the modal's fixed
+        // header (and removes it from the body).  Rendered standalone (outside
+        // the modal) it simply stays here as the form's heading.
         opts.title !== undefined
-            ? [h.h2, {class: 'h5 col-12'}, opts.title]
+            ? [h.h2, {class: 'lm-dialog-title h5 col-12'}, opts.title]
             : undefined,
 
         // Hidden (non-user-editable) parameters supplied by the dialog generator.

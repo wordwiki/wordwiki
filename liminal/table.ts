@@ -179,6 +179,15 @@ export class Table<T extends Tuple> {
                 pencilIcon()];
     }
 
+    // Title for a record's edit dialog (lifted into the modal's fixed header by
+    // showModalEditor, native-edit-sheet style: say WHAT is being edited).
+    // Default: the record's 'name' column when the table has a non-empty one,
+    // else the table name.  Override per table for better titles.
+    formTitle(record: T): string {
+        const name = (record as Record<string, unknown>)['name'];
+        return `Edit ${typeof name === 'string' && name ? name : this.name}`;
+    }
+
     // Props for a record rendered as a whole-surface-tappable list item: the
     // standard "editable surface" presentation.  Combines:
     //   - reloadableItemProps (an edit save re-renders just this item);
@@ -278,6 +287,7 @@ export class Table<T extends Tuple> {
         try { ownerPath = serializeAny(this); } catch(_e) { ownerPath = undefined; }
 
         return action.renderParamForm(editableFields, record, {
+            title: this.formTitle(record),
             submitLabel: 'Save',
             hidden,
             fieldContext: { ownerPath },

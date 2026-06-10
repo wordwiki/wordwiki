@@ -1,48 +1,7 @@
-/**
- * Expects to run in an environment where the bootstrap JS code
- * has been loaded as a script.  This function packages accessing the bootstrap
- * global inst via the browser window object.
- */
-function getGlobalBoostrapInst() {
-    const bootstrap = window?.bootstrap;
-    if(!bootstrap)
-        throw new Error("can't find global bootstrap inst");
-    return bootstrap;
-}
-
-function getModalEditor() {
-    return getGlobalBoostrapInst().Modal.getOrCreateInstance('#modalEditor');
-}
-
-function showModalEditor() {
-    getModalEditor().show();
-}
-
-function hideModalEditor() {
-    getModalEditor().hide();
-    getModalTitleElem().innerText = '';
-    getModalBodyElem().innerHtml = '';
-}
-
-function getModalTitleElem() {
-    const modalTitleElem = document.querySelector(`#modalEditorLabel`);
-    if(!modalTitleElem)
-        throw new Error('unable to find modal editor label for dialog');
-    return modalTitleElem;
-}
-
-function getModalBodyElem() {
-    const modalBodyElem = document.querySelector(`#modalEditorBody`);
-    if(!modalBodyElem)
-        throw new Error('unable to find modal editor body for dialog');
-    return modalBodyElem;
-}
-
-function popupModalEditor(modalTitleText, modalBodyHtmlText) {
-    getModalTitleElem().innerText = modalTitleText;
-    getModalBodyElem().innerHtml = modalBodyHtmlText;
-    showModalEditor();
-} 
+// (The modal-editor helpers - getGlobalBoostrapInst, show/hideModalEditor,
+// getModalTitleElem/getModalBodyElem, popupModalEditor - moved to
+// liminal-scripts.js: they pair with liminal's renderParamForm/editButtonProps,
+// not with anything rabid-specific.)
 
 function reload(elementSelectorArray, eventName='reload', detail={}) {
     console.info('reloadElementsBySelector', elementSelectorArray);
