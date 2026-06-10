@@ -5,7 +5,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asAnon } from "./testing.ts";
-import { getByTestId, text, hasText } from "../liminal/testing/markup-assert.ts";
+import { getByTestId, text, hasText, find, byClass, tagOf, attr } from "../liminal/testing/markup-assert.ts";
 
 const detail = (id: number) => renderRoute(`rabid.volunteer.detailPage(${id})`);
 const phoneText = (markup: any) => text(getByTestId(markup, "detail-phone")).trim();
@@ -71,6 +71,65 @@ test("the list view never shows phone numbers, even to an admin (detail-page-onl
     });
 });
 
+// --- Row-level edit security (recordEdit): which row species does each viewer
+// --- get, and are renderForm/saveForm gated server-side to match?
+
+const listFor = () => renderRoute(`rabid.volunteer.renderVolunteerList("", "all")`);
+const rowIn = (list: any, id: number) => getByTestId(list, `volunteer-row-${id}`);
+const hasPencil = (list: any, id: number) => !!find(rowIn(list, id), byClass("lm-edit-pencil"));
+
+test("the pencil (and tap-to-edit) renders only on rows the viewer may edit", async () => {
+    await withTestDb(async ({ alice, bob, carol, dave }) => {
+        const bobList = await asUser(bob, listFor);
+        assert(hasPencil(bobList, bob));     // own row: editable surface
+        assert(!hasPencil(bobList, carol));  // someone else's: not for a regular volunteer
+
+        const aliceList = await asUser(alice, listFor);
+        assert(hasPencil(aliceList, carol)); // host: edits anyone
+
+        const daveList = await asUser(dave, listFor);
+        assert(hasPencil(daveList, carol));  // admin: edits anyone
+    });
+});
+
+test("a non-editable row is a navigable item: an <a> to the detail page, with a chevron", async () => {
+    await withTestDb(async ({ bob, carol }) => {
+        const row = rowIn(await asUser(bob, listFor), carol);
+        assertEquals(tagOf(row), "a");
+        assertStringIncludes(String(attr(row, "href")), `detailPage(${carol})`);
+        assert(!!find(row, byClass("lm-nav-chevron")));
+        // and the editable species is not an anchor
+        const own = rowIn(await asUser(bob, listFor), bob);
+        assertEquals(tagOf(own), "div");
+    });
+});
+
+test("renderForm is row-gated: you cannot even generate a form for a record you may not edit", async () => {
+    await withTestDb(async ({ bob, carol }) => {
+        await asUser(bob, () => assertRejects(
+            () => renderRoute(`rabid.volunteer.renderForm(rabid.volunteer.getById(${carol}))`),
+            Error, "Not permitted to edit this volunteer"));
+        // but your own form renders fine
+        await asUser(bob, () => renderRoute(`rabid.volunteer.renderForm(rabid.volunteer.getById(${bob}))`));
+    });
+});
+
+test("saveForm is row-gated before the per-field check (host may, regular may not)", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        await asUser(bob, () => assertRejects(
+            () => invoke("rabid.volunteer.saveForm($arg0)", {
+                volunteer_id: String(carol), skills: "crafted", "before-skills": "",
+            }),
+            Error, "Not permitted to edit this volunteer"));
+
+        // alice is a host: same edit goes through.
+        const res = await asUser(alice, () => invoke("rabid.volunteer.saveForm($arg0)", {
+            volunteer_id: String(carol), skills: "host-assigned", "before-skills": "",
+        }));
+        assertEquals(res.action, "reload");
+    });
+});
+
 test("an anonymous viewer cannot read volunteer records (non-redactable field throws)", async () => {
     await withTestDb(async ({ bob }) => {
         await asAnon(() => assertRejects(() => detail(bob)));
@@ -78,10 +137,18 @@ test("an anonymous viewer cannot read volunteer records (non-redactable field th
 });
 
 test("a crafted edit of a field you may not edit is rejected at save", async () => {
-    await withTestDb(async ({ bob, carol }) => {
+    await withTestDb(async ({ alice, bob }) => {
+        // The row gate passes (own record / host) - the FIELD gate must still
+        // hold: `permissions` (role management) is admin-only to edit.
         await asUser(bob, () => assertRejects(
             () => invoke("rabid.volunteer.saveForm($arg0)", {
-                volunteer_id: String(carol), name: "Hacked", "before-name": "Carol Private",
+                volunteer_id: String(bob), permissions: "admin", "before-permissions": "",
+            }),
+            Error, "Not permitted to edit",
+        ));
+        await asUser(alice, () => assertRejects(   // a host is not an admin either
+            () => invoke("rabid.volunteer.saveForm($arg0)", {
+                volunteer_id: String(bob), permissions: "admin", "before-permissions": "",
             }),
             Error, "Not permitted to edit",
         ));

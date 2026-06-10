@@ -113,6 +113,16 @@
     text-decoration: underline;
 }
 
+/* The navigable counterpart of the pencil: a muted chevron marking a row whose
+   whole surface drills in to a detail page (navigableItemProps). */
+.lm-nav-chevron {
+    flex: 0 0 auto;
+    color: var(--bs-secondary-color);
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0 0.5rem;
+}
+
 .lm-item-secondary {
     color: var(--bs-secondary-color);
     font-size: 0.875rem;

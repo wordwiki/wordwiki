@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -25,9 +25,9 @@ const selfOrHost = security.or(security.isSelf, host);
 // opt-in/opt-out flag - to everyone.  Phone defaults private (opt-in); email shared.
 const phoneViewable = security.or(selfOrHost, security.recordFlag('phone_number_visible_to_all_volunteers'));
 const emailViewable = security.or(selfOrHost, security.recordFlag('email_visible_to_all_volunteers'));
-// Editing a volunteer record is for the volunteer themselves or an admin - hosts
-// get extra visibility, not edit rights, by default.
-const selfOrAdmin = security.or(security.isSelf, security.hasRole('admin'));
+// Editing a volunteer record is for the volunteer themselves, a host, or an
+// admin - hosts run the place day-to-day and can edit pretty much anything.
+// (Role management - the `permissions` field - stays admin-only.)
 
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
@@ -118,9 +118,14 @@ export class VolunteerTable extends Table<Volunteer> {
     // private ones are locked down explicitly above (phone opt-in, email opt-out,
     // emergency contact self-or-host) and redacted to '***' rather than hidden.
     defaultFieldView: security.Permission = security.loggedIn;
-    // A volunteer edits their own record; admins edit anyone.  (permissions is
-    // admin-only to edit; other administrative fields could be tightened later.)
-    defaultFieldEdit: security.Permission = selfOrAdmin;
+    // A volunteer edits their own record; hosts and admins edit anyone.
+    // (permissions is admin-only to edit - see the field declaration.)
+    defaultFieldEdit: security.Permission = selfOrHost;
+    // Row-level: who may edit a volunteer record AT ALL.  Decides which row
+    // species the list renders (editable surface with pencil vs. navigable
+    // item with chevron) and gates renderForm/saveForm server-side.  Same rule
+    // as the field default, declared explicitly: yourself, a host, or an admin.
+    override get recordEdit(): security.Permission { return selfOrHost; }
 
     @path
     get byEmail() {
@@ -233,22 +238,42 @@ export class VolunteerTable extends Table<Volunteer> {
         ];
     }
 
-    // One list item.  editableItemProps makes the whole surface open the edit
-    // dialog (delegating to the contained pencil) and tags it so an edit save
-    // (which reloads `.-volunteer-<id>-`) re-renders just this item.  The email
-    // reuses the field render() helper (mailto, redaction).
+    // One list item, in one of two row species depending on the viewer's
+    // row-level edit permission (recordEdit) - the affordance carries the
+    // semantics, so tap behaviour is a function of what the row visibly IS:
+    //  - editable surface (pencil): whole surface opens the edit dialog
+    //    (editableItemProps delegates to the contained pencil), name links to
+    //    the detail page, and reloadable tagging re-renders just this item
+    //    after a save;
+    //  - navigable item (chevron): the whole row is the detail-page link.
+    //    An <a> row can't nest the mailto link, so email is plain text there
+    //    (the detail page has the mailto).
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
-        const item = this.editableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
-        return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
+        const inactiveBadge = v.inactive
+            ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Inactive'] : undefined;
+
+        if(this.canEditRecord(v)) {
+            const item = this.editableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
+            return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
+                [h.div, {class: 'lm-item-body'},
+                 [h.div, {class: 'lm-item-primary'},
+                  templates.pageLink(`/rabid.volunteer.detailPage(${id})`, v.name),
+                  inactiveBadge],
+                 [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
+                  renderFieldValue(f.email, v.email)]],
+                this.editPencil(id),
+            ];
+        }
+
+        return [h.a, {...navigableItemProps(`/rabid.volunteer.detailPage(${id})`),
+                      'data-testid': `volunteer-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
-              templates.pageLink(`/rabid.volunteer.detailPage(${id})`, v.name),
-              v.inactive ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Inactive'] : undefined],
+             [h.div, {class: 'lm-item-primary'}, v.name, inactiveBadge],
              [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
-              renderFieldValue(f.email, v.email)]],
-            this.editPencil(id),
+              security.isRedacted(v.email) ? '***' : v.email]],
+            navChevron(),
         ];
     }
 
@@ -312,7 +337,7 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, v.name],
              v.inactive ? [h.span, {class: 'badge text-bg-secondary'}, 'Inactive'] : undefined,
-             this.editPencil(volunteer_id)],
+             this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined],
 
             [h.dl, {class: 'row mb-0'},
              [h.dt, {class: 'col-sm-3'}, 'Email'],

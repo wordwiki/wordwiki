@@ -89,6 +89,24 @@ export class Table<T extends Tuple> {
         return this.fieldView(field)(a) && this.fieldEdit(field)(a);
     }
 
+    // ---------------------------------------------------------------------------
+    // --- Record-level edit security ----------------------------------------------
+    // ---------------------------------------------------------------------------
+
+    // Row-level edit permission: may this actor edit this record AT ALL?  The
+    // field-level checks above refine WHICH fields; this gates WHETHER the record
+    // presents an edit affordance (pencil / tap-to-edit) and accepts
+    // renderForm/saveForm.  A getter defaulting to defaultFieldEdit, so a table
+    // that only declares its field default gets the matching row rule - but
+    // security-sensitive tables should declare it explicitly (see VolunteerTable).
+    get recordEdit(): security.Permission { return this.defaultFieldEdit; }
+
+    canEditRecord(record: T): boolean {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return true;
+        return this.recordEdit(this.accessFor(record));
+    }
+
     // Prepare a query *tagged with this table*, so its results are checked against
     // the current actor's field-view permissions.  Table-owned queries (getById,
     // the @path query getters) go through here.
@@ -265,6 +283,11 @@ export class Table<T extends Tuple> {
      *    them out of the non-record param case.
      */
     renderForm(record: T, onsubmit?: string): Markup {
+        // Row-level gate (the save side has its own in parseForm): don't even
+        // generate an edit form for a record the actor may not edit.
+        if(!this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+
         onsubmit ??= 'tx`'+this+'.saveForm(${getFormJSON(event.target)})`';
 
         // Only fields the actor may edit become inputs.  Since edit ⊆ view, a
@@ -356,6 +379,12 @@ export class Table<T extends Tuple> {
         const existing = primaryKey !== undefined
             ? security.runSystem(() => this.getById(primaryKey))
             : undefined;
+        // Row-level gate first: a crafted POST against a record the actor may
+        // not edit at all fails here, before the per-field refinement.  (The
+        // insert path has no existing record to gate - field-level checks and a
+        // future recordInsert declaration cover it.)
+        if(existing && !this.canEditRecord(existing))
+            throw new Error(`Not permitted to edit this ${this.name}`);
         const notEditable = Object.keys(changedFieldValues).filter(name => {
             const field = this.fieldsByName[name];
             return field && !this.canEdit(field, existing);
@@ -1127,6 +1156,28 @@ export function editButtonProps(editFormURL: string): Record<string, string> {
         'hx-swap': 'innerHTML',
         'hx-on::after-request': "showModalEditor()"
     };
+}
+
+// Props for a record rendered as a plain *navigable* list item - the counterpart
+// of editableItemProps for rows the viewer may NOT edit (see Table.canEditRecord).
+// The whole row is a link (render it on an 'a' tag) to e.g. the record's detail
+// page; pair it with navChevron() so the two row species are self-describing
+// (pencil = tap edits, chevron = tap drills in).  Note: an <a> row cannot nest
+// other links (invalid HTML), so inner values render as plain text.
+// Same htmx page-nav attrs as an app pageLink (assumes the app's page template
+// swaps #content - the convention shared by rabid and wordwiki).
+export function navigableItemProps(href: string): Record<string, string> {
+    return {
+        href,
+        class: 'list-group-item list-group-item-action lm-item',
+        'hx-boost': 'true', 'hx-target': '#content', 'hx-swap': 'innerHTML show:window:top',
+    };
+}
+
+// The "drills in" marker for a navigable list item (the affordance counterpart
+// of the editable surface's pencil).
+export function navChevron(): Markup {
+    return ['span', {class: 'lm-nav-chevron', 'aria-hidden': 'true'}, '›'];
 }
 
 // The pencil glyph used by editPencil (Bootstrap Icons "pencil", MIT).  Inlined

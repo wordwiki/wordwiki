@@ -125,6 +125,14 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         last_change_time: rockyJoin,
     });
 
+    // Canonical fixed logins for the other role tiers, so role-dependent UI
+    // (e.g. which rows present an edit affordance) can be checked by hand
+    // without hunting for credentials:
+    //   hazel@redraccoon.org / hzl   - host
+    //   vinnie@redraccoon.org / vnny - regular volunteer (no roles)
+    seedFixedLogin(rabid, 'Hazel Host', 'hazel@redraccoon.org', 'hzl', 'host');
+    seedFixedLogin(rabid, 'Vinnie Volunteer', 'vinnie@redraccoon.org', 'vnny', undefined);
+
     for(let i = 0; i < count; i++) {
         const firstName = idS.person.firstName();
         const lastName = idS.person.lastName();
@@ -194,6 +202,40 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         });
     }
     return { rockyId };
+}
+
+// One fixed, role-tiered login (see the canonical-logins block in
+// seedVolunteers).  Fixed values, not faker streams, so the credentials and
+// records are stable across runs.
+function seedFixedLogin(rabid: Rabid, name: string, email: string, pw: string,
+                        permissions: string|undefined): number {
+    const join = '2023-02-01 10:00:00';
+    const id = rabid.volunteer.insert({
+        join_date: join,
+        name,
+        email,
+        email_visible_to_all_volunteers: 1,
+        phone: undefined,
+        phone_number_visible_to_all_volunteers: 0,
+        skills: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        permissions,
+        inactive: 0,
+        marked_inactive_date: undefined,
+        exit_feedback_requested: 0,
+        exit_reason: undefined,
+        exit_feedback: undefined,
+        deleted: 0,
+    });
+    const salt = password.generateSalt();
+    rabid.passwordHash.insert({
+        volunteer_id: id,
+        password_salt: salt,
+        password_hash: password.hashPassword(pw, salt),
+        last_change_time: join,
+    });
+    return id;
 }
 
 // --------------------------------------------------------------------------------
