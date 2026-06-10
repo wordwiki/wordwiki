@@ -449,7 +449,15 @@ export class LexemeEditor {
                        onsubmit: 'event.preventDefault(); tx`wordwiki.lexeme.saveTuple(${getFormJSON(event.target)})`'},
         });
 
-        return [form, this.renderSecondaryActions(entry_id, fact_id, rel)];
+        // Self-lift (deferred - the script runs during insertion, before its
+        // sibling elements exist): this dialog is also reachable from WITHIN
+        // the modal (the history dialog's "Back to edit"), where the issuing
+        // button is detached by its own swap before after-request can fire.
+        // showModalEditor composes safely with the page-pencil path (it keeps
+        // the header when the title has already been lifted).
+        return [['script', {}, 'setTimeout(showModalEditor)'],
+                form,
+                this.renderSecondaryActions(entry_id, fact_id, rel)];
     }
 
     // The tuple's secondary actions (move/delete/history) live in the dialog,
@@ -489,13 +497,15 @@ export class LexemeEditor {
         const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag};
         fields.forEach(f => hidden['before-'+f.name] = '');
 
-        return action.renderParamForm(widgets, {}, {
-            title: `New ${rel.prompt}`,
-            submitLabel: 'Save',
-            hidden,
-            dispatch: {id: 'edit-form',
-                       onsubmit: 'event.preventDefault(); tx`wordwiki.lexeme.saveTuple(${getFormJSON(event.target)})`'},
-        });
+        // Self-lift, as in editDialog (composable wherever it is loaded from).
+        return [['script', {}, 'setTimeout(showModalEditor)'],
+                action.renderParamForm(widgets, {}, {
+                    title: `New ${rel.prompt}`,
+                    submitLabel: 'Save',
+                    hidden,
+                    dispatch: {id: 'edit-form',
+                               onsubmit: 'event.preventDefault(); tx`wordwiki.lexeme.saveTuple(${getFormJSON(event.target)})`'},
+                })];
     }
 
     /**
@@ -518,6 +528,11 @@ export class LexemeEditor {
             // the sibling title element below exists.
             ['script', {}, 'setTimeout(showModalEditor)'],
             ['h2', {class: 'lm-dialog-title h5'}, `History of ${rel.prompt}`],
+            // The way back to the assertion this is the history OF.
+            ['div', {class: 'mb-2'},
+             action.actionButton('← Back to edit',
+                 {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id})`},
+                 'btn btn-sm btn-outline-secondary')],
             ['div', {class:'list-group lm-list'},
              versions.map(v => {
                  const a = v.assertion;

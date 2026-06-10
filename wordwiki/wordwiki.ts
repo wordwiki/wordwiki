@@ -1239,6 +1239,9 @@ if (import.meta.main) {
     switch(command) {
         case 'serve':
             security.runSystem(() => ww.ensureNewStyleTables());
+            // Legacy-template pages don't go through coercePageResult, so the
+            // navbar's test-client-link default is set once here instead.
+            templates.setDefaultShowTestClientLink(ww.isTestDb);
             ww.startServer({hostname: 'localhost', port: 9000});
             break;
 

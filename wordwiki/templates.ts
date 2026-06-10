@@ -19,9 +19,9 @@ export interface PageContent {
 // <title> for an htmx request.  Routes that produce *fragments* (the common
 // case) just return plain markup and are never wrapped.
 //
-// The OLD editor's routes keep calling pageTemplate (below) directly - that
-// legacy template loads the old client-side editor's module scripts and stays
-// untouched until the old editor is retired.
+// Not-yet-migrated routes (home/search/reports) call pageTemplate (below)
+// directly - a plain document shell that shares the same navBar, so the
+// chrome is identical site-wide.
 
 export const pageMarker: unique symbol = Symbol('page');
 
@@ -79,7 +79,7 @@ export function htmxPageTemplate(content: PageContent): any {
           content.head,
          ],
          ['body', {},
-          htmxNavBar(content.showTestClientLink),
+          navBar(content.showTestClientLink),
           ['audio', {id:'audioPlayer', preload:'none'},
            ['source', {src:'', type:'audio/mpeg'}]],
           // The page body lives in #content, the swap target for hx-boosted
@@ -109,10 +109,21 @@ export function renderHtmxModalEditorSkeleton(): any {
           ]]]);
 }
 
-// The navbar for new-style (htmx) pages.  Deliberately does NOT reuse the old
-// navBar below: that one's "Add New Entry" calls into the old editor's
-// browser modules, which the htmx template doesn't load.
-export function htmxNavBar(showTestClientLink: boolean = false): any {
+/**
+ * THE site navbar, shared by both page templates so the chrome is identical
+ * everywhere.  Everything here works without htmx: mutations (Add New Entry,
+ * Logout) are plain form POSTs that the server answers with a redirect, and
+ * the dropdowns only need bootstrap (loaded by both templates).
+ */
+// Whether navbars show the (test-only) test-client link by default - set once
+// at server startup from isTestDb, so legacy-template pages (which don't go
+// through coercePageResult) get the same chrome as page() pages.
+let defaultShowTestClientLink = false;
+export function setDefaultShowTestClientLink(v: boolean): void {
+    defaultShowTestClientLink = v;
+}
+
+export function navBar(showTestClientLink: boolean = defaultShowTestClientLink): any {
     return (
         ['nav', {class:'navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body', 'data-bs-theme':'dark'},
          ['div', {class:'container-fluid'},
@@ -121,29 +132,75 @@ export function htmxNavBar(showTestClientLink: boolean = false): any {
            ['span', {class:'navbar-toggler-icon'}]],
           ['div', {class:'collapse navbar-collapse', id:'navbarSupportedContent'},
            ['ul', {class:'navbar-nav me-auto mb-2 mb-lg-0'},
-            // A mutation, so a POST (not a prefetchable GET link); the server
-            // redirects to the new entry in the editor.
+
+            ['li', {class:'nav-item'},
+             ['a', {class:'nav-link', href:'/ww/wordwiki.categoriesDirectory()'}, 'Categories']],
+
+            // --- Reference Books
+            ['li', {class:'nav-item dropdown'},
+             ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+              'Reference Books'],
+             ['ul', {class:'dropdown-menu'},
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("PDM")'}, 'PDM']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("Rand")'}, 'Rand']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("Clark")'}, 'Clark']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
+             ]],
+
+            // --- Reports
+            ['li', {class:'nav-item dropdown'},
+             ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+              'Reports'],
+             ['ul', {class:'dropdown-menu'},
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],
+             ]],
+
+            // --- Admin
+            ['li', {class:'nav-item dropdown'},
+             ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+              'Admin'],
+             ['ul', {class:'dropdown-menu'},
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/startPublish()'}, 'Publish']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.usersPage()'}, 'Users']],
+             ]],
+
+            // A mutation, so a POST (a GET link could be prefetched/prerendered
+            // into creating entries); the server responds with a redirect to
+            // the new entry in the editor.
             ['li', {class:'nav-item'},
              ['form', {method:'post', action:'/ww/wordwiki.newLexemeAction()', class:'m-0'},
-              ['button', {type:'submit', class:'nav-link btn btn-link'}, 'Add New Entry']]],
+              ['button', {type:'submit', class:'nav-link btn btn-link text-nowrap'}, 'Add New Entry']]],
+
             ['li', {class:'nav-item'},
-             ['a', {class:'nav-link', href:'/ww/wordwiki.usersPage()'}, 'Users']],
+             ['a', {class:'nav-link text-nowrap', href:'/index.html'}, 'Public Site']],
+
             showTestClientLink
                 ? ['li', {class:'nav-item'},
-                   ['button', {type:'button', class:'nav-link btn btn-link text-warning',
+                   ['button', {type:'button', class:'nav-link btn btn-link text-warning text-nowrap',
                                onclick:"window.location.href='/ww/wordwiki.testClientPage()'",
                                title:'Test-mode only: act as the browser test client'},
                     'Test client ',
                     ['span', {class:'badge text-bg-warning'}, 'test']]]
                 : undefined,
            ],
+
+           // Search form
            ['form', {class:'d-flex me-3', role:'search', method:'get', action:'/ww/wordwiki.searchPage(query)'},
             ['input', {name:'searchText', class:'form-control me-2', type:'search', placeholder:'Search', 'aria-label':'Search'}],
             ['button', {class:'btn btn-outline-success', type:'submit'}, 'Search']],
+
+           // Logout: a plain form POST (no htmx dependency - this navbar also
+           // appears on legacy-template pages); the server clears the session
+           // and redirects.  session_token is bound in the route scope.
            ['ul', {class:'navbar-nav'},
             ['li', {class:'nav-item'},
-             ['button', {type:'button', class:'nav-link btn btn-link',
-                         'hx-post':'/ww/wordwiki.logout(session_token)', 'hx-swap':'none'}, 'Logout']]],
+             ['form', {method:'post', action:'/ww/wordwiki.logout(session_token)', class:'m-0'},
+              ['button', {type:'submit', class:'nav-link btn btn-link'}, 'Logout']]]],
           ]]]);
 }
 
@@ -185,95 +242,4 @@ export function pageTemplate(content: PageContent): any {
     );
 }
 
-export function navBar(): any {
-    return [
-        ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
-         ['div', {class:"container-fluid"},
-          ['a', {class:"navbar-brand", href:"/ww/"}, 'MMO Editor'],
-          ['button', {class:"navbar-toggler", type:"button", 'data-bs-toggle':"collapse", 'data-bs-target':"#navbarSupportedContent", 'aria-controls':"navbarSupportedContent", 'aria-expanded':"false", 'aria-label':"Toggle navigation"},
-           ['span', {class:"navbar-toggler-icon"}],
-          ], //button
 
-          ['div', {class:"collapse navbar-collapse", id:"navbarSupportedContent"},
-           ['ul', {class:"navbar-nav me-auto mb-2 mb-lg-0"},
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", href:"/ww/wordwiki.categoriesDirectory()"}, 'Categories'],
-            ], //li
-
-            // --- Reference Books
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Reference Books'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PDM")'}, 'PDM']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Rand")'}, 'Rand']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("Clark")'}, 'Clark']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
-              //['li', {}, ['hr', {class:"dropdown-divider"}]],
-              //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
-             ], //ul
-            ], //li
-
-            // Reports
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Reports'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],              
-              //['li', {}, ['a', {class:"dropdown-item", href:'/ww/wordwiki.entriesByEnglishGloss()'}, 'Entries by English Gloss']],              
-             ], //ul
-            ], //li
-
-            // Reports
-            ['li', {class:"nav-item dropdown"},
-             ['a', {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false"},
-              'Admin'
-             ], //a
-             ['ul', {class:"dropdown-menu"},
-              ['li', {}, ['a', {class:"dropdown-item", href:'/ww/startPublish()'}, 'Publish']],
-             ], //ul
-            ], //li
-            
-           //  ['li', {class:"nav-item"},
-           //   ['a', {class:"nav-link disabled", 'aria-disabled':"true"}, 'Disabled'],
-           //  ], //li
-
-
-            // A mutation, so a POST (a GET link could be prefetched/prerendered
-            // into creating entries); the server responds with a redirect to
-            // the new entry in the editor.
-            ['li', {class:"nav-item"},
-             ['form', {method:'post', action:'/ww/wordwiki.newLexemeAction()', class:'m-0'},
-              ['button', {type:'submit', class:"nav-link btn btn-link text-nowrap"}, 'Add New Entry']],
-            ], //li
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", 'aria-current':"page", href:"/index.html"}, 'Public Site'],
-            ], //li
-
-            ['li', {class:"nav-item"},
-             ['a', {class:"nav-link", href:"/ww/wordwiki.usersPage()"}, 'Users'],
-            ], //li
-            
-           ], //ul
-
-           // Search form
-           ['form', {class:"d-flex", role:"search", method:'get', action:'/ww/wordwiki.searchPage(query)'},
-            ['input', {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
-            ['button', {class:"btn btn-outline-success", type:"submit"}, 'Search'],
-           ], //form
-
-          ], //div navbar-collaplse
-
-         ], //div container
-        ], //nav
-    ];
-}
