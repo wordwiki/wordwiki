@@ -4,11 +4,13 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navigableItemProps, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
 import {Markup, h} from "../liminal/markup.ts";
+import * as security from "../liminal/security.ts";
+import * as templates from './templates.ts';
 
 export const routes = ()=> ({
 });
@@ -16,6 +18,10 @@ export const routes = ()=> ({
 // --------------------------------------------------------------------------------
 // --- Event ----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
+
+// Hosts run events: only hosts/admins edit event records.  (Volunteers
+// participate via commitments, not by editing the event.)
+const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
 
 export const event_kind_enum: Record<string, string> = {
     'public': 'Public Event',
@@ -55,8 +61,11 @@ export class EventTable extends Table<Event> {
             new PrimaryKeyField('event_id', {}),
             new EnumField('event_kind', event_kind_enum, {}),
             new StringField('description', {}),
-            new StringField('location_description', {}),
-            new StringField('location_url', {}),
+            // Optional (default '') - without the default these render as
+            // REQUIRED inputs, and a host editing an event with no location
+            // URL could never save (the browser silently blocks the submit).
+            new StringField('location_description', {default: ''}),
+            new StringField('location_url', {default: ''}),
             new BooleanField('is_remote_event', {default: 0}),
             new BooleanField('volunteer_only', {default: 0}),
             new DateTimeField('shop_load_time', {nullable: true}),
@@ -64,11 +73,23 @@ export class EventTable extends Table<Event> {
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
             new FloatingPointField('total_cash_collected', {default: 0}),
-            new StringField('notes', {})
+            new StringField('notes', {default: ''})
         ],[
             'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);'
         ])
     };
+
+    // All fields stay viewable (events are org-public information); editing is
+    // host/admin only, at both the field and row level.  recordEdit drives the
+    // two row species in the standard list below.
+    defaultFieldEdit: security.Permission = hostOrAdmin;
+    override get recordEdit(): security.Permission { return hostOrAdmin; }
+
+    // Edit-dialog title: the event has no 'name' column, so the base default
+    // would say just "Edit event" - say which one.
+    override formTitle(e: Event): string {
+        return `Edit ${e.description || 'event'}`;
+    }
 
     @path
     get allEvents() {
@@ -96,6 +117,95 @@ export class EventTable extends Table<Event> {
     @path
     get tableView(): TableView<Event> {
         return new TableView<Event>(this.tableRenderer, this.allEvents.closure());
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Standard editable-item list (same model as the volunteer list) -----
+    // ------------------------------------------------------------------------
+    //
+    // Two self-describing row species by recordEdit: hosts get the editable
+    // surface (pencil, whole row opens the edit dialog, description links to
+    // the detail page); everyone else gets a navigable item (chevron, whole
+    // row IS the detail-page link).
+
+    renderEventList(events: Event[]): Markup {
+        return [h.div, {class: 'list-group lm-list'},
+                events.map(e => this.renderEventRow(e))];
+    }
+
+    // "Sat, Jun 13, 2026, 7:00 PM - 9:30 PM" (year included: unlike the
+    // upcoming-events cards, a full list spans years).
+    timeRangeText(e: Event): string {
+        if(!e.start_time) return '';
+        let s = date.sqliteDateTimeToString(e.start_time, '', {
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', hour12: true});
+        if(e.end_time)
+            s += ` - ${date.sqliteDateTimeToTimeString(e.end_time)}`;
+        return s;
+    }
+
+    eventBadges(e: Event): Markup {
+        return [
+            [h.span, {class: `card-badge event-${e.event_kind}`},
+             event_kind_enum[e.event_kind] ?? e.event_kind],
+            e.volunteer_only ? [h.span, {class: 'volunteer-only-badge'}, 'Volunteers only'] : undefined,
+            e.is_remote_event ? [h.span, {class: 'remote-event-badge'}, 'Remote'] : undefined,
+        ];
+    }
+
+    renderEventRow(e: Event): Markup {
+        const id = e.event_id;
+        const secondary = [this.timeRangeText(e), e.location_description].filter(Boolean).join(' · ');
+
+        if(this.canEditRecord(e)) {
+            const item = this.editableItemProps(id, `rabid.event.renderEventRowById(${id})`);
+            return [h.div, {...item, 'data-testid': `event-row-${id}`},
+                [h.div, {class: 'lm-item-body'},
+                 [h.div, {class: 'lm-item-primary'},
+                  templates.pageLink(`/rabid.event.detailPage(${id})`, e.description || 'Untitled Event'),
+                  this.eventBadges(e)],
+                 [h.div, {class: 'lm-item-secondary'}, secondary]],
+                this.editPencil(id),
+            ];
+        }
+
+        return [h.a, {...navigableItemProps(`/rabid.event.detailPage(${id})`),
+                      'data-testid': `event-row-${id}`},
+            [h.div, {class: 'lm-item-body'},
+             [h.div, {class: 'lm-item-primary'}, e.description || 'Untitled Event', this.eventBadges(e)],
+             [h.div, {class: 'lm-item-secondary'}, secondary]],
+            navChevron(),
+        ];
+    }
+
+    // Reload target for a single list row (after an edit save).
+    renderEventRowById(id: number): Markup {
+        return this.renderEventRow(this.getById(id));
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Event detail page ---------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // The navigable destination for list rows: the summary card (time,
+    // location, committed volunteers) under a header with the host-only pencil.
+    detailPage(event_id: number): templates.Page {
+        const e = this.getById(event_id);
+        return templates.page(`${e.description || 'Event'} — Event`, this.renderEventDetail(event_id));
+    }
+
+    // Reloadable fragment (an edit save re-renders it).
+    renderEventDetail(event_id: number): Markup {
+        const e = this.getById(event_id);
+        const props = this.reloadableItemProps(event_id, `rabid.event.renderEventDetail(${event_id})`);
+        props.class = 'container py-3 ' + props.class;
+        return [h.div, props,
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
+             this.canEditRecord(e) ? this.editPencil(event_id) : undefined],
+            this.renderEventSummary(event_id),
+        ];
     }
 
     renderUpcomingEvents(): Markup {
