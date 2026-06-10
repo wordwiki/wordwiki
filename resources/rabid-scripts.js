@@ -63,6 +63,11 @@ let alertSeq = 0;
 function showAlert(message) {
     const text = message == null ? '' : String(message);
 
+    // A message identical to one still on screen is not shown again: a
+    // repeated failure (e.g. every throw of an rpc storm) makes ONE toast,
+    // not thousands.  current_alert is cleared when its toast is dismissed.
+    if (window.current_alert === text) return;
+
     // Record immediately so a test can observe the message regardless of how it
     // is ultimately displayed (toast or fallback).
     window.current_alert = text;
@@ -183,14 +188,71 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
     }
 }
 
+// --- RPC storm watchdog ------------------------------------------------------
+//
+// Legit concurrency here is single digits (a save plus a couple of fragment
+// reloads); anything like 50 rpc calls in flight means something is re-entering
+// (we have twice seen ~3,100-call tx storms end in a blown stack, which
+// destroys the evidence).  So rpc() keeps an in-flight counter (inc before the
+// fetch, dec in a finally) and, past the threshold, captures ONE diagnostic
+// report and then throws on every further call - throwing from inside a
+// synchronous recursion BREAKS it, converting the storm into a clean,
+// inspectable failure whose stack trace contains the actual cycle.
+//
+// The report goes to console.error AND window.lmTxStormReport (so a debugging
+// session can retrieve it after the console has scrolled).  The threshold is
+// overridable from the console (window.lmTxMaxInFlight) - no flag, the cost is
+// an inc/dec/compare and a small ring-buffer push per call.
+let lmRpcInFlight = 0;
+const lmRpcRecent = [];  // ring buffer of the last few calls' {t, expr}
+const LM_RPC_RECENT_MAX = 20;
+
+// Called with lmRpcInFlight already incremented by rpc() (which decrements in
+// a finally even when this throws, so the counter drains after a storm).
+function lmRpcWatchdogCheck(rpcExpr) {
+    lmRpcRecent.push({t: performance.now(), expr: rpcExpr});
+    if(lmRpcRecent.length > LM_RPC_RECENT_MAX) lmRpcRecent.shift();
+    if(lmRpcInFlight <= (window.lmTxMaxInFlight ?? 50)) return;
+    if(!window.lmTxStormReport) {   // capture once per storm
+        window.lmTxStormReport = {
+            when: new Date().toISOString(),
+            inFlight: lmRpcInFlight,
+            trippingExpr: rpcExpr,
+            // If the storm is synchronous re-entry, this stack IS the cycle.
+            stack: new Error('rpc storm').stack,
+            recentCalls: lmRpcRecent.slice(),
+        };
+        console.error('RPC STORM detected - report in window.lmTxStormReport', window.lmTxStormReport);
+    }
+    // Constant message (no varying count) so showAlert's identical-message
+    // dedup collapses a storm's worth of throws into one toast; the live
+    // numbers are in the report.
+    throw new Error('RPC storm: too many rpc calls in flight (see window.lmTxStormReport)');
+}
+
 /**
- *
+ * Deliberately a SYNC function returning the core's promise: the watchdog
+ * throw must propagate synchronously to the caller (inside an async function
+ * a throw only rejects the returned promise), so that a synchronous-recursion
+ * storm is BROKEN at the threshold instead of running on to a blown stack.
  */
-async function rpc(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
+function rpc(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
 
     console.info('RPC', rpcExprSegments, args);
 
     const {rpcExpr, argsObj} = rpcUrl(rpcExprSegments, ...args);
+
+    lmRpcInFlight++;
+    try {
+        lmRpcWatchdogCheck(rpcExpr);   // sync throw past the in-flight threshold
+    } catch(e) {
+        lmRpcInFlight--;
+        throw e;
+    }
+    return rpcCore(rpcExpr, argsObj).finally(() => { lmRpcInFlight--; });
+}
+
+async function rpcCore(rpcExpr /*: string*/, argsObj /*: Record<string, any>*/) /*: Promise<any>*/ {
 
     // --- Make the request with expr as the URL and the
     //     args json as the post body.

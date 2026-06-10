@@ -18,7 +18,7 @@ import * as timesheet from './timesheet.ts';
 import * as event from './event.ts';
 import * as service from './service.ts';
 import * as sale from './sale.ts';
-import {Rabid} from './rabid.ts';
+import {Rabid, getRabid} from './rabid.ts';
 import { assertSafeToWipe, type DbPurpose } from './config.ts';
 import { faker, Faker, en } from "@faker-js/faker";
 import * as password from '../liminal/password.ts';
@@ -814,6 +814,39 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number } = {}) {
 // --------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------
+// --- Committees ------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+
+// A few committees with deterministic membership (every Nth active volunteer,
+// plus Hazel on Logistics so the canonical host login has a committee to play
+// with).  Cheap, so seeded in every scenario.
+export function seedCommittees(rabid: Rabid): void {
+    const volunteers = rabid.volunteer.allVolunteersByName.all()
+        .filter(v => !v.inactive && !v.deleted);
+    const byEmail = (email: string) => volunteers.find(v => v.email === email);
+
+    const committees: Array<{name: string, description: string, members: number[]}> = [
+        {name: 'Logistics Committee',
+         description: 'Event logistics: supplies, transport, setup crews.',
+         members: [byEmail('hazel@redraccoon.org')?.volunteer_id,
+                   ...volunteers.filter((_, i) => i % 11 === 3).slice(0, 4).map(v => v.volunteer_id)]
+             .filter((id): id is number => id !== undefined)},
+        {name: 'Outreach Committee',
+         description: 'Community partnerships, social media, and event promotion.',
+         members: volunteers.filter((_, i) => i % 13 === 5).slice(0, 3).map(v => v.volunteer_id)},
+    ];
+
+    for(const c of committees) {
+        const committee_id = rabid.committee.insert({
+            name: c.name, description: c.description, notes: '', deleted: 0});
+        const {group_id} = rabid.committee.getById(committee_id);
+        for(const volunteer_id of new Set(c.members))
+            rabid.group_member.insert({group_id, volunteer_id});
+    }
+    console.info(`${committees.length} committees created`);
+}
+
+// --------------------------------------------------------------------------------
 // --- Scenarios + composition ----------------------------------------------------
 // --------------------------------------------------------------------------------
 //
@@ -845,6 +878,7 @@ export const SCENARIOS: Record<ScenarioName, Scenario> = {
 // Run the builders for a scenario (order matters: later builders read earlier data).
 export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     seedVolunteers(rabid, { count: scenario.volunteers, baseSeed: scenario.baseSeed });
+    seedCommittees(rabid);
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed });
@@ -879,7 +913,9 @@ function main(args: string[]) {
                 break;
             }
             console.info(`scenario '${name}':`, scenario);
-            destroyAllAndFillWithFakeData(new Rabid(), scenario);
+            // getRabid (not new Rabid()): it also sets the module-level `rabid`
+            // binding that table code (e.g. CommitteeTable.insert) reaches for.
+            destroyAllAndFillWithFakeData(getRabid(), scenario);
             break;
         }
         case 'set_db_purpose': {
@@ -888,7 +924,7 @@ function main(args: string[]) {
                 console.info(`usage: set_db_purpose <production|dev|test>`);
                 break;
             }
-            new Rabid().config.setDbPurpose(purpose);
+            getRabid().config.setDbPurpose(purpose);
             console.info(`db_purpose set to '${purpose}'`);
             break;
         }

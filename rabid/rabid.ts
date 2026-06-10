@@ -15,6 +15,8 @@ import * as event from './event.ts';
 import * as commitment from './commitment.ts';
 import * as sale from './sale.ts';
 import * as service from './service.ts';
+import * as group from './group.ts';
+import * as committee from './committee.ts';
 import * as table from '../liminal/table.ts';
 import {serialize, path} from "../liminal/serializable.ts";
 import {lazy} from '../liminal/lazy.ts';
@@ -54,10 +56,13 @@ export class Rabid extends LiminalApp {
     @path get event_commitment() { return new commitment.EventCommitmentTable(); }
     @path get sale() { return new sale.SaleTable(); }
     @path get service() { return new service.ServiceTable(); }
+    @path get volunteer_group() { return new group.VolunteerGroupTable(); }
+    @path get group_member() { return new group.GroupMemberTable(); }
+    @path get committee() { return new committee.CommitteeTable(); }
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.sale, this.service];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.sale, this.service, this.volunteer_group, this.group_member, this.committee];
     }
 
     home() { return templates.page('home', home.home()); }
@@ -66,6 +71,7 @@ export class Rabid extends LiminalApp {
     sales() { return templates.page('Sales', this.sale.renderSalesPage()); }
     servicePage() { return templates.page('Service', this.service.renderServicePage()); }
     timesheets() { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage()); }
+    committees() { return templates.page('Committees', this.committee.renderCommitteesPage()); }
 
     constructor() {
         super();
@@ -82,6 +88,7 @@ export class Rabid extends LiminalApp {
             // name is what appears in the URL, the method avoids the collision.)
             service:()=>this.servicePage(),
             timesheets:()=>this.timesheets(),
+            committees:()=>this.committees(),
             activityReport:()=>templates.page('Activity Report', activityReport()),
             dailyActivityReport:()=>templates.page(
                 'Daily Activity Report',

@@ -403,15 +403,18 @@ export class Table<T extends Tuple> {
         return {primaryKey, changedFieldValues};
     }
 
+    // No primary key in the form means INSERT (the "new record" dialog is the
+    // record form rendered over an empty record); with one, UPDATE.  parseForm
+    // (not parseFormWithPrimaryKey, which requires the pk) handles both.
     saveForm(form: Record<string, string>): Markup {
-        const {primaryKey, changedFieldValues} = this.parseFormWithPrimaryKey(form);
-        if(primaryKey) {
+        const {primaryKey, changedFieldValues} = this.parseForm(form);
+        if(primaryKey !== undefined) {
             this.updateNamedFields(primaryKey, Object.keys(changedFieldValues), changedFieldValues as T);
             return {action:'reload', targets:[`.-${this.name}-${primaryKey}-`]};
         } else {
-            console.info('inserting new user', changedFieldValues);
-            const newPrimaryKey = this.insert(changedFieldValues as T);
-            console.info('new user primary key is', newPrimaryKey);
+            this.insert(changedFieldValues as T);
+            // Reload every fragment tagged with this table (e.g. the list
+            // wrapper) - there is no per-row class for a row that didn't exist.
             return {action:'reload', targets:[`.-${this.name}-`]};
         }
     }
