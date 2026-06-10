@@ -19,48 +19,10 @@ export const routes = ()=> ({
 // --------------------------------------------------------------------------------
 // --- User -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
-
-export interface User {
-    user_id: number;
-
-    name: string;
-    username: string;
-    email?: string;
-
-    /**
-     * We disable users rather than deleting them because the
-     * dictionary change history is joined to users, so deleting the
-     * user would destroy the change history.  Depending on policy and
-     * situation, one may choose to change the user, username and
-     * email to some anon string on semantic 'delete'.
-     */
-    disabled?: boolnum;
-
-    password_salt: string;
-    password_hash: string;
-}
-
-export type UserOpt = Partial<User>;
-export const userFieldNames:Array<keyof User> = [
-    'user_id', 'name', 'username', 'email', 'disabled',
-    'password_salt', 'password_hash'];
-
-const createUserDml = block`
-/**/   CREATE TABLE IF NOT EXISTS user(
-/**/       user_id INTEGER PRIMARY KEY ASC,
-/**/       name TEXT NOT NULL,
-/**/       username TEXT NOT NULL,
-/**/       email TEXT NOT NULL,
-/**/       disabled NUMBER,
-/**/       password_salt TEXT,
-/**/       password_hash TEXT);
-/**/
-/**/   CREATE UNIQUE INDEX IF NOT EXISTS user_by_username ON user(username);
-/**/   CREATE UNIQUE INDEX IF NOT EXISTS user_by_email ON user(email);
-/**/   `
-
-assertDmlContainsAllFields(createUserDml, userFieldNames);
-
+//
+// The user table now lives in wordwiki/user.ts, declared in the new liminal
+// Table style (with sessions, login and the standard editable UI).  The old
+// raw-DML user table that used to be declared here was never used.
 
 // --------------------------------------------------------------------------------
 // --- Scanned Document -----------------------------------------------------------
@@ -1150,7 +1112,7 @@ export function highestTimestamp(tableName: string): number {
 // --------------------------------------------------------------------------------
 
 const allSchemaDml =
-    createUserDml + createDocumentDml + createPageDml + createLayerDml +
+    createDocumentDml + createPageDml + createLayerDml +
     createBoundingGroupDml + createBoundingBoxDml + createChangeLogDml +
     createAssertionDml('dict');
 

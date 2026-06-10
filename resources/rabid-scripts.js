@@ -182,6 +182,19 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
         break;
     }
 
+    // Open a (server-supplied) URL in a new window, optionally also reloading
+    // fragments - e.g. wordwiki's "add document reference" creates the
+    // reference then opens the page tagger on it.
+    case 'open': {
+        if(typeof response.url !== 'string')
+            throw new Error('Expected "open" url');
+        hideModalEditor();
+        if(Array.isArray(response.targets))
+            reload(response.targets);
+        window.open(response.url);
+        break;
+    }
+
     default: {
         throw new Error(`Unexpected response action ${action}`);
     }

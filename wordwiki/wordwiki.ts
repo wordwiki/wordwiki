@@ -29,6 +29,12 @@ import * as pageViewerModule from '../scannedpage/page-viewer.ts';
 
 import {LiminalApp, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
 import * as security from '../liminal/security.ts';
+import * as passwordUtils from '../liminal/password.ts';
+import * as date from '../liminal/date.ts';
+import {serialize, path} from '../liminal/serializable.ts';
+import {lazy} from '../liminal/lazy.ts';
+import {LexemeEditor} from './lexeme-editor.ts';
+import * as user from './user.ts';
 
 /**
  *
@@ -66,6 +72,43 @@ export class WordWiki extends LiminalApp {
             audio.routes(),
             publish.routes(),
         );
+    }
+
+    [serialize](): string {
+        return 'wordwiki';
+    }
+
+    // ----- New-style (liminal Table) tables ----------------------------------
+
+    @path get config() { return new config.ConfigTable(); }
+    @path get users() { return new user.UserTable(); }
+    @path get passwordHash() { return new user.PasswordHashTable(); }
+    @path get userSession() { return new user.UserSessionTable(); }
+
+    // The new-style tables (auto-created at startup; the legacy raw-DML tables
+    // - scanned documents, bounding boxes, the dict assertion table - stay in
+    // schema.ts).  More rabid-style tables will be added here over time.
+    @lazy get tables() {
+        return [this.config, this.users, this.passwordHash, this.userSession];
+    }
+
+    // Create the new-style tables if missing (idempotent CREATE IF NOT EXISTS).
+    ensureNewStyleTables() {
+        for(const t of this.tables)
+            db().executeStatements(t.createDMLString());
+    }
+
+    // The v2 (server-side htmx) lexeme editor, reachable as wordwiki.lexeme.*
+    // (e.g. /ww/wordwiki.lexeme.entryPage(<entry_id>)).  See lexeme-editor-design.md.
+    #lexeme: LexemeEditor|undefined = undefined;
+    get lexeme(): LexemeEditor {
+        return this.#lexeme ??= new LexemeEditor(this);
+    }
+
+    // ----- New-style pages ----------------------------------------------------
+
+    usersPage(): templates.Page {
+        return templates.page('Users', this.users.renderUsersPage());
     }
 
     get lastAllocatedTxTimestamp() {
@@ -1096,27 +1139,190 @@ export class WordWiki extends LiminalApp {
         return {'/ww/': handler, '/page/': handler, '/workspace-rpc-and-sync': handler};
     }
 
-    // No login/sessions yet: every request is anonymous.
-    resolveSecurityContext(_session_token: string | undefined): security.SecurityContext {
-        return {actorId: undefined, roles: new Set()};
+    // Resolve the session token into the request's security context (one trusted
+    // lookup of the actor's own record, before any actor context exists).  The
+    // try/catch keeps a not-yet-migrated db (no user_session table) working as
+    // anonymous rather than erroring on every request.
+    resolveSecurityContext(session_token: string | undefined): security.SecurityContext {
+        return security.runSystem(() => {
+            try {
+                const session = session_token ? this.userSession.getBySessionToken.first({session_token}) : undefined;
+                const actor = session ? this.users.getById(session.user_id) : undefined;
+                return {
+                    actorId: session?.user_id,
+                    roles: security.rolesFromPermissionsField(actor?.permissions),
+                };
+            } catch (_e) {
+                return {actorId: undefined, roles: new Set<string>()};
+            }
+        });
     }
-    getDbPurpose(): string | undefined { return undefined; }
 
-    // The browser-test bridge's durable identity has no persistent home yet (no
-    // sessions); keep it in memory so the abstract hooks are satisfied.  The
-    // bridge is effectively unused until wordwiki has sessions.
-    #testClient: TestClientSession | undefined = undefined;
+    // The username (short code) of the logged-in user - stamped into
+    // assertions as change_by_username.
+    currentUsername(): string | undefined {
+        const actorId = security.current()?.actorId;
+        if(actorId === undefined) return undefined;
+        try {
+            return security.runSystem(() => this.users.getById(actorId).username);
+        } catch (_e) {
+            return undefined;
+        }
+    }
+
+    // Always read the db_purpose marker as a trusted op.
+    getDbPurpose(): string | undefined {
+        try { return security.runSystem(() => this.config.getDbPurpose()); }
+        catch { return undefined; }
+    }
+
+    // Test-client durable identity lives on the login-session row.
     stampTestClientOptIn(session_token: string, now: string): void {
-        this.#testClient = {session_token, last_test_client_opt_in: now, last_test_client_heartbeat: now};
+        this.userSession.stampTestClientOptIn(session_token, now);
     }
     stampTestClientHeartbeat(session_token: string, now: string): void {
-        if(this.#testClient?.session_token === session_token) this.#testClient.last_test_client_heartbeat = now;
+        this.userSession.stampTestClientHeartbeat(session_token, now);
     }
-    mostRecentTestClient(): TestClientSession | undefined { return this.#testClient; }
+    mostRecentTestClient(): TestClientSession | undefined {
+        return this.userSession.mostRecentTestClient.first({});
+    }
 
-    makePage(title: any, body: any): any { return templates.pageTemplate({title, body}); }
+    makePage(title: any, body: any): any { return templates.page(title, body); }
+
+    // Wrap a page() in the standard htmx document (full load) or reduce it to
+    // body-only + <title> (htmx partial swap).  Legacy routes that build full
+    // documents with the old pageTemplate pass through untouched.
+    protected override coercePageResult(result: any, isHtmxRequest: boolean): any {
+        if(templates.isPage(result))
+            return isHtmxRequest
+                ? [['title', {}, result.title], result.body]
+                : templates.htmxPageTemplate({title: result.title, body: result.body,
+                                              showTestClientLink: this.isTestDb});
+        return result;
+    }
+
+    // Unauthenticated requests are sent to the login page (except the login POST
+    // - and, on NON-PRODUCTION dbs only, the GET form of the login, so a
+    // puppeteer/test session can log in with a single navigation:
+    //   /ww/wordwiki.loginRequest(queryArgs)?username=djz&password=...
+    // Kept off production because a GET puts the password in the URL.)
+    // NOTE the two root-level legacy endpoints (/page/<Book>/<N>.html and
+    // /workspace-rpc-and-sync) are handled before this gate in requestHandler -
+    // they remain ungated until the old editor is retired.
+    protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
+        const allowedWithoutLogin = new Set([
+            'wordwiki.loginRequest(bodyArgs)',
+        ]);
+        if(this.getDbPurpose() !== 'production')
+            allowedWithoutLogin.add('wordwiki.loginRequest(queryArgs)');
+        const loggedIn = ctx.actorId !== undefined;
+        if(loggedIn || allowedWithoutLogin.has(jsExprSrc)) return undefined;
+        return `wordwiki.login(${JSON.stringify(requestUrl)})`;
+    }
+
+    // Override so /eval server-target code sees WORDWIKI's lexical scope.
+    protected override evalServer(js: string): Promise<any> {
+        const wordwiki = this; // exposed to the eval'd code
+        return security.runSystem(() =>
+            // deno-lint-ignore no-eval
+            eval(`(async () => { ${js}\n})()`));
+    }
 
     testRuns(): Record<string, TestCase[]> { return {}; }
+
+    // ----- Login / logout -----------------------------------------------------
+
+    login(targetUrl: string, errorMessage?: string): templates.Page {
+        const body = [
+            ['div', {class: 'container mt-5'},
+             ['div', {class: 'row justify-content-center'},
+              ['div', {class: 'col-md-6 col-lg-5'},
+               ['div', {class: 'card shadow'},
+                ['div', {class: 'card-body p-5'},
+                 ['h1', {class: 'text-center mb-2'}, 'MMO Editor'],
+                 ['p', {class: 'text-center text-muted mb-4'}, `The Mi'gmaq-Mi'kmaq Online dictionary editor`],
+                 errorMessage
+                     ? ['div', {class: 'alert alert-danger', role: 'alert'}, errorMessage]
+                     : undefined,
+                 ['form', {name: 'login', method: 'post', action: 'wordwiki.loginRequest(bodyArgs)'},
+                  ['div', {class: 'form-group mb-3'},
+                   ['label', {for: 'username'}, 'Username'],
+                   ['input', {type: 'text', class: 'form-control', name: 'username', id: 'username',
+                              placeholder: 'Your short user code (e.g. djz)', required: true}]],
+                  ['div', {class: 'form-group mb-4'},
+                   ['label', {for: 'password'}, 'Password'],
+                   ['input', {type: 'password', class: 'form-control', name: 'password', id: 'password',
+                              placeholder: 'Enter your password', required: true}]],
+                  ['input', {type: 'hidden', name: 'targetUrl', value: targetUrl}],
+                  ['button', {type: 'submit', class: 'btn btn-primary btn-block w-100'}, 'Sign In'],
+                 ]]]]]],
+        ];
+        return templates.page('Login', body);
+    }
+
+    loginRequest(args: {username?: string, password?: string, targetUrl?: string}) {
+        const {username, password} = args;
+        const targetUrl = args.targetUrl || '/ww/';
+
+        const reRenderWithError = (message: string) => this.login(targetUrl, message);
+
+        if(!username) return reRenderWithError('Please enter your username');
+        if(!password) return reRenderWithError('Please enter your password');
+
+        const actor = security.runSystem(() => this.users.byUsername.first({username}));
+        if(!actor || actor.disabled)
+            return reRenderWithError('No account was found for that username');
+
+        const passwordHashRecord = security.runSystem(() =>
+            this.passwordHash.byUserId.first({user_id: actor.user_id}));
+        const {password_salt, password_hash} = passwordHashRecord ?? {};
+        if(!password_salt || !password_hash)
+            return reRenderWithError('No password has been set for this account - ask an admin to set one');
+
+        const hashedSuppliedPassword = passwordUtils.hashPassword(password, password_salt);
+        if(!passwordUtils.constantTimeEqual(hashedSuppliedPassword, password_hash))
+            return reRenderWithError('Incorrect password');
+
+        return this.createSessionResponse(actor.user_id, targetUrl);
+    }
+
+    // Cookie attributes for the session cookie.  Secure on a production db
+    // (served over HTTPS); dev runs on plain http://localhost.
+    private sessionCookieAttrs(): string {
+        const secure = this.getDbPurpose() === 'production' ? '; Secure' : '';
+        return `Path=/; HttpOnly; SameSite=Lax${secure}`;
+    }
+
+    private createSessionResponse(user_id: number, targetUrl: string): server.Response {
+        const now = date.currentSqliteDateTime();
+        const session_token = passwordUtils.generateSessionToken();
+        security.runSystem(() => this.userSession.insert({
+            session_token,
+            user_id,
+            start_time: now,
+            last_resume_time: now,
+            last_ip: '', // TODO
+        }));
+
+        const response = server.forwardResponse(targetUrl);
+        // Max-Age is the 400-day browser cap; the authoritative session lifetime
+        // is the user_session row (deleting it ends the session regardless).
+        const fourHundredDaysInSeconds = 400 * 24 * 60 * 60;
+        response.headers['Set-Cookie'] =
+            `${this.sessionCookieName}=${session_token}; ${this.sessionCookieAttrs()}; Max-Age=${fourHundredDaysInSeconds}`;
+        return response;
+    }
+
+    logout(session_token?: string): server.Response {
+        if(session_token) {
+            try { this.testClientChannel.drop(session_token); } catch (_e) { /* ignore */ }
+            security.runSystem(() => this.userSession.deleteBySessionToken(session_token));
+        }
+        const response = server.forwardResponse('/ww/');
+        response.headers['Set-Cookie'] =
+            `${this.sessionCookieName}=; ${this.sessionCookieAttrs()}; Max-Age=0`;
+        return response;
+    }
 
     /**
      *
@@ -1154,10 +1360,73 @@ export function getWordWiki(): WordWiki {
 if (import.meta.main) {
     const args = Deno.args;
     const command = args[0];
+    const ww = getWordWiki();
     switch(command) {
         case 'serve':
-            getWordWiki().startServer({hostname: 'localhost', port: 9000});
+            security.runSystem(() => ww.ensureNewStyleTables());
+            ww.startServer({hostname: 'localhost', port: 9000});
             break;
+
+        // One-time migration: replace the old (never-used) raw-DML user table
+        // with the new liminal-style one and seed it from the hardcoded users
+        // map in entry-schema.ts.  Refuses if the old table has rows.
+        case 'upgrade-users': {
+            security.runSystem(() => {
+                const userCount = (() => {
+                    try { return db().prepare<{n: number}, {}>('SELECT COUNT(*) AS n FROM user').required({}).n; }
+                    catch (_e) { return 0; }  // no user table at all
+                })();
+                const hasNewShape = (() => {
+                    try { db().prepare('SELECT permissions FROM user LIMIT 1').all({}); return true; }
+                    catch (_e) { return false; }
+                })();
+                if(userCount > 0 && !hasNewShape)
+                    throw new Error(`user table has ${userCount} rows but the OLD schema - migrate manually`);
+                if(!hasNewShape) {
+                    console.info('dropping old-style empty user table');
+                    db().execute('DROP TABLE IF EXISTS user', {});
+                }
+                ww.ensureNewStyleTables();
+                const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
+                console.info(`user table upgraded: ${inserted} users seeded, ${skipped} already present`);
+                console.info('set a password with: wordwiki.ts set-password <username> <password>');
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Set (or replace) a user's password.  Run with the server stopped
+        // (SQLite single writer).
+        case 'set-password': {
+            const [username, password] = [args[1], args[2]];
+            if(!username || !password)
+                throw new Error('usage: set-password <username> <password>');
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const u = ww.users.byUsername.first({username})
+                    ?? panic(`no user with username '${username}' (run upgrade-users first?)`);
+                ww.passwordHash.setPassword(u.user_id, password);
+                console.info(`password set for ${u.name} (${username})`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Mark the database's purpose (production databases refuse destructive
+        // test/dev operations and get Secure cookies).
+        case 'set-db-purpose': {
+            const purpose = args[1];
+            if(purpose !== 'production' && purpose !== 'dev' && purpose !== 'test')
+                throw new Error('usage: set-db-purpose production|dev|test');
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                ww.config.setDbPurpose(purpose);
+                console.info(`db_purpose set to '${purpose}'`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
         default:
             throw new Error(`incorrect usage: unknown command "${command}"`);
     }

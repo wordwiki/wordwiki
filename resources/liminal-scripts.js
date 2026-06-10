@@ -101,10 +101,17 @@ function showModalEditor() {
     // renderParamForm).  Lift that into the modal's fixed header, where it
     // stays visible while the form scrolls - and where it replaces whatever
     // the previous dialog left behind.
+    // When the body has no inline title (e.g. showModalEditor is re-run after
+    // the title was already lifted), keep the existing header rather than
+    // blanking it - dialog content may arrive via more than one mechanism
+    // (a page button's after-request, or an inline script in content swapped
+    // from WITHIN the modal, where the issuing button is detached by its own
+    // swap before after-request can fire on it).
     const inlineTitle = getModalBodyElem().querySelector('.lm-dialog-title');
-    getModalTitleElem().innerText = inlineTitle ? inlineTitle.textContent.trim() : '';
-    if (inlineTitle)
+    if (inlineTitle) {
+        getModalTitleElem().innerText = inlineTitle.textContent.trim();
         inlineTitle.remove();
+    }
     lmModalInitialState = lmModalFormState();
     getModalEditor().show();
 }

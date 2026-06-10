@@ -688,7 +688,10 @@ export class VersionedTuple/*<T extends NodeT>*/ {
             if(assertion.replaces_assertion_id !== prevAssertion.assertion_id)
                 throw new Error(`FIX ERROR: replaces_assertion_id chain broken - ${JSON.stringify(prevAssertion)} TO ${JSON.stringify(tuple.assertion)}`);
             if(prevAssertion.valid_to) {
-                if(assertion.valid_from !== prevAssertion.valid_to) {
+                // A successor normally starts exactly when its predecessor ends; a
+                // LATER start is a valid-time gap, which is how a restore after a
+                // delete looks (the tuple did not exist during the gap).
+                if(assertion.valid_from < prevAssertion.valid_to) {
                     throw new Error(`FIX ERROR: valid_from chain broken - ${JSON.stringify(prevAssertion, undefined, 2)} TO ${JSON.stringify(assertion, undefined, 2)}`);
                 }
             } else {
@@ -749,11 +752,15 @@ export class VersionedTuple/*<T extends NodeT>*/ {
                 }
 
                 case prevAssertion.valid_to < assertAtTime: {
-                    // --- Assertion we are replacing is deleted, so our new assertion
-                    //     is starting a new valid period.
-                    //     NOT SUPPORTED YET!
-                    throw new Error(`no operations are currently supported on top of a deleted assertion - deleted assertion is ${JSON.stringify(prevAssertion, undefined, 2)}`);
-                    //break;
+                    // --- Assertion we are replacing is deleted (closed valid_to in
+                    //     our past), so our new assertion starts a new valid period
+                    //     after a gap - this is a restore/undelete.  The replaced
+                    //     assertion is already closed, so it needs no valid_to
+                    //     update (updatedPrevAssertion stays undefined).
+                    if(!(assertAtTime > prevAssertion.valid_from)) {
+                        throw new Error(`Attempt to assert a tuple in the past (4)`);
+                    }
+                    break;
                 }
 
                 case prevAssertion.valid_to >= assertAtTime: {
