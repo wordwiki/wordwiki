@@ -59,6 +59,7 @@ import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import * as templates from './templates.ts';
+import * as category from './category.ts';
 import * as entrySchema from './entry-schema.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
 import type {WordWiki} from './wordwiki.ts';
@@ -128,6 +129,73 @@ class AudioUploadField extends table.StringField {
 }
 
 /**
+ * The category field: a select over the controlled vocabulary in the
+ * category table (category.ts), grouped by theme.  Free text is what
+ * produced the old misspelled/duplicated categories - creating a new
+ * category is now a deliberate act on the Category Table admin page, and
+ * the editor only OFFERS active (non-retired) categories.
+ *
+ * A current value that is not offered (a retired ~old-* import, or
+ * pre-import free text) stays selectable as a marked extra option, so
+ * editing it leaves it untouched - but a CHANGED value must be an active
+ * slug (validated server-side in parseSimpleInput; the select is only the
+ * client-side half).
+ */
+class CategorySelectField extends table.EnumField {
+    // Takes ALL categories: the active ones become the offered optgroups;
+    // the retired ones supply a friendly label when the CURRENT value is a
+    // retired slug (a ~old-* import).
+    active: category.Category[];
+    constructor(name: string, public cats: category.Category[],
+                options: table.FieldOptions = {}) {
+        super(name, Object.fromEntries(cats.map(c => [c.slug, c.name])), options);
+        this.active = cats.filter(c => !c.retired);
+    }
+
+    override renderInput(value: any): Markup {
+        // Theme runs in table (order_key) order -> optgroups.
+        const runs: Array<{theme: string, cats: category.Category[]}> = [];
+        for(const c of this.active) {
+            const theme = c.theme || 'Other';
+            const run = runs[runs.length-1];
+            if(run && run.theme === theme) run.cats.push(c);
+            else runs.push({theme, cats: [c]});
+        }
+        // The current value when it is not offered: a retired category (kept
+        // with its name) or a value not in the table at all (pre-import text).
+        let currentExtra: Markup;
+        if(value != null && value !== '' && !this.active.some(c => c.slug === value)) {
+            const retired = this.cats.find(c => c.slug === value);
+            currentExtra = ['option', {value, selected: ''},
+                retired ? `${retired.name} - retired (kept until changed)`
+                        : `${value} (not in the category table - kept until changed)`];
+        }
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['select', {name: this.name, id: `input-${this.name}`, class: 'form-select'},
+              ['option', {value: '', ...((value==null||value==='')?{selected:''}:{})}, ''],
+              currentExtra,
+              runs.map(run =>
+                  ['optgroup', {label: run.theme},
+                   run.cats.map(c =>
+                       ['option', {value: c.slug, ...(value===c.slug?{selected:''}:{})},
+                        `${c.name} (${c.slug})`])]),
+             ]]];
+    }
+
+    // Only runs for CHANGED values (parseInput skips inputs equal to their
+    // before-snapshot), so legacy/retired values survive unrelated edits.
+    override parseSimpleInput(value: string): any {
+        if(value === '') return null;
+        if(!this.active.some(c => c.slug === value))
+            throw new Error(`'${value}' is not an active category - categories are ` +
+                            `managed on the Category Table page (Admin menu)`);
+        return value;
+    }
+}
+
+/**
  * Fields that cannot be edited through a dialog yet: images (need an image
  * counterpart of the audio eager-upload widget) and bounding-group references
  * (created through the per-book buttons + the page tagger).  They render
@@ -150,7 +218,15 @@ function dialogFields(rel: model.RelationField): model.ScalarField[] {
         !(f instanceof model.PrimaryKeyField) && !isDialogReadOnly(f));
 }
 
-function widgetFor(f: model.ScalarField): table.Field {
+function widgetFor(f: model.ScalarField, rel: model.RelationField,
+                   allCategories: () => category.Category[]): table.Field {
+    // The category value: a select over the category table (falls back to the
+    // free-text widget while the table is unseeded, i.e. pre-import dbs).
+    if(rel.tag === entrySchema.CategoryTag && f.name === 'category') {
+        const cats = allCategories();
+        if(cats.some(c => !c.retired))
+            return new CategorySelectField(f.name, cats, {nullable: true, prompt: f.prompt});
+    }
     // NOTE: instanceof order matters - the soft schema's field classes form
     // a hierarchy (Variant < Enum < String, Audio/Image < Blob < String).
     if(f instanceof model.VariantField)
@@ -179,10 +255,11 @@ function widgetFor(f: model.ScalarField): table.Field {
  * only the CHANGED fields (the widgets' parseInput compares each input to its
  * before-<name> snapshot, which the dialog generators supply as hidden params).
  */
-function parseDialogFields(rel: model.RelationField, form: Record<string, any>): Record<string, any> {
+function parseDialogFields(rel: model.RelationField, form: Record<string, any>,
+                           allCategories: () => category.Category[]): Record<string, any> {
     const changed: Record<string, any> = {};
     for(const f of dialogFields(rel))
-        widgetFor(f).parseInput(form, changed);
+        widgetFor(f, rel, allCategories).parseInput(form, changed);
     return changed;
 }
 
@@ -227,6 +304,13 @@ export class LexemeEditor {
 
     constructor(public app: WordWiki) {
     }
+
+    // The select options for category fields (an arrow property: passed
+    // unbound into widgetFor/parseDialogFields).  Queried per dialog open,
+    // so Category Table edits show up immediately.  ALL categories: active
+    // ones are offered; retired ones label a kept current value.
+    private allCategories = (): category.Category[] =>
+        this.app.categories.allByOrder.all({});
 
     // ------------------------------------------------------------------------
     // --- Page + fragments ----------------------------------------------------
@@ -430,7 +514,7 @@ export class LexemeEditor {
         const current = tuple.mostRecentTuple ?? panic('no current version for', fact_id);
 
         const fields = dialogFields(rel);
-        const widgets = fields.map(widgetFor);
+        const widgets = fields.map(f => widgetFor(f, rel, this.allCategories));
         const defaults = current.domainFields;
 
         const hidden: Record<string, any> = {
@@ -492,7 +576,7 @@ export class LexemeEditor {
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
 
         const fields = dialogFields(rel);
-        const widgets = fields.map(widgetFor);
+        const widgets = fields.map(f => widgetFor(f, rel, this.allCategories));
 
         const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag};
         fields.forEach(f => hidden['before-'+f.name] = '');
@@ -630,7 +714,7 @@ export class LexemeEditor {
                     message: 'This item was changed by someone else since you opened the editor. ' +
                              'Please close the dialog and re-open it to see the latest version.'};
 
-        const changed = parseDialogFields(rel, form);
+        const changed = parseDialogFields(rel, form, this.allCategories);
         if(Object.keys(changed).length === 0)
             return this.reload(this.mutationTargets(entry_id, current.assertion, 'self'));
 
@@ -662,7 +746,7 @@ export class LexemeEditor {
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
         const rel = relation.schema;
 
-        const changed = parseDialogFields(rel, form);
+        const changed = parseDialogFields(rel, form, this.allCategories);
 
         const id = newId();
         const parentAssertion = parent.currentAssertion
@@ -731,8 +815,8 @@ export class LexemeEditor {
         const i = peers.findIndex(p => p.src.id === fact_id);
         if(i === -1) panic('tuple not found among its peers', fact_id);
 
-        const keyOf = (p: workspace.CurrentTupleQuery|undefined): string|undefined =>
-            p?.mostRecentTupleVersion?.assertion.order_key ?? undefined;
+        const keyOf = (p: workspace.CurrentTupleQuery|undefined): string|null|undefined =>
+            p?.mostRecentTupleVersion?.assertion.order_key;
 
         let order_key: string;
         if(direction === 'up') {
