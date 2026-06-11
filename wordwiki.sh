@@ -12,6 +12,9 @@ set -e
 #   ./wordwiki.sh upgrade-users        # one-time user-table migration + seed
 #   ./wordwiki.sh set-password djz pw  # set a user's password
 #   ./wordwiki.sh set-db-purpose dev   # mark the db (production|dev|test)
+#   ./wordwiki.sh import-categories    # seed category table + rewrite entry
+#                                      # categories from ~/wordwiki/categorization
+#                                      # (idempotent; refuses production db)
 #
 # Any command first cleanly stops a running server (SQLite single writer).
 # Note: this does NOT run the transpile step (the old client-side editor's

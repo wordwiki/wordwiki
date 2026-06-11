@@ -36,6 +36,7 @@ import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
+import * as categoryImport from './category-import.ts';
 
 /**
  *
@@ -122,12 +123,13 @@ export class WordWiki extends LiminalApp {
         return this.#lastAllocatedTxTimestamp ??= highestTimestamp('dict');
     }
 
-    allocTxTimestamps(count: number=1) {
+    allocTxTimestamps(count: number=1, opts: {quiet?: boolean} = {}) {
         const lastTxTimestamp = this.lastAllocatedTxTimestamp;
         const nextTxTimestamp = timestamp.nextTime(lastTxTimestamp);
         utils.assert(count>=1);
         this.#lastAllocatedTxTimestamp = nextTxTimestamp + count - 1;
-        console.info('alloced timestamp', {last: lastTxTimestamp, next: nextTxTimestamp, next_txt: timestamp.formatTimestampAsLocalTime(nextTxTimestamp)});
+        if(!opts.quiet)
+            console.info('alloced timestamp', {last: lastTxTimestamp, next: nextTxTimestamp, next_txt: timestamp.formatTimestampAsLocalTime(nextTxTimestamp)});
         return nextTxTimestamp;
     }
 
@@ -210,14 +212,15 @@ export class WordWiki extends LiminalApp {
      * This should probaly move to workspace.
      *
      */
-    applyTransaction(assertions: Assertion[]) {
+    applyTransaction(assertions: Assertion[], opts: {quiet?: boolean} = {}) {
 
-        console.info('Applying TX',
-                     JSON.stringify(assertions, undefined, 2));
+        if(!opts.quiet)
+            console.info('Applying TX',
+                         JSON.stringify(assertions, undefined, 2));
 
         // --- Allocate a new server timestamp for this tx
         //     TODO we may want to allocate multiple here to give client new base.
-        const serverTimestamp = this.allocTxTimestamps(1);
+        const serverTimestamp = this.allocTxTimestamps(1, opts);
 
         // --- No assertions can be trivially applied (we check this
         //     because our consistency checks can't handle this case)
@@ -254,9 +257,10 @@ export class WordWiki extends LiminalApp {
                     a.valid_to = serverTimestamp;
             });
 
-            console.info('Applying TX after advancing to server timestamp',
-                         serverTimestamp,
-                         JSON.stringify(assertions, undefined, 2));
+            if(!opts.quiet)
+                console.info('Applying TX after advancing to server timestamp',
+                             serverTimestamp,
+                             JSON.stringify(assertions, undefined, 2));
 
             // --- Apply assertions to workspace (throwing exception if incompatible)
             // TODO swith to an apply method that gives us enough info to update the valid_to
@@ -1352,6 +1356,38 @@ if (import.meta.main) {
                 ww.passwordHash.setPassword(djz.user_id, djzPassword);
                 console.info(`post-pull complete: ${inserted} users seeded (${skipped} already present), ` +
                              `db marked 'dev', djz password set${args[1] ? '' : " to the default 'djz-dev'"}`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Import the batch re-categorization (see categorization/ and
+        // category-import.ts): seed the category table (new scheme + internal
+        // + retired ~old-*) and rewrite every entry's category tuples via
+        // applyTransaction.  Idempotent - re-run freely after pulls; entries
+        // already in the desired state are skipped.  This is the prototype
+        // for the eventual production import, so it refuses a production-
+        // marked db unless --allow-production is given.
+        //   ./wordwiki.sh import-categories [categorization-dir]
+        //                  [--username=NAME] [--allow-production]
+        case 'import-categories': {
+            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
+                ?? `${Deno.env.get('HOME')}/wordwiki/categorization`;
+            const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
+                ?? 'djz';
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                if(!ww.users.byUsername.first({username}))
+                    throw new Error(`--username '${username}' is not in the user table`);
+                const schemeText = Deno.readTextFileSync(`${dir}/scheme.md`);
+                const assignmentsText = Deno.readTextFileSync(`${dir}/assignments.jsonl`);
+                categoryImport.importCategories(ww, {
+                    schemeText, assignmentsText, username,
+                    log: (msg) => console.info(msg),
+                });
             });
             Deno.exit(0);
             break;
