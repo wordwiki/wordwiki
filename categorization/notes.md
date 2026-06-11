@@ -61,3 +61,19 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 - Proper-noun places → places; nationality/people-group nouns → peoples.
 - Entries whose only English is `?`/TBA/empty → flag needs-human, cats [].
 - Archived entries: tagged normally (cheap), separated in views.
+
+## Conventions accreted during the tagging pass
+- scatter/spread/stack/pile (placing things in space) -> position
+- decorate (generic) -> making-and-fixing; embroidery/crochet/sewn decoration -> sewing-and-textiles
+- rub/smear/massage -> smell-and-taste (touch); medicinal rubbing also health
+- laughing/crying -> emotions (+body-actions when strongly physical)
+- caring-for/helping/meeting/forgiving -> social-life
+- capability words (skilled/awkward/unable) -> character
+- hide/conceal -> seeing (visibility); hidden-position also position
+- lock/unlock/key -> fastening
+- stuck/loose/tipsy/fragile -> condition
+- punish -> leadership-and-law; revenge/instigate-harm -> conflict or character
+- floating (people/things on water) -> swimming; gliding in air -> movement
+- anchors/sails/ferries -> boats
+- "in the way"/hinderance -> position
+- breakfast/supper words -> food (+time)
