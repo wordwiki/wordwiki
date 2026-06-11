@@ -153,6 +153,21 @@ def cmd_scheme(args):
         print(f"  {counts.get(slug, 0):5}  {name} ({slug})")
     print(f"\n{len(scheme)} categories")
 
+def cmd_tiers(args):
+    """List tier nominations. Tiers are CUMULATIVE: t10 entries are also in
+    t100 and t1000; t100 entries are also in t1000."""
+    entries, assigns = load(args)
+    want = args.tier
+    rank = {'t10': 1, 't100': 2, 't1000': 3}
+    for e in entries:
+        a = assigns.get(e['e'])
+        if not a or not a.get('tier'):
+            continue
+        if want and rank[a['tier']] > rank[want]:
+            continue
+        print(f"{a['tier']:5} {e['e']:6}  {headword(e):28} {english(e)[:80]}"
+              f"  [{','.join(a['cats'])}]")
+
 def cmd_validate(args):
     scheme = load_scheme()
     entries, assigns = load(args)
@@ -189,6 +204,8 @@ def main():
     s.add_argument('--untagged-only', action='store_true')
     s.add_argument('--terse', action='store_true'); s.set_defaults(fn=cmd_batch)
 
+    s = sub.add_parser('tiers'); s.add_argument('tier', nargs='?', choices=['t10', 't100', 't1000'])
+    s.set_defaults(fn=cmd_tiers)
     sub.add_parser('scheme').set_defaults(fn=cmd_scheme)
     s = sub.add_parser('validate'); s.add_argument('--show-missing', action='store_true')
     s.set_defaults(fn=cmd_validate)

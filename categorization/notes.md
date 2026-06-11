@@ -77,3 +77,23 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 - anchors/sails/ferries -> boats
 - "in the way"/hinderance -> position
 - breakfast/supper words -> food (+time)
+
+## Category-sweep audit (pass 3, 2026-06-11)
+
+Each audited category was re-read as a complete member list
+(`dictq.py members CAT`) looking for misfits. Fully swept: all 6 Places &
+Little Words categories, learning-and-teaching, basket-making, sky,
+insects, swimming, peoples-and-nations, leadership-and-law, conflict,
+appearance, thinking, stories-and-writing, family, people, social-life,
+character, emotions, smell-and-taste, hearing, seeing, talking, work,
+occupations, making-and-fixing, good-and-bad, condition, amounts, customs,
+ceremony, spirit-world, games, music-and-dance, age, time — i.e. every
+category whose boundary needs judgment (38 of 85, ~6,400 of ~12,600
+membership rows). Result: 6 corrections appended (rate ~0.1%), no
+systematic drift found.
+
+The remaining categories are concrete object/action classes (body parts,
+animals, birds, numbers, colors, foods, weather, the physical-action verbs)
+tagged under the explicit conventions above; their membership is
+self-evident from the gloss, and the team review views are the final check
+on them.
