@@ -34,19 +34,6 @@ export type PrimitiveType<T> =
     ? boolean
     : T;
 
-// export type TypeName<T> = T extends string
-//     ? "string"
-//     : T extends number
-//     ? "number"
-//     : T extends boolean
-//     ? "boolean"
-//     : T extends undefined
-//     ? "undefined"
-//     : T extends Function
-//     ? "function"
-//     : "object";
-
-
 type TypeofExtendedEnum =
     "undefined" | "boolean" | "number" | "bigint" | "string" | "symbol" |
     "function" | "object" | "null" | "array";
@@ -63,95 +50,37 @@ export function typeof_extended(v: any): TypeofExtendedEnum {
 }
 
 export function isPromise(v: any): boolean {
-    return typeof v === 'object' && typeof v.then === 'function';
+    // v != null first: typeof null is 'object', and null.then throws.
+    // Functions with a .then are thenables too (Promises/A+).
+    return v != null && (typeof v === 'object' || typeof v === 'function') &&
+        typeof v.then === 'function';
 }
 
 export function isAssignableFrom(targetCls: any, valueCls: any): boolean {
     return targetCls === valueCls ||
-        valueCls.prototype instanceof targetCls;
+        (valueCls != null && valueCls.prototype instanceof targetCls);
 }
 
 const ObjectLiteralPrototype = Object.getPrototypeOf({});
 
 export function isObjectLiteral(v: any): boolean {
-    return typeof v === 'object' && Object.getPrototypeOf(v) === ObjectLiteralPrototype;
+    // v !== null matters: typeof null is 'object', and getPrototypeOf(null)
+    // throws - and this gets called on things like request.body, which can
+    // legitimately be null.
+    return typeof v === 'object' && v !== null &&
+        Object.getPrototypeOf(v) === ObjectLiteralPrototype;
 }
 
-export function className(v: any): string {
-    return Object.getPrototypeOf(v)?.constructor?.name;
-}
-
-/* 
- * Checks whether a value is an ES6 class (or something pretending
- * sufficiently hard to be an ES6 class).
- *
- * A ES6 class is a Function, with a prototype, and that prototype has a 
- * 'constructor' property that refers back to the Function.
+/**
+ * A debug/error-message label for a value's class.  Total: never throws
+ * (it is mostly called while BUILDING an error message, where a secondary
+ * throw would eat the real diagnostic).
  */
-// export function isES6Class (v: any) {
-//   return typeof (v) === 'function' && v.prototype && v.prototype.constructor && v.prototype.constructor == v;
-// }
-
-// /**
-//  * Arrow functions are the only functions that have a 'undefined' prototype, so
-//  * this is how we distinguish them from types.
-//  */
-// export function isArrowFunction (v: any): v is Function {
-//     return typeof v == 'function' && v.prototype === undefined;
-// };
-
-// /**
-//  * Determines whether obj has the named own property.
-//  *
-//  * 'obj.hasOwnProperty (propName)' is not, in general, correct,
-//  * because the obj or any of its prototypes can define an override for
-//  * hasOwnProperty.
-//  *
-//  * 'Object.prototype.hasOwnProperty.call (obj, propName)' - the
-//  * usual workaround - is ugly - thus this wrapper function.
-//  *
-//  * Sadly, we can't call this 'hasOwnProperty' - or we are overriding
-//  * 'hasOwnProperty' on the exports object - which could cause random
-//  * screwyness + makes flow mad.
-//  */
-// export function hasOwnProp (obj: Object, propName: string|Symbol) {
-//     return Object.prototype.hasOwnProperty.call (obj, propName);
-// };
-
-
-// // Returns class name for objects, or undefined it it cannot find a class name.
-// // Uses non-standard Function.name property, so will not always work, but can be used
-// // to make debugging dumps nicer in those environments where it does work.
-// export function typeName (v:any): string {
-//     var typeStr = typeof (v);
-//     switch (typeStr) {
-//         case 'function':
-//             return (v as Function).name;
-//         case 'object':
-//             if (v === null)
-//                 return 'null';
-//             var proto = Object.getPrototypeOf (v)||v['__proto__'];
-//             if (!proto)
-//                 return 'object';
-//             var construct = proto['constructor'];
-//             if (!construct)
-//                 return 'object';
-//             return construct.name;
-//         case 'undefined':
-//             return 'undefined';
-//         default:
-//             return typeStr;
-//     }
-// }
-
-// export function stringCompare (a:string, b:string) {
-//     if (a < b)
-//         return -1;
-//     else if (a > b)
-//         return 1;
-//     else
-//         return 0;
-// }
+export function className(v: any): string {
+    if (v === null) return 'null';
+    if (v === undefined) return 'undefined';
+    return Object.getPrototypeOf(v)?.constructor?.name ?? '(no class)';
+}
 
 /**
  * Throws a panic exception with the supplied message, typed as 'never'.
@@ -166,14 +95,10 @@ export function className(v: any): string {
  */
 export function panic(message: string = 'panic', detail: any=undefined): never {
     if(detail !== undefined)
-        throw new Error(`Panic: ${message} - ${JSON.stringify(detail)}`);
+        throw new Error(`Panic: ${message} - ${stringifyForError(detail)}`);
     else
         throw new Error(`Panic: ${message}`);
 }
-
-// export function panic(message: string = 'panic'): never {
-//     throw new Error (`Panic: ${message}`);
-// }
 
 export function unwrap<T>(v: T|null|undefined, message: string = 'panic'): T {
     if(v === null || v === undefined)
@@ -183,8 +108,18 @@ export function unwrap<T>(v: T|null|undefined, message: string = 'panic'): T {
 
 export function unwrapWithDetail<T>(v: T|null|undefined, message: string, detail: any): T {
     if(v === null || v === undefined)
-        throw new Error (`${message} - ${JSON.stringify(detail)}`);
+        throw new Error (`${message} - ${stringifyForError(detail)}`);
     return v;
+}
+
+// JSON.stringify that never throws (circular details etc): panic/unwrap are
+// error paths, and an error path that itself explodes eats the diagnostic.
+function stringifyForError(detail: any): string {
+    try {
+        return JSON.stringify(detail) ?? String(detail);
+    } catch {
+        return String(detail);
+    }
 }
 
 /**
@@ -206,43 +141,17 @@ export function assert(condition: any, msg?: string): asserts condition {
 }
 
 /**
- * A decorator that, when applied to a getter, caches the getter result until
- * the (global) invalidateCache is called.
- */
-// export function lazy<T> (target: Object, key: string, descriptor: TypedPropertyDescriptor<T>) :TypedPropertyDescriptor<T> {
-
-//   const memoizedResults = new WeakMap<Object, T>();
-  
-//   // --- Memoizing getter that wraps original getter.
-//   function cachingGetter () {
-//       let self:T = this as T;
-//       // --- If we have cached this property computation, return it from the cache,
-//       //     otherwise compute it and cache it.
-//       //     A slightly odd factoring so that we only have to do the .get() when
-//       //     cached result is present as long as the result is not 'undefined'.
-//       let cachedValue = memoizedResults.get(self);
-//       if(cachedValue === undefined && !memoizedResults.has(self)) {
-//           let value = descriptor.get.call (self);
-//           memoizedResults.set(self, value);
-//           return value;
-//       } else {
-//           return cachedValue;
-//       }
-//   }
-
-//   // --- Return descriptor that uses cachingGetter rather than original getter
-//   return {get: cachingGetter, enumerable: false, configurable: true};
-// }
-
-/**
  * Wrapper for parseInt that throws an exception on parse failure
- * (rather than returning NaN)
+ * (rather than returning NaN).
+ *
+ * Strict: the whole string must be a base-10 integer.  (Bare parseInt
+ * silently accepted trailing garbage and other bases: '12abc' -> 12,
+ * '12.9' -> 12, '0x10' -> 16 - bad news for ids arriving in forms/urls.)
  */
 export function parseIntOrError(s: string): number {
-    let i = parseInt(s);
-    if(Number.isNaN(i))
+    if(!/^[+-]?\d+$/.test(s))
         throw new Error(`Failed to parse ${s} as an integer`);
-    return i;
+    return parseInt(s, 10);
 }
 
 /**
@@ -371,34 +280,6 @@ export function getAllPropertyNames(o: Object): string[] {
         allPropertyNames.push(propertyName);
     return allPropertyNames;
 }
-
-/**
- *
- */
-//export function fromEntriesNoDups
-
-
-// export function reference_longest_increasing_sequence<T>(v: T[], cmp: (T,T)=>number): number[] {
-//     switch(v.length) {
-//         case 0: return [];
-//         case 1: return [0];
-//         default: {
-            
-//         }
-            
-//     }
-// }
-
-/**
- * use Arrays.fromAsync instead
- */
-// export async function collectAsyncIterable<T>(i: AsyncIterable<T>): Promise<T[]> {
-//     const out: T[] = [];
-//     for await (const v of i) {
-//         out.push(v);
-//     }
-//     return out;
-// }        
 
 /**
  * Returns array of numbers from 'from' up to 'to' (exclusive of 'to');
