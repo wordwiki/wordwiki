@@ -38,6 +38,7 @@ import * as user from './user.ts';
 import * as category from './category.ts';
 import * as categoryImport from './category-import.ts';
 import * as lexicalForm from './lexical-form.ts';
+import * as lexicalFormImport from './lexical-form-import.ts';
 
 /**
  *
@@ -1419,22 +1420,25 @@ if (import.meta.main) {
             break;
         }
 
-        // Seed the lexical form (part of speech) vocabulary from the curated
-        // list in lexical-form.ts (the entry-schema partsOfSpeech map + the
-        // sane codes the data uses).  Idempotent - existing slugs are kept.
-        // Junk legacy values are deliberately not seeded; the editor shows
-        // them as not-in-table until each is fixed.  Additive-only, but
-        // guarded like import-categories for symmetry: every command that
-        // writes vocabulary into a production db should be a deliberate act.
-        //   ./wordwiki.sh seed-lexical-forms [--allow-production]
-        case 'seed-lexical-forms': {
+        // Import the lexical form (part of speech) vocabulary (see
+        // lexical-form-import.ts): seed the curated table, normalize the
+        // UNAMBIGUOUS legacy values in the data ('vii ' -> vii, 'particle'
+        // -> PTCL) via applyTransaction, and report the remaining un-tabled
+        // values as the team's curation worklist.  Idempotent; guarded like
+        // import-categories.
+        //   ./wordwiki.sh import-lexical-forms [--username=NAME] [--allow-production]
+        case 'import-lexical-forms':
+        case 'seed-lexical-forms': {   // older name kept as an alias
+            const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
+                ?? 'djz';
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
-                const {inserted, skipped} = lexicalForm.seedLexicalForms(ww.lexicalForms);
-                console.info(`lexical forms seeded: ${inserted} inserted, ${skipped} already present`);
+                if(!ww.users.byUsername.first({username}))
+                    throw new Error(`--username '${username}' is not in the user table`);
+                lexicalFormImport.importLexicalForms(ww, {username, log: (msg) => console.info(msg)});
             });
             Deno.exit(0);
             break;
