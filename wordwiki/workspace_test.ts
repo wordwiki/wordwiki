@@ -8,7 +8,7 @@
  * the editor flows) is covered in wordwiki/assertion_model_test.ts.
  */
 import { test } from "../liminal/testing/test.ts";
-import { assert, assertEquals, assertExists, assertThrows, assertNotEquals } from "../liminal/testing/assert.ts";
+import { assert, assertEquals, assertExists, assertThrows } from "../liminal/testing/assert.ts";
 import * as model from './model.ts';
 import { VersionedDb, CurrentTupleQuery, CurrentRelationQuery,
          currentTuplesForVersionedRelation,
@@ -92,16 +92,14 @@ test("timestamp: nextTime is strictly monotonic, even faster than the clock", ()
     }
 });
 
-test("timestamp: the TIME component round-trips; ordering survives counter rollover", () => {
+test("timestamp: both components round-trip; ordering survives counter rollover", () => {
     const t = timestamp.makeTimestamp(123456, 789);
     assertEquals(timestamp.extractTimeFromTimestamp(t), 123456);
 
-    // KNOWN QUIRK (display-only): makeTimestamp multiplies by COUNTER_MASK
-    // while extractCounterFromTimestamp uses a bitwise AND - these are not
-    // inverses, so the COUNTER does not round-trip in general.  The counter is
-    // only used in formatted timestamps; ordering never depends on extracting
-    // it.  This assertion documents the quirk so a fix is a conscious change.
-    assertNotEquals(timestamp.extractCounterFromTimestamp(t), 789);
+    // The old known quirk (extractCounter used a bitwise AND, which is not
+    // the inverse of the radix-2^20-1 encoding) is fixed: the counter now
+    // round-trips.  Full coverage lives in liminal/timestamp_test.ts.
+    assertEquals(timestamp.extractCounterFromTimestamp(t), 789);
 
     // What actually matters: timestamps order correctly across a counter
     // rollover into the next second.

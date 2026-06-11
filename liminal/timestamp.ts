@@ -2,34 +2,51 @@
  * A hybrid logical clock implementation.
  *
  * Hands out monotonically increasing time stamps.  These time stamps
- * are closely related to wall clock time. (the differ from wall clock time
- * only when one allocates more than 1 million stamps in a second, or when you
- * are approaching the end times).
+ * are closely related to wall clock time. (they differ from wall clock time
+ * only when one allocates more than ~1 million stamps in a second, or when
+ * you are approaching the end times).
  */
 
 /**
  * 2^53-1 == JS Maxint
- * We allocate 33 bits for the time since local epoch start in seconds ~= 270 years.
- * We allocate the remaining 20 bits to updates per second ~= 1 million updates per second.
- * - if we run out of updates in a second, we will just start using the next second.
- * - as we approach the end of time, we switch to a fixed clock time ...
+ *
+ * A timestamp is time*COUNTER_MASK + counter, where time is seconds since
+ * our local epoch start and counter is events within that second.
+ *
+ * NOTE: this is positional encoding in radix 2^20-1 (COUNTER_MASK), NOT
+ * 33/20 bit fields - the radix is baked into all persisted timestamps so
+ * must never change.  This gives ~272 years of time range with ~1 million
+ * events per second.
+ * - if we run out of events in a second, we just start using the next second.
+ * - as we approach the end of time, the time portion freezes at RAPTURE_TIME
+ *   and we rely on the within-second counting alone (see below).
  */
 
 // We use a newer epoch start than the default "January 1, 1970,
-// 00:00:00 UTC" so we can go longer before we run out of time bits
-// (and so that future people can adjust the epoch if this happens)
+// 00:00:00 UTC" so we can go longer before we run out of time range
+// (and so that future people can adjust the epoch if this happens).
+// Units: milliseconds since the JS epoch.
 export const LOCAL_EPOCH_START = +new Date(Date.UTC(2020, 0, 1));
 
-// When we hit the epoch end, the time portion of the timestamp stops
-// moving forward (except as driven by counter overflow).  This will
-// give us 1 billion further events after we hit the end of the epoch.
-export const RAPTURE_TIME = (LOCAL_EPOCH_START + 2**33) - (1024*1024);
+// When the time portion reaches this (seconds since local epoch start -
+// about year 2292), it stops moving forward and further timestamps come
+// from the counter-overflow mechanism alone.  The remaining headroom below
+// Number.MAX_SAFE_INTEGER gives us about 10^12 further events after the
+// rapture before nextTime() throws.
+export const RAPTURE_TIME = 2**33 - 1024*1024;
 
-// Bottom 20 bits of a timestamp is the counter portion.  (1 million
-// events per second).  (If there is more than 1 million events in a
-// second, we will just advance to the next second).
+// The counter portion of a timestamp counts events within one second
+// (~1 million per second).  (If there are more than ~1 million events in
+// a second, we just advance to the next second).  This is the RADIX of
+// the timestamp encoding (see note above), so despite the name it is not
+// usable as a bitmask.
 const COUNTER_MASK = 0x0FFFFF;
 
+// BEGINNING_OF_TIME is a sentinel that sorts below all timestamps this
+// module generates.  (The value is the local epoch start in milliseconds -
+// decoded as a timestamp it actually means Jan 18 2020 - but it is only
+// ever used as a sentinel, and it is persisted in existing databases, so
+// the value is frozen.)
 export const BEGINNING_OF_TIME = LOCAL_EPOCH_START;
 export const END_OF_TIME = Number.MAX_SAFE_INTEGER;
 
@@ -78,7 +95,10 @@ export function extractTimeFromTimestamp(timestamp: number): number {
  * Extract the counter portion of a timestamp.
  */
 export function extractCounterFromTimestamp(timestamp: number): number {
-    return timestamp & COUNTER_MASK;
+    // % not & : the encoding radix is 2^20-1, not 2^20, so a bitwise AND
+    // is not the inverse of makeTimestamp (for example makeTimestamp(1, 0)
+    // & COUNTER_MASK is 1048575, not 0).
+    return timestamp % COUNTER_MASK;
 }
 
 /**
@@ -86,13 +106,16 @@ export function extractCounterFromTimestamp(timestamp: number): number {
  * counter (max size 2^20) into a timestamp.
  */
 export function makeTimestamp(time: number, counter: number): number {
-    if(time < 0 || !Number.isSafeInteger(time*COUNTER_MASK))
+    if(time < 0 || !Number.isSafeInteger(time))
         throw new Error(`internal error: invalid time component of timestamp ${time}`);
     if(counter < 0 || !Number.isSafeInteger(counter) || counter >= COUNTER_MASK)
         throw new Error(`internal error: invalid counter component of timestamp ${counter}`);
-    // We are doing this with multiply and add (instead of <<< and |)
+    // We are doing this with multiply and add (instead of << and |)
     // because the JS bit operators are 32 bit only.
-    return time*COUNTER_MASK + counter;
+    const timestamp = time*COUNTER_MASK + counter;
+    if(!Number.isSafeInteger(timestamp))
+        throw new Error(`internal error: timestamp out of range: time ${time}, counter ${counter}`);
+    return timestamp;
 }
 
 /**
