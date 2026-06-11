@@ -156,6 +156,95 @@ test("subtask checklist: add/toggle/remove gated by the task; every mutation sta
     });
 });
 
+// A committee with the given members, inserted as system.
+function seedCommittee(name: string, members: number[]): {committee_id: number, group_id: number} {
+    return asSystem(() => {
+        const committee_id = rabid.committee.insert({name, description: '', notes: '', deleted: 0});
+        const group_id = rabid.committee.getById(committee_id).group_id;
+        for(const volunteer_id of members)
+            rabid.group_member.insert({group_id, volunteer_id});
+        return {committee_id, group_id};
+    });
+}
+
+test("assign committee: task aliases the named group (live); orphaned adhoc group dropped", async () => {
+    await withTestDb(({ alice, bob, carol }) => {
+        const {task_id, group_id: ownGroup} = seedTask();
+        const c1 = seedCommittee('Logistics Committee', [bob]);
+        const c2 = seedCommittee('Outreach Committee', []);
+
+        // Only task editors may assign; carol (not host, not assignee) can't.
+        assertThrows(() => asUser(carol, () => rabid.task.assignCommittee(
+            {task_id, committee_id: c1.committee_id})), Error, 'Not permitted');
+
+        // Host assigns: the task now points at the committee's NAMED group...
+        const result = asUser(alice, () => rabid.task.assignCommittee(
+            {task_id, committee_id: c1.committee_id})) as any;
+        assertEquals(result.targets, [`.-task-${task_id}-`]);
+        assertEquals(asSystem(() => rabid.task.getById(task_id)).group_id, c1.group_id);
+        // ...and the task's old owned adhoc group is gone (hard-deleted garbage).
+        assertThrows(() => asSystem(() => rabid.volunteer_group.getById(ownGroup)));
+
+        // LIVE semantics: committee members are task assignees - bob can work
+        // the task, and committee membership changes propagate (carol added to
+        // the committee becomes a task editor with no task write at all).
+        asUser(bob, () => rabid.task.saveForm({
+            task_id: String(task_id), status: 'in-progress', 'before-status': 'open'}));
+        asSystem(() => rabid.group_member.insert({group_id: c1.group_id, volunteer_id: carol}));
+        asUser(carol, () => rabid.subtask.addItem({task_id, title: 'now allowed'}));
+
+        // Reassigning to another committee NEVER touches the first committee's
+        // group (it fails the task-ownership test).
+        asUser(alice, () => rabid.task.assignCommittee({task_id, committee_id: c2.committee_id}));
+        assertEquals(asSystem(() => rabid.task.getById(task_id)).group_id, c2.group_id);
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: c1.group_id})).length, 2);
+    });
+});
+
+test("customize members: explicit snapshot detaches from the committee (derived_from provenance)", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const {task_id} = seedTask();
+        const c1 = seedCommittee('Logistics Committee', [bob]);
+        asUser(alice, () => rabid.task.assignCommittee({task_id, committee_id: c1.committee_id}));
+
+        // Committee-assigned: the detail page shows the committee READ-ONLY -
+        // no Add member even for a host (member edits must not silently hit
+        // the committee) - plus the two explicit affordances.
+        const before = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
+        assert(hasText(before, 'Logistics Committee'));
+        assert(hasText(before, 'Membership follows the committee'));
+        assert(!hasText(before, 'Add member'));
+        assert(hasText(before, 'Customize members'));
+        assert(hasText(before, 'Change committee'));
+
+        // The snapshot: a fresh task-owned adhoc group, members copied,
+        // provenance stamped; the committee's group is untouched.
+        asUser(bob, () => rabid.task.customizeMembers(task_id));
+        const t = asSystem(() => rabid.task.getById(task_id));
+        assert(t.group_id !== c1.group_id);
+        const g = asSystem(() => rabid.volunteer_group.getById(t.group_id));
+        assertEquals(g.group_kind, 'adhoc');
+        assertEquals(g.owner_table, 'task');
+        assertEquals(g.owner_id, task_id);
+        assertEquals(g.derived_from, 'Logistics Committee');
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id}))
+            .map(m => m.volunteer_id), [bob]);
+
+        // Edits now hit only the task's own group.
+        asUser(bob, () => rabid.volunteer_group.addMember({group_id: t.group_id, volunteer_id: carol}));
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id})).length, 2);
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: c1.group_id})).length, 1);
+
+        // The detail page is back to the editable member editor, with the
+        // provenance label.
+        const after = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
+        assert(hasText(after, 'Customized from Logistics Committee'));
+        assert(hasText(after, 'Add member'));
+        assert(hasText(after, 'Assign committee'));
+        assert(!hasText(after, 'Membership follows the committee'));
+    });
+});
+
 test("tasks page: 'My tasks' for the actor's assignments; all-open grouped by project; done/deleted excluded", async () => {
     await withTestDb(async ({ bob, carol }) => {
         const {project_id, task_id, group_id} = seedTask();

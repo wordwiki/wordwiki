@@ -208,6 +208,18 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
         ];
     }
 
+    // Read-only member list (no add/remove affordances) - used where a group is
+    // shown through an ALIASING reference (e.g. a task assigned to a committee's
+    // named group): member edits there must go through the explicit
+    // customize/convert flow, never silently into the committee.
+    renderMemberList(group_id: number): Markup {
+        const members = this.members.all({group_id});
+        return members.length === 0
+            ? [h.p, {class: 'text-muted'}, 'No members yet.']
+            : [h.div, {class: 'list-group lm-list mb-2'},
+               members.map(m => this.renderMemberRow(m, false))];
+    }
+
     renderMemberRow(m: GroupMemberWithName, canEdit: boolean): Markup {
         return [h.div, {class: 'list-group-item lm-item d-flex align-items-center',
                         'data-testid': `member-row-${m.volunteer_id}`},
@@ -325,6 +337,41 @@ export function createOwnedGroup(group_kind: 'named'|'adhoc', owner_table: strin
     return rabid.volunteer_group.insert({
         group_kind, name: '', owner_table, owner_id,
         derived_from: '', deleted: 0});
+}
+
+// The EXPLICIT named->adhoc conversion (the "mixing quirk" in the file header):
+// copy the named group's CURRENT members into a fresh adhoc group owned by
+// (owner_table, owner_id), stamped with derived_from = the named group's
+// display name - so pages can say "Customized from Logistics Committee".  Only
+// ever invoked behind a user confirmation (never as a silent side effect of a
+// member edit); the named group itself is untouched.
+export function snapshotAsOwnedAdhocGroup(named_group_id: number,
+                                          owner_table: string, owner_id: number): number {
+    const src = rabid.volunteer_group.getById(named_group_id);
+    const group_id = rabid.volunteer_group.insert({
+        group_kind: 'adhoc', name: '', owner_table, owner_id,
+        derived_from: rabid.volunteer_group.displayName(src), deleted: 0});
+    db().execute<{src: number, dst: number}>(block`
+/**/   INSERT INTO group_member(group_id, volunteer_id)
+/**/          SELECT :dst, volunteer_id FROM group_member WHERE group_id = :src`,
+        {src: named_group_id, dst: group_id});
+    return group_id;
+}
+
+// Hard-delete an owned adhoc group its owner no longer references (e.g. a
+// task's original assignee group after the task was pointed at a committee's
+// named group).  Unreferenced adhoc groups have no historical referent, so -
+// unlike named groups, which soft-delete - they are simply garbage.  A module
+// function (NOT on the route tree): callers gate via the owning record's edit
+// permission before the reference is repointed.
+export function dropOrphanedAdhocGroup(group_id: number): void {
+    const g = rabid.volunteer_group.getById(group_id);
+    if(g.group_kind !== 'adhoc')
+        throw new Error(`Refusing to drop non-adhoc group ${group_id}`);
+    db().execute<{group_id: number}>(
+        'DELETE FROM group_member WHERE group_id = :group_id', {group_id});
+    db().execute<{group_id: number}>(
+        'DELETE FROM volunteer_group WHERE group_id = :group_id', {group_id});
 }
 
 export const allDml =

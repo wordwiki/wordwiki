@@ -893,6 +893,15 @@ export function seedProjects(rabid: Rabid): void {
         project_id: drive, title: 'Confirm dropoff sites',
         status: 'done', deleted: 0});
 
+    // A committee-assigned task (live: membership follows the committee) -
+    // through the real action, so the orphaned adhoc group is dropped too.
+    if(logistics) {
+        const staffing = rabid.task.insert({
+            project_id: drive, title: 'Donation day staffing',
+            due: '2026-06-19', deleted: 0});
+        rabid.task.assignCommittee({task_id: staffing, committee_id: logistics.committee_id});
+    }
+
     const stand = rabid.task.insert({
         project_id: shop, title: 'Fix wobbly repair stand #3',
         priority: 'low', deleted: 0});

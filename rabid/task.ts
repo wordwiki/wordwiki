@@ -42,7 +42,8 @@ import * as security from "../liminal/security.ts";
 import * as date from "../liminal/date.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
-import {OwnedGroupField, createOwnedGroup} from './group.ts';
+import {OwnedGroupField, createOwnedGroup, snapshotAsOwnedAdhocGroup, dropOrphanedAdhocGroup,
+        VolunteerGroup} from './group.ts';
 import {rabid} from './rabid.ts';
 
 export const routes = ()=> ({
@@ -599,11 +600,134 @@ export class TaskTable extends Table<Task> {
              row('Due', t.due ? date.sqliteDateToString(t.due) : '—'),
              t.details ? row('Details', t.details) : undefined,
             ],
-            [h.h4, {class: 'mt-3'}, 'Assigned to'],
-            rabid.volunteer_group.renderMemberEditor(t.group_id),
+            this.renderAssignedTo(t),
             [h.h4, {class: 'mt-3'}, 'Checklist'],
             rabid.subtask.renderChecklist(task_id),
         ];
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Assignment (people, or a committee) -----------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // A task's group_id usually points at its OWN adhoc group (people picked
+    // for this task).  Assigning a COMMITTEE points it at the committee's
+    // named group instead - LIVE semantics, membership follows the committee.
+    // On the task page a committee assignment renders READ-ONLY: member edits
+    // there must never silently mutate the committee.  The escape hatch is the
+    // explicit, confirmed customizeMembers snapshot (see group.ts header).
+
+    // The "Assigned to" section of the detail page (part of the `.-task-<id>-`
+    // fragment, so the assignment actions reload the whole detail).
+    renderAssignedTo(t: Task): Markup {
+        const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
+        const canEdit = this.canEditRecord(t);
+        const committeeAssigned = g.group_kind === 'named';
+
+        const header = [h.div, {class: 'd-flex align-items-center gap-2 mt-3 mb-2'},
+            [h.h4, {class: 'mb-0'}, 'Assigned to'],
+            canEdit && committeeAssigned
+                ? action.actionButton('Customize members…',
+                    {kind: 'confirm',
+                     expr: `rabid.task.customizeMembers(${t.task_id})`,
+                     message: `Detach this task from ${rabid.volunteer_group.displayName(g)}? ` +
+                              `The assignees start as the current committee members, but committee ` +
+                              `changes will no longer affect this task.`},
+                    'btn btn-outline-secondary btn-sm')
+                : undefined,
+            canEdit
+                ? action.actionButton(committeeAssigned ? 'Change committee' : 'Assign committee',
+                    {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
+                    'btn btn-outline-primary btn-sm')
+                : undefined,
+        ];
+
+        if(committeeAssigned) {
+            // Owned named groups belong to a committee; link to it.
+            const committee = g.owner_table === 'committee' && g.owner_id != null
+                ? security.runSystem(() => rabid.committee.getById(g.owner_id!))
+                : undefined;
+            return [header,
+                [h.p, {class: 'mb-1'},
+                 committee
+                     ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
+                     : rabid.volunteer_group.displayName(g),
+                 ' ',
+                 [h.span, {class: 'badge text-bg-info'}, 'Committee'],
+                 [h.span, {class: 'text-muted small ms-2'}, 'Membership follows the committee.']],
+                rabid.volunteer_group.renderMemberList(t.group_id),
+            ];
+        }
+
+        return [header,
+            g.derived_from
+                ? [h.p, {class: 'text-muted small mb-1'}, `Customized from ${g.derived_from}.`]
+                : undefined,
+            rabid.volunteer_group.renderMemberEditor(t.group_id),
+        ];
+    }
+
+    // The assign-committee parameter dialog: one committee picker (type-ahead
+    // via project's committee_id FK route) + the task id riding hidden.
+    assignCommitteeDialog(task_id: number): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        return [
+            [h.p, {class: 'text-muted small'},
+             'The current assignee list is replaced; membership then follows the committee.'],
+            action.renderParamForm(
+                [new ForeignKeyField('committee_id', 'committee', 'committee_id', {}, 'name')],
+                {},
+                {
+                    title: `Assign a committee to ${t.title || 'this task'}`,
+                    submitLabel: 'Assign',
+                    hidden: {task_id},
+                    fieldContext: {ownerPath: 'rabid.project'},
+                    dispatch: {onsubmit:
+                        'event.preventDefault(); tx`rabid.task.assignCommittee(${getFormJSON(event.target)})`'},
+                }),
+        ];
+    }
+
+    // Point the task at the committee's named group (live), and drop the
+    // task's own now-orphaned adhoc group.  Args arrive from our own dialog's
+    // form (strings - the same trust model as saveForm).
+    assignCommittee(args: {task_id?: string|number, committee_id?: string|number}): Markup {
+        const task_id = Number(args?.task_id);
+        const committee_id = Number(args?.committee_id);
+        if(!Number.isInteger(task_id) || !task_id) throw new Error('Missing task');
+        if(!Number.isInteger(committee_id) || !committee_id) throw new Error('Please choose a committee');
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        const committee = security.runSystem(() => rabid.committee.getById(committee_id));
+        if(committee.group_id !== t.group_id) {
+            const old = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
+            this.update(task_id, {group_id: committee.group_id});   // stamps last_change_time
+            // The task's old OWN adhoc group is now unreferenced garbage.  (A
+            // previous COMMITTEE assignment fails this ownership test and is
+            // left alone - reassigning never touches a committee's group.)
+            if(old.group_kind === 'adhoc' && old.owner_table === 'task' && old.owner_id === task_id)
+                security.runSystem(() => dropOrphanedAdhocGroup(old.group_id));
+        }
+        return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
+    }
+
+    // The EXPLICIT committee->custom conversion (always behind the confirm
+    // button above): snapshot the committee's current members into a fresh
+    // task-owned adhoc group, with derived_from keeping the provenance label.
+    customizeMembers(task_id: number): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
+        if(g.group_kind === 'named') {
+            const group_id = security.runSystem(() =>
+                snapshotAsOwnedAdhocGroup(g.group_id, 'task', task_id));
+            this.update(task_id, {group_id});
+        }
+        return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
     }
 }
 
