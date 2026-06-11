@@ -12,6 +12,7 @@ import * as server from '../liminal/http-server.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
+import * as category from './category.ts';
 import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as schema from './scanned-document.ts';
@@ -189,6 +190,53 @@ export class Publish {
                 public publishRoot: string = '.',
                 public options: PublishOptions = {}) {
         this.entryToPublicId = this.computeEntryPublicIds(entries, this.defaultVariant);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Public-site category policy ------------------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // Internal categories ('~' slugs: ~needs-human, ~old-*, ~tier-*, ...) are
+    // NEVER rendered on the public site - every category the publisher emits
+    // goes through these helpers (the single-filter rule: see category.ts).
+    // Display names come from the category table when seeded; a value with no
+    // table row (a pre-import db) falls back to the raw value.
+
+    #categoryBySlug: Map<string, category.Category>|undefined;
+    get categoryBySlug(): Map<string, category.Category> {
+        return this.#categoryBySlug ??= (() => {
+            try {
+                return new Map(this.wordWiki.categories.allByOrder.all({})
+                    .map(c => [c.slug, c]));
+            } catch (_e) {
+                return new Map();   // pre-import db: no category table yet
+            }
+        })();
+    }
+
+    publicCategoryName(slug: string): string {
+        return this.categoryBySlug.get(slug)?.name ?? slug;
+    }
+
+    /** An entry's categories as shown on the public site (internal filtered). */
+    publicEntryCategories(entry: Entry): string[] {
+        return entry.subentry.flatMap(s=>s.category.flatMap(c=>c.category))
+            .filter(c => c != null && c !== '' && !category.isInternalCategorySlug(c));
+    }
+
+    /**
+     * The public categories with entry counts: internal filtered out, ordered
+     * by the category table's order (theme blocks) when seeded - categories
+     * without a table row (pre-import) keep their alphabetical order, after
+     * the tabled ones.
+     */
+    publicCategories(): Array<[string, number]> {
+        const cats = Array.from(this.wordWiki.getCategories().entries())
+            .filter(([slug, _n]) => !category.isInternalCategorySlug(slug));
+        const order = new Map(Array.from(this.categoryBySlug.keys()).map((slug, i) => [slug, i]));
+        return cats.toSorted(([a], [b]) =>
+            (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity)
+            || this.wordWiki.sourceLangCollator.compare(a, b));
     }
 
     async publish(): Promise<void> {
@@ -613,10 +661,10 @@ including remixing, transforming, and building upon the material, for any non-co
         const entryMarkup:any[] = entryschema.renderEntry({rootPath}, entry);
         // renderCategoriesForEntry here.
 
-        const entryCategories = entry.subentry.flatMap(s=>s.category.flatMap(c=>c.category));
+        const entryCategories = this.publicEntryCategories(entry);
         const relatedCategoryMarkup =
             entryCategories.map(category=>[
-                ['h3', {}, `Related entries for category "${category}"`],
+                ['h3', {}, `Related entries for category "${this.publicCategoryName(category)}"`],
                 ['div', {},
                  ['ul', {},
                   (this.wordWiki.entriesByCategory.get(category)??[])
@@ -692,10 +740,10 @@ including remixing, transforming, and building upon the material, for any non-co
         const body = [
             ['h1', {}, title],
             ['ul', {},
-             Array.from(this.wordWiki.getCategories().entries()).map(cat=>
+             this.publicCategories().map(cat=>
                  ['li', {}, ['a',
                              {href:this.pathForCategory(cat[0])},
-                             cat[0], ` (${cat[1]} entries)`]]),
+                             this.publicCategoryName(cat[0]), ` (${cat[1]} entries)`]]),
             ]
         ];
         await writePageFromMarkupIfChanged(this.categoriesDirectoryPath, this.publicPageTemplate('', {title, body}));
@@ -706,7 +754,7 @@ including remixing, transforming, and building upon the material, for any non-co
      */
     async publishCategories(): Promise<void> {
         await Deno.mkdir(this.categoriesDir, {recursive: true});
-        for(const category of this.wordWiki.getCategories().keys()) {
+        for(const [category, _count] of this.publicCategories()) {
             await this.publishItem(`Category ${category}`, ()=>this.publishCategory(category));
         }
     }
@@ -719,7 +767,7 @@ including remixing, transforming, and building upon the material, for any non-co
         //const entriesForCategory = this.wordWiki.getEntriesForCategory(category);
         const entriesForCategory = this.wordWiki.entriesByCategory.get(category)??[];
         
-        const title = ['Entries for category ', category];
+        const title = ['Entries for category ', this.publicCategoryName(category)];
         
         const body = [
             ['h2', {}, title],
