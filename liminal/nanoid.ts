@@ -35,7 +35,31 @@ export const customAlphabet = (alphabet: string, size: number) => customRandom(r
 export type CustomRandomGenerator = (size: number) => Uint8Array | Uint16Array | Uint32Array;
 
 export const customRandom = (random: CustomRandomGenerator, alphabet: string, size: number) => {
-    const mask = (2 << (Math.log(alphabet.length - 1) / Math.LN2)) - 1;
+    // Validate up front: the generator loop below runs until the id reaches
+    // exactly `size` characters, so a size it can never reach (0, negative,
+    // fractional) or an alphabet it can never draw from (empty) would loop
+    // forever; >256 characters silently makes the top of the alphabet
+    // unreachable (biased ids); duplicates bias toward the repeated
+    // characters; a surrogate half would emit garbage code units.
+    if (alphabet.length < 1 || alphabet.length > 256)
+        throw new Error(`nanoid alphabet must contain 1..256 characters (got ${alphabet.length})`);
+    if (/[\uD800-\uDFFF]/.test(alphabet))
+        throw new Error(`nanoid alphabet must contain single-code-unit characters only`);
+    if (new Set(alphabet).size !== alphabet.length)
+        throw new Error(`nanoid alphabet must not contain duplicate characters`);
+    if (!Number.isSafeInteger(size) || size <= 0)
+        throw new Error(`nanoid size must be a positive integer (got ${size})`);
+
+    // The smallest 2^k - 1 >= alphabet.length - 1: masking a random byte
+    // with this is uniform over 0..mask (2^k divides 256), and indices
+    // beyond the alphabet are refused below, so accepted indices are
+    // uniform over the alphabet.  Computed with exact integer ops (clz32,
+    // as in upstream nanoid) - the historical Math.log(n)/Math.LN2 form
+    // depends on implementation-approximated floats, which on some engines
+    // round below the exact power-of-two result, making the mask too small
+    // and the last alphabet character unreachable.  The `| 1` keeps clz32
+    // well-defined for a 1-character alphabet.
+    const mask = (2 << (31 - Math.clz32((alphabet.length - 1) | 1))) - 1;
     const step = -~(1.6 * mask * size / alphabet.length);
 
     return (): string => {
@@ -46,7 +70,7 @@ export const customRandom = (random: CustomRandomGenerator, alphabet: string, si
             while (i--) {
                 // Adding `|| ''` refuses a random byte that exceeds the alphabet size.
                 id += alphabet[bytes[i] & mask] || '';
-                if (id.length === +size) return id;
+                if (id.length === size) return id;
             }
         }
     };

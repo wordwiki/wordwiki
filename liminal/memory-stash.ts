@@ -13,7 +13,7 @@
  * and entire user stash on logout and so that 'session token
  * stealing' style attacks can't work.
  */
-import newId from './nanoid.ts';
+import { newId } from './nanoid.ts';
 
 export class Stash {
     contents_by_key: Map<string, any>;
