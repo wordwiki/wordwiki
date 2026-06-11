@@ -239,6 +239,11 @@ export const h = html;
 // ----------------------------------------------------------------------------
 
 
+/**
+ * DEBUG-ONLY pretty printer.  Does NOT escape text or attribute values -
+ * never serve its output as HTML; use renderToStringViaLinkeDOM /
+ * asyncRenderToStringViaLinkeDOM for that.
+ */
 export function markupToString(markup: any, indent: string='') {
     return new MarkupRenderer().renderContentMarkupItem(markup, indent);
 }
@@ -267,7 +272,59 @@ export const phrasingContentElements = new Set([
     'meter', 'noscript', 'object', 'output', 'picture', 'progress', 'q',
     'ruby', 's', 'samp', 'script', 'select', 'slot', 'small', 'span',
     'strong', 'sub', 'sup', 'svg', 'template', 'textarea', 'time', 'u',
-    'var', 'video', 'w', 'br']);
+    'var', 'video', 'wbr']);
+
+// --- Name validation for the JSDON/linkedom render path.  Tag and
+//     attribute names are emitted into the HTML *unescaped* (there is no
+//     valid escaping for them), so a name containing '>' or spaces is
+//     direct markup injection.  Names come from code, not user data - but
+//     code increasingly builds them from soft-schema strings, so we fail
+//     loudly rather than emit an exploit.  The attr pattern allows the
+//     conventions in live use: data-*, aria-*, hx-on::after-request,
+//     xlink:href, @click.
+const validTagNameRe = /^[a-zA-Z][a-zA-Z0-9-]*$/;
+const validAttrNameRe = /^[a-zA-Z@_][a-zA-Z0-9_:.@-]*$/;
+
+function checkTagName(tagName: string): string {
+    if(!validTagNameRe.test(tagName))
+        throw new Error(`invalid element tag name: ${JSON.stringify(tagName)}`);
+    return tagName;
+}
+
+function checkAttrName(name: string): string {
+    if(!validAttrNameRe.test(name))
+        throw new Error(`invalid attribute name: ${JSON.stringify(name)}`);
+    return name;
+}
+
+// --- Raw text elements (script/style) have no escaping mechanism at all:
+//     text content containing '</script' TERMINATES the element early and
+//     the rest parses as HTML (the classic raw-text breakout).  All live
+//     script content is static today; this guard keeps it safe when
+//     someone inevitably embeds dynamic data.
+function checkRawTextContent(tagName: string, s: string): string {
+    if(s.toLowerCase().includes('</'+tagName))
+        throw new Error(`content of <${tagName}> must not contain "</${tagName}" - ` +
+                        `it would terminate the element early (raw-text breakout)`);
+    return s;
+}
+
+// --- Text content adjustments by parent element.  linkedom serializes
+//     textarea/title content RAW (no escaping) - but per spec they are
+//     ESCAPABLE raw text, where character references do get decoded.  So
+//     we pre-escape ourselves: that both displays correctly and closes the
+//     '</textarea>' breakout - which matters, because textareas routinely
+//     hold USER data (the record editors render stored field values into
+//     them).
+function textForParent(parentTag: string|undefined, s: string): string {
+    if(parentTag === undefined)
+        return s;
+    if(htmlRawTextElements.has(parentTag))
+        return checkRawTextContent(parentTag, s);
+    if(escapableRawTextElements.has(parentTag))
+        return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;');
+    return s;
+}
 
 export class MarkupRenderer {
 
@@ -429,13 +486,15 @@ export class MarkupRenderer {
     }
 
     renderAttrValue(v: any): string {
-        const s = String(v).replace('\n', '\\n').replace('\t', '\\t');
+        // Debug formatting, not HTML escaping (see markupToString note).
+        // (replaceAll: the old .replace only rewrote the FIRST occurrence.)
+        const s = String(v).replaceAll('\n', '\\n').replaceAll('\t', '\\t');
         switch(true) {
             case s==='': return "''";
             case /^[a-zA-Z0-9_]+$/.test(s): return s;
             case s.indexOf("'") === -1: return `'${s}'`;
             case s.indexOf('"') === -1: return `"${s}"`;
-            default: return "'"+s.replace("'", "\\'")+"'";
+            default: return "'"+s.replaceAll("'", "\\'")+"'";
         }
     }
 }
@@ -454,11 +513,6 @@ function collectMarkup(out: any[], item: any) {
         out.push(item);
     }
 }
-
-export function flattenMarkupDeep(markup: any): any {
-    throw new Error('no impl yet');
-}
-
 
 function isShortInlineContent(flattenedMarkup: any[], maxLen: number): boolean {
     let total = 0;
@@ -538,11 +592,20 @@ export const NODE_END = -1;
 
 export function renderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true, debug: boolean=false): string {
     //console.info('MARKUP', jsonStrIfPossible(markup));
-    return toLinkeDOM(markup, wrapInHtmlDocument, debug).toString();
+    return linkeDOMToString(toLinkeDOM(markup, wrapInHtmlDocument, debug), wrapInHtmlDocument);
 }
 
 export function toLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true, debug: boolean=false): any {
     return linkedom.parseJSON(renderToJSDON(markup, wrapInHtmlDocument, debug));
+}
+
+// Unwrapped markup is parsed as a DOCUMENT_FRAGMENT (see renderToJSDON), so
+// serialize its children individually - the fragment's own toString() wraps
+// them in literal <#document-fragment> tags.
+function linkeDOMToString(dom: any, wrappedInHtmlDocument: boolean): string {
+    return wrappedInHtmlDocument
+        ? dom.toString()
+        : [...dom.childNodes].map((c: any) => c.toString()).join('');
 }
 
 /**
@@ -564,15 +627,21 @@ export function renderToJSDON(item: any, wrapInHtmlDocument: boolean=true, debug
     if(wrapInHtmlDocument) {
         out.push(DOCUMENT_NODE);
         out.push(DOCUMENT_TYPE_NODE, "html");
-    }        
-    renderItemToJSDON(out, item, debug);
-    if(wrapInHtmlDocument) {
-        out.push(NODE_END, NODE_END);
+    } else {
+        // Wrap unwrapped markup in a document fragment: linkedom.parseJSON
+        // otherwise keeps only the FIRST root node, silently dropping the
+        // rest of a multi-root fragment.
+        out.push(DOCUMENT_FRAGMENT_NODE);
     }
+    renderItemToJSDON(out, item, debug);
+    if(wrapInHtmlDocument)
+        out.push(NODE_END, NODE_END);
+    else
+        out.push(NODE_END);
     return out;
 }
 
-function renderItemToJSDON(out: JSDON, item: any, debug: boolean=false) {
+function renderItemToJSDON(out: JSDON, item: any, debug: boolean=false, parentTag?: string) {
     switch(typeof item) {
         case 'undefined':
             break;
@@ -582,7 +651,7 @@ function renderItemToJSDON(out: JSDON, item: any, debug: boolean=false) {
             out.push(TEXT_NODE, String(item));
             break;
         case 'string':
-            out.push(TEXT_NODE, item);
+            out.push(TEXT_NODE, textForParent(parentTag, item));
             break;
         case 'object':
             if(item == null)
@@ -596,7 +665,7 @@ function renderItemToJSDON(out: JSDON, item: any, debug: boolean=false) {
                     if(debug)
                         console.info('renderArrayToJSDON', item);
                     for(const i of item)
-                        renderItemToJSDON(out, i, debug);
+                        renderItemToJSDON(out, i, debug, parentTag);
                 }
             } else if(true && item instanceof Promise) {
                 out.push(TEXT_NODE, '*** UNRESOLVED PROMISE ***')
@@ -635,19 +704,23 @@ function jsonStrIfPossible(v: any): string {
 
 function renderElementToJSDON(out: JSDON, e: ElemExprLiteral, debug: boolean = false) {
     const [tag, {...attrs}, ...content] = e;
-    const tagName = tag instanceof Function ? tag.name : String(tag);
+    const tagName = checkTagName(tag instanceof Function ? tag.name : String(tag));
 
     out.push(ELEMENT_NODE);
     out.push(tagName);
     for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
-        if(name !== '') {
-            out.push(ATTRIBUTE_NODE, name);
-            if(value != undefined)
-                out.push(String(value));
+        // Null/undefined attr values mean ABSENT (per the module doc "null
+        // and undefined are elided", matching the JSX convention).  (The
+        // historical version emitted the attr name without a value, which
+        // linkedom serialized as a PRESENT empty attr - so {required:
+        // cond ? '' : undefined} was always required.)
+        if(name !== '' && value != undefined) {
+            out.push(ATTRIBUTE_NODE, checkAttrName(name));
+            out.push(String(value));
         }
     }
     for(const c of content)
-        renderItemToJSDON(out, c, debug);
+        renderItemToJSDON(out, c, debug, tagName);
     out.push(NODE_END);
 }
 
@@ -672,7 +745,8 @@ class AsyncRenderToJSDON {
     }
 
     async asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<string> {
-        return (await this.asyncToLinkeDOM(markup, wrapInHtmlDocument)).toString();
+        return linkeDOMToString(await this.asyncToLinkeDOM(markup, wrapInHtmlDocument),
+                                wrapInHtmlDocument);
     }
 
     async asyncToLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<any> {
@@ -684,15 +758,18 @@ class AsyncRenderToJSDON {
         if(wrapInHtmlDocument) {
             out.push(DOCUMENT_NODE);
             out.push(DOCUMENT_TYPE_NODE, "html");
-        }        
-        await this.asyncRenderItemToJSDON(out, item);
-        if(wrapInHtmlDocument) {
-            out.push(NODE_END, NODE_END);
+        } else {
+            out.push(DOCUMENT_FRAGMENT_NODE);   // see renderToJSDON note
         }
+        await this.asyncRenderItemToJSDON(out, item);
+        if(wrapInHtmlDocument)
+            out.push(NODE_END, NODE_END);
+        else
+            out.push(NODE_END);
         return out;
     }
 
-    async asyncRenderItemToJSDON(out: JSDON, item: any) {
+    async asyncRenderItemToJSDON(out: JSDON, item: any, parentTag?: string) {
         switch(typeof item) {
             case 'undefined':
                 break;
@@ -702,7 +779,7 @@ class AsyncRenderToJSDON {
                 out.push(TEXT_NODE, String(item));
                 break;
             case 'string':
-                out.push(TEXT_NODE, item);
+                out.push(TEXT_NODE, textForParent(parentTag, item));
                 break;
             case 'object':
                 if(item == null)
@@ -712,10 +789,10 @@ class AsyncRenderToJSDON {
                         await this.asyncRenderElementToJSDON(out, item as ElemExprLiteral);
                     } else {
                         for(const i of item)
-                            await this.asyncRenderItemToJSDON(out, i);
+                            await this.asyncRenderItemToJSDON(out, i, parentTag);
                     }
                 } else if(item instanceof Promise) {
-                    await this.asyncRenderItemToJSDON(out, await item);
+                    await this.asyncRenderItemToJSDON(out, await item, parentTag);
                 } else {
                     throw new Error(`unhandled content object ${item} of type ${utils.className(item)}`);
                 }
@@ -728,164 +805,42 @@ class AsyncRenderToJSDON {
 
     async asyncRenderElementToJSDON(out: JSDON, e: ElemExprLiteral) {
         let [tag, {...attrs}, ...content] = e;
-        const tagName = tag instanceof Function ? tag.name : String(tag);
+        const tagName = checkTagName(tag instanceof Function ? tag.name : String(tag));
 
         out.push(ELEMENT_NODE);
         out.push(tagName);
         for(let [name, value] of Object.entries(attrs as Record<string, any>)) {
-            if(name !== '') {
-                out.push(ATTRIBUTE_NODE, name);
-                while(value instanceof Promise)
-                    value = await value;
-                if(value != undefined)
-                    out.push(String(value));
+            while(value instanceof Promise)
+                value = await value;
+            // Null/undefined (incl a promise resolving to them) means the
+            // attr is ABSENT - see the sync renderer note.
+            if(name !== '' && value != undefined) {
+                out.push(ATTRIBUTE_NODE, checkAttrName(name));
+                out.push(String(value));
             }
         }
 
         // --- If we have hx-trigger='server', eval hx-get in jsTerp and inline
-        //     the results.  This 
+        //     the results.
         const hxTrigger = attrs['hx-trigger'];
         const hxGet = attrs['hx-get'];
         if(this.jsTerpEnabled &&
+            typeof hxTrigger === 'string' &&   // (most elements have no hx-trigger - .split on undefined threw)
             hxTrigger.split(/[ ]*,[ ]*/).indexOf('server') !== -1 &&
             typeof hxGet === 'string') {
             content = await jsterp.evalJsExprSrcForcingTopLevelPromises(this.jsTerpScope, hxGet, this.jsTerpSafeMode);
         }
 
-         await this.asyncRenderItemToJSDON(out, content);
+        await this.asyncRenderItemToJSDON(out, content, tagName);
 
         out.push(NODE_END);
     }
 }
 
-async function linkeDOMPlay() {
-    console.info(renderToStringViaLinkeDOM(
-        ['div', {class: 'top', style: 'none', 'cat': null}, 'hello',
-         ['img', {width: 7, height: 9}]]));
-    attrEscapePlay(`cat`);
-    attrEscapePlay(`"cat"`);
-    attrEscapePlay(`'"cat"'`);
-    attrEscapePlay(`"'cat'"`);
-    attrEscapePlay("`cat`");
-    attrEscapePlay("ca\nt"); // This one generates broken html (newline is not escaped)
-    scriptEscapePlay(`"'cat'"`);
-    await jsterpPlay(
-        ['div',
-         ['div', {'hx-get': '1+1', 'hx-trigger': 'server'}]]);
-}
-
-async function jsterpPlay(markup: any) {
-    const out = await (new AsyncRenderToJSDON(true, {'size': 7}, false)).
-        asyncRenderToStringViaLinkeDOM(markup, false);
-    console.info('Markup', markup, 'terp renders to', out);
-}
-
-
-function attrEscapePlay(s: string) {
-    const markup = ['div', {onclick: s, 'data-s': s}];
-    const asText = renderToStringViaLinkeDOM(markup, false);
-    console.info('ATTR ESCAPE PLAY', s, asText);
-}
-
-function scriptEscapePlay(s: string) {
-    const markup = ['script', {}, s];
-    const asText = renderToStringViaLinkeDOM(markup, false);
-    console.info('SCRIPT ESCAPE PLAY', s, asText);
-}
-
-
-// ----------------------------------------------------------------------------
-// --- Diff -------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-/*
-  - expect a single root node, and ids must match (if not throw Error)
-  - recursive by-value compare of a and b contents, when an elem with an id
-    is found, they are pairwise added to descendants collection.
-  - if don't match, return [b] (b is replacement for a - they have the same
-    id, so will be easy to find)
-    - if do match, for all child elems with ids, rerun algo.
-    - will be super easy to apply this to DOM.
- */
-
-
-// Stopped working on for the moment.
-// - I still think a V0 that can only replace entire nodes (ie. no insert, delete or move)
-//   will be some benefit (and is super easy to implement) - so will probably finish.
-// - Probably not super hard to add insert/delete ???
-
-export function diffElem(a: ElemExprLiteral, b: ElemExprLiteral): ElemExprLiteral[] {
-    if(!isElemMarkup(a) || !isElemMarkup(b))
-        throw new Error('attempt to diff non-elems');
-    const [aTag, aAttrs, ...aChildren] = a;
-    const [bTag, bAttrs, ...bChildren] = b;
-    const aId = aAttrs['id'];
-    const bId = bAttrs['id'];
-    if(aId === undefined || bId === undefined || aId !== bId)
-        throw new Error('top level diff only works on two elements with identical ids');
-
-    // --- Compare attrs, rerendering if any have changed (including order change)
-    const aAttrEntries = aAttrs.entries();
-    const bAttrEntries = bAttrs.entries();
-    if(aAttrEntries.length !== bAttrEntries.length)
-        return [b];
-    for(let i=0; i<aAttrEntries.length; i++) {
-        if(aAttrs[0] !== bAttrs[0] || aAttrs[1] !== bAttrs[1])
-            return [b];
-    }
-
-    // --- Compare Children
-    return diffContent(a, b, aChildren, bChildren);
-}
-
-function diffContent(aParent: ElemExprLiteral, bParent: ElemExprLiteral,
-                     aContent: any[], bContent: any[]): ElemExprLiteral[] {
-    const diffs:any[] = [];
-    if(aContent.length !== bContent.length)
-        return [bParent];
-    for(let i=0; i<aContent.length; i++) {
-        const a = aContent[i];
-        const b = bContent[i];
-
-        // --- Identical content --- So happy!
-        if(a === b)
-            continue;
-
-        // --- If either side is an elem - compare as such
-        if(isElemMarkup(a) || isElemMarkup(b)) {
-            // TODO: handle non ide elems here 
-            if(getElemId(a) !== getElemId(b))
-                diffs.push(b);
-            else
-                diffs.push(...diffElem(a, b));
-        }
-
-        // ---
-
-        
-        // if(Array.isArray(a) && Array.isArray(b))
-        //         const childElemDiffs = diffElem(a, b);
-        //         if(childElemDiffs.length !== 0)
-        //             diffs.push(...childElemDiffs);
-        //         continue;
-        //     }
-                
-            
-        // }
-        
-    }
-
-
-    return diffs;
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-
-if (import.meta.main)
-    await linkeDOMPlay();
+// (A markup diff facility - diffElem/diffContent - lived here as unfinished
+// WIP until June 2026; it crashed on first call (plain-object .entries())
+// and had no callers.  Recover from git history if the fragment-diff plan
+// revives.)
 
 
 
