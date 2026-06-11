@@ -6,7 +6,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
-import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './schema.ts';
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './scanned-document.ts';
 import * as config from "./config.ts";
 import * as server from '../liminal/http-server.ts';
 import {

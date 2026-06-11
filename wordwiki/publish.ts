@@ -14,7 +14,7 @@ import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
 import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
-import * as schema from './schema.ts';
+import * as schema from './scanned-document.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import * as renderPageEditor from './render-page-editor.ts';
 

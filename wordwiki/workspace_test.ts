@@ -14,7 +14,7 @@ import { VersionedDb, CurrentTupleQuery, CurrentRelationQuery,
          currentTuplesForVersionedRelation,
          generateAtEndOrderKey, generateBeforeOrderKey, generateAfterOrderKey } from './workspace.ts';
 import { Assertion, getAssertionPath, assertionPathToFields, parentAssertionPath,
-         getAssertionTypeN, getAssertionIdN, compareAssertionsByOrderKey } from './schema.ts';
+         getAssertionTypeN, getAssertionIdN, compareAssertionsByOrderKey } from './assertion.ts';
 import { dictSchemaJson } from './entry-schema.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as orderkey from '../liminal/orderkey.ts';

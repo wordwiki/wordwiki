@@ -13,7 +13,7 @@ import { hasText, text, find, findAll, attr } from "../liminal/testing/markup-as
 import { withTestDb, as, renderRoute, invoke,
          TestTimeline, mkEntry, mkChild, mkEdit, mkTombstone, type Fixture } from './testing.ts';
 import { WordWiki } from './wordwiki.ts';
-import { Assertion } from './schema.ts';
+import { Assertion } from './assertion.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import { db } from '../liminal/db.ts';
 import * as security from '../liminal/security.ts';

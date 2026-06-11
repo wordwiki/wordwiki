@@ -31,7 +31,7 @@ import {RelationField, Schema} from "./model.ts";
 import {panic} from "../liminal/utils.ts";
 import * as utils from "../liminal/utils.ts";
 import { Assertion, AssertionPath, getAssertionPath, parentAssertionPath,
-         compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./schema.ts";
+         compareAssertionsByOrderKey, compareAssertionsByRecentness } from "./assertion.ts";
 import * as timestamp from "../liminal/timestamp.ts";
 import {BEGINNING_OF_TIME} from '../liminal/timestamp.ts';
 import * as orderkey from '../liminal/orderkey.ts';

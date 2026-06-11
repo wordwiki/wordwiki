@@ -2,7 +2,6 @@
 import * as markup from '../liminal/markup.ts';
 import * as model from './model.ts';
 import * as renderPageEditor from './render-page-editor.ts';
-import * as schema from "./schema.ts";
 import * as server from '../liminal/http-server.ts';
 import * as strings from "../liminal/strings.ts";
 import * as utils from "../liminal/utils.ts";
@@ -20,7 +19,8 @@ import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
+import {ScannedDocument, ScannedPage, Layer, BoundingGroup, selectScannedDocumentByFriendlyId, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber, allScannedDocumentSchemaDml} from './scanned-document.ts';
+import {Assertion, updateAssertion, assertionPathToFields, getAssertionPath, highestTimestamp, selectAllAssertions, createAssertionDml} from './assertion.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
 import * as pageEditorModule from './page-editor.ts';
@@ -65,7 +65,6 @@ export class WordWiki extends LiminalApp {
             {},
             {wordwiki: this},
             renderPageEditor.routes(),
-            schema.routes(),
             audio.routes(),
             publish.routes(),
         );
@@ -110,7 +109,7 @@ export class WordWiki extends LiminalApp {
 
     get lastAllocatedTxTimestamp() {
         // TODO as we add more tables, this will need to be extended.
-        return this.#lastAllocatedTxTimestamp ??= schema.highestTimestamp('dict');
+        return this.#lastAllocatedTxTimestamp ??= highestTimestamp('dict');
     }
 
     allocTxTimestamps(count: number=1) {
@@ -129,7 +128,7 @@ export class WordWiki extends LiminalApp {
             const workspace = new VersionedDb([this.dictSchema]);
 
             // --- Do load of dictionary
-            const assertions = schema.selectAllAssertions('dict').all();
+            const assertions = selectAllAssertions('dict').all();
             assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
 
             return workspace;
@@ -1225,6 +1224,13 @@ export class WordWiki extends LiminalApp {
     }
 }
 
+
+// Create the legacy raw-DML tables (both data worlds: the scanned-document
+// tables and the dict assertion table).  Idempotent; the new-style liminal
+// tables are created separately by WordWiki.ensureNewStyleTables().
+export function createAllTables() {
+    db().executeStatements(allScannedDocumentSchemaDml + createAssertionDml('dict'));
+}
 
 export let wordwiki: WordWiki|undefined = undefined;
 

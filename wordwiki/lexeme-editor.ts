@@ -45,9 +45,9 @@
 import * as model from './model.ts';
 import * as workspace from './workspace.ts';
 import {VersionedTuple, CurrentTupleQuery, TupleVersion} from './workspace.ts';
-import {Assertion, getAssertionPath, assertionPathToFields, BoundingGroup,
-        selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber,
-        getOrCreateNamedLayer} from './schema.ts';
+import {Assertion, getAssertionPath, assertionPathToFields} from './assertion.ts';
+import {BoundingGroup, selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber,
+        getOrCreateNamedLayer} from './scanned-document.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as orderkey from '../liminal/orderkey.ts';
 import * as table from '../liminal/table.ts';

@@ -16,9 +16,8 @@
  * Each withTestDb call hands you a FRESH WordWiki instance over the cleared
  * db, so the workspace/entries caches can never leak between tests.
  */
-import { WordWiki } from './wordwiki.ts';
-import * as schema from './schema.ts';
-import { Assertion, getAssertionPath, assertionPathToFields } from './schema.ts';
+import { WordWiki, createAllTables } from './wordwiki.ts';
+import { Assertion, getAssertionPath, assertionPathToFields } from './assertion.ts';
 import * as user from './user.ts';
 import * as security from '../liminal/security.ts';
 import * as templates from './templates.ts';
@@ -27,7 +26,7 @@ import type { Markup } from '../liminal/markup.ts';
 import { db } from '../liminal/db.ts';
 import { openTestDb, clearAllData } from '../liminal/testing/db-harness.ts';
 
-// The legacy raw-DML tables (created by schema.createAllTables, cleared here
+// The legacy raw-DML tables (created by createAllTables, cleared here
 // by name - they are not liminal Tables).
 const LEGACY_TABLES = ['scanned_document', 'scanned_page', 'layer',
                        'bounding_group', 'bounding_box', 'change_log', 'dict'];
@@ -46,7 +45,7 @@ export async function withTestDb(fn: (fx: Fixture) => any | Promise<any>): Promi
     const ww = new WordWiki();
     openTestDb(ww.tables);
     if(!legacySchemaCreated) {
-        security.runSystem(() => schema.createAllTables());
+        security.runSystem(() => createAllTables());
         legacySchemaCreated = true;
     }
     const fx = security.runSystem(() => {
