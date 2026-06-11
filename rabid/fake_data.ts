@@ -74,6 +74,19 @@ function mulberry32(seed: number): () => number {
 // Reset at the start of each builder that needs it (commitments / timesheets).
 let rand: () => number = mulberry32(1);
 
+// Seeded Fisher-Yates over a copy.  (Not `.sort(() => rand() - 0.5)`: a
+// random comparator is measurably biased and engine-dependent - see
+// liminal/random.ts shuffle for the uniform algorithm; this is the same
+// thing driven by the seeded rand() stream.)
+function shuffled<T>(vals: readonly T[]): T[] {
+    const out = [...vals];
+    for (let i = 0; i < out.length - 1; i++) {
+        const peer = i + Math.floor(rand() * (out.length - i));
+        [out[i], out[peer]] = [out[peer], out[i]];
+    }
+    return out;
+}
+
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -457,7 +470,7 @@ export function seedEventCommitments(rabid: Rabid, opts: { baseSeed?: number } =
         let commitmentCount = 0;
         
         // First, let super volunteers sign up based on their participation rate
-        const shuffledVolunteers = [...volunteers].sort(() => rand() - 0.5);
+        const shuffledVolunteers = shuffled(volunteers);
         
         for(const volunteer of shuffledVolunteers) {
             const participationRate = volunteerParticipationRates.get(volunteer.volunteer_id)!;
