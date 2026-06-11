@@ -12,7 +12,7 @@ handwritten dictionaries. The editor runs at `http://localhost:9000/ww/`
 Wordwiki is two data worlds in one SQLite db:
 
 1. **Plain SQL tables** (`user`, `scanned_document`, `scanned_page`, `layer`,
-   `bounding_group`, `bounding_box` + FTS — see `wordwiki/schema.ts`) — the
+   `bounding_group`, `bounding_box` + FTS — see `wordwiki/scanned-document.ts`) — the
    transcription workflow: scanned dictionaries (PDM, Rand, Clark…) are tagged
    with bounding boxes grouped into bounding groups, organized in layers (OCR
    reference layers like textract that get copied into work layers,
