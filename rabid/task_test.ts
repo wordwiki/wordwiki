@@ -282,6 +282,66 @@ test("tasks page: 'My tasks' for the actor's assignments; all-open grouped by pr
     });
 });
 
+test("completion provenance: done_time/done_by stamped on the done transition, cleared on reopen", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const {project_id, task_id, group_id} = seedTask();
+        addToGroup(group_id, bob);
+
+        // Subtask: bob checks it off -> stamped with bob + now; unchecking clears.
+        asUser(bob, () => rabid.subtask.addItem({task_id, title: 'step'}));
+        const sid = asSystem(() => rabid.subtask.forTask.all({task_id}))[0].subtask_id;
+        asUser(bob, () => rabid.subtask.toggle(sid));
+        let s = asSystem(() => rabid.subtask.getById(sid));
+        assertEquals(s.done_by, bob);
+        assert(s.done_time! > '2020');
+        // The checklist row shows the provenance quietly.
+        const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
+        assert(hasText(checklist, 'Bob Shares,'));
+        asUser(bob, () => rabid.subtask.toggle(sid));
+        s = asSystem(() => rabid.subtask.getById(sid));
+        assertEquals(s.done_time ?? null, null);
+        assertEquals(s.done_by ?? null, null);
+
+        // Task: the generic edit path stamps the done transition...
+        asUser(bob, () => rabid.task.saveForm({
+            task_id: String(task_id), status: 'done', 'before-status': 'open'}));
+        let t = asSystem(() => rabid.task.getById(task_id));
+        assertEquals(t.done_by, bob);
+        assert(t.done_time! > '2020');
+        // ...the detail page says who...
+        const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
+        assert(hasText(detail, 'by Bob Shares'));
+        // ...an unrelated edit leaves the stamp alone...
+        asUser(bob, () => rabid.task.saveForm({
+            task_id: String(task_id), details: 'note', 'before-details': ''}));
+        assertEquals(asSystem(() => rabid.task.getById(task_id)).done_by, bob);
+        // ...and reopening clears it.
+        asUser(bob, () => rabid.task.saveForm({
+            task_id: String(task_id), status: 'open', 'before-status': 'done'}));
+        t = asSystem(() => rabid.task.getById(task_id));
+        assertEquals(t.done_time ?? null, null);
+        assertEquals(t.done_by ?? null, null);
+
+        // Born-done rows (seeds, imports) get a time; no actor -> no by.
+        const t2 = asSystem(() => rabid.task.insert({
+            project_id, title: 'born done', status: 'done', deleted: 0}));
+        assert(asSystem(() => rabid.task.getById(t2)).done_time);
+        assertEquals(asSystem(() => rabid.task.getById(t2)).done_by ?? null, null);
+
+        // Project: archiving stamps archived_time/archived_by; unarchiving clears.
+        asUser(alice, () => rabid.project.saveForm({
+            project_id: String(project_id), deleted: '1', 'before-deleted': '0'}));
+        let p = asSystem(() => rabid.project.getById(project_id));
+        assertEquals(p.archived_by, alice);
+        assert(p.archived_time);
+        asUser(alice, () => rabid.project.saveForm({
+            project_id: String(project_id), deleted: '0', 'before-deleted': '1'}));
+        p = asSystem(() => rabid.project.getById(project_id));
+        assertEquals(p.archived_time ?? null, null);
+        assertEquals(p.archived_by ?? null, null);
+    });
+});
+
 test("pages: two row species; task detail embeds the member editor and checklist", async () => {
     await withTestDb(async ({ alice, bob, carol }) => {
         const {project_id, task_id, group_id} = seedTask();

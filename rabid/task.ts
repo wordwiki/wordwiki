@@ -70,14 +70,26 @@ export function canEditTask(task_id: number): boolean {
     return rabid.task.canEditRecord(t);
 }
 
-// A column managed entirely by the table code (order keys, change stamps):
-// hidden from the generic record form, which also exempts it from required-
-// input validation - insert()/update() overrides supply it.
+// A column managed entirely by the table code (order keys, change stamps,
+// completion provenance): hidden from the generic record form, which also
+// exempts it from required-input validation - insert()/update() overrides
+// supply it.
 class ManagedStringField extends StringField {
     override isVisible(): boolean { return false; }
 }
 class ManagedDateTimeField extends DateTimeField {
     override isVisible(): boolean { return false; }
+}
+class ManagedForeignKeyField extends ForeignKeyField {
+    override isVisible(): boolean { return false; }
+}
+
+// Display name for a provenance column (null-safe: system writes - seeds,
+// imports - leave no actor).
+function volunteerName(volunteer_id: number|null|undefined): string|undefined {
+    if(volunteer_id == null) return undefined;
+    return security.runSystem(() => db().first<{name: string}>(
+        'SELECT name FROM volunteer WHERE volunteer_id = :id', {id: volunteer_id}))?.name;
 }
 
 // --------------------------------------------------------------------------------
@@ -96,6 +108,12 @@ export interface Project {
 
     // Archived projects are soft-deleted: their tasks/history keep working.
     deleted: boolnum;
+
+    // Archive provenance (the project's terminal transition): who archived it
+    // and when.  Describes the CURRENT state - unarchiving clears both (this
+    // is not an audit log).  Null archived_by = a system write (seeds, imports).
+    archived_time?: string;
+    archived_by?: number;
 }
 
 export type ProjectOpt = Partial<Project>;
@@ -110,6 +128,8 @@ export class ProjectTable extends Table<Project> {
             new ForeignKeyField('committee_id', 'committee', 'committee_id',
                                 {nullable: true, prompt: 'Committee (optional)'}, 'name'),
             new BooleanField('deleted', {default: 0, prompt: 'Archived'}),
+            new ManagedDateTimeField('archived_time', {nullable: true}),
+            new ManagedForeignKeyField('archived_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
         ], [
             'CREATE INDEX IF NOT EXISTS project_by_committee ON project(committee_id);',
         ])
@@ -121,6 +141,30 @@ export class ProjectTable extends Table<Project> {
 
     override formTitle(p: Project): string {
         return p.project_id ? `Edit ${p.name || 'project'}` : 'New project';
+    }
+
+    // A `deleted` change across the archive boundary sets/clears the archive
+    // provenance.  All updates funnel through updateNamedFields (update()
+    // delegates), so the generic saveForm path and direct calls both stamp.
+    override updateNamedFields<P extends Partial<Project>>(id: number, fieldNames: Array<keyof P>, fields: P) {
+        const amended: any = {...fields};
+        const names: any[] = [...fieldNames];
+        if(amended.deleted !== undefined && amended.archived_time === undefined) {
+            const wasArchived = !!security.runSystem(() => this.getById(id)).deleted;
+            if(amended.deleted && !wasArchived) {
+                amended.archived_time = date.currentSqliteDateTime();
+                amended.archived_by = security.current()?.actorId ?? null;
+                names.push('archived_time', 'archived_by');
+            } else if(!amended.deleted && wasArchived) {
+                amended.archived_time = null;
+                amended.archived_by = null;
+                names.push('archived_time', 'archived_by');
+            }
+        }
+        super.updateNamedFields(id, names, amended);
+    }
+    override update<P extends Partial<Project>>(id: number, fields: P) {
+        this.updateNamedFields(id, Object.keys(fields) as Array<keyof P>, fields);
     }
 
     @path
@@ -230,6 +274,14 @@ export class ProjectTable extends Table<Project> {
              [h.h2, {class: 'mb-0'}, p.name || 'Unnamed project'],
              p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
              this.canEditRecord(p) ? this.editPencil(project_id) : undefined],
+            p.deleted && p.archived_time
+                ? [h.p, {class: 'text-muted small mb-1'},
+                   `Archived ${date.sqliteDateTimeToDateString(p.archived_time)}`,
+                   p.archived_by != null
+                       ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${p.archived_by})`,
+                                                     volunteerName(p.archived_by) ?? `volunteer ${p.archived_by}`)]
+                       : undefined]
+                : undefined,
             committee
                 ? [h.p, {class: 'text-muted mb-1'}, 'Committee: ',
                    templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)]
@@ -279,6 +331,12 @@ export interface Task {
     order_key: string;         // sibling order within the project (orderkey.ts)
     last_change_time: string;  // stamped on every insert/update + subtask change
     deleted: boolnum;
+
+    // Completion provenance: who moved it to 'done' and when.  Describes the
+    // CURRENT done state - reopening clears both (not an audit log).  Null
+    // done_by = a system write (seeds, imports).
+    done_time?: string;
+    done_by?: number;
 }
 
 export type TaskOpt = Partial<Task>;
@@ -307,6 +365,8 @@ export class TaskTable extends Table<Task> {
             new ManagedStringField('order_key', {default: ''}),
             new ManagedDateTimeField('last_change_time', {}),
             new BooleanField('deleted', {default: 0}),
+            new ManagedDateTimeField('done_time', {nullable: true}),
+            new ManagedForeignKeyField('done_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
         ], [
             'CREATE INDEX IF NOT EXISTS task_by_project ON task(project_id);',
             'CREATE INDEX IF NOT EXISTS task_by_group ON task(group_id);',
@@ -333,10 +393,15 @@ export class TaskTable extends Table<Task> {
     // path too (group_id/order_key/last_change_time are managed fields, absent
     // from the form).
     override insert<P extends Partial<Task>>(tuple: P): number {
-        const withManaged = {
+        const withManaged: any = {
             order_key: this.nextOrderKey(tuple.project_id),
             last_change_time: date.currentSqliteDateTime(),
             ...tuple};
+        // A task born done (seeds, imports) still gets its completion stamp.
+        if(withManaged.status === 'done' && withManaged.done_time === undefined) {
+            withManaged.done_time = date.currentSqliteDateTime();
+            withManaged.done_by = security.current()?.actorId;
+        }
         if(withManaged.group_id !== undefined)
             return super.insert(withManaged);
         const group_id = createOwnedGroup('adhoc', 'task');
@@ -345,15 +410,31 @@ export class TaskTable extends Table<Task> {
         return task_id;
     }
 
-    // Every update stamps last_change_time (both the generic saveForm path,
-    // which calls updateNamedFields, and direct update() calls).
-    override update<P extends Partial<Task>>(id: number, fields: P) {
-        super.update(id, {...fields, last_change_time: date.currentSqliteDateTime()});
-    }
+    // Every update stamps last_change_time, and a status change across the
+    // 'done' boundary sets/clears the completion provenance (done_time/done_by
+    // describe the CURRENT done state - reopening clears them; full history
+    // would be an audit log, which this deliberately is not).  All updates
+    // funnel through here (update() delegates), so the generic saveForm path
+    // and direct calls both stamp.
     override updateNamedFields<P extends Partial<Task>>(id: number, fieldNames: Array<keyof P>, fields: P) {
-        super.updateNamedFields(id,
-            [...fieldNames, 'last_change_time' as keyof P],
-            {...fields, last_change_time: date.currentSqliteDateTime()});
+        const amended: any = {...fields, last_change_time: date.currentSqliteDateTime()};
+        const names: any[] = [...fieldNames, 'last_change_time'];
+        if(typeof amended.status === 'string' && amended.done_time === undefined) {
+            const wasDone = security.runSystem(() => this.getById(id)).status === 'done';
+            if(amended.status === 'done' && !wasDone) {
+                amended.done_time = date.currentSqliteDateTime();
+                amended.done_by = security.current()?.actorId ?? null;
+                names.push('done_time', 'done_by');
+            } else if(amended.status !== 'done' && wasDone) {
+                amended.done_time = null;
+                amended.done_by = null;
+                names.push('done_time', 'done_by');
+            }
+        }
+        super.updateNamedFields(id, names, amended);
+    }
+    override update<P extends Partial<Task>>(id: number, fields: P) {
+        this.updateNamedFields(id, Object.keys(fields) as Array<keyof P>, fields);
     }
 
     // A subtask mutation IS a change to its task (the poll watches tasks).
@@ -469,11 +550,14 @@ export class TaskTable extends Table<Task> {
             ?? rabid.volunteer_group.members.all({group_id: t.group_id}).length;
         const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
         const parts: Markup[] = [
-            t.due
-                ? (overdue
-                   ? [h.span, {class: 'text-danger'}, `Due ${date.sqliteDateToString(t.due)}`]
-                   : `Due ${date.sqliteDateToString(t.due)}`)
-                : undefined,
+            // A done row leads with when it was done; an open row with its due date.
+            done
+                ? (t.done_time ? `Done ${date.sqliteDateTimeToDateString(t.done_time)}` : undefined)
+                : t.due
+                    ? (overdue
+                       ? [h.span, {class: 'text-danger'}, `Due ${date.sqliteDateToString(t.due)}`]
+                       : `Due ${date.sqliteDateToString(t.due)}`)
+                    : undefined,
             // Cross-project lists say which project the task lives in.
             t.project_name,
             assignees ? `${assignees} assigned` : 'unassigned',
@@ -598,6 +682,14 @@ export class TaskTable extends Table<Task> {
              row('Project', templates.pageLink(`/rabid.project.detailPage(${project.project_id})`, project.name)),
              row('Priority', task_priority_enum[t.priority] ?? t.priority),
              row('Due', t.due ? date.sqliteDateToString(t.due) : '—'),
+             done && t.done_time
+                 ? row('Done', [date.sqliteDateTimeToString(t.done_time),
+                                t.done_by != null
+                                    ? [' by ', templates.pageLink(
+                                        `/rabid.volunteer.detailPage(${t.done_by})`,
+                                        volunteerName(t.done_by) ?? `volunteer ${t.done_by}`)]
+                                    : undefined])
+                 : undefined,
              t.details ? row('Details', t.details) : undefined,
             ],
             this.renderAssignedTo(t),
@@ -744,6 +836,11 @@ export interface Subtask {
     title: string;
     done: boolnum;
     order_key: string;
+
+    // Check-off provenance (same rule as Task.done_time/done_by: current
+    // state only; unchecking clears).
+    done_time?: string;
+    done_by?: number;
 }
 
 export type SubtaskOpt = Partial<Subtask>;
@@ -757,6 +854,8 @@ export class SubtaskTable extends Table<Subtask> {
             new StringField('title', {}),
             new BooleanField('done', {default: 0}),
             new ManagedStringField('order_key', {default: ''}),
+            new ManagedDateTimeField('done_time', {nullable: true}),
+            new ManagedForeignKeyField('done_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
         ], [
             'CREATE INDEX IF NOT EXISTS subtask_by_task ON subtask(task_id);',
         ])
@@ -773,7 +872,13 @@ export class SubtaskTable extends Table<Subtask> {
 
     // Append at the end of the task's checklist; every insert stamps the task.
     override insert<P extends Partial<Subtask>>(tuple: P): number {
-        const subtask_id = super.insert({order_key: this.nextOrderKey(tuple.task_id), ...tuple});
+        const withManaged: any = {order_key: this.nextOrderKey(tuple.task_id), ...tuple};
+        // An item born checked (seeds, imports) still gets its check-off stamp.
+        if(withManaged.done && withManaged.done_time === undefined) {
+            withManaged.done_time = date.currentSqliteDateTime();
+            withManaged.done_by = security.current()?.actorId;
+        }
+        const subtask_id = super.insert(withManaged);
         if(tuple.task_id !== undefined) rabid.task.touch(tuple.task_id);
         return subtask_id;
     }
@@ -816,11 +921,15 @@ export class SubtaskTable extends Table<Subtask> {
         return {action:'reload', targets:[`.-subtask-${task_id}-`]} as unknown as Markup;
     }
 
+    // Checking stamps who/when; unchecking clears (current-state provenance).
     toggle(subtask_id: number): Markup {
         const s = this.getById(subtask_id);
         if(!canEditTask(s.task_id))
             throw new Error('Not permitted to edit this task');
-        this.update(subtask_id, {done: s.done ? 0 : 1});
+        this.update(subtask_id, (s.done
+            ? {done: 0, done_time: null, done_by: null}
+            : {done: 1, done_time: date.currentSqliteDateTime(),
+               done_by: security.current()?.actorId ?? null}) as any);
         rabid.task.touch(s.task_id);
         return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
     }
@@ -860,6 +969,12 @@ export class SubtaskTable extends Table<Subtask> {
     }
 
     renderChecklistRow(s: Subtask, canEdit: boolean): Markup {
+        // Check-off provenance, shown quietly beside a done item ("Hazel, Jun 10").
+        const prov = s.done
+            ? [volunteerName(s.done_by),
+               s.done_time ? date.sqliteDateTimeToDateString(s.done_time) : undefined]
+                  .filter(Boolean).join(', ')
+            : '';
         return [h.div, {class: 'list-group-item lm-item d-flex align-items-center gap-2',
                         'data-testid': `subtask-row-${s.subtask_id}`},
             [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
@@ -869,6 +984,7 @@ export class SubtaskTable extends Table<Subtask> {
                            : {disabled: ''})}],
             [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
              s.title],
+            prov ? [h.span, {class: 'text-muted small flex-shrink-0'}, prov] : undefined,
             canEdit
                 ? action.actionButton('Remove',
                     {kind: 'confirm',
