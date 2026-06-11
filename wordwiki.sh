@@ -16,7 +16,7 @@ set -e
 #                                      # categories from ~/wordwiki/categorization
 #                                      # (idempotent; refuses production db)
 #   ./wordwiki.sh seed-lexical-forms   # seed the part-of-speech vocabulary
-#                                      # (idempotent)
+#                                      # (idempotent; refuses production db)
 #
 # Any command first cleanly stops a running server (SQLite single writer).
 # Note: this does NOT run the transpile step (the old client-side editor's

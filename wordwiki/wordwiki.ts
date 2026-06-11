@@ -1423,10 +1423,16 @@ if (import.meta.main) {
         // list in lexical-form.ts (the entry-schema partsOfSpeech map + the
         // sane codes the data uses).  Idempotent - existing slugs are kept.
         // Junk legacy values are deliberately not seeded; the editor shows
-        // them as not-in-table until each is fixed.
+        // them as not-in-table until each is fixed.  Additive-only, but
+        // guarded like import-categories for symmetry: every command that
+        // writes vocabulary into a production db should be a deliberate act.
+        //   ./wordwiki.sh seed-lexical-forms [--allow-production]
         case 'seed-lexical-forms': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
                 const {inserted, skipped} = lexicalForm.seedLexicalForms(ww.lexicalForms);
                 console.info(`lexical forms seeded: ${inserted} inserted, ${skipped} already present`);
             });
