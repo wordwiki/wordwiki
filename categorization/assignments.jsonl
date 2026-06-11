@@ -7447,3 +7447,158 @@
 {"e":165451,"cats":["amounts"]}
 {"e":165475,"cats":["body"]}
 {"e":165491,"cats":["colors"]}
+{"e":165512,"cats":["colors"]}
+{"e":165533,"cats":["colors"]}
+{"e":165551,"cats":["plants","health"]}
+{"e":165570,"cats":["colors"],"tier":"t1000"}
+{"e":165596,"cats":["health"]}
+{"e":165633,"cats":["texture-and-materials","money-and-trade"]}
+{"e":165651,"cats":["health"]}
+{"e":165668,"cats":["money-and-trade"],"tier":"t1000"}
+{"e":165703,"cats":["body","appearance"]}
+{"e":165727,"cats":["body"]}
+{"e":165747,"cats":["body"]}
+{"e":165765,"cats":["body","food"]}
+{"e":165786,"cats":["body"]}
+{"e":165805,"cats":["fire"]}
+{"e":165829,"cats":["fire","household"]}
+{"e":165853,"cats":["emotions"],"tier":"t1000"}
+{"e":165875,"cats":["cooking"]}
+{"e":165906,"cats":["music-and-dance"]}
+{"e":165931,"cats":["body","appearance"]}
+{"e":165957,"cats":["body","appearance"]}
+{"e":165984,"cats":["animals"],"tier":"t100"}
+{"e":166005,"cats":["animals"]}
+{"e":166027,"cats":["fish"]}
+{"e":166046,"cats":["fish"]}
+{"e":166068,"cats":["animals","hunting"]}
+{"e":166088,"cats":["body","animals"]}
+{"e":166112,"cats":["seeing","weather"]}
+{"e":166134,"cats":["trees","plants"]}
+{"e":166159,"cats":["social-life"]}
+{"e":166179,"cats":["smell-and-taste","food"]}
+{"e":166201,"cats":["pushing-and-pulling"]}
+{"e":166224,"cats":["movement","birds"]}
+{"e":166246,"cats":["character"]}
+{"e":166270,"cats":["travel"]}
+{"e":166295,"cats":["movement"]}
+{"e":166313,"cats":["body","animals"]}
+{"e":166337,"cats":["trees","basket-making"],"tier":"t1000"}
+{"e":166358,"cats":["birds"],"tier":"t1000"}
+{"e":166379,"cats":["animals"]}
+{"e":166398,"cats":["cooking"]}
+{"e":166422,"cats":["cooking"]}
+{"e":166444,"cats":["cooking"]}
+{"e":166467,"cats":["cooking"]}
+{"e":166494,"cats":["conflict"]}
+{"e":166517,"cats":["conflict"]}
+{"e":166535,"cats":["talking"],"tier":"t10"}
+{"e":166559,"cats":["talking","family"]}
+{"e":166581,"cats":["talking"]}
+{"e":166615,"cats":["people"],"tier":"t10"}
+{"e":166638,"cats":["people"],"tier":"t1000"}
+{"e":166661,"cats":["people"]}
+{"e":166685,"cats":["body"]}
+{"e":166708,"cats":["body"]}
+{"e":166725,"cats":["boats","fishing"]}
+{"e":166747,"cats":["body"]}
+{"e":166765,"cats":["food"]}
+{"e":166782,"cats":["food"],"tier":"t100"}
+{"e":166805,"cats":["occupations"]}
+{"e":166829,"cats":["family"],"tier":"t100"}
+{"e":166847,"cats":["family"]}
+{"e":166869,"cats":["body"]}
+{"e":166892,"cats":["household"],"tier":"t100"}
+{"e":166913,"cats":["animals"],"tier":"t100"}
+{"e":166938,"cats":["land"]}
+{"e":11500962673525,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":13697192401841,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":18008158511787,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":24597464331622,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":33725022322257,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":40555038045441,"cats":["appearance","health"]}
+{"e":41819137914249,"cats":["dwellings"]}
+{"e":44214955641706,"cats":["farming","cutting"]}
+{"e":55658129449633,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":71667976336679,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":80560062163880,"cats":["spirit-world"]}
+{"e":86681166980081,"cats":["carrying","work"]}
+{"e":97107753024865,"cats":["dwellings"]}
+{"e":97666432943073,"cats":["places","water"]}
+{"e":104301039575599,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":105425017662173,"cats":["dwellings"]}
+{"e":106106885005047,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":107519483928463,"cats":["dwellings"]}
+{"e":112968347784109,"cats":["seeing","sky"]}
+{"e":128914200568627,"cats":["ceremony"]}
+{"e":129598435601368,"cats":[],"flag":"needs-human","note":"TBA placeholder"}
+{"e":136044703789057,"cats":["dwellings"]}
+{"e":153579075505727,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":158788121319331,"cats":["dwellings"]}
+{"e":161076931274313,"cats":["travel","money-and-trade"]}
+{"e":165793780511693,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":181785905435800,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":181952439448988,"cats":["places"]}
+{"e":188903920615241,"cats":["fire","dwellings"],"tier":"t1000"}
+{"e":213885335459355,"cats":[],"flag":"needs-human","note":"French editor note, not an entry"}
+{"e":214801017079081,"cats":["texture-and-materials"]}
+{"e":216152833098027,"cats":["dwellings"]}
+{"e":224951419362577,"cats":[],"flag":"needs-human","note":"TBA placeholder"}
+{"e":226240702597482,"cats":[],"flag":"needs-human","note":"TBA placeholder"}
+{"e":248136225875827,"cats":["size-and-shape","stories-and-writing"]}
+{"e":252424161397936,"cats":["spirit-world"]}
+{"e":266444145862301,"cats":["emotions"]}
+{"e":275107276889711,"cats":["amounts","household"]}
+{"e":297660862727833,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":304369049271425,"cats":["people","character"]}
+{"e":309361490180699,"cats":["customs"]}
+{"e":318686003098269,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":325459603491851,"cats":["water","swimming"]}
+{"e":330997902453327,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":331804052855731,"cats":["fishing"]}
+{"e":332031340527113,"cats":["dwellings"]}
+{"e":340962282419889,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":341205586716966,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":349685748781965,"cats":["birds"]}
+{"e":368828090882561,"cats":["body-actions"]}
+{"e":376232063632681,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":388307432766323,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":394132513683220,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":394826741916527,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":394892674040997,"cats":["customs","clothing"]}
+{"e":405758348749787,"cats":["ceremony"]}
+{"e":414089403307506,"cats":["money-and-trade"]}
+{"e":427062779343486,"cats":["social-life","character"]}
+{"e":433309615998281,"cats":["animals"]}
+{"e":439202036903365,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":448711386238939,"cats":[],"flag":"needs-human","note":"placeholder"}
+{"e":453771458070636,"cats":[],"flag":"needs-human","note":"placeholder"}
+{"e":456082819567655,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":456528804999991,"cats":["boats"]}
+{"e":456810841940739,"cats":["amounts"],"conf":"l","note":"to lack - thin gloss"}
+{"e":456833864526683,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":459472080909023,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":483815240397947,"cats":["fire","customs"]}
+{"e":508848171921543,"cats":["making-and-fixing","tools"]}
+{"e":521134993176850,"cats":["leadership-and-law"],"conf":"l"}
+{"e":525680723375218,"cats":["clothing"]}
+{"e":527231349718543,"cats":["people"]}
+{"e":541878361044121,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":544102514828645,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":546470536574095,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":557462252955185,"cats":["dwellings"]}
+{"e":572208055483087,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":577481495747869,"cats":["trees","calendar"]}
+{"e":587185155084746,"cats":["numbers"]}
+{"e":588500306976097,"cats":["cooking"]}
+{"e":588643358599283,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":595554430743177,"cats":["animals"]}
+{"e":608242766086379,"cats":["farming","tools"]}
+{"e":612498708969785,"cats":["fire","customs"]}
+{"e":612802056691669,"cats":["health","conflict"]}
+{"e":613366077508215,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":613621267426627,"cats":[],"flag":"needs-human","note":"no English"}
+{"e":628233070319343,"cats":["health","conflict"]}
+{"e":646566912378396,"cats":["making-and-fixing"]}
+{"e":647284451454127,"cats":["ceremony","dwellings"]}
+{"e":650495874755893,"cats":[],"flag":"needs-human","note":"no English"}
