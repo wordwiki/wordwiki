@@ -1420,6 +1420,44 @@ if (import.meta.main) {
             break;
         }
 
+        // Publish from the CLI - the whole site, or just the named targets
+        // for quick turnaround while iterating on templates.  Targets are
+        // site-relative paths ("the URL you want rebuilt" - see
+        // parsePublishTarget in publish.ts for the grammar); errors and
+        // warnings go to stdout and a non-zero exit means errors.
+        // Publishing only READS the db, so wordwiki.sh leaves the dev
+        // server running for this command.
+        //   ./wordwiki.sh publish                                 # everything
+        //   ./wordwiki.sh publish entries/samqwan categories/water
+        case 'publish': {
+            const targets = args.slice(1).filter(a => !a.startsWith('--'));
+            const exitCode = await security.runSystem(async () => {
+                const status = new publish.PublishStatus();
+                status.start();
+                const pub = new publish.Publish(status, ww, ww.publishedEntries);
+                try {
+                    if(targets.length === 0)
+                        await pub.publish();
+                    else
+                        await pub.publishTargets(targets);
+                } catch(e) {
+                    status.errors.push(String(e instanceof Error ? (e.stack ?? e.message) : e));
+                }
+                status.end();
+                for(const w of status.warnings)
+                    console.info(`WARNING: ${w}`);
+                for(const err of status.errors)
+                    console.error(`ERROR: ${err}`);
+                const secs = Math.round(((status.endTime ?? 0) - (status.startTime ?? 0)) / 1000);
+                console.info(`publish${targets.length ? ` of ${targets.join(', ')}` : ''} ` +
+                             `completed in ${secs}s: ` +
+                             `${status.errors.length} errors, ${status.warnings.length} warnings`);
+                return status.errors.length > 0 ? 1 : 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
         // Import the lexical form (part of speech) vocabulary (see
         // lexical-form-import.ts): seed the curated table, normalize the
         // UNAMBIGUOUS legacy values in the data ('vii ' -> vii, 'particle'

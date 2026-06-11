@@ -19,6 +19,9 @@ import * as schema from './scanned-document.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import * as renderPageEditor from './render-page-editor.ts';
 
+export const REFERENCE_BOOK_IDS =
+    ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'];
+
 export class PublishStatus {
     startTime?: number = undefined;
     endTime?: number = undefined;
@@ -199,6 +202,77 @@ interface PublishOptions {
 /**
  *
  */
+/**
+ * Publish-target grammar: targets are SITE-RELATIVE PATHS - "the URL you
+ * want rebuilt" - so the way to name a thing is to copy it from the browser.
+ * Tolerant of full URLs (scheme+host stripped), leading/trailing slashes and
+ * a .html suffix.  Extend the grammar here as the site grows.
+ *
+ *   (empty) | index.html | home      home page
+ *   404 | all-words | about-us       the other top-level pages
+ *   categories                       categories directory + every category page
+ *   categories/water                 one category page
+ *   books                            every book
+ *   books/PDM                        one book (all pages)
+ *   books/PDM/page-0101              one book page (also books/PDM/101)
+ *   entries                          every entry page
+ *   entries/samqwan                  one entry by its public id (the cluster
+ *                                    dir and repeated filename are optional:
+ *                                    entries/s/samqwan/samqwan.html works)
+ *   entry:121590                     one entry by entry id (escape hatch)
+ */
+export type PublishTarget =
+    | {kind: 'home'} | {kind: '404'} | {kind: 'all-words'} | {kind: 'about-us'}
+    | {kind: 'categories-all'}
+    | {kind: 'category', slug: string}
+    | {kind: 'books-all'}
+    | {kind: 'book', book: string}
+    | {kind: 'book-page', book: string, page: number}
+    | {kind: 'entries-all'}
+    | {kind: 'entry-public-id', publicId: string}
+    | {kind: 'entry-id', entryId: number};
+
+export function parsePublishTarget(raw: string): PublishTarget {
+    let t = raw.trim()
+        .replace(/^https?:\/\/[^/]+/, '')     // full URL -> path
+        .replace(/^\/+/, '').replace(/\/+$/, '')
+        .replace(/\.html$/, '');
+
+    const idMatch = /^entry:(\d+)$/.exec(t);
+    if(idMatch) return {kind: 'entry-id', entryId: Number(idMatch[1])};
+
+    if(t === '' || t === 'index' || t === 'home') return {kind: 'home'};
+    if(t === '404') return {kind: '404'};
+    if(t === 'all-words') return {kind: 'all-words'};
+    if(t === 'about-us') return {kind: 'about-us'};
+
+    const parts = t.split('/');
+    switch(parts[0]) {
+        case 'categories':
+            if(parts.length === 1) return {kind: 'categories-all'};
+            if(parts.length === 2) return {kind: 'category', slug: parts[1]};
+            break;
+        case 'books': {
+            if(parts.length === 1) return {kind: 'books-all'};
+            if(parts.length === 2) return {kind: 'book', book: parts[1]};
+            if(parts.length === 3) {
+                const pageMatch = /^(?:page-)?(\d+)$/.exec(parts[2]);
+                if(pageMatch)
+                    return {kind: 'book-page', book: parts[1], page: Number(pageMatch[1])};
+            }
+            break;
+        }
+        case 'entries':
+            if(parts.length === 1) return {kind: 'entries-all'};
+            // entries/<publicId> or the full entries/<cluster>/<publicId>[/<publicId>]
+            return {kind: 'entry-public-id', publicId: parts[parts.length - 1]};
+    }
+    throw new Error(
+        `unrecognized publish target '${raw}' - targets are site-relative paths, e.g. ` +
+        `index.html, categories, categories/water, books/PDM/page-0101, ` +
+        `entries/samqwan, entry:121590 (see parsePublishTarget in publish.ts)`);
+}
+
 export class Publish {
     entryToPublicId: Map<Entry, string>;
     defaultVariant: string = 'mm-li';
@@ -321,7 +395,7 @@ export class Publish {
 
         // --- Publish books
         if(!this.options.suppressPublishBooks) {
-            for(const book of ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'])
+            for(const book of REFERENCE_BOOK_IDS)
                 await this.publishBook(book);
         }
 
@@ -335,6 +409,89 @@ export class Publish {
         if(!this.options.suppressPublishEntries) {
             await this.publishEntries();
         }
+    }
+
+    /**
+     * Publish just the named targets (see parsePublishTarget for the
+     * grammar) - the quick-turnaround path for template iteration.  Note it
+     * publishes EXACTLY what is asked: cross-page effects (a renamed entry
+     * appearing in category listings, say) need their own targets.
+     */
+    async publishTargets(rawTargets: string[]): Promise<void> {
+        for(const raw of rawTargets) {
+            let t: PublishTarget;
+            try {
+                t = parsePublishTarget(raw);
+            } catch(e) {
+                this.status.errors.push(String(e instanceof Error ? e.message : e));
+                continue;
+            }
+            switch(t.kind) {
+                case 'home':      await this.publishItem('Home Page', ()=>this.publishHomePage()); break;
+                case '404':       await this.publishItem('404 Page', ()=>this.publish404Page()); break;
+                case 'all-words': await this.publishItem('All Words Page', ()=>this.publishAllWordsPage()); break;
+                case 'about-us':  await this.publishItem('About Us', ()=>this.publishAboutUsPage()); break;
+                case 'categories-all':
+                    await this.publishItem('Categories Directory', ()=>this.publishCategoriesDirectory());
+                    await this.publishCategories();
+                    break;
+                case 'category':
+                    await Deno.mkdir(this.categoriesDir, {recursive: true});
+                    await this.publishItem(`Category ${t.slug}`, ()=>this.publishCategory((t as any).slug));
+                    break;
+                case 'books-all':
+                    for(const book of REFERENCE_BOOK_IDS)
+                        await this.publishBook(book);
+                    break;
+                case 'book':
+                    await this.publishBook(t.book);
+                    break;
+                case 'book-page': {
+                    const document = schema.selectScannedDocumentByFriendlyId()
+                        .required({friendly_document_id: t.book});
+                    const pagesInDocument = schema.maxPageNumberForDocument()
+                        .required({document_id: document.document_id}).max_page_number;
+                    const tt = t;
+                    await this.publishItem(`Book ${tt.book} page ${tt.page}`,
+                                           ()=>this.publishBookPage(tt.book, tt.page, pagesInDocument));
+                    break;
+                }
+                case 'entries-all':
+                    for(const entry of this.entries)
+                        await this.publishItem(`Entry ${entryschema.renderEntrySpellingsSummary(entry)}`,
+                                               ()=>this.publishEntry(entry));
+                    break;
+                case 'entry-public-id': {
+                    const entry = this.entryByPublicId.get(t.publicId);
+                    if(!entry) {
+                        this.status.errors.push(
+                            `no published entry with public id '${t.publicId}' ` +
+                            `(public ids are the entry-page filenames, e.g. 'samqwan')`);
+                        break;
+                    }
+                    await this.publishItem(`Entry ${t.publicId}`, ()=>this.publishEntry(entry));
+                    break;
+                }
+                case 'entry-id': {
+                    const tid = t.entryId;
+                    const entry = this.entries.find(e=>e.entry_id === tid);
+                    if(!entry) {
+                        this.status.errors.push(
+                            `no published entry with entry id ${tid} ` +
+                            `(unpublished/deleted entries have no public page)`);
+                        break;
+                    }
+                    await this.publishItem(`Entry ${tid}`, ()=>this.publishEntry(entry));
+                    break;
+                }
+            }
+        }
+    }
+
+    #entryByPublicId: Map<string, Entry>|undefined;
+    get entryByPublicId(): Map<string, Entry> {
+        return this.#entryByPublicId ??= new Map(
+            Array.from(this.entryToPublicId.entries()).map(([e, id]) => [id, e]));
     }
 
     async publishItem(itemDesc: string, itemPromise: ()=>Promise<void>): Promise<void> {

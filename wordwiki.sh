@@ -18,6 +18,9 @@ set -e
 #   ./wordwiki.sh import-lexical-forms # seed the part-of-speech vocabulary +
 #                                      # normalize unambiguous legacy values
 #                                      # (idempotent; refuses production db)
+#   ./wordwiki.sh publish [target...]  # publish the public site (or just the
+#                                      # named pages, e.g. entries/samqwan);
+#                                      # leaves a running server alone
 #
 # Any command first cleanly stops a running server (SQLite single writer).
 # Note: this does NOT run the transpile step (the old client-side editor's
@@ -41,7 +44,10 @@ cd "$RUN_DIR"
 # We stop it the clean way: ask the server to shut itself down via its
 # authenticated shutdown route, so SQLite closes properly.  We only fall back
 # to SIGKILL if a wedged server ignores the request and outlives the timeout.
-if [ -f "$PIDFILE" ]; then
+# `publish` only READS the db (it writes site files), so it runs happily
+# alongside the server - skip the stop-the-server dance for it, which is
+# exactly what you want when iterating on the public-site templates.
+if [ "$1" != "publish" ] && [ -f "$PIDFILE" ]; then
     OLDPID=$(cat "$PIDFILE" 2>/dev/null || true)
     # Act only if that pid is alive AND really is a wordwiki - reading
     # /proc/PID/cmdline both confirms liveness and guards against a stale
