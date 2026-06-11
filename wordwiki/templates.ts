@@ -167,6 +167,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
              ['ul', {class:'dropdown-menu'},
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/startPublish()'}, 'Publish']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.usersPage()'}, 'Users']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.categoriesPage()'}, 'Category Table']],
              ]],
 
             // A mutation, so a POST (a GET link could be prefetched/prerendered

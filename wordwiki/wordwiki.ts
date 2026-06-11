@@ -35,6 +35,7 @@ import {serialize, path} from '../liminal/serializable.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import * as user from './user.ts';
+import * as category from './category.ts';
 
 /**
  *
@@ -81,12 +82,14 @@ export class WordWiki extends LiminalApp {
     @path get users() { return new user.UserTable(); }
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
+    @path get categories() { return new category.CategoryTable(); }
 
     // The new-style tables (auto-created at startup; the legacy raw-DML tables
     // - scanned documents, bounding boxes, the dict assertion table - stay in
     // schema.ts).  More rabid-style tables will be added here over time.
     @lazy get tables() {
-        return [this.config, this.users, this.passwordHash, this.userSession];
+        return [this.config, this.users, this.passwordHash, this.userSession,
+                this.categories];
     }
 
     // Create the new-style tables if missing (idempotent CREATE IF NOT EXISTS).
@@ -106,6 +109,12 @@ export class WordWiki extends LiminalApp {
 
     usersPage(): templates.Page {
         return templates.page('Users', this.users.renderUsersPage());
+    }
+
+    // The category VOCABULARY admin page (the controlled list of categories) -
+    // distinct from categoriesDirectory(), the entries-by-category report.
+    categoriesPage(): templates.Page {
+        return templates.page('Category Table', this.categories.renderCategoriesPage());
     }
 
     get lastAllocatedTxTimestamp() {
