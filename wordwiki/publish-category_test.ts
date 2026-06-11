@@ -64,6 +64,32 @@ test("public categories: internal '~' slugs filtered, table order, display names
     });
 });
 
+test("publicCategoryGroups: theme groups, internal filtered, un-tabled trail", async () => {
+    await withTestDb((fx) => {
+        as(fx, 'djz', () => {
+            const tl = new TestTimeline();
+            fx.ww.categories.insert({slug: 'people', name: 'People', theme: 'People & Relationships'});
+            fx.ww.categories.insert({slug: 'family', name: 'Family & Kinship', theme: 'People & Relationships'});
+            fx.ww.categories.insert({slug: 'weather', name: 'Weather', theme: 'Land, Water & Sky'});
+            fx.ww.categories.insert({slug: '~old-kinship', name: 'kinship (old)', theme: 'Old categories', retired: 1});
+
+            seedPublishedEntry(fx.ww, tl, 1000, 'aaa', ['people', 'family', '~old-kinship']);
+            seedPublishedEntry(fx.ww, tl, 2000, 'bbb', ['weather', 'zz-not-in-table']);
+
+            const groups = mkPublish(fx).publicCategoryGroups();
+            assertEquals(groups.map(g => g.theme),
+                         ['People & Relationships', 'Land, Water & Sky', 'Other categories']);
+            // Sorted by display name within the theme; counts attached;
+            // the internal ~old-* category is nowhere.
+            assertEquals(groups[0].cats,
+                         [{slug: 'family', name: 'Family & Kinship', count: 1},
+                          {slug: 'people', name: 'People', count: 1}]);
+            assertEquals(groups[2].cats,
+                         [{slug: 'zz-not-in-table', name: 'zz-not-in-table', count: 1}]);
+        });
+    });
+});
+
 test("public categories: pre-import db (empty table) degrades to raw values", async () => {
     await withTestDb((fx) => {
         as(fx, 'djz', () => {
@@ -75,6 +101,11 @@ test("public categories: pre-import db (empty table) degrades to raw values", as
             // filter (the marker lives in the data, not the table).
             assertEquals(pub.publicCategories(), [['fish', 1], ['kinship', 1]]);
             assertEquals(pub.publicCategoryName('kinship'), 'kinship');
+            // The grouped form: one plain 'Categories' group.
+            assertEquals(pub.publicCategoryGroups(),
+                         [{theme: 'Categories',
+                           cats: [{slug: 'fish', name: 'fish', count: 1},
+                                  {slug: 'kinship', name: 'kinship', count: 1}]}]);
         });
     });
 });

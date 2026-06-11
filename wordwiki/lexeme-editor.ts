@@ -153,14 +153,9 @@ class CategorySelectField extends table.EnumField {
     }
 
     override renderInput(value: any): Markup {
-        // Theme runs in table (order_key) order -> optgroups.
-        const runs: Array<{theme: string, cats: category.Category[]}> = [];
-        for(const c of this.active) {
-            const theme = c.theme || 'Other';
-            const run = runs[runs.length-1];
-            if(run && run.theme === theme) run.cats.push(c);
-            else runs.push({theme, cats: [c]});
-        }
+        // THE shared theme grouping (themes in table order, names sorted
+        // within) -> optgroups.
+        const runs = category.groupByTheme(this.active);
         // The current value when it is not offered: a retired category (kept
         // with its name) or a value not in the table at all (pre-import text).
         let currentExtra: Markup;

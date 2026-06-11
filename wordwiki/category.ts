@@ -50,6 +50,33 @@ export function isInternalCategorySlug(slug: string): boolean {
     return slug.startsWith('~');
 }
 
+/**
+ * Group categories into theme groups for presentation - THE grouping, shared
+ * by the Category Table admin page, the lexeme editor's category select, the
+ * editor's by-category report and the public categories page:
+ *  - themes keep their first-appearance order (pass categories in table
+ *    order, i.e. allByOrder/activeByOrder - so the scheme's theme order,
+ *    with Internal and Old categories at the end);
+ *  - WITHIN a theme, categories sort alphabetically by display name (the
+ *    table order drives theme order; alphabetical is what eyes want inside
+ *    a group).
+ */
+export interface CategoryThemeGroup { theme: string; cats: Category[]; }
+const nameCollator = Intl.Collator('en');
+export function groupByTheme(cats: Category[]): CategoryThemeGroup[] {
+    const groups: CategoryThemeGroup[] = [];
+    const byTheme = new Map<string, CategoryThemeGroup>();
+    for(const c of cats) {
+        const theme = c.theme || (isInternalCategorySlug(c.slug) ? 'Internal' : 'Other');
+        let g = byTheme.get(theme);
+        if(!g) { g = {theme, cats: []}; byTheme.set(theme, g); groups.push(g); }
+        g.cats.push(c);
+    }
+    for(const g of groups)
+        g.cats.sort((a, b) => nameCollator.compare(a.name || a.slug, b.name || b.slug));
+    return groups;
+}
+
 // A column managed by the table code (the global ordering): hidden from the
 // generic record form; insert() supplies it.
 class ManagedStringField extends StringField {
@@ -153,7 +180,7 @@ export class CategoryTable extends Table<Category> {
     private nextOrderKey(): string {
         const last = db().first<{k: string|null}>(
             'SELECT MAX(order_key) AS k FROM category', {});
-        return orderkey.between(last?.k ?? undefined, undefined);
+        return orderkey.between(last?.k, undefined);
     }
 
     @path
@@ -214,19 +241,11 @@ export class CategoryTable extends Table<Category> {
                 ['p', {class: 'text-muted'},
                  'No categories yet (the import seeds these - see categorization/).']];
 
-        // Group into theme runs, preserving order_key order.
-        const runs: Array<{theme: string, cats: Category[]}> = [];
-        for(const c of cats) {
-            const theme = c.theme || (isInternalCategorySlug(c.slug) ? 'Internal' : 'Ungrouped');
-            const run = runs[runs.length-1];
-            if(run && run.theme === theme) run.cats.push(c);
-            else runs.push({theme, cats: [c]});
-        }
         return ['div', props,
-            runs.map(run => [
-                ['h5', {class: 'mt-3 mb-1'}, run.theme],
+            groupByTheme(cats).map(group => [
+                ['h5', {class: 'mt-3 mb-1'}, group.theme],
                 ['div', {class: 'list-group lm-list'},
-                 run.cats.map(c => this.renderCategoryRow(c))]])];
+                 group.cats.map(c => this.renderCategoryRow(c))]])];
     }
 
     renderCategoryRow(c: Category): Markup {

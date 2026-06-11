@@ -573,14 +573,33 @@ export class WordWiki extends LiminalApp {
     categoriesDirectory(): any {
         const title = `Categories Directory`;
 
+        // Grouped by theme via the category table (the shared grouping:
+        // themes in table order - so Internal and Old categories land at the
+        // end - names sorted within).  This is the EDITOR report, so internal
+        // '~' categories are shown; the public site filters them.  Values
+        // with no table row (a pre-import db) trail in their own group.
+        const counts = this.getCategories();
+        const tabled = this.categories.allByOrder.all({}).filter(c => counts.has(c.slug));
+        const tabledSlugs = new Set(tabled.map(c => c.slug));
+        const untabled = Array.from(counts.keys())
+            .filter(v => !tabledSlugs.has(v))
+            .toSorted((a, b) => this.sourceLangCollator.compare(a, b));
+
+        const categoryLink = (value: string, label: string) =>
+            ['li', {}, ['a',
+                        {href:`/ww/wordwiki.entriesForCategory(${JSON.stringify(value)})`},
+                        label, ` (${counts.get(value)} entries)`]];
+
         const body = [
             ['h1', {}, title],
-            ['ul', {},
-             Array.from(this.getCategories().entries()).map(cat=>
-                 ['li', {}, ['a',
-                             {href:`/ww/wordwiki.entriesForCategory(${JSON.stringify(cat[0])})`},
-                             cat[0], ` (${cat[1]} entries)`]]),
-            ]
+            category.groupByTheme(tabled).map(group => [
+                ['h3', {}, group.theme],
+                ['ul', {}, group.cats.map(c => categoryLink(c.slug, `${c.name} (${c.slug})`))],
+            ]),
+            untabled.length > 0
+                ? [['h3', {}, 'Not in the category table'],
+                   ['ul', {}, untabled.map(v => categoryLink(v, v))]]
+                : undefined,
         ];
 
         return templates.pageTemplate({title, body});

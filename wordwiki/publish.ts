@@ -239,6 +239,32 @@ export class Publish {
             || this.wordWiki.sourceLangCollator.compare(a, b));
     }
 
+    /**
+     * The public categories as THEME GROUPS (the shared grouping from
+     * category.ts: themes in table order, names sorted within), for the
+     * public categories page.  Un-tabled values (pre-import) trail in an
+     * 'Other categories' group; on a fully pre-import db that is the only
+     * group.  Counts ride along for the listing.
+     */
+    publicCategoryGroups(): Array<{theme: string, cats: Array<{slug: string, name: string, count: number}>}> {
+        const counts = new Map(this.publicCategories());
+        const tabled = Array.from(this.categoryBySlug.values())
+            .filter(c => !category.isInternalCategorySlug(c.slug) && counts.has(c.slug));
+        const tabledSlugs = new Set(tabled.map(c => c.slug));
+        const groups = category.groupByTheme(tabled).map(g => ({
+            theme: g.theme,
+            cats: g.cats.map(c => ({slug: c.slug, name: c.name,
+                                    count: counts.get(c.slug)!}))}));
+        const untabled = Array.from(counts.entries())
+            .filter(([slug, _n]) => !tabledSlugs.has(slug))
+            .toSorted(([a], [b]) => this.wordWiki.sourceLangCollator.compare(a, b))
+            .map(([slug, count]) => ({slug, name: slug, count}));
+        if(untabled.length > 0)
+            groups.push({theme: groups.length > 0 ? 'Other categories' : 'Categories',
+                         cats: untabled});
+        return groups;
+    }
+
     async publish(): Promise<void> {
         // --- If publish root dir does not exist, create it.
         await Deno.mkdir(this.publishRoot, {recursive: true});
@@ -739,12 +765,14 @@ including remixing, transforming, and building upon the material, for any non-co
 
         const body = [
             ['h1', {}, title],
-            ['ul', {},
-             this.publicCategories().map(cat=>
-                 ['li', {}, ['a',
-                             {href:this.pathForCategory(cat[0])},
-                             this.publicCategoryName(cat[0]), ` (${cat[1]} entries)`]]),
-            ]
+            this.publicCategoryGroups().map(group => [
+                ['h2', {}, group.theme],
+                ['ul', {},
+                 group.cats.map(c =>
+                     ['li', {}, ['a',
+                                 {href:this.pathForCategory(c.slug)},
+                                 c.name, ` (${c.count} entries)`]])],
+            ]),
         ];
         await writePageFromMarkupIfChanged(this.categoriesDirectoryPath, this.publicPageTemplate('', {title, body}));
     }
