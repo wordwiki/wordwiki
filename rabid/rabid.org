@@ -1,14 +1,31 @@
-* PROPOSAL: Vibe it until stalls!
-- turn off login for now
+* TODAY Get login working
+* TODAY Get generic editing working
+* TODAY Get generic actions working
+* TODAY fix activity report.
 
+
+
+* TODO make activeVolunteersByDay report
+- update fake data so is nice
+- make same pages show free bikes, trainings etc by month.
+- 
+
+
+* Primary paper use
+- have a sheet per event, with all the spots on it (double sided)
+- at end of event, enter into rabid.
+- screen for turbo entry, list of postal prefixes for service (XXX for missing) all on one string. (or some picker).
+- list of volunteers (common ones at top), click to add.
+- bike sales etc entered in a standard format.
+
+* npm installed
+deno install npm:@faker-js/faker
+deno install npm:temporal-polyfill
 
 * PROPOSAL: Timer function in rabid
 - once someone is put on a DIY stand, start timer with the stand #
 - have page that shows time on stand for all DIY clients.
 - TUE/WED/FRI - 3 days to working rabid?  Is it worth it?  Maybe?
-
-
-
 
  
 * TODO Login

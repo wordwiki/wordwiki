@@ -5,13 +5,16 @@
  */
 
 const ani = 'Ani';
-const zach = 'Zach';
-const abdullah = 'Abdullah';
+const gabe = 'Gaberiel';
+const nick = 'Nicholas';
+const csj2 = 'Csj2';
 
 const pub = 'public';
 const volunteer = 'volunteer';
 const event = 'event';
 const shop = 'shop';
+
+const all = [ani, gabe, nick]
 
 // Day constants (0-6, Sunday to Saturday)
 const sun = 0;
@@ -51,52 +54,31 @@ const t9_30pm = 21.5;
 const t10pm = 22;
 const t11pm = 23;
 
-// const schedule_ani_mon = [
-
-//     // Public Hours
-//     { kind: pub, day: mon, start: t1pm, end: t6pm, staff: [ani, abdullah] },
-//     { kind: pub, day: mon, start: t6pm, end: t9pm, staff: [ani] },
-//     { kind: pub, day: tue, start: t1pm, end: t6pm, staff: [ani, zach] },
-//     { kind: pub, day: thu, start: t2pm, end: t5pm, staff: [zach, abdullah] },
-
-//     // Volunteer Hours
-//     { kind: volunteer, day: tue, start: t6pm, end: t9pm, staff: [ani] },
-//     { kind: volunteer, day: thu, start: t10am, end: t2pm, staff: [zach] },
-//     { kind: volunteer, day: thu, start: t5pm, end: t9pm, staff: [abdullah] },
-
-//     // Event Hours - wed daytime may move depending on partners
-//     { kind: event, day: wed, start: t11am, end: t3pm, staff: [abdullah, zach] },
-//     { kind: event, day: wed, start: t5pm, end: t9pm, staff: [abdullah, zach] },
-//     { kind: event, day: sat, start: t9am, end: t5pm, staff: [zach, abdullah] },
-
-//     // Shop Hours - these can be moved whenever
-//     //{ kind: shop, day: mon, start: t1pm, end: t3pm, staff: [ani] },
-//     //{ kind: shop, day: tue, start: t1pm, end: t3pm, staff: [ani] },
-//     { kind: shop, day: sat, start: t9am, end: t12pm, staff: [ani] },
-    
-// ];
-
 const schedule = [
 
-    // Public Hours
-    { kind: pub, day: tue, start: t2pm, end: t6pm, staff: [ani, zach] },
-    { kind: pub, day: thu, start: t2pm, end: t6pm, staff: [zach, abdullah] },
-    { kind: pub, day: fri, start: t2pm, end: t8pm, staff: [ani, abdullah] },
-    { kind: pub, day: sat, start: t9_30am, end: t4pm, staff: [zach, abdullah] },
+    { kind: pub, day: tue, start: t2pm, end: t9pm, staff: all },
+    { kind: pub, day: thu, start: t2pm, end: t9pm, staff: all },
+    { kind: pub, day: fri, start: t2pm, end: t9pm, staff: all },
+    { kind: pub, day: sat, start: t9_30am, end: t4pm, staff: all },
 
+    { kind: pub, day: tue, start: t10am, end: t2pm, staff: [ani, zach] },
+    { kind: pub, day: fri, start: t10am, end: t2pm, staff: [ani, csj1] },
+    
     // Volunteer Hours
-    { kind: volunteer, day: tue, start: t6pm, end: t9pm, staff: [ani] },
-    { kind: volunteer, day: thu, start: t10am, end: t2pm, staff: [zach] },
-    { kind: volunteer, day: thu, start: t5pm, end: t9pm, staff: [abdullah] },
+    { kind: volunteer, day: tue, start: t6pm, end: t9pm, staff: [csj2] },
+    { kind: volunteer, day: thu, start: t6pm, end: t9pm, staff: [csj2] },
+    { kind: volunteer, day: thu, start: t10am, end: t2pm, staff: [csj2] },
+    //{ kind: volunteer, day: thu, start: t5pm, end: t9pm, staff: [abdullah] },
 
     // Event Hours - wed daytime may move depending on partners
-    { kind: event, day: wed, start: t11am, end: t3pm, staff: [abdullah, zach] },
-    { kind: event, day: wed, start: t5pm, end: t9pm, staff: [abdullah, zach] },
+    //{ kind: event, day: wed, start: t11am, end: t3pm, staff: [abdullah, zach] },
+    { kind: event, day: wed, start: t5pm, end: t9pm, staff: [all] },
+    //{ kind: event, day: wed, start: t1pm, end: t4pm, staff: [csj1, zach] },
 
     // Shop Hours - these can be moved whenever
     //{ kind: shop, day: mon, start: t1pm, end: t3pm, staff: [ani] },
     //{ kind: shop, day: tue, start: t1pm, end: t3pm, staff: [ani] },
-    { kind: shop, day: sat, start: t9_30am, end: t12pm, staff: [ani] },
+    //{ kind: shop, day: sat, start: t9_30am, end: t12pm, staff: [ani] },
     
 ];
 
@@ -207,10 +189,12 @@ function getHours(start, end) {
 function formatSchedule(schedule, name = 'Schedule') {
 
     // Calculate overall total hours
-    const totalHours = schedule.reduce((total, event) => 
+    const totalHours = schedule.reduce((total, event) =>
         total + getHours(event.start, event.end), 0);
+    const totalStaffHours = schedule.reduce((total, event) =>
+        total + getHours(event.start, event.end) * (event.staff ? event.staff.length : 0), 0);
 
-    let title = name + ` (${totalHours} hours total)\n`;
+    let title = name + ` (${totalHours} operating hours, ${totalStaffHours} staffed hours)\n`;
     
     let output = `${title}\n${'='.repeat(title.length)}\n\n`;
 
@@ -238,10 +222,12 @@ function formatSchedule(schedule, name = 'Schedule') {
         });
 
         // Calculate total hours for this kind
-        const kindTotalHours = allKindEvents.reduce((total, event) => 
+        const kindTotalHours = allKindEvents.reduce((total, event) =>
             total + getHours(event.start, event.end), 0);
+        const kindStaffHours = allKindEvents.reduce((total, event) =>
+            total + getHours(event.start, event.end) * (event.staff ? event.staff.length : 0), 0);
 
-        const title = `${kind.toUpperCase()} - Total hours: ${kindTotalHours}`;
+        const title = `${kind.toUpperCase()} - ${kindTotalHours} operating hours, ${kindStaffHours} staffed hours`;
         output += `${title}\n${'-'.repeat(title.length)}\n`;
         
         // Sort days of the week in chronological order
@@ -362,6 +348,12 @@ function formatStaffScheduleByDay(events, staffId, fullSchedule) {
 function renderScheduleSummary(schedule) {
     let output = '';
     
+    // Sanity checks first
+    output += sanityCheckSchedule(schedule) + '\n';
+
+    // Staffing analysis
+    output += analyzeStaffingBurden(schedule) + '\n\n';
+
     // First, render the full schedule
     output += formatSchedule(schedule, 'FULL SCHEDULE') + '\n\n';
     
@@ -380,6 +372,173 @@ function renderScheduleSummary(schedule) {
     return output;
 }
 
+
+// --- Staffing analysis configuration ---
+const TOTAL_STAFF = 4;
+const HOURS_PER_WEEK = 35;
+const EVENING_CUTOFF = t5pm;  // hours at or after this count as evening/weekend
+const WEEKEND_DAYS = [sat];   // Sunday and Monday are days off (no shifts)
+
+/**
+ * Analyze staffing burden: evening/weekend vs daytime, and leftover capacity.
+ * Splits shifts that straddle the evening cutoff into two portions.
+ */
+function analyzeStaffingBurden(schedule) {
+    let eveningWeekendStaffHours = 0;
+    let daytimeStaffHours = 0;
+
+    // Count staff-slots needed per evening/weekend day
+    // e.g. if Tuesday evening needs 3 staff across all shifts, that's 3 occasions
+    const staffNeededPerDay = {};  // day -> max staff needed concurrently or total unique slots
+
+    schedule.forEach(event => {
+        const staffCount = event.staff ? event.staff.length : 0;
+        const isWeekend = WEEKEND_DAYS.includes(event.day);
+
+        if (isWeekend) {
+            eveningWeekendStaffHours += getHours(event.start, event.end) * staffCount;
+            staffNeededPerDay[event.day] = (staffNeededPerDay[event.day] || 0) + staffCount;
+        } else {
+            const daytimeEnd = Math.min(event.end, EVENING_CUTOFF);
+            const eveningStart = Math.max(event.start, EVENING_CUTOFF);
+
+            if (event.start < EVENING_CUTOFF) {
+                daytimeStaffHours += getHours(event.start, daytimeEnd) * staffCount;
+            }
+            if (event.end > EVENING_CUTOFF) {
+                eveningWeekendStaffHours += getHours(eveningStart, event.end) * staffCount;
+                staffNeededPerDay[event.day] = (staffNeededPerDay[event.day] || 0) + staffCount;
+            }
+        }
+    });
+
+    // Total staff-occasions (e.g. 3 people working Tuesday evening = 3 occasions)
+    const totalOccasions = Object.values(staffNeededPerDay).reduce((a, b) => a + b, 0);
+
+    const totalStaffHours = eveningWeekendStaffHours + daytimeStaffHours;
+    const totalCapacity = TOTAL_STAFF * HOURS_PER_WEEK;
+    const remainingHours = totalCapacity - totalStaffHours;
+
+    let output = 'STAFFING ANALYSIS\n';
+    output += '=================\n\n';
+    output += `Staff: ${TOTAL_STAFF} @ ${HOURS_PER_WEEK} hrs/wk = ${totalCapacity} hrs total capacity\n`;
+    output += `Total staffed hours needed: ${totalStaffHours}\n`;
+    output += `Remaining (admin/shop/flex): ${remainingHours} hrs (${(remainingHours / TOTAL_STAFF).toFixed(1)} per person)\n\n`;
+
+    output += `Evening/weekend staffed hours: ${eveningWeekendStaffHours} hrs (${(eveningWeekendStaffHours / TOTAL_STAFF).toFixed(1)} per person)\n`;
+    output += `Daytime weekday staffed hours: ${daytimeStaffHours} hrs (${(daytimeStaffHours / TOTAL_STAFF).toFixed(1)} per person)\n\n`;
+
+    // Per-day breakdown of evening/weekend occasions
+    output += `Evening/weekend occasions: ${totalOccasions} staff-slots across ${Object.keys(staffNeededPerDay).length} days (${(totalOccasions / TOTAL_STAFF).toFixed(1)} per person)\n`;
+    const sortedDays = Object.keys(staffNeededPerDay).map(Number).sort((a, b) => a - b);
+    sortedDays.forEach(day => {
+        output += `  ${formatDay(day)}: ${staffNeededPerDay[day]} staff needed\n`;
+    });
+
+    return output;
+}
+
+/**
+ * Sanity-check the schedule and analysis for common errors.
+ * Returns a string with warnings/errors, or empty string if all checks pass.
+ */
+function sanityCheckSchedule(schedule) {
+    const errors = [];
+
+    // 1. Basic shift validity
+    schedule.forEach((event, i) => {
+        if (event.end <= event.start) {
+            errors.push(`Shift ${i}: end (${event.end}) <= start (${event.start})`);
+        }
+        if (!event.staff || event.staff.length === 0) {
+            errors.push(`Shift ${i} (${formatDay(event.day)} ${formatTimeRange(event.start, event.end)}): no staff assigned`);
+        }
+        if (event.day === sun || event.day === mon) {
+            errors.push(`Shift ${i}: scheduled on ${formatDay(event.day)} (should be a day off)`);
+        }
+    });
+
+    // 2. Cross-check: evening+daytime staffed hours == total staffed hours
+    const totalStaffHours = schedule.reduce((t, e) =>
+        t + getHours(e.start, e.end) * (e.staff ? e.staff.length : 0), 0);
+    let checkEvening = 0, checkDaytime = 0;
+    schedule.forEach(event => {
+        const sc = event.staff ? event.staff.length : 0;
+        const isWeekend = WEEKEND_DAYS.includes(event.day);
+        if (isWeekend) {
+            checkEvening += getHours(event.start, event.end) * sc;
+        } else {
+            const daytimeEnd = Math.min(event.end, EVENING_CUTOFF);
+            const eveningStart = Math.max(event.start, EVENING_CUTOFF);
+            if (event.start < EVENING_CUTOFF)
+                checkDaytime += getHours(event.start, daytimeEnd) * sc;
+            if (event.end > EVENING_CUTOFF)
+                checkEvening += getHours(eveningStart, event.end) * sc;
+        }
+    });
+    if (Math.abs((checkEvening + checkDaytime) - totalStaffHours) > 0.01) {
+        errors.push(`Hour split mismatch: evening(${checkEvening}) + daytime(${checkDaytime}) = ${checkEvening + checkDaytime}, but total staffed = ${totalStaffHours}`);
+    }
+
+    // 3. Peak concurrent staff check — at any moment, are more staff needed than available?
+    //    Uses a sweep-line per day across all shifts.
+    const shiftsByDay = {};
+    schedule.forEach(event => {
+        if (!shiftsByDay[event.day]) shiftsByDay[event.day] = [];
+        shiftsByDay[event.day].push(event);
+    });
+    for (const [day, shifts] of Object.entries(shiftsByDay)) {
+        // Build timeline events: +staff at start, -staff at end
+        const timeline = [];
+        shifts.forEach(event => {
+            const sc = event.staff ? event.staff.length : 0;
+            timeline.push({ time: event.start, delta: +sc });
+            timeline.push({ time: event.end, delta: -sc });
+        });
+        timeline.sort((a, b) => a.time - b.time || a.delta - b.delta);
+        let concurrent = 0, peak = 0, peakTime = 0;
+        for (const t of timeline) {
+            concurrent += t.delta;
+            if (concurrent > peak) {
+                peak = concurrent;
+                peakTime = t.time;
+            }
+        }
+        if (peak > TOTAL_STAFF) {
+            errors.push(`${formatDay(Number(day))}: peak concurrent staff = ${peak} at ${formatHourAmPm(peakTime)}, but only ${TOTAL_STAFF} staff available`);
+        }
+    }
+
+    // 4. Evening/weekend occasion count: on any single day, staff-slots needed should not
+    //    exceed TOTAL_STAFF (otherwise not everyone can get that evening off in rotation)
+    //    Note: this is a warning, not necessarily an error — it means that day requires
+    //    more than one person to give up their evening.
+    // (Already covered by peak check above for feasibility)
+
+    // 5. Total staffed hours should not exceed total capacity
+    const totalCapacity = TOTAL_STAFF * HOURS_PER_WEEK;
+    if (totalStaffHours > totalCapacity) {
+        errors.push(`Total staffed hours (${totalStaffHours}) exceeds total capacity (${totalCapacity})`);
+    }
+
+    // 6. Check for duplicate shifts (same day, same time range, same kind)
+    const seen = new Set();
+    schedule.forEach((event, i) => {
+        const key = `${event.kind}-${event.day}-${event.start}-${event.end}`;
+        if (seen.has(key)) {
+            errors.push(`Shift ${i}: possible duplicate — ${event.kind} ${formatDay(event.day)} ${formatTimeRange(event.start, event.end)}`);
+        }
+        seen.add(key);
+    });
+
+    if (errors.length === 0) {
+        return 'SANITY CHECKS: all passed ✓\n';
+    }
+    let output = `SANITY CHECKS: ${errors.length} issue(s) found\n`;
+    output += '-'.repeat(40) + '\n';
+    errors.forEach(e => output += `  ⚠ ${e}\n`);
+    return output + '\n';
+}
 
 /**
  * Write each staff schedule to individual files and the full schedule to schedule.txt
