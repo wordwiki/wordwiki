@@ -69,19 +69,35 @@ export function orgToday(): PlainDate {
     return orgNow().toPlainDate();
 }
 
+// Strict format checks for the parse edge.  Temporal's ISO parsing is far
+// more lenient than our storage contract: it accepts datetime strings where
+// a date is expected, basic-format '20250723', and - worst - silently DROPS
+// a utc offset ('2025-07-23 14:30:00+05:00' parses as wall time 14:30).
+// Rows must carry exactly the canonical forms (that is what makes them
+// lexicographically sortable and SQL-comparable), so reads reject anything
+// else rather than letting non-canonical strings hide in the db.  Seconds
+// are optional on read (datetime-local form values omit them); Temporal
+// normalizes them to :00.
+const SQLITE_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const SQLITE_DATETIME_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/;
+const SQLITE_TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
+
 /**
  * Convert a SQLite date string (YYYY-MM-DD) to a Temporal.PlainDate
- * 
+ *
  * @param sqliteDate - Date string in format YYYY-MM-DD
  * @returns Temporal.PlainDate object
  * @throws Error if the date string is invalid
  */
 export function sqliteDateToTemporal(sqliteDate: SQLiteDateString): PlainDate {
+    if (!SQLITE_DATE_RE.test(sqliteDate))
+        throw new Error(`Invalid SQLite date string: ${sqliteDate}. Expected format: YYYY-MM-DD`);
     try {
-        // Temporal.PlainDate.from can parse ISO 8601 date strings directly
+        // The regex checks the shape; Temporal checks the calendar (Feb 30 etc).
         return Temporal.PlainDate.from(sqliteDate);
     } catch (error) {
-        throw new Error(`Invalid SQLite date string: ${sqliteDate}. Expected format: YYYY-MM-DD`);
+        throw new Error(`Invalid SQLite date string: ${sqliteDate}. Expected format: YYYY-MM-DD`,
+                        { cause: error });
     }
 }
 
@@ -117,12 +133,15 @@ export function temporalToSqliteDateOrUndefined(date: PlainDate | null | undefin
  * @throws Error if the datetime string is invalid
  */
 export function sqliteDateTimeToTemporal(sqliteDateTime: SQLiteDateTimeString): PlainDateTime {
+    if (!SQLITE_DATETIME_RE.test(sqliteDateTime))
+        throw new Error(`Invalid SQLite datetime string: ${sqliteDateTime}. Expected format: YYYY-MM-DD HH:MM:SS`);
     try {
         // SQLite uses space separator, but Temporal expects 'T'
         const isoDateTime = sqliteDateTime.replace(' ', 'T');
         return Temporal.PlainDateTime.from(isoDateTime);
     } catch (error) {
-        throw new Error(`Invalid SQLite datetime string: ${sqliteDateTime}. Expected format: YYYY-MM-DD HH:MM:SS`);
+        throw new Error(`Invalid SQLite datetime string: ${sqliteDateTime}. Expected format: YYYY-MM-DD HH:MM:SS`,
+                        { cause: error });
     }
 }
 
@@ -178,10 +197,13 @@ export function extractDateFromDateTime(sqliteDateTime: SQLiteDateTimeString): S
  * Useful for columns that store only time without date
  */
 export function sqliteTimeToTemporal(sqliteTime: string): PlainTime {
+    if (!SQLITE_TIME_RE.test(sqliteTime))
+        throw new Error(`Invalid SQLite time string: ${sqliteTime}. Expected format: HH:MM:SS`);
     try {
         return Temporal.PlainTime.from(sqliteTime);
     } catch (error) {
-        throw new Error(`Invalid SQLite time string: ${sqliteTime}. Expected format: HH:MM:SS`);
+        throw new Error(`Invalid SQLite time string: ${sqliteTime}. Expected format: HH:MM:SS`,
+                        { cause: error });
     }
 }
 
@@ -350,145 +372,3 @@ export function sqliteTimeToString(sqliteTime: string | null | undefined, nullVa
  *      const zoned = plainDateTime.toZonedDateTime('America/New_York');
  *      ```
  */
-
-// Example usage:
-function examples() {
-    // Converting from SQLite to Temporal
-    const sqliteDate = '2025-07-23';
-    const sqliteDateTime = '2025-07-23 14:30:00';
-    
-    const date = sqliteDateToTemporal(sqliteDate);
-    const dateTime = sqliteDateTimeToTemporal(sqliteDateTime);
-    
-    console.log('Parsed date:', date?.toString());
-    console.log('Parsed datetime:', dateTime?.toString());
-    
-    // Converting from Temporal to SQLite
-    const now = Temporal.Now.plainDateTimeISO();
-    const sqliteNow = temporalToSqliteDateTime(now);
-    console.log('Current time for SQLite:', sqliteNow);
-    
-    // Working with dates
-    if (date) {
-        const nextWeek = date.add({ days: 7 });
-        console.log('Next week:', temporalToSqliteDate(nextWeek));
-    }
-    
-    // Working with times
-    if (dateTime) {
-        const twoHoursLater = dateTime.add({ hours: 2 });
-        console.log('Two hours later:', temporalToSqliteDateTime(twoHoursLater));
-    }
-    
-    // Working with nullable values
-    const nullableDate: string | undefined = undefined;
-    const nullableResult = sqliteDateToTemporalOrNull(nullableDate);
-    console.log('Nullable result:', nullableResult); // null
-    
-    const maybeDate = sqliteDateToTemporalOrNull('2025-07-23');
-    const sqliteString = temporalToSqliteDateOrUndefined(maybeDate);
-    console.log('SQLite string or undefined:', sqliteString);
-    
-    // ========================================================================
-    // HUMAN-READABLE FORMATTING EXAMPLES
-    // ========================================================================
-    
-    console.log('\n--- Human-readable date formatting ---');
-    if (date) {
-        // Using toLocaleString with various options
-        console.log('Default US format:', date.toLocaleString('en-US'));
-        console.log('Long format:', date.toLocaleString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        }));
-        console.log('Short format:', date.toLocaleString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        }));
-        console.log('Numeric format:', date.toLocaleString('en-US', { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit' 
-        }));
-        
-        // Custom formats
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        console.log('Custom format:', `${monthNames[date.month - 1]} ${date.day}, ${date.year}`);
-    }
-    
-    console.log('\n--- Human-readable datetime formatting ---');
-    if (dateTime) {
-        // DateTime with various formats
-        console.log('Default US format:', dateTime.toLocaleString('en-US'));
-        console.log('Full format:', dateTime.toLocaleString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }));
-        console.log('Compact format:', dateTime.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }));
-        
-        // Date and time separately
-        const dateOnly = dateTime.toPlainDate();
-        const timeOnly = dateTime.toPlainTime();
-        console.log('Date only:', dateOnly.toLocaleString('en-US', { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric' 
-        }));
-        console.log('Time only:', timeOnly.toLocaleString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }));
-    }
-    
-    console.log('\n--- Human-readable time formatting ---');
-    const time = sqliteTimeToTemporal('14:30:00');
-    if (time) {
-        console.log('Default format:', time.toLocaleString('en-US'));
-        console.log('12-hour format:', time.toLocaleString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }));
-        console.log('24-hour format:', time.toLocaleString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        }));
-        console.log('With seconds:', time.toLocaleString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        }));
-    }
-    
-    console.log('\n--- Relative time examples ---');
-    const today = Temporal.Now.plainDateISO();
-    const tomorrow = today.add({ days: 1 });
-    const nextWeek = today.add({ days: 7 });
-    const lastMonth = today.subtract({ months: 1 });
-    
-    // Simple relative descriptions
-    console.log('Today:', today.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
-    console.log('Tomorrow:', tomorrow.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
-    console.log('Next week:', nextWeek.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
-    console.log('Last month:', lastMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
-}
-
-if (import.meta.main)
-    examples();
