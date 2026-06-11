@@ -36,6 +36,20 @@ def load(args):
             assigns[a['e']] = a   # later lines win: corrections are appends
     return entries, assigns
 
+def load_scheme(path=os.path.join(HERE, 'scheme.md')):
+    """Parse the category scheme out of scheme.md (single source of truth).
+    Returns {slug: (name, theme)} in document order."""
+    scheme, theme = {}, None
+    rx = re.compile(r'^- \*\*(.+?)\*\* \(`([a-z0-9-]+)`\)')
+    with open(path) as f:
+        for line in f:
+            if line.startswith('## '):
+                theme = line[3:].strip()
+            m = rx.match(line)
+            if m:
+                scheme[m.group(2)] = (m.group(1), theme)
+    return scheme
+
 def headword(e):
     return e['mm'][0].split(' (')[0] if e['mm'] else f"#{e['e']}"
 
@@ -122,8 +136,39 @@ def cmd_batch(args):
         pos = '/'.join(e['pos']) or '-'
         old = ','.join(e['cat']) or '-'
         arch = ' ARCHIVED' if is_archived(e) else ''
-        ex = f"  ex: {e['ex'][0][:80]}" if e['ex'] and not e['gl'] and not e['tr'] else ''
-        print(f"{e['e']}|{headword(e)}|{pos}|{english(e)[:130]}|old:{old}{arch}{ex}")
+        # first example translation as clearly-marked WEAK evidence (helps
+        # thin/polysemous glosses; never keyword-matched)
+        ex = f" ex:{e['ex'][0][:70]}" if e['ex'] else ''
+        print(f"{e['e']}|{headword(e)}|{pos}|{english(e)[:160]}|old:{old}{arch}{ex}")
+
+def cmd_scheme(args):
+    scheme = load_scheme()
+    entries, assigns = load(args)
+    counts = collections.Counter(c for a in assigns.values() for c in a['cats'])
+    theme = None
+    for slug, (name, th) in scheme.items():
+        if th != theme:
+            theme = th
+            print(f"\n{theme}")
+        print(f"  {counts.get(slug, 0):5}  {name} ({slug})")
+    print(f"\n{len(scheme)} categories")
+
+def cmd_validate(args):
+    scheme = load_scheme()
+    entries, assigns = load(args)
+    bad = 0
+    for a in assigns.values():
+        for c in a['cats']:
+            if c not in scheme:
+                print(f"UNKNOWN CATEGORY {c!r} on entry {a['e']}"); bad += 1
+        if not a['cats'] and not a.get('flag'):
+            print(f"entry {a['e']}: no categories and no flag"); bad += 1
+        if a.get('tier') not in (None, 't10', 't100', 't1000'):
+            print(f"entry {a['e']}: bad tier {a.get('tier')!r}"); bad += 1
+    missing = [e['e'] for e in entries if e['e'] not in assigns]
+    print(f"{len(assigns)} assigned, {len(missing)} unassigned, {bad} problems")
+    if missing and args.show_missing:
+        print("first unassigned:", missing[:20])
 
 # --- main --------------------------------------------------------------------
 
@@ -143,6 +188,10 @@ def main():
     s = sub.add_parser('batch'); s.add_argument('start', type=int); s.add_argument('count', type=int)
     s.add_argument('--untagged-only', action='store_true')
     s.add_argument('--terse', action='store_true'); s.set_defaults(fn=cmd_batch)
+
+    sub.add_parser('scheme').set_defaults(fn=cmd_scheme)
+    s = sub.add_parser('validate'); s.add_argument('--show-missing', action='store_true')
+    s.set_defaults(fn=cmd_validate)
 
     args = p.parse_args()
     args.fn(args)
