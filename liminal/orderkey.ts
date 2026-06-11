@@ -40,9 +40,11 @@ export const orderKeyCollator = Intl.Collator('en');
  * Compare two order keys.
  *
  * Supports null/undefined order keys with null/undefined sorting last.
+ * Two null/undefined keys compare as equal (so that callers' secondary
+ * sort criteria still apply).
  */
 export function compareOrderKeys(a: string|undefined|null, b: string|undefined|null): number {
-    if(a == undefined) return 1;
+    if(a == undefined) return b == undefined ? 0 : 1;
     if(b == undefined) return -1;
     return orderKeyCollator.compare(a, b);
 }
@@ -68,30 +70,52 @@ export function initial(size: number): string[] {
 }
 
 /**
- *
- *
+ * Order keys are stored and compared as strings, so they must be in the
+ * canonical form '0.' followed by digits with no trailing zero - that is
+ * the form for which plain string comparison agrees with numeric comparison.
+ * (For example '0.20' is numerically equal to '0.2' but string-distinct,
+ * which would corrupt ordering, so it is rejected).
  */
-export function between(a_key?: string, b_key?: string): string {
+const canonical_order_key_re = /^0\.[1-9](\d*[1-9])?$/;
 
-    if(a_key === undefined && b_key === undefined)
+/**
+ * Is 'key' a validly formed order key?
+ */
+export function isValidOrderKey(key: string): boolean {
+    return canonical_order_key_re.test(key);
+}
+
+/**
+ * Generate a new order key that sorts strictly between the two supplied
+ * order keys.
+ *
+ * A null/undefined a_key means 'before the first key' and a null/undefined
+ * b_key means 'after the last key' (callers can pass DB nulls directly).
+ */
+export function between(a_key?: string|null, b_key?: string|null): string {
+
+    if(a_key == undefined && b_key == undefined)
         return new_range_start_string;
-    
-    if(a_key === undefined)
+
+    if(a_key == undefined)
         a_key = begin_string;
-    if(b_key === undefined)
+    if(b_key == undefined)
         b_key = end_string;
-    
-    Big.strict = true;
+
+    // --- Expect both order keys to be canonical-form keys between
+    //     0.1 and 0.9 (inclusive)
+    if(!isValidOrderKey(a_key))
+        throw new Error(`internal error: order key in incorrect form: ${a_key}`);
+    if(!isValidOrderKey(b_key))
+        throw new Error(`internal error: order key in incorrect form: ${b_key}`);
+
     const a:any = new Big(a_key);
     const b:any = new Big(b_key);
 
-    // --- Expect both order keys to be positive numbers between 0.1 and 0.9 (inclusive)
-    if(a.lt(begin_key) || a.s !== 1 || a.e !== -1)
-        throw new Error(`internal error: order key in incorrect form: ${a}`);
-    if(b.gt(end_key) || b.s !== 1 || b.e !== -1)
-        throw new Error(`internal error: order key in incorrect form: ${b}`);
+    if(b.gt(end_key))
+        throw new Error(`internal error: order key out of range: ${b}`);
     if(a.gte(b))
-        throw new Error(`internal error: lower order key >= bigger order key: ${a} >= ${b}`);
+        throw new Error(`internal error: lower order key >= upper order key: ${a} >= ${b}`);
 
     // --- Calculate mid point between two order keys.  (We use times(0.5) rather
     //     than div(2) to avoid the auto rounding done by div).
@@ -116,43 +140,3 @@ export function between(a_key?: string, b_key?: string): string {
     return candidatesWithFewestDigits.toSorted(
         (x:any, y:any)=>mid.minus(x).abs().cmp(mid.minus(y).abs()))[0].toString();
 }
-
-function many_splits_play(count:number): string {
-    let a = '0.1';
-    let b = '0.2';
-    for(let i=0; i<count; i++) {
-        a = between(a,b);
-        //console.info(i, a.length, a);
-    }
-    return a;
-}
-
-function prepend_play() {
-    let v = '0.2';
-    for(let i=0; i<100; i++) {
-        v = between('0.1',v);
-        console.info(i, v.length, v);
-    }
-}
-
-function main() {
-    let a:any = new Big(0.456);
-    let b:any = new Big(0.4578);
-    console.info(a, b);
-    console.info(a.plus(b.minus(a).div(2)));
-    console.info(a.plus(b.minus(a).times(0.5)));
-
-    console.info(between(a.toString(),b.toString()));
-
-    console.time('many_splits_play');
-    console.info(many_splits_play(1001));
-    console.timeEnd('many_splits_play');
-    prepend_play();
-
-    console.info('initial(1)', initial(1).join(','));
-    console.info('initial(10)', initial(10).join(','));
-    console.info('initial(1000)', initial(1000).join(','));
-}
-
-if (import.meta.main)
-    main();

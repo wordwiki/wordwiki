@@ -452,7 +452,7 @@ export class TaskTable extends Table<Task> {
             db().first<{k: string|null}>(
                 'SELECT MAX(order_key) AS k FROM task WHERE project_id = :project_id',
                 {project_id});
-        return orderkey.between(last?.k ?? undefined, undefined);
+        return orderkey.between(last?.k, undefined);
     }
 
     @path
@@ -888,7 +888,7 @@ export class SubtaskTable extends Table<Subtask> {
             db().first<{k: string|null}>(
                 'SELECT MAX(order_key) AS k FROM subtask WHERE task_id = :task_id',
                 {task_id});
-        return orderkey.between(last?.k ?? undefined, undefined);
+        return orderkey.between(last?.k, undefined);
     }
 
     @path
