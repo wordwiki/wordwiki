@@ -56,7 +56,12 @@ export async function uploadRecording(args: {recordingBytesAsBase64: string}): P
 /**
  *
  */
-export function renderAudio(recording: string, label: string, hoverText: string|undefined=undefined, rootPath: string=''): any {
+export function renderAudio(recording: string|null|undefined, label: string, hoverText: string|undefined=undefined, rootPath: string=''): any {
+    // A missing recording must never break the page: render a calm marker
+    // instead.  (The publisher separately reports these as WARNINGS - it is
+    // the final validation pass - see Publish.warnMissingRecordings.)
+    if(recording == null || recording === '')
+        return ['i', {class: 'text-muted'}, label, ' (recording missing)'];
     return (async ()=>{
         //console.info('in render audio', recording, label);
         try {
@@ -67,8 +72,11 @@ export function renderAudio(recording: string, label: string, hoverText: string|
                     {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`, href: audioUrl},
                     label]
         } catch(ex) {
-            // DO better here TODO
-            return ['b', {}, 'Failed to load recording: ', ex];
+            // Degrade, don't break the page: a raw Error object is not valid
+            // markup (it used to kill the whole page render).
+            return ['i', {class: 'text-muted'},
+                    label, ' (recording unavailable: ',
+                    String((ex as Error)?.message ?? ex), ')'];
         }
     })();
 }

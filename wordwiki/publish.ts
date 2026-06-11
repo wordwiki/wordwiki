@@ -24,6 +24,11 @@ export class PublishStatus {
     endTime?: number = undefined;
     log: string[] = [];
     errors: string[] = [];
+    // Warnings vs errors: an ERROR means a page could not be published (and
+    // reads as "the site is broken"); a WARNING means the page published but
+    // the publish - as the final validation of everything - noticed a
+    // data problem to deal with (e.g. a recording with no audio file).
+    warnings: string[] = [];
 
     constructor() {
     }
@@ -39,6 +44,7 @@ export class PublishStatus {
         this.endTime = undefined;
         this.log = [];
         this.errors = [];
+        this.warnings = [];
     }
 
     end() {
@@ -79,6 +85,18 @@ export function publishStatus(joiningExistingPublish: boolean=false,
             ['h2', {style: "color: red"}, 'Errors'],
             ['ul', {},
              publishStatus.errors.map(e=>[
+                 ['li', {}, e]
+             ])
+            ]] : [],
+
+        // Deliberately calm (amber, not red): the pages ARE published; these
+        // are data items to deal with, found by publish-as-final-validation.
+        (publishStatus.warnings.length > 0) ? [
+            ['h2', {style: "color: darkgoldenrod"},
+             `Warnings (${publishStatus.warnings.length})`],
+            ['p', {}, 'These pages published fine - each warning is a data item to fix when convenient.'],
+            ['ul', {},
+             publishStatus.warnings.map(e=>[
                  ['li', {}, e]
              ])
             ]] : [],
@@ -216,6 +234,32 @@ export class Publish {
 
     publicCategoryName(slug: string): string {
         return this.categoryBySlug.get(slug)?.name ?? slug;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Publish-as-final-validation: data warnings ----------------------------
+    // ------------------------------------------------------------------------
+
+    // Recording tuples whose audio file is missing: the page still publishes
+    // (renderAudio degrades to a marker), and the publish reports a WARNING
+    // per entry.  Called wherever an entry's markup is rendered (its own
+    // page, book-page info boxes), deduped so each entry warns once.
+    #recordingWarnedEntries = new Set<number>();
+    warnMissingRecordings(entry: Entry): void {
+        if(this.#recordingWarnedEntries.has(entry.entry_id)) return;
+        this.#recordingWarnedEntries.add(entry.entry_id);
+        const name = entry.spelling?.[0]?.text || `entry ${entry.entry_id}`;
+        const missing = (recording: string|null|undefined) => recording == null || recording === '';
+        for(const r of entry.recording ?? [])
+            if(missing(r.recording))
+                this.status.warnings.push(
+                    `Entry '${name}': recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`);
+        for(const sub of entry.subentry ?? [])
+            for(const ex of sub.example ?? [])
+                for(const r of ex.example_recording ?? [])
+                    if(missing(r.recording))
+                        this.status.warnings.push(
+                            `Entry '${name}': example recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`);
     }
 
     /** An entry's categories as shown on the public site (internal filtered). */
@@ -678,6 +722,7 @@ including remixing, transforming, and building upon the material, for any non-co
      *
      */
     async publishEntry(entry: Entry): Promise<void> {
+        this.warnMissingRecordings(entry);
         const rootPath = '../../../';
         const entryPath = this.pathForEntry(entry);
         const entryDir = this.dirForEntry(entry);
@@ -1010,6 +1055,7 @@ including remixing, transforming, and building upon the material, for any non-co
         const entry = this.wordWiki.entriesByReferenceGroupId.get(groupId);
         if(!entry)
             return (`Unknown group id ${groupId}`);
+        this.warnMissingRecordings(entry);
         const entryMarkup:any[] = [
             'div', {style: 'overflow: auto;'},
             entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true}, entry)];
