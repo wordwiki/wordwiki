@@ -1,3 +1,2 @@
-# entries.jsonl is derived from the db (re-run dump_entries.py); everything
-# else (scheme, assignments, reports) is committed for audit.
 entries.jsonl
+__pycache__/
