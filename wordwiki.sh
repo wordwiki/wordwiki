@@ -15,6 +15,8 @@ set -e
 #   ./wordwiki.sh import-categories    # seed category table + rewrite entry
 #                                      # categories from ~/wordwiki/categorization
 #                                      # (idempotent; refuses production db)
+#   ./wordwiki.sh seed-lexical-forms   # seed the part-of-speech vocabulary
+#                                      # (idempotent)
 #
 # Any command first cleanly stops a running server (SQLite single writer).
 # Note: this does NOT run the transpile step (the old client-side editor's

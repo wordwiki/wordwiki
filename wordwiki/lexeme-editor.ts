@@ -60,6 +60,7 @@ import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
+import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
 import type {WordWiki} from './wordwiki.ts';
@@ -129,41 +130,42 @@ class AudioUploadField extends table.StringField {
 }
 
 /**
- * The category field: a select over the controlled vocabulary in the
- * category table (category.ts), grouped by theme.  Free text is what
- * produced the old misspelled/duplicated categories - creating a new
- * category is now a deliberate act on the Category Table admin page, and
- * the editor only OFFERS active (non-retired) categories.
+ * A controlled-vocabulary select - shared by the category field (category
+ * table) and the part-of-speech field (lexical form table).  Free text is
+ * what produced the old misspelled/duplicated vocabularies; creating a new
+ * value is a deliberate act on the matching admin page, and the editor only
+ * OFFERS active (non-retired) rows, grouped by theme (the shared grouping
+ * from category.ts: themes in table order, names sorted within).
  *
- * A current value that is not offered (a retired ~old-* import, or
- * pre-import free text) stays selectable as a marked extra option, so
- * editing it leaves it untouched - but a CHANGED value must be an active
- * slug (validated server-side in parseSimpleInput; the select is only the
+ * A current value that is not offered (a retired row, or legacy free text
+ * not in the table) stays selectable as a marked extra option, so editing
+ * it leaves it untouched - but a CHANGED value must be an active slug
+ * (validated server-side in parseSimpleInput; the select is only the
  * client-side half).
  */
-class CategorySelectField extends table.EnumField {
-    // Takes ALL categories: the active ones become the offered optgroups;
-    // the retired ones supply a friendly label when the CURRENT value is a
-    // retired slug (a ~old-* import).
-    active: category.Category[];
-    constructor(name: string, public cats: category.Category[],
+interface VocabRow { slug: string; name: string; theme?: string; retired: number; }
+class VocabSelectField extends table.EnumField {
+    // Takes ALL rows: the active ones become the offered optgroups; the
+    // retired ones supply a friendly label when the CURRENT value is a
+    // retired slug.
+    active: VocabRow[];
+    constructor(name: string, public rows: VocabRow[],
+                public vocab: {what: string, adminPage: string},
                 options: table.FieldOptions = {}) {
-        super(name, Object.fromEntries(cats.map(c => [c.slug, c.name])), options);
-        this.active = cats.filter(c => !c.retired);
+        super(name, Object.fromEntries(rows.map(c => [c.slug, c.name])), options);
+        this.active = rows.filter(c => !c.retired);
     }
 
     override renderInput(value: any): Markup {
-        // THE shared theme grouping (themes in table order, names sorted
-        // within) -> optgroups.
         const runs = category.groupByTheme(this.active);
-        // The current value when it is not offered: a retired category (kept
-        // with its name) or a value not in the table at all (pre-import text).
+        // The current value when it is not offered: a retired row (kept with
+        // its name) or a value not in the table at all (legacy free text).
         let currentExtra: Markup;
         if(value != null && value !== '' && !this.active.some(c => c.slug === value)) {
-            const retired = this.cats.find(c => c.slug === value);
+            const retired = this.rows.find(c => c.slug === value);
             currentExtra = ['option', {value, selected: ''},
                 retired ? `${retired.name} - retired (kept until changed)`
-                        : `${value} (not in the category table - kept until changed)`];
+                        : `${value} (not in the ${this.vocab.what} table - kept until changed)`];
         }
         return [
             ['div', {'class':'col-12'},
@@ -184,8 +186,9 @@ class CategorySelectField extends table.EnumField {
     override parseSimpleInput(value: string): any {
         if(value === '') return null;
         if(!this.active.some(c => c.slug === value))
-            throw new Error(`'${value}' is not an active category - categories are ` +
-                            `managed on the Category Table page (Admin menu)`);
+            throw new Error(`'${value}' is not an active ${this.vocab.what} - ` +
+                            `${this.vocab.what}s are managed on the ` +
+                            `${this.vocab.adminPage} page (Admin menu)`);
         return value;
     }
 }
@@ -214,13 +217,22 @@ function dialogFields(rel: model.RelationField): model.ScalarField[] {
 }
 
 function widgetFor(f: model.ScalarField, rel: model.RelationField,
-                   allCategories: () => category.Category[]): table.Field {
-    // The category value: a select over the category table (falls back to the
-    // free-text widget while the table is unseeded, i.e. pre-import dbs).
+                   vocabs: VocabProviders): table.Field {
+    // Controlled-vocabulary values get selects over their tables (falling
+    // back to the free-text widget while a table is unseeded).
     if(rel.tag === entrySchema.CategoryTag && f.name === 'category') {
-        const cats = allCategories();
+        const cats = vocabs.categories();
         if(cats.some(c => !c.retired))
-            return new CategorySelectField(f.name, cats, {nullable: true, prompt: f.prompt});
+            return new VocabSelectField(f.name, cats,
+                {what: 'category', adminPage: 'Category Table'},
+                {nullable: true, prompt: f.prompt});
+    }
+    if(rel.tag === entrySchema.SubentryTag && f.name === 'part_of_speech') {
+        const forms = vocabs.lexicalForms();
+        if(forms.some(c => !c.retired))
+            return new VocabSelectField(f.name, forms,
+                {what: 'lexical form', adminPage: 'Lexical Form Table'},
+                {nullable: true, prompt: f.prompt});
     }
     // NOTE: instanceof order matters - the soft schema's field classes form
     // a hierarchy (Variant < Enum < String, Audio/Image < Blob < String).
@@ -250,11 +262,16 @@ function widgetFor(f: model.ScalarField, rel: model.RelationField,
  * only the CHANGED fields (the widgets' parseInput compares each input to its
  * before-<name> snapshot, which the dialog generators supply as hidden params).
  */
+interface VocabProviders {
+    categories: () => category.Category[];
+    lexicalForms: () => lexicalForm.LexicalForm[];
+}
+
 function parseDialogFields(rel: model.RelationField, form: Record<string, any>,
-                           allCategories: () => category.Category[]): Record<string, any> {
+                           vocabs: VocabProviders): Record<string, any> {
     const changed: Record<string, any> = {};
     for(const f of dialogFields(rel))
-        widgetFor(f, rel, allCategories).parseInput(form, changed);
+        widgetFor(f, rel, vocabs).parseInput(form, changed);
     return changed;
 }
 
@@ -300,12 +317,14 @@ export class LexemeEditor {
     constructor(public app: WordWiki) {
     }
 
-    // The select options for category fields (an arrow property: passed
-    // unbound into widgetFor/parseDialogFields).  Queried per dialog open,
-    // so Category Table edits show up immediately.  ALL categories: active
-    // ones are offered; retired ones label a kept current value.
-    private allCategories = (): category.Category[] =>
-        this.app.categories.allByOrder.all({});
+    // The select options for the controlled-vocabulary fields (an arrow
+    // property: passed unbound into widgetFor/parseDialogFields).  Queried
+    // per dialog open, so admin-table edits show up immediately.  ALL rows:
+    // active ones are offered; retired ones label a kept current value.
+    private vocabs: VocabProviders = {
+        categories: () => this.app.categories.allByOrder.all({}),
+        lexicalForms: () => this.app.lexicalForms.allByOrder.all({}),
+    };
 
     // ------------------------------------------------------------------------
     // --- Page + fragments ----------------------------------------------------
@@ -509,7 +528,7 @@ export class LexemeEditor {
         const current = tuple.mostRecentTuple ?? panic('no current version for', fact_id);
 
         const fields = dialogFields(rel);
-        const widgets = fields.map(f => widgetFor(f, rel, this.allCategories));
+        const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
         const defaults = current.domainFields;
 
         const hidden: Record<string, any> = {
@@ -571,7 +590,7 @@ export class LexemeEditor {
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
 
         const fields = dialogFields(rel);
-        const widgets = fields.map(f => widgetFor(f, rel, this.allCategories));
+        const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
 
         const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag};
         fields.forEach(f => hidden['before-'+f.name] = '');
@@ -709,7 +728,7 @@ export class LexemeEditor {
                     message: 'This item was changed by someone else since you opened the editor. ' +
                              'Please close the dialog and re-open it to see the latest version.'};
 
-        const changed = parseDialogFields(rel, form, this.allCategories);
+        const changed = parseDialogFields(rel, form, this.vocabs);
         if(Object.keys(changed).length === 0)
             return this.reload(this.mutationTargets(entry_id, current.assertion, 'self'));
 
@@ -741,7 +760,7 @@ export class LexemeEditor {
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
         const rel = relation.schema;
 
-        const changed = parseDialogFields(rel, form, this.allCategories);
+        const changed = parseDialogFields(rel, form, this.vocabs);
 
         const id = newId();
         const parentAssertion = parent.currentAssertion

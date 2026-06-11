@@ -37,6 +37,7 @@ import {LexemeEditor} from './lexeme-editor.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
 import * as categoryImport from './category-import.ts';
+import * as lexicalForm from './lexical-form.ts';
 
 /**
  *
@@ -84,13 +85,14 @@ export class WordWiki extends LiminalApp {
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
     @path get categories() { return new category.CategoryTable(); }
+    @path get lexicalForms() { return new lexicalForm.LexicalFormTable(); }
 
     // The new-style tables (auto-created at startup; the legacy raw-DML tables
     // - scanned documents, bounding boxes, the dict assertion table - stay in
     // schema.ts).  More rabid-style tables will be added here over time.
     @lazy get tables() {
         return [this.config, this.users, this.passwordHash, this.userSession,
-                this.categories];
+                this.categories, this.lexicalForms];
     }
 
     // Create the new-style tables if missing (idempotent CREATE IF NOT EXISTS).
@@ -116,6 +118,11 @@ export class WordWiki extends LiminalApp {
     // distinct from categoriesDirectory(), the entries-by-category report.
     categoriesPage(): templates.Page {
         return templates.page('Category Table', this.categories.renderCategoriesPage());
+    }
+
+    // The lexical form (part of speech) vocabulary admin page.
+    lexicalFormsPage(): templates.Page {
+        return templates.page('Lexical Form Table', this.lexicalForms.renderLexicalFormsPage());
     }
 
     get lastAllocatedTxTimestamp() {
@@ -1407,6 +1414,21 @@ if (import.meta.main) {
                     schemeText, assignmentsText, username,
                     log: (msg) => console.info(msg),
                 });
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Seed the lexical form (part of speech) vocabulary from the curated
+        // list in lexical-form.ts (the entry-schema partsOfSpeech map + the
+        // sane codes the data uses).  Idempotent - existing slugs are kept.
+        // Junk legacy values are deliberately not seeded; the editor shows
+        // them as not-in-table until each is fixed.
+        case 'seed-lexical-forms': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const {inserted, skipped} = lexicalForm.seedLexicalForms(ww.lexicalForms);
+                console.info(`lexical forms seeded: ${inserted} inserted, ${skipped} already present`);
             });
             Deno.exit(0);
             break;

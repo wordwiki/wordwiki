@@ -61,11 +61,15 @@ export function isInternalCategorySlug(slug: string): boolean {
  *    table order drives theme order; alphabetical is what eyes want inside
  *    a group).
  */
-export interface CategoryThemeGroup { theme: string; cats: Category[]; }
+// (Generic over the minimal vocab-row shape so the lexical-form table - the
+// same controlled-vocabulary treatment for parts of speech - shares it.)
+export interface VocabRow { slug: string; name: string; theme?: string; }
+export interface ThemeGroup<T extends VocabRow> { theme: string; cats: T[]; }
+export type CategoryThemeGroup = ThemeGroup<Category>;
 const nameCollator = Intl.Collator('en');
-export function groupByTheme(cats: Category[]): CategoryThemeGroup[] {
-    const groups: CategoryThemeGroup[] = [];
-    const byTheme = new Map<string, CategoryThemeGroup>();
+export function groupByTheme<T extends VocabRow>(cats: T[]): ThemeGroup<T>[] {
+    const groups: ThemeGroup<T>[] = [];
+    const byTheme = new Map<string, ThemeGroup<T>>();
     for(const c of cats) {
         const theme = c.theme || (isInternalCategorySlug(c.slug) ? 'Internal' : 'Other');
         let g = byTheme.get(theme);

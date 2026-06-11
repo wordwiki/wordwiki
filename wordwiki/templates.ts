@@ -168,6 +168,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/startPublish()'}, 'Publish']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.usersPage()'}, 'Users']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.categoriesPage()'}, 'Category Table']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.lexicalFormsPage()'}, 'Lexical Form Table']],
              ]],
 
             // A mutation, so a POST (a GET link could be prefetched/prerendered
