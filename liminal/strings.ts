@@ -5,10 +5,6 @@
  *
  */
 
-
-// @deno-types='https://deno.land/x/xregexp/types/index.d.ts'
-import XRegExp from  'https://deno.land/x/xregexp/src/index.js'
-
 // Escape a string to allow it to be used as a literal component of a new regex.
 // From: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions
 export function escapeRegExp(s: string) {
@@ -19,10 +15,9 @@ export function escapeRegExp(s: string) {
  * Split a string into words the posh way (using unicode segmenter - handles
  * complex punctuation, the apostrophe, multiple languages etc).
  */
+const wordSegmenter = new Intl.Segmenter([], { granularity: 'word' });
 export function splitIntoWords(text: string): string[] {
-    const segmenter = new Intl.Segmenter([], { granularity: 'word' });
-    const segmentedText = segmenter.segment(text);
-    return [...segmentedText].filter(s=>s.isWordLike).map(s=>s.segment);    
+    return [...wordSegmenter.segment(text)].filter(s=>s.isWordLike).map(s=>s.segment);
 }
 
 export function stripOptionalPrefix (s: string, prefix: string) {
@@ -182,31 +177,17 @@ export function startsWithUpperCaseChar (s: string) {
 // ---------------------------------------------------------------------------------
 
 /**
- * Camel case to dashed.
- *
- * Converts strings in camel case format to a dashed format.
- *
- * The complicated case is multiple adjacent upper case letters.  For example
- * converting ICBMSilo to i-c-b-m-silo is gross.
- *
- * The heuristic we are presently using would convert this to:
- *
- * icbm-silo
- *
- * We define a word as starting at the beginning of the string or with the
- * last upper case letter of an upper case sequence.
+ * Camel case to dashed, mechanically: EVERY upper case letter becomes a
+ * dash plus its lower case form ('ICBMSilo' -> '-i-c-b-m-silo'), so that
+ * camelCase() exactly inverts it (for inputs that contain no dashes -
+ * that's the "reversibly").  For the human-pleasing acronym-aware variant
+ * see camelCasedToDashedFancily.
  *
  * Examples:
  *
  * catFood -> cat-food
- * ICBMSilo -> icbm-silo
-
- * isWordStart = upper case letter followed by a lower case letter, or first upper case letter after a lower case letter.
- *
- * BigI -> big-i
- * BigEYE -> big-eye
- * BigIFood -> big-i-food
- * BigEYEFood -> big-eye-food
+ * ICBMSilo -> -i-c-b-m-silo
+ * BigI -> -big-i  (or big-i with firstLetterIsConventionallyUpcased)
  */
 export function camelCasedToDashedReversibly (s: string,
 					      firstLetterIsConventionallyUpcased: boolean=false): string {
@@ -287,17 +268,20 @@ export function camelCase (s: string, capitalize: boolean=false): string {
 export function camelCasedToDashedFancily (s: string): string {
 
   let out = '';
-  let pos = 0;
   let len = s.length;
 
   for (let pos=0; pos<len; pos++) {
 
     let c = s.charAt (pos);
-    
+
+    // A word starts at an upper case letter preceded by a lower case letter
+    // OR followed by one (the last letter of an acronym run starts the next
+    // word).  (Historical bug: the preceded-by test was `pos-1>0`, so an
+    // upper case SECOND character never started a word: 'aB' -> 'ab'.)
     let isWordStart =
 	  pos === 0 ||
 	  (isUpperCaseChar (c) &&
-	   ((pos-1>0 && !isUpperCaseChar (s.charAt (pos-1))) ||
+	   ((pos-1>=0 && !isUpperCaseChar (s.charAt (pos-1))) ||
 	    (pos+1<len && !isUpperCaseChar (s.charAt (pos+1)))));
 
     if (isWordStart && pos > 0)
@@ -313,19 +297,28 @@ export function camelCasedToDashedFancily (s: string): string {
 // --- Escaping ---------------------------------------------------------------------
 // ----------------------------------------------------------------------------------
 
-// encode64 - base64 encoding
+// encode64 - base64 encoding.  (btoa is a global in browsers AND Deno -
+// the historical `window.btoa` threw ReferenceError under Deno 2, which
+// removed the window global.)
 export function encode64 (s: string) {
-  if (window && window.btoa)
-    return window.btoa (s);
+  if (globalThis.btoa)
+    return globalThis.btoa (s);
   else
-    throw new Error('This browser does not have a native btoa and our fallback is not implemented yet');
+    throw new Error('This runtime does not have a native btoa and our fallback is not implemented yet');
 }
 
 
+// The escapers below pair a non-global regex for the fast has-unsafe-chars
+// test with a global one for the replace.  They must be SEPARATE regex
+// objects: .test() on a 'g' regex advances its persistent lastIndex on a
+// match, which (outside this exact test-then-replace pairing) makes later
+// calls silently start mid-string and miss unsafe characters.
+
 // JS string literal escaping.
-// XXX needs more unicode support.
-var unsafeJsStringLiteralCharRegex = new RegExp('[\'"\\n\\r\\t\\\\]', 'g');
-var unsafeJsStringLiteralCharToEscaped: {[lit:string]:string} = {
+// XXX needs more unicode support (line/paragraph separators etc).
+const unsafeJsStringLiteralCharTest = /['"\n\r\t\\]/;
+const unsafeJsStringLiteralCharRegex = /['"\n\r\t\\]/g;
+const unsafeJsStringLiteralCharToEscaped: {[lit:string]:string} = {
   "'": "\\'",
   '"': '\\"',
   "\n": "\\n",
@@ -335,37 +328,41 @@ var unsafeJsStringLiteralCharToEscaped: {[lit:string]:string} = {
 };
 
 export function escapeJsStringLiteral (v: string): string {
-  if (!unsafeJsStringLiteralCharRegex.test(v)) return v;
+  if (!unsafeJsStringLiteralCharTest.test(v)) return v;
   else return v.replace(unsafeJsStringLiteralCharRegex, c => unsafeJsStringLiteralCharToEscaped[c]);
 }
 
 
-// Html Attribute escaping.
-var unsafeHtmlAttrCharRegex = new RegExp('[<>\'"&\\n\\r]', 'g');
-var unsafeHtmlAttrCharToEscaped: {[c:string]:string} = {
+// Html Attribute escaping.  (The newline entities were historically
+// swapped: \n (LF, 10) was emitted as &#13; and \r (CR, 13) as &#10;,
+// silently CR/LF-swapping any attribute value that round-tripped.)
+const unsafeHtmlAttrCharTest = /[<>'"&\n\r]/;
+const unsafeHtmlAttrCharRegex = /[<>'"&\n\r]/g;
+const unsafeHtmlAttrCharToEscaped: {[c:string]:string} = {
   "<": "&lt;",
   ">": "&gt;",
   "'": "&#39;",
   '"': "&quot;",
   "&": "&amp;",
-  "\n": "&#13;",
-  "\r": "&#10;"
+  "\n": "&#10;",
+  "\r": "&#13;"
 };
 
 export function escapeHtmlAttr (v: string) {
-  if (!unsafeHtmlAttrCharRegex.test(v)) return v;
+  if (!unsafeHtmlAttrCharTest.test(v)) return v;
   else return v.replace(unsafeHtmlAttrCharRegex, (c) => unsafeHtmlAttrCharToEscaped[c]);
 }
 
 // Html Text escaping
-var unsafeHtmlTextCharRegex = new RegExp('[<&]', 'g');
-var unsafeHtmlTextCharToEscaped: {[c:string]:string} = {
+const unsafeHtmlTextCharTest = /[<&]/;
+const unsafeHtmlTextCharRegex = /[<&]/g;
+const unsafeHtmlTextCharToEscaped: {[c:string]:string} = {
   "<": "&lt;",
   "&": "&amp;",
 };
 
 export function escapeHtmlText (v: string): string {
-  if (!unsafeHtmlTextCharRegex.test(v)) return v;
+  if (!unsafeHtmlTextCharTest.test(v)) return v;
   else return v.replace(unsafeHtmlTextCharRegex, (c) => unsafeHtmlTextCharToEscaped[c]);
 }
 
@@ -374,27 +371,23 @@ export function escapeHtmlText (v: string): string {
 // --------------------------------------------------------------------------
 
 /**
- *
- * XXX should internationalize
- * XXX should rename to indicate what kind of identifier we are talking about
- * XXX probably should add in $
+ * Is `name` an ASCII identifier ([A-Za-z_][A-Za-z_0-9]*)?
+ * (Deliberately ASCII-only and $-less: this is for OUR identifiers - route
+ * names, field names etc - not for validating arbitrary JS.)
  */
-// XXX somewhat creeped out by using a regex in a var because it's
-//     state is modified on use.
-var identifierRegex = /^[A-Za-z_][A-Za-z_0-9]*$/;
-
 export function isIdentifier (name: string) {
-  return !!name.match (/^[A-Za-z_][A-Za-z_0-9]*$/);
+  return /^[A-Za-z_][A-Za-z_0-9]*$/.test (name);
 }
 
 /**
- *
+ * Is `id` a legal ES identifier?  Uses the native unicode property
+ * escapes (the spec's IdentifierStart/IdentifierPart: ID_Start plus $_,
+ * then ID_Continue plus $ and ZWNJ/ZWJ).  (Historically this was an
+ * XRegExp-based placeholder that only accepted ASCII - and pulled the
+ * whole remote xregexp dependency into every app that imported
+ * strings.ts.)
  */
-//const isES2016IdentifierRegex = XRegExp (`^\\p{ID_Start}\\p{ID_Continue}*$`, 'x');
-// WRONG: the above version should work as XRegExp is updated to unicode 9 (+ similar
-//        syntax is coming to ES native), our current impl is only supporting
-//        ASCII identifiers.
-const isES2016IdentifierRegex = XRegExp (`^[A-Za-z_$][A-Za-z_$0-9]*$`, 'x');
+const isES2016IdentifierRegex = new RegExp('^[$_\\p{ID_Start}][$\\p{ID_Continue}\\u200C\\u200D]*$', 'u');
 
 export function isES2016Identifier (id: string) {
     return id != null && typeof id == 'string' && isES2016IdentifierRegex.test (id);
@@ -431,16 +424,15 @@ export function normalizeToOneEndingNewline (s: string) {
  *   CR (Legacy Macintosh Format)
  *   CR LF (Legacy Windows/DOS Format)
  */
-export function normalizeNewlines (s: string) { 
-  s = s.indexOf ('\r') ? s.replace(/\r\n?/g, '\n') : s;
+export function normalizeNewlines (s: string) {
+  // !== -1, not truthiness: indexOf returns 0 (falsy!) when the \r is the
+  // FIRST character, which historically skipped normalization exactly when
+  // the string started with a legacy newline.
+  s = s.indexOf ('\r') !== -1 ? s.replace(/\r\n?/g, '\n') : s;
   if(!s.endsWith('\n'))
     s = s + '\n';
   return s;
 }
-
-// // Efficiently count the number of newline characters in a string.  If the string
-// // is \r delimited, this will not work (DOS style \r\n will be fine however).
-// export function countNewlines (s: string) { return countMatches (s, '\n'); }
 
 /**
  * Returns whether a string is all whitespace.
@@ -448,7 +440,10 @@ export function normalizeNewlines (s: string) {
  * An empty string is defined as being all whitespace.
  */
 export function isAllWhitespace (s: string) {
-  return s === '' || /^[ \r\n\t]*$/m.test (s);
+  // No 'm' flag!  With it, ^...$ match around any EMPTY LINE, so every
+  // string containing one ('abc\n', 'abc\n\ndef') counted as all
+  // whitespace.
+  return /^[ \r\n\t]*$/.test (s);
 }
 
 const whitespaceRegex = new RegExp('^[ \r\n\t]*$');
@@ -543,8 +538,6 @@ export function dedentString (text: string, stripLinePrefix:string|null = null):
   return lines.join ('\n') + '\n';
 }
 
-//let dedentCache = new Map<Object,string> ();
-
 /**
  * Dedent template handler.
  *
@@ -562,23 +555,6 @@ export function dedentBlock (strings: TemplateStringsArray, ...values: any[]) {
 export function block (strings: TemplateStringsArray, ...values: any[]) {
     return dedentString (mergeTemplate (strings, values), '/**/');
 }
-
-// /**
-//  * Dedent template handler.
-//  *
-//  * Uses a dedent cache to memoize dedents.  There is no issue with cache size -
-//  * is 1-1 with template strings in the source code.
-//  *
-//  * ON WEED WHEN I WROTE THIS ONE - MEMOZING IS NOT VALUES AWARE ...
-//  */
-// export function dedentBUSTED (strings: TemplateStringsArray, ...values: any[]) {
-//   let dedented = dedentCache.get (strings);
-//   if (!dedented) {
-//     dedented = dedentString (mergeTemplate (strings, values));
-//     dedentCache.set (strings, dedented);
-//   }
-//   return dedented;
-// }
 
 /**
  * A template hander function that merges subsitutions into the
@@ -633,7 +609,7 @@ export function parseBoolean(s: string): boolean|undefined {
         case 'f':
         case 'no':
         case 'n':
-            return true;
+            return false;
         default:
             return undefined;
     }
