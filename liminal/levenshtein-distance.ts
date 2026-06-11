@@ -1,33 +1,40 @@
 // A very efficient JS implementation calculating the Levenshtein distance,
 // i.e. the difference between two strings.
 //
-// Based on Wagner-Fischer dynamic programming algorithm, optimized for speed and memory.
+// Based on Wagner-Fischer dynamic programming algorithm, optimized for speed
+// and memory: common prefix/suffix trimming, two short-circuit exits, then a
+// single-row DP with the inner loop unrolled 4 columns at a time.
+//
+// Distances are in UTF-16 CODE UNITS (charCodeAt), not code points: an
+// astral character (emoji etc) counts as 2.  Fine for the fuzzy-match
+// ranking this is intended for - just don't read the result as "number of
+// characters edited" for non-BMP text.
 //
 // Copied from: https://github.com/gustf/js-levenshtein
 // By: Gustaf Andersson
 // Licence: MIT
 
-export function levenshteinDistance(a, b)
+export function levenshteinDistance(a: string, b: string): number
 {
     if (a === b) {
       return 0;
     }
 
     if (a.length > b.length) {
-      var tmp = a;
+      const tmp = a;
       a = b;
       b = tmp;
     }
 
-    var la = a.length;
-    var lb = b.length;
+    let la = a.length;
+    let lb = b.length;
 
     while (la > 0 && (a.charCodeAt(la - 1) === b.charCodeAt(lb - 1))) {
       la--;
       lb--;
     }
 
-    var offset = 0;
+    let offset = 0;
 
     while (offset < la && (a.charCodeAt(offset) === b.charCodeAt(offset))) {
       offset++;
@@ -40,28 +47,28 @@ export function levenshteinDistance(a, b)
       return lb;
     }
 
-    var x = 0;
-    var y;
-    var d0;
-    var d1;
-    var d2;
-    var d3;
-    var dd;
-    var dy;
-    var ay;
-    var bx0;
-    var bx1;
-    var bx2;
-    var bx3;
+    let x = 0;
+    let y;
+    let d0;
+    let d1;
+    let d2;
+    let d3;
+    let dd = 0;
+    let dy;
+    let ay;
+    let bx0;
+    let bx1;
+    let bx2;
+    let bx3;
 
-    var vector = [];
+    const vector = [];
 
     for (y = 0; y < la; y++) {
       vector.push(y + 1);
       vector.push(a.charCodeAt(offset + y));
     }
 
-    var len = vector.length - 1;
+    const len = vector.length - 1;
 
     for (; x < lb - 3;) {
       bx0 = b.charCodeAt(offset + (d0 = x));
@@ -97,7 +104,7 @@ export function levenshteinDistance(a, b)
     return dd;
 }
 
-function _min(d0, d1, d2, bx, ay)
+function _min(d0: number, d1: number, d2: number, bx: number, ay: number): number
 {
     return d0 < d1 || d2 < d1
         ? d0 > d2
@@ -107,22 +114,3 @@ function _min(d0, d1, d2, bx, ay)
         ? d1
         : d1 + 1;
 }
-
-
-function test(a, b) {
-    console.info(a, b, lev(a, b));
-}
-
-function play() {
-    test('cat', 'cut');
-    test('dog', 'doug');
-    test('catalog', 'doug');
-    const iters = 100000;
-    console.time(`${iters} iters`);
-    for(let i=0; i<iters; i++) {
-        lev('catalog', 'doug');
-    }
-    console.timeEnd(`${iters} iters`);
-}
-
-//play();
