@@ -1296,6 +1296,44 @@ if (import.meta.main) {
             break;
         }
 
+        // Everything a freshly-pulled PRODUCTION db needs to run as the dev
+        // db: upgrade/seed the user table (production still has the old empty
+        // one), mark the db 'dev', and set a dev password for djz.  Re-run
+        // after every pull until the new version IS production.
+        //   ./wordwiki.sh post-pull [djz-password]   (default: djz-dev)
+        case 'post-pull': {
+            const djzPassword = args[1] ?? 'djz-dev';
+            security.runSystem(() => {
+                // Same logic as upgrade-users: replace an old-shape (empty)
+                // user table, create anything missing, seed from the
+                // entry-schema users map (idempotent - existing rows kept).
+                const hasNewShape = (() => {
+                    try { db().prepare('SELECT permissions FROM user LIMIT 1').all({}); return true; }
+                    catch (_e) { return false; }
+                })();
+                if(!hasNewShape) {
+                    const userCount = (() => {
+                        try { return db().prepare<{n: number}, {}>('SELECT COUNT(*) AS n FROM user').required({}).n; }
+                        catch (_e) { return 0; }
+                    })();
+                    if(userCount > 0)
+                        throw new Error(`user table has ${userCount} rows but the OLD schema - migrate manually`);
+                    console.info('dropping old-style empty user table');
+                    db().execute('DROP TABLE IF EXISTS user', {});
+                }
+                ww.ensureNewStyleTables();
+                const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
+                ww.config.setDbPurpose('dev');
+                const djz = ww.users.byUsername.first({username: 'djz'})
+                    ?? panic('djz missing after seed?');
+                ww.passwordHash.setPassword(djz.user_id, djzPassword);
+                console.info(`post-pull complete: ${inserted} users seeded (${skipped} already present), ` +
+                             `db marked 'dev', djz password set${args[1] ? '' : " to the default 'djz-dev'"}`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
         // Mark the database's purpose (production databases refuse destructive
         // test/dev operations and get Secure cookies).
         case 'set-db-purpose': {
