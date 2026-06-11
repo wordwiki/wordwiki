@@ -1,0 +1,288 @@
+# Low-confidence assignments
+
+Entries tagged with reduced confidence (m = medium, l = low). Good first targets for a human double-check.
+
+- *(m)* **aij** — lost for right word \| pausing to think \| That  *[small-words]*
+- *(m)* **a'jel-\*\*** — inappropriate (dmm 02-07-30) \| in the way (dmm jnw 02-07-30)  *[position]*
+- *(m)* **ajgnewa'toq\*\*** — harm  *[conflict]*
+- *(m)* **ala'latl** — go around  with \| go out with \| He/she goes with him/her  *[carrying]*
+- *(m)* **alamgistoq** — scatter it about \| He/she scatters it(seed) about  *[position]*  — scatter/spread -> position (convention)
+- *(m)* **alanga'toq** — scatter \| He/she scatters it  *[position]*
+- *(m)* **alapilawemgewei** — stretcher \| briefcase \| Stretcher  *[carrying, household]*
+- *(m)* **alaqami'g** — snowshoe \| He/she snowshoes  *[vehicles]*
+- *(m)* **alaqteg** — spread out (sail) \| It is spread(sail, sheet) out  *[position]*
+- *(m)* **alaqte'g** — spread out (sail) \| He/she is spreading it (sail, sheet) out  *[position]*
+- *(m)* **alasenmat** — walk around with light \| use a light \| He/she goes about with a light  *[fire]*
+- *(m)* **ale'g** — hanging around \| hanging out \| He/she/it is hanging around  *[social-life]*
+- *(m)* **algltaqanatl** — walk about on leash \| go about holding hands \| He/she walks about with  *[movement]*
+- *(m)* **aligja't\*\*** — show buttocks  *[body]*
+- *(m)* **aljat** — painted \| stained  *[colors]*
+- *(m)* **alo'tasit** — hint \| throw \| insult \| He/she hints \| He/she throws things around  *[social-life]*
+- *(m)* **alpatl** — mouths \| gums \| He/she has...in his/her mouth  *[eating-and-drinking]*
+- *(m)* **alsumatl** — have control of \| own \| He/she has control of him/her  *[holding]*  — have control/own
+- *(m)* **alustuatl** — misunderstands \| doubts pronunciation is correct  *[talking]*
+- *(m)* **amalamatl** — looks weak \| appears inadequate \| He/she thinks he/she looks too weak  *[appearance]*
+- *(m)* **amalapt'g** — looks weak \| appears inadequate \| He/she thinks it looks too weak  *[appearance]*
+- *(m)* **amallugwalatl** — decorate \| He/she decorates it (shirt)  *[making-and-fixing]*  — decorate family -> making-and-fixing
+- *(m)* **amallugwatg** — decorate \| He/she decorates it  *[making-and-fixing]*
+- *(m)* **amallugweg** — decorate \| It decorates  *[making-and-fixing]*
+- *(m)* **amallugwet** — decorate \| He/she decorates  *[making-and-fixing]*
+- *(m)* **amaltaqa'latl** — decorate \| He/she decorates him (it)  *[making-and-fixing]*
+- *(m)* **amaltaqa'taqan** — decoration \| design \| Decoration  *[making-and-fixing]*
+- *(m)* **amaltaqa'toq** — decorate \| He/she decorates it  *[making-and-fixing]*
+- *(m)* **amjaqa'latl** — smeer \| He/she smeers someone  *[smell-and-taste]*  — smear -> touch/spread
+- *(m)* **amjaqa'lsit** — smeer something on self \| He/she smears something on himself  *[smell-and-taste]*
+- *(m)* **amjaqamat** — spread on \| smear \| He/she spreads something (butter) for self  *[food]*  — spreading butter/jam
+- *(m)* **amjaqamuatl** — spreads something for him/her \| smeers something for him/her \| He/she   *[food]*
+- *(m)* **amjaqatl** — spread on \| smear on \| He/she spreads ...on  *[smell-and-taste]*
+- *(m)* **amjaqq** — spread on \| He/she spreads it on  *[smell-and-taste]*
+- *(m)* **amjaqto'sit** — dab self with perfume \| sprinkle self with powder \| He/she dabs himsel  *[smell-and-taste]*
+- *(m)* **amjepit** — tipsy \| He/she is tipsy  *[condition]*  — tipsy
+- *(m)* **amugsit** — appear \| look so  *[appearance]*
+- *(m)* **anesga'latl** — compromise someone \| make vulnerable \| expose to danger \| jeopardize \|  *[conflict]*
+- *(m)* **ango'tg** — take care of \| care for \| look after \| bring up \| raise \| He/she takes  *[social-life]*  — caring for -> social-life
+- *(m)* **anguopiga'toq** — add length to cord, yarn, string \| He/she adds length to cord, yarn or  *[amounts]*
+- *(m)* **angweiwatl** — take care of \| care for \| look after \| bring up \| raise \| He/she takes  *[social-life]*
+- *(m)* **aniamugwet** — suffering for past wrongs \| punishment for past wrongs \| He/she is suf  *[emotions]*
+- *(m)* **aniapsu'latl** — punish \| make someone do penance \| He/she punishes him  *[leadership-and-law]*  — punish
+- *(m)* **anqanei\*\*** — ancient  *[time]*
+- *(m)* **an'tanqanawejua'latl** — make monkey of \| He/she turns someone to a monkey  *[social-life]*
+- *(m)* **apajiaq** — result of \| outcome \| return \| comeuppance \| penalty \| reward \| It com  *[good-and-bad]*  — comeuppance/outcome
+- *(m)* **apajigsua'latl** — reconcile \| take back \| He/she takes back someone  *[holding]*
+- *(m)* **apajigsua'toq** — take back \| He/she takes it back  *[holding]*
+- *(m)* **apajipet** — resurrect \| He/she resurrects  *[spirit-world]*  — resurrect
+- *(m)* **apatta'tl** — hit back \| win back \| send back \| He/she wins him back  *[hitting]*
+- *(m)* **apjelmit** — unable to stop laughing \| He/she is unable to stop laughing  *[emotions]*  — laughing -> emotions
+- *(m)* **aptaqanet** — starve \| He/she is starved  *[food, health]*  — starve
+- *(m)* **aptaqatg** — stay permanently \| He/she stays permanently  *[travel]*
+- *(m)* **aptluajig\*\*** — locked together \| clenched \| copulating  *[body-actions]*
+- *(m)* **apuaqaj\*\*** — hindquarter \| round of meat \| hammer of gun  *[food]*
+- *(m)* **a'qatapit** — half intoxicated \| somewhat intoxicated \| He/she is somewhat intoxicat  *[condition]*
+- *(m)* **aqatatpa't** — half·witted \| He/she is half-witted  *[thinking]*
+- *(m)* **aqawigalatl** — hide \| conceal \| He/she hides him  *[seeing]*  — hide/conceal -> seeing
+- *(m)* **aqawigatg** — hide \| conceal \| He/she hides it  *[seeing]*
+- *(m)* **aqjigateg** — shade \| It is shady  *[fire]*  — shade (light)
+- *(m)* **a's'gg** — meet \| He/she meets up with it  *[social-life]*  — meet
+- *(m)* **asgo'tg** — harm \| bother \| annoy \| disturb \| He/she bothers it  *[conflict]*
+- *(m)* **asita'teget** — revenge \| reciprocate \| pay back \| He/she gets revenge  *[conflict]*  — revenge
+- *(m)* **asite'lmatl\*\*** — intercourse with \| permit \| allow  *[social-life]*
+- *(m)* **asoqon'gaqan\*\*** — railroad bridge  *[dwellings, vehicles]*
+- *(m)* **atapaqatl** — wind up \| turn \| He/she winds him up  *[movement]*
+- *(m)* **atapaqq** — wind up \| turn \| He/she winds it up  *[movement]*
+- *(m)* **atpi'sewatl** — change diaper \| He/she changes his/her diaper  *[family]*  — baby care
+- *(m)* **awana'qiet** — incapable \| not able to do \| He/she is incapable  *[character]*  — capability -> character
+- *(m)* **awane'g** — awkward \| inexperienced \| incapable of doing \| lacks ability \| He/she   *[character]*
+- *(m)* **awaneiwatl** — awkward in handling \| inexperienced in handling \| incompetent in opera  *[character]*
+- *(m)* **awane'jit** — awkward one \| unskilled one \| He/she is the awkward one  *[character]*
+- *(m)* **awanitpluteget\*\*** — judgement \| He/she judges in poor manner  *[thinking]*
+- *(m)* **awano'tg** — operate poorly \| handle poorly \| handle awkwardly \| He/she operates it  *[character]*
+- *(m)* **awan\*\*** — untrained \| inexperienced \| deficient \| not able  *[character]*
+- *(m)* **awialusing** — encircled with halo \| He/she is encircled with halo  *[sky]*  — halo
+- *(m)* **awisgu'g\*\*** — spy  *[people]*
+- *(m)* **ejela'latl** — have no control \| in no position to do otherwise \| unable to help or a  *[social-life]*
+- *(m)* **ejela'sit\*\*** — helpless \| He/she is helpless  *[condition]*
+- *(m)* **ejela'teget** — can't do more (influencing or convincing) \| unable to influence \| unab  *[social-life]*
+- *(m)* **ejela'toq** — in no position to change \| unable to help \| have no control over \| He/  *[social-life]*
+- *(m)* **ejele'g** — can not be helped \| unavoidable \| It can't be helped  *[small-words]*
+- *(m)* **elalqeg** — tunnel \| long hole \| It is tunneled  *[land]*
+- *(m)* **elapaqtesmatl** — casts a line (as in fishing) \| mark (with a chalk line) \| throw a line  *[fishing]*
+- *(m)* **elasga'latl** — point it towards \| passes it towards \| offers it to \| He/she points it  *[carrying]*  — pass/offer toward
+- *(m)* **elasga'toq** — point towards \| pass towards \| He/she points it towards  *[carrying]*
+- *(m)* **elasgnatl** — hand over (bottle) \| holds in the direction of \| He/she hands it over  *[carrying]*
+- *(m)* **elasgng** — hand over \| hold in the direction of \| He/she hands it over  *[carrying]*
+- *(m)* **elatqeg** — dense (as thicket) \| It is dense  *[trees]*  — dense thicket
+- *(m)* **eletqo'toq** — coil \| He/she coils it  *[movement]*  — coil
+- *(m)* **elita'sit** — depend on \| count on \| He/she depends on  *[social-life]*  — depend on
+- *(m)* **elita'sualatl** — depend on \| count on \| trust \| He/she depends on someone  *[social-life]*
+- *(m)* **elita'suatg** — depend on \| count on \| trust \| He/she depends on it  *[social-life]*
+- *(m)* **eljaqatl** — spread \| He/she spreads it  *[smell-and-taste]*
+- *(m)* **eljaqq** — spread \| smear \| He/she smears it on  *[smell-and-taste]*
+- *(m)* **elmipisagganiet** — bubble along \| He/she is bubbling along  *[water]*
+- *(m)* **elpualatl** — want there \| He/she wants him/her/it there  *[emotions]*  — want
+- *(m)* **elpuatg** — want there \| He/she wants it there  *[emotions]*
+- *(m)* **eltaqa'q** — spray \| shoot toward \| He/she shoots it toward  *[pushing-and-pulling]*
+- *(m)* **elue'wiaq** — crazy \| It is crazy  *[thinking]*
+- *(m)* **elue'wiet** — crazy \| He/she is crazy  *[thinking]*  — crazy
+- *(m)* **elugomit** — commission \| he/she commissions...  *[work]*
+- *(m)* **elu'gwalatl** — point at \| He/she pointed at him/her  *[body-actions]*  — pointing
+- *(m)* **elu'gwatg** — point at \| He/she points at it  *[body-actions]*
+- *(m)* **elu'gweg** — point toward \| leaning toward \| It points toward  *[directions]*
+- *(m)* **elu'gwet** — point toward \| He/she is pointing  *[body-actions]*
+- *(m)* **elutuatl** — impersonate \| imitate \| He/she imitates someone  *[games]*  — imitate
+- *(m)* **emisqatesing** — strip dance \| stripped quickly \| He/she strip dances  *[clothing]*
+- *(m)* **emtoqwalatl** — worship \| He/she worships him/her/it  *[emotions]*  — worship/adore
+- *(m)* **emtoqwatg** — worship \| He/she worships it  *[emotions]*
+- *(m)* **e'natl** — lose \| He/she loses him/her  *[holding]*  — lose -> holding (loss of possession)
+- *(m)* **e'n'g** — lose \| He/she loses it  *[holding]*
+- *(m)* **enqalatl\*\*** — strain  *[body]*
+- *(m)* **enqang** — strain  *[body]*
+- *(m)* **entoq** — lose \| He/she loses it  *[holding]*
+- *(m)* **esa'tl** — send away \| dismiss \| banish \| fire \| He/she sends him away  *[carrying]*  — send away/dismiss
+- *(m)* **ese'g** — send away \| refuse \| banish \| turn down \| He/she sends it away  *[social-life]*  — refuse
+- *(m)* **esetegjipsa'toq** — skin it inside out \| He/she skins it inside out  *[hunting]*  — skinning
+- *(m)* **esetegjipsqa'latl** — skin inside out \| He/she skins him/her inside out  *[hunting]*
+- *(m)* **espa'sit** — go high \| go up high \| He/she/it going up high (mountrain or status)  *[movement]*
+- *(m)* **e'watl** — use \| make use \| He/she makes use of him/her/it  *[work]*  — use -> work
+- *(m)* **ewega'tl** — make use \| needs \| He/she needs him  *[work]*
+- *(m)* **ewegetoq** — make use \| need \| He/she needs it  *[work]*
+- *(m)* **e'w'g** — use \| make use \| He/she uses it  *[work]*
+- *(m)* **ewnasgwa'latl** — make dizzy \| He/she makes him/her/it dizzy  *[condition]*  — dizzy
+- *(m)* **ewnasgwatpa'latl** — confuse \| drive crazy \| make dizzy \| He/she confuses him/her  *[thinking]*  — confuse
+- *(m)* **ewnasiaq** — gone awry \| mixed up \| topsy turvy \| confused \| Everything is gone awr  *[condition]*
+- *(m)* **ewnasiet** — confused \| gone awry \| mixed up \| topsy turvy \| He/she is confused  *[thinking]*
+- *(m)* **ewnasimgnajig** — pick up in a disorganized way \| pick in a muddled manner \| choose in a  *[character]*
+- *(m)* **ewnasimgnasit** — gather or pick up in a disorganized way \| select illogically \| choose   *[character]*
+- *(m)* **ewnasimgngl** — pick up in a disorganized way \| select illogically \| choose in a rando  *[character]*
+- *(m)* **ga'gaga\*\*** — babytalk (said by baby when tired or needs of change)  *[talking]*  — baby talk
+- *(m)* **ganie'wit** — profit \| gain \| win \| earn \| gain weight \| He/she profits  *[money-and-trade]*  — profit/gain
+- *(m)* **gaqamutoq** — challenge \| stand against \| put up with \| He/she challenges it  *[conflict]*  — challenge
+- *(m)* **gaqamutuatl** — challenge someone \| stand up to \| put up with \| He/she challenges some  *[conflict]*
+- *(m)* **ge'** — please (equivalent? dmm02-03-26)  *[greetings]*  — please
+- *(m)* **gegna'latl** — decorate \| trim (Christmas tree) \| He/she decorates it  *[making-and-fixing]*
+- *(m)* **gegna'toq** — decorate \| He/she decorates it  *[making-and-fixing]*
+- *(m)* **gegnugwalatl** — mark \| number \| alphabetize \| He/she marks it  *[stories-and-writing]*  — marking -> stories-and-writing
+- *(m)* **gegnugwatg** — mark \| number \| alphabetize \| He/she marks it  *[stories-and-writing]*
+- *(m)* **gegnugwatiget** — mark made to indicate a place \| blaze \| He/she blazes a trail  *[travel]*  — blaze trail
+- *(m)* **gejgapa'latl** — leave a scratch mark \| scratches \| He/she scratches him/her  *[conflict]*  — scratch (harm)
+- *(m)* **gejgapa'toq** — leave a scratch mark \| scratches \| He/she scratches it  *[conflict]*
+- *(m)* **gejgapeta'tl** — scratches quickly \| He/she scratches him/her quickly  *[conflict]*
+- *(m)* **gelta'tl** — put claim \| give temporary relief to \| put deposit on \| prop up sudden  *[money-and-trade]*  — claim/deposit
+- *(m)* **gelte'g** — put claim \| deposit \| retainer \| down payment on \| He/she puts a claim  *[money-and-trade]*
+- *(m)* **gesga't** — lost \| He/she is lost  *[travel]*  — lost
+- *(m)* **gesgmaplgigwa'latl** — make someone see things that are not there \| perform magic \| He/she pe  *[spirit-world]*  — magic -> spirit-world
+- *(m)* **gesgmaplgigwa'teget** — do magic tricks \| produces illusions \| He/she does magic tricks  *[spirit-world]*
+- *(m)* **gesgmaplgigwa'toq** — make someone see things that are not there \| do magic \| He/she causes   *[spirit-world]*
+- *(m)* **gesguta'tl** — catch red-handed \| catch by surprise \| He/she caught him/her red-hande  *[seeing]*  — catch red-handed
+- *(m)* **gesipatl** — painful bite \| hurt by biting \| hurt by biting hard \| He/she hurts som  *[conflict]*  — painful bite
+- *(m)* **gespaqami'g** — end of the world \| It is the end of the world  *[spirit-world]*  — end of the world
+- *(m)* **getalqigwalatl** — take out by scraping \| digging out \| He/she is digging it(bug) out  *[land]*  — dig out
+- *(m)* **getalqigwatg** — dig out \| He/she digs it out  *[land]*
+- *(m)* **getemetesultijig** — all killed \| They are all killed  *[conflict]*  — all killed
+- *(m)* **getmeta'tl** — wipe out \| finish off \| He/she wipes him/her/it out  *[conflict]*
+- *(m)* **gi'gajie'watl** — use in spite of \| use in spite of condition \| use forcefully \| He/she   *[work]*
+- *(m)* **gi'gajinmigimatl** — send home against their will \| send home forcefully \| He/she sends him  *[carrying]*
+- *(m)* **gi'gajo'tg** — use in spite of condition \| force self \| aggravate \| He/she uses it in  *[work]*
+- *(m)* **gi'gassmatl** — forcefeed \| forcefully give food \| He/she forcefeeds him/her  *[food]*
+- *(m)* **gijitpa'qtug** — in total darkness \| in the dark \| In total darkness  *[fire]*  — darkness
+- *(m)* **gisa'latl** — prompted \| compel to do \| motivate \| cause \| He/she compels him/her to  *[social-life]*  — motivate
+- *(m)* **gisanatl** — killed him/her/it \| destroyed him/her/it \| He/she/it killed him/her/it  *[conflict]*  — kill
+- *(m)* **gisigweng** — full-grown \| raise \| rear \| He/she raised it until full-grown  *[family]*
+- *(m)* **gisteluatl** — impregnate (slang expression) \| He impregnated her (slang expression)  *[family, animals]*
+- *(m)* **gitnmo'tg** — give a hard time \| He/she gives it a hard time  *[conflict]*
+- *(m)* **gjitmei** — genuine \| genuine \| really \| real one \| real one \| actually \| truly \|   *[good-and-bad]*  — genuine/really
+- *(m)* **gweja'latl\*\*** — test \| try out  *[work]*  — test/try
+- *(m)* **gweja'toq\*\*** — test \| try out  *[work]*
+- *(m)* **ilanqa'latl** — fold \| He/she folds it(shirt)  *[household]*  — folding laundry
+- *(m)* **ilanqa'toq** — fold \| He/she folds it  *[household]*
+- *(m)* **ilanqo'tasit** — folding \| folding bedding \| folding clothing \| He/she/it is folding...  *[household]*
+- *(m)* **istue'g** — different \| different \| not normal \| strange \| strange \| He/she is dif  *[good-and-bad]*  — different/strange
+- *(m)* **istu'napui'gatl** — take crooked picture \| He/she takes a crooked picture of him/her/it  *[seeing]*  — crooked photo
+- *(m)* **istu'napui'g'g** — take crooked picture \| He/she takes a crooked picture of it  *[seeing]*
+- *(m)* **jigawepit** — inactive \| dull \| quite \| He/she is inactive  *[character]*  — inactive/quiet
+- *(m)* **jigaweteg** — inactive \| dull \| boring \| quiet \| It is dull  *[condition]*
+- *(m)* **jigteg** — not much happening \| calm, quiet, dull,... \| it is quiet, it is...  *[hearing]*
+- *(m)* **jilapa'latl** — make scratch marks \| scratches \| He/she makes scratch marks on him/her  *[conflict]*
+- *(m)* **jilapaqta'tl** — make a mark \| scratches \| He/she makes a mark on him/her/it  *[cutting]*
+- *(m)* **jilapaqte'g** — make a mark on \| scratches \| He/she makes a line mark on it  *[cutting]*
+- *(m)* **jilapa'tegeg** — makes scratch marks \| scratches \| It makes scratch marks  *[cutting]*
+- *(m)* **jilapa'teget** — make scratch marks \| scratches \| He/she makes scratch marks  *[cutting]*
+- *(m)* **jilapa'toq** — makes scratch marks \| He/she makes scratch marks on it  *[cutting]*
+- *(m)* **jilaptoq** — make footprints \| He/she makes footprints  *[travel]*  — footprints
+- *(m)* **jilpit** — leave an impression \| leave a mark \| He/she leaves a mark  *[position]*
+- *(m)* **jilteg** — leaves an impression \| leave a mark \| It leaves a mark  *[position]*
+- *(m)* **lnuoqta'w** — statue \| Statue  *[household]*  — statue
+- *(m)* **logowit** — fortunate \| lucky \| He/she is lucky  *[good-and-bad]*  — lucky
+- *(m)* **maliapt'g** — bother \| handle \| mess around with \| He/she bothers it  *[smell-and-taste]*  — handle/bother
+- *(m)* **maqatewei** — temporary replacement \| temporary replacement \| Temporary replacement   *[work]*  — temporary replacement
+- *(m)* **masquta'tl** — quickly hide \| He/she quickly hides him/her/it  *[seeing]*
+- *(m)* **masqute'g** — quickly hide \| temporarily hide \| put away quickly or temporarily \| sa  *[seeing]*
+- *(m)* **mawisetesg** — contract \| cringe \| crumple together \| It contracts  *[movement]*  — contract/crumple
+- *(m)* **mawisetesg'g** — crumple with feet \| kicks it together \| He/she crumples it with his/he  *[breaking]*
+- *(m)* **mawisetesguatl** — crumple \| crumple with feet \| kicks it together \| He/she crumples...wi  *[breaking]*
+- *(m)* **mawisetesing** — contract \| cringe \| fall in heap \| crumple from a fall \| shrink from \|  *[movement]*
+- *(m)* **mawpega'toq** — mix liquid \| add liquid \| collect liquid \| He/she mixes liquid  *[water]*  — mix liquid
+- *(m)* **me'gi·ula'teget\*\*** — do wondrous things \| He/she does wondrous things  *[spirit-world]*
+- *(m)* **menuega'tl** — need \| need the services \| He/she needs him/her  *[emotions]*  — need
+- *(m)* **menueget** — need \| has use for \| could use \| require \| He/she needs  *[emotions]*
+- *(m)* **menuegetoq** — need \| has use for \| could use \| require \| He/she needs it  *[emotions]*
+- *(m)* **milaplgigwa'teget** — illusionist \| He/she is an illusionist  *[spirit-world]*
+- *(m)* **milsuteget** — gives multipital instructions \| undecided \| He/she gives multipital in  *[talking]*
+- *(m)* **mulqalatl** — dig out \| He/she digs him/her/it out  *[land]*  — dig
+- *(m)* **mulqatg** — dig out \| shovel something \| He/she digs it out  *[land]*
+- *(m)* **mulqet** — dig \| shovel \| He/she digs  *[land]*
+- *(m)* **najine'pateget** — going (to location) to kill \| going (to location) to hunt \| going (to   *[hunting]*
+- *(m)* **naqalatl** — abandon \| leave behind \| He/she leaves him/her behind  *[social-life]*  — abandon
+- *(m)* **naqsio'pla'latl** — quickly do wrong \| He/she quickly does him/her wrong  *[good-and-bad]*
+- *(m)* **naqsio'pla'toq** — quickly do wrong \| He/she quickly does it wrong  *[good-and-bad]*
+- *(m)* **naqsitetapua'latl** — quickly do right \| satisfy quickly \| quickly treat correctly or approp  *[good-and-bad]*
+- *(m)* **naqsitetapua'toq** — quickly do right \| quickly do correctly \| He/she quickly does it right  *[good-and-bad]*
+- *(m)* **naqt'g** — abandon \| leave behind \| He/she leaves it behind  *[social-life]*
+- *(m)* **na'tala'latl** — does something to \| He/she does something to him/her  *[work]*
+- *(m)* **na'tala'toq** — do something to \| He/she does something to it  *[work]*
+- *(m)* **nawnatl** — fail to reach \| missed him/her/it \| He/she fails to reach him/her/it  *[smell-and-taste]*  — fail to reach
+- *(m)* **nawn'g** — fail to reach \| He/she fails to reach it  *[smell-and-taste]*
+- *(m)* **ne'pa'tl** — kill \| He/she kills him/her  *[conflict]*  — kill
+- *(m)* **nigtua'latl** — separate from \| He/she separates him/her from the rest  *[movement]*  — separate
+- *(m)* **nigtua'toq** — separate \| He/she separates it  *[movement]*
+- *(m)* **nugt'g** — soften by chewing \| He/she softens it by chewing  *[sewing-and-textiles]*  — chewing leather
+- *(m)* **nugwa'gipulatl** — grind \| He/she grinds it  *[breaking]*  — grind
+- *(m)* **nugwa'gittoq** — grind \| He/she grinds it  *[breaking]*
+- *(m)* **nujeiwatl** — in charge of \| responsible for \| handle \| He/she in charge of him/her  *[work]*  — in charge of
+- *(m)* **nujo'tg** — in charge of \| responsible for \| handle \| He/she is in charge of it  *[work]*
+- *(m)* **nuta'mat** — need  something \| require something \| missing  something \| He/she need  *[emotions]*
+- *(m)* **pajjaqamat** — spread-on thickly \| exaggerate (slang) \| overdo \| He/she spreads-on th  *[character]*
+- *(m)* **pegwatoq** — at fault \| cause \| He/she is at fault  *[good-and-bad]*  — at fault
+- *(m)* **pela'latl** — excluded \| omitted \| miss connecting with \| He/she excludes him/her  *[social-life]*  — exclude/omit
+- *(m)* **pela'toq** — omit \| miss connecting with \| He/she omits it  *[thinking]*
+- *(m)* **pemanatl** — process of doing away with \| process of destroying \| process of killin  *[conflict]*
+- *(m)* **pemang** — process of doing away with \| process of destroying \| process of killin  *[conflict]*
+- *(m)* **petqwasit** — deny \| He/she denies  *[talking]*  — deny
+- *(m)* **piltua's'g** — turn out differently \| turn out unexpectedly \| It turns out differentl  *[good-and-bad]*
+- *(m)* **piltua'sit** — turn out differently \| turn out unexpectedly \| He/she turns our differ  *[good-and-bad]*
+- *(m)* **puna'toq** — quit \| leave \| desert \| abandon \| He/she quits it  *[work]*  — quit
+- *(m)* **putmat** — come out empty·handed \| miss \| lose out on \| He/she comes out empty·ha  *[games]*  — empty-handed
+- *(m)* **qwa'niejuei** — imitation item \| fake item \| Imitation item  *[character]*  — fake item
+- *(m)* **sespeiwatl** — molest \| bother with hands \| He/she molests someone  *[conflict]*
+- *(m)* **sespo'tg** — bother it \| tampering with \| meddle in \| He/she bothers it  *[smell-and-taste]*
+- *(m)* **tela'latl** — do in such a way \| he/she does it (something) to him/her \| He/she does  *[work]*
+- *(m)* **tela'tegeg** — caused \| do it \| action or inaction caused something to happen \| do so  *[good-and-bad]*
+- *(m)* **tela'teget** — at fault \| do something \| He/she is at fault \| He/she does something  *[good-and-bad]*
+- *(m)* **telo'tg** — treat so \| perceive that \| treat as such \| seems that \| find that \| He  *[emotions]*
+- *(m)* **teluegeg** — for specific use \| use as \| use for \| It is for specific use  *[work]*  — use
+- *(m)* **telueget** — for specific use \| used for \| He/she is for specific use  *[work]*
+- *(m)* **tleiawig** — originate from \| belongs there \| from there \| It belongs there  *[places]*  — originate from
+- *(m)* **tleiawit** — originate from \| belongs there \| from there \| He/she originates from  *[places]*
+- *(m)* **wejignematl** — challenge \| He/she challenges him/her  *[conflict]*
+- *(m)* **wejo'tg** — attempt \| try out \| try \| test \| He/she attempt it  *[work]*  — try
+- *(m)* **wejue'g** — have close call \| He/she has a close call  *[good-and-bad]*  — close call
+- *(m)* **welitpa's'g** — happen unexpectedly \| happen pleasantly \| fortunate happenstance \| It   *[good-and-bad]*  — happenstance
+- *(m)* **welitpa'sit** — happen pleasantly \| happen unexpectedly \| fortunate happenstance \| He/  *[good-and-bad]*
+- *(m)* **wetmo'tg** — disturb \| use occasionally as needed \| He/she disturbs it  *[work]*
+- *(l)* **aneset** — to lack  *[amounts]*  — to lack - thin gloss
+- *(l)* **aniapsutelsit** — he/she would punish him/her  *[leadership-and-law]*
+- *(l)* **ela'gittas'g** — saw \| file \| rasp  *[tools]*
+- *(l)* **ugtasuign** — breastbone, sternum  *[body]*
+- *(l)* **mui'ne'get** — hunt bear  *[hunting]*
+- *(l)* **aniapsuqwan** — garment of penitence, penitential robe  *[ceremony, clothing]*
+- *(l)* **lamotleweji'j** — inner garment  *[clothing]*
+- *(l)* **aniapsutg** — he/she punishes themselves  *[ceremony]*
+- *(l)* **paslugw** — Dark thick clouds \| Thick covering (snow)  *[weather]*
+- *(l)* **muiaq** — sea duck  *[birds]*
+- *(l)* **mestaqteg** — it is spread out \| it covers everything  *[position]*
+- *(l)* **netua'gwet** — Hunts porcupine seal \| He/she hunts porcupine seal.  *[hunting]*  — 'porcupine seal' unclear
+- *(l)* **mi'watmuatl** — thank someone  *[greetings]*
+- *(l)* **papgesestaqan** — wood kindling  *[fire]*
+- *(l)* **mui'numan** — huckleberry  *[plants, food]*
+- *(m)* **nenaqte'mat** — Sings fast \| Picking berries quickly. \| Playing an instrument quickly.  *[music-and-dance]*
+- *(l)* **aniamatl** — he/she is discontent with him/her  *[emotions]*
+- *(l)* **mui'newe'sm** — female bear (DMM?)  *[animals]*
+- *(l)* **aniamgui'tij** — they are hated by him   *[emotions]*
+- *(m)* **aniaps'tg** — gives something little or no consideration \| He/she gives something li  *[social-life]*
+- *(l)* **papitaqan** — toy  *[games]*
+- *(l)* **metepenegitg, Metepenagiaq** —   *[places]*
+- *(l)* **waqana'pi, fishing net** —   *[fishing]*
+- *(l)* **napitaqwenign/nap'tagwenign** — handle (pail) \| basket handle  *[basket-making]*
+- *(m)* **saptesg'g** — gone through something difficult \| forged a path \| has gone through a   *[character]*
+- *(l)* **moqpa's'g** — Swelling  *[health]*
+- *(m)* **nu’gwa’luejg** — fireworks \| cattails \| fireworks  *[fire, plants]*  — fireworks/cattails
+- *(l)* **lamlotaqan** — an enclosure  *[dwellings]*

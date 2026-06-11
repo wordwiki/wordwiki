@@ -1,0 +1,412 @@
+# Moving & Going (`movement`)
+
+Theme: *Movement & Physical Actions* — 385 entries (+20 archived)
+
+- **aja'sit** — move over \| make room \| progress \| He/she moves over
+- **alapega'sit** — dash all about hurriedly \| dart all about hurriedly \| He/she darts or dashes all about hurriedly or hastily
+- **alapegiaq** — swings freely \| swings easily \| It swings freely
+- **alapegit** — crawl about \| crawl around \| crawl on all fours \| He/she/it crawls about
+- **alaqsing** — fly around \| flying \| He/she/it flies around
+- **alaqsutoq** — fly something around \| He/she/it is flying it around
+- **ala's'g** — go about \| spread around (as sickness) \| It is going about
+- **ala'sit** — go about \| He/she is going about
+- **alasumteget** — walk through snow \| wade through snow \| He/she walks through the snow
+- **alateja'sit** — scurry about \| bustle about \| walk about \| He/she is scurrying about
+- **algimsgwet** — tiptoe about \| walk softly \| sneak about \| He/she is tiptoeing about
+- **algltaqanatl** — walk about on leash \| go about holding hands \| He/she walks about with him on a leash (as a dog)  *(confidence: m)*
+- **algusuet** — climb about \| climb \| He/she climbs about
+- **aligjo'gwet** — go about bent over \| go about bent over with buttocks up \| go about with buttocks stuck out \| He/she goes about bent over  *(also: position)*
+- **alja't** — stagger \| stumble about \| He/she is staggering
+- **als'g** — glide around \| float about \| fly about \| It is gliding about
+- **alsing** — glide about \| float about \| fly about \| He/she glides about
+- **alsumugwat** — flee \| escape \| He/she flees
+- **altugwa't** — make sound of footsteps \| He/she goes about making the sound of footsteps  *(also: hearing)*
+- **aluggwalatl** — follow around \| accompany \| He/she follows him around
+- **aluggwatg** — follow around \| accompany \| He/she follows it around
+- **apaja's'g** — come back \| return \| It returns
+- **apaja'sit** — come back \| return \| He/she returns
+- **apajuggwalatl** — follow back \| He/she follows someone back
+- **apajuggwatg** — follow back \| He/she follows it back
+- **apatl'ga't** — walk back \| stride back \| He/she walks back
+- **apattesg** — spring back \| It springs back
+- **apattesing** — spring back \| He springs back
+- **aptoqwet** — lean (by holding on to something) to walk \| use for balance \| He/she is holding on to something while walking
+- **aputasga'latl** — turn upside down \| He/she turns him upside down
+- **aputasga'toq** — turn upside down \| He/she turns it upside down
+- **aputasgiaq** — flip \| flip over \| flip back \| It flips
+- **aputasgigwalatl** — turn over (using a tool) \| He/she turns him over using a tool
+- **aputasgigwatg** — turn over (using a tool) \| He/she turns it over using a tool  *(also: farming)*
+- **aputasg'tesing** — flip backwards \| flip over \| He/she flips backwards
+- **aquoqomgwa's'g** — make turn \| veer off \| It is making a turn
+- **aquoqomgwa'sit** — make turn \| veer off \| He/she is making a turn
+- **asgaja't** — walk with a limp \| limp \| He/she moves with a limp  *(also: health)*
+- **asga'sit** — limp \| He/she walks with a limp  *(also: health)*
+- **asgatesing** — limp \| He/she limps  *(also: health)*
+- **a'sisapegit** — crawl over \| He/she crawls over
+- **a'sisa'sit** — go over something \| He/she goes over it
+- **a'sisiwnaqialatl** — jump over \| He/she jumps over him/her
+- **a'sisiwnaqiatg** — jump over \| He/she jumps over it
+- **asoqomapegit** — crawl across \| He/she crawls across
+- **asoqoma's'g** — cross over \| It crosses over
+- **asoqoma'sit** — cross over \| He/she crosses over
+- **asoqomi'pit** — run across \| He/she runs across
+- **asua's'g** — back and forth \| to and fro \| travel back and forth \| It goes back and forth
+- **asua'sit** — back and forth \| to and fro \| travel back and forth \| He/she goes back and forth
+- **asu'set** — pace back and forth \| He/she paces back and forth
+- **asu'tesg'g** — walk back and forth \| kick back and forth \| go in and out \| He/she walks back and forth
+- **atapaqatl** — wind up \| turn \| He/she winds him up  *(confidence: m)*
+- **atapaqq** — wind up \| turn \| He/she winds it up  *(confidence: m)*
+- **ejiglaqsing** — flying away \| He/she flies away
+- **ejiglateja'sit** — scoot \| go away quickly \| He/she scoots away
+- **ejiglsing** — blown away \| He/she is being blown away  *(also: weather)*
+- **ela'gwi'teget** — steer toward \| He/she steers toward
+- **ela'gwi't'g** — steer it toward \| He/she steers it toward
+- **ela'gwi'tmuatl** — steer toward \| He/she steers toward him/her/it
+- **elapte'g** — walk toward with a cane \| walk toward with a crutch \| He/she walks toward with a cane
+- **elaptoq** — make tracks toward \| leave  footprints to \| He/she makes tracks toward
+- **elaqs'g** — fly toward \| It flies towards
+- **elaqsing** — fly toward \| flying to \| He/she flies towards  *(also: travel)*
+- **elasumteget** — wade through the snow towards... \| He/she wades through the snow towards...
+- **elateja'sit** — scoot over \| go over quickly \| walk over quickly \| rush toward \| He/she scoots toward
+- **elenqwe'set** — rush over \| scoot over \| go toward on foot \| He/she scoot towards
+- **eletqo'toq** — coil \| He/she coils it  *(confidence: m)*  *(note: coil)*
+- **elgimsgwet** — tiptoe over \| sneak toward \| He/she sneaks towards
+- **elgusuet** — to climb \| He/she climbs to
+- **eliaq** — goes \| It goes
+- **eliet** — goes \| He/she goes to  *(also: travel)*
+- **eli'pit** — rush toward \| He/she rushes toward
+- **elipqama'toq** — roll toward \| slide toward \| He/she rolls it toward
+- **eli'pugwet** — stagger toward \| He/she staggers toward
+- **elsumugwat** — flee toward \| He/she flees toward
+- **eltesguatl** — chase toward \| kick toward \| He/she chases someone toward
+- **eltugwi'g** — run toward \| He/she runs toward
+- **eluggwalatl** — follow to \| follow toward \| He/she follows him towards
+- **eluggwatg** — follow to \| follow toward \| He/she follows it toward
+- **enmateja'sit** — hurry onward \| hurry home \| He/she hurries onward or home
+- **enm'gate'pit** — trot onward or home \| scoot onward or home \| beat it home \| He/she trots or scoots onward or home
+- **enmipisgwa't** — in process of entering \| entering towards \| He/she is in the process of entering
+- **enmisa'tgwatp'tesing** — run with hair bobbing up and down \| He/she runs with hair bobbing up and down
+- **enml'ga't** — walk onward \| walk home \| He/she is walking home or onward
+- **enmnqwe'set** — go home quickly \| go on the way quickly \| He/she goes home quickly
+- **enmoqtesing** — stagger onward \| stagger home \| He/she is staggering onward or home
+- **enm'tesguatl** — chase onward \| chase home \| He/she chases someone home or onward
+- **enmuggwalatl** — follow onward \| follow home \| He/she follows someone home or onward
+- **enmuggwatg** — follow onward \| follow home \| He/she follows it home or onward
+- **enqa'latl** — halt \| stop \| He/she brings someone to a halt
+- **enqapit** — standstill \| stopped \| He/she is at standstill
+- **enqa's'g** — stop \| It stops
+- **enqa'sit** — come to a stop \| He/she comes to a stop
+- **enqateg** — at a standstill \| stopped \| It is at a standstill
+- **enqa'toq** — brings it to a stop \| He/she brings it to a stop
+- **esetegja'latl** — move backward \| He/she moves it (stove) backwards
+- **esetegjapegit** — crawl backwards \| He/she crawls backwards
+- **esetegja's'g** — moves backwards \| It moves backwards
+- **esetegja'sit** — move backward \| He/she moves backwards
+- **esetegja'toq** — move it backwards \| He/she moves it backwards
+- **esetegjipija'sit** — enter backward \| He/she enters backwards
+- **espaqs'g** — fly high \| It flies high
+- **espaqsing** — fly high \| He/she/it flies high
+- **espa'sit** — go high \| go up high \| He/she/it going up high (mountrain or status)  *(confidence: m)*
+- **etepna'tl** — catch up with \| He/she catches up with him/her
+- **etepne'g** — catch up with \| He/she catches up with it
+- **etltesg** — beat or move rythmically \| shake \| It is shaking
+- **etltesing** — where one got struck \| beat or move rythmically \| where one got injured \| dance \| shake \| He/she is struck there \| He/she is moving rythmically  *(also: health)*
+- **etoqatesing** — cornered and can't move \| hit the wall \| He/she is cornered and can't move
+- **gaqawa'sit** — go by quickly \| He/she goes by quickly
+- **gawasga'latl** — turn to opposite direction \| turn around \| He/she turns someone to the opposite direction
+- **gawasga's'g** — turns around \| It turns around
+- **gawasga'sit** — turns around \| He/she turns around
+- **gawasga'toq** — turn it around \| He/she turns it around
+- **gawasgega'latl** — turn over \| He/she turns it (bedsheet) over
+- **gawasgega'toq** — turn it over \| He/she turns it over
+- **gawasgeget** — flip \| turn it over quickly \| He/she turns it over quickly
+- **ge'gutesing** — land on top \| jump on top \| He/she lands on top
+- **gegwa's'g** — move slowly \| It moves slowly
+- **gegwa'sit** — move slowly \| He/she moves slowly
+- **gegwe'g** — is a slowpoke \| is a slowpoke \| slow-moving \| slow-moving \| He/she is slow-moving \| It is slow-moving  *(also: character)*
+- **gegwi'pit** — run slowly \| goes slowly \| He/she runs slowly
+- **ge'gwi'pit** — run onto the top \| He/she runs onto the top
+- **gepta's'g** — get off atop \| get out of \| It gets off
+- **gepta'sit** — get off of \| get out of \| He/she gets down from
+- **gesgijaqsing** — fly over \| He/she flies over
+- **gesgija'sit** — go over \| climb over \| pass over \| He/she passes over
+- **gesgiss'g** — pass over in the air \| It passes over in the air
+- **gesgissing** — pass over in the air \| fly over \| He/she passes over in the air
+- **gesigaq** — slides fast \| It(sled) is fast
+- **gesigat** — slides fast \| It(ski) is fast
+- **gesigawa's'g** — goes at high speed \| move fast \| It goes at high speed
+- **gesigawa'sit** — goes at high speed \| move fast \| He/she moves fast
+- **gesigawatpi'pit** — run fast with head bobbing \| He/she runs fast with head bobbing
+- **gesigawi'pit** — moving fast \| scooting along quickly \| He/she moving fast
+- **getgugjiaq** — turns prone face down \| It turns prone faced down
+- **getgwi'g** — run \| He/she runs
+- **gimiet** — sneak around \| He/she sneaks around  *(also: character)*
+- **gimsgwet** — walk quietly \| tiptoe \| He/she walks quietly
+- **gimtesg'g** — sneak up on \| He/she sneaks up on it
+- **gimtesguatl** — sneak up on \| He/she sneaks up on
+- **ginateja'sit** — strut on \| proudly going \| He/she struts on
+- **gisigu'lega't** — walk like an old person \| He/she walks like an old person  *(also: age)*
+- **giwto'qa'latl** — circling with \| spin around \| He/she brings him/her around
+- **giwto'qa's'g** — circle around \| goes around \| It goes around
+- **giwto'qasga'latl** — turn around to point in opposite direction \| pass around \| He/she turns him/her to point in opposite direction \| He/she passes him/her/it around
+- **giwto'qasga'toq** — turn around to point in opposite direction \| pass around \| He/she turns something around to point in opposite direction \| He/she passes something around
+- **giwto'qa'sit** — circle \| turn around \| go around \| He/she turns around
+- **giwto'qatesgatultijig** — chase around in a circle \| They (plural) chase each other around in a circle  *(also: games)*
+- **giwto'qa'toq** — circling with \| wave around \| spin around \| He/she takes it around in a circle
+- **giwto'qiaq** — spin \| turns by itself \| It spins
+- **giwto'qiet** — spin \| turns \| get dizzy \| He/she spins
+- **giwto'qopega'latl** — swing around \| He/she swings him/her around
+- **giwto'qopega'toq** — swing around \| He/she swings it around
+- **giwto'qoto'sit** — spins self \| skip rope (Nova Scotia) \| He/she spins self  *(also: games)*
+- **giwto'qugwaltultijig** — follow one another in a circle \| They follow one another in a circle
+- **giwto'qwa'sit** — circle \| goes around \| turns \| spin \| He/she circles
+- **gsigawa'suinu** — fast runner \| Fast runner  *(also: people)*
+- **ilgwenatl** — steer (by head) \| direct (by head) \| He/she steers him/her  *(also: farm-animals)*
+- **ilgweng** — steer \| directs \| He/she steers it
+- **ilgwi't'g** — steer \| He/she steers it
+- **iltaqanatl** — guide or direct (horse) by reins \| He/she directs using reins  *(also: farm-animals)*
+- **jajiga'sit** — going along/beside the shore \| going along/beside edge \| Going along/beside the shore  *(also: water)*
+- **jampo'qiet** — somersault \| He/she somersaults  *(also: games)*
+- **jaqala'latl** — rush \| cause to do fast \| He/she rushes him/her
+- **jaqala'sit** — rush \| go fast \| move fast \| He/she moves fast
+- **jaqala'toq** — do fast \| He/she does it fast
+- **jaqale'g** — quick \| fast \| fast \| quick \| He/she is fast \| It is fast
+- **majo'qiaq** — wobble \| It wobbles
+- **majo'qiet** — wobble \| He/she wobbles
+- **majuggwalatl** — keep in time with \| follow \| He/she follows him/her
+- **majuggwatg** — keep in time with \| follow \| He/she follows it
+- **malja't** — stagger slowly \| He/she staggers slowly
+- **matama'sit** — walk towards the road \| heading towards the  road \| He/she walks towards the road
+- **matamasumteget** — wades through snow towards the road \| He/she wades through the snow towards the road
+- **mato'qiaq** — sway \| It sways
+- **mato'qiet** — sway \| He/she sways
+- **mattesg** — shake \| It shakes
+- **mattesing** — shaking \| He/she is shaking
+- **matua'sit** — wander about (without purpose) \| He/she wanders about (without purpose)
+- **mawisetesg** — contract \| cringe \| crumple together \| It contracts  *(confidence: m)*  *(note: contract/crumple)*
+- **mawisetesing** — contract \| cringe \| fall in heap \| crumple from a fall \| shrink from \| He/she contracts  *(confidence: m)*
+- **mawito'latl** — wind something around itself or a core \| coil something around itself or a core \| roll something around itself or a core \| reel something around itself or a core \| He/she winds, coils, rolls, or reels something
+- **me'ga's'g** — overactive \| It is overactive
+- **me'sipmiet** — incapable of walking \| He/she is incapable of walking  *(also: health)*
+- **me's'tugwi'g** — incapable of running \| He/she is incapable of running  *(also: health)*
+- **metoqiaq** — go down to \| come down to \| descend in elevation \| It(bus) descends (from the mountain) in elevation  *(also: land)*
+- **metoqiet** — descend in elevation \| go down to \| come down to \| He/she descends (from the mountain) in elevation  *(also: land)*
+- **miligjetesg** — wiggle \| shakes \| It wiggles
+- **miligjetesing** — wiggle about \| dance wildly \| He/she wiggles about  *(also: music-and-dance)*
+- **milipusit** — squirm \| He/she squirms
+- **mntawa'latl** — twist \| He/she twists him/her/it
+- **mntawaqalatl** — twist quickly \| He/she twists him/her/it quickly
+- **mntawaqtoq** — twist quickly \| He/she twists it quickly
+- **mntawa'toq** — twist \| He/she twists it
+- **musgi'pit** — run out to an open area \| He/she runs out to an open area
+- **nanama'latl** — rock (baby) \| swing \| He/she rocks him/her  *(also: family)*
+- **nanama'toq** — rock \| swing \| He/she rocks it
+- **nanamiet** — rock \| swing \| He/she rocks
+- **nanamo'qiaq** — sway \| rock from side to side \| It sways
+- **nanamo'qiet** — sway \| rock from side to side \| It sways
+- **naqa'latl** — stop \| bring to halt \| He/she stops him/her
+- **naqa'sit** — stop \| halt \| He/she stops
+- **naqa'toq** — stop \| bring to halt \| He/she stops it
+- **naqta'tl** — stop abruptly \| bring to halt \| interrupt \| He/she stops him/her/it abruptly
+- **naqte'g** — stop abruptly \| bring to a halt \| interrupt \| He/she stops it abruptly
+- **nattesg'g** — go after \| chase \| try to catch \| He/she goes after it
+- **nattesguatl** — go after \| chase \| He/she goes after him/her
+- **nenaqa'sit** — hurry \| He/she hurries
+- **nenaqe'g** — in a hurry \| in a rush \| He/she is in a hurry
+- **neng'tesg** — tremble \| shake \| shiver \| quake \| It trembles
+- **neng'tesing** — tremble \| quiver \| shake \| shiver \| He/she trembles  *(also: body-actions)*
+- **newtigata'lugwet** — stand or slide on one leg \| He/she stands or slides on one leg  *(also: body)*
+- **nigana'sit** — goes ahead \| He/she goes ahead
+- **nigan'tqa'sit** — run up ahead \| He/she runs up ahead
+- **nigtua'latl** — separate from \| He/she separates him/her from the rest  *(confidence: m)*  *(note: separate)*
+- **nigtua'toq** — separate \| He/she separates it  *(confidence: m)*
+- **nisapegit** — crawl downward \| crawl down \| crawl on all fours \| He/she/it crawls downward
+- **nisa'sit** — goes down \| descend \| He/she goes down
+- **nisgusuet** — climb down \| descend \| He/she climbs down
+- **niso'piet** — swing down \| He/she swings down
+- **nuji'pit** — runner (professional) \| runner (professional) \| errand runner \| errand runner \| Runner \| He/she is a professional runner  *(also: occupations)*
+- **pan'tqa'sit** — come running out of the woods \| comes running out into the open \| He/she comes running out of the woods
+- **pawa's'g** — move slowly \| It moves slowly
+- **pawa'sit** — move slowly \| He/she moves slowly
+- **pemapaqtesg** — streak \| It streaks
+- **pemapaqtesing** — streak \| He/she/it streaks
+- **pemapegit** — crawl along \| He/she/it is crawling along
+- **pemaqs'g** — fly by \| It flies by
+- **pematpe'pit** — run along with head abobbing \| He/she is running along with head abobbing
+- **pematqaiet** — go through thicket \| He/she goes through the thicket  *(also: trees)*
+- **pemelmit** — pass by laughing \| He/she is passing by and laughing  *(also: emotions)*
+- **pemg'g** — go past \| pass \| go past in authority \| promote over \| He/she goes past it
+- **pemguatl** — go past \| pass \| go past in authority \| promote over \| He/she goes past him/her
+- **pemgwi't'g** — steer along \| He/she is steering it along  *(also: boats)*
+- **pemiaq** — move along \| going by \| It is going by
+- **pemiet** — go by \| move along \| He/she is going by
+- **pemigegwi'pit** — run along slowly \| He/she is running along slowly
+- **pemigp'ta'q** — puff along \| smoke along \| It is smoking along  *(also: fire)*
+- **pemijajiga'sit** — move along the shore \| walk along shore \| He/she is moving or walking along the shore  *(also: water)*
+- **pemintoq** — go along singing \| He/she is going along singing  *(also: music-and-dance)*
+- **pemi'pit** — run along \| He/she is running along
+- **pemipqamig** — slide \| skate along \| coast along \| It is sliding or coasting along
+- **pemipqamit** — slide \| coast along \| skate along \| He/she is coasting or skating along  *(also: games)*
+- **pemi'pugwet** — stagger along \| He/she is staggering along
+- **pemisiawa'sit** — pass by \| He/she is passing by
+- **pemisiawtemit** — pass by while continuing to cry \| He/she is passing by while continuing to cry  *(also: emotions)*
+- **pemisqoqitugwi'g** — run up the hill \| He/she is running up the hill
+- **pemitqoju'tugwi'g** — run upstairs \| He/she is running upstairs
+- **pemiwigwa'smugwet** — whistle along \| He/she is whistling along  *(also: music-and-dance)*
+- **pemja't** — leap along \| hop along \| He/she is leaping along
+- **peml'ga't** — walk along \| He/she is walking along
+- **pems'g** — pass by (in air) \| It passes by in the air
+- **pemsing** — hurry by \| pass by (in the air) \| He/she is hurrying by
+- **pemsulatl** — hurrying by with \| Hurrying by with him/her/it
+- **pemtaqaiet** — slither along \| It is slithering along
+- **pemtemit** — going by and crying \| He/she is going by and crying  *(also: emotions)*
+- **pemtesg'g** — kick along \| pass by \| chase after \| He/she is kicking it along
+- **pemtesguatl** — kick along \| pass by \| chase after \| He/she is kicking him/her/it along
+- **pemtugwi'g** — run along \| He/she is running along
+- **pepueget** — shake \| He/she shakes it
+- **pepuegetl** — shake \| He/she shakes him/her/it
+- **pepuetesg** — shake \| tremble \| It trembles or shakes
+- **pepuetesing** — shake \| tremble \| He/she/it is shaking
+- **pesoqtesg'g** — miss \| fail to meet it \| fail to come into contact with it \| He/she fails to meet or come into contact with it
+- **pesoqtesguatl** — miss \| fail to meet \| fail to come into contact with it(ball) \| He/she fails to come into contact with it
+- **petaptu'sit** — come with the aid of a cane \| He/she comes with the aid of a cane  *(also: health)*
+- **petasenmat** — come walking with light or torch \| He/she comes walking with a light or a torch  *(also: fire)*
+- **pewaqtesmatl** — shake out \| shake off \| He/she shakes him/her/it off  *(also: cleaning)*
+- **pewaqtestoq** — shake off \| shake out \| He/she shakes it off  *(also: cleaning)*
+- **pijapegit** — crawl into \| crawl underneath \| He/she crawls underneath or into
+- **pija'sit** — go into \| go underneath \| He/she goes into
+- **pijiwnaqaiet** — jump into \| jump inside \| He/she/it jumps into
+- **pisguije'watl** — accompany inside \| He/she accompanies him/her inside  *(also: social-life)*
+- **pisgulgwalatl** — follow inside \| He/she follows him/her inside
+- **pisgulgwatg** — follow inside \| He/she/it follows it inside
+- **pisgwa'q** — enters \| It enters
+- **pisgwa't** — enters \| He/she enters
+- **pisgwetesg'g** — track inside (mud, snow, water) \| He/she tracks it (mud, snow, water) inside  *(also: cleaning)*
+- **pisgwetesguatl** — chase inside \| kick into \| He/she chases him/her/it inside
+- **pisgwi'putoq** — hurries inside with it \| runs inside with it \| He/she hurries inside with it
+- **poqtamgiaq** — begin \| start out \| It begins
+- **poqt'tesg'g** — chase \| start after \| He/she starts to chase it
+- **poqt'tesguatl** — chase \| start after \| He/she chases someone
+- **poqtuggwalatl** — begin to follow \| He/she begins to follow him/her/it
+- **poqtuggwatg** — begin to follow \| He/she begins to follow it
+- **putugtesing** — dance fast \| shake violently \| He/she is dancing fast \| He/she is shakiing violently  *(also: music-and-dance)*
+- **qa'sgwit** — gallop \| He/she/it gallops  *(also: farm-animals)*
+- **sangew** — slowly \| calmly \| carefully \| gently \| Slowly
+- **sangewa'latl** — go slowly with \| do gently \| He/she goes slowly with him/her
+- **sangewa's'g** — go slow \| cruise along \| saunter along \| It goes slow
+- **sangewa'sit** — go slow \| cruise along \| saunter along \| He/she goes slow
+- **sangewa'toq** — go slow with \| do gently \| He/she goes slow with it
+- **saputa's'g** — pass through \| go through \| It passes through
+- **saputa'sit** — pass through \| go through \| He/she passes through
+- **se'sa'sit** — wander \| He/she wanders about
+- **sesupa'lugwet** — slide \| slip \| He/she slides
+- **seta's'g** — moves aside \| It moves aside
+- **seta'sit** — moves aside \| He/she moves asides
+- **siawa's'g** — keep on going \| continuing \| It keeps on going
+- **siawa'sit** — keep on going \| continue \| He/she/it keeps on going  *(also: travel)*
+- **sipga'latl** — do it slowly \| He/she does he/she/it slowly
+- **sipga'toq** — do it slowly \| He/she does it slowly
+- **sipge'g** — slow-moving \| slowpoke \| He/she is a slowpoke
+- **siwpmiet** — tired of walking \| He/she is tired of walking  *(also: emotions)*
+- **s'tapugua'latl** — stand aside \| He/she stands him/her aside
+- **s'tapugua'toq** — stands it aside \| He/she stands it aside
+- **tajiga'sit** — going along/beside the shore \| going along/beside edge \| Going along/beside the shore  *(also: water)*
+- **tepne'g** — catch up with \| catch up to \| He/she catches up with it
+- **tetaqa'sit** — rush \| hurry \| He/she is rushing
+- **tetaqe'g** — hurry \| rush \| He/she is in a hurry
+- **te'tipja'latl** — roll \| roll over \| He/she rolls him/her
+- **te'tipja'toq** — roll \| roll over \| He/she rolls it
+- **te'tipjiet** — roll \| tumble \| He/she tumbles
+- **tewalqatestoq** — shake out \| dislocate \| He/she shakes it out
+- **tewattesguatl** — chase out \| He/she chases someone out
+- **tewiet** — go outside \| exit \| He/she exits
+- **tewpugua'sit** — step out or outside \| step outside for fresh air \| He/she steps out
+- **tewuggwalatl** — follow out or outside \| He/she follows him/her out
+- **tewuggwatg** — follow out or outside \| He/she follows it out
+- **toqjuapegit** — crawl up \| He/she crawls up
+- **toqjua'q** — go up (stairs) \| mount (stairs) \| It goes up
+- **toqjua't** — go up (stairs) \| swim up stream \| mount (stairs) \| He/she goes up \| It swims up stream
+- **toqju'tesguatl** — chase up \| chase upstairs \| He/she chases someone up
+- **toqju'tugwi'g** — run up \| run upstairs \| He/she runs up
+- **uggwata'q** — go by foot \| travel by walking \| walk \| He/she goes by foot.  *(also: travel)*
+- **wejgu'aq** — approach \| come \| It is approaching
+- **wejgu'et** — approach \| come \| He/she is approaching
+- **wejgutemit** — come toward crying \| He/she comes towards here crying  *(also: emotions)*
+- **wejgutugwi'g** — come running \| He/she comes running
+- **wejgwateja's'g** — come in this direction \| hurry this way \| It is coming in this direction
+- **wejgwateja'sit** — hurry this way \| come in this direction \| He/she is hurrying this way
+- **wejgwitu'gwe'pit** — come scuttling with pounding feet \| He/she comes scuttling with pounding feet
+- **wejiaq** — come from there \| It comes from there
+- **wejiqolomgwipmiet** — return moving along with drooping head \| move along with drooping head because... \| return walking along with drooping head \| walking along with drooping head because... \| come from somewhere with a drooped head \| He/she returns moving along with drooping head \| He/she moves along with drooping head because...
+- **wejuaqatesg'g** — approach \| He/she approaches it
+- **wejuaqatesguatl** — approach \| He/she approaches him/her
+- **welpmiet** — go or move about well \| operates well \| He/she moves about well  *(also: health)*
+- **wenagiet** — accend \| He/she is accending  *(also: spirit-world)*
+- **wenaqa'sit** — rise \| He/she rises
+- **wenaqialatl** — jump at \| He/she jumps at him/her
+- **wenaqiaq** — jump \| It jumps
+- **wenaqiatg** — jumps at \| He/she jumps at it
+- **wenaqiatuatl** — jumps at \| He/she jumps at someone
+- **wenaqiet** — jump \| He/she jumps
+- **wenaqja't** — hop \| skip \| He/she hops
+- **wenaqtesgasit** — spring up \| He/she springs up
+- **wenaqtesguatl** — flush out... \| kick upward \| flush bird out of field \| He/she/it flushes out... \| He/she kicks it upward  *(also: hunting)*
+- **wesgija's'g** — goes on top of \| It goes on top of
+- **wesgija'sit** — goes on top of \| He/she goes on top of
+- **wesmi'pulatl** — flee with \| run off with \| kidnap \| He/she flees with him/her/it  *(also: character)*
+- **wesmi'putoq** — run off with \| He/she runs off with it
+- **wesmugwat** — runs away \| flees \| escape from there \| He/she runs away
+- **wessmugt'g** — run away from \| escape from \| He/she is running away from it
+- **wessmugtuatl** — run away from \| escape from \| He/she is running away from him/her/it
+- **wesua'q** — sink in \| It sinks in
+- **wesuasgiaq** — sink in \| It sinks in
+- **wesuasgiet** — sink in \| drawn into (pit or quicksand) \| He/she sinks in
+- **wesua't** — sink in \| He/she sinks in
+- **wettepna'tl** — try to catch up with \| He/she tries to catch up with him/her/it
+- **wettepne'g** — try to catch up with \| He/she tries to catch up with it
+- **wisqijiglsing** — quickly flies away \| He/she quickly flies away  *(also: birds)*
+- **wisqi'pit** — go full speed \| dash off \| sprint \| He/she goes at full speed
+- **wejguigaqawapuguet** — come scolding \| come reprimanding \| He/she comes scolding or reprimanding  *(also: talking)*
+- **pejila'sit** — come up \| He/she comes up.
+- **sitapa'sit** — move away from a table \| move away from a desk \| He/she moves away from (table)
+- ** jipaluwejitu'et** — leaving in fear \| He/she is leaving in fear  *(also: emotions)*
+- **wejgwinisaqa'sit** — comes down descending ground  \| He/she comes down descending ground 
+- **wejgwatemit** — comes crying \| He/she/it comes crying.  *(also: emotions)*
+- **pisgwisga'sit** — reaches in \| He/she reaches in
+- **nanamo'qweiet** — sways back and forth \| He/she sways back and forth.
+- **nipenat** — prowl around at night \| roam around at night \| lurk around at night \| He/she prowls/roams around at night
+- **wejgwiso'qwiet** — Comes up from the shore. \| Comes up the Hill. \| Comes up the Mountain. \| He/she comes up the shore, the hill, the mountain
+- **wejgwimusga'sit** — come into sight \| come into view \| He/she/it comes into sight, into view  *(also: seeing)*
+- **sa'sewgpa'sit** — change places (seats) \| He/she changes places (seats)
+- **wejitu'wet** — exit out of \| go out because \| exit from \| reason he/she leaves \| exit through \| goes outdoors from \| He/she/it exits from or through \| He/she goes out because
+- **petateja'sit** — arrive walking with a strut \| He/she arrives walking with a strut (without a care in the world)
+- **wejgwenmit** — come laughing \| He/she comes laughing  *(also: emotions)*
+- **nenaqal'ga'sit** — walk at a rapid pace \| He/she walks at a rapid pace
+- **nanamateget** — rocks/swings \| nanama'teget, he/she rocks/swings
+- **nanamg'g** — glides using his/her feet \| swings using his/her feet \| He/she swings or glides using his/her feet.
+- **nanamit** — rocks him/herself \| He/she rocks him/herself.
+- **nanama'lsit** — rocks his/herself \| He/she rocks his/herself.
+- **oqolomgui'pit** — runs leaning forward \| He/she runs leaning forward.
+
+## Archived entries (lower priority)
+
+- **aliet** — wander \| roam \| walk around
+- **alita'sit** — roam \| walk around \| wander \| go here and there
+- **all'ga't** — walk about \| he/she walks about
+- **elmoqwe'set\*\*** — scoot home \| He/she scoots home
+- **etoqtesgmat** — catches foot on something and trips \| He/she catches foot on something and trips
+- **etoqtesguatl** — trips? (?jnw) \| He/she trips him/her (?jnw)
+- **ilgwi'tatl** — steer \| He/she steers him/her/it
+- **jaqali-** — quickly \| fast
+- **nisgusua'sit\*\*** — descend \| takes a step downward (dmm 01-11-14) \| He/she descends
+- **pawnatqa'sit** — get out of water slowly \| He/she gets out of the water slowly
+- **pematgwetesing** — move along while nodding head \| He/she is moving along while nodding head
+- **pemigate'pit** — trot along \| He/she is trotting along
+- **pemisiawi'pugwet** — stagger along by \| He/she is staggering along by
+- **pemiwisqi'pit** — sprint along \| He/she sprints along
+- **siawgumiet** — keep on coasting (on river) \| He/she keeps on coasting on the river
+- **siawiet** — keep going \| He/she keeps going
+- **ta'qaiet** — dawdle \| pokey \| linger \| he/she dawdles
+- **tegusuet** — climb \| He/she climbs
+- **te't'poqja'latl** — turns up side down \| He/she turns him/her up-side down
+- **wejipawnaqa't** — try to get out of the thicket \| He/she ties to get out of the thicket

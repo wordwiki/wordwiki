@@ -1,0 +1,100 @@
+# Making & Fixing (`making-and-fixing`)
+
+Theme: *Work & Livelihood* — 92 entries (+1 archived)
+
+- **amallugwalatl** — decorate \| He/she decorates it (shirt)  *(confidence: m)*  *(note: decorate family -> making-and-fixing)*
+- **amallugwatg** — decorate \| He/she decorates it  *(confidence: m)*
+- **amallugweg** — decorate \| It decorates  *(confidence: m)*
+- **amallugwet** — decorate \| He/she decorates  *(confidence: m)*
+- **amaltaqa'latl** — decorate \| He/she decorates him (it)  *(confidence: m)*
+- **amaltaqa'taqan** — decoration \| design \| Decoration  *(confidence: m)*
+- **amaltaqa'toq** — decorate \| He/she decorates it  *(confidence: m)*
+- **amgisitas'g** — partly built \| partly complete \| incomplete \| It is partly built  *(also: dwellings)*
+- **eliatl** — make \| build \| He/she makes it (shoe)
+- **eloqomgiatg** — fit handle on \| He/she fits a handle on something
+- **eltoq** — make \| build \| earn \| He/she makes it
+- **elugwalatl** — repair \| prepare \| fix \| He/she fixes it (motor)
+- **elugwatg** — repair \| fix \| He/she repairs it
+- **espesegnas'g** — brick or stone wall built tall \| A brick or stone wall is build tall  *(also: dwellings)*
+- **espesegng** — build high brick or stone wall \| He/she/it builds a high brick or stone wall  *(also: dwellings)*
+- **espoqo'teget** — build high (fence) with wood or logs \| build high (palisade) with wood or logs \| He/she builds high with wood or logs  *(also: dwellings)*
+- **espoqo'toq** — build high (fence) with wood or logs \| build high (palisade) with wood or logs \| He/she builds high with wood or logs  *(also: dwellings)*
+- **etliatl** — making \| He/she is making it (shoe)
+- **etlitoq** — create \| make \| He/she is creating/making it
+- **etlsegnatl** — construct or build with brick or cement blocks \| He/she is building it (statue) with brick or cement blocks  *(also: dwellings)*
+- **etlsegng** — construct or build with brick or cement blocks \| He/she is building it with brick or cement blocks  *(also: dwellings)*
+- **ewi'gat** — build house \| make camp or dwelling \| He/she builds a house  *(also: dwellings)*
+- **gegna'latl** — decorate \| trim (Christmas tree) \| He/she decorates it  *(confidence: m)*
+- **gegna'toq** — decorate \| He/she decorates it  *(confidence: m)*
+- **geitapaqte'g** — drive in (as nail) \| He/she drives it in/into  *(also: hitting)*
+- **gisa'tas'g** — fixed \| prepared \| It is fixed
+- **gisa'tasit** — fixed \| repaired \| prepared \| It(pole) is prepared
+- **gisa'toq** — fix \| able to \| repair \| can \| capable of \| He/she fixes it \| He/she is able to do it
+- **gisgaja'latl** — get ready \| prepare \| He/she gets it(turkey) ready
+- **gisgaja'tas'g** — prepared \| It is prepared
+- **gisgaja'toq** — get it ready \| prepare \| He/she gets it ready
+- **gisgaje'g** — prepared \| ready \| He/she is ready
+- **gisgajoqosg** — lies ready \| It lies ready
+- **gisgatpit** — sits ready \| prepared \| He/she sits ready
+- **gisgat'puguit** — stand ready \| He/she is standing ready  *(also: position)*
+- **gisgatta'tl** — prepare \| fix up \| He/she prepares him/her/it
+- **gisgatteg** — ready \| prepared \| It is ready
+- **gisiatl** — creates \| made \| He/she made it(statue)
+- **gisite'lmatl** — invent \| He/she invents it(robot)  *(also: thinking)*
+- **gisite'tg** — invent \| He/she invents it  *(also: thinking)*
+- **gisitoq** — finish making \| He/she finished making it
+- **ilaji'gewatl** — prepare for \| He/she prepares for him/her
+- **ilaji'gewsit** — prepare \| get ready \| He/she prepares for self
+- **ilajit** — get ready \| prepare \| pack \| He/she gets ready  *(also: travel)*
+- **ilajugt'g** — prepare for \| get ready for \| He/she prepares for it
+- **ilajugtuatl** — prepare for \| get ready for \| He/she gets ready for him/her
+- **ilaju'latl** — pack for \| prepare for \| get ready for \| He/she packs for him/her  *(also: travel)*
+- **ila'latl** — adjust \| reset \| He/she adjusts it(picture)
+- **ila'toq** — adjust \| reset \| He/she resets it
+- **iljoqte'g** — revamp its (shape) \| refurbish \| He/she revamps its shape
+- **ilpilatl** — provide clothing for \| get ready for shipping \| dress up \| He/she provides clothing for him/her/it \| He/she gets it ready for shipping  *(also: clothing)*
+- **iltaqane'walatl** — prepare \| organize \| get ready (hunting or fishing) \| set up \| He/she gets him/her organized
+- **iltaqane'watg** — prepare \| organize \| set up \| He/she sets it up
+- **mawlugwalatl** — include in the repairs \| include in the work \| He/she includes it(stove) in the repairs
+- **mawlugwatg** — include in the repairs \| include in the work \| He/she includes it in the repairs
+- **mesna'latl** — mend \| repair \| He/she mends it(shirt)
+- **mesna'toq** — mend \| patch \| repair \| He/she mends it  *(also: sewing-and-textiles)*
+- **mesni'sas'g** — patched \| mended \| sewn \| It is patched
+- **mesni'sasit** — patched \| mended \| sewn \| He/she/it is patched
+- **mesni'satl** — patch \| mend \| sew \| He/she patches it(shirt)  *(also: sewing-and-textiles)*
+- **mesni's'g** — patch \| mend \| sew \| He/she patches it  *(also: sewing-and-textiles)*
+- **miguteget** — plane (as in carpentry) \| He/she planes (as in carpentry)
+- **naji'gat** — going to build own house at (location) \| going to build own camp at (location) \| He/she is going to build his/her house at (location)  *(also: dwellings)*
+- **najiilajit** — go to get ready \| start to pack \| go get prepared \| go to get dressed \| He/she goes to pack  *(also: travel)*
+- **najimsnaqami'get** — going there to repair snowshoes \| repair snowshoes \| He/she is going there to repair snowshoes  *(also: vehicles)*
+- **napgwetoq** — copy \| He/she copies it
+- **nasaqomgigwat** — fit handle in or on (axe or hammer) \| He/she fits handles in or on...
+- **nasaqomgigwatg** — fit handle in or on (axe or hammer) \| He/she fits a handle in or on something
+- **nujiajig** — make (professionally) \| He/she makes them  *(also: occupations)*
+- **nujitoq** — make professionally \| He/she makes it professionally  *(also: occupations)*
+- **pegajeiwatl** — keep in good shape or condition \| He/she/it keeps him/her/it in good shape or condition
+- **pegajo'tg** — keep in good shape or condition \| He/she keeps it in good shape or condition
+- **pegwi'satl** — patch \| He/she patches it(shirt)  *(also: sewing-and-textiles)*
+- **pegwi's'g** — patch \| He/she patches it  *(also: sewing-and-textiles)*
+- **penta'latl** — paint \| He/she paints it(board)  *(also: colors)*  *(note: paint)*
+- **penta'tegewatl** — paint for \| He/she paints for him/her  *(also: colors)*
+- **penta'toq** — paint \| He/she paints it  *(also: colors)*
+- **pi'tisignta'tl** — caulk \| He/she caulks it  *(also: boats)*
+- **pi'tisignte'g** — caulk \| He/she caulks it  *(also: boats)*
+- **po'qatl** — drill \| bore \| He/she drills it(board)  *(also: tools)*
+- **po'q'g** — drill \| bore \| He/she drills it  *(also: tools)*
+- **po'qiget** — drill \| bore \| He/she drills  *(also: tools)*
+- **teliatl** — make as such \| make so \| make that way \| He/she makes him/her as such
+- **telitoq** — make as such \| make in such a way \| He/she makes it in such a way
+- **tepgisitoq** — make separately \| build individually \| He/she makes it separately
+- **wejiatl** — make from \| make out of \| He/she makes it from something
+- **wejitoq** — make from \| make out of \| He/she makes it from something
+- **la'gittaqane'get** — files, or sands or planes \| makes files \| He/she files, or sands or planes, maybe, he/she makes files.  *(also: tools)*
+- **ela'gittoq** — files it \| sands it \| He/she files/sands it.
+- **usgijigwegua'toq** — cements it \| He/she cements it.  *(also: dwellings)*
+- **usgijigwegewei** — cement \| Cement  *(also: texture-and-materials)*
+- **usgijigweg** — it is cemented \| It is cemented
+
+## Archived entries (lower priority)
+
+- **apjuna'toq\*\*** — put handle on \| He/she put a handle on it

@@ -1,0 +1,226 @@
+# Food (`food`)
+
+Theme: *Home & Daily Life* — 186 entries (+32 archived)
+
+- **ajioqjemin** — blackberry \| Blackberry  *(also: plants)*
+- **alawei** — pea \| Pea  *(also: plants)*
+- **aloqoman** — grape \| Grape  *(also: plants)*
+- **alu'saq** — lean meat \| lean tissue \| It is lean
+- **amjaqamat** — spread on \| smear \| He/she spreads something (butter) for self  *(confidence: m)*  *(note: spreading butter/jam)*
+- **amjaqamuatl** — spreads something for him/her \| smeers something for him/her \| He/she spreads something (butter) for him/her  *(confidence: m)*
+- **apita'taqan** — baking powder \| baking soda \| rising agent \| yeast \| leavening \| Baking powder or baking soda  *(also: cooking)*
+- **apjelmultimgewei** — grain of rice \| Rice
+- **aptaqanet** — starve \| He/she is starved  *(also: health)*  *(confidence: m)*  *(note: starve)*
+- **atuomgomin** — strawberry \| Strawberry  *(also: plants)*
+- **egsitpu'gowei** — breakfast \| item pertaining to morning \| event pertaining to morning \| Breakfast \| Pertaining to morning  *(also: time)*
+- **egsitpu'gwatalmgewei** — item for breakfast \| food for breakfast \| Breakfast food
+- **ejgujg** — squash \| pumpkin \| Pumpkin  *(also: plants)*
+- **ela'muet** — ladle out \| dish out the food \| He/she dishes out the food  *(also: social-life)*
+- **elanqaiejit** — stomach wall of a cow \| tripe \| Tripe
+- **elm'joqteg** — spread of food \| setout (as table) \| It is set with food
+- **enmapejit** — carrot \| Carrot  *(also: plants)*
+- **e's** — clam \| Clam  *(also: fish)*
+- **esge'g** — raw \| uncooked \| It is raw  *(also: condition)*
+- **esg'tmm'gewei** — cucumber \| something to be eaten raw \| Cucumber
+- **esmatl** — feed \| He/she feeds him/her  *(also: social-life)*
+- **essit** — ripe \| It is ripe  *(also: condition)*
+- **etteg** — ripe \| It is ripe  *(also: condition)*
+- **galgunawei** — hard cookie \| hardtack \| biscuit \| Hardtack
+- **gaqpesaw** — smelt \| Smelt  *(also: fish)*
+- **gastio'mi** — molasses \| syrup \| Molasses
+- **ga't** — eel \| Eel  *(also: fish)*
+- **gawaqtejg** — gooseberry \| Gooseberry  *(also: plants)*
+- **gi'gassmatl** — forcefeed \| forcefully give food \| He/she forcefeeds him/her  *(confidence: m)*
+- **glitaw** — strawberry \| red raspberry (Nova Scotia and parts of New Brunswick) \| berry \| Strawberry  *(also: plants)*
+- **glumg** — wheat grain \| Wheat grain  *(also: plants)*
+- **gmu'jmin** — raspberry \| Raspberry  *(also: plants)*
+- **go'gomin** — thornberry \| hawthorn berry \| Thornberry  *(also: plants)*
+- **guign** — marrow bone \| Marrow bone  *(also: body)*
+- **gulgwi'suei** — pork \| Pork
+- **gulgwi'su'mi** — lard \| pork fat \| Lard
+- **gweltanat** — feast \| He/she feasts  *(also: customs)*
+- **jagej** — lobster \| Lobster  *(also: fish)*
+- **jijjawignej** — raisin \| Raisin
+- **laglem** — cream \| Cream
+- **lamuaw** — yolk \| egg yolk \| Yolk
+- **lapilas** — flax seed \| Flax seed  *(also: plants)*
+- **lasup** — soup \| Soup
+- **lasupe'ji'j** — savory \| summer savory \| Savory
+- **lgetu** — mushroom \| Mushroom  *(also: plants)*
+- **lgetue'get** — gather mushrooms \| He/she gathers mushrooms  *(also: plants)*
+- **lusgnign** — bannock \| dough \| biscuit \| Bannock
+- **malipqwanj** — hazelnut \| Hazelnut  *(also: plants)*
+- **masgwe'siman** — pin cherry \| Pin cherry  *(also: plants)*
+- **ma'susi** — fern \| fiddlehead \| Fern  *(also: plants)*
+- **matnugtesgewei** — head cheese \| Head cheese
+- **matuesuei** — porcupine meat \| Porcupine meat  *(also: animals)*
+- **megwe'jit** — beet \| Beet  *(also: plants)*
+- **melgapegisg** — tough and stringy \| It is tough and stringy  *(also: texture-and-materials)*
+- **metgwasteg** — dry or crusty (bread) \| Dry or crusty (bread)  *(also: texture-and-materials)*
+- **mewisit** — pick berries \| He/she is berry picking  *(also: plants)*
+- **mewlia'gowei** — dinner (noon meal) \| lunch time meal \| noon meal \| Noon meal  *(also: time)*
+- **mijipjewei** — food \| Food
+- **mijjuaqan** — meal \| Meal
+- **mime'g** — oily \| greasy \| greasy \| He/she is greasy \| It is greasy  *(also: texture-and-materials)*
+- **mimei** — oil \| grease \| Oil  *(also: household)*
+- **minijg** — berry \| fruit \| nut \| Berry  *(also: plants)*
+- **mlagejg** — milk \| Milk
+- **mlagejua'tat** — add milk (to tea, coffee or drink) \| He/she adds milk (to his/her tea,\_coffee\_or\_drink)  *(also: eating-and-drinking)*
+- **mlageju'mi** — butter \| Butter
+- **mlagejuo'q** — milk container \| milk bottle \| milk pitcher \| Milk container  *(also: household)*
+- **mntmu** — oyster \| Oyster  *(also: fish)*
+- **moqopa'q** — wine \| Wine
+- **msaqa'gw** — crust of bread \| bark \| Crust of the bread
+- **mui'no'mi** — bear grease \| bear oil \| Bear grease  *(also: animals)*
+- **nana'n** — food (baby talk) \| Food (baby talk)  *(also: talking)*
+- **netugulimg** — provisioning (time) \| Provisioning time  *(also: hunting)*
+- **netugulit** — get provisions \| provide \| He/she gets provisions  *(also: hunting)*
+- **nipi'l** — cabbage \| Cabbage  *(also: plants)*
+- **pa'le'we'l** — barley \| Barley
+- **papawei** — horse bean \| broad bean \| fava bean \| Horse bean  *(also: plants)*
+- **pasgoqsign** — jam \| Jam
+- **peju** — codfish \| Codfish  *(also: fish)*
+- **pejuei** — codfish meat \| Codfish meat  *(also: fish)*
+- **pestmat** — starve \| He/she starves  *(also: health)*
+- **pestmo'qon** — starvation \| Starvation  *(also: health)*
+- **petaqan** — pie \| Piepestmat
+- **petaqanji'j** — tart \| small pie \| Tart
+- **pgu** — gum \| pitch \| fudge \| Gum
+- **pguman** — blueberry \| Blueberry  *(also: plants)*
+- **pgumanapu** — blueberry juice \| Blueberry juice
+- **pgumane'get** — go to get(pick) blueberries \| He/she goes to get blueberries  *(also: plants)*
+- **pgwejijg** — cinnamon \| Cinnamon
+- **piesgmin** — corn \| Corn
+- **piliman** — new potato \| New potato
+- **pilse'g** — numb \| unsalted \| unsalted \| under-salted \| under-salted \| It is numb \| It is unsalted \| It is unsalted  *(also: body)*
+- **pipnaqan** — bread \| Bread
+- **pipnaqane'ji'j** — caraway seed \| Caraway seed
+- **pipnaqsign** — piece of bread \| slice of  bread \| Piece of bread
+- **pipnaqsignji'j** — small piece of bread \| Small piece of bread
+- **pistamun** — dip \| bread spread or sop (fat, molasses, etc.) \| Dip
+- **pitlanji'j** — string bean \| String bean
+- **piwtign** — peeling (of fruit or vegetable) \| Peeling (of fruit or vegetable)
+- **poggwitewei** — buckwheat pancakes \| Buckwheat pancakes
+- **pogoman** — foxberry \| kind of berry \| Foxberry  *(also: plants)*
+- **poqwa'lamgewei** — choke cherry \| Choke cherry  *(also: plants)*
+- **pqan** — nut \| Nut
+- **pqwamg** — coconut \| Coconut
+- **psa'mun** — brisket \| Brisket
+- **pse's's** — onion \| Onion
+- **psg'san** — foreshoulder (of animal) \| Foreshoulder (of animal)  *(also: animals)*
+- **p'tew** — broth \| Broth
+- **p'tewei** — tea \| Tea
+- **p'teweie'mat** — have tea break \| take tea \| He/she has a tea break  *(also: eating-and-drinking)*
+- **puggwana'tasit\_nme'j** — smoked fish \| Smoked fish
+- **puggwanaw** — smoked food (e.g. fish or meat) \| Smoked food  *(also: cooking)*
+- **pugtewijg** — liquor \| whiskey \| Liquor  *(note: liquor -> food (drink))*
+- **pusgialigs'ta'gwet** — frequently visits at meal-time for free meals \| He/she frequently visits at meal-time for free meals  *(also: social-life)*
+- **salawapu** — salty water \| salt water \| salted water \| Salty water  *(also: water)*
+- **salawa'tat** — add salt \| He/she adds salt to his/her food
+- **salawa'toq** — put/sprinkle salt on \| He/she salts it
+- **salawe'g** — salty \| salty \| It is salty \| It is salty  *(also: smell-and-taste)*
+- **salawei** — salt \| Salt
+- **sapan** — paste \| mush \| batter \| Paste
+- **sasqale's** — scallop \| Scallop  *(also: fish)*
+- **seggw** — sweet \| sweet \| It is sweet \| It is sweet  *(also: smell-and-taste)*
+- **seggwewei** — sweetener \| Sweetner
+- **sewa'tat** — sweeten his/her food \| sweeten his/her drink \| He/she sweetens his/her food or drink
+- **sewl'g** — sour \| sour \| He/she is sour \| It is sour  *(also: smell-and-taste)*
+- **sewlugowei** — rhubarb \| Rhubarb  *(also: plants)*
+- **s'gepn** — wild potato \| ground nut \| Indian potato \| Wild potato  *(also: plants)*
+- **sgmugualaw** — spruce gum \| Spruce gum  *(also: plants)*
+- **sigupaqte'gn** — buttermilk \| Buttermilk
+- **sisla'gwa'taqan** — fry bread \| pancake (fried cake) \| Fry bread
+- **sismo'qon** — sugar \| maple sugar \| Sugar
+- **sismo'qonapu** — maple sap \| sugar water (for babies) \| maple syrup \| Maple sap or sugar water  *(also: trees)*
+- **sismo'qonima'q** — tastes sweet \| tastes like sugar \| smells like sugar \| sweet (Bear River) \| It is sweet  *(also: smell-and-taste)*
+- **so'gwistaqan** — yeast \| Yeast
+- **suitis** — candy \| Candy
+- **su'n** — cranberry \| Cranberry  *(also: plants)*
+- **suoman** — beech nut \| Beech nut  *(also: plants)*
+- **tap'tan** — potato \| Potato  *(also: plants)*
+- **taqate'l** — currant \| Currant  *(also: plants)*
+- **te'pineglewei** — vinegar \| Vinegar  *(also: household)*
+- **te'pisewa'tat** — add pepper to one's food \| He/she adds pepper to his/her food
+- **te'pisewei** — pepper \| Pepper
+- **te'plma'sewei** — cheese \| Cheese
+- **te'sipowmann** — oats \| Oats  *(also: plants)*
+- **tia'muei** — moose meat \| Moose meat  *(also: animals)*
+- **tia'mu'mi** — moose fat or tallow \| Moose fat or tallow  *(also: animals)*
+- **tmato's** — tomato \| Tomato  *(also: plants)*
+- **tmtmu** — oyster \| Oyster  *(also: fish)*
+- **tuli'jeweie'l** — rice \| Rice
+- **usgun** — liver \| Liver  *(also: body)*
+- **wape'jg** — flour \| Flour
+- **wapusuei** — rabbit meat \| Rabbit meat
+- **wasapeglaw** — spruce gum \| Spruce gum  *(also: plants)*
+- **wa'w** — egg \| Egg
+- **wela'gowei** — supper \| Supper  *(also: time)*
+- **weloqotalg** — eat supper \| have supper \| He/she eats supper  *(also: time)*
+- **welpistamit** — have good lunch (on bread dipped with molasses, syrup, broth,
+milk etc.) \| He/she has a good lunch on bread dipped with molasses, syrup etc.  *(also: eating-and-drinking)*
+- **wenjua'p'tew** — pea soup \| Pea soup
+- **wenju's'gapun** — turnip \| Turnip
+- **wenju'su'n** — apple \| Apple
+- **wenju'su'napu** — apple juice \| apple cider \| Apple juice
+- **wesamla'muatl** — overload (someone's) plate \| He/she overloads his/her plate  *(also: amounts)*
+- **wigamig** — lean (Nova Scotia) \| It is lean
+- **wigapu'g** — taste good \| It tastes good  *(also: smell-and-taste)*
+- **wigapugsit** — taste good \| He/she/it tastes good  *(also: smell-and-taste)*
+- **wi'gatignipgw** — lettuce \| Lettuce
+- **wigew** — fat (animal) \| lardon \| Fat  *(also: body)*
+- **wigpatl** — like taste of \| He/she likes the tastes of...  *(also: smell-and-taste)*
+- **wigt'g** — like taste of \| He/she likes the taste of it  *(also: smell-and-taste)*
+- **wigun** — bean \| Bean
+- **wilu** — food \| provisions \| His/her food
+- **wi'n** — marrow \| Marrow  *(also: body)*
+- **wi'nei\_waqantew** — marrow bone \| Marrow bone  *(also: body)*
+- **winisqi** — tripe \| Tripe
+- **wisgaqan** — gristle \| Gristle  *(also: body)*
+- **wisqeg** — bitter \| It is bitter  *(also: smell-and-taste)*
+- **wiu'ji'j** — small piece of meat \| Small piece of meat
+- **wius** — meat \| Meat
+- **gastio’mio’q** — molasses container \| syrup container \| Molasses container  *(also: household)*
+- **gopitewei** — beaver meat \| something pertaining to beaver \| Beaver meat  *(also: animals)*
+- **mui'numan** — huckleberry  *(also: plants)*  *(confidence: l)*
+- **amalo'qomanaqsi** — fruit tree \| Fruit tree  *(also: trees)*
+- **ewlawsuo'qon** — food scarcity \| scarcity \| Scarcity, food scarcity  *(also: amounts)*
+- **gastio’ma’teget** — makes syrup \| He/she makes syrup  *(also: cooking)*
+- **amalo'qomanimusi** — fruit bush \| Fruit bush  *(also: plants)*
+- **gli'gn** — flagpole \| snack \| hold-over until... \| large post \| temporary support \| prop \| Flagpole \| Something to hold you over until the next...  *(also: dwellings)*  *(note: flagpole/snack polysemy)*
+- **amalo'qoman** — fruit \| Fruit
+
+## Archived entries (lower priority)
+
+- **amjoqtelign\*\*** — pear
+- **apuaqaj\*\*** — hindquarter \| round of meat \| hammer of gun
+- **gaqaqw\*\*** — smoke moosemeat \| dried moosemeat
+- **gatewaqan\*\*** — brisket NS
+- **gatteg** — unripe \| green \| it is unripe
+- **giwigatg\*\*** — stock with provisions
+- **giwigsit\*\*** — provision
+- **jioqsimusiapu\*\*** — maple syrup
+- **joqjimusiapu\*\*** — maple syrup
+- **lentugowei** — deer meat \| Deer meat
+- **mal'tewiejit\*\*** — beet
+- **mamam\*\*** — food \| drink \| bottle (baby talk)
+- **maqtewiman\*\*** — blackberry \| potato (alternate form)
+- **miawla'gowei\*\*** — dinner
+- **mlasisua'tat\*\*** — add molasses (to his food) \| He/she adds molasses to his food
+- **mlasisua'toq\*\*** — put molasses on \| He/she puts molasses on it
+- **ml'suapu\*\*** — strong brew
+- **ni'mat** — bring own food \| bring own provisions \| bring snack \| He/she brings his/her own food
+- **passoqsawet** — make jam \| thicken by boiling \| He/she is making jam
+- **passoqs'g** — make into jam \| He/she makes it into jam
+- **passoqsign** — jam
+- **pi'ts** — beet
+- **pu'gu'lu'sgwiman** — elderberry \| Elderberry
+- **sqato'min** — raisin \| Raisin
+- **tanaps** — turnip \| Turnip
+- **tapia'jijgewatp** — fiddlehead \| nut, pegbox and scroll of violin (dmm 02-10-30) \| Fiddlehead
+- **tap'tanei** — pertaining to potato \| of potato \| Pertaining to potato
+- **tepa'te** — pate \| tart \| Pate
+- **tepplma'sigewei** — cheese
+- **tnuanoq** — sirloin \| tenderloin \| Sirloin
+- **wig** — taste good
+- **wi'gupaltimg** — feast

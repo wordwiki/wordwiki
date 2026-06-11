@@ -1,0 +1,101 @@
+# Good & Bad (`good-and-bad`)
+
+Theme: *Qualities & Amounts* — 88 entries (+6 archived)
+
+- **ajiglu'lg** — better than \| It is better than (something else)
+- **ajiglu'sit** — better than \| He/she is better than (someone else)
+- **ajiwinjig** — worse \| It is worse than
+- **ajiwinjit** — worse \| He/she is worse than
+- **alua'latl** — find unsatisfactory \| He/she finds him unsatisfactory
+- **aluamatl** — find unsatisfactory in appearance \| find unattractive \| He/she finds his/her appearance unsatisfactory  *(also: appearance)*
+- **aluapt'g** — find the appearance unsatisfactory \| find unattractive \| He/she finds its appearance unsatisfactory  *(also: appearance)*
+- **alua'toq** — find unsatisfactory \| He/she finds it unsatisfactory
+- **amiglu'lg** — sort of good \| somewhat good \| It is sort of good
+- **amiglu'sit** — sort of good \| so·so \| somewhat precious \| He is somewhat good
+- **amsala'latl** — do something wrong to \| do something incorrect to \| He/she does something wrong or incorrect to someone else  *(also: social-life)*
+- **amsala's'g** — go wrong \| It goes wrong
+- **amsala'sit** — do wrong \| go wrong \| He goes wrong
+- **amsaliaq** — go wrong \| It goes wrong
+- **apajiaq** — result of \| outcome \| return \| comeuppance \| penalty \| reward \| It comes back  *(confidence: m)*  *(note: comeuppance/outcome)*
+- **espe'g** — important \| high in rank \| high in rank \| important \| He/she is high in rank \| It is important  *(also: leadership-and-law)*
+- **gegnua'latl** — do correctly or properly \| He/she does it properly
+- **gegnua'teget** — inform \| do what is proper or correct \| He/she informs \| He/she does what is proper  *(also: talking)*
+- **gegnua'toq** — do correctly or properly \| He/she does it correctly
+- **gelu'lg** — good \| nice \| It is good
+- **gelu'si'ji'jit** — very small and somewhat good \| He/she is very small and somewhat good
+- **gelu'sit** — good \| nice \| He/she is good
+- **giasgiw** — correct \| proper \| exactly \| It is correct
+- **giasgiwewei** — correct one \| proper one \| right one \| The correct one
+- **gi'wajiaq** — honest \| fact \| true \| so \| It is a fact  *(note: true/fact)*
+- **gjitmei** — genuine \| genuine \| really \| real one \| real one \| actually \| truly \| factually \| He/she/it is the genuine one \| It is the genuine one \| Really  *(confidence: m)*  *(note: genuine/really)*
+- **goqqaja'teget** — do the right thing \| do correctly \| He/she does the right thing  *(also: character)*
+- **gs'geltaqan** — valued and protected \| something held dear \| precious \| someone held dear \| something animate  held dear \| Valued and protected person or thing \| Valued and protected thing  *(also: emotions)*
+- **gsite'taqan** — someone cherished or valued \| something cherished or valued \| someone precious \| something precious \| Someone cherished or valued \| Something cherished or valued  *(also: emotions)*
+- **gsnqo'qon** — foolishness \| silly \| pointless \| Foolishness
+- **gsnqo'weiei** — foolish thing \| useless object \| worthless object \| Foolish thing
+- **istue'g** — different \| different \| not normal \| strange \| strange \| He/she is different \| It is different  *(confidence: m)*  *(note: different/strange)*
+- **logowit** — fortunate \| lucky \| He/she is lucky  *(confidence: m)*  *(note: lucky)*
+- **mawiglulg** — very good \| It is very good
+- **mawiglu'sit** — very good \| He/she is very good
+- **maw\_winjig** — very bad \| It is very bad
+- **maw\_winjit** — very bad \| worse \| It is very bad
+- **menaqajewa'latl** — do carefully and correctly \| He/she does something carefully and correctly to him/her/it
+- **menaqajewa'toq** — do carefully and correctly \| He/she does it carefully and correctly
+- **menaqajewei** — rightfully \| right or correct one \| right or correct one \| by rights! (exclamation) \| Rightfully \| Right or correct one \| Right or correct one
+- **metue'g** — difficult \| hard to do \| It is difficult  *(note: difficult)*
+- **mujgajewei** — the best! \| The best!
+- **naqamase'g** — manageable \| easy (to do) \| at hand, handy \| It is manageable  *(note: easy)*
+- **naqsio'pla'latl** — quickly do wrong \| He/she quickly does him/her wrong  *(confidence: m)*
+- **naqsio'pla'toq** — quickly do wrong \| He/she quickly does it wrong  *(confidence: m)*
+- **naqsitetapua'latl** — quickly do right \| satisfy quickly \| quickly treat correctly or appropriately \| He/she quickly does him/her/it right  *(confidence: m)*
+- **naqsitetapua'toq** — quickly do right \| quickly do correctly \| He/she quickly does it right  *(confidence: m)*
+- **nsanoqon** — danger \| Danger  *(note: danger)*
+- **nsanoqonig** — dangerous \| It is dangerous
+- **nsanoqonit** — dangerous \| He/she is dangerous
+- **o'pla'latl** — do wrong \| do something wrong to \| He/she does him/her wrong  *(also: conflict)*
+- **o'pla's'g** — go wrong \| It goes wrong
+- **o'pla'sit** — go wrong \| He/she/it goes wrong
+- **o'pla'teget** — do wrong \| do incorrectly \| He/she does wrong
+- **o'pla'toq** — do wrong \| do incorrectly \| He/she does it wrong
+- **pajijiglulg** — extremely good or nice \| best \| It is extremely good
+- **pajijiglu'sit** — extremely good or nice \| the best \| He/she is extremely good
+- **pajijiwinjig** — extremely bad \| worst \| It is worst
+- **pajijiwinjit** — extremely bad \| worst \| It is worst
+- **pegwatoq** — at fault \| cause \| He/she is at fault  *(confidence: m)*  *(note: at fault)*
+- **piamglu'lg** — better \| It is better
+- **piamglu'sit** — better \| He/she is better
+- **piltua's'g** — turn out differently \| turn out unexpectedly \| It turns out differently  *(confidence: m)*
+- **piltua'sit** — turn out differently \| turn out unexpectedly \| He/she turns our differently  *(confidence: m)*
+- **teliaq** — true \| happens \| It's true \| It happens  *(note: true)*
+- **tetapua'latl** — treat correctly or appropriately \| treat right \| do right by \| satisfy \| He/she treats him/her correctly  *(also: social-life)*
+- **tetapua'teget** — do what is right \| do right way \| He/she does what is right  *(also: character)*
+- **tetapua'toq** — do right way \| do correctly \| He/she does it the right way
+- **tetapuigsua'toq** — take right or proper way \| He/she takes it the right way
+- **tetapu'teg** — correct \| proper \| It is correct
+- **ugtapsunig** — useful \| It is useful
+- **ugtapsunit** — useful \| He/she is useful
+- **wejue'g** — have close call \| He/she has a close call  *(confidence: m)*  *(note: close call)*
+- **welapetg** — benefit \| is useful to \| obtain favor or something good from \| He/she benefits from it
+- **wela's'g** — turn out well \| It turns out well
+- **wela'toq** — do properly \| He/she does it properly
+- **weliaq** — useful \| good \| It is useful
+- **welitpa's'g** — happen unexpectedly \| happen pleasantly \| fortunate happenstance \| It happens unexpectedly and pleasantly  *(confidence: m)*  *(note: happenstance)*
+- **welitpa'sit** — happen pleasantly \| happen unexpectedly \| fortunate happenstance \| He/she/it happens unexpectedly and pleasantly  *(confidence: m)*
+- **wesamglu'lg** — too good \| It is too good
+- **wetapsunig** — useful \| It is useful
+- **wetapsunit** — useful \| He/she is useful
+- **ewla'sg** — it goes miserably \| It goes miserably
+- **aniamug** — improper \| Improper
+- **ewla's'g** — it goes poorly \| it is not going well \| It goes poorly, it is not going well.
+- **ewlteg** — made poorly \| badly done \| It is made poorly or badly done.
+- **piamiglu'sit** — better (quality) \| more beautiful \| more handsome \| more attractive \| more good looking \| Better (quality); (older meaning about appearance) more beautiful, handsome, attractive, good looking  *(also: appearance)*
+- **aneteg** — inconvenant \| improper \| unseemly \| Inconvenient
+
+## Archived entries (lower priority)
+
+- **goqwatteg\*\*** — straight \| right \| It is right
+- **tela'tegeg** — caused \| do it \| action or inaction caused something to happen \| do something \| It is the cause \| It does something
+- **tela'teget** — at fault \| do something \| He/she is at fault \| He/she does something
+- **ugtapsun** — useful person \| useful object
+- **weliet\*\*** — good \| useful
+- **weli·** — good, nice

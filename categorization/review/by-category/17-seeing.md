@@ -1,0 +1,160 @@
+# Seeing & Looking (`seeing`)
+
+Theme: *Mind & Language* — 146 entries (+7 archived)
+
+- **alamatl** — look around for \| He/she looks around for him/her
+- **alamugsit** — search for \| look for \| He/she/it is searched for
+- **alamut** — look for \| search for \| He/she looks for him/her/it
+- **alapa'sit** — looks around \| looks here and there \| looks about \| He/she/it looks around
+- **alapiet** — looks around \| looks here and there \| looks about \| He/she/it looks around
+- **alapimg** — time spent looking about \| time spent looking around \| Time spent looking about
+- **alapit** — look about \| look around \| He/she looks about
+- **alapteget** — look about \| look around \| He/she/it looks about
+- **alapt'g** — look around for \| He/she looks around for it
+- **algwiluatl** — looking about for \| He/she is looking about for him/her/it
+- **aluasa'sit** — shadow \| fade in and out of view \| appear and disappear \| His/her shadow/spirit fades in and out
+- **amasapit** — far·sighted \| He/she is far-sighted
+- **angamatl** — look at \| view \| He/she looks at  him/her
+- **angamsit** — look at self \| examine self \| He/she looks at self
+- **angamsutiei** — mirror \| looking glass \| Mirror  *(also: household)*
+- **angapt'g** — look at \| view \| He/she views it
+- **apsgu'lapa'sit** — turns head around to look \| turn head around \| He/she looks back  *(also: body-actions)*
+- **aqawigalatl** — hide \| conceal \| He/she hides him  *(confidence: m)*  *(note: hide/conceal -> seeing)*
+- **aqawigatg** — hide \| conceal \| He/she hides it  *(confidence: m)*
+- **aqupit** — hidden and sitting \| He/she is sitting somewhere and is hidden from view  *(also: position)*
+- **aquteg** — hidden \| hidden area \| It is hidden  *(also: position)*
+- **ejiglamugwiet** — fade away \| He/she is fading away
+- **elapa'sit** — look in a direction \| look toward \| He/she/it looks in a direction
+- **elapetesing** — glance at \| He/she glances at
+- **elapit** — looking towards \| looking at \| He/she is looking towards
+- **gesga'latl** — make disappear \| He/she makes him/her/it disappear
+- **gesgamu'g** — blurred \| looks wide \| appears wide \| It is blurred \| It looks wide  *(also: size-and-shape)*
+- **gesgamugsit** — blurred \| looks wide \| It (tree) is blurred \| It looks wide  *(also: size-and-shape)*
+- **gesgamugwa'latl** — make vanish \| make disappear \| dissolve \| He/she makes him/her disappear
+- **gesgamugwa's'g** — dissolving \| disappearing \| vanishing \| It is disappearing
+- **gesgamugwa'sit** — disappearing \| dissolving \| vanishing \| He/she (ghost) is disappearing
+- **gesgamugwa'toq** — make vanish \| make disappear \| dissolve \| He/she makes it vanish
+- **gesgamugwiaq** — fade away \| fade out of sight \| It fades away
+- **gesgamugwiet** — fade away \| fade out of sight \| It (picture) fades away
+- **gesga'sit** — disappear \| wide \| become invisible \| become wider \| He/she disappears \| It becomes wider  *(also: size-and-shape)*
+- **gesgatesg** — disappear in flash \| vanish \| It disappears in a flash
+- **gesgatesing** — disappear in flash \| vanish \| He/she vanishes
+- **gesga'toq** — make disappear \| make wider \| He/she makes it disappear \| He/she makes it wider  *(also: size-and-shape)*
+- **gesgmaplgigwa't** — see things that are not there \| see a mirage \| see an optical illusion \| He/she sees a mirage
+- **gesguta'tl** — catch red-handed \| catch by surprise \| He/she caught him/her red-handed  *(confidence: m)*  *(note: catch red-handed)*
+- **gesiangamatl** — stare \| He/she stares at him/her
+- **gesiangapt'g** — stare \| He/she stares at it
+- **gigjapit** — near·sighted \| He/she is near·sighted
+- **gimamatl** — peek at \| spy on \| look at surreptitiously \| He/she looks at him surreptitiously
+- **gimapit** — peek \| look on secretly \| He/she peeks
+- **gimapt'g** — peek at \| spy on \| look at secretly \| He/she peeks at it
+- **gipoqamatl** — glance at \| catch a glimpse \| He/she glances at him/her
+- **gipoqapt'g** — glance at \| catch a glimpse \| He/she glances at it
+- **gwilg** — search \| He/she searches for it
+- **gwiluasit** — search \| He/she searches
+- **gwiluatl** — looks for \| search for \| He/she searches for him/her
+- **ilamatl** — sight \| look over \| examine \| He/she examines him/her
+- **ilapt'g** — look over \| examine \| He/she examines it
+- **istu'napui'gatl** — take crooked picture \| He/she takes a crooked picture of him/her/it  *(confidence: m)*  *(note: crooked photo)*
+- **istu'napui'g'g** — take crooked picture \| He/she takes a crooked picture of it  *(confidence: m)*
+- **laputi** — spy glass \| telescope \| Spy glass  *(also: tools)*
+- **laputi'l** — binoculars \| Binoculars  *(also: tools)*
+- **malapit** — see poorly \| bad eyesight \| failing vision \| He/she sees poorly
+- **masquta'tl** — quickly hide \| He/she quickly hides him/her/it  *(confidence: m)*
+- **masqute'g** — quickly hide \| temporarily hide \| put away quickly or temporarily \| save temporarily (slang) \| He/she quickly hides it  *(confidence: m)*
+- **matuapetesing** — glance \| He/she glances
+- **menjinoqamatl** — look at up and down or from head to toe \| He/she  looks at him/her up and down
+- **me'su'tug** — in full view \| in full view \| It is in full view \| He/she/it is in full view
+- **mimugwalatl** — hide \| conceal \| He/she hides him/her
+- **mimugwasit** — hide \| He/she hides
+- **mimugwatoq** — hide \| conceal \| He/she hides it
+- **munsapit** — look persistently \| He/she looks persistently
+- **musga'toq** — show something \| He/she shows it
+- **najine'iamatl** — go to look in on \| go to take a brief look \| go to glimpse at \| He/she goes to look in on him/her  *(also: social-life)*
+- **napui'gatl** — take photograph \| draw \| trace \| He/she takes a photograph of him/her  *(also: stories-and-writing)*  *(note: photograph)*
+- **napui'g'g** — take photograph \| draw \| trace \| He/she takes a photograph of it  *(also: stories-and-writing)*
+- **napui'gigemgewei** — camera \| tracing paper \| Camera \| Tracing paper  *(also: household)*
+- **napui'giget** — take photographs \| trace, draw or copy a picture \| He/she takes photographs
+- **napui'gign** — photograph \| picture \| Photograph  *(also: household)*
+- **negapigwa'latl** — make blind (with light) \| He/she makes him/her blind
+- **neia'latl** — shows it \| bring into view \| He/she shows something
+- **neiamatl** — look in on briefly \| check on briefly \| call upon (for visit) \| He/she looks in on him/her briefly  *(also: social-life)*
+- **neiamugwa'latl** — cause to appear \| make to appear \| He/she causes him/her to appear
+- **neiamugwa'toq** — make to appear \| cause to appear \| He/she causes it to appear
+- **neiapt'g** — look at briefly \| check on briefly \| He/she checks on it briefly
+- **neiapugua'sit** — step into view \| step out from behind somewhere in full view \| He/she steps into view
+- **neia's'g** — appear \| show up \| It appears
+- **neia'sit** — appear \| show up \| He/she appears
+- **neia'tuatl** — shows... \| He/she shows him/her...
+- **nemiatl** — see \| He/she sees him/her
+- **nemiteget** — see \| have eyesight \| He/she sees
+- **nemitoq** — see \| He/she sees it
+- **nepapigwa't** — blind \| He/she is blind  *(also: health)*
+- **ne'talqigwat** — excellent eyesight \| capable of seeing unnoticable or unobvious things \| He/she/it has excellent eyesight
+- **nujinapui'giget** — photographer \| take photograph \| Photographer \| He/she takes photographs  *(also: occupations)*
+- **nutapit** — scout (around) \| scout \| He/she scouts \| Scout  *(also: occupations)*
+- **panawijqanawet** — thoroughly search \| He/she thoroughly searches
+- **panuijgatg** — examine \| study \| He/she examines it  *(also: thinking)*
+- **panuijgo'latl** — examine in an inquisitive manner \| invasive,  prying investigation \| study \| dig through \| He/she examines him/her/it in an inquisitive manner
+- **panuijgo'tasit** — examine in an inquisitive manner \| invasive,  prying investigation \| dig through \| He/she examines in an inquisitive manner
+- **pa'qamajeiwatl** — snooping \| meddlesome to him/her \| examine \| inspect \| investigate \| study \| He/she is snooping on someone  *(also: character)*
+- **pa'qamajo'tg** — snooping \| meddlesome to it \| examine \| inspect \| investigate \| study \| He/she snoops on it  *(also: character)*
+- **pe'gwamatl** — pleased to see again after a long time \| He/she is pleased to see him/her/it again after a long time  *(also: emotions)*
+- **pe'gwamu'g** — it is nice to see again after a long time \| It is nice to see again after a long time (has passed)  *(also: emotions)*
+- **pe'gwamugsit** — it is nice to see again after a long time \| It is nice to see him/her/it again after a long time (has passed)  *(also: emotions)*
+- **pe'gwapt'g** — is pleased to see again after long time \| He/she is pleased to see it again after a long time  *(also: emotions)*
+- **peigwapit** — see all around \| He/she sees all around
+- **petasit** — blinded (by glare of light or sun) \| He/she is blinded by a glare of light or the sun
+- **piltuamatl** — see something strange about \| look strange \| look different \| He sees something strange about him/her
+- **piltuapt'g** — see something strange in \| look different to \| look strange  \| look at differently \| It looks strange to him/her
+- **pisgwapa'sit** — peek in \| He/she peeks in  *(also: social-life)*
+- **pisgwapit** — look in (from outside) \| He/she is outside looking in
+- **plu'jaqamat** — look in mirror (at self) \| He/she looks in a mirror (at self)
+- **plu'jaqamati** — mirror \| Mirror  *(also: household)*
+- **pu'tapa'sit** — peep through \| He/she peeps through
+- **samamatl** — get a glimpse of \| He/she gets a glimpse of someone
+- **samapt'g** — get a glimpse of \| He/she gets a glimpse of it
+- **sepigwa'sit** — close eyes \| He/she closes his/her eyes  *(also: body-actions)*
+- **sepigwet** — have eyes closed \| He/she has his/her eyes closed  *(also: body)*
+- **sepuijjenatl** — hide or conceal in hand \| He/she hides or conceals in hand  *(also: holding)*
+- **sepuijjeng** — hide or conceal in hand \| He/she hides or conceals it in the hand  *(also: holding)*
+- **sipuasaptas'g** — transparent as clear water \| It is as transparent as clear water  *(also: water)*
+- **telaplgigwa'sit** — see mirage \| see imaginary thing \| He/she sees a mirage
+- **tewapit** — look out (from inside) \| He/she looks out
+- **ugpugugwa'latl** — eye \| watch closely \| He/she is eyeing him/her/it
+- **ugpugugwa'toq** — eye \| watch closely \| He/she is eyeing it
+- **ugpugugwe'l** — eyeglasses \| glasses \| His/her eyeglasses  *(also: household)*
+- **we'gwamatl** — watch until out of sight \| follow (with eyes) until out of sight \| He/she watches him/her until he/she is out of sight
+- **we'gwapt'g** — watch until out of sight \| follow (with eyes) until out of sight \| He/she watches it until it is out of sight
+- **we'jiatl** — find \| come upon \| He/she finds him/her  *(note: find)*
+- **wejinmiatl** — try to see \| He/she tries to see someone
+- **wejinmitoq** — try to see \| He/she tries to see
+- **we'jitoq** — find \| come upon \| He/she finds it
+- **welamatl** — attracted to appearance \| like looks of \| He/she is attracted to the appearance of him/her  *(also: emotions)*
+- **welapt'g** — attracted to \| like the appearance \| He/she is attracted to it  *(also: emotions)*
+- **welisapaptas'g** — very transparent \| easy to see through \| It is very transparent
+- **wilogamatl** — catch full view \| He/she catches full view of him/her
+- **wilogapt'g** — catch full view \| He/she catches a full view of it
+- **winapit** — see poorly \| He/she sees poorly
+- **wisqaplgigwa't** — snow blinded \| He/she is snow blinded.  *(also: weather)*
+- **goptmneg** — limit of view \| horizon line \| range of vision \| Limit of view/horizon line/range of vision.  *(also: sky)*
+- **aniamsit** — looks at self with dissatisfaction \| looks at him/herself with discontent  \| He/she looks at him/herself with dissatisfaction.  *(also: emotions)*
+- **oqonoqo'pilg** — blindfolds it \| He/she blindfolds it.  *(also: fastening)*
+- **ewlamatl** — looks at him/her with pity or sadness \| He/she looks at him/her with pity or sadness.  *(also: emotions)*
+- **wejgwimusga'sit** — come into sight \| come into view \| He/she/it comes into sight, into view  *(also: movement)*
+- **aniaptg** — looks at it with contempt \| He/she looks at it with contempt.  *(also: emotions)*
+- **oqonoqo'pilatl** — blindfolds him/her/it \| He/she blindfolds him/her/it.  *(also: fastening)*
+- **msigui'ganapt'g** — it resembles a thatched house to him/her \| It resembles a thatched house to him/her.  *(also: dwellings)*
+- **aniamtultijig** — they (p) look at each other with discontent \| they (p) look at each other with discontent  *(also: emotions)*
+- **msigui'ganamu'g** — resembles a thatched house \| It resembles a thatched house.  *(also: dwellings)*
+- **elsegenigenji'jiganuapt'g** — sees it as a small brick house \| He/she sees it as a small brick house.  *(also: dwellings)*
+
+## Archived entries (lower priority)
+
+- **gegapit\*\*** — nearsighted \| He/she is nearsighted
+- **gesapt'g** — sees easily \| sight of it is appealing
+- **gesatenmat** — affected by bright light \| He/she is affected by the bright light
+- **gesga's'g** — disappear \| gets wider \| become invisible \| become wider \| widens \| It disappears \| It gets wider
+- **neia'toq** — show it to \| expose something \| brings out \| bring into view \| He/she exposes it
+- **pannujguatg** — examines \| explores \| researches \| looks closely \| He/she examines it
+- **putapa'sit** — peer into a hollow \| He/she peers into a hollow

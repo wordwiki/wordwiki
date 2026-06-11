@@ -1,0 +1,88 @@
+# Sewing, Knitting & Cloth (`sewing-and-textiles`)
+
+Theme: *Home & Daily Life* — 74 entries (+7 archived)
+
+- **amalisgnuet** — crochet \| fancy knitting \| He/she crochets
+- **amaltaqawi'gas'g** — embroidered \| mixed design \| It has designs on it
+- **amaltaqi'satl** — sew a design on \| embroider \| He/she sews a design on him
+- **amaltaqi'sewet** — embroider \| He/she is embroidering
+- **amaltaqi's'g** — embroider \| He/she embroiders it
+- **a'papi'j** — thread \| twine \| string \| Thread  *(also: household)*
+- **apsi'satl** — reduce the size by sewing \| alter to smaller size \| He/she reduces the size of it/him/her by sewing  *(also: size-and-shape)*
+- **apsi's'g** — to make smaller by sewing \| alter to smaller size by sewing \| He/she makes it smaller by sewing  *(also: size-and-shape)*
+- **apsisgnuet** — small stitch knitting \| fine·weave \| He/she knits using small stitches
+- **atla'wegn** — cloth \| Cloth
+- **eli'satl** — sew \| He/she sews it (shirt)
+- **eli'sewatl** — sew for \| He/she sews for him/her
+- **eli'sewet** — sew \| He/she sews
+- **eli's'g** — sew \| He/she sews it
+- **elisgnualatl** — braid \| knit (sweater) \| He/she knits it
+- **elisgnuaqan** — knitting \| Knitting
+- **elisgnuatg** — braid \| knit \| He/she braids it
+- **elisgnuet** — knit \| weave \| braid \| He/she weaves
+- **elisqanapega'toq** — cast on in knitting \| cast off in knitting \| weave base of basket \| He/she casts on  *(also: basket-making)*
+- **eltaqanewet** — spin (yarn) \| He/she is spinning (yarn)
+- **galiset** — flannelette \| flannel \| Flannelette
+- **ga'tomi** — eelskin \| Eelskin  *(also: fish)*
+- **gepjoqi'satl** — sew up \| sew shut \| sew closed \| He/she sews him/her/it up
+- **gepjoqi's'g** — sew up \| seam \| sew shut \| sew closed \| He/she sews it up
+- **gisi'satl** — sew \| He/she has sewn it(shirt)
+- **gisi's'g** — sew \| He/she has sewn it
+- **jijgluewjuapi** — wool \| yarn \| Yarn
+- **jijgluewjuapiei** — woolen material \| woolen material (as in socks) \| Woolen \| Woolen
+- **lapli'sign** — satin \| silk \| Silk
+- **lapli'signei** — satin or silk material \| satin or silk fabric \| Made of satin or silk material  *(also: clothing)*
+- **lisgnuaqan** — weaving \| knitting \| Knitting
+- **mawisgnuatg** — knit together \| braid together \| weave together \| He/she knits it together
+- **mesna'toq** — mend \| patch \| repair \| He/she mends it  *(also: making-and-fixing)*
+- **mesni'satl** — patch \| mend \| sew \| He/she patches it(shirt)  *(also: making-and-fixing)*
+- **mesni's'g** — patch \| mend \| sew \| He/she patches it  *(also: making-and-fixing)*
+- **m'gegn** — hide \| leather \| skin \| Leather  *(also: hunting)*
+- **misegnuj** — rag \| Rag  *(also: household)*
+- **mulinji'j** — sewing machine \| Sewing machine  *(also: household)*
+- **nangwe'get** — card (moose hair or wool) \| pick through hair to remove (burdocks) \| He/she cards
+- **nugt'g** — soften by chewing \| He/she softens it by chewing  *(confidence: m)*  *(note: chewing leather)*
+- **pa'pnji'j** — spool \| bobbin \| Bobbin  *(also: household)*
+- **pawnigwet** — dress hides \| tan hides \| He/she tans or dresses hides  *(also: hunting)*
+- **pegwi'satl** — patch \| He/she patches it(shirt)  *(also: making-and-fixing)*
+- **pegwi's'g** — patch \| He/she patches it  *(also: making-and-fixing)*
+- **pgegn** — hide (of skin) \| Hide (of skin)  *(also: hunting)*
+- **pgesign** — piece of cloth \| Piece of cloth
+- **pgesign'ji'j** — small piece of cloth \| Small piece of cloth
+- **pilegn** — new cloth \| New cloth
+- **pituega'latl** — line a garment(as coat) \| He/she lines it(coat)  *(also: clothing)*
+- **pituega'taqan** — lining \| Lining
+- **pituega'toq** — line (a garment) \| He/she lines it
+- **piwsign** — scrap of cloth \| scrap of paper \| Scrap of cloth
+- **poqwas'tiei** — thimble \| Thimble  *(also: tools)*
+- **qasawo'qu'j** — knitting needle \| Knitting needle  *(also: tools)*
+- **sa'pign** — awl \| Awl  *(also: tools)*
+- **sa'qati** — needle \| knitting needle \| Needle \| Knitting needle  *(also: tools)*
+- **seiegn** — dry goods \| clothing material \| cloth fabric \| Dry goods
+- **seiegnji'j** — piece of material \| piece of fabric \| Piece of material
+- **sepusa'latl** — bring to point \| seal \| He/she seals him/her
+- **sepusa'toq** — bring to point \| seal \| He/she seals it
+- **sepusi'satl** — sew closed gap of pointed(animate) article \| seam \| darn \| He/she sews closed the gap of a pointed(animate) article
+- **sepusi's'g** — sew closed gap of pointed article (as sock or mitt) \| seam \| darn \| He/she sews closed the gap of a pointed article
+- **sipistaqano'suti** — safety pin \| Safety pin  *(also: household)*
+- **sipnma'latl** — make point (in knitting) \| He/she makes a point in knitting
+- **sipnma'toq** — make point (in knitting) \| He/she makes a point in knitting
+- **sipnmi'get** — join together (make point) \| He/she joins together to make a point
+- **tetapui'satl** — sew right way or correctly \| He/she sews it (shirt) the right way
+- **tetapui's'g** — sew the right way or correctly \| He/she sews it the right way
+- **tia'muegn** — moosehide \| Moosehide  *(also: animals)*
+- **ugpitni'sewet** — sew (by hand) \| He/she sews by hand
+- **wapusuegn** — rabbit skin \| Rabbit skin  *(also: animals)*
+- **laqsun** — leather for strapes \| leather for bindings \| leather for Babish on traditional snowshoes \| Leather for straps, bindings, babish on traditional snowshoes.  *(also: vehicles)*
+- **mtai** — beaver skin \| Beaver skin.  *(also: animals)*
+- **gupilgwataqan** — stitch \| Stitch
+
+## Archived entries (lower priority)
+
+- **eltnualatl\*\*** — knit \| He/she knits...
+- **eltnuatg\*\*** — knit \| He/she knits it
+- **eltnuet\*\*** — knit \| purr (as cat) \| He/she knits
+- **menapega'toq** — cast off (in knitting)
+- **mta'i\*\*** — green (undressed) hide
+- **nasapega'toq** — cast on (knitting) \| He/she casts on
+- **waiegn\*\*** — cloth

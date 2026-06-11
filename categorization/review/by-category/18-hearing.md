@@ -1,0 +1,119 @@
+# Hearing & Sounds (`hearing`)
+
+Theme: *Mind & Language* — 101 entries (+11 archived)
+
+- **altugwa't** — make sound of footsteps \| He/she goes about making the sound of footsteps  *(also: movement)*
+- **amig'pistaqanat** — slightly deaf \| somewhat hard of hearing \| He/she is somewhat hard of hearing  *(also: health)*
+- **ams'tg** — hear vaguely \| hear portion \| He/she hears it vaguely
+- **ams'tmat** — hear about vaguely \| hear about partly \| He/she hears vaguely about
+- **ams'tuatl** — only partly hear \| half hear \| He/she only partly hears him/her
+- **enmoqowet** — carry (pertaining to voice) \| His/her voice carries
+- **epetoqsit** — groan \| make moans \| He/she moans  *(also: body-actions)*
+- **etlaqqisewet** — hollering \| He/she is hollering  *(also: talking)*
+- **etltoqsit** — make loud sound \| He/she makes a loud sound
+- **gepistaqanat** — deaf \| He/she is deaf  *(also: health)*
+- **gepitnetoqsit** — sounds nasal \| sounds hoarse \| Sounds nasal  *(also: health)*
+- **gesgust'g** — overhear \| He/she overhears it
+- **gesgustuatl** — overhear \| He/she overhears him
+- **gesigawewo'gwet** — speak loudly \| speak quickly \| speak loudly and quickly \| He/she speaks loudly  *(also: talking)*
+- **gesigawitnet** — snort \| snore loudly \| It(horse) snorts  *(also: body-actions)*
+- **gesigawta'q** — make loud noise \| make loud sound \| It is making a loud sound
+- **gesigawtewesigeg** — make loud report (as cannon or gun) \| It makes a loud report
+- **gesigawtewesiget** — make loud report (as cannon or gun) \| He/she/it makes a loud report (as\_cannon\_or\_gun)
+- **gesigawtoqsit** — make loud sound with voice \| He/she makes a loud sound with his/her voice
+- **gesigawweg** — loud \| It is loud
+- **gesigawwet** — talk loud \| makes a loud noise with voice \| shouts \| He/she talks loud  *(also: talking)*
+- **gesitewipnet** — groan \| He/she groans  *(also: body-actions)*
+- **gesnugwetoqsit** — sound sickly \| He/she sounds sickly  *(also: health)*
+- **getu'g** — to crow \| holler \| sing \| He/she crows(rooster)  *(also: birds)*
+- **gintewoqsit** — snore loudly \| He/she snores loudly  *(also: sleep)*
+- **gispnetoqsit** — tired sounding voice \| He/she has a tired sounding voice
+- **jagweg** — sound loud \| It sounds loud
+- **jagwet** — sound loud \| talk loudly \| He/she talks loudly  *(also: talking)*
+- **jenteg** — quiet \| It is quiet  *(note: quiet -> hearing)*
+- **jigistaqanat** — listen attentively \| eavesdrop \| He/she listens attentively
+- **jigmit** — growl \| He/she growls  *(also: animals)*
+- **jigmugt'g** — growl at \| He/she growls at it  *(also: animals)*
+- **jigmugtuatl** — growl at \| He/she growls at him/her  *(also: animals)*
+- **jigs'tg** — listen \| He/she listens to it
+- **jigs'tuatl** — listen to \| He/she listens to him/her
+- **jijuejg** — bell \| Bell  *(also: household)*
+- **jijuejg'ji'j** — small bell \| sleigh bell \| Small bell
+- **jipji'ju'gisutnat** — have voice like bird \| He/she has a voice like a bird  *(also: talking)*
+- **mattaqa'toq** — pull on to make sound (as bell) \| He/she pulls on it to make a sound  *(also: pushing-and-pulling)*
+- **metete'get** — knocking \| pounding \| He/she is knocking  *(also: hitting)*
+- **metetoqsit** — make repeated sounds (like groaning, chirping or cawing) \| cawing, quacking (Nova Scotia) \| He/she makes repeated sounds with voice
+- **metewaqs'g** — make a fluttering sound \| make a flapping sound \| It(flag) makes a flapping sound
+- **metewaqsing** — makes a fluttering sound \| makes a flapping sound \| It(bird) makes a flapping sound
+- **metewa'sit** — makes a sound from moving about \| He/she makes a sound from moving about
+- **metewatalg** — makes a sound when eating \| It(horse) makes a sound when eating
+- **metewa'toq** — makes a sound in handling it \| He/she makes a sound in handling it
+- **metewe'g** — makes a sound by stirring or bustling about \| He/she makes a sound by stirring or bustling about
+- **meteweng** — heard talking \| He/she is heard talking
+- **metewenmit** — heard laughing \| He/she is heard laughing
+- **metewilua't** — heard sounding off in anger \| heard bellowing (as moose) \| He/she is heard sounding off in anger
+- **metewintoq** — heard singing \| He/she is heard singing  *(also: music-and-dance)*
+- **metewjigmit** — heard growling (as dog) \| It(animal) is heard growling  *(also: animals)*
+- **metewo'gwet** — heard talking \| He/she is heard talking
+- **metewoqsing** — heard snoring \| He/she is heard snoring  *(also: sleep)*
+- **metewtemit** — heard crying \| He/she is heard crying
+- **migust'g** — overhear \| He/she overhears it
+- **migustuatl** — overhear \| He/she overhears him/her
+- **miltoqsit** — makes different sounds with voice \| He/she makes different sounds with his voice
+- **ne'tistaqanat** — extrememly good hearing \| Extrememly good hearing
+- **nutg** — hear \| He/she hears it
+- **nutmat** — hear about \| hear tell of \| He/she hears about
+- **nutuatl** — hear \| He/she hears someone
+- **pa'qastmat** — easily pick up news and gossip \| He/she easily picks up news and gossip  *(also: talking)*
+- **paqtaqawa'q** — echoey \| It is echoey
+- **pasg'teg** — pop (as log on fire or as corn) \| It pops  *(also: fire)*
+- **pa'sg'teg** — explode (moisture in log on fire) \| It explodes  *(also: fire)*
+- **pemta'q** — go by making noise \| It goes by making noise
+- **pemtoqsit** — prattle along \| yelling by \| gab by \| He/she is prattling or gabbing by  *(also: talking)*
+- **pe'sg'teg** — fire (as gun) \| It fires (as gun)  *(also: hunting)*
+- **sesgwalatl** — holler \| scream at \| He/she hollers at him/her  *(also: talking)*
+- **se'sgwet** — holler \| scream \| shout \| He/she screams  *(also: talking)*
+- **sespe'g** — noisy \| noisy \| He/she is noisy \| It is noisy
+- **sespena'q** — noisy \| It is noisy
+- **sespenoqsit** — noisy \| snore loudly \| He/she is noisy \| He/she snores loudly
+- **sespeta'q** — continuous noise \| It is noisy continously
+- **sespetoqsit** — talk noisily \| babble on \| loud sound(s) made with the voice \| He/she is talks noisily  *(also: talking)*
+- **sespilugweg** — work noisily \| It works noisily  *(also: work)*
+- **sespilugwet** — work noisily \| He/she works noisily  *(also: work)*
+- **sigtewa'latl** — tired of hearing him/her \| tired of hearing repetition \| He/she tires someone by talking
+- **sisuaqata'q** — chime \| It chimes
+- **sisua'qate'gn** — bell clapper \| Bell clapper
+- **sisua'qi'gn** — chime \| bell \| Chime
+- **siws'tuatl** — tired of listening to someone \| tired of listening to repetition \| tired of hearing someone \| He/she is tired of listening to him/her  *(also: emotions)*
+- **telgisutnat** — sound (voice) in such manner \| He/she sounds in such manner
+- **telistaqanewa'sit** — hears things that are not there \| thinks one hears something \| He/she hears things that are not there
+- **tels'tg** — hear thus \| hear something like \| hear sound that sounds like \| He/she hears it thus
+- **tels'tmat** — hear tell \| hear-say \| hear news of something \| He/she has heard...
+- **tels'tuatl** — thinks hears someone \| thinks hears someone say \| hear sound like (him/her/it) \| He/she thinks he/she hears him/her/it
+- **telta'q** — sound like \| sound so \| It sounds like
+- **teltoqsit** — sound like \| sound so \| He/she sounds like
+- **wantaqteg** — quiet \| It is quiet
+- **wegilalatl** — bark at \| It (dog) barks at her/him  *(also: animals)*
+- **wegilat** — bark \| He/she/it (dog) barks  *(also: animals)*
+- **wels'tg** — like sound of \| He/she likes the sound of it
+- **wels'tuatl** — like sound of singing \| like sound of speaking \| He/she likes the sound of him/her
+- **welta'q** — have good sound (music) \| It has a good sound  *(also: music-and-dance)*
+- **weltoqsit** — have good sound (music) \| He/she has a good sound  *(also: music-and-dance)*
+- **pepgwijeta'q** — sounds like a drum \| It sounds like a drum  *(also: music-and-dance)*
+- **ewlistmuatl** — heeds his/her request \| He/she heeds his/her request.  *(also: social-life)*
+- **ewlistuatl** — heeds his/her request \| He/she heeds his/her request.  *(also: social-life)*
+- **ewlistg** — listen, abide, hearken \| lend an ear, listen mercifully \| He/she heeds.  *(also: character)*
+
+## Archived entries (lower priority)
+
+- **gesgwaq\*\*** — echo
+- **gesigawulusit\*\*** — make loud crack \| twang
+- **jigs'tmagwet\*\*** — approach and listen
+- **jigteg** — not much happening \| calm, quiet, dull,... \| it is quiet, it is...
+- **pentoqsit** — make sounds \| quack \| He/she/it makes sounds
+- **sesaqtoqsit** — cackle \| He/she cackles
+- **welgisutnat** — good voice \| good singing voice \| He/she has a good voice
+- **welgoweg** — sound pleasing to ear \| sound pleasant \| sound nice
+- **welistaqanat** — good hearing \| He/she has good hearing
+- **wetewelmit** — neigh \| He/she neighs
+- **wetewiluat** — bellow \| low \| He/she is bellowing

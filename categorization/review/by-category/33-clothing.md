@@ -1,0 +1,145 @@
+# Clothing & Dress (`clothing`)
+
+Theme: *Home & Daily Life* — 127 entries (+11 archived)
+
+- **a'gwesn** — hat \| Hat
+- **aligew** — clothing \| clothes \| garments \| Clothing
+- **a'su'ngewatl** — provide clothing \| clothe \| provide household goods \| He/she provides clothing for someone  *(also: social-life)*
+- **atlai** — shirt \| Shirt
+- **atlaia'q** — wear a shirt \| He/she is wearing a shirt
+- **atlaimit** — have a shirt \| He/she has a shirt
+- **ejaqan'jetesgmat** — wear out shoe(s) on one side \| He/she wears out him/her shoes on one side  *(also: condition)*
+- **elpiso'tulatl** — bundle up (with scarf) \| wrap \| He/she bundles him up  *(also: fastening)*
+- **elqawet** — hang clothing \| He/she hangs clothing  *(also: household)*
+- **emisqa'sit** — strip self nude \| He/she strips nude  *(also: body)*
+- **emisqatesing** — strip dance \| stripped quickly \| He/she strip dances  *(confidence: m)*
+- **emisqo'tlatl** — undress \| strip naked \| He/she strips someone naked
+- **etu'gutewei** — scapular \| Scapular  *(also: ceremony)*
+- **gaqg'g** — wear out (clothing article) \| He/she wears it out  *(also: condition)*
+- **gaqgmat** — wear out clothes \| He/she wears out his/her clothes  *(also: condition)*
+- **gaqguatl** — wear out (clothing article) \| He/she wears it(shirt) out  *(also: condition)*
+- **gaqtesgmat** — wear out footwear \| He/she wears out his/her footwear  *(also: condition)*
+- **gegna'sit** — dress up \| He/she dresses up
+- **gegnesit** — dressed up \| He/she is dressed up
+- **gegno'tlatl** — dress \| cloth \| He/she dresses him
+- **gesm'pisit** — strangely dressed \| well dressed \| fancily dressed \| He/she is fancily dressed  *(also: appearance)*
+- **gispisun** — belt \| Belt
+- **gispisuna'q** — wear belt \| He/she is wearing a belt
+- **gisue'g** — keeps one warm \| warm (clothing) \| It is (keeps one) warm  *(also: temperature)*
+- **gisu'g'g** — warmly dressed \| He/she is warmly dressed  *(also: temperature)*
+- **gisu'pisit** — dress warmly \| dress for the cold \| He/she is dressed warmly  *(also: temperature)*
+- **gisu'piso'tlatl** — dress up warmly \| He/she dresses him/her up warmly  *(also: temperature)*
+- **ilpilatl** — provide clothing for \| get ready for shipping \| dress up \| He/she provides clothing for him/her/it \| He/she gets it ready for shipping  *(also: making-and-fixing)*
+- **ilpilsit** — get properly dressed \| redresses \| He/she gets properly dressed
+- **la'jijjaqan** — glove \| Glove
+- **lame'gewei** — slip \| Slip
+- **lame'geweia'q** — wear slip \| He/she is wearing a slip
+- **lamqwan** — undershirt \| Undershirt
+- **lamqwana'q** — wear undershirt \| He/she is wearing an undershirt
+- **lapli'signei** — satin or silk material \| satin or silk fabric \| Made of satin or silk material  *(also: sewing-and-textiles)*
+- **laqpa'taqan** — shoelace \| Shoelace
+- **laqpisuti** — apron \| Apron  *(also: household)*
+- **ma'gn** — moccasin \| Moccasin  *(also: customs)*
+- **ma'gna'q** — wear moccasins \| He/she is wearing moccasins
+- **magot** — dress \| Dress
+- **magota'q** — wear a dress \| She is wearing a dress
+- **mapos** — pocket \| Pocket
+- **mejiggumet** — wear dirty clothes \| He/she wears dirty clothes  *(also: appearance)*
+- **metaqapit** — underdressed for weather (torso area) \| bare chested \| He/she is underdressed for weather  *(also: body)*
+- **metgatat** — barefooted \| He/she is barefooted  *(also: body)*
+- **metgwat** — hatless \| bareheaded \| He/she is hatless  *(also: body)*
+- **mg'sn** — shoe \| Shoe
+- **mg'snapi** — shoelace \| shoestring \| Shoelace
+- **mg'sna'q** — wear shoes \| He/she is wearing shoes
+- **misissiet** — dressed raggedly \| get raggedy \| He/she is dressed raggedly  *(also: condition)*
+- **musiga'sit** — undress \| remove clothing \| He/she undresses
+- **musigo'tlatl** — undress \| untrim \| He/she undresses him/her \| He/she untrims him/her
+- **musuei** — handkerchief \| kerchief \| Handkerchief
+- **na'jijjaqan** — glove \| Glove
+- **nasa'latl** — put on \| don \| He/she puts it (shirt) on
+- **nasa'toq** — put on \| don \| He/she puts it on
+- **nasg'g** — wear \| He/she wears it
+- **nasguatl** — wear \| He/she wears it(shirt)
+- **nasoqwa'taqan** — ring \| Ring  *(note: jewelry -> clothing)*
+- **nassaputaqan** — earring \| Earring
+- **nutg'g** — no longer fits \| something has become too large or too small to fit anymore \| He/she no longer fits it  *(also: size-and-shape)*
+- **oqonoqopiso'tlatl** — place hood on \| He/she places a hood on him/her
+- **pept'sgna'sit** — put on shoes and socks \| He/she puts on shoes and socks.
+- **pijjaqan** — mitten \| Mitten
+- **pijjaqana'q** — wear mittens \| He/she is wearing mittens
+- **pisoqos'ti** — button \| Button
+- **pita'qaweia'q** — wear pants \| He/she is wearing pants
+- **pita'qawe'l** — trousers \| pants \| Trousers
+- **pitaqsa't** — long skirt \| long dress \| long garment \| He/she wears a long skirt
+- **pitqonat** — wear high heel shoes \| high heel shoe \| He/she wears high heel shoes. \| High heel shoe
+- **pituega'latl** — line a garment(as coat) \| He/she lines it(coat)  *(also: sewing-and-textiles)*
+- **pitu'gun** — hooded cape \| cape (garment) \| Hooded cape
+- **poj** — purse \| pouch \| wallet \| Purse  *(also: money-and-trade)*
+- **sa'l** — shawl \| Shawl
+- **saqalo'pi** — hair ribbon \| ribbon \| Ribbon
+- **sa'sewgna'sit** — changing clothes \| He/she is changing clothes
+- **sa'wes** — rain hat \| Rain hat  *(also: weather)*
+- **sign** — stocking \| sock \| Stocking
+- **signa'q** — wear socks \| He/she wears socks
+- **sigsuti** — ankle length sock \| Ankle length sock
+- **toqwaqsa't** — short skirt \| short dress \| short garment \| He/she wears a short skirt
+- **ugp'ssan** — sleeve \| His/her/its sleeve
+- **ugpusgunei** — bra \| breast protector \| chest protector (baseball) \| His/her bra
+- **ugqotaqanigjipilaqan** — scarf \| necktie \| neck wrapper \| Scarf
+- **ugtoqon** — her dress \| Her dress
+- **umugsnn** — shoe \| His/her shoe
+- **utapsun** — clothing \| essentials \| belongings \| His/her clothing
+- **waio'psgw** — bead \| Bead  *(also: customs)*
+- **wasoqwa'taqan** — ring \| Ring
+- **welg'g** — good fit \| He/she fits it well  *(also: size-and-shape)*
+- **welgna'q** — nicely dressed \| He/she is nicely dressed
+- **welgnesit** — well·dressed \| He/she is well·dressed
+- **welg'snet** — well·shoed \| He/she is well·shoed
+- **welguatl** — fit well \| good fit \| He/she fits it well
+- **welgutat** — well·dressed \| He/she is well·dressed  *(also: appearance)*
+- **welia'su'na'q** — well·dressed \| He/she is well·dressed  *(also: appearance)*
+- **weliptesgna'q** — have nice shoes on \| have nice boots on \| He/she has nice shoes or boots on
+- **welpisit** — well·dressed \| He/she is well·dressed  *(also: appearance)*
+- **welqwanet** — wear proper clothes (for season) \| He/she wears proper clothing
+- **wesgit** — vest \| Vest
+- **wesgita'q** — wear vest \| He/she is wearing a vest
+- **wetnasa'latl** — try on \| He/she tries...on
+- **wetnasa'toq** — try on \| He/she tries it on
+- **wingutat** — poorly shoed \| badly clothed \| He/she is poorly shoed
+- **jipugje's** — mask \| Mask  *(also: customs)*
+- **la'gignapi** — scarf \| sling \| sash \| Scarf/sling/sash
+- **elaqpisa'sit** — puts on an apron \| He/she puts on an apron.
+- **elaqpisit** — has an apron on \| He/she has an apron on.
+- **mpitnei** — muff (hand warmer) \| Muff (hand warmer)
+- **oqonoqopisit** — is veiled \| He/she is veiled  *(also: ceremony)*
+- **saptaqsing** — cold wind passing through fabric \| cold wind passing through clothing \| He/she has cold wind passing through (fabric)  *(also: temperature)*
+- **aniapsuqwan** — garment of penitence, penitential robe  *(also: ceremony)*  *(confidence: l)*
+- **maqtawe'g usgitaqang ** — mourning vail (mourning shroud) \| Black mourning veil [mourning shroud]  *(also: ceremony)*
+- **oqonoqupisun** — vail \| A vail
+- **lamotleweji'j** — inner garment  *(confidence: l)*
+- **ewlgutat** — is poorly clad/dressed \| ewlgutat, he/she is poorly clad/dressed
+- **usgit'tutm'gewei** — Chasuble (catholic priest’s cloak) \| Chasuble (catholic priest’s cloak)  *(also: ceremony)*
+- **ewlqwan** — shabby/ragged clothing \| Shabby/ragged clothing  *(also: condition)*
+- **anguni'gn** — vail \| cover \| Vail/cover
+- **oqonoqupilsit** — veils his/herself \| He/she veils his/herself.
+- **metpit** — not wear outerwear \| He/she is not wearing outerwear
+- **panugwa'teget** — unveils \| He/she unveils.
+- **ewlg'g** — is poorly dressed \| He/she is poorly dressed.
+- **oqonopigwa'suti** — face veil \| Face veil.
+- **aniapsuoqon** — garment of penitence \| penitential robe \| garment of penitence, penitential robe  *(also: ceremony)*
+- **oqonogupi'suti** — veil \| Veil
+- **oqonoqupi'suti** — nun's veil/wedding veil \| Nun's veil/wedding veil.  *(also: ceremony)*
+
+## Archived entries (lower priority)
+
+- **je'git\*\*** — jacket
+- **menigna'sit\*\*** — undress \| He/she undresses
+- **pi'san** — diaper \| Diaper
+- **pita'qawei'mgl\*\*** — trousers
+- **pqasqaqan** — sock
+- **p'sgugun** — necklace \| Necklace
+- **qotaqanigjipilaqan\*\*** — muffler \| scarf
+- **qotaqanigjipilo'qon\*\*** — necktie
+- **wenjugsnan** — shoe \| boot
+- **wenjusgnan** — shoe \| boot
+- **wijipoti** — money belt (with pocket) \| Money belt

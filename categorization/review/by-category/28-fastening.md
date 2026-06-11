@@ -1,0 +1,129 @@
+# Tying, Fastening & Wrapping (`fastening`)
+
+Theme: *Movement & Physical Actions* — 118 entries (+4 archived)
+
+- **anguna'latl** — cover \| encase \| enclose \| He/she covers him
+- **anguna'toq** — cover \| encase \| enclose \| He/she covers it
+- **anguno'sit** — cover \| He/she covers self
+- **apgwa'latl** — untie \| He/she unties him
+- **apgwa's'g** — become untied \| It becomes untied
+- **apgwa'sit** — become untied \| He/she becomes untied
+- **apgwa'toq** — untie \| He/she unties it
+- **apt'sqa'muatl** — lock out \| lock in \| He/she locks it for him
+- **apt'sqa'q** — lock up \| lock in \| He/she locks it up
+- **apt'sqata'tl** — lock up \| lock in \| lock out with quick motion or accidentally \| He/she locks him in or out
+- **apt'sqate'g** — lock up \| lock in \| lock out with quick motion or accidentally \| He/she locks it in or out
+- **apt'sqa'tl** — lock up \| lock in \| He/she locks him up or in
+- **apt'sqi'gn** — key \| Key  *(also: household)*
+- **elaqpilatl** — hang a cloth to cover \| shield or conceal (with drape) \| He/she drapes him (with a cloth)
+- **elaqpilg** — shield or conceal (with drape) \| He/she drapes it
+- **elaqpo'latl** — bind \| lace \| He/she laces...up
+- **elaqpo'teget** — bind \| lace \| He/she laces
+- **elaqpo'toq** — bind \| lace \| He/she binds it
+- **elegepilawet** — to drape \| He/she drapes something  *(also: household)*
+- **elpiso'tulatl** — bundle up (with scarf) \| wrap \| He/she bundles him up  *(also: clothing)*
+- **ewe'ga'latl** — loosen \| He/she loosens it (belt)
+- **ewe'ga'toq** — loosen \| He/she loosens it
+- **ewe'gisga'toq** — loosens \| break in \| He/she loosens it
+- **gelapaqatl** — screw \| fasten \| He/she fastens it (picture)
+- **gelapaqq** — screw \| fasten \| He/she fastens it
+- **gelapaqta'tl** — tack something on \| attach with nails \| tack on with nails \| stitch on  or together temporarily \| He/she tacks it on
+- **gelapaqte'g** — tack something on \| attach with nails \| tack on with nails \| stitch on  or together temporarily \| He/she tacks it on
+- **gelpilatl** — tie up \| He/she ties him up
+- **gelpilg** — tie up \| He/she ties it up
+- **geltaqanatl** — hold by a leash \| restrain (by leash or rope) \| He/she has him/her by a leash
+- **geltaqpilatl** — tie with a rope \| He/she ties him/her with a rope
+- **geltaqpilg** — tie it up with a rope \| He/she ties it up with a rope
+- **gepijoqwa'latl** — put the lid on \| close \| block \| plug \| He/she closes it(bottle)
+- **gepijoqwa'toq** — put the lid on \| close \| block \| plug \| He/she closes it
+- **gepjoqiget** — lock up \| He/she locks up
+- **gepjoqign** — bottle cover \| lid \| plug \| cork \| Lid  *(also: household)*
+- **gepjoqpit** — plugged \| it is closed \| blocked \| shut \| It(bottle) is plugged
+- **gepjoqta'tl** — plug up by pounding \| shut by hammering \| lock someone in \| nail shut \| close quickly \| shut quickly \| shut by pounding \| He/she plugs it(bottle) up by pounding
+- **gepjoqteg** — plugged \| blocked \| closed \| It is plugged
+- **gepjoqte'g** — plug up by pounding \| pound shut \| nail shut \| He/she plugs it up by pounding
+- **gepsaqa'latl** — close \| shut \| He/she closes him/her
+- **gepsaqa'toq** — shut \| close \| He/she closes it
+- **gepsoqatl** — lock up \| He/she locks him/her up
+- **gepsoqpit** — closed \| shut \| It (jar) is closed
+- **gepsoqq** — lock in \| lock \| He/she locks it in
+- **gepsoqteg** — closed \| shut \| It is shut
+- **giwto'qopilatl** — wrap around \| He/she wraps it (rope) around
+- **giwto'qopilg** — wrap around \| hang around perimiter \| He/she wraps it around
+- **iloqomoqwa'latl** — wrap (as gift) \| He/she wraps him/her/it
+- **iloqomoqwa'taqan** — wrapping paper \| Wrapping paper  *(also: household)*
+- **iloqomoqwa'toq** — wrap (as gift) \| He/she wraps it
+- **ilpilg** — tie \| retie properly \| He/she ties it
+- **ilta'latl** — shut \| close \| He/she closes it (fridge)
+- **iltaqalatl** — hitch up (horse) \| He/she hitches him/her/it up  *(also: farm-animals)*
+- **ilta'toq** — shut \| close \| He/she shuts it
+- **ilteget** — shut quickly \| He/she shuts it quickly
+- **iltijieget** — slam shut \| He/she slams it shut
+- **mawgopilgl** — tie together \| attach together \| He/she ties them together
+- **mawitqo'latl** — bundle rope together lengthwise \| group rope together lengthwise \| wrap cord or rope lengthwise \| He/she bundles rope together lenghwise
+- **mawoqpiteg** — bundled or rolled together \| It is bundled or rolled together
+- **mawpilaqan** — bundle (wheat sheaf) \| bundle tied together \| Bundle (wheat sheaf)  *(also: farming)*
+- **mawpisit** — bundled \| He/she/it is bundled
+- **mawpiteg** — bundled up \| tied together \| It is bundled up
+- **maw\_pisit** — packaged with \| inside with \| included \| He/she/it is packaged with
+- **maw\_piteg** — included in \| included \| It is included in
+- **megwasa'latl** — attach \| stick on \| glue on \| He/she attaches it(picture)
+- **megwasa'toq** — attach \| stick on \| glue on \| He/she attaches it
+- **megwaspit** — attached \| It(picture) is attached
+- **megwasteg** — attached \| It is attached
+- **menapaqatl** — unscrew \| He/she unscrews it (bulb)
+- **menapaqq** — unscrew \| He/she unscrews it
+- **nasapaqq** — screw on \| attach by screwing on \| He/she screws it on
+- **nasapaqtesg** — entangle \| get caught on \| It entangles
+- **nasapaqtesing** — entangle \| get caught on \| He/she entangles
+- **naseget** — quickly put on \| quickly fasten \| He/she quickly puts it on
+- **naspit** — attached \| be a member \| He/she/it is attached to
+- **nastaqo'tlatl** — hitch up (horse) \| He/she hitches him/her up  *(also: farm-animals)*
+- **nasteg** — attached \| enmeshed \| It is attached
+- **oqonaliaq** — covered with snow, soil, etc. \| process of being covered with snow, soil, etc. \| It is covered (with snow)  *(also: weather)*
+- **oqonaliet** — covered with snow, etc. \| process of being covered with snow, etc. \| He/she is covered with snow  *(also: weather)*
+- **oqonisgwa'latl** — cover \| He/she covers him/her
+- **oqonisgwa'toq** — cover \| He/she covers it
+- **oqonisqopilatl** — wrap \| cover \| cover with a wrap \| He/she wraps him/her
+- **oqonisqopilg** — wrap \| cover \| cover by wrapping \| He/she wraps it
+- **oqonoqopisaqan** — wrap \| receiving blanket \| bundle (for infant) \| privacy curtain \| Wrap  *(also: family)*
+- **oqopisit** — wrapped up \| bundled (as infant) \| swadded (as infant) \| He/she is wrapped up  *(also: family)*
+- **pana'latl** — open \| He/she opens him/her/it  *(note: open -> fastening)*
+- **pana's'g** — open \| It opens
+- **pana'sit** — open \| It(bottle) opens
+- **pana'toq** — open \| He/she opens it
+- **pansaqatl** — unlock \| He/she unlocks him/her
+- **pansaqq** — unlock \| He/she unlocks it
+- **panta'latl** — open up \| He/she opens him/her/it up
+- **panta'toq** — open \| He/she opens it
+- **pantepit** — open \| He/she/it is open
+- **panteteg** — open \| It is open
+- **pgijoqign** — bottle cap \| bottle cover \| lid \| cork \| plug \| Bottle cap  *(also: household)*
+- **pittaqpisit** — tethered (by long rope, string, chain, twine) \| hitched by long rope \| He/she is tethered by a long rope, chain
+- **segg'pilatl** — tie tightly \| He/she ties him/her tightly
+- **segg'pilg** — tie tightly \| He/she ties it tightly
+- **sepusepilatl** — close by tying with rope or string \| He/she closes him/her/it by tying with rope or string
+- **sepusepilg** — close by tying with rope or string \| He/she closes it by tying with rope or string
+- **sepusepit** — closed up \| tied shut \| He/she/it is closed up
+- **sepuseteg** — closed up \| tied shut \| It is closed up
+- **wesuisepilas'g** — gathered and tied \| It is gathered and tied
+- **wesuisepilasit** — gathered and tied \| ...is gathered and tied
+- **wetnasteg** — hooked or attached from \| It is hooked or attached from
+- **oqonipgwa'q** — burying it in the (sand)  \| covering it over in the sand, snow, mud etc... \| He/she is burying it in sand  *(also: land)*
+- **oqonipgwa'sit** — covered with earth \| covered with grass, snow \| He/she is covered with earth.  *(also: land)*
+- **oqonaqamigiet** — becomes covered with earth \| He/she becomes covered with earth  *(also: land)*
+- **gelpilawe'l** — bundle of sheaves \| A bundle of sheaves.  *(also: farming)*
+- **oqonipgwa'latl** — buries/covers him/her in earth or grass or blanket etc. \| He/she buries/covers him/her/it in earth or grass blanket etc.
+- **oqonipgwa'toq** — covers/buries it \| He/she cover/buries it.
+- **oqonoqo'pilg** — blindfolds it \| He/she blindfolds it.  *(also: seeing)*
+- **oqonaqamiga'teget** — covers with earth \| He/she covers with earth.  *(also: land)*
+- **oqonaqamiga'toq** — covers it with earth \| He/she covers it with earth  *(also: land)*
+- **oqonoqo'pilatl** — blindfolds him/her/it \| He/she blindfolds him/her/it.  *(also: seeing)*
+- **gasgutqo'toq** — unravel it \| untangle it \| separate it \| He/she unravels it
+
+## Archived entries (lower priority)
+
+- **gejipilatl\*\*** — secure by tying \| tie up (with rope) securely \| He/she ties him /her up securely
+- **gejipilg\*\*** — secure \| tie up securely (with rope) \| He/she ties it up securely with rope
+- **geltaqang\*\*** — hold \| restrain (by leash or rope) \| He/she hold it by a leash or rope
+- **nastestmgewei** — latch \| hook \| attachment(?) \| Latch

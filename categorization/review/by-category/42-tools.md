@@ -1,0 +1,108 @@
+# Tools (`tools`)
+
+Theme: *Work & Livelihood* — 90 entries (+11 archived)
+
+- **a'papi** — rope \| fishing line \| Rope  *(also: fishing)*
+- **aptu'n** — cane \| staff \| walking stick \| Cane  *(also: health)*
+- **awa'qi'gn** — crooked knife \| Crooked knife
+- **engemgewei** — measuring instrument \| Measuring instrument  *(also: size-and-shape)*
+- **esipulatl** — sharpen \| file \| grind \| He/she sharpens it (knife)  *(also: cutting)*
+- **esiputoq** — sharpen \| file \| grind \| He/she sharpens it  *(also: cutting)*
+- **ewi'gigemgewei** — notepad \| pen \| pencil \| object used for writing \| Notepad \| Pen, pencil  *(also: stories-and-writing)*
+- **gi'gamgo'n** — pole (for poling boat) \| Boat pole  *(also: boats)*
+- **ginipewa'j** — branch (holds tea kettle over fire) \| stick (holds tea kettle over fire) \| branch (holds a tea kettle over fire)  *(also: fire)*
+- **gi'taqan** — grindstone \| Grindstone
+- **glapaqign** — screw \| Screw
+- **glapaqignei** — screw driver \| Screw driver
+- **go'pign** — dip net (for fish) \| Dip net (for fish)  *(also: fishing)*
+- **jigg'putaqan** — rake \| Rake  *(also: farming)*
+- **jinqamistaqanei** — strainer \| sieve \| colander \| Strainer  *(also: household)*
+- **la'gittaqan** — file \| filing tool \| File
+- **laputi** — spy glass \| telescope \| Spy glass  *(also: seeing)*
+- **laputi'l** — binoculars \| Binoculars  *(also: seeing)*
+- **lge'gn** — hoe \| Hoe  *(also: farming)*
+- **lgeso'qon** — plow \| Plow  *(also: farming)*
+- **lnaqanatgw** — wooden handle \| axe handle \| Wooden handle
+- **lugowaqane'gmuti** — tool kit \| tool bag \| tool box \| Tool kit
+- **lu'gwejg** — compass \| pointer \| Compass  *(also: travel)*
+- **lu'segn** — fire poker \| furnace poker \| Fire poker  *(also: fire)*
+- **majjoqtelign** — arrow \| Arrow  *(also: hunting)*
+- **maltejjuei** — hammer \| Hammer
+- **maltejjueiatgw** — hammer handle \| Hammer handle
+- **mattejjuei** — hammer \| Hammer
+- **melg'tqasit** — strong rope \| strong string \| Strong rope
+- **mgign** — hook \| fish hook \| Hook  *(also: fishing)*
+- **mgumie'j** — horseshoe \| Horseshoe  *(also: farm-animals)*
+- **mistug** — oakum \| Oakum  *(also: boats)*
+- **ngaqan** — ruler \| measure \| Ruler  *(also: size-and-shape)*
+- **nqani'gn** — dip net \| scoop \| Dip net  *(also: fishing)*
+- **pesgwete'gemgewei** — sickle \| Sickle  *(also: farming)*
+- **pewaqs'te'gnei** — thrasher (used in farming) \| Thrasher  *(also: farming)*
+- **pijimaqan** — funnel \| Funnel  *(also: household)*
+- **pi'pi** — peavey hook \| Peavey hook
+- **pisga'taqanapi** — chain \| Chain
+- **pisga'taqanapi'ji'j** — small chain \| Small chain
+- **plegu** — nail \| Nail
+- **plegu'j** — tack \| Tack
+- **plegu'ji'j** — small nail \| Small nail
+- **plos** — brush \| Brush
+- **po'qatl** — drill \| bore \| He/she drills it(board)  *(also: making-and-fixing)*
+- **po'q'g** — drill \| bore \| He/she drills it  *(also: making-and-fixing)*
+- **po'qiget** — drill \| bore \| He/she drills  *(also: making-and-fixing)*
+- **po'qign** — auger \| drill bit \| Auger
+- **poqwas'tiei** — thimble \| Thimble  *(also: sewing-and-textiles)*
+- **psgweso'qon** — scythe \| Scythe  *(also: farming)*
+- **pugumaqan** — weapon \| Weapon  *(also: conflict)*
+- **qaliputi** — shovel \| Shovel
+- **qasawo'qapi** — wire \| Wire
+- **qasawo'qu'j** — knitting needle \| Knitting needle  *(also: sewing-and-textiles)*
+- **sa'pign** — awl \| Awl  *(also: sewing-and-textiles)*
+- **sa'qati** — needle \| knitting needle \| Needle \| Knitting needle  *(also: sewing-and-textiles)*
+- **sinqamistaqanei** — strainer \| sieve \| colander \| Strainer  *(also: household)*
+- **sipigi'taqan** — whetstone \| Whetstone
+- **sipitaqan** — hide·stretcher \| Hide·stretcher  *(also: hunting)*
+- **siputaqan** — metal file \| sharpener \| Metal file
+- **si'sign** — awl \| Awl
+- **tapuapjimgewei** — tool or object requiring use of both hands \| Tool or object requiring use of both hands
+- **te'sipowgumaqan** — horse whip \| Horse whip  *(also: farm-animals)*
+- **te'sipowji'j** — young horse \| portable work bench (in carpentry) \| foal \| sawhorse \| Young horse \| Portable work bench  *(also: farm-animals)*
+- **tetpaqign** — scale \| Scale  *(also: size-and-shape)*
+- **tia'muapi** — moose thong \| moose leather strap \| moose leather  lash \| Moose thong  *(also: animals)*
+- **tlawo'q** — butcher knife \| bread knife \| hunting knife \| Butcher knife  *(also: household)*
+- **tma'gittaqan** — saw \| Saw
+- **tmi'gn** — axe \| Axe
+- **tmi'gnatgw** — axe handle \| Axe handle
+- **tm'tqe'gnn** — scissors \| pair of scissors \| Scissors  *(also: household)*
+- **tulgowei** — cannon \| Cannon  *(also: conflict)*
+- **ugju'snei** — fan \| propeller \| Fan  *(also: household)*
+- **ugtaptu'n** — cane \| crutch \| walking stick \| His/her cane  *(also: health)*
+- **ugtunapi** — rein \| His/her rein  *(also: farm-animals)*
+- **ugtuneil** — bridles and bits \| Bridles and bits  *(also: farm-animals)*
+- **utmi'gn** — axe \| His/her axe
+- **wa'qan** — knife \| blade \| Knife  *(also: household)*
+- **wa'qanji'j** — jacknife \| Jacknife
+- **wetmo'taqan** — useful object or tool \| Useful object or tool
+- **wi'gign** — pen \| pencil \| Pen  *(also: stories-and-writing)*
+- **la'gittaqane'get** — files, or sands or planes \| makes files \| He/she files, or sands or planes, maybe, he/she makes files.  *(also: making-and-fixing)*
+- **pewgwete'geg mulin** — threshing machine \| threshing mill \| Threshing machine/mill.  *(also: farming)*
+- **ela'gittas'g** — saw \| file \| rasp  *(confidence: l)*
+- **nipisoqon** — stick \| rod \| cane \| Stick  *(also: trees)*
+- **nasgwa’gittaqan** — saw used to cut logs lengthwise \| lengthwise cutting saw \| Lengthwise cutting saw  *(also: cutting)*
+- **pugtewa’taqan** — fire making tools (matches, flint and steel) \| lighter \| Fire making tools (matches, flint and steel)  *(also: fire)*
+- **pepga'q'g** — thin iron \| thin axe \| thin knife \| Thin iron (axe, knife)  *(also: size-and-shape)*
+- **nipeloqte'gnei** — tool used to set traps at night \| something used to set night traps \| Tool used to set night traps  *(also: hunting)*
+- **gopgwej** — saw whet owl \| Saw whet owl \| File, sharpening tool  *(also: birds)*
+
+## Archived entries (lower priority)
+
+- **apjun\*\*** — handle
+- **gla'qi'gnn** — handcuffs
+- **l'tqa'mun** — arrow \| an arrow
+- **l'tqa'mun\*\*** — arrowhead \| harpoon
+- **lutqamun\*\*** — harpoon
+- **mattelign\*\*** — arrow
+- **mulqwegn\*\*** — digging tool \| hoe
+- **nemaqwe'gn\*\*** — hoe
+- **nu'se'gn** — poker (fire)
+- **si'signi'gn** — 
+- **sumogati** — spear \| pole

@@ -1,0 +1,132 @@
+# Trees & Forest (`trees`)
+
+Theme: *Land, Water & Sky* — 108 entries (+17 archived)
+
+- **aqamoq** — white ash tree \| White ash tree
+- **aqamoqwe'gati** — white ash grove \| White ash grove
+- **eligua'q** — have grain (as of wood) \| It has a grain  *(also: texture-and-materials)*
+- **eliguet** — have grain \| lean toward \| It (plank) has a grain \| It (tree) leans toward  *(also: texture-and-materials)*
+- **epsmusi** — Mountain ash \| Mountain ash
+- **esgig** — green \| not dryed(firewood) \| uncured \| It is uncured  *(also: condition)*
+- **gastug** — Canada yew \| Ground hemlock \| Hemlock
+- **gawatgw** — spruce tree \| Spruce tree
+- **gawigso'musi** — thorn wood genus \| Thorn wood
+- **gispasas'g** — cured \| dried out(wood) \| It is cured  *(also: condition)*
+- **gispasasit** — cured \| dried out \| It(plank) is cured  *(also: condition)*
+- **gi'taqanmusi** — Staghorn sumac \| sumac \| Staghorn sumac
+- **gmu'j** — stick \| wood \| piece of lumber \| pile of lumber \| Stick
+- **gmu'je'gaqan** — lumbering \| forestry \| Lumbering  *(also: work)*
+- **gmu'je'get** — get wood \| cut lumber \| He/she gets wood (or lumber)  *(also: work)*
+- **gmu'ji'j** — small stick \| Small stick
+- **gnisgwastu** — evergreen needle \| Evergreen needle
+- **gsu'sgw** — hemlock \| Hemlock
+- **guow** — pine \| Pine
+- **ji'gataw** — dressed wood \| Dressed wood
+- **joqjimusi** — white maple tree \| White maple tree
+- **laggol** — cord of wood \| Cord of wood  *(also: amounts)*
+- **lasqo'plaw** — board \| plank \| Board  *(also: dwellings)*
+- **lnoqom** — green wood \| Green wood
+- **lo'gs** — log \| Log
+- **malsnawei** — soft maple \| mountain maple \| red maple \| Soft maple
+- **masgwe's** — young birch tree \| Young birch tree
+- **masgwe'simanaqse'gati** — pin cherry tree grove \| Pin cherry tree grove
+- **masgwe'simanaqsi** — pin cherry  tree \| cherry tree \| Pin cherry tree
+- **masgwe'simusi** — birch genus \| Birch genus
+- **masgwi** — white birch tree \| white birch bark \| White birch bark or tree
+- **megwe'g\_snawei** — red maple \| swamp maple \| soft maple \| Red maple
+- **memgoqte'g** — make a clearing \| deforest \| clear cut \| He/she makes a clearing  *(also: cutting)*
+- **memgoqte'get** — make a clearing \| deforest \| clear cutting \| He/she is making a clearing  *(also: cutting)*
+- **meni'gwet** — strip off bark (birch) \| He/she strips off birch bark
+- **menipqwa'latl** — remove tree bark \| take off tree bark \| He/she removes tree bark
+- **menipqwa'toq** — take off or remove tree bark \| He/she removes tree bark
+- **menipqwa'wet** — remove bark (from tree) \| He/she is removing tree bark
+- **metuatqeg** — hard going (through thicket) \| Hard going through thicket  *(also: travel)*
+- **mimgwaqan** — perfume \| acorn \| hair·oil \| Perfume \| Acorn  *(also: smell-and-taste)*
+- **mimgwaqanimusi** — oak tree \| Oak tree
+- **minit** — bears fruit \| It(tree) bears fruit  *(also: plants)*
+- **miti** — aspen \| poplar \| Aspen or poplar
+- **miti'ji'j** — sapling \| small tree \| Sapling
+- **miti's** — tree \| Tree
+- **mnnoqon** — yellow birch \| Yellow birch
+- **musigatgunta'ji** — delimb logs with axe \| remove branches from logs with axe \| He/she delimbs logs with an axe  *(also: cutting)*
+- **nasqo'plaw** — board \| plank \| Board  *(also: dwellings)*
+- **ne'gasgi'gn** — log (before being cut into specified lengths) \| Log
+- **nipugt** — forest \| woods \| Forest
+- **nnigmu'j** — hardwood \| Hardwood
+- **nuja'gitteget** — sawyer \| He/she is a sawyer  *(also: occupations)*
+- **nujatejo'tasit** — twitcher (person who by horse or machine, pulls logs from woods) \| twitch (person who by horse or machine, pulls logs from woods) \| Twitcher \| He/she twitches  *(also: occupations)*
+- **nujatejo'teget** — twitch logs (person who by horse or machine, pulls logs from woods) \| hauls logs \| He/she twitches logs  *(also: occupations)*
+- **nujinget** — scaler (in lumbering) \| scale (in lumbering) \| one who does the measuring \| Scaler \| He/she scales (in lumbering)  *(also: occupations)*
+- **nuta'gitteget** — sawyer \| sawyer \| He/she is a sawyer  *(also: occupations)*
+- **nuta'gittegewinu** — sawyer \| Sawyer  *(also: occupations)*
+- **pa'migli** — black poplar (Balm of Gilead) \| kind of tree (related to poplar grows near water) \| Black poplar (Balm of Gilead)
+- **papqwa'toq** — strip off birchbark \| He/she strips off birchbark
+- **pelgo'qiget** — debark \| He/she debarks  *(also: cutting)*
+- **pelgoqta'tl** — strip off with sharp tool \| He/she strips it(tree) off with a sharp tool  *(also: cutting)*
+- **pelgoqte'g** — strip off with sharp tool \| He/she strips it off with a sharp tool  *(also: cutting)*
+- **pematqaiet** — go through thicket \| He/she goes through the thicket  *(also: movement)*
+- **pqwa'w** — tree bark (Nova Scotia) \| Tree bark
+- **psaqa'gw** — bark (of tree) \| crust \| Bark (of tree)
+- **psetgun** — branch (of tree) \| knot (of tree) \| Branch (of tree)
+- **psetgunatgw** — dead (dried out) tree branch \| Dead (dried out) tree branch
+- **pu'gowij** — balsam sap \| Balsam sap
+- **pugsug** — firewood \| Firewood  *(also: fire)*
+- **pugu'sgw** — dead and dry yellow birch \| Dead and dry yellow birch
+- **pugwatqeg** — thicket \| Thicket  *(also: plants)*
+- **pu'tlaqan** — wood shaving \| Wood shaving
+- **qasgusi** — cedar \| cedar tree \| Cedar
+- **qasgusia'qamigt** — cedar grove \| Tide Head, New Brunswick \| Cedar grove \| Tide Head, New Brunswick  *(also: places)*
+- **qastulastu** — cedar bough \| branch of evergreen tree (used for breaking fever) \| Cedar bough  *(also: health)*
+- **sipawas'g** — cleared area in the woods \| It is a cleared area in the woods  *(also: land)*
+- **sismo'qonapu** — maple sap \| sugar water (for babies) \| maple syrup \| Maple sap or sugar water  *(also: food)*
+- **slaps** — slab (of wood) \| Slab of wood
+- **snawei** — maple tree \| hard rock maple \| sugar maple \| Maple tree
+- **sngatigna'taqan** — raft (of logs) \| Raft of logs  *(also: water)*
+- **sngatigna'teget** — work on boom \| boom \| He/she works on a boom  *(also: work)*
+- **sngatigna'tegewinu** — rafter \| one who gathers logs into booms destined for mill \| Rafter  *(also: occupations)*
+- **stoqon** — fir tree \| balsam tree \| palm frond (used on Palm Sunday) \| Fir tree
+- **stoqonaqsi** — fir tree \| balsam tree \| Fir tree
+- **stoqone'get** — search for fir trees \| He/she searches for fir trees
+- **suomusi** — beech tree \| Beech tree
+- **ti'ls** — plank \| long square timber \| beam \| Plank  *(also: dwellings)*
+- **tmoqta'w** — log \| beam \| large post \| Log  *(also: dwellings)*
+- **tmoqta'we'get** — cut logs \| cut beams \| He/she cuts logs  *(also: cutting)*
+- **tupsi** — alder \| Alder
+- **tupsia'qami** — alder grove \| Alder grove  *(also: land)*
+- **ugji'g'j** — stump \| tree stump \| Stump
+- **wasuet** — blossom \| It (tree) blossoms  *(also: plants)*
+- **wenju'su'naqsi** — apple tree \| Apple tree
+- **wigpi** — elm tree \| Elm tree
+- **wisqasaw** — pine cone \| Pine cone  *(also: plants)*
+- **wisqoq** — black ash \| ash tree \| brown ash \| basket ash \| Black ash  *(also: basket-making)*
+- **papguiaq** — time when bark is collected \|  Time when the bark is collected, June (31)  *(also: calendar)*
+- **temgutiesgw** — beam of hard wood, shard \| Beam of hard wood, stoqonesg, gawatgusg, shard.
+- **tmoqte’gn** — cut log \| A cut log, length unknown
+- **temguitansg** — tree stump  \| Tree stump 
+- **nipisoqon** — stick \| rod \| cane \| Stick  *(also: tools)*
+- **amalo'qomanaqsi** — fruit tree \| Fruit tree  *(also: food)*
+- **ujaqalmasgwi** — Bark of a tree. \| Bark of a tree.
+- **aweligj** — hazel wood \| witch hazel \| Hazel wood, also called witch hazel  *(also: health)*
+- **tmoqta’wsm** — cut logs \| lumberjack \| log-cutter \| He/she cuts logs (log-cutter/lumberjack)  *(also: occupations)*
+- **aweligjaqamigt** — hazel wood grove \| Hazel wood grove
+- **sasqo'plaw** — flattened rod \| flattened pole \| flattened boom \| A flattened rod, pole, or boom
+
+## Archived entries (lower priority)
+
+- **elatqeg** — dense (as thicket) \| It is dense
+- **eletqeg** — grove \| orchard \| Grove
+- **enaqan** — spruce bough (used as floor covering in wigwam) \| Spruce bough
+- **esgigloqon\*\*** — green twig
+- **gini'swagum\*\*** — point of tree
+- **guasan\*\*** — dead (sagging) tree
+- **jioqjimusia'qamigt\*\*** — maple grove
+- **jioqsimusi\*\*** — rock maple tree
+- **ligpeta'w** — white ash tree \| White ash
+- **menastatg\*\*** — break off spruce bough
+- **menastet\*\*** — break off spruce boughs
+- **nigtu'sit** — crotch (tree) \| crotch (tree) \| human crotch \| human crotch \| Crotch (branch) \| He/she is crotched
+- **pelqoqte'gniget** — scrape ground?? \| debark (mmo 2019.03.27) \| debranch (mmo 2018-10-09)
+- **pqoqt** — knerl \| knot (on tree)
+- **qasqei\*\*** — board
+- **qasqe'j\*\*** — small board
+- **tupi** — alder \| Alder

@@ -1,0 +1,76 @@
+# Customs & Traditions (`customs`)
+
+Theme: *Culture & Spirit* — 60 entries (+9 archived)
+
+- **elawigatas'g** — porcupine quillwork \| decorated with porcupine quills \| It is porcupine quillwork
+- **elawigateget** — does quillwork \| works with porcupine quills \| He/she does quillwork
+- **gawi** — porcupine quill \| Porcupine quill  *(also: animals)*
+- **gawiei** — quill work \| made of quills \| It is quill work
+- **gawioqolaqan** — quill box \| Quill box  *(also: household)*
+- **geluluet** — request permission from parents to marry their child \| He/she requests permission from parents to marry their child  *(also: family)*
+- **gitmaqan** — count stick (in waltes game) \| Count stick (in waltes game)  *(also: games)*
+- **gomgwejui'gaqan** — glyphics (Nnu/Mi'gmaw) \| hieroglyphics (Nnu/Mi'gmaw) \| character used to write Micmac \| Mi'gmaq hieroglyphics  *(also: stories-and-writing)*
+- **gomgwejui'gas'g** — written in Mi'gmaw glyph writing \| Mi'gmaw glyph writing \| written in Mi'gmaw hieroglyphics \| Mi'gmaw hieroglyphics \| It is written in Mi'gmaw glyph writing \| Mi'gmaw glyph writing  *(also: stories-and-writing)*
+- **gomgwejui'gasit** — hieroglyphic writing \| written in sucker fish (gomgwej) writing \| sucker fish (gomgwej) writing \| written in Nnu glyph writing \| Nnu glyph writing \| Sucker fish (gomgwej) writing \| It is written in sucker fish (gomgwej) writing  *(also: stories-and-writing)*
+- **gomgwejui'giget** — writes using Mi'gmaq hieroglyphics \| writes using old Mi'gmaq hieroglyphics \| He/she writes using Mi'gmaq hieroglyphics  *(also: stories-and-writing)*
+- **gpugteminu** — Council fire \| Our council fire  *(also: fire)*
+- **gweltanat** — feast \| He/she feasts  *(also: food)*
+- **jawa'tat** — chew tobacco \| use snuff \| He/she chews tobacco
+- **ja'wei** — chewing tobacco \| snuff \| Chewing tobacco
+- **lnuipi** — native paddle \| Native paddle  *(also: boats)*
+- **lnu'tesing** — dance native style \| dance aboriginal style \| He/she dances native style  *(also: music-and-dance)*
+- **loqomoqwa'taqan** — wrapper \| cigarette paper \| Wrapper  *(also: household)*
+- **ma'gn** — moccasin \| Moccasin  *(also: clothing)*
+- **mawgpugtem** — council fire \| Council fire  *(also: fire)*
+- **mawigpugtem** — council fire \| Council fire  *(also: fire)*
+- **mtawegn** — flag \| Flag  *(also: peoples-and-nations)*  *(note: sweep: flag)*
+- **najigluluet** — ask permission to marry daughter \| He goes to ask permission to marry his/her/their daughter  *(also: family)*
+- **nnu'tesing** — dance native style \| dance aboriginal style \| He/she dances native style  *(also: music-and-dance)*
+- **pasgesetmat** — light up \| smoke \| He/she lights up  *(also: fire)*
+- **pasg'sematl** — light up (tobacco pipe) \| light up a cigarette \| He/she lights it (tobacco pipe) up  *(also: fire)*
+- **pasg'setmat** — light up (to smoke) \| He/she lights up to smoke  *(also: fire)*
+- **pasg'setmuatl** — light up (cigarette or pipe) for \| He/she lights up (a cigarette or pipe) for him/her  *(also: fire)*
+- **pejigluluet** — comes to ask permission from parents to marry their daughter \| He comes to ask permission from parents to marry their daughter  *(also: family)*
+- **pi'snalatl** — pack (pipe) with tobacco \| He/she pack a pipe with tobacco
+- **pi'snsit** — pack pipe \| He/she pack a pipe
+- **tmaqan** — pipe (for smoking) \| Pipe(for smoking)
+- **tmawei** — tobacco \| Tobacco  *(also: plants)*
+- **ugtutem** — clan \| totem \| His/her clan  *(also: family)*
+- **ugtuttemit** — have totem or benefactor \| He/she has a totem or benefactor
+- **utmaqann** — pipe \| his/her pipe
+- **waio'psgw** — bead \| Bead  *(also: clothing)*
+- **waltes** — waltes game \| wooden plate used in dice game \| Mi'gmaw game of chance \| Game  *(also: games)*
+- **waltestaqan** — waltes dice \| round bones or dice used in dice game \| Waltes dice  *(also: games)*
+- **waltestat** — play waltes dice \| He/she plays the waltes dice game  *(also: games)*
+- **waltesta'timg** — playing Mi'gmaw game of chance \| dice game playing \| Playing Mi'gmaw game of chance  *(also: games)*
+- **weja'teget** — get spouse from there \| He/she gets a spouse from there  *(also: family)*
+- **weljemajgewe'l** — sweetgrass \| lilacs \| Sweetgrass  *(also: plants)*
+- **wetmamgewei** — material for smoking \| pipe \| tobacco \| Material for smoking
+- **wetmat** — smoke \| He/she smokes
+- **wetmuatl** — give smoke (cigarette) to \| He/she gives someone a smoke(cigarette)  *(also: social-life)*
+- **wigumat** — heavy smoker \| He/she is a heavy smoker  *(also: character)*
+- **wigwom** — wigwam \| dwelling \| camp \| Wigwam  *(also: dwellings)*
+- **wijgwe'tlaqan** — birch bark dish or platter \| Birch bark dish or platter  *(also: household)*
+- **papgasetg** — stuffs/fills his/her pipe \| He/she stuffs/fills his/her pipe.
+- **jipugje's** — mask \| Mask  *(also: clothing)*
+- **papgestoq** — lights it \| He/she lights it (a pipe)  *(also: fire)*
+- **papg'sestoq** — lights it \| He/she lights it.  *(also: fire)*
+- **ni'pa'pit** — sits at wake overnight \| sits overnight at vigil \| He/she sits overnight at a wake or a vigil  *(also: ceremony)*
+- **nnui'gan** — Indigenous house \| Indigenous house  *(also: dwellings)*
+- **usgijega’tuaten** — will be covered in death shroud \| He/she will be covered in a death shroud.  *(also: ceremony)*
+- **nipapultimg** — wake of the dead \| vigil for the dead/deceased \| Wake or vigil of the dead  *(also: ceremony)*
+- **jipagjiewei ** — residue of tobacco (from bottom of pipe)  \| Residue of tobacco (from bottom of pipe) 
+- **usgitaqaiei** — cup made of bark \| A cup made of bark  *(also: household)*
+- **pasinnui'sit** — uses old Mi'gmaq syntax or words \| He/she uses old Mi'gmaq syntax or words.  *(also: talking)*
+
+## Archived entries (lower priority)
+
+- **awio'qopilaqan\*\*** — quill box
+- **lnapsgu'g** — wampum \| bead made from quahog or other sea shell \| Wampum
+- **lu'sugwewa'timg** — brideprice activity \| Brideprice (dowry?)
+- **misimijqanaw\*\*** — butterfly (with picture of ace of spades on wings) \| good luck charm
+- **postewit** — matchmaker \| matchmaker \| scout \| scout \| He/she is matchmaking \| Matchmaker
+- **saqtat** — light up and smoke \| He/she lights up and smokes
+- **ta'n telo'timg** — culture \| Culture
+- **wen'juipg\*\*** — tobacco leaf
+- **wi'gupaltimg** — feast

@@ -1,0 +1,109 @@
+# Body Actions (`body-actions`)
+
+Theme: *Body & Health* — 95 entries (+7 archived)
+
+- **apjitoq** — out of breath (as a result of a tantrum) \| out of breath \| He/she is breathless  *(also: health)*
+- **apsgu'lapa'sit** — turns head around to look \| turn head around \| He/she looks back  *(also: seeing)*
+- **aptlama'latl** — smother \| block off air from \| He/she smothers him  *(also: conflict)*
+- **aptlamit** — suffocate \| He/she is suffocating  *(also: health)*
+- **aptlamsing** — lose breath (in gale) \| He/she loses breath (in gale)
+- **aptluat** — hold breath \| He/she is holding breath
+- **atgitemit** — cry \| weep \| He/she cries  *(also: emotions)*
+- **atlasmit** — relax \| rest \| He/she is resting  *(also: sleep)*
+- **ejgwe'mat** — sob \| He/she is sobbing  *(also: emotions)*
+- **ejgwit** — hiccup \| He/she hiccups
+- **elu'gwalatl** — point at \| He/she pointed at him/her  *(confidence: m)*  *(note: pointing)*
+- **elu'gwatg** — point at \| He/she points at it  *(confidence: m)*
+- **elu'gwet** — point toward \| He/she is pointing  *(confidence: m)*
+- **elu'gwit** — something gets stuck in throat \| choke (food) \| He/she has something stuck in throat  *(also: health)*
+- **elusgwatamit** — spit \| He/she spits
+- **enmlamit** — gasp \| He/she is gasping
+- **epetoqsit** — groan \| make moans \| He/she moans  *(also: hearing)*
+- **ewe'gisga'latl** — exercise \| break in \| He/she exercises it(knee)
+- **ewe'gisga'lsit** — stretch \| loosen up bones and muscles \| He/she loosens up his/her bones and muscles
+- **ewsgwapeg** — twitch \| It twitches
+- **ewsgwapet** — twitch \| He/she/it twitches
+- **ewsgwit** — sneeze \| He/she sneezes
+- **gamlamit** — breathe \| He/she breathes
+- **gaqalamiet** — out of breath \| He/she is out of breath
+- **gaqalamit** — stop breathing \| He/she stops breathing  *(also: health)*
+- **gesgma'qa'latl** — causes shivers \| He/she causes him/her to get shivers up his/her spine  *(also: emotions)*
+- **gesgma'qiet** — shivers up spine \| shudder \| He/she has shivers up his/her spine  *(also: emotions)*
+- **gesigawitnet** — snort \| snore loudly \| It(horse) snorts  *(also: hearing)*
+- **gesigawlamit** — breathe hard and fast \| He/she breathes hard and fast
+- **gesipa'latl** — relieve an itch by scratching \| scratch \| He/she scratches it(knee)
+- **gesipa'toq** — scratch \| relives an itch by scratching \| He/she scratches it
+- **gesipa'tuaj** — scratches it \| He/she scratches it for him/her
+- **gesipa'tuatl** — scratches it \| He/she scratches it for him/her
+- **gesipta'tl** — scratch with an object \| scratch \| He/she scratches him/her with an object
+- **gesipte'g** — quick scratch \| a distracted scratch \| scratch with an object \| He/she gives it a quick scratch
+- **gesipto'sit** — scratch self (like an animal) \| He/she scratches his/herself  *(also: animals)*
+- **gesitewipnet** — groan \| He/she groans  *(also: hearing)*
+- **igto'sit** — yawn \| He/she yawns  *(also: sleep)*
+- **japigwet** — wink \| face covered in a substance \| He/she winks \| His/her face is covered in a substance
+- **japigwetuatl** — wink \| He/she winks at him/her
+- **japigwetuet** — winks \| He/she is a winker
+- **matgwa'sit** — bow down \| bow \| He/she bows down  *(also: position)*
+- **matgwetoq** — bow to \| nod to \| He/she bows to it
+- **matgwetuatl** — bow to \| nod to \| He/she bows to him/her  *(also: social-life)*
+- **megwe'saqa'sit** — turn red \| blush \| He/she blushes  *(also: colors)*
+- **mejjigwat** — defecate \| have bowel movement \| He/she defecates
+- **mejjilsit** — defecate on oneself \| He/she defecates on self
+- **mesa'latl** — swallow \| He/she swallows it(gum)  *(also: eating-and-drinking)*
+- **mesa'tamit** — swallow \| He/she swallows  *(also: eating-and-drinking)*
+- **mesa'toq** — swallow \| swallow slowly \| He/she swallows it  *(also: eating-and-drinking)*
+- **musgomatl** — lick someone/something \| He/she licks him/her/it  *(also: eating-and-drinking)*
+- **musgumatl** — lick \| He/she licks him/her
+- **musgwatamit** — lick \| He/she licks
+- **musgwatg** — lick \| He/she licks it  *(also: eating-and-drinking)*
+- **najijjigwat** — go to defecate \| He/she goes to defecate
+- **najisgit** — goes to urinate \| He/she goes to urinate
+- **neng'tesing** — tremble \| quiver \| shake \| shiver \| He/she trembles  *(also: movement)*
+- **no'q'g** — cough \| He/she coughs  *(also: health)*
+- **noqt'g** — choke \| gag (on food) \| He/she chokes  *(also: health)*
+- **nunat** — suck \| He/she sucks
+- **nunatg** — suck \| He/she sucks it
+- **nusalatl** — suckle (infant) \| breastfeed \| She (mother) suckles him/her (infant)  *(also: family)*
+- **nuset** — breast-feed \| She breast-feeds  *(also: family)*
+- **oqolema'sit** — puts in mouth \| He/she puts something in his/her mouth
+- **oqolumgwa'sit** — bow head \| He/she bows his/her head  *(also: position)*
+- **oqonitpaqaiet** — faint \| He/she/it faints  *(also: health)*
+- **pantuna'sit** — open mouth \| He/she/it opens one's mouth
+- **pene'sugwa't** — drool \| He/she drools
+- **pigtit** — fart \| He/she farts
+- **poqtapa'teget** — start to scratch \| He/she starts to scratch
+- **putualatl** — blow on \| He/she blows on him/her
+- **putuatamit** — blow \| He/she blows
+- **putuatg** — blow on \| He/she blows on it
+- **segit** — urinate \| He/she urinates
+- **sepigwa'sit** — close eyes \| He/she closes his/her eyes  *(also: seeing)*
+- **sipit** — stretch \| stretch and yawn \| He/she stretches
+- **sitnigwit** — blow nose \| He/she blows his/her nose
+- **so'qotemit** — vomit \| He/she vomits  *(also: health)*
+- **tegniaq** — sweat \| It sweats
+- **tegniet** — sweat \| He/she sweats
+- **tewa'lsit** — urinate \| He/she urinates
+- **tewulamit** — exhale \| He/she exhales
+- **wapa'sit** — open eyes \| turn white \| He/she opens his/her eyes \| He/she turns white  *(also: colors)*
+- **waqjuiga'sit** — bend \| droop \| He/she bends  *(also: size-and-shape)*
+- **wejjelamit** — sigh \| He/she sighs
+- **welat** — burp \| belch \| He/she burps
+- **wesgowigwa'sit** — smile \| He/she smiles  *(also: emotions)*
+- **wesuelamit** — inhale \| He/she inhales
+- **wetajigwet** — frown \| scowl \| He/she is frowning  *(also: emotions)*
+- **wetlamit** — breathe from \| He/she breathes from  *(also: health)*
+- **winigwa'sit** — scowl \| make funny face \| put on face \| He/she scowls  *(also: appearance)*
+- **winigwetuatl** — make a face at \| sticks tongue out at \| scowl at \| squint at \| He/she makes a face at him/her  *(also: social-life)*
+- **saqapja'sit** — closes hand \| He/she closes his/her hand
+- **mimtoqopsga'toq** — makes a fist \|  He/she makes a fist
+- **nanamtesguatl** — rocks him/her/it on his/her knees \| He/she rocks him/her/it on his/her knees.  *(also: family)*
+
+## Archived entries (lower priority)
+
+- **alisma'sit** — stretch self
+- **alsipisgitat** — stretch out hands
+- **aptluajig\*\*** — locked together \| clenched \| copulating
+- **sitnigu'g** — blow nose \| he/she blows his/her nose
+- **ta'utna'latl** — open (mouth) wide \| He opens...mouth wide
+- **ta'utna'sit** — open (mouth) wide \| He opens...mouth wide
+- **ta'utna'toq** — open (mouth) wide \| He opens it wide

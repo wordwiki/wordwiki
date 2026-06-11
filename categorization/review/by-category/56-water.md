@@ -1,0 +1,238 @@
+# Water & Rivers (`water`)
+
+Theme: *Land, Water & Sky* — 211 entries (+20 archived)
+
+- **alitg** — flows about \| flows in different directions \| it flows about
+- **alm'stapueg** — shriveled up \| It shriveled up from soaking in liquid  *(also: condition)*
+- **alm'stapuet** — shriveled up from soaking in water \| He is shriveled up from soaking in the water  *(also: condition)*
+- **amisisguapua'q** — slightly muddy water \| somewhat muddy liquid \| The liquid is slightly muddy
+- **apaqt** — sea \| off shore \| Sea
+- **apaqtu'jg** — inshore \| short distance offshore \| Inshore  *(also: location-words)*
+- **apatpa'q** — returning tide \| The tide is returning
+- **apitapueg** — waterlogged \| It is swollen by moisture  *(also: condition)*
+- **apitapuet** — waterlogged \| He/she is waterlogged  *(also: condition)*
+- **apsgwitg** — form eddy \| back water eddy \| It reverses flow
+- **aps'tgu'j** — narrow stream \| brook \| small stream \| Narrow stream
+- **egwija'latl** — immerse \| dip into the water (or liquid) \| He/she immerses him/her into the water (or liquid)
+- **egwija'toq** — immerse \| dip into a liquid \| He/she dips..into a liquid
+- **egwijatpa'latl** — dip the head into the water (or liquid) \| He/she dips his/her head into the water  *(also: body)*
+- **egwijing** — in water \| in liquid \| He/she is in water
+- **egwitg** — in water \| in liquid \| It is in water
+- **elapaqta'tl** — splash \| squirts \| He/she splashes him/her
+- **elapaqte'g** — splash water on \| spray on \| squirt  on \| He/she splashes it
+- **elapaqto'sit** — splash oneself \| spray oneself \| He/she splashes self
+- **elguta'latl** — pour on \| pour into \| pour toward \| He/she pours it into  *(note: pouring -> water)*
+- **elguta'toq** — pour on \| pour into \| pour toward \| He/she pours it into
+- **eligua'laq** — liquid dripping down from an opening \| leaks \| It is drips or leaks
+- **eligua'lat** — dripping down from \| leaks \| He/she/it drips or leaks
+- **enmigiaq** — falling of the tide \| receding (tide) \| The tide is receding
+- **enmitg** — flow away \| It flows away
+- **eppa'q** — warm liquid \| The liquid is warm  *(also: temperature)*
+- **eppeteg** — lukewarm liquid \| lukewarm water \| The liquid is lukewarm  *(also: temperature)*
+- **espeg** — leak \| drip \| It leaks
+- **espet** — leak \| drip \| It (pail) leaks
+- **gapsgu'j** — little waterfall \| Little waterfall
+- **gapsguji'j** — tiny waterfall \| Tiny waterfall
+- **gapsgw** — waterfall \| Waterfall
+- **gapsgwamgitg** — rapid water \| rapid water preceeding a waterfall \| It is rapid water
+- **gawasg'pa'q** — reversing tide \| reverses \| The tide is reversing
+- **gep't'g** — frozen over (water) \| It is frozen over  *(also: weather)*
+- **gesigawitg** — flow swiftly \| swift current \| It flows swiftly
+- **getapa'q** — sink into water \| sink into liquid \| It sinks\_into\_the\_water
+- **getapa't** — sink \| He/she sinks
+- **gisupa'q** — lukewarm (of liquid) \| Lukewarm (of\_liquid)  *(also: temperature)*
+- **gjigapa'n** — tide \| Tide
+- **gta'n** — ocean \| Ocean
+- **guta'latl** — pour \| He/she pours it(paint)
+- **gutatesmatl** — spill \| He/she spills it(paint)
+- **gutatestat\*\*** — spill \| He/she spills
+- **gutatestoq** — spill \| He/she spills it
+- **guta'toq** — pour \| He/she pours it
+- **guteget** — spill \| spill intentionally \| He/she spills it
+- **jajiga'sit** — going along/beside the shore \| going along/beside edge \| Going along/beside the shore  *(also: movement)*
+- **jigwapa'n** — tide (Bear River) \| Tide (Bear River)
+- **jipu'ji'j** — brook \| Brook
+- **lampo'q** — bottom of lake \| bottom of river \| River bed
+- **lmu'ju'pa'q** — neap tide \| dog tide \| It is neap tide
+- **magu'n** — iceberg \| big block of ice \| Iceburg
+- **maqatgwig** — big waves \| heavy seas \| They are big waves
+- **mawpega'toq** — mix liquid \| add liquid \| collect liquid \| He/she mixes liquid  *(confidence: m)*  *(note: mix liquid)*
+- **mespo'qweg** — flooded \| It is flooded
+- **mespo'qwet** — flooded \| He/she/it is flooded
+- **mgumi** — ice \| icecube \| Ice  *(also: temperature)*
+- **mgumi'gn** — icicle \| Icicle  *(also: temperature)*
+- **milpegitg** — flow in many directions \| It flows in many directions
+- **mjigapu** — dirty water \| used (scrubbing) water \| Dirty water  *(also: cleaning)*
+- **mllawa'latl** — take from shore \| take off-shore \| He/she takes him/her from shore  *(also: boats)*
+- **mnnawa'latl** — take from shore \| take off-shore \| He/she takes him/her/it from shore  *(also: boats)*
+- **naqana'pet** — draw water from (well or river) \| He/she draws water from (well or river)
+- **naqana'q** — dip out \| ladle out \| He/she dips it out
+- **naqani'get** — bail \| scoop out \| He/she bails out water  *(also: boats)*
+- **na'taqama'latl** — bring ashore \| He/she brings him/her ashore  *(also: boats)*
+- **na'taqama'sit** — go ashore \| He/she goes ashore  *(also: boats)*
+- **na'taqama'toq** — bring ashore \| He/she brings it ashore  *(also: boats)*
+- **na'taqamtug** — at the shore \| at the riverbank \| At the shore  *(also: location-words)*
+- **natqa'latl** — remove from water \| He/she/it removes him/her/it from the water
+- **natqa'sit** — get out of water \| He/she gets out of the water
+- **natqa'toq** — remove from water \| He/she removes it from the water
+- **nenmue'g** — damp \| damp \| It(shirt) is damp \| It is damp  *(also: condition)*
+- **newapalatl** — cool off with water \| He/she cools him/her off with water  *(also: temperature)*
+- **newapatoq** — cool off with water \| He/she cools it off with water  *(also: temperature)*
+- **newugulasing** — moist underneath \| It is moist underneath
+- **niwa's'g** — become dry \| get dry \| all liquid empties out \| evaporate \| It becomes dry  *(also: condition)*
+- **niwa'sit** — become dry \| get dry \| all liquid empties out \| evaporate \| It becomes dry  *(also: condition)*
+- **niweteg** — low tide \| It is low tide
+- **nqana'paqsun** — well bucket \| Well bucket  *(also: household)*
+- **nqani'guom** — manger \| well house \| shelter \| stable \| Manger \| Well house  *(also: dwellings)*
+- **nqano'pati** — well (of water) \| Well (of water)  *(also: dwellings)*
+- **pagwe'jg** — shallow water \| The water is shallow
+- **pa'itepega'sit** — overflow \| ...overflows
+- **pa'it'pega's'g** — overflow \| It overflows
+- **papga'lugwet** — drift down the coast \| drift down river \| He/she drifts down the coast (by water)  *(also: boats)*
+- **paqasa'latl** — place in the water (river) \| He/she places him/her/it in the water
+- **paqasaqalatl** — throw in water \| launch \| He/she throws him/her in the water  *(also: pushing-and-pulling)*
+- **paqasaqtoq** — throw in the water \| launch \| He/she throws it in the water  *(also: pushing-and-pulling)*
+- **paqasa'sit** — goes in the water \| He/she/it goes in the water  *(also: swimming)*
+- **paqasa'toq** — put in the water (river) \| launch into water \| He/she puts it in the water  *(also: boats)*
+- **paqasiet** — fall into the water \| He/she/it falls into the water  *(also: falling)*
+- **paqaste'g** — launch \| cause to fall into water, river or lake \| knock into water \| hit into water \| He/she launches it  *(also: boats)*
+- **paqo'si** — seaweed \| Seaweed  *(also: plants)*
+- **paqtlusg'teg** — extremely low tide \| Extremely low tide
+- **pemapaqto'sit** — splash self (as going along) \| He/she is going along splashing self
+- **pemijajiga'sit** — move along the shore \| walk along shore \| He/she is moving or walking along the shore  *(also: movement)*
+- **pemitg** — flow along \| It is flowing
+- **pemitma's'g** — start to break (ice) \| It is starting to break  *(also: breaking)*
+- **pempa'q** — rise (of tide) \| The tide is rising
+- **pempega's'g** — start to rise (of tide) \| It is starting to rise
+- **pempegitg** — flow along \| It flows along
+- **pesi'gugwet** — river drive \| He/she works at a river drive  *(also: work)*
+- **petgutatestoq** — spill unintentionally \| He/she spills it unintentionally
+- **petguteget** — spill unintentionally \| He/she spills it
+- **pisaqqan** — bubble \| Bubble
+- **pisew** — foam \| suds \| Foam  *(also: texture-and-materials)*
+- **pi'taw** — up river \| up stream \| Up river  *(also: directions)*
+- **pi'tawa'latl** — take up river \| take up stream \| He/she takes him/her/it up river  *(also: directions)*
+- **pi'tawa's'g** — goes up river \| goes up the coast \| It goes up river  *(also: directions)*
+- **pi'tawa'sit** — going up river \| goes up the coast \| He/she goes up river  *(also: directions)*
+- **pi'tawa'toq** — take it up river \| take up the coast \| He/she takes it up river  *(also: directions)*
+- **po'gwin** — lagoon \| Lagoon
+- **psi'gwaqan** — river drive \| River drive  *(also: work)*
+- **psitn** — river channel \| River channel
+- **psitnu'j** — small river channel \| Small river channel
+- **qospem** — lake \| Lake
+- **salawapu** — salty water \| salt water \| salted water \| Salty water  *(also: food)*
+- **samqwan** — water \| Water
+- **samqwanapua'q** — watery \| diluted with water \| It is watery
+- **samqwano'q** — water pitcher \| water container \| Water container  *(also: household)*
+- **samuqwaniaq** — becomes watery \| It becomes watery
+- **samuqwaniet** — becomes watery \| He/she/it becomes watery
+- **saqpe'g** — wet \| wet \| He/she is wet \| It is wet
+- **saqpejaq** — damp \| boggy \| It is damp  *(also: land)*
+- **saqpejaqamig** — swamp \| damp ground \| wet lands \| Swamp  *(also: land)*
+- **saqpiaq** — get wet \| get damp \| Get damp
+- **saqpiet** — get moist \| Get moist
+- **saqpigjat** — have a wet bottom \| He/she has a wet bottom  *(also: body)*
+- **sewisto'gweg** — break up (through action of water) \| It breaks up through the action of the water  *(also: breaking)*
+- **sewisto'gwet** — break up (through action of water) \| ...breaks up through the action of the water  *(also: breaking)*
+- **siguapatign** — rinse (water) \| Rinse water  *(also: cleaning)*
+- **si'n'g** — bail water (from boat) \| He/she bails water from it  *(also: boats)*
+- **si'niget** — bails water (from boat) \| He/she bails water  *(also: boats)*
+- **sipu** — river \| River
+- **sipuasaptas'g** — transparent as clear water \| It is as transparent as clear water  *(also: seeing)*
+- **sipu'ji'j** — brook \| Brook
+- **sisguapu** — muddy water \| Muddy water
+- **sitm** — shore \| beach \| Shore  *(also: land)*
+- **sngatigna'taqan** — raft (of logs) \| Raft of logs  *(also: trees)*
+- **tajiga'sit** — going along/beside the shore \| going along/beside edge \| Going along/beside the shore  *(also: movement)*
+- **tegpa'q** — cold (of liquid) \| It(liquid) is cold  *(also: temperature)*
+- **temig** — deep \| It is deep
+- **tg'poq** — spring water \| a spring of water \| Spring water
+- **tgu** — wave \| Wave
+- **tguig** — wavy (of sea) \| It is wavy(of the sea)
+- **tgupoq** — bubbling spring \| Bubbling spring
+- **tuitn** — narrows \| Narrows  *(also: land)*
+- **waju'pa'q** — high tide \| It is high tide
+- **waju'pega'latl** — fill up (with liquid) \| soak \| He/she fills him/her/it up with liquid  *(also: amounts)*
+- **waju'pega'toq** — fill up (with liquid) \| soak \| He/she fills it up with liquid  *(also: amounts)*
+- **wantaqpa'q** — calm water \| The water is calm
+- **wantaqpegitg** — flows calmly \| still flowing water \| It is flowing calmly
+- **waqamitg** — clean flowing water \| It is a clean flowing water
+- **wasapa'q** — crystal·clear water \| It is crystal·clear water
+- **we'gwamgug** — where waterway ends at falls \| Where the waterway ends at falls
+- **we'gwapsgw** — falls end \| Falls end
+- **wejgwapa'q** — incoming or rising tide \| The tide is coming in
+- **wesgitpega's'g** — flow over \| It flows over
+- **wesgitpega'sit** — flow over \| He/she/it flows over
+- **wesgitpegiaq** — flows over \| It flows over it
+- **wesgitpegiet** — flows on top \| coating \| It flows on top
+- **wesgitqo'qweg** — float \| It floats  *(also: swimming)*
+- **wetqapalatl** — soak \| immerse in water \| He/she soaks him/her/it  *(also: cleaning)*
+- **wetqapalsit** — soak \| immerse in water \| bathe \| He/she soaks one's self  *(also: cleaning)*
+- **wetqapatoq** — soak \| immerse in water \| He/she soaks it
+- **wintsug** — Windsor, Nova Scotia \|  rising tide flows up and divides off into another river \| the rising tide flows up and divides off into another river \| Windsor, Nova Scotia  *(also: places)*
+- **paqasasugwet** — walks into the water \| He/she walks down to the river into the water.  *(also: swimming)*
+- **gesigawamgwitg** — fast current \| It is a fast current
+- **gopugwet** — filled with sea water \| is swamped \| He/she/it is filled with sea water, is swamped.  *(also: boats)*
+- **pemijuig** — flowing along \| It is flowing along 
+- **matamgejuig ** — confluence of waterways \| It is a confluence of waterways
+- **mespa'q** — the water rises up to something \| The water rises up to something.
+- **mespo'q** — flood, overflow \| Flood, overflow.
+- **winpegitg** —  bad current \| dangerous current \| Bad, dangerous current.
+- **past'g** — frozen thick \| Thick ice.  *(also: temperature)*
+- **gasgipsitn** — edge of channel \| Edge of a canal or channel.
+- **giwgto’quamgwitg** — flows in a circular motion \| flows around something \|  Water flows in a circular motion, or water flows around something 
+- **elmitg** — flow away \| It flows away from
+- **winpegijuig** — rough current \| bad current \| dangerous current \| It is a rough, bad or dangerous current
+- **qomuti** — harbour \| haven \| Harbour, haven   *(also: land)*
+- **papgitg** — flows downstream  \| The water or current flows downstream
+- **gasgipnaqtug** — on the shore \| On the shore  *(also: location-words)*
+- **temgwatign** — aquatic plant (i.e. nymphaea water lilies) \| Aquatic plant (i.e. nymphaea water lilies)  *(also: plants)*
+- **gotlomi** — landin place \| quay \| dock \| wharf \| Landing place/quay/dock/wharf.  *(also: boats)*
+- **gesigawitg** — Fast current
+- **guntewapsgitg** — rocky shore \| A rocky shore  *(also: land)*
+- **welpegitg** — nice current \| Nice current
+- **wejitg** — flows from  \| Flows from
+- **elitg** — Flowing in that direction. \| Flowing in that direction.
+- **pesigitg ** — fork in a river \| A fork in a river
+- **wantaqpegitg** — Calm flowing river. \| Calm flowing water. \| Calm flowing (water/river)
+- **wejgwaqo'qwet** — comes adrifting (floating in water)  \| He/she/it comes adrifting (floating in water)   *(also: swimming)*
+- **pugwelijipu'ji’juig** — multiple streams come together into one \| Multiple streams coming together into one
+- **gutajuig** — pours out \| It pours out  *(also: weather)*
+- **qasqisipug** — on the shore \| On the shore  *(also: location-words)*
+- **qaspem** — lake edge \| border of a lake \| The lake edge, border of a lake  *(also: land)*
+- **qaspemg** — lake edge \| At the lake edge  *(also: land)*
+- **gegwitg** — flows slowly \| Flows slowly (river)
+- **tatujitg** — how fast is the current?  \| How fast is the current?   *(also: question-words)*
+- **jipu'ji’juig** — Many small streams there. \| There are many small streams there.
+- **pastesgu'gwig** — waves break and enter the canoe \| Waves break and enter the canoe.  *(also: boats)*
+- **pawitg** — slow current \| slow flowing river \| It is a slow current
+- **qasgisipug** — edge of river \| edge of water \| At the edge of the river/water  *(also: location-words)*
+- **pi'tawitg** — water flows upstream \| current flows upstream \| The water or current flows upstream
+- **etlijuig ** — flowing \| It is flowing
+- **pemijuig** — liquid flowing along \| Liquid flowing along
+- **oqonoqo'piteg** — it curls like a breaking wave \| coiled like a breaking wave \| It curls over/coiled (like a breaking wave)
+- **sasmuqwatign** — aquatic plant \| sweet flag plant \| Aquatic plant, sweet flag plant  *(also: plants)*
+- **wejijuig** — flow from \| Flows from (a certain place)
+
+## Archived entries (lower priority)
+
+- **alispet\*** — soaked \| wet
+- **alm'sta'q\*\*** — soggy \| soggy \| It is soggy \| It is soggy
+- **alm'sta't\*\*** — soggy \| It is soggy
+- **elmipisagganiet** — bubble along \| He/she is bubbling along
+- **gispa'q\*\*** — floodtide
+- **lampo'q\*\*** — spring (water)
+- **me'ga'sig\*\*** — flow rapidly \| It flows rapidly
+- **mesamu'g\*\*** — murky (of liquids)
+- **migpa'q\*\*** — weak tide
+- **msg'tgw\*\*** — deadwater \| eddy
+- **pawnatqa'sit** — get out of water slowly \| He/she gets out of the water slowly
+- **putlaq** — seep in
+- **samuqwanig\*\*** — water
+- **samuqwanit\*\*** — 
+- **sapoqwan** — water (sweet)
+- **sapoqwanipago'sit** — lily root \| Lily root
+- **saqatpeg** — head sticking out (of the water) \| top sticking out (of the water) \| Its head is sticking out
+- **suegaw** — tidal bore
+- **ugjigapa'n** — incoming tide
+- **wijigmualug** — iceberg \| Iceberg

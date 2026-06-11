@@ -1,0 +1,151 @@
+# Carrying & Bringing (`carrying`)
+
+Theme: *Movement & Physical Actions* — 139 entries (+5 archived)
+
+- **ala'latl** — go around  with \| go out with \| He/she goes with him/her  *(confidence: m)*
+- **alapilaqan** — knapsack \| carrier \| Carrier  *(also: household)*
+- **alapilawemgewei** — stretcher \| briefcase \| Stretcher  *(also: household)*  *(confidence: m)*
+- **ala'toq** — have it with you \| carry with you \| He/she has it with him/her/it
+- **alawlalatl** — carry on back \| carry around \| He/she is carrying someone on his back
+- **alawlatg** — carry on back \| carry around \| He/she is carrying everything on his back
+- **alawlet** — carry on back \| carry around \| He/she is carrying on his/her back
+- **alnatl** — carry about by hand \| He/she carries him/her/it about by hand
+- **apaja'toq** — bring back \| return to \| He/she brings it back
+- **apatgimatl** — send back \| He/she sends him/her back
+- **apatgitg** — send back \| He/she sends it back
+- **apnmisg'g** — retrieve \| return from getting it \| He/she returns from getting it
+- **apnmisguatl** — retrieve \| return from getting \| He/she returns from getting him
+- **ejigla'latl** — take away \| He/she takes him/her away
+- **ejigla'toq** — take away \| He/she takes it away
+- **ela'latl** — take or bring toward \| take to \| bring to \| He/she brings him/her toward
+- **elasga'latl** — point it towards \| passes it towards \| offers it to \| He/she points it towards  *(confidence: m)*  *(note: pass/offer toward)*
+- **elasga'toq** — point towards \| pass towards \| He/she points it towards  *(confidence: m)*
+- **elasgnatl** — hand over (bottle) \| holds in the direction of \| He/she hands it over  *(confidence: m)*
+- **elasgng** — hand over \| hold in the direction of \| He/she hands it over  *(confidence: m)*
+- **ela'toq** — take toward \| bring toward \| He/she takes it towards
+- **elawlet** — lug or carry toward (on back) \| He/she lugs toward
+- **elgimatl** — send someone \| send over \| send there \| He/she sends him/her over
+- **elgitg** — send forth \| send over \| send there \| He/she sends it over
+- **eln'galatl** — carry or pack on shoulder toward \| He/she carry him on shoulder
+- **eln'gatg** — carry or pack on shoulder toward \| He/she carries it on  shoulder toward
+- **eln'get** — carry to on shoulder \| He/she carries on shoulder
+- **elo'lajig** — take in groups \| move \| He/she take them in groups
+- **elpilatl** — to send by rope or cable \| He/she sends him/her by rope
+- **elpilg** — send toward by rope or cable or cord \| He/she sends it/him/her by rope towards
+- **eltaqa'latl** — laying something long along a path \| chase toward \| wind toward \| string to \| extend to \| drag toward \| He/she strings it (rope) towards \| He/she chases him/her towards
+- **eltaqa'toq** — string toward \| drag toward \| wind toward \| He/she strings it (wire) towards
+- **elteja'latl** — take by vehicle toward \| He/she takes someone by vehicle toward  *(also: vehicles)*
+- **elteja'toq** — take by vehicle toward \| He/she drives it toward  *(also: vehicles)*
+- **elugtoq** — carry toward on back \| carry toward on shoulder \| He/she carries it toward on back or shoulder
+- **elugtulatl** — carry on back \| carry on shoulder(s) toward \| He/she carries him on his/her back or shoulder(s) towards
+- **enma'latl** — take home \| take onward \| He/she takes someone onward or home
+- **enmateja'latl** — convey onward \| drive home (in vehicle) \| He/she drives someone onward or home  *(also: vehicles)*
+- **enmateja'toq** — driving onward \| convey home (in vehicle) \| He/she drives it onward or home  *(also: vehicles)*
+- **enma'toq** — take onward \| take home \| He/she takes it onward or home
+- **enmawlalatl** — carry home \| carry onward \| He/she carries home on back or shoulder
+- **enmawlatg** — carry home on back or shoulder(s) \| carry onward on back or shoulder(s) \| He/she carries it onward or home on back or shoulder(s)
+- **enmigimatl** — send home \| He/she sends someone home
+- **enmigitg** — send home \| He/she sends it home
+- **esa'tl** — send away \| dismiss \| banish \| fire \| He/she sends him away  *(confidence: m)*  *(note: send away/dismiss)*
+- **espa'toq** — lift up high \| raise up high \| He/she/it lifts it up high  *(note: lift/raise -> carrying)*
+- **etulgomit** — hold or carry something under arm \| He/she carries something under the arm
+- **ewjo'lajig** — transport \| He/she transports them  *(also: vehicles)*
+- **ewjo'toqol** — transport \| He/she transports them  *(also: vehicles)*
+- **gepta'latl** — take down \| unload \| remove from \| let off \| He/she takes him/her down
+- **gepta'toq** — take down from the top \| unload \| remove from the top or inside \| He/she takes it down from the top
+- **gesgunasit** — carry(by hand) heavy load \| He/she carries(by hand) a heavy load
+- **getalqa'latl** — take out of \| He/she takes him/her out of
+- **getalqa'toq** — take out of \| He/she takes it out of
+- **gi'gajinmigimatl** — send home against their will \| send home forcefully \| He/she sends him/her home forcefully  *(confidence: m)*
+- **metoqwa'latl** — bring down to \| take to lower land \| take to lower elevation \| He/she takes him/her to lower land  *(also: land)*
+- **metoqwa'toq** — bring down to \| take to lower elevation \| take to lower land \| He/she takes it to lower land  *(also: land)*
+- **natuptoq** — go lug \| He/she goes to lug it
+- **natuptulatl** — go lug \| He/she goes to lug him/her/it
+- **nawnsewatl** — carry for \| He/she carries for him/her
+- **nemisg'g** — get \| fetch \| He/she gets it
+- **nemisguatl** — get \| fetch \| He/she gets him/her
+- **neps'tgwa'toq** — raise \| lift up \| He/she raises it
+- **nespnatl** — bring along \| take along \| He/she takes him/her along
+- **nespng** — bring along \| take along \| He/she take it along
+- **nisa'latl** — take down \| bring down \| He/she takes him/her down
+- **nisa'toq** — take down \| bring down \| He/she takes it down
+- **nujialawlet** — carrier \| carrier \| porter \| porter \| He/she is a carrier \| A carrier  *(also: occupations)*
+- **nujiewjo'lajig** — hauler \| transporter \| Hauler  *(also: occupations)*
+- **nujiewjo'tasit** — hauler \| Hauler  *(also: occupations)*
+- **nujiewjo'teget** — delivery person \| deliver \| hauler \| transport \| haul \| Delivery person \| He/she delivers...  *(also: occupations)*
+- **nujiewjo'toq** — haul \| He/she hauls it  *(also: work)*
+- **nutateji'pulatl** — deliver \| He/she delivers him/her.
+- **nutateji'puteget** — delivery person \| Delivery person  *(also: occupations)*
+- **nutateji'putoq** — deliver \| He/she delivers it
+- **nutawlet** — carrier \| porter \| He/she is a carrier  *(also: occupations)*
+- **nutawletat'g** — backpack \| Backpack  *(also: household)*
+- **papga'latl** — take down the coast \| He/she takes him/her down the coast  *(also: travel)*
+- **papga'toq** — take down the coast \| take down river \| He/she takes it down the coast  *(also: travel)*
+- **pegisitoq** — bring or arrive with \| He/she brings or arrives with it
+- **pegisulatl** — bring or arrive with \| He/she brings or arrives with him/her/it
+- **pegwang** — able to lift the weight of \| able to move it \| He/she/it is able to lift the weight of it
+- **pejo'laji** — bring them \| haul or deliver them \| He/she brings them
+- **pejo'toql** — brings them \| haul or deliver in bulk \| He/she brings them
+- **pema'latl** — carry \| bringing someone along (wheelchair) \| He/she/it carries him/her/it
+- **pemapilatl** — carry along in hand (by of rope, handle, etc.) \| He/she is carrying him/her along in hand
+- **pemapilawet** — carry by rope or handle \| carry by scruff of neck (as cat) \| He/she is carrying by rope or handle
+- **pemapilg** — carry along in hand (by rope, handle, etc.) \| He/she carries it along in hand by rope or handle
+- **pema'teget** — pallbearer \| He/she is a pallbearer  *(also: ceremony)*
+- **pema'toq** — carry \| He/she is carrying it
+- **pemawlalatl** — carry along on back \| He/she carrys him/her along on the back
+- **pemawlatg** — carry along on back \| He/she carries it along on the back
+- **pemn'galatl** — carry on shoulder \| He/she is carrying him/her on the shoulder
+- **pemn'gatg** — carry on shoulder \| He/she is carrying it on his/her shoulder
+- **pemn'get** — wear shoulder pack \| He/she is going by with a shoulder pack
+- **pemsutoq** — hurrying by with \| Hurrying by with it
+- **pemtulgomit** — going with something tucked under the arm \| He/she is going with something tucked under the arm
+- **petawlalatl** — comes carrying on back \| comes lugging on back \| He/she comes carrying or lugging him/her on back
+- **petawlatg** — comes lugging on back \| comes carrying on back \| He/she comes lugging or carrying it on his/her back
+- **petawlet** — lug here (on back) \| He/she comes lugging on back
+- **petgitg** — mail here \| send here \| dispatch here \| He/she sends it here
+- **petuptoq** — lug here (on shoulder) \| He/she lugs it here on his/her shoulder
+- **pisgwa'latl** — bring inside \| take inside \| let in \| He/she brings or takes him/her inside
+- **pisgwa'toq** — bring inside \| take inside \| bring in from outside \| put in (Cape Breton) \| He/she brings or takes it inside
+- **pitgimatl** — send in \| He/she sends him/her/it in
+- **poqtamga'latl** — carry away or take along \| He/she carries him/her away or take him/her along  *(also: travel)*
+- **poqtamga'toq** — carry away or take along \| He/she carries it away or takes it along  *(also: travel)*
+- **poqtawlalatl** — lug away \| carry away \| He/she lugs him/her/it away
+- **poqtawlatg** — lug away \| carry away \| He/she lugs it away
+- **poqtawlet** — start to lug \| start to carry \| He/she starts to lug
+- **poqtigimatl** — send off \| He/she sends him/her off
+- **siawa'latl** — keeps on going with \| continue with \| He/she keeps on going with him/her  *(also: travel)*
+- **siawa'toq** — keep on going \| continue with \| He/she keeps on going with it
+- **so'qwa'latl** — take to higher ground or level \| take him/her/it up to the woods (Listuguj) \| take up (in altitude) \| He/she takes him/her to higher ground or level  *(also: land)*
+- **so'qwa'toq** — take to higher ground or level \| taking it up to the woods (Listuguj) \| take up (in altitude) \| He/she takes it to higher ground or level  *(also: land)*
+- **tepa'latl** — put on board \| put on top \| He/she puts someone on board  *(also: vehicles)*
+- **tepa'toq** — put aboard \| put it on something \| He/she puts it on board  *(also: vehicles)*
+- **tepo'tas'g** — loaded up \| placed on top \| put in \| It is loaded up  *(also: vehicles)*
+- **tepo'tasit** — load up \| pile on \| put in \| He/she loads up  *(also: vehicles)*
+- **tewa'latl** — take outside or let out \| He/she takes him/her outside
+- **tewalqa'latl** — take out in the open \| remove from \| He/she take him/her out in the open
+- **tewalqa'toq** — take out of \| remove from \| He/she takes it out
+- **tewa'toq** — take or put out \| He/she takes it out
+- **toqju'gimatl** — send up \| He/she sends someone up
+- **toqju'gitg** — send up \| He/she sends it up
+- **weja'latl** — get or bring from \| He/she gets him/her from there
+- **weja'toq** — obtain from \| get or bring from \| buys it \| He/she obtains it from there
+- **wejgwa'latl** — bring or come with \| He/she is bringing him/her
+- **wejgwa'toq** — bring or come with \| He/she is coming with it
+- **wejigtalqa'latl** — take out from \| remove from underneath \| He/she takes him/her out from there
+- **wejigtalqa'toq** — take out from \| remove from underneath \| He/she takes it out from there
+- **wejinisa'latl** — bring down from \| He/she brings him/her down from there
+- **wenaqa'latl** — pick up \| lift up \| He/she picks him/her/it up
+- **wenaqa'toq** — pick up \| lift up \| He/she picks it up
+- **oqompaligewatl** — overloads him/her/it \| He/she overloads him/her/it.  *(also: work)*
+- **oqosit** — approaches \| arrives \| lands with cargo \| He/she approaches/arrives/lands with cargo.  *(also: travel)*
+- **ne'naqpega'toq** — lightens it (ship) \| reduce the load \| reduce the weight \| He/she lightens it, reduces the load or weight  *(also: boats)*
+- **nenaqawlet** — carries a light burden \| carries a light load. \| He/she carries a light burden.
+- **ne'naqa'toq** — make burden light \| make load light \| He/she makes a burden/load light.
+
+## Archived entries (lower priority)
+
+- **apisg'g\*\*** — fetch \| He/she fetches it
+- **apisguatl\*\*** — fetch \| He/she fetches him
+- **miwsn\*\*** — load
+- **pemawlatl** — carry along on back \| He/she carrys him/her along on the back
+- **poqtugtoq** — start to backpack \| He/she starts to backpack

@@ -1,0 +1,130 @@
+# Church & Ceremony (`ceremony`)
+
+Theme: *Culture & Spirit* — 118 entries (+5 archived)
+
+- **alame's** — mass \| Mass
+- **alame'sguimgewei** — mass book \| Mass book
+- **alame'sig** — mass is in process \| Mass is in process
+- **alame'siget** — say mass \| celebrate mass \| He/she says mass
+- **alame'sigewatl** — say mass for ... \| He/she says a mass for him/her
+- **aniapsuinu** — penitent \| one who sacrifices \| missionary \| Penitent  *(also: people)*
+- **aniapsuinu'sgw** — female penitent \| female who sacrifices \| female saint \| female missionary \| nun \| Female penitent  *(also: people)*
+- **aqantie'wit** — observe Sunday \| He/she observes Sunday  *(also: calendar)*
+- **a's'tuo'guom** — church \| Church  *(also: dwellings)*
+- **a'sutmaqan** — prayer \| religion \| Prayer
+- **a'sutmat** — pray \| He/she prays
+- **a'sutmessewatg** — pray for \| He/she prays for something
+- **a'sutmessewatl** — pray for \| He/she prays for him
+- **elapalatl** — splash with holywater \| to use for the first time(slang) \| bless \| He/she blesses him/her
+- **elapatoq** — bless using holywater \| to use for the first time(slang) \| bless \| He/she blesses it
+- **etu'gutewei** — scapular \| Scapular  *(also: clothing)*
+- **gale'mewit** — observe lent \| He/she is observing lent
+- **gale'mewumg** — Lent \| Lent  *(also: calendar)*
+- **gaqama'sualatl** — witness (at wedding, in court) \| maid of honour (at wedding) \| best man (at wedding) \| He/she is a witness for him/her (at wedding, in court)  *(also: leadership-and-law)*
+- **geggunawet** — godparent \| He/she is a godparent  *(also: family)*
+- **gjipa'tlia's** — bishop \| Bishop  *(also: occupations)*
+- **gjisape'wit** — patron saint \| Patron saint  *(also: spirit-world)*
+- **gmenie'wit** — receive holy communion \| He/she receives holy communion
+- **gmnie'wit** — take holy communion \| He/she takes communion (host)
+- **Guljewto't\_Na'gweg** — Good Friday \| Good Friday  *(also: calendar)*
+- **guljie'wei** — cross \| Cross
+- **guljiewta'sit** — crucifix \| crucified \| Crucifix \| He/she is crucified
+- **guljiewto'sit** — cross oneself \| He/she makes the sign of the cross
+- **jijuejgwatp** — steeple \| Steeple  *(also: dwellings)*
+- **lapaltnewei** — holy water \| Holy water
+- **lapatign** — holy water sprinkler \| Holy water sprinkler
+- **lesqe'gn** — clothes trunk \| coffin \| casket \| Trunk \| Coffin  *(also: household)*
+- **lnu\_a'sutmamg** — Native mass \| Native language mass \| Native mass
+- **Ma'li** — Virgin Mary \| Virgin Mary  *(also: spirit-world)*
+- **malie'wit** — marry \| He/she marries  *(also: family)*
+- **malie'wuti** — marriage \| Marriage  *(also: family)*
+- **najitgo'tg** — to attend service \| to attend church \| He/she attends service
+- **nepuitewei\_alame's** — funeral mass \| Funeral mass
+- **nesgawet** — console \| offer condolences \| join in bereavement \| He/she consoles  *(also: social-life)*
+- **nipia'sutmamg** — midnight mass \| Christmas \| Midnight mass  *(also: calendar)*
+- **nnu\_a'sutmamg** — Native mass \| Native language mass \| Native mass
+- **npuinu'ulgw** — hearse \| vehicle (boat) used to transport the deceased \| Hearse  *(also: vehicles)*
+- **nujipestung** — preacher \| preacher \| Preacher \| He/she is a preacher  *(also: occupations)*
+- **nujo'teget** — witness \| witness (as in a wedding) \| serve at mass \| server at mass \| sheperd (in the song Nujo'taqatioq) \| He/she is a witness \| Witness  *(also: leadership-and-law)*
+- **nutgulpugua'sit** — genuflect \| He/she genuflects  *(also: position)*
+- **nutnewet** — assist at mass \| altar boy/girl \| serve mass \| acolyte \| He/she assists at a mass \| Alter boy/girl/assistant  *(also: people)*
+- **Pa'gewumg** — Easter \| time of Easter  *(also: calendar)*
+- **pa'qapugua'latl** — hear confession \| He/she hears his/her confession
+- **pa'qapuguatg** — confess \| He/she confesses it
+- **pa'qapuguet** — confess \| He/she confesses
+- **pa'qapuguo'ti** — confession \| Confession
+- **pata'taqan** — sin \| Sin
+- **pata'teget** — sin \| He/she sins
+- **pata'tegewinu** — sinner \| Sinner  *(also: people)*
+- **patgulme'sigaqan** — altar \| Alter
+- **pa'tlia's** — priest \| clergy \| Priest  *(also: occupations)*
+- **pa'tlia'si'sgw** — nun \| Nun  *(also: occupations)*
+- **pa'tliatji'j** — brother (religious) \| Brother (religious)  *(also: occupations)*
+- **Pa'tligs'te'wumg** — Saint Patrick's Day \| Saint Patrick's Day  *(also: calendar)*
+- **pema'teget** — pallbearer \| He/she is a pallbearer  *(also: carrying)*
+- **pessmgewei** — holy picture or medal or crucifix \| Holy picture or medal or crucifix
+- **pestie'wumg** — feast day \| Feast day  *(also: calendar)*
+- **pestung** — preach \| make speech \| He/she preaches  *(also: talking)*
+- **Sape'wig\_Gesp'teg** — Holy Saturday \| Holy Saturday  *(also: calendar)*
+- **Sape'wig\_Ne'wowei** — Holy Thursday \| Holy Thursday  *(also: calendar)*
+- **sape'winu** — saint \| Saint  *(also: people)*
+- **Se'suguli** — Jesus Christ \| Jesus Christ  *(also: spirit-world)*
+- **Se'sus** — Jesus \| Jesus  *(also: spirit-world)*
+- **Se'ta'n** — Saint·Anne \| Saint Anne  *(also: spirit-world)*
+- **Se'tane'umg** — Saint·Anne's Day \| Saint·Anne's Day  *(also: calendar)*
+- **signt'g** — baptize \| use first time \| He/she uses it for the first time or baptizes it
+- **signtuatl** — baptize \| use first time \| He/she baptizes someone
+- **sulming** — rosary \| Rosary
+- **sune'wimg** — fasting \| time of fasting \| fast day \| Fasting
+- **sune'wit** — fast \| He/she is fasting
+- **sunming** — rosary \| Rosary
+- **tego'tg** — attends mass \| aware of \| in close touch with \| pays attention to \| He/she attends mass \| He/she pays attention to it  *(also: emotions)*
+- **temigale'm** — mid·lent \| Mid-lent
+- **t'pgwan** — gravel \| ashes from cremation \| soil \| Gravel \| Ashes from cremation  *(also: land)*
+- **T'pgwantimg** — Ash Wednesday \| Ash Wednesday  *(also: calendar)*
+- **uggeggusgl** — godparent \| His/her godparent  *(also: family)*
+- **uggnnignn** — godchild \| His/her godchild  *(also: family)*
+- **ulapatmuaqan** — blessing \| favor obtained (religious) \| Blessing
+- **usgijipnew** — host (communion) \| Communion host
+- **utqotalatl** — bury \| He/she buries him/her
+- **utqotamg** — burial \| funeral \| Burial
+- **utqotaqan** — grave \| Grave
+- **utqotaqane'gati** — graveyard \| Graveyard  *(also: places)*
+- **utqotatg** — bury \| He/she buries it  *(also: land)*
+- **welapetmuet** — obtain (religious) favor \| He/she obtains (religious) favor
+- **aniapsimgewei** — related to penance \| Relates to penance.
+- **aniapsit** — doing penance \| He/she is doing penance.
+- **aniapsuinuo'guom** — convent/monastery \| Convent/monastery  *(also: dwellings)*
+- **aniapsit** — does penance \| He/she does penance.
+- **oqonoqopisit** — is veiled \| He/she is veiled  *(also: clothing)*
+- **aniapsua'tma'tijig** — are suffering the consequence \| They (p) are suffering the consequence.
+- **ni'pa'pit** — sits at wake overnight \| sits overnight at vigil \| He/she sits overnight at a wake or a vigil  *(also: customs)*
+- **aniapsuqwan** — garment of penitence, penitential robe  *(also: clothing)*  *(confidence: l)*
+- **usgijega’tuaten** — will be covered in death shroud \| He/she will be covered in a death shroud.  *(also: customs)*
+- **nipepestung** — preach by night \| He/she preaches by night  *(also: talking)*
+- **maqtawe'g usgitaqang ** — mourning vail (mourning shroud) \| Black mourning veil [mourning shroud]  *(also: clothing)*
+- **aniapsua'teget** — suffering the consequence \| He/she is suffering the consequence.
+- **aniapsutg** — he/she punishes themselves  *(confidence: l)*
+- **nipapultimg** — wake of the dead \| vigil for the dead/deceased \| Wake or vigil of the dead  *(also: customs)*
+- **aniapsute'lsit** — impose a penance on oneself \| Impose a penance on himself/herself.
+- **usgit'tutm'gewei** — Chasuble (catholic priest’s cloak) \| Chasuble (catholic priest’s cloak)  *(also: clothing)*
+- **aniapsua'tmasit** — currently suffering the consequences \| He/she is currently suffering the consequences.
+- **aniapsimg** — penance for sin or wrongdoing \| Penance
+- **aniapsua'toq** — suffering the consequences \| He/she is suffering the consequences.
+- **aniapsuinui'sguo'guom** — convent for nuns \| A convent for nuns  *(also: dwellings)*
+- **Nisgamewi'gan** — House of God \| House of God  *(also: dwellings)*
+- **aniapsutelsit** — suffers in penance \| He/she suffers in penance.
+- **aniapsutelmatl** — thoughts of imposing penance over someone \| He/she has thoughts of imposing penance over someone.
+- **aniapsua'sit** — suffers the consequence \| He/she suffers the consequence.
+- **pa'pe'wit** — pope \| pope  *(also: people)*
+- **aniapsuoqon** — garment of penitence \| penitential robe \| garment of penitence, penitential robe  *(also: clothing)*
+- **oqonoqupi'suti** — nun's veil/wedding veil \| Nun's veil/wedding veil.  *(also: clothing)*
+- **aniapsuaqan** — penance \| punishment \| Penance, punishment  *(also: leadership-and-law)*
+
+## Archived entries (lower priority)
+
+- **a'sutmo'guom** — church
+- **etawaqtmamgewe'g** — one decade rosary \| One decade rosary
+- **glujjewta'sit\*\*** — crucifix
+- **pesimgewei** — holy medal or image of saint? \| image of saint on paper, medal or fabric (devotional scapular)?
+- **sisqa'tuj** — is being circumcized \| He is being circumcized

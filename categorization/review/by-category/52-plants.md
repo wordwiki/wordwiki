@@ -1,0 +1,125 @@
+# Plants & Berries (`plants`)
+
+Theme: *Land, Water & Sky* — 98 entries (+20 archived)
+
+- **ajioqjemin** — blackberry \| Blackberry  *(also: food)*
+- **ajioqjeminaqsi** — blackberry bush \| Blackberry bush
+- **alawei** — pea \| Pea  *(also: food)*
+- **aloqoman** — grape \| Grape  *(also: food)*
+- **aloqomanaqsi** — grape vine \| Grape vine
+- **atuomgomin** — strawberry \| Strawberry  *(also: food)*
+- **ejgujg** — squash \| pumpkin \| Pumpkin  *(also: food)*
+- **enmapejit** — carrot \| Carrot  *(also: food)*
+- **esgit** — green(of foliage) \| uncured \| It is green  *(also: condition)*
+- **gawaqtejg** — gooseberry \| Gooseberry  *(also: food)*
+- **gawaqtejgumusi** — gooseberry bush \| Gooseberry bush
+- **gawigsaw** — thorn \| thistle \| Thistle
+- **gesaluejijit** — burdock bur \| burdock \| Burdock
+- **gi'gwesuasgw** — muskrat root (cold remedy, mix with liquid or chewed) \| cold remedy \| Muskrat root  *(also: health)*
+- **ginigwejij** — thistle prickle \| thistle \| Thistle
+- **gislassit** — turn ripe \| It(berry) turns ripe  *(also: condition)*
+- **gislasteg** — turn ripe \| It turns ripe  *(also: condition)*
+- **glamuejmnaqsi** — serviceberry bush \| billberry \| shadbush (juneberry) \| Serviceberry bush
+- **glitaw** — strawberry \| red raspberry (Nova Scotia and parts of New Brunswick) \| berry \| Strawberry  *(also: food)*
+- **glumg** — wheat grain \| Wheat grain  *(also: food)*
+- **glumgul** — wheat plant \| Wheat plant
+- **gmu'jmin** — raspberry \| Raspberry  *(also: food)*
+- **go'gomin** — thornberry \| hawthorn berry \| Thornberry  *(also: food)*
+- **go'gominaqsi** — hawthornberry bush \| thorn apple bush \| Hawthornberry bush
+- **lapilas** — flax seed \| Flax seed  *(also: food)*
+- **lgetu** — mushroom \| Mushroom  *(also: food)*
+- **lgetue'get** — gather mushrooms \| He/she gathers mushrooms  *(also: food)*
+- **malipqwanj** — hazelnut \| Hazelnut  *(also: food)*
+- **malipqwanjmusi** — hazelnut bush \| hazelnut tree \| Hazelnut bush
+- **masgwe'siman** — pin cherry \| Pin cherry  *(also: food)*
+- **ma'susi** — fern \| fiddlehead \| Fern  *(also: food)*
+- **me'goqomgwejg** — dogwood \| Red osier dogwood \| dogwood
+- **megwe'jit** — beet \| Beet  *(also: food)*
+- **mewisit** — pick berries \| He/she is berry picking  *(also: food)*
+- **minig** — bear fruit \| It bears fruit
+- **minijg** — berry \| fruit \| nut \| Berry  *(also: food)*
+- **minit** — bears fruit \| It(tree) bears fruit  *(also: trees)*
+- **msigu** — hay \| grass \| Hay or grass
+- **nigweg** — grow \| It grows  *(also: age)*  *(note: grow)*
+- **nijinj** — roe \| seed \| Seed  *(also: fish)*
+- **nipi** — leaf (of tree) \| leaf (of paper) \| vegetable leaf \| Leaf
+- **nipi'l** — cabbage \| Cabbage  *(also: food)*
+- **nipispaqan** — twig \| switch \| small branch \| Twig
+- **nipman** — high bush cranberry \| bush cranberry \| High bush cranberry
+- **nmu'ji'jmnaqsi** — willow \| pussy willow \| Willow
+- **nu'gwa'luejgewei** — cattail \| Cattail
+- **papawei** — horse bean \| broad bean \| fava bean \| Horse bean  *(also: food)*
+- **paqo'si** — seaweed \| Seaweed  *(also: water)*
+- **pewoqiajgewei** — nasturtium \| Nasturtium flower
+- **pguman** — blueberry \| Blueberry  *(also: food)*
+- **pgumanaqsi** — blueberry bush \| blueberry branch \| Blueberry bush
+- **pgumane'get** — go to get(pick) blueberries \| He/she goes to get blueberries  *(also: food)*
+- **pogoman** — foxberry \| kind of berry \| Foxberry  *(also: food)*
+- **poqomaqn'sgw** — cattail \| Cattail
+- **poqwa'lamgewei** — choke cherry \| Choke cherry  *(also: food)*
+- **psesgw** — mint \| Mint
+- **pugwatqasig** — bushy \| It is bushy
+- **pugwatqasit** — bushy \| It is bushy
+- **pugwatqeg** — thicket \| Thicket  *(also: trees)*
+- **saqaliaq** — sprout \| It sprouts
+- **saqaliet** — sprout \| He/she/it sprouts
+- **sewlugowei** — rhubarb \| Rhubarb  *(also: food)*
+- **s'gepn** — wild potato \| ground nut \| Indian potato \| Wild potato  *(also: food)*
+- **sgilmin** — seed \| Seed
+- **sginaqanmusi** — wild raisin bush \| Wild raisin bush
+- **sgmugualaw** — spruce gum \| Spruce gum  *(also: food)*
+- **siguaqs'te'gn** — straw \| Straw  *(also: farming)*
+- **siguaqs'te'gnei** — made of  straw \| Item made of straw
+- **sqoljui'gan** — toadstool \| mushroom \| Toadstool
+- **su'n** — cranberry \| Cranberry  *(also: food)*
+- **suoman** — beech nut \| Beech nut  *(also: food)*
+- **tansiewe'l** — tansy \| daisy \| Tansy
+- **tap'tan** — potato \| Potato  *(also: food)*
+- **taqate'l** — currant \| Currant  *(also: food)*
+- **te'sipowmann** — oats \| Oats  *(also: food)*
+- **tewa'lutewei** — dandelion \| Dandelion
+- **tmato's** — tomato \| Tomato  *(also: food)*
+- **tmawei** — tobacco \| Tobacco  *(also: customs)*
+- **ugjip'sg** — root \| Root
+- **wapoq** — striped maple \| moosewood \| Striped maple
+- **wasapeglaw** — spruce gum \| Spruce gum  *(also: food)*
+- **wasueg** — flower \| blossom \| blossom \| bloom \| flower \| A flower \| It blossoms
+- **wasuet** — blossom \| It (tree) blossoms  *(also: trees)*
+- **weligweg** — grow well \| It grows well  *(also: age)*
+- **weligwet** — grow well \| It (tree) grows well  *(also: age)*
+- **weljemajgewe'l** — sweetgrass \| lilacs \| Sweetgrass  *(also: customs)*
+- **wisawgwesgl** — golden thread \| Golden thread  *(also: health)*
+- **wisqasaw** — pine cone \| Pine cone  *(also: trees)*
+- **mpisune'gati** — area of medicinal plants \| Area of medicinal plants  *(also: health)*
+- **npisune'get** — gathers medicines/remedies \| provides medicines/remedies \| He/she gathers medicines  *(also: health)*
+- **temisguna’toq** — cut the bud or sprout \| break off bud or sprout \| He/she cuts/breaks off the bud or sprout  *(also: cutting)*
+- **temgwatign** — aquatic plant (i.e. nymphaea water lilies) \| Aquatic plant (i.e. nymphaea water lilies)  *(also: water)*
+- **mui'numan** — huckleberry  *(also: food)*  *(confidence: l)*
+- **sasoqoman** — bunchberry \| Bunchberry
+- **npisune'gaqtmat** — Gathers/provides remedies for him/her self \| He/she gathers/provides remedies for him/her self.  *(also: health)*
+- **amalo'qomanimusi** — fruit bush \| Fruit bush  *(also: food)*
+- **sasmuqwatign** — aquatic plant \| sweet flag plant \| Aquatic plant, sweet flag plant  *(also: water)*
+- **nu’gwa’luejg** — fireworks \| cattails \| fireworks  *(also: fire)*  *(confidence: m)*  *(note: fireworks/cattails)*
+
+## Archived entries (lower priority)
+
+- **amjoqtelign\*\*** — pear
+- **ga'qaguju'man\*\*** — teaberry
+- **gaqaju'man\*\*** — teaberry
+- **ga'to'mi\*\*** — kind of berry
+- **gi'gasuasg** — bear root \| Bear root
+- **gjimsgigu\*\*** — poison ivy
+- **mali'japa'qawei** — golden thread (root) \| Golden thread (root)
+- **mal'tewiejit\*\*** — beet
+- **maqtewiman\*\*** — blackberry \| potato (alternate form)
+- **neiasisgowei\*\*** — marie copain (medicinal salve)
+- **pi'ts** — beet
+- **pu'gu'lu'sgwiman** — elderberry \| Elderberry
+- **sapoqwanipago'sit** — lily root \| Lily root
+- **tanaps** — turnip \| Turnip
+- **tapia'jijgewatp** — fiddlehead \| nut, pegbox and scroll of violin (dmm 02-10-30) \| Fiddlehead
+- **t'lego'pn** — poison hemlock
+- **ugtluanipgaji'jit\*\*** — kind of leaf for medical purposes
+- **wajuejg\*\*** — blossom (of fruit or vegetable)
+- **wen'juipg\*\*** — tobacco leaf
+- **wipgoman** — seedling \| pit \| bud \| seedling

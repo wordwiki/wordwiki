@@ -1,0 +1,111 @@
+# Land & Landscape (`land`)
+
+Theme: *Land, Water & Sky* — 96 entries (+8 archived)
+
+- **atuomg** — sand \| beach sand \| Sand
+- **elalqeg** — tunnel \| long hole \| It is tunneled  *(confidence: m)*
+- **elmalqei** — hole \| Hole
+- **elmalqe'ji'j** — small hole \| Small hole
+- **enmipgowe'g** — along edge of cliff \| Along edge of cliff  *(also: location-words)*
+- **esnaqamiga'toq** — make ground hard by trampling under foot \| He/she/it makes the ground hard by trampling it under foot
+- **esnaqamigeg** — solid  ground \| firm  ground \|  It is solid ground
+- **espapsg'teg** — high rock \| high boulder \| It is a high rock
+- **espaqamigeg** — hill \| small hill \| high land \| Hill
+- **espaqeg** — steep slope \| high hill \| Steep slope
+- **esp'saqteg** — high \| high (sharp) angle \| It is high
+- **esp'tepnigeg** — high bank \| It is a high bank
+- **espulqeg** — deep hole \| The hole is deep
+- **ge'gupn** — hilltop \| Hilltop
+- **gesaqeg** — steep \| It is steep
+- **gesaqet** — steep \| It (mountain) is steep
+- **getalqigwalatl** — take out by scraping \| digging out \| He/she is digging it(bug) out  *(confidence: m)*  *(note: dig out)*
+- **getalqigwatg** — dig out \| He/she digs it out  *(confidence: m)*
+- **gisoqeg** — hill top \| atop hill \| Hill top
+- **giwgw** — earthquake \| Earthquake
+- **gm'tginu** — our territory \| our country \| Our territory  *(also: peoples-and-nations)*
+- **gmtn** — mountain \| Mountain
+- **gunte'j** — pebble \| small stone \| small rock \| Pebble
+- **guntew** — stone \| rock \| Stone
+- **guntewapsgeg** — rocky \| rocky texture \| It is rocky
+- **iga'taqan** — cultivated field \| cultivated land \| garden \| yard \| Cultivated field  *(also: farming)*
+- **lamqamu'g** — underground \| Underground
+- **mals** — flint \| Flint
+- **maqamigew** — land \| ground \| Land
+- **memge'g** — uncultivated field \| cleared fiekl \| Uncultivated field  *(also: farming)*
+- **menigu** — island \| Island
+- **metesegiet** — treeless mountain top \| Treeless mountain top
+- **metoqiaq** — go down to \| come down to \| descend in elevation \| It(bus) descends (from the mountain) in elevation  *(also: movement)*
+- **metoqiet** — descend in elevation \| go down to \| come down to \| He/she descends (from the mountain) in elevation  *(also: movement)*
+- **metoqwa'latl** — bring down to \| take to lower land \| take to lower elevation \| He/she takes him/her to lower land  *(also: carrying)*
+- **metoqwa'toq** — bring down to \| take to lower elevation \| take to lower land \| He/she takes it to lower land  *(also: carrying)*
+- **Mi'gma'gi** — territory of the Mi'gmaq nation \| Mi'gmaq territory  *(also: peoples-and-nations)*
+- **milqamigeg** — uneven \| hilly (of ground or floor) \| It is hilly
+- **mntn** — mountain \| Mountain
+- **msigue'gati** — hay field \| Hay field  *(also: farming)*
+- **mtasoq** — ledge \| cliff \| slate \| Ledge
+- **mulqalatl** — dig out \| He/she digs him/her/it out  *(confidence: m)*  *(note: dig)*
+- **mulqatg** — dig out \| shovel something \| He/she digs it out  *(confidence: m)*
+- **mulqet** — dig \| shovel \| He/she digs  *(confidence: m)*
+- **musigapsg'g** — smooth and round \| bare and round \| It is smooth and round
+- **nunmaqeg** — slope \| slight incline \| It slopes
+- **nunmaqet** — slope \| slight incline \| It (animate) slopes
+- **paqtaqamigt** — wilderness \| deserted area \| Wilderness
+- **paqtaqamigtug** — wilderness \| deserted area \| In the wilderness
+- **pga'w** — clay \| Clay
+- **pitalqeg** — deep hole \| It is a deep hole
+- **pqa'lu'sgw** — clay \| Clay
+- **qalipit** — shovel \| He/she shovels  *(also: work)*  *(note: shovel snow)*
+- **qalipitg** — shovel \| He/she shovels it  *(also: work)*
+- **saputalqatg** — dig through \| He/she digs through it
+- **saqpejaq** — damp \| boggy \| It is damp  *(also: water)*
+- **saqpejaqamig** — swamp \| damp ground \| wet lands \| Swamp  *(also: water)*
+- **sipawas'g** — cleared area in the woods \| It is a cleared area in the woods  *(also: trees)*
+- **sisgu** — mud \| Mud
+- **sisguig** — muddy \| It is muddy
+- **sitm** — shore \| beach \| Shore  *(also: water)*
+- **so'qiaq** — go to higher ground or level \| go up (in altitude) \| go up to the woods (Listuguj) \| It goes up (to higher ground or level)
+- **so'qiet** — go to higher ground or level \| go up (in altitude) \| go up to the woods (Listuguj) \| He/she goes up (to higher ground)  *(also: travel)*
+- **so'qwa'latl** — take to higher ground or level \| take him/her/it up to the woods (Listuguj) \| take up (in altitude) \| He/she takes him/her to higher ground or level  *(also: carrying)*
+- **so'qwa'toq** — take to higher ground or level \| taking it up to the woods (Listuguj) \| take up (in altitude) \| He/she takes it to higher ground or level  *(also: carrying)*
+- **t'pgwan** — gravel \| ashes from cremation \| soil \| Gravel \| Ashes from cremation  *(also: ceremony)*
+- **tuitn** — narrows \| Narrows  *(also: water)*
+- **tupsia'qami** — alder grove \| Alder grove  *(also: trees)*
+- **ugs'tqamu** — earth \| world \| Earth  *(also: sky)*
+- **um'tgi** — territory \| land \| homeland \| His/her territory  *(also: peoples-and-nations)*
+- **usgitqamug** — surface (of the earth) \| above ground \| Surface of the earth
+- **utqotatg** — bury \| He/she buries it  *(also: ceremony)*
+- **walgwe'g** — low place \| hollow place \| dip in earth \| hollow \| Hollow
+- **wesawei** — point \| projection \| Point (of land)
+- **wowj** — quicksand pit \| pit \| Quicksand pit
+- **oqonipgwa'q** — burying it in the (sand)  \| covering it over in the sand, snow, mud etc... \| He/she is burying it in sand  *(also: fastening)*
+- **oqonipgwa'sit** — covered with earth \| covered with grass, snow \| He/she is covered with earth.  *(also: fastening)*
+- **nemegeget** — dries the land \| He/she dries the land.  *(also: farming)*
+- **oqonaqamigiet** — becomes covered with earth \| He/she becomes covered with earth  *(also: fastening)*
+- **oqonaqateg** — pitfall \| covered pitfall \| Pitfall  *(also: hunting)*
+- **gunteweiei** — of stone \| Made of stone  *(also: texture-and-materials)*
+- **qomuti** — harbour \| haven \| Harbour, haven   *(also: water)*
+- **oqomsaqteg** — overhanging precipice \| An overhanging precipice.
+- **guntewapsgu'jl** — pebbles \| Pebbles
+- **espese'g** — high cliff edge \| sharp upward incline \| High cliff edge
+- **gunteweie'get** — gathers rocks/stones \| collects stones/rocks \| He/she gather/collect stones/rocks.  *(also: holding)*
+- **guntewapsgitg** — rocky shore \| A rocky shore  *(also: water)*
+- **guntewapsgiaq** — rocky area \| rocky landscape \| Rocky (area)
+- **oqonaqamiga'teget** — covers with earth \| He/she covers with earth.  *(also: fastening)*
+- **guntewig** — area of stone/rock \| Area of stone/rock
+- **oqonaqamiga'toq** — covers it with earth \| He/she covers it with earth  *(also: fastening)*
+- **qaspem** — lake edge \| border of a lake \| The lake edge, border of a lake  *(also: water)*
+- **guntewe'gati** — rocky land \| rock quarry \| Rocky land/quarries
+- **qaspemg** — lake edge \| At the lake edge  *(also: water)*
+- **sasqapsgeg** — plateau \| table rock \| Plateau/table rock
+- **guntewaqamitg** — rocky region \| quarry \| rocky land \| A rocky region/quarry or land
+
+## Archived entries (lower priority)
+
+- **amalamgug\*\*** — where many varieties of sand
+- **amalamgw\*\*** — fine sand
+- **lnuapsgw\*\*** — Indian rock
+- **mge'gtug** — in the open field \| open field
+- **nemaqt'jgji'j\*\*** — hummock
+- **nemaqt\*\*** — hill
+- **qalipulatl\*** — shovel \| He/she shovels...
+- **tqojuan** — hill \| Hill

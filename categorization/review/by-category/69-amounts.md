@@ -1,0 +1,128 @@
+# Amounts & Degree (`amounts`)
+
+Theme: *Qualities & Amounts* — 116 entries (+5 archived)
+
+- **ajipugwennaji** — have much more than \| He/she has more of them than
+- **ajipugwenn'g** — have much more than \| He/she has much more than
+- **angua'latl** — give additional amount \| give extra \| He/she gives someone an additional amount  *(also: social-life)*
+- **angua'taqan** — supplement \| extra \| something extra \| a little extra \| Extra
+- **angua'toq** — adds additional amount \| adds extra \| He/she adds an additional amount
+- **angu'gitg** — add additional amount \| additional reading \| He/she add an additional amount
+- **anguopiga'toq** — add length to cord, yarn, string \| He/she adds length to cord, yarn or string  *(confidence: m)*
+- **a'qataig** — half \| It is half
+- **aqtamgiaq** — half·full (dry ingredient) \| It is piled half way with something dry
+- **aqtamgiet** — half·full (dry ingredient) \| It is piled half way with something dry
+- **aqtapeg** — half·filled (with liquid) \| It is half-filled with liquid
+- **aqtapet** — half·filled (with liquid) \| It is half-filled with liquid
+- **awije'jg** — scarce \| rare \| It is scarce
+- **awije'jit** — scarce \| rare \| He/she is scarce
+- **esgwiaq** — leftover \| remainder \| It is leftover
+- **esgwiet** — leftover \| remainder \| It (fish) is leftover
+- **espaliaq** — piled high \| It is piled high (snow, gravel...)
+- **espamgo'tas'g** — piled high \| stacked high \| It is piled high  *(also: position)*
+- **espamg'teg** — high pile \| high stack \| It is a high pile  *(also: position)*
+- **ga'l** — one quarter (of time, etc.) \| Quarter of an hour  *(also: time)*
+- **gaqiaq** — comes to an end \| finished \| ended \| It is finished
+- **gaqiet** — exhausted \| come to an end \| finished \| ended \| He/she is finished
+- **gaqo'tg** — exhaust supply \| use up \| He/she used up something
+- **gaqtaqaiaq** — end of trail \| end of something linear \| It (wire) ends
+- **gaqtaqaiet** — the end of (a rope or string) \| end of something linear \| It (rope) ends
+- **gijga'jijg** — little bit \| A little bit
+- **laggol** — cord of wood \| Cord of wood  *(also: trees)*
+- **la'taqsuna'laq** — equivalent to pail \| pail full \| It is equivalent to a pail
+- **lpa\_jigaw** — all gone! \| All gone
+- **malige'wa't** — equal or equivalent to barrel \| It is equivalent to a barrel
+- **mawa'tmg** — gathered \| It is gathered
+- **mawteg** — included \| bunched together \| It is included
+- **megeng** — have many \| have much \| He/she has many
+- **megepaji** — eat plenty of \| eat in abundance \| He/she eats plenty of them(fish)  *(also: eating-and-drinking)*
+- **megeta'ji** — acquire plenty of \| gather plenty \| pick plenty \| win plenty \| He/she has acquired plenty of them(fish)
+- **megete'g** — acquire plenty of \| gather plenty \| pick plenty \| win plenty \| He/she acquires plenty of it
+- **megete'gl** — acquire plenty of \| gather plenty \| pick plenty \| win plenty \| He/she acquires plenty of them
+- **megetg** — eat plenty of \| eat in abundance \| He/she eats plenty of it  *(also: eating-and-drinking)*
+- **megetgl** — eat plenty of \| eat in abundance \| He/she eats plenty of them  *(also: eating-and-drinking)*
+- **mese'g** — whole \| whole \| entire \| entire \| It is whole \| Whole
+- **me'\_ap** — more again \| still again \| some again \| More again
+- **me'\_ijga** — a little more \| a bit more \| some more! \| A little more
+- **ms't\_goqwei** — everything \| Everything  *(also: small-words)*
+- **ms't\_tami** — everywhere \| Everywhere  *(also: location-words)*
+- **ms't\_wen** — everybody \| Everybody  *(also: people)*
+- **musse'j** — small piece \| a bit \| A small piece
+- **mussew** — piece \| Piece
+- **nasgwa'latl** — divide in half \| halve \| He/she divides him/her/it in half
+- **nasgwa'tatijig** — share evenly \| They share evenly  *(also: social-life)*
+- **nasgwa'toq** — halve \| divide in half \| He/she divides it in half  *(also: cutting)*
+- **nuta'q** — missing \| not there \| absent \| needs, requires \| It is missing  *(note: missing/absent)*
+- **nuta't** — missing \| not there \| absent \| needs, requires \| He/she is missing
+- **nutqwa'latl** — give insufficient amount \| put insufficient amount \| He/she gives insufficient amount to him/her
+- **nutqwa'toq** — put insufficient amount \| add insufficient amount \| He/she puts an insufficient amount
+- **nutqwelg** — inadequate \| inadequate \| insufficient \| insufficient \| He/she doesn't have enough \| It is an insufficient amount
+- **piamiaq** — leftover \| It is leftover
+- **piamiet** — something leftover \| He/she has something leftover
+- **piamiw** — more than \| over \| More than
+- **pitgmalatl** — fill up \| stuff \| load \| He/she fills up him/her/it
+- **pitgmatg** — fill up \| stuff \| load \| He/she fills it up
+- **pitgmewatl** — load for \| fill for \| pack for \| He/she loads or fills for him/her
+- **piwiaq** — left over \| remainder \| It is left over
+- **poqtamgiet** — begin to pile up \| begin to fill up \| Begin to pile up
+- **puesu** — bushel \| Bushel  *(also: household)*
+- **pugwei** — piece of \| portion of \| Piece of (something)
+- **pugwelg** — lots \| lots \| several \| several \| many \| many \| much \| much \| Lots \| Lots
+- **pugweliaq** — plentiful \| in good supply \| It is plentiful
+- **pugweliet** — many \| plentiful \| in good supply \| They are many
+- **pugweliganig** — have many buildings or houses \| It has many buildings or houses  *(also: dwellings)*
+- **pugwelijuig** — flow excessively \| It flows excessively
+- **pugwelijuit** — flow extensively \| He/she flows extensively
+- **pugweng** — have plenty of \| He/she has plenty of it
+- **pugwennatl** — have plenty of \| He/she has plenty of them
+- **qasgo'tg** — take or withdraw in small amounts \| He/she takes or withdraws in small amounts
+- **qasgweiwatl** — take in small amounts \| withdraw in small amounts \| He/she takes in small amounts
+- **qataig** — half way \| midway \| Half way  *(also: location-words)*
+- **sigua'latl** — empty out \| He/she empties him/her/it out
+- **sigua'toq** — empty out \| He/she empties it out
+- **sigue'g** — empty \| empty \| He/she/it is empty \| It is empty
+- **ta's'g** — how much? \| some \| How much?  *(also: question-words)*
+- **ta'sit** — how much? \| how many? \| How much is there?  *(also: question-words)*
+- **ta's'ji'jg** — little portion \| little bit \| A little portion (of something inanimate)
+- **ta's'ji'jit** — little portion \| little bit \| A little portion (of something animate)
+- **ta'sunatl** — has how much (many) of? \| has what quantity? \| How much does he/she have?  *(also: question-words)*
+- **tegele'jg** — small amount or number \| not very much \| It is a small amount
+- **tegele'jit** — small amount or number \| It is a small amount or number
+- **tepiaq** — enough \| sufficient \| adequate \| It is enough
+- **tepiet** — enough \| sufficient \| adequate \| He/she is/has enough
+- **te's'g** — so much \| so many \| So much
+- **te'sit** — so many \| so much \| So many
+- **te'sunatl** — have so many or so much \| He/she has so many
+- **te'sunemi'g** — so many kinds \| So many kinds
+- **te'sunemigsit** — so many kinds \| There are so many kinds
+- **te'sung** — have so much or so many \| He has so much or so many
+- **tmaqanigju'aq** — loaded to brim \| overloaded \| It is loaded to the brim
+- **tmaqanigju'et** — loaded to brim \| overloaded \| It is loaded to the brim
+- **wajua'latl** — fill up (with non·liquid) \| He/she fills it (bottle) up with non·liquid
+- **waju'aq** — full (with non·liquid) \| It is full
+- **wajua'toq** — fill up (with non·liquid) \| He/she fills it up with non·liquid
+- **wajuegnepit** — full \| fully stocked \| full to capacity \| It (animate) is full
+- **waju'et** — full \| He/she is full
+- **wajuigneteg** — full \| fully stocked \| full to capacity \| It is full
+- **waju'pega'latl** — fill up (with liquid) \| soak \| He/she fills him/her/it up with liquid  *(also: water)*
+- **waju'pega'toq** — fill up (with liquid) \| soak \| He/she fills it up with liquid  *(also: water)*
+- **wesamelg** — too much \| too much \| Too much of it \| Too much of him/her/it
+- **wesamla'muatl** — overload (someone's) plate \| He/she overloads his/her plate  *(also: food)*
+- **wiaqiaqal** — mixed \| They are mixed  *(note: mixed)*
+- **wiaqqiejig** — mixed \| They are mixed
+- **wipsgunatl** — have one of \| He/has one of an animate
+- **wipsgung** — have only one \| He/she has only one of it
+- **tempuesu** — half-bushel \| Half-bushel  *(also: household)*
+- **aneset** — to lack  *(confidence: l)*  *(note: to lack - thin gloss)*
+- **mestaqigsua'toq** — he/she takes everything \| he/she takes it all \| He/she takes it all, he/she takes everything.
+- **anesimgewei** — to be lacking in something \| To lack
+- **naqanipgwa'tmg** — a handful \| A handful  *(also: holding)*
+- **ewlawsuo'qon** — food scarcity \| scarcity \| Scarcity, food scarcity  *(also: food)*
+
+## Archived entries (lower priority)
+
+- **aji-** — much \| more
+- **isei\*\*** — half
+- **laggo'la'laq** — equivalent to cord (of wood) \| equal to a cord (of wood) \| It is equivalent to a cord of wood
+- **la'taqsuna'lat\*\*** — equivalent to pail \| It is equivalent to a pail
+- **piami·** — more (dmm 04Jul08) \| more than (dmm 04Jul08)

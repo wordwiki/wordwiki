@@ -1,0 +1,196 @@
+# Work & Effort (`work`)
+
+Theme: *Work & Livelihood* — 173 entries (+16 archived)
+
+- **agase'wa'latl** — hire \| He/she hires him/her
+- **agase'wa'toq** — hire \| to pay for the use of \| lease \| He/she hires it  *(also: money-and-trade)*
+- **agase'wit** — enlist \| sign up \| trade (Cape Breton) \| hire (New Brunswick) \| He/she enlists
+- **allugwet** — work in different locations \| work at odd jobs \| He/she works in different locations
+- **alsusit** — boss \| boss \| supervise \| direct \| oversee \| Boss \| He/she bosses  *(also: occupations)*
+- **aluse'wit** — carpenter \| carpentry \| Carpenter \| He/she does carpentry  *(also: occupations)*
+- **amilugwet** — work a bit \| work a little \| He/she works a bit
+- **angu'lugwet** — work extra \| He/she does extra work
+- **aplugwet** — return from work \| back from work \| He/she is back from work
+- **assusit** — boss \| boss \| supervise \| direct \| oversee \| Boss \| He/she bosses  *(also: occupations)*
+- **atlasmu'teget** — take break \| take rest \| He/she takes a rest  *(also: sleep)*
+- **attigna's'g** — work hard \| laborious \| work to the limit \| It works very hard
+- **attigna'sit** — work hard \| strain \| laborious \| work to limit \| He/she strains
+- **awanlugwet** — unskilled worker \| works poorly \| He/she works poorly
+- **awtit** — on salary \| cost \| being paid \| He/she is on salary \| The cost of it  *(also: money-and-trade)*
+- **elugowatl** — work for \| He/she works for him/her
+- **elugwa'tl** — work \| make work \| He/she makes him/her work
+- **elugweg** — operating \| work \| It is operating
+- **elugwet** — operates \| work \| He/she works
+- **elugwetoq** — use it to work \| He/she uses it to work
+- **elulatl** — give a task \| ask to do something \| He/she gives him/her  a task  *(also: talking)*
+- **enget** — scale \| measure (pertaining to wood) \| He/she scales  *(also: size-and-shape)*
+- **engewatl** — to scale(pertaining to pulpwood or logs) \| to survey land \| He/she scales for someone  *(also: size-and-shape)*
+- **enmilugweg** — works until... \| It works until ...  *(also: time)*
+- **enmilugwet** — work until...(midnight) \| He/she works until...(midnight)  *(also: time)*
+- **etllugweg** — work \| It is working
+- **etllugwet** — working \| work there \| place of work \| He/she is working \| He/she works there
+- **e'watl** — use \| make use \| He/she makes use of him/her/it  *(confidence: m)*  *(note: use -> work)*
+- **ewega'tl** — make use \| needs \| He/she needs him  *(confidence: m)*
+- **ewegetoq** — make use \| need \| He/she needs it  *(confidence: m)*
+- **e'w'g** — use \| make use \| He/she uses it  *(confidence: m)*
+- **ewllugwet** — poor quality work \| badly done work \| He/she does poor quality work
+- **gaqa'latl** — complete \| finish \| terminate \| end \| He/she finishes him/her
+- **gaqalugweg** — finished working \| stop working \| It is finished working
+- **gaqalugwet** — finished working \| He/she is finished working
+- **gaqa'teget** — finished doing something \| finish a task \| He/she finished a task
+- **gaqa'toq** — complete \| finish \| finish a task \| terminate \| end \| He/she completes it
+- **gaqiga'lsit** — maximum effort \| puts all of himself/herself in \| He/she puts in maximum effort  *(also: character)*
+- **gegnu'lugwet** — work properly \| He/she works properly
+- **gesigawlugweg** — works quickly \| It works quickly
+- **gesigawlugwet** — works fast \| works non-stop \| works quickly \| He/she works fast
+- **getantoq** — hunt \| strive to obtain \| gather \| work to earn \| He/she hunts it  *(also: hunting)*
+- **getmete'mat** — finished off \| wiped out \| He/she finished his/hers off
+- **giasgilugwet** — work with precision \| work properly \| He/she works with precision
+- **giaspilugwet** — last time worked \| Last time he/she worked  *(also: time)*
+- **gi'gajie'watl** — use in spite of \| use in spite of condition \| use forcefully \| He/she uses it forcefully  *(confidence: m)*
+- **gi'gajilugwet** — work in spite of... \| He/she works in spite of...
+- **gi'gajo'tg** — use in spite of condition \| force self \| aggravate \| He/she uses it in spite of it's condition  *(confidence: m)*
+- **gimilugwet** — work in secret \| work secretly \| He/she works in secret
+- **gina'sit** — put a lot of effort \| try hard \| He/she puts a lot of effort
+- **gisilugwet** — able to work \| He/she is able to work
+- **gmu'je'gaqan** — lumbering \| forestry \| Lumbering  *(also: trees)*
+- **gmu'je'get** — get wood \| cut lumber \| He/she gets wood (or lumber)  *(also: trees)*
+- **jaqalilugwet** — work quickly \| He/she works quickly
+- **jaqallugweg** — works quickly \| It works quickly
+- **jaqalte'g** — earn quickly \| gather quickly \| chop quickly \| He/she gathers it quickly  *(also: money-and-trade)*
+- **lgowaqan** — job \| work \| task \| Work
+- **lugowaqan** — task \| work \| job \| jobs \| Work
+- **lugowinu** — worker \| laborer \| Worker  *(also: occupations)*
+- **lugowinu'sgw** — worker (female) \| laborer (female) \| Female worker  *(also: occupations)*
+- **mallugweg** — work poorly \| It works poorly
+- **mallugwet** — works poorly \| works lazily \| He/she works poorly
+- **maqatewei** — temporary replacement \| temporary replacement \| Temporary replacement \| Temporary replacement  *(confidence: m)*  *(note: temporary replacement)*
+- **matu'lugwet** — do odd or simple jobs \| handyperson \| He/she does odd jobs
+- **mawintawo'tg** — very skilled at (something) \| He/she is very skilled at (something)
+- **melgilugwet** — works hard \| He/she is works hard
+- **millugwet** — do different kinds of work \| He/she does different kinds of work
+- **minua'toq** — duplicate \| redo \| He/she duplicates it
+- **mulin** — mill \| machine \| Mill  *(also: dwellings)*
+- **na'gwegewa'q** — paid daily \| He/she is paid daily  *(also: money-and-trade)*
+- **najilugwet** — go to work \| He/she goes to work
+- **naqsilugweg** — works quickly \| It works quickly
+- **naqsilugwet** — work quickly \| He/she works quickly
+- **na'tala'latl** — does something to \| He/she does something to him/her  *(confidence: m)*
+- **na'tala'toq** — do something to \| He/she does something to it  *(confidence: m)*
+- **nata'lugwet** — know how to work \| good worker \| He/she knows how to work
+- **nata'nmat** — good at whatever they do \| capable person \| handy \| handyman \| jack of all trades \| He/she is good at whatever he/she does  *(also: character)*
+- **natawa'qa'latl** — skillful in handling \| competent in doing \| He/she is competent in handling it(horse)  *(also: character)*
+- **natawa'qa'toq** — skillful in handling \| competent in doing \| He/she is competent in doing or handling it  *(also: character)*
+- **natawo'tg** — skilled at (something) \| He/she is skilled at (something)
+- **ne'patat** — slaughter own livestock \| slaughterer \| butcher \| He/she slaughters his/her livestock  *(also: farming)*
+- **nespilugweg** — work while also... \| work at same time as... \| It works while also...
+- **nespilugwet** — work while also... \| work at same time as... \| He/she works while also...
+- **nespit** — baby·sit \| house·sit \| He/she baby·sits or house·sits  *(also: family)*
+- **newtlugwet** — work alone \| He/she works alone
+- **nme'juaqan** — fishery \| fishing industry \| Fishery  *(also: fishing)*
+- **nujatejo'toqol** — haul \| twitch (in logging) \| He/she hauls them  *(also: pushing-and-pulling)*
+- **nujeiwatl** — in charge of \| responsible for \| handle \| He/she in charge of him/her  *(confidence: m)*  *(note: in charge of)*
+- **nujiewjo'toq** — haul \| He/she hauls it  *(also: carrying)*
+- **nujigsmoqja'teget** — foreman \| foreman \| pusher \| pusher \| He/she is the forman \| He/she is a foreman  *(also: occupations)*
+- **nujo'tg** — in charge of \| responsible for \| handle \| He/she is in charge of it  *(confidence: m)*
+- **nutalugwet** — unfinished or uncompleted work \| incorrectly finished work \| He/she does unfinished or incomplete work
+- **nutanguet** — responsible for provisioning \| responsible for buying \| He/she is responsible for provisioning  *(also: money-and-trade)*
+- **nuta'toq** — incompletely made or done \| insufficient \| He/she did not complete something
+- **nutqalugwet** — poor quality work \| He/she does poor quality work
+- **pegajilugwet** — work neatly \| work cleanly \| He/she works neatly
+- **pegitapematl** — useful for a long time \| He/she is useful to him/her for a long time  *(also: time)*
+- **pegitapetg** — useful for long time \| It is useful to him/her for a long time  *(also: time)*
+- **pejilugwet** — came here to work \| arrive here to work \| He/she came here to work  *(also: travel)*
+- **pemeiwatl** — operating \| He/she is operating it (a tractor)
+- **pemlugweg** — go along working \| It goes along working
+- **pemlugwet** — go along working \| He/she goes along working
+- **pemo'tg** — operate \| He/she operates it
+- **pesi'gugwet** — river drive \| He/she works at a river drive  *(also: water)*
+- **piltu'lugweg** — work differently \| It works differently
+- **piltu'lugwet** — do different work \| do something else \| He/she does different work
+- **pi't'pet** — pour in \| tend bar (Nova Scotia) \| He/she pours in
+- **poqjilugweg** — start to work \| It starts to work
+- **poqjilugwet** — begin to work \| He/she begins to work
+- **psi'gwaqan** — river drive \| River drive  *(also: water)*
+- **pugwellugwet** — do a lot of work \| He/she does a lot of work
+- **puna'toq** — quit \| leave \| desert \| abandon \| He/she quits it  *(confidence: m)*  *(note: quit)*
+- **punlugowatl** — stop working for \| He/she stops working for him/her
+- **punlugweg** — stop working \| It stops working
+- **punlugwet** — stop work \| He/she stops working
+- **pusgilugwet** — usually works \| He/she usually works
+- **pusgiullugweg** — usually work well \| generally work well \| It usually works well
+- **pusgiullugwet** — usually work well \| habitually work well \| He/she usually works well
+- **putaqatl** — butcher \| He/she butchers him/her  *(also: farming)*
+- **putaqiget** — butcher \| He/she butchers  *(also: farming)*
+- **qalipit** — shovel \| He/she shovels  *(also: land)*  *(note: shovel snow)*
+- **qalipitg** — shovel \| He/she shovels it  *(also: land)*
+- **sangewlugweg** — work slowly \| It works slowly
+- **sangewlugwet** — work slowly \| work calmly \| He/she works slowly
+- **saqamawit** — boss \| chief \| supervisor \| He/she is the boss  *(also: leadership-and-law)*
+- **sespilugweg** — work noisily \| It works noisily  *(also: hearing)*
+- **sespilugwet** — work noisily \| He/she works noisily  *(also: hearing)*
+- **siawlugweg** — continue work \| It continues to work
+- **siawlugwet** — continue work \| He/she continues to work
+- **sipgilugweg** — work slowly \| It works slowly
+- **sipgilugwet** — work slowly \| He/she works slowly
+- **siwlugwet** — tired of working \| He/she is tired of working  *(also: emotions)*
+- **sngatigna'teget** — work on boom \| boom \| He/she works on a boom  *(also: trees)*
+- **tallugweg** — how does it work? \| How does it work?  *(also: question-words)*
+- **tallugwet** — what is he/she doing? \| what type of work does he/she do? \| what does he/she do? \| What is he/she doing? \| What type of work does he/she do?  *(also: question-words)*
+- **tela'latl** — do in such a way \| he/she does it (something) to him/her \| He/she does him/her/it in such a way  *(confidence: m)*
+- **tela'toq** — do in such a way \| He/she does it in such a way
+- **tellugweg** — works in such a way \| It works in such a way
+- **tellugwet** — do such work \| works in such a way \| He/she does such work
+- **teluegeg** — for specific use \| use as \| use for \| It is for specific use  *(confidence: m)*  *(note: use)*
+- **telueget** — for specific use \| used for \| He/she is for specific use  *(confidence: m)*
+- **tepilugwet** — work enough to... \| work enough for... \| He/she works enough to...
+- **tewlugwet** — work away from home \| work outside the community \| He/she works away from home
+- **toqolugwegl** — two work together \| two work in tandem \| Those two work together
+- **toqolugwejig** — work together \| work in tandem \| work in pairs \| They work together  *(also: social-life)*
+- **unjewit** — lead of something \| head of something \| He/she is a lead (of something)  *(also: leadership-and-law)*
+- **usgaqan** — fishery \| fishing industry \| Fishery  *(also: fishing)*
+- **wantaqilugwet** — work calmly \| work quietly \| He/she works calmly
+- **wejilugweg** — works from... \| works because... \| reason it works \| It works from... \| It works because...
+- **wejilugwet** — work because \| work from (location) \| reason for work \| He/she works because... \| He/she works from (location)
+- **wejo'tg** — attempt \| try out \| try \| test \| He/she attempt it  *(confidence: m)*  *(note: try)*
+- **wellugweg** — work well \| It works well
+- **wellugwet** — do good work \| do well (in general) \| succeed (in general) \| work well \| He/she does good work \| He/she does well (in general)
+- **welpmiaq** — operates well \| go or move well \| It is operating well
+- **wenaqto'sit** — move up (in world) \| help oneself up (in the world) \| He/ she moves up (in the world)
+- **wesgo'tas'g** — worked on \| It is being worked on
+- **wesgo'tg** — handle \| fondle \| have, possess (Nova Scotia) \| process of doing \| He/she is handling it  *(also: smell-and-taste)*
+- **wesgweiwatl** — handle \| fondle \| have, possess (Nova Scotia) \| He/she is handling him/her/it  *(also: smell-and-taste)*
+- **wesuejo'qwa'latl** — undertake \| tackle \| take on \| He/she undertakes him/her/it
+- **wesuejo'qwa'toq** — undertake \| tackle \| take on \| He/she undertakes it
+- **wetme'g** — busy \| He/she is busy
+- **wetmeiwatl** — keep busy \| use occasionally as needed \| disturb \| He/she keeps him/her busy  *(also: social-life)*
+- **wetmo'tg** — disturb \| use occasionally as needed \| He/she disturbs it  *(confidence: m)*
+- **wi'gu'lugweg** — work strangely \| work weirdly \| It works strangely
+- **winpasit** — hustle \| try hard \| He/she hustles
+- **oqompaligewatl** — overloads him/her/it \| He/she overloads him/her/it.  *(also: carrying)*
+- **nena'q'te'get** — Forges quickly. \| Hammers quickly. \| He/she forges and hammers quickly.  *(also: hitting)*
+- **ela'qate'get** — forges into certain shape \| hammers into certain shape \| He/she forges  *(also: hitting)*
+- **ewlte'mat** — doing poorly at an activity
+- **ewllugowaqan** — poor work \| Poor work.
+- **alsusite'sgw** — boss (woman) \| Boss (woman)  *(also: leadership-and-law)*
+- **ewlamugwa'teget** — does poorly \| He/she does poorly.
+- **niplugwet** — work at night \| work night shift \| He/she works at night
+
+## Archived entries (lower priority)
+
+- **a'qatlugwet** — do incomplete work \| He/she works -
+- **elugomit** — commission \| he/she commissions...
+- **ewnasilugwet** — disorganized work style \| confused work style \| He/she has a disorganized work style
+- **gweja'latl\*\*** — test \| try out
+- **gweja'toq\*\*** — test \| try out
+- **-lugweg** — It works -
+- **-lugwet** — He/she works -
+- **matu'lugweg** — kind of works \| doesn't work up to par \| works poorly \| It works -
+- **nutsa'qaniget** — who dismisses or fires \| discharger, dismisser, firer \| He/she dismisses or fires
+- **pegi't'pet\*\*** — tend bar
+- **qalipulatl\*** — shovel \| He/she shovels...
+- **tetapu'lugweg** — work correctly \| It works correctly
+- **tetapu'lugwet** — work correctly \| He/she works correctly
+- **waqajilugwet** — hardly works \| seldom works \| works weakly (doesn;t work because of weakness, illness?) \| He/she hardly works
+- **wesamlugwet** — works too much \| He/she works too much
+- **winlugweg** — work poorly \| work badly \| It works poorly

@@ -1,0 +1,134 @@
+# Weather (`weather`)
+
+Theme: *Land, Water & Sky* — 114 entries (+12 archived)
+
+- **alug** — cloud \| Cloud
+- **alugwiaq** — become cloudy \| cloud up \| It turns cloudy
+- **amitge'g** — bit cold \| somewhat cold \| The weather is somewhat cold  *(also: temperature)*
+- **a'petna's'g** — whirlwind(-ing) \| gusty \| It is whirlwind(-ing)
+- **ejiglsing** — blown away \| He/she is being blown away  *(also: movement)*
+- **ejipewe'g** — easterly breeze \| It is an easterly breeze
+- **elpanigs'g** — drifted up against \| drifts (usually snow) \| It forms drifts
+- **epteg** — hot \| hot temperature \| It is hot  *(also: temperature)*
+- **esp'panigs'g** — high snowdrift \| It forms high snowdrifts
+- **etlanqatesg** — shimmer (heat) \| flap in breeze \| It is shimmering
+- **ewlamsn** — tornado \| gale \| hurricane \| Tornado
+- **ewupniaq** — calming storm \| The storm is calming
+- **gaqaliteg** — snow all melted \| The snow has all melted
+- **gaqtugwaw** — thunder \| Thunder
+- **gaqtugwawig** — thunder \| It is thundering
+- **gawasg'tniaq** — change direction, of wind \| The wind changes to the opposite direction
+- **gegpewisg** — dew \| morning dew \| It is dew
+- **gep't'g** — frozen over (water) \| It is frozen over  *(also: water)*
+- **gewaqs'g** — fell by the wind \| blown down by the wind \| It is fell by the wind  *(also: falling)*
+- **gewaqsing** — blown down by the wind \| fell by the wind \| It(tree) is blown down by the wind  *(also: falling)*
+- **gews'g** — toppled by the wind \| topple by cutting \| blown over by the wind \| fell (by cutting) \| blown down \| It is toppled by the wind \| He/she fells it by cutting  *(also: cutting)*
+- **gigpesa'ji'jg** — shower \| rain slightly \| It is raining slightly
+- **gigpesan** — rain \| Rain
+- **gigpesanamu'g** — misty \| looks like rain \| looks like it's going to rain \| It looks misty
+- **gigpesanamugwiaq** — rain clouds approaching \| Rain clouds are approaching
+- **gigpesaq** — rain \| It is raining
+- **giwasg** — heat lightning \| It is heat lightning
+- **ma'munipsaq** — snow heavily \| It snows heavily
+- **ma'munlaq** — rain heavily \| It rains heavily
+- **mesie'waq** — drizzle \| It is drizzling
+- **metuamu'g** — looks bad \| It(weather) looks bad
+- **metuguna'q** — stormy \| It is stormy
+- **metuigisg'g** — bad weather \| The weather is bad today
+- **mgumi'gnig** — icy (in patches) \| It is icy
+- **mgumi'gnit** — icy (in patches) \| It(board) is icy
+- **msi'gw** — hailstone \| sleet \| Hailstone
+- **mtugunoqt** — storm \| Storm
+- **mtugunoqtnugwet** — behave a certain way when a storm is approaching \| It(horse) is behaving in a certain way when a storm is
+approaching  *(also: animals)*
+- **musgwiaq** — sky clearing \| The sky is clearing
+- **na'gu'setewig** — sunny \| It is sunny  *(also: sky)*
+- **neiaseniget** — appear shining (as sun) \| shining through (the clouds) \| come into view with a light source \| It appears shining  *(also: fire)*
+- **neweg** — breezy \| cool breeze \| It is breezy
+- **newjoqaluesmatl** — air out in the cool wind \| He/she airs it(shirt) out in the cool wind  *(also: cleaning)*
+- **newjoqaluestoq** — air out in the cool wind \| He/she airs it out in the cool wind  *(also: cleaning)*
+- **news'g** — draughty \| breezy \| It is draughty  *(also: dwellings)*
+- **oqonaliaq** — covered with snow, soil, etc. \| process of being covered with snow, soil, etc. \| It is covered (with snow)  *(also: fastening)*
+- **oqonaliet** — covered with snow, etc. \| process of being covered with snow, etc. \| He/she is covered with snow  *(also: fastening)*
+- **oqwatg** — wind blows from the north \| The wind is blowing from the north
+- **paneta'q** — sun beginning to shine through clouds \| open or clear up (of sky) \| The sun begins to shine through the clouds
+- **paniaq** — end of the snow period \| It is the end of the snow period  *(also: calendar)*
+- **panigisgiaq** — clear up (of clouds or fog) \| It clears up
+- **paqu'niaq** — fog dissipating \| The fog is dissipatiing
+- **pasaliteg** — deep snow \| The snow is deep
+- **pegte's'g** — southwind \| The wind is blowing from the south
+- **pejipug** — winter arrives \| Winter arrives  *(also: calendar)*
+- **pemitge'g** — get cold (of weather) \| It is getting cold (of weather)  *(also: temperature)*
+- **pesa'ji'jg** — lightly snowing \| It is snowing lightly
+- **pesanagig** — snow mist \| snow flurries \| It is a snow mist
+- **pesaq** — snowing \| It is snowing
+- **petna's'g** — gust of cool wind \| There is a gust of cool wind
+- **petu'niaq** — get foggy \| It is getting foggy
+- **pisgulaq** — rain into \| It is raining into
+- **pisgupanigs'g** — drift inside (snow) \| It (snow) drifts inside
+- **poqwatign** — umbrella \| Umbrella  *(also: household)*
+- **psan** — snowfall \| snow \| Snowfall
+- **psanji'j** — light snowfall \| little snow \| Light snowfall
+- **psigweta'w** — spleen \| organ taken from pig to predict weather \| Spleen  *(also: animals)*
+- **saqaniaq** — falling level of the snow due to melting/thaw \| falling level \| The level of snow falls due to melting/thaw
+- **saqpipsaq** — wet snow \| It is snowing wet snow
+- **sa'wes** — rain hat \| Rain hat  *(also: clothing)*
+- **sesupe'g** — slippery \| slippery (due to weather) \| He/she/it is slippery \| It is slippery  *(also: texture-and-materials)*
+- **tege'g** — cold (of weather) \| The weather is cold
+- **tegigisg'g** — chilly day \| It is a chilly day  *(also: temperature)*
+- **tegs'g** — westwind \| It is blowing from the west  *(note: west wind)*
+- **tupig** — frosted (as tree branch) \| Frosted (as a tree branch)  *(also: temperature)*
+- **ugju'sn** — wind \| air \| Wind
+- **u'n** — fog \| Fog
+- **u'niaq** — get foggy \| It is getting foggy
+- **u'nig** — foggy \| It is foggy
+- **wali'g** — snowbank \| snowdrift \| Snowdrift
+- **wali'j** — snowball \| Snowball  *(also: games)*
+- **walqwan** — rainbow \| Rainbow  *(also: sky)*
+- **waseta's'g** — (sky) clearing up \| getting brighter (clouds moving out) \| It (sky) is clearing up
+- **wasoqotesg** — lightning \| sparkle \| It is lightning
+- **wastew** — snow \| fallen snow \| Snow
+- **wastewt'g** — frosty \| frost \| It is frosty
+- **weglams'g** — gusty (of wind) \| It is gusty
+- **wejgwapaneta'q** — clear up (of sky) \| It is clearing up
+- **wejipeg** — east wind \| The wind is blowing from the east
+- **weju's'g** — windy \| It is windy
+- **welegisg** — nice breeze \| Nice breeze
+- **welegistat** — have good wind \| have good breeze \| He/she has good wind
+- **weliegsitpu'g** — nice morning \| It is a nice morning  *(also: time)*
+- **weligisg'g** — nice weather day \| It is a nice day
+- **welipug** — nice winter \| It is a nice winter  *(also: calendar)*
+- **welipunsit** — have nice winter \| He/she has a nice winter  *(also: calendar)*
+- **welitpa'q** — nice evening or night \| It is a nice evening or night  *(also: time)*
+- **welneweg** — breezy \| nice and cool (of air) \| It is breezy  *(also: temperature)*
+- **welp'teg** — nice and warm \| It is nice and warm  *(also: temperature)*
+- **wetqane'g** — mild (of weather) \| The weather is mild
+- **wetqanigisg'g** — mild day \| It is a mild day
+- **wets'g** — airborne from... \| thrown from... \| It is airbourne from...
+- **wetteniaq** — wind blowing from such direction \| The wind is blowing from such direction
+- **wett'g** — wind blowing from such direction \| taste \| The wind is blowing from such direction \| He/she tastes it  *(also: smell-and-taste)*
+- **winigisg'g** — bad weather day \| day of bad weather \| It is a bad weather day
+- **wisqaplgigwa't** — snow blinded \| He/she is snow blinded.  *(also: seeing)*
+- **saptaqt'g** — wind goes through it \| cold goes through it \| freezes through \| Wind or cold goes through it (draft, floors)  *(also: temperature)*
+- **gaqawiewlams'g** — extreme wind gust  \| sudden strong gust of wind \| An extreme wind gust.
+- **paslugw** — Dark thick clouds \| Thick covering (snow)  *(confidence: l)*
+- **pastesg** — thick accumulation (snow) \| Thick accumulation. (snow)
+- **gutajuig** — pours out \| It pours out  *(also: water)*
+- **gaqiewlams'g** — the strong wind gust is over \| the hurricane is over \| the tornado is over \| The strong wind gust/hurricane/tornado is over.
+- **ewlams'nuigtug** — in the strong gust of wind \| In the strong gust of wind.
+- **ewlams'g** — gale \| hurricane \| tornado \| Gale/hurricane/tornado.
+
+## Archived entries (lower priority)
+
+- **awalugtesg\*\*** — form clouds
+- **gigpesanuiaq\*\*** — turn to rain
+- **ginawsgituniaq\*\*** — change direction (of wind)
+- **me'giwju's'g\*\*** — gale force wind
+- **megunig** — icy \| It is icy
+- **newlasg\*\*** — frosted (from cold) \| It is frosted
+- **newlasing\*\*** — frosted (from cold) \| He/she is frosted
+- **senusaqte'g** — southwest wind
+- **sigtiniaq** — turn spring \| It turns spring
+- **te'sipowalugtesg\*\*** — form (as cloud) in shape of horse
+- **ugjoqolqote'gnalugtesg** — clouds forming like a palate \| The clouds are forming like a palate
+- **u'npegw\*\*** — rainbow (in bay) \| fog eater
