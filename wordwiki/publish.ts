@@ -284,6 +284,14 @@ export class Publish {
         this.entryToPublicId = this.computeEntryPublicIds(entries, this.defaultVariant);
     }
 
+    // Path discipline: every `*Path`/`pathFor*` helper returns a
+    // SITE-RELATIVE path (they double as href sources, so they must never
+    // contain publishRoot); every filesystem write/mkdir goes through
+    // fsPath(), the ONE place publishRoot is applied.
+    fsPath(sitePath: string): string {
+        return `${this.publishRoot}/${sitePath}`;
+    }
+
     // ------------------------------------------------------------------------
     // --- Public-site category policy ------------------------------------------
     // ------------------------------------------------------------------------
@@ -436,7 +444,7 @@ export class Publish {
                     await this.publishCategories();
                     break;
                 case 'category':
-                    await Deno.mkdir(this.categoriesDir, {recursive: true});
+                    await Deno.mkdir(this.fsPath(this.categoriesDir), {recursive: true});
                     await this.publishItem(`Category ${t.slug}`, ()=>this.publishCategory((t as any).slug));
                     break;
                 case 'books-all':
@@ -587,7 +595,7 @@ export class Publish {
              ],
             ];
         
-        await writePageFromMarkupIfChanged(this.homePath, this.publicPageTemplate('', {title, head, body}));
+        await writePageFromMarkupIfChanged(this.fsPath(this.homePath), this.publicPageTemplate('', {title, head, body}));
     }
 
     async publish404Page(): Promise<void> {
@@ -601,11 +609,11 @@ export class Publish {
              ['p', {}, 'You can ', ['a', {href:`https://${this.publicSiteDomain}`},  'start again at our home page.']],
             ];
         
-        await writePageFromMarkupIfChanged(this.fourOhFourPath, this.publicPageTemplate('', {title, body}));
+        await writePageFromMarkupIfChanged(this.fsPath(this.fourOhFourPath), this.publicPageTemplate('', {title, body}));
     }
     
     get allWordsPath(): string {
-        return this.publishRoot+'/all-words.html';
+        return 'all-words.html';
     }
     
     async publishAllWordsPage(): Promise<void> {
@@ -624,7 +632,7 @@ export class Publish {
              ]
             ];
         
-        await writePageFromMarkupIfChanged(this.allWordsPath,
+        await writePageFromMarkupIfChanged(this.fsPath(this.allWordsPath),
                                            this.publicPageTemplate('', {title, body}));
     }
 
@@ -642,7 +650,7 @@ export class Publish {
              this.renderAboutUsBody()
             ];
         
-        await writePageFromMarkupIfChanged(this.aboutUsPath,
+        await writePageFromMarkupIfChanged(this.fsPath(this.aboutUsPath),
                                            this.publicPageTemplate('', {title, body}));
     }
 
@@ -869,7 +877,7 @@ including remixing, transforming, and building upon the material, for any non-co
         }
 
         // Generate .html files that forward our old URLS to our new ones (using meta refresh)
-        await Deno.mkdir('servlet/words', {recursive: true});
+        await Deno.mkdir(this.fsPath('servlet/words'), {recursive: true});
         for(const entry of this.entries) {
             await this.publishItem(`Entry Forwarder ${this.getPublicIdForEntry(entry)}`, ()=>this.publishEntryForwarder(entry));
         }
@@ -883,7 +891,7 @@ including remixing, transforming, and building upon the material, for any non-co
         const rootPath = '../../../';
         const entryPath = this.pathForEntry(entry);
         const entryDir = this.dirForEntry(entry);
-        await Deno.mkdir(entryDir, {recursive: true});
+        await Deno.mkdir(this.fsPath(entryDir), {recursive: true});
         const spellingsSummary = entryschema.renderEntrySpellingsSummary(entry);
         const title = entryschema.renderEntryTitle(entry);
         const entryMarkup:any[] = entryschema.renderEntry({rootPath}, entry);
@@ -906,7 +914,7 @@ including remixing, transforming, and building upon the material, for any non-co
             relatedCategoryMarkup,
         ];
                                 
-        await writePageFromMarkupIfChanged(entryPath, this.publicPageTemplate(rootPath, {title, body}));
+        await writePageFromMarkupIfChanged(this.fsPath(entryPath), this.publicPageTemplate(rootPath, {title, body}));
     }
 
     // <meta http-equiv="refresh" content="3;url=https://www.mozilla.org" />
@@ -944,7 +952,7 @@ including remixing, transforming, and building upon the material, for any non-co
              ['a', {href: siteUrl}, siteUrl]]
         ];
                                 
-        await writePageFromMarkupIfChanged(entryForwarderPath, this.publicPageTemplate('../../', {title, head, body}));
+        await writePageFromMarkupIfChanged(this.fsPath(entryForwarderPath), this.publicPageTemplate('../../', {title, head, body}));
     }
 
     get categoriesDir(): string {
@@ -976,14 +984,14 @@ including remixing, transforming, and building upon the material, for any non-co
                                  c.name, ` (${c.count} entries)`]])],
             ]),
         ];
-        await writePageFromMarkupIfChanged(this.categoriesDirectoryPath, this.publicPageTemplate('', {title, body}));
+        await writePageFromMarkupIfChanged(this.fsPath(this.categoriesDirectoryPath), this.publicPageTemplate('', {title, body}));
     }
 
     /**
      *
      */
     async publishCategories(): Promise<void> {
-        await Deno.mkdir(this.categoriesDir, {recursive: true});
+        await Deno.mkdir(this.fsPath(this.categoriesDir), {recursive: true});
         for(const [category, _count] of this.publicCategories()) {
             await this.publishItem(`Category ${category}`, ()=>this.publishCategory(category));
         }
@@ -1011,13 +1019,13 @@ including remixing, transforming, and building upon the material, for any non-co
             ] // div
         ];
 
-        await writePageFromMarkupIfChanged(this.pathForCategory(category), this.publicPageTemplate('../', {title, body}));
+        await writePageFromMarkupIfChanged(this.fsPath(this.pathForCategory(category)), this.publicPageTemplate('../', {title, body}));
     }
         
     dirForEntry(entry: Entry): string {
         const publicId = this.getPublicIdForEntry(entry);
         const cluster = this.clusterForEntry(entry);
-        return `${this.publishRoot}/entries/${cluster}/${publicId}`;
+        return `entries/${cluster}/${publicId}`;
     }
 
     clusterForEntry(entry: Entry): string {
@@ -1083,7 +1091,7 @@ including remixing, transforming, and building upon the material, for any non-co
     }
 
     dirForBookPage(publicBookId: string, pageNum: number): string {
-        return `${this.publishRoot}/books/${publicBookId}/page-${String(pageNum).padStart(4, '0')}`;
+        return `books/${publicBookId}/page-${String(pageNum).padStart(4, '0')}`;
     }
 
     pathForBookPage(publicBookId: string, pageNum: number): string {
@@ -1160,9 +1168,9 @@ including remixing, transforming, and building upon the material, for any non-co
         // 'https://numerique.banq.qc.ca/patrimoine/archives/52327/3216685'
 
         
-        await Deno.mkdir(this.dirForBookPage(publicBookId, page_number), {recursive: true});
+        await Deno.mkdir(this.fsPath(this.dirForBookPage(publicBookId, page_number)), {recursive: true});
 
-        await writePageFromMarkupIfChanged(this.pathForBookPage(publicBookId, page_number),
+        await writePageFromMarkupIfChanged(this.fsPath(this.pathForBookPage(publicBookId, page_number)),
                                            this.publicPageTemplate(rootPath, {head, body}));
     }
 

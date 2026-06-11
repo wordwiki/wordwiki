@@ -1429,12 +1429,16 @@ if (import.meta.main) {
         // server running for this command.
         //   ./wordwiki.sh publish                                 # everything
         //   ./wordwiki.sh publish entries/samqwan categories/water
+        //   ./wordwiki.sh publish --root=/tmp/staging categories    # other tree
         case 'publish': {
             const targets = args.slice(1).filter(a => !a.startsWith('--'));
+            const root = args.find(a => a.startsWith('--root='))?.slice('--root='.length) || '.';
             const exitCode = await security.runSystem(async () => {
                 const status = new publish.PublishStatus();
                 status.start();
-                const pub = new publish.Publish(status, ww, ww.publishedEntries);
+                const pub = new publish.Publish(status, ww, ww.publishedEntries, root);
+                if(root !== '.')
+                    await Deno.mkdir(root, {recursive: true});
                 try {
                     if(targets.length === 0)
                         await pub.publish();
