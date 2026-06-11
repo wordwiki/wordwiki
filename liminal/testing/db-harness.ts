@@ -19,7 +19,9 @@ let active: Db | undefined;
 // Ensure the process-wide in-memory test db exists, is the ambient default, and
 // has the given tables' schema.  Idempotent.
 export function openTestDb(tables: SchemaTable[]): Db {
-    if(active) return active;
+    // Re-assert the ambient default on every call: another suite in the same
+    // process (e.g. the schema-upgrade tests) may have pointed db() elsewhere.
+    if(active) { setDefaultDb(active); return active; }
     active = Db.openMemory();
     setDefaultDb(active);
     active.execute("PRAGMA foreign_keys = OFF");   // tests build partial graphs

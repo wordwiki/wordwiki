@@ -29,6 +29,7 @@ import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
 import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
+import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
 import {TEST_RUNS} from './browser_test_demo.ts';
 
 // Kept for compatibility; the generic server config now lives in liminal.
@@ -585,8 +586,20 @@ if (import.meta.main) {
     const command = args[0];
     switch(command) {
         case 'serve':
-            rabid.startServer({hostname: 'localhost', port: 8888});
+            rabid.startServer({hostname: 'localhost', port: 8888,
+                               allowSchemaMismatch: args.includes('--allow-schema-mismatch')});
             break;
+
+        // Compare the db against the declared table model; with --apply, bring
+        // it up to date (additive changes only - see liminal/schema-upgrade.ts;
+        // a backup is taken first).  Stop the server before --apply (SQLite
+        // single writer); `./rabid.sh upgrade-db --apply` does that for you.
+        case 'upgrade-db': {
+            const code = security.runSystem(() =>
+                schemaUpgrade.upgradeDbCommand(rabid.tables, args.slice(1)));
+            Deno.exit(code);
+            break;
+        }
         case 'test-run': {
             // Start the server, run the named browser test run against a connected
             // client, then exit with a pass/fail code.  startServer() resolves once

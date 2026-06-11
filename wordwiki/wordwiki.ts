@@ -27,6 +27,7 @@ import * as pageEditorModule from './page-editor.ts';
 import * as pageViewerModule from './page-viewer.ts';
 
 import {LiminalApp, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
+import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
 import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
@@ -1248,8 +1249,21 @@ if (import.meta.main) {
             // Legacy-template pages don't go through coercePageResult, so the
             // navbar's test-client-link default is set once here instead.
             templates.setDefaultShowTestClientLink(ww.isTestDb);
-            ww.startServer({hostname: 'localhost', port: 9000});
+            ww.startServer({hostname: 'localhost', port: 9000,
+                            allowSchemaMismatch: args.includes('--allow-schema-mismatch')});
             break;
+
+        // Compare the db against the declared (new-style) table model; with
+        // --apply, bring it up to date (additive changes only - see
+        // liminal/schema-upgrade.ts; a backup is taken first).  The legacy
+        // raw-DML tables (scanned documents, dict, ...) are not covered: they
+        // show up as ignorable notes.  Stop the server before --apply.
+        case 'upgrade-db': {
+            const code = security.runSystem(() =>
+                schemaUpgrade.upgradeDbCommand(ww.tables, args.slice(1)));
+            Deno.exit(code);
+            break;
+        }
 
         // One-time migration: replace the old (never-used) raw-DML user table
         // with the new liminal-style one and seed it from the hardcoded users

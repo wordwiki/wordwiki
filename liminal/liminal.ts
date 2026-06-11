@@ -35,10 +35,16 @@ import * as browserAgent from './browser-agent.ts';
 import * as date from './date.ts';
 import {Temporal} from 'temporal-polyfill';
 import {lazy} from './lazy.ts';
+import {checkDbMatchesSchema} from './schema-upgrade.ts';
+import type {Table} from './table.ts';
 
 export interface LiminalServerConfig {
     hostname: string;
     port: number;
+    // Serve even though the db schema doesn't match the declared table model
+    // (see schema-upgrade.ts; normally startup refuses).  Set from the app's
+    // --allow-schema-mismatch flag.
+    allowSchemaMismatch?: boolean;
 }
 
 // The durable identity/liveness of a browser test client, read back from wherever
@@ -193,6 +199,15 @@ export abstract class LiminalApp {
 
     // ----- Overridable hooks (sensible defaults) ----------------------------
 
+    /** The declarative tables whose schema is checked against the db at every
+     *  startup (schema-upgrade.ts; mismatch refuses to serve).  Defaults to the
+     *  app's `tables` property - both rabid and wordwiki declare one.  Note
+     *  this deliberately does NOT cover legacy raw-DML tables (wordwiki's
+     *  scanned-document/dict tables): those appear as ignorable notes. */
+    get schemaTables(): Table<any>[] {
+        return (this as any).tables ?? [];
+    }
+
     /** The URL path segment the routes live under, which may differ from the
      *  scope name (e.g. wordwiki: segment 'ww', scope name 'wordwiki').  Default:
      *  the appName.  requestHandler strips a leading '/<routeSegment>/'. */
@@ -259,6 +274,14 @@ export abstract class LiminalApp {
 
     async startServer(config: LiminalServerConfig) {
         console.info(`Starting ${this.appName} server`);
+
+        // Refuse to serve a db that doesn't match the declared table model
+        // (before any runtime files are written).  Startup never applies DDL -
+        // that is the explicit `upgrade-db` command's job.
+        const schemaTables = this.schemaTables;
+        if(schemaTables.length > 0)
+            security.runSystem(() =>
+                checkDbMatchesSchema(schemaTables, this.appName, !!config.allowSchemaMismatch));
 
         // Runtime files in cwd: the pidfile (liveness) and the shutdown password
         // (authorises the clean self-shutdown route), the latter written 0600.
