@@ -11,6 +11,6 @@ SCRIPTS=../mmo/scripts
 mkdir -p $SCRIPTS
 
 cp resources/resource_dir_marker.txt $SCRIPTS
-swc compile --config-file .swcrc scannedpage/page-editor.ts scannedpage/page-viewer.ts --out-dir $SCRIPTS
+swc compile --config-file .swcrc wordwiki/page-editor.ts wordwiki/page-viewer.ts --out-dir $SCRIPTS
 
 rsync -a resources/ ../mmo/resources/

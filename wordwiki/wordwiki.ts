@@ -1,15 +1,15 @@
 // deno-lint-ignore-file no-unused-vars, no-explicit-any
 import * as markup from '../liminal/markup.ts';
-import * as model from '../datawiki/model.ts';
-import * as renderPageEditor from '../scannedpage/render-page-editor.ts';
+import * as model from './model.ts';
+import * as renderPageEditor from './render-page-editor.ts';
 import * as schema from "./schema.ts";
 import * as server from '../liminal/http-server.ts';
 import * as strings from "../liminal/strings.ts";
 import * as utils from "../liminal/utils.ts";
 import * as random from "../liminal/random.ts";
 import {panic} from '../liminal/utils.ts';
-import * as workspace from '../datawiki/workspace.ts';
-import {VersionedDb} from  '../datawiki/workspace.ts';
+import * as workspace from './workspace.ts';
+import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as timestamp from '../liminal/timestamp.ts';
@@ -22,9 +22,9 @@ import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import {ScannedDocument, ScannedPage, Assertion, updateAssertion, selectScannedDocumentByFriendlyId, Layer, assertionPathToFields, getAssertionPath, BoundingGroup, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber} from './schema.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
-import {pageEditor, PageEditorConfig, renderStandaloneGroup} from '../scannedpage/render-page-editor.ts';
-import * as pageEditorModule from '../scannedpage/page-editor.ts';
-import * as pageViewerModule from '../scannedpage/page-viewer.ts';
+import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
+import * as pageEditorModule from './page-editor.ts';
+import * as pageViewerModule from './page-viewer.ts';
 
 import {LiminalApp, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
 import * as security from '../liminal/security.ts';

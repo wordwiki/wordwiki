@@ -14,11 +14,11 @@ import { VersionedDb, CurrentTupleQuery, CurrentRelationQuery,
          currentTuplesForVersionedRelation,
          generateAtEndOrderKey, generateBeforeOrderKey, generateAfterOrderKey } from './workspace.ts';
 import { Assertion, getAssertionPath, assertionPathToFields, parentAssertionPath,
-         getAssertionTypeN, getAssertionIdN, compareAssertionsByOrderKey } from '../wordwiki/schema.ts';
-import { dictSchemaJson } from '../wordwiki/entry-schema.ts';
+         getAssertionTypeN, getAssertionIdN, compareAssertionsByOrderKey } from './schema.ts';
+import { dictSchemaJson } from './entry-schema.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as orderkey from '../liminal/orderkey.ts';
-import { TestTimeline, mkEntry, mkChild, mkEdit, mkTombstone } from '../wordwiki/testing.ts';
+import { TestTimeline, mkEntry, mkChild, mkEdit, mkTombstone } from './testing.ts';
 
 const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
 

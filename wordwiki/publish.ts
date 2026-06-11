@@ -16,7 +16,7 @@ import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as schema from './schema.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import * as renderPageEditor from '../scannedpage/render-page-editor.ts';
+import * as renderPageEditor from './render-page-editor.ts';
 
 export class PublishStatus {
     startTime?: number = undefined;
@@ -855,7 +855,7 @@ including remixing, transforming, and building upon the material, for any non-co
                 
         const head = [
             //['link', {href: '/resources/page-viewer.css', rel:'stylesheet', type:'text/css'}],
-            ['script', {src:'/scripts/scannedpage/page-viewer.js'}],
+            ['script', {src:'/scripts/wordwiki/page-viewer.js'}],
         ];
 
         const body = [

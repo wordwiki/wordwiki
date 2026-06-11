@@ -100,7 +100,7 @@ anyway; the new editor stops duplicating it.
    bounding-group. The `$bind → attrN` mapping is applied server-side when
    building the assertion — the wire format uses domain field names. Once the
    shape proves out, consider folding the widget interface directly into
-   `datawiki/model.ts` and deleting the adapter.
+   `wordwiki/model.ts` and deleting the adapter.
 
 4. **Save path.** `saveTuple(form)`: parse via widgets → look up relation by
    `ty` → build assertion (path fields from current version or hidden parent
@@ -176,7 +176,7 @@ existing links follow); "Add New Entry" is a navbar form POST →
 `newLexemeAction` → redirect into the editor; datawiki/view.ts and the
 workspace's client-sync scaffolding (RemoteDb, /workspace-rpc-and-sync,
 persistProposedAssertions) are deleted; transpile.sh now builds only the two
-standalone browser files (scannedpage/page-editor.ts for the tagger,
+standalone browser files (wordwiki/page-editor.ts for the tagger,
 page-viewer.ts for the public site) with none of the module-graph hackery.
 Sessions also landed (see wordwiki-toplevel upgrade): every assertion is
 stamped with change_by_username from the login session.

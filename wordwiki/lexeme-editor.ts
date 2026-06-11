@@ -42,9 +42,9 @@
  *    a popup; on "Done editing reference" the tagger posts a message that
  *    reloads the reference's fragment (listener in lexeme-editor-scripts.js).
  */
-import * as model from '../datawiki/model.ts';
-import * as workspace from '../datawiki/workspace.ts';
-import {VersionedTuple, CurrentTupleQuery, TupleVersion} from '../datawiki/workspace.ts';
+import * as model from './model.ts';
+import * as workspace from './workspace.ts';
+import {VersionedTuple, CurrentTupleQuery, TupleVersion} from './workspace.ts';
 import {Assertion, getAssertionPath, assertionPathToFields, BoundingGroup,
         selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber,
         getOrCreateNamedLayer} from './schema.ts';
@@ -60,7 +60,7 @@ import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import * as templates from './templates.ts';
 import * as entrySchema from './entry-schema.ts';
-import type {PageEditorConfig} from '../scannedpage/render-page-editor.ts';
+import type {PageEditorConfig} from './render-page-editor.ts';
 import type {WordWiki} from './wordwiki.ts';
 
 // All editor routes live under /ww/ (wordwiki's route mount); tx`...` calls use

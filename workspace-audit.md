@@ -1,4 +1,4 @@
-# Audit: datawiki/workspace.ts
+# Audit: wordwiki/workspace.ts
 
 *(2026-06-10, post old-editor retirement.  Line numbers refer to the file as
 of commit 756364f.  Companion docs: assertion-model.md, lexeme-editor-design.md.)*

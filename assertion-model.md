@@ -84,7 +84,7 @@ governed by traversal from a live parent.
 **Payload & ordering.** `attr1..attr15` are untyped columns interpreted per
 `ty` by the soft schema. `order_key` is a fractional-indexing string ordering
 siblings within (parent, ty) — `generateBefore/After/AtEndOrderKey` (in
-`datawiki/workspace.ts`, on top of `liminal/orderkey.ts`) compute keys without
+`wordwiki/workspace.ts`, on top of `liminal/orderkey.ts`) compute keys without
 renumbering peers. Plus `tags`, `note`, `confidence_expr` (the hook for
 low-confidence community-sourced facts), and change metadata
 (`change_by_username/action/arg/note`) as the substrate for the
@@ -100,7 +100,7 @@ language (e.g., which English gloss applies). Rendering currently hard-codes
 `defaultVariant = 'mm-li'`, so the override/resolution machinery is modeled
 but not yet exercised.
 
-**The soft schema** (`datawiki/model.ts` + `wordwiki/entry-schema.ts`): a
+**The soft schema** (`wordwiki/model.ts` + `wordwiki/entry-schema.ts`): a
 `Schema`/`RelationField`/`ScalarField` class tree parsed from compact JSON
 (`dictSchemaJson`). Each relation has a 3-letter `$tag` (= the `ty` values),
 exactly one `primary_key`, and scalar fields with `$bind: 'attrN'` mapping
@@ -109,7 +109,7 @@ column). `$style` carries UI hints (`$shape`: containerRelation /
 inlineListRelation / compactInlineListRelation, `$options`, widths). This is
 the per-language customizability and the reason fields aren't hard columns.
 
-**The workspace** (`datawiki/workspace.ts`): the whole assertion table is
+**The workspace** (`wordwiki/workspace.ts`): the whole assertion table is
 loaded into RAM as `VersionedDb` → `VersionedTable` → `VersionedRelation` (per
 tag) → `VersionedTuple` (per fact id) → `TupleVersion[]` (versions in time
 order). `CurrentTupleQuery`/`CurrentRelationQuery` project the "now" view —

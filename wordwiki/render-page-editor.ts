@@ -2,17 +2,17 @@
 
 import * as pageEditorModule from './page-editor.ts';
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { selectLayer, selectLayerByLayerName } from "../wordwiki/schema.ts";
-import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, selectBoundingBoxesForGroup, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from '../wordwiki/schema.ts';
-import * as schema from '../wordwiki/schema.ts';
+import { selectLayer, selectLayerByLayerName } from "./schema.ts";
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPage, selectScannedPageByPageNumber, selectBoundingGroup, BoundingBox, boundingBoxFieldNames, Shape, BoundingGroup, boundingGroupFieldNames, selectBoundingBoxesForGroup, maxPageNumberForDocument, updateBoundingBox, getOrCreateNamedLayer, selectBoundingBox} from './schema.ts';
+import * as schema from './schema.ts';
 import {block} from "../liminal/strings.ts";
 import * as utils from "../liminal/utils.ts";
 import {range} from "../liminal/utils.ts";
 //import { writeAll } from "https://deno.land/std@0.195.0/streams/write_all.ts";
 import { renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM, Markup } from '../liminal/markup.ts';
-import * as config from '../wordwiki/config.ts';
+import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
-import * as templates from '../wordwiki/templates.ts';
+import * as templates from './templates.ts';
 import {Response, ResponseMarker, forwardResponse} from '../liminal/http-server.ts';
 import * as random from "../liminal/random.ts";
 
@@ -110,7 +110,7 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
     const head = [
         // this CSS is loaded on all pages of the site.
         //['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-        ['script', {src:'/scripts/scannedpage/page-editor.js'}],
+        ['script', {src:'/scripts/wordwiki/page-editor.js'}],
     ];
 
     const body = [
@@ -163,7 +163,7 @@ export function renderPageViewer(cfg: PageViewerConfig, page_id: number, pageJum
 
     const head = [
         //['link', {href: '/resources/page-viewer.css', rel:'stylesheet', type:'text/css'}],
-        ['script', {src:'/scripts/scannedpage/page-viewer.js'}],
+        ['script', {src:'/scripts/wordwiki/page-viewer.js'}],
     ];
 
     const body = [

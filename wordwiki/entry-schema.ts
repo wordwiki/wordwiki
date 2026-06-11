@@ -5,14 +5,14 @@
 //import {startRpcDbServer} from './rpc-db.ts';
 
 //import * as denoSqliteDb from "./denoSqliteDb.ts";
-import * as model from '../datawiki/model.ts';
+import * as model from './model.ts';
 //import * as persistence from './persistence.ts';
 import * as utils from "../liminal/utils.ts";
 import * as timestamp from '../liminal/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
 import ContextMenu from '../liminal/context-menu.js';
-import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from '../scannedpage/render-page-editor.ts'; // REMOVE_FOR_WEB
+import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from './render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as random from '../liminal/random.ts';
 

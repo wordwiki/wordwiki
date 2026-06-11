@@ -8,8 +8,8 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
-import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPagesForDocument} from '../wordwiki/schema.ts';
-import * as config from "../wordwiki/config.ts";
+import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, selectScannedDocumentByFriendlyId, ScannedPage, ScannedPageOpt, selectScannedPagesForDocument} from './schema.ts';
+import * as config from "./config.ts";
 import * as utils_config from "../liminal/utils-config.ts";
 import {getImageSize} from "../liminal/get-image-size.ts";
 
