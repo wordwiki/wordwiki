@@ -102,8 +102,8 @@ test("category detail page: entries listed with remove buttons; removeEntry relo
     });
 });
 
-// --- Lexical form removal: the POS is a FIELD of the subentry (attr1), so
-// --- removal = supersede-with-null, never tombstone (the subentry survives).
+// --- supersedeFields: the field-edit primitive (vs tombstoneFact for
+// --- deletion).  Exercised here on a subentry's part_of_speech (attr1).
 
 function currentSubPos(): (string|null)[] {
     return db().all<{attr1: string|null}, {end: number}>(
@@ -111,7 +111,7 @@ function currentSubPos(): (string|null)[] {
         {end: timestamp.END_OF_TIME}).map(r => r.attr1);
 }
 
-test("clearSubentryPartOfSpeech: clears the field, keeps the subentry, race-guarded", async () => {
+test("supersedeFields: edits a field in place, keeps the tuple, stamps, chains history", async () => {
     await withTestDb((fx: Fixture) => {
         as(fx, 'djz', () => {
             const tl = new TestTimeline();
@@ -119,32 +119,29 @@ test("clearSubentryPartOfSpeech: clears the field, keeps the subentry, race-guar
             fx.ww.applyTransaction([e], {quiet: true});
             fx.ww.applyTransaction([mkChild(e, 'spl', 1010, tl.next(),
                                             {attr1: 'samqwan', order_key: '0.5'})], {quiet: true});
-            const s1 = mkChild(e, 'sub', 1100, tl.next(), {attr1: 'vai', order_key: '0.3'});
-            const s2 = mkChild(e, 'sub', 1200, tl.next(), {attr1: 'vii', order_key: '0.6'});
-            fx.ww.applyTransaction([s1], {quiet: true});
-            fx.ww.applyTransaction([s2], {quiet: true});
+            fx.ww.applyTransaction([mkChild(e, 'sub', 1100, tl.next(),
+                                            {attr1: 'vai', order_key: '0.3'})], {quiet: true});
 
-            // Clears only when the current value matches (race guard): s2 is
-            // 'vii', asking to clear 'vai' from it is a no-op.
-            assertEquals(fx.ww.lexemeOps.clearSubentryPartOfSpeech(1000, 1200, 'vai'),
-                         {changed: false});
-            assertEquals(fx.ww.lexemeOps.clearSubentryPartOfSpeech(1000, 1100, 'vai'),
-                         {changed: true});
-            assertEquals(currentSubPos(), [null, 'vii']);   // subentry SURVIVES, POS cleared
+            const r = fx.ww.lexemeOps.supersedeFields(1000, 1100, {attr1: 'vii'});
+            assertEquals(r.outcome, 'updated');
+            assertEquals(currentSubPos(), ['vii']);   // tuple SURVIVES, field changed
 
-            // Stamped + history preserved; second clear is a no-op.
+            // Stamped + history chained onto the replaced version.
             const versions = db().all<{change_by_username: string|null}, {id: number}>(
                 'SELECT change_by_username FROM dict WHERE id = :id ORDER BY valid_from',
                 {id: 1100});
             assertEquals(versions.length, 2);
             assertEquals(versions[1].change_by_username, 'djz');
-            assertEquals(fx.ww.lexemeOps.clearSubentryPartOfSpeech(1000, 1100, 'vai'),
-                         {changed: false});
+
+            // Refuses to resurrect: supersede after a delete reports the race.
+            fx.ww.lexemeOps.tombstoneFact(1000, 1100);
+            assertEquals(fx.ww.lexemeOps.supersedeFields(1000, 1100, {attr1: 'na'}).outcome,
+                         'already-deleted');
         });
     });
 });
 
-test("lexical form detail page: subentries listed with remove buttons; removeSubentry reloads", async () => {
+test("lexical form detail page: subentries listed, navigating, NO remove button", async () => {
     await withTestDb((fx: Fixture) => {
         as(fx, 'djz', () => {
             const tl = new TestTimeline();
@@ -160,13 +157,10 @@ test("lexical form detail page: subentries listed with remove buttons; removeSub
             const detail = markupToString(fx.ww.lexicalForms.renderDetail(formId));
             assertStringIncludes(detail, 'Subentries (1)');
             assertStringIncludes(detail, 'samqwan');
-            assertStringIncludes(detail, `wordwiki.lexicalForms.removeSubentry(${formId}, 1000, 1100)`);
-
-            const r = fx.ww.lexicalForms.removeSubentry(formId, 1000, 1100);
-            assertEquals(r, {action: 'reload', targets: [`.-lexical_form-${formId}-`]});
-            assertStringIncludes(markupToString(fx.ww.lexicalForms.renderDetail(formId)),
-                                 'Subentries (0)');
-            assertEquals(currentSubPos(), [null]);   // cleared, not deleted
+            assertStringIncludes(detail, 'wordwiki.lexeme.entryPage(1000)');
+            // Deliberately no remove affordance: a wrong POS gets FIXED in
+            // the editor, not cleared from here.
+            assertEquals(detail.includes('Remove'), false);
         });
     });
 });

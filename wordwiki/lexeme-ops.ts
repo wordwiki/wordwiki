@@ -169,31 +169,6 @@ export class LexemeOps {
             s.category.filter(c => c.category === slug).map(c => c.category_id));
     }
 
-    /** The fact ids of an entry's CURRENT subentries whose part_of_speech
-     *  is the given slug (the POS is a FIELD of the subentry tuple - attr1 -
-     *  not a child tuple, so 'removing' it means clearing the field). */
-    currentSubentryIdsWithPartOfSpeech(entry_id: number, slug: string): number[] {
-        const e = this.app.entriesById.get(entry_id);
-        if(!e) return [];
-        return e.subentry.filter(s => s.part_of_speech === slug)
-            .map(s => s.subentry_id);
-    }
-
-    /** Clear a subentry's part of speech - IF it still has the expected
-     *  value (a race where someone re-tagged it concurrently is a no-op:
-     *  blindly clearing would discard their edit).  The subentry survives
-     *  with no part of speech (one more for the empty-POS worklist). */
-    clearSubentryPartOfSpeech(entry_id: number, subentry_id: number,
-                              expectedSlug: string): {changed: boolean} {
-        this.requireUsername();
-        const tuple = this.findTupleInEntry(entry_id, subentry_id);
-        const current = tuple.mostRecentTuple;
-        if(!current || !current.isCurrent || current.assertion.attr1 !== expectedSlug)
-            return {changed: false};
-        const r = this.supersedeFields(entry_id, subentry_id, {attr1: null});
-        return {changed: r.outcome === 'updated'};
-    }
-
     /** Remove an entry from a category: tombstone EVERY current cat tuple
      *  with this slug across the entry's subentries (the button means "the
      *  entry leaves the category", wherever it is tagged).  Races where
