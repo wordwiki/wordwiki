@@ -1,5 +1,6 @@
-// Events in the standard editable-item markup: host/admin-only editing
-// (recordEdit) drives the two row species; everyone can still view.
+// Events in the standard navigable-item markup: one row species for every
+// viewer (tap drills in); host/admin-only editing (recordEdit) drives the
+// pencil, the only edit affordance.
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
@@ -16,22 +17,24 @@ function insertEvent(): number {
     }));
 }
 
-test("event rows: hosts get the editable surface, regulars get the navigable item", async () => {
+test("event rows: one navigable species; the pencil only for hosts", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const id = insertEvent();
         const row = (viewer: number) => asUser(viewer, () =>
             renderRoute(`rabid.event.renderEventRowById(${id})`));
 
         const bobRow = await row(bob);                       // regular volunteer
-        assertEquals(tagOf(bobRow as any), "a");
-        assertStringIncludes(String(attr(bobRow as any, "href")), `detailPage(${id})`);
+        assertEquals(tagOf(bobRow as any), "div");
+        assertEquals(attr(bobRow as any, "onclick"), "lmNavigableClick(event)");
+        const link = find(bobRow, byClass("lm-nav-link"));   // the delegation target
+        assert(link);
+        assertStringIncludes(String(attr(link, "href")), `detailPage(${id})`);
         assert(!!find(bobRow, byClass("lm-nav-chevron")));
         assert(!find(bobRow, byClass("lm-edit-pencil")));
         assert(hasText(bobRow, "Repair Night"));
         assert(hasText(bobRow, "Jun 20, 2026"));
 
         const aliceRow = await row(alice);                   // host
-        assertEquals(tagOf(aliceRow as any), "div");
         assert(!!find(aliceRow, byClass("lm-edit-pencil")));
     });
 });

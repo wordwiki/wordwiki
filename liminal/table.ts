@@ -186,10 +186,10 @@ export class Table<T extends Tuple> {
         return ['button', editButtonProps(`${this}.renderForm(${this}.getById(${id}))`), label];
     }
 
-    // The icon-only variant of editButton: a ghosted pencil, the standard
-    // affordance marker for an editable surface (see editableItemProps).  Still
-    // a real <button> (keyboard/screen-reader users get the same path), just
-    // quieter than a text button - so it can sit on every editable item without
+    // The icon-only variant of editButton: a ghosted pencil, the ONLY edit
+    // affordance on a list row or detail page (see detailItemProps).  A real
+    // <button> (keyboard/screen-reader users get the same path), just quieter
+    // than a text button - so it can sit on every editable item without
     // turning the page into a wall of buttons.
     editPencil(id: number): Markup {
         return ['button', {...editButtonProps(`${this}.renderForm(${this}.getById(${id}))`),
@@ -207,21 +207,24 @@ export class Table<T extends Tuple> {
         return `Edit ${typeof name === 'string' && name ? name : this.name}`;
     }
 
-    // Props for a record rendered as a whole-surface-tappable list item: the
-    // standard "editable surface" presentation.  Combines:
-    //   - reloadableItemProps (an edit save re-renders just this item);
-    //   - Bootstrap list-group classes (hover tint on desktop) + .lm-editable
-    //     (cursor, pressed tint on touch - styles in resources/liminal.css);
-    //   - a click handler that delegates anywhere-on-the-surface clicks to the
-    //     item's contained edit/pencil button (lmEditableClick in
-    //     resources/liminal-scripts.js declines clicks on inner links/buttons,
-    //     text-selection drags, and nested editable surfaces).
-    // The item should contain an editPencil(id) - it is both the visible cue
-    // that the surface is editable and the delegation target.
-    editableItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
+    // Props for a record rendered as a whole-surface *navigable* list item -
+    // THE standard list-row presentation: tap anywhere drills in to the
+    // record's detail page; editing (when the viewer may) is ONLY via the
+    // contained editPencil.  One species for every viewer, so what tapping a
+    // row DOES never depends on permissions - the pencil just appears or not.
+    // Rendered on a div (not an <a>), so the row can contain other interactive
+    // elements (the pencil, a mailto email).  The delegation target is the
+    // row's nav link: give the detail-page <a> class 'lm-nav-link'
+    // (lmNavigableClick in resources/liminal-scripts.js clicks it, declining
+    // clicks that belong to inner links/buttons or a text-selection drag).
+    // Pair with navChevron(); reloadable tagging re-renders just this item
+    // after an edit save.  Tables WITHOUT a detail page render an inert row
+    // instead: reloadableItemProps + 'list-group-item lm-item' + a conditional
+    // pencil (see e.g. wordwiki/user.ts renderUserRow).
+    detailItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
         const props = this.reloadableItemProps(id, reloadURL, extraProps);
-        props.class = 'list-group-item list-group-item-action lm-item lm-editable ' + props.class;
-        props.onclick = 'lmEditableClick(event)';
+        props.class = 'list-group-item list-group-item-action lm-item lm-navigable ' + props.class;
+        props.onclick = 'lmNavigableClick(event)';
         return props;
     }
     
@@ -1311,24 +1314,9 @@ export function editButtonProps(editFormURL: string): Record<string, string> {
     };
 }
 
-// Props for a record rendered as a plain *navigable* list item - the counterpart
-// of editableItemProps for rows the viewer may NOT edit (see Table.canEditRecord).
-// The whole row is a link (render it on an 'a' tag) to e.g. the record's detail
-// page; pair it with navChevron() so the two row species are self-describing
-// (pencil = tap edits, chevron = tap drills in).  Note: an <a> row cannot nest
-// other links (invalid HTML), so inner values render as plain text.
-// Same htmx page-nav attrs as an app pageLink (assumes the app's page template
-// swaps #content - the convention shared by rabid and wordwiki).
-export function navigableItemProps(href: string): Record<string, string> {
-    return {
-        href,
-        class: 'list-group-item list-group-item-action lm-item',
-        'hx-boost': 'true', 'hx-target': '#content', 'hx-swap': 'innerHTML show:window:top',
-    };
-}
-
-// The "drills in" marker for a navigable list item (the affordance counterpart
-// of the editable surface's pencil).
+// The "drills in" marker for a navigable list item (Table.detailItemProps) -
+// the affordance counterpart of the pencil: chevron = tap drills in,
+// pencil = the viewer may also edit.
 export function navChevron(): Markup {
     return ['span', {class: 'lm-nav-chevron', 'aria-hidden': 'true'}, '›'];
 }

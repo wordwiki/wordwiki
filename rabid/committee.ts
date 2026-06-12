@@ -10,7 +10,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, BooleanField, StringField, navigableItemProps, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, BooleanField, StringField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -116,22 +116,17 @@ export class CommitteeTable extends Table<Committee> {
         const secondary = [`${count} member${count === 1 ? '' : 's'}`, c.description]
             .filter(Boolean).join(' · ');
 
-        if(this.canEditRecord(c)) {
-            const item = this.editableItemProps(id, `rabid.committee.renderCommitteeRowById(${id})`);
-            return [h.div, {...item, 'data-testid': `committee-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: 'lm-item-primary'},
-                  templates.pageLink(`/rabid.committee.detailPage(${id})`, c.name || 'Unnamed committee')],
-                 [h.div, {class: 'lm-item-secondary'}, secondary]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.committee.detailPage(${id})`),
-                      'data-testid': `committee-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `rabid.committee.renderCommitteeRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `committee-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'}, c.name || 'Unnamed committee'],
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.committee.detailPage(${id})`),
+                     class: 'lm-nav-link'}, c.name || 'Unnamed committee']],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            this.canEditRecord(c) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

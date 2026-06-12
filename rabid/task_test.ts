@@ -6,7 +6,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows, assertRejects } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, asUser, asSystem, as } from "./testing.ts";
-import { find, tagOf, attr, hasText, getByTestId } from "../liminal/testing/markup-assert.ts";
+import { find, byClass, tagOf, attr, hasText, getByTestId } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 import { db } from "../liminal/db.ts";
 
@@ -342,7 +342,7 @@ test("completion provenance: done_time/done_by stamped on the done transition, c
     });
 });
 
-test("pages: two row species; task detail embeds the member editor and checklist", async () => {
+test("pages: one navigable row species, pencil follows recordEdit; task detail embeds the member editor and checklist", async () => {
     await withTestDb(async ({ alice, bob, carol }) => {
         const {project_id, task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
@@ -353,16 +353,27 @@ test("pages: two row species; task detail embeds the member editor and checklist
         assert(hasText(hostPage, 'New project'));
         const volPage = await asUser(carol, () => renderRoute('rabid.project.renderProjectsPage()'));
         assert(!hasText(volPage, 'New project'));
-        // ...and the row species follow recordEdit: editable div for the host,
-        // navigable <a> for the regular volunteer.
-        assertEquals(tagOf(getByTestId(hostPage, `project-row-${project_id}`)), 'div');
-        assertEquals(tagOf(getByTestId(volPage, `project-row-${project_id}`)), 'a');
+        // Every viewer gets the same navigable row (tap drills in); only the
+        // pencil follows recordEdit.
+        const hostRow = getByTestId(hostPage, `project-row-${project_id}`);
+        const volRow = getByTestId(volPage, `project-row-${project_id}`);
+        for (const row of [hostRow, volRow]) {
+            assertEquals(tagOf(row), 'div');
+            assertEquals(attr(row, 'onclick'), 'lmNavigableClick(event)');
+            assert(!!find(row, byClass('lm-nav-link')));
+            assert(!!find(row, byClass('lm-nav-chevron')));
+        }
+        assert(!!find(hostRow, byClass('lm-edit-pencil')));  // host: edits anyone's project
+        assert(!find(volRow, byClass('lm-edit-pencil')));    // regular volunteer: no pencil
 
-        // Task rows: the assignee gets the editable species, others navigate.
+        // Task rows: same species for assignee and non-assignee; the pencil
+        // appears only for the assignee (recordEdit).
         const bobTasks = await asUser(bob, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
-        assertEquals(tagOf(getByTestId(bobTasks, `task-row-${task_id}`)), 'div');
+        assert(!!find(getByTestId(bobTasks, `task-row-${task_id}`), byClass('lm-edit-pencil')));
         const carolTasks = await asUser(carol, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
-        assertEquals(tagOf(getByTestId(carolTasks, `task-row-${task_id}`)), 'a');
+        const carolRow = getByTestId(carolTasks, `task-row-${task_id}`);
+        assertEquals(tagOf(carolRow), 'div');
+        assert(!find(carolRow, byClass('lm-edit-pencil')));
         assert(hasText(carolTasks, '1 assigned'));
         assert(hasText(carolTasks, '0/1 done'));
 

@@ -266,13 +266,14 @@ export class CategoryTable extends Table<Category> {
                   ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
              ['div', {class: 'lm-item-secondary'}, secondary]];
 
-        if(this.canEditRecord(c)) {
-            const item = this.editableItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
-            return ['div', {...item, 'data-testid': `category-row-${id}`},
-                body, this.editPencil(id)];
-        }
-        return ['div', {class: 'list-group-item lm-item', 'data-testid': `category-row-${id}`},
-            body];
+        // Pencil-only editing: no detail page yet, so the row surface is inert
+        // (no whole-surface tap; cf. the navigable species Table.detailItemProps
+        // used where a detail page exists).  Reloadable tagging re-renders just
+        // this item after an edit save.
+        const props = this.reloadableItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
+        props.class = 'list-group-item lm-item ' + props.class;
+        return ['div', {...props, 'data-testid': `category-row-${id}`},
+            body, this.canEditRecord(c) ? this.editPencil(id) : undefined];
     }
 
     renderCategoryRowById(id: number): Markup {

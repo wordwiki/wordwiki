@@ -1,33 +1,43 @@
 /* liminal - generic framework styles (app-specific styling belongs in the
    app's own css, e.g. rabid.css, loaded after this so it can override).
 
-   The centrepiece is the "editable surface" language: any element carrying
-   .lm-editable is tap/click-to-edit (the whole surface opens the record's edit
-   dialog).  The affordance is communicated three ways:
-     - a ghosted pencil (.lm-edit-pencil) docked at the surface's edge - the
-       always-visible marker, and itself a real <button> so keyboard and
-       screen-reader users get the same path;
+   The centrepiece is the "tappable surface" language:
+     - .lm-navigable: tap anywhere drills in to the detail page (chevron);
+       editing, when offered, is only via the contained pencil - the standard
+       list-row species (Table.detailItemProps);
+     - .lm-editable: tap anywhere opens the edit dialog - only for hand-rolled
+       surfaces with no detail page to drill into (e.g. the wordwiki lexeme
+       editor's fact rows).
+   The affordances are communicated three ways:
+     - a docked marker at the surface's edge: a chevron (drills in) and/or a
+       ghosted pencil (.lm-edit-pencil) - the pencil itself a real <button> so
+       keyboard and screen-reader users get the same path;
      - a hover tint on devices that hover (desktop);
      - a pressed tint via :active (works on touch, where hover does not).
 */
 
 /* ---------------------------------------------------------------------------
-   Editable surfaces
+   Tappable surfaces: editable (.lm-editable, tap-anywhere-edits) and navigable
+   (.lm-navigable, tap-anywhere-drills-in; editing only via the pencil).  Same
+   touch feedback for both - what differs is what the tap does.
 --------------------------------------------------------------------------- */
 
-.lm-editable {
+.lm-editable,
+.lm-navigable {
     cursor: pointer;
 }
 
 /* Pressed feedback - :active fires on touch, unlike :hover.  (Hover tint on
    desktop comes from Bootstrap's .list-group-item-action; surfaces that are
    not list items get it here.) */
-.lm-editable:active {
+.lm-editable:active,
+.lm-navigable:active {
     background-color: var(--bs-secondary-bg);
 }
 
 @media (hover: hover) {
-    .lm-editable:hover {
+    .lm-editable:hover,
+    .lm-navigable:hover {
         background-color: var(--bs-tertiary-bg);
     }
 }

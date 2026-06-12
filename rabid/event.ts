@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navigableItemProps, navChevron } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
@@ -168,23 +168,18 @@ export class EventTable extends Table<Event> {
         const id = e.event_id;
         const secondary = [this.timeRangeText(e), e.location_description].filter(Boolean).join(' · ');
 
-        if(this.canEditRecord(e)) {
-            const item = this.editableItemProps(id, `rabid.event.renderEventRowById(${id})`);
-            return [h.div, {...item, 'data-testid': `event-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: 'lm-item-primary'},
-                  templates.pageLink(`/rabid.event.detailPage(${id})`, e.description || 'Untitled Event'),
-                  this.eventBadges(e)],
-                 [h.div, {class: 'lm-item-secondary'}, secondary]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.event.detailPage(${id})`),
-                      'data-testid': `event-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link title); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `rabid.event.renderEventRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `event-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'}, e.description || 'Untitled Event', this.eventBadges(e)],
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`),
+                     class: 'lm-nav-link'}, e.description || 'Untitled Event'],
+              this.eventBadges(e)],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            this.canEditRecord(e) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

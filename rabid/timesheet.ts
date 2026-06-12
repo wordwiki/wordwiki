@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import * as security from "../liminal/security.ts";
 import * as templates from './templates.ts';
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
@@ -227,22 +227,17 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         const secondary = [date.sqliteDateTimeToDateString(e.start_time), hrs,
                            e.event_description ?? undefined].filter(Boolean).join(' · ');
 
-        if(this.canEditRecord(e)) {
-            const item = this.editableItemProps(id, `rabid.timesheet_entry.renderTimesheetRowById(${id})`);
-            return [h.div, {...item, 'data-testid': `timesheet-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: 'lm-item-primary'},
-                  templates.pageLink(`/rabid.timesheet_entry.detailPage(${id})`, e.volunteer_name)],
-                 [h.div, {class: 'lm-item-secondary'}, secondary]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.timesheet_entry.detailPage(${id})`),
-                      'data-testid': `timesheet-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `rabid.timesheet_entry.renderTimesheetRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `timesheet-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'}, e.volunteer_name],
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.timesheet_entry.detailPage(${id})`),
+                     class: 'lm-nav-link'}, e.volunteer_name]],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            this.canEditRecord(e) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

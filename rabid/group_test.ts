@@ -104,14 +104,15 @@ test("crafted group_member.saveForm writes are rejected (the actions are the wri
     });
 });
 
-test("committee rows: two species; page renders with New-committee for hosts only", async () => {
+test("committee rows: one navigable species, pencil for hosts only; New-committee for hosts only", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const {committee_id} = insertCommittee();
 
         const aliceRow = await asUser(alice, () => renderRoute(`rabid.committee.renderCommitteeRowById(${committee_id})`));
         assert(!!find(aliceRow, byClass("lm-edit-pencil")));
         const bobRow = await asUser(bob, () => renderRoute(`rabid.committee.renderCommitteeRowById(${committee_id})`));
-        assertEquals(tagOf(bobRow as any), "a");
+        assertEquals(tagOf(bobRow as any), "div");                 // navigable species
+        assert(!find(bobRow, byClass("lm-edit-pencil")));
         assert(!!find(bobRow, byClass("lm-nav-chevron")));
         assert(hasText(bobRow, "0 members"));
 

@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navigableItemProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navChevron, PublicViewable } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -252,12 +252,12 @@ export class VolunteerTable extends Table<Volunteer> {
         ];
     }
 
-    // Hand-coded volunteer list, in the standard "editable item list" markup
+    // Hand-coded volunteer list, in the standard "navigable item list" markup
     // (mobile-first: a stacked list-group, not a column table).  Each item is a
-    // whole-surface-tappable editable surface (see Table.editableItemProps);
-    // the name links to the detail page; the pencil is the visible edit cue
-    // and the accessible backstop.  Phone is deliberately NOT shown here - it
-    // is on the detail page (keeps the list compact, and keeps the mostly-'***'
+    // whole-surface-tappable navigable surface (see Table.detailItemProps);
+    // tapping anywhere drills in to the detail page, the pencil is the only
+    // edit affordance.  Phone is deliberately NOT shown here - it is on the
+    // detail page (keeps the list compact, and keeps the mostly-'***'
     // redacted column out of everyone's face).
     renderVolunteerList(text: string, only_active: boolean): Markup {
         const rows = this.searchVolunteers.all({text, only_active: only_active ? 1 : 0});
@@ -272,41 +272,28 @@ export class VolunteerTable extends Table<Volunteer> {
         ];
     }
 
-    // One list item, in one of two row species depending on the viewer's
-    // row-level edit permission (recordEdit) - the affordance carries the
-    // semantics, so tap behaviour is a function of what the row visibly IS:
-    //  - editable surface (pencil): whole surface opens the edit dialog
-    //    (editableItemProps delegates to the contained pencil), name links to
-    //    the detail page, and reloadable tagging re-renders just this item
-    //    after a save;
-    //  - navigable item (chevron): the whole row is the detail-page link.
-    //    An <a> row can't nest the mailto link, so email is plain text there
-    //    (the detail page has the mailto).
+    // One list item: a single row species for every viewer (detailItemProps -
+    // tap anywhere drills in to the detail page via the lm-nav-link name
+    // link; chevron marks the navigation).  Permissions change what the row
+    // OFFERS, never what tapping it does: viewers with row-level edit
+    // permission (recordEdit) additionally get the pencil - the only edit
+    // affordance.  Reloadable tagging re-renders just this item after a save.
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
         const inactiveBadge = v.inactive
             ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Inactive'] : undefined;
 
-        if(this.canEditRecord(v)) {
-            const item = this.editableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
-            return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: 'lm-item-primary'},
-                  templates.pageLink(`/rabid.volunteer.detailPage(${id})`, v.name),
-                  inactiveBadge],
-                 [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
-                  renderFieldValue(f.email, v.email)]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.volunteer.detailPage(${id})`),
-                      'data-testid': `volunteer-row-${id}`},
+        const item = this.detailItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'}, v.name, inactiveBadge],
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.volunteer.detailPage(${id})`),
+                     class: 'lm-nav-link'}, v.name],
+              inactiveBadge],
              [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
-              security.isRedacted(v.email) ? '***' : v.email]],
+              renderFieldValue(f.email, v.email)]],
+            this.canEditRecord(v) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

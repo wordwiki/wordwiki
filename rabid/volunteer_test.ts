@@ -79,7 +79,7 @@ const listFor = () => renderRoute(`rabid.volunteer.renderVolunteerList("", false
 const rowIn = (list: any, id: number) => getByTestId(list, `volunteer-row-${id}`);
 const hasPencil = (list: any, id: number) => !!find(rowIn(list, id), byClass("lm-edit-pencil"));
 
-test("the pencil (and tap-to-edit) renders only on rows the viewer may edit", async () => {
+test("the pencil (the only edit affordance) renders only on rows the viewer may edit", async () => {
     await withTestDb(async ({ alice, bob, carol, dave }) => {
         const bobList = await asUser(bob, listFor);
         assert(hasPencil(bobList, bob));     // own row: editable surface
@@ -93,15 +93,21 @@ test("the pencil (and tap-to-edit) renders only on rows the viewer may edit", as
     });
 });
 
-test("a non-editable row is a navigable item: an <a> to the detail page, with a chevron", async () => {
+test("every row is the same navigable species: tap drills in, regardless of edit permission", async () => {
     await withTestDb(async ({ bob, carol }) => {
-        const row = rowIn(await asUser(bob, listFor), carol);
-        assertEquals(tagOf(row), "a");
-        assertStringIncludes(String(attr(row, "href")), `detailPage(${carol})`);
-        assert(!!find(row, byClass("lm-nav-chevron")));
-        // and the editable species is not an anchor
-        const own = rowIn(await asUser(bob, listFor), bob);
-        assertEquals(tagOf(own), "div");
+        const list = await asUser(bob, listFor);
+        for (const id of [bob, carol]) {        // own (editable) and someone else's (not)
+            const row = rowIn(list, id);
+            assertEquals(tagOf(row), "div");
+            assertEquals(attr(row, "onclick"), "lmNavigableClick(event)"); // whole surface navigates
+            const link = find(row, byClass("lm-nav-link"));               // the delegation target
+            assert(link);
+            assertStringIncludes(String(attr(link, "href")), `detailPage(${id})`);
+            assert(!!find(row, byClass("lm-nav-chevron")));
+        }
+        // tapping a row never opens the edit dialog - the old tap-to-edit
+        // species (lm-editable) is gone from this list
+        assert(!find(list, byClass("lm-editable")));
     });
 });
 

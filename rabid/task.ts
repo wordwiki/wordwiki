@@ -33,7 +33,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, DateField, DateTimeField, navigableItemProps, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, DateField, DateTimeField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -206,22 +206,17 @@ export class ProjectTable extends Table<Project> {
                            p.committee_name, p.description]
             .filter(Boolean).join(' · ');
 
-        if(this.canEditRecord(p)) {
-            const item = this.editableItemProps(id, `rabid.project.renderProjectRowById(${id})`);
-            return [h.div, {...item, 'data-testid': `project-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: 'lm-item-primary'},
-                  templates.pageLink(`/rabid.project.detailPage(${id})`, p.name || 'Unnamed project')],
-                 [h.div, {class: 'lm-item-secondary'}, secondary]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.project.detailPage(${id})`),
-                      'data-testid': `project-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `rabid.project.renderProjectRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `project-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'}, p.name || 'Unnamed project'],
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.project.detailPage(${id})`),
+                     class: 'lm-nav-link'}, p.name || 'Unnamed project']],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            this.canEditRecord(p) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }
@@ -566,26 +561,20 @@ export class TaskTable extends Table<Task> {
         const secondary = parts.flatMap((p, i) => i ? [' · ', p] : [p]);
         const titleClass = 'lm-item-primary' + (done ? ' text-decoration-line-through text-muted' : '');
 
-        if(this.canEditRecord(t)) {
-            const item = this.editableItemProps(id, `rabid.task.renderTaskRowById(${id})`);
-            // (the strike class rides on the <a> too: text-decoration on the
-            // wrapping div doesn't reach into the anchor's own decoration)
-            return [h.div, {...item, 'data-testid': `task-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: titleClass},
-                  [h.a, {...templates.pageLinkProps(`/rabid.task.detailPage(${id})`),
-                         class: done ? 'text-decoration-line-through' : ''},
-                   t.title || 'Untitled task'], badges],
-                 [h.div, {class: 'lm-item-secondary'}, secondary]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.task.detailPage(${id})`),
-                      'data-testid': `task-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link title); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        // (the strike class rides on the <a> too: text-decoration on the
+        // wrapping div doesn't reach into the anchor's own decoration)
+        const item = this.detailItemProps(id, `rabid.task.renderTaskRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `task-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: titleClass}, t.title || 'Untitled task', badges],
+             [h.div, {class: titleClass},
+              [h.a, {...templates.pageLinkProps(`/rabid.task.detailPage(${id})`),
+                     class: 'lm-nav-link' + (done ? ' text-decoration-line-through' : '')},
+               t.title || 'Untitled task'], badges],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            this.canEditRecord(t) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

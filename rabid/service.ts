@@ -5,7 +5,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navigableItemProps, navChevron, renderFieldValue } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue } from "../liminal/table.ts";
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
@@ -144,23 +144,18 @@ export class ServiceTable extends Table<Service> {
         const secondary = [date.sqliteDateTimeToString(s.service_check_in_time ?? null),
                            s.service_description].filter(Boolean).join(' · ');
 
-        if(this.canEditRecord(s)) {
-            const item = this.editableItemProps(id, `rabid.service.renderServiceRowById(${id})`);
-            return [h.div, {...item, 'data-testid': `service-row-${id}`},
-                [h.div, {class: 'lm-item-body'},
-                 [h.div, {class: 'lm-item-primary'},
-                  templates.pageLink(`/rabid.service.detailPage(${id})`, s.client_name || 'Unnamed client'),
-                  this.serviceBadges(s)],
-                 [h.div, {class: 'lm-item-secondary'}, secondary]],
-                this.editPencil(id),
-            ];
-        }
-
-        return [h.a, {...navigableItemProps(`/rabid.service.detailPage(${id})`),
-                      'data-testid': `service-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`);
+        return [h.div, {...item, 'data-testid': `service-row-${id}`},
             [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'}, s.client_name || 'Unnamed client', this.serviceBadges(s)],
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.service.detailPage(${id})`),
+                     class: 'lm-nav-link'}, s.client_name || 'Unnamed client'],
+              this.serviceBadges(s)],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            this.canEditRecord(s) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

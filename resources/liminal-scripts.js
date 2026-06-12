@@ -2,8 +2,11 @@
    Loaded before the app's own scripts (e.g. rabid-scripts.js). */
 
 /**
- * Click handler for an "editable surface" (an element rendered with
- * Table.editableItemProps - class .lm-editable, onclick="lmEditableClick(event)").
+ * Click handler for an "editable surface" (class .lm-editable,
+ * onclick="lmEditableClick(event)").  List rows no longer use this - they are
+ * navigable surfaces (lmNavigableClick below) with pencil-only editing; it
+ * remains for hand-rolled tap-to-edit surfaces with no detail page to drill
+ * into (e.g. the wordwiki lexeme editor's fact rows).
  *
  * The surface's *whole area* opens the record's edit dialog, by delegating to
  * the surface's own pencil/edit <button> (a real button, so keyboard and
@@ -21,14 +24,43 @@ function lmEditableClick(event) {
     const item = event.currentTarget;
     if (event.target.closest('a, button, input, select, textarea, label'))
         return;
-    if (event.target.closest('.lm-editable') !== item)
-        return; // nested editable surface owns this click
+    if (event.target.closest('.lm-editable, .lm-navigable') !== item)
+        return; // nested tappable surface owns this click
     const sel = window.getSelection ? window.getSelection() : null;
     if (sel && sel.type === 'Range')
         return; // user is selecting text, not tapping the row
     const button = item.querySelector('button.edit');
     if (button && button.closest('.lm-editable') === item)
         button.click();
+}
+
+/**
+ * Click handler for a "navigable surface" (an element rendered with
+ * Table.detailItemProps - class .lm-navigable, onclick="lmNavigableClick(event)").
+ *
+ * The surface's *whole area* navigates to the record's detail page, by
+ * delegating to the row's own nav link (the <a class="lm-nav-link"> - a real
+ * link, so keyboard/screen-reader access and middle-click-on-the-name never
+ * depend on this handler).  Editing is NOT on this path: the pencil <button>
+ * handles itself, and we decline its clicks below.  Same declines as
+ * lmEditableClick:
+ *   - an inner interactive element (the pencil, a mailto link, the nav link
+ *     itself) keeps its own behaviour;
+ *   - a text-selection drag (someone copying an email address off the row);
+ *   - a click that originated inside a nested tappable surface.
+ */
+function lmNavigableClick(event) {
+    const item = event.currentTarget;
+    if (event.target.closest('a, button, input, select, textarea, label'))
+        return;
+    if (event.target.closest('.lm-navigable, .lm-editable') !== item)
+        return; // nested tappable surface owns this click
+    const sel = window.getSelection ? window.getSelection() : null;
+    if (sel && sel.type === 'Range')
+        return; // user is selecting text, not tapping the row
+    const link = item.querySelector('a.lm-nav-link');
+    if (link && link.closest('.lm-navigable') === item)
+        link.click();
 }
 
 /**

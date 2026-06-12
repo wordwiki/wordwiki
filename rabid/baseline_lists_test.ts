@@ -1,5 +1,6 @@
-// Sales, service and timesheets in the standard editable-item markup: the
-// baseline row species + edit gating for each (structured views come later).
+// Sales, service and timesheets in the standard navigable-item markup: one
+// row species for every viewer (tap drills in), the pencil - the only edit
+// affordance - gated per table (structured views come later).
 //   sale/service: host/admin-edit;  timesheet: self-or-host (ownerId).
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
@@ -38,13 +39,14 @@ function insertTimesheet(volunteer_id: number): number {
     }));
 }
 
-test("sale rows: host edits, regular navigates; saveForm host-gated", async () => {
+test("sale rows: pencil for hosts only; saveForm host-gated", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const id = insertSale(alice);
 
         const bobRow = await asUser(bob, () => renderRoute(`rabid.sale.renderSaleRowById(${id})`));
-        assertEquals(tagOf(bobRow as any), "a");
+        assertEquals(tagOf(bobRow as any), "div");                 // navigable species
         assert(!!find(bobRow, byClass("lm-nav-chevron")));
+        assert(!find(bobRow, byClass("lm-edit-pencil")));
         assert(hasText(bobRow, "Blue commuter"));
         assert(hasText(bobRow, "$80.00"));
 
@@ -61,12 +63,13 @@ test("sale rows: host edits, regular navigates; saveForm host-gated", async () =
     });
 });
 
-test("service rows: host edits, regular navigates; client phone redacted for regulars", async () => {
+test("service rows: pencil for hosts only; client phone redacted for regulars", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const id = insertService();
 
         const bobRow = await asUser(bob, () => renderRoute(`rabid.service.renderServiceRowById(${id})`));
-        assertEquals(tagOf(bobRow as any), "a");
+        assertEquals(tagOf(bobRow as any), "div");                 // navigable species
+        assert(!find(bobRow, byClass("lm-edit-pencil")));
         assert(hasText(bobRow, "Jo Client"));
 
         const aliceRow = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${id})`));
@@ -91,12 +94,14 @@ test("timesheet rows: self-or-host edit (a volunteer manages their OWN time)", a
         const bobsEntry = insertTimesheet(bob);
         const carolsEntry = insertTimesheet(carol);
 
-        // bob: his own entry is an editable surface, carol's is navigable.
+        // bob: his own entry carries the pencil, carol's doesn't (same
+        // navigable species either way).
         const own = await asUser(bob, () => renderRoute(`rabid.timesheet_entry.renderTimesheetRowById(${bobsEntry})`));
         assert(!!find(own, byClass("lm-edit-pencil")));
         assert(hasText(own, "3.0 hrs"));
         const others = await asUser(bob, () => renderRoute(`rabid.timesheet_entry.renderTimesheetRowById(${carolsEntry})`));
-        assertEquals(tagOf(others as any), "a");
+        assertEquals(tagOf(others as any), "div");
+        assert(!find(others, byClass("lm-edit-pencil")));
 
         // bob edits his own; carol's is rejected; the host edits anyone's.
         const res = await asUser(bob, () => invoke("rabid.timesheet_entry.saveForm($arg0)", {
