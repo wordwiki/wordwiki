@@ -42,10 +42,12 @@
     }
 }
 
-/* The standard edit-affordance marker: an icon-only <button> (quieter than a
-   text button, but still the accessible/backstop path).  Padded out to a
-   finger-sized (~44px) tap target. */
-.lm-edit-pencil {
+/* The standard edit-affordance marker (and its sibling, the ☰ less-common-
+   actions menu button - action.ts actionMenu): icon-only <button>s (quieter
+   than text buttons, but still the accessible/backstop path).  Padded out to
+   a finger-sized (~44px) tap target. */
+.lm-edit-pencil,
+.lm-menu-button {
     flex: 0 0 auto;
     border: 0;
     background: transparent;
@@ -56,13 +58,21 @@
     line-height: 0;
 }
 .lm-edit-pencil:hover,
-.lm-edit-pencil:focus-visible {
+.lm-edit-pencil:focus-visible,
+.lm-menu-button:hover,
+.lm-menu-button:focus-visible {
     color: var(--bs-body-color);
     background-color: var(--bs-secondary-bg);
 }
-.lm-edit-pencil svg {
+.lm-edit-pencil svg,
+.lm-menu-button svg {
     width: 1.1rem;
     height: 1.1rem;
+}
+/* The menu wrapper participates in the line's flex row without adding size. */
+.lm-action-menu {
+    flex: 0 0 auto;
+    line-height: 0;
 }
 
 /* ---------------------------------------------------------------------------

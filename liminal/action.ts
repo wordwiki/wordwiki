@@ -77,6 +77,32 @@ export function actionButton(label: string, mode: ActionMode,
     }
 }
 
+/**
+ * A quiet ☰ menu for a line's LESS-COMMON actions (the common ones stay as
+ * the pencil and inline buttons): an icon-only button popping a Bootstrap
+ * dropdown of action items, each in one of the three standard action forms.
+ * This keeps rarely-used affordances from occupying permanent space - pages
+ * should read as documents that present their information, coincidentally
+ * editable.  (Bootstrap's dropdown data-api is delegation-based, so menus
+ * inside htmx-swapped fragments work without re-initialization.)
+ */
+export function actionMenu(items: Array<{label: string, mode: ActionMode}>,
+                           opts: {ariaLabel?: string} = {}): Markup {
+    return [h.div, {class: 'dropdown lm-action-menu'},
+        [h.button, {type: 'button', class: 'lm-menu-button',
+                    'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
+                    'aria-label': opts.ariaLabel ?? 'More actions'},
+         menuIcon()],
+        [h.ul, {class: 'dropdown-menu'},
+         items.map(it => [h.li, {}, actionButton(it.label, it.mode, 'dropdown-item')])]];
+}
+
+// Three-bars menu glyph (Bootstrap Icons "list", MIT), inlined like pencilIcon.
+function menuIcon(): Markup {
+    return ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true'},
+            ['path', {d: 'M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z'}]];
+}
+
 // ----------------------------------------------------------------------------
 // --- Parameter dialogs (the general case of TableEditForm) ------------------
 // ----------------------------------------------------------------------------

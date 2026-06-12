@@ -288,17 +288,16 @@ body .ts-dropdown {
 }
 
 /* ---------------------------------------------------------------------------
-   The merged project overview (google-keep style): each task is a block -
-   compact task line + its checklist inline - on the project page.
+   The merged project overview (google-keep style): each task is ONE checkbox
+   line, its subtasks one indented checkbox line each.  No card framing, no
+   borders, no empty-state text - the page reads as a document presenting the
+   project's state, coincidentally editable via the quiet line affordances
+   (checkbox, pencil, ☰, ×).
 --------------------------------------------------------------------------- */
 
 .lm-task-block {
-    padding: 0.625rem 0;
-    border-top: var(--bs-border-width) solid var(--bs-border-color);
+    padding: 0.125rem 0;
     max-width: 42rem;          /* same comfortable reading cap as .lm-list */
-}
-.lm-task-block:last-child {
-    border-bottom: var(--bs-border-width) solid var(--bs-border-color);
 }
 .lm-task-block .lm-item-primary {
     flex: 1 1 auto;
@@ -306,15 +305,12 @@ body .ts-dropdown {
 }
 
 /* The inline checklist: indented under the task title (past the checkbox),
-   visually part of the block rather than a standalone list. */
+   plain lines - the document's sub-items, not a framed list. */
 .lm-task-block-checklist {
     margin-left: 1.75rem;
 }
 .lm-task-block-checklist .list-group-item {
-    border: 0;                 /* the block provides the framing */
+    border: 0;
     padding: 0.125rem 0;
     background: transparent;
-}
-.lm-task-block-checklist .btn {
-    margin-top: 0.25rem;
 }

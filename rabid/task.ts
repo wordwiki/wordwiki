@@ -807,7 +807,18 @@ export class TaskTable extends Table<Task> {
                  ? [h.span, {class: 'text-muted small flex-shrink-0',
                              'data-testid': `task-${id}-override`}, `→ ${overrideLabel}`]
                  : undefined,
-             canEdit ? this.editPencil(id) : undefined],
+             canEdit ? this.editPencil(id) : undefined,
+             // The less-common actions, one tap behind the ☰ (in place, so
+             // casual users find them without knowing about detail pages;
+             // move up/down etc. will join these).
+             canEdit
+                 ? action.actionMenu([
+                       {label: 'Add checklist item…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id})`}},
+                       {label: 'Add completed item…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id},true)`}},
+                   ], {ariaLabel: `More actions for ${t.title || 'task'}`})
+                 : undefined],
             [h.div, {class: 'lm-task-block-checklist'},
              rabid.subtask.renderChecklist(id)],
         ];
@@ -1003,6 +1014,7 @@ export class TaskTable extends Table<Task> {
             this.renderAssignedTo(t),
             [h.h4, {class: 'mt-3'}, 'Checklist'],
             rabid.subtask.renderChecklist(task_id),
+            rabid.subtask.addItemButtons(task_id),
         ];
     }
 
@@ -1308,30 +1320,39 @@ export class SubtaskTable extends Table<Subtask> {
     // --- The checklist fragment ------------------------------------------------
     // ------------------------------------------------------------------------
 
-    // The reloadable checklist for one task.  Keyed by the TASK's id (like the
-    // member editor is keyed by its group's id): the fragment is "this task's
-    // checklist", so its mutations reload `.-subtask-<task_id>-`.
+    // The reloadable checklist for one task: BARE items only - an empty
+    // checklist renders nothing at all (the page is a document presenting the
+    // project's state; "No checklist items." is noise, and the add actions
+    // live in the task line's ☰ menu / the detail page's buttons, both
+    // OUTSIDE this fragment so reloads never eat them).  Keyed by the TASK's
+    // id: the fragment is "this task's checklist", so its mutations reload
+    // `.-subtask-<task_id>-`.
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
         const props = this.reloadableItemProps(task_id, `rabid.subtask.renderChecklist(${task_id})`);
         return [h.div, props,
             items.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No checklist items.']
-                : [h.div, {class: 'list-group lm-list mb-2'},
+                ? undefined
+                : [h.div, {class: 'list-group lm-list'},
                    items.map(s => this.renderChecklistRow(s, canEdit))],
-            canEdit
-                ? [h.div, {class: 'd-flex align-items-center gap-2'},
-                   action.actionButton('Add item',
-                       {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`},
-                       'btn btn-outline-primary btn-sm'),
-                   // Log work already done (this shared checklist doubles as
-                   // "here's what I did" communication).
-                   action.actionButton('Add completed item',
-                       {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id},true)`},
-                       'btn btn-outline-secondary btn-sm')]
-                : undefined,
         ];
+    }
+
+    // The detail page's add affordances (static, outside the reloadable
+    // checklist fragment).  The project page offers the same two actions via
+    // the task line's ☰ menu.
+    addItemButtons(task_id: number): Markup {
+        if(!canEditTask(task_id)) return undefined;
+        return [h.div, {class: 'd-flex align-items-center gap-2 mt-2'},
+            action.actionButton('Add item',
+                {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`},
+                'btn btn-outline-primary btn-sm'),
+            // Log work already done (this shared checklist doubles as
+            // "here's what I did" communication).
+            action.actionButton('Add completed item',
+                {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id},true)`},
+                'btn btn-outline-secondary btn-sm')];
     }
 
     renderChecklistRow(s: Subtask, canEdit: boolean): Markup {

@@ -461,11 +461,18 @@ test("Add completed item: born-done checklist entry with provenance (work-log wo
         assertEquals(item.done_by, bob);
         assert(item.done_time);
 
-        // Renders checked, with the who/when provenance and the quiet ×.
+        // Renders checked, with the who/when provenance and the quiet ×; the
+        // add actions live in the task block's ☰ menu (and the detail page's
+        // buttons), not in the checklist fragment itself.
         const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
         assert(hasText(checklist, 'Sorted the parts bin'));
-        assert(hasText(checklist, 'Add completed item'));
+        assert(!hasText(checklist, 'Add completed item'));
         assert(!!find(checklist, byClass('lm-remove-x')));
+        const block = await asUser(bob, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
+        assert(!!find(block, byClass('lm-action-menu')));
+        assert(hasText(block, 'Add completed item…'));
+        const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
+        assert(hasText(detail, 'Add completed item'));
     });
 });
 
