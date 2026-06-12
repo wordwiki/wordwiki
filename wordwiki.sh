@@ -22,16 +22,20 @@ set -e
 #                                      # named pages, e.g. entries/samqwan);
 #                                      # leaves a running server alone
 #
-# Any command first cleanly stops a running server (SQLite single writer).
-# Note: this does NOT run the transpile step (the old client-side editor's
-# browser build) - use ./publishHomeAndServe.sh when the old editor's client
-# code or /resources have changed.
+# Any command first cleanly stops a running server (SQLite single writer),
+# except `publish`, which only reads the db.
 
 WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
 RUN_DIR="$HOME/mmo"
 PIDFILE="wordwiki.pid"
 PWFILE="wordwiki-shutdown-password.txt"
 PORT=9000
+
+# Always refresh the browser-side scripts and /resources first (transpile.sh
+# compiles page-editor/page-viewer into ~/mmo/scripts and rsyncs resources/).
+# A bit hoaky to run it on every invocation, but starting with stale client
+# scripts breaks things in confusing ways, and it's cheap.
+(cd "$WORDWIKI_SRC" && ./transpile.sh)
 
 cd "$RUN_DIR"
 
