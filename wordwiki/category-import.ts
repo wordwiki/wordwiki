@@ -38,6 +38,7 @@ import * as timestamp from '../liminal/timestamp.ts';
 import * as orderkey from '../liminal/orderkey.ts';
 import { db } from '../liminal/db.ts';
 import type { WordWiki } from './wordwiki.ts';
+import { muteAttr1Values, AttrMuteStats } from './assertion-mute.ts';
 
 // ---------------------------------------------------------------------------
 // --- Inputs ------------------------------------------------------------------
@@ -140,23 +141,47 @@ export const INTERNAL_CATEGORIES = [
 export interface SeedStats { seededNew: number; seededInternal: number;
                              seededOld: number; skipped: number; }
 
-// Distinct old free-text category values still present in CURRENT assertions
-// (values that are already '~'-internal or already a seeded slug are not
-// "old" - this is what makes a re-run find nothing left to do).
-export function currentOldCategoryNames(categories: CategoryTable): string[] {
-    const values = db().all<{v: string}, {end: number}>(
+// Distinct category values across ALL assertion history (not just current
+// rows): the mute must rename every value that has EVER been used, so that
+// every historical version of every fact carries a live identifier and is
+// safely restorable.
+export function allCategoryValuesEver(): string[] {
+    const values = db().all<{v: string}, {}>(
         `SELECT DISTINCT attr1 AS v FROM dict
-                WHERE ty = '${entrySchema.CategoryTag}' AND valid_to = :end
-                  AND attr1 IS NOT NULL AND attr1 != ''`,
-        {end: timestamp.END_OF_TIME});
-    return values.map(r => r.v)
-        .filter(v => !isInternalCategorySlug(v))
-        .filter(v => !categories.bySlug.first({slug: v}))
-        .sort();
+                WHERE ty = '${entrySchema.CategoryTag}'
+                  AND attr1 IS NOT NULL AND attr1 != ''`, {});
+    return values.map(r => r.v).sort();
+}
+
+/**
+ * The legacy-value plan: which historical values rename to which '~old-*'
+ * slug.  Values already '~'-internal are ours; values that EQUAL a tabled
+ * slug are the merge case - the old free-text value is being ADOPTED as the
+ * new-scheme category, so the fact's identity simply continues (no rename).
+ * Everything else renames in place.  One plan drives both the ~old-* row
+ * seeding and the mute mapping, so they cannot disagree; case/whitespace
+ * variants collapse onto one slug (the row's description records them all).
+ */
+export interface LegacyValuePlan {
+    bySlug: Map<string, string[]>;     // '~old-*' slug -> legacy value variants
+    mapping: Map<string, string>;      // legacy value -> '~old-*' slug
+}
+export function planLegacyValues(values: string[], categories: CategoryTable,
+                                 schemeSlugs: Set<string>): LegacyValuePlan {
+    const plan: LegacyValuePlan = {bySlug: new Map(), mapping: new Map()};
+    for(const v of values) {
+        if(isInternalCategorySlug(v)) continue;            // already in our namespace
+        if(schemeSlugs.has(v)) continue;                   // merge: adopted as-is
+        if(categories.bySlug.first({slug: v})) continue;   // already tabled (prior run)
+        const slug = oldCategorySlug(v);
+        plan.mapping.set(v, slug);
+        plan.bySlug.set(slug, [...(plan.bySlug.get(slug) ?? []), v]);
+    }
+    return plan;
 }
 
 export function seedCategoryTable(categories: CategoryTable, scheme: SchemeCategory[],
-                                  oldNames: string[]): SeedStats {
+                                  legacy: LegacyValuePlan): SeedStats {
     const stats: SeedStats = {seededNew: 0, seededInternal: 0, seededOld: 0, skipped: 0};
     const insertIfAbsent = (c: {slug: string, name: string, theme?: string,
                                 description?: string, retired?: 0|1},
@@ -173,10 +198,18 @@ export function seedCategoryTable(categories: CategoryTable, scheme: SchemeCateg
     for(const c of INTERNAL_CATEGORIES)
         insertIfAbsent({...c, theme: 'Internal'}, 'seededInternal');
     // ...then the old free-text categories, retired (not offered in pickers).
-    for(const name of oldNames)
-        insertIfAbsent({slug: oldCategorySlug(name), name: `${name} (old)`,
+    // The row is the durable record of the in-place rename: the display name
+    // keeps the original surface form, the description lists every variant
+    // that collapsed onto this slug (the assertion rows themselves now carry
+    // only the slug - see planLegacyValues / the mute step).
+    for(const [slug, variants] of legacy.bySlug)
+        insertIfAbsent({slug, name: `${variants[0]} (old)`,
                         theme: 'Old categories', retired: 1,
-                        description: `Imported from the old free-text category '${name}'.`},
+                        description: `Old free-text category value` +
+                            `${variants.length > 1 ? 's' : ''} ` +
+                            variants.map(v => `'${v}'`).join(', ') +
+                            `, renamed in place by the category migration ` +
+                            `(fact identity and history preserved).`},
                        'seededOld');
     return stats;
 }
@@ -186,31 +219,22 @@ export function seedCategoryTable(categories: CategoryTable, scheme: SchemeCateg
 // ---------------------------------------------------------------------------
 
 /**
- * The desired ordered category values for one entry, as a pure function of
- * its assignment (if any) and its CURRENT values - so running it on already-
- * imported data returns the current values unchanged (the fixed point that
- * makes the import re-runnable):
- *   - assigned entries: new cats (primary first) + tier tag + ~needs-human;
- *   - '~'-internal current values are preserved (in current order);
- *   - plain current values that aren't part of the assignment are old
- *     free-text categories -> preserved as '~old-*'.
+ * The categories to ADD to a subentry, as a pure function of its assignment
+ * and its CURRENT (post-mute) values.  Preservation needs no work here any
+ * more - the mute renamed the legacy values in place, identity intact - so
+ * the rewrite phase only adds what is missing (and tombstones duplicates).
+ * Fixed point: on already-imported data every desired value is present and
+ * this returns [] (what makes --expect-no-changes provable).
  */
-export function computeDesiredCats(assignment: AssignmentRecord|undefined,
-                                   currentValues: string[]): string[] {
-    const head: string[] = [];
-    if(assignment) {
-        head.push(...assignment.cats);
-        if(assignment.tier) head.push(TIER_SLUGS[assignment.tier]);
-        if(assignment.flag === 'needs-human') head.push('~needs-human');
-    }
-    const tail = currentValues
-        .filter(v => v !== '')
-        .map(v => isInternalCategorySlug(v) ? v
-                : assignment?.cats.includes(v) ? ''     // re-run artifact: regenerated in head
-                : oldCategorySlug(v))
-        .filter(v => v !== '');
+export function computeCategoryAdditions(assignment: AssignmentRecord|undefined,
+                                         currentValues: string[]): string[] {
+    if(!assignment) return [];
+    const desired: string[] = [...assignment.cats];
+    if(assignment.tier) desired.push(TIER_SLUGS[assignment.tier]);
+    if(assignment.flag === 'needs-human') desired.push('~needs-human');
+    const present = new Set(currentValues);
     const seen = new Set<string>();
-    return [...head, ...tail].filter(v => !seen.has(v) && (seen.add(v), true));
+    return desired.filter(v => !present.has(v) && !seen.has(v) && (seen.add(v), true));
 }
 
 export interface RewriteStats {
@@ -277,20 +301,13 @@ export function rewriteEntryCategories(
             const currentValues = current.map(t =>
                 (t.mostRecentTupleVersion!.assertion as any).attr1 as string ?? '');
 
-            const desired = computeDesiredCats(
-                subIndex === 0 ? assignment : undefined, currentValues);
-            //  -joined comparison: category values can contain spaces
-            // (old free-text names), never  .
-            if(desired.join(' ') === currentValues.join(' '))
-                return;
-            entryChanged = true;
-
-            // Replace wholesale: tombstone every current tuple, insert the
-            // desired values in order with a fresh order-key spread.
-            // (Category tuples are atomic strings; the entry history
-            // retains every prior version.)
+            // Duplicates (case/whitespace variants collapsed by the mute):
+            // keep the first, tombstone the rest - a genuine recorded delete.
+            const seen = new Set<string>();
             for(const t of current) {
                 const cur = t.mostRecentTupleVersion!.assertion;
+                const v = (cur as any).attr1 as string ?? '';
+                if(!seen.has(v)) { seen.add(v); continue; }
                 batch.push({
                     ...cur,
                     assertion_id: newId(),
@@ -300,9 +317,25 @@ export function rewriteEntryCategories(
                     change_by_username: opts.username,
                 });
                 stats.tuplesTombstoned++;
+                entryChanged = true;
             }
-            const keys = orderkey.initial(desired.length);
-            desired.forEach((value, i) => {
+
+            // Additions (assignment cats + tier + ~needs-human on the FIRST
+            // subentry), inserted BEFORE the existing values so the new
+            // vocabulary leads and the preserved '~old-*' values trail.
+            const additions = computeCategoryAdditions(
+                subIndex === 0 ? assignment : undefined, currentValues);
+            if(additions.length === 0) return;
+            entryChanged = true;
+
+            const minExisting = current.length > 0
+                ? (current[0].mostRecentTupleVersion!.assertion as any).order_key as string
+                : undefined;
+            let prev: string|undefined = undefined;
+            for(const value of additions) {
+                const key: string = orderkey.between(prev ?? orderkey.begin_string,
+                                                     minExisting ?? orderkey.end_string);
+                prev = key;
                 const id = newId();
                 batch.push({
                     ...assertionPathToFields([...getAssertionPath(subAssertion),
@@ -313,11 +346,11 @@ export function rewriteEntryCategories(
                     valid_from: batchTime,
                     valid_to: timestamp.END_OF_TIME,
                     attr1: value,
-                    order_key: keys[i],
+                    order_key: key,
                     change_by_username: opts.username,
                 } as Assertion);
                 stats.tuplesInserted++;
-            });
+            }
         });
 
         if(entryChanged) stats.entriesRewritten++;
@@ -341,7 +374,7 @@ export function rewriteEntryCategories(
 // --- The whole import ----------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-export interface ImportStats { seed: SeedStats; rewrite: RewriteStats; }
+export interface ImportStats { seed: SeedStats; mute: AttrMuteStats; rewrite: RewriteStats; }
 
 export function importCategories(
         ww: WordWiki,
@@ -354,15 +387,27 @@ export function importCategories(
         throw new Error('parsed 0 categories from scheme.md - wrong file?');
     const assignments = loadAssignments(opts.assignmentsText);
 
-    const oldNames = currentOldCategoryNames(ww.categories);
-    const seed = seedCategoryTable(ww.categories, scheme, oldNames);
+    // Plan the legacy renames over ALL history (merge-case values - those
+    // equal to a scheme slug - are adopted, not renamed), seed the whole
+    // vocabulary (the ~old-* rows are the durable record of the renames)...
+    const legacy = planLegacyValues(allCategoryValuesEver(), ww.categories,
+                                    new Set(scheme.map(c => c.slug)));
+    const seed = seedCategoryTable(ww.categories, scheme, legacy);
     log(`seeded categories: ${seed.seededNew} new, ${seed.seededInternal} internal, ` +
         `${seed.seededOld} old (~old-*), ${seed.skipped} already present`);
+
+    // ...then RENAME the legacy values in place (assertion-mute.ts): all
+    // history rows, one transaction, completeness-verified.  Fact identity
+    // and history survive; every historical version stays restorable.
+    const mute = muteAttr1Values(ww, {ty: entrySchema.CategoryTag, mapping: legacy.mapping},
+                                 {log});
+    log(`muted legacy values: ${mute.valuesRenamed} distinct values, ` +
+        `${mute.rowsUpdated} assertion rows (history included)`);
 
     const rewrite = rewriteEntryCategories(ww, assignments, opts);
     log(`entries: ${rewrite.entriesScanned} scanned, ${rewrite.entriesRewritten} rewritten, ` +
         `${rewrite.entriesUnchanged} already up to date; ` +
         `${rewrite.tuplesTombstoned} category tuples retired, ${rewrite.tuplesInserted} written; ` +
         `${rewrite.assignmentsWithoutEntry} assignments had no matching entry`);
-    return {seed, rewrite};
+    return {seed, mute, rewrite};
 }

@@ -73,12 +73,16 @@ export function verifyMigration(ww: WordWiki,
          `${cats.filter(c => c.slug.startsWith('~old-')).length} ~old-*, ` +
          `${cats.filter(c => c.retired).length} retired)`);
 
-    // --- 4. Every CURRENT category value is in the category table -----------
-    const unknownCats = db().all<{attr1: string, n: number}, {eot: number}>(
-        `SELECT attr1, COUNT(*) AS n FROM dict WHERE ty = 'cat' AND valid_to = :eot
-         GROUP BY attr1`, {eot: EOT}).filter(row => !catSlugs.has(row.attr1));
+    // --- 4. Every category value IN ALL OF HISTORY is in the category table -
+    // (The in-place mute renames history rows too, precisely so that every
+    // historical version of every fact is restorable to a live identifier -
+    // this is the completeness check for that property.)
+    const unknownCats = db().all<{attr1: string, n: number}, {}>(
+        `SELECT attr1, COUNT(*) AS n FROM dict
+         WHERE ty = 'cat' AND attr1 IS NOT NULL AND attr1 != ''
+         GROUP BY attr1`, {}).filter(row => !catSlugs.has(row.attr1));
     if(unknownCats.length > 0)
-        fail(`current category values not in the category table: ` +
+        fail(`category values (in history) not in the category table: ` +
              unknownCats.slice(0, 5).map(u => `'${u.attr1}' (x${u.n})`).join(', ') +
              (unknownCats.length > 5 ? ` (+${unknownCats.length - 5} more)` : ''));
 

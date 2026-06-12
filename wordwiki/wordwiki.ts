@@ -1442,7 +1442,8 @@ if (import.meta.main) {
                 // against an already-migrated db must be a pure no-op.
                 if(args.includes('--expect-no-changes')) {
                     const changes = stats.rewrite.entriesRewritten
-                        + stats.seed.seededNew + stats.seed.seededInternal + stats.seed.seededOld;
+                        + stats.seed.seededNew + stats.seed.seededInternal + stats.seed.seededOld
+                        + stats.mute.valuesRenamed;
                     if(changes > 0)
                         throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
                                         'the previous run did not reach the fixed point');
