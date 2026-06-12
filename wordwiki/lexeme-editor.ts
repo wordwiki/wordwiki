@@ -379,7 +379,7 @@ export class LexemeEditor {
             ['div', {class:'d-flex align-items-center gap-2 lex-relation-header'},
              ['span', {class:'fw-bold'}, rf.prompt],
              this.addButtons(entry_id, parent_fact_id, rf),
-             this.deletedButton(entry_id, parent_fact_id, rf, rq)];
+             this.relationHeaderMenu(entry_id, parent_fact_id, rf, rq)];
 
         switch(rf.style.$shape) {
             case 'containerRelation':
@@ -404,11 +404,11 @@ export class LexemeEditor {
 
     /**
      * One tuple as an editable surface (and a self-level reloadable fragment):
-     * the whole area opens the edit dialog (delegating to the contained
-     * pencil - the visible affordance cue), and the standard ☰ menu carries
+     * the whole area opens the edit dialog, and the standard ☰ menu carries
      * ALL of the tuple's actions (the liminal UI language - see
-     * action.actionMenu): Edit (redundantly with the body tap, for
-     * discoverability), positioned inserts, moves, History, Delete.
+     * action.actionMenu).  No pencil: the ☰ is the row's single icon, and
+     * its Edit item (class 'edit') doubles as the body tap's delegation
+     * target (lmEditableClick taps button.edit).
      */
     private renderTupleSurface(entry_id: number, rf: model.RelationField,
                                tq: CurrentTupleQuery, extraClasses: string = ''): Markup {
@@ -421,14 +421,13 @@ export class LexemeEditor {
                      'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
                      onclick: 'lmEditableClick(event)'},
              ['div', {class:'flex-grow-1'}, this.renderTupleValues(rf, current)],
-             this.editPencil(entry_id, fact_id),
              this.tupleActionMenu(entry_id, fact_id, rf, current),
             ]);
     }
 
-    /** The tuple's ☰: every action on the tuple, one tap away.  (The body
-     *  tap and the pencil stay as edit shortcuts; lmEditableClick declines
-     *  clicks on buttons, so the menu doesn't also open the edit dialog.) */
+    /** The tuple's ☰: every action on the tuple, one tap away.
+     *  (lmEditableClick declines clicks on buttons, so opening the menu
+     *  doesn't also open the edit dialog.) */
     private tupleActionMenu(entry_id: number, fact_id: number,
                             rf: model.RelationField, current: TupleVersion): Markup {
         const parentPath = getAssertionPath(current.assertion);
@@ -438,7 +437,7 @@ export class LexemeEditor {
         const insertable = !rf.scalarFields.some(isBoundingGroupField)
             && !rf.scalarFields.some(isDialogReadOnly);
         return action.actionMenu([
-            {label: 'Edit', mode: {kind: 'modal',
+            {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
                 dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id})`}},
             ...(insertable ? [
                 {label: 'Insert before', mode: {kind: 'modal' as const,
@@ -493,17 +492,14 @@ export class LexemeEditor {
         return ['span', {}, String(v)];
     }
 
-    private editPencil(entry_id: number, fact_id: number): Markup {
-        return ['button', {...table.editButtonProps(`${R}.editDialog(${entry_id}, ${fact_id})`),
-                           class: 'edit lm-edit-pencil', type: 'button', 'aria-label': 'Edit'},
-                table.pencilIcon()];
-    }
-
     /**
-     * The relation header's add affordance.  Three cases by metadata:
-     * a bounding-group relation gets one button per reference book (create
-     * group + ref, then open the tagger); an image relation gets nothing yet;
-     * everything else gets the generic "+" (insert dialog).
+     * The relation header's add affordance (task.ts style): the common verb
+     * as a quiet icon-only + (so an EMPTY relation still has a visible way
+     * to add), with the header ☰ naming it for discoverability and carrying
+     * the rare actions (the deleted-items dialog).  Special cases by
+     * metadata: a bounding-group relation keeps one labelled button per
+     * reference book (create group + ref, then open the tagger); an image
+     * relation has no add flow yet.
      */
     private addButtons(entry_id: number, parent_fact_id: number, rf: model.RelationField): Markup {
         if(rf.scalarFields.some(isBoundingGroupField))
@@ -513,20 +509,26 @@ export class LexemeEditor {
                 'btn btn-sm btn-outline-primary lex-add-btn py-0 px-1'));
         if(rf.scalarFields.some(isDialogReadOnly))
             return [];
-        return action.actionButton('+',
+        return action.actionButton(action.plusIcon(),
             {kind: 'modal', dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`},
-            'btn btn-sm btn-outline-primary lex-add-btn py-0 px-1');
+            'lm-menu-button', {'aria-label': `New ${rf.prompt}`, title: `New ${rf.prompt}`});
     }
 
-    // A subtle "n deleted" affordance when the relation has tombstoned tuples;
-    // opens the deleted-items dialog (with restore buttons).
-    private deletedButton(entry_id: number, parent_fact_id: number,
-                          rf: model.RelationField, rq: workspace.CurrentRelationQuery): Markup {
+    // The header ☰: names the add for discoverability, and carries the
+    // deleted-items dialog (rare - it used to be an inline "n deleted"
+    // link).  Omitted when it would be empty.
+    private relationHeaderMenu(entry_id: number, parent_fact_id: number,
+                               rf: model.RelationField, rq: workspace.CurrentRelationQuery): Markup {
+        const items: Array<{label: string, mode: action.ActionMode}> = [];
+        if(!rf.scalarFields.some(isBoundingGroupField) && !rf.scalarFields.some(isDialogReadOnly))
+            items.push({label: `Add ${rf.prompt}…`, mode: {kind: 'modal',
+                dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`}});
         const deletedCount = this.deletedTuples(rq).length;
-        if(deletedCount === 0) return [];
-        return action.actionButton(`${deletedCount} deleted`,
-            {kind: 'modal', dialogUrl: `${R}.deletedDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`},
-            'btn btn-sm btn-link text-muted p-0 lex-deleted-btn');
+        if(deletedCount > 0)
+            items.push({label: `Deleted items (${deletedCount})…`, mode: {kind: 'modal',
+                dialogUrl: `${R}.deletedDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`}});
+        if(items.length === 0) return [];
+        return action.actionMenu(items, {ariaLabel: `${rf.prompt} list actions`});
     }
 
     private deletedTuples(rq: workspace.CurrentRelationQuery): VersionedTuple[] {

@@ -41,6 +41,19 @@ test("tuple surface: the ☰ carries every action; edit dialog is just the form"
                 `deleteTuple(1000, 1110)`,
             ]) assertStringIncludes(html, needle);
 
+            // No pencil: the ☰ is the row's single icon, and its Edit item
+            // carries class 'edit' (lmEditableClick's delegation target for
+            // the body tap).
+            assertEquals(html.includes('lm-edit-pencil'), false);
+            assertStringIncludes(html, 'dropdown-item edit');
+
+            // Header treatment (task.ts style): quiet icon-only + naming the
+            // relation, and a header ☰ naming the add; the old inline
+            // "n deleted" link is gone (it lives in the header ☰ now).
+            assertStringIncludes(html, "aria-label='New Category'");
+            assertStringIncludes(html, 'Add Category…');
+            assertEquals(html.includes('lex-deleted-btn'), false);
+
             // The edit dialog no longer carries the secondary actions.
             const dialog = markupToString(fx.ww.lexeme.editDialog(1000, 1110));
             assertEquals(dialog.includes('Move up'), false);
