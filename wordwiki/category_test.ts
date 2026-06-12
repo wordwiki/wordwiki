@@ -144,3 +144,34 @@ test("insertion order is presentation order (order keys append)", async () => {
         });
     });
 });
+
+test("the category detail page shows the record; rows navigate, the pencil only for admins", async () => {
+    await withTestDb(async (fx) => {
+        const nonAdmin = as(fx, 'system', () =>
+            fx.ww.users.allUsersByName.all({}).find(u => !u.permissions)!.username);
+        const id = as(fx, 'djz', () =>
+            fx.ww.categories.insert({slug: 'weather', name: 'Weather',
+                                     theme: 'Land, Water & Sky',
+                                     description: 'Rain, snow, wind, storms.'}));
+
+        // The list row is the navigable species: name links to the detail page.
+        const page = markupToString(await as(fx, nonAdmin, () =>
+            renderRoute(fx.ww, 'wordwiki.categoriesPage()')));
+        assertStringIncludes(page, 'lm-nav-link');
+        assertStringIncludes(page, `detailPage(${id})`);
+        assertStringIncludes(page, 'lm-nav-chevron');
+
+        // Detail page: the row's info plus the rest of the record; the pencil
+        // follows recordEdit (admin-only vocabulary).
+        const adminPage = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.categories.detailPage(${id})`)));
+        assertStringIncludes(adminPage, 'Weather');
+        assertStringIncludes(adminPage, 'Rain, snow, wind, storms.');
+        assertStringIncludes(adminPage, 'lm-edit-pencil');
+
+        const viewerPage = markupToString(await as(fx, nonAdmin, () =>
+            renderRoute(fx.ww, `wordwiki.categories.detailPage(${id})`)));
+        assertStringIncludes(viewerPage, 'Weather');
+        assertFalse(viewerPage.includes('lm-edit-pencil'));
+    });
+});

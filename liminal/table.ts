@@ -218,9 +218,9 @@ export class Table<T extends Tuple> {
     // (lmNavigableClick in resources/liminal-scripts.js clicks it, declining
     // clicks that belong to inner links/buttons or a text-selection drag).
     // Pair with navChevron(); reloadable tagging re-renders just this item
-    // after an edit save.  Tables WITHOUT a detail page render an inert row
-    // instead: reloadableItemProps + 'list-group-item lm-item' + a conditional
-    // pencil (see e.g. wordwiki/user.ts renderUserRow).
+    // after an edit save.  (A table without a detail page would render an
+    // inert row instead - reloadableItemProps + 'list-group-item lm-item' +
+    // a conditional pencil - but every table currently has one.)
     detailItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
         const props = this.reloadableItemProps(id, reloadURL, extraProps);
         props.class = 'list-group-item list-group-item-action lm-item lm-navigable ' + props.class;

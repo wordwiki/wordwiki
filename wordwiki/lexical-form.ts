@@ -26,11 +26,12 @@
  * yet.  No orthography columns, as with categories (later i18n project).
  */
 import { db, boolnum } from "../liminal/db.ts";
-import { Table, PrimaryKeyField, BooleanField, StringField } from "../liminal/table.ts";
+import { Table, PrimaryKeyField, BooleanField, StringField, navChevron } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
+import * as templates from './templates.ts';
 import * as security from "../liminal/security.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import { groupByTheme, isInternalCategorySlug } from "./category.ts";
@@ -205,23 +206,57 @@ export class LexicalFormTable extends Table<LexicalForm> {
         const body =
             ['div', {class: 'lm-item-body'},
              ['div', {class: 'lm-item-primary'},
-              f.name || f.slug,
+              ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexicalForms.detailPage(${id})`),
+                     class: 'lm-nav-link'}, f.name || f.slug],
               isInternalCategorySlug(f.slug)
                   ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
              ['div', {class: 'lm-item-secondary'}, secondary]];
 
-        // Pencil-only editing: no detail page yet, so the row surface is inert
-        // (no whole-surface tap; cf. the navigable species Table.detailItemProps
-        // used where a detail page exists).  Reloadable tagging re-renders just
-        // this item after an edit save.
-        const props = this.reloadableItemProps(id, `/ww/wordwiki.lexicalForms.renderLexicalFormRowById(${id})`);
-        props.class = 'list-group-item lm-item ' + props.class;
-        return ['div', {...props, 'data-testid': `lexical-form-row-${id}`},
-            body, this.canEditRecord(f) ? this.editPencil(id) : undefined];
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `/ww/wordwiki.lexicalForms.renderLexicalFormRowById(${id})`);
+        return ['div', {...item, 'data-testid': `lexical-form-row-${id}`},
+            body, this.canEditRecord(f) ? this.editPencil(id) : undefined, navChevron()];
     }
 
     renderLexicalFormRowById(id: number): Markup {
         return this.renderLexicalFormRow(this.getById(id));
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Lexical form detail page --------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // Full page for one lexical form (navigated to by tapping the list row).
+    // For now the same info as the row, plus the pencil; domain-specific
+    // detail (entries using this form, usage stats, ...) comes later.
+    detailPage(lexical_form_id: number): templates.Page {
+        const f = this.getById(lexical_form_id);
+        return templates.page(`${f.name || f.slug} — Lexical Form`, this.renderDetail(lexical_form_id));
+    }
+
+    // The detail body, as a reloadable fragment (an edit save re-renders it).
+    renderDetail(lexical_form_id: number): Markup {
+        const f = this.getById(lexical_form_id);
+        const props = this.reloadableItemProps(lexical_form_id, `/ww/wordwiki.lexicalForms.renderDetail(${lexical_form_id})`);
+        props.class = 'container py-3 ' + props.class;
+        const row = (label: string, value: Markup) =>
+            [['dt', {class: 'col-sm-3'}, label], ['dd', {class: 'col-sm-9'}, value]];
+        return ['div', props,
+            ['div', {class: 'd-flex align-items-center gap-2 mb-3'},
+             ['h2', {class: 'mb-0'}, f.name || f.slug],
+             isInternalCategorySlug(f.slug)
+                 ? ['span', {class: 'badge text-bg-secondary'}, 'internal'] : undefined,
+             f.retired ? ['span', {class: 'badge text-bg-secondary'}, 'Retired'] : undefined,
+             this.canEditRecord(f) ? this.editPencil(lexical_form_id) : undefined],
+            ['dl', {class: 'row mb-0'},
+             row('Slug', f.slug),
+             row('Theme', f.theme || '—'),
+             row('Description', f.description || '—'),
+             row('Editor notes', f.tagger_notes || '—'),
+            ],
+        ];
     }
 
     newDialog(): Markup {

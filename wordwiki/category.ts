@@ -31,13 +31,14 @@
  * the same longevity goal as the assertions, so they ride along in exports.
  */
 import { db, boolnum } from "../liminal/db.ts";
-import { Table, PrimaryKeyField, BooleanField, StringField } from "../liminal/table.ts";
+import { Table, PrimaryKeyField, BooleanField, StringField, navChevron } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
 import * as orderkey from "../liminal/orderkey.ts";
+import * as templates from './templates.ts';
 
 const admin = security.hasRole('admin');
 
@@ -261,23 +262,57 @@ export class CategoryTable extends Table<Category> {
         const body =
             ['div', {class: 'lm-item-body'},
              ['div', {class: 'lm-item-primary'},
-              c.name || c.slug,
+              ['a', {...templates.pageLinkProps(`/ww/wordwiki.categories.detailPage(${id})`),
+                     class: 'lm-nav-link'}, c.name || c.slug],
               isInternalCategorySlug(c.slug)
                   ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
              ['div', {class: 'lm-item-secondary'}, secondary]];
 
-        // Pencil-only editing: no detail page yet, so the row surface is inert
-        // (no whole-surface tap; cf. the navigable species Table.detailItemProps
-        // used where a detail page exists).  Reloadable tagging re-renders just
-        // this item after an edit save.
-        const props = this.reloadableItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
-        props.class = 'list-group-item lm-item ' + props.class;
-        return ['div', {...props, 'data-testid': `category-row-${id}`},
-            body, this.canEditRecord(c) ? this.editPencil(id) : undefined];
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
+        return ['div', {...item, 'data-testid': `category-row-${id}`},
+            body, this.canEditRecord(c) ? this.editPencil(id) : undefined, navChevron()];
     }
 
     renderCategoryRowById(id: number): Markup {
         return this.renderCategoryRow(this.getById(id));
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Category detail page ------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // Full page for one category (navigated to by tapping the list row).  For
+    // now the same info as the row, plus the pencil; domain-specific detail
+    // (entries in this category, tagging stats, ...) comes later.
+    detailPage(category_id: number): templates.Page {
+        const c = this.getById(category_id);
+        return templates.page(`${c.name || c.slug} — Category`, this.renderDetail(category_id));
+    }
+
+    // The detail body, as a reloadable fragment (an edit save re-renders it).
+    renderDetail(category_id: number): Markup {
+        const c = this.getById(category_id);
+        const props = this.reloadableItemProps(category_id, `/ww/wordwiki.categories.renderDetail(${category_id})`);
+        props.class = 'container py-3 ' + props.class;
+        const row = (label: string, value: Markup) =>
+            [['dt', {class: 'col-sm-3'}, label], ['dd', {class: 'col-sm-9'}, value]];
+        return ['div', props,
+            ['div', {class: 'd-flex align-items-center gap-2 mb-3'},
+             ['h2', {class: 'mb-0'}, c.name || c.slug],
+             isInternalCategorySlug(c.slug)
+                 ? ['span', {class: 'badge text-bg-secondary'}, 'internal'] : undefined,
+             c.retired ? ['span', {class: 'badge text-bg-secondary'}, 'Retired'] : undefined,
+             this.canEditRecord(c) ? this.editPencil(category_id) : undefined],
+            ['dl', {class: 'row mb-0'},
+             row('Slug', c.slug),
+             row('Theme', c.theme || '—'),
+             row('Description', c.description || '—'),
+             row('Tagger notes', c.tagger_notes || '—'),
+            ],
+        ];
     }
 
     // The create dialog: the record form over an empty record (renderForm

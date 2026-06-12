@@ -21,7 +21,7 @@
  */
 import { db, boolnum } from "../liminal/db.ts";
 import { Table, PrimaryKeyField, ForeignKeyField, BooleanField, StringField,
-         EmailField, SecretField, DateTimeField } from "../liminal/table.ts";
+         EmailField, SecretField, DateTimeField, navChevron } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
@@ -150,22 +150,55 @@ export class UserTable extends Table<User> {
                            u.disabled ? 'disabled' : '']
             .filter(Boolean).join(' · ');
 
-        // Pencil-only editing: no detail page yet, so the row surface is inert
-        // (no whole-surface tap; cf. the navigable species Table.detailItemProps
-        // used where a detail page exists).  Reloadable tagging re-renders just
-        // this item after an edit save.
-        const props = this.reloadableItemProps(id, `/ww/wordwiki.users.renderUserRowById(${id})`);
-        props.class = 'list-group-item lm-item ' + props.class;
-        return ['div', {...props, 'data-testid': `user-row-${id}`},
+        // One navigable row species for every viewer (Table.detailItemProps:
+        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
+        // only to viewers with recordEdit - is the only edit affordance.
+        const item = this.detailItemProps(id, `/ww/wordwiki.users.renderUserRowById(${id})`);
+        return ['div', {...item, 'data-testid': `user-row-${id}`},
             ['div', {class: 'lm-item-body'},
-             ['div', {class: 'lm-item-primary'}, u.name || u.username],
+             ['div', {class: 'lm-item-primary'},
+              ['a', {...templates.pageLinkProps(`/ww/wordwiki.users.detailPage(${id})`),
+                     class: 'lm-nav-link'}, u.name || u.username]],
              ['div', {class: 'lm-item-secondary'}, secondary]],
             this.canEditRecord(u) ? this.editPencil(id) : undefined,
+            navChevron(),
         ];
     }
 
     renderUserRowById(id: number): Markup {
         return this.renderUserRow(this.getById(id));
+    }
+
+    // ------------------------------------------------------------------------
+    // --- User detail page ----------------------------------------------------
+    // ------------------------------------------------------------------------
+
+    // Full page for one user (navigated to by tapping the list row).  For now
+    // the same info as the row, plus the pencil; domain-specific detail
+    // (assertions authored, assignments, ...) comes later.
+    detailPage(user_id: number): templates.Page {
+        const u = this.getById(user_id);
+        return templates.page(`${u.name || u.username} — User`, this.renderDetail(user_id));
+    }
+
+    // The detail body, as a reloadable fragment (an edit save re-renders it).
+    renderDetail(user_id: number): Markup {
+        const u = this.getById(user_id);
+        const props = this.reloadableItemProps(user_id, `/ww/wordwiki.users.renderDetail(${user_id})`);
+        props.class = 'container py-3 ' + props.class;
+        const row = (label: string, value: Markup) =>
+            [['dt', {class: 'col-sm-3'}, label], ['dd', {class: 'col-sm-9'}, value]];
+        return ['div', props,
+            ['div', {class: 'd-flex align-items-center gap-2 mb-3'},
+             ['h2', {class: 'mb-0'}, u.name || u.username],
+             u.disabled ? ['span', {class: 'badge text-bg-secondary'}, 'Disabled'] : undefined,
+             this.canEditRecord(u) ? this.editPencil(user_id) : undefined],
+            ['dl', {class: 'row mb-0'},
+             row('Username', u.username),
+             row('Email', u.email || '—'),
+             row('Permissions', u.permissions || '—'),
+            ],
+        ];
     }
 
     // The create dialog: the record form over an empty record (renderForm

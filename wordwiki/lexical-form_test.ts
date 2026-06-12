@@ -7,7 +7,7 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertFalse, assertThrows, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { withTestDb, as, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
+import { withTestDb, as, renderRoute, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
 import { seedLexicalForms, SEED_LEXICAL_FORMS } from "./lexical-form.ts";
 import { markupToString } from "../liminal/markup.ts";
 import * as timestamp from "../liminal/timestamp.ts";
@@ -113,5 +113,26 @@ test("unseeded lexical form table: the free-text input remains", async () => {
             assertFalse(dialog.includes('<select name=part_of_speech'));
             assertStringIncludes(dialog, 'name=part_of_speech');   // plain text input
         });
+    });
+});
+
+test("the lexical form detail page shows the record; the pencil only for admins", async () => {
+    await withTestDb(async (fx) => {
+        const nonAdmin = as(fx, 'system', () =>
+            fx.ww.users.allUsersByName.all({}).find(u => !u.permissions)!.username);
+        const id = as(fx, 'djz', () =>
+            fx.ww.lexicalForms.insert({slug: 'vai', name: 'verb animate intransitive',
+                                       theme: 'Verbs'}));
+
+        const adminPage = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.lexicalForms.detailPage(${id})`)));
+        assertStringIncludes(adminPage, 'verb animate intransitive');
+        assertStringIncludes(adminPage, 'vai');
+        assertStringIncludes(adminPage, 'lm-edit-pencil');
+
+        const viewerPage = markupToString(await as(fx, nonAdmin, () =>
+            renderRoute(fx.ww, `wordwiki.lexicalForms.detailPage(${id})`)));
+        assertStringIncludes(viewerPage, 'verb animate intransitive');
+        assertFalse(viewerPage.includes('lm-edit-pencil'));
     });
 });
