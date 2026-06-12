@@ -15,6 +15,22 @@ window.addEventListener('pageshow', (e) => {
 });
 
 /**
+ * Mobile navbar dismissal: nav links are htmx-boosted, so following one does
+ * NOT reload the page - and the expanded hamburger menu would simply stay
+ * open over the new content.  Collapse it whenever a navigation link inside
+ * the open collapse is activated.  Delegated on document (works however the
+ * navbar arrives); toggles (data-bs-toggle, e.g. the user dropdown inside the
+ * navbar) are excluded - opening a sub-menu must not close the nav.
+ */
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('.navbar-collapse.show a:not([data-bs-toggle])');
+    if (!link) return;
+    const collapse = link.closest('.navbar-collapse');
+    if (collapse && window.bootstrap)
+        window.bootstrap.Collapse.getOrCreateInstance(collapse).hide();
+});
+
+/**
  * Click handler for an "editable surface" (class .lm-editable,
  * onclick="lmEditableClick(event)").  List rows no longer use this - they are
  * navigable surfaces (lmNavigableClick below) with pencil-only editing; it
