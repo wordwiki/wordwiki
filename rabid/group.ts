@@ -186,49 +186,49 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     // ------------------------------------------------------------------------
 
     // The reloadable members fragment for one group: every owner detail page
-    // (committee, task) embeds this same fragment.  It IS a chip line
-    // (.lm-chip-list - a set of names, not a table): each member chip links
-    // to the volunteer page with a confirm-gated × for actors who pass
-    // canEditMembers, and for those actors it ends with the quiet
-    // "+ Add member" chip - the COMMON membership verb stays inline; rarer
-    // assignment actions live in the owner's ☰ menu.  The add chip is INSIDE
-    // the fragment (which computes its own permissions), so membership
-    // reloads re-render it correctly.  No empty-state text: a document shows
-    // the members there are, and for editors the bare add chip says the rest.
+    // (committee, task, project) embeds this same fragment.  Members render
+    // as a TEXT name list - "Hazel ×, Bob × and Carol ×" - a document
+    // phrase, not a table or pill row.  The × (confirm-gated remove) and the
+    // trailing quiet "+ add member" verb appear only for actors who pass
+    // canEditMembers - the COMMON membership verbs stay inline; rarer
+    // assignment actions live in the owner's ☰ menu.  Both are INSIDE the
+    // fragment (which computes its own permissions), so membership reloads
+    // re-render them correctly.  No empty-state text: for editors the bare
+    // add verb says the rest; read-only viewers get a tiny 'nobody yet'.
     renderMemberEditor(group_id: number): Markup {
         const g = this.getById(group_id);
         const members = this.members.all({group_id});
         const canEdit = this.canEditMembers(g);
         const props = this.reloadableItemProps(group_id, `rabid.volunteer_group.renderMemberEditor(${group_id})`);
-        return [h.div, {...props, class: 'lm-chip-list ' + props.class},
-            members.map(m => this.renderMemberChip(m, canEdit)),
+        return [h.span, {...props, class: 'lm-name-list ' + props.class},
+            joinNames(members.map(m => this.renderMemberName(m, canEdit))),
             canEdit
-                ? action.actionButton('+ Add member',
-                    {kind: 'modal', dialogUrl: `/rabid.volunteer_group.addMemberDialog(${group_id})`},
-                    'lm-chip-add')
+                ? [members.length > 0 ? ' ' : '',
+                   action.actionButton('+ add member',
+                       {kind: 'modal', dialogUrl: `/rabid.volunteer_group.addMemberDialog(${group_id})`},
+                       'lm-add-link')]
                 : (members.length === 0
                     ? [h.span, {class: 'text-muted small'}, 'nobody yet'] : undefined),
         ];
     }
 
-    // Read-only member chips (no ×, no add) - used where a group is shown
+    // Read-only member names (no ×, no add) - used where a group is shown
     // through an ALIASING reference (e.g. a task assigned to a committee's
     // named group, or a task showing its project's assignees): member edits
     // there must go through the explicit flows, never silently into the
     // referenced group.
     renderMemberList(group_id: number): Markup {
         const members = this.members.all({group_id});
-        return [h.div, {class: 'lm-chip-list'},
+        return [h.span, {class: 'lm-name-list'},
             members.length === 0
                 ? [h.span, {class: 'text-muted small'}, 'nobody yet']
-                : members.map(m => this.renderMemberChip(m, false))];
+                : joinNames(members.map(m => this.renderMemberName(m, false)))];
     }
 
-    // One member chip: the name (link to the volunteer page) plus, in member
-    // editors, the × - the same confirm-gated removeMember action the old
-    // Remove button carried, just a quieter trigger.
-    renderMemberChip(m: GroupMemberWithName, canEdit: boolean): Markup {
-        return [h.span, {class: 'lm-chip', 'data-testid': `member-row-${m.volunteer_id}`},
+    // One member as inline text: the name (quiet link to the volunteer page)
+    // plus, in member editors, the tiny confirm-gated ×.
+    renderMemberName(m: GroupMemberWithName, canEdit: boolean): Markup {
+        return [h.span, {class: 'lm-member', 'data-testid': `member-row-${m.volunteer_id}`},
             templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, m.volunteer_name),
             canEdit
                 ? action.actionButton('×',
@@ -379,6 +379,79 @@ export function dropOrphanedAdhocGroup(group_id: number): void {
         'DELETE FROM group_member WHERE group_id = :group_id', {group_id});
     db().execute<{group_id: number}>(
         'DELETE FROM volunteer_group WHERE group_id = :group_id', {group_id});
+}
+
+// "A", "A and B", "A, B and C" - members read as a document phrase.
+function joinNames(parts: Markup[]): Markup[] {
+    return parts.flatMap((p, i) =>
+        i === 0 ? [p] : [i === parts.length - 1 ? ' and ' : ', ', p]);
+}
+
+// --------------------------------------------------------------------------------
+// --- Assignment rendering (the shared assigned-to language) ----------------------
+// --------------------------------------------------------------------------------
+
+// A read-only reference to a group's assignees: the committee (a quiet link -
+// a committee assignment does NOT unroll its members; tap through for the
+// roster) when the group is a committee's named group, else the member names.
+export function renderGroupRef(group_id: number): Markup {
+    const g = security.runSystem(() => rabid.volunteer_group.getById(group_id));
+    if(g.group_kind === 'named') {
+        const committee = g.owner_table === 'committee' && g.owner_id != null
+            ? security.runSystem(() => rabid.committee.getById(g.owner_id!))
+            : undefined;
+        return [h.span, {class: 'lm-name-list'},
+            committee
+                ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
+                : rabid.volunteer_group.displayName(g)];
+    }
+    return rabid.volunteer_group.renderMemberList(group_id);
+}
+
+// The shared assigned-to LINE for an assignment group (a project's, or a
+// task's exclusive override) - part of the groups mechanism because every
+// owner renders it.  Document-weight: one wrapping line of
+// "Assigned to: <who>", where <who> is the committee (a quiet link, members
+// NOT unrolled) or the editable member names (with the inline "+ add member"
+// verb).  The rarer assignment actions (assign/change committee, customize
+// snapshot, plus the caller's extraItems, e.g. a task's revert) sit one tap
+// behind the line's ☰ menu.  ownerRoute ('rabid.project' | 'rabid.task')
+// parameterizes the routes.  Still THE one place to tune the presentation.
+export function renderAssignmentLine(ownerRoute: string, owner_id: number, group_id: number,
+                                     canEdit: boolean,
+                                     extraItems: Array<{label: string, mode: action.ActionMode}> = []): Markup {
+    const g = security.runSystem(() => rabid.volunteer_group.getById(group_id));
+    const menu = (items: Array<{label: string, mode: action.ActionMode}>) =>
+        canEdit ? action.actionMenu([...items, ...extraItems],
+                                    {ariaLabel: 'Assignment actions'}) : undefined;
+
+    if(g.group_kind === 'named') {
+        return [h.div, {class: 'lm-assign-line d-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
+            [h.span, {class: 'text-muted'}, 'Assigned to:'],
+            renderGroupRef(group_id),
+            menu([
+                {label: 'Change committee…',
+                 mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
+                {label: 'Customize members…',
+                 mode: {kind: 'confirm',
+                        expr: `${ownerRoute}.customizeMembers(${owner_id})`,
+                        message: `Detach from ${rabid.volunteer_group.displayName(g)}? The assignees ` +
+                                 `start as the current committee members, but committee changes ` +
+                                 `will no longer apply here.`}},
+            ]),
+        ];
+    }
+    return [h.div, {class: 'lm-assign-line d-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
+        [h.span, {class: 'text-muted'}, 'Assigned to:'],
+        rabid.volunteer_group.renderMemberEditor(group_id),
+        g.derived_from
+            ? [h.span, {class: 'text-muted small'}, `(customized from ${g.derived_from})`]
+            : undefined,
+        menu([
+            {label: 'Assign committee…',
+             mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
+        ]),
+    ];
 }
 
 export const allDml =

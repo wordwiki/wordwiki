@@ -60,7 +60,15 @@ export function pageTemplate(content: PageContent): any {
           // hx-boost targets #content (not <body>), so htmx's default would scroll
           // #content's top to the viewport top - hiding the navbar above it.  Turn
           // that off so a boosted nav leaves the navbar in view.
-          [h.meta, {name:"htmx-config", content:'{"scrollIntoViewOnBoost":false}'}],
+          //
+          // History: NO snapshot cache.  htmx's default back-button behaviour
+          // restores a saved copy of the old DOM, which (a) shows stale data
+          // on live pages and (b) resurrects widget state Bootstrap no longer
+          // knows about (☰ dropdowns came back inoperable).  With the cache
+          // off + refreshOnHistoryMiss, Back is a real page load: always
+          // fresh, everything works.
+          [h.meta, {name:"htmx-config",
+                    content:'{"scrollIntoViewOnBoost":false,"historyCacheSize":0,"refreshOnHistoryMiss":true}'}],
           content.title !== undefined ? [h.title, {}, content.title] : undefined,
           config.bootstrapCssLink,
           [h.link, {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],

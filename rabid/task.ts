@@ -46,7 +46,7 @@ import * as date from "../liminal/date.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
 import {OwnedGroupField, createOwnedGroup, snapshotAsOwnedAdhocGroup, dropOrphanedAdhocGroup,
-        VolunteerGroup} from './group.ts';
+        renderAssignmentLine, renderGroupRef, VolunteerGroup} from './group.ts';
 import {rabid} from './rabid.ts';
 
 export const routes = ()=> ({
@@ -98,60 +98,9 @@ function volunteerName(volunteer_id: number|null|undefined): string|undefined {
         'SELECT name FROM volunteer WHERE volunteer_id = :id', {id: volunteer_id}))?.name;
 }
 
-// The shared assigned-to LINE for an assignment group - a project's, or a
-// task's exclusive override.  Document-weight: one wrapping line of
-// "Assigned to: <who>", where <who> is either the committee (link + badge +
-// read-only member chips) or the editable member chips (with the inline
-// "+ Add member" chip - the common verb).  The rarer assignment actions
-// (assign/change committee, customize snapshot, plus the caller's
-// extraItems, e.g. the task's revert) sit one tap behind the line's ☰ menu.
-// ownerRoute ('rabid.project' | 'rabid.task') parameterizes the routes.
-// Still THE one place to tune the assigned-to presentation.
-function renderGroupAssignment(ownerRoute: string, owner_id: number, group_id: number,
-                               canEdit: boolean,
-                               extraItems: Array<{label: string, mode: action.ActionMode}> = []): Markup {
-    const g = security.runSystem(() => rabid.volunteer_group.getById(group_id));
-    const menu = (items: Array<{label: string, mode: action.ActionMode}>) =>
-        canEdit ? action.actionMenu([...items, ...extraItems],
-                                    {ariaLabel: 'Assignment actions'}) : undefined;
-
-    if(g.group_kind === 'named') {
-        // Owned named groups belong to a committee; link to it.  The badge
-        // marks the live semantics (membership follows the committee).
-        const committee = g.owner_table === 'committee' && g.owner_id != null
-            ? security.runSystem(() => rabid.committee.getById(g.owner_id!))
-            : undefined;
-        return [h.div, {class: 'd-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
-            [h.span, {class: 'text-muted'}, 'Assigned to:'],
-            committee
-                ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
-                : rabid.volunteer_group.displayName(g),
-            [h.span, {class: 'badge text-bg-info'}, 'Committee'],
-            rabid.volunteer_group.renderMemberList(group_id),
-            menu([
-                {label: 'Change committee…',
-                 mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
-                {label: 'Customize members…',
-                 mode: {kind: 'confirm',
-                        expr: `${ownerRoute}.customizeMembers(${owner_id})`,
-                        message: `Detach from ${rabid.volunteer_group.displayName(g)}? The assignees ` +
-                                 `start as the current committee members, but committee changes ` +
-                                 `will no longer apply here.`}},
-            ]),
-        ];
-    }
-    return [h.div, {class: 'd-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
-        [h.span, {class: 'text-muted'}, 'Assigned to:'],
-        rabid.volunteer_group.renderMemberEditor(group_id),
-        g.derived_from
-            ? [h.span, {class: 'text-muted small'}, `(customized from ${g.derived_from})`]
-            : undefined,
-        menu([
-            {label: 'Assign committee…',
-             mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
-        ]),
-    ];
-}
+// (The shared assigned-to line now lives in group.ts - renderAssignmentLine /
+// renderGroupRef - packaged with the groups mechanism, since every owner
+// table renders it.)
 
 // --------------------------------------------------------------------------------
 // --- Project ---------------------------------------------------------------------
@@ -435,22 +384,23 @@ export class ProjectTable extends Table<Project> {
              [h.h2, {class: 'mb-0'}, p.name || 'Unnamed project'],
              p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Done'] : undefined,
              this.canEditRecord(p) ? this.editPencil(project_id) : undefined,
-             // The project's terminal transition, as a confirmed button (the
-             // confirm carries the open-task count - marking a project done
-             // with work outstanding should be deliberate).
+             // The project's own ☰: its terminal mark-done/reopen transition
+             // (the confirm carries the open-task count - finishing a project
+             // with work outstanding should be deliberate); more project-level
+             // actions will join it.
              this.canEditRecord(p)
-                 ? (p.deleted
-                     ? action.actionButton('Reopen project',
-                         {kind: 'confirm', expr: `rabid.project.reopen(${project_id})`,
-                          message: `Reopen ${p.name || 'this project'}?`},
-                         'btn btn-outline-secondary btn-sm ms-auto')
-                     : action.actionButton('Mark project done',
-                         {kind: 'confirm', expr: `rabid.project.markDone(${project_id})`,
-                          message: openCount > 0
-                              ? `${openCount} open task${openCount === 1 ? '' : 's'} remain - ` +
-                                `mark ${p.name || 'this project'} done anyway?`
-                              : `Mark ${p.name || 'this project'} done?`},
-                         'btn btn-outline-success btn-sm ms-auto'))
+                 ? action.actionMenu([
+                       p.deleted
+                           ? {label: 'Reopen project…',
+                              mode: {kind: 'confirm', expr: `rabid.project.reopen(${project_id})`,
+                                     message: `Reopen ${p.name || 'this project'}?`}}
+                           : {label: 'Mark project done…',
+                              mode: {kind: 'confirm', expr: `rabid.project.markDone(${project_id})`,
+                                     message: openCount > 0
+                                         ? `${openCount} open task${openCount === 1 ? '' : 's'} remain - ` +
+                                           `mark ${p.name || 'this project'} done anyway?`
+                                         : `Mark ${p.name || 'this project'} done?`}},
+                   ], {ariaLabel: 'Project actions'})
                  : undefined],
             p.deleted && p.archived_time
                 ? [h.p, {class: 'text-muted small mb-1'},
@@ -471,13 +421,21 @@ export class ProjectTable extends Table<Project> {
                 : undefined,
             p.description ? [h.p, {}, p.description] : undefined,
             // The project's assignment: THE assigned-to its tasks inherit.
-            renderGroupAssignment('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
+            renderAssignmentLine('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
+            // The Tasks heading: a quiet + for the common verb (new task),
+            // plus the ☰ naming it for discoverability.
             [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
              [h.h4, {class: 'mb-0'}, 'Tasks'],
              canCreateTask
-                 ? action.actionButton('New task',
+                 ? action.actionButton(action.plusIcon(),
                      {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
-                     'btn btn-outline-primary btn-sm')
+                     'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
+                 : undefined,
+             canCreateTask
+                 ? action.actionMenu([
+                       {label: 'Add task…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`}},
+                   ], {ariaLabel: 'Task list actions'})
                  : undefined],
             rabid.task.renderProjectTasks(project_id),
         ];
@@ -803,14 +761,17 @@ export class TaskTable extends Table<Task> {
                  : undefined,
              canEdit ? this.editPencil(id) : undefined,
              // The less-common actions, one tap behind the ☰ (in place, so
-             // casual users find them without knowing about detail pages;
-             // move up/down etc. will join these).
+             // casual users find them without knowing about detail pages).
              canEdit
                  ? action.actionMenu([
                        {label: 'Add checklist item…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id})`}},
                        {label: 'Add completed item…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id},true)`}},
+                       {label: 'Move up',
+                        mode: {kind: 'immediate', expr: `rabid.task.moveUp(${id})`}},
+                       {label: 'Move down',
+                        mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`}},
                    ], {ariaLabel: `More actions for ${t.title || 'task'}`})
                  : undefined],
             [h.div, {class: 'lm-task-block-checklist'},
@@ -832,6 +793,30 @@ export class TaskTable extends Table<Task> {
             throw new Error('Not permitted to edit this task');
         this.update(task_id, {status: t.status === 'done' ? 'open' : 'done'});
         return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
+    }
+
+    // Reorder within the project, as DISPLAYED: open tasks move among open
+    // tasks, the done wall keeps its own order (the two never interleave on
+    // screen, so a cross-partition move would be a visual no-op).  A move at
+    // the end is a plain no-op; either way the list fragment reloads.
+    moveUp(task_id: number): Markup { return this.moveBy(task_id, -1); }
+    moveDown(task_id: number): Markup { return this.moveBy(task_id, +1); }
+    private moveBy(task_id: number, dir: -1|1): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        const sibs = security.runSystem(() => this.tasksForProject.all({project_id: t.project_id}))
+            .filter(s => (s.status === 'done') === (t.status === 'done'));
+        const i = sibs.findIndex(s => s.task_id === task_id);
+        const j = i + dir;
+        if(i >= 0 && j >= 0 && j < sibs.length) {
+            // Land on the far side of the displaced neighbour.
+            const order_key = dir < 0
+                ? orderkey.between(sibs[j-1]?.order_key, sibs[j].order_key)
+                : orderkey.between(sibs[j].order_key, sibs[j+1]?.order_key);
+            this.update(task_id, {order_key} as any);
+        }
+        return {action:'reload', targets:['.-task-']} as unknown as Markup;
     }
 
     // ------------------------------------------------------------------------
@@ -1029,12 +1014,13 @@ export class TaskTable extends Table<Task> {
         const canEdit = this.canEditRecord(t);
 
         if(t.group_id == null) {
-            // Inherited (the rule): one line showing the project's assignees
-            // read-only, with the override actions behind the ☰.
+            // Inherited (the rule): one line referencing the project's
+            // assignment (a committee shows as its name, NOT unrolled), with
+            // the override actions behind the ☰.
             const project = security.runSystem(() => rabid.project.getById(t.project_id));
-            return [h.div, {class: 'd-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
+            return [h.div, {class: 'lm-assign-line d-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
                 [h.span, {class: 'text-muted'}, 'Assigned to:'],
-                rabid.volunteer_group.renderMemberList(project.group_id),
+                renderGroupRef(project.group_id),
                 [h.span, {class: 'text-muted small'},
                  '(everyone on ',
                  templates.pageLink(`/rabid.project.detailPage(${project.project_id})`,
@@ -1052,7 +1038,7 @@ export class TaskTable extends Table<Task> {
 
         // Overridden (the exception, and exclusive - this task is on these
         // people alone, not the wider project team); revert lives in the ☰.
-        return renderGroupAssignment('rabid.task', t.task_id, t.group_id, canEdit, [
+        return renderAssignmentLine('rabid.task', t.task_id, t.group_id, canEdit, [
             {label: 'Use project assignees…',
              mode: {kind: 'confirm',
                     expr: `rabid.task.revertAssignees(${t.task_id})`,
@@ -1302,6 +1288,27 @@ export class SubtaskTable extends Table<Subtask> {
         return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
     }
 
+    // Reorder within the task's checklist; a move at the end is a plain
+    // no-op.  Reloads the checklist fragment (and stamps the task).
+    moveUp(subtask_id: number): Markup { return this.moveBy(subtask_id, -1); }
+    moveDown(subtask_id: number): Markup { return this.moveBy(subtask_id, +1); }
+    private moveBy(subtask_id: number, dir: -1|1): Markup {
+        const s = this.getById(subtask_id);
+        if(!canEditTask(s.task_id))
+            throw new Error('Not permitted to edit this task');
+        const sibs = this.forTask.all({task_id: s.task_id});
+        const i = sibs.findIndex(x => x.subtask_id === subtask_id);
+        const j = i + dir;
+        if(i >= 0 && j >= 0 && j < sibs.length) {
+            const order_key = dir < 0
+                ? orderkey.between(sibs[j-1]?.order_key, sibs[j].order_key)
+                : orderkey.between(sibs[j].order_key, sibs[j+1]?.order_key);
+            this.update(subtask_id, {order_key} as any);
+            rabid.task.touch(s.task_id);
+        }
+        return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
+    }
+
     // ------------------------------------------------------------------------
     // --- The checklist fragment ------------------------------------------------
     // ------------------------------------------------------------------------
@@ -1359,13 +1366,19 @@ export class SubtaskTable extends Table<Subtask> {
              s.title],
             prov ? [h.span, {class: 'text-muted small flex-shrink-0'}, prov] : undefined,
             canEdit ? this.editPencil(s.subtask_id) : undefined,
+            // Remove lives in the ☰ too (rarely used; an inline × made the
+            // line flow ragged).  Destructive item last.
             canEdit
-                ? action.actionButton('×',
-                    {kind: 'confirm',
-                     expr: `rabid.subtask.remove(${s.subtask_id})`,
-                     message: `Remove "${s.title}"?`},
-                    'lm-remove-x',
-                    {'aria-label': `Remove ${s.title}`})
+                ? action.actionMenu([
+                      {label: 'Move up',
+                       mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`}},
+                      {label: 'Move down',
+                       mode: {kind: 'immediate', expr: `rabid.subtask.moveDown(${s.subtask_id})`}},
+                      {label: 'Remove…',
+                       mode: {kind: 'confirm',
+                              expr: `rabid.subtask.remove(${s.subtask_id})`,
+                              message: `Remove "${s.title}"?`}},
+                  ], {ariaLabel: `More actions for ${s.title}`})
                 : undefined,
         ];
     }

@@ -55,7 +55,7 @@ export type ActionMode =
  * extraProps merge into the button's attributes - e.g. an aria-label for
  * icon-only buttons ('×').
  */
-export function actionButton(label: string, mode: ActionMode,
+export function actionButton(label: Markup, mode: ActionMode,
                              btnClass: string = 'btn btn-primary',
                              extraProps: Record<string, string> = {}): Markup {
     switch(mode.kind) {
@@ -101,6 +101,14 @@ export function actionMenu(items: Array<{label: string, mode: ActionMode}>,
 function menuIcon(): Markup {
     return ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true'},
             ['path', {d: 'M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z'}]];
+}
+
+// Plus glyph (Bootstrap Icons "plus-lg", MIT) - for icon-only "new/add"
+// buttons (pass to actionButton with the lm-menu-button class and an
+// aria-label; pair with an actionMenu carrying the same action by name).
+export function plusIcon(): Markup {
+    return ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true'},
+            ['path', {d: 'M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z'}]];
 }
 
 // ----------------------------------------------------------------------------

@@ -69,10 +69,14 @@
     width: 1.1rem;
     height: 1.1rem;
 }
-/* The menu wrapper participates in the line's flex row without adding size. */
+/* The menu wrapper participates in the line's flex row without adding size.
+   (NO line-height:0 here - that would cascade into the dropdown list and
+   collapse its items onto each other; the icon button carries its own.) */
 .lm-action-menu {
     flex: 0 0 auto;
-    line-height: 0;
+}
+.lm-action-menu .dropdown-menu {
+    line-height: var(--bs-body-line-height, 1.5);
 }
 
 /* ---------------------------------------------------------------------------
@@ -158,60 +162,38 @@
 }
 
 /* ----------------------------------------------------------------------------
-   Chip list (inline membership-style lists)
+   Inline name list (group members as TEXT, not pills)
 
-   The light-weight alternative to .lm-list rows for lists that are really
-   SETS of references - task assignees, committee members.  Chips wrap into
-   tidy lines; each holds a link to the entity and, when the viewer may edit,
-   a quiet × remove button.
+   A set of people reads as a document phrase - "Hazel, Bob and Carol" - with
+   quiet per-name affordances for editors: a tiny × after each name, and the
+   "+ add member" ghost verb at the end.  Rarer actions live in the ☰ menu.
 ---------------------------------------------------------------------------- */
 
-.lm-chip-list {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.375rem;
+.lm-name-list {
+    display: inline;
+}
+.lm-member {
+    white-space: nowrap;       /* a name and its × stay together */
 }
 
-.lm-chip {
-    display: inline-flex;
-    align-items: center;
-    border: var(--bs-border-width) solid var(--bs-border-color);
-    border-radius: 50rem;
-    background-color: var(--bs-body-bg);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.875rem;
-}
-/* The entity link reads as text - the chip is the visual unit. */
-.lm-chip > a {
-    color: var(--bs-body-color);
-    text-decoration: none;
-    padding: 0.25rem 0;       /* taller tap target without inflating the chip */
-}
-.lm-chip > a:hover {
-    text-decoration: underline;
-}
-
-/* The quiet add chip: a <button> in chip clothing (dashed = "slot for one
-   more").  The common membership verb stays inline at the end of the chip
-   line; rarer actions live in the ☰ menu. */
-.lm-chip-add {
-    display: inline-flex;
-    align-items: center;
-    border: var(--bs-border-width) dashed var(--bs-border-color);
-    border-radius: 50rem;
+/* The quiet inline add verb: a borderless <button> that reads as text. */
+.lm-add-link {
+    border: 0;
     background: transparent;
     color: var(--bs-secondary-color);
-    padding: 0.25rem 0.75rem;
+    padding: 0.125rem 0.375rem;
+    margin: -0.125rem;
+    border-radius: 0.25rem;
     font-size: 0.875rem;
+    white-space: nowrap;
 }
-.lm-chip-add:hover,
-.lm-chip-add:focus-visible {
+.lm-add-link:hover,
+.lm-add-link:focus-visible {
     color: var(--bs-body-color);
-    background-color: var(--bs-tertiary-bg);
+    background-color: var(--bs-secondary-bg);
 }
 
-/* The quiet × remove button (chips, checklist rows).  Ghosted like the
+/* The quiet × remove button (name lists, checklist rows).  Ghosted like the
    pencil and padded to a usable touch target; the confirm gate stays on the
    action - only the trigger got smaller. */
 .lm-remove-x {
@@ -225,14 +207,36 @@
     margin: -0.375rem;
     border-radius: 50rem;
 }
-/* Tuck the × into the pill's right end. */
-.lm-chip .lm-remove-x {
-    margin: -0.375rem -0.625rem -0.375rem -0.125rem;
+/* Inside a text name-list the × flows with the words: smaller padding, no
+   negative flex margins. */
+.lm-name-list .lm-remove-x {
+    font-size: 1rem;
+    padding: 0.25rem 0.375rem;
+    margin: -0.25rem -0.125rem;
+    vertical-align: baseline;
 }
 .lm-remove-x:hover,
 .lm-remove-x:focus-visible {
     color: var(--bs-danger);
     background-color: var(--bs-secondary-bg);
+}
+
+/* ----------------------------------------------------------------------------
+   Document links: navigation inside document-weight lines (task blocks,
+   assignment lines, name lists) reads as TEXT - the page is a printable
+   document with unobtrusive affordances; hover/focus reveals the link-ness.
+---------------------------------------------------------------------------- */
+
+.lm-task-block a,
+.lm-assign-line a,
+.lm-name-list a {
+    color: inherit;
+    text-decoration: none;
+}
+.lm-task-block a:hover, .lm-task-block a:focus-visible,
+.lm-assign-line a:hover, .lm-assign-line a:focus-visible,
+.lm-name-list a:hover, .lm-name-list a:focus-visible {
+    text-decoration: underline;
 }
 
 /* ----------------------------------------------------------------------------

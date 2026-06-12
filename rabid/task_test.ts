@@ -225,7 +225,7 @@ test("customize members: explicit snapshot detaches from the committee (derived_
         // the committee) - plus the two explicit affordances (in the ☰ menu).
         const before = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(before, 'Logistics Committee'));
-        assert(!hasText(before, 'Add member'));
+        assert(!hasText(before, 'add member'));
         assert(hasText(before, 'Customize members'));
         assert(hasText(before, 'Change committee'));
 
@@ -251,7 +251,7 @@ test("customize members: explicit snapshot detaches from the committee (derived_
         // provenance label; the committee-state actions are gone.
         const after = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(after, 'customized from Logistics Committee'));
-        assert(hasText(after, 'Add member'));
+        assert(hasText(after, 'add member'));
         assert(hasText(after, 'Assign committee'));
         assert(!hasText(after, 'Change committee'));
     });
@@ -398,10 +398,10 @@ test("pages: one navigable row species, pencil follows recordEdit; task detail e
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(detail, 'Assigned to'));
         assert(hasText(detail, 'Checklist'));
-        assert(hasText(detail, 'Add member'));
+        assert(hasText(detail, 'add member'));
         assert(hasText(detail, 'Add item'));
         const carolDetail = await asUser(carol, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(!hasText(carolDetail, 'Add member'));
+        assert(!hasText(carolDetail, 'add member'));
         assert(!hasText(carolDetail, 'Add item'));
         // The checklist checkbox is disabled for the non-editor.
         const box = find(carolDetail, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox');
@@ -460,13 +460,15 @@ test("Add completed item: born-done checklist entry with provenance (work-log wo
         assertEquals(item.done_by, bob);
         assert(item.done_time);
 
-        // Renders checked, with the who/when provenance and the quiet ×; the
-        // add actions live in the task block's ☰ menu (and the detail page's
-        // buttons), not in the checklist fragment itself.
+        // Renders checked, with the who/when provenance; the row's rare verbs
+        // (move/remove) live in its ☰ - no inline × - and the add actions
+        // live in the task block's ☰ (and the detail page's buttons).
         const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
         assert(hasText(checklist, 'Sorted the parts bin'));
         assert(!hasText(checklist, 'Add completed item'));
-        assert(!!find(checklist, byClass('lm-remove-x')));
+        assert(!find(checklist, byClass('lm-remove-x')));
+        assert(!!find(checklist, byClass('lm-action-menu')));
+        assert(hasText(checklist, 'Remove…'));
         const block = await asUser(bob, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
         assert(!!find(block, byClass('lm-action-menu')));
         assert(hasText(block, 'Add completed item…'));
@@ -654,5 +656,36 @@ test("merged project page: toggleDone completes/reopens from the block checkbox 
         const t2 = asSystem(() => rabid.task.getById(task_id));
         assertEquals(t2.status, 'open');
         assertEquals(t2.done_time ?? null, null);
+    });
+});
+
+test("move up/down: reorder tasks within the project and items within the checklist", async () => {
+    await withTestDb(({ alice, bob }) => {
+        const {project_id, task_id, group_id} = seedTask();      // 'Book truck'
+        addToGroup(group_id, bob);
+        const t2 = asSystem(() => rabid.task.insert({project_id, title: 'Posters', deleted: 0}));
+        const titles = () => asSystem(() => rabid.task.tasksForProject.all({project_id})).map(t => t.title);
+        assertEquals(titles(), ['Book truck', 'Posters']);
+
+        // Host reorders; a move past the end is a no-op; gated like any edit
+        // (bob is not on t2's effective assignment - empty project group).
+        asUser(alice, () => rabid.task.moveUp(t2));
+        assertEquals(titles(), ['Posters', 'Book truck']);
+        asUser(alice, () => rabid.task.moveUp(t2));
+        assertEquals(titles(), ['Posters', 'Book truck']);
+        assertThrows(() => asUser(bob, () => rabid.task.moveDown(t2)), Error, 'Not permitted');
+        // The assignee can move THEIR task.
+        asUser(bob, () => rabid.task.moveUp(task_id));
+        assertEquals(titles(), ['Book truck', 'Posters']);
+
+        // Checklist items reorder within their task.
+        asUser(bob, () => rabid.subtask.addItem({task_id, title: 'one'}));
+        asUser(bob, () => rabid.subtask.addItem({task_id, title: 'two'}));
+        const items = () => asSystem(() => rabid.subtask.forTask.all({task_id})).map(s => s.title);
+        const two = asSystem(() => rabid.subtask.forTask.all({task_id}))[1].subtask_id;
+        asUser(bob, () => rabid.subtask.moveUp(two));
+        assertEquals(items(), ['two', 'one']);
+        asUser(bob, () => rabid.subtask.moveUp(two));               // already first: no-op
+        assertEquals(items(), ['two', 'one']);
     });
 });

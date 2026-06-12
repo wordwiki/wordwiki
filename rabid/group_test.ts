@@ -73,15 +73,15 @@ test("member editor: edit affordances for the host only; dialog gated server-sid
         const hostView = await asUser(alice, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(hostView, "Bob Shares"));
-        assert(!!find(hostView, byClass("lm-chip")));
+        assert(!!find(hostView, byClass("lm-member")));
         assert(!!find(hostView, byClass("lm-remove-x")));
-        assert(!!find(hostView, byClass("lm-chip-add")));
+        assert(!!find(hostView, byClass("lm-add-link")));
 
         const regularView = await asUser(bob, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(regularView, "Bob Shares"));
         assert(!find(regularView, byClass("lm-remove-x")));
-        assert(!find(regularView, byClass("lm-chip-add")));
+        assert(!find(regularView, byClass("lm-add-link")));
 
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.volunteer_group.addMemberDialog(${group_id})`),
