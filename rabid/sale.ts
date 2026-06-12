@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -64,7 +64,7 @@ export class SaleTable extends Table<Sale> {
             new ImageField('photo', 'rabid.photo', {nullable: true, prompt: 'Photo'}),
             new FloatingPointField('amount', {}),
             new EnumField('payment_method', payment_method_enum, {default: 'cash'}),
-            new StringField('notes', {nullable: true})
+            new MarkdownField('notes', {nullable: true})
         ])
     };
 
@@ -172,7 +172,7 @@ export class SaleTable extends Table<Sale> {
              row('Recorded by', recordedBy
                  ? templates.pageLink(`/rabid.volunteer.detailPage(${s.sale_recorded_by})`, recordedBy.name)
                  : '—'),
-             row('Notes', s.notes || '—'),
+             row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
             ],
         ];
     }

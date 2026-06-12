@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import * as security from "../liminal/security.ts";
 import * as templates from './templates.ts';
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
@@ -93,7 +93,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             new BooleanField('start_time_is_approximate', {default: 0}),
             new BooleanField('end_time_is_approximate', {default: 0}),
             new BooleanField('end_time_is_provisional', {default: 0}),
-            new StringField('notes', {}),
+            new MarkdownField('notes', {}),
             new FloatingPointField('km_driven_for_reimbursement', {}),
             new BooleanField('km_driven_processed', {default: 0}),
             new BooleanField('is_paid_time', {default: 0}),
@@ -294,7 +294,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
              row('Hours', e.end_time ? entryHours(e).toFixed(1) : '—'),
              row('Driving', e.km_driven_for_reimbursement
                  ? `${e.km_driven_for_reimbursement} km${e.km_driven_processed ? ' (processed)' : ''}` : '—'),
-             row('Notes', e.notes || '—'),
+             row('Notes', e.notes ? this.fieldsByName.notes.render(e.notes) : '—'),
             ],
         ];
     }

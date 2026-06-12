@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
@@ -73,7 +73,7 @@ export class EventTable extends Table<Event> {
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
             new FloatingPointField('total_cash_collected', {default: 0}),
-            new StringField('notes', {default: ''})
+            new MarkdownField('notes', {default: ''})
         ],[
             'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);'
         ])
@@ -449,7 +449,7 @@ export class EventTable extends Table<Event> {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Notes:'],
-                    [h.div, {class: 'card-notes'}, event.notes]
+                    [h.div, {class: 'card-notes'}, this.fieldsByName.notes.render(event.notes)]
                 ]
             );
         }

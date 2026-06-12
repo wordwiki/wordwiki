@@ -26,7 +26,7 @@
  * yet.  No orthography columns, as with categories (later i18n project).
  */
 import { db, boolnum } from "../liminal/db.ts";
-import { Table, PrimaryKeyField, BooleanField, StringField, navChevron } from "../liminal/table.ts";
+import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField, navChevron } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
@@ -110,9 +110,9 @@ export class LexicalFormTable extends Table<LexicalForm> {
                                               prompt: 'Slug (stable code used in entries - cannot be changed later)'}),
             new StringField('name', {prompt: 'Display name'}),
             new StringField('theme', {nullable: true}),
-            new StringField('description', {nullable: true,
+            new MarkdownField('description', {nullable: true,
                                             prompt: 'Description (public: what this form means)'}),
-            new StringField('tagger_notes', {nullable: true,
+            new MarkdownField('tagger_notes', {nullable: true,
                                              prompt: 'Editor notes (internal: when to use this form)'}),
             new BooleanField('retired', {default: 0,
                                          prompt: 'Retired (not offered in pickers)'}),
@@ -260,8 +260,8 @@ export class LexicalFormTable extends Table<LexicalForm> {
             ['dl', {class: 'row mb-0'},
              row('Slug', f.slug),
              row('Theme', f.theme || '—'),
-             row('Description', f.description || '—'),
-             row('Editor notes', f.tagger_notes || '—'),
+             row('Description', f.description ? this.fieldsByName.description.render(f.description) : '—'),
+             row('Editor notes', f.tagger_notes ? this.fieldsByName.tagger_notes.render(f.tagger_notes) : '—'),
             ],
             this.renderFormSubentries(f),
         ];

@@ -240,6 +240,24 @@
 }
 
 /* ----------------------------------------------------------------------------
+   Rendered markdown (MarkdownField.render / liminal/markdown.ts): document
+   text.  Trim the trailing margin so embedded notes don't pad out their
+   container (a dl row, a detail section).
+---------------------------------------------------------------------------- */
+
+.lm-markdown > :last-child {
+    margin-bottom: 0;
+}
+.lm-markdown-img {
+    max-width: 100%;
+}
+.lm-markdown-quote {
+    border-left: 3px solid var(--bs-border-color);
+    padding-left: 0.75rem;
+    color: var(--bs-secondary-color);
+}
+
+/* ----------------------------------------------------------------------------
    Photos (liminal/photo.ts + ImageField)
 ---------------------------------------------------------------------------- */
 

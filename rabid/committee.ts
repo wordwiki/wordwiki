@@ -10,7 +10,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, BooleanField, StringField, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, BooleanField, StringField, MarkdownField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -57,7 +57,7 @@ export class CommitteeTable extends Table<Committee> {
             new StringField('name', {}),
             new StringField('description', {default: ''}),
             new OwnedGroupField('group_id'),
-            new StringField('notes', {default: ''}),
+            new MarkdownField('notes', {default: ''}),
             new BooleanField('deleted', {default: 0, prompt: 'Dissolved'}),
         ])
     };
@@ -181,7 +181,7 @@ export class CommitteeTable extends Table<Committee> {
              c.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Dissolved'] : undefined,
              this.canEditRecord(c) ? this.editPencil(committee_id) : undefined],
             c.description ? [h.p, {}, c.description] : undefined,
-            c.notes ? [h.p, {class: 'text-muted'}, c.notes] : undefined,
+            c.notes ? this.fieldsByName.notes.render(c.notes) : undefined,
             [h.h4, {class: 'mt-3'}, 'Members'],
             rabid.volunteer_group.renderMemberEditor(c.group_id),
         ];

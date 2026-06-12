@@ -31,7 +31,7 @@
  * the same longevity goal as the assertions, so they ride along in exports.
  */
 import { db, boolnum } from "../liminal/db.ts";
-import { Table, PrimaryKeyField, BooleanField, StringField, navChevron } from "../liminal/table.ts";
+import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField, navChevron } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
@@ -158,9 +158,9 @@ export class CategoryTable extends Table<Category> {
                                    prompt: 'Slug (stable id used in assertions - cannot be changed later)'}),
             new StringField('name', {prompt: 'Display name'}),
             new StringField('theme', {nullable: true}),
-            new StringField('description', {nullable: true,
+            new MarkdownField('description', {nullable: true,
                                             prompt: 'Description (public: what belongs here)'}),
-            new StringField('tagger_notes', {nullable: true,
+            new MarkdownField('tagger_notes', {nullable: true,
                                              prompt: 'Tagger notes (internal: boundary rules)'}),
             new BooleanField('retired', {default: 0,
                                          prompt: 'Retired (not offered in pickers)'}),
@@ -316,8 +316,8 @@ export class CategoryTable extends Table<Category> {
             ['dl', {class: 'row mb-0'},
              row('Slug', c.slug),
              row('Theme', c.theme || '—'),
-             row('Description', c.description || '—'),
-             row('Tagger notes', c.tagger_notes || '—'),
+             row('Description', c.description ? this.fieldsByName.description.render(c.description) : '—'),
+             row('Tagger notes', c.tagger_notes ? this.fieldsByName.tagger_notes.render(c.tagger_notes) : '—'),
             ],
             this.renderCategoryEntries(c),
         ];

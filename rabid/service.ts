@@ -5,7 +5,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue } from "../liminal/table.ts";
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
@@ -99,7 +99,7 @@ export class ServiceTable extends Table<Service> {
             new DateTimeField('work_end_time', {nullable: true}),
             new IntegerField('work_stand_id', {nullable: true}),
             
-            new StringField('notes', {nullable: true})
+            new MarkdownField('notes', {nullable: true})
         ])
     };
 
@@ -211,7 +211,7 @@ export class ServiceTable extends Table<Service> {
                  ? `${date.sqliteDateTimeToString(s.work_start_time)}${s.work_end_time
                      ? ' - ' + date.sqliteDateTimeToTimeString(s.work_end_time) : ''}`
                  : '—'),
-             row('Notes', s.notes || '—'),
+             row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
             ],
         ];
     }

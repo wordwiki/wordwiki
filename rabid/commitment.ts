@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
@@ -39,7 +39,7 @@ export class EventCommitmentTable extends Table<EventCommitment> {
             new ForeignKeyField('event_id', 'event', 'event_id', {}, 'description'),
             new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name'),
             new StringField('requested_role', {default:''}),
-            new StringField('notes', {default:''}),
+            new MarkdownField('notes', {default:''}),
             new BooleanField('will_drive_supplies', {default: 0}),
             new IntegerField('will_drive_passengers_count', {default: 0}),
             new DateTimeField('start_time', {nullable: true}),

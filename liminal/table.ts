@@ -1,4 +1,5 @@
 import {Markup} from '../liminal/markup.ts';
+import {markdownToMarkup} from './markdown.ts';
 import * as strings from '../liminal/strings.ts';
 import * as utils from '../liminal/utils.ts';
 import {unwrap} from '../liminal/utils.ts';
@@ -716,7 +717,7 @@ export class StringField extends Field {
     dmlType(): string {
         return 'TEXT';
     }
-    
+
     renderInput(value: any): Markup {
         return [
             ['div', {'class':'col-12'},
@@ -733,6 +734,32 @@ export class StringField extends Field {
 
     parseSimpleInput(value: string): any {
         return value;
+    }
+}
+
+/**
+ * A markdown text field, for notes/descriptions everywhere: stored as plain
+ * markdown TEXT, edited in a <textarea>, displayed through the safe
+ * markdown->Markup translation (liminal/markdown.ts - raw HTML renders as
+ * text, hostile URL schemes are refused; see that file's security story).
+ */
+export class MarkdownField extends StringField {
+    override renderInput(value: any): Markup {
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['textarea', Object.assign({class:'form-control', name:this.name,
+                                         id:'input-'+this.name, rows:'5'},
+                                        this.isInputRequired() ? {required: ''} : {}),
+              value ?? ''],
+             // A quiet hint, not a manual: enough to signal markdown works.
+             ['div', {class:'form-text'}, 'Markdown: **bold**, *italic*, - lists, [link](url)'],
+            ]
+        ];
+    }
+
+    override render(value: any): Markup {
+        return markdownToMarkup(typeof value === 'string' ? value : undefined);
     }
 }
 

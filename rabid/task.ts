@@ -36,7 +36,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, DateField, DateTimeField, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -142,7 +142,7 @@ export class ProjectTable extends Table<Project> {
         super ('project', [
             new PrimaryKeyField('project_id', {}),
             new StringField('name', {}),
-            new StringField('description', {default: ''}),
+            new MarkdownField('description', {default: ''}),
             new OwnedGroupField('group_id'),
             new BooleanField('deleted', {default: 0, prompt: 'Done'}),
             new ManagedDateTimeField('archived_time', {nullable: true}),
@@ -419,7 +419,7 @@ export class ProjectTable extends Table<Project> {
                                                      volunteerName(p.created_by) ?? `volunteer ${p.created_by}`)]
                        : undefined]
                 : undefined,
-            p.description ? [h.p, {}, p.description] : undefined,
+            p.description ? this.fieldsByName.description.render(p.description) : undefined,
             // The project's assignment: THE assigned-to its tasks inherit.
             renderAssignmentLine('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
             // The Tasks heading: a quiet + for the common verb (new task),
@@ -512,7 +512,7 @@ export class TaskTable extends Table<Task> {
             new PrimaryKeyField('task_id', {}),
             new ForeignKeyField('project_id', 'project', 'project_id', {prompt: 'Project'}, 'name'),
             new StringField('title', {}),
-            new StringField('details', {default: ''}),
+            new MarkdownField('details', {default: ''}),
             new EnumField('priority', task_priority_enum, {default: 'normal'}),
             new DateField('due', {nullable: true, prompt: 'Due date'}),
             new EnumField('status', task_status_enum, {default: 'open'}),
@@ -988,7 +988,7 @@ export class TaskTable extends Table<Task> {
                                         volunteerName(t.done_by) ?? `volunteer ${t.done_by}`)]
                                     : undefined])
                  : undefined,
-             t.details ? row('Details', t.details) : undefined,
+             t.details ? row('Details', this.fieldsByName.details.render(t.details)) : undefined,
             ],
             this.renderAssignedTo(t),
             [h.h4, {class: 'mt-3'}, 'Checklist'],
