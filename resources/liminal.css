@@ -164,61 +164,22 @@
 /* ----------------------------------------------------------------------------
    Inline name list (group members as TEXT, not pills)
 
-   A set of people reads as a document phrase - "Hazel, Bob and Carol" - with
-   quiet per-name affordances for editors: a tiny × after each name, and the
-   "+ add member" ghost verb at the end.  Rarer actions live in the ☰ menu.
+   A set of people reads as a PURE document phrase - "Hazel, Bob and Carol" -
+   followed by one ☰ carrying every membership verb (add me / add member /
+   the per-member removes / remove all).  No inline ×, no inline add: the
+   names are just names.
 ---------------------------------------------------------------------------- */
 
 .lm-name-list {
     display: inline;
 }
 .lm-member {
-    white-space: nowrap;       /* a name and its × stay together */
-}
-
-/* The quiet inline add verb: a borderless <button> that reads as text. */
-.lm-add-link {
-    border: 0;
-    background: transparent;
-    color: var(--bs-secondary-color);
-    padding: 0.125rem 0.375rem;
-    margin: -0.125rem;
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
     white-space: nowrap;
 }
-.lm-add-link:hover,
-.lm-add-link:focus-visible {
-    color: var(--bs-body-color);
-    background-color: var(--bs-secondary-bg);
-}
-
-/* The quiet × remove button (name lists, checklist rows).  Ghosted like the
-   pencil and padded to a usable touch target; the confirm gate stays on the
-   action - only the trigger got smaller. */
-.lm-remove-x {
-    flex: 0 0 auto;
-    border: 0;
-    background: transparent;
-    color: var(--bs-secondary-color);
-    font-size: 1.125rem;
-    line-height: 1;
-    padding: 0.375rem 0.625rem;
-    margin: -0.375rem;
-    border-radius: 50rem;
-}
-/* Inside a text name-list the × flows with the words: smaller padding, no
-   negative flex margins. */
-.lm-name-list .lm-remove-x {
-    font-size: 1rem;
-    padding: 0.25rem 0.375rem;
-    margin: -0.25rem -0.125rem;
-    vertical-align: baseline;
-}
-.lm-remove-x:hover,
-.lm-remove-x:focus-visible {
-    color: var(--bs-danger);
-    background-color: var(--bs-secondary-bg);
+/* The membership ☰ flows with the phrase. */
+.lm-name-list .lm-action-menu {
+    display: inline-block;
+    vertical-align: middle;
 }
 
 /* ----------------------------------------------------------------------------

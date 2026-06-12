@@ -67,21 +67,23 @@ test("member editor: edit affordances for the host only; dialog gated server-sid
         await asUser(alice, () => invoke("rabid.volunteer_group.addMember($arg0)",
             {group_id: String(group_id), volunteer_id: String(bob)}));
 
-        // Members render as a chip line; the × (confirm-gated remove) and the
-        // inline "+ Add member" chip only for the host - the fragment computes
-        // its own permissions, so reloads keep them correct.
+        // Members render as a pure name phrase; ONE in-fragment ☰ carries the
+        // verbs.  The host (not a member) gets Add me / Add member… / the
+        // per-member removes; bob (a member but not an editor) gets no menu
+        // at all - his one open verb, Add me, doesn't apply to a member.
         const hostView = await asUser(alice, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(hostView, "Bob Shares"));
         assert(!!find(hostView, byClass("lm-member")));
-        assert(!!find(hostView, byClass("lm-remove-x")));
-        assert(!!find(hostView, byClass("lm-add-link")));
+        assert(!!find(hostView, byClass("lm-action-menu")));
+        assert(hasText(hostView, "Add me"));
+        assert(hasText(hostView, "Add member…"));
+        assert(hasText(hostView, "Remove Bob Shares"));
 
         const regularView = await asUser(bob, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(regularView, "Bob Shares"));
-        assert(!find(regularView, byClass("lm-remove-x")));
-        assert(!find(regularView, byClass("lm-add-link")));
+        assert(!find(regularView, byClass("lm-action-menu")));
 
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.volunteer_group.addMemberDialog(${group_id})`),

@@ -178,67 +178,142 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
         db().execute<{group_id: number, volunteer_id: number}>(
             'DELETE FROM group_member WHERE group_id = :group_id AND volunteer_id = :volunteer_id',
             {group_id, volunteer_id});
+        this.clearDerivedFromIfEmpty(group_id);
         return {action:'reload', targets:[`.-volunteer_group-${group_id}-`]} as unknown as Markup;
+    }
+
+    // "Add me": sign the CURRENT actor up.  Deliberately NOT gated by
+    // canEditMembers - self-signup is the ONE membership edit that is always
+    // allowed (dz policy: in a volunteer org, "I'll take that" is the
+    // dominant flow and must never need an editor).  No-op if already a
+    // member (the unique index).
+    addSelf(group_id: number): Markup {
+        const actorId = security.current()?.actorId;
+        if(actorId === undefined)
+            throw new Error('Not logged in as a volunteer');
+        this.getById(group_id);                  // must exist (and be viewable)
+        db().execute<{group_id: number, volunteer_id: number}>(
+            'INSERT OR IGNORE INTO group_member(group_id, volunteer_id) VALUES (:group_id, :volunteer_id)',
+            {group_id, volunteer_id: actorId});
+        return {action:'reload', targets:[`.-volunteer_group-${group_id}-`]} as unknown as Markup;
+    }
+
+    // Clear the roster wholesale (the long-roster escape hatch; the one
+    // removal that keeps a confirm - it's bulk).
+    removeAllMembers(group_id: number): Markup {
+        const g = this.getById(group_id);
+        if(!this.canEditMembers(g))
+            throw new Error(`Not permitted to edit the members of ${this.displayName(g)}`);
+        db().execute<{group_id: number}>(
+            'DELETE FROM group_member WHERE group_id = :group_id', {group_id});
+        this.clearDerivedFromIfEmpty(group_id);
+        return {action:'reload', targets:[`.-volunteer_group-${group_id}-`]} as unknown as Markup;
+    }
+
+    // An emptied roster sheds its provenance: "customized from X" with nobody
+    // left in it is stale noise - erasing the members (one by one or via
+    // Remove all) resets the group to a plain blank slate.
+    private clearDerivedFromIfEmpty(group_id: number): void {
+        db().execute<{group_id: number}>(block`
+/**/   UPDATE volunteer_group SET derived_from = ''
+/**/          WHERE group_id = :group_id AND derived_from != ''
+/**/            AND NOT EXISTS (SELECT 1 FROM group_member gm WHERE gm.group_id = :group_id)`,
+            {group_id});
     }
 
     // ------------------------------------------------------------------------
     // --- Member editor (the shared membership UI) ----------------------------
     // ------------------------------------------------------------------------
 
-    // The reloadable members fragment for one group: every owner detail page
-    // (committee, task, project) embeds this same fragment.  Members render
-    // as a TEXT name list - "Hazel ×, Bob × and Carol ×" - a document
-    // phrase, not a table or pill row.  The × (confirm-gated remove) and the
-    // trailing quiet "+ add member" verb appear only for actors who pass
-    // canEditMembers - the COMMON membership verbs stay inline; rarer
-    // assignment actions live in the owner's ☰ menu.  Both are INSIDE the
-    // fragment (which computes its own permissions), so membership reloads
-    // re-render them correctly.  No empty-state text: for editors the bare
-    // add verb says the rest; read-only viewers get a tiny 'nobody yet'.
-    renderMemberEditor(group_id: number): Markup {
+    // The reloadable members fragment for one group - the COMPLETE membership
+    // UI: the member names as a pure document phrase ("Hazel, Bob and
+    // Carol"), plus ONE ☰ holding every membership verb.  The menu lives
+    // INSIDE the fragment so a membership reload regenerates it (the
+    // per-member Remove items must track the roster); the owner's assignment
+    // verbs ride in via ownerRoute/owner_id - plain route-string params, so
+    // the fragment's own reload URL carries them too.
+    //
+    // Verbs and their gates:
+    //   - "Add me": offered to any logged-in non-member - self-signup is the
+    //     ONE membership edit that is always allowed (dz policy);
+    //   - everything else needs canEditMembers: Add member…, the owner's
+    //     assignment verbs, the per-member removes ("Remove me" for the
+    //     actor's own entry; IMMEDIATE - picking a named item is already a
+    //     deliberate act, and re-adding is trivial), and the confirm-gated
+    //     Remove all… (bulk) once there are 2+.
+    renderMemberEditor(group_id: number, ownerRoute?: string, owner_id?: number): Markup {
         const g = this.getById(group_id);
         const members = this.members.all({group_id});
         const canEdit = this.canEditMembers(g);
-        const props = this.reloadableItemProps(group_id, `rabid.volunteer_group.renderMemberEditor(${group_id})`);
+        const actorId = security.current()?.actorId;
+        const isMember = actorId !== undefined && members.some(m => m.volunteer_id === actorId);
+        const reloadURL = ownerRoute != null && owner_id != null
+            ? `rabid.volunteer_group.renderMemberEditor(${group_id},${JSON.stringify(ownerRoute)},${owner_id})`
+            : `rabid.volunteer_group.renderMemberEditor(${group_id})`;
+        const props = this.reloadableItemProps(group_id, reloadURL);
+
+        const items: action.ActionMenuItem[] = [];
+        if(actorId !== undefined && !isMember)
+            items.push({label: 'Add me',
+                        mode: {kind: 'immediate', expr: `rabid.volunteer_group.addSelf(${group_id})`}});
+        if(canEdit) {
+            items.push({label: 'Add member…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.volunteer_group.addMemberDialog(${group_id})`}});
+            if(ownerRoute != null && owner_id != null) {
+                items.push({label: 'Assign committee…',
+                            mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}});
+                // The task owner's extra verb (a mild layering wink, but it
+                // keeps the whole menu inside the reloadable fragment).
+                if(ownerRoute === 'rabid.task')
+                    items.push({label: 'Use project assignees…',
+                                mode: {kind: 'confirm',
+                                       expr: `rabid.task.revertAssignees(${owner_id})`,
+                                       message: `Drop this task's own assignees and go back to the project's?`}});
+            }
+            if(members.length > 0) items.push('divider');
+            for(const m of members)
+                items.push({label: m.volunteer_id === actorId ? 'Remove me' : `Remove ${m.volunteer_name}`,
+                            mode: {kind: 'immediate',
+                                   expr: `rabid.volunteer_group.removeMember(${group_id},${m.volunteer_id})`}});
+            if(members.length >= 2)
+                items.push({label: 'Remove all…',
+                            mode: {kind: 'confirm',
+                                   expr: `rabid.volunteer_group.removeAllMembers(${group_id})`,
+                                   message: `Remove all ${members.length} members?`}});
+        }
+
         return [h.span, {...props, class: 'lm-name-list ' + props.class},
-            joinNames(members.map(m => this.renderMemberName(m, canEdit))),
-            canEdit
-                ? [members.length > 0 ? ' ' : '',
-                   action.actionButton('+ add member',
-                       {kind: 'modal', dialogUrl: `/rabid.volunteer_group.addMemberDialog(${group_id})`},
-                       'lm-add-link')]
-                : (members.length === 0
-                    ? [h.span, {class: 'text-muted small'}, 'nobody yet'] : undefined),
+            joinNames(members.map(m => this.renderMemberName(m))),
+            members.length === 0 && items.length === 0
+                ? [h.span, {class: 'text-muted small'}, 'nobody yet'] : undefined,
+            // Provenance reads as part of the phrase, BEFORE the menu.
+            g.derived_from
+                ? [h.span, {class: 'text-muted small'}, ` (customized from ${g.derived_from})`]
+                : undefined,
+            items.length > 0
+                ? [members.length > 0 || g.derived_from ? ' ' : '',
+                   action.actionMenu(items, {ariaLabel: 'Membership actions'})]
+                : undefined,
         ];
     }
 
-    // Read-only member names (no ×, no add) - used where a group is shown
-    // through an ALIASING reference (e.g. a task assigned to a committee's
-    // named group, or a task showing its project's assignees): member edits
-    // there must go through the explicit flows, never silently into the
-    // referenced group.
+    // Read-only member names (no menu) - used where a group is shown through
+    // an ALIASING reference (e.g. a task assigned to a committee's named
+    // group, or a task showing its project's assignees): member edits there
+    // must go through the explicit flows, never silently into the referenced
+    // group.
     renderMemberList(group_id: number): Markup {
         const members = this.members.all({group_id});
         return [h.span, {class: 'lm-name-list'},
             members.length === 0
                 ? [h.span, {class: 'text-muted small'}, 'nobody yet']
-                : joinNames(members.map(m => this.renderMemberName(m, false)))];
+                : joinNames(members.map(m => this.renderMemberName(m)))];
     }
 
-    // One member as inline text: the name (quiet link to the volunteer page)
-    // plus, in member editors, the tiny confirm-gated ×.
-    renderMemberName(m: GroupMemberWithName, canEdit: boolean): Markup {
+    // One member as inline text: the name, a quiet link to the volunteer page.
+    renderMemberName(m: GroupMemberWithName): Markup {
         return [h.span, {class: 'lm-member', 'data-testid': `member-row-${m.volunteer_id}`},
-            templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, m.volunteer_name),
-            canEdit
-                ? action.actionButton('×',
-                    {kind: 'confirm',
-                     expr: `rabid.volunteer_group.removeMember(${m.group_id},${m.volunteer_id})`,
-                     message: `Remove ${m.volunteer_name}?`},
-                    'lm-remove-x',
-                    {'aria-label': `Remove ${m.volunteer_name}`})
-                : undefined,
-        ];
+            templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, m.volunteer_name)];
     }
 
     // The add-member parameter dialog: one volunteer picker (remote type-ahead
@@ -441,16 +516,13 @@ export function renderAssignmentLine(ownerRoute: string, owner_id: number, group
             ]),
         ];
     }
+    // Adhoc: the member editor IS the line - its in-fragment ☰ carries all
+    // the membership verbs plus (via ownerRoute/owner_id) the owner's
+    // assignment verbs, so there is exactly ONE menu and it can never go
+    // stale on a membership reload.
     return [h.div, {class: 'lm-assign-line d-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
         [h.span, {class: 'text-muted'}, 'Assigned to:'],
-        rabid.volunteer_group.renderMemberEditor(group_id),
-        g.derived_from
-            ? [h.span, {class: 'text-muted small'}, `(customized from ${g.derived_from})`]
-            : undefined,
-        menu([
-            {label: 'Assign committee…',
-             mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
-        ]),
+        rabid.volunteer_group.renderMemberEditor(group_id, ownerRoute, owner_id),
     ];
 }
 

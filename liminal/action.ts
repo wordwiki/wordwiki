@@ -86,7 +86,9 @@ export function actionButton(label: Markup, mode: ActionMode,
  * editable.  (Bootstrap's dropdown data-api is delegation-based, so menus
  * inside htmx-swapped fragments work without re-initialization.)
  */
-export function actionMenu(items: Array<{label: string, mode: ActionMode, btnClass?: string}>,
+export type ActionMenuItem = {label: string, mode: ActionMode, btnClass?: string} | 'divider';
+
+export function actionMenu(items: ActionMenuItem[],
                            opts: {ariaLabel?: string} = {}): Markup {
     return [h.div, {class: 'dropdown lm-action-menu'},
         [h.button, {type: 'button', class: 'lm-menu-button',
@@ -94,12 +96,14 @@ export function actionMenu(items: Array<{label: string, mode: ActionMode, btnCla
                     'aria-label': opts.ariaLabel ?? 'More actions'},
          menuIcon()],
         [h.ul, {class: 'dropdown-menu'},
-         items.map(it => [h.li, {}, actionButton(
-             it.label, it.mode,
-             // An item's extra class lets a menu item double as a surface's
-             // delegation target (e.g. 'edit' makes the Edit item the button
-             // lmEditableClick taps for a pencil-less editable surface).
-             it.btnClass ? `dropdown-item ${it.btnClass}` : 'dropdown-item')])]];
+         items.map(it => it === 'divider'
+             ? [h.li, {}, [h.hr, {class: 'dropdown-divider'}]]
+             : [h.li, {}, actionButton(
+                   it.label, it.mode,
+                   // An item's extra class lets a menu item double as a surface's
+                   // delegation target (e.g. 'edit' makes the Edit item the button
+                   // lmEditableClick taps for a pencil-less editable surface).
+                   it.btnClass ? `dropdown-item ${it.btnClass}` : 'dropdown-item')])]];
 }
 
 // Three-bars menu glyph (Bootstrap Icons "list", MIT), inlined like pencilIcon.

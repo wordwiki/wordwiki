@@ -6,7 +6,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows, assertRejects } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, asUser, asSystem, as } from "./testing.ts";
-import { find, byClass, tagOf, attr, hasText, getByTestId } from "../liminal/testing/markup-assert.ts";
+import { find, byClass, tagOf, attr, hasText, text, getByTestId } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 import { db } from "../liminal/db.ts";
 
@@ -247,13 +247,28 @@ test("customize members: explicit snapshot detaches from the committee (derived_
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id!})).length, 2);
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: c1.group_id})).length, 1);
 
-        // The detail page is back to the editable chip line, with the
+        // The detail page is back to the editable name line, with the
         // provenance label; the committee-state actions are gone.
         const after = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(after, 'customized from Logistics Committee'));
-        assert(hasText(after, 'add member'));
+        assert(hasText(after, 'Add member'));
         assert(hasText(after, 'Assign committee'));
         assert(!hasText(after, 'Change committee'));
+
+        // Erasing ALL the members resets the provenance: "customized from X"
+        // with nobody left is stale - the group is a blank slate again.
+        asUser(alice, () => rabid.volunteer_group.removeAllMembers(t.group_id!));
+        assertEquals(asSystem(() => rabid.volunteer_group.getById(t.group_id!)).derived_from, '');
+        const emptied = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
+        assert(!hasText(emptied, 'customized from'));
+        // ...and one-by-one removal resets the same way: re-customize, then
+        // remove the single member.
+        asUser(alice, () => rabid.task.assignCommittee({task_id, committee_id: c1.committee_id}));
+        asUser(alice, () => rabid.task.customizeMembers(task_id));
+        const g2 = asSystem(() => rabid.task.getById(task_id)).group_id!;
+        assertEquals(asSystem(() => rabid.volunteer_group.getById(g2)).derived_from, 'Logistics Committee');
+        asUser(alice, () => rabid.volunteer_group.removeMember(g2, bob));
+        assertEquals(asSystem(() => rabid.volunteer_group.getById(g2)).derived_from, '');
     });
 });
 
@@ -398,10 +413,10 @@ test("pages: one navigable row species, pencil follows recordEdit; task detail e
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(detail, 'Assigned to'));
         assert(hasText(detail, 'Checklist'));
-        assert(hasText(detail, 'add member'));
+        assert(hasText(detail, 'Add member'));
         assert(hasText(detail, 'Add item'));
         const carolDetail = await asUser(carol, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(!hasText(carolDetail, 'add member'));
+        assert(!hasText(carolDetail, 'Add member'));
         assert(!hasText(carolDetail, 'Add item'));
         // The checklist checkbox is disabled for the non-editor.
         const box = find(carolDetail, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox');
@@ -687,5 +702,42 @@ test("move up/down: reorder tasks within the project and items within the checkl
         assertEquals(items(), ['two', 'one']);
         asUser(bob, () => rabid.subtask.moveUp(two));               // already first: no-op
         assertEquals(items(), ['two', 'one']);
+    });
+});
+
+test("membership ☰: Add me is always allowed (self-signup); named removes; Remove all gated", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const {task_id, group_id} = seedTask();
+
+        // carol has NO rights on this task, but signs HERSELF up - the one
+        // always-allowed membership edit - and thereby becomes an assignee
+        // who can work the task.  Re-adding is a no-op.
+        asUser(carol, () => rabid.volunteer_group.addSelf(group_id));
+        asUser(carol, () => rabid.volunteer_group.addSelf(group_id));
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id}))
+            .map(m => m.volunteer_id), [carol]);
+        asUser(carol, () => rabid.subtask.addItem({task_id, title: 'mine now'}));
+
+        // The ☰ speaks in sentences about you: carol (now a member+editor)
+        // sees 'Remove me'; alice (host, not a member) sees 'Add me' and
+        // 'Remove Carol Private'.
+        const carolView = await asUser(carol, () =>
+            renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
+        assert(hasText(carolView, 'Remove me'));
+        // ('Add me' is a prefix of 'Add member…', so check the exact item.)
+        assert(!find(carolView, n => tagOf(n) === 'button' && text(n).trim() === 'Add me'));
+        const aliceView = await asUser(alice, () =>
+            renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
+        assert(hasText(aliceView, 'Add me'));
+        assert(hasText(aliceView, 'Remove Carol Private'));
+
+        // Remove all: bulk, confirm-gated in the UI, and canEditMembers-gated
+        // on the server - bob, an outsider (not assignee, not host), is
+        // refused; the host clears the whole roster.
+        assertThrows(() => asUser(bob, () => rabid.volunteer_group.removeAllMembers(group_id)),
+                     Error, 'Not permitted');
+        addToGroup(group_id, bob);
+        asUser(alice, () => rabid.volunteer_group.removeAllMembers(group_id));
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id})).length, 0);
     });
 });
