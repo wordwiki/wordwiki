@@ -35,6 +35,11 @@ import * as templates from './templates.ts';
 import * as security from "../liminal/security.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import { groupByTheme, isInternalCategorySlug } from "./category.ts";
+import * as entrySchema from './entry-schema.ts';
+import { panic } from "../liminal/utils.ts";
+import type { WordWiki } from './wordwiki.ts';
+
+const nameCollator = Intl.Collator('en');
 
 const admin = security.hasRole('admin');
 
@@ -96,7 +101,10 @@ export type LexicalFormOpt = Partial<LexicalForm>;
 
 export class LexicalFormTable extends Table<LexicalForm> {
 
-    constructor() {
+    // The app back-reference (same pattern as CategoryTable): the detail
+    // page reaches across into the assertion world (subentries using this
+    // form, the remove verb via app.lexemeOps).
+    constructor(private app?: WordWiki) {
         super('lexical_form', [
             new PrimaryKeyField('lexical_form_id', {}),
             new LexicalFormSlugField('slug', {indexed: true, unique: true, edit: onCreateOnly,
@@ -256,7 +264,70 @@ export class LexicalFormTable extends Table<LexicalForm> {
              row('Description', f.description || '—'),
              row('Editor notes', f.tagger_notes || '—'),
             ],
+            this.renderFormSubentries(f),
         ];
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Subentries with this form (the assertion world) ---------------------
+    // ------------------------------------------------------------------------
+
+    // Unlike a category (a child tuple), the part of speech is a FIELD of
+    // the subentry - so the rows here are SUBENTRIES (an entry can appear
+    // once per subentry), and "remove" means clearing the field (the
+    // subentry survives, joining the empty-POS worklist), via
+    // LexemeOps.clearSubentryPartOfSpeech.
+
+    // ALL entries' subentries - including unpublished entries (curation
+    // page).  Sorted by spelling.
+    private subentriesForSlug(slug: string): {e: entrySchema.Entry, s: any}[] {
+        if(!this.app) return [];
+        const rows = Array.from(this.app.entriesById.values())
+            .flatMap(e => e.subentry
+                .filter(s => s.part_of_speech === slug)
+                .map(s => ({e, s})));
+        return rows.sort((a, b) => nameCollator.compare(
+            entrySchema.renderEntrySpellingsSummary(a.e),
+            entrySchema.renderEntrySpellingsSummary(b.e)));
+    }
+
+    private renderFormSubentries(f: LexicalForm): Markup {
+        if(!this.app) return undefined;
+        const rows = this.subentriesForSlug(f.slug);
+        return [
+            ['h4', {class: 'mt-4 mb-2'}, `Subentries (${rows.length})`],
+            rows.length === 0
+                ? ['p', {class: 'text-muted'}, 'No subentries carry this form.']
+                : ['div', {class: 'list-group lm-list'},
+                   rows.map(({e, s}) => this.renderFormSubentryRow(f, e, s))]];
+    }
+
+    private renderFormSubentryRow(f: LexicalForm, e: entrySchema.Entry, s: any): Markup {
+        const spelling = entrySchema.renderEntrySpellingsSummary(e);
+        const glosses = s.gloss.map((g: any) => g.gloss).filter(Boolean).join(' / ');
+        return ['div', {class: 'list-group-item lm-item d-flex align-items-center'},
+            ['div', {class: 'lm-item-body'},
+             ['div', {class: 'lm-item-primary'},
+              ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexeme.entryPage(${e.entry_id})`),
+                     class: 'lm-nav-link'}, spelling]],
+             ['div', {class: 'lm-item-secondary'}, glosses]],
+            action.actionButton('Remove',
+                {kind: 'confirm',
+                 message: `Remove part of speech ${f.name || f.slug} from “${spelling}”? ` +
+                          `(the subentry is kept, with no part of speech)`,
+                 expr: `wordwiki.lexicalForms.removeSubentry(${f.lexical_form_id}, ${e.entry_id}, ${s.subentry_id})`},
+                'btn btn-outline-danger btn-sm'),
+        ];
+    }
+
+    /** The remove verb: clear the subentry's part_of_speech (LexemeOps
+     *  does the assertion work, including the only-if-still-this-value
+     *  race guard), then reload the detail fragment. */
+    removeSubentry(lexical_form_id: number, entry_id: number, subentry_id: number): any {
+        const f = this.getById(lexical_form_id);
+        const app = this.app ?? panic('lexical form table has no app reference');
+        app.lexemeOps.clearSubentryPartOfSpeech(entry_id, subentry_id, f.slug);
+        return {action: 'reload', targets: [`.-lexical_form-${lexical_form_id}-`]};
     }
 
     newDialog(): Markup {

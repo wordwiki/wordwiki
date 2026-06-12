@@ -46,6 +46,13 @@ export function isTombstone(a: Assertion): boolean {
     return a.valid_from === a.valid_to;
 }
 
+export type SupersedeOutcome =
+    // The fact was current; a new version with the changed fields is asserted.
+    | {outcome: 'updated', assertion: Assertion, replaced: Assertion}
+    // The fact was deleted since the caller looked: re-asserting would
+    // silently RESURRECT it - refuse instead.
+    | {outcome: 'already-deleted'};
+
 export type TombstoneOutcome =
     // The fact was current and is now tombstoned.
     | {outcome: 'removed', tombstone: Assertion, replaced: Assertion}
@@ -123,6 +130,31 @@ export class LexemeOps {
         return {outcome: 'removed', tombstone, replaced: current};
     }
 
+    /** Re-assert a fact with some fields changed (a new version chained
+     *  onto the current one).  The single-field edit primitive for verbs
+     *  that change a value in place (vs tombstoneFact for deletion). */
+    supersedeFields(entry_id: number, fact_id: number,
+                    fields: Partial<Assertion>): SupersedeOutcome {
+        this.requireUsername();
+        const tuple = this.findTupleInEntry(entry_id, fact_id);
+        const mostRecent = tuple.mostRecentTuple;
+        if(!mostRecent || !mostRecent.isCurrent)
+            return {outcome: 'already-deleted'};
+        const current = mostRecent.assertion;
+
+        const assertion: Assertion = {
+            ...current,
+            ...fields,
+            assertion_id: newId(),
+            replaces_assertion_id: current.assertion_id,
+            valid_from: placeholderTxTime(),
+            valid_to: timestamp.END_OF_TIME,
+            ...this.changeStamp(),
+        };
+        this.app.applyTransaction([assertion]);
+        return {outcome: 'updated', assertion, replaced: current};
+    }
+
     // ------------------------------------------------------------------------
     // --- Domain verbs ---------------------------------------------------------
     // ------------------------------------------------------------------------
@@ -135,6 +167,31 @@ export class LexemeOps {
         if(!e) return [];
         return e.subentry.flatMap(s =>
             s.category.filter(c => c.category === slug).map(c => c.category_id));
+    }
+
+    /** The fact ids of an entry's CURRENT subentries whose part_of_speech
+     *  is the given slug (the POS is a FIELD of the subentry tuple - attr1 -
+     *  not a child tuple, so 'removing' it means clearing the field). */
+    currentSubentryIdsWithPartOfSpeech(entry_id: number, slug: string): number[] {
+        const e = this.app.entriesById.get(entry_id);
+        if(!e) return [];
+        return e.subentry.filter(s => s.part_of_speech === slug)
+            .map(s => s.subentry_id);
+    }
+
+    /** Clear a subentry's part of speech - IF it still has the expected
+     *  value (a race where someone re-tagged it concurrently is a no-op:
+     *  blindly clearing would discard their edit).  The subentry survives
+     *  with no part of speech (one more for the empty-POS worklist). */
+    clearSubentryPartOfSpeech(entry_id: number, subentry_id: number,
+                              expectedSlug: string): {changed: boolean} {
+        this.requireUsername();
+        const tuple = this.findTupleInEntry(entry_id, subentry_id);
+        const current = tuple.mostRecentTuple;
+        if(!current || !current.isCurrent || current.assertion.attr1 !== expectedSlug)
+            return {changed: false};
+        const r = this.supersedeFields(entry_id, subentry_id, {attr1: null});
+        return {changed: r.outcome === 'updated'};
     }
 
     /** Remove an entry from a category: tombstone EVERY current cat tuple

@@ -87,7 +87,7 @@ export class WordWiki extends LiminalApp {
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
     @path get categories() { return new category.CategoryTable(this); }
-    @path get lexicalForms() { return new lexicalForm.LexicalFormTable(); }
+    @path get lexicalForms() { return new lexicalForm.LexicalFormTable(this); }
 
     // The new-style tables (auto-created at startup; the legacy raw-DML tables
     // - scanned documents, bounding boxes, the dict assertion table - stay in
