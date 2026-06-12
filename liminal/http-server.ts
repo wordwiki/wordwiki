@@ -78,7 +78,13 @@ export function toHxRedirectResponse(redirect: Response): Response {
 }
 
 export function htmlResponse(htmlText: string, status:number=200): Response {
-    return {marker: ResponseMarker, status, headers: {}, body: htmlText};            
+    // Dynamic HTML is auth-gated, personalized and freshly rendered per
+    // request: 'no-store' keeps it out of the HTTP cache AND (on most
+    // browsers) the back/forward cache - so pressing Back after editing
+    // re-requests the list page and shows the edits.  (Safari bfcaches even
+    // no-store pages; the pageshow handler in liminal-scripts.js covers it.)
+    return {marker: ResponseMarker, status,
+            headers: {'cache-control': 'no-store'}, body: htmlText};
 }
 
 export function jsonResponse(json:any, status:number=200): Response {

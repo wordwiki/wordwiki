@@ -2,6 +2,19 @@
    Loaded before the app's own scripts (e.g. rabid-scripts.js). */
 
 /**
+ * Back-button freshness: liminal pages are live views of the db (navigate to
+ * an editor, edit, press Back - the list you came from must show the edit).
+ * Dynamic pages are served Cache-Control: no-store, which keeps them out of
+ * the back/forward cache on Chrome/Firefox; Safari restores from bfcache
+ * regardless, so when a page is shown from a bfcache snapshot (e.persisted)
+ * we reload it from the server.
+ */
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted)
+        location.reload();
+});
+
+/**
  * Click handler for an "editable surface" (class .lm-editable,
  * onclick="lmEditableClick(event)").  List rows no longer use this - they are
  * navigable surfaces (lmNavigableClick below) with pencil-only editing; it
