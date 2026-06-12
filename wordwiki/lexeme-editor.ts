@@ -59,6 +59,7 @@ import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone} from './lexeme-ops.ts';
+import {isAutomatedUsername} from './user.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
@@ -617,14 +618,16 @@ export class LexemeEditor {
                  {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id})`},
                  'btn btn-sm btn-outline-secondary')],
             ['div', {class:'list-group lm-list'},
-             versions.map(v => {
+             this.collapseAutomatedRuns(versions.map(v => {
                  const a = v.assertion;
                  const isCurrent = a.assertion_id === mostRecent?.assertion.assertion_id && v.isCurrent;
-                 return ['div', {class:'list-group-item d-flex align-items-start gap-2'},
+                 const item = ['div', {class:'list-group-item d-flex align-items-start gap-2'},
                          ['div', {class:'flex-grow-1'},
                           ['div', {class:'small text-muted'},
                            timestamp.formatTimestampAsLocalTime(a.valid_from),
-                           a.change_by_username ? ` — ${entrySchema.users[a.change_by_username] ?? a.change_by_username}` : ''],
+                           a.change_by_username ? ` — ${entrySchema.users[a.change_by_username] ?? a.change_by_username}` : '',
+                           isAutomatedUsername(a.change_by_username)
+                              ? ['span', {class:'badge text-bg-secondary ms-1'}, 'automated'] : ''],
                           isTombstone(a)
                              ? ['span', {class:'text-danger'}, '(deleted)']
                              : this.renderTupleValues(rel, v)],
@@ -632,13 +635,51 @@ export class LexemeEditor {
                             ? ['span', {class:'badge text-bg-success'}, 'Current']
                             : isTombstone(a)
                             ? []
+                            : this.restoreBarrierFrom(tuple) > a.valid_from
+                            // Pre-migration versions are view-only: their
+                            // values are expressed in a vocabulary that no
+                            // longer exists (also enforced in restoreVersion).
+                            ? ['span', {class:'small text-muted'},
+                               'not restorable (predates a vocabulary migration)']
                             : action.actionButton('Restore',
                                 {kind: 'confirm',
                                  expr: `wordwiki.lexeme.restoreVersion(${entry_id}, ${fact_id}, ${a.assertion_id})`,
                                  message: `Restore this version of ${rel.prompt}?`},
                                 'btn btn-sm btn-outline-secondary')];
-             })],
+                 return {automated: isAutomatedUsername(a.change_by_username) && !isCurrent, item};
+             }))],
         ];
+    }
+
+    /** The migration barrier for a fact: the valid_from of its most recent
+     *  AUTOMATED version (batch import/migration).  Versions older than
+     *  this are view-only in the history dialog and refused by
+     *  restoreVersion.  BEGINNING_OF_TIME when the fact has none. */
+    private restoreBarrierFrom(tuple: VersionedTuple): number {
+        return tuple.tupleVersions.findLast(
+            v => isAutomatedUsername(v.assertion.change_by_username))
+            ?.assertion.valid_from ?? timestamp.BEGINNING_OF_TIME;
+    }
+
+    /** Fold runs of consecutive automated versions behind a <details>
+     *  disclosure ("N automated changes ...") so a migration reads as one
+     *  event, not a pile of edits.  Single automated items keep their badge
+     *  but aren't worth a fold. */
+    private collapseAutomatedRuns(items: {automated: boolean, item: Markup}[]): Markup {
+        const out: Markup[] = [];
+        for(let i = 0; i < items.length; ) {
+            if(!items[i].automated) { out.push(items[i].item); i++; continue; }
+            let j = i;
+            while(j < items.length && items[j].automated) j++;
+            const run = items.slice(i, j).map(x => x.item);
+            out.push(run.length === 1 ? run[0] :
+                ['details', {class: 'list-group-item lm-automated-run'},
+                 ['summary', {class: 'small text-muted'},
+                  `${run.length} automated changes (batch import / migration)`],
+                 run]);
+            i = j;
+        }
+        return out;
     }
 
     /**
@@ -663,14 +704,23 @@ export class LexemeEditor {
                 : ['div', {class:'list-group lm-list'},
                    deleted.map(t => {
                        const lastReal = t.tupleVersions.findLast(v => !isTombstone(v.assertion));
-                       const deletedAt = t.mostRecentTuple?.assertion.valid_from;
+                       const tombstone = t.mostRecentTuple?.assertion;
+                       // Removed by a batch migration: restoring would
+                       // resurrect values the migration deliberately retired
+                       // (also enforced in restoreVersion).
+                       const byMigration = isAutomatedUsername(tombstone?.change_by_username);
                        return ['div', {class:'list-group-item d-flex align-items-start gap-2'},
                                ['div', {class:'flex-grow-1'},
                                 ['div', {class:'small text-muted'},
-                                 'deleted ', deletedAt !== undefined ? timestamp.formatTimestampAsLocalTime(deletedAt) : ''],
+                                 'deleted ', tombstone !== undefined ? timestamp.formatTimestampAsLocalTime(tombstone.valid_from) : '',
+                                 byMigration
+                                    ? ['span', {class:'badge text-bg-secondary ms-1'}, 'by migration'] : ''],
                                 lastReal ? this.renderTupleValues(rel, lastReal)
                                          : ['span', {class:'text-muted'}, '(no recorded values)']],
-                               lastReal
+                               byMigration
+                                  ? ['span', {class:'small text-muted'},
+                                     'not restorable (retired by a vocabulary migration)']
+                                  : lastReal
                                   ? action.actionButton('Restore',
                                       {kind: 'confirm',
                                        expr: `wordwiki.lexeme.restoreVersion(${entry_id}, ${t.id}, ${lastReal.assertion.assertion_id})`,
@@ -846,6 +896,13 @@ export class LexemeEditor {
             return {action: 'alert', message: 'Cannot restore a deletion marker.'};
         if(mostRecent.assertion.assertion_id === assertion_id && mostRecent.isCurrent)
             return {action: 'alert', message: 'This is already the current version.'};
+        // The migration barrier: a version older than the fact's most recent
+        // automated version is expressed in a vocabulary that no longer
+        // exists - restoring it would plant stale tags in current data.
+        if(this.restoreBarrierFrom(tuple) > hist.assertion.valid_from)
+            return {action: 'alert',
+                    message: 'This version predates a batch vocabulary migration - ' +
+                             'its values are no longer in use, so it cannot be restored.'};
 
         const wasDeleted = !mostRecent.isCurrent;
         const newAssertion: Assertion = {

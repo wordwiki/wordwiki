@@ -14,10 +14,13 @@ set -e
 #   ./wordwiki.sh set-db-purpose dev   # mark the db (production|dev|test)
 #   ./wordwiki.sh import-categories    # seed category table + rewrite entry
 #                                      # categories from ~/wordwiki/categorization
-#                                      # (idempotent; refuses production db)
+#                                      # (idempotent; refuses production db;
+#                                      # stamps '~category-import' unless
+#                                      # --username=NAME)
 #   ./wordwiki.sh import-lexical-forms # seed the part-of-speech vocabulary +
 #                                      # normalize unambiguous legacy values
-#                                      # (idempotent; refuses production db)
+#                                      # (idempotent; refuses production db;
+#                                      # stamps '~lexical-form-import')
 #   ./wordwiki.sh publish [target...]  # publish the public site (or just the
 #                                      # named pages, e.g. entries/samqwan);
 #                                      # leaves a running server alone

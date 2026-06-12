@@ -211,6 +211,22 @@ export class UserTable extends Table<User> {
 // Seed the user table from the hardcoded users map in entry-schema.ts (the
 // '___' placeholder code is skipped).  Idempotent: existing usernames are
 // left untouched.  djz/dmm get the roles matching the old canUserPublish hack.
+// The '~' prefix marks an AUTOMATED identity (mirroring the internal-
+// category slug convention): batch imports/migrations stamp their
+// assertions with one of these so history UI can collapse/badge the runs
+// and restore can refuse to cross a migration boundary.  This is THE test
+// - never a bare startsWith elsewhere.
+export function isAutomatedUsername(username: string|null|undefined): boolean {
+    return typeof username === 'string' && username.startsWith('~');
+}
+
+// The reserved automation identities, seeded (disabled - they can never log
+// in) by the same user seeding the post-pull recipe already runs.
+export const SYSTEM_USERS: {username: string, name: string}[] = [
+    {username: '~category-import',     name: 'Category import (automated)'},
+    {username: '~lexical-form-import', name: 'Lexical form import (automated)'},
+];
+
 export function seedUsersFromEntrySchema(users: UserTable): {inserted: number, skipped: number} {
     const initialPermissions: Record<string, string> = {
         'djz': 'admin,publish,testing',
@@ -221,6 +237,11 @@ export function seedUsersFromEntrySchema(users: UserTable): {inserted: number, s
         if(username === '___') continue;
         if(users.byUsername.first({username})) { skipped++; continue; }
         users.insert({username, name, permissions: initialPermissions[username] ?? '', disabled: 0});
+        inserted++;
+    }
+    for(const {username, name} of SYSTEM_USERS) {
+        if(users.byUsername.first({username})) { skipped++; continue; }
+        users.insert({username, name, permissions: '', disabled: 1});
         inserted++;
     }
     return {inserted, skipped};

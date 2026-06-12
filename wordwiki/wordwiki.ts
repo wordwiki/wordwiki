@@ -1409,13 +1409,17 @@ if (import.meta.main) {
         case 'import-categories': {
             const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
                 ?? `${Deno.env.get('HOME')}/wordwiki/categorization`;
+            // Stamped with the reserved automation identity by default
+            // (history UI collapses '~' authors; restore refuses to cross
+            // the migration) - --username=NAME for a human-attributed run.
             const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
-                ?? 'djz';
+                ?? '~category-import';
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
+                user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
                 if(!ww.users.byUsername.first({username}))
                     throw new Error(`--username '${username}' is not in the user table`);
                 const schemeText = Deno.readTextFileSync(`${dir}/scheme.md`);
@@ -1480,13 +1484,15 @@ if (import.meta.main) {
         //   ./wordwiki.sh import-lexical-forms [--username=NAME] [--allow-production]
         case 'import-lexical-forms':
         case 'seed-lexical-forms': {   // older name kept as an alias
+            // Default stamp = the automation identity (see import-categories).
             const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
-                ?? 'djz';
+                ?? '~lexical-form-import';
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
+                user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
                 if(!ww.users.byUsername.first({username}))
                     throw new Error(`--username '${username}' is not in the user table`);
                 lexicalFormImport.importLexicalForms(ww, {username, log: (msg) => console.info(msg)});
