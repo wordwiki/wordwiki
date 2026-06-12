@@ -116,7 +116,7 @@ export function loadAssignments(jsonlText: string): Map<number, AssignmentRecord
     return out;
 }
 
-const TIER_SLUGS: Record<string, string> = {
+export const TIER_SLUGS: Record<string, string> = {
     t10: '~tier-top-10', t100: '~tier-top-100', t1000: '~tier-top-1000'};
 
 export const INTERNAL_CATEGORIES = [

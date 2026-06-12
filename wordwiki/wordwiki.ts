@@ -40,6 +40,7 @@ import * as category from './category.ts';
 import * as categoryImport from './category-import.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
+import * as migrationVerify from './migration-verify.ts';
 
 /**
  *
@@ -1364,6 +1365,15 @@ if (import.meta.main) {
         // one), mark the db 'dev', and set a dev password for djz.  Re-run
         // after every pull until the new version IS production.
         //   ./wordwiki.sh post-pull [djz-password]   (default: djz-dev)
+        // Stop the server and nothing else.  (wordwiki.sh stops any running
+        // server before dispatching ANY command, so by the time we get here
+        // the work is done - this command just gives the stop a name for
+        // scripts like migrateDevDb.sh.)
+        case 'stop':
+            console.info('server stopped (if one was running)');
+            Deno.exit(0);
+            break;
+
         case 'post-pull': {
             const djzPassword = args[1] ?? 'djz-dev';
             security.runSystem(() => {
@@ -1424,12 +1434,46 @@ if (import.meta.main) {
                     throw new Error(`--username '${username}' is not in the user table`);
                 const schemeText = Deno.readTextFileSync(`${dir}/scheme.md`);
                 const assignmentsText = Deno.readTextFileSync(`${dir}/assignments.jsonl`);
-                categoryImport.importCategories(ww, {
+                const stats = categoryImport.importCategories(ww, {
                     schemeText, assignmentsText, username,
                     log: (msg) => console.info(msg),
                 });
+                // The idempotency proof for the migration recipe: a re-run
+                // against an already-migrated db must be a pure no-op.
+                if(args.includes('--expect-no-changes')) {
+                    const changes = stats.rewrite.entriesRewritten
+                        + stats.seed.seededNew + stats.seed.seededInternal + stats.seed.seededOld;
+                    if(changes > 0)
+                        throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
+                                        'the previous run did not reach the fixed point');
+                    console.info('idempotency confirmed: re-run made no changes');
+                }
             });
             Deno.exit(0);
+            break;
+        }
+
+        // Read-only post-migration sanity checks (see migration-verify.ts);
+        // exit 1 on violated invariants.  [dir] supplies scheme.md for the
+        // exact scheme-vs-table check (defaults like import-categories).
+        case 'verify-migration': {
+            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
+                ?? `${Deno.env.get('HOME')}/wordwiki/categorization`;
+            const schemeText = (() => {
+                try { return Deno.readTextFileSync(`${dir}/scheme.md`); }
+                catch (_e) { return undefined; }
+            })();
+            const ok = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const report = migrationVerify.verifyMigration(ww, {schemeText});
+                for(const m of report.info)     console.info(`  info: ${m}`);
+                for(const m of report.warnings) console.info(`WARNING: ${m}`);
+                for(const m of report.failures) console.error(`FAILURE: ${m}`);
+                console.info(`verify-migration: ${report.failures.length} failures, ` +
+                             `${report.warnings.length} warnings`);
+                return report.failures.length === 0;
+            });
+            Deno.exit(ok ? 0 : 1);
             break;
         }
 
@@ -1495,7 +1539,15 @@ if (import.meta.main) {
                 user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
                 if(!ww.users.byUsername.first({username}))
                     throw new Error(`--username '${username}' is not in the user table`);
-                lexicalFormImport.importLexicalForms(ww, {username, log: (msg) => console.info(msg)});
+                const stats = lexicalFormImport.importLexicalForms(
+                    ww, {username, log: (msg) => console.info(msg)});
+                if(args.includes('--expect-no-changes')) {
+                    const changes = stats.seeded.inserted + stats.subentriesNormalized;
+                    if(changes > 0)
+                        throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
+                                        'the previous run did not reach the fixed point');
+                    console.info('idempotency confirmed: re-run made no changes');
+                }
             });
             Deno.exit(0);
             break;

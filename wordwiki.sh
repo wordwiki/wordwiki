@@ -24,6 +24,12 @@ set -e
 #   ./wordwiki.sh publish [target...]  # publish the public site (or just the
 #                                      # named pages, e.g. entries/samqwan);
 #                                      # leaves a running server alone
+#   ./wordwiki.sh stop                 # stop the server, nothing else
+#   ./wordwiki.sh verify-migration     # read-only post-migration sanity
+#                                      # checks (exit 1 on failure)
+#
+# The whole pull-and-migrate rehearsal is packaged as ./migrateDevDb.sh
+# (which also documents the eventual production-cutover recipe).
 #
 # Any command first cleanly stops a running server (SQLite single writer),
 # except `publish`, which only reads the db.
