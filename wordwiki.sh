@@ -41,9 +41,8 @@ cd "$RUN_DIR"
 
 # Only one wordwiki server may run at a time: it binds a fixed port and uses
 # SQLite in a single-writer configuration.  So before doing anything, stop any
-# server that is already running - whether launched from here, from
-# publishHomeAndServe.sh, or by hand.  This makes "just run wordwiki.sh again"
-# a reliable restart.
+# server that is already running - whether launched from here or by hand.
+# This makes "just run wordwiki.sh again" a reliable restart.
 #
 # We stop it the clean way: ask the server to shut itself down via its
 # authenticated shutdown route, so SQLite closes properly.  We only fall back
