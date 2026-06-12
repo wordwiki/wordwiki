@@ -405,7 +405,10 @@ export class LexemeEditor {
     /**
      * One tuple as an editable surface (and a self-level reloadable fragment):
      * the whole area opens the edit dialog (delegating to the contained
-     * pencil - the visible affordance cue).
+     * pencil - the visible affordance cue), and the standard ☰ menu carries
+     * ALL of the tuple's actions (the liminal UI language - see
+     * action.actionMenu): Edit (redundantly with the body tap, for
+     * discoverability), positioned inserts, moves, History, Delete.
      */
     private renderTupleSurface(entry_id: number, rf: model.RelationField,
                                tq: CurrentTupleQuery, extraClasses: string = ''): Markup {
@@ -419,7 +422,40 @@ export class LexemeEditor {
                      onclick: 'lmEditableClick(event)'},
              ['div', {class:'flex-grow-1'}, this.renderTupleValues(rf, current)],
              this.editPencil(entry_id, fact_id),
+             this.tupleActionMenu(entry_id, fact_id, rf, current),
             ]);
+    }
+
+    /** The tuple's ☰: every action on the tuple, one tap away.  (The body
+     *  tap and the pencil stay as edit shortcuts; lmEditableClick declines
+     *  clicks on buttons, so the menu doesn't also open the edit dialog.) */
+    private tupleActionMenu(entry_id: number, fact_id: number,
+                            rf: model.RelationField, current: TupleVersion): Markup {
+        const parentPath = getAssertionPath(current.assertion);
+        const parent_fact_id = parentPath[parentPath.length-2][1];
+        // Bounding-group/image relations create tuples via their own flows
+        // (per-book buttons / not yet) - no generic positioned inserts.
+        const insertable = !rf.scalarFields.some(isBoundingGroupField)
+            && !rf.scalarFields.some(isDialogReadOnly);
+        return action.actionMenu([
+            {label: 'Edit', mode: {kind: 'modal',
+                dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id})`}},
+            ...(insertable ? [
+                {label: 'Insert before', mode: {kind: 'modal' as const,
+                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before')`}},
+                {label: 'Insert after', mode: {kind: 'modal' as const,
+                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after')`}},
+            ] : []),
+            {label: 'Move up', mode: {kind: 'immediate',
+                expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up')`}},
+            {label: 'Move down', mode: {kind: 'immediate',
+                expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down')`}},
+            {label: 'History', mode: {kind: 'modal',
+                dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id})`}},
+            {label: 'Delete', mode: {kind: 'confirm',
+                expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id})`,
+                message: `Delete this ${rf.prompt}?`}},
+        ], {ariaLabel: `Actions for this ${rf.prompt}`});
     }
 
     private renderTupleValues(rf: model.RelationField, tv: TupleVersion): Markup {
@@ -539,38 +575,20 @@ export class LexemeEditor {
         // button is detached by its own swap before after-request can fire.
         // showModalEditor composes safely with the page-pencil path (it keeps
         // the header when the title has already been lifted).
+        // The tuple's other actions (moves/history/delete) live in the
+        // surface's ☰ menu, not here - the dialog is just the form.
         return [['script', {}, 'setTimeout(showModalEditor)'],
-                form,
-                this.renderSecondaryActions(entry_id, fact_id, rel)];
-    }
-
-    // The tuple's secondary actions (move/delete/history) live in the dialog,
-    // keeping the read surface to a single affordance.
-    private renderSecondaryActions(entry_id: number, fact_id: number, rel: model.RelationField): Markup {
-        return (
-            ['div', {class:'d-flex gap-2 mt-4 pt-2 border-top flex-wrap'},
-             action.actionButton('Move up',
-                 {kind: 'immediate', expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up')`},
-                 'btn btn-sm btn-outline-secondary'),
-             action.actionButton('Move down',
-                 {kind: 'immediate', expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down')`},
-                 'btn btn-sm btn-outline-secondary'),
-             action.actionButton('History',
-                 {kind: 'modal', dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id})`},
-                 'btn btn-sm btn-outline-secondary'),
-             action.actionButton('Delete',
-                 {kind: 'confirm', expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id})`,
-                  message: `Delete this ${rel.prompt}?`},
-                 'btn btn-sm btn-outline-danger ms-auto'),
-            ]);
+                form];
     }
 
     /**
      * The insert dialog: the same record form over an empty tuple, with the
-     * insert position (parent + relation tag) as hidden params.  Inserts at
-     * the end of the relation; the new tuple can then be moved.
+     * insert position as hidden params.  By default inserts at the end of
+     * the relation; with an anchor (the ☰'s "Insert before/after") the new
+     * tuple lands next to the anchor tuple.
      */
-    insertDialog(entry_id: number, parent_fact_id: number, child_tag: string): Markup {
+    insertDialog(entry_id: number, parent_fact_id: number, child_tag: string,
+                 anchor_fact_id?: number, where?: 'before'|'after'): Markup {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
         const rel = parent.childRelations[child_tag]?.schema
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
@@ -579,6 +597,10 @@ export class LexemeEditor {
         const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
 
         const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag};
+        if(anchor_fact_id !== undefined && (where === 'before' || where === 'after')) {
+            hidden.anchor_fact_id = anchor_fact_id;
+            hidden.where = where;
+        }
         fields.forEach(f => hidden['before-'+f.name] = '');
 
         // Self-lift, as in editDialog (composable wherever it is loaded from).
@@ -785,6 +807,30 @@ export class LexemeEditor {
         return this.reload(this.mutationTargets(entry_id, newAssertion, 'self'));
     }
 
+    /** Where a new tuple lands: next to the anchor when the form carries
+     *  one (the ☰'s "Insert before/after"), else at the end.  A vanished
+     *  anchor (deleted while the dialog was open) degrades to at-end. */
+    private insertOrderKey(relation: workspace.VersionedRelation,
+                           form: Record<string, any>): string {
+        const anchorRaw = form.anchor_fact_id;
+        const where = String(form.where ?? '');
+        if(anchorRaw === undefined || anchorRaw === '' ||
+           (where !== 'before' && where !== 'after'))
+            return workspace.generateAtEndOrderKey(relation);
+        const anchor_fact_id = utils.parseIntOrError(String(anchorRaw));
+        const peers = workspace.currentTuplesForVersionedRelation(relation);
+        const i = peers.findIndex(p => p.src.id === anchor_fact_id);
+        if(i === -1)
+            return workspace.generateAtEndOrderKey(relation);
+        const keyOf = (p: workspace.CurrentTupleQuery|undefined): string|undefined =>
+            p?.mostRecentTupleVersion?.assertion.order_key ?? undefined;
+        return where === 'before'
+            ? orderkey.between(i > 0 ? keyOf(peers[i-1]) : orderkey.begin_string,
+                               keyOf(peers[i]))
+            : orderkey.between(keyOf(peers[i]),
+                               i + 1 < peers.length ? keyOf(peers[i+1]) : orderkey.end_string);
+    }
+
     private saveInsert(form: Record<string, any>): any {
         const entry_id = utils.parseIntOrError(String(form.entry_id));
         const parent_fact_id = utils.parseIntOrError(String(form.parent_fact_id));
@@ -808,7 +854,7 @@ export class LexemeEditor {
             valid_from: placeholderTxTime(),
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
-            order_key: workspace.generateAtEndOrderKey(relation),
+            order_key: this.insertOrderKey(relation, form),
         } as Assertion;
         setAssertionFields(newAssertion, rel, changed);
 
