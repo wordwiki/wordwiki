@@ -10,12 +10,16 @@ import { find, byClass, tagOf, attr, hasText, getByTestId } from "../liminal/tes
 import { rabid } from "./rabid.ts";
 import { db } from "../liminal/db.ts";
 
-// A project + one task, inserted as system; returns the ids and the task's group.
+// A project + one task, inserted as system.  The task gets an (empty)
+// EXCLUSIVE assignment override, so tests can assign people to the task
+// itself; group_id is that override group.  (Inheritance - the no-override
+// rule - has its own tests below.)
 function seedTask(): {project_id: number, task_id: number, group_id: number} {
     return asSystem(() => {
         const project_id = rabid.project.insert({name: 'Bike Drive', deleted: 0});
         const task_id = rabid.task.insert({project_id, title: 'Book truck', deleted: 0});
-        return {project_id, task_id, group_id: rabid.task.getById(task_id).group_id};
+        rabid.task.overrideAssignees(task_id);
+        return {project_id, task_id, group_id: rabid.task.getById(task_id).group_id!};
     });
 }
 
@@ -40,17 +44,26 @@ test("projects: host-gated create via saveForm insert; managed defaults applied"
     });
 });
 
-test("task insert creates its owned adhoc assignee group (backlink patched in)", async () => {
+test("projects own the assignment group; a new task INHERITS (NULL group); override creates its own", async () => {
     await withTestDb(() => {
-        const {task_id, group_id} = seedTask();
+        const {project_id, task_id, group_id} = seedTask();   // seedTask overrides
+        // The project's assignment group, created with the project.
+        const p = asSystem(() => rabid.project.getById(project_id));
+        const pg = asSystem(() => rabid.volunteer_group.getById(p.group_id));
+        assertEquals(pg.group_kind, 'adhoc');
+        assertEquals(pg.owner_table, 'project');
+        assertEquals(pg.owner_id, project_id);
+        // A task inserted WITHOUT an override has no group of its own - the
+        // RULE is inheritance.
+        const bare = asSystem(() => rabid.task.insert({project_id, title: 'Inherits', deleted: 0}));
+        assertEquals(asSystem(() => rabid.task.getById(bare)).group_id ?? null, null);
+        // seedTask's override: a task-owned adhoc group, backlink patched in;
+        // display name falls through to the task's title.
         const g = asSystem(() => rabid.volunteer_group.getById(group_id));
         assertEquals(g.group_kind, 'adhoc');
         assertEquals(g.owner_table, 'task');
         assertEquals(g.owner_id, task_id);
-        // Owned-group display name falls through to the task's title.
         assertEquals(asSystem(() => rabid.volunteer_group.displayName(g)), 'Book truck');
-        // "Unassigned" is an EMPTY group, not NULL.
-        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id})).length, 0);
         // Managed fields were stamped at insert.
         const t = asSystem(() => rabid.task.getById(task_id));
         assert(t.order_key.startsWith('0.'));
@@ -222,17 +235,17 @@ test("customize members: explicit snapshot detaches from the committee (derived_
         asUser(bob, () => rabid.task.customizeMembers(task_id));
         const t = asSystem(() => rabid.task.getById(task_id));
         assert(t.group_id !== c1.group_id);
-        const g = asSystem(() => rabid.volunteer_group.getById(t.group_id));
+        const g = asSystem(() => rabid.volunteer_group.getById(t.group_id!));
         assertEquals(g.group_kind, 'adhoc');
         assertEquals(g.owner_table, 'task');
         assertEquals(g.owner_id, task_id);
         assertEquals(g.derived_from, 'Logistics Committee');
-        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id}))
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id!}))
             .map(m => m.volunteer_id), [bob]);
 
         // Edits now hit only the task's own group.
         asUser(bob, () => rabid.volunteer_group.addMember({group_id: t.group_id, volunteer_id: carol}));
-        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id})).length, 2);
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id!})).length, 2);
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: c1.group_id})).length, 1);
 
         // The detail page is back to the editable member editor, with the
@@ -366,16 +379,20 @@ test("pages: one navigable row species, pencil follows recordEdit; task detail e
         assert(!!find(hostRow, byClass('lm-edit-pencil')));  // host: edits anyone's project
         assert(!find(volRow, byClass('lm-edit-pencil')));    // regular volunteer: no pencil
 
-        // Task rows: same species for assignee and non-assignee; the pencil
-        // appears only for the assignee (recordEdit).
+        // The merged project view: each task is a BLOCK (checkbox + title +
+        // inline checklist).  The pencil/checkbox follow recordEdit (assignee
+        // yes, others read-only); the subtask is right there on the page; the
+        // task's exclusive override shows as the → marker.
         const bobTasks = await asUser(bob, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
-        assert(!!find(getByTestId(bobTasks, `task-row-${task_id}`), byClass('lm-edit-pencil')));
+        const bobBlock = getByTestId(bobTasks, `task-block-${task_id}`);
+        assert(!!find(bobBlock, byClass('lm-edit-pencil')));
+        assert(!!find(bobBlock, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox'
+                                     && attr(n, 'disabled') === undefined));
+        assert(hasText(bobBlock, 'Get quotes'));                  // checklist inline
+        assert(hasText(getByTestId(bobTasks, `task-${task_id}-override`), 'Bob Shares'));
         const carolTasks = await asUser(carol, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
-        const carolRow = getByTestId(carolTasks, `task-row-${task_id}`);
-        assertEquals(tagOf(carolRow), 'div');
-        assert(!find(carolRow, byClass('lm-edit-pencil')));
-        assert(hasText(carolTasks, '1 assigned'));
-        assert(hasText(carolTasks, '0/1 done'));
+        const carolBlock = getByTestId(carolTasks, `task-block-${task_id}`);
+        assert(!find(carolBlock, byClass('lm-edit-pencil')));
 
         // Task detail: assignee list + checklist render; the assignee gets the
         // add/remove affordances, the non-assignee gets read-only fragments.
@@ -519,5 +536,116 @@ test("checklist items edit via the pencil: title-only dialog, reload targets the
         await asUser(carol, () => assertRejects(
             () => renderRoute(`rabid.subtask.renderForm(rabid.subtask.getById(${item.subtask_id}))`),
             Error, 'Not permitted'));
+    });
+});
+
+test("assignment inheritance: project assignees work all non-overridden tasks; overrides are EXCLUSIVE", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        // A project assigned to bob+carol with two tasks: one inherited, one
+        // overridden to bob alone.
+        const {inherited, overridden} = asSystem(() => {
+            const project_id = rabid.project.insert({name: 'Yard Sale', deleted: 0});
+            const pg = rabid.project.getById(project_id).group_id;
+            rabid.group_member.insert({group_id: pg, volunteer_id: bob});
+            rabid.group_member.insert({group_id: pg, volunteer_id: carol});
+            const inherited = rabid.task.insert({project_id, title: 'Price stickers', deleted: 0});
+            const overridden = rabid.task.insert({project_id, title: 'Borrow tables', deleted: 0});
+            rabid.task.overrideAssignees(overridden);
+            rabid.group_member.insert({group_id: rabid.task.getById(overridden).group_id!,
+                                       volunteer_id: bob});
+            return {inherited, overridden};
+        });
+        const mine = (v: number) => asSystem(() =>
+            rabid.task.openTasksForVolunteer.all({volunteer_id: v}).map(t => t.title).sort());
+
+        // Inherited task: any project assignee can work it.
+        asUser(carol, () => rabid.task.saveForm({
+            task_id: String(inherited), status: 'in-progress', 'before-status': 'open'}));
+
+        // EXCLUSIVE override: the task is on bob's list and LEAVES carol's -
+        // carol can clear her list without doing bob's task - and carol may
+        // not edit it.
+        assertEquals(mine(bob), ['Borrow tables', 'Price stickers']);
+        assertEquals(mine(carol), ['Price stickers']);
+        assertThrows(() => asUser(carol, () => rabid.task.saveForm({
+            task_id: String(overridden), status: 'done', 'before-status': 'open'})),
+            Error, 'Not permitted');
+        asUser(bob, () => rabid.task.saveForm({
+            task_id: String(overridden), status: 'in-progress', 'before-status': 'open'}));
+
+        // Revert (host): back to inheritance - the whole team again, and the
+        // orphaned override group is gone.
+        const og = asSystem(() => rabid.task.getById(overridden)).group_id!;
+        asUser(alice, () => rabid.task.revertAssignees(overridden));
+        assertEquals(asSystem(() => rabid.task.getById(overridden)).group_id ?? null, null);
+        assertThrows(() => asSystem(() => rabid.volunteer_group.getById(og)));
+        assertEquals(mine(carol), ['Borrow tables', 'Price stickers']);
+    });
+});
+
+test("project assignCommittee: live committee assignment, inherited by tasks; customize snapshots", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const c = seedCommittee('Logistics Committee', [bob]);
+        const project_id = asSystem(() => rabid.project.insert({name: 'Drive', deleted: 0}));
+        const ownGroup = asSystem(() => rabid.project.getById(project_id)).group_id;
+
+        // Host assigns the committee: project aliases the NAMED group, the
+        // old owned adhoc group is dropped.
+        asUser(alice, () => rabid.project.assignCommittee({project_id, committee_id: c.committee_id}));
+        assertEquals(asSystem(() => rabid.project.getById(project_id)).group_id, c.group_id);
+        assertThrows(() => asSystem(() => rabid.volunteer_group.getById(ownGroup)));
+
+        // A task in the project INHERITS it: committee member bob can work
+        // the task with no task-level assignment at all.
+        const task_id = asSystem(() => rabid.task.insert({project_id, title: 'Sort donations', deleted: 0}));
+        asUser(bob, () => rabid.subtask.addItem({task_id, title: 'now allowed'}));
+
+        // The project page shows the committee assignment; the task detail's
+        // inherited state names the project and offers the override actions.
+        const page = await asUser(alice, () => renderRoute(`rabid.project.detailPage(${project_id})`));
+        assert(hasText(page, 'Assigned to'));
+        assert(hasText(page, 'Membership follows the committee'));
+        const detail = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
+        assert(hasText(detail, 'Everyone assigned to'));
+        assert(hasText(detail, 'Assign specific people'));
+
+        // Customize: snapshot into a project-owned adhoc group, provenance kept.
+        asUser(alice, () => rabid.project.customizeMembers(project_id));
+        const p = asSystem(() => rabid.project.getById(project_id));
+        const g = asSystem(() => rabid.volunteer_group.getById(p.group_id));
+        assertEquals(g.group_kind, 'adhoc');
+        assertEquals(g.owner_table, 'project');
+        assertEquals(g.owner_id, project_id);
+        assertEquals(g.derived_from, 'Logistics Committee');
+        assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: p.group_id}))
+            .map(m => m.volunteer_id), [bob]);
+    });
+});
+
+test("merged project page: toggleDone completes/reopens from the block checkbox (provenance stamped)", async () => {
+    await withTestDb(async ({ bob, carol }) => {
+        const {task_id, group_id} = seedTask();
+        addToGroup(group_id, bob);
+
+        // Gated like every task edit.
+        assertThrows(() => asUser(carol, () => rabid.task.toggleDone(task_id)),
+                     Error, 'Not permitted');
+
+        // Check: done, provenance stamped, block reloads.
+        const res = asUser(bob, () => rabid.task.toggleDone(task_id)) as any;
+        assertEquals(res.targets, [`.-task-${task_id}-`]);
+        const t = asSystem(() => rabid.task.getById(task_id));
+        assertEquals(t.status, 'done');
+        assertEquals(t.done_by, bob);
+        // The block renders struck-through with the box checked.
+        const block = await asUser(bob, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
+        assert(!!find(block, n => tagOf(n) === 'input' && attr(n, 'checked') !== undefined));
+        assert(!!find(block, n => String(attr(n, 'class') ?? '').includes('text-decoration-line-through')));
+
+        // Uncheck: reopens (to 'open'), provenance cleared.
+        asUser(bob, () => rabid.task.toggleDone(task_id));
+        const t2 = asSystem(() => rabid.task.getById(task_id));
+        assertEquals(t2.status, 'open');
+        assertEquals(t2.done_time ?? null, null);
     });
 });

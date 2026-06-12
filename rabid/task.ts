@@ -22,12 +22,15 @@
  *  - Subtasks are kept aggressively THIN: title + done + order, nothing else.
  *    They are part of their task's change unit - every subtask mutation stamps
  *    the parent task's last_change_time (a checklist tick IS a task change).
- *  - assigned-to is an owned 'adhoc' volunteer_group created with the task
- *    (non-nullable FK; "unassigned" = EMPTY group, never NULL - see group.ts).
- *    Assignees may edit the task (and, via the owner backlink, its assignee
- *    list); creating projects/tasks is host/admin.  Assigning a task to a
- *    committee (referencing its NAMED group, + the explicit snapshot-convert
- *    flow) is deferred until wanted.
+ *  - assigned-to lives on the PROJECT (an owned 'adhoc' volunteer set, or a
+ *    committee's NAMED group - live membership - with the explicit
+ *    snapshot-convert escape hatch).  Tasks INHERIT it: task.group_id is NULL
+ *    by default; setting it is the per-task override - the EXCEPTION, not the
+ *    rule - and it is EXCLUSIVE: an overridden task belongs to its override
+ *    group alone (if it's assigned to you, it's on YOU, and it leaves your
+ *    teammates' "My tasks" lists - people must be able to clear their list
+ *    without doing other people's tasks).  Effective assignees may edit the
+ *    task (and its override list); creating projects/tasks is host/admin.
  *  - order_key (liminal/orderkey.ts) orders tasks within a project and
  *    subtasks within a task; inserts append at the end.  Reorder UI later.
  */
@@ -95,6 +98,65 @@ function volunteerName(volunteer_id: number|null|undefined): string|undefined {
         'SELECT name FROM volunteer WHERE volunteer_id = :id', {id: volunteer_id}))?.name;
 }
 
+// The shared assigned-to body for an assignment group - a project's, or a
+// task's exclusive override.  Renders one of the two assignment states:
+//   - committee-aliased (named group): read-only member chips + the
+//     change-committee / customize-snapshot actions;
+//   - adhoc: member chips with editor + the add-member / assign-committee
+//     actions.
+// ownerRoute ('rabid.project' | 'rabid.task') parameterizes the action
+// routes; extraActions appends to the action row (e.g. the task's
+// use-project-assignees revert).  Deliberately thin and in one place - dz
+// wants the assigned-to presentation slimmed further; do it here.
+function renderGroupAssignment(ownerRoute: string, owner_id: number, group_id: number,
+                               canEdit: boolean, extraActions?: Markup): Markup {
+    const g = security.runSystem(() => rabid.volunteer_group.getById(group_id));
+    if(g.group_kind === 'named') {
+        // Owned named groups belong to a committee; link to it.
+        const committee = g.owner_table === 'committee' && g.owner_id != null
+            ? security.runSystem(() => rabid.committee.getById(g.owner_id!))
+            : undefined;
+        return [
+            [h.p, {class: 'mb-1'},
+             committee
+                 ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
+                 : rabid.volunteer_group.displayName(g),
+             ' ',
+             [h.span, {class: 'badge text-bg-info'}, 'Committee'],
+             [h.span, {class: 'text-muted small ms-2'}, 'Membership follows the committee.']],
+            rabid.volunteer_group.renderMemberList(group_id),
+            canEdit
+                ? [h.div, {class: 'd-flex align-items-center gap-2'},
+                   action.actionButton('Change committee',
+                       {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`},
+                       'btn btn-outline-primary btn-sm'),
+                   action.actionButton('Customize members…',
+                       {kind: 'confirm',
+                        expr: `${ownerRoute}.customizeMembers(${owner_id})`,
+                        message: `Detach from ${rabid.volunteer_group.displayName(g)}? The assignees ` +
+                                 `start as the current committee members, but committee changes ` +
+                                 `will no longer apply here.`},
+                       'btn btn-outline-secondary btn-sm'),
+                   extraActions]
+                : undefined,
+        ];
+    }
+    return [
+        g.derived_from
+            ? [h.p, {class: 'text-muted small mb-1'}, `Customized from ${g.derived_from}.`]
+            : undefined,
+        rabid.volunteer_group.renderMemberEditor(group_id),
+        canEdit
+            ? [h.div, {class: 'd-flex align-items-center gap-2'},
+               rabid.volunteer_group.addMemberButton(group_id),
+               action.actionButton('Assign committee',
+                   {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`},
+                   'btn btn-outline-primary btn-sm'),
+               extraActions]
+            : undefined,
+    ];
+}
+
 // --------------------------------------------------------------------------------
 // --- Project ---------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -104,10 +166,12 @@ export interface Project {
     name: string;
     description: string;
 
-    // Optionally, the committee this project belongs to (a plain FK - the
-    // committee's group is NOT the project's assignee set; tasks carry their
-    // own assignees).
-    committee_id?: number;
+    // The project's assignment - THE assigned-to of record for its tasks
+    // (tasks inherit it unless individually overridden; see Task.group_id).
+    // An owned 'adhoc' set of volunteers, or a committee's NAMED group (live:
+    // membership follows the committee) with the explicit customize-snapshot
+    // escape hatch.  (Subsumes the old informational committee_id FK.)
+    group_id: number;
 
     // Archived projects are soft-deleted: their tasks/history keep working.
     deleted: boolnum;
@@ -134,25 +198,93 @@ export class ProjectTable extends Table<Project> {
             new PrimaryKeyField('project_id', {}),
             new StringField('name', {}),
             new StringField('description', {default: ''}),
-            new ForeignKeyField('committee_id', 'committee', 'committee_id',
-                                {nullable: true, prompt: 'Committee (optional)'}, 'name'),
+            new OwnedGroupField('group_id'),
             new BooleanField('deleted', {default: 0, prompt: 'Done'}),
             new ManagedDateTimeField('archived_time', {nullable: true}),
             new ManagedForeignKeyField('archived_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
             new ManagedDateTimeField('created_time', {nullable: true}),
             new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
-        ], [
-            'CREATE INDEX IF NOT EXISTS project_by_committee ON project(committee_id);',
         ])
     };
 
-    // Creation provenance rides on every insert (the New-project saveForm path
-    // included - both are managed fields, absent from the form).
+    // Creating a project creates its (empty) assignment group (the same
+    // owner-backlink sequence as committees/tasks); creation provenance rides
+    // on every insert (the New-project saveForm path included - all managed
+    // fields, absent from the form).
     override insert<P extends Partial<Project>>(tuple: P): number {
-        return super.insert({
+        const withManaged: any = {
             created_time: date.currentSqliteDateTime(),
             created_by: security.current()?.actorId ?? null,
-            ...tuple} as any);
+            ...tuple};
+        if(withManaged.group_id !== undefined)
+            return super.insert(withManaged);
+        const group_id = createOwnedGroup('adhoc', 'project');
+        const project_id = super.insert({...withManaged, group_id});
+        rabid.volunteer_group.update(group_id, {owner_id: project_id});
+        return project_id;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Assignment (people, or a committee) ----------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // The project's assignment is the assigned-to of record for its tasks
+    // (tasks inherit unless overridden - see Task.group_id).  Same dual model
+    // and the same actions as a task override: an adhoc set of volunteers, or
+    // a committee's named group (live) with the explicit customize snapshot.
+
+    assignCommitteeDialog(project_id: number): Markup {
+        const p = this.getById(project_id);
+        if(!this.canEditRecord(p))
+            throw new Error('Not permitted to edit this project');
+        return [
+            [h.p, {class: 'text-muted small'},
+             'The current assignee list is replaced; membership then follows the committee.'],
+            action.renderParamForm(
+                [new ForeignKeyField('committee_id', 'committee', 'committee_id', {}, 'name')],
+                {},
+                {
+                    title: `Assign a committee to ${p.name || 'this project'}`,
+                    submitLabel: 'Assign',
+                    hidden: {project_id},
+                    dispatch: {onsubmit:
+                        'event.preventDefault(); tx`rabid.project.assignCommittee(${getFormJSON(event.target)})`'},
+                }),
+        ];
+    }
+
+    // Point the project at the committee's named group (live), and drop the
+    // project's own now-orphaned adhoc group.
+    assignCommittee(args: {project_id?: string|number, committee_id?: string|number}): Markup {
+        const project_id = Number(args?.project_id);
+        const committee_id = Number(args?.committee_id);
+        if(!Number.isInteger(project_id) || !project_id) throw new Error('Missing project');
+        if(!Number.isInteger(committee_id) || !committee_id) throw new Error('Please choose a committee');
+        const p = this.getById(project_id);
+        if(!this.canEditRecord(p))
+            throw new Error('Not permitted to edit this project');
+        const committee = security.runSystem(() => rabid.committee.getById(committee_id));
+        if(committee.group_id !== p.group_id) {
+            const old = security.runSystem(() => rabid.volunteer_group.getById(p.group_id));
+            this.update(project_id, {group_id: committee.group_id});
+            if(old.group_kind === 'adhoc' && old.owner_table === 'project' && old.owner_id === project_id)
+                security.runSystem(() => dropOrphanedAdhocGroup(old.group_id));
+        }
+        return {action:'reload', targets:[`.-project-${project_id}-`]} as unknown as Markup;
+    }
+
+    // The EXPLICIT committee->custom conversion (always behind a confirm).
+    customizeMembers(project_id: number): Markup {
+        const p = this.getById(project_id);
+        if(!this.canEditRecord(p))
+            throw new Error('Not permitted to edit this project');
+        const g = security.runSystem(() => rabid.volunteer_group.getById(p.group_id));
+        if(g.group_kind === 'named') {
+            const group_id = security.runSystem(() =>
+                snapshotAsOwnedAdhocGroup(g.group_id, 'project', project_id));
+            this.update(project_id, {group_id});
+        }
+        return {action:'reload', targets:[`.-project-${project_id}-`]} as unknown as Markup;
     }
 
     // Hosts run the org: projects (like committees) are host/admin-managed.
@@ -209,7 +341,9 @@ export class ProjectTable extends Table<Project> {
     get activeProjects() {
         return this.prepare<Project & {committee_name?: string, open_task_count: number}, {}>(block`
 /**/   SELECT ${this.allFields},
-/**/          (SELECT c.name FROM committee c WHERE c.committee_id = project.committee_id)
+/**/          (SELECT c.name FROM volunteer_group g
+/**/                  JOIN committee c ON g.owner_table = 'committee' AND c.committee_id = g.owner_id
+/**/                  WHERE g.group_id = project.group_id)
 /**/              AS committee_name,
 /**/          (SELECT COUNT(*) FROM task t
 /**/                  WHERE t.project_id = project.project_id
@@ -296,9 +430,6 @@ export class ProjectTable extends Table<Project> {
     // its own fragment, so a new/edited task reloads just that.
     renderProjectDetail(project_id: number): Markup {
         const p = this.getById(project_id);
-        const committee = p.committee_id != null
-            ? security.runSystem(() => rabid.committee.getById(p.committee_id!))
-            : undefined;
         const canCreateTask = rabid.task.canEditRecord({} as any);
         const openCount = rabid.task.openCountForProject.required({project_id}).n;
         const props = this.reloadableItemProps(project_id, `rabid.project.renderProjectDetail(${project_id})`);
@@ -342,11 +473,11 @@ export class ProjectTable extends Table<Project> {
                                                      volunteerName(p.created_by) ?? `volunteer ${p.created_by}`)]
                        : undefined]
                 : undefined,
-            committee
-                ? [h.p, {class: 'text-muted mb-1'}, 'Committee: ',
-                   templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)]
-                : undefined,
             p.description ? [h.p, {}, p.description] : undefined,
+            // The project's assignment: THE assigned-to its tasks inherit.
+            [h.div, {class: 'd-flex align-items-center gap-2 mt-3 mb-2'},
+             [h.h4, {class: 'mb-0'}, 'Assigned to']],
+            renderGroupAssignment('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
             [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
              [h.h4, {class: 'mb-0'}, 'Tasks'],
              canCreateTask
@@ -384,9 +515,14 @@ export interface Task {
     due?: string;              // 'YYYY-MM-DD' (day granularity)
     status: string;            // task_status_enum - done-ness lives HERE (one table)
 
-    // The task's assignees: an owned 'adhoc' group (see group.ts; '' members =
-    // unassigned, never NULL).
-    group_id: number;
+    // The task's EXCLUSIVE assignment override - the EXCEPTION, not the rule.
+    // NULL (the default) = the task belongs to whoever the project is
+    // assigned to (Project.group_id).  Set = this task is on the override
+    // group ALONE: it shows on their "My tasks" list and leaves everyone
+    // else's (people must be able to clear their list without doing other
+    // people's tasks).  An owned 'adhoc' set, or a committee's named group,
+    // exactly like the project-level assignment.
+    group_id?: number;
 
     order_key: string;         // sibling order within the project (orderkey.ts)
     last_change_time: string;  // stamped on every insert/update + subtask change
@@ -428,7 +564,7 @@ export class TaskTable extends Table<Task> {
             new EnumField('priority', task_priority_enum, {default: 'normal'}),
             new DateField('due', {nullable: true, prompt: 'Due date'}),
             new EnumField('status', task_status_enum, {default: 'open'}),
-            new OwnedGroupField('group_id'),
+            new OwnedGroupField('group_id', {nullable: true}),   // NULL = inherit project's
             new ManagedStringField('order_key', {default: ''}),
             new ManagedDateTimeField('last_change_time', {}),
             new BooleanField('deleted', {default: 0}),
@@ -445,22 +581,36 @@ export class TaskTable extends Table<Task> {
         ])
     };
 
-    // Hosts/admins, OR the task's assignees: being assigned a task means being
-    // able to work it (status, checklist, and - via the group owner backlink -
-    // the assignee list itself).  Creation (no record yet) is host/admin only.
-    private canWorkTask: security.Permission = a =>
-        hostOrAdmin(a) || actorInGroup((a.record as Task|undefined)?.group_id);
+    // Hosts/admins, OR the task's EFFECTIVE assignees: being assigned a task
+    // means being able to work it (status, checklist, and - via the group
+    // owner backlink - the override assignee list).  Effective = the override
+    // group when set (EXCLUSIVE - see Task.group_id), else the project's
+    // assignment.  Creation (no record yet) is host/admin only.
+    private canWorkTask: security.Permission = a => {
+        if(hostOrAdmin(a)) return true;
+        const t = a.record as Task|undefined;
+        return t != null && actorInGroup(this.effectiveGroupId(t));
+    };
     defaultFieldEdit: security.Permission = a => this.canWorkTask(a);
     override get recordEdit(): security.Permission { return this.canWorkTask; }
+
+    // The group a task's assignment resolves to: its own exclusive override
+    // when set, else its project's assignment.
+    effectiveGroupId(t: Task): number|undefined {
+        if(t.group_id != null) return t.group_id;
+        if(t.project_id == null) return undefined;
+        return security.runSystem(() => rabid.project.getById(t.project_id)).group_id;
+    }
 
     override formTitle(t: Task): string {
         return t.task_id ? `Edit ${t.title || 'task'}` : 'New task';
     }
 
-    // Creating a task creates its (empty) assignee group and appends the task
-    // at the end of its project's order.  Serves the generic saveForm insert
-    // path too (group_id/order_key/last_change_time are managed fields, absent
-    // from the form).
+    // Appends the task at the end of its project's order.  A new task has NO
+    // assignment group of its own - it inherits the project's (group_id NULL;
+    // overrideAssignees / assignCommittee create the exceptional override).
+    // Serves the generic saveForm insert path too (group_id/order_key/
+    // last_change_time are managed fields, absent from the form).
     override insert<P extends Partial<Task>>(tuple: P): number {
         const withManaged: any = {
             order_key: this.nextOrderKey(tuple.project_id),
@@ -473,12 +623,7 @@ export class TaskTable extends Table<Task> {
             withManaged.done_time = date.currentSqliteDateTime();
             withManaged.done_by = security.current()?.actorId;
         }
-        if(withManaged.group_id !== undefined)
-            return super.insert(withManaged);
-        const group_id = createOwnedGroup('adhoc', 'task');
-        const task_id = super.insert({...withManaged, group_id});
-        rabid.volunteer_group.update(group_id, {owner_id: task_id});
-        return task_id;
+        return super.insert(withManaged);
     }
 
     // Every update stamps last_change_time, and a status change across the
@@ -534,7 +679,8 @@ export class TaskTable extends Table<Task> {
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
 /**/              AS subtask_done_count,
-/**/          (SELECT COUNT(*) FROM group_member gm WHERE gm.group_id = task.group_id)
+/**/          (SELECT COUNT(*) FROM group_member gm WHERE gm.group_id = COALESCE(task.group_id,
+/**/                  (SELECT p.group_id FROM project p WHERE p.project_id = task.project_id)))
 /**/              AS assignee_count
 /**/          FROM task
 /**/          WHERE project_id = :project_id AND deleted = 0
@@ -551,19 +697,23 @@ export class TaskTable extends Table<Task> {
     // The cross-project work views (the queries the assigned-to group model
     // exists for: task -> group_member is one flat indexed join).
 
-    // "My tasks": open tasks the volunteer is assigned to, most urgent first
-    // (overdue/dated before undated).
+    // "My tasks": open tasks the volunteer is EFFECTIVELY assigned to (their
+    // task overrides + the non-overridden tasks of their projects - an
+    // overridden task is exclusive, so it leaves teammates' lists), most
+    // urgent first (overdue/dated before undated).
     @path
     get openTasksForVolunteer() {
         return this.prepare<TaskWithContext, {volunteer_id: number}>(block`
 /**/   SELECT ${this.fieldNames.map(n => 'task.'+n).join(',')},
-/**/          (SELECT p.name FROM project p WHERE p.project_id = task.project_id) AS project_name,
+/**/          p.name AS project_name,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
 /**/              AS subtask_done_count,
-/**/          (SELECT COUNT(*) FROM group_member g2 WHERE g2.group_id = task.group_id)
+/**/          (SELECT COUNT(*) FROM group_member g2
+/**/                  WHERE g2.group_id = COALESCE(task.group_id, p.group_id))
 /**/              AS assignee_count
-/**/          FROM task JOIN group_member gm ON gm.group_id = task.group_id
+/**/          FROM task JOIN project p ON p.project_id = task.project_id
+/**/               JOIN group_member gm ON gm.group_id = COALESCE(task.group_id, p.group_id)
 /**/          WHERE gm.volunteer_id = :volunteer_id
 /**/            AND task.deleted = 0 AND task.status != 'done'
 /**/          ORDER BY task.due IS NULL, task.due, project_name, task.order_key`);
@@ -578,7 +728,8 @@ export class TaskTable extends Table<Task> {
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
 /**/              AS subtask_done_count,
-/**/          (SELECT COUNT(*) FROM group_member gm WHERE gm.group_id = task.group_id)
+/**/          (SELECT COUNT(*) FROM group_member gm WHERE gm.group_id = COALESCE(task.group_id,
+/**/                  (SELECT p.group_id FROM project p WHERE p.project_id = task.project_id)))
 /**/              AS assignee_count
 /**/          FROM task
 /**/          WHERE deleted = 0 AND status != 'done'
@@ -586,21 +737,101 @@ export class TaskTable extends Table<Task> {
     }
 
     // ------------------------------------------------------------------------
-    // --- Task list within a project -------------------------------------------
+    // --- The merged project overview (google-keep style) -----------------------
     // ------------------------------------------------------------------------
+    //
+    // The PROJECT page is the working surface: every task renders directly on
+    // it - checkbox, title, badges, and its checklist inline - so the whole
+    // project is workable from one page.  Task detail pages remain for the
+    // longer-form stuff (details text, provenance, assignment override).
+    // Done tasks sort to the bottom (the ORDER BY) and render struck-through,
+    // NOT collapsed - the strikethrough wall shows stuff is HAPPENING, which
+    // is half the point in a volunteer-primarily org.
 
     // Self-fetching reloadable fragment, tagged with the pk-less `-task-` class
-    // (the reload target a "New task" saveForm insert emits).  Done tasks sort
-    // to the bottom (the ORDER BY) and render muted.
+    // (the reload target a "New task" saveForm insert emits).
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
         const props = this.reloadableItemProps(undefined, `rabid.task.renderProjectTasks(${project_id})`);
         return [h.div, props,
             tasks.length === 0
                 ? [h.p, {class: 'text-muted'}, 'No tasks yet.']
-                : [h.div, {class: 'list-group lm-list'},
-                   tasks.map(t => this.renderTaskRow(t))]];
+                : tasks.map(t => this.renderTaskBlock(t)),
+        ];
     }
+
+    // One task on the project page: a compact task line (checkbox toggles
+    // done; title links to the detail page) + the checklist inline.  Its own
+    // reloadable fragment, so a toggle/edit re-renders just this block.
+    // Assignment shows ONLY when overridden (the exception) - the project
+    // header already says who everything else belongs to.
+    renderTaskBlock(t: Task): Markup {
+        const id = t.task_id;
+        const done = t.status === 'done';
+        const canEdit = this.canEditRecord(t);
+        const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
+        const props = this.reloadableItemProps(id, `rabid.task.renderTaskBlockById(${id})`);
+
+        // The override marker: the committee's name, or the override members.
+        let overrideLabel: string|undefined;
+        if(t.group_id != null) {
+            const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id!));
+            overrideLabel = g.group_kind === 'named'
+                ? rabid.volunteer_group.displayName(g)
+                : security.runSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id!}))
+                    .map(m => m.volunteer_name).join(', ') || 'nobody yet';
+        }
+
+        return [h.div, {...props, class: 'lm-task-block ' + props.class,
+                        'data-testid': `task-block-${id}`},
+            [h.div, {class: 'd-flex align-items-center gap-2'},
+             [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
+                        ...(done ? {checked: ''} : {}),
+                        ...(canEdit
+                            ? {onclick: `tx\`rabid.task.toggleDone(${id})\``}
+                            : {disabled: ''}),
+                        'aria-label': `Mark ${t.title || 'task'} done`}],
+             [h.div, {class: 'lm-item-primary' + (done ? ' text-muted' : '')},
+              [h.a, {...templates.pageLinkProps(`/rabid.task.detailPage(${id})`),
+                     class: 'lm-nav-link' + (done ? ' text-decoration-line-through' : '')},
+               t.title || 'Untitled task'],
+              t.status === 'in-progress'
+                  ? [h.span, {class: 'badge text-bg-info ms-2'}, 'In progress'] : undefined,
+              t.priority === 'high' && !done
+                  ? [h.span, {class: 'badge text-bg-danger ms-2'}, 'High'] : undefined],
+             t.due && !done
+                 ? [h.span, {class: 'small flex-shrink-0 ' + (overdue ? 'text-danger' : 'text-muted')},
+                    `Due ${date.sqliteDateToString(t.due)}`]
+                 : undefined,
+             overrideLabel
+                 ? [h.span, {class: 'text-muted small flex-shrink-0',
+                             'data-testid': `task-${id}-override`}, `→ ${overrideLabel}`]
+                 : undefined,
+             canEdit ? this.editPencil(id) : undefined],
+            [h.div, {class: 'lm-task-block-checklist'},
+             rabid.subtask.renderChecklist(id)],
+        ];
+    }
+
+    // Reload target for a single block (after a toggle or an edit save).
+    renderTaskBlockById(id: number): Markup {
+        return this.renderTaskBlock(this.getById(id));
+    }
+
+    // The merged-page checkbox: open <-> done.  (in-progress counts as
+    // not-done: checking completes it; unchecking a done task reopens to
+    // 'open'.)  updateNamedFields stamps/clears the completion provenance.
+    toggleDone(task_id: number): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        this.update(task_id, {status: t.status === 'done' ? 'open' : 'done'});
+        return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Task rows (the cross-project lists: /tasks, My tasks) -----------------
+    // ------------------------------------------------------------------------
 
     renderTaskRow(t: Task & Partial<TaskWithContext>): Markup {
         const id = t.task_id;
@@ -617,8 +848,10 @@ export class TaskTable extends Table<Task> {
         const items = t.subtask_count === undefined ? rabid.subtask.forTask.all({task_id: id}) : undefined;
         const subtotal = t.subtask_count ?? items!.length;
         const subDone = t.subtask_done_count ?? items!.filter(s => s.done).length;
+        const effectiveGroup = t.assignee_count === undefined ? this.effectiveGroupId(t) : undefined;
         const assignees = t.assignee_count
-            ?? rabid.volunteer_group.members.all({group_id: t.group_id}).length;
+            ?? (effectiveGroup == null ? 0
+                : rabid.volunteer_group.members.all({group_id: effectiveGroup}).length);
         const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
         const parts: Markup[] = [
             // A done row leads with when it was done; an open row with its due date.
@@ -774,72 +1007,88 @@ export class TaskTable extends Table<Task> {
     }
 
     // ------------------------------------------------------------------------
-    // --- Assignment (people, or a committee) -----------------------------------
+    // --- Assignment (inherited from the project; exclusive override) -----------
     // ------------------------------------------------------------------------
     //
-    // A task's group_id usually points at its OWN adhoc group (people picked
-    // for this task).  Assigning a COMMITTEE points it at the committee's
-    // named group instead - LIVE semantics, membership follows the committee.
-    // On the task page a committee assignment renders READ-ONLY: member edits
-    // there must never silently mutate the committee.  The escape hatch is the
-    // explicit, confirmed customizeMembers snapshot (see group.ts header).
+    // The RULE is inheritance: group_id NULL -> the task belongs to whoever
+    // the project is assigned to.  The EXCEPTION is the exclusive override
+    // (group_id set): its own adhoc set or a committee's named group, with the
+    // same customize-snapshot escape hatch as the project level.  Committee
+    // assignments render READ-ONLY (member edits must never silently mutate
+    // the committee).
 
     // The "Assigned to" section of the detail page (part of the `.-task-<id>-`
-    // fragment, so the assignment actions reload the whole detail).  Layout:
-    // plain header, then the member list, then ONE action row below it - the
-    // ways to change who's assigned sit together ([Add member][Assign
-    // committee] adhoc; [Change committee][Customize members…] committee).
+    // fragment, so the assignment actions reload the whole detail).
     renderAssignedTo(t: Task): Markup {
-        const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
         const canEdit = this.canEditRecord(t);
-        const committeeAssigned = g.group_kind === 'named';
-
         const header = [h.div, {class: 'd-flex align-items-center gap-2 mt-3 mb-2'},
             [h.h4, {class: 'mb-0'}, 'Assigned to']];
 
-        if(committeeAssigned) {
-            // Owned named groups belong to a committee; link to it.
-            const committee = g.owner_table === 'committee' && g.owner_id != null
-                ? security.runSystem(() => rabid.committee.getById(g.owner_id!))
-                : undefined;
+        if(t.group_id == null) {
+            // Inherited (the rule): show the project's assignees, read-only
+            // here - this section manages the task's own assignment only.
+            const project = security.runSystem(() => rabid.project.getById(t.project_id));
             return [header,
-                [h.p, {class: 'mb-1'},
-                 committee
-                     ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
-                     : rabid.volunteer_group.displayName(g),
-                 ' ',
-                 [h.span, {class: 'badge text-bg-info'}, 'Committee'],
-                 [h.span, {class: 'text-muted small ms-2'}, 'Membership follows the committee.']],
-                rabid.volunteer_group.renderMemberList(t.group_id),
+                [h.p, {class: 'text-muted small mb-1'},
+                 'Everyone assigned to ',
+                 templates.pageLink(`/rabid.project.detailPage(${project.project_id})`,
+                                    project.name || 'the project'), '.'],
+                rabid.volunteer_group.renderMemberList(project.group_id),
                 canEdit
                     ? [h.div, {class: 'd-flex align-items-center gap-2'},
-                       action.actionButton('Change committee',
-                           {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
+                       action.actionButton('Assign specific people…',
+                           {kind: 'immediate', expr: `rabid.task.overrideAssignees(${t.task_id})`},
                            'btn btn-outline-primary btn-sm'),
-                       action.actionButton('Customize members…',
-                           {kind: 'confirm',
-                            expr: `rabid.task.customizeMembers(${t.task_id})`,
-                            message: `Detach this task from ${rabid.volunteer_group.displayName(g)}? ` +
-                                     `The assignees start as the current committee members, but committee ` +
-                                     `changes will no longer affect this task.`},
-                           'btn btn-outline-secondary btn-sm')]
+                       action.actionButton('Assign committee',
+                           {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
+                           'btn btn-outline-primary btn-sm')]
                     : undefined,
             ];
         }
 
+        // Overridden (the exception, and exclusive - this task is on these
+        // people alone, not the wider project team).
+        const revert = canEdit
+            ? action.actionButton('Use project assignees',
+                {kind: 'confirm',
+                 expr: `rabid.task.revertAssignees(${t.task_id})`,
+                 message: `Drop this task's own assignees and go back to the project's?`},
+                'btn btn-outline-secondary btn-sm')
+            : undefined;
         return [header,
-            g.derived_from
-                ? [h.p, {class: 'text-muted small mb-1'}, `Customized from ${g.derived_from}.`]
-                : undefined,
-            rabid.volunteer_group.renderMemberEditor(t.group_id),
-            [h.div, {class: 'd-flex align-items-center gap-2'},
-             rabid.volunteer_group.addMemberButton(t.group_id),
-             canEdit
-                 ? action.actionButton('Assign committee',
-                     {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
-                     'btn btn-outline-primary btn-sm')
-                 : undefined],
+            [h.p, {class: 'text-muted small mb-1'},
+             'Assigned separately from the project (only these assignees see it on their list).'],
+            renderGroupAssignment('rabid.task', t.task_id, t.group_id, canEdit, revert),
         ];
+    }
+
+    // Start an exclusive per-task assignment: an empty task-owned adhoc group,
+    // ready for Add member.  (The two-step - override, then add - keeps this a
+    // plain immediate action; the action row appears as soon as it reloads.)
+    overrideAssignees(task_id: number): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        if(t.group_id == null) {
+            const group_id = security.runSystem(() => createOwnedGroup('adhoc', 'task', task_id));
+            this.update(task_id, {group_id});
+        }
+        return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
+    }
+
+    // Back to inheritance: drop the override (and its now-orphaned owned adhoc
+    // group; a committee's group is never touched).
+    revertAssignees(task_id: number): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        if(t.group_id != null) {
+            const old = security.runSystem(() => rabid.volunteer_group.getById(t.group_id!));
+            this.update(task_id, {group_id: null} as any);
+            if(old.group_kind === 'adhoc' && old.owner_table === 'task' && old.owner_id === task_id)
+                security.runSystem(() => dropOrphanedAdhocGroup(old.group_id));
+        }
+        return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
     }
 
     // The assign-committee parameter dialog: one committee picker (type-ahead
@@ -858,16 +1107,16 @@ export class TaskTable extends Table<Task> {
                     title: `Assign a committee to ${t.title || 'this task'}`,
                     submitLabel: 'Assign',
                     hidden: {task_id},
-                    fieldContext: {ownerPath: 'rabid.project'},
                     dispatch: {onsubmit:
                         'event.preventDefault(); tx`rabid.task.assignCommittee(${getFormJSON(event.target)})`'},
                 }),
         ];
     }
 
-    // Point the task at the committee's named group (live), and drop the
-    // task's own now-orphaned adhoc group.  Args arrive from our own dialog's
-    // form (strings - the same trust model as saveForm).
+    // Override the task's assignment with the committee's named group (live),
+    // and drop the task's own now-orphaned adhoc group if it had one.  Args
+    // arrive from our own dialog's form (strings - the same trust model as
+    // saveForm).
     assignCommittee(args: {task_id?: string|number, committee_id?: string|number}): Markup {
         const task_id = Number(args?.task_id);
         const committee_id = Number(args?.committee_id);
@@ -878,12 +1127,14 @@ export class TaskTable extends Table<Task> {
             throw new Error('Not permitted to edit this task');
         const committee = security.runSystem(() => rabid.committee.getById(committee_id));
         if(committee.group_id !== t.group_id) {
-            const old = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
+            const old = t.group_id != null
+                ? security.runSystem(() => rabid.volunteer_group.getById(t.group_id!))
+                : undefined;
             this.update(task_id, {group_id: committee.group_id});   // stamps last_change_time
             // The task's old OWN adhoc group is now unreferenced garbage.  (A
             // previous COMMITTEE assignment fails this ownership test and is
             // left alone - reassigning never touches a committee's group.)
-            if(old.group_kind === 'adhoc' && old.owner_table === 'task' && old.owner_id === task_id)
+            if(old && old.group_kind === 'adhoc' && old.owner_table === 'task' && old.owner_id === task_id)
                 security.runSystem(() => dropOrphanedAdhocGroup(old.group_id));
         }
         return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
@@ -896,7 +1147,9 @@ export class TaskTable extends Table<Task> {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
             throw new Error('Not permitted to edit this task');
-        const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
+        if(t.group_id == null)   // inherited - nothing to customize here
+            return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
+        const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id!));
         if(g.group_kind === 'named') {
             const group_id = security.runSystem(() =>
                 snapshotAsOwnedAdhocGroup(g.group_id, 'task', task_id));

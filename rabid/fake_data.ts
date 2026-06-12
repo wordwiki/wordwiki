@@ -874,16 +874,23 @@ export function seedProjects(rabid: Rabid): void {
     const logistics = rabid.committee.activeCommittees.all({})
         .find(c => c.name === 'Logistics Committee');
 
+    // A per-task EXCLUSIVE override (the exception, not the rule - most tasks
+    // inherit their project's assignment), through the real action so the
+    // override group is created the same way the UI creates it.
     const assign = (task_id: number, ids: Array<number|undefined>) => {
-        const {group_id} = rabid.task.getById(task_id);
+        rabid.task.overrideAssignees(task_id);
+        const group_id = rabid.task.getById(task_id).group_id!;
         for(const volunteer_id of new Set(ids.filter((id): id is number => id !== undefined)))
             rabid.group_member.insert({group_id, volunteer_id});
     };
 
     const drive = rabid.project.insert({
         name: 'Spring Bike Drive',
-        description: 'Collect, refurbish, and distribute donated bikes.',
-        committee_id: logistics?.committee_id, deleted: 0});
+        description: 'Collect, refurbish, and distribute donated bikes.', deleted: 0});
+    // The drive is the Logistics Committee's project (live membership) -
+    // its tasks inherit that assignment unless individually overridden.
+    if(logistics)
+        rabid.project.assignCommittee({project_id: drive, committee_id: logistics.committee_id});
     const shop = rabid.project.insert({
         name: 'Shop Improvements',
         description: 'Small fixes and upgrades around the shop.', deleted: 0});
@@ -906,14 +913,11 @@ export function seedProjects(rabid: Rabid): void {
         project_id: drive, title: 'Confirm dropoff sites',
         status: 'done', deleted: 0});
 
-    // A committee-assigned task (live: membership follows the committee) -
-    // through the real action, so the orphaned adhoc group is dropped too.
-    if(logistics) {
-        const staffing = rabid.task.insert({
-            project_id: drive, title: 'Donation day staffing',
-            due: '2026-06-19', deleted: 0});
-        rabid.task.assignCommittee({task_id: staffing, committee_id: logistics.committee_id});
-    }
+    // No override: inherits the project's assignment (the Logistics
+    // Committee, live) - the RULE, demonstrated.
+    rabid.task.insert({
+        project_id: drive, title: 'Donation day staffing',
+        due: '2026-06-19', deleted: 0});
 
     const stand = rabid.task.insert({
         project_id: shop, title: 'Fix wobbly repair stand #3',

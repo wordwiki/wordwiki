@@ -330,10 +330,12 @@ function tableByName(name: string): Table<any> {
  * form (the group is created WITH the record and never user-assigned), which
  * also exempts it from the required-input validation on insert - the owning
  * table's insert() supplies it (see createOwnedGroup / CommitteeTable.insert).
+ * Nullable for owners where "no group" means something (a task's NULL =
+ * inherit the project's assignment - see task.ts).
  */
 export class OwnedGroupField extends ForeignKeyField {
-    constructor(name: string = 'group_id') {
-        super(name, 'volunteer_group', 'group_id', {indexed: true});
+    constructor(name: string = 'group_id', opts: {nullable?: boolean} = {}) {
+        super(name, 'volunteer_group', 'group_id', {indexed: true, ...opts});
     }
     override isVisible(): boolean { return false; }
 }
