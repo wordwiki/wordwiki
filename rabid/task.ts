@@ -98,62 +98,58 @@ function volunteerName(volunteer_id: number|null|undefined): string|undefined {
         'SELECT name FROM volunteer WHERE volunteer_id = :id', {id: volunteer_id}))?.name;
 }
 
-// The shared assigned-to body for an assignment group - a project's, or a
-// task's exclusive override.  Renders one of the two assignment states:
-//   - committee-aliased (named group): read-only member chips + the
-//     change-committee / customize-snapshot actions;
-//   - adhoc: member chips with editor + the add-member / assign-committee
-//     actions.
-// ownerRoute ('rabid.project' | 'rabid.task') parameterizes the action
-// routes; extraActions appends to the action row (e.g. the task's
-// use-project-assignees revert).  Deliberately thin and in one place - dz
-// wants the assigned-to presentation slimmed further; do it here.
+// The shared assigned-to LINE for an assignment group - a project's, or a
+// task's exclusive override.  Document-weight: one wrapping line of
+// "Assigned to: <who>", where <who> is either the committee (link + badge +
+// read-only member chips) or the editable member chips (with the inline
+// "+ Add member" chip - the common verb).  The rarer assignment actions
+// (assign/change committee, customize snapshot, plus the caller's
+// extraItems, e.g. the task's revert) sit one tap behind the line's ☰ menu.
+// ownerRoute ('rabid.project' | 'rabid.task') parameterizes the routes.
+// Still THE one place to tune the assigned-to presentation.
 function renderGroupAssignment(ownerRoute: string, owner_id: number, group_id: number,
-                               canEdit: boolean, extraActions?: Markup): Markup {
+                               canEdit: boolean,
+                               extraItems: Array<{label: string, mode: action.ActionMode}> = []): Markup {
     const g = security.runSystem(() => rabid.volunteer_group.getById(group_id));
+    const menu = (items: Array<{label: string, mode: action.ActionMode}>) =>
+        canEdit ? action.actionMenu([...items, ...extraItems],
+                                    {ariaLabel: 'Assignment actions'}) : undefined;
+
     if(g.group_kind === 'named') {
-        // Owned named groups belong to a committee; link to it.
+        // Owned named groups belong to a committee; link to it.  The badge
+        // marks the live semantics (membership follows the committee).
         const committee = g.owner_table === 'committee' && g.owner_id != null
             ? security.runSystem(() => rabid.committee.getById(g.owner_id!))
             : undefined;
-        return [
-            [h.p, {class: 'mb-1'},
-             committee
-                 ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
-                 : rabid.volunteer_group.displayName(g),
-             ' ',
-             [h.span, {class: 'badge text-bg-info'}, 'Committee'],
-             [h.span, {class: 'text-muted small ms-2'}, 'Membership follows the committee.']],
+        return [h.div, {class: 'd-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
+            [h.span, {class: 'text-muted'}, 'Assigned to:'],
+            committee
+                ? templates.pageLink(`/rabid.committee.detailPage(${committee.committee_id})`, committee.name)
+                : rabid.volunteer_group.displayName(g),
+            [h.span, {class: 'badge text-bg-info'}, 'Committee'],
             rabid.volunteer_group.renderMemberList(group_id),
-            canEdit
-                ? [h.div, {class: 'd-flex align-items-center gap-2'},
-                   action.actionButton('Change committee',
-                       {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`},
-                       'btn btn-outline-primary btn-sm'),
-                   action.actionButton('Customize members…',
-                       {kind: 'confirm',
+            menu([
+                {label: 'Change committee…',
+                 mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
+                {label: 'Customize members…',
+                 mode: {kind: 'confirm',
                         expr: `${ownerRoute}.customizeMembers(${owner_id})`,
                         message: `Detach from ${rabid.volunteer_group.displayName(g)}? The assignees ` +
                                  `start as the current committee members, but committee changes ` +
-                                 `will no longer apply here.`},
-                       'btn btn-outline-secondary btn-sm'),
-                   extraActions]
-                : undefined,
+                                 `will no longer apply here.`}},
+            ]),
         ];
     }
-    return [
-        g.derived_from
-            ? [h.p, {class: 'text-muted small mb-1'}, `Customized from ${g.derived_from}.`]
-            : undefined,
+    return [h.div, {class: 'd-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
+        [h.span, {class: 'text-muted'}, 'Assigned to:'],
         rabid.volunteer_group.renderMemberEditor(group_id),
-        canEdit
-            ? [h.div, {class: 'd-flex align-items-center gap-2'},
-               rabid.volunteer_group.addMemberButton(group_id),
-               action.actionButton('Assign committee',
-                   {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`},
-                   'btn btn-outline-primary btn-sm'),
-               extraActions]
+        g.derived_from
+            ? [h.span, {class: 'text-muted small'}, `(customized from ${g.derived_from})`]
             : undefined,
+        menu([
+            {label: 'Assign committee…',
+             mode: {kind: 'modal', dialogUrl: `/${ownerRoute}.assignCommitteeDialog(${owner_id})`}},
+        ]),
     ];
 }
 
@@ -475,8 +471,6 @@ export class ProjectTable extends Table<Project> {
                 : undefined,
             p.description ? [h.p, {}, p.description] : undefined,
             // The project's assignment: THE assigned-to its tasks inherit.
-            [h.div, {class: 'd-flex align-items-center gap-2 mt-3 mb-2'},
-             [h.h4, {class: 'mb-0'}, 'Assigned to']],
             renderGroupAssignment('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
             [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
              [h.h4, {class: 'mb-0'}, 'Tasks'],
@@ -1029,49 +1023,41 @@ export class TaskTable extends Table<Task> {
     // assignments render READ-ONLY (member edits must never silently mutate
     // the committee).
 
-    // The "Assigned to" section of the detail page (part of the `.-task-<id>-`
+    // The "Assigned to" line of the detail page (part of the `.-task-<id>-`
     // fragment, so the assignment actions reload the whole detail).
     renderAssignedTo(t: Task): Markup {
         const canEdit = this.canEditRecord(t);
-        const header = [h.div, {class: 'd-flex align-items-center gap-2 mt-3 mb-2'},
-            [h.h4, {class: 'mb-0'}, 'Assigned to']];
 
         if(t.group_id == null) {
-            // Inherited (the rule): show the project's assignees, read-only
-            // here - this section manages the task's own assignment only.
+            // Inherited (the rule): one line showing the project's assignees
+            // read-only, with the override actions behind the ☰.
             const project = security.runSystem(() => rabid.project.getById(t.project_id));
-            return [header,
-                [h.p, {class: 'text-muted small mb-1'},
-                 'Everyone assigned to ',
-                 templates.pageLink(`/rabid.project.detailPage(${project.project_id})`,
-                                    project.name || 'the project'), '.'],
+            return [h.div, {class: 'd-flex align-items-center gap-2 flex-wrap mt-3 mb-2'},
+                [h.span, {class: 'text-muted'}, 'Assigned to:'],
                 rabid.volunteer_group.renderMemberList(project.group_id),
+                [h.span, {class: 'text-muted small'},
+                 '(everyone on ',
+                 templates.pageLink(`/rabid.project.detailPage(${project.project_id})`,
+                                    project.name || 'the project'), ')'],
                 canEdit
-                    ? [h.div, {class: 'd-flex align-items-center gap-2'},
-                       action.actionButton('Assign specific people…',
-                           {kind: 'immediate', expr: `rabid.task.overrideAssignees(${t.task_id})`},
-                           'btn btn-outline-primary btn-sm'),
-                       action.actionButton('Assign committee',
-                           {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
-                           'btn btn-outline-primary btn-sm')]
+                    ? action.actionMenu([
+                          {label: 'Assign specific people…',
+                           mode: {kind: 'immediate', expr: `rabid.task.overrideAssignees(${t.task_id})`}},
+                          {label: 'Assign committee…',
+                           mode: {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`}},
+                      ], {ariaLabel: 'Assignment actions'})
                     : undefined,
             ];
         }
 
         // Overridden (the exception, and exclusive - this task is on these
-        // people alone, not the wider project team).
-        const revert = canEdit
-            ? action.actionButton('Use project assignees',
-                {kind: 'confirm',
-                 expr: `rabid.task.revertAssignees(${t.task_id})`,
-                 message: `Drop this task's own assignees and go back to the project's?`},
-                'btn btn-outline-secondary btn-sm')
-            : undefined;
-        return [header,
-            [h.p, {class: 'text-muted small mb-1'},
-             'Assigned separately from the project (only these assignees see it on their list).'],
-            renderGroupAssignment('rabid.task', t.task_id, t.group_id, canEdit, revert),
-        ];
+        // people alone, not the wider project team); revert lives in the ☰.
+        return renderGroupAssignment('rabid.task', t.task_id, t.group_id, canEdit, [
+            {label: 'Use project assignees…',
+             mode: {kind: 'confirm',
+                    expr: `rabid.task.revertAssignees(${t.task_id})`,
+                    message: `Drop this task's own assignees and go back to the project's?`}},
+        ]);
     }
 
     // Start an exclusive per-task assignment: an empty task-owned adhoc group,

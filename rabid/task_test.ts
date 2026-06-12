@@ -222,10 +222,9 @@ test("customize members: explicit snapshot detaches from the committee (derived_
 
         // Committee-assigned: the detail page shows the committee READ-ONLY -
         // no Add member even for a host (member edits must not silently hit
-        // the committee) - plus the two explicit affordances.
+        // the committee) - plus the two explicit affordances (in the ☰ menu).
         const before = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(before, 'Logistics Committee'));
-        assert(hasText(before, 'Membership follows the committee'));
         assert(!hasText(before, 'Add member'));
         assert(hasText(before, 'Customize members'));
         assert(hasText(before, 'Change committee'));
@@ -248,13 +247,13 @@ test("customize members: explicit snapshot detaches from the committee (derived_
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id!})).length, 2);
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id: c1.group_id})).length, 1);
 
-        // The detail page is back to the editable member editor, with the
-        // provenance label.
+        // The detail page is back to the editable chip line, with the
+        // provenance label; the committee-state actions are gone.
         const after = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(hasText(after, 'Customized from Logistics Committee'));
+        assert(hasText(after, 'customized from Logistics Committee'));
         assert(hasText(after, 'Add member'));
         assert(hasText(after, 'Assign committee'));
-        assert(!hasText(after, 'Membership follows the committee'));
+        assert(!hasText(after, 'Change committee'));
     });
 });
 
@@ -607,13 +606,14 @@ test("project assignCommittee: live committee assignment, inherited by tasks; cu
         const task_id = asSystem(() => rabid.task.insert({project_id, title: 'Sort donations', deleted: 0}));
         asUser(bob, () => rabid.subtask.addItem({task_id, title: 'now allowed'}));
 
-        // The project page shows the committee assignment; the task detail's
-        // inherited state names the project and offers the override actions.
+        // The project page shows the committee assignment line; the task
+        // detail's inherited state names the project and offers the override
+        // actions (in the ☰ menu).
         const page = await asUser(alice, () => renderRoute(`rabid.project.detailPage(${project_id})`));
         assert(hasText(page, 'Assigned to'));
-        assert(hasText(page, 'Membership follows the committee'));
+        assert(hasText(page, 'Change committee'));
         const detail = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(hasText(detail, 'Everyone assigned to'));
+        assert(hasText(detail, 'everyone on'));
         assert(hasText(detail, 'Assign specific people'));
 
         // Customize: snapshot into a project-owned adhoc group, provenance kept.

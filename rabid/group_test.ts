@@ -67,21 +67,21 @@ test("member editor: edit affordances for the host only; dialog gated server-sid
         await asUser(alice, () => invoke("rabid.volunteer_group.addMember($arg0)",
             {group_id: String(group_id), volunteer_id: String(bob)}));
 
-        // Members render as chips; the × (confirm-gated remove) only for the
-        // host.  The Add-member button lives on the owner page's action row
-        // (addMemberButton), outside this fragment.
+        // Members render as a chip line; the × (confirm-gated remove) and the
+        // inline "+ Add member" chip only for the host - the fragment computes
+        // its own permissions, so reloads keep them correct.
         const hostView = await asUser(alice, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(hostView, "Bob Shares"));
         assert(!!find(hostView, byClass("lm-chip")));
         assert(!!find(hostView, byClass("lm-remove-x")));
-        assert(!!asUser(alice, () => rabid.volunteer_group.addMemberButton(group_id)));
+        assert(!!find(hostView, byClass("lm-chip-add")));
 
         const regularView = await asUser(bob, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(regularView, "Bob Shares"));
         assert(!find(regularView, byClass("lm-remove-x")));
-        assertEquals(asUser(bob, () => rabid.volunteer_group.addMemberButton(group_id)), undefined);
+        assert(!find(regularView, byClass("lm-chip-add")));
 
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.volunteer_group.addMemberDialog(${group_id})`),

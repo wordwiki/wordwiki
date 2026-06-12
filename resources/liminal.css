@@ -192,6 +192,25 @@
     text-decoration: underline;
 }
 
+/* The quiet add chip: a <button> in chip clothing (dashed = "slot for one
+   more").  The common membership verb stays inline at the end of the chip
+   line; rarer actions live in the ☰ menu. */
+.lm-chip-add {
+    display: inline-flex;
+    align-items: center;
+    border: var(--bs-border-width) dashed var(--bs-border-color);
+    border-radius: 50rem;
+    background: transparent;
+    color: var(--bs-secondary-color);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+.lm-chip-add:hover,
+.lm-chip-add:focus-visible {
+    color: var(--bs-body-color);
+    background-color: var(--bs-tertiary-bg);
+}
+
 /* The quiet × remove button (chips, checklist rows).  Ghosted like the
    pencil and padded to a usable touch target; the confirm gate stays on the
    action - only the trigger got smaller. */
