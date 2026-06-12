@@ -83,6 +83,9 @@ class ManagedDateTimeField extends DateTimeField {
 class ManagedForeignKeyField extends ForeignKeyField {
     override isVisible(): boolean { return false; }
 }
+class ManagedBooleanField extends BooleanField {
+    override isVisible(): boolean { return false; }
+}
 
 // Display name for a provenance column (null-safe: system writes - seeds,
 // imports - leave no actor).
@@ -114,6 +117,12 @@ export interface Project {
     // is not an audit log).  Null archived_by = a system write (seeds, imports).
     archived_time?: string;
     archived_by?: number;
+
+    // Creation provenance: who created the project and when, so people know
+    // who to ask about it.  Nullable: rows that predate these columns, and
+    // system writes (seeds, imports), have no creator.
+    created_time?: string;
+    created_by?: number;
 }
 
 export type ProjectOpt = Partial<Project>;
@@ -127,13 +136,24 @@ export class ProjectTable extends Table<Project> {
             new StringField('description', {default: ''}),
             new ForeignKeyField('committee_id', 'committee', 'committee_id',
                                 {nullable: true, prompt: 'Committee (optional)'}, 'name'),
-            new BooleanField('deleted', {default: 0, prompt: 'Archived'}),
+            new BooleanField('deleted', {default: 0, prompt: 'Done'}),
             new ManagedDateTimeField('archived_time', {nullable: true}),
             new ManagedForeignKeyField('archived_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
+            new ManagedDateTimeField('created_time', {nullable: true}),
+            new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
         ], [
             'CREATE INDEX IF NOT EXISTS project_by_committee ON project(committee_id);',
         ])
     };
+
+    // Creation provenance rides on every insert (the New-project saveForm path
+    // included - both are managed fields, absent from the form).
+    override insert<P extends Partial<Project>>(tuple: P): number {
+        return super.insert({
+            created_time: date.currentSqliteDateTime(),
+            created_by: security.current()?.actorId ?? null,
+            ...tuple} as any);
+    }
 
     // Hosts run the org: projects (like committees) are host/admin-managed.
     defaultFieldEdit: security.Permission = hostOrAdmin;
@@ -165,6 +185,24 @@ export class ProjectTable extends Table<Project> {
     }
     override update<P extends Partial<Project>>(id: number, fields: P) {
         this.updateNamedFields(id, Object.keys(fields) as Array<keyof P>, fields);
+    }
+
+    // Mark done / reopen: first-class confirmed actions over the project's
+    // terminal flag (the `deleted` column, presented as "Done" in the UI; the
+    // edit dialog's Done checkbox is the same flag).  updateNamedFields above
+    // stamps/clears the archived_time/archived_by provenance.
+    markDone(project_id: number): Markup {
+        return this.setDone(project_id, 1);
+    }
+    reopen(project_id: number): Markup {
+        return this.setDone(project_id, 0);
+    }
+    private setDone(project_id: number, deleted: 0|1): Markup {
+        const p = this.getById(project_id);
+        if(!this.canEditRecord(p))
+            throw new Error('Not permitted to edit this project');
+        this.updateNamedFields(project_id, ['deleted'], {deleted});
+        return {action:'reload', targets:[`.-project-${project_id}-`]} as unknown as Markup;
     }
 
     @path
@@ -262,19 +300,46 @@ export class ProjectTable extends Table<Project> {
             ? security.runSystem(() => rabid.committee.getById(p.committee_id!))
             : undefined;
         const canCreateTask = rabid.task.canEditRecord({} as any);
+        const openCount = rabid.task.openCountForProject.required({project_id}).n;
         const props = this.reloadableItemProps(project_id, `rabid.project.renderProjectDetail(${project_id})`);
         props.class = 'container py-3 ' + props.class;
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, p.name || 'Unnamed project'],
-             p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
-             this.canEditRecord(p) ? this.editPencil(project_id) : undefined],
+             p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Done'] : undefined,
+             this.canEditRecord(p) ? this.editPencil(project_id) : undefined,
+             // The project's terminal transition, as a confirmed button (the
+             // confirm carries the open-task count - marking a project done
+             // with work outstanding should be deliberate).
+             this.canEditRecord(p)
+                 ? (p.deleted
+                     ? action.actionButton('Reopen project',
+                         {kind: 'confirm', expr: `rabid.project.reopen(${project_id})`,
+                          message: `Reopen ${p.name || 'this project'}?`},
+                         'btn btn-outline-secondary btn-sm ms-auto')
+                     : action.actionButton('Mark project done',
+                         {kind: 'confirm', expr: `rabid.project.markDone(${project_id})`,
+                          message: openCount > 0
+                              ? `${openCount} open task${openCount === 1 ? '' : 's'} remain - ` +
+                                `mark ${p.name || 'this project'} done anyway?`
+                              : `Mark ${p.name || 'this project'} done?`},
+                         'btn btn-outline-success btn-sm ms-auto'))
+                 : undefined],
             p.deleted && p.archived_time
                 ? [h.p, {class: 'text-muted small mb-1'},
-                   `Archived ${date.sqliteDateTimeToDateString(p.archived_time)}`,
+                   `Done ${date.sqliteDateTimeToDateString(p.archived_time)}`,
                    p.archived_by != null
                        ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${p.archived_by})`,
                                                      volunteerName(p.archived_by) ?? `volunteer ${p.archived_by}`)]
+                       : undefined]
+                : undefined,
+            // Creation provenance: who to ask about this project.
+            p.created_time
+                ? [h.p, {class: 'text-muted small mb-1'},
+                   `Created ${date.sqliteDateTimeToDateString(p.created_time)}`,
+                   p.created_by != null
+                       ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${p.created_by})`,
+                                                     volunteerName(p.created_by) ?? `volunteer ${p.created_by}`)]
                        : undefined]
                 : undefined,
             committee
@@ -332,6 +397,13 @@ export interface Task {
     // done_by = a system write (seeds, imports).
     done_time?: string;
     done_by?: number;
+
+    // Creation provenance: who created the task and when, so an assignee
+    // (staff especially - they can't just ignore an assigned item) knows who
+    // to ask about it.  Nullable: rows that predate these columns, and system
+    // writes (seeds, imports), have no creator.
+    created_time?: string;
+    created_by?: number;
 }
 
 export type TaskOpt = Partial<Task>;
@@ -362,6 +434,8 @@ export class TaskTable extends Table<Task> {
             new BooleanField('deleted', {default: 0}),
             new ManagedDateTimeField('done_time', {nullable: true}),
             new ManagedForeignKeyField('done_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
+            new ManagedDateTimeField('created_time', {nullable: true}),
+            new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
         ], [
             'CREATE INDEX IF NOT EXISTS task_by_project ON task(project_id);',
             'CREATE INDEX IF NOT EXISTS task_by_group ON task(group_id);',
@@ -391,6 +465,8 @@ export class TaskTable extends Table<Task> {
         const withManaged: any = {
             order_key: this.nextOrderKey(tuple.project_id),
             last_change_time: date.currentSqliteDateTime(),
+            created_time: date.currentSqliteDateTime(),
+            created_by: security.current()?.actorId ?? null,
             ...tuple};
         // A task born done (seeds, imports) still gets its completion stamp.
         if(withManaged.status === 'done' && withManaged.done_time === undefined) {
@@ -671,6 +747,16 @@ export class TaskTable extends Table<Task> {
              row('Project', templates.pageLink(`/rabid.project.detailPage(${project.project_id})`, project.name)),
              row('Priority', task_priority_enum[t.priority] ?? t.priority),
              row('Due', t.due ? date.sqliteDateToString(t.due) : '—'),
+             // Who to ask about this task (staff especially - they can't just
+             // ignore an assigned item).
+             t.created_time
+                 ? row('Created', [date.sqliteDateTimeToDateString(t.created_time),
+                                   t.created_by != null
+                                       ? [' by ', templates.pageLink(
+                                           `/rabid.volunteer.detailPage(${t.created_by})`,
+                                           volunteerName(t.created_by) ?? `volunteer ${t.created_by}`)]
+                                       : undefined])
+                 : undefined,
              done && t.done_time
                  ? row('Done', [date.sqliteDateTimeToString(t.done_time),
                                 t.done_by != null
@@ -699,29 +785,17 @@ export class TaskTable extends Table<Task> {
     // explicit, confirmed customizeMembers snapshot (see group.ts header).
 
     // The "Assigned to" section of the detail page (part of the `.-task-<id>-`
-    // fragment, so the assignment actions reload the whole detail).
+    // fragment, so the assignment actions reload the whole detail).  Layout:
+    // plain header, then the member list, then ONE action row below it - the
+    // ways to change who's assigned sit together ([Add member][Assign
+    // committee] adhoc; [Change committee][Customize members…] committee).
     renderAssignedTo(t: Task): Markup {
         const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id));
         const canEdit = this.canEditRecord(t);
         const committeeAssigned = g.group_kind === 'named';
 
         const header = [h.div, {class: 'd-flex align-items-center gap-2 mt-3 mb-2'},
-            [h.h4, {class: 'mb-0'}, 'Assigned to'],
-            canEdit && committeeAssigned
-                ? action.actionButton('Customize members…',
-                    {kind: 'confirm',
-                     expr: `rabid.task.customizeMembers(${t.task_id})`,
-                     message: `Detach this task from ${rabid.volunteer_group.displayName(g)}? ` +
-                              `The assignees start as the current committee members, but committee ` +
-                              `changes will no longer affect this task.`},
-                    'btn btn-outline-secondary btn-sm')
-                : undefined,
-            canEdit
-                ? action.actionButton(committeeAssigned ? 'Change committee' : 'Assign committee',
-                    {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
-                    'btn btn-outline-primary btn-sm')
-                : undefined,
-        ];
+            [h.h4, {class: 'mb-0'}, 'Assigned to']];
 
         if(committeeAssigned) {
             // Owned named groups belong to a committee; link to it.
@@ -737,6 +811,19 @@ export class TaskTable extends Table<Task> {
                  [h.span, {class: 'badge text-bg-info'}, 'Committee'],
                  [h.span, {class: 'text-muted small ms-2'}, 'Membership follows the committee.']],
                 rabid.volunteer_group.renderMemberList(t.group_id),
+                canEdit
+                    ? [h.div, {class: 'd-flex align-items-center gap-2'},
+                       action.actionButton('Change committee',
+                           {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
+                           'btn btn-outline-primary btn-sm'),
+                       action.actionButton('Customize members…',
+                           {kind: 'confirm',
+                            expr: `rabid.task.customizeMembers(${t.task_id})`,
+                            message: `Detach this task from ${rabid.volunteer_group.displayName(g)}? ` +
+                                     `The assignees start as the current committee members, but committee ` +
+                                     `changes will no longer affect this task.`},
+                           'btn btn-outline-secondary btn-sm')]
+                    : undefined,
             ];
         }
 
@@ -745,6 +832,13 @@ export class TaskTable extends Table<Task> {
                 ? [h.p, {class: 'text-muted small mb-1'}, `Customized from ${g.derived_from}.`]
                 : undefined,
             rabid.volunteer_group.renderMemberEditor(t.group_id),
+            [h.div, {class: 'd-flex align-items-center gap-2'},
+             rabid.volunteer_group.addMemberButton(t.group_id),
+             canEdit
+                 ? action.actionButton('Assign committee',
+                     {kind: 'modal', dialogUrl: `/rabid.task.assignCommitteeDialog(${t.task_id})`},
+                     'btn btn-outline-primary btn-sm')
+                 : undefined],
         ];
     }
 
@@ -839,9 +933,12 @@ export class SubtaskTable extends Table<Subtask> {
     constructor() {
         super ('subtask', [
             new PrimaryKeyField('subtask_id', {}),
-            new ForeignKeyField('task_id', 'task', 'task_id', {}, 'title'),
+            // Managed (form-invisible): an item never moves between tasks, and
+            // done-ness is the checkbox/toggle path (which stamps provenance) -
+            // so the pencil-edit dialog is title-only.
+            new ManagedForeignKeyField('task_id', 'task', 'task_id', {}, 'title'),
             new StringField('title', {}),
-            new BooleanField('done', {default: 0}),
+            new ManagedBooleanField('done', {default: 0}),
             new ManagedStringField('order_key', {default: ''}),
             new ManagedDateTimeField('done_time', {nullable: true}),
             new ManagedForeignKeyField('done_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
@@ -857,6 +954,23 @@ export class SubtaskTable extends Table<Subtask> {
         a.record ? canEditTask((a.record as Subtask).task_id) : false;
     override get recordEdit(): security.Permission {
         return a => a.record ? canEditTask((a.record as Subtask).task_id) : false;
+    }
+
+    override formTitle(s: Subtask): string {
+        return `Edit "${s.title || 'checklist item'}"`;
+    }
+
+    // The pencil-edit save path.  The generic reload target would be
+    // `.-subtask-<pk>-`, but our reloadable fragment is the whole checklist,
+    // keyed by TASK id (renderChecklist) - retarget there so the rename shows.
+    override saveForm(form: Record<string, string>): Markup {
+        const result = super.saveForm(form) as any;
+        const subtask_id = Number(form.subtask_id);
+        if(Number.isInteger(subtask_id) && subtask_id) {
+            const task_id = security.runSystem(() => this.getById(subtask_id)).task_id;
+            return {...result, targets: [`.-subtask-${task_id}-`]} as unknown as Markup;
+        }
+        return result;
     }
 
     // Append at the end of the task's checklist; every insert stamps the task.
@@ -897,16 +1011,20 @@ export class SubtaskTable extends Table<Subtask> {
     // checklist fragment (UI mutation model: toggle is immediate, remove is
     // confirm, add is a modal-of-action-arguments).
 
-    // Args arrive from our own add-item dialog's form (strings, like every
-    // bodyArgs form - the same trust model as saveForm).
-    addItem(args: {task_id?: string|number, title?: string}): Markup {
+    // Args arrive from our own add-item dialogs' forms (strings, like every
+    // bodyArgs form - the same trust model as saveForm).  done='1' is the
+    // "Add completed item" path: this is a SHARED task system, also used to
+    // tell others what got done - insert() stamps the born-done provenance
+    // (who/when) so the item reads "Hazel, Jun 12" immediately.
+    addItem(args: {task_id?: string|number, title?: string, done?: string|number}): Markup {
         const task_id = Number(args?.task_id);
         const title = String(args?.title ?? '').trim();
+        const done = Number(args?.done ?? 0) ? 1 : 0;
         if(!Number.isInteger(task_id) || !task_id) throw new Error('Missing task');
         if(!title) throw new Error('Please enter a checklist item');
         if(!canEditTask(task_id))
             throw new Error('Not permitted to edit this task');
-        this.insert({task_id, title, done: 0});
+        this.insert({task_id, title, done});
         return {action:'reload', targets:[`.-subtask-${task_id}-`]} as unknown as Markup;
     }
 
@@ -950,9 +1068,15 @@ export class SubtaskTable extends Table<Subtask> {
                 : [h.div, {class: 'list-group lm-list mb-2'},
                    items.map(s => this.renderChecklistRow(s, canEdit))],
             canEdit
-                ? action.actionButton('Add item',
-                    {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`},
-                    'btn btn-outline-primary btn-sm')
+                ? [h.div, {class: 'd-flex align-items-center gap-2'},
+                   action.actionButton('Add item',
+                       {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`},
+                       'btn btn-outline-primary btn-sm'),
+                   // Log work already done (this shared checklist doubles as
+                   // "here's what I did" communication).
+                   action.actionButton('Add completed item',
+                       {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id},true)`},
+                       'btn btn-outline-secondary btn-sm')]
                 : undefined,
         ];
     }
@@ -974,27 +1098,30 @@ export class SubtaskTable extends Table<Subtask> {
             [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
              s.title],
             prov ? [h.span, {class: 'text-muted small flex-shrink-0'}, prov] : undefined,
+            canEdit ? this.editPencil(s.subtask_id) : undefined,
             canEdit
-                ? action.actionButton('Remove',
+                ? action.actionButton('×',
                     {kind: 'confirm',
                      expr: `rabid.subtask.remove(${s.subtask_id})`,
                      message: `Remove "${s.title}"?`},
-                    'btn btn-outline-danger btn-sm')
+                    'lm-remove-x',
+                    {'aria-label': `Remove ${s.title}`})
                 : undefined,
         ];
     }
 
-    // The add-item parameter dialog: one title input + the task id riding hidden.
-    addItemDialog(task_id: number): Markup {
+    // The add-item parameter dialog: one title input + the task id (and, for
+    // the Add-completed-item variant, done=1) riding hidden.
+    addItemDialog(task_id: number, completed: boolean = false): Markup {
         if(!canEditTask(task_id))
             throw new Error('Not permitted to edit this task');
         return action.renderParamForm(
-            [new StringField('title', {prompt: 'Item'})],
+            [new StringField('title', {prompt: completed ? 'Item (already done)' : 'Item'})],
             {},
             {
-                title: 'Add checklist item',
+                title: completed ? 'Add completed item' : 'Add checklist item',
                 submitLabel: 'Add',
-                hidden: {task_id},
+                hidden: completed ? {task_id, done: 1} : {task_id},
                 dispatch: {onsubmit:
                     'event.preventDefault(); tx`rabid.subtask.addItem(${getFormJSON(event.target)})`'},
             });

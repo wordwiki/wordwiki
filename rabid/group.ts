@@ -186,10 +186,13 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     // ------------------------------------------------------------------------
 
     // The reloadable members fragment for one group: every owner detail page
-    // (committee today, tasks later) embeds this same editor.  Members link to
-    // their volunteer page; the Remove/Add affordances appear only for actors
-    // who pass canEditMembers (UI mutation model: every mutation is a button -
-    // Remove is confirm-style, Add is a modal-of-action-arguments).
+    // (committee, task) embeds this same fragment.  Members render as an
+    // inline CHIP LIST (.lm-chip-list - a set of names, not a table), each
+    // chip linking to the volunteer page with a confirm-gated × for actors
+    // who pass canEditMembers.  The action buttons (addMemberButton + any
+    // owner-specific assignment actions) live on the owner's own action row
+    // BELOW this fragment - outside it, so a membership reload (which
+    // replaces just this div) never eats them.
     renderMemberEditor(group_id: number): Markup {
         const g = this.getById(group_id);
         const members = this.members.all({group_id});
@@ -197,41 +200,47 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
         const props = this.reloadableItemProps(group_id, `rabid.volunteer_group.renderMemberEditor(${group_id})`);
         return [h.div, props,
             members.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No members yet.']
-                : [h.div, {class: 'list-group lm-list mb-2'},
-                   members.map(m => this.renderMemberRow(m, canEdit))],
-            canEdit
-                ? action.actionButton('Add member',
-                    {kind: 'modal', dialogUrl: `/rabid.volunteer_group.addMemberDialog(${group_id})`},
-                    'btn btn-outline-primary btn-sm')
-                : undefined,
+                ? [h.p, {class: 'text-muted mb-2'}, 'No members yet.']
+                : [h.div, {class: 'lm-chip-list mb-2'},
+                   members.map(m => this.renderMemberChip(m, canEdit))],
         ];
     }
 
-    // Read-only member list (no add/remove affordances) - used where a group is
-    // shown through an ALIASING reference (e.g. a task assigned to a committee's
-    // named group): member edits there must go through the explicit
-    // customize/convert flow, never silently into the committee.
+    // The Add-member affordance for the owner page's action row (undefined for
+    // actors who may not edit members - the button IS the permission surface).
+    addMemberButton(group_id: number): Markup {
+        const g = this.getById(group_id);
+        if(!this.canEditMembers(g)) return undefined;
+        return action.actionButton('Add member',
+            {kind: 'modal', dialogUrl: `/rabid.volunteer_group.addMemberDialog(${group_id})`},
+            'btn btn-outline-primary btn-sm');
+    }
+
+    // Read-only member chips (no ×) - used where a group is shown through an
+    // ALIASING reference (e.g. a task assigned to a committee's named group):
+    // member edits there must go through the explicit customize/convert flow,
+    // never silently into the committee.
     renderMemberList(group_id: number): Markup {
         const members = this.members.all({group_id});
         return members.length === 0
-            ? [h.p, {class: 'text-muted'}, 'No members yet.']
-            : [h.div, {class: 'list-group lm-list mb-2'},
-               members.map(m => this.renderMemberRow(m, false))];
+            ? [h.p, {class: 'text-muted mb-2'}, 'No members yet.']
+            : [h.div, {class: 'lm-chip-list mb-2'},
+               members.map(m => this.renderMemberChip(m, false))];
     }
 
-    renderMemberRow(m: GroupMemberWithName, canEdit: boolean): Markup {
-        return [h.div, {class: 'list-group-item lm-item d-flex align-items-center',
-                        'data-testid': `member-row-${m.volunteer_id}`},
-            [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
-              templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, m.volunteer_name)]],
+    // One member chip: the name (link to the volunteer page) plus, in member
+    // editors, the × - the same confirm-gated removeMember action the old
+    // Remove button carried, just a quieter trigger.
+    renderMemberChip(m: GroupMemberWithName, canEdit: boolean): Markup {
+        return [h.span, {class: 'lm-chip', 'data-testid': `member-row-${m.volunteer_id}`},
+            templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, m.volunteer_name),
             canEdit
-                ? action.actionButton('Remove',
+                ? action.actionButton('×',
                     {kind: 'confirm',
                      expr: `rabid.volunteer_group.removeMember(${m.group_id},${m.volunteer_id})`,
                      message: `Remove ${m.volunteer_name}?`},
-                    'btn btn-outline-danger btn-sm')
+                    'lm-remove-x',
+                    {'aria-label': `Remove ${m.volunteer_name}`})
                 : undefined,
         ];
     }

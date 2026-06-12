@@ -67,17 +67,21 @@ test("member editor: edit affordances for the host only; dialog gated server-sid
         await asUser(alice, () => invoke("rabid.volunteer_group.addMember($arg0)",
             {group_id: String(group_id), volunteer_id: String(bob)}));
 
+        // Members render as chips; the × (confirm-gated remove) only for the
+        // host.  The Add-member button lives on the owner page's action row
+        // (addMemberButton), outside this fragment.
         const hostView = await asUser(alice, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(hostView, "Bob Shares"));
-        assert(hasText(hostView, "Add member"));
-        assert(hasText(hostView, "Remove"));
+        assert(!!find(hostView, byClass("lm-chip")));
+        assert(!!find(hostView, byClass("lm-remove-x")));
+        assert(!!asUser(alice, () => rabid.volunteer_group.addMemberButton(group_id)));
 
         const regularView = await asUser(bob, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(regularView, "Bob Shares"));
-        assert(!hasText(regularView, "Add member"));
-        assert(!hasText(regularView, "Remove"));
+        assert(!find(regularView, byClass("lm-remove-x")));
+        assertEquals(asUser(bob, () => rabid.volunteer_group.addMemberButton(group_id)), undefined);
 
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.volunteer_group.addMemberDialog(${group_id})`),

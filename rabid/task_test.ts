@@ -392,3 +392,132 @@ test("pages: one navigable row species, pencil follows recordEdit; task detail e
         assert(attr(box!, 'disabled') !== undefined);
     });
 });
+
+test("Mark project done / Reopen: confirmed buttons over the terminal flag, host-gated", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        const {project_id} = seedTask();
+
+        // The host page offers the button; a regular volunteer's doesn't.
+        const hostPage = await asUser(alice, () => renderRoute(`rabid.project.detailPage(${project_id})`));
+        assert(hasText(hostPage, 'Mark project done'));
+        const volPage = await asUser(carol, () => renderRoute(`rabid.project.detailPage(${project_id})`));
+        assert(!hasText(volPage, 'Mark project done'));
+
+        // The action is gated server-side too.
+        assertThrows(() => asUser(carol, () => rabid.project.markDone(project_id)),
+                     Error, "Not permitted to edit this project");
+
+        // Host marks done: flag + provenance stamped; the page flips to Done/Reopen.
+        const res = asUser(alice, () => rabid.project.markDone(project_id)) as any;
+        assertEquals(res.action, 'reload');
+        const p = asSystem(() => rabid.project.getById(project_id));
+        assertEquals(p.deleted, 1);
+        assertEquals(p.archived_by, alice);
+        assert(p.archived_time);
+        const donePage = await asUser(alice, () => renderRoute(`rabid.project.detailPage(${project_id})`));
+        assert(hasText(donePage, 'Done'));
+        assert(hasText(donePage, 'Reopen project'));
+
+        // Reopen clears the provenance (the existing unarchive path).
+        asUser(alice, () => rabid.project.reopen(project_id));
+        const p2 = asSystem(() => rabid.project.getById(project_id));
+        assertEquals(p2.deleted, 0);
+        assertEquals(p2.archived_time ?? null, null);
+    });
+});
+
+test("Add completed item: born-done checklist entry with provenance (work-log workflow)", async () => {
+    await withTestDb(async ({ bob }) => {
+        const {task_id, group_id} = seedTask();
+        addToGroup(group_id, bob);
+
+        // The dialog variant exists (done=1 rides hidden); the action inserts
+        // a checked item stamped to the actor.
+        const dialog = await asUser(bob, () => renderRoute(`rabid.subtask.addItemDialog(${task_id},true)`));
+        assert(hasText(dialog, 'Add completed item'));
+        const res = asUser(bob, () => rabid.subtask.addItem({
+            task_id: String(task_id), title: 'Sorted the parts bin', done: '1'})) as any;
+        assertEquals(res.action, 'reload');
+        const item = asSystem(() => rabid.subtask.forTask.all({task_id}))
+            .find(s => s.title === 'Sorted the parts bin')!;
+        assertEquals(item.done, 1);
+        assertEquals(item.done_by, bob);
+        assert(item.done_time);
+
+        // Renders checked, with the who/when provenance and the quiet ×.
+        const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
+        assert(hasText(checklist, 'Sorted the parts bin'));
+        assert(hasText(checklist, 'Add completed item'));
+        assert(!!find(checklist, byClass('lm-remove-x')));
+    });
+});
+
+test("projects and tasks record creation provenance (who to ask about it)", async () => {
+    await withTestDb(async ({ alice }) => {
+        // Created through the normal host flow (saveForm inserts): both
+        // managed stamps land without appearing in any form.
+        asUser(alice, () => rabid.project.saveForm({name: 'Paint Shop', 'before-name': ''}));
+        const p = asSystem(() => rabid.project.activeProjects.all({}))
+            .find(p => p.name === 'Paint Shop')!;
+        assertEquals(p.created_by, alice);
+        assert(p.created_time);
+
+        asUser(alice, () => rabid.task.saveForm({
+            title: 'Buy brushes', 'before-title': '',
+            project_id: String(p.project_id), 'before-project_id': ''}));
+        const t = asSystem(() => rabid.task.tasksForProject.all({project_id: p.project_id}))[0];
+        assertEquals(t.created_by, alice);
+        assert(t.created_time);
+
+        // Both detail pages say who to ask.
+        const projPage = await asUser(alice, () => renderRoute(`rabid.project.detailPage(${p.project_id})`));
+        assert(hasText(projPage, 'Created'));
+        assert(hasText(projPage, 'Alice Host'));
+        const taskPage = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${t.task_id})`));
+        assert(hasText(taskPage, 'Created'));
+        assert(hasText(taskPage, 'Alice Host'));
+
+        // System writes (seeds, imports) stamp the time but no creator.
+        const {project_id} = seedTask();
+        const seeded = asSystem(() => rabid.project.getById(project_id));
+        assertEquals(seeded.created_by ?? null, null);
+        assert(seeded.created_time);
+    });
+});
+
+test("checklist items edit via the pencil: title-only dialog, reload targets the task's checklist", async () => {
+    await withTestDb(async ({ bob, carol }) => {
+        const {task_id, group_id} = seedTask();
+        addToGroup(group_id, bob);
+        asUser(bob, () => rabid.subtask.addItem({task_id, title: 'Get qotes'}));
+        const item = asSystem(() => rabid.subtask.forTask.all({task_id}))[0];
+
+        // The row carries the pencil for the assignee, not for others.
+        const bobList = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
+        assert(!!find(getByTestId(bobList, `subtask-row-${item.subtask_id}`), byClass('lm-edit-pencil')));
+        const carolList = await asUser(carol, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
+        assert(!find(carolList, byClass('lm-edit-pencil')));
+
+        // The dialog is title-only: no done checkbox, no task picker (done-ness
+        // is the toggle path, which stamps provenance).
+        const form = await asUser(bob, () =>
+            renderRoute(`rabid.subtask.renderForm(rabid.subtask.getById(${item.subtask_id}))`));
+        assert(!!find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'title'));
+        assert(!find(form, n => (tagOf(n) === 'input' || tagOf(n) === 'select')
+                                && attr(n, 'name') === 'done'));
+        assert(!find(form, n => (tagOf(n) === 'input' || tagOf(n) === 'select')
+                                && attr(n, 'name') === 'task_id'));
+
+        // Saving renames, and reloads the TASK's checklist fragment (not the
+        // generic pk target, which nothing on the page carries).
+        const res = asUser(bob, () => rabid.subtask.saveForm({
+            subtask_id: String(item.subtask_id), title: 'Get quotes', 'before-title': 'Get qotes'})) as any;
+        assertEquals(res.targets, [`.-subtask-${task_id}-`]);
+        assertEquals(asSystem(() => rabid.subtask.getById(item.subtask_id)).title, 'Get quotes');
+
+        // Gated: a non-assignee cannot even render the form.
+        await asUser(carol, () => assertRejects(
+            () => renderRoute(`rabid.subtask.renderForm(rabid.subtask.getById(${item.subtask_id}))`),
+            Error, 'Not permitted'));
+    });
+});

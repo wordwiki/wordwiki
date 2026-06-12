@@ -52,16 +52,20 @@ export type ActionMode =
 
 /**
  * Render a button that invokes an action in one of the three supported forms.
+ * extraProps merge into the button's attributes - e.g. an aria-label for
+ * icon-only buttons ('×').
  */
 export function actionButton(label: string, mode: ActionMode,
-                             btnClass: string = 'btn btn-primary'): Markup {
+                             btnClass: string = 'btn btn-primary',
+                             extraProps: Record<string, string> = {}): Markup {
     switch(mode.kind) {
         case 'immediate':
             return [h.button, {type:'button', class:btnClass,
-                               onclick:`tx\`${mode.expr}\``}, label];
+                               onclick:`tx\`${mode.expr}\``, ...extraProps}, label];
         case 'confirm':
             return [h.button, {type:'button', class:btnClass,
-                               onclick:`if(confirm(${JSON.stringify(mode.message)})) tx\`${mode.expr}\``}, label];
+                               onclick:`if(confirm(${JSON.stringify(mode.message)})) tx\`${mode.expr}\``,
+                               ...extraProps}, label];
         case 'modal':
             // Same wiring as table.editButtonProps, minus the record-edit 'edit'
             // class: load the generated dialog into the modal body, then show it.
@@ -69,7 +73,7 @@ export function actionButton(label: string, mode: ActionMode,
                                'hx-get': mode.dialogUrl,
                                'hx-target': '#modalEditorBody',
                                'hx-swap': 'innerHTML',
-                               'hx-on::after-request': 'showModalEditor()'}, label];
+                               'hx-on::after-request': 'showModalEditor()', ...extraProps}, label];
     }
 }
 

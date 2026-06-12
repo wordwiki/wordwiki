@@ -184,6 +184,7 @@ export class CommitteeTable extends Table<Committee> {
             c.notes ? [h.p, {class: 'text-muted'}, c.notes] : undefined,
             [h.h4, {class: 'mt-3'}, 'Members'],
             rabid.volunteer_group.renderMemberEditor(c.group_id),
+            rabid.volunteer_group.addMemberButton(c.group_id),
         ];
     }
 }

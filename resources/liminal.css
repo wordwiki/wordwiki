@@ -148,6 +148,65 @@
 }
 
 /* ----------------------------------------------------------------------------
+   Chip list (inline membership-style lists)
+
+   The light-weight alternative to .lm-list rows for lists that are really
+   SETS of references - task assignees, committee members.  Chips wrap into
+   tidy lines; each holds a link to the entity and, when the viewer may edit,
+   a quiet × remove button.
+---------------------------------------------------------------------------- */
+
+.lm-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.lm-chip {
+    display: inline-flex;
+    align-items: center;
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: 50rem;
+    background-color: var(--bs-body-bg);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+/* The entity link reads as text - the chip is the visual unit. */
+.lm-chip > a {
+    color: var(--bs-body-color);
+    text-decoration: none;
+    padding: 0.25rem 0;       /* taller tap target without inflating the chip */
+}
+.lm-chip > a:hover {
+    text-decoration: underline;
+}
+
+/* The quiet × remove button (chips, checklist rows).  Ghosted like the
+   pencil and padded to a usable touch target; the confirm gate stays on the
+   action - only the trigger got smaller. */
+.lm-remove-x {
+    flex: 0 0 auto;
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color);
+    font-size: 1.125rem;
+    line-height: 1;
+    padding: 0.375rem 0.625rem;
+    margin: -0.375rem;
+    border-radius: 50rem;
+}
+/* Tuck the × into the pill's right end. */
+.lm-chip .lm-remove-x {
+    margin: -0.375rem -0.625rem -0.375rem -0.125rem;
+}
+.lm-remove-x:hover,
+.lm-remove-x:focus-visible {
+    color: var(--bs-danger);
+    background-color: var(--bs-secondary-bg);
+}
+
+/* ----------------------------------------------------------------------------
    Photos (liminal/photo.ts + ImageField)
 ---------------------------------------------------------------------------- */
 
