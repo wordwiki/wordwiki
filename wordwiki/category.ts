@@ -35,10 +35,13 @@ import { Table, PrimaryKeyField, BooleanField, StringField, navChevron } from ".
 import { path } from "../liminal/serializable.ts";
 import { block } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
+import { panic } from "../liminal/utils.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
+import * as entrySchema from './entry-schema.ts';
+import type { WordWiki } from './wordwiki.ts';
 
 const admin = security.hasRole('admin');
 
@@ -144,7 +147,11 @@ export type CategoryOpt = Partial<Category>;
 
 export class CategoryTable extends Table<Category> {
 
-    constructor() {
+    // The app back-reference (same pattern as LexemeEditor): the detail page
+    // reaches across into the assertion world (entries in this category, the
+    // remove verb via app.lexemeOps).  Optional so the table stays usable
+    // standalone (tests of the pure-db parts construct it bare).
+    constructor(private app?: WordWiki) {
         super('category', [
             new PrimaryKeyField('category_id', {}),
             new SlugField('slug', {indexed: true, unique: true, edit: onCreateOnly,
@@ -312,7 +319,68 @@ export class CategoryTable extends Table<Category> {
              row('Description', c.description || '—'),
              row('Tagger notes', c.tagger_notes || '—'),
             ],
+            this.renderCategoryEntries(c),
         ];
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Entries in this category (the assertion world) ----------------------
+    // ------------------------------------------------------------------------
+
+    // ALL entries carrying this category - including unpublished ones (this
+    // is a curation page; you must be able to see and fix an InProgress
+    // entry's tags).  Sorted by spelling.
+    private entriesForSlug(slug: string): entrySchema.Entry[] {
+        if(!this.app) return [];
+        const all = Array.from(this.app.entriesById.values());
+        const has = (e: entrySchema.Entry) =>
+            e.subentry.some(s => s.category.some(c => c.category === slug));
+        return all.filter(has).sort((a, b) => nameCollator.compare(
+            entrySchema.renderEntrySpellingsSummary(a),
+            entrySchema.renderEntrySpellingsSummary(b)));
+    }
+
+    private renderCategoryEntries(c: Category): Markup {
+        if(!this.app) return undefined;
+        const entries = this.entriesForSlug(c.slug);
+        return [
+            ['h4', {class: 'mt-4 mb-2'}, `Entries (${entries.length})`],
+            entries.length === 0
+                ? ['p', {class: 'text-muted'}, 'No entries carry this category.']
+                : ['div', {class: 'list-group lm-list'},
+                   entries.map(e => this.renderCategoryEntryRow(c, e))]];
+    }
+
+    private renderCategoryEntryRow(c: Category, e: entrySchema.Entry): Markup {
+        const spelling = entrySchema.renderEntrySpellingsSummary(e);
+        const glosses = e.subentry.flatMap(s => s.gloss.map(g => g.gloss))
+            .filter(Boolean).join(' / ');
+        // Rows navigate (to the lexeme editor); the remove is a confirm
+        // button - it mutates ASSERTION data, so it goes through the
+        // wordwiki.categories.removeEntry verb (-> app.lexemeOps), not the
+        // table's own row editing.
+        return ['div', {class: 'list-group-item lm-item d-flex align-items-center'},
+            ['div', {class: 'lm-item-body'},
+             ['div', {class: 'lm-item-primary'},
+              ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexeme.entryPage(${e.entry_id})`),
+                     class: 'lm-nav-link'}, spelling]],
+             ['div', {class: 'lm-item-secondary'}, glosses]],
+            action.actionButton('Remove',
+                {kind: 'confirm',
+                 message: `Remove “${spelling}” from ${c.name || c.slug}?`,
+                 expr: `wordwiki.categories.removeEntry(${c.category_id}, ${e.entry_id})`},
+                'btn btn-outline-danger btn-sm'),
+        ];
+    }
+
+    /** The remove verb: tombstone the entry's cat tuple(s) for this
+     *  category (LexemeOps does the assertion work and enforces the
+     *  logged-in requirement), then reload the detail fragment. */
+    removeEntry(category_id: number, entry_id: number): any {
+        const c = this.getById(category_id);
+        const app = this.app ?? panic('category table has no app reference');
+        app.lexemeOps.removeEntryFromCategory(entry_id, c.slug);
+        return {action: 'reload', targets: [`.-category-${category_id}-`]};
     }
 
     // The create dialog: the record form over an empty record (renderForm

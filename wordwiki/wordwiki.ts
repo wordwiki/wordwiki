@@ -34,6 +34,7 @@ import * as date from '../liminal/date.ts';
 import {serialize, path} from '../liminal/serializable.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
+import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
 import * as categoryImport from './category-import.ts';
@@ -85,7 +86,7 @@ export class WordWiki extends LiminalApp {
     @path get users() { return new user.UserTable(); }
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
-    @path get categories() { return new category.CategoryTable(); }
+    @path get categories() { return new category.CategoryTable(this); }
     @path get lexicalForms() { return new lexicalForm.LexicalFormTable(); }
 
     // The new-style tables (auto-created at startup; the legacy raw-DML tables
@@ -107,6 +108,14 @@ export class WordWiki extends LiminalApp {
     #lexeme: LexemeEditor|undefined = undefined;
     get lexeme(): LexemeEditor {
         return this.#lexeme ??= new LexemeEditor(this);
+    }
+
+    // The assertion-mutation domain verbs (lexeme-ops.ts), shared by the
+    // lexeme editor and the table pages' buttons.  Not itself a dispatch
+    // target: pages expose their own verbs and delegate here.
+    #lexemeOps: LexemeOps|undefined = undefined;
+    get lexemeOps(): LexemeOps {
+        return this.#lexemeOps ??= new LexemeOps(this);
     }
 
     // ----- New-style pages ----------------------------------------------------

@@ -58,6 +58,7 @@ import * as utils from '../liminal/utils.ts';
 import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
+import {newId, placeholderTxTime, isTombstone} from './lexeme-ops.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
@@ -289,24 +290,8 @@ function setAssertionFields(assertion: Assertion, rel: model.RelationField,
     }
 }
 
-// New fact/assertion ids use the same scheme as the rest of the system (see
-// the id-allocation TODOs in assertion-model.md) - but now allocated in one
-// place, on the server.
-function newId(): number {
-    return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-}
-
-// Placeholder tx time: applyTransaction rewrites every assertion in the tx to
-// a freshly allocated server timestamp (it only requires the tx's assertions
-// to share this placeholder, and tombstones to have valid_to === valid_from).
-function placeholderTxTime(): number {
-    return timestamp.nextTime(timestamp.BEGINNING_OF_TIME);
-}
-
-// A tombstone marks a deletion: a version whose valid period is empty.
-function isTombstone(a: Assertion): boolean {
-    return a.valid_from === a.valid_to;
-}
+// newId/placeholderTxTime/isTombstone moved to lexeme-ops.ts (shared with
+// the table pages' assertion verbs); imported above.
 
 // ---------------------------------------------------------------------------
 // --- The editor --------------------------------------------------------------
@@ -781,34 +766,24 @@ export class LexemeEditor {
         return this.reload(this.mutationTargets(entry_id, newAssertion, 'parent'));
     }
 
-    /** Delete = a tombstone assertion (valid_from === valid_to).  Children
-     *  must be deleted first (same rule as the old editor). */
+    /** Delete = a tombstone assertion (see LexemeOps.tombstoneFact - the
+     *  mutation and its race handling live there); this method only
+     *  translates the outcome into the editor's alerts/reload targets. */
     deleteTuple(entry_id: number, fact_id: number): any {
-        const tuple = this.findTupleInEntry(entry_id, fact_id);
-        if(tuple.findNonDeletedChildTuples().length > 0)
-            return {action: 'alert',
-                    message: 'Cannot delete an item that still has child items - please delete those first.'};
-        const mostRecent = tuple.mostRecentTuple;
-        // Already deleted (e.g. a stale dialog's delete racing another user's):
-        // deleting is idempotent - just refresh.  Without this check we would
-        // chain a tombstone onto a tombstone.
-        if(!mostRecent || !mostRecent.isCurrent)
-            return this.reload(mostRecent
-                ? this.mutationTargets(entry_id, mostRecent.assertion, 'parent')
-                : [this.rootTarget(entry_id)]);
-        const current = mostRecent.assertion;
-
-        const t = placeholderTxTime();
-        const tombstone: Assertion = {
-            ...current,
-            assertion_id: newId(),
-            replaces_assertion_id: current.assertion_id,
-            valid_from: t,
-            valid_to: t,
-            ...this.changeStamp(),
-        };
-        this.app.applyTransaction([tombstone]);
-        return this.reload(this.mutationTargets(entry_id, current, 'parent'));
+        const r = this.app.lexemeOps.tombstoneFact(entry_id, fact_id);
+        switch(r.outcome) {
+            case 'has-children':
+                return {action: 'alert',
+                        message: 'Cannot delete an item that still has child items - please delete those first.'};
+            case 'already-deleted':
+                // A stale dialog's delete racing another user's: idempotent -
+                // just refresh.
+                return this.reload(r.mostRecent
+                    ? this.mutationTargets(entry_id, r.mostRecent, 'parent')
+                    : [this.rootTarget(entry_id)]);
+            case 'removed':
+                return this.reload(this.mutationTargets(entry_id, r.replaced, 'parent'));
+        }
     }
 
     /** Reorder within the parent relation by re-asserting with a fresh
@@ -960,7 +935,7 @@ export class LexemeEditor {
     // Stamped into every assertion this editor creates.  (Assertions built by
     // spreading a previous version would otherwise inherit ITS author.)
     private changeStamp(): Pick<Assertion, 'change_by_username'> {
-        return {change_by_username: this.app.currentUsername()};
+        return this.app.lexemeOps.changeStamp();
     }
 
     private rootTarget(entry_id: number): string {
@@ -986,16 +961,10 @@ export class LexemeEditor {
     // ------------------------------------------------------------------------
 
     private entryTuple(entry_id: number): VersionedTuple {
-        const dict = this.app.workspace.getTableByTag(entrySchema.DictTag);
-        return dict.childRelations[entrySchema.EntryTag]?.tuples.get(entry_id)
-            ?? panic('entry not found', entry_id);
+        return this.app.lexemeOps.entryTuple(entry_id);
     }
 
-    // Tuples are addressed as (entry_id, fact_id) so the search is scoped to
-    // the entry's (small) subtree rather than the whole dictionary.
     private findTupleInEntry(entry_id: number, fact_id: number): VersionedTuple {
-        const entryTuple = this.entryTuple(entry_id);
-        if(fact_id === entry_id) return entryTuple;
-        return entryTuple.findRequiredVersionedTupleById(fact_id);
+        return this.app.lexemeOps.findTupleInEntry(entry_id, fact_id);
     }
 }
