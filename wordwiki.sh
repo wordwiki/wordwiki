@@ -25,8 +25,12 @@ set -e
 #                                      # named pages, e.g. entries/samqwan);
 #                                      # leaves a running server alone
 #   ./wordwiki.sh stop                 # stop the server, nothing else
+#   ./wordwiki.sh repair-assertions    # idempotent structural fixes of store
+#                                      # corruption (refuses production db)
 #   ./wordwiki.sh verify-migration     # read-only post-migration sanity
 #                                      # checks (exit 1 on failure)
+#   ./wordwiki.sh verify-workspace     # read-only structural invariants of
+#                                      # the whole assertion store (exit 1)
 #
 # The whole pull-and-migrate rehearsal is packaged as ./migrateDevDb.sh
 # (which also documents the eventual production-cutover recipe).

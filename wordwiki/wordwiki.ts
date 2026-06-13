@@ -42,6 +42,7 @@ import * as lexicalForm from './lexical-form.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
 import * as migrationVerify from './migration-verify.ts';
 import { validateVersionedDb } from './versioned-db-validate.ts';
+import { repairAssertions } from './repair-assertions.ts';
 
 /**
  *
@@ -1458,6 +1459,24 @@ if (import.meta.main) {
         // Read-only post-migration sanity checks (see migration-verify.ts);
         // exit 1 on violated invariants.  [dir] supplies scheme.md for the
         // exact scheme-vs-table check (defaults like import-categories).
+        // Idempotent structural repairs of the assertion store (repair-
+        // assertions.ts): fixes corruption surfaced by verify-workspace -
+        // currently dangling chain heads. A no-op on a clean db, so it rides
+        // in the repeatable migration flow (migrateDevDb.sh). Refuses a
+        // production db without --allow-production, like the imports.
+        case 'repair-assertions': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                const stats = repairAssertions({log: (m) => console.info(m)});
+                console.info(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
         // Structural validation of the persisted versioned model (read-only):
         // load the whole dict into the workspace and run the invariant sweep
         // (versioned-db-validate.ts). Exit 1 on any problem.
