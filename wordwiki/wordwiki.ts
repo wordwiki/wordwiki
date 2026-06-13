@@ -41,6 +41,7 @@ import * as categoryImport from './category-import.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
 import * as migrationVerify from './migration-verify.ts';
+import { validateVersionedDb } from './versioned-db-validate.ts';
 
 /**
  *
@@ -1457,6 +1458,21 @@ if (import.meta.main) {
         // Read-only post-migration sanity checks (see migration-verify.ts);
         // exit 1 on violated invariants.  [dir] supplies scheme.md for the
         // exact scheme-vs-table check (defaults like import-categories).
+        // Structural validation of the persisted versioned model (read-only):
+        // load the whole dict into the workspace and run the invariant sweep
+        // (versioned-db-validate.ts). Exit 1 on any problem.
+        case 'verify-workspace': {
+            const problems = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                return validateVersionedDb(ww.workspace);
+            });
+            for(const p of problems)
+                console.error(`PROBLEM [${p.invariant}] ${p.path}: ${p.detail}`);
+            console.info(`verify-workspace: ${problems.length} problem(s)`);
+            Deno.exit(problems.length === 0 ? 0 : 1);
+            break;
+        }
+
         case 'verify-migration': {
             const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
                 ?? `${Deno.env.get('HOME')}/wordwiki/categorization`;
