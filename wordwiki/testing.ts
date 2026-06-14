@@ -25,6 +25,7 @@ import * as timestamp from '../liminal/timestamp.ts';
 import type { Markup } from '../liminal/markup.ts';
 import { db } from '../liminal/db.ts';
 import { openTestDb, clearAllData } from '../liminal/testing/db-harness.ts';
+import { backfillPublication } from './publication-backfill.ts';
 
 // The legacy raw-DML tables (created by createAllTables, cleared here
 // by name - they are not liminal Tables).
@@ -80,6 +81,15 @@ export function as<T>(fx: Fixture, spec: ActorSpec | string, fn: () => T): T {
         return security.run({actorId, roles: security.rolesFromPermissionsField(u.permissions)}, fn);
     }
     return security.run({actorId: spec.actorId, roles: new Set(spec.roles)}, fn);
+}
+
+// Born-approve the test's Completed-status data (the Phase 0 mute) and rebuild
+// the in-RAM workspace from the updated db, so `publishedEntries` (now the
+// published projection AND status) sees it. For tests that seed Completed
+// entries and then exercise the public renderer.
+export function bornApprove(ww: WordWiki): void {
+    backfillPublication();
+    ww.requestWorkspaceReload();
 }
 
 // --- Dispatching routes as the current actor --------------------------------

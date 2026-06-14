@@ -56,6 +56,7 @@ export class WordWiki extends LiminalApp {
     #entriesById: Map<number, entry.Entry>|undefined = undefined;
     #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
     #publishedEntries: any|undefined = undefined;
+    #publishedProjection: entry.Entry[]|undefined = undefined;
     #publishedEntriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
     #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
     #entryCountByPage: Array<[number, number]>|undefined = undefined;
@@ -188,6 +189,7 @@ export class WordWiki extends LiminalApp {
         this.#entriesById = undefined;
         // This needs to be more complicated when publishing multiple dialects.
         this.#publishedEntries = undefined;
+        this.#publishedProjection = undefined;
         this.#publishedEntriesByCategory = undefined;
         this.#entriesByReferenceGroupId = undefined;
         this.#entryCountByPage = undefined;
@@ -201,9 +203,29 @@ export class WordWiki extends LiminalApp {
             new workspace.CurrentTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry;
     }
 
+    /**
+     * The PUBLISHED projection of the dictionary (publication-model.md): every
+     * entry built from its published-current facts (published_to=END_OF_TIME),
+     * not its valid-current facts. After the Phase 0 backfill this equals the
+     * valid projection for approved data; once pending edits exist it diverges
+     * (the public sees the last approved value, not the in-flight one).
+     */
+    get publishedProjection(): entry.Entry[] {
+        return this.#publishedProjection ??=
+            new workspace.PublishedTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry ?? [];
+    }
+
+    /**
+     * The entries the public site renders. TWO gates (dz): the entry's status
+     * is Completed (the lexeme is "ready" - isPublished, unchanged) AND its
+     * facts are published. So the base projection is the PUBLISHED one (per-fact
+     * approval), filtered by status. Approval is used while building too, so an
+     * in-progress entry may carry published facts, but stays off the public site
+     * until its status reaches Completed.
+     */
     get publishedEntries(): entry.Entry[] {
         return this.#publishedEntries ??=
-            Array.from(this.entries.filter(e=>entry.isPublished(e)));
+            Array.from(this.publishedProjection.filter(e=>entry.isPublished(e)));
     }
 
     get entriesByReferenceGroupId(): Map<number, entry.Entry> {

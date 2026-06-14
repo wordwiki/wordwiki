@@ -6,7 +6,7 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { withTestDb, as, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
+import { withTestDb, as, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
 import { Publish, PublishStatus } from "./publish.ts";
 import { renderAudio } from "./audio.ts";
 import { markupToString } from "../liminal/markup.ts";
@@ -43,6 +43,7 @@ test("warnMissingRecordings: warnings (not errors), once per entry", async () =>
     await withTestDb((fx: Fixture) => {
         as(fx, 'djz', () => {
             seedEntryWithMissingRecordings(fx.ww);
+            bornApprove(fx.ww);  // the public site is the published projection now
             const status = new PublishStatus();
             status.start();
             const pub = new Publish(status, fx.ww, fx.ww.publishedEntries);

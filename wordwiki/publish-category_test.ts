@@ -7,7 +7,7 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assertEquals } from "../liminal/testing/assert.ts";
-import { withTestDb, as, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
+import { withTestDb, as, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
 import { Publish, PublishStatus } from "./publish.ts";
 
 // A PUBLISHED entry (status Completed) with one subentry carrying the given
@@ -28,6 +28,7 @@ function seedPublishedEntry(ww: any, tl: TestTimeline, entryId: number,
 }
 
 function mkPublish(fx: Fixture): Publish {
+    bornApprove(fx.ww);  // the public site is the published projection now
     return new Publish(new PublishStatus(), fx.ww, fx.ww.publishedEntries);
 }
 

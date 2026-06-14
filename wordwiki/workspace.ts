@@ -428,6 +428,14 @@ export class TupleVersion {
         return this.assertion.valid_to === timestamp.END_OF_TIME;
     }
 
+    /** This version is the fact's currently-published truth (the public view -
+     *  see publication-model.md). At most one version per fact is (I2), and it
+     *  may not be the most recent (an approved value while a pending edit sits
+     *  on top). */
+    get isPublished(): boolean {
+        return this.assertion.published_to === timestamp.END_OF_TIME;
+    }
+
     // The version's domain values keyed by schema field NAME (the $bind
     // mapping applied).  Memoization is safe because the only field the
     // workspace ever mutates on an applied assertion is valid_to, which is
@@ -578,6 +586,54 @@ export class CurrentRelationQuery extends VersionedRelationQuery {
 
         const inUserOrder =
             currentTupleQuerys.toSorted(([_aId, aTup], [_bId, bTup]) =>
+                compareVersionedTupleAssertionByOrderKey(
+                    aTup.mostRecentTupleVersion!, bTup.mostRecentTupleVersion!));
+
+        return new Map(inUserOrder);
+    }
+}
+
+// -------------------------------------------------------------------------------
+// --- The PUBLISHED view (the public projection - publication-model.md) -------------
+// -------------------------------------------------------------------------------
+//
+// Parallel to the Current* query: presents each fact's currently-PUBLISHED
+// version (published_to === END_OF_TIME) instead of its valid-current version,
+// and a fact appears only if it has one (so a published parent with a pending
+// child shows the parent without the unapproved child; a pending edit shows the
+// last approved value). The public site renders this, gated additionally by the
+// entry's status (see WordWiki.publishedEntries).
+
+export class PublishedTupleQuery extends VersionedTupleQuery {
+    declare childRelations: Record<Tag, PublishedRelationQuery>;
+
+    computeTuples(): TupleVersion[] {
+        // The published-current version (at most one per fact, by I2).
+        return this.src.tupleVersions.
+            filter(tv => tv.isPublished).
+            toSorted(compareVersionedTupleByRecentness);
+    }
+
+    computeChildRelations(): Record<Tag, VersionedRelationQuery> {
+        return Object.fromEntries(Object.entries(this.src.childRelations).
+                map(([tag,rel]) => [tag, new PublishedRelationQuery(rel)]));
+    }
+}
+
+export class PublishedRelationQuery extends VersionedRelationQuery {
+    declare tuplesById: Map<number,PublishedTupleQuery>;
+    declare tuples: PublishedTupleQuery[];
+
+    computeCurrentTuplesById(): Map<number, PublishedTupleQuery> {
+        // Facts that HAVE a published-current version (which need NOT be the
+        // most recent), in user (order_key) order of that published version.
+        const queries = [...this.src.tuples.entries()]
+            .filter(([_id, tup]) => tup.tupleVersions.some(tv => tv.isPublished))
+            .map(([id, tup]): [number, PublishedTupleQuery] =>
+                [id, new PublishedTupleQuery(tup)]);
+
+        const inUserOrder =
+            queries.toSorted(([_aId, aTup], [_bId, bTup]) =>
                 compareVersionedTupleAssertionByOrderKey(
                     aTup.mostRecentTupleVersion!, bTup.mostRecentTupleVersion!));
 
