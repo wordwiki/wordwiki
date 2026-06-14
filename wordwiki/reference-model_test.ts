@@ -85,7 +85,7 @@ const pick = <T>(rng: () => number, xs: T[]): T => xs[randInt(rng, xs.length)];
 // expose apply + the publication operations with identical signatures.
 interface TestModel {
     apply(a: Assertion): void;
-    approve(id: number, who: string, now: number, aid: number): void;
+    approve(id: number, who: string, now: number, aid: number, opts?: { allowSelfApprove?: boolean }): void;
     revert(id: number, who: string, note: string, now: number, aid: number): void;
     comment(id: number, who: string, note: string, now: number, aid: number): void;
 }
@@ -106,6 +106,8 @@ function genOp(rng: () => number, oracle: ReferenceModel,
     if (live.length) choices.push("edit", "edit", "del", "move", "stale", "revert", "comment");
     if (dead.length) choices.push("restore");
     if (pendingFacts.length) choices.push("approve", "approve");
+    const pendingWithAuthor = pendingFacts.filter((h) => h.contentAuthor);
+    if (pendingWithAuthor.length) choices.push("approveSelf");
     const op = pick(rng, choices);
 
     const tok = () => "v" + Math.floor(rng() * 1e6).toString(36);
@@ -151,6 +153,15 @@ function genOp(rng: () => number, oracle: ReferenceModel,
             const now = nextClock(), aid = nextId();
             return { run: (m) => m.approve(h.id, approver, now, aid), expectReject: false,
                      desc: `approve ${h.path} by ${approver}` };
+        }
+        case "approveSelf": {
+            // The author approves their own content: rejected unless the
+            // self-approve workaround is allowed. Both models must agree.
+            const h = pick(rng, pendingWithAuthor);
+            const allow = rng() < 0.5;
+            const now = nextClock(), aid = nextId();
+            return { run: (m) => m.approve(h.id, h.contentAuthor!, now, aid, { allowSelfApprove: allow }),
+                     expectReject: !allow, desc: `approveSelf ${h.path} allow=${allow}` };
         }
         case "revert": {
             const h = pick(rng, live);

@@ -167,13 +167,19 @@ export class ReferenceModel implements VersionedModel {
     }
 
     /** Approve the fact's pending content: re-assert it as published, and close
-     *  the prior published version. Requires a senior ≠ the content's author
-     *  (the two-person rule). Refuses if the fact is not pending. */
-    approve(factId: number, approver: string, now: number, assertionId: number): void {
+     *  the prior published version. The approver must differ from the author of
+     *  the change being approved (the two-person rule) — unless allowSelfApprove
+     *  is set (the workaround, granted in production by a self-approve
+     *  permission; a self-approval is self-documenting — approver === author on
+     *  an approved version). Production also checks the approver holds
+     *  approve-permission; that's a role check, not part of the pure model.
+     *  Refuses if the fact is not pending. */
+    approve(factId: number, approver: string, now: number, assertionId: number,
+            opts: { allowSelfApprove?: boolean } = {}): void {
         const content = this.#latestContentVersion(factId);
         if (!content) throw new Error(`fact ${factId} has no content to approve`);
         if (content.published_from != null) throw new Error(`fact ${factId} is not pending`);
-        if (content.change_by_username === approver)
+        if (content.change_by_username === approver && !opts.allowSelfApprove)
             throw new Error(`approver must differ from the content's author (two-person rule)`);
         const tip = this.#latest(factId);
         const prevPublished = this.#publishedCurrent(factId);

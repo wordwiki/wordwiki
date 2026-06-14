@@ -116,12 +116,23 @@ a version row; `change_action` labels it.
    `change_action='assert'`, `published_from` null (pending). The valid chain
    advances. Needs approval.
 
-2. **Approve** *(senior ≠ content author)* — **re-assert** the pending value
-   with `change_action='approved'`; the new row becomes valid-current and
+2. **Approve** *(a user with **approve-permission**, ≠ the author of the change
+   being approved)* — **re-assert** the pending value with
+   `change_action='approved'`; the new row becomes valid-current and
    published-current, and the predecessor's `published_to` closes at the same
    instant (gap-free, overlap-free). The approval row's author is the approver.
    (dz's model: every fact edit is naturally two rows — the assert and the
    approve — and "approved-by" lives on the chain as that second row.)
+   **The workaround** (dz, after the language team): the "≠ the contributor"
+   half has an escape hatch — a user granted a **self-approve permission** may
+   approve their own content (a sole approver on a small project). It is
+   self-documenting: an `approved` version whose author equals the content's
+   author *is* a recorded single-signature approval, queryable in the audit.
+   The two layers: the *permission* checks (holds approve-permission; may
+   self-approve) live in the production verb (`LexemeOps` + `security`); the
+   *two-person* rule is an overridable guard in the model itself
+   (`approve(…, {allowSelfApprove})`), so the spec expresses it and the
+   property test checks both implementations enforce it identically.
 
 3. **Revert** *(senior ≠ author)* — undo a change by **re-asserting a prior
    published value**, `change_action='reverted'`, **required note**,
@@ -214,16 +225,17 @@ In the `verify-migration` spirit — write these the week the columns go live.
   handoff (approve / revert) they are **gap-free**
   (`old.published_to === new.published_from`). Deletions intentionally leave no
   open published interval.
-- **I4 — the two-person rule.** Every version with a `published_from` is
-  legitimate iff **either** (a) its `change_by_username` (the publisher) ≠ the
-  author of the content it publishes — found by walking back to the content's
-  originating `assert` — and the publisher holds the senior role; **or** (b)
-  its content equals a *prior published* value of the same fact and the
-  publisher holds the senior role (reject/revert — no *new* value enters
-  publication, so the reviewer's single revert signature suffices). Stated as a value
-  rule: **every newly-published value-state needs an independent approver;
-  re-publishing a previously-approved value needs only senior authority.**
-- **I5** — the publishing row's author holds the senior role.
+- **I4 — the two-person rule** *(a WRITE-TIME check, not a stored-data
+  invariant — the data carries no roles, so this is enforced in the production
+  verb, not by the validator).* An `approved` version is legitimate iff its
+  author **holds approve-permission** and **differs from the author of the
+  change being approved** — *unless* the author holds the **self-approve
+  permission** (the workaround), in which case a single-signature self-approval
+  is allowed and recorded (approver === content author). A `reverted` version
+  re-publishes a *previously-published* value — no new value enters publication
+  — so it needs only the reverter's own authority (the carve-out). Grandfathered
+  rows (below) are exempt: they predate the system and have no approver.
+- **I5** — the publishing row's author holds approve-permission (write-time).
 - **I6** — `published_from ≥ valid_from`.
 - **I7** — tombstones (`valid_from === valid_to`) carry no published interval; a
   retraction publishes by *closing the predecessor's* `published_to`.
@@ -324,14 +336,24 @@ migration — **backfill first, preserving equivalence, then change behavior**:
   different time-space than `valid_from`). So Phase 0 must **first clear this
   placeholder** (`UPDATE dict SET published_from = NULL, published_to = NULL`
   where it equals the constant — verified by `verify-workspace`-style checks),
-  then backfill every currently-public version (today's `status`-Completed set):
-  `published_from = valid_from`, `published_to = valid_to` (current versions get
-  `END_OF_TIME`). These are published `assert` rows with no approving successor
-  — the grandfather signature (§6). The new public query
-  (`published_to = END_OF_TIME`) is then *equivalent* to today's status filter.
-  Run I1–I8 on the result. (The clear-then-backfill is a natural new
-  `repair-assertions`/migration step, rehearsed against every dev pull like the
-  rest of the flow.)
+  then **born-approve the existing dictionary by MUTE-IN-PLACE — NOT by adding
+  approval rows** (dz, after the language team: the predecessor system already
+  approved this data via its `status` field; adding an `approved` re-assertion
+  to every chain would roughly *double* the ~226k rows for no benefit). So for
+  every fact under a `status`-`Completed`/`CompletedAsPDMOnly` entry, **stamp**
+  `published_from = valid_from`, `published_to = END_OF_TIME` directly onto its
+  **current** version — in place, like the category mute. (Only the current
+  version: the predecessor carried no per-version publish timestamps, so
+  historical published intervals are unknowable and left empty — the public
+  view needs only the current published state.) In-progress entries are left
+  unstamped → correctly *pending* in the new model ("most, not all"). A
+  born-approved row is then a *published row that is not an `approved`/`reverted`
+  re-assertion* — exactly the **grandfather signature** (§6), which I4 exempts:
+  its audit reads "imported as approved," not "approved by *X*" (the
+  predecessor's status is its approval record). After this the public query
+  (`published_to = END_OF_TIME`) is *equivalent* to today's status filter. Run
+  I1–I8. (Clear-then-stamp is a new idempotent `repair-assertions`-style
+  migration step, rehearsed against every dev pull like the rest of the flow.)
 - **Phase 1 — dual-run.** Public renderer switches to the published query
   (equivalent post-backfill). New edits set the published dimension correctly;
   to avoid blocking the team before the queue UI exists, trusted editors may

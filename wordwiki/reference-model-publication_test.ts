@@ -84,11 +84,19 @@ test("approval gates publication, not editing; pending tracks the content", () =
     assertEquals(valid(m), []);
 });
 
-test("the two-person rule: you cannot approve your own content", () => {
+test("the two-person rule, and the self-approve workaround", () => {
     const m = new ReferenceModel(); const c = mk();
     assertEntry(m, 10, "ana", c.now(), 100, "water");
+    // ana cannot approve her own content...
     const e = assertThrows(() => m.approve(10, "ana", c.now(), c.id()), Error);
     assertStringIncludes((e as Error).message, "two-person");
+    // ...unless the self-approve workaround is granted (a sole approver). The
+    // self-approval is self-documenting: approver === content author.
+    m.approve(10, "ana", c.now(), c.id(), { allowSelfApprove: true });
+    assertEquals(val(m.publishedView(), "dct/ent:10"), "water");
+    const pub = m.factViews()[0].versions.at(-1)!;
+    assertEquals(pub.change_action, "approved");
+    assertEquals(valid(m), []);
 });
 
 test("revert restores the last published value on one signature (carve-out)", () => {

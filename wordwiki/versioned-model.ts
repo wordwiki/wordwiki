@@ -133,8 +133,9 @@ export class VersionedDbModel implements VersionedModel {
 
     // The publication operations, over the real workspace (publication-ops.ts).
     // The OpResult persist-set is irrelevant in-RAM (the test compares state).
-    approve(factId: number, approver: string, now: number, assertionId: number): void {
-        pubOps.approve(this.vdb, factId, approver, now, assertionId);
+    approve(factId: number, approver: string, now: number, assertionId: number,
+            opts: { allowSelfApprove?: boolean } = {}): void {
+        pubOps.approve(this.vdb, factId, approver, now, assertionId, opts);
     }
     revert(factId: number, reverter: string, note: string, now: number, assertionId: number): void {
         pubOps.revert(this.vdb, factId, reverter, note, now, assertionId);

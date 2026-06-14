@@ -63,14 +63,18 @@ function buildReassertion(contentFrom: Assertion, tip: Assertion, f: {
 }
 
 /** Approve the fact's pending content: re-assert it as published, close the
- *  prior published version. Requires a senior ≠ the content's author. */
+ *  prior published version. The approver must differ from the change's author
+ *  (the two-person rule) unless allowSelfApprove is set (the production layer
+ *  grants this via a self-approve permission, and separately checks the
+ *  approver holds approve-permission). */
 export function approve(vdb: VersionedDb, factId: number, approver: string,
-                        now: number, assertionId: number): OpResult {
+                        now: number, assertionId: number,
+                        opts: { allowSelfApprove?: boolean } = {}): OpResult {
     const vs = versionsOf(tupleOf(vdb, factId));
     const content = latestContent(vs);
     if (!content) throw new Error(`fact ${factId} has no content to approve`);
     if (content.published_from != null) throw new Error(`fact ${factId} is not pending`);
-    if (content.change_by_username === approver)
+    if (content.change_by_username === approver && !opts.allowSelfApprove)
         throw new Error(`approver must differ from the content's author (two-person rule)`);
     const tip = latest(vs);
     const prevPublished = publishedCurrent(vs);
