@@ -1,10 +1,15 @@
 # Wordwiki Architecture Proposal — the Publication / Approval Model
 
-*Status: **PROPOSAL** (written 2026-06-12, revised 2026-06-13, from a design
-conversation between dz and Claude). Nothing here is built yet. This is the
-design we converged on for the `published_from`/`published_to` dimension and
-the review/approval workflow that hangs off it. It extends, and assumes, the
-existing [assertion model](assertion-model.md).*
+*Status: **PARTLY BUILT** (designed 2026-06-12/13, implementation 2026-06-14
+onward, dz + Claude). The model's logic is built and tested behind an
+oracle/property-test harness; the data is migrated. **Built:** the columns; the
+operations (assert/approve/revert/comment as `LexemeOps` verbs over
+`publication-ops.ts`, property-tested against the in-core reference oracle);
+`publishedView`/`pending` queries; the structural invariants in the validator;
+Phase 0 (born-approve backfill, in the rehearsed migration flow); Phase 1 (the
+public renderer switched to the published projection AND status). **Not yet
+built:** the review UI; opening to untrusted contributors (Phase 3). It
+extends, and assumes, the existing [assertion model](assertion-model.md).*
 
 *Design posture (dz): this versioned model is already complex, and its
 durability rests on two people — a future archivist reconstructing it cold
