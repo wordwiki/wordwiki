@@ -17,6 +17,7 @@
  */
 import { Assertion, getAssertionPath } from "./assertion.ts";
 import { VersionedDb, CurrentTupleQuery } from "./workspace.ts";
+import * as pubOps from "./publication-ops.ts";
 
 // --- The canonical, comparable observable shapes --------------------------------
 
@@ -128,6 +129,18 @@ export class VersionedDbModel implements VersionedModel {
         // valid_to in place; we keep the caller's object (and the oracle's
         // copy) untouched.
         this.vdb.applyProposedAssertion(structuredClone(assertion));
+    }
+
+    // The publication operations, over the real workspace (publication-ops.ts).
+    // The OpResult persist-set is irrelevant in-RAM (the test compares state).
+    approve(factId: number, approver: string, now: number, assertionId: number): void {
+        pubOps.approve(this.vdb, factId, approver, now, assertionId);
+    }
+    revert(factId: number, reverter: string, note: string, now: number, assertionId: number): void {
+        pubOps.revert(this.vdb, factId, reverter, note, now, assertionId);
+    }
+    comment(factId: number, commenter: string, note: string, now: number, assertionId: number): void {
+        pubOps.comment(this.vdb, factId, commenter, note, now, assertionId);
     }
 
     fullHistory(): FactHistory[] {

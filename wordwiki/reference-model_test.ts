@@ -81,7 +81,17 @@ const pick = <T>(rng: () => number, xs: T[]): T => xs[randInt(rng, xs.length)];
 
 // --- The generator ----------------------------------------------------------------
 
-interface Op { assertion: Assertion; expectReject: boolean; desc: string; }
+// The op runs against either model (ReferenceModel / VersionedDbModel) - both
+// expose apply + the publication operations with identical signatures.
+interface TestModel {
+    apply(a: Assertion): void;
+    approve(id: number, who: string, now: number, aid: number): void;
+    revert(id: number, who: string, note: string, now: number, aid: number): void;
+    comment(id: number, who: string, note: string, now: number, aid: number): void;
+}
+interface Op { run: (m: TestModel) => void; expectReject: boolean; desc: string; }
+
+const USERS = ["ua", "ub", "uc"];
 
 function genOp(rng: () => number, oracle: ReferenceModel,
                nextClock: () => number, nextId: () => number): Op {
@@ -89,51 +99,76 @@ function genOp(rng: () => number, oracle: ReferenceModel,
     const live = handles.filter((h) => h.live);
     const dead = handles.filter((h) => !h.live);
     const parents = live.filter((h) => (SCHEMA_INDEX.get(h.ty)?.length ?? 0) > 0);
+    const pendingFacts = handles.filter((h) => h.pending);
 
     const choices: string[] = ["addEntry"];
     if (parents.length) choices.push("addChild", "addChild");
-    if (live.length) choices.push("edit", "edit", "del", "move", "stale");
+    if (live.length) choices.push("edit", "edit", "del", "move", "stale", "revert", "comment");
     if (dead.length) choices.push("restore");
+    if (pendingFacts.length) choices.push("approve", "approve");
     const op = pick(rng, choices);
 
     const tok = () => "v" + Math.floor(rng() * 1e6).toString(36);
-    const attrs = () => ({ attr1: tok(), ...(rng() < 0.3 ? { attr2: tok() } : {}) });
+    const author = () => pick(rng, USERS);
+    const attrs = (who?: string) => ({ attr1: tok(), ...(rng() < 0.3 ? { attr2: tok() } : {}),
+                                       ...(who ? { change_by_username: who } : {}) });
     const okey = () => "0." + Math.floor(rng() * 1e6).toString(36);
+    const applyOp = (assertion: Assertion, desc: string, expectReject = false): Op =>
+        ({ run: (m) => m.apply(assertion), expectReject, desc });
 
     switch (op) {
         case "addEntry": {
             const id = nextId();
-            return { assertion: build([["dct", 0], ["ent", id]], nextId(), nextClock(), EOT, undefined, okey(), attrs()),
-                     expectReject: false, desc: `addEntry ent:${id}` };
+            return applyOp(build([["dct", 0], ["ent", id]], nextId(), nextClock(), EOT, undefined, okey(), attrs(author())),
+                           `addEntry ent:${id}`);
         }
         case "addChild": {
             const p = pick(rng, parents);
             const childTag = pick(rng, SCHEMA_INDEX.get(p.ty)!);
             const id = nextId();
-            return { assertion: build([...parsePath(p.path), [childTag, id]], nextId(), nextClock(), EOT, undefined, okey(), attrs()),
-                     expectReject: false, desc: `addChild ${childTag}:${id} under ${p.path}` };
+            return applyOp(build([...parsePath(p.path), [childTag, id]], nextId(), nextClock(), EOT, undefined, okey(), attrs(author())),
+                           `addChild ${childTag}:${id} under ${p.path}`);
         }
         case "edit": case "move": {
             const h = pick(rng, live);
-            return { assertion: build(parsePath(h.path), nextId(), nextClock(), EOT, h.currentAssertionId, okey(), attrs()),
-                     expectReject: false, desc: `${op} ${h.path}` };
+            return applyOp(build(parsePath(h.path), nextId(), nextClock(), EOT, h.currentAssertionId, okey(), attrs(author())),
+                           `${op} ${h.path}`);
         }
         case "del": {
             const h = pick(rng, live);
             const t = nextClock();
-            return { assertion: build(parsePath(h.path), nextId(), t, t, h.currentAssertionId, okey(), {}),
-                     expectReject: false, desc: `del ${h.path}` };
+            return applyOp(build(parsePath(h.path), nextId(), t, t, h.currentAssertionId, okey(), attrs(author())),
+                           `del ${h.path}`);
         }
         case "restore": {
             const h = pick(rng, dead);
-            return { assertion: build(parsePath(h.path), nextId(), nextClock(), EOT, h.currentAssertionId, okey(), attrs()),
-                     expectReject: false, desc: `restore ${h.path}` };
+            return applyOp(build(parsePath(h.path), nextId(), nextClock(), EOT, h.currentAssertionId, okey(), attrs(author())),
+                           `restore ${h.path}`);
+        }
+        case "approve": {
+            const h = pick(rng, pendingFacts);
+            const approver = pick(rng, USERS.filter((u) => u !== h.contentAuthor));
+            const now = nextClock(), aid = nextId();
+            return { run: (m) => m.approve(h.id, approver, now, aid), expectReject: false,
+                     desc: `approve ${h.path} by ${approver}` };
+        }
+        case "revert": {
+            const h = pick(rng, live);
+            const who = author(), now = nextClock(), aid = nextId();
+            return { run: (m) => m.revert(h.id, who, "rv", now, aid), expectReject: false,
+                     desc: `revert ${h.path} by ${who}` };
+        }
+        case "comment": {
+            const h = pick(rng, live);
+            const who = author(), now = nextClock(), aid = nextId();
+            return { run: (m) => m.comment(h.id, who, "cm", now, aid), expectReject: false,
+                     desc: `comment ${h.path} by ${who}` };
         }
         case "stale": default: {
             const h = pick(rng, live);
             // Wrong replaces_assertion_id: both models must reject (chain check).
-            return { assertion: build(parsePath(h.path), nextId(), nextClock(), EOT, 999999999, okey(), attrs()),
-                     expectReject: true, desc: `stale(wrong-replaces) ${h.path}` };
+            return applyOp(build(parsePath(h.path), nextId(), nextClock(), EOT, 999999999, okey(), attrs()),
+                           `stale(wrong-replaces) ${h.path}`, true);
         }
     }
 }
@@ -185,14 +220,14 @@ test("property: production VersionedDb matches the reference oracle", () => {
             log.push(op.desc);
 
             if (op.expectReject) {
-                const oThrew = didThrow(() => oracle.apply(op.assertion));
-                const pThrew = didThrow(() => prod.apply(op.assertion));
+                const oThrew = didThrow(() => op.run(oracle));
+                const pThrew = didThrow(() => op.run(prod));
                 if (oThrew !== pThrew)
                     bail(i, `reject parity: oracle threw=${oThrew}, prod threw=${pThrew}`);
             } else {
-                try { oracle.apply(op.assertion); }
+                try { op.run(oracle); }
                 catch (e) { bail(i, `oracle rejected a valid op: ${(e as Error).message}`); }
-                try { prod.apply(op.assertion); }
+                try { op.run(prod); }
                 catch (e) { bail(i, `production rejected a valid op: ${(e as Error).message}`); }
             }
 

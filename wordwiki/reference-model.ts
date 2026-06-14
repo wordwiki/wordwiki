@@ -255,22 +255,23 @@ export class ReferenceModel implements VersionedModel {
         return out.sort(byPath);
     }
 
-    /** The review queue: facts whose editorial state awaits a decision —
-     *  a pending edit/creation (latest content version unpublished), or a
-     *  pending DELETION (the latest content is a tombstone but a published
-     *  value still stands). A settled deletion (nothing published to retract)
-     *  is not pending. Sorted by path. */
+    /** A fact awaits a decision: a pending edit/creation (latest content
+     *  version unpublished), or a pending DELETION (latest content is a
+     *  tombstone but a published value still stands). A settled deletion
+     *  (nothing published to retract) is not pending. */
+    #isPending(factId: number): boolean {
+        const ec = this.#latestContentVersion(factId);
+        if (!ec) return false;
+        return ec.valid_from === ec.valid_to
+            ? this.#publishedCurrent(factId) != null   // deletion awaiting approval
+            : ec.published_from == null;                // edit/creation awaiting approval
+    }
+
+    /** The review queue, sorted by path. */
     pending(): string[] {
         const out: string[] = [];
-        for (const id of this.#facts.keys()) {
-            const ec = this.#latestContentVersion(id);
-            if (!ec) continue;
-            const isTombstone = ec.valid_from === ec.valid_to;
-            const isPending = isTombstone
-                ? this.#publishedCurrent(id) != null   // a deletion awaiting approval
-                : ec.published_from == null;            // an edit/creation awaiting approval
-            if (isPending) out.push(pathString(ec));
-        }
+        for (const id of this.#facts.keys())
+            if (this.#isPending(id)) out.push(pathString(this.#latestContentVersion(id)!));
         return out.sort();
     }
 
@@ -278,13 +279,17 @@ export class ReferenceModel implements VersionedModel {
 
     /** Per-fact handles the generator uses to pick targets and build valid
      *  follow-on assertions. */
-    handles(): Array<{ id: number; path: string; ty: string; currentAssertionId: number; live: boolean }> {
+    handles(): Array<{ id: number; path: string; ty: string; currentAssertionId: number;
+                       live: boolean; pending: boolean; contentAuthor: string | undefined }> {
         const hs = [];
         for (const versions of this.#facts.values()) {
             const last = versions[versions.length - 1];
+            const content = this.#latestContentVersion(last.id);
             hs.push({
                 id: last.id, path: pathString(versions[0]), ty: last.ty,
                 currentAssertionId: last.assertion_id, live: last.valid_to === EOT,
+                pending: this.#isPending(last.id),
+                contentAuthor: content?.change_by_username,
             });
         }
         return hs;
