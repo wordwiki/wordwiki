@@ -53,8 +53,26 @@ export class VersionedDb {
     // by allocating a distinct server timestamp per tx group).
     mostRecentLocalTimestamp: number = BEGINNING_OF_TIME;
 
+    // Every assertion_id ever applied to this workspace (load or live). An
+    // assertion_id identifies one version for all time, so a repeat is
+    // corruption - caught here, at the row it enters on, rather than at some
+    // later derivation. (versioned-db-validate.ts re-states this, and the
+    // tail/orphan invariants the incremental walk cannot see, independently.)
+    readonly #seenAssertionIds = new Set<number>();
+
     constructor(schemas: Schema[]) {
         schemas.forEach(s=>this.addTable(s));
+    }
+
+    // Cheap per-assertion invariants checked on EVERY apply path.
+    private _trackAssertion(assertion: Assertion) {
+        if(!Number.isFinite(assertion.assertion_id))
+            throw new Error(`assertion has no assertion_id: ${JSON.stringify(assertion)}`);
+        if(this.#seenAssertionIds.has(assertion.assertion_id))
+            throw new Error(`duplicate assertion_id ${assertion.assertion_id} - an assertion_id identifies one version for all time`);
+        if(assertion.valid_from > assertion.valid_to)
+            throw new Error(`assertion ${assertion.assertion_id} has valid_from ${assertion.valid_from} > valid_to ${assertion.valid_to}`);
+        this.#seenAssertionIds.add(assertion.assertion_id);
     }
 
     addTable(schema: Schema): VersionedTable {
@@ -82,6 +100,7 @@ export class VersionedDb {
      * before applying.
      */
     applyProposedAssertion(assertion: Assertion): Assertion|undefined  {
+        this._trackAssertion(assertion);
         if(assertion.valid_from <= this.mostRecentLocalTimestamp)
             throw new Error(`Attempt to assert into the past - asserting at ${assertion.valid_from} most recent local timestamp is ${this.mostRecentLocalTimestamp} - ${assertion.valid_from - this.mostRecentLocalTimestamp} should be positive`);
         if(assertion.valid_to !== assertion.valid_from &&
@@ -102,6 +121,7 @@ export class VersionedDb {
      * because an ancestor is always asserted before its descendants).
      */
     untrackedApplyAssertion(assertion: Assertion) {
+        this._trackAssertion(assertion);
         const versionedTuple = this.getOrCreateVersionedTupleByPath(getAssertionPath(assertion));
         versionedTuple._untrackedApplyAssertion(assertion);
         this.mostRecentLocalTimestamp = assertion.valid_from;

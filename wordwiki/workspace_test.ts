@@ -490,8 +490,11 @@ test("AUDIT 2.1 FIXED: a duplicate fact id is rejected at apply time", () => {
     apply(ws, mkChild(entry, 'spl', 555, tl.next(), {attr1: 'cat'}));
 
     // Same fact id under a DIFFERENT relation: refused (ids are unique per
-    // table - the editor's (entry_id, fact_id) addressing depends on it).
-    assertThrows(() => ws.applyProposedAssertion(mkChild(entry, 'sub', 555, tl.next())),
+    // table - the editor's (entry_id, fact_id) addressing depends on it). A
+    // distinct assertion_id isolates the fact-id invariant from the (also
+    // enforced) assertion_id-uniqueness one.
+    assertThrows(() => ws.applyProposedAssertion(
+                     mkChild(entry, 'sub', 555, tl.next(), {assertion_id: 99555})),
                  Error, 'duplicate fact id 555');
 
     // Subsequent VERSIONS of the existing fact are of course still fine.

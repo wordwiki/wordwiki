@@ -41,7 +41,7 @@ import * as categoryImport from './category-import.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
 import * as migrationVerify from './migration-verify.ts';
-import { validateVersionedDb } from './versioned-db-validate.ts';
+import { validateVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 
 /**
@@ -162,6 +162,15 @@ export class WordWiki extends LiminalApp {
             // --- Do load of dictionary
             const assertions = selectAllAssertions('dict').all();
             assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
+
+            // --- Fail loud on a structurally broken store rather than letting
+            //     derivations (and more edits) pile on top of corruption. The
+            //     incremental apply above catches chain/overlap/dup-id; this
+            //     adds the global/tail invariants (orphans, dangling heads,
+            //     containment). Run repair-assertions / verify-workspace if it
+            //     fires. (One O(n) sweep per full load - startup and post-
+            //     failed-tx reload, not per edit.)
+            assertVersionedDbValid(workspace);
 
             return workspace;
         })();
