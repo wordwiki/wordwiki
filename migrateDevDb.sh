@@ -14,19 +14,18 @@ set -e
 #      recreates/seeds users - including the '~' automation identities -
 #      marks the db 'dev' and sets djz's dev password)
 #   3. repair-assertions: idempotent structural fixes of pre-existing store
-#      corruption (dangling chain heads); a no-op once clean
+#      corruption (dangling chain heads + clearing the legacy published_*
+#      placeholder, which must go before any workspace load); no-op once clean
 #   4. import categories (stamped '~category-import')
 #   5. prove category-import idempotency (re-run must be a pure no-op)
 #   6. import lexical forms (stamped '~lexical-form-import') + same proof
-#   7. verify-migration: read-only invariant checks (system users present,
-#      one current version per fact, scheme==table, all current category
-#      values tabled, no orphaned tuples, tier sizes exactly 10/90/900,
-#      POS normalization at its fixed point, ...); exits nonzero on failure
-#   8. verify-workspace: read-only STRUCTURAL invariants of the whole
-#      assertion store (chain continuity, no orphans/dangling tails, ...);
-#      exits nonzero on any problem - proves the repair + imports left the
-#      store well-formed
-#   9. restart the server and smoke-test it over HTTP
+#   7. publication Phase 0: born-approve existing approved data by mute-in-
+#      place (stamp published_* on the current facts of Completed entries;
+#      NO approval rows; AFTER imports so re-categorized tuples are stamped
+#      and tombstoned old ones are not); idempotent
+#   8. verify-migration: read-only invariant checks; exits nonzero on failure
+#   9. verify-workspace: read-only STRUCTURAL invariants of the whole store
+#  10. restart the server and smoke-test it over HTTP
 #
 # ---- The PRODUCTION cutover (when the day comes) is NOT this script ------
 # On the production host (no pull, no dev marking, no dev password):
@@ -36,43 +35,48 @@ set -e
 #   4. ./wordwiki.sh import-categories --allow-production --expect-no-changes
 #   5. ./wordwiki.sh import-lexical-forms --allow-production
 #   6. ./wordwiki.sh import-lexical-forms --allow-production --expect-no-changes
-#   7. ./wordwiki.sh verify-migration   (read-only; same checks as here;
-#      expect a WARNING for entries created after the assignments dump -
-#      those need incremental tagging)
-#   8. ./wordwiki.sh verify-workspace   (read-only structural invariants)
-#   9. start the server; ./wordwiki.sh publish; spot-check the site
+#   7. ./wordwiki.sh backfill-publication --allow-production
+#   8. ./wordwiki.sh backfill-publication --allow-production --expect-no-changes
+#   9. ./wordwiki.sh verify-migration   (read-only; same checks as here;
+#      expect a WARNING for entries created after the assignments dump)
+#  10. ./wordwiki.sh verify-workspace   (read-only structural invariants)
+#  11. start the server; ./wordwiki.sh publish; spot-check the site
 # --------------------------------------------------------------------------
 
 cd "$(dirname "$0")"
 
 step() { echo; echo "=== $* ==="; }
 
-step "[1/9] stopping the server"
+step "[1/10] stopping the server"
 ./wordwiki.sh stop
 
-step "[2/9] pulling production db + content from staging"
+step "[2/10] pulling production db + content from staging"
 ./pullDbFromPublic.sh
 
-step "[3/9] repairing pre-existing store corruption (idempotent)"
+step "[3/10] repairing pre-existing store corruption (idempotent)"
 ./wordwiki.sh repair-assertions
 
-step "[4/9] importing categories"
+step "[4/10] importing categories"
 ./wordwiki.sh import-categories
 
-step "[5/9] category import idempotency proof"
+step "[5/10] category import idempotency proof"
 ./wordwiki.sh import-categories --expect-no-changes
 
-step "[6/9] importing lexical forms (+ idempotency proof)"
+step "[6/10] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms
 ./wordwiki.sh import-lexical-forms --expect-no-changes
 
-step "[7/9] verifying the migration"
+step "[7/10] publication Phase 0: born-approve existing data (+ idempotency proof)"
+./wordwiki.sh backfill-publication
+./wordwiki.sh backfill-publication --expect-no-changes
+
+step "[8/10] verifying the migration"
 ./wordwiki.sh verify-migration
 
-step "[8/9] verifying the assertion store is structurally well-formed"
+step "[9/10] verifying the assertion store is structurally well-formed"
 ./wordwiki.sh verify-workspace
 
-step "[9/9] starting the server + smoke test"
+step "[10/10] starting the server + smoke test"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break

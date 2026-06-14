@@ -27,6 +27,9 @@ set -e
 #   ./wordwiki.sh stop                 # stop the server, nothing else
 #   ./wordwiki.sh repair-assertions    # idempotent structural fixes of store
 #                                      # corruption (refuses production db)
+#   ./wordwiki.sh backfill-publication # publication Phase 0: clear legacy
+#                                      # placeholder + born-approve Completed
+#                                      # data, mute-in-place (refuses prod)
 #   ./wordwiki.sh verify-migration     # read-only post-migration sanity
 #                                      # checks (exit 1 on failure)
 #   ./wordwiki.sh verify-workspace     # read-only structural invariants of

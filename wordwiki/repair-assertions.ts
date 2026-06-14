@@ -12,9 +12,43 @@
  * result.
  */
 import { db } from "../liminal/db.ts";
+import * as timestamp from "../liminal/timestamp.ts";
 
 export interface RepairStats {
     danglingChainHeadsFixed: number;
+    legacyPublishedPlaceholdersCleared: number;
+}
+
+/**
+ * Clear the legacy `published_*` placeholder: `published_from =
+ * BEGINNING_OF_TIME` (a 2020 epoch-ms constant left on ~151k rows by an old
+ * experiment, in a different time-space than valid_from; published_to was
+ * END_OF_TIME). It violates the publication invariants (published-before-valid,
+ * tombstone-published, ...), so it must be cleared BEFORE any workspace load -
+ * which is why it lives here in the pure-SQL repair pass that runs first, not
+ * in the (post-import, workspace-using) born-approve backfill.
+ *
+ * Idempotency subtlety: most facts carry `valid_from = BEGINNING_OF_TIME` (the
+ * predecessor import's initial timestamp), so a born-approved row's
+ * `published_from = valid_from` can ALSO be BEGINNING_OF_TIME — byte-identical
+ * to a placeholder sitting on such a fact. We therefore key on the
+ * UNAMBIGUOUS, invariant-VIOLATING placeholder: `published_from = BOT` with
+ * `valid_from != BOT`. While any of those remain the db is pre-Phase-0 and the
+ * whole `published_from = BOT` set is junk (clear it all); once born-approve
+ * has run there are none, so a re-run clears nothing and never clobbers a
+ * born-approved fact.
+ */
+export function clearLegacyPublishedPlaceholder(opts: { log?: (m: string) => void } = {}): number {
+    const bot = timestamp.BEGINNING_OF_TIME;
+    const violating = db().required<{ n: number }, { b: number }>(
+        `SELECT COUNT(*) AS n FROM dict WHERE published_from = :b AND valid_from != :b`, { b: bot }).n;
+    if (violating === 0) return 0; // already cleared / never present / post-born-approve
+    const n = db().required<{ n: number }, { b: number }>(
+        `SELECT COUNT(*) AS n FROM dict WHERE published_from = :b`, { b: bot }).n;
+    db().execute(
+        `UPDATE dict SET published_from = NULL, published_to = NULL WHERE published_from = :b`, { b: bot });
+    (opts.log ?? (() => undefined))(`  cleared ${n} legacy published placeholder rows`);
+    return n;
 }
 
 /**
@@ -30,7 +64,7 @@ export interface RepairStats {
  * would paper over by silently splitting the chain — so we refuse and throw,
  * surfacing it for investigation rather than "repairing" it.
  */
-export function repairDanglingChainHeads(opts: { log?: (m: string) => void } = {}): RepairStats {
+export function repairDanglingChainHeads(opts: { log?: (m: string) => void } = {}): { danglingChainHeadsFixed: number } {
     const log = opts.log ?? (() => undefined);
 
     const dangling = db().all<{ assertion_id: number; replaces: number; id: number; ty: string }, {}>(`
@@ -64,5 +98,8 @@ export function repairDanglingChainHeads(opts: { log?: (m: string) => void } = {
 
 /** Run every structural repair (idempotent). Returns the combined counts. */
 export function repairAssertions(opts: { log?: (m: string) => void } = {}): RepairStats {
-    return repairDanglingChainHeads(opts);
+    return {
+        ...repairDanglingChainHeads(opts),
+        legacyPublishedPlaceholdersCleared: clearLegacyPublishedPlaceholder(opts),
+    };
 }

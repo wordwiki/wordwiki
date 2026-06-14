@@ -43,6 +43,7 @@ import * as lexicalFormImport from './lexical-form-import.ts';
 import * as migrationVerify from './migration-verify.ts';
 import { validateVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
 import { repairAssertions } from './repair-assertions.ts';
+import { backfillPublication } from './publication-backfill.ts';
 
 /**
  *
@@ -1480,7 +1481,30 @@ if (import.meta.main) {
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
                 const stats = repairAssertions({log: (m) => console.info(m)});
-                console.info(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed`);
+                console.info(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed, ` +
+                             `${stats.legacyPublishedPlaceholdersCleared} legacy published placeholder row(s) cleared`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Phase 0 of the publication model (publication-backfill.ts): clear the
+        // legacy published_* placeholder and born-approve the existing
+        // Completed-status data by mute-in-place (no approval rows). Idempotent;
+        // refuses production without --allow-production. --expect-no-changes
+        // proves a re-run is a no-op.
+        case 'backfill-publication': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                const stats = backfillPublication({log: (m) => console.info(m)});
+                if(args.includes('--expect-no-changes')) {
+                    if(stats.bornApproved > 0)
+                        throw new Error(`--expect-no-changes: the backfill born-approved ${stats.bornApproved} facts`);
+                    console.info('idempotency confirmed: re-run made no changes');
+                }
             });
             Deno.exit(0);
             break;
