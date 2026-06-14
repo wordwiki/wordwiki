@@ -21,10 +21,13 @@
  * already-deleted fact is idempotent, never a double tombstone).
  */
 import {VersionedTuple} from './workspace.ts';
-import {Assertion} from './assertion.ts';
+import {Assertion, updateAssertion} from './assertion.ts';
 import * as entrySchema from './entry-schema.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import {panic} from '../liminal/utils.ts';
+import {db} from '../liminal/db.ts';
+import * as security from '../liminal/security.ts';
+import * as publicationOps from './publication-ops.ts';
 import type {WordWiki} from './wordwiki.ts';
 
 // New fact/assertion ids use the same scheme as the rest of the system (see
@@ -182,5 +185,88 @@ export class LexemeOps {
             if(r.outcome === 'removed') removed++;
         }
         return {removed};
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Publication verbs (publication-model.md) ----------------------------
+    // ------------------------------------------------------------------------
+    //
+    // The app-level wrappers over the pure publication operations
+    // (publication-ops.ts): they enforce permissions, allocate a server
+    // timestamp + id, run the op against the workspace, and persist the
+    // applied/updated set (mirroring applyTransaction). The pure ops are
+    // property-tested against the reference oracle; these add the production
+    // wiring.
+
+    // Approve-permission gates approval and revert (both publish). 'admin'
+    // implies it (so existing admins can review); a dedicated 'approve' role
+    // can be granted to non-admin reviewers.
+    private requireApprovePermission(action: string): void {
+        const roles = security.current()?.roles;
+        if(!roles || !(roles.has('approve') || roles.has('admin')))
+            throw new Error(`${action} requires approve permission`);
+    }
+
+    // The self-approve workaround (a sole approver): 'admin' may approve their
+    // own content. (A dedicated 'self-approve' role could be added.)
+    private canSelfApprove(): boolean {
+        return security.current()?.roles.has('admin') ?? false;
+    }
+
+    /** Approve a fact's pending content (publishes it). Requires approve
+     *  permission and an approver ≠ the content's author, unless the approver
+     *  may self-approve. */
+    approveFact(entry_id: number, fact_id: number): any {
+        const approver = this.requireUsername();
+        this.requireApprovePermission('approving');
+        this.runPublicationOp((now, aid) =>
+            publicationOps.approve(this.app.workspace, fact_id, approver, now, aid,
+                                   {allowSelfApprove: this.canSelfApprove()}));
+        return {action: 'reload', targets: [`.-entry-${entry_id}-`]};
+    }
+
+    /** Revert a fact to its last published value (declining a pending edit or
+     *  rolling back an approved one). Requires approve permission + a note. */
+    revertFact(entry_id: number, fact_id: number, note: string): any {
+        const reverter = this.requireUsername();
+        this.requireApprovePermission('reverting');
+        if(!note?.trim()) throw new Error('a revert requires a note');
+        this.runPublicationOp((now, aid) =>
+            publicationOps.revert(this.app.workspace, fact_id, reverter, note, now, aid));
+        return {action: 'reload', targets: [`.-entry-${entry_id}-`]};
+    }
+
+    /** Add a discussion comment to a fact (any logged-in editor; never
+     *  published). Requires a note. */
+    commentFact(entry_id: number, fact_id: number, note: string): any {
+        const commenter = this.requireUsername();
+        if(!note?.trim()) throw new Error('a comment requires a note');
+        this.runPublicationOp((now, aid) =>
+            publicationOps.comment(this.app.workspace, fact_id, commenter, note, now, aid));
+        return {action: 'reload', targets: [`.-entry-${entry_id}-`]};
+    }
+
+    // Allocate a server timestamp + id, run the op (mutating the workspace in
+    // place), and persist the result in one db transaction: UPDATE predecessors
+    // whose valid_to/published_to changed, INSERT the new version. On any error,
+    // reload the workspace from the db (discarding the partial mutation), like
+    // applyTransaction.
+    private runPublicationOp(run: (now: number, assertionId: number) => publicationOps.OpResult): void {
+        const now = this.app.allocTxTimestamps(1, {quiet: true});
+        const assertionId = newId();
+        try {
+            const result = run(now, assertionId);
+            db().transaction(() => {
+                for(const u of result.updated)
+                    updateAssertion('dict', u.assertion_id, ['valid_to', 'published_to'],
+                                    {valid_to: u.valid_to, published_to: u.published_to});
+                for(const a of result.applied)
+                    db().insert<Assertion, 'assertion_id'>('dict', a, 'assertion_id');
+            });
+            this.app.requestEntriesJSONReload();
+        } catch(e) {
+            this.app.requestWorkspaceReload();
+            throw e;
+        }
     }
 }
