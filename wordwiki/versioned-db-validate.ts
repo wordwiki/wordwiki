@@ -44,6 +44,7 @@ export interface VersionRecord {
     valid_to: number;
     published_from?: number;
     published_to?: number;
+    change_action?: string | null;
 }
 
 /** One fact, as the validator needs to see it (any representation adapts to
@@ -151,6 +152,45 @@ export function validateFacts(facts: Iterable<FactView>): ValidationProblem[] {
             add(fact.path, "fact-predates-parent",
                 `oldest version begins at ${vs[0].valid_from}, before its parent's ` +
                 `earliest version at ${fact.parentEarliestValidFrom}`);
+
+        // --- The publication dimension (publication-model.md, I2/I3/I6/I7/I8).
+        //     The two-person rule (I4/I5) needs author/role info and lives in a
+        //     separate semantic check; these are the structural invariants.
+        const published = vs.filter((v) => v.published_from != null);
+        let openPublished = 0;
+        for (const v of vs) {
+            const hasFrom = v.published_from != null, hasTo = v.published_to != null;
+            if (hasFrom !== hasTo)
+                add(fact.path, "half-set-published-interval",
+                    `version ${v.assertion_id} has only one of published_from/published_to`);
+            if (hasFrom) {
+                if (v.published_from! < v.valid_from)
+                    add(fact.path, "published-before-valid",
+                        `version ${v.assertion_id} published_from ${v.published_from} < valid_from ${v.valid_from}`);
+                if (hasTo && v.published_from! > v.published_to!)
+                    add(fact.path, "published-interval-reversed",
+                        `version ${v.assertion_id} has published_from > published_to`);
+                if (v.valid_from === v.valid_to)
+                    add(fact.path, "tombstone-published",
+                        `tombstone ${v.assertion_id} carries a published interval`);
+                if (v.change_action === "comment")
+                    add(fact.path, "comment-published",
+                        `comment ${v.assertion_id} carries a published interval`);
+            }
+            if (v.published_to === timestamp.END_OF_TIME) openPublished++;
+        }
+        // I2: at most one currently-published version.
+        if (openPublished > 1)
+            add(fact.path, "multiple-published-current",
+                `${openPublished} versions have published_to = END_OF_TIME`);
+        // I3: published intervals are disjoint.
+        const intervals = published
+            .map((v) => [v.published_from!, v.published_to!] as [number, number])
+            .sort((a, b) => a[0] - b[0]);
+        for (let i = 1; i < intervals.length; i++)
+            if (intervals[i][0] < intervals[i - 1][1])
+                add(fact.path, "overlapping-published-intervals",
+                    `published intervals overlap: [..${intervals[i - 1][1]}) and [${intervals[i][0]}..)`);
     }
 
     return problems;
@@ -183,6 +223,7 @@ function walk(tuple: VersionedTuple, path: string,
                 valid_to: a.valid_to,
                 published_from: a.published_from,
                 published_to: a.published_to,
+                change_action: a.change_action,
             };
         });
         earliest = versions[0]?.valid_from ?? parentEarliestValidFrom;

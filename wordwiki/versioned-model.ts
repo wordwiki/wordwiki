@@ -25,6 +25,13 @@ export interface VersionSnapshot {
     replaces_assertion_id: number | null;
     valid_from: number;
     valid_to: number;
+    // The publication dimension + change metadata (null while unset) — part of
+    // the compared state, so the property test catches publication bugs too.
+    published_from: number | null;
+    published_to: number | null;
+    change_action: string | null;
+    change_by_username: string | null;
+    change_note: string | null;
     attrs: Record<string, unknown>;
 }
 
@@ -86,8 +93,20 @@ export function toSnapshot(a: Assertion): VersionSnapshot {
         replaces_assertion_id: a.replaces_assertion_id ?? null,
         valid_from: a.valid_from,
         valid_to: a.valid_to,
+        published_from: a.published_from ?? null,
+        published_to: a.published_to ?? null,
+        change_action: a.change_action ?? null,
+        change_by_username: a.change_by_username ?? null,
+        change_note: a.change_note ?? null,
         attrs: extractAttrs(a),
     };
+}
+
+/** A comment re-asserts a value to carry discussion; it is never published and
+ *  never counts as a content version (see publication-model.md §5). */
+export const COMMENT = "comment";
+export function isComment(a: { change_action?: string | null }): boolean {
+    return a.change_action === COMMENT;
 }
 
 export function byPath<T extends { path: string }>(a: T, b: T): number {
