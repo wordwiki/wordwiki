@@ -248,9 +248,14 @@ In the `verify-migration` spirit — write these the week the columns go live.
 
 ## 7. Derived queries (the payoff)
 
-- **Public view** becomes `published_to = END_OF_TIME` — it *replaces* the
-  current `status`-field filter. `status` is freed to mean editorial workflow,
-  not public visibility. `publishedEntries` is this query.
+- **Public view** = the published projection **AND** the status filter (dz,
+  after the language team): the `status`-`Completed` gate is *kept* (it means
+  "the whole lexeme is ready"), and the per-fact published dimension
+  (`published_to = END_OF_TIME`) is ANDed on top. So `publishedEntries` is the
+  `PublishedTupleQuery` projection filtered by `isPublished`. Approval runs even
+  while a lexeme is in-progress, so an in-progress entry may carry published
+  facts but stays off the public site until its status reaches Completed. The
+  editor views stay on the valid-current projection. *(Built — Phase 1.)*
 - **Review queue** = facts where `isPending` (latest content version
   unpublished), plus pending deletions (latest content version is a tombstone
   whose predecessor is still published). Index it on day one — it is the
@@ -354,11 +359,12 @@ migration — **backfill first, preserving equivalence, then change behavior**:
   (`published_to = END_OF_TIME`) is *equivalent* to today's status filter. Run
   I1–I8. (Clear-then-stamp is a new idempotent `repair-assertions`-style
   migration step, rehearsed against every dev pull like the rest of the flow.)
-- **Phase 1 — dual-run.** Public renderer switches to the published query
-  (equivalent post-backfill). New edits set the published dimension correctly;
-  to avoid blocking the team before the queue UI exists, trusted editors may
-  **auto-approve their own** edits transitionally (a logged, temporary
-  relaxation of I4).
+- **Phase 1 — dual-run.** *(Built.)* Public renderer switches to the published
+  projection **AND** status (`PublishedTupleQuery` filtered by `isPublished`;
+  equivalent post-backfill — verified 6973 = 6973 on the dev pull). New edits
+  set the published dimension correctly; to avoid blocking the team before the
+  queue UI exists, trusted editors may **auto-approve their own** edits
+  transitionally (a logged, temporary relaxation of I4).
 - **Phase 2 — the review surface.** Build the review queue + per-lexeme change
   view + approve/revert/comment verbs. Turn auto-approve **off**:
   approval now requires a second senior.
@@ -374,7 +380,7 @@ convention + restore barrier, the migration/verify machinery, two-form export.
 
 **New:** the `published_from`/`published_to`/`change_action`/`change_note`
 columns; the approve/revert/comment verbs (all re-assertions on the
-chain); the published query replacing the status filter; the review queue +
+chain); the published projection ANDed with the status filter; the review queue +
 per-lexeme change view + diff UI; the `latestContentVersion`/`isPending`
 helper; the I1–I8 invariant checks.
 
