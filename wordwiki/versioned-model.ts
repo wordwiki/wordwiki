@@ -56,6 +56,11 @@ export interface VersionedModel {
     /** The editor view: facts whose latest version is live (not a tombstone)
      *  AND all of whose ancestors are likewise live. Sorted by path. */
     currentView(): VisibleFact[];
+    /** The public view: each fact's currently-published version, ancestor-
+     *  visible. Sorted by path. */
+    publishedView(): VisibleFact[];
+    /** The review queue: paths of facts awaiting a decision. Sorted. */
+    pending(): string[];
 }
 
 // --- Shared pure helpers (data extraction only — no model logic) ----------------
@@ -179,4 +184,7 @@ export class VersionedDbModel implements VersionedModel {
         walk(new CurrentTupleQuery(root), this.rootTag);
         return out.sort(byPath);
     }
+
+    publishedView(): VisibleFact[] { return pubOps.publishedView(this.vdb); }
+    pending(): string[] { return pubOps.pending(this.vdb); }
 }

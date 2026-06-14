@@ -197,8 +197,11 @@ function firstDiff(label: string, a: { path: string }[], b: { path: string }[]):
 }
 
 function compare(oracle: ReferenceModel, prod: VersionedDbModel): string | null {
+    const op = JSON.stringify(oracle.pending()), pp = JSON.stringify(prod.pending());
     return firstDiff("fullHistory", oracle.fullHistory(), prod.fullHistory())
-        ?? firstDiff("currentView", oracle.currentView(), prod.currentView());
+        ?? firstDiff("currentView", oracle.currentView(), prod.currentView())
+        ?? firstDiff("publishedView", oracle.publishedView(), prod.publishedView())
+        ?? (op !== pp ? `pending differ:\n  oracle: ${op}\n  prod:   ${pp}` : null);
 }
 
 function didThrow(fn: () => void): boolean {

@@ -20,7 +20,7 @@
 import { Assertion } from "./assertion.ts";
 import { VersionedDb, VersionedTuple } from "./workspace.ts";
 import * as timestamp from "../liminal/timestamp.ts";
-import { isComment, COMMENT } from "./versioned-model.ts";
+import { isComment, COMMENT, extractAttrs, byPath, type VisibleFact } from "./versioned-model.ts";
 
 const EOT = timestamp.END_OF_TIME;
 
@@ -121,6 +121,62 @@ export function comment(vdb: VersionedDb, factId: number, commenter: string, not
         changeAction: COMMENT, changeBy: commenter, changeNote: note });
     return finish(vdb, newAssertion, now, undefined);
 }
+
+// --------------------------------------------------------------------------------
+// --- Queries (the public view + the review queue) -------------------------------
+// --------------------------------------------------------------------------------
+//
+// Computed by walking the workspace tree - independently from the oracle's
+// flat-map traversal (the point of the conformance test). These are what the
+// public renderer and the review-queue UI read.
+
+/** The public view: each fact's currently-published version, visible only when
+ *  every ancestor is also published-visible. Walks top-down and prunes - a
+ *  fact with no published-current version can have no published descendants. */
+export function publishedView(vdb: VersionedDb): VisibleFact[] {
+    const out: VisibleFact[] = [];
+    const root = vdb.getTableByTag("dct");
+    const walk = (tuple: VersionedTuple, path: string) => {
+        for (const rel of Object.values(tuple.childRelations))
+            for (const child of rel.tuples.values()) {
+                const pub = publishedCurrent(versionsOf(child));
+                if (!pub) continue;  // not published -> children can't be either
+                const childPath = `${path}/${child.schema.tag}:${child.id}`;
+                out.push({ path: childPath, attrs: extractAttrs(pub) });
+                walk(child, childPath);
+            }
+    };
+    walk(root, root.schema.tag);
+    return out.sort(byPath);
+}
+
+/** The review queue: facts awaiting a decision - a pending edit/creation, or a
+ *  pending DELETION (a tombstone with a published value still standing). Walks
+ *  every fact (pending-ness is independent of ancestors). Sorted by path. */
+export function pending(vdb: VersionedDb): string[] {
+    const out: string[] = [];
+    const root = vdb.getTableByTag("dct");
+    const walk = (tuple: VersionedTuple, path: string) => {
+        for (const rel of Object.values(tuple.childRelations))
+            for (const child of rel.tuples.values()) {
+                const childPath = `${path}/${child.schema.tag}:${child.id}`;
+                const vs = versionsOf(child);
+                const content = latestContent(vs);
+                if (content) {
+                    const isTombstone = content.valid_from === content.valid_to;
+                    const isPending = isTombstone
+                        ? publishedCurrent(vs) !== undefined   // deletion awaiting approval
+                        : content.published_from == null;       // edit/creation awaiting approval
+                    if (isPending) out.push(childPath);
+                }
+                walk(child, childPath);
+            }
+    };
+    walk(root, root.schema.tag);
+    return out.sort();
+}
+
+// --------------------------------------------------------------------------------
 
 // Apply the new assertion (closing the tip's valid_to) and, if publishing,
 // close the prior published version's published_to in place. Returns the
