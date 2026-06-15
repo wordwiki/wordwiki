@@ -49,12 +49,28 @@ export function isTombstone(a: Assertion): boolean {
     return a.valid_from === a.valid_to;
 }
 
+// A freshly proposed edit is NOT yet approved.  Builders that start from a copy
+// of a prior version (which, post-backfill, is usually PUBLISHED) must drop its
+// publication interval and approval/comment metadata, or the new version would
+// be born-published - leaving two published-current versions on the fact (an I2
+// violation the load-time validator throws on).  Spread this AFTER `...prev` so
+// it overrides the inherited values; the publication verbs (approve/revert) set
+// these deliberately and do NOT use it.  See publication-model.md.
+export const unapprovedDimension: Partial<Assertion> = {
+    published_from: undefined, published_to: undefined,
+    change_action: undefined, change_arg: undefined, change_note: undefined,
+};
+
 export type SupersedeOutcome =
     // The fact was current; a new version with the changed fields is asserted.
     | {outcome: 'updated', assertion: Assertion, replaced: Assertion}
     // The fact was deleted since the caller looked: re-asserting would
     // silently RESURRECT it - refuse instead.
     | {outcome: 'already-deleted'};
+
+// The result of a publication verb (approve/revert/comment).  The work is
+// done; the editor's review mode turns this into a reload directive.
+export type PublicationOutcome = {outcome: 'approved' | 'reverted' | 'commented'};
 
 export type TombstoneOutcome =
     // The fact was current and is now tombstoned.
@@ -128,6 +144,7 @@ export class LexemeOps {
             valid_from: t,
             valid_to: t,
             ...this.changeStamp(),
+            ...unapprovedDimension,
         };
         this.app.applyTransaction([tombstone]);
         return {outcome: 'removed', tombstone, replaced: current};
@@ -153,6 +170,7 @@ export class LexemeOps {
             valid_from: placeholderTxTime(),
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
+            ...unapprovedDimension,
         };
         this.app.applyTransaction([assertion]);
         return {outcome: 'updated', assertion, replaced: current};
@@ -202,9 +220,24 @@ export class LexemeOps {
     // implies it (so existing admins can review); a dedicated 'approve' role
     // can be granted to non-admin reviewers.
     private requireApprovePermission(action: string): void {
-        const roles = security.current()?.roles;
-        if(!roles || !(roles.has('approve') || roles.has('admin')))
+        if(!this.hasApprovePermission())
             throw new Error(`${action} requires approve permission`);
+    }
+
+    /** Whether the current actor may approve/revert at all (the review UI uses
+     *  this to decide whether to offer those items). */
+    hasApprovePermission(): boolean {
+        const roles = security.current()?.roles;
+        return !!roles && (roles.has('approve') || roles.has('admin'));
+    }
+
+    /** Whether the current actor may approve content authored by `author`:
+     *  approve-permission AND the two-person rule (author ≠ self), unless they
+     *  may self-approve.  The review UI hides Approve when this is false (the
+     *  op still enforces it server-side). */
+    mayApprove(author: string|null): boolean {
+        return this.hasApprovePermission()
+            && (author !== this.app.currentUsername() || this.canSelfApprove());
     }
 
     // The self-approve workaround (a sole approver): 'admin' may approve their
@@ -215,35 +248,36 @@ export class LexemeOps {
 
     /** Approve a fact's pending content (publishes it). Requires approve
      *  permission and an approver ≠ the content's author, unless the approver
-     *  may self-approve. */
-    approveFact(entry_id: number, fact_id: number): any {
+     *  may self-approve.  Returns the typed outcome; the caller (the editor's
+     *  review mode) decides what to reload. */
+    approveFact(fact_id: number): PublicationOutcome {
         const approver = this.requireUsername();
         this.requireApprovePermission('approving');
         this.runPublicationOp((now, aid) =>
             publicationOps.approve(this.app.workspace, fact_id, approver, now, aid,
                                    {allowSelfApprove: this.canSelfApprove()}));
-        return {action: 'reload', targets: [`.-entry-${entry_id}-`]};
+        return {outcome: 'approved'};
     }
 
     /** Revert a fact to its last published value (declining a pending edit or
      *  rolling back an approved one). Requires approve permission + a note. */
-    revertFact(entry_id: number, fact_id: number, note: string): any {
+    revertFact(fact_id: number, note: string): PublicationOutcome {
         const reverter = this.requireUsername();
         this.requireApprovePermission('reverting');
         if(!note?.trim()) throw new Error('a revert requires a note');
         this.runPublicationOp((now, aid) =>
             publicationOps.revert(this.app.workspace, fact_id, reverter, note, now, aid));
-        return {action: 'reload', targets: [`.-entry-${entry_id}-`]};
+        return {outcome: 'reverted'};
     }
 
     /** Add a discussion comment to a fact (any logged-in editor; never
      *  published). Requires a note. */
-    commentFact(entry_id: number, fact_id: number, note: string): any {
+    commentFact(fact_id: number, note: string): PublicationOutcome {
         const commenter = this.requireUsername();
         if(!note?.trim()) throw new Error('a comment requires a note');
         this.runPublicationOp((now, aid) =>
             publicationOps.comment(this.app.workspace, fact_id, commenter, note, now, aid));
-        return {action: 'reload', targets: [`.-entry-${entry_id}-`]};
+        return {outcome: 'commented'};
     }
 
     // Allocate a server timestamp + id, run the op (mutating the workspace in

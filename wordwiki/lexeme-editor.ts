@@ -58,7 +58,8 @@ import * as utils from '../liminal/utils.ts';
 import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
-import {newId, placeholderTxTime, isTombstone} from './lexeme-ops.ts';
+import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
+import {classifyFact, type FactReview} from './versioned-model.ts';
 import {isAutomatedUsername} from './user.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
@@ -294,6 +295,60 @@ function setAssertionFields(assertion: Assertion, rel: model.RelationField,
 // newId/placeholderTxTime/isTombstone moved to lexeme-ops.ts (shared with
 // the table pages' assertion verbs); imported above.
 
+// The editor's two looks: 'edit' shows each fact's bare current value with
+// editing affordances; 'review' shows each fact diffed against its published
+// baseline, adds approve/revert/comment, and surfaces pending deletions (see
+// publication-model.md).  The mode rides in each fragment's hx-get, so an
+// in-place reload re-renders in the same mode.
+export type EditMode = 'edit' | 'review';
+
+// ---------------------------------------------------------------------------
+// --- Value rendering (module-level: drives both the edit surface and the ----
+// --- review diff, over a raw assertion rather than a TupleVersion) ----------
+// ---------------------------------------------------------------------------
+
+/** One scalar field's value as display markup (undefined = render nothing). */
+function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
+    if(v === null || v === undefined || v === '') return undefined;
+    if(f instanceof model.AudioField)
+        return audio.renderAudio(String(v), '🔉 Recording', undefined, '/');
+    if(f instanceof model.ImageField)
+        return ['img', {src: '/'+String(v), style: 'max-width: 10em; max-height: 10em;'}];
+    if(f instanceof model.VariantField)
+        return ['span', {class:'badge text-bg-light'}, entrySchema.variants[v] ?? String(v)];
+    if(f instanceof model.EnumField) {
+        const options = (f.style as any).$options as Record<string,string>|undefined;
+        return ['span', {}, options?.[v] ?? String(v)];
+    }
+    if(f instanceof model.BooleanField)
+        return ['span', {}, f.prompt, ': ', v ? 'Yes' : 'No'];
+    if(isBoundingGroupField(f))
+        // The reference image; clicking opens the page tagger on its group
+        // (stopPropagation so the surrounding editable surface doesn't also
+        // open the edit dialog).
+        return ['div', {onclick: `event.stopPropagation(); window.open('/ww/forwardToSingleBoundingGroupEditorURL(${v}, null)')`},
+                ['object', {style: 'pointer-events: none;',
+                            data: `/ww/renderStandaloneGroupAsSvgResponse('/', ${v})`,
+                            type: 'image/svg+xml'}]];
+    return ['span', {}, String(v)];
+}
+
+/** The edit mode carried in a dialog postback (defaults to plain editing). */
+function formMode(form: Record<string, any>): EditMode {
+    return form.mode === 'review' ? 'review' : 'edit';
+}
+
+/** Every non-pk scalar of a relation, rendered from one assertion's values. */
+function renderAssertionValues(rf: model.RelationField, a: Assertion): Markup {
+    const parts = rf.scalarFields
+        .filter(f => !(f instanceof model.PrimaryKeyField))
+        .map(f => renderFieldValue(f, (a as any)[f.bind]))
+        .filter(p => p !== undefined);
+    return parts.length === 0
+        ? ['span', {class:'text-muted'}, '(empty)']
+        : parts.map(p => [p, ' ']);
+}
+
 // ---------------------------------------------------------------------------
 // --- The editor --------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -316,25 +371,67 @@ export class LexemeEditor {
     // --- Page + fragments ----------------------------------------------------
     // ------------------------------------------------------------------------
 
-    entryPage(entry_id: number): templates.Page {
+    entryPage(entry_id: number, mode: EditMode = 'edit'): templates.Page {
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
-        return templates.page(title, this.renderEntry(entry_id));
+        return templates.page(title, this.renderEntry(entry_id, mode));
     }
 
-    /** The root-level fragment: the whole entry (heading + all relations). */
-    renderEntry(entry_id: number): Markup {
+    /** The root-level fragment: the whole entry (heading + all relations).  The
+     *  mode rides in the fragment's hx-get, so every in-place reload (including
+     *  the coarse review-mode reloads) re-renders in the same look. */
+    renderEntry(entry_id: number, mode: EditMode = 'edit'): Markup {
         const entryTuple = this.entryTuple(entry_id);
         const q = new CurrentTupleQuery(entryTuple);
         const e = this.app.entriesById.get(entry_id);
         const heading = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
         return (
             ['div', {class: `-entry-${entry_id}- container py-3`,
-                     'hx-get': `${R}.renderEntry(${entry_id})`,
+                     'hx-get': `${R}.renderEntry(${entry_id}, '${mode}')`,
                      'hx-trigger': 'reload', 'hx-swap': 'outerHTML'},
+             this.renderModeToggle(entry_id, entryTuple, mode),
              ['h2', {}, heading || 'No spellings'],
-             this.renderChildRelations(entry_id, q),
+             mode === 'review'
+                ? this.renderReviewChildRelations(entry_id, entryTuple)
+                : this.renderChildRelations(entry_id, q),
             ]);
+    }
+
+    /** The Editing ⇄ Reviewing switch (and, in review mode, the pending count).
+     *  A plain htmx swap of the entry fragment into the other mode - the
+     *  fragment's own hx-get then keeps it there. */
+    private renderModeToggle(entry_id: number, entryTuple: VersionedTuple, mode: EditMode): Markup {
+        const other: EditMode = mode === 'review' ? 'edit' : 'review';
+        const swap = (label: Markup, cls: string) =>
+            ['button', {type: 'button', class: cls,
+                        'hx-get': `${R}.renderEntry(${entry_id}, '${other}')`,
+                        'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'}, label];
+        if(mode === 'review') {
+            const n = this.entryPendingCount(entryTuple);
+            return ['div', {class: 'd-flex align-items-center gap-2 mb-2 lm-review-bar'},
+                    ['span', {class: 'badge text-bg-warning'}, 'Reviewing'],
+                    ['span', {class: 'text-muted small'},
+                     n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`],
+                    swap('Back to editing', 'btn btn-sm btn-outline-secondary ms-auto')];
+        }
+        const n = this.entryPendingCount(entryTuple);
+        return ['div', {class: 'd-flex mb-2'},
+                swap(`Review changes${n>0?` (${n})`:''}`,
+                     `btn btn-sm ms-auto ${n>0?'btn-outline-warning':'btn-outline-secondary'}`)];
+    }
+
+    /** Pending facts in this entry's subtree (added / edited / removed): the
+     *  review badge's count.  Walks the VersionedTuples directly (pending
+     *  deletions are not in the current view). */
+    private entryPendingCount(entryTuple: VersionedTuple): number {
+        let n = 0;
+        entryTuple.forEachVersionedTuple(t => {
+            if(t.tupleVersions.length === 0) return;
+            const s = classifyFact(t.tupleVersions.map(v => v.assertion),
+                                   timestamp.END_OF_TIME).state;
+            if(s === 'added' || s === 'edited' || s === 'removed') n++;
+        });
+        return n;
     }
 
     /** The parent-level fragment: one relation (header + its tuples). */
@@ -430,66 +527,50 @@ export class LexemeEditor {
      *  doesn't also open the edit dialog.) */
     private tupleActionMenu(entry_id: number, fact_id: number,
                             rf: model.RelationField, current: TupleVersion): Markup {
-        const parentPath = getAssertionPath(current.assertion);
+        return action.actionMenu(
+            this.editMenuItems(entry_id, fact_id, rf, current.assertion, 'edit'),
+            {ariaLabel: `Actions for this ${rf.prompt}`});
+    }
+
+    /** The editing affordances for a tuple (Edit / Insert / Move / History /
+     *  Delete).  Factored out so review mode can offer them too (a reviewer
+     *  often fixes a value in place) above its approve/revert/comment items.
+     *  `mode` rides into every action so its reload re-renders in the same
+     *  look (review mode reloads coarsely - see mutationTargets). */
+    private editMenuItems(entry_id: number, fact_id: number, rf: model.RelationField,
+                          current: Assertion, mode: EditMode): action.ActionMenuItem[] {
+        const parentPath = getAssertionPath(current);
         const parent_fact_id = parentPath[parentPath.length-2][1];
         // Bounding-group/image relations create tuples via their own flows
         // (per-book buttons / not yet) - no generic positioned inserts.
         const insertable = !rf.scalarFields.some(isBoundingGroupField)
             && !rf.scalarFields.some(isDialogReadOnly);
-        return action.actionMenu([
+        // The mode rides as a trailing arg ONLY in review mode (it defaults to
+        // 'edit' server-side), so plain editing keeps its byte-identical wire.
+        const m = mode === 'review' ? `, 'review'` : '';
+        return [
             {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
-                dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id})`}},
+                dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}},
             ...(insertable ? [
                 {label: 'Insert before', mode: {kind: 'modal' as const,
-                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before')`}},
+                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
                 {label: 'Insert after', mode: {kind: 'modal' as const,
-                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after')`}},
+                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ] : []),
             {label: 'Move up', mode: {kind: 'immediate',
-                expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up')`}},
+                expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up'${m})`}},
             {label: 'Move down', mode: {kind: 'immediate',
-                expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down')`}},
+                expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down'${m})`}},
             {label: 'History', mode: {kind: 'modal',
-                dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id})`}},
+                dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id}${m})`}},
             {label: 'Delete', mode: {kind: 'confirm',
-                expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id})`,
+                expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id}${m})`,
                 message: `Delete this ${rf.prompt}?`}},
-        ], {ariaLabel: `Actions for this ${rf.prompt}`});
+        ];
     }
 
     private renderTupleValues(rf: model.RelationField, tv: TupleVersion): Markup {
-        const parts = rf.scalarFields
-            .filter(f => !(f instanceof model.PrimaryKeyField))
-            .map(f => this.renderFieldValue(f, (tv.assertion as any)[f.bind]))
-            .filter(p => p !== undefined);
-        return parts.length === 0
-            ? ['span', {class:'text-muted'}, '(empty)']
-            : parts.map(p => [p, ' ']);
-    }
-
-    private renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
-        if(v === null || v === undefined || v === '') return undefined;
-        if(f instanceof model.AudioField)
-            return audio.renderAudio(String(v), '🔉 Recording', undefined, '/');
-        if(f instanceof model.ImageField)
-            return ['img', {src: '/'+String(v), style: 'max-width: 10em; max-height: 10em;'}];
-        if(f instanceof model.VariantField)
-            return ['span', {class:'badge text-bg-light'}, entrySchema.variants[v] ?? String(v)];
-        if(f instanceof model.EnumField) {
-            const options = (f.style as any).$options as Record<string,string>|undefined;
-            return ['span', {}, options?.[v] ?? String(v)];
-        }
-        if(f instanceof model.BooleanField)
-            return ['span', {}, f.prompt, ': ', v ? 'Yes' : 'No'];
-        if(isBoundingGroupField(f))
-            // The reference image; clicking opens the page tagger on its group
-            // (stopPropagation so the surrounding editable surface doesn't also
-            // open the edit dialog).
-            return ['div', {onclick: `event.stopPropagation(); window.open('/ww/forwardToSingleBoundingGroupEditorURL(${v}, null)')`},
-                    ['object', {style: 'pointer-events: none;',
-                                data: `/ww/renderStandaloneGroupAsSvgResponse('/', ${v})`,
-                                type: 'image/svg+xml'}]];
-        return ['span', {}, String(v)];
+        return renderAssertionValues(rf, tv.assertion);
     }
 
     /**
@@ -537,6 +618,215 @@ export class LexemeEditor {
     }
 
     // ------------------------------------------------------------------------
+    // --- Review mode ----------------------------------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // The same structured lexeme as edit mode, but each fact is shown DIFFED
+    // against its published baseline (publication-model.md): clean facts read
+    // plainly, pending creations/edits/deletions are badged and (for edits)
+    // shown old→new, and discussion comments hang under their fact.  The walk
+    // goes over the raw VersionedTuples - not the current-view query - so a
+    // pending DELETION (gone from the current view, still published) surfaces.
+    // The ☰ keeps the edit affordances (a reviewer often fixes a value in
+    // place) and adds approve / revert / comment.
+
+    private renderReviewChildRelations(entry_id: number, parentTuple: VersionedTuple): Markup {
+        return parentTuple.schema.relationFields.map(rf =>
+            this.renderReviewRelation(entry_id, parentTuple.id, rf,
+                                      parentTuple.childRelations[rf.tag]));
+    }
+
+    private renderReviewRelation(entry_id: number, parent_fact_id: number,
+                                 rf: model.RelationField,
+                                 vrel: workspace.VersionedRelation): Markup {
+        const header =
+            ['div', {class:'d-flex align-items-center gap-2 lex-relation-header'},
+             ['span', {class:'fw-bold'}, rf.prompt],
+             // Proposing a new item while reviewing reloads the whole entry
+             // (review mode), so the add affordance carries the mode.
+             this.reviewAddButton(entry_id, parent_fact_id, rf)];
+        const reviewed = this.reviewTuples(vrel);
+
+        switch(rf.style.$shape) {
+            case 'containerRelation':
+                return ['div', {class: `lex-relation mt-3`},
+                        header,
+                        reviewed.map(({tuple, review}) =>
+                            ['div', {class:'card mt-1 mb-2'},
+                             ['div', {class:'card-body py-2'},
+                              this.renderReviewSurface(entry_id, rf, tuple, review),
+                              // A live container recurses; a pending-removal one
+                              // does not (its children went with it).
+                              review.state === 'removed' ? [] :
+                              ['div', {class:'ms-4'},
+                               this.renderReviewChildRelations(entry_id, tuple)]]])];
+            case 'inlineListRelation':
+            case 'compactInlineListRelation':
+            default:
+                return ['div', {class: `lex-relation mt-2`},
+                        header,
+                        ['div', {class:'list-group lm-list'},
+                         reviewed.map(({tuple, review}) => this.renderReviewSurface(
+                             entry_id, rf, tuple, review, this.surfaceClasses(rf)))]];
+        }
+    }
+
+    // The relation's add affordance in review mode: the same '+' as edit mode,
+    // but mode-tagged so the new proposal lands and reloads in review.
+    private reviewAddButton(entry_id: number, parent_fact_id: number,
+                            rf: model.RelationField): Markup {
+        if(rf.scalarFields.some(isBoundingGroupField) || rf.scalarFields.some(isDialogReadOnly))
+            return [];
+        return action.actionButton(action.plusIcon(),
+            {kind: 'modal',
+             dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', null, null, 'review')`},
+            'lm-menu-button', {'aria-label': `New ${rf.prompt}`, title: `New ${rf.prompt}`});
+    }
+
+    // The overlay set for a relation: every fact that is either live or has a
+    // standing published version (so pending deletions appear); settled, no-
+    // longer-public deletions ('hidden') drop out.  Ordered by the order_key of
+    // the version that places it (the live head, or the published baseline for
+    // a pending removal).
+    private reviewTuples(vrel: workspace.VersionedRelation):
+        Array<{tuple: VersionedTuple, review: FactReview<Assertion>}> {
+        return [...vrel.tuples.values()]
+            .filter(t => t.tupleVersions.length > 0)
+            .map(t => ({tuple: t,
+                        review: classifyFact(t.tupleVersions.map(v => v.assertion),
+                                             timestamp.END_OF_TIME)}))
+            .filter(x => x.review.state !== 'hidden')
+            .sort((a, b) => {
+                const ka = (a.review.state === 'removed' ? a.review.baseline : a.review.head)?.order_key ?? '';
+                const kb = (b.review.state === 'removed' ? b.review.baseline : b.review.head)?.order_key ?? '';
+                return ka < kb ? -1 : ka > kb ? 1 : 0;
+            });
+    }
+
+    /** One fact in review mode: its diff/badge, the change's provenance, any
+     *  comments, and the superset ☰.  Body tap still opens the edit dialog
+     *  (the reviewer fixes in place), except on a pending-removal (nothing to
+     *  edit). */
+    private renderReviewSurface(entry_id: number, rf: model.RelationField,
+                                tuple: VersionedTuple, review: FactReview<Assertion>,
+                                extraClasses: string = ''): Markup {
+        const fact_id = tuple.id;
+        const editable = review.state !== 'removed';
+        return (
+            ['div', {class: `-fact-${fact_id}- lm-review-fact ${editable ? 'lm-editable' : ''} `
+                            + `d-flex align-items-start ${extraClasses}`,
+                     ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
+             ['div', {class:'flex-grow-1'},
+              this.renderReviewBody(rf, review),
+              this.renderReviewProvenance(review),
+              this.renderReviewComments(review)],
+             this.reviewActionMenu(entry_id, fact_id, rf, review),
+            ]);
+    }
+
+    // The fact's value, shown according to its review state.
+    private renderReviewBody(rf: model.RelationField, review: FactReview<Assertion>): Markup {
+        switch(review.state) {
+            case 'added':
+                return ['div', {},
+                        ['span', {class:'badge text-bg-success me-2 lm-pending'}, 'new'],
+                        renderAssertionValues(rf, review.content)];
+            case 'removed':
+                return ['div', {},
+                        ['span', {class:'badge text-bg-danger me-2 lm-pending'}, 'deletion proposed'],
+                        ['del', {class:'text-muted'},
+                         renderAssertionValues(rf, review.baseline ?? review.content)]];
+            case 'edited':
+                return ['div', {},
+                        ['span', {class:'badge text-bg-warning me-2 lm-pending'}, 'edited'],
+                        this.renderFactDiff(rf, review.baseline!, review.content)];
+            case 'clean':
+            default:
+                return renderAssertionValues(rf, review.content);
+        }
+    }
+
+    // Field-by-field old→new for an edited fact: changed fields show the
+    // published value struck then the proposed value; unchanged fields render
+    // once, plainly (from the proposed version - identical to the baseline).
+    private renderFactDiff(rf: model.RelationField, baseline: Assertion,
+                           content: Assertion): Markup {
+        const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
+        const parts: Markup[] = [];
+        for(const f of rf.scalarFields) {
+            if(f instanceof model.PrimaryKeyField) continue;
+            const before = (baseline as any)[f.bind], after = (content as any)[f.bind];
+            if(norm(before) === norm(after)) {
+                const v = renderFieldValue(f, after);
+                if(v !== undefined) parts.push([v, ' ']);
+                continue;
+            }
+            const oldM = renderFieldValue(f, before), newM = renderFieldValue(f, after);
+            parts.push(['span', {class:'lm-diff me-1'},
+                        ['del', {class:'text-muted me-1'},
+                         oldM !== undefined ? oldM : ['span', {}, '(empty)']],
+                        ['span', {class:'lm-diff-new'},
+                         newM !== undefined ? newM : ['span', {class:'text-muted'}, '(empty)']],
+                        ' ']);
+        }
+        return parts.length === 0 ? ['span', {class:'text-muted'}, '(empty)'] : parts;
+    }
+
+    // Who proposed the pending change, and when (clean facts say nothing).
+    private renderReviewProvenance(review: FactReview<Assertion>): Markup {
+        if(review.state === 'clean' || review.state === 'hidden') return [];
+        const a = review.content;
+        const who = a.change_by_username
+            ? (entrySchema.users[a.change_by_username] ?? a.change_by_username) : 'unknown';
+        const verb = review.state === 'removed' ? 'deleted'
+            : review.state === 'added' ? 'added' : 'edited';
+        return ['div', {class:'small text-muted'},
+                `${verb} by ${who} — ${timestamp.formatTimestampAsLocalTime(a.valid_from)}`,
+                isAutomatedUsername(a.change_by_username)
+                    ? ['span', {class:'badge text-bg-secondary ms-1'}, 'automated'] : ''];
+    }
+
+    private renderReviewComments(review: FactReview<Assertion>): Markup {
+        return review.comments.map(c => {
+            const who = c.change_by_username
+                ? (entrySchema.users[c.change_by_username] ?? c.change_by_username) : 'unknown';
+            return ['div', {class:'small lm-review-comment'},
+                    ['span', {class:'badge text-bg-light me-1'}, 'comment'],
+                    ['span', {class:'fw-semibold'}, who], ': ', c.change_note ?? '',
+                    ['span', {class:'text-muted ms-1'},
+                     timestamp.formatTimestampAsLocalTime(c.valid_from)]];
+        });
+    }
+
+    /** The review ☰: approve (when pending and the two-person rule allows it),
+     *  revert, comment — then the ordinary edit affordances below a divider
+     *  (so a reviewer can also fix the value in place). */
+    private reviewActionMenu(entry_id: number, fact_id: number,
+                             rf: model.RelationField, review: FactReview<Assertion>): Markup {
+        const items: action.ActionMenuItem[] = [];
+        const pending = review.state === 'added' || review.state === 'edited'
+            || review.state === 'removed';
+
+        if(pending && this.app.lexemeOps.mayApprove(review.content.change_by_username ?? null))
+            items.push({label: review.state === 'removed' ? 'Approve deletion' : 'Approve',
+                mode: {kind: 'immediate',
+                       expr: `wordwiki.lexeme.reviewApprove(${entry_id}, ${fact_id})`}});
+        if(this.app.lexemeOps.hasApprovePermission())
+            items.push({label: pending ? 'Reject…' : 'Roll back…',
+                mode: {kind: 'modal', dialogUrl: `${R}.revertDialog(${entry_id}, ${fact_id})`}});
+        items.push({label: 'Comment…',
+            mode: {kind: 'modal', dialogUrl: `${R}.commentDialog(${entry_id}, ${fact_id})`}});
+
+        // A pending removal has no live value to edit; everything else keeps the
+        // edit affordances (mode-tagged so their reloads stay in review).
+        if(review.state !== 'removed')
+            items.push('divider',
+                ...this.editMenuItems(entry_id, fact_id, rf, review.content, 'review'));
+
+        return action.actionMenu(items, {ariaLabel: `Review actions for this ${rf.prompt}`});
+    }
+
+    // ------------------------------------------------------------------------
     // --- Dialogs --------------------------------------------------------------
     // ------------------------------------------------------------------------
 
@@ -546,7 +836,7 @@ export class LexemeEditor {
      * params carry the addressing and the conflict guard
      * (replaces_assertion_id).
      */
-    editDialog(entry_id: number, fact_id: number): Markup {
+    editDialog(entry_id: number, fact_id: number, mode: EditMode = 'edit'): Markup {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const rel = tuple.schema;
         const current = tuple.mostRecentTuple ?? panic('no current version for', fact_id);
@@ -556,7 +846,7 @@ export class LexemeEditor {
         const defaults = current.domainFields;
 
         const hidden: Record<string, any> = {
-            entry_id, fact_id,
+            entry_id, fact_id, mode,
             replaces_assertion_id: current.assertion.assertion_id,
         };
         // The before-<name> snapshots parseInput compares against (only fields
@@ -590,7 +880,8 @@ export class LexemeEditor {
      * tuple lands next to the anchor tuple.
      */
     insertDialog(entry_id: number, parent_fact_id: number, child_tag: string,
-                 anchor_fact_id?: number, where?: 'before'|'after'): Markup {
+                 anchor_fact_id?: number|null, where?: 'before'|'after'|null,
+                 mode: EditMode = 'edit'): Markup {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
         const rel = parent.childRelations[child_tag]?.schema
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
@@ -598,7 +889,7 @@ export class LexemeEditor {
         const fields = dialogFields(rel);
         const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
 
-        const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag};
+        const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag, mode};
         if(anchor_fact_id !== undefined && (where === 'before' || where === 'after')) {
             hidden.anchor_fact_id = anchor_fact_id;
             hidden.where = where;
@@ -622,11 +913,14 @@ export class LexemeEditor {
      * re-asserts the old version's values as a NEW assertion (the undo model:
      * mutes are not allowed).
      */
-    historyDialog(entry_id: number, fact_id: number): Markup {
+    historyDialog(entry_id: number, fact_id: number, mode: EditMode = 'edit'): Markup {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const rel = tuple.schema;
         const versions = tuple.tupleVersions.toReversed();
         const mostRecent = tuple.mostRecentTuple;
+        // As in editMenuItems: the mode rides along only in review (edit keeps
+        // its byte-identical wire).
+        const m = mode === 'review' ? `, 'review'` : '';
 
         return [
             // This dialog is opened from a button INSIDE the modal body, which
@@ -639,7 +933,7 @@ export class LexemeEditor {
             // The way back to the assertion this is the history OF.
             ['div', {class: 'mb-2'},
              action.actionButton('← Back to edit',
-                 {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id})`},
+                 {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`},
                  'btn btn-sm btn-outline-secondary')],
             ['div', {class:'list-group lm-list'},
              this.collapseAutomatedRuns(versions.map(v => {
@@ -667,7 +961,7 @@ export class LexemeEditor {
                                'not restorable (predates a vocabulary migration)']
                             : action.actionButton('Restore',
                                 {kind: 'confirm',
-                                 expr: `wordwiki.lexeme.restoreVersion(${entry_id}, ${fact_id}, ${a.assertion_id})`,
+                                 expr: `wordwiki.lexeme.restoreVersion(${entry_id}, ${fact_id}, ${a.assertion_id}${m})`,
                                  message: `Restore this version of ${rel.prompt}?`},
                                 'btn btn-sm btn-outline-secondary')];
                  return {automated: isAutomatedUsername(a.change_by_username) && !isCurrent, item};
@@ -771,10 +1065,68 @@ export class LexemeEditor {
             return this.saveInsert(form);
     }
 
+    // --- Review actions (publication-model.md) ------------------------------
+    //
+    // Thin wrappers over the LexemeOps publication verbs (which do the work and
+    // enforce permissions): they reload the whole entry fragment, which - being
+    // rendered in review mode - re-renders the diff with the fact reclassified
+    // (an approved edit becomes clean; an approved deletion disappears).
+
+    /** Approve a fact's pending content (publishes it). */
+    reviewApprove(entry_id: number, fact_id: number): any {
+        this.app.lexemeOps.approveFact(fact_id);
+        return this.reload([this.rootTarget(entry_id)]);
+    }
+
+    /** The revert/rollback note dialog (a reject reason or a rollback rationale). */
+    revertDialog(entry_id: number, fact_id: number): Markup {
+        return this.noteDialog(entry_id, fact_id, 'submitRevert',
+            {title: 'Revert to the published value',
+             prompt: 'Reason (required) — kept with the reverted value',
+             submitLabel: 'Revert'});
+    }
+
+    /** The discussion-comment dialog. */
+    commentDialog(entry_id: number, fact_id: number): Markup {
+        return this.noteDialog(entry_id, fact_id, 'submitComment',
+            {title: 'Add a comment',
+             prompt: 'Comment (required) — recorded on the fact, never published',
+             submitLabel: 'Comment'});
+    }
+
+    private noteDialog(entry_id: number, fact_id: number, submit: string,
+                       o: {title: string, prompt: string, submitLabel: string}): Markup {
+        const note = new TextAreaField('note', 3, {nullable: false, prompt: o.prompt});
+        return [
+            ['script', {}, 'setTimeout(showModalEditor)'],
+            action.renderParamForm([note], {}, {
+                title: o.title,
+                submitLabel: o.submitLabel,
+                hidden: {entry_id, fact_id},
+                dispatch: {id: 'edit-form',
+                           onsubmit: `event.preventDefault(); tx\`wordwiki.lexeme.${submit}(\${getFormJSON(event.target)})\``},
+            })];
+    }
+
+    submitRevert(form: Record<string, any>): any {
+        const entry_id = utils.parseIntOrError(String(form.entry_id));
+        const fact_id = utils.parseIntOrError(String(form.fact_id));
+        this.app.lexemeOps.revertFact(fact_id, String(form.note ?? ''));
+        return this.reload([this.rootTarget(entry_id)]);
+    }
+
+    submitComment(form: Record<string, any>): any {
+        const entry_id = utils.parseIntOrError(String(form.entry_id));
+        const fact_id = utils.parseIntOrError(String(form.fact_id));
+        this.app.lexemeOps.commentFact(fact_id, String(form.note ?? ''));
+        return this.reload([this.rootTarget(entry_id)]);
+    }
+
     private saveEdit(form: Record<string, any>): any {
         const entry_id = utils.parseIntOrError(String(form.entry_id));
         const fact_id = utils.parseIntOrError(String(form.fact_id));
         const replaces = utils.parseIntOrError(String(form.replaces_assertion_id));
+        const mode = formMode(form);
 
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const rel = tuple.schema;
@@ -789,7 +1141,7 @@ export class LexemeEditor {
 
         const changed = parseDialogFields(rel, form, this.vocabs);
         if(Object.keys(changed).length === 0)
-            return this.reload(this.mutationTargets(entry_id, current.assertion, 'self'));
+            return this.reload(this.mutationTargets(entry_id, current.assertion, 'self', mode));
 
         // Re-assert the whole tuple: current values merged with the changes.
         // Starting from a copy of the current assertion preserves the columns
@@ -802,11 +1154,12 @@ export class LexemeEditor {
             valid_from: placeholderTxTime(),
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
+            ...unapprovedDimension,
         };
         setAssertionFields(newAssertion, rel, values);
 
         this.app.applyTransaction([newAssertion]);
-        return this.reload(this.mutationTargets(entry_id, newAssertion, 'self'));
+        return this.reload(this.mutationTargets(entry_id, newAssertion, 'self', mode));
     }
 
     /** Where a new tuple lands: next to the anchor when the form carries
@@ -861,13 +1214,13 @@ export class LexemeEditor {
         setAssertionFields(newAssertion, rel, changed);
 
         this.app.applyTransaction([newAssertion]);
-        return this.reload(this.mutationTargets(entry_id, newAssertion, 'parent'));
+        return this.reload(this.mutationTargets(entry_id, newAssertion, 'parent', formMode(form)));
     }
 
     /** Delete = a tombstone assertion (see LexemeOps.tombstoneFact - the
      *  mutation and its race handling live there); this method only
      *  translates the outcome into the editor's alerts/reload targets. */
-    deleteTuple(entry_id: number, fact_id: number): any {
+    deleteTuple(entry_id: number, fact_id: number, mode: EditMode = 'edit'): any {
         const r = this.app.lexemeOps.tombstoneFact(entry_id, fact_id);
         switch(r.outcome) {
             case 'has-children':
@@ -877,16 +1230,16 @@ export class LexemeEditor {
                 // A stale dialog's delete racing another user's: idempotent -
                 // just refresh.
                 return this.reload(r.mostRecent
-                    ? this.mutationTargets(entry_id, r.mostRecent, 'parent')
+                    ? this.mutationTargets(entry_id, r.mostRecent, 'parent', mode)
                     : [this.rootTarget(entry_id)]);
             case 'removed':
-                return this.reload(this.mutationTargets(entry_id, r.replaced, 'parent'));
+                return this.reload(this.mutationTargets(entry_id, r.replaced, 'parent', mode));
         }
     }
 
     /** Reorder within the parent relation by re-asserting with a fresh
      *  order_key between the appropriate neighbours. */
-    move(entry_id: number, fact_id: number, direction: 'up'|'down'): any {
+    move(entry_id: number, fact_id: number, direction: 'up'|'down', mode: EditMode = 'edit'): any {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const mostRecent = tuple.mostRecentTuple ?? panic('no versions for', String(fact_id));
         // A stale dialog's move racing another user's delete: re-asserting a
@@ -923,10 +1276,11 @@ export class LexemeEditor {
             valid_from: placeholderTxTime(),
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
+            ...unapprovedDimension,
             order_key,
         };
         this.app.applyTransaction([newAssertion]);
-        return this.reload(this.mutationTargets(entry_id, newAssertion, 'parent'));
+        return this.reload(this.mutationTargets(entry_id, newAssertion, 'parent', mode));
     }
 
     /**
@@ -934,7 +1288,8 @@ export class LexemeEditor {
      * the fact's current state.  Works both for a live fact (revert) and a
      * tombstoned one (restore after delete - starts a new valid period).
      */
-    restoreVersion(entry_id: number, fact_id: number, assertion_id: number): any {
+    restoreVersion(entry_id: number, fact_id: number, assertion_id: number,
+                   mode: EditMode = 'edit'): any {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const hist = tuple.tupleVersions.find(v => v.assertion.assertion_id === assertion_id)
             ?? panic('no such version', assertion_id);
@@ -960,12 +1315,13 @@ export class LexemeEditor {
             valid_from: placeholderTxTime(),
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
+            ...unapprovedDimension,
             // Restoring values, not position: a live fact keeps its current
             // place; a restored-after-delete fact returns at its old key.
             order_key: wasDeleted ? hist.assertion.order_key : mostRecent.assertion.order_key,
         };
         this.app.applyTransaction([newAssertion]);
-        return this.reload(this.mutationTargets(entry_id, newAssertion, wasDeleted ? 'parent' : 'self'));
+        return this.reload(this.mutationTargets(entry_id, newAssertion, wasDeleted ? 'parent' : 'self', mode));
     }
 
     /**
@@ -1051,8 +1407,15 @@ export class LexemeEditor {
     // 'self' reloads the tuple's surface, 'parent' the containing relation -
     // except that anything touching a spelling widens to the whole entry,
     // because spellings feed the entry heading.
-    private mutationTargets(entry_id: number, a: Assertion, scope: 'self'|'parent'): string[] {
-        if(a.ty === entrySchema.SpellingTag)
+    //
+    // Review mode reloads coarsely: the whole entry fragment, always.  Any
+    // mutation there can change a fact's CLASSIFICATION (approving an edit
+    // makes it clean; deleting makes it a pending-removal; editing a clean
+    // fact makes it edited), and those changes ripple through the diff display
+    // - so a fine-grained self/parent reload would leave sibling classes stale.
+    private mutationTargets(entry_id: number, a: Assertion, scope: 'self'|'parent',
+                            mode: EditMode = 'edit'): string[] {
+        if(mode === 'review' || a.ty === entrySchema.SpellingTag)
             return [this.rootTarget(entry_id)];
         if(scope === 'self')
             return [`.-fact-${a.id}-`];

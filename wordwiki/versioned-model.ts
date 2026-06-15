@@ -119,6 +119,79 @@ export function byPath<T extends { path: string }>(a: T, b: T): number {
     return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
 }
 
+// --- Publication classification (shared by the queries and the review UI) -------
+//
+// One definition of "which version is published-current" and "which is the
+// latest content version", used by the production queries (publication-ops.ts)
+// and the review renderer (lexeme-editor.ts). A fact's versions are oldest-
+// first (the chain order the workspace maintains).
+
+const EOT = (a: { published_to?: number | null }) => a.published_to;
+
+/** The fact's currently-published version (published_to = END_OF_TIME), or
+ *  undefined if nothing of this fact is published. At most one exists (I2). */
+export function publishedCurrentVersion<T extends { published_to?: number | null }>(
+    versions: T[], endOfTime: number): T | undefined {
+    return versions.find((a) => EOT(a) === endOfTime);
+}
+
+/** The latest CONTENT version (a real assert/approve/revert — not a comment).
+ *  Comments re-assert a value to carry discussion and never count as content. */
+export function latestContentVersion<T extends { change_action?: string | null }>(
+    versions: T[]): T | undefined {
+    for (let i = versions.length - 1; i >= 0; i--)
+        if (!isComment(versions[i])) return versions[i];
+    return undefined;
+}
+
+/** How a fact stands relative to its published baseline — the unit the review
+ *  UI renders and acts on. `clean` = the published value stands unchanged;
+ *  `added`/`edited`/`removed` = a creation/edit/deletion is pending approval;
+ *  `hidden` = nothing to show (a settled, never-or-no-longer-published
+ *  deletion). */
+export type FactReviewState = "clean" | "added" | "edited" | "removed" | "hidden";
+
+export interface FactReview<T> {
+    state: FactReviewState;
+    /** The currently-published version (the baseline the diff is against), if any. */
+    baseline: T | undefined;
+    /** The latest content version (the proposed value, or the standing one when clean). */
+    content: T;
+    /** The newest version overall (may be a comment or a tombstone). */
+    head: T;
+    /** Comment versions newer than the baseline (the live discussion). */
+    comments: T[];
+}
+
+/** Classify a fact from its oldest-first version chain. Display-only: it reads
+ *  the same publication state the (property-tested) queries do, and never
+ *  mutates. `versions` must be non-empty (every fact has at least its first
+ *  assertion). */
+export function classifyFact<
+    T extends { valid_from: number; valid_to: number;
+                published_from?: number | null; published_to?: number | null;
+                change_action?: string | null }>(
+    versions: T[], endOfTime: number): FactReview<T> {
+    const head = versions[versions.length - 1];
+    const content = latestContentVersion(versions) ?? head;
+    const baseline = publishedCurrentVersion(versions, endOfTime);
+    const baselineIdx = baseline ? versions.indexOf(baseline) : -1;
+    const comments = versions.filter((v, i) => i > baselineIdx && isComment(v));
+
+    const isTombstone = content.valid_from === content.valid_to;
+    let state: FactReviewState;
+    if (isTombstone)
+        state = baseline ? "removed" : "hidden";
+    else if (content.published_to === endOfTime)
+        state = "clean";                               // content IS the published truth
+    else if (content.published_from == null)
+        state = baseline ? "edited" : "added";         // pending edit / creation
+    else
+        state = baseline ? "edited" : "clean";         // published-then-superseded
+
+    return { state, baseline, content, head, comments };
+}
+
 // --- The production adapter: VersionedDb behind the shared interface ------------
 
 /**

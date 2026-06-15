@@ -20,7 +20,8 @@
 import { Assertion } from "./assertion.ts";
 import { VersionedDb, VersionedTuple } from "./workspace.ts";
 import * as timestamp from "../liminal/timestamp.ts";
-import { isComment, COMMENT, extractAttrs, byPath, type VisibleFact } from "./versioned-model.ts";
+import { COMMENT, extractAttrs, byPath, publishedCurrentVersion, latestContentVersion,
+         type VisibleFact } from "./versioned-model.ts";
 
 const EOT = timestamp.END_OF_TIME;
 
@@ -37,11 +38,9 @@ function tupleOf(vdb: VersionedDb, factId: number): VersionedTuple {
 const versionsOf = (t: VersionedTuple): Assertion[] => t.tupleVersions.map((tv) => tv.assertion);
 const latest = (vs: Assertion[]): Assertion => vs[vs.length - 1];
 const publishedCurrent = (vs: Assertion[]): Assertion | undefined =>
-    vs.find((a) => a.published_to === EOT);
-function latestContent(vs: Assertion[]): Assertion | undefined {
-    for (let i = vs.length - 1; i >= 0; i--) if (!isComment(vs[i])) return vs[i];
-    return undefined;
-}
+    publishedCurrentVersion(vs, EOT);
+const latestContent = (vs: Assertion[]): Assertion | undefined =>
+    latestContentVersion(vs);
 
 // A re-assertion: same path + content as `contentFrom`, chained onto `tip`,
 // with the version/publication/change fields set explicitly. (Independent of

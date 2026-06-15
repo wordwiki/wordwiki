@@ -256,3 +256,36 @@
     border-radius: 0.5rem;
     margin-bottom: 1rem;
 }
+
+/* --- Review mode (the lexeme editor's approval look; lexeme-editor.ts) ------
+   The structured lexeme shown diffed against its published baseline: pending
+   creations/edits/deletions are badged, edits show old -> new, and comments
+   hang under their fact.  See publication-model.md. */
+
+/* The sticky-ish header bar carrying the Editing <-> Reviewing switch. */
+.lm-review-bar {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+/* A proposed-but-unpublished value (the "new" half of an edit diff). */
+.lm-diff-new {
+    background: #fff3cd;          /* bootstrap warning-subtle */
+    border-radius: 0.2rem;
+    padding: 0 0.15rem;
+}
+
+/* The whole fact surface when it carries a pending change - a quiet left rule
+   so the eye finds what needs review without the row shouting.  Keyed on the
+   state badge's .lm-pending marker, NOT a bare .badge (a clean fact may carry a
+   value badge - a variant/enum renders .text-bg-light). */
+.lm-review-fact:has(.lm-pending) {
+    border-left: 3px solid var(--bs-warning, #ffc107);
+    padding-left: 0.5rem;
+}
+
+/* A discussion comment line under a fact. */
+.lm-review-comment {
+    margin-top: 0.15rem;
+    color: var(--bs-secondary-color, #6c757d);
+}

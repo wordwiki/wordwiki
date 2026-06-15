@@ -35,7 +35,7 @@ const publishedCurrent = (factId: number) =>
 test("approveFact: an admin publishes another user's content; it persists", () => {
     return withTestDb((fx: Fixture) => {
         seed(fx, 1000, "djz", "water");                  // content by djz
-        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1000, 1000)); // dmm (admin) approves
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1000)); // dmm (admin) approves
 
         const pub = publishedCurrent(1000);
         assertEquals(pub?.change_action, "approved");
@@ -60,7 +60,7 @@ test("approveFact: a user without approve-permission is refused", () => {
                 return !perms.includes("admin") && !perms.includes("approve");
             }))!;
         const e = as(fx, nonApprover, () =>
-            assertThrows(() => fx.ww.lexemeOps.approveFact(1000, 1000), Error));
+            assertThrows(() => fx.ww.lexemeOps.approveFact(1000), Error));
         assertStringIncludes((e as Error).message, "approve permission");
         assertEquals(publishedCurrent(1000), undefined);  // nothing published
     });
@@ -69,7 +69,7 @@ test("approveFact: a user without approve-permission is refused", () => {
 test("self-approve: an admin may approve their own content (the workaround)", () => {
     return withTestDb((fx: Fixture) => {
         seed(fx, 1000, "djz", "water");                  // content by djz
-        as(fx, "djz", () => fx.ww.lexemeOps.approveFact(1000, 1000)); // djz approves own
+        as(fx, "djz", () => fx.ww.lexemeOps.approveFact(1000)); // djz approves own
         const pub = publishedCurrent(1000);
         assertEquals(pub?.change_action, "approved");
         assertEquals(pub?.change_by_username, "djz");     // self-approval, recorded
@@ -84,13 +84,13 @@ test("two-person: an approve-only (non-admin) user cannot approve their own", ()
         seed(fx, 1000, "rev", "water");                  // content by rev
         const ctx = { actorId: reviewerId, roles: new Set(["approve"]) };
         const e = as(fx, ctx, () =>
-            assertThrows(() => fx.ww.lexemeOps.approveFact(1000, 1000), Error));
+            assertThrows(() => fx.ww.lexemeOps.approveFact(1000), Error));
         assertStringIncludes((e as Error).message, "two-person");
         // A different approve-user CAN approve it.
         const rev2 = as(fx, "system", () =>
             fx.ww.users.insert({ username: "rev2", name: "Rev2", permissions: "approve", disabled: 0 }));
         as(fx, { actorId: rev2, roles: new Set(["approve"]) }, () =>
-            fx.ww.lexemeOps.approveFact(1000, 1000));
+            fx.ww.lexemeOps.approveFact(1000));
         assertEquals(publishedCurrent(1000)?.change_by_username, "rev2");
     });
 });
@@ -98,14 +98,14 @@ test("two-person: an approve-only (non-admin) user cannot approve their own", ()
 test("revertFact requires a note; revert + comment persist correctly", () => {
     return withTestDb((fx: Fixture) => {
         seed(fx, 1000, "djz", "water");
-        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1000, 1000));
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1000));
 
         // revert needs a note.
         as(fx, "dmm", () =>
-            assertThrows(() => fx.ww.lexemeOps.revertFact(1000, 1000, "  "), Error, "note"));
+            assertThrows(() => fx.ww.lexemeOps.revertFact(1000, "  "), Error, "note"));
 
         // A comment: any logged-in editor; never published.
-        as(fx, "djz", () => fx.ww.lexemeOps.commentFact(1000, 1000, "add SF spelling?"));
+        as(fx, "djz", () => fx.ww.lexemeOps.commentFact(1000, "add SF spelling?"));
         const vs = versions(1000);
         const comment = vs.at(-1);
         assertEquals(comment.change_action, "comment");
@@ -114,7 +114,7 @@ test("revertFact requires a note; revert + comment persist correctly", () => {
         assertEquals(publishedCurrent(1000)?.change_action, "approved");
 
         // revert with a note publishes a 'reverted' version.
-        as(fx, "dmm", () => fx.ww.lexemeOps.revertFact(1000, 1000, "wrong sense"));
+        as(fx, "dmm", () => fx.ww.lexemeOps.revertFact(1000, "wrong sense"));
         assertEquals(publishedCurrent(1000)?.change_action, "reverted");
         assertEquals(validateVersionedDb(fx.ww.workspace), []);
     });
