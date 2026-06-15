@@ -166,5 +166,44 @@ test("check-in editor: self verb for everyone, host verbs only for hosts", async
         const hostView = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
         assert(hasText(hostView, "Check someone in…"));
         assert(hasText(hostView, "Check out Bob Shares"));
+        assert(hasText(hostView, "Edit Bob Shares's check-in…"));
+    });
+});
+
+test("check-in editor: editing times/notes round-trips; blank clears the override", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        const checkinId = asSystem(() =>
+            rabid.event_checkin.checkinsForEvent.all({event_id: id})[0].event_checkin_id);
+
+        // The owner edits their own times + notes.
+        await asUser(bob, () => invoke(`rabid.event_checkin.editCheckin($arg0)`, {
+            event_checkin_id: String(checkinId),
+            start_time: '2026-06-20 19:30:00', end_time: '2026-06-20 21:00:00',
+            notes: 'left early'}));
+        let c = asSystem(() => rabid.event_checkin.getById(checkinId));
+        assertEquals(c.start_time, '2026-06-20 19:30:00');
+        assertEquals(c.end_time, '2026-06-20 21:00:00');
+        assertEquals(c.notes, 'left early');
+
+        // Blank time inputs clear the override (revert to the event's times).
+        await asUser(bob, () => invoke(`rabid.event_checkin.editCheckin($arg0)`, {
+            event_checkin_id: String(checkinId), start_time: '', end_time: '', notes: ''}));
+        c = asSystem(() => rabid.event_checkin.getById(checkinId));
+        assertEquals(c.start_time ?? null, null);
+        assertEquals(c.end_time ?? null, null);
+
+        // A different regular volunteer cannot edit it; a host can.
+        await asUser(carol, () => assertRejects(
+            () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
+                         {event_checkin_id: String(checkinId), notes: 'hax'}),
+            Error, "Not permitted to edit this check-in"));
+        await asUser(carol, () => assertRejects(
+            () => renderRoute(`rabid.event_checkin.editCheckinDialog(${checkinId})`),
+            Error, "Not permitted"));
+        await asUser(alice, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
+            {event_checkin_id: String(checkinId), notes: 'host note'}));
+        assertEquals(asSystem(() => rabid.event_checkin.getById(checkinId)).notes, 'host note');
     });
 });

@@ -788,6 +788,48 @@ export class EventCheckinTable extends Table<EventCheckin> {
             });
     }
 
+    // Edit one check-in's time overrides + notes (the less-common detailed flow).
+    // Identity (event/volunteer) and the was_staff snapshot are NOT editable.
+    // Own check-in always; anyone else's needs host/admin.
+    private assertCanManageCheckin(c: EventCheckin): void {
+        if(!this.canManageCheckins() && security.current()?.actorId !== c.volunteer_id)
+            throw new Error('Not permitted to edit this check-in');
+    }
+
+    editCheckinDialog(event_checkin_id: number): Markup {
+        const c = this.getById(event_checkin_id);
+        this.assertCanManageCheckin(c);
+        const name = security.runSystem(() =>
+            db().prepare<{name: string}, {id: number}>(
+                'SELECT name FROM volunteer WHERE volunteer_id = :id').first({id: c.volunteer_id}))?.name
+            ?? 'volunteer';
+        return action.renderParamForm(
+            [this.fieldsByName.start_time, this.fieldsByName.end_time, this.fieldsByName.notes],
+            {start_time: c.start_time, end_time: c.end_time, notes: c.notes},
+            {
+                title: `Edit ${name}'s check-in`,
+                submitLabel: 'Save',
+                hidden: {event_checkin_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.event_checkin.editCheckin(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    editCheckin(args: {event_checkin_id?: string|number, start_time?: string, end_time?: string, notes?: string}): Markup {
+        const id = Number(args?.event_checkin_id);
+        if(!Number.isInteger(id)) throw new Error('bad check-in id');
+        const c = this.getById(id);
+        this.assertCanManageCheckin(c);
+        // Empty time inputs clear the override (revert to the event's times).
+        const trim = (s?: string) => (s != null && String(s).trim() !== '') ? String(s) : null;
+        this.update(id, {
+            start_time: trim(args.start_time),
+            end_time: trim(args.end_time),
+            notes: args.notes ?? '',
+        } as Partial<EventCheckin>);
+        return this.reloadEditor(c.event_id);
+    }
+
     // The reloadable attendance fragment: the attendee names + the one ☰.  Lives
     // inside the fragment so a check-in reload regenerates it (the per-person
     // check-out items must track the roster).
@@ -806,13 +848,19 @@ export class EventCheckinTable extends Table<EventCheckin> {
         if(canManage)
             items.push({label: 'Check someone in…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.event_checkin.checkInDialog(${event_id})`}});
-        // Per-person check-out: own row always; others only with host/admin.
-        const removable = checkins.filter(c => canManage || c.volunteer_id === actorId);
-        if(items.length > 0 && removable.length > 0) items.push('divider');
-        for(const c of removable)
-            items.push({label: c.volunteer_id === actorId ? 'Check me out' : `Check out ${c.volunteer_name}`,
+        // Per-person verbs (own row always; others only with host/admin): the
+        // detailed Edit (times/notes) then the one-tap Check out, kept adjacent.
+        const manageable = checkins.filter(c => canManage || c.volunteer_id === actorId);
+        if(items.length > 0 && manageable.length > 0) items.push('divider');
+        for(const c of manageable) {
+            const self = c.volunteer_id === actorId;
+            items.push({label: self ? 'Edit my check-in…' : `Edit ${c.volunteer_name}'s check-in…`,
+                        mode: {kind: 'modal',
+                               dialogUrl: `/rabid.event_checkin.editCheckinDialog(${c.event_checkin_id})`}});
+            items.push({label: self ? 'Check me out' : `Check out ${c.volunteer_name}`,
                         mode: {kind: 'immediate',
                                expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
+        }
         if(canManage && checkins.length >= 2)
             items.push({label: 'Check everyone out…',
                         mode: {kind: 'confirm',
