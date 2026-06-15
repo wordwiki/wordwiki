@@ -32,7 +32,7 @@ import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import {serialize, path} from '../liminal/serializable.ts';
-import {route, authenticated} from '../liminal/security.ts';
+import {route, authenticated, publicRoute} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {LexemeOps} from './lexeme-ops.ts';
@@ -1165,21 +1165,17 @@ export class WordWiki extends LiminalApp {
         return result;
     }
 
-    // Unauthenticated requests are sent to the login page (except the login POST
-    // - and, on NON-PRODUCTION dbs only, the GET form of the login, so a
-    // puppeteer/test session can log in with a single navigation:
-    //   /ww/wordwiki.loginRequest(queryArgs)?username=djz&password=...
-    // Kept off production because a GET puts the password in the URL.)
-    // NOTE the root-level /page/<Book>/<N>.html vanity endpoint is handled
-    // before this gate in requestHandler and remains ungated.
-    protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
-        const allowedWithoutLogin = new Set([
-            'wordwiki.loginRequest(bodyArgs)',
-        ]);
-        if(this.getDbPurpose() !== 'production')
-            allowedWithoutLogin.add('wordwiki.loginRequest(queryArgs)');
-        const loggedIn = ctx.actorId !== undefined;
-        if(loggedIn || allowedWithoutLogin.has(jsExprSrc)) return undefined;
+    // Where anonymous, denied requests are bounced.  The PUBLIC entry points
+    // (login / loginRequest / logout) are no longer listed here - they carry
+    // @route(publicRoute(...)), so the strict route interpreter lets them
+    // through and only NON-public routes reach this bounce.  (The puppeteer GET
+    // login shortcut - /ww/wordwiki.loginRequest(queryArgs)?username=...&password=...
+    // - still works because loginRequest is publicRoute; NOTE this also allows it
+    // on production, where the old gate blocked the GET form to keep the password
+    // out of the URL.  Re-add a production GET guard in requestHandler if wanted.)
+    // The root-level /page/<Book>/<N>.html vanity endpoint is handled before this
+    // gate in requestHandler and remains ungated.
+    protected override loginRouteFor(requestUrl: string): string | undefined {
         return `wordwiki.login(${JSON.stringify(requestUrl)})`;
     }
 
@@ -1195,6 +1191,7 @@ export class WordWiki extends LiminalApp {
 
     // ----- Login / logout -----------------------------------------------------
 
+    @route(publicRoute('login page — the unauthenticated entry point'))
     login(targetUrl: string, errorMessage?: string): templates.Page {
         const body = [
             ['div', {class: 'container mt-5'},
@@ -1223,6 +1220,7 @@ export class WordWiki extends LiminalApp {
         return templates.page('Login', body);
     }
 
+    @route(publicRoute('login form submit — authenticates the user'))
     loginRequest(args: {username?: string, password?: string, targetUrl?: string}) {
         const {username, password} = args;
         const targetUrl = args.targetUrl || '/ww/';
@@ -1276,6 +1274,7 @@ export class WordWiki extends LiminalApp {
         return response;
     }
 
+    @route(publicRoute('logout — clears the session; harmless when anonymous'))
     logout(session_token?: string): server.Response {
         if(session_token) {
             try { this.testClientChannel.drop(session_token); } catch (_e) { /* ignore */ }
