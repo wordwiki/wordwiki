@@ -100,6 +100,7 @@ async function lmAudioFinalizeRecording(recId) {
     const st = lmRecorders[recId];
     if (!st) return;
     if (st.stream) st.stream.getTracks().forEach(t => t.stop());   // release the mic
+    if (st.aborted) return;   // dialog was closed mid-record: don't touch the gone DOM
     const status = document.getElementById(st.hiddenInputId + '-status');
     try {
         const blob = new Blob(st.chunks, {type: st.mr.mimeType || 'audio/webm'});
@@ -175,6 +176,42 @@ function lmArrayBufferToBase64(buf) {
         binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
     return btoa(binary);
 }
+
+/**
+ * Tear a recorder down: release the microphone, stop the timer, drop the
+ * MediaRecorder, revoke the preview blob URL, and forget the state.  Safe to
+ * call at any phase (recording, recorded-not-yet-used, or already finished).
+ * `aborted` makes a still-pending onstop/finalize bail without touching the DOM.
+ */
+function lmAudioCleanupRecorder(recId) {
+    const st = lmRecorders[recId];
+    if (!st) return;
+    st.aborted = true;
+    st.recording = false;
+    if (st.timer) { clearInterval(st.timer); st.timer = null; }
+    try { if (st.mr && st.mr.state !== 'inactive') st.mr.stop(); } catch (_e) { /* already stopped */ }
+    if (st.stream) { try { st.stream.getTracks().forEach(t => t.stop()); } catch (_e) {} }
+    const preview = document.getElementById(recId + '-preview');
+    if (preview && preview.src && preview.src.indexOf('blob:') === 0) {
+        try { URL.revokeObjectURL(preview.src); } catch (_e) {}
+    }
+    delete lmRecorders[recId];
+}
+
+function lmAudioCleanupAllRecorders() {
+    Object.keys(lmRecorders).forEach(lmAudioCleanupRecorder);
+}
+
+// Release the mic (and recorder state) whenever the shared modal editor closes -
+// ANY path: the X, Escape, a backdrop click, or a programmatic hide after save.
+// Without this, closing the dialog while still recording leaves the microphone
+// track live (and its in-use indicator on) until GC.  hidden.bs.modal fires
+// after the dialog is fully closed; the modal skeleton is in the page template,
+// loaded before this script.  Pages without the modal skip silently.
+(() => {
+    const modal = document.getElementById('modalEditor');
+    if (modal) modal.addEventListener('hidden.bs.modal', lmAudioCleanupAllRecorders);
+})();
 
 /**
  * The page tagger popup posts {action:'reloadBoundingGroup', boundingGroupId}
