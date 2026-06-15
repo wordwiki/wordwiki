@@ -159,6 +159,18 @@ export function formatTimestampAsLocalTime(t: number): string {
     }
 }
 
+// A compact, regular date for event-log rows: "yy-MM-dd" (e.g. 26-06-14).
+// Empty at the sentinels.  Date only - the log is already in time order, so the
+// clock time would just add noise; same-day events read in sequence.
+export function formatTimestampCompact(t: number): string {
+    if(t === BEGINNING_OF_TIME || t === END_OF_TIME) return '';
+    const d = new Date(extractTimeFromTimestamp(t)*1000 + LOCAL_EPOCH_START);
+    const yy = String(d.getFullYear() % 100).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+}
+
 export function formatTimestampAsUTCTime(t: number): string {
     switch(t) {
         case BEGINNING_OF_TIME: return 'BEGINNING_OF_TIME';

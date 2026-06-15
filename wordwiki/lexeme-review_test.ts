@@ -89,58 +89,81 @@ function seedClean(fx: Fixture) {
     return {tl, e, spl, sub, cat};
 }
 
-const reviewHtml = (fx: Fixture) =>
-    markupToString(fx.ww.lexeme.renderEntry(1000, "review"));
+const reviewHtml = (fx: Fixture, participant = "", full = "") =>
+    markupToString(fx.ww.lexeme.renderEntry(1000, "review", participant, full));
 const editHtml = (fx: Fixture) =>
     markupToString(fx.ww.lexeme.renderEntry(1000, "edit"));
 
-test("review render: a fully-approved entry is clean - no badges, nothing pending", async () => {
+test("review queue: a fully-approved entry has no groups - nothing needs approving", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             seedClean(fx);
             const html = reviewHtml(fx);
             assertStringIncludes(html, "Reviewing");
             assertStringIncludes(html, "nothing pending");
-            assertEquals(html.includes("badge text-bg-success"), false);  // no 'new'
-            assertEquals(html.includes("deletion proposed"), false);
-            assertStringIncludes(html, "samqwan");                        // the clean value shows
+            assertStringIncludes(html, "Nothing needs approving");
+            assertEquals(html.includes("lm-cl-group"), false);   // no pending groups
+            assertStringIncludes(html, "Showing: Everyone");      // admin -> Everyone
+
+            // The accepted history is still reachable via Full history.
+            const full = reviewHtml(fx, "everyone", "full");
+            assertStringIncludes(full, "lm-cl-group");
+            assertStringIncludes(full, "samqwan");                // the accepted value
         });
     });
 });
 
-test("review render: a pending EDIT shows old->new, the badge, and provenance", async () => {
+test("review queue: a pending EDIT is one group with the field header, from/to, and the ☰", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             const {tl, spl} = seedClean(fx);
-            // A pending edit of the spelling (born-approved baseline still stands).
-            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "samqwann"})],
+            // Distinct value so the baseline and the proposal are unambiguous.
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})],
                                    {quiet: true});
             const html = reviewHtml(fx);
-            assertStringIncludes(html, "edited");
-            assertStringIncludes(html, "lm-diff-new");
-            assertStringIncludes(html, "samqwan");    // struck baseline
-            assertStringIncludes(html, "samqwann");   // proposed value
-            assertStringIncludes(html, "edited by");
-            // 1 change pending (the spelling).
+            assertStringIncludes(html, "lm-cl-group-header");  // grouped by fact
+            assertStringIncludes(html, "needs approval");      // the group badge
+            assertStringIncludes(html, "lm-cl-detail");        // the change (from/to)
+            assertStringIncludes(html, "samqwan");             // the change's "from"
+            assertStringIncludes(html, "XYZZY");               // proposed value
+            assertStringIncludes(html, "btn-success");         // the DIRECT Approve button
+            assertStringIncludes(html, "reviewApprove");       // ...wired to approve
+            assertStringIncludes(html, "revertDialog");        // the direct Reject button
+            assertStringIncludes(html, "historyDialog");       // revert-to-a-past-value picker (☰)
             assertStringIncludes(html, "1 change pending approval");
         });
     });
 });
 
-test("review render: a pending ADD is badged 'new'", async () => {
+test("review queue: an edit NOTE rides the event as a sub-line", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(),
+                                           {attr1: "XYZZY", change_note: "per the 1888 Rand citation"})],
+                                   {quiet: true});
+            const html = reviewHtml(fx);
+            assertStringIncludes(html, "lm-cl-note");
+            assertStringIncludes(html, "per the 1888 Rand citation");
+        });
+    });
+});
+
+test("review queue: a pending ADD is a group with an 'added' event", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             const {tl, sub} = seedClean(fx);
             fx.ww.applyTransaction([mkChild(sub, "cat", 2200, tl.next(),
                                             {attr1: "weather", order_key: "0.6"})], {quiet: true});
             const html = reviewHtml(fx);
-            assertStringIncludes(html, "badge text-bg-success");  // 'new'
+            assertStringIncludes(html, "lm-cl-group");
+            assertStringIncludes(html, "lm-cl-added");   // the 'added' event class
             assertStringIncludes(html, "weather");
         });
     });
 });
 
-test("review render: a pending DELETION surfaces (overlay walk) though it is gone from edit view", async () => {
+test("review queue: a pending DELETION is a group (overlay walk), gone from edit view", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             const {tl, cat} = seedClean(fx);
@@ -148,44 +171,110 @@ test("review render: a pending DELETION surfaces (overlay walk) though it is gon
 
             // Edit mode (current view) drops the deleted category entirely...
             assertEquals(editHtml(fx).includes("water"), false);
-            // ...but review mode shows it, struck, as a pending removal.
+            // ...but the queue shows a 'deleted' group, still approvable.
             const html = reviewHtml(fx);
-            assertStringIncludes(html, "deletion proposed");
-            assertStringIncludes(html, "water");
+            assertStringIncludes(html, "lm-cl-group");
+            assertStringIncludes(html, "lm-cl-deleted");
+            assertStringIncludes(html, "water");           // the value being removed
             assertStringIncludes(html, "Approve deletion");
         });
     });
 });
 
-test("review action: approving a pending edit publishes it and the fact goes clean", async () => {
+test("review: full-history reveals settled facts + versions before the baseline", async () => {
     await withTestDb((fx) => {
-        // Author the edit as djz; approve as dmm (the two-person rule).
+        // samqwan published; edited to XYZZY; approved (XYZZY becomes the
+        // baseline, samqwan is now a PRE-baseline version).
         as(fx, "djz", () => {
             const {tl, spl} = seedClean(fx);
-            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "samqwann"})],
-                                   {quiet: true});
-            assertStringIncludes(reviewHtml(fx), "edited");
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})], {quiet: true});
         });
-        as(fx, "dmm", () => {
-            fx.ww.lexemeOps.approveFact(1010);   // the spelling fact id
-            const html = reviewHtml(fx);
-            assertEquals(html.includes("edited"), false);   // reclassified clean
-            assertStringIncludes(html, "nothing pending");
-            assertStringIncludes(html, "samqwann");
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1010));
+        as(fx, "djz", () => {
+            // The queue (default) is now empty - nothing pending.
+            const since = reviewHtml(fx, "everyone", "");
+            assertStringIncludes(since, "Nothing needs approving");
+            // Full history reveals the (now settled) spelling group, back to the
+            // original value.
+            const full = reviewHtml(fx, "everyone", "full");
+            assertStringIncludes(full, "lm-cl-group");
+            assertStringIncludes(full, "samqwan");           // pre-baseline value
+            assertStringIncludes(full, "XYZZY");             // accepted value
+            assertStringIncludes(full, "Full history ✓");
         });
     });
 });
 
-test("review action: a comment renders inline and never publishes", async () => {
+test("review: the participant filter shows only the chosen user's threads", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, sub, cat} = seedClean(fx);
+            // 'sally' edits the existing category; djz proposes a new one.  (We
+            // probe with category values, not the spelling - the spelling is in
+            // the entry heading regardless of the filter.)
+            fx.ww.applyTransaction([mkEdit(cat, 2110, tl.next(),
+                                           {attr1: "fire", change_by_username: "sally"})], {quiet: true});
+            fx.ww.applyTransaction([mkChild(sub, "cat", 2120, tl.next(),
+                                            {attr1: "land", order_key: "0.7",
+                                             change_by_username: "djz"})], {quiet: true});
+
+            // Everyone: both threads show.
+            const all = reviewHtml(fx, "everyone");
+            assertStringIncludes(all, "fire");
+            assertStringIncludes(all, "land");
+
+            // Sally: only the category she touched; djz's new one is filtered out.
+            const sally = reviewHtml(fx, "sally");
+            assertStringIncludes(sally, "fire");
+            assertEquals(sally.includes("land"), false);
+        });
+    });
+});
+
+test("review action: approving a pending edit clears it from the queue", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})],
+                                   {quiet: true});
+            assertStringIncludes(reviewHtml(fx), "lm-cl-group"); // a pending group is present
+        });
+        as(fx, "dmm", () => {
+            fx.ww.lexemeOps.approveFact(1010);   // the spelling fact id
+            const html = reviewHtml(fx);
+            assertStringIncludes(html, "nothing pending");
+            assertStringIncludes(html, "Nothing needs approving");  // queue cleared
+            assertEquals(html.includes("lm-cl-group"), false);
+            // The accepted value is the new baseline (visible in full history).
+            assertStringIncludes(reviewHtml(fx, "everyone", "full"), "XYZZY");
+        });
+    });
+});
+
+test("review action: a comment never makes a fact pending (and shows in full history)", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             seedClean(fx);
             fx.ww.lexemeOps.commentFact(1010, "is this the Listuguj spelling?");
-            const html = reviewHtml(fx);
-            assertStringIncludes(html, "lm-review-comment");
-            assertStringIncludes(html, "is this the Listuguj spelling?");
-            // The fact stays clean (a comment is not a content change).
-            assertStringIncludes(html, "nothing pending");
+            // A comment is not a content change: the queue stays empty.
+            const queue = reviewHtml(fx);
+            assertStringIncludes(queue, "nothing pending");
+            assertEquals(queue.includes("lm-cl-group"), false);
+            // But the discussion is there in the full history.
+            const full = reviewHtml(fx, "everyone", "full");
+            assertStringIncludes(full, "lm-cl-chip-commented");   // the 'comment' kind chip
+            assertStringIncludes(full, "is this the Listuguj spelling?");
+        });
+    });
+});
+
+test("edit dialog: carries an optional change-note field", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            seedClean(fx);
+            const dialog = markupToString(fx.ww.lexeme.editDialog(1000, 1010));
+            assertStringIncludes(dialog, "change_note");
+            assertStringIncludes(dialog, "Note (optional)");
         });
     });
 });
@@ -206,8 +295,8 @@ test("two-person rule: Approve is hidden for self-authored content, shown for a 
         // The author reviewing their OWN change, holding only the approve role
         // (no admin => no self-approve): Approve is hidden, revert still offered.
         as(fx, {actorId: fx.userIds["djz"], roles: ["approve"]}, () => {
-            const html = reviewHtml(fx);
-            assertStringIncludes(html, "edited");
+            const html = reviewHtml(fx, "everyone");
+            assertStringIncludes(html, "lm-cl-detail");               // the pending change
             assertEquals(html.includes("reviewApprove"), false);
             assertStringIncludes(html, "revertDialog");
         });

@@ -569,8 +569,8 @@ test("editor: the history dialog offers the way back to the edit dialog", async 
     await withTestDb(async (fx) => {
         seedEntry(fx.ww);
         const dialog = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.historyDialog(1000, 1001)'));
-        const back = find(dialog, n => n[0] === 'button' && text(n).includes('Back to edit'))!;
-        assertExists(back, 'history dialog has a Back to edit button');
+        const back = find(dialog, n => n[0] === 'button' && text(n).includes('Edit'))!;
+        assertExists(back, 'history dialog has an Edit button back to the form');
         assertStringIncludes(attr(back, 'hx-get'), 'editDialog(1000, 1001)');
     });
 });

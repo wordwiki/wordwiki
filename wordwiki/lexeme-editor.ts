@@ -59,7 +59,9 @@ import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
-import {classifyFact, type FactReview} from './versioned-model.ts';
+import {classifyFact, isComment, type FactReview} from './versioned-model.ts';
+import {renderGroupedChangeList, initials, type ChangeEvent, type ChangeKind,
+        type ChangeGroup} from './change-list.ts';
 import {isAutomatedUsername} from './user.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
@@ -302,6 +304,12 @@ function setAssertionFields(assertion: Assertion, rel: model.RelationField,
 // in-place reload re-renders in the same mode.
 export type EditMode = 'edit' | 'review';
 
+// Review-mode view state, carried in the entry fragment's hx-get so a reload
+// preserves it.  `participant` is a username whose threads to show, or
+// 'everyone'; `full` extends each fact's timeline back past the published
+// baseline to creation.
+export interface ReviewOpts { participant: string; full: boolean; }
+
 // ---------------------------------------------------------------------------
 // --- Value rendering (module-level: drives both the edit surface and the ----
 // --- review diff, over a raw assertion rather than a TupleVersion) ----------
@@ -336,6 +344,26 @@ function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
 /** The edit mode carried in a dialog postback (defaults to plain editing). */
 function formMode(form: Record<string, any>): EditMode {
     return form.mode === 'review' ? 'review' : 'edit';
+}
+
+/** A user's display name for the history grid (the friendly name when known,
+ *  else the bare username; 'unknown' for an unstamped row). */
+function userLabel(username: string | null | undefined): string {
+    return username ? (entrySchema.users[username] ?? username) : 'unknown';
+}
+
+/** The optional change-note widget appended to the edit/insert dialogs.  Read
+ *  raw on save into the version's change_note (it is NOT a relation field), so
+ *  an edit can carry a rationale that shows in the review timeline. */
+function changeNoteWidget(): table.Field {
+    return new TextAreaField('change_note', 2,
+        {nullable: true, prompt: 'Note (optional) — a short why, shown to reviewers'});
+}
+
+/** The change note from a dialog postback, trimmed (undefined when blank). */
+function formChangeNote(form: Record<string, any>): string | undefined {
+    const n = typeof form.change_note === 'string' ? form.change_note.trim() : '';
+    return n || undefined;
 }
 
 /** Every non-pk scalar of a relation, rendered from one assertion's values. */
@@ -378,46 +406,107 @@ export class LexemeEditor {
     }
 
     /** The root-level fragment: the whole entry (heading + all relations).  The
-     *  mode rides in the fragment's hx-get, so every in-place reload (including
-     *  the coarse review-mode reloads) re-renders in the same look. */
-    renderEntry(entry_id: number, mode: EditMode = 'edit'): Markup {
+     *  mode AND the review view-state (participant / full-history) ride in the
+     *  fragment's hx-get, so every in-place reload re-renders identically. */
+    renderEntry(entry_id: number, mode: EditMode = 'edit',
+                participant: string = '', full: string = ''): Markup {
         const entryTuple = this.entryTuple(entry_id);
         const q = new CurrentTupleQuery(entryTuple);
         const e = this.app.entriesById.get(entry_id);
         const heading = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+
+        // Default participant: an approver lands on EVERYONE (their review
+        // queue); a plain contributor lands on their OWN threads (the rest is
+        // just noise to them).  Either way it's one click to switch.
+        const opts: ReviewOpts = {
+            participant: participant
+                || (this.app.lexemeOps.hasApprovePermission()
+                    ? 'everyone' : (this.app.currentUsername() ?? 'everyone')),
+            full: full === 'full',
+        };
+        const hxGet = mode === 'review'
+            ? `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${opts.full ? 'full' : ''}')`
+            : `${R}.renderEntry(${entry_id}, 'edit')`;
+
         return (
             ['div', {class: `-entry-${entry_id}- container py-3`,
-                     'hx-get': `${R}.renderEntry(${entry_id}, '${mode}')`,
+                     'hx-get': hxGet,
                      'hx-trigger': 'reload', 'hx-swap': 'outerHTML'},
-             this.renderModeToggle(entry_id, entryTuple, mode),
+             this.renderModeToggle(entry_id, entryTuple, mode, opts),
              ['h2', {}, heading || 'No spellings'],
              mode === 'review'
-                ? this.renderReviewChildRelations(entry_id, entryTuple)
+                ? renderGroupedChangeList(
+                    this.lexemeChangeGroups(entry_id, entryTuple, opts),
+                    opts.full ? 'No changes recorded.' : 'Nothing needs approving.')
                 : this.renderChildRelations(entry_id, q),
             ]);
     }
 
-    /** The Editing ⇄ Reviewing switch (and, in review mode, the pending count).
-     *  A plain htmx swap of the entry fragment into the other mode - the
-     *  fragment's own hx-get then keeps it there. */
-    private renderModeToggle(entry_id: number, entryTuple: VersionedTuple, mode: EditMode): Markup {
-        const other: EditMode = mode === 'review' ? 'edit' : 'review';
-        const swap = (label: Markup, cls: string) =>
-            ['button', {type: 'button', class: cls,
-                        'hx-get': `${R}.renderEntry(${entry_id}, '${other}')`,
-                        'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'}, label];
+    /** The Editing ⇄ Reviewing switch; in review mode also the pending count,
+     *  the participant filter, and the full-history toggle.  Each control is a
+     *  plain htmx swap of the entry fragment - its own hx-get keeps the look. */
+    private renderModeToggle(entry_id: number, entryTuple: VersionedTuple,
+                             mode: EditMode, opts: ReviewOpts): Markup {
         if(mode === 'review') {
             const n = this.entryPendingCount(entryTuple);
-            return ['div', {class: 'd-flex align-items-center gap-2 mb-2 lm-review-bar'},
+            return ['div', {class: 'd-flex align-items-center gap-2 mb-2 lm-review-bar flex-wrap'},
                     ['span', {class: 'badge text-bg-warning'}, 'Reviewing'],
                     ['span', {class: 'text-muted small'},
                      n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`],
-                    swap('Back to editing', 'btn btn-sm btn-outline-secondary ms-auto')];
+                    this.participantControl(entry_id, entryTuple, opts),
+                    this.fullHistoryToggle(entry_id, opts),
+                    this.modeSwapButton(entry_id, 'edit', 'Edit entry',
+                                        'btn btn-sm btn-outline-secondary ms-auto')];
         }
         const n = this.entryPendingCount(entryTuple);
         return ['div', {class: 'd-flex mb-2'},
-                swap(`Review changes${n>0?` (${n})`:''}`,
+                this.modeSwapButton(entry_id, 'review', `Review changes${n>0?` (${n})`:''}`,
                      `btn btn-sm ms-auto ${n>0?'btn-outline-warning':'btn-outline-secondary'}`)];
+    }
+
+    // A button that swaps the entry fragment into the other mode (review opens
+    // with the default participant/full, resolved server-side).
+    private modeSwapButton(entry_id: number, to: EditMode, label: Markup, cls: string): Markup {
+        const url = to === 'review'
+            ? `${R}.renderEntry(${entry_id}, 'review')`
+            : `${R}.renderEntry(${entry_id}, 'edit')`;
+        return ['button', {type: 'button', class: cls,
+                           'hx-get': url, 'hx-target': `.-entry-${entry_id}-`,
+                           'hx-swap': 'outerHTML'}, label];
+    }
+
+    // "Showing: <who>" - a dropdown of Everyone + the people active on this
+    // entry (the logged-in user always offered), each swapping the fragment.
+    private participantControl(entry_id: number, entryTuple: VersionedTuple,
+                               opts: ReviewOpts): Markup {
+        const people = this.entryParticipants(entryTuple);
+        const me = this.app.currentUsername();
+        if(me && !people.includes(me)) people.unshift(me);
+        const reviewUrl = (p: string) =>
+            `${R}.renderEntry(${entry_id}, 'review', '${p}', '${opts.full ? 'full' : ''}')`;
+        const item = (value: string, text: string) =>
+            ['li', {}, ['button', {type: 'button',
+                class: `dropdown-item ${value === opts.participant ? 'active' : ''}`,
+                'hx-get': reviewUrl(value), 'hx-target': `.-entry-${entry_id}-`,
+                'hx-swap': 'outerHTML'}, text]];
+        const current = opts.participant === 'everyone' ? 'Everyone' : userLabel(opts.participant);
+        return ['div', {class: 'dropdown'},
+                ['button', {type: 'button', class: 'btn btn-sm btn-outline-secondary dropdown-toggle',
+                            'data-bs-toggle': 'dropdown', 'aria-expanded': 'false'},
+                 `Showing: ${current}`],
+                ['ul', {class: 'dropdown-menu'},
+                 item('everyone', 'Everyone'),
+                 people.map(u => item(u, userLabel(u)))]];
+    }
+
+    // Extend every fact's timeline back past the published baseline to creation.
+    private fullHistoryToggle(entry_id: number, opts: ReviewOpts): Markup {
+        const to = opts.full ? '' : 'full';
+        return ['button', {type: 'button',
+            class: `btn btn-sm ${opts.full ? 'btn-secondary' : 'btn-outline-secondary'}`,
+            'hx-get': `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${to}')`,
+            'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'},
+            opts.full ? 'Full history ✓' : 'Full history'];
     }
 
     /** Pending facts in this entry's subtree (added / edited / removed): the
@@ -512,11 +601,22 @@ export class LexemeEditor {
         const fact_id = tq.src.id;
         const current = tq.mostRecentTupleVersion;
         if(!current) return [];
+        // Even in the compact (default) view, mark a fact whose current value is
+        // not yet approved (an unpublished edit/addition sitting on top of - or
+        // in place of - the published version), so an editor can see at a glance
+        // what still carries an unaccepted change.  (publication-model.md)
+        const pending = (() => {
+            const s = classifyFact(tq.src.tupleVersions.map(v => v.assertion),
+                                   timestamp.END_OF_TIME).state;
+            return s === 'added' || s === 'edited';
+        })();
         return (
-            ['div', {class: `-fact-${fact_id}- lm-editable d-flex align-items-start ${extraClasses}`,
+            ['div', {class: `-fact-${fact_id}- lm-editable d-flex align-items-start `
+                            + `${pending ? 'lm-pending-fact ' : ''}${extraClasses}`,
                      'hx-get': `${R}.renderTupleFragment(${entry_id}, ${fact_id})`,
                      'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
                      onclick: 'lmEditableClick(event)'},
+             pending ? ['span', {class:'lm-pending-dot', title:'unapproved change'}, ''] : [],
              ['div', {class:'flex-grow-1'}, this.renderTupleValues(rf, current)],
              this.tupleActionMenu(entry_id, fact_id, rf, current),
             ]);
@@ -618,212 +718,256 @@ export class LexemeEditor {
     }
 
     // ------------------------------------------------------------------------
-    // --- Review mode ----------------------------------------------------------
+    // --- Review mode: the change list -----------------------------------------
     // ------------------------------------------------------------------------
     //
-    // The same structured lexeme as edit mode, but each fact is shown DIFFED
-    // against its published baseline (publication-model.md): clean facts read
-    // plainly, pending creations/edits/deletions are badged and (for edits)
-    // shown old→new, and discussion comments hang under their fact.  The walk
-    // goes over the raw VersionedTuples - not the current-view query - so a
-    // pending DELETION (gone from the current view, still published) surfaces.
-    // The ☰ keeps the edit affordances (a reviewer often fixes a value in
-    // place) and adds approve / revert / comment.
+    // Review is NOT a second tree.  The lexeme tree is already at the edge of
+    // what the users can hold; nesting a per-fact history inside it tipped it
+    // over.  So review renders one FLAT change list (change-list.ts) - the
+    // lexeme's events merged in time order, each line naming its fact - read
+    // exactly like the single-fact / global / per-user lists that reuse the
+    // same component.  Only the SET of events differs; the rendering never
+    // does.  The walk is over raw VersionedTuples, so pending DELETIONS appear.
 
-    private renderReviewChildRelations(entry_id: number, parentTuple: VersionedTuple): Markup {
-        return parentTuple.schema.relationFields.map(rf =>
-            this.renderReviewRelation(entry_id, parentTuple.id, rf,
-                                      parentTuple.childRelations[rf.tag]));
-    }
-
-    private renderReviewRelation(entry_id: number, parent_fact_id: number,
-                                 rf: model.RelationField,
-                                 vrel: workspace.VersionedRelation): Markup {
-        const header =
-            ['div', {class:'d-flex align-items-center gap-2 lex-relation-header'},
-             ['span', {class:'fw-bold'}, rf.prompt],
-             // Proposing a new item while reviewing reloads the whole entry
-             // (review mode), so the add affordance carries the mode.
-             this.reviewAddButton(entry_id, parent_fact_id, rf)];
-        const reviewed = this.reviewTuples(vrel);
-
-        switch(rf.style.$shape) {
-            case 'containerRelation':
-                return ['div', {class: `lex-relation mt-3`},
-                        header,
-                        reviewed.map(({tuple, review}) =>
-                            ['div', {class:'card mt-1 mb-2'},
-                             ['div', {class:'card-body py-2'},
-                              this.renderReviewSurface(entry_id, rf, tuple, review),
-                              // A live container recurses; a pending-removal one
-                              // does not (its children went with it).
-                              review.state === 'removed' ? [] :
-                              ['div', {class:'ms-4'},
-                               this.renderReviewChildRelations(entry_id, tuple)]]])];
-            case 'inlineListRelation':
-            case 'compactInlineListRelation':
-            default:
-                return ['div', {class: `lex-relation mt-2`},
-                        header,
-                        ['div', {class:'list-group lm-list'},
-                         reviewed.map(({tuple, review}) => this.renderReviewSurface(
-                             entry_id, rf, tuple, review, this.surfaceClasses(rf)))]];
-        }
-    }
-
-    // The relation's add affordance in review mode: the same '+' as edit mode,
-    // but mode-tagged so the new proposal lands and reloads in review.
-    private reviewAddButton(entry_id: number, parent_fact_id: number,
-                            rf: model.RelationField): Markup {
-        if(rf.scalarFields.some(isBoundingGroupField) || rf.scalarFields.some(isDialogReadOnly))
-            return [];
-        return action.actionButton(action.plusIcon(),
-            {kind: 'modal',
-             dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', null, null, 'review')`},
-            'lm-menu-button', {'aria-label': `New ${rf.prompt}`, title: `New ${rf.prompt}`});
-    }
-
-    // The overlay set for a relation: every fact that is either live or has a
-    // standing published version (so pending deletions appear); settled, no-
-    // longer-public deletions ('hidden') drop out.  Ordered by the order_key of
-    // the version that places it (the live head, or the published baseline for
-    // a pending removal).
-    private reviewTuples(vrel: workspace.VersionedRelation):
-        Array<{tuple: VersionedTuple, review: FactReview<Assertion>}> {
-        return [...vrel.tuples.values()]
-            .filter(t => t.tupleVersions.length > 0)
-            .map(t => ({tuple: t,
-                        review: classifyFact(t.tupleVersions.map(v => v.assertion),
-                                             timestamp.END_OF_TIME)}))
-            .filter(x => x.review.state !== 'hidden')
-            .sort((a, b) => {
-                const ka = (a.review.state === 'removed' ? a.review.baseline : a.review.head)?.order_key ?? '';
-                const kb = (b.review.state === 'removed' ? b.review.baseline : b.review.head)?.order_key ?? '';
-                return ka < kb ? -1 : ka > kb ? 1 : 0;
-            });
-    }
-
-    /** One fact in review mode: its diff/badge, the change's provenance, any
-     *  comments, and the superset ☰.  Body tap still opens the edit dialog
-     *  (the reviewer fixes in place), except on a pending-removal (nothing to
-     *  edit). */
-    private renderReviewSurface(entry_id: number, rf: model.RelationField,
-                                tuple: VersionedTuple, review: FactReview<Assertion>,
-                                extraClasses: string = ''): Markup {
-        const fact_id = tuple.id;
-        const editable = review.state !== 'removed';
-        return (
-            ['div', {class: `-fact-${fact_id}- lm-review-fact ${editable ? 'lm-editable' : ''} `
-                            + `d-flex align-items-start ${extraClasses}`,
-                     ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
-             ['div', {class:'flex-grow-1'},
-              this.renderReviewBody(rf, review),
-              this.renderReviewProvenance(review),
-              this.renderReviewComments(review)],
-             this.reviewActionMenu(entry_id, fact_id, rf, review),
-            ]);
-    }
-
-    // The fact's value, shown according to its review state.
-    private renderReviewBody(rf: model.RelationField, review: FactReview<Assertion>): Markup {
-        switch(review.state) {
-            case 'added':
-                return ['div', {},
-                        ['span', {class:'badge text-bg-success me-2 lm-pending'}, 'new'],
-                        renderAssertionValues(rf, review.content)];
-            case 'removed':
-                return ['div', {},
-                        ['span', {class:'badge text-bg-danger me-2 lm-pending'}, 'deletion proposed'],
-                        ['del', {class:'text-muted'},
-                         renderAssertionValues(rf, review.baseline ?? review.content)]];
-            case 'edited':
-                return ['div', {},
-                        ['span', {class:'badge text-bg-warning me-2 lm-pending'}, 'edited'],
-                        this.renderFactDiff(rf, review.baseline!, review.content)];
-            case 'clean':
-            default:
-                return renderAssertionValues(rf, review.content);
-        }
-    }
-
-    // Field-by-field old→new for an edited fact: changed fields show the
-    // published value struck then the proposed value; unchanged fields render
-    // once, plainly (from the proposed version - identical to the baseline).
-    private renderFactDiff(rf: model.RelationField, baseline: Assertion,
-                           content: Assertion): Markup {
+    /** The events for ONE fact, oldest-to-newest, from the published baseline
+     *  (or, with `full`, from creation).  The value is carried only when it
+     *  MOVES (so comments/no-ops add no value noise).  This is the single-fact
+     *  change list, and the per-fact slice the lexeme list is built from. */
+    factChangeEvents(rf: model.RelationField, tuple: VersionedTuple,
+                     full: boolean): ChangeEvent[] {
+        const versions = tuple.tupleVersions;
+        const review = classifyFact(versions.map(v => v.assertion), timestamp.END_OF_TIME);
+        const baseId = review.baseline?.assertion_id;
+        const startIdx = (!full && baseId !== undefined)
+            ? versions.findIndex(v => v.assertion.assertion_id === baseId) : 0;
         const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
-        const parts: Markup[] = [];
-        for(const f of rf.scalarFields) {
-            if(f instanceof model.PrimaryKeyField) continue;
-            const before = (baseline as any)[f.bind], after = (content as any)[f.bind];
-            if(norm(before) === norm(after)) {
-                const v = renderFieldValue(f, after);
-                if(v !== undefined) parts.push([v, ' ']);
-                continue;
+        const hasContent = (a: Assertion) => rf.scalarFields.some(f =>
+            !(f instanceof model.PrimaryKeyField) && norm((a as any)[f.bind]) !== null);
+        const val = (a: Assertion | undefined) =>
+            (a && hasContent(a)) ? renderAssertionValues(rf, a) : undefined;
+
+        const events: ChangeEvent[] = [];
+        // The previous CONTENT value (the change's "from") - tracked explicitly,
+        // because in the merged lexeme log the prior version is not the row
+        // above (other facts' events interleave), so a change must carry its
+        // own before/after to be legible.
+        let prevContent: Assertion | undefined = undefined;
+        for(let i = startIdx; i < versions.length; i++) {
+            const a = versions[i].assertion;
+            const isBaseline = baseId !== undefined && a.assertion_id === baseId;
+            const comment = isComment(a);
+            const tomb = isTombstone(a);
+
+            const kind: ChangeKind =
+                isBaseline                       ? 'baseline'
+              : comment                          ? 'commented'
+              : a.change_action === 'reverted'   ? 'reverted'
+              : tomb                             ? 'deleted'
+              : a.change_action === 'approved'   ? 'approved'
+              : (!review.baseline && i === startIdx) ? 'added'
+              :                                    'changed';
+
+            // Structural/container facts (an entry, a subentry - no scalar value
+            // of their own) contribute no baseline NOISE; only their real events.
+            if(kind === 'baseline' && !hasContent(a)) { prevContent = a; continue; }
+
+            const u = a.change_by_username;
+            const ev: ChangeEvent = {
+                when: a.valid_from,
+                whoInitials: initials(u, u ? entrySchema.users[u] : undefined),
+                whoName: userLabel(u),
+                automated: isAutomatedUsername(u),
+                field: rf.prompt,
+                kind,
+                note: a.change_note ?? undefined,
+            };
+            switch(kind) {
+                case 'changed':
+                case 'reverted':                    // a change: show before -> after, aligned
+                    ev.from = val(prevContent);
+                    ev.to = val(a);
+                    prevContent = a;
+                    break;
+                case 'deleted':                      // show what is being removed
+                    ev.value = val(prevContent);
+                    break;
+                case 'added':
+                    ev.value = val(a);
+                    prevContent = a;
+                    break;
+                case 'approved':
+                    ev.value = val(a);
+                    prevContent = a;
+                    break;
+                case 'baseline':
+                    ev.value = val(a);
+                    prevContent = a;
+                    break;
+                case 'commented':                    // the note IS the content (inline)
+                    break;
             }
-            const oldM = renderFieldValue(f, before), newM = renderFieldValue(f, after);
-            parts.push(['span', {class:'lm-diff me-1'},
-                        ['del', {class:'text-muted me-1'},
-                         oldM !== undefined ? oldM : ['span', {}, '(empty)']],
-                        ['span', {class:'lm-diff-new'},
-                         newM !== undefined ? newM : ['span', {class:'text-muted'}, '(empty)']],
-                        ' ']);
+            events.push(ev);
         }
-        return parts.length === 0 ? ['span', {class:'text-muted'}, '(empty)'] : parts;
+        return events;
     }
 
-    // Who proposed the pending change, and when (clean facts say nothing).
-    private renderReviewProvenance(review: FactReview<Assertion>): Markup {
-        if(review.state === 'clean' || review.state === 'hidden') return [];
-        const a = review.content;
-        const who = a.change_by_username
-            ? (entrySchema.users[a.change_by_username] ?? a.change_by_username) : 'unknown';
-        const verb = review.state === 'removed' ? 'deleted'
-            : review.state === 'added' ? 'added' : 'edited';
-        return ['div', {class:'small text-muted'},
-                `${verb} by ${who} — ${timestamp.formatTimestampAsLocalTime(a.valid_from)}`,
-                isAutomatedUsername(a.change_by_username)
-                    ? ['span', {class:'badge text-bg-secondary ms-1'}, 'automated'] : ''];
-    }
-
-    private renderReviewComments(review: FactReview<Assertion>): Markup {
-        return review.comments.map(c => {
-            const who = c.change_by_username
-                ? (entrySchema.users[c.change_by_username] ?? c.change_by_username) : 'unknown';
-            return ['div', {class:'small lm-review-comment'},
-                    ['span', {class:'badge text-bg-light me-1'}, 'comment'],
-                    ['span', {class:'fw-semibold'}, who], ': ', c.change_note ?? '',
-                    ['span', {class:'text-muted ms-1'},
-                     timestamp.formatTimestampAsLocalTime(c.valid_from)]];
+    /** The whole lexeme's change list: every fact's events, merged in time
+     *  order, each carrying its fact as the subject.  The participant filter
+     *  keeps only the facts that user is party to; 'everyone' keeps all.  The
+     *  fact's action menu rides its latest event. */
+    lexemeChangeEvents(entry_id: number, entryTuple: VersionedTuple,
+                       opts: ReviewOpts): ChangeEvent[] {
+        const all: ChangeEvent[] = [];
+        // The lexeme headword, stamped on every event's subject (redundant in
+        // this single-lexeme view, but it makes a line self-identifying so the
+        // SAME list works unchanged in a multi-lexeme / global feed).
+        const e = this.app.entriesById.get(entry_id);
+        const headword = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        entryTuple.forEachVersionedTuple(t => {
+            if(t.tupleVersions.length === 0) return;
+            if(opts.participant !== 'everyone'
+               && !this.participantActiveOnFact(t, opts.participant)) return;
+            const review = classifyFact(t.tupleVersions.map(v => v.assertion),
+                                        timestamp.END_OF_TIME);
+            if(review.state === 'hidden') return;   // settled, no-longer-public deletion
+            const evs = this.factChangeEvents(t.schema, t, opts.full);
+            for(const ev of evs) ev.lexeme = headword;
+            // Actions ride the latest event - but ONLY when the fact has a
+            // pending change to act on.  A clean/approved fact is just log
+            // history; giving it a (roll-back) menu reads as "this accepted
+            // thing is under review", which is confusing.
+            const pending = review.state === 'added' || review.state === 'edited'
+                || review.state === 'removed';
+            if(pending && evs.length > 0)
+                evs[evs.length - 1].actions =
+                    this.factActionMenu(entry_id, t.id, t.schema, review);
+            all.push(...evs);
         });
+        // Stable chronological merge (Array.sort is stable in V8).
+        all.sort((a, b) => a.when - b.when);
+        return all;
     }
 
-    /** The review ☰: approve (when pending and the two-person rule allows it),
-     *  revert, comment — then the ordinary edit affordances below a divider
-     *  (so a reviewer can also fix the value in place). */
-    private reviewActionMenu(entry_id: number, fact_id: number,
-                             rf: model.RelationField, review: FactReview<Assertion>): Markup {
-        const items: action.ActionMenuItem[] = [];
-        const pending = review.state === 'added' || review.state === 'edited'
-            || review.state === 'removed';
+    /** The lexeme review, GROUPED by fact: one headed block per fact, so "what
+     *  needs approving" reads as a short list of groups rather than a long flat
+     *  log.  DEFAULT (not full) is the approval queue - only facts with a
+     *  pending change; `full` reveals every fact's complete record.  Within a
+     *  group the field is in the header, so the lines drop their subject. */
+    lexemeChangeGroups(entry_id: number, entryTuple: VersionedTuple,
+                       opts: ReviewOpts): ChangeGroup[] {
+        const groups: ChangeGroup[] = [];
+        entryTuple.forEachVersionedTuple(t => {
+            if(t.tupleVersions.length === 0) return;
+            if(opts.participant !== 'everyone'
+               && !this.participantActiveOnFact(t, opts.participant)) return;
+            const review = classifyFact(t.tupleVersions.map(v => v.assertion),
+                                        timestamp.END_OF_TIME);
+            if(review.state === 'hidden') return;   // settled, no-longer-public deletion
+            const pending = review.state === 'added' || review.state === 'edited'
+                || review.state === 'removed';
+            if(!opts.full && !pending) return;      // the queue: pending facts only
+            const events = this.factChangeEvents(t.schema, t, opts.full);
+            if(events.length === 0) return;
+            groups.push({
+                header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending),
+                events,
+            });
+        });
+        return groups;
+    }
 
-        if(pending && this.app.lexemeOps.mayApprove(review.content.change_by_username ?? null))
+    // A group's header: the field, and - when pending - a "needs approval" badge
+    // with DIRECT Approve / Reject buttons (the primary decision shouldn't hide
+    // in a menu).  A small ☰ holds the rarer actions (comment, edit, and
+    // revert-to-a-past-value, which opens the history picker rather than putting
+    // a per-version menu on every row).
+    private changeGroupHeader(entry_id: number, fact_id: number, rf: model.RelationField,
+                              review: FactReview<Assertion>, pending: boolean): Markup {
+        const parts: Markup[] = [['span', {class: 'lm-cl-field'}, rf.prompt]];
+        if(pending) {
+            parts.push(['span', {class: 'badge text-bg-warning'}, 'needs approval']);
+            if(this.app.lexemeOps.mayApprove(review.content.change_by_username ?? null))
+                parts.push(action.actionButton(
+                    review.state === 'removed' ? 'Approve deletion' : 'Approve',
+                    {kind: 'immediate', expr: `wordwiki.lexeme.reviewApprove(${entry_id}, ${fact_id})`},
+                    'btn btn-sm btn-success py-0'));
+            if(this.app.lexemeOps.hasApprovePermission())
+                parts.push(action.actionButton('Reject…',
+                    {kind: 'modal', dialogUrl: `${R}.revertDialog(${entry_id}, ${fact_id})`},
+                    'btn btn-sm btn-outline-danger py-0'));
+        }
+        parts.push(this.groupMenu(entry_id, fact_id, rf, review));
+        return ['div', {class: 'd-flex align-items-center gap-2 flex-wrap'}, parts];
+    }
+
+    // The group ☰: the rarer per-fact actions.  "Revert to a past value…" opens
+    // the history picker (one entry point, not a menu per version row) - it
+    // re-asserts the chosen value, which covers reverting an intermediate value
+    // while building, or rolling a published value back to any past one.
+    private groupMenu(entry_id: number, fact_id: number, rf: model.RelationField,
+                      review: FactReview<Assertion>): Markup {
+        const items: action.ActionMenuItem[] = [
+            {label: 'Comment…',
+             mode: {kind: 'modal', dialogUrl: `${R}.commentDialog(${entry_id}, ${fact_id})`}},
+        ];
+        if(review.state !== 'removed')
+            items.push({label: 'Edit…',
+                mode: {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}, 'review')`}});
+        items.push({label: 'Revert to a past value…',
+            mode: {kind: 'modal', dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id}, 'review')`}});
+        return action.actionMenu(items, {ariaLabel: `More actions for this ${rf.prompt}`});
+    }
+
+    /** The action menu for a PENDING fact in the change list: approve (when the
+     *  two-person rule allows), reject, comment, and edit-in-place - scoped to
+     *  the one fact (the spatial moves/inserts belong to the tree editor, not
+     *  the flat log).  Clean facts get no menu (see lexemeChangeEvents); there
+     *  is deliberately no roll-back-an-approved-value affordance here - that
+     *  rare moderation move doesn't belong on every accepted value. */
+    private factActionMenu(entry_id: number, fact_id: number,
+                           rf: model.RelationField, review: FactReview<Assertion>): Markup {
+        const items: action.ActionMenuItem[] = [];
+        if(this.app.lexemeOps.mayApprove(review.content.change_by_username ?? null))
             items.push({label: review.state === 'removed' ? 'Approve deletion' : 'Approve',
                 mode: {kind: 'immediate',
                        expr: `wordwiki.lexeme.reviewApprove(${entry_id}, ${fact_id})`}});
         if(this.app.lexemeOps.hasApprovePermission())
-            items.push({label: pending ? 'Reject…' : 'Roll back…',
+            items.push({label: 'Reject…',
                 mode: {kind: 'modal', dialogUrl: `${R}.revertDialog(${entry_id}, ${fact_id})`}});
         items.push({label: 'Comment…',
             mode: {kind: 'modal', dialogUrl: `${R}.commentDialog(${entry_id}, ${fact_id})`}});
-
-        // A pending removal has no live value to edit; everything else keeps the
-        // edit affordances (mode-tagged so their reloads stay in review).
         if(review.state !== 'removed')
-            items.push('divider',
-                ...this.editMenuItems(entry_id, fact_id, rf, review.content, 'review'));
+            items.push({label: 'Edit…', mode: {kind: 'modal',
+                dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}, 'review')`}});
+        return action.actionMenu(items, {ariaLabel: `Actions for this ${rf.prompt}`});
+    }
 
-        return action.actionMenu(items, {ariaLabel: `Review actions for this ${rf.prompt}`});
+    // A user "participates" in a fact when they authored a version that is NOT
+    // the published baseline (an edit, reassert, revert, or comment) - so the
+    // importer of a born-approved fact is not a participant in it.
+    private participantActiveOnFact(tuple: VersionedTuple, participant: string): boolean {
+        const baseId = classifyFact(tuple.tupleVersions.map(v => v.assertion),
+                                    timestamp.END_OF_TIME).baseline?.assertion_id;
+        return tuple.tupleVersions.some(v =>
+            v.assertion.change_by_username === participant
+            && v.assertion.assertion_id !== baseId);
+    }
+
+    // The (human) users with activity anywhere in this entry - the participant
+    // filter's options (automated identities excluded).
+    private entryParticipants(entryTuple: VersionedTuple): string[] {
+        const set = new Set<string>();
+        entryTuple.forEachVersionedTuple(t => {
+            if(t.tupleVersions.length === 0) return;
+            const baseId = classifyFact(t.tupleVersions.map(v => v.assertion),
+                                        timestamp.END_OF_TIME).baseline?.assertion_id;
+            for(const v of t.tupleVersions) {
+                const u = v.assertion.change_by_username;
+                if(u && v.assertion.assertion_id !== baseId && !isAutomatedUsername(u))
+                    set.add(u);
+            }
+        });
+        return [...set].sort();
     }
 
     // ------------------------------------------------------------------------
@@ -844,6 +988,7 @@ export class LexemeEditor {
         const fields = dialogFields(rel);
         const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
         const defaults = current.domainFields;
+        const noteWidget = changeNoteWidget();
 
         const hidden: Record<string, any> = {
             entry_id, fact_id, mode,
@@ -853,7 +998,11 @@ export class LexemeEditor {
         // the user actually changed are parsed out of the postback).
         fields.forEach((f, i) => hidden['before-'+f.name] = widgets[i].toFormValue(defaults[f.name]));
 
-        const form = action.renderParamForm(widgets, defaults, {
+        // The optional change note starts empty (it describes THIS edit, not a
+        // prior one) and is read raw on save into change_note - it rides the
+        // version like a comment/revert reason and shows in the review timeline.
+        const form = action.renderParamForm([...widgets, noteWidget],
+            {...defaults, change_note: ''}, {
             title: `Edit ${rel.prompt}`,
             submitLabel: 'Save',
             hidden,
@@ -898,7 +1047,7 @@ export class LexemeEditor {
 
         // Self-lift, as in editDialog (composable wherever it is loaded from).
         return [['script', {}, 'setTimeout(showModalEditor)'],
-                action.renderParamForm(widgets, {}, {
+                action.renderParamForm([...widgets, changeNoteWidget()], {change_note: ''}, {
                     title: `New ${rel.prompt}`,
                     submitLabel: 'Save',
                     hidden,
@@ -932,7 +1081,7 @@ export class LexemeEditor {
             ['h2', {class: 'lm-dialog-title h5'}, `History of ${rel.prompt}`],
             // The way back to the assertion this is the history OF.
             ['div', {class: 'mb-2'},
-             action.actionButton('← Back to edit',
+             action.actionButton('← Edit',
                  {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`},
                  'btn btn-sm btn-outline-secondary')],
             ['div', {class:'list-group lm-list'},
@@ -1155,6 +1304,7 @@ export class LexemeEditor {
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
             ...unapprovedDimension,
+            change_note: formChangeNote(form),
         };
         setAssertionFields(newAssertion, rel, values);
 
@@ -1209,6 +1359,7 @@ export class LexemeEditor {
             valid_from: placeholderTxTime(),
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
+            change_note: formChangeNote(form),
             order_key: this.insertOrderKey(relation, form),
         } as Assertion;
         setAssertionFields(newAssertion, rel, changed);

@@ -257,35 +257,149 @@
     margin-bottom: 1rem;
 }
 
-/* --- Review mode (the lexeme editor's approval look; lexeme-editor.ts) ------
-   The structured lexeme shown diffed against its published baseline: pending
-   creations/edits/deletions are badged, edits show old -> new, and comments
-   hang under their fact.  See publication-model.md. */
+/* --- The change list (change-list.ts) --------------------------------------
+   ONE flat event log, reused in every context (single fact / lexeme / global /
+   per-user).  Each line reads left-to-right as a log: WHEN, WHO lead (rigid,
+   narrow columns - the regular info that says "activity log"), then what
+   happened.  See publication-model.md. */
 
-/* The sticky-ish header bar carrying the Editing <-> Reviewing switch. */
+/* The header bar carrying the Editing<->Reviewing switch + filters. */
 .lm-review-bar {
     padding: 0.25rem 0;
     border-bottom: 1px solid var(--bs-border-color, #dee2e6);
 }
 
-/* A proposed-but-unpublished value (the "new" half of an edit diff). */
-.lm-diff-new {
-    background: #fff3cd;          /* bootstrap warning-subtle */
-    border-radius: 0.2rem;
-    padding: 0 0.15rem;
+.lm-changelist {
+    line-height: 1.55;
 }
 
-/* The whole fact surface when it carries a pending change - a quiet left rule
-   so the eye finds what needs review without the row shouting.  Keyed on the
-   state badge's .lm-pending marker, NOT a bare .badge (a clean fact may carry a
-   value badge - a variant/enum renders .text-bg-light). */
-.lm-review-fact:has(.lm-pending) {
-    border-left: 3px solid var(--bs-warning, #ffc107);
-    padding-left: 0.5rem;
+/* Grouped review: one headed block per fact (the approval queue).  The header
+   names the field and carries its actions; the body is the fact's events. */
+.lm-cl-group { margin-bottom: 0.7rem; }
+.lm-cl-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.1rem 0;
+    border-bottom: 1px solid var(--bs-border-color, #e6e8ea);
+    margin-bottom: 0.15rem;
 }
+.lm-cl-group-body { padding-left: 0.25rem; }
 
-/* A discussion comment line under a fact. */
-.lm-review-comment {
-    margin-top: 0.15rem;
+/* One event line: WHEN and WHO lead in fixed columns; then (in multi-fact
+   lists) a scannable SUBJECT column; the description fills the rest; an optional
+   action menu trails. */
+.lm-cl-row {
+    display: grid;
+    grid-template-columns: 4.2rem 2.2rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 0.5rem;
+}
+.lm-cl-row.lm-cl-withsubject {
+    grid-template-columns: 4.2rem 2.2rem 9rem minmax(0, 1fr) auto;
+}
+.lm-cl-subject {
+    overflow-wrap: anywhere;
+}
+.lm-cl-field { font-weight: 600; }
+.lm-cl-lexeme {
+    font-size: 0.85em;
     color: var(--bs-secondary-color, #6c757d);
+}
+.lm-cl-when {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color, #6c757d);
+    white-space: nowrap;
+}
+.lm-cl-who {
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    color: var(--bs-secondary-color, #6c757d);
+}
+.lm-cl-what {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.lm-cl-subject {
+    font-weight: 600;
+}
+.lm-cl-verb {
+    color: var(--bs-secondary-color, #6c757d);
+}
+/* Media in a line stays small so the rhythm holds; audio is a one-line player
+   and is left alone (approving audio means playing it). */
+.lm-cl-what img,
+.lm-cl-what object {
+    max-height: 2.5rem;
+    max-width: 8rem;
+    vertical-align: middle;
+}
+/* A note (comment / revert reason / edit rationale) under its line. */
+.lm-cl-note {
+    font-size: 0.9em;
+    color: var(--bs-secondary-color, #6c757d);
+    font-style: italic;
+}
+/* The baseline (accepted value) reads quietly; the moving events carry weight. */
+.lm-cl-baseline  { color: var(--bs-secondary-color, #6c757d); }
+.lm-cl-deleted   > .lm-cl-what > .lm-cl-verb { color: var(--bs-danger, #dc3545); }
+.lm-cl-added     > .lm-cl-what > .lm-cl-verb { color: var(--bs-success, #198754); }
+.lm-cl-approved  > .lm-cl-what > .lm-cl-verb { color: var(--bs-success, #198754); }
+
+/* A change shown as before -> after: a fixed "from/to" label column so the two
+   values line up under each other and the difference is apparent at a glance. */
+.lm-cl-detail {
+    display: grid;
+    row-gap: 0.05rem;
+}
+.lm-cl-dline {
+    display: grid;
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    column-gap: 0.4rem;
+    align-items: baseline;
+}
+.lm-cl-dlabel {
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color, #6c757d);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.lm-cl-dval { overflow-wrap: anywhere; }
+.lm-cl-from { color: var(--bs-secondary-color, #6c757d); }   /* the prior value, quiet */
+
+/* A comment's text, inline (it is the content of a comment event). */
+.lm-cl-comment { font-style: italic; }
+
+/* A word chip naming the event KIND (comment / approved / reverted / added /
+   deleted) - words not glyphs, lightly coloured. */
+.lm-cl-chip {
+    display: inline-block;
+    font-size: 0.68rem;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 600;
+    padding: 0 0.32rem;
+    border-radius: 0.25rem;
+    vertical-align: middle;
+    background: var(--bs-secondary-bg, #e9ecef);
+    color: var(--bs-secondary-color, #6c757d);
+}
+.lm-cl-chip-added,
+.lm-cl-chip-approved { background: #d1e7dd; color: #0f5132; }
+.lm-cl-chip-deleted,
+.lm-cl-chip-reverted { background: #f8d7da; color: #842029; }
+.lm-cl-chip-commented { background: #e2e3e5; color: #41464b; }
+
+/* Compact (default) view: a quiet dot on a fact whose current value is not yet
+   approved, so editors can spot unaccepted changes without entering review. */
+.lm-pending-dot {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin: 0.35rem 0.4rem 0 0;
+    border-radius: 50%;
+    background: var(--bs-warning, #ffc107);
 }
