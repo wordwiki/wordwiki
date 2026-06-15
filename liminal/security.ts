@@ -94,10 +94,10 @@ export function publicRouteReason(p: Permission | undefined): string | undefined
     return p ? (p as any)[PUBLIC_REASON] : undefined;
 }
 
-// Declare a method/getter as an exposed route carrying its authorization.
-// Replaces @safe: it both exposes (the capability routeterp checks) AND records
-// the Permission (enforced when routeterp runs in strict mode).  An undeclared
-// member stays unreachable.  NB: stack ABOVE @path on getters - @path installs a
+// Declare a method/getter as an exposed route carrying its authorization.  It
+// both exposes (the capability routeterp checks) AND records the Permission
+// (enforced when routeterp runs in strict mode).  An undeclared member stays
+// unreachable.  NB: stack ABOVE @path on getters - @path installs a
 // wrapper, and @route must tag the installed function.
 const ROUTE: unique symbol = Symbol('routePermission');
 const ROUTE_MUTATES: unique symbol = Symbol('routeMutates');

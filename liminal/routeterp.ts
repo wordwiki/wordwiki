@@ -21,7 +21,7 @@
  *                        no getters/methods; keys installed via defineProperty
  *                        so a `__proto__` key cannot poison the prototype)
  *   - MemberExpression   obj.name               (NON-computed only; gated: the
- *                        property must be marked @safe on obj's class/proto)
+ *                        property must be declared @route on obj's class/proto)
  *   - CallExpression     callee(args)           (callee must be an Identifier or
  *                        a (gated) MemberExpression - you cannot call the result
  *                        of an arbitrary sub-expression)
@@ -39,10 +39,12 @@
  * one of two trusted things:
  *   1. a name the caller explicitly placed in `scope` (the route table, plus
  *      request bindings like bodyArgs / $argN), or
- *   2. a property/method the application author explicitly decorated `@safe`.
- * A blessed method is fully trusted once reached: it may do anything its own
+ *   2. a method/getter the application author explicitly declared `@route(perm)`
+ *      (see security.ts).  Reaching it is gated; the declared permission is then
+ *      enforced under the strict policy.
+ * A declared method is fully trusted once reached: it may do anything its own
  * code does.  The interpreter's job is only to ensure the expression cannot
- * reach anything that was not blessed.
+ * reach anything that was not declared.
  */
 import * as acorn from "npm:acorn@8.11.3";
 import {Node, Identifier, Literal, ArrayExpression, ObjectExpression,
@@ -54,34 +56,6 @@ import {routePermissionOf, routeIsMutation, current as currentCtx, type Security
 export type JsNode = Node;
 export type Scope = Record<string, any>;
 
-/**
- * Marker set by the @safe decorator on a method or getter *function*.  We check
- * it on the property *descriptor* (the accessor/method), never on the returned
- * value - so exposing a getter that returns a plain object does NOT expose that
- * object's own properties.
- */
-const SAFE = Symbol('routeSafe');
-
-/**
- * Mark a method or getter as reachable by route expressions.  Usage:
- *
- *     class VolunteerTable {
- *         @safe get volunteer() { ... }
- *         @safe saveForm(form) { ... }
- *     }
- *
- * Works for instance methods, getters, and static methods (TC39 / "ES" style
- * decorators, as already used elsewhere in this codebase).  The decorator simply
- * tags the underlying function object and leaves it otherwise untouched.
- */
-export function safe(target: any, _context: any): any {
-    // `target` is the method/getter function itself.  Tag it in place and keep
-    // it (return undefined => original, now-tagged, function is installed).
-    if(typeof target === 'function')
-        target[SAFE] = true;
-    return undefined;
-}
-
 export function parseRouteExpr(src: string): JsNode {
     return acorn.parseExpressionAt(src, 0, {ecmaVersion: 2023});
 }
@@ -89,8 +63,8 @@ export function parseRouteExpr(src: string): JsNode {
 /**
  * Enforcement policy for the member-access gate (orthogonal to the grammar,
  * which is always restricted):
- *   - 'strict'      every member access must be declared (@safe today, @route
- *                   when the route-security migration lands); undeclared throws.
+ *   - 'strict'      every member access must be declared `@route(perm)`;
+ *                   undeclared throws (and the permission is enforced).
  *   - 'permissive'  undeclared members are ALLOWED but logged once (deduped) -
  *                   the migration bridge: it proves the restricted grammar can
  *                   evaluate the whole site before any annotations exist, and the
@@ -144,24 +118,6 @@ export class RouteMethodError extends Error {
 }
 
 const ANON: SecurityContext = {actorId: undefined, roles: new Set()};
-
-/** Walk the prototype chain to find the descriptor that defines `name`. */
-function findDescriptor(obj: any, name: PropertyKey): PropertyDescriptor|undefined {
-    for(let o = obj; o != null; o = Object.getPrototypeOf(o)) {
-        const d = Object.getOwnPropertyDescriptor(o, name);
-        if(d) return d;
-    }
-    return undefined;
-}
-
-/** A member access is permitted iff the accessor (getter) or method value that
- *  defines it carries the @safe marker. */
-function isSafeMember(obj: any, name: PropertyKey): boolean {
-    const d = findDescriptor(obj, name);
-    if(!d) return false;
-    if(d.get) return (d.get as any)[SAFE] === true;
-    return typeof d.value === 'function' && (d.value as any)[SAFE] === true;
-}
 
 export class RouteEval {
     ticksUsed = 0;
@@ -232,12 +188,12 @@ export class RouteEval {
         return out;
     }
 
-    // A member is "declared" if it carries a @route permission or the legacy
-    // @safe marker.  Capability check + value resolution, NO permission run -
-    // that is authorize()'s job (deferred to the call site so a route perm can
-    // see the call args).
+    // A member is "declared" (reachable) iff it carries a @route permission.
+    // Capability check + value resolution, NO permission run - that is
+    // authorize()'s job (deferred to the call site so a route perm can see the
+    // call args).
     resolveMember(obj: any, name: PropertyKey): any {
-        const declared = routePermissionOf(obj, name) !== undefined || isSafeMember(obj, name);
+        const declared = routePermissionOf(obj, name) !== undefined;
         if(!declared) {
             if(this.policy === 'strict')
                 throw new RouteUndeclaredError(memberKey(obj, name));
@@ -253,8 +209,7 @@ export class RouteEval {
     }
 
     // Run a member's @route permission (strict only).  `args` are the evaluated
-    // call args when authorizing a call (undefined for plain navigation).  A
-    // @safe-only member (no @route perm) is capability-gated but not authz'd.
+    // call args when authorizing a call (undefined for plain navigation).
     authorize(obj: any, name: PropertyKey, args: any[] | undefined): void {
         if(this.policy !== 'strict') return;
         // A state-changing route must be POSTed - reject a GET (closes GET-CSRF).
@@ -328,7 +283,7 @@ export class RouteEval {
      *  method that returns a raw function cannot have that function invoked. */
     assertCallable(callee: Node): void {
         if(callee.type !== 'Identifier' && callee.type !== 'MemberExpression')
-            throw new Error(`routeterp: callee must be a name or @safe member, not '${callee.type}'`);
+            throw new Error(`routeterp: callee must be a name or @route member, not '${callee.type}'`);
     }
 
     evalArgs(s: Scope, args: Array<Expression|SpreadElement>): any[] {
@@ -359,19 +314,20 @@ function expectThrow(s: Scope, src: string) {
     console.info(`FAIL  ${src}\n  expected a throw, but it succeeded`);
 }
 
+const open = publicRoute('demo');   // anyone-reachable, so the no-ctx self-test can call it
 class Demo {
     name = 'Rover';
-    @safe get pet() { return new Pet('Spot'); }
-    @safe greet(who: string) { return `hi ${who}`; }
-    secret() { return 'leak'; }            // NOT @safe
-    @safe static make() { return new Demo(); }
-    @route(publicRoute('demo')) openEcho(x: string) { return `open ${x}`; }
+    @route(open) get pet() { return new Pet('Spot'); }
+    @route(open) greet(who: string) { return `hi ${who}`; }
+    secret() { return 'leak'; }            // NOT declared (no @route)
+    @route(open) static make() { return new Demo(); }
+    @route(open) openEcho(x: string) { return `open ${x}`; }
     @route(authenticated) authEcho(x: string) { return `auth ${x}`; }
     @route(selfArg('who')) selfEcho(arg: {who: number}) { return `self ${arg.who}`; }
 }
 class Pet {
     constructor(readonly petName: string) {}
-    @safe speak() { return `${this.petName} barks`; }
+    @route(open) speak() { return `${this.petName} barks`; }
 }
 
 function routePlay() {
@@ -383,19 +339,19 @@ function routePlay() {
     expectOk(scope, `[1, {a: 2, b: [3, 4]}]`, `[1,{"a":2,"b":[3,4]}]`);
     expectOk(scope, `demo.greet("you")`, `"hi you"`);
     expectOk(scope, `demo.greet(who)`, `"hi world"`);          // identifier arg binds from scope
-    expectOk(scope, `demo.pet.speak()`, `"Spot barks"`);        // chained @safe member + method
-    expectOk(scope, `Demo.make().greet("x")`, `"hi x"`);        // static @safe + call result then @safe member
+    expectOk(scope, `demo.pet.speak()`, `"Spot barks"`);        // chained @route member + method
+    expectOk(scope, `Demo.make().greet("x")`, `"hi x"`);        // static @route + call result then @route member
 
-    // --- denied: unsafe / escape attempts ---
-    expectThrow(scope, `demo.secret()`);                        // method not @safe
-    expectThrow(scope, `demo.name`);                            // plain field not @safe
+    // --- denied: undeclared / escape attempts ---
+    expectThrow(scope, `demo.secret()`);                        // method not @route
+    expectThrow(scope, `demo.name`);                            // plain field not @route
     expectThrow(scope, `demo.constructor`);                     // proto escape hatch
     expectThrow(scope, `demo.pet.petName`);                     // plain field on returned object
     expectThrow({}, `constructor`);                             // no prototype-walk identifier leak
     expectThrow(scope, `constructor.constructor("return 1")()`);// classic RCE shape
     expectThrow(scope, `demo["greet"]("x")`);                   // computed access banned
     expectThrow(scope, `1 + 1`);                                // operators absent
-    expectThrow(scope, `demo.greet.call(demo, "x")`);           // .call not @safe
+    expectThrow(scope, `demo.greet.call(demo, "x")`);           // .call not @route
     expectThrow(scope, `(()=>1)()`);                            // arrow absent
     expectThrow(scope, `demo.greet("x")("y")`);                 // cannot call a call-result
 
