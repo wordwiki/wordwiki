@@ -120,6 +120,7 @@ class TextAreaField extends table.StringField {
 class AudioUploadField extends table.StringField {
     override renderInput(value: any): Markup {
         const inputId = 'input-'+this.name;
+        const recId = 'rec-'+this.name;
         return [
             ['div', {'class':'col-12'},
              ['label', {class:'form-label'}, this.prompt],
@@ -129,9 +130,21 @@ class AudioUploadField extends table.StringField {
              ['input', {type:'hidden', name:this.name, id:inputId, value: value ?? ''}],
              ['input', {type:'file', class:'form-control', accept:'.wav,audio/*',
                         onchange:`lmAudioUploadChange(event, '${inputId}')`}],
+             // Record directly in the browser (alongside the file picker): capture
+             // with MediaRecorder, re-encode to WAV client-side (lmAudioRecord* in
+             // lexeme-editor-scripts.js), then feed the SAME uploadRecording path.
+             ['div', {class:'mt-2 d-flex align-items-center flex-wrap gap-2'},
+              ['button', {type:'button', class:'btn btn-outline-danger btn-sm', id:recId+'-rec',
+                          onclick:`lmAudioRecordToggle('${inputId}', '${recId}')`}, '● Record'],
+              ['span', {class:'text-muted small', id:recId+'-timer'}, ''],
+              ['audio', {id:recId+'-preview', controls:'controls',
+                         style:'display:none; height:32px; vertical-align:middle;'}],
+              ['button', {type:'button', class:'btn btn-outline-primary btn-sm', id:recId+'-use',
+                          style:'display:none;', onclick:`lmAudioUseRecording('${inputId}', '${recId}')`},
+               'Use this recording']],
              ['div', {class:'form-text', id:inputId+'-status'},
-              value ? 'Choose a file to replace the current recording.'
-                    : 'Choose a recording file to upload.'],
+              value ? 'Choose a file, or record a new clip, to replace the current recording.'
+                    : 'Choose a recording file, or record a new clip.'],
             ]];
     }
 }
