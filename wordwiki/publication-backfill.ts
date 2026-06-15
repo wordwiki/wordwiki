@@ -4,12 +4,20 @@
  * existing, predecessor-approved dictionary into the published dimension WITHOUT
  * adding an approval row to every chain (which would roughly double the ~226k
  * rows). Mute-in-place: stamp `published_from = valid_from`, `published_to =
- * END_OF_TIME` directly onto the CURRENT live version of each fact under a
- * `Completed`/`CompletedAsPDMOnly`-status entry. A born-approved row is then a
- * *published row that is not an approved/reverted re-assertion* — the
- * grandfather signature; its audit reads "imported as approved" (the
- * predecessor's status is its approval record). In-progress entries are left
- * pending; tombstones and comments are never published.
+ * END_OF_TIME` directly onto the CURRENT live version of each fact.
+ *
+ * THE CUTOVER blesses the WHOLE accepted state, whatever the entry's status: the
+ * team edited on top of the import for years with an OFFLINE approval process,
+ * so forcing manual re-approval of any of it is pointless. `published` means
+ * "approved" (out of the review queue); the separate `status = Completed` gate
+ * still decides the public site, so this makes a non-Completed (Archived,
+ * InProcess, …) fact *approved-but-not-public* — exactly the offline reality.
+ * A born-approved row is then a *published row that is not an approved/reverted
+ * re-assertion* — the grandfather signature; its audit reads "grandfathered at
+ * cutover" (the predecessor + offline process is its approval record).
+ * Tombstones and comments are never published: a fact deleted offline has no
+ * published baseline, so it is already a settled (hidden) deletion - nothing to
+ * bless.
  *
  * This runs AFTER the vocabulary imports (so the re-categorized current tuples
  * get born-approved, while the old tuples those imports tombstoned do not — a
@@ -33,19 +41,14 @@ export function backfillPublication(opts: { log?: (m: string) => void } = {}): B
     const log = opts.log ?? (() => undefined);
     const EOT = timestamp.END_OF_TIME;
 
-    // The current live version of a fact under a published-status entry, not yet
-    // carrying a published interval. valid_to = EOT selects the current live
+    // Every current live version of a fact not yet carrying a published interval,
+    // regardless of its entry's status. valid_to = EOT selects the current live
     // version (a tombstone's valid_to is finite, so excluded); `published_from
     // IS NULL` keeps it idempotent and never re-stamps a new-system publication;
-    // comments are never publishable (I8). The entry's id is `id1` on every fact
-    // under it, so the non-correlated subquery (computed once) selects whole
-    // entries by current status.
+    // comments are never publishable (I8).
     const where =
         `valid_to = :eot AND published_from IS NULL
-         AND COALESCE(change_action, '') != 'comment'
-         AND id1 IN (SELECT DISTINCT id1 FROM dict
-                     WHERE ty = 'sta' AND valid_to = :eot
-                       AND attr1 IN ('Completed', 'CompletedAsPDMOnly'))`;
+         AND COALESCE(change_action, '') != 'comment'`;
 
     const stats: BackfillStats = { bornApproved: 0 };
     db().transaction(() => {

@@ -1511,9 +1511,10 @@ if (import.meta.main) {
             break;
         }
 
-        // Phase 0 of the publication model (publication-backfill.ts): clear the
-        // legacy published_* placeholder and born-approve the existing
-        // Completed-status data by mute-in-place (no approval rows). Idempotent;
+        // Phase 0 of the publication model (publication-backfill.ts): born-approve
+        // the existing accepted state - the current live fact of every chain,
+        // whatever its entry's status (the cutover blesses the whole offline-
+        // approved dictionary) - by mute-in-place (no approval rows). Idempotent;
         // refuses production without --allow-production. --expect-no-changes
         // proves a re-run is a no-op.
         case 'backfill-publication': {
