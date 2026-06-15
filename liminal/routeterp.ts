@@ -48,6 +48,8 @@ import * as acorn from "npm:acorn@8.11.3";
 import {Node, Identifier, Literal, ArrayExpression, ObjectExpression,
         MemberExpression, CallExpression, NewExpression, Property,
         Expression, SpreadElement, PrivateIdentifier} from "npm:acorn@8.11.3";
+import {routePermissionOf, current as currentCtx, type SecurityContext,
+        route, authenticated, publicRoute, selfArg, run as runAs} from "./security.ts";
 
 export type JsNode = Node;
 export type Scope = Record<string, any>;
@@ -113,6 +115,24 @@ function memberKey(obj: any, name: PropertyKey): string {
 export function evalRouteExprSrc(scope: Scope, src: string, policy: RoutePolicy = 'strict'): any {
     return new RouteEval(policy).eval(scope, parseRouteExpr(src));
 }
+
+// A declared route the actor isn't permitted to reach (strict policy).  Distinct
+// from RouteUndeclaredError (the member isn't a route at all) so the dispatcher
+// can map them differently later (deny -> login-or-403; undeclared -> 404).
+export class RouteDeniedError extends Error {
+    constructor(readonly member: string) {
+        super(`routeterp: not permitted: '${member}'`);
+        this.name = 'RouteDeniedError';
+    }
+}
+export class RouteUndeclaredError extends Error {
+    constructor(readonly member: string) {
+        super(`routeterp: '${member}' is not an exposed route member`);
+        this.name = 'RouteUndeclaredError';
+    }
+}
+
+const ANON: SecurityContext = {actorId: undefined, roles: new Set()};
 
 /** Walk the prototype chain to find the descriptor that defines `name`. */
 function findDescriptor(obj: any, name: PropertyKey): PropertyDescriptor|undefined {
@@ -199,7 +219,48 @@ export class RouteEval {
         return out;
     }
 
+    // A member is "declared" if it carries a @route permission or the legacy
+    // @safe marker.  Capability check + value resolution, NO permission run -
+    // that is authorize()'s job (deferred to the call site so a route perm can
+    // see the call args).
+    resolveMember(obj: any, name: PropertyKey): any {
+        const declared = routePermissionOf(obj, name) !== undefined || isSafeMember(obj, name);
+        if(!declared) {
+            if(this.policy === 'strict')
+                throw new RouteUndeclaredError(memberKey(obj, name));
+            // permissive: allow, but record the gap once (the annotation worklist).
+            const key = memberKey(obj, name);
+            if(!undeclaredSeen.has(key)) {
+                undeclaredSeen.add(key);
+                console.warn(`ROUTE-SECURITY undeclared member: ${key}`);
+            }
+        }
+        const member = obj[name];
+        return (member instanceof Function) ? member.bind(obj) : member;
+    }
+
+    // Run a member's @route permission (strict only).  `args` are the evaluated
+    // call args when authorizing a call (undefined for plain navigation).  A
+    // @safe-only member (no @route perm) is capability-gated but not authz'd.
+    authorize(obj: any, name: PropertyKey, args: any[] | undefined): void {
+        if(this.policy !== 'strict') return;
+        const perm = routePermissionOf(obj, name);
+        if(!perm) return;
+        const ctx = currentCtx() ?? ANON;
+        if(ctx.system) return;
+        if(!perm({ctx, args}))
+            throw new RouteDeniedError(memberKey(obj, name));
+    }
+
     evalMember(s: Scope, e: MemberExpression): any {
+        const {obj, name} = this.evalMemberTarget(s, e);
+        this.authorize(obj, name, undefined);   // navigation: ctx-only
+        return this.resolveMember(obj, name);
+    }
+
+    // Shared by evalMember and evalCall: validate the member syntax and evaluate
+    // the receiver object (without authorizing/resolving the property yet).
+    private evalMemberTarget(s: Scope, e: MemberExpression): {obj: any, name: string} {
         if(e.computed)
             throw new Error('routeterp: computed member access obj[..] is not supported');
         if((e as any).optional)
@@ -210,23 +271,24 @@ export class RouteEval {
         const obj = this.eval(s, e.object);
         if(obj == null)
             throw new Error(`routeterp: cannot read '${name}' of ${obj}`);
-        if(!isSafeMember(obj, name)) {
-            if(this.policy === 'strict')
-                throw new Error(`routeterp: '${name}' is not an exposed route member`);
-            // permissive: allow, but record the gap once (the annotation worklist).
-            const key = memberKey(obj, name);
-            if(!undeclaredSeen.has(key)) {
-                undeclaredSeen.add(key);
-                console.warn(`ROUTE-SECURITY undeclared member: ${key}`);
-            }
-        }
-        const member = obj[name];
-        // Bind methods so `this` is the receiver when later called.
-        return (member instanceof Function) ? member.bind(obj) : member;
+        return {obj, name};
     }
 
     evalCall(s: Scope, e: CallExpression): any {
         this.assertCallable(e.callee);
+        // Member call: authorize the final method WITH the evaluated args (so a
+        // route perm like selfArg('volunteer_id') can read them).  The receiver
+        // chain is authorized as navigation by the inner eval/evalMember.
+        if(e.callee.type === 'MemberExpression') {
+            const {obj, name} = this.evalMemberTarget(s, e.callee as MemberExpression);
+            const args = this.evalArgs(s, e.arguments);
+            this.authorize(obj, name, args);
+            const fn = this.resolveMember(obj, name);
+            if(!(fn instanceof Function))
+                throw new Error(`routeterp: attempt to call a non-function (${typeof fn})`);
+            return fn(...args);
+        }
+        // Identifier callee: a function placed in scope (the route table).
         const callee = this.eval(s, e.callee);
         const args = this.evalArgs(s, e.arguments);
         if(!(callee instanceof Function))
@@ -285,6 +347,9 @@ class Demo {
     @safe greet(who: string) { return `hi ${who}`; }
     secret() { return 'leak'; }            // NOT @safe
     @safe static make() { return new Demo(); }
+    @route(publicRoute('demo')) openEcho(x: string) { return `open ${x}`; }
+    @route(authenticated) authEcho(x: string) { return `auth ${x}`; }
+    @route(selfArg('who')) selfEcho(arg: {who: number}) { return `self ${arg.who}`; }
 }
 class Pet {
     constructor(readonly petName: string) {}
@@ -335,6 +400,27 @@ function routePlay() {
         new RouteEval('permissive').eval(scope, parseRouteExpr(`demo.greet("x")("y")`));
         console.info('FAIL  permissive should still block calling a call-result');
     } catch { /* expected */ }
+
+    // --- @route enforcement (strict policy) ---
+    const strict = (src: string, ctx?: SecurityContext) => {
+        const run = () => new RouteEval('strict').eval(scope, parseRouteExpr(src));
+        return ctx ? runAs(ctx, run) : run();
+    };
+    const denies = (src: string, ctx?: SecurityContext) => {
+        try { strict(src, ctx); return false; } catch(e) { return e instanceof RouteDeniedError; }
+    };
+    const actor = (id: number, roles: string[] = []): SecurityContext => ({actorId: id, roles: new Set(roles)});
+
+    if(strict(`demo.openEcho("hi")`) !== 'open hi')
+        console.info('FAIL  public @route should be allowed anonymously');
+    if(!denies(`demo.authEcho("x")`))
+        console.info('FAIL  authenticated @route should deny an anonymous actor');
+    if(strict(`demo.authEcho("x")`, actor(5)) !== 'auth x')
+        console.info('FAIL  authenticated @route should allow a logged-in actor');
+    if(strict(`demo.selfEcho({who: 5})`, actor(5)) !== 'self 5')
+        console.info('FAIL  selfArg @route should allow the owner (arg matches actor)');
+    if(!denies(`demo.selfEcho({who: 5})`, actor(9)))
+        console.info('FAIL  selfArg @route should deny a non-owner');
 
     console.info('routePlay done');
 }

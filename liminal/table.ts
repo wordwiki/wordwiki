@@ -9,6 +9,7 @@ import {serialize, serializeAny} from "../liminal/serializable.ts";
 import { db, Db, PreparedQuery, QueryClosure, RowObject, QueryParameterSet, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as action from "./action.ts";
 import * as security from "./security.ts";
+import {route, authenticated} from "./security.ts";
 import * as date from "./date.ts";
 
 export type Tuple = Record<string, any>;
@@ -48,6 +49,7 @@ export class Table<T extends Tuple> {
     // --- Default Queries -------------------------------------------------------
     // ---------------------------------------------------------------------------
     
+    @route(authenticated)
     getById(id: number): T {
         //console.info("getById", id);
         return this.prepare<T, {id: number}>(block`
@@ -287,6 +289,7 @@ export class Table<T extends Tuple> {
      *    these as hidden params (rather than emitting them from renderInput) keeps
      *    them out of the non-record param case.
      */
+    @route(authenticated)
     renderForm(record: T, onsubmit?: string): Markup {
         // Row-level gate (the save side has its own in parseForm): don't even
         // generate an edit form for a record the actor may not edit.
@@ -417,6 +420,7 @@ export class Table<T extends Tuple> {
     // No primary key in the form means INSERT (the "new record" dialog is the
     // record form rendered over an empty record); with one, UPDATE.  parseForm
     // (not parseFormWithPrimaryKey, which requires the pk) handles both.
+    @route(authenticated)
     saveForm(form: Record<string, string>): Markup {
         const {primaryKey, changedFieldValues} = this.parseForm(form);
         if(primaryKey !== undefined) {

@@ -26,6 +26,8 @@ export interface Access {
     ctx: SecurityContext;
     record?: any;                  // the row being accessed (for owner checks)
     ownerId?: number | undefined;  // owner of the record, precomputed by the caller
+    args?: any[];                  // the route call's evaluated args (for route perms
+                                   // that key off an arg, e.g. selfArg('volunteer_id'))
 }
 
 export type Permission = (a: Access) => boolean;
@@ -46,6 +48,77 @@ export function not(p: Permission):       Permission { return a => !p(a); }
 // For now roles are a comma-separated list in volunteer.permissions.
 export function rolesFromPermissionsField(permissions: string | null | undefined): Set<string> {
     return new Set((permissions ?? '').split(',').map(s => s.trim()).filter(Boolean));
+}
+
+// --------------------------------------------------------------------------
+// Route (request-level) security.  The SAME Permission vocabulary as fields and
+// tables, applied to the methods/getters reachable as route expressions.
+//
+// Route perms are deliberately COARSE - public / authenticated / role - because
+// per-record (isSelf/owner) and per-field redaction are already enforced down in
+// the query/save layer; the route layer's job is "is this exposed, and to whom"
+// (anonymous vs logged-in vs a role floor).  See route-security-migration notes.
+// --------------------------------------------------------------------------
+
+// The everyday floor: must be logged in.  (Open-books: any volunteer may reach
+// most reads; the field layer still redacts the sensitive bits.)
+export const authenticated: Permission = loggedIn;
+
+// A role floor for host-only actions (the common one; redefined per-file today).
+export const hostOrAdmin: Permission = or(hasRole('host'), hasRole('admin'));
+
+// Owner check keyed off the route's ARGS rather than a loaded record - lets an
+// arg-subject route (e.g. addTimesheet({volunteer_id}), checkOut(eid, vid))
+// express "self" at the route layer, before the record is loaded.  `pick` is
+// either a field name read from the first object arg, or an extractor over the
+// positional arg array.
+export function selfArg(pick: string | ((args: any[]) => number | undefined)): Permission {
+    return a => {
+        const args = a.args ?? [];
+        const id = typeof pick === 'function'
+            ? pick(args)
+            : (args[0] && typeof args[0] === 'object' ? Number((args[0] as any)[pick]) : undefined);
+        return id !== undefined && !Number.isNaN(id) && id === a.ctx.actorId;
+    };
+}
+
+// Anonymous-reachable.  NOT a default: explicit, reason'd, and greppable so the
+// public surface can be audited (and snapshotted) - e.g. login / password reset.
+const PUBLIC_REASON: unique symbol = Symbol('publicRouteReason');
+export function publicRoute(reason: string): Permission {
+    const p: Permission = () => true;
+    (p as any)[PUBLIC_REASON] = reason;
+    return p;
+}
+export function publicRouteReason(p: Permission | undefined): string | undefined {
+    return p ? (p as any)[PUBLIC_REASON] : undefined;
+}
+
+// Declare a method/getter as an exposed route carrying its authorization.
+// Replaces @safe: it both exposes (the capability routeterp checks) AND records
+// the Permission (enforced when routeterp runs in strict mode).  An undeclared
+// member stays unreachable.  NB: stack ABOVE @path on getters - @path installs a
+// wrapper, and @route must tag the installed function.
+const ROUTE: unique symbol = Symbol('routePermission');
+export function route(perm: Permission) {
+    return (target: any, _ctx?: any) => {
+        // Tag the function with its permission.  routeterp reads this (via
+        // routePermissionOf) both to treat the member as exposed AND to enforce
+        // the permission under its strict policy.
+        if(typeof target === 'function') (target as any)[ROUTE] = perm;
+        return undefined;              // keep the original (now-tagged) function
+    };
+}
+// The route permission declared on obj.name (walks the prototype chain), or undefined.
+export function routePermissionOf(obj: any, name: PropertyKey): Permission | undefined {
+    for(let o = obj; o != null; o = Object.getPrototypeOf(o)) {
+        const d = Object.getOwnPropertyDescriptor(o, name);
+        if(d) {
+            const fn = d.get ?? (typeof d.value === 'function' ? d.value : undefined);
+            return fn ? (fn as any)[ROUTE] : undefined;
+        }
+    }
+    return undefined;
 }
 
 // A redactable field the actor may not view is replaced (in the query result)
