@@ -38,6 +38,7 @@ import { Markup } from "../liminal/markup.ts";
 import { panic } from "../liminal/utils.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
 import * as entrySchema from './entry-schema.ts';
@@ -225,6 +226,7 @@ export class CategoryTable extends Table<Category> {
     // --- Standard editable-item list (the rabid UI standard) -----------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     renderCategoriesPage(): Markup {
         const canCreate = this.canEditRecord({} as Category);
         return ['div', {class: 'container py-3'},
@@ -283,6 +285,7 @@ export class CategoryTable extends Table<Category> {
             body, this.canEditRecord(c) ? this.editPencil(id) : undefined, navChevron()];
     }
 
+    @route(authenticated)
     renderCategoryRowById(id: number): Markup {
         return this.renderCategoryRow(this.getById(id));
     }
@@ -294,12 +297,14 @@ export class CategoryTable extends Table<Category> {
     // Full page for one category (navigated to by tapping the list row).  For
     // now the same info as the row, plus the pencil; domain-specific detail
     // (entries in this category, tagging stats, ...) comes later.
+    @route(authenticated)
     detailPage(category_id: number): templates.Page {
         const c = this.getById(category_id);
         return templates.page(`${c.name || c.slug} — Category`, this.renderDetail(category_id));
     }
 
     // The detail body, as a reloadable fragment (an edit save re-renders it).
+    @route(authenticated)
     renderDetail(category_id: number): Markup {
         const c = this.getById(category_id);
         const props = this.reloadableItemProps(category_id, `/ww/wordwiki.categories.renderDetail(${category_id})`);
@@ -385,6 +390,7 @@ export class CategoryTable extends Table<Category> {
 
     // The create dialog: the record form over an empty record (renderForm
     // gates on recordEdit server-side too).
+    @route(admin)
     newDialog(): Markup {
         return this.renderForm({} as Category);
     }

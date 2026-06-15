@@ -31,6 +31,7 @@ import {evalJsExprSrc} from './jsterp.ts';
 import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredError, RouteMethodError} from './routeterp.ts';
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
+import {route, authenticated} from './security.ts';
 import * as browserAgent from './browser-agent.ts';
 import * as date from './date.ts';
 import {Temporal} from 'temporal-polyfill';
@@ -535,6 +536,7 @@ export abstract class LiminalApp {
 
     // Opt in as the test client (stamps opt-in + heartbeat).  Most-recent opt-in
     // is "the" test client; older ones are told (via testClientPoll) to stop.
+    @route(authenticated)   // self-gates further: assertHarnessEnabled + assertTestingRole
     testClientOptIn(session_token?: string) {
         this.assertHarnessEnabled();
         this.assertTestingRole();
@@ -543,6 +545,7 @@ export abstract class LiminalApp {
         return {ok: true, pollTimeoutMs: 25_000};
     }
 
+    @route(authenticated)
     async testClientPoll(session_token?: string) {
         this.assertHarnessEnabled();
         this.assertTestingRole();
@@ -555,6 +558,7 @@ export abstract class LiminalApp {
         return {cmd};
     }
 
+    @route(authenticated)
     testClientResult(session_token: string | undefined, cmdId: string, result: browserAgent.BrowserResult) {
         this.assertHarnessEnabled();
         this.assertTestingRole();
@@ -588,6 +592,7 @@ export abstract class LiminalApp {
 
     // The opt-in page: injects the route URLs + loads the client script (which
     // opts in, then polls).  Navigating here is the explicit opt-in.
+    @route(authenticated)
     testClientPage(): any {
         const routes = this.testClientRoutes();
         const runTestsUrl = `/${this.appName}.runBrowserTests()`;
@@ -610,6 +615,7 @@ export abstract class LiminalApp {
     }
 
     // Run a named test suite and render the summary (the page's button; default 'demo').
+    @route(authenticated)
     async runBrowserTests(name: string = 'demo'): Promise<Markup> {
         this.assertHarnessEnabled();
         this.assertTestingRole();

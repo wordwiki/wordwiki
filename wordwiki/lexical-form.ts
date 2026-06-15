@@ -33,6 +33,7 @@ import { Markup } from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import { groupByTheme, isInternalCategorySlug } from "./category.ts";
 import * as entrySchema from './entry-schema.ts';
@@ -172,6 +173,7 @@ export class LexicalFormTable extends Table<LexicalForm> {
     // --- Standard editable-item list (the rabid UI standard) -----------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     renderLexicalFormsPage(): Markup {
         const canCreate = this.canEditRecord({} as LexicalForm);
         return ['div', {class: 'container py-3'},
@@ -227,6 +229,7 @@ export class LexicalFormTable extends Table<LexicalForm> {
             body, this.canEditRecord(f) ? this.editPencil(id) : undefined, navChevron()];
     }
 
+    @route(authenticated)
     renderLexicalFormRowById(id: number): Markup {
         return this.renderLexicalFormRow(this.getById(id));
     }
@@ -238,12 +241,14 @@ export class LexicalFormTable extends Table<LexicalForm> {
     // Full page for one lexical form (navigated to by tapping the list row).
     // For now the same info as the row, plus the pencil; domain-specific
     // detail (entries using this form, usage stats, ...) comes later.
+    @route(authenticated)
     detailPage(lexical_form_id: number): templates.Page {
         const f = this.getById(lexical_form_id);
         return templates.page(`${f.name || f.slug} — Lexical Form`, this.renderDetail(lexical_form_id));
     }
 
     // The detail body, as a reloadable fragment (an edit save re-renders it).
+    @route(authenticated)
     renderDetail(lexical_form_id: number): Markup {
         const f = this.getById(lexical_form_id);
         const props = this.reloadableItemProps(lexical_form_id, `/ww/wordwiki.lexicalForms.renderDetail(${lexical_form_id})`);
@@ -314,6 +319,7 @@ export class LexicalFormTable extends Table<LexicalForm> {
         ];
     }
 
+    @route(admin)
     newDialog(): Markup {
         return this.renderForm({} as LexicalForm);
     }

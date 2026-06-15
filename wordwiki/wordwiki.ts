@@ -32,7 +32,7 @@ import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import {serialize, path} from '../liminal/serializable.ts';
-import {route, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
+import {route, routeMutation, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {LexemeOps} from './lexeme-ops.ts';
@@ -155,17 +155,20 @@ export class WordWiki extends LiminalApp {
 
     // ----- New-style pages ----------------------------------------------------
 
+    @route(authenticated)
     usersPage(): templates.Page {
         return templates.page('Users', this.users.renderUsersPage());
     }
 
     // The category VOCABULARY admin page (the controlled list of categories) -
     // distinct from categoriesDirectory(), the entries-by-category report.
+    @route(authenticated)
     categoriesPage(): templates.Page {
         return templates.page('Category Table', this.categories.renderCategoriesPage());
     }
 
     // The lexical form (part of speech) vocabulary admin page.
+    @route(authenticated)
     lexicalFormsPage(): templates.Page {
         return templates.page('Lexical Form Table', this.lexicalForms.renderLexicalFormsPage());
     }
@@ -378,6 +381,7 @@ export class WordWiki extends LiminalApp {
      * to it in the editor.  Reached by the navbar "Add New Entry" form POST
      * (a POST so link prefetch/prerender can't create entries).
      */
+    @routeMutation(authenticated)   // POSTed by the new-lexeme form; creates an entry
     newLexemeAction(): server.Response {
         const tx_time = timestamp.nextTime(timestamp.BEGINNING_OF_TIME);  // placeholder; applyTransaction allocates
 
@@ -418,10 +422,12 @@ export class WordWiki extends LiminalApp {
 
     // The entry editor (the server-side htmx lexeme editor - the old
     // client-side editor is retired).
+    @route(authenticated)
     entry(entry_id: number): templates.Page {
         return this.lexeme.entryPage(entry_id);
     }
 
+    @route(authenticated)
     home(): any {
         const title = "Dictionary Editor";
         const body = [
@@ -479,6 +485,7 @@ export class WordWiki extends LiminalApp {
     }
 
 
+    @route(authenticated)
     searchPage(query?: {searchText?: string}): any {
 
         //console.info('ENTRIES', this.entries);
@@ -587,6 +594,7 @@ export class WordWiki extends LiminalApp {
     }
 
 
+    @route(authenticated)
     searchDocumentsPage(query?: {searchText?: string}): any {
         throw new Error('not impl yetc');
     }
@@ -652,6 +660,7 @@ export class WordWiki extends LiminalApp {
 
     
 
+    @route(authenticated)
     categoriesDirectory(): any {
         const title = `Categories Directory`;
 
@@ -687,6 +696,7 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
 
+    @route(authenticated)
     todoReport(restrictToUser: string|null, restrictToTask: string|null): any {
         const userSummary = restrictToUser ? `for user "${entry.users[restrictToUser] ?? restrictToUser}"` : 'for all users';
         const taskSummary = restrictToTask ? `for task "${entry.todos[restrictToTask] ?? restrictToTask}"` : 'for all tasks';
@@ -759,6 +769,7 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
 
+    @route(authenticated)
     entriesForCategory(category?: string): any {
         category = String(category ?? '');
 
@@ -786,6 +797,7 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
     
+    @route(authenticated)
     entriesByTwitterPostStatus(): any {
         
         function getTwitterPostStatusForEntry(e: entry.Entry): string|undefined {
@@ -830,6 +842,7 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
 
+    @route(authenticated)
     entriesByPronunciation(): any {
         throw new Error('no working yet');
        const entriesByPronunciation = utils.multi_partition_by(
@@ -867,6 +880,7 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
     
+    @route(authenticated)
     entriesByEnglishGloss(): any {
     }
     
@@ -893,6 +907,7 @@ export class WordWiki extends LiminalApp {
     //     return templates.pageTemplate({title, body});
     // }
 
+    @route(authenticated)
     entriesForStatus(status?: string): any {
         status = String(status ?? '');
 
@@ -986,6 +1001,7 @@ export class WordWiki extends LiminalApp {
         })();
     }
     
+    @route(authenticated)
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;
 
@@ -1030,6 +1046,7 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
 
+    @route(authenticated)
     entriesByPDMPage(page_number: number): any {
         typeof page_number === 'number' || panic('expected page number');
 
