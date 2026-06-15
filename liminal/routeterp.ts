@@ -84,8 +84,34 @@ export function parseRouteExpr(src: string): JsNode {
     return acorn.parseExpressionAt(src, 0, {ecmaVersion: 2023});
 }
 
-export function evalRouteExprSrc(scope: Scope, src: string): any {
-    return new RouteEval().eval(scope, parseRouteExpr(src));
+/**
+ * Enforcement policy for the member-access gate (orthogonal to the grammar,
+ * which is always restricted):
+ *   - 'strict'      every member access must be declared (@safe today, @route
+ *                   when the route-security migration lands); undeclared throws.
+ *   - 'permissive'  undeclared members are ALLOWED but logged once (deduped) -
+ *                   the migration bridge: it proves the restricted grammar can
+ *                   evaluate the whole site before any annotations exist, and the
+ *                   log becomes the annotation worklist.  Still strictly safer
+ *                   than jsterp (no globals in scope; no operators / computed
+ *                   access / calling a call-result -> the classic RCE shapes
+ *                   stay blocked).
+ */
+export type RoutePolicy = 'permissive' | 'strict';
+
+// Deduped record of undeclared (class.member) reached under 'permissive' - the
+// route-annotation worklist.  Module-level so it accrues across requests.
+const undeclaredSeen = new Set<string>();
+export function undeclaredRouteMembers(): string[] { return [...undeclaredSeen].sort(); }
+export function clearUndeclaredRouteMembers(): void { undeclaredSeen.clear(); }
+
+function memberKey(obj: any, name: PropertyKey): string {
+    const cls = (obj && obj.constructor && obj.constructor.name) || typeof obj;
+    return `${cls}.${String(name)}`;
+}
+
+export function evalRouteExprSrc(scope: Scope, src: string, policy: RoutePolicy = 'strict'): any {
+    return new RouteEval(policy).eval(scope, parseRouteExpr(src));
 }
 
 /** Walk the prototype chain to find the descriptor that defines `name`. */
@@ -109,7 +135,7 @@ function isSafeMember(obj: any, name: PropertyKey): boolean {
 export class RouteEval {
     ticksUsed = 0;
 
-    constructor(readonly maxTicks: number = 100_000) {}
+    constructor(readonly policy: RoutePolicy = 'strict', readonly maxTicks: number = 100_000) {}
 
     eval(s: Scope, e: JsNode): any {
         if(this.ticksUsed++ > this.maxTicks)
@@ -184,8 +210,16 @@ export class RouteEval {
         const obj = this.eval(s, e.object);
         if(obj == null)
             throw new Error(`routeterp: cannot read '${name}' of ${obj}`);
-        if(!isSafeMember(obj, name))
-            throw new Error(`routeterp: '${name}' is not a @safe member`);
+        if(!isSafeMember(obj, name)) {
+            if(this.policy === 'strict')
+                throw new Error(`routeterp: '${name}' is not an exposed route member`);
+            // permissive: allow, but record the gap once (the annotation worklist).
+            const key = memberKey(obj, name);
+            if(!undeclaredSeen.has(key)) {
+                undeclaredSeen.add(key);
+                console.warn(`ROUTE-SECURITY undeclared member: ${key}`);
+            }
+        }
         const member = obj[name];
         // Bind methods so `this` is the receiver when later called.
         return (member instanceof Function) ? member.bind(obj) : member;
@@ -286,6 +320,21 @@ function routePlay() {
     const poisoned: any = evalRouteExprSrc(scope, `{"__proto__": 7}`);
     if(Object.getPrototypeOf(poisoned) !== Object.prototype)
         console.info('FAIL  __proto__ key poisoned the prototype');
+
+    // --- policy dial: strict throws on undeclared, permissive allows + logs ---
+    expectThrow(scope, `demo.secret()`);                            // strict (default)
+    clearUndeclaredRouteMembers();
+    const leaked = new RouteEval('permissive').eval(scope, parseRouteExpr(`demo.secret()`));
+    if(leaked !== 'leak')
+        console.info('FAIL  permissive should allow an undeclared member');
+    if(!undeclaredRouteMembers().includes('Demo.secret'))
+        console.info('FAIL  permissive should record the undeclared member');
+    // permissive still blocks the RCE shapes (no globals; cannot call a call-result)
+    expectThrow({}, `constructor`);
+    try {
+        new RouteEval('permissive').eval(scope, parseRouteExpr(`demo.greet("x")("y")`));
+        console.info('FAIL  permissive should still block calling a call-result');
+    } catch { /* expected */ }
 
     console.info('routePlay done');
 }

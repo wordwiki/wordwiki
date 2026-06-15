@@ -28,7 +28,7 @@ import * as utils from './utils.ts';
 import {DenoHttpServer} from './deno-http-server.ts';
 import {parseCookies} from './http-server.ts';
 import {evalJsExprSrc} from './jsterp.ts';
-import {evalRouteExprSrc} from './routeterp.ts';
+import {evalRouteExprSrc, type RoutePolicy} from './routeterp.ts';
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
 import * as browserAgent from './browser-agent.ts';
@@ -92,12 +92,23 @@ export function renderTestResults(results: TestResult[]): Markup {
 
 // Which interpreter evaluates route expressions, selected once via env var:
 //   (unset)/'jsterp' - the full JS-expression interpreter; 'routeterp' - the
-// restricted, default-deny route interpreter.
+// restricted route interpreter.
 const routeEvalMode = (Deno.env.get('LIMINAL_ROUTE_EVAL') ?? Deno.env.get('RABID_ROUTE_EVAL') ?? 'jsterp').toLowerCase();
+
+// routeterp enforcement policy (ignored under jsterp):
+//   'strict'     - undeclared members 404 (the end state).
+//   'permissive' - undeclared members allowed but logged (the migration bridge:
+//                  brings the restricted grammar up against the live site before
+//                  any annotations exist; the log is the annotation worklist).
+// Default 'strict' so a bare routeterp flip is fail-closed; the migration sets
+// 'permissive' explicitly (see rabid.sh).
+const routePolicy: RoutePolicy =
+    (Deno.env.get('LIMINAL_ROUTE_POLICY') ?? 'strict').toLowerCase() === 'permissive'
+        ? 'permissive' : 'strict';
 
 function evalRoute(scope: Record<string, any>, jsExprSrc: string): any {
     switch(routeEvalMode) {
-        case 'routeterp': return evalRouteExprSrc(scope, jsExprSrc);
+        case 'routeterp': return evalRouteExprSrc(scope, jsExprSrc, routePolicy);
         case 'jsterp':
         case '':          return evalJsExprSrc(scope, jsExprSrc);
         default: throw new Error(`liminal: unknown route eval mode '${routeEvalMode}' (expected 'jsterp' or 'routeterp')`);
