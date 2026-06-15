@@ -22,7 +22,7 @@ async function lmAudioUploadChange(event, hiddenInputId) {
             reader.onload = e => resolve(e.target.result.split(',')[1]);
             reader.readAsDataURL(file);
         });
-        const {audioPath} = await rpc`uploadRecording(${{recordingBytesAsBase64}})`;
+        const {audioPath} = await rpc`wordwiki.audio.uploadRecording(${{recordingBytesAsBase64}})`;
         document.getElementById(hiddenInputId).value = audioPath;
         if (status) status.textContent = 'Uploaded ' + file.name + ' — will be attached when you save.';
     } catch (e) {

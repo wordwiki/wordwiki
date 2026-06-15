@@ -9,6 +9,7 @@ import * as utils from '../liminal/utils.ts';
 import * as strings from '../liminal/strings.ts';
 import {block} from '../liminal/strings.ts';
 import * as server from '../liminal/http-server.ts';
+import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import * as entryschema from './entry-schema.ts';
@@ -130,7 +131,7 @@ export interface PublicPageContent {
 
 export function startPublish(): any {
     if(publishStatusSingleton.isRunning) {
-        return server.forwardResponse('/ww/publishStatus(true)');
+        return server.forwardResponse('/ww/wordwiki.publish.publishStatus(true)');
     } else {
         (async ()=>{
             publishStatusSingleton.start();
@@ -152,7 +153,7 @@ export function startPublish(): any {
             }
             publishStatusSingleton.end();
         })();
-        return server.forwardResponse('/ww/publishStatus(false)');
+        return server.forwardResponse('/ww/wordwiki.publish.publishStatus(false)');
     }
 }
 
@@ -1399,10 +1400,22 @@ export async function writePageFromMarkupIfChanged(path: string, pageMarkup: any
 
 
 
-export const routes = ()=> ({
-    startPublish,
-    publishStatus,
-});
+/**
+ * The publish URL routes, namespaced under `wordwiki.publish` so the strict
+ * route interpreter's member @route gate covers them (they used to be bare
+ * top-level scope functions, which routeterp does NOT gate - see
+ * render-page-editor.ts PageRoutes for the rationale).  Both are `hostOrAdmin`:
+ * pushing the public site is a release/curator task.
+ *
+ * Neither is marked `mutates`: startPublish is triggered by a GET navbar link
+ * and publishStatus is a GET status view (both redirect via forwardResponse), so
+ * POST-only gating would 405 them.  startPublish IS state-changing over GET -
+ * acceptable here because it is admin-only; harden to a POST form if wanted.
+ */
+export class PublishRoutes {
+    @route(hostOrAdmin) startPublish(...a: Parameters<typeof startPublish>) { return startPublish(...a); }
+    @route(hostOrAdmin) publishStatus(...a: Parameters<typeof publishStatus>) { return publishStatus(...a); }
+}
 
 
 // function makeJsonForCategoryPlay() {

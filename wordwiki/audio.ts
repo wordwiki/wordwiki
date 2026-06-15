@@ -9,6 +9,7 @@ import {block} from "../liminal/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './scanned-document.ts';
 import * as config from "./config.ts";
 import * as server from '../liminal/http-server.ts';
+import {route, authenticated} from '../liminal/security.ts';
 import {
     encodeBase64,
     decodeBase64,
@@ -132,7 +133,19 @@ async function preCompressDictionaryAudio() {
 
 }
 
-export const routes = ()=> ({
-    uploadRecording,
-    forwardToCompressedRecording,
-});
+/**
+ * The audio URL routes, namespaced under `wordwiki.audio` so the strict route
+ * interpreter's member @route gate covers them (they used to be bare top-level
+ * scope functions, which routeterp does NOT gate - see render-page-editor.ts
+ * PageRoutes for the full rationale).  Thin delegators to the module functions.
+ *
+ *  - uploadRecording is `authenticated` + mutates (POST-only): any logged-in
+ *    contributor records audio while editing a lexeme; it writes to the
+ *    content store, so it is a mutation.
+ *  - forwardToCompressedRecording is `authenticated` view (a 302 to the
+ *    compressed file); currently unreferenced but kept reachable-and-gated.
+ */
+export class AudioRoutes {
+    @route(authenticated, {mutates: true}) uploadRecording(...a: Parameters<typeof uploadRecording>) { return uploadRecording(...a); }
+    @route(authenticated) forwardToCompressedRecording(...a: Parameters<typeof forwardToCompressedRecording>) { return forwardToCompressedRecording(...a); }
+}

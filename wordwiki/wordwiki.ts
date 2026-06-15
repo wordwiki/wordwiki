@@ -32,7 +32,7 @@ import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import {serialize, path} from '../liminal/serializable.ts';
-import {route, authenticated, publicRoute} from '../liminal/security.ts';
+import {route, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {LexemeOps} from './lexeme-ops.ts';
@@ -73,16 +73,14 @@ export class WordWiki extends LiminalApp {
         // --- Load schema and create an empty workspace
         this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
         // --- Set up our routes
-        // The page-editor routes are NOT spread in here anymore: they now live
-        // under the @route-gated `wordwiki.pages` namespace (see get pages()),
-        // so the strict route interpreter's member gate covers them.  (audio /
-        // publish are still bare top-level routes - the same ungated pattern;
-        // they need the same wrapping before wordwiki flips to routeterp.)
+        // The page-editor / audio / publish routes are NOT spread in here as
+        // bare top-level functions anymore: they live under the @route-gated
+        // `wordwiki.pages` / `wordwiki.audio` / `wordwiki.publish` namespaces
+        // (see the getters below), so the strict route interpreter's member gate
+        // covers them.  The root scope now binds only the app itself.
         this.routes = Object.assign(
             {},
             {wordwiki: this},
-            audio.routes(),
-            publish.routes(),
         );
     }
 
@@ -92,12 +90,15 @@ export class WordWiki extends LiminalApp {
 
     // ----- New-style (liminal Table) tables ----------------------------------
 
-    @path get config() { return new config.ConfigTable(); }
-    @path get users() { return new user.UserTable(); }
+    // Service getters are navigation (the leaf method carries its own route perm);
+    // reaching any table requires a login.  The internal auth tables
+    // (passwordHash/userSession) are deliberately NOT exposed as routes.
+    @route(authenticated) @path get config() { return new config.ConfigTable(); }
+    @route(authenticated) @path get users() { return new user.UserTable(); }
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
-    @path get categories() { return new category.CategoryTable(this); }
-    @path get lexicalForms() { return new lexicalForm.LexicalFormTable(this); }
+    @route(authenticated) @path get categories() { return new category.CategoryTable(this); }
+    @route(authenticated) @path get lexicalForms() { return new lexicalForm.LexicalFormTable(this); }
 
     // The new-style tables (auto-created at startup; the legacy raw-DML tables
     // - scanned documents, bounding boxes, the dict assertion table - stay in
@@ -128,6 +129,20 @@ export class WordWiki extends LiminalApp {
     #pages: renderPageEditor.PageRoutes|undefined = undefined;
     @route(authenticated) @path get pages(): renderPageEditor.PageRoutes {
         return this.#pages ??= new renderPageEditor.PageRoutes();
+    }
+
+    // Audio routes, reachable as wordwiki.audio.* (e.g. the lexeme editor's
+    // eager recording upload).  `authenticated`; uploadRecording is POST-only.
+    #audioRoutes: audio.AudioRoutes|undefined = undefined;
+    @route(authenticated) @path get audio(): audio.AudioRoutes {
+        return this.#audioRoutes ??= new audio.AudioRoutes();
+    }
+
+    // Publish routes, reachable as wordwiki.publish.* (start a publish / view
+    // its status).  `hostOrAdmin` - pushing the public site is a release task.
+    #publishRoutes: publish.PublishRoutes|undefined = undefined;
+    @route(hostOrAdmin) @path get publish(): publish.PublishRoutes {
+        return this.#publishRoutes ??= new publish.PublishRoutes();
     }
 
     // The assertion-mutation domain verbs (lexeme-ops.ts), shared by the

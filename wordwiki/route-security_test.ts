@@ -14,6 +14,8 @@ import { evalRouteExprSrc, RouteUndeclaredError, RouteDeniedError } from "../lim
 import { withTestDb, as, TestTimeline, mkEntry } from "./testing.ts";
 import { LexemeEditor } from "./lexeme-editor.ts";
 import { PageRoutes } from "./render-page-editor.ts";
+import { AudioRoutes } from "./audio.ts";
+import { PublishRoutes } from "./publish.ts";
 import { WordWiki } from "./wordwiki.ts";
 
 // Every URL-reachable editor route (an hx-get fragment, a dialog url, or a tx
@@ -155,6 +157,57 @@ test("routeterp strict: a page mutation is allowed for an admin (djz)", async ()
             try { evalRouteExprSrc({wordwiki: fx.ww}, "wordwiki.pages.removeBoxFromGroup(1)", "strict"); }
             catch(e) { denied = e instanceof RouteDeniedError; }
             assert(!denied, "an admin must not be route-denied a page mutation");
+        });
+    });
+});
+
+// ----- Audio (wordwiki.audio.*) and publish (wordwiki.publish.*) ------------
+// Both were bare top-level scope functions too; now @route-gated namespaces.
+
+test("the wordwiki.audio / wordwiki.publish namespaces are declared routes", () => {
+    assert(routePermissionOf(WordWiki.prototype, "audio") !== undefined,
+           "wordwiki.audio must be @route @path");
+    assert(routePermissionOf(WordWiki.prototype, "publish") !== undefined,
+           "wordwiki.publish must be @route @path");
+});
+
+test("audio: uploadRecording is authenticated + POST-only; forward is a GET view", () => {
+    assertEquals(routePermissionOf(AudioRoutes.prototype, "uploadRecording"), authenticated,
+                 "uploadRecording must be @route(authenticated)");
+    assert(routeIsMutation(AudioRoutes.prototype, "uploadRecording"),
+           "uploadRecording must be mutates (POST-only - it writes to the content store)");
+    assertEquals(routePermissionOf(AudioRoutes.prototype, "forwardToCompressedRecording"), authenticated);
+    assertEquals(routeIsMutation(AudioRoutes.prototype, "forwardToCompressedRecording"), false,
+                 "forwardToCompressedRecording is a GET forward, not a mutation");
+});
+
+test("publish: startPublish / publishStatus are hostOrAdmin and GET-reachable", () => {
+    for(const name of ["startPublish", "publishStatus"]) {
+        assertEquals(routePermissionOf(PublishRoutes.prototype, name), hostOrAdmin,
+                     `'${name}' must be @route(hostOrAdmin)`);
+        // GET-reachable: startPublish is a navbar link, publishStatus a status
+        // view - marking either mutates would 405 them.
+        assertEquals(routeIsMutation(PublishRoutes.prototype, name), false,
+                     `'${name}' must stay GET-reachable (not mutates)`);
+    }
+});
+
+test("routeterp strict: publish is DENIED for an authenticated non-host", async () => {
+    await withTestDb((fx) => {
+        as(fx, {actorId: 999, roles: []}, () => {
+            // Denied at the `wordwiki.publish` navigation (the getter is hostOrAdmin).
+            assertThrows(
+                () => evalRouteExprSrc({wordwiki: fx.ww}, "wordwiki.publish.publishStatus(false)", "strict"),
+                RouteDeniedError);
+        });
+    });
+});
+
+test("routeterp strict: the audio namespace resolves for an authenticated non-host", async () => {
+    await withTestDb((fx) => {
+        as(fx, {actorId: 999, roles: []}, () => {
+            const ns = evalRouteExprSrc({wordwiki: fx.ww}, "wordwiki.audio", "strict");
+            assert(ns instanceof AudioRoutes, "wordwiki.audio should resolve to the AudioRoutes holder");
         });
     });
 });
