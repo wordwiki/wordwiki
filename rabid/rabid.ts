@@ -12,7 +12,6 @@ import * as home from './home-page.ts';
 import * as volunteer from './volunteer.ts';
 import * as timesheet from './timesheet.ts';
 import * as event from './event.ts';
-import * as commitment from './commitment.ts';
 import * as sale from './sale.ts';
 import * as service from './service.ts';
 import * as group from './group.ts';
@@ -57,7 +56,8 @@ export class Rabid extends LiminalApp {
     @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
     @path get timesheet_entry() { return new timesheet.TimesheetEntryTable(); }
     @path get event() { return new event.EventTable(); }
-    @path get event_commitment() { return new commitment.EventCommitmentTable(); }
+    @path get event_commitment() { return new event.EventCommitmentTable(); }
+    @path get event_checkin() { return new event.EventCheckinTable(); }
     @path get sale() { return new sale.SaleTable(); }
     @path get service() { return new service.ServiceTable(); }
     @path get volunteer_group() { return new group.VolunteerGroupTable(); }
@@ -79,7 +79,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
     }
 
     home() { return templates.page('home', home.home()); }

@@ -56,6 +56,12 @@ export interface Volunteer {
     // Skills or Experience You'd Like to Share e.g., bike repair, event planning, fundraising, social media, etc
     skills: string;
 
+    // Whether this person is currently employed as staff (as opposed to a
+    // volunteer).  Distinct from pay: staff can volunteer and volunteers can be
+    // paid.  Event check-ins snapshot this at check-in time for grant reporting,
+    // so changing it here does not rewrite history.  Host/admin managed.
+    is_staff: boolnum;
+
     // Optional photo: a content-store path ('content/photos/…' - see
     // liminal/photo.ts).  Volunteer-supplied by choice.
     photo?: string;
@@ -102,6 +108,9 @@ export class VolunteerTable extends Table<Volunteer> {
             // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
             new StringField('skills', {default: ''}),
+            // Employment status (host/admin managed) - snapshotted into event
+            // check-ins for grant reporting.  See the interface field comment.
+            new BooleanField('is_staff', {default: 0, prompt: 'Staff member', edit: host}),
             // Optional photo (a content-store path - see liminal/photo.ts).
             // Uploading one is the volunteer's own choice: the point is to help
             // other volunteers on a shift learn each other's names.
@@ -376,6 +385,9 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.dt, {class: 'col-sm-3'}, 'Joined'],
              [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.join_date, v.join_date) || '—'],
             ],
+
+            [h.h4, {class: 'mt-4'}, 'Event attendance'],
+            rabid.event_checkin.renderForVolunteer(volunteer_id),
 
             [h.h4, {class: 'mt-4'}, 'Timesheet'],
             rabid.timesheet_entry.renderForVolunteer(volunteer_id),

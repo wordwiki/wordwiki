@@ -178,6 +178,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
                 'carpentry, welding',
                 ''
             ]),
+            // A small fraction are staff (the rest volunteers); event check-ins
+            // snapshot this for grant reporting.
+            is_staff: statusS.datatype.boolean({ probability: 0.08 }) ? 1 : 0,
             emergency_contact_name: contactS.helpers.maybe(
                 () => `${contactS.person.firstName()} ${contactS.person.lastName()}`, { probability: 0.7 }) || '',
             emergency_contact_phone: contactS.helpers.maybe(
@@ -526,270 +529,100 @@ export function seedEventCommitments(rabid: Rabid, opts: { baseSeed?: number } =
     }
 }
 
+// Event attendance: who actually showed up.  This is the bulk of volunteer
+// activity (volunteers attend events; they rarely fill out timesheets).  We turn
+// most commitments on started events into check-ins, plus some walk-ins
+// (attended without committing).  was_staff is snapshotted by EventCheckin.insert
+// from each volunteer's is_staff, so we don't pass it here.
+export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}) {
+    faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('checkins')) >>> 0);
+    rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('checkins.rand')) >>> 0);
+    const currentDate = new Date();
+    const events = rabid.event.allEvents.all();
+    const volunteers = rabid.volunteer.allVolunteersByName.all();
+
+    // Only events that have started can have check-ins.
+    const startedEvents = events.filter(e => e.start_time && new Date(e.start_time) <= currentDate);
+
+    let checkinCount = 0;
+    let walkInCount = 0;
+    // A walk-in attends at most one event in this dataset (keeps the data legible).
+    const walkInVolunteers = new Set<number>();
+
+    for (const event of startedEvents) {
+        const isPast = !!(event.end_time && new Date(event.end_time) < currentDate);
+        const commitments = rabid.event_commitment.commitmentsForEvent.all({ event_id: event.event_id });
+
+        // Most committed volunteers show up; a bit fewer for a still-ongoing event
+        // (not everyone has arrived yet).  Check-ins inherit the event's times.
+        const showRate = isPast ? 0.9 : 0.7;
+        for (const commitment of commitments) {
+            if (rand() < showRate) {
+                rabid.event_checkin.insert({
+                    event_id: event.event_id,
+                    volunteer_id: commitment.volunteer_id,
+                    notes: '',
+                });
+                checkinCount++;
+            }
+        }
+
+        // A few walk-ins: attended without committing.  Give them an explicit late
+        // arrival (a start_time override) to exercise partial attendance.
+        const committedIds = new Set(commitments.map(c => c.volunteer_id));
+        const eventDate = new Date(event.start_time!);
+        const maxWalkIns = eventDate.getDay() === 6 ? 3 : 1;   // more on Saturdays
+        const numWalkIns = faker.helpers.rangeToNumber({ min: 0, max: maxWalkIns });
+        for (let i = 0; i < numWalkIns; i++) {
+            const available = volunteers.filter(v =>
+                !committedIds.has(v.volunteer_id) && !walkInVolunteers.has(v.volunteer_id));
+            if (available.length === 0) break;
+            const walkIn = faker.helpers.arrayElement(available);
+            walkInVolunteers.add(walkIn.volunteer_id);
+
+            // Arrived 30-120 min after the event start (overrides the event time).
+            const arrival = new Date(eventDate.getTime() +
+                faker.helpers.rangeToNumber({ min: 30, max: 120 }) * 60000);
+            rabid.event_checkin.insert({
+                event_id: event.event_id,
+                volunteer_id: walkIn.volunteer_id,
+                start_time: arrival.toISOString().replace('T', ' ').slice(0, 19),
+                notes: 'Walk-in',
+            });
+            checkinCount++;
+            walkInCount++;
+        }
+    }
+
+    console.info(`Total event check-ins created: ${checkinCount} (${walkInCount} walk-ins) across ${startedEvents.length} started events`);
+}
+
+// Explicit recorded time NOT tied to an event - volunteers/staff doing work like
+// shop maintenance, admin, or supply runs.  (Event attendance lives in
+// event_checkin - see seedEventCheckins.)
 export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number } = {}) {
     faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('timesheets')) >>> 0);
     rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('timesheets.rand')) >>> 0);
     const currentDate = new Date();
-    const events = rabid.event.allEvents.all();
     const volunteers = rabid.volunteer.allVolunteersByName.all();
-    
-    // Categorize events by time
-    const pastEvents = events.filter(event => {
-        return event.end_time && new Date(event.end_time) < currentDate;
-    });
-    
-    const ongoingEvents = events.filter(event => {
-        return event.start_time && event.end_time && 
-               new Date(event.start_time) <= currentDate && 
-               new Date(event.end_time) >= currentDate;
-    });
-    
-    const futureEvents = events.filter(event => {
-        return event.start_time && new Date(event.start_time) > currentDate;
-    });
-    
-    console.info(`Creating timesheet entries for ${pastEvents.length} past events, ${ongoingEvents.length} ongoing events, ${futureEvents.length} future events`);
-    
-    // Track which volunteers have already created timesheet entries for walk-ins
-    const walkInVolunteers = new Set<number>();
-    
-    for (const event of pastEvents) {
-        // Get commitments for this event
-        const commitments = rabid.event_commitment.commitmentsForEvent.all({ 
-            event_id: event.event_id 
-        });
-        
-        // Convert 90% of commitments to timesheet entries
-        for (const commitment of commitments) {
-            if (rand() < 0.9) {
-                // Parse event times
-                const eventStart = new Date(event.start_time!);
-                const eventEnd = new Date(event.end_time!);
-                
-                // Volunteer might arrive late or leave early
-                const arrivalVariance = faker.helpers.rangeToNumber({ min: -15, max: 30 }); // -15 to +30 minutes
-                const departureVariance = faker.helpers.rangeToNumber({ min: -60, max: 15 }); // -60 to +15 minutes
-                
-                const volunteerStart = new Date(eventStart.getTime() + arrivalVariance * 60000);
-                const volunteerEnd = new Date(eventEnd.getTime() + departureVariance * 60000);
-                
-                // Format times
-                const startTimeStr = volunteerStart.toISOString().replace('T', ' ').slice(0, 19);
-                const endTimeStr = volunteerEnd.toISOString().replace('T', ' ').slice(0, 19);
-                
-                rabid.timesheet_entry.insert({
-                    volunteer_id: commitment.volunteer_id,
-                    event_id: event.event_id,
-                    start_time: startTimeStr,
-                    end_time: endTimeStr,
-                    start_time_is_approximate: 0, // Exact time since volunteer showed up
-                    end_time_is_approximate: 0,   // Exact time since event is over
-                    end_time_is_provisional: 0,   // Not provisional since event is complete
-                    notes: faker.helpers.maybe(() => 
-                        faker.helpers.arrayElement([
-                            'Helped with electronics repair',
-                            'Greeted visitors and managed queue',
-                            'Repaired bicycles',
-                            'Taught sewing repairs',
-                            'General repairs and assistance',
-                            'Setup and breakdown',
-                            'Organized tools and supplies',
-                            ''
-                        ]), { probability: 0.7 }) || '',
-                    km_driven_for_reimbursement: commitment.will_drive_supplies ? 
-                        faker.helpers.rangeToNumber({ min: 5, max: 50 }) : 0,
-                    km_driven_processed: 0,       // Not yet processed
-                    is_paid_time: 0,              // Assuming volunteers are unpaid
-                    paid_time_processed: 0,       // Not yet processed
-                    entry_creation_time: faker.date.between({ 
-                        from: eventEnd, 
-                        to: new Date(eventEnd.getTime() + 7 * 24 * 60 * 60 * 1000) 
-                    }).toISOString().replace('T', ' ').slice(0, 19)
-                });
-            }
-        }
-        
-        // Add walk-in volunteers based on event type and season
-        // Weekend events get more walk-ins
-        const eventDate = new Date(event.start_time!);
-        const dayOfWeek = eventDate.getDay();
-        const month = eventDate.getMonth();
-        
-        let maxWalkIns = dayOfWeek === 6 ? 3 : 1; // More walk-ins on Saturdays
-        
-        // Apply same seasonal variation to walk-ins
-        if (month === 11 || month === 0 || month === 1) {
-            // Winter - fewer walk-ins
-            maxWalkIns = Math.max(0, maxWalkIns - 1);
-        } else if (month >= 5 && month <= 7) {
-            // Summer - more walk-ins
-            maxWalkIns = maxWalkIns + 1;
-        }
-        
-        const walkInCount = faker.helpers.rangeToNumber({ min: 0, max: maxWalkIns });
-        for (let i = 0; i < walkInCount; i++) {
-            // Pick a random volunteer who hasn't committed to this event
-            const committedVolunteerIds = new Set(commitments.map(c => c.volunteer_id));
-            const availableVolunteers = volunteers.filter(v => 
-                !committedVolunteerIds.has(v.volunteer_id) && 
-                !walkInVolunteers.has(v.volunteer_id)
-            );
-            
-            if (availableVolunteers.length > 0) {
-                const walkInVolunteer = faker.helpers.arrayElement(availableVolunteers);
-                walkInVolunteers.add(walkInVolunteer.volunteer_id);
-                
-                // Walk-ins typically arrive later and might leave earlier
-                const eventStart = new Date(event.start_time!);
-                const eventEnd = new Date(event.end_time!);
-                
-                const arrivalVariance = faker.helpers.rangeToNumber({ min: 30, max: 120 }); // 30-120 minutes late
-                const departureVariance = faker.helpers.rangeToNumber({ min: -120, max: 0 }); // up to 2 hours early
-                
-                const volunteerStart = new Date(eventStart.getTime() + arrivalVariance * 60000);
-                const volunteerEnd = new Date(eventEnd.getTime() + departureVariance * 60000);
-                
-                // Make sure they actually attended for some time
-                if (volunteerEnd > volunteerStart) {
-                    const startTimeStr = volunteerStart.toISOString().replace('T', ' ').slice(0, 19);
-                    const endTimeStr = volunteerEnd.toISOString().replace('T', ' ').slice(0, 19);
-                    
-                    rabid.timesheet_entry.insert({
-                        volunteer_id: walkInVolunteer.volunteer_id,
-                        event_id: event.event_id,
-                        start_time: startTimeStr,
-                        end_time: endTimeStr,
-                        start_time_is_approximate: 1, // Approximate since walk-in
-                        end_time_is_approximate: 1,   // Approximate since walk-in
-                        end_time_is_provisional: 0,   // Not provisional since event is complete
-                        notes: 'Walk-in volunteer - ' + faker.helpers.arrayElement([
-                            'Helped where needed',
-                            'Assisted with repairs',
-                            'Helped with cleanup',
-                            'General assistance'
-                        ]),
-                        km_driven_for_reimbursement: 0,
-                        km_driven_processed: 0,
-                        is_paid_time: 0,
-                        paid_time_processed: 0,
-                        entry_creation_time: faker.date.between({ 
-                            from: volunteerEnd, 
-                            to: new Date(volunteerEnd.getTime() + 7 * 24 * 60 * 60 * 1000) 
-                        }).toISOString().replace('T', ' ').slice(0, 19)
-                    });
-                }
-            }
-        }
-    }
-    
-    // Process ongoing events - volunteers are checking in during the event
-    for (const event of ongoingEvents) {
-        const commitments = rabid.event_commitment.commitmentsForEvent.all({ 
-            event_id: event.event_id 
-        });
-        
-        // For ongoing events, about 60-80% of committed volunteers have checked in
-        for (const commitment of commitments) {
-            if (rand() < 0.7) {
-                const eventStart = new Date(event.start_time!);
-                const eventEnd = new Date(event.end_time!);
-                const now = currentDate;
-                
-                // Volunteer checked in sometime between event start and now
-                const checkInTime = faker.date.between({ from: eventStart, to: now });
-                
-                // Format times
-                const startTimeStr = checkInTime.toISOString().replace('T', ' ').slice(0, 19);
-                const endTimeStr = eventEnd.toISOString().replace('T', ' ').slice(0, 19);
-                
-                rabid.timesheet_entry.insert({
-                    volunteer_id: commitment.volunteer_id,
-                    event_id: event.event_id,
-                    start_time: startTimeStr,
-                    end_time: endTimeStr,
-                    start_time_is_approximate: 0, // Exact check-in time
-                    end_time_is_approximate: 0,   // Using event end time
-                    end_time_is_provisional: 1,   // Still provisional - volunteer can check out
-                    notes: faker.helpers.arrayElement([
-                        'Currently helping with repairs',
-                        'Working at greeting table',
-                        'Assisting with bike repairs',
-                        ''
-                    ]),
-                    km_driven_for_reimbursement: commitment.will_drive_supplies ? 
-                        faker.helpers.rangeToNumber({ min: 5, max: 50 }) : 0,
-                    km_driven_processed: 0,
-                    is_paid_time: 0,
-                    paid_time_processed: 0,
-                    entry_creation_time: checkInTime.toISOString().replace('T', ' ').slice(0, 19)
-                });
-            }
-        }
-    }
-    
-    // Process future events - some volunteers might be checked in early (for setup)
-    for (const event of futureEvents) {
-        const eventStart = new Date(event.start_time!);
-        const setupTime = event.setup_time ? new Date(event.setup_time) : new Date(eventStart.getTime() - 60 * 60000); // 1 hour before
-        
-        // Only process near-future events (within 2 hours)
-        if (eventStart.getTime() - currentDate.getTime() < 2 * 60 * 60 * 1000) {
-            const commitments = rabid.event_commitment.commitmentsForEvent.all({ 
-                event_id: event.event_id 
-            });
-            
-            // About 10-20% of volunteers check in early for setup
-            for (const commitment of commitments) {
-                if (rand() < 0.15) {
-                    const eventEnd = new Date(event.end_time!);
-                    
-                    // Use setup time or event start time
-                    const startTimeStr = (event.setup_time || event.start_time)!;
-                    const endTimeStr = event.end_time!;
-                    
-                    rabid.timesheet_entry.insert({
-                        volunteer_id: commitment.volunteer_id,
-                        event_id: event.event_id,
-                        start_time: startTimeStr,
-                        end_time: endTimeStr,
-                        start_time_is_approximate: 1, // Using event times, not actual check-in
-                        end_time_is_approximate: 1,   // Booked for whole event
-                        end_time_is_provisional: 0,   // Not provisional since event hasn't started
-                        notes: 'Early check-in for setup',
-                        km_driven_for_reimbursement: commitment.will_drive_supplies ? 
-                            faker.helpers.rangeToNumber({ min: 5, max: 50 }) : 0,
-                        km_driven_processed: 0,
-                        is_paid_time: 0,
-                        paid_time_processed: 0,
-                        entry_creation_time: currentDate.toISOString().replace('T', ' ').slice(0, 19)
-                    });
-                }
-            }
-        }
-    }
-    
-    // Add some non-event timesheet entries (volunteers doing work outside of events)
+
     const activeVolunteers = volunteers.filter(v => !v.inactive && !v.deleted);
-    const numNonEventEntries = Math.floor(activeVolunteers.length * 0.05); // 5% of active volunteers
-    
-    for (let i = 0; i < numNonEventEntries; i++) {
+    const numEntries = Math.max(1, Math.floor(activeVolunteers.length * 0.05)); // ~5% of active volunteers
+
+    for (let i = 0; i < numEntries; i++) {
         const volunteer = faker.helpers.arrayElement(activeVolunteers);
         const daysAgo = faker.helpers.rangeToNumber({ min: 1, max: 30 });
         const workDate = new Date(currentDate.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-        
+
         // Random work duration between 1-4 hours
         const duration = faker.helpers.rangeToNumber({ min: 1, max: 4 }) * 60 * 60 * 1000;
         const startTime = new Date(workDate.setHours(faker.helpers.rangeToNumber({ min: 9, max: 18 }), 0, 0, 0));
         const endTime = new Date(startTime.getTime() + duration);
-        
+
         rabid.timesheet_entry.insert({
             volunteer_id: volunteer.volunteer_id,
-            event_id: undefined, // No event associated
             start_time: startTime.toISOString().replace('T', ' ').slice(0, 19),
             end_time: endTime.toISOString().replace('T', ' ').slice(0, 19),
-            start_time_is_approximate: 0,
-            end_time_is_approximate: 0,
-            end_time_is_provisional: 0,
             notes: faker.helpers.arrayElement([
                 'Shop maintenance and organization',
                 'Tool inventory and sorting',
@@ -798,28 +631,15 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number } = {}) {
                 'Picking up donated supplies',
                 'Meeting with community partners'
             ]),
-            km_driven_for_reimbursement: faker.datatype.boolean({ probability: 0.3 }) ? 
+            km_driven_for_reimbursement: faker.datatype.boolean({ probability: 0.3 }) ?
                 faker.helpers.rangeToNumber({ min: 10, max: 100 }) : 0,
             km_driven_processed: 0,
             is_paid_time: faker.datatype.boolean({ probability: 0.1 }) ? 1 : 0, // 10% might be paid
             paid_time_processed: 0,
-            entry_creation_time: faker.date.between({ 
-                from: endTime, 
-                to: new Date(endTime.getTime() + 2 * 24 * 60 * 60 * 1000) // Within 2 days
-            }).toISOString().replace('T', ' ').slice(0, 19)
         });
     }
-    
-    // Get summary statistics
-    const allTimesheetEntries = rabid.timesheet_entry.all();
-    const provisionalEntries = allTimesheetEntries.filter(e => e.end_time_is_provisional);
-    const approximateEntries = allTimesheetEntries.filter(e => e.start_time_is_approximate || e.end_time_is_approximate);
-    const nonEventEntries = allTimesheetEntries.filter(e => !e.event_id);
-    
-    console.info(`Total timesheet entries created: ${allTimesheetEntries.length}`);
-    console.info(`  - Provisional (ongoing): ${provisionalEntries.length}`);
-    console.info(`  - Approximate times: ${approximateEntries.length}`);
-    console.info(`  - Non-event entries: ${nonEventEntries.length}`);
+
+    console.info(`Total (non-event) timesheet entries created: ${numEntries}`);
 }
 
 // --------------------------------------------------------------------------------
@@ -940,6 +760,9 @@ export interface Scenario {
     volunteers: number;
     events: boolean;
     commitments: boolean;
+    // Event attendance (the bulk activity).  Needs events + commitments first.
+    checkins: boolean;
+    // Explicit non-event recorded time (a small slice).
     timesheets: boolean;
     baseSeed: number;
 }
@@ -948,12 +771,12 @@ export type ScenarioName = 'minimal' | 'dev' | 'full' | 'activityReport';
 
 export const SCENARIOS: Record<ScenarioName, Scenario> = {
     // tiny + fast, for a quick poke
-    minimal:        { volunteers: 8,  events: true, commitments: true, timesheets: false, baseSeed: 1 },
-    // the everyday dataset: people, events, who's coming - but NOT the bulk timesheets
-    dev:            { volunteers: 99, events: true, commitments: true, timesheets: false, baseSeed: 1 },
-    // everything, incl. the bulk timesheet entries the activity report needs
-    full:           { volunteers: 99, events: true, commitments: true, timesheets: true,  baseSeed: 1 },
-    activityReport: { volunteers: 99, events: true, commitments: true, timesheets: true,  baseSeed: 1 },
+    minimal:        { volunteers: 8,  events: true, commitments: true, checkins: false, timesheets: false, baseSeed: 1 },
+    // the everyday dataset: people, events, who's coming - but NOT the bulk attendance
+    dev:            { volunteers: 99, events: true, commitments: true, checkins: false, timesheets: false, baseSeed: 1 },
+    // everything, incl. the bulk attendance + timesheets the activity report needs
+    full:           { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  baseSeed: 1 },
+    activityReport: { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  baseSeed: 1 },
 };
 
 // Run the builders for a scenario (order matters: later builders read earlier data).
@@ -963,6 +786,7 @@ export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     seedProjects(rabid);
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
+    if(scenario.checkins)    seedEventCheckins(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed });
 }
 

@@ -20,8 +20,6 @@ import {
 } from '../liminal/date.ts'
 
 import { Volunteer } from "./volunteer.ts";
-import { Event } from "./event.ts";
-import { TimesheetEntry } from "./timesheet.ts";
 import { Temporal } from 'temporal-polyfill';
 import { h } from "../liminal/markup.ts";
 
@@ -68,65 +66,37 @@ export function activeVolunteersByDay(startDate: PlainDate, endDate: PlainDate):
         volunteers.map(volunteer => [volunteer.volunteer_id, volunteer])
     );
     
-    // --- Load all events that occurred between scanStartDate and endDate (inclusive)
     const scanStartDateStr = temporalToSqliteDate(scanStartDate);
     const endDateStr = temporalToSqliteDate(endDate);
-    
-    const events = db().prepare<Event, {start_date: string, end_date: string}>(block`
-        SELECT * FROM event 
-        WHERE start_time >= :start_date 
-        AND start_time <= :end_date || ' 23:59:59'`).all({
-            start_date: scanStartDateStr,
-            end_date: endDateStr
-        });
-    const eventMap = new Map(
-        events.map(event => [event.event_id, event])
-    );
-    
-    // --- Load all timesheet entries and organize by date
-    // Query 1: Entries with start_time in range
-    const directEntries = db().prepare<TimesheetEntry, {start_date: string, end_date: string}>(block`
-        SELECT * FROM timesheet_entry 
-        WHERE start_time >= :start_date 
-        AND start_time <= :end_date || ' 23:59:59'`).all({
-            start_date: scanStartDateStr,
-            end_date: endDateStr
-        });
-        
-    // Query 2: Entries linked to events in range (where timesheet has no start_time)
-    const eventLinkedEntries = db().prepare<TimesheetEntry & {event_start_time: string}, {start_date: string, end_date: string}>(block`
-        SELECT t.*, e.start_time as event_start_time
-        FROM timesheet_entry t
-        JOIN event e ON t.event_id = e.event_id
-        WHERE t.start_time IS NULL
-        AND e.start_time >= :start_date
-        AND e.start_time <= :end_date || ' 23:59:59'`).all({
-            start_date: scanStartDateStr,
-            end_date: endDateStr
-        });
-    
-    // Combine all entries with their effective dates
-    const allEntriesWithDates = [
-        ...directEntries.filter(e => e.start_time).map(entry => ({
-            entry,
-            date: extractDateFromDateTime(entry.start_time!)
-        })),
-        ...eventLinkedEntries.map(entry => ({
-            entry: entry as TimesheetEntry,
-            date: extractDateFromDateTime(entry.event_start_time)
-        }))
-    ];
-    
-    // Group entries by date
-    const timesheetEntriesByDate = Map.groupBy(
-        allEntriesWithDates,
-        ({ date }) => date
-    ) as Map<SQLiteDateString, Array<{entry: TimesheetEntry, date: SQLiteDateString}>>;
-    
-    // Transform to get just the entries
-    const timesheetsByDate = new Map<SQLiteDateString, Array<TimesheetEntry>>();
-    for (const [date, items] of timesheetEntriesByDate) {
-        timesheetsByDate.set(date, items.map(item => item.entry));
+
+    // --- Volunteer activity comes from two sources, unioned:
+    //   1. explicit timesheet entries (always have a real start_time), and
+    //   2. event check-ins (dated by the check-in's own start_time, falling back
+    //      to the event's start_time - the common case where the check-in just
+    //      inherits the event's time).
+    // We only need (volunteer_id, date) pairs from each.
+    type Activity = {volunteer_id: number, activity_date: SQLiteDateString};
+    const timesheetActivity = db().prepare<Activity, {start_date: string, end_date: string}>(block`
+        SELECT volunteer_id, DATE(start_time) AS activity_date
+        FROM timesheet_entry
+        WHERE start_time >= :start_date
+          AND start_time <= :end_date || ' 23:59:59'`).all({
+            start_date: scanStartDateStr, end_date: endDateStr});
+
+    const checkinActivity = db().prepare<Activity, {start_date: string, end_date: string}>(block`
+        SELECT c.volunteer_id, DATE(COALESCE(c.start_time, e.start_time)) AS activity_date
+        FROM event_checkin c JOIN event e USING (event_id)
+        WHERE COALESCE(c.start_time, e.start_time) >= :start_date
+          AND COALESCE(c.start_time, e.start_time) <= :end_date || ' 23:59:59'`).all({
+            start_date: scanStartDateStr, end_date: endDateStr});
+
+    // Group volunteer ids by activity date.
+    const volunteerIdsByDate = new Map<SQLiteDateString, number[]>();
+    for (const {volunteer_id, activity_date} of [...timesheetActivity, ...checkinActivity]) {
+        if (!activity_date) continue;
+        let ids = volunteerIdsByDate.get(activity_date);
+        if (!ids) { ids = []; volunteerIdsByDate.set(activity_date, ids); }
+        ids.push(volunteer_id);
     }
     
     // --- Walk forward day by day from scanStartDate to endDate
@@ -138,9 +108,9 @@ export function activeVolunteersByDay(startDate: PlainDate, endDate: PlainDate):
         const currentDateStr = temporalToSqliteDate(currentDate);
         
         // Update last active date for volunteers with activity on this day
-        const todaysEntries = timesheetsByDate.get(currentDateStr) || [];
-        for (const entry of todaysEntries) {
-            lastActiveDateByVolunteerId.set(entry.volunteer_id, currentDate);
+        const todaysIds = volunteerIdsByDate.get(currentDateStr) || [];
+        for (const volunteer_id of todaysIds) {
+            lastActiveDateByVolunteerId.set(volunteer_id, currentDate);
         }
         
         // Calculate active volunteers (those with activity within 31 days)
@@ -243,18 +213,19 @@ export function dailyActivityReport(startDate: PlainDate, endDate: PlainDate): M
         
         // Get all timesheet entries for these volunteers to find their last activity
         for (const volunteer of volunteers) {
-            // Find the most recent timesheet entry for this volunteer up to currentDate
+            // Find the volunteer's most recent activity up to currentDate, across
+            // both timesheet entries and event check-ins.
             const recentActivity = db().prepare<{max_date: string | null}, {volunteer_id: number, current_date: string}>(block`
-                SELECT MAX(CASE 
-                    WHEN t.start_time IS NOT NULL THEN DATE(t.start_time)
-                    ELSE DATE(e.start_time)
-                END) as max_date
-                FROM timesheet_entry t
-                LEFT JOIN event e ON t.event_id = e.event_id
-                WHERE t.volunteer_id = :volunteer_id
-                AND (
-                    (t.start_time IS NOT NULL AND DATE(t.start_time) <= :current_date)
-                    OR (t.start_time IS NULL AND DATE(e.start_time) <= :current_date)
+                SELECT MAX(d) AS max_date FROM (
+                    SELECT DATE(start_time) AS d
+                        FROM timesheet_entry
+                        WHERE volunteer_id = :volunteer_id
+                          AND DATE(start_time) <= :current_date
+                    UNION ALL
+                    SELECT DATE(COALESCE(c.start_time, e.start_time)) AS d
+                        FROM event_checkin c JOIN event e USING (event_id)
+                        WHERE c.volunteer_id = :volunteer_id
+                          AND DATE(COALESCE(c.start_time, e.start_time)) <= :current_date
                 )`).first({
                     volunteer_id: volunteer.volunteer_id,
                     current_date: dateStr

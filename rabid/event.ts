@@ -23,6 +23,10 @@ export const routes = ()=> ({
 // participate via commitments, not by editing the event.)
 const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
 
+// A volunteer manages their own event check-ins (self-signup, retroactive
+// check-in); hosts/admins manage anyone's (e.g. checking everyone in at once).
+const checkinSelfOrHost = security.or(security.isSelf, hostOrAdmin);
+
 export const event_kind_enum: Record<string, string> = {
     'public': 'Public Event',
     'training': 'Volunteer Training',
@@ -304,10 +308,18 @@ export class EventTable extends Table<Event> {
             return [h.div, {class: 'card-not-found'}, `Event ${event_id} not found`];
         }
         
-        // Get commitments for this event
+        // Get commitments ("signed up") for this event
         const commitments = db().prepare<{volunteer_name: string}, {event_id: number}>(block`
             SELECT volunteer.name AS volunteer_name
-            FROM event_commitment 
+            FROM event_commitment
+            LEFT JOIN volunteer USING (volunteer_id)
+            WHERE event_id = :event_id
+            ORDER BY volunteer.name`).all({event_id});
+
+        // Get check-ins ("showed up") for this event.
+        const checkins = db().prepare<{volunteer_name: string, was_staff: boolnum}, {event_id: number}>(block`
+            SELECT volunteer.name AS volunteer_name, event_checkin.was_staff
+            FROM event_checkin
             LEFT JOIN volunteer USING (volunteer_id)
             WHERE event_id = :event_id
             ORDER BY volunteer.name`).all({event_id});
@@ -413,12 +425,12 @@ export class EventTable extends Table<Event> {
             );
         }
         
-        // Volunteer row
+        // Signed-up row (commitments)
         if (commitments.length > 0) {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
-                    [h.div, {}, 'Volunteers:'],
-                    [h.div, {}, 
+                    [h.div, {}, 'Signed up:'],
+                    [h.div, {},
                         `(${commitments.length}) ${commitments.map(c => c.volunteer_name).join(', ')}`
                     ]
                 ]
@@ -426,9 +438,23 @@ export class EventTable extends Table<Event> {
         } else {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
-                    [h.div, {}, 'Volunteers:'],
-                    [h.div, {class: 'card-empty-value'}, 
+                    [h.div, {}, 'Signed up:'],
+                    [h.div, {class: 'card-empty-value'},
                         [h.em, {}, 'No volunteers signed up yet']
+                    ]
+                ]
+            );
+        }
+
+        // Checked-in row (actual attendance) - only shown once anyone has
+        // checked in.  Staff are marked, since attendance mixes both.
+        if (checkins.length > 0) {
+            gridRows.push(
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Checked in:'],
+                    [h.div, {},
+                        `(${checkins.length}) ` +
+                        checkins.map(c => c.was_staff ? `${c.volunteer_name} (staff)` : c.volunteer_name).join(', ')
                     ]
                 ]
             );
@@ -460,6 +486,216 @@ export class EventTable extends Table<Event> {
         ];
     }
 }
+
+// A system-managed datetime: stamped on insert, never shown in the edit form.
+class ManagedDateTimeField extends DateTimeField {
+    override isVisible(): boolean { return false; }
+}
+
+// --------------------------------------------------------------------------------
+// --- EventCommitment ------------------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// "I plan to come" - a volunteer signing up for an event ahead of time.  The
+// actual showing-up is recorded separately as an EventCheckin (below): you can
+// commit and not show (a no-show), or show without committing (a walk-in).
+
+export interface EventCommitment {
+    event_commitment_id: number;
+
+    event_id: number;
+    volunteer_id: number;
+
+    requested_role: string;
+    notes: string;
+
+    // Driving information
+    will_drive_supplies: boolnum;
+    will_drive_passengers_count: number;
+
+    // To allow for commit for partial event.
+    start_time?: string;
+    end_time?: string;
+}
+
+export type EventCommitmentOpt = Partial<EventCommitment>;
+
+export class EventCommitmentTable extends Table<EventCommitment> {
+
+    constructor() {
+        super ('event_commitment', [
+            new PrimaryKeyField('event_commitment_id', {}),
+            new ForeignKeyField('event_id', 'event', 'event_id', {}, 'description'),
+            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name'),
+            new StringField('requested_role', {default:''}),
+            new MarkdownField('notes', {default:''}),
+            new BooleanField('will_drive_supplies', {default: 0}),
+            new IntegerField('will_drive_passengers_count', {default: 0}),
+            new DateTimeField('start_time', {nullable: true}),
+            new DateTimeField('end_time', {nullable: true})
+        ], [
+            'CREATE INDEX IF NOT EXISTS event_commitment_by_event_id ON event_commitment(event_id);',
+            'CREATE INDEX IF NOT EXISTS event_commitment_by_volunteer_id ON event_commitment(volunteer_id);',
+        ])
+    };
+
+    @path
+    get commitmentsForEvent() {
+        return db().prepare<EventCommitment, {event_id: number}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM event_commitment
+/**/          WHERE event_id = :event_id`);
+    }
+
+    @path
+    get commitmentsForEventWithVolunteerName() {
+        return db().prepare<(EventCommitment&{volunteer_name: string}), {event_id: number}>(block`
+/**/   SELECT ${this.allFields}, volunteer.name AS volunteer_name
+/**/          FROM event_commitment LEFT JOIN volunteer USING (volunteer_id)
+/**/          WHERE event_id = :event_id`);
+    }
+}
+
+// --------------------------------------------------------------------------------
+// --- EventCheckin ---------------------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// "I came" - a volunteer (or staff member) who actually showed up to an event.
+// This is the primary way volunteer time is captured: a single check-in is far
+// easier to get accurate than a full timesheet entry (it can be done
+// retroactively, a host can check everyone in at once, and it gives the event
+// page a real attendance list).  Hours come from the event's times; the optional
+// start_time/end_time override them for partial attendance (NULL = "use the
+// event's times").  was_staff snapshots the person's employment status AT
+// check-in, because grant reporting needs point-in-time truth.
+
+export interface EventCheckin {
+    event_checkin_id: number;
+
+    event_id: number;
+    volunteer_id: number;
+
+    // Snapshot of volunteer.is_staff at check-in time (so later employment
+    // changes don't rewrite who counts as staff for past events).
+    was_staff: boolnum;
+
+    // Optional overrides of the event's times for partial attendance.  NULL
+    // means "use the event's start_time/end_time" (the common case).
+    start_time?: string;
+    end_time?: string;
+
+    notes: string;
+
+    // When the check-in record was created (managed, hidden from the form).
+    created_time?: string;
+}
+
+export type EventCheckinOpt = Partial<EventCheckin>;
+
+export class EventCheckinTable extends Table<EventCheckin> {
+
+    constructor() {
+        super ('event_checkin', [
+            new PrimaryKeyField('event_checkin_id', {}),
+            new ForeignKeyField('event_id', 'event', 'event_id', {}, 'description'),
+            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name'),
+            new BooleanField('was_staff', {default: 0}),
+            new DateTimeField('start_time', {nullable: true}),
+            new DateTimeField('end_time', {nullable: true}),
+            new MarkdownField('notes', {default: ''}),
+            new ManagedDateTimeField('created_time', {nullable: true}),
+        ], [
+            // One check-in per volunteer per event.
+            'CREATE UNIQUE INDEX IF NOT EXISTS event_checkin_unique ON event_checkin(event_id, volunteer_id);',
+            'CREATE INDEX IF NOT EXISTS event_checkin_by_volunteer_id ON event_checkin(volunteer_id);',
+        ])
+    };
+
+    // A check-in belongs to its volunteer (drives isSelf), like a timesheet entry.
+    ownerId(c: EventCheckin): number|undefined { return c.volunteer_id; }
+
+    defaultFieldEdit: security.Permission = checkinSelfOrHost;
+    override get recordEdit(): security.Permission { return checkinSelfOrHost; }
+
+    // Stamp the creation time, and snapshot was_staff from the volunteer's
+    // current employment status when the caller didn't set it explicitly.
+    override insert<P extends Partial<EventCheckin>>(tuple: P): number {
+        const withManaged: any = {created_time: date.currentSqliteDateTime(), ...tuple};
+        if(withManaged.was_staff === undefined && withManaged.volunteer_id != null) {
+            const v = security.runSystem(() =>
+                db().prepare<{is_staff: boolnum}, {id: number}>(
+                    'SELECT is_staff FROM volunteer WHERE volunteer_id = :id')
+                    .first({id: withManaged.volunteer_id}));
+            withManaged.was_staff = v?.is_staff ?? 0;
+        }
+        return super.insert(withManaged);
+    }
+
+    // A volunteer's check-ins, with the event name/times (for the volunteer page
+    // and hours).  Most recent first by effective start.
+    @path
+    get checkinsForVolunteer() {
+        return db().prepare<EventCheckin & {event_description: string|null,
+                                            event_start_time: string|null, event_end_time: string|null},
+                            {volunteer_id: number}>(block`
+/**/   SELECT event_checkin.*, event.description AS event_description,
+/**/          event.start_time AS event_start_time, event.end_time AS event_end_time
+/**/          FROM event_checkin
+/**/          LEFT JOIN event USING (event_id)
+/**/          WHERE event_checkin.volunteer_id = :volunteer_id
+/**/          ORDER BY COALESCE(event_checkin.start_time, event.start_time) DESC`);
+    }
+
+    // An event's check-ins, with the volunteer name.
+    @path
+    get checkinsForEvent() {
+        return db().prepare<EventCheckin & {volunteer_name: string}, {event_id: number}>(block`
+/**/   SELECT event_checkin.*, volunteer.name AS volunteer_name
+/**/          FROM event_checkin
+/**/          LEFT JOIN volunteer USING (volunteer_id)
+/**/          WHERE event_checkin.event_id = :event_id
+/**/          ORDER BY volunteer.name`);
+    }
+
+    // Event-attendance section for the volunteer detail page (sibling of the
+    // timesheet section): the events this volunteer checked into, with hours.
+    renderForVolunteer(volunteer_id: number): Markup {
+        const checkins = this.checkinsForVolunteer.all({volunteer_id});
+        if(checkins.length === 0)
+            return [h.p, {class: 'text-muted'}, 'No event check-ins yet.'];
+        const hoursOf = (c: EventCheckin & {event_start_time: string|null, event_end_time: string|null}) =>
+            checkinHours(c.start_time ?? c.event_start_time, c.end_time ?? c.event_end_time);
+        const totalHours = checkins.reduce((sum, c) => sum + hoursOf(c), 0);
+        return [h.table, {class: 'table table-sm'},
+            [h.tbody, {},
+             [h.tr, {},
+              [h.th, {}, 'Date'], [h.th, {}, 'Event'], [h.th, {class: 'text-end'}, 'Hours']],
+             checkins.map(c => {
+                 const eff = c.start_time ?? c.event_start_time;
+                 const hrs = hoursOf(c);
+                 return [h.tr, {},
+                     [h.td, {}, eff ? date.sqliteDateTimeToDateString(eff) : '—'],
+                     [h.td, {}, c.event_description
+                         ? templates.pageLink(`/rabid.event.detailPage(${c.event_id})`, c.event_description)
+                         : '—'],
+                     [h.td, {class: 'text-end'}, hrs ? hrs.toFixed(1) : '—']];
+             }),
+             [h.tr, {},
+              [h.td, {colspan: '2', class: 'text-end fw-bold'}, 'Total'],
+              [h.td, {class: 'text-end fw-bold'}, totalHours.toFixed(1)]],
+            ]];
+    }
+}
+
+// Duration of a check-in in hours, given its effective start/end (0 if either
+// is missing - e.g. an event with no times, or someone still checked in).
+function checkinHours(start: string|null|undefined, end: string|null|undefined): number {
+    if(!start || !end) return 0;
+    return date.sqliteDateTimeToTemporal(end)
+        .since(date.sqliteDateTimeToTemporal(start))
+        .total({unit: 'hours'});
+}
+
 //export const eventMetaData = new EventTable();
 
 // export function insertEvent(event: EventOpt): number {

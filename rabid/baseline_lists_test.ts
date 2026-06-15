@@ -31,11 +31,10 @@ function insertService(): number {
 
 function insertTimesheet(volunteer_id: number): number {
     return asSystem(() => rabid.timesheet_entry.insert({
-        volunteer_id, event_id: undefined,
+        volunteer_id,
         start_time: '2026-06-13 18:00:00', end_time: '2026-06-13 21:00:00',
-        start_time_is_approximate: 0, end_time_is_approximate: 0, end_time_is_provisional: 0,
         notes: '', km_driven_for_reimbursement: 0, km_driven_processed: 0,
-        is_paid_time: 0, paid_time_processed: 0, entry_creation_time: undefined,
+        is_paid_time: 0, paid_time_processed: 0,
     }));
 }
 
