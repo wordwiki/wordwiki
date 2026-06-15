@@ -123,7 +123,7 @@ test("new-task dialog: project preset survives an untouched picker (empty before
         // Task creation is host/admin (an assignee can work tasks, not mint them).
         await assertRejects(() => asUser(bob, () =>
             renderRoute(`rabid.task.newDialog(${project_id})`)) as Promise<any>,
-            Error, 'Not permitted');
+            Error, 'not permitted');   // route layer (@route hostOrAdmin) denies first
     });
 });
 

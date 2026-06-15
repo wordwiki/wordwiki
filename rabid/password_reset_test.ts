@@ -100,7 +100,7 @@ test("only hosts/admins can mint reset links", async () => {
     await withTestDb(async ({ bob, carol, dave }) => {
         await asUser(bob, () => assertRejects(() => rabid.makeResetLinkPath(carol), Error, "Not permitted"));
         await asUser(bob, () => assertRejects(
-            () => renderRoute(`rabid.resetLinkDialog(${carol})`), Error, "Not permitted"));
+            () => renderRoute(`rabid.resetLinkDialog(${carol})`), Error, "not permitted"));   // route denies first
         // admin (and host, covered above via alice in other tests) may.
         const path = await asUser(dave, () => rabid.makeResetLinkPath(carol));
         assertStringIncludes(path, "rabid.resetPassword(");

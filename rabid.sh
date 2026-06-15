@@ -61,14 +61,13 @@ if [ "$#" -eq 0 ]; then
     set -- serve
 fi
 
-# Route-security migration (rabid is the test bed).  Run the restricted route
-# interpreter (routeterp) in PERMISSIVE mode: the safe grammar is enforced -
-# closing jsterp's arbitrary-JS hole - but undeclared members are allowed and
-# logged ("ROUTE-SECURITY undeclared member: ..."), which is the annotation
-# worklist.  We flip to LIMINAL_ROUTE_POLICY=strict once routes are annotated.
-# wordwiki keeps its own (jsterp) default until rabid's migration is finished.
-# Both honour an explicit override, e.g. `LIMINAL_ROUTE_POLICY=strict ./rabid.sh`.
+# Route security: rabid runs the restricted route interpreter (routeterp) in
+# STRICT mode - undeclared members are unreachable (404), and each @route's
+# permission is enforced (anonymous -> login, insufficient role -> 403).  Every
+# route is annotated (see the @route decorators); the suite runs under this same
+# config.  wordwiki stays on jsterp (its own script) until it is migrated too.
+# Override on the command line, e.g. `LIMINAL_ROUTE_POLICY=permissive ./rabid.sh`.
 export LIMINAL_ROUTE_EVAL="${LIMINAL_ROUTE_EVAL:-routeterp}"
-export LIMINAL_ROUTE_POLICY="${LIMINAL_ROUTE_POLICY:-permissive}"
+export LIMINAL_ROUTE_POLICY="${LIMINAL_ROUTE_POLICY:-strict}"
 
 deno run --check --allow-all rabid/rabid.ts "$@"

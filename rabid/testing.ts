@@ -16,6 +16,13 @@ import * as templates from "./templates.ts";
 import type { Markup } from "../liminal/markup.ts";
 import { openTestDb, clearAllData } from "../liminal/testing/db-harness.ts";
 import { buildFixture, type Fixture } from "./test-fixtures.ts";
+import { setRouteEval } from "../liminal/liminal.ts";
+
+// rabid is fully migrated to the restricted route interpreter, so the test suite
+// runs under the SAME config the server ships (routeterp, strict) - exercising
+// @route enforcement, not the legacy jsterp.  (An explicit env still wins for the
+// live server; this only sets the in-process default for tests.)
+setRouteEval('routeterp', 'strict');
 
 // Ensure the in-memory test db + schema exist (once per process), reset its data,
 // seed the deterministic fixture, and run `fn` with the fixture handles.

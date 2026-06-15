@@ -144,7 +144,7 @@ test("adding time is self-or-host; it reloads the volunteer's time fragment", ()
             () => invoke(`rabid.volunteer_time.addTimesheet($arg0)`,
                          {volunteer_id: String(bob), start_time: '2026-06-20 09:00:00',
                           end_time: '2026-06-20 10:00:00', notes: 'x'}),
-            Error, "Not permitted to add time for this volunteer"));
+            Error, "not permitted"));   // route layer (@route ownTimeOrHost) denies first
 
         // bob adds his own; the reload targets his time fragment.
         const res = await asUser(bob, () => invoke(`rabid.volunteer_time.addTimesheet($arg0)`,

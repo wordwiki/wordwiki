@@ -132,7 +132,7 @@ test("committee rows: one navigable species, pencil for hosts only; New-committe
         // The create dialog itself is server-gated.
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.committee.newDialog()`),
-            Error, "Not permitted to edit this committee"));
+            Error, "not permitted"));   // route layer (@route hostOrAdmin) denies first
     });
 });
 

@@ -28,7 +28,7 @@ import * as utils from './utils.ts';
 import {DenoHttpServer} from './deno-http-server.ts';
 import {parseCookies} from './http-server.ts';
 import {evalJsExprSrc} from './jsterp.ts';
-import {evalRouteExprSrc, type RoutePolicy} from './routeterp.ts';
+import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredError} from './routeterp.ts';
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
 import * as browserAgent from './browser-agent.ts';
@@ -90,21 +90,24 @@ export function renderTestResults(results: TestResult[]): Markup {
     ];
 }
 
-// Which interpreter evaluates route expressions, selected once via env var:
-//   (unset)/'jsterp' - the full JS-expression interpreter; 'routeterp' - the
-// restricted route interpreter.
-const routeEvalMode = (Deno.env.get('LIMINAL_ROUTE_EVAL') ?? Deno.env.get('RABID_ROUTE_EVAL') ?? 'jsterp').toLowerCase();
-
-// routeterp enforcement policy (ignored under jsterp):
-//   'strict'     - undeclared members 404 (the end state).
-//   'permissive' - undeclared members allowed but logged (the migration bridge:
-//                  brings the restricted grammar up against the live site before
-//                  any annotations exist; the log is the annotation worklist).
-// Default 'strict' so a bare routeterp flip is fail-closed; the migration sets
-// 'permissive' explicitly (see rabid.sh).
-const routePolicy: RoutePolicy =
+// Which interpreter evaluates route expressions, and (for routeterp) its
+// enforcement policy.  Defaults come from env once at load; the live server is
+// driven by env (rabid.sh / wordwiki.sh).  Mutable + a setter so a test harness
+// can run the suite under the same config it ships (rabid's tests -> routeterp
+// strict) without depending on env being set before module load.
+//   mode:   (unset)/'jsterp' - the full JS-expr interpreter; 'routeterp' - the
+//           restricted route interpreter.
+//   policy: 'strict' - undeclared members 404 (the end state, fail-closed);
+//           'permissive' - undeclared allowed but logged (the migration bridge).
+let routeEvalMode = (Deno.env.get('LIMINAL_ROUTE_EVAL') ?? Deno.env.get('RABID_ROUTE_EVAL') ?? 'jsterp').toLowerCase();
+let routePolicy: RoutePolicy =
     (Deno.env.get('LIMINAL_ROUTE_POLICY') ?? 'strict').toLowerCase() === 'permissive'
         ? 'permissive' : 'strict';
+
+export function setRouteEval(mode: 'jsterp' | 'routeterp', policy: RoutePolicy = 'strict'): void {
+    routeEvalMode = mode;
+    routePolicy = policy;
+}
 
 function evalRoute(scope: Record<string, any>, jsExprSrc: string): any {
     switch(routeEvalMode) {
@@ -240,9 +243,13 @@ export abstract class LiminalApp {
         return {[this.routePrefix]: handler, '/': handler};
     }
 
-    /** Given an unauthenticated request, return a replacement route expr (e.g. a
-     *  login page) or undefined to proceed.  Default: no auth gate. */
-    protected rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
+    /** The route expression that renders the app's login page for `requestUrl`,
+     *  or undefined if the app has no auth gate.  Called when an ANONYMOUS request
+     *  is denied a route (the route interpreter, under its strict policy, throws
+     *  RouteDeniedError for any non-public route reached without a login) - so the
+     *  bounce-to-login decision now comes from the @route declarations, not a
+     *  separately-maintained allowlist.  Default: no gate. */
+    protected loginRouteFor(requestUrl: string): string | undefined {
         return undefined;
     }
 
@@ -420,19 +427,39 @@ export abstract class LiminalApp {
         const ctx = this.resolveSecurityContext(session_token);
         security.enterWith(ctx);
 
-        // Let the app rewrite an unauthenticated request (e.g. to its login page).
-        const rewritten = this.rewriteUnauthenticatedRoute(jsExprSrc, ctx, requestUrl);
-        if(rewritten !== undefined) {
-            console.info('Rewriting unauthenticated route ->', rewritten);
-            jsExprSrc = rewritten;
-        }
-
         let result: any = null;
         try {
             result = await this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token});
         } catch(e) {
-            console.info('request failed', e);
-            return server.jsonResponse({error: String(e)}, 400);
+            // Undeclared route member: not a route at all -> 404 (don't leak which
+            // members/args exist).
+            if(e instanceof RouteUndeclaredError) {
+                console.info('route not found', jsExprSrc);
+                return server.jsonResponse({error: 'not found'}, 404);
+            }
+            // A declared route the actor may not reach.  Anonymous -> bounce to the
+            // app's login page (smooth UX); authenticated-but-insufficient -> 403.
+            if(e instanceof RouteDeniedError) {
+                if(ctx.actorId === undefined) {
+                    const loginExpr = this.loginRouteFor(requestUrl);
+                    if(loginExpr === undefined)
+                        return server.jsonResponse({error: 'unauthorized'}, 401);
+                    console.info('unauthenticated route -> login:', loginExpr);
+                    try {
+                        result = await this.dispatch(loginExpr, {queryArgs, bodyArgs, session_token});
+                    } catch(e2) {
+                        console.info('login redirect failed', e2);
+                        return server.jsonResponse({error: String(e2)}, 400);
+                    }
+                    // fall through to render the login page
+                } else {
+                    console.info('route forbidden for actor', jsExprSrc);
+                    return server.jsonResponse({error: 'forbidden'}, 403);
+                }
+            } else {
+                console.info('request failed', e);
+                return server.jsonResponse({error: String(e)}, 400);
+            }
         }
 
         // A "page" result is wrapped in the app's document template (or reduced to

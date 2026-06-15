@@ -114,10 +114,10 @@ test("check-in: checking OTHERS in/out needs host/admin", async () => {
         await asUser(bob, () => assertRejects(
             () => invoke(`rabid.event_checkin.checkIn($arg0)`,
                          {event_id: String(id), volunteer_id: String(carol)}),
-            Error, "Not permitted to check volunteers into this event"));
+            Error, "not permitted"));   // route layer (@route hostOrAdmin) denies first
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.event_checkin.checkInDialog(${id})`),
-            Error, "Not permitted"));
+            Error, "not permitted"));
 
         // alice (host) checks carol in; bob still can't check her out.
         await asUser(alice, () => invoke(`rabid.event_checkin.checkIn($arg0)`,
@@ -126,7 +126,7 @@ test("check-in: checking OTHERS in/out needs host/admin", async () => {
             .map(c => c.volunteer_name), ["Carol Private"]);
         await asUser(bob, () => assertRejects(
             () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, carol),
-            Error, "Not permitted to check out this volunteer"));
+            Error, "not permitted"));   // route layer (@route or(hostOrAdmin, selfArg)) denies first
         await asUser(alice, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, carol));
         assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id})).length, 0);
     });

@@ -29,6 +29,7 @@ import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
 import {route, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
+import {RouteDeniedError} from '../liminal/routeterp.ts';
 import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
 import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
 import {TEST_RUNS} from './browser_test_demo.ts';
@@ -130,10 +131,25 @@ export class Rabid extends LiminalApp {
             ),
         };
 
+        // Page routes are bare identifiers (auto-invoked by dispatch), so they are
+        // NOT @route-gated like the rabid.* member routes.  Wrap each to require a
+        // login, so anonymous page nav throws RouteDeniedError and is bounced to
+        // login uniformly.  No page is public; the anonymous entry points are
+        // member routes (rabid.login / loginRequest / resetPassword*).
+        const requireLogin = (fn: (...a: any[]) => any) =>
+            (...args: any[]) => {
+                const ctx = security.current();
+                if(!ctx?.system && ctx?.actorId === undefined)
+                    throw new RouteDeniedError('page');
+                return fn(...args);
+            };
+        const gatedPages = Object.fromEntries(
+            Object.entries(this.pages).map(([name, fn]) => [name, requireLogin(fn as any)]));
+
         this.routes = Object.assign(
             {},
             {rabid: this},
-            this.pages,
+            gatedPages,
             constructorRoutes,
         );
     }
@@ -211,18 +227,12 @@ export class Rabid extends LiminalApp {
     // Kept off production because a GET puts the password in the URL, which
     // transits the server log (the route interpreter logs each expr) and
     // browser history.
-    protected override rewriteUnauthenticatedRoute(jsExprSrc: string, ctx: security.SecurityContext, requestUrl: string): string | undefined {
-        const allowedWithoutLogin = new Set([
-            'rabid.loginRequest(bodyArgs)',
-            // The password-reset flow is reachable while logged out by design:
-            // the single-use token in the link IS the authentication.
-            'rabid.resetPasswordRequest(bodyArgs)',
-        ]);
-        if(this.getDbPurpose() !== 'production')
-            allowedWithoutLogin.add('rabid.loginRequest(queryArgs)');
-        const loggedIn = ctx.actorId !== undefined;
-        if(loggedIn || allowedWithoutLogin.has(jsExprSrc)
-           || jsExprSrc.startsWith('rabid.resetPassword("')) return undefined;
+    // Where anonymous, denied requests are sent.  The PUBLIC entry points
+    // (login / loginRequest / password reset) are no longer listed here - they
+    // carry @route(publicRoute(...)), so the strict route interpreter lets them
+    // through and only NON-public routes reach this bounce.  (The puppeteer GET
+    // login shortcut still works: loginRequest is publicRoute.)
+    protected override loginRouteFor(requestUrl: string): string | undefined {
         return `rabid.login(${JSON.stringify(requestUrl)})`;
     }
 
