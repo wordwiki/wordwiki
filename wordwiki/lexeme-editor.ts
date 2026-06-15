@@ -352,6 +352,17 @@ function userLabel(username: string | null | undefined): string {
     return username ? (entrySchema.users[username] ?? username) : 'unknown';
 }
 
+/** The "imported base set": the predecessor-system dictionary (loaded at
+ *  valid_from = BEGINNING_OF_TIME, no author) and the automated batch migrations
+ *  (a '~' identity).  These are filtered out of the review change list - they
+ *  are not human activity and drown the real changes.  The values they carry
+ *  still surface as the "from" of any human change on top of them, and the full
+ *  raw record stays reachable through the history picker. */
+function isImportedEvent(a: Assertion): boolean {
+    return a.valid_from === timestamp.BEGINNING_OF_TIME
+        || isAutomatedUsername(a.change_by_username);
+}
+
 /** The optional change-note widget appended to the edit/insert dialogs.  Read
  *  raw on save into the version's change_note (it is NOT a relation field), so
  *  an edit can carry a rationale that shows in the review timeline. */
@@ -734,7 +745,7 @@ export class LexemeEditor {
      *  MOVES (so comments/no-ops add no value noise).  This is the single-fact
      *  change list, and the per-fact slice the lexeme list is built from. */
     factChangeEvents(rf: model.RelationField, tuple: VersionedTuple,
-                     full: boolean): ChangeEvent[] {
+                     full: boolean, hideImported = false): ChangeEvent[] {
         const versions = tuple.tupleVersions;
         const review = classifyFact(versions.map(v => v.assertion), timestamp.END_OF_TIME);
         const baseId = review.baseline?.assertion_id;
@@ -806,6 +817,9 @@ export class LexemeEditor {
                 case 'commented':                    // the note IS the content (inline)
                     break;
             }
+            // Drop imported base-set events from the display (prevContent above
+            // already advanced, so a human change on top still shows its "from").
+            if(hideImported && isImportedEvent(a)) continue;
             events.push(ev);
         }
         return events;
@@ -866,7 +880,9 @@ export class LexemeEditor {
             const pending = review.state === 'added' || review.state === 'edited'
                 || review.state === 'removed';
             if(!opts.full && !pending) return;      // the queue: pending facts only
-            const events = this.factChangeEvents(t.schema, t, opts.full);
+            // The imported base set is filtered everywhere in the review (it is
+            // not human activity); a fact left with no human events drops out.
+            const events = this.factChangeEvents(t.schema, t, opts.full, true);
             if(events.length === 0) return;
             groups.push({
                 header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending),

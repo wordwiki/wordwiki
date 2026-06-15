@@ -205,6 +205,34 @@ test("review: full-history reveals settled facts + versions before the baseline"
     });
 });
 
+test("review: full history hides the imported base set (automated authorship)", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const tl = new TestTimeline();
+            const e = mkEntry(1000, tl.next());
+            fx.ww.applyTransaction([e], {quiet: true});
+            fx.ww.applyTransaction([mkChild(e, "spl", 1010, tl.next(),
+                                            {attr1: "samqwan", order_key: "0.5"})], {quiet: true});
+            fx.ww.applyTransaction([mkChild(e, "sta", 1020, tl.next(),
+                                            {attr1: "Completed", order_key: "0.5"})], {quiet: true});
+            const sub = mkChild(e, "sub", 1100, tl.next(), {order_key: "0.5"});
+            fx.ww.applyTransaction([sub], {quiet: true});
+            // One category from the automated import, one authored by a person.
+            fx.ww.applyTransaction([mkChild(sub, "cat", 1110, tl.next(),
+                                            {attr1: "imported-cat", order_key: "0.5",
+                                             change_by_username: "~category-import"})], {quiet: true});
+            fx.ww.applyTransaction([mkChild(sub, "cat", 1120, tl.next(),
+                                            {attr1: "human-cat", order_key: "0.6",
+                                             change_by_username: "djz"})], {quiet: true});
+            bornApprove(fx.ww);
+
+            const full = reviewHtml(fx, "everyone", "full");
+            assertStringIncludes(full, "human-cat");                  // human activity stays
+            assertEquals(full.includes("imported-cat"), false);      // the import base set is gone
+        });
+    });
+});
+
 test("review: the participant filter shows only the chosen user's threads", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
