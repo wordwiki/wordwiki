@@ -275,6 +275,34 @@ test("review: the participant filter shows only the chosen user's threads", asyn
     });
 });
 
+test("review refresh is scoped: actions touch the group + count fragment, not the whole entry", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})], {quiet: true});
+
+            // The group is its OWN reloadable htmx fragment; the count is another.
+            const html = reviewHtml(fx);
+            assertStringIncludes(html, "-review-group-1010-");
+            assertStringIncludes(html, "renderReviewGroupFragment(1000, 1010");
+            assertStringIncludes(html, "-review-pending-1000-");
+
+            // The approve action reloads ONLY those two - never the entry root.
+            const r = fx.ww.lexeme.reviewApprove(1000, 1010);
+            assertEquals(r, {action: "reload",
+                             targets: [".-review-group-1010-", ".-review-pending-1000-"]});
+
+            // After approval the group fragment re-renders to nothing (it removes
+            // itself), while full history still shows the now-settled fact.
+            assertEquals(markupToString(
+                fx.ww.lexeme.renderReviewGroupFragment(1000, 1010, "everyone", "")), "");
+            assertStringIncludes(
+                markupToString(fx.ww.lexeme.renderReviewGroupFragment(1000, 1010, "everyone", "full")),
+                "lm-cl-group-header");
+        });
+    });
+});
+
 test("review action: approving a pending edit clears it from the queue", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {

@@ -60,8 +60,8 @@ import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
 import {classifyFact, isComment, type FactReview} from './versioned-model.ts';
-import {renderGroupedChangeList, initials, type ChangeEvent, type ChangeKind,
-        type ChangeGroup} from './change-list.ts';
+import {renderGroupedChangeList, renderChangeGroup, initials,
+        type ChangeEvent, type ChangeKind, type ChangeGroup} from './change-list.ts';
 import {diffValues} from './diff.ts';
 import {isAutomatedUsername} from './user.ts';
 import * as templates from './templates.ts';
@@ -448,15 +448,7 @@ export class LexemeEditor {
         const e = this.app.entriesById.get(entry_id);
         const heading = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
 
-        // Default participant: an approver lands on EVERYONE (their review
-        // queue); a plain contributor lands on their OWN threads (the rest is
-        // just noise to them).  Either way it's one click to switch.
-        const opts: ReviewOpts = {
-            participant: participant
-                || (this.app.lexemeOps.hasApprovePermission()
-                    ? 'everyone' : (this.app.currentUsername() ?? 'everyone')),
-            full: full === 'full',
-        };
+        const opts = this.reviewOpts(participant, full);
         const hxGet = mode === 'review'
             ? `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${opts.full ? 'full' : ''}')`
             : `${R}.renderEntry(${entry_id}, 'edit')`;
@@ -481,11 +473,9 @@ export class LexemeEditor {
     private renderModeToggle(entry_id: number, entryTuple: VersionedTuple,
                              mode: EditMode, opts: ReviewOpts): Markup {
         if(mode === 'review') {
-            const n = this.entryPendingCount(entryTuple);
             return ['div', {class: 'd-flex align-items-center gap-2 mb-2 lm-review-bar flex-wrap'},
                     ['span', {class: 'badge text-bg-warning'}, 'Reviewing'],
-                    ['span', {class: 'text-muted small'},
-                     n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`],
+                    this.renderReviewPending(entry_id),
                     this.participantControl(entry_id, entryTuple, opts),
                     this.fullHistoryToggle(entry_id, opts),
                     this.modeSwapButton(entry_id, 'edit', 'Edit entry',
@@ -908,25 +898,79 @@ export class LexemeEditor {
                        opts: ReviewOpts): ChangeGroup[] {
         const groups: ChangeGroup[] = [];
         entryTuple.forEachVersionedTuple(t => {
-            if(t.tupleVersions.length === 0) return;
-            if(opts.participant !== 'everyone'
-               && !this.participantActiveOnFact(t, opts.participant)) return;
-            const review = classifyFact(t.tupleVersions.map(v => v.assertion),
-                                        timestamp.END_OF_TIME);
-            if(review.state === 'hidden') return;   // settled, no-longer-public deletion
-            const pending = review.state === 'added' || review.state === 'edited'
-                || review.state === 'removed';
-            if(!opts.full && !pending) return;      // the queue: pending facts only
-            // The imported base set is filtered everywhere in the review (it is
-            // not human activity); a fact left with no human events drops out.
-            const events = this.factChangeEvents(t.schema, t, opts.full, true);
-            if(events.length === 0) return;
-            groups.push({
-                header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending),
-                events,
-            });
+            const g = this.reviewGroupFor(entry_id, t, opts);
+            if(g) groups.push(g);
         });
         return groups;
+    }
+
+    /** One fact's review group, as its OWN reloadable fragment - or null when
+     *  the fact does not belong in the current view (settled in the queue,
+     *  filtered out, or pure import).  An action that touches this fact reloads
+     *  just `.-review-group-<fact_id>-`: it re-renders here (a comment lands),
+     *  or returns nothing and the fragment removes itself (an approval). */
+    private reviewGroupFor(entry_id: number, t: VersionedTuple,
+                           opts: ReviewOpts): ChangeGroup | null {
+        if(t.tupleVersions.length === 0) return null;
+        if(opts.participant !== 'everyone'
+           && !this.participantActiveOnFact(t, opts.participant)) return null;
+        const review = classifyFact(t.tupleVersions.map(v => v.assertion), timestamp.END_OF_TIME);
+        if(review.state === 'hidden') return null;   // settled, no-longer-public deletion
+        const pending = review.state === 'added' || review.state === 'edited'
+            || review.state === 'removed';
+        if(!opts.full && !pending) return null;      // the queue: pending facts only
+        // The imported base set is filtered everywhere in the review (it is not
+        // human activity); a fact left with no human events drops out.
+        const events = this.factChangeEvents(t.schema, t, opts.full, true);
+        if(events.length === 0) return null;
+        return {
+            attrs: {
+                class: `-review-group-${t.id}- lm-cl-group`,
+                'hx-get': `${R}.renderReviewGroupFragment(${entry_id}, ${t.id}, `
+                        + `'${opts.participant}', '${opts.full ? 'full' : ''}')`,
+                'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
+            },
+            header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending),
+            events,
+        };
+    }
+
+    // The default review view-state (an approver lands on EVERYONE - their
+    // queue; a plain contributor on their OWN threads), shared by renderEntry
+    // and the per-group/count fragments so a reload keeps the same view.
+    private reviewOpts(participant: string, full: string): ReviewOpts {
+        return {
+            participant: participant
+                || (this.app.lexemeOps.hasApprovePermission()
+                    ? 'everyone' : (this.app.currentUsername() ?? 'everyone')),
+            full: full === 'full',
+        };
+    }
+
+    /** The self-reloading fragment for one review group: re-render it, or
+     *  nothing (so htmx removes it) when the fact has left the view. */
+    renderReviewGroupFragment(entry_id: number, fact_id: number,
+                              participant: string = '', full: string = ''): Markup {
+        const opts = this.reviewOpts(participant, full);
+        const tuple = this.findTupleInEntry(entry_id, fact_id);
+        const g = this.reviewGroupFor(entry_id, tuple, opts);
+        return g ? renderChangeGroup(g) : [];
+    }
+
+    /** The pending-count fragment in the review bar (reloaded after an action,
+     *  so the count tracks without re-rendering the whole entry). */
+    renderReviewPending(entry_id: number): Markup {
+        const n = this.entryPendingCount(this.entryTuple(entry_id));
+        return ['span', {class: `-review-pending-${entry_id}- text-muted small`,
+                         'hx-get': `${R}.renderReviewPending(${entry_id})`,
+                         'hx-trigger': 'reload', 'hx-swap': 'outerHTML'},
+                n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`];
+    }
+
+    // The reload targets for a review action on one fact: its group (re-renders
+    // or removes itself) and the bar's pending count - never the whole entry.
+    private reviewActionTargets(entry_id: number, fact_id: number): string[] {
+        return [`.-review-group-${fact_id}-`, `.-review-pending-${entry_id}-`];
     }
 
     // A group's header: the field, and - when pending - a "needs approval" badge
@@ -1270,14 +1314,14 @@ export class LexemeEditor {
     // --- Review actions (publication-model.md) ------------------------------
     //
     // Thin wrappers over the LexemeOps publication verbs (which do the work and
-    // enforce permissions): they reload the whole entry fragment, which - being
-    // rendered in review mode - re-renders the diff with the fact reclassified
-    // (an approved edit becomes clean; an approved deletion disappears).
+    // enforce permissions).  Each reloads only the touched fact's GROUP (which
+    // re-renders the fact reclassified, or removes itself if it has left the
+    // queue) plus the bar's pending COUNT - never the whole entry.
 
     /** Approve a fact's pending content (publishes it). */
     reviewApprove(entry_id: number, fact_id: number): any {
         this.app.lexemeOps.approveFact(fact_id);
-        return this.reload([this.rootTarget(entry_id)]);
+        return this.reload(this.reviewActionTargets(entry_id, fact_id));
     }
 
     /** The revert/rollback note dialog (a reject reason or a rollback rationale). */
@@ -1314,14 +1358,14 @@ export class LexemeEditor {
         const entry_id = utils.parseIntOrError(String(form.entry_id));
         const fact_id = utils.parseIntOrError(String(form.fact_id));
         this.app.lexemeOps.revertFact(fact_id, String(form.note ?? ''));
-        return this.reload([this.rootTarget(entry_id)]);
+        return this.reload(this.reviewActionTargets(entry_id, fact_id));
     }
 
     submitComment(form: Record<string, any>): any {
         const entry_id = utils.parseIntOrError(String(form.entry_id));
         const fact_id = utils.parseIntOrError(String(form.fact_id));
         this.app.lexemeOps.commentFact(fact_id, String(form.note ?? ''));
-        return this.reload([this.rootTarget(entry_id)]);
+        return this.reload(this.reviewActionTargets(entry_id, fact_id));
     }
 
     private saveEdit(form: Record<string, any>): any {

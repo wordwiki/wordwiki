@@ -285,6 +285,10 @@
     margin-bottom: 0.15rem;
 }
 .lm-cl-group-body { padding-left: 0.25rem; }
+/* The grouped list's empty message is always present but hidden while any group
+   exists - so when the last group's fragment removes itself, it appears with no
+   re-render of the list. */
+.lm-changelist-grouped:has(> .lm-cl-group) > .lm-cl-empty { display: none; }
 
 /* One event line: WHEN and WHO lead in fixed columns; then (in multi-fact
    lists) a scannable SUBJECT column; the description fills the rest; an optional

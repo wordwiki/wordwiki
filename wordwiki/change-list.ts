@@ -87,17 +87,30 @@ export function renderChangeList(events: ChangeEvent[], opts: ChangeListOpts = {
 export interface ChangeGroup {
     header: Markup;
     events: ChangeEvent[];
+    // Attributes for the group's wrapper element (must include the lm-cl-group
+    // class).  The caller uses this to make each group its OWN reloadable htmx
+    // fragment, so an action that touches one fact re-renders just its group -
+    // not the whole page.  Defaults to a plain lm-cl-group div.
+    attrs?: Record<string, any>;
+}
+
+/** One group: its header + its event lines.  Rendered both inline (the list)
+ *  and on its own (the per-group reload fragment), so the two never drift. */
+export function renderChangeGroup(g: ChangeGroup): Markup {
+    return ["div", g.attrs ?? { class: "lm-cl-group" },
+        ["div", { class: "lm-cl-group-header" }, g.header],
+        ["div", { class: "lm-cl-group-body" },
+         g.events.map(e => renderChangeEvent(e, { showSubject: false }))]];
 }
 
 export function renderGroupedChangeList(groups: ChangeGroup[],
                                         emptyMessage = "Nothing to show."): Markup {
+    // The empty message is ALWAYS present and hidden by CSS while any group
+    // exists - so when the last group's fragment removes itself (an approval),
+    // the message appears without re-rendering the whole list.
     return ["div", {class: "lm-changelist lm-changelist-grouped"},
-        groups.length === 0
-            ? ["div", {class: "lm-cl-empty text-muted small"}, emptyMessage]
-            : groups.map(g => ["div", {class: "lm-cl-group"},
-                ["div", {class: "lm-cl-group-header"}, g.header],
-                ["div", {class: "lm-cl-group-body"},
-                 g.events.map(e => renderChangeEvent(e, {showSubject: false}))]])];
+        groups.map(g => renderChangeGroup(g)),
+        ["div", {class: "lm-cl-empty text-muted small"}, emptyMessage]];
 }
 
 function renderChangeEvent(e: ChangeEvent, opts: ChangeListOpts): Markup {
