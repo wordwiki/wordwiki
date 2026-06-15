@@ -32,6 +32,7 @@ import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import {serialize, path} from '../liminal/serializable.ts';
+import {route, authenticated} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {LexemeOps} from './lexeme-ops.ts';
@@ -111,7 +112,7 @@ export class WordWiki extends LiminalApp {
     // The v2 (server-side htmx) lexeme editor, reachable as wordwiki.lexeme.*
     // (e.g. /ww/wordwiki.lexeme.entryPage(<entry_id>)).  See lexeme-editor-design.md.
     #lexeme: LexemeEditor|undefined = undefined;
-    get lexeme(): LexemeEditor {
+    @route(authenticated) @path get lexeme(): LexemeEditor {
         return this.#lexeme ??= new LexemeEditor(this);
     }
 

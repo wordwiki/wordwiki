@@ -59,6 +59,7 @@ import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
+import {route, authenticated} from '../liminal/security.ts';
 import {classifyFact, isComment, type FactReview} from './versioned-model.ts';
 import {renderGroupedChangeList, renderChangeGroup, initials,
         type ChangeEvent, type ChangeKind, type ChangeGroup} from './change-list.ts';
@@ -432,6 +433,7 @@ export class LexemeEditor {
     // --- Page + fragments ----------------------------------------------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     entryPage(entry_id: number, mode: EditMode = 'edit'): templates.Page {
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
@@ -441,6 +443,7 @@ export class LexemeEditor {
     /** The root-level fragment: the whole entry (heading + all relations).  The
      *  mode AND the review view-state (participant / full-history) ride in the
      *  fragment's hx-get, so every in-place reload re-renders identically. */
+    @route(authenticated)
     renderEntry(entry_id: number, mode: EditMode = 'edit',
                 participant: string = '', full: string = ''): Markup {
         const entryTuple = this.entryTuple(entry_id);
@@ -553,6 +556,7 @@ export class LexemeEditor {
     }
 
     /** The parent-level fragment: one relation (header + its tuples). */
+    @route(authenticated)
     renderRelationFragment(entry_id: number, parent_fact_id: number, tag: string): Markup {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
         const rf = parent.schema.relationFields.find(r => r.tag === tag)
@@ -562,6 +566,7 @@ export class LexemeEditor {
     }
 
     /** The self-level fragment: one tuple's editable surface. */
+    @route(authenticated)
     renderTupleFragment(entry_id: number, fact_id: number): Markup {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const tq = new CurrentTupleQuery(tuple);
@@ -955,6 +960,7 @@ export class LexemeEditor {
 
     /** The self-reloading fragment for one review group: re-render it, or
      *  nothing (so htmx removes it) when the fact has left the view. */
+    @route(authenticated)
     renderReviewGroupFragment(entry_id: number, fact_id: number,
                               participant: string = '', full: string = ''): Markup {
         const opts = this.reviewOpts(participant, full);
@@ -965,6 +971,7 @@ export class LexemeEditor {
 
     /** The pending-count fragment in the review bar (reloaded after an action,
      *  so the count tracks without re-rendering the whole entry). */
+    @route(authenticated)
     renderReviewPending(entry_id: number, participant: string = ''): Markup {
         const p = this.reviewOpts(participant, '').participant;
         const n = this.entryPendingCount(this.entryTuple(entry_id), p);
@@ -1084,6 +1091,7 @@ export class LexemeEditor {
      * params carry the addressing and the conflict guard
      * (replaces_assertion_id).
      */
+    @route(authenticated)
     editDialog(entry_id: number, fact_id: number, mode: EditMode = 'edit'): Markup {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const rel = tuple.schema;
@@ -1132,6 +1140,7 @@ export class LexemeEditor {
      * the relation; with an anchor (the ☰'s "Insert before/after") the new
      * tuple lands next to the anchor tuple.
      */
+    @route(authenticated)
     insertDialog(entry_id: number, parent_fact_id: number, child_tag: string,
                  anchor_fact_id?: number|null, where?: 'before'|'after'|null,
                  mode: EditMode = 'edit'): Markup {
@@ -1166,6 +1175,7 @@ export class LexemeEditor {
      * re-asserts the old version's values as a NEW assertion (the undo model:
      * mutes are not allowed).
      */
+    @route(authenticated)
     historyDialog(entry_id: number, fact_id: number, mode: EditMode = 'edit'): Markup {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const rel = tuple.schema;
@@ -1258,6 +1268,7 @@ export class LexemeEditor {
      * real values, with a restore button (re-asserts that version over the
      * tombstone, starting a new valid period).
      */
+    @route(authenticated)
     deletedDialog(entry_id: number, parent_fact_id: number, child_tag: string): Markup {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
         const rel = parent.childRelations[child_tag]?.schema
@@ -1311,6 +1322,7 @@ export class LexemeEditor {
      * fact_id) and insert (has parent_fact_id + child_tag); the soft schema
      * supplies everything else.
      */
+    @route(authenticated)
     saveTuple(form: Record<string, any>): any {
         if(form.fact_id !== undefined && form.fact_id !== '')
             return this.saveEdit(form);
@@ -1326,12 +1338,14 @@ export class LexemeEditor {
     // queue) plus the bar's pending COUNT - never the whole entry.
 
     /** Approve a fact's pending content (publishes it). */
+    @route(authenticated)
     reviewApprove(entry_id: number, fact_id: number): any {
         this.app.lexemeOps.approveFact(fact_id);
         return this.reload(this.reviewActionTargets(entry_id, fact_id));
     }
 
     /** The revert/rollback note dialog (a reject reason or a rollback rationale). */
+    @route(authenticated)
     revertDialog(entry_id: number, fact_id: number): Markup {
         return this.noteDialog(entry_id, fact_id, 'submitRevert',
             {title: 'Revert to the published value',
@@ -1340,6 +1354,7 @@ export class LexemeEditor {
     }
 
     /** The discussion-comment dialog. */
+    @route(authenticated)
     commentDialog(entry_id: number, fact_id: number): Markup {
         return this.noteDialog(entry_id, fact_id, 'submitComment',
             {title: 'Add a comment',
@@ -1361,6 +1376,7 @@ export class LexemeEditor {
             })];
     }
 
+    @route(authenticated)
     submitRevert(form: Record<string, any>): any {
         const entry_id = utils.parseIntOrError(String(form.entry_id));
         const fact_id = utils.parseIntOrError(String(form.fact_id));
@@ -1368,6 +1384,7 @@ export class LexemeEditor {
         return this.reload(this.reviewActionTargets(entry_id, fact_id));
     }
 
+    @route(authenticated)
     submitComment(form: Record<string, any>): any {
         const entry_id = utils.parseIntOrError(String(form.entry_id));
         const fact_id = utils.parseIntOrError(String(form.fact_id));
@@ -1475,6 +1492,7 @@ export class LexemeEditor {
     /** Delete = a tombstone assertion (see LexemeOps.tombstoneFact - the
      *  mutation and its race handling live there); this method only
      *  translates the outcome into the editor's alerts/reload targets. */
+    @route(authenticated)
     deleteTuple(entry_id: number, fact_id: number, mode: EditMode = 'edit'): any {
         const r = this.app.lexemeOps.tombstoneFact(entry_id, fact_id);
         switch(r.outcome) {
@@ -1494,6 +1512,7 @@ export class LexemeEditor {
 
     /** Reorder within the parent relation by re-asserting with a fresh
      *  order_key between the appropriate neighbours. */
+    @route(authenticated)
     move(entry_id: number, fact_id: number, direction: 'up'|'down', mode: EditMode = 'edit'): any {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const mostRecent = tuple.mostRecentTuple ?? panic('no versions for', String(fact_id));
@@ -1543,6 +1562,7 @@ export class LexemeEditor {
      * the fact's current state.  Works both for a live fact (revert) and a
      * tombstoned one (restore after delete - starts a new valid period).
      */
+    @route(authenticated)
     restoreVersion(entry_id: number, fact_id: number, assertion_id: number,
                    mode: EditMode = 'edit'): any {
         const tuple = this.findTupleInEntry(entry_id, fact_id);
@@ -1586,6 +1606,7 @@ export class LexemeEditor {
      * reference" posts back, the reference's fragment reloads (listener in
      * lexeme-editor-scripts.js).
      */
+    @route(authenticated)
     addDocumentReference(entry_id: number, parent_fact_id: number, child_tag: string,
                          friendly_document_id: string): any {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
