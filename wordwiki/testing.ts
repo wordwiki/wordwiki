@@ -26,11 +26,11 @@ import type { Markup } from '../liminal/markup.ts';
 import { db } from '../liminal/db.ts';
 import { openTestDb, clearAllData } from '../liminal/testing/db-harness.ts';
 import { backfillPublication } from './publication-backfill.ts';
-import { setRouteEval } from "../liminal/liminal.ts";
+import { setRoutePolicy } from "../liminal/liminal.ts";
 
-// wordwiki is fully @route-annotated, so the suite runs under the shipped config
-// (routeterp, strict) - exercising the route gate, not the legacy jsterp.
-setRouteEval('routeterp', 'strict');
+// Pin the suite to strict so it exercises full @route enforcement regardless of
+// any LIMINAL_ROUTE_POLICY in the environment.  (routeterp is the only router now.)
+setRoutePolicy('strict');
 
 // The legacy raw-DML tables (created by createAllTables, cleared here
 // by name - they are not liminal Tables).

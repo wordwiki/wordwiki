@@ -117,15 +117,6 @@ test("sync renderer marks unawaited promises rather than emitting [object Promis
     assertEquals(render(['div', {}, Promise.resolve('x')]), '<div>*** UNRESOLVED PROMISE ***</div>');
 });
 
-test("jsterp-enabled rendering does not crash on elements without hx-trigger (regression)", async () => {
-    // Pre-fix: hxTrigger.split threw a TypeError for EVERY element lacking
-    // an hx-trigger attr whenever jsTerpEnabled was on.
-    const out = await m.asyncRenderToStringViaLinkeDOM(
-        ['div', {}, ['span', {}, 'plain'], ['span', {'hx-trigger': 'click'}, 'x']],
-        false, /*jsTerpEnabled=*/true, {});
-    assertStringIncludes(out, '<span>plain</span>');
-});
-
 test("isElemMarkup / getElemId / flattenMarkup / createElement", () => {
     assert(m.isElemMarkup(['div', {}, 'x']) && m.isElemMarkup(['div', {}]));
     assert(!m.isElemMarkup(['div']) && !m.isElemMarkup(['div', null]) && !m.isElemMarkup('div') && !m.isElemMarkup([]));

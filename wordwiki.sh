@@ -103,12 +103,8 @@ if [ "$#" -eq 0 ]; then
     set -- serve
 fi
 
-# Route security: wordwiki now runs the restricted route interpreter (routeterp)
-# in STRICT mode - every route is @route-annotated, so undeclared members are
-# unreachable (404) and each route's permission + POST-for-mutations is enforced.
-# (Was jsterp during the migration.)  Override on the command line, e.g.
-# `LIMINAL_ROUTE_POLICY=permissive ./wordwiki.sh` to fall back to logging.
-export LIMINAL_ROUTE_EVAL="${LIMINAL_ROUTE_EVAL:-routeterp}"
-export LIMINAL_ROUTE_POLICY="${LIMINAL_ROUTE_POLICY:-strict}"
-
+# Route security: routes are evaluated by the restricted routeterp interpreter in
+# STRICT mode (the liminal default now that jsterp is unhooked) - undeclared
+# members 404, @route perms + POST-for-mutations enforced.  For debugging only,
+# override with `LIMINAL_ROUTE_POLICY=permissive ./wordwiki.sh`.
 deno run --check --allow-all "$WORDWIKI_SRC/wordwiki/wordwiki.ts" "$@"

@@ -27,7 +27,6 @@ import * as strings from './strings.ts';
 import * as utils from './utils.ts';
 import {DenoHttpServer} from './deno-http-server.ts';
 import {parseCookies} from './http-server.ts';
-import {evalJsExprSrc} from './jsterp.ts';
 import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredError, RouteMethodError} from './routeterp.ts';
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
@@ -91,32 +90,23 @@ export function renderTestResults(results: TestResult[]): Markup {
     ];
 }
 
-// Which interpreter evaluates route expressions, and (for routeterp) its
-// enforcement policy.  Defaults come from env once at load; the live server is
-// driven by env (rabid.sh / wordwiki.sh).  Mutable + a setter so a test harness
-// can run the suite under the same config it ships (rabid's tests -> routeterp
-// strict) without depending on env being set before module load.
-//   mode:   (unset)/'jsterp' - the full JS-expr interpreter; 'routeterp' - the
-//           restricted route interpreter.
-//   policy: 'strict' - undeclared members 404 (the end state, fail-closed);
-//           'permissive' - undeclared allowed but logged (the migration bridge).
-let routeEvalMode = (Deno.env.get('LIMINAL_ROUTE_EVAL') ?? Deno.env.get('RABID_ROUTE_EVAL') ?? 'jsterp').toLowerCase();
+// Route expressions are evaluated ONLY by routeterp (the restricted, default-deny
+// interpreter); jsterp is no longer wired in as a router.  routeterp's
+// enforcement policy:
+//   'strict'     - undeclared members 404; perms + POST-for-mutations enforced.
+//   'permissive' - undeclared allowed but logged (a migration/debug bridge).
+// Default 'strict' (fail-closed); override for debugging via LIMINAL_ROUTE_POLICY.
+// Mutable + a setter so the test harness can pin the policy regardless of env.
 let routePolicy: RoutePolicy =
     (Deno.env.get('LIMINAL_ROUTE_POLICY') ?? 'strict').toLowerCase() === 'permissive'
         ? 'permissive' : 'strict';
 
-export function setRouteEval(mode: 'jsterp' | 'routeterp', policy: RoutePolicy = 'strict'): void {
-    routeEvalMode = mode;
+export function setRoutePolicy(policy: RoutePolicy): void {
     routePolicy = policy;
 }
 
 function evalRoute(scope: Record<string, any>, jsExprSrc: string, httpMethod: string = 'POST'): any {
-    switch(routeEvalMode) {
-        case 'routeterp': return evalRouteExprSrc(scope, jsExprSrc, routePolicy, httpMethod);
-        case 'jsterp':
-        case '':          return evalJsExprSrc(scope, jsExprSrc);
-        default: throw new Error(`liminal: unknown route eval mode '${routeEvalMode}' (expected 'jsterp' or 'routeterp')`);
-    }
+    return evalRouteExprSrc(scope, jsExprSrc, routePolicy, httpMethod);
 }
 
 /**

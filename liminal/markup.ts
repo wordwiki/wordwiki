@@ -30,14 +30,10 @@
  *
  * Note that there are two serializers to text here - use the LinkeDOM versions for
  * now - we haven't gotten the other one HTML spec compliant yet.
- *
- * The jsterp integration here is diseased and disabled at the moment.  Please
- * ignore it until I get around to removing it.
  */
 
 import * as utils from './utils.ts';
 import * as linkedom from "https://esm.sh/linkedom@0.18.10/worker";
-import * as jsterp from './jsterp.ts'; // REMOVE_FOR_WEB
 
 export type DumpOpts = Record<string, any>;
 
@@ -732,17 +728,12 @@ function renderElementToJSDON(out: JSDON, e: ElemExprLiteral, debug: boolean = f
  * Probably quite a bit slower than the sync one - so keeping that one around as
  * well.
  */
-export async function asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true, jsTerpEnabled:boolean=false, jsTerpScope: jsterp.Scope = {}, jsTerpSafeMode: boolean = false): Promise<string> {
-    return (new AsyncRenderToJSDON(jsTerpEnabled, jsTerpScope, jsTerpSafeMode)).
+export async function asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<string> {
+    return (new AsyncRenderToJSDON()).
         asyncRenderToStringViaLinkeDOM(markup, wrapInHtmlDocument);
 }
 
 class AsyncRenderToJSDON {
-
-    constructor(public jsTerpEnabled: boolean = false,
-                public jsTerpScope: jsterp.Scope = {},
-                public jsTerpSafeMode: boolean = false) {
-    }
 
     async asyncRenderToStringViaLinkeDOM(markup: any, wrapInHtmlDocument: boolean=true): Promise<string> {
         return linkeDOMToString(await this.asyncToLinkeDOM(markup, wrapInHtmlDocument),
@@ -818,17 +809,6 @@ class AsyncRenderToJSDON {
                 out.push(ATTRIBUTE_NODE, checkAttrName(name));
                 out.push(String(value));
             }
-        }
-
-        // --- If we have hx-trigger='server', eval hx-get in jsTerp and inline
-        //     the results.
-        const hxTrigger = attrs['hx-trigger'];
-        const hxGet = attrs['hx-get'];
-        if(this.jsTerpEnabled &&
-            typeof hxTrigger === 'string' &&   // (most elements have no hx-trigger - .split on undefined threw)
-            hxTrigger.split(/[ ]*,[ ]*/).indexOf('server') !== -1 &&
-            typeof hxGet === 'string') {
-            content = await jsterp.evalJsExprSrcForcingTopLevelPromises(this.jsTerpScope, hxGet, this.jsTerpSafeMode);
         }
 
         await this.asyncRenderItemToJSDON(out, content, tagName);
