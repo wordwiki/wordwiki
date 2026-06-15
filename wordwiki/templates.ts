@@ -141,11 +141,11 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
              ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               'Reference Books'],
              ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("PDM")'}, 'PDM']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("Rand")'}, 'Rand']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("Clark")'}, 'Clark']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("PDM")'}, 'PDM']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("Rand")'}, 'Rand']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("Clark")'}, 'Clark']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
              ]],
 
             // --- Reports

@@ -14,6 +14,7 @@ import * as config from './config.ts';
 import * as derivedPageImages from './derived-page-images.ts';
 import * as templates from './templates.ts';
 import {Response, ResponseMarker, forwardResponse} from '../liminal/http-server.ts';
+import {route, authenticated, hostOrAdmin} from '../liminal/security.ts';
 import * as random from "../liminal/random.ts";
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
@@ -124,7 +125,7 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
 
          renderPageJumper(page.page_number, total_pages_in_document,
                           (page_number: number) =>
-             `/ww/renderPageEditorByPageNumber(${document_id}, ${page_number}, ${JSON.stringify(cfg)})`),
+             `/ww/wordwiki.pages.renderPageEditorByPageNumber(${document_id}, ${page_number}, ${JSON.stringify(cfg)})`),
         ], // /div
 
         (cfg.reference_layer_ids.length === 1
@@ -562,7 +563,7 @@ export function singleBoundingGroupEditorURL(bounding_group_id: number, title: s
         is_popup_editor: true,
         locked_bounding_group_id: bounding_group_id,
     };
-    return `/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
+    return `/ww/wordwiki.pages.renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`;
 
 }
 
@@ -638,7 +639,7 @@ export function forwardToSingleBoundingGroupEditorURL(bounding_group_id: number,
 export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
-        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/ww/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/ww/wordwiki.pages.renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
 
          ['div', {class:'col-12'},
           ['label', {class:'visually-hidden', for:'searchText'}, 'Search'],
@@ -657,7 +658,7 @@ export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
 export function renderTextSearchForm2(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
-        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/ww/renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/ww/wordwiki.pages.renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
          ['label', {class:'sr-only', for:'searchText'}, 'Search'],
          ['input', {type:'text', class:'form-control mb-2 mr-sm-2',
                     id:'searchText', name:'searchText', placeholder:'Search',
@@ -688,7 +689,7 @@ export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
             cfg,
             {highlight_ref_bounding_box_ids: [bounding_box_id]});
 
-        const href=`/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
+        const href=`/ww/wordwiki.pages.renderPageEditorByPageId(${page_id}, ${JSON.stringify(itemCfg)})`;
         return [
             ['li', {},
              ['a', {href},
@@ -963,23 +964,48 @@ function sampleTextSearch(search: string, layer_id: number = 5) {
 // ---------------------------------------------------------------------------------
 
 
-export const routes = ()=> ({
-    pageEditor,
-    renderStandaloneGroupAsSvgResponse,
-    renderPageEditorByPageNumber,
-    renderPageEditorByPageId,
-    updateBoundingBoxShape,
-    createNewEmptyBoundingGroupForFriendlyDocumentId,
-    newBoundingBoxInNewGroup,
-    newBoundingBoxInExistingGroup,
-    copyRefBoxToNewGroup,
-    copyRefBoxToExistingGroup,
-    copyBoxToExistingGroup,
-    removeBoxFromGroup,
-    migrateBoxToGroup,
-    renderTextSearchResults,
-    forwardToSingleBoundingGroupEditorURL,
-});
+/**
+ * The scanned-document / page-editor URL routes, namespaced under
+ * `wordwiki.pages` (e.g. /ww/wordwiki.pages.renderPageEditorByPageId(...)) so
+ * the strict route interpreter's member-access @route gate covers them.  These
+ * USED to be merged into the root route scope as bare top-level functions -
+ * which routeterp does NOT gate (an Identifier callee in scope is trusted by
+ * being in scope), so under the strict policy they would have been reachable by
+ * anonymous users.  Wrapping them as members closes that hole.
+ *
+ * Thin delegators to the module functions above (implementations unchanged, and
+ * still called internally - e.g. the PUBLIC /page/<Book>/<N>.html viewer calls
+ * pageEditor() directly in requestHandler, bypassing this gate by design).
+ *
+ * Split by sensitivity:
+ *   - VIEW / render routes are `authenticated`: the lexeme editor embeds the
+ *     source-scan view (renderPageEditorByPageId, renderStandaloneGroupAsSvg…,
+ *     forwardToSingleBoundingGroupEditorURL) for ANY logged-in contributor.
+ *   - MUTATION routes are `hostOrAdmin` + mutates (POST-only): reshaping the
+ *     scanned-document bounding boxes is a curator task.  NOTE this TIGHTENS the
+ *     old blanket "any authenticated user" reachability - relax a method to
+ *     `authenticated` if ordinary editors turn out to need box editing.
+ */
+export class PageRoutes {
+    // --- view / render: any authenticated user (GET-reachable) ---
+    @route(authenticated) pageEditor(...a: Parameters<typeof pageEditor>) { return pageEditor(...a); }
+    @route(authenticated) renderStandaloneGroupAsSvgResponse(...a: Parameters<typeof renderStandaloneGroupAsSvgResponse>) { return renderStandaloneGroupAsSvgResponse(...a); }
+    @route(authenticated) renderPageEditorByPageNumber(...a: Parameters<typeof renderPageEditorByPageNumber>) { return renderPageEditorByPageNumber(...a); }
+    @route(authenticated) renderPageEditorByPageId(...a: Parameters<typeof renderPageEditorByPageId>) { return renderPageEditorByPageId(...a); }
+    @route(authenticated) renderTextSearchResults(...a: Parameters<typeof renderTextSearchResults>) { return renderTextSearchResults(...a); }
+    @route(authenticated) forwardToSingleBoundingGroupEditorURL(...a: Parameters<typeof forwardToSingleBoundingGroupEditorURL>) { return forwardToSingleBoundingGroupEditorURL(...a); }
+
+    // --- mutation: host/admin, POST-only (GET-CSRF closed via mutates) ---
+    @route(hostOrAdmin, {mutates: true}) updateBoundingBoxShape(...a: Parameters<typeof updateBoundingBoxShape>) { return updateBoundingBoxShape(...a); }
+    @route(hostOrAdmin, {mutates: true}) createNewEmptyBoundingGroupForFriendlyDocumentId(...a: Parameters<typeof createNewEmptyBoundingGroupForFriendlyDocumentId>) { return createNewEmptyBoundingGroupForFriendlyDocumentId(...a); }
+    @route(hostOrAdmin, {mutates: true}) newBoundingBoxInNewGroup(...a: Parameters<typeof newBoundingBoxInNewGroup>) { return newBoundingBoxInNewGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) newBoundingBoxInExistingGroup(...a: Parameters<typeof newBoundingBoxInExistingGroup>) { return newBoundingBoxInExistingGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) copyRefBoxToNewGroup(...a: Parameters<typeof copyRefBoxToNewGroup>) { return copyRefBoxToNewGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) copyRefBoxToExistingGroup(...a: Parameters<typeof copyRefBoxToExistingGroup>) { return copyRefBoxToExistingGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) copyBoxToExistingGroup(...a: Parameters<typeof copyBoxToExistingGroup>) { return copyBoxToExistingGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) removeBoxFromGroup(...a: Parameters<typeof removeBoxFromGroup>) { return removeBoxFromGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) migrateBoxToGroup(...a: Parameters<typeof migrateBoxToGroup>) { return migrateBoxToGroup(...a); }
+}
 
 
 

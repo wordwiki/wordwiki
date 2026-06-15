@@ -857,7 +857,7 @@ function updateBoundingBoxShape(box: Element,
     (async ()=>{
         const box_id = getBoxId(box);
         try {
-            await rpc`updateBoundingBoxShape(${box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
+            await rpc`wordwiki.pages.updateBoundingBoxShape(${box_id}, {x:${x},y:${y},w:${w},h:${h}})`;
         } catch (e) {
             onAbort();
             updateDerivedDom(box);
@@ -885,7 +885,7 @@ function newBoundingBoxInNewGroup(group: Element, box: Element,
         const color = group.getAttribute('stroke');
 
         try {
-            const response = await rpc`newBoundingBoxInNewGroup(${page_id}, ${layer_id}, {x:${x},y:${y},w:${w},h:${h}}, ${color})`;
+            const response = await rpc`wordwiki.pages.newBoundingBoxInNewGroup(${page_id}, ${layer_id}, {x:${x},y:${y},w:${w},h:${h}}, ${color})`;
             console.info('added new box', response);
             if(!Object.hasOwn(response, 'bounding_group_id') ||
                 !Object.hasOwn(response, 'bounding_box_id'))
@@ -918,7 +918,7 @@ function newBoundingBoxInExistingGroup(group: Element, box: Element,
 
         try {
             const page_id = getContainingPageId(box);
-            const response = await rpc`newBoundingBoxInExistingGroup(${page_id}, ${getGroupId(group)}, {x:${x},y:${y},w:${w},h:${h}})`;
+            const response = await rpc`wordwiki.pages.newBoundingBoxInExistingGroup(${page_id}, ${getGroupId(group)}, {x:${x},y:${y},w:${w},h:${h}})`;
             console.info('added new box to existing group', response);
             if(!Object.hasOwn(response, 'bounding_box_id'))
                 throw new Error(`new bounding box in existing group rpc had malformed response`);
@@ -955,7 +955,7 @@ function copyRefBoxToNewGroup(box: Element) {
         try {
             const refBoxId = getBoxId(box);
             const layer_id = getContainingLayerId(box);
-            const response = await rpc`copyRefBoxToNewGroup(${refBoxId}, ${layer_id}, ${color})`;
+            const response = await rpc`wordwiki.pages.copyRefBoxToNewGroup(${refBoxId}, ${layer_id}, ${color})`;
             console.info('copied ref box to new group', response);
             if(!Object.hasOwn(response, 'bounding_group_id') ||
                 !Object.hasOwn(response, 'bounding_box_id'))
@@ -991,7 +991,7 @@ function copyRefBoxToExistingGroup(box: Element, group: Element) {
 
     (async() => {
         try {
-            const response = await rpc`copyRefBoxToExistingGroup(${getGroupId(group)}, ${getBoxId(box)})`;
+            const response = await rpc`wordwiki.pages.copyRefBoxToExistingGroup(${getGroupId(group)}, ${getBoxId(box)})`;
             console.info('copied ref box to group', response);
             if(!Object.hasOwn(response, 'bounding_box_id'))
                 throw new Error(`copy ref box to group rpc had malformed response`);
@@ -1031,7 +1031,7 @@ function copyBoxToGroup(toGroup: Element, srcBox: Element) {
 
     (async() => {
         try {
-            const response = await rpc`copyBoxToExistingGroup(${getGroupId(toGroup)}, ${getBoxId(srcBox)})`;
+            const response = await rpc`wordwiki.pages.copyBoxToExistingGroup(${getGroupId(toGroup)}, ${getBoxId(srcBox)})`;
             console.info('copied box to group', response);
             newBox.setAttribute('id', `bb_${response.bounding_box_id}`);
         } catch (e) {
@@ -1059,7 +1059,7 @@ function removeBoxFromGroup(group: Element, box: Element) {
 
     (async() => {
         try {
-            const response = await rpc`removeBoxFromGroup(${getBoxId(box)})`;
+            const response = await rpc`wordwiki.pages.removeBoxFromGroup(${getBoxId(box)})`;
             console.info('removed box from group', response);
             // TODO: consider also removing group based on return value?
         } catch (e) {
@@ -1093,7 +1093,7 @@ function migrateBoxToGroup(box: Element, group: Element) {
 
     (async() => {
         try {
-            const response = await rpc`migrateBoxToGroup(${getGroupId(group)}, ${getBoxId(box)})`;
+            const response = await rpc`wordwiki.pages.migrateBoxToGroup(${getGroupId(group)}, ${getBoxId(box)})`;
             console.info('migrated box to group', response);
         } catch (e) {
             updateDerivedDom(box);

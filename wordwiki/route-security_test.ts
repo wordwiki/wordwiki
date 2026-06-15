@@ -9,10 +9,11 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts";
-import { routePermissionOf } from "../liminal/security.ts";
+import { routePermissionOf, routeIsMutation, authenticated, hostOrAdmin } from "../liminal/security.ts";
 import { evalRouteExprSrc, RouteUndeclaredError, RouteDeniedError } from "../liminal/routeterp.ts";
 import { withTestDb, as, TestTimeline, mkEntry } from "./testing.ts";
 import { LexemeEditor } from "./lexeme-editor.ts";
+import { PageRoutes } from "./render-page-editor.ts";
 import { WordWiki } from "./wordwiki.ts";
 
 // Every URL-reachable editor route (an hx-get fragment, a dialog url, or a tx
@@ -81,6 +82,79 @@ test("routeterp strict: an internal builder is UNDECLARED (404s)", async () => {
             assertThrows(
                 () => evalRouteExprSrc(scope, "wordwiki.lexeme.lexemeChangeGroups(1000, 0, 0)", "strict"),
                 RouteUndeclaredError);
+        });
+    });
+});
+
+// ----- The scanned-document / page editor (wordwiki.pages.*) ----------------
+// These used to be bare top-level scope functions, which routeterp does NOT
+// gate (an Identifier callee is trusted by being in scope) - so under strict
+// they would have been anonymously reachable.  They now live behind the
+// @route-gated `wordwiki.pages` namespace, split by sensitivity.
+
+const PAGE_VIEW_ROUTES = [
+    "pageEditor", "renderStandaloneGroupAsSvgResponse", "renderPageEditorByPageNumber",
+    "renderPageEditorByPageId", "renderTextSearchResults", "forwardToSingleBoundingGroupEditorURL",
+];
+const PAGE_MUTATION_ROUTES = [
+    "updateBoundingBoxShape", "createNewEmptyBoundingGroupForFriendlyDocumentId",
+    "newBoundingBoxInNewGroup", "newBoundingBoxInExistingGroup", "copyRefBoxToNewGroup",
+    "copyRefBoxToExistingGroup", "copyBoxToExistingGroup", "removeBoxFromGroup", "migrateBoxToGroup",
+];
+
+test("the wordwiki.pages namespace getter is a declared route", () => {
+    assert(routePermissionOf(WordWiki.prototype, "pages") !== undefined,
+           "wordwiki.pages must be @route @path");
+});
+
+test("page editor: view routes are authenticated and stay GET-reachable", () => {
+    for(const name of PAGE_VIEW_ROUTES) {
+        assertEquals(routePermissionOf(PageRoutes.prototype, name), authenticated,
+                     `view route '${name}' must be @route(authenticated)`);
+        assertEquals(routeIsMutation(PageRoutes.prototype, name), false,
+                     `view route '${name}' must NOT be mutates (it is GET-navigated)`);
+    }
+});
+
+test("page editor: mutation routes are hostOrAdmin and POST-only", () => {
+    for(const name of PAGE_MUTATION_ROUTES) {
+        assertEquals(routePermissionOf(PageRoutes.prototype, name), hostOrAdmin,
+                     `mutation route '${name}' must be @route(hostOrAdmin)`);
+        assert(routeIsMutation(PageRoutes.prototype, name),
+               `mutation route '${name}' must be mutates (POST-only, closes GET-CSRF)`);
+    }
+});
+
+test("routeterp strict: the pages namespace resolves for an authenticated non-host", async () => {
+    await withTestDb((fx) => {
+        as(fx, {actorId: 999, roles: []}, () => {
+            const ns = evalRouteExprSrc({wordwiki: fx.ww}, "wordwiki.pages", "strict");
+            assert(ns instanceof PageRoutes, "wordwiki.pages should resolve to the PageRoutes holder");
+        });
+    });
+});
+
+test("routeterp strict: a page MUTATION is DENIED for an authenticated non-host", async () => {
+    await withTestDb((fx) => {
+        as(fx, {actorId: 999, roles: []}, () => {
+            // The perm check throws before removeBoxFromGroup runs - no db touched.
+            assertThrows(
+                () => evalRouteExprSrc({wordwiki: fx.ww}, "wordwiki.pages.removeBoxFromGroup(1)", "strict"),
+                RouteDeniedError);
+        });
+    });
+});
+
+test("routeterp strict: a page mutation is allowed for an admin (djz)", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            // Authorized: navigation + the hostOrAdmin perm both pass for djz, so
+            // it reaches the call.  (We don't assert the result - the bounding
+            // box doesn't exist - only that it is NOT a RouteDeniedError.)
+            let denied = false;
+            try { evalRouteExprSrc({wordwiki: fx.ww}, "wordwiki.pages.removeBoxFromGroup(1)", "strict"); }
+            catch(e) { denied = e instanceof RouteDeniedError; }
+            assert(!denied, "an admin must not be route-denied a page mutation");
         });
     });
 });

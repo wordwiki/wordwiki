@@ -73,10 +73,14 @@ export class WordWiki extends LiminalApp {
         // --- Load schema and create an empty workspace
         this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
         // --- Set up our routes
+        // The page-editor routes are NOT spread in here anymore: they now live
+        // under the @route-gated `wordwiki.pages` namespace (see get pages()),
+        // so the strict route interpreter's member gate covers them.  (audio /
+        // publish are still bare top-level routes - the same ungated pattern;
+        // they need the same wrapping before wordwiki flips to routeterp.)
         this.routes = Object.assign(
             {},
             {wordwiki: this},
-            renderPageEditor.routes(),
             audio.routes(),
             publish.routes(),
         );
@@ -114,6 +118,16 @@ export class WordWiki extends LiminalApp {
     #lexeme: LexemeEditor|undefined = undefined;
     @route(authenticated) @path get lexeme(): LexemeEditor {
         return this.#lexeme ??= new LexemeEditor(this);
+    }
+
+    // The scanned-document / page editor, reachable as wordwiki.pages.*
+    // (e.g. /ww/wordwiki.pages.renderPageEditorByPageId(...)).  The namespace
+    // getter is `authenticated` (the view routes are embedded in the lexeme
+    // editor for any contributor); individual mutation routes further require
+    // hostOrAdmin.  See render-page-editor.ts PageRoutes.
+    #pages: renderPageEditor.PageRoutes|undefined = undefined;
+    @route(authenticated) @path get pages(): renderPageEditor.PageRoutes {
+        return this.#pages ??= new renderPageEditor.PageRoutes();
     }
 
     // The assertion-mutation domain verbs (lexeme-ops.ts), shared by the
@@ -419,11 +433,11 @@ export class WordWiki extends LiminalApp {
             ['br', {}],
             ['h3', {}, 'Reference Books'],
             ['ul', {},
-             ['li', {}, ['a', {href:`/ww/pageEditor("PDM")`}, 'PDM']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("Rand")`}, 'Rand']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("Clark")`}, 'Clark']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("PacifiquesGeography")`}, 'PacifiquesGeography']],
-             ['li', {}, ['a', {href:`/ww/pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
+             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("PDM")`}, 'PDM']],
+             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("Rand")`}, 'Rand']],
+             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("Clark")`}, 'Clark']],
+             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("PacifiquesGeography")`}, 'PacifiquesGeography']],
+             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
         ];
 
         return templates.pageTemplate({title, body});

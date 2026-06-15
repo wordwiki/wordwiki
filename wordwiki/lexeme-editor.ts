@@ -336,9 +336,9 @@ function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
         // The reference image; clicking opens the page tagger on its group
         // (stopPropagation so the surrounding editable surface doesn't also
         // open the edit dialog).
-        return ['div', {onclick: `event.stopPropagation(); window.open('/ww/forwardToSingleBoundingGroupEditorURL(${v}, null)')`},
+        return ['div', {onclick: `event.stopPropagation(); window.open('/ww/wordwiki.pages.forwardToSingleBoundingGroupEditorURL(${v}, null)')`},
                 ['object', {style: 'pointer-events: none;',
-                            data: `/ww/renderStandaloneGroupAsSvgResponse('/', ${v})`,
+                            data: `/ww/wordwiki.pages.renderStandaloneGroupAsSvgResponse('/', ${v})`,
                             type: 'image/svg+xml'}]];
     return ['span', {}, String(v)];
 }
@@ -1657,7 +1657,7 @@ export class LexemeEditor {
             locked_bounding_group_id: bounding_group_id,
         };
         return {action: 'open',
-                url: `/ww/renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`,
+                url: `/ww/wordwiki.pages.renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`,
                 targets: this.mutationTargets(entry_id, newAssertion, 'parent')};
     }
 
