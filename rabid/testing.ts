@@ -66,7 +66,8 @@ export async function renderRoute(
     path: string,
     opts: { queryArgs?: Record<string, any> } = {},
 ): Promise<Markup> {
-    const result = await getRabid().dispatch(path, { queryArgs: opts.queryArgs });
+    // Renders are reads -> GET (so a mutates route rendered this way is rejected).
+    const result = await getRabid().dispatch(path, { queryArgs: opts.queryArgs, httpMethod: 'GET' });
     return templates.isPage(result) ? result.body : result;
 }
 
@@ -76,5 +77,6 @@ export async function renderRoute(
 export async function invoke(path: string, ...args: any[]): Promise<any> {
     const bodyArgs: Record<string, any> = {};
     args.forEach((a, i) => bodyArgs[`$arg${i}`] = a);
-    return await getRabid().dispatch(path, { bodyArgs });
+    // Actions are mutations -> POST.
+    return await getRabid().dispatch(path, { bodyArgs, httpMethod: 'POST' });
 }

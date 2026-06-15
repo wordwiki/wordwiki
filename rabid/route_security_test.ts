@@ -4,9 +4,10 @@
 // Also spot-checks that sensitive routes are NOT public and that internal/query
 // members stay unexposed (undeclared -> unreachable under strict).
 import { test } from "../liminal/testing/test.ts";
-import { assertEquals, assert } from "../liminal/testing/assert.ts";
-import { getRabid } from "./rabid.ts";
-import { routePermissionOf, publicRouteReason } from "../liminal/security.ts";
+import { assertEquals, assert, assertRejects } from "../liminal/testing/assert.ts";
+import { getRabid, rabid } from "./rabid.ts";
+import { routePermissionOf, routeIsMutation, publicRouteReason } from "../liminal/security.ts";
+import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
 
 // Every public route declared directly on the app object (walking its prototype
 // chain): the name of any method/getter whose @route permission is a publicRoute.
@@ -54,4 +55,35 @@ test("internal + query members are unexposed (unreachable under strict)", () => 
     undeclared(rabid, "passwordHash");                 // internal auth table getter
     undeclared(rabid, "volunteerLoginSession");        // internal session table
     undeclared(rabid.event, "allEvents");              // a @path query getter (data via .all)
+});
+
+test("mutations are POST-only; reads are not (CSRF axis)", () => {
+    const r = getRabid();
+    // Writes flagged as mutations (reached only via POST).
+    assert(routeIsMutation(r.event_checkin, "checkSelfIn"));
+    assert(routeIsMutation(r.event_checkin, "checkOut"));
+    assert(routeIsMutation(r.volunteer_time, "addTimesheet"));
+    assert(routeIsMutation(r.event, "saveForm"));          // base Table.saveForm
+    // Reads / dialogs are NOT mutations (GET is fine).
+    assert(!routeIsMutation(r.event, "detailPage"));
+    assert(!routeIsMutation(r.event_checkin, "checkInDialog"));
+    assert(!routeIsMutation(r.event, "renderEventRowById"));
+});
+
+test("a mutation route reached via GET is rejected; POST works", () => {
+    return withTestDb(async ({ bob }) => {
+        const id = asSystem(() => rabid.event.insert({
+            event_kind: 'public', description: 'Repair Night', location_description: '',
+            location_url: '', is_remote_event: 0, volunteer_only: 0,
+            start_time: '2026-06-20 19:00:00', end_time: '2026-06-20 21:30:00',
+            total_cash_collected: 0, notes: '',
+        }));
+        // renderRoute dispatches as GET -> the mutation is refused.
+        await asUser(bob, () => assertRejects(
+            () => renderRoute(`rabid.event_checkin.checkSelfIn(${id})`),
+            Error, "must be POST"));
+        // invoke dispatches as POST -> it goes through.
+        const res = await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        assertEquals(res.action, "reload");
+    });
 });

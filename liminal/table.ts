@@ -9,7 +9,7 @@ import {serialize, serializeAny} from "../liminal/serializable.ts";
 import { db, Db, PreparedQuery, QueryClosure, RowObject, QueryParameterSet, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as action from "./action.ts";
 import * as security from "./security.ts";
-import {route, authenticated} from "./security.ts";
+import {route, routeMutation, authenticated} from "./security.ts";
 import * as date from "./date.ts";
 
 export type Tuple = Record<string, any>;
@@ -420,7 +420,7 @@ export class Table<T extends Tuple> {
     // No primary key in the form means INSERT (the "new record" dialog is the
     // record form rendered over an empty record); with one, UPDATE.  parseForm
     // (not parseFormWithPrimaryKey, which requires the pk) handles both.
-    @route(authenticated)
+    @routeMutation(authenticated)
     saveForm(form: Record<string, string>): Markup {
         const {primaryKey, changedFieldValues} = this.parseForm(form);
         if(primaryKey !== undefined) {

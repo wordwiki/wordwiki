@@ -100,25 +100,43 @@ export function publicRouteReason(p: Permission | undefined): string | undefined
 // member stays unreachable.  NB: stack ABOVE @path on getters - @path installs a
 // wrapper, and @route must tag the installed function.
 const ROUTE: unique symbol = Symbol('routePermission');
-export function route(perm: Permission) {
+const ROUTE_MUTATES: unique symbol = Symbol('routeMutates');
+
+// Declare a route.  `opts.mutates: true` marks it a state-changing route, which
+// the interpreter requires to be reached via POST (a GET to a mutates route is
+// rejected) - closing the trivial GET-CSRF (an <img>/link that fires a mutation).
+export function route(perm: Permission, opts?: {mutates?: boolean}) {
     return (target: any, _ctx?: any) => {
         // Tag the function with its permission.  routeterp reads this (via
         // routePermissionOf) both to treat the member as exposed AND to enforce
         // the permission under its strict policy.
-        if(typeof target === 'function') (target as any)[ROUTE] = perm;
+        if(typeof target === 'function') {
+            (target as any)[ROUTE] = perm;
+            if(opts?.mutates) (target as any)[ROUTE_MUTATES] = true;
+        }
         return undefined;              // keep the original (now-tagged) function
     };
 }
-// The route permission declared on obj.name (walks the prototype chain), or undefined.
-export function routePermissionOf(obj: any, name: PropertyKey): Permission | undefined {
+// Sugar for a state-changing route (POST-only).  Use on saveForm and every
+// write action (checkIn, addMember, markDone, ...); reads/dialogs use route().
+export function routeMutation(perm: Permission) { return route(perm, {mutates: true}); }
+
+function routeFnOf(obj: any, name: PropertyKey): any {
     for(let o = obj; o != null; o = Object.getPrototypeOf(o)) {
         const d = Object.getOwnPropertyDescriptor(o, name);
-        if(d) {
-            const fn = d.get ?? (typeof d.value === 'function' ? d.value : undefined);
-            return fn ? (fn as any)[ROUTE] : undefined;
-        }
+        if(d) return d.get ?? (typeof d.value === 'function' ? d.value : undefined);
     }
     return undefined;
+}
+// The route permission declared on obj.name (walks the prototype chain), or undefined.
+export function routePermissionOf(obj: any, name: PropertyKey): Permission | undefined {
+    const fn = routeFnOf(obj, name);
+    return fn ? (fn as any)[ROUTE] : undefined;
+}
+// Whether obj.name is a state-changing (POST-only) route.
+export function routeIsMutation(obj: any, name: PropertyKey): boolean {
+    const fn = routeFnOf(obj, name);
+    return !!(fn && (fn as any)[ROUTE_MUTATES]);
 }
 
 // A redactable field the actor may not view is replaced (in the query result)

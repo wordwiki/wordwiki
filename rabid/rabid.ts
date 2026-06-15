@@ -28,7 +28,7 @@ import { Temporal } from 'temporal-polyfill';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
-import {route, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
+import {route, routeMutation, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {RouteDeniedError} from '../liminal/routeterp.ts';
 import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
 import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
@@ -310,6 +310,8 @@ export class Rabid extends LiminalApp {
     }
 
 
+    // NOT a routeMutation: the dev/puppeteer GET-login shortcut posts via the URL
+    // (kept off production separately, where a GET would leak the password).
     @route(publicRoute('login form submit — authenticates the user'))
     loginRequest(args: {email?: string, password?: string, targetUrl?: string}) {
 
@@ -524,7 +526,7 @@ export class Rabid extends LiminalApp {
 
     // Redeem: set the password, consume ALL the volunteer's outstanding reset
     // tokens, end any existing sessions, and log them straight in.
-    @route(publicRoute('password reset submit — token-authenticated'))
+    @routeMutation(publicRoute('password reset submit — token-authenticated'))
     async resetPasswordRequest(args: {token?: string, password?: string, password2?: string}) {
         const token = args?.token ?? '';
         const reset = await this.validResetRecord(token);

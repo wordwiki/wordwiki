@@ -28,7 +28,7 @@ import * as utils from './utils.ts';
 import {DenoHttpServer} from './deno-http-server.ts';
 import {parseCookies} from './http-server.ts';
 import {evalJsExprSrc} from './jsterp.ts';
-import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredError} from './routeterp.ts';
+import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredError, RouteMethodError} from './routeterp.ts';
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
 import * as browserAgent from './browser-agent.ts';
@@ -109,9 +109,9 @@ export function setRouteEval(mode: 'jsterp' | 'routeterp', policy: RoutePolicy =
     routePolicy = policy;
 }
 
-function evalRoute(scope: Record<string, any>, jsExprSrc: string): any {
+function evalRoute(scope: Record<string, any>, jsExprSrc: string, httpMethod: string = 'POST'): any {
     switch(routeEvalMode) {
-        case 'routeterp': return evalRouteExprSrc(scope, jsExprSrc, routePolicy);
+        case 'routeterp': return evalRouteExprSrc(scope, jsExprSrc, routePolicy, httpMethod);
         case 'jsterp':
         case '':          return evalJsExprSrc(scope, jsExprSrc);
         default: throw new Error(`liminal: unknown route eval mode '${routeEvalMode}' (expected 'jsterp' or 'routeterp')`);
@@ -365,7 +365,8 @@ export abstract class LiminalApp {
         if(filepath === '/eval' || filepath === `${this.routePrefix}eval`)
             return await this.evalEndpoint(request);
 
-        const response = await this.rpcHandler(request.url, jsExprSrc, searchParams, bodyArgs, session_token, isHtmxRequest);
+        const response = await this.rpcHandler(request.url, jsExprSrc, searchParams, bodyArgs, session_token, isHtmxRequest,
+                                               request.method ?? 'GET');
 
         // For htmx, turn a server-side redirect into an HX-Redirect (htmx follows
         // it as a real client navigation rather than swapping the redirected page).
@@ -383,7 +384,8 @@ export abstract class LiminalApp {
     async dispatch(jsExprSrc: string,
                    opts: {queryArgs?: Record<string, any>,
                           bodyArgs?: Record<string, any>,
-                          session_token?: string} = {}): Promise<any> {
+                          session_token?: string,
+                          httpMethod?: string} = {}): Promise<any> {
         const queryArgs = opts.queryArgs ?? {};
         const bodyArgs = opts.bodyArgs ?? {};
 
@@ -401,7 +403,7 @@ export abstract class LiminalApp {
                 rpcArgBindings[k] = v;
         rootScope = Object.assign({}, rootScope, rpcArgBindings);
 
-        let result: any = evalRoute(rootScope, jsExprSrc);
+        let result: any = evalRoute(rootScope, jsExprSrc, opts.httpMethod ?? 'POST');
         while(result instanceof Promise)
             result = await result;
 
@@ -418,7 +420,8 @@ export abstract class LiminalApp {
                      queryArgs: Record<string, any>,
                      bodyArgs: Record<string, any>,
                      session_token: string | undefined,
-                     isHtmxRequest: boolean = false): Promise<any> {
+                     isHtmxRequest: boolean = false,
+                     httpMethod: string = 'POST'): Promise<any> {
 
         console.info('***', new Date().toLocaleString(), '::', jsExprSrc);
 
@@ -429,8 +432,13 @@ export abstract class LiminalApp {
 
         let result: any = null;
         try {
-            result = await this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token});
+            result = await this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token, httpMethod});
         } catch(e) {
+            // A state-changing route reached via GET -> 405 (closes GET-CSRF).
+            if(e instanceof RouteMethodError) {
+                console.info('route requires POST', jsExprSrc);
+                return server.jsonResponse({error: 'method not allowed'}, 405);
+            }
             // Undeclared route member: not a route at all -> 404 (don't leak which
             // members/args exist).
             if(e instanceof RouteUndeclaredError) {

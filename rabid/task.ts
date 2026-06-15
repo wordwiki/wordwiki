@@ -42,7 +42,7 @@ import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
-import {route, authenticated} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
+import {route, routeMutation, authenticated} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as date from "../liminal/date.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
@@ -202,7 +202,7 @@ export class ProjectTable extends Table<Project> {
 
     // Point the project at the committee's named group (live), and drop the
     // project's own now-orphaned adhoc group.
-    @route(authenticated)
+    @routeMutation(authenticated)
     assignCommittee(args: {project_id?: string|number, committee_id?: string|number}): Markup {
         const project_id = Number(args?.project_id);
         const committee_id = Number(args?.committee_id);
@@ -222,7 +222,7 @@ export class ProjectTable extends Table<Project> {
     }
 
     // The EXPLICIT committee->custom conversion (always behind a confirm).
-    @route(authenticated)
+    @routeMutation(authenticated)
     customizeMembers(project_id: number): Markup {
         const p = this.getById(project_id);
         if(!this.canEditRecord(p))
@@ -272,11 +272,11 @@ export class ProjectTable extends Table<Project> {
     // terminal flag (the `deleted` column, presented as "Done" in the UI; the
     // edit dialog's Done checkbox is the same flag).  updateNamedFields above
     // stamps/clears the archived_time/archived_by provenance.
-    @route(authenticated)
+    @routeMutation(authenticated)
     markDone(project_id: number): Markup {
         return this.setDone(project_id, 1);
     }
-    @route(authenticated)
+    @routeMutation(authenticated)
     reopen(project_id: number): Markup {
         return this.setDone(project_id, 0);
     }
@@ -801,7 +801,7 @@ export class TaskTable extends Table<Task> {
     // The merged-page checkbox: open <-> done.  (in-progress counts as
     // not-done: checking completes it; unchecking a done task reopens to
     // 'open'.)  updateNamedFields stamps/clears the completion provenance.
-    @route(authenticated)
+    @routeMutation(authenticated)
     toggleDone(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -814,9 +814,9 @@ export class TaskTable extends Table<Task> {
     // tasks, the done wall keeps its own order (the two never interleave on
     // screen, so a cross-partition move would be a visual no-op).  A move at
     // the end is a plain no-op; either way the list fragment reloads.
-    @route(authenticated)
+    @routeMutation(authenticated)
     moveUp(task_id: number): Markup { return this.moveBy(task_id, -1); }
-    @route(authenticated)
+    @routeMutation(authenticated)
     moveDown(task_id: number): Markup { return this.moveBy(task_id, +1); }
     private moveBy(task_id: number, dir: -1|1): Markup {
         const t = this.getById(task_id);
@@ -1086,7 +1086,7 @@ export class TaskTable extends Table<Task> {
     // Start an exclusive per-task assignment: an empty task-owned adhoc group,
     // ready for Add member.  (The two-step - override, then add - keeps this a
     // plain immediate action; the action row appears as soon as it reloads.)
-    @route(authenticated)
+    @routeMutation(authenticated)
     overrideAssignees(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1100,7 +1100,7 @@ export class TaskTable extends Table<Task> {
 
     // Back to inheritance: drop the override (and its now-orphaned owned adhoc
     // group; a committee's group is never touched).
-    @route(authenticated)
+    @routeMutation(authenticated)
     revertAssignees(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1141,7 +1141,7 @@ export class TaskTable extends Table<Task> {
     // and drop the task's own now-orphaned adhoc group if it had one.  Args
     // arrive from our own dialog's form (strings - the same trust model as
     // saveForm).
-    @route(authenticated)
+    @routeMutation(authenticated)
     assignCommittee(args: {task_id?: string|number, committee_id?: string|number}): Markup {
         const task_id = Number(args?.task_id);
         const committee_id = Number(args?.committee_id);
@@ -1168,7 +1168,7 @@ export class TaskTable extends Table<Task> {
     // The EXPLICIT committee->custom conversion (always behind the confirm
     // button above): snapshot the committee's current members into a fresh
     // task-owned adhoc group, with derived_from keeping the provenance label.
-    @route(authenticated)
+    @routeMutation(authenticated)
     customizeMembers(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1295,7 +1295,7 @@ export class SubtaskTable extends Table<Subtask> {
     // "Add completed item" path: this is a SHARED task system, also used to
     // tell others what got done - insert() stamps the born-done provenance
     // (who/when) so the item reads "Hazel, Jun 12" immediately.
-    @route(authenticated)
+    @routeMutation(authenticated)
     addItem(args: {task_id?: string|number, title?: string, done?: string|number}): Markup {
         const task_id = Number(args?.task_id);
         const title = String(args?.title ?? '').trim();
@@ -1309,7 +1309,7 @@ export class SubtaskTable extends Table<Subtask> {
     }
 
     // Checking stamps who/when; unchecking clears (current-state provenance).
-    @route(authenticated)
+    @routeMutation(authenticated)
     toggle(subtask_id: number): Markup {
         const s = this.getById(subtask_id);
         if(!canEditTask(s.task_id))
@@ -1322,7 +1322,7 @@ export class SubtaskTable extends Table<Subtask> {
         return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
     }
 
-    @route(authenticated)
+    @routeMutation(authenticated)
     remove(subtask_id: number): Markup {
         const s = this.getById(subtask_id);
         if(!canEditTask(s.task_id))
@@ -1335,9 +1335,9 @@ export class SubtaskTable extends Table<Subtask> {
 
     // Reorder within the task's checklist; a move at the end is a plain
     // no-op.  Reloads the checklist fragment (and stamps the task).
-    @route(authenticated)
+    @routeMutation(authenticated)
     moveUp(subtask_id: number): Markup { return this.moveBy(subtask_id, -1); }
-    @route(authenticated)
+    @routeMutation(authenticated)
     moveDown(subtask_id: number): Markup { return this.moveBy(subtask_id, +1); }
     private moveBy(subtask_id: number, dir: -1|1): Markup {
         const s = this.getById(subtask_id);

@@ -48,8 +48,8 @@ import * as acorn from "npm:acorn@8.11.3";
 import {Node, Identifier, Literal, ArrayExpression, ObjectExpression,
         MemberExpression, CallExpression, NewExpression, Property,
         Expression, SpreadElement, PrivateIdentifier} from "npm:acorn@8.11.3";
-import {routePermissionOf, current as currentCtx, type SecurityContext,
-        route, authenticated, publicRoute, selfArg, run as runAs} from "./security.ts";
+import {routePermissionOf, routeIsMutation, current as currentCtx, type SecurityContext,
+        route, routeMutation, authenticated, publicRoute, selfArg, run as runAs} from "./security.ts";
 
 export type JsNode = Node;
 export type Scope = Record<string, any>;
@@ -112,8 +112,12 @@ function memberKey(obj: any, name: PropertyKey): string {
     return `${cls}.${String(name)}`;
 }
 
-export function evalRouteExprSrc(scope: Scope, src: string, policy: RoutePolicy = 'strict'): any {
-    return new RouteEval(policy).eval(scope, parseRouteExpr(src));
+// httpMethod gates mutates routes (POST-only).  Defaults to 'POST' so non-HTTP
+// callers (the server passes the real method; tests pass it explicitly) aren't
+// surprised; the server passing 'GET' is what catches a GET to a mutation.
+export function evalRouteExprSrc(scope: Scope, src: string, policy: RoutePolicy = 'strict',
+                                 httpMethod: string = 'POST'): any {
+    return new RouteEval(policy, httpMethod).eval(scope, parseRouteExpr(src));
 }
 
 // A declared route the actor isn't permitted to reach (strict policy).  Distinct
@@ -129,6 +133,13 @@ export class RouteUndeclaredError extends Error {
     constructor(readonly member: string) {
         super(`routeterp: '${member}' is not an exposed route member`);
         this.name = 'RouteUndeclaredError';
+    }
+}
+// A state-changing (mutates) route reached via GET - rejected to close GET-CSRF.
+export class RouteMethodError extends Error {
+    constructor(readonly member: string) {
+        super(`routeterp: '${member}' is a mutation and must be POSTed`);
+        this.name = 'RouteMethodError';
     }
 }
 
@@ -155,7 +166,9 @@ function isSafeMember(obj: any, name: PropertyKey): boolean {
 export class RouteEval {
     ticksUsed = 0;
 
-    constructor(readonly policy: RoutePolicy = 'strict', readonly maxTicks: number = 100_000) {}
+    constructor(readonly policy: RoutePolicy = 'strict',
+                readonly httpMethod: string = 'POST',
+                readonly maxTicks: number = 100_000) {}
 
     eval(s: Scope, e: JsNode): any {
         if(this.ticksUsed++ > this.maxTicks)
@@ -244,6 +257,11 @@ export class RouteEval {
     // @safe-only member (no @route perm) is capability-gated but not authz'd.
     authorize(obj: any, name: PropertyKey, args: any[] | undefined): void {
         if(this.policy !== 'strict') return;
+        // A state-changing route must be POSTed - reject a GET (closes GET-CSRF).
+        // Checked before auth, and not bypassed by the system ctx (it's about the
+        // HTTP method, not the actor; internal callers default to POST anyway).
+        if(this.httpMethod === 'GET' && routeIsMutation(obj, name))
+            throw new RouteMethodError(memberKey(obj, name));
         const perm = routePermissionOf(obj, name);
         if(!perm) return;
         const ctx = currentCtx() ?? ANON;

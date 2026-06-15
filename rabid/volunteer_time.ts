@@ -26,7 +26,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import {reloadableItemProps, pencilIcon, ForeignKeyField} from "../liminal/table.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
-import {route, authenticated, hostOrAdmin, selfArg} from "../liminal/security.ts";
+import {route, routeMutation, authenticated, hostOrAdmin, selfArg} from "../liminal/security.ts";
 
 // Manage a volunteer's own time, or (host/admin) anyone's.  The volunteer id is
 // an arg, so the route can express it without loading a record.
@@ -250,7 +250,7 @@ export class VolunteerTimeService {
             });
     }
 
-    @route(ownTimeOrHost)
+    @routeMutation(ownTimeOrHost)
     addTimesheet(args: {volunteer_id?: string|number, start_time?: string, end_time?: string, notes?: string}): Markup {
         const volunteer_id = Number(args?.volunteer_id);
         if(!canManage(volunteer_id)) throw new Error('Not permitted to add time for this volunteer');
@@ -286,7 +286,7 @@ export class VolunteerTimeService {
             });
     }
 
-    @route(ownTimeOrHost)
+    @routeMutation(ownTimeOrHost)
     checkIntoEvent(args: {volunteer_id?: string|number, event_id?: string|number}): Markup {
         const volunteer_id = Number(args?.volunteer_id);
         const event_id = Number(args?.event_id);

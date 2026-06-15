@@ -5,7 +5,7 @@ import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import * as security from "../liminal/security.ts";
-import {route, authenticated} from "../liminal/security.ts";
+import {route, routeMutation, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
@@ -134,7 +134,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
     // An edit may be shown inside a volunteer's reconciled time view (volunteer_time.ts),
     // so also reload that fragment - htmx ignores the selector when it isn't present
     // (e.g. an edit from the global Timesheets list).
-    @route(authenticated)   // override re-declares the route perm (base's marker is on Table.saveForm)
+    @routeMutation(authenticated)   // override re-declares the route perm (base's marker is on Table.saveForm)
     override saveForm(form: Record<string, string>): Markup {
         const result = super.saveForm(form) as any;
         const id = Number(form?.timesheet_entry_id);

@@ -10,7 +10,7 @@ import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
-import {route, authenticated, selfArg} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
+import {route, routeMutation, authenticated, selfArg} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as templates from './templates.ts';
 import * as action from "../liminal/action.ts";
 import {rabid} from './rabid.ts';
@@ -709,7 +709,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // "Check me in": sign the CURRENT actor in.  Ungated (self-signup is always
     // allowed); idempotent (no-op if already checked in).  insert() snapshots
     // was_staff from the volunteer's current is_staff.
-    @route(authenticated)   // self-signup: any logged-in volunteer checks themselves in
+    @routeMutation(authenticated)   // self-signup: any logged-in volunteer checks themselves in
     checkSelfIn(event_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(actorId === undefined) throw new Error('Not logged in as a volunteer');
@@ -720,7 +720,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
 
     // "Check someone in": host/admin checks another volunteer in (args from the
     // check-in dialog's form - strings, like every bodyArgs form).
-    @route(hostOrAdmin)     // checking SOMEONE ELSE in
+    @routeMutation(hostOrAdmin)     // checking SOMEONE ELSE in
     checkIn(args: {event_id?: string|number, volunteer_id?: string|number}): Markup {
         const event_id = Number(args?.event_id);
         const volunteer_id = Number(args?.volunteer_id);
@@ -735,7 +735,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
 
     // Check a volunteer out (remove their check-in).  Own check-in always; anyone
     // else's needs host/admin.  Immediate (picking the named item is deliberate).
-    @route(security.or(hostOrAdmin, selfArg(args => Number(args[1]))))   // own check-out, or host
+    @routeMutation(security.or(hostOrAdmin, selfArg(args => Number(args[1]))))   // own check-out, or host
     checkOut(event_id: number, volunteer_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(!this.canManageCheckins() && actorId !== volunteer_id)
@@ -747,7 +747,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
     }
 
     // Clear the whole attendance list (host/admin; confirm-gated - it's bulk).
-    @route(hostOrAdmin)
+    @routeMutation(hostOrAdmin)
     checkOutAll(event_id: number): Markup {
         if(!this.canManageCheckins())
             throw new Error('Not permitted to check out volunteers for this event');
@@ -805,7 +805,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
             });
     }
 
-    @route(authenticated)   // pk-keyed: the method's assertCanManageCheckin does self-or-host
+    @routeMutation(authenticated)   // pk-keyed: the method's assertCanManageCheckin does self-or-host
     editCheckin(args: {event_checkin_id?: string|number, start_time?: string, end_time?: string, notes?: string}): Markup {
         const id = Number(args?.event_checkin_id);
         if(!Number.isInteger(id)) throw new Error('bad check-in id');
