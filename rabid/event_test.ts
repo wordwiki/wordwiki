@@ -85,3 +85,86 @@ test("the summary-card title links to the detail page - except ON the detail pag
         assert(!find(detail, n => tagOf(n) === "a" && hasClass(n, "card-title")));
     });
 });
+
+// --- Event check-in editor -----------------------------------------------------
+
+test("check-in: self-signup is always allowed and idempotent", async () => {
+    await withTestDb(async ({ bob }) => {
+        const id = insertEvent();
+        // A regular volunteer checks themselves in (no host role needed).
+        const res = await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        assertEquals(res.action, "reload");
+        assertEquals(res.targets, [`.-event_checkin-${id}-`]);
+        // Idempotent: checking in again is a no-op (one row).
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        const checkins = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
+        assertEquals(checkins.map(c => c.volunteer_name), ["Bob Shares"]);
+        // ...and they can check themselves back out.
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, bob));
+        assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id})).length, 0);
+    });
+});
+
+test("check-in: checking OTHERS in/out needs host/admin", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        // bob (regular) may not check carol in, nor out once she's in.
+        await asUser(bob, () => assertRejects(
+            () => invoke(`rabid.event_checkin.checkIn($arg0)`,
+                         {event_id: String(id), volunteer_id: String(carol)}),
+            Error, "Not permitted to check volunteers into this event"));
+        await asUser(bob, () => assertRejects(
+            () => renderRoute(`rabid.event_checkin.checkInDialog(${id})`),
+            Error, "Not permitted"));
+
+        // alice (host) checks carol in; bob still can't check her out.
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkIn($arg0)`,
+            {event_id: String(id), volunteer_id: String(carol)}));
+        assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}))
+            .map(c => c.volunteer_name), ["Carol Private"]);
+        await asUser(bob, () => assertRejects(
+            () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, carol),
+            Error, "Not permitted to check out this volunteer"));
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, carol));
+        assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id})).length, 0);
+    });
+});
+
+test("check-in: was_staff is snapshotted at check-in and never rewritten", async () => {
+    await withTestDb(async ({ bob }) => {
+        const id = insertEvent();
+        asSystem(() => rabid.volunteer.update(bob, {is_staff: 1}));   // bob is staff now
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}))[0].was_staff, 1);
+
+        // bob later stops being staff - the past check-in still counts as staff time.
+        asSystem(() => rabid.volunteer.update(bob, {is_staff: 0}));
+        assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}))[0].was_staff, 1);
+        const editor = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(hasText(editor, "(staff)"));
+    });
+});
+
+test("check-in editor: self verb for everyone, host verbs only for hosts", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();
+
+        // Logged-in non-attendee: "Check me in", but NOT the host's "Check someone in…".
+        const before = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(!!find(before, byClass("lm-action-menu")));
+        assert(hasText(before, "Check me in"));
+        assert(!hasText(before, "Check someone in…"));
+
+        // Once checked in, the self verb flips to "Check me out".
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        const after = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(hasText(after, "Bob Shares"));
+        assert(!hasText(after, "Check me in"));
+        assert(hasText(after, "Check me out"));
+
+        // The host gets the management verbs (check someone in, check others out).
+        const hostView = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(hasText(hostView, "Check someone in…"));
+        assert(hasText(hostView, "Check out Bob Shares"));
+    });
+});

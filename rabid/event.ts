@@ -11,6 +11,8 @@ import { faker } from "@faker-js/faker";
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
 import * as templates from './templates.ts';
+import * as action from "../liminal/action.ts";
+import {rabid} from './rabid.ts';
 
 export const routes = ()=> ({
 });
@@ -213,7 +215,7 @@ export class EventTable extends Table<Event> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
              this.canEditRecord(e) ? this.editPencil(event_id) : undefined],
-            this.renderEventSummary(event_id, {titleLink: false}),
+            this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true}),
         ];
     }
 
@@ -295,7 +297,7 @@ export class EventTable extends Table<Event> {
     // The summary card.  titleLink: the title links to the event's detail page
     // (the home upcoming-events cards) - the detail page itself passes false,
     // since there it would be a pointless self-link.
-    renderEventSummary(event_id: number, opts: {titleLink?: boolean} = {}): Markup {
+    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean} = {}): Markup {
         const titleLink = opts.titleLink ?? true;
 
         // Get the event
@@ -446,9 +448,18 @@ export class EventTable extends Table<Event> {
             );
         }
 
-        // Checked-in row (actual attendance) - only shown once anyone has
-        // checked in.  Staff are marked, since attendance mixes both.
-        if (checkins.length > 0) {
+        // Checked-in row (actual attendance).  On the detail page (editableCheckins)
+        // the value IS the check-in editor (always shown, so the ☰ is reachable
+        // even with nobody checked in yet); elsewhere (cards) it's a read-only
+        // names list, shown only once someone has checked in.  Staff are marked.
+        if (opts.editableCheckins) {
+            gridRows.push(
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Checked in:'],
+                    [h.div, {}, rabid.event_checkin.renderCheckinEditor(event_id)]
+                ]
+            );
+        } else if (checkins.length > 0) {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Checked in:'],
@@ -685,6 +696,152 @@ export class EventCheckinTable extends Table<EventCheckin> {
               [h.td, {class: 'text-end fw-bold'}, totalHours.toFixed(1)]],
             ]];
     }
+
+    // ------------------------------------------------------------------------
+    // --- Check-in editor (the attendance UI) ---------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // Modelled on the group member editor's interaction language: the attendee
+    // names as a document phrase ("Hazel, Bob (staff) and Carol") plus ONE ☰
+    // holding every check-in verb.  "Check me in" is the always-allowed
+    // self-signup (a volunteer org's dominant flow - I'll take that); checking
+    // OTHERS in/out (the host's "check everyone in") needs host/admin.
+
+    // Can the current actor manage anyone's check-in on this event (host/admin)?
+    // Self check-in / check-out is allowed regardless and handled per-action.
+    private canManageCheckins(): boolean {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return true;
+        return hostOrAdmin({ctx});
+    }
+
+    private hasCheckin(event_id: number, volunteer_id: number): boolean {
+        return !!db().prepare<{n: number}, {event_id: number, volunteer_id: number}>(
+            'SELECT 1 AS n FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id')
+            .first({event_id, volunteer_id});
+    }
+
+    private reloadEditor(event_id: number): Markup {
+        return {action: 'reload', targets: [`.-event_checkin-${event_id}-`]} as unknown as Markup;
+    }
+
+    // "Check me in": sign the CURRENT actor in.  Ungated (self-signup is always
+    // allowed); idempotent (no-op if already checked in).  insert() snapshots
+    // was_staff from the volunteer's current is_staff.
+    checkSelfIn(event_id: number): Markup {
+        const actorId = security.current()?.actorId;
+        if(actorId === undefined) throw new Error('Not logged in as a volunteer');
+        if(!this.hasCheckin(event_id, actorId))
+            this.insert({event_id, volunteer_id: actorId, notes: ''});
+        return this.reloadEditor(event_id);
+    }
+
+    // "Check someone in": host/admin checks another volunteer in (args from the
+    // check-in dialog's form - strings, like every bodyArgs form).
+    checkIn(args: {event_id?: string|number, volunteer_id?: string|number}): Markup {
+        const event_id = Number(args?.event_id);
+        const volunteer_id = Number(args?.volunteer_id);
+        if(!Number.isInteger(event_id) || !Number.isInteger(volunteer_id) || !volunteer_id)
+            throw new Error('Please choose a volunteer');
+        if(!this.canManageCheckins())
+            throw new Error('Not permitted to check volunteers into this event');
+        if(!this.hasCheckin(event_id, volunteer_id))
+            this.insert({event_id, volunteer_id, notes: ''});
+        return this.reloadEditor(event_id);
+    }
+
+    // Check a volunteer out (remove their check-in).  Own check-in always; anyone
+    // else's needs host/admin.  Immediate (picking the named item is deliberate).
+    checkOut(event_id: number, volunteer_id: number): Markup {
+        const actorId = security.current()?.actorId;
+        if(!this.canManageCheckins() && actorId !== volunteer_id)
+            throw new Error('Not permitted to check out this volunteer');
+        db().execute<{event_id: number, volunteer_id: number}>(
+            'DELETE FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id',
+            {event_id, volunteer_id});
+        return this.reloadEditor(event_id);
+    }
+
+    // Clear the whole attendance list (host/admin; confirm-gated - it's bulk).
+    checkOutAll(event_id: number): Markup {
+        if(!this.canManageCheckins())
+            throw new Error('Not permitted to check out volunteers for this event');
+        db().execute<{event_id: number}>(
+            'DELETE FROM event_checkin WHERE event_id = :event_id', {event_id});
+        return this.reloadEditor(event_id);
+    }
+
+    // The check-someone-in dialog: one volunteer picker, event id riding hidden.
+    checkInDialog(event_id: number): Markup {
+        if(!this.canManageCheckins())
+            throw new Error('Not permitted to check volunteers into this event');
+        return action.renderParamForm(
+            [new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name')],
+            {},
+            {
+                title: 'Check a volunteer in',
+                submitLabel: 'Check in',
+                hidden: {event_id},
+                fieldContext: {ownerPath: 'rabid.event_checkin'},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.event_checkin.checkIn(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    // The reloadable attendance fragment: the attendee names + the one ☰.  Lives
+    // inside the fragment so a check-in reload regenerates it (the per-person
+    // check-out items must track the roster).
+    renderCheckinEditor(event_id: number): Markup {
+        const checkins = this.checkinsForEvent.all({event_id});
+        const ctx = security.current();
+        const actorId = ctx?.actorId;
+        const canManage = this.canManageCheckins();
+        const isCheckedIn = actorId !== undefined && checkins.some(c => c.volunteer_id === actorId);
+        const props = this.reloadableItemProps(event_id, `rabid.event_checkin.renderCheckinEditor(${event_id})`);
+
+        const items: action.ActionMenuItem[] = [];
+        if(actorId !== undefined && !isCheckedIn)
+            items.push({label: 'Check me in',
+                        mode: {kind: 'immediate', expr: `rabid.event_checkin.checkSelfIn(${event_id})`}});
+        if(canManage)
+            items.push({label: 'Check someone in…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.event_checkin.checkInDialog(${event_id})`}});
+        // Per-person check-out: own row always; others only with host/admin.
+        const removable = checkins.filter(c => canManage || c.volunteer_id === actorId);
+        if(items.length > 0 && removable.length > 0) items.push('divider');
+        for(const c of removable)
+            items.push({label: c.volunteer_id === actorId ? 'Check me out' : `Check out ${c.volunteer_name}`,
+                        mode: {kind: 'immediate',
+                               expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
+        if(canManage && checkins.length >= 2)
+            items.push({label: 'Check everyone out…',
+                        mode: {kind: 'confirm',
+                               expr: `rabid.event_checkin.checkOutAll(${event_id})`,
+                               message: `Check out all ${checkins.length} volunteers?`}});
+
+        return [h.span, {...props, class: 'lm-name-list ' + props.class},
+            checkins.length === 0
+                ? [h.span, {class: 'text-muted small'}, 'nobody yet']
+                : joinNames(checkins.map(c => this.renderCheckinName(c))),
+            items.length > 0
+                ? [checkins.length > 0 ? ' ' : '', action.actionMenu(items, {ariaLabel: 'Check-in actions'})]
+                : undefined,
+        ];
+    }
+
+    // One attendee as inline text: name (quiet link to the volunteer page), staff
+    // marked (attendance mixes volunteers and staff).
+    renderCheckinName(c: EventCheckin & {volunteer_name: string}): Markup {
+        return [h.span, {class: 'lm-member', 'data-testid': `checkin-${c.volunteer_id}`},
+            templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, c.volunteer_name),
+            c.was_staff ? [h.span, {class: 'text-muted small'}, ' (staff)'] : undefined];
+    }
+}
+
+// "A", "A and B", "A, B and C" - a set of names as a document phrase.
+function joinNames(parts: Markup[]): Markup[] {
+    return parts.flatMap((p, i) =>
+        i === 0 ? [p] : [i === parts.length - 1 ? ' and ' : ', ', p]);
 }
 
 // Duration of a check-in in hours, given its effective start/end (0 if either
