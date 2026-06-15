@@ -9,6 +9,7 @@ import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
 
@@ -125,6 +126,7 @@ export class SaleTable extends Table<Sale> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderSaleRowById(id: number): Markup {
         return this.renderSaleRow(this.getById(id));
     }
@@ -143,6 +145,7 @@ export class SaleTable extends Table<Sale> {
     // --- Sale detail page ----------------------------------------------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     detailPage(sale_id: number): templates.Page {
         const s = this.getById(sale_id);
         return templates.page(`${s.description || sale_kind_enum[s.sale_kind] || 'Sale'} — Sale`,
@@ -150,6 +153,7 @@ export class SaleTable extends Table<Sale> {
     }
 
     // Reloadable fragment (an edit save re-renders it).
+    @route(authenticated)
     renderSaleDetail(sale_id: number): Markup {
         const s = this.getById(sale_id);
         const recordedBy = security.runSystem(() =>

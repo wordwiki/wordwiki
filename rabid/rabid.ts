@@ -28,6 +28,7 @@ import { Temporal } from 'temporal-polyfill';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
 import * as security from '../liminal/security.ts';
+import {route, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {LiminalApp, type LiminalServerConfig, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
 import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
 import {TEST_RUNS} from './browser_test_demo.ts';
@@ -51,28 +52,32 @@ export class Rabid extends LiminalApp {
     pages: Record<string, any>;
 
     @path get config() { return new config.ConfigTable(); }
-    @path get volunteer() { return new volunteer.VolunteerTable(); }
+    // Service getters are navigation: reaching any table requires a login (the
+    // leaf method then carries its own route perm).  The internal auth tables
+    // (passwordHash/passwordReset/volunteerLoginSession) are deliberately NOT
+    // exposed as routes - they stay unreachable from a URL.
+    @route(authenticated) @path get volunteer() { return new volunteer.VolunteerTable(); }
     @path get passwordHash() { return new volunteer.PasswordHashTable(); }
     @path get passwordReset() { return new volunteer.PasswordResetTable(); }
     @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
-    @path get timesheet_entry() { return new timesheet.TimesheetEntryTable(); }
-    @path get event() { return new event.EventTable(); }
-    @path get event_commitment() { return new event.EventCommitmentTable(); }
-    @path get event_checkin() { return new event.EventCheckinTable(); }
+    @route(authenticated) @path get timesheet_entry() { return new timesheet.TimesheetEntryTable(); }
+    @route(authenticated) @path get event() { return new event.EventTable(); }
+    @route(authenticated) @path get event_commitment() { return new event.EventCommitmentTable(); }
+    @route(authenticated) @path get event_checkin() { return new event.EventCheckinTable(); }
     // A view-service (not a table): the reconciled per-volunteer time view.
-    @path get volunteer_time() { return new volunteer_time.VolunteerTimeService(); }
-    @path get sale() { return new sale.SaleTable(); }
-    @path get service() { return new service.ServiceTable(); }
-    @path get volunteer_group() { return new group.VolunteerGroupTable(); }
-    @path get group_member() { return new group.GroupMemberTable(); }
-    @path get committee() { return new committee.CommitteeTable(); }
-    @path get project() { return new task.ProjectTable(); }
-    @path get task() { return new task.TaskTable(); }
-    @path get subtask() { return new task.SubtaskTable(); }
+    @route(authenticated) @path get volunteer_time() { return new volunteer_time.VolunteerTimeService(); }
+    @route(authenticated) @path get sale() { return new sale.SaleTable(); }
+    @route(authenticated) @path get service() { return new service.ServiceTable(); }
+    @route(authenticated) @path get volunteer_group() { return new group.VolunteerGroupTable(); }
+    @route(authenticated) @path get group_member() { return new group.GroupMemberTable(); }
+    @route(authenticated) @path get committee() { return new committee.CommitteeTable(); }
+    @route(authenticated) @path get project() { return new task.ProjectTable(); }
+    @route(authenticated) @path get task() { return new task.TaskTable(); }
+    @route(authenticated) @path get subtask() { return new task.SubtaskTable(); }
 
     // Photo upload + on-demand presentation sizing (liminal/photo.ts).  The
     // stores live beside the db: they are data, not code.
-    @path get photo() {
+    @route(authenticated) @path get photo() {
         return new photo.PhotoService({
             contentDir: 'database/content',
             derivedDir: 'database/derived',
@@ -232,6 +237,7 @@ export class Rabid extends LiminalApp {
 
     // ----- Login / logout (app-specific auth) --------------------------------
 
+    @route(publicRoute('login page — the unauthenticated entry point'))
     login(targetUrl: string, errorMessage?: string): Markup {
 
         // TODO: rendering the login page while already logged in is confusing - probably 301 to the
@@ -294,6 +300,7 @@ export class Rabid extends LiminalApp {
     }
 
 
+    @route(publicRoute('login form submit — authenticates the user'))
     loginRequest(args: {email?: string, password?: string, targetUrl?: string}) {
 
         const {email, password} = args;
@@ -357,6 +364,7 @@ export class Rabid extends LiminalApp {
     /**
      * Log out: clear the session (server record + client cookie) and redirect home.
      */
+    @route(publicRoute('logout — clears the session; harmless when anonymous'))
     logout(session_token?: string): server.Response {
         if(session_token) {
             // If this session was a test client, drop its in-memory channel state.
@@ -409,6 +417,7 @@ export class Rabid extends LiminalApp {
     }
 
     // Step 1 (generator): confirmation dialog for issuing a reset link.
+    @route(hostOrAdmin)
     resetLinkDialog(volunteer_id: number): Markup {
         this.assertHostOrSystem();
         const v = rabid.volunteer.getById(volunteer_id);
@@ -464,6 +473,7 @@ export class Rabid extends LiminalApp {
 
     // The volunteer-facing set-your-password page (unauthenticated: the token
     // is the authentication).
+    @route(publicRoute('password reset — the emailed single-use token is the auth'))
     async resetPassword(token: string, errorMessage?: string): Promise<templates.Page> {
         const reset = await this.validResetRecord(token);
         if(!reset) {
@@ -504,6 +514,7 @@ export class Rabid extends LiminalApp {
 
     // Redeem: set the password, consume ALL the volunteer's outstanding reset
     // tokens, end any existing sessions, and log them straight in.
+    @route(publicRoute('password reset submit — token-authenticated'))
     async resetPasswordRequest(args: {token?: string, password?: string, password2?: string}) {
         const token = args?.token ?? '';
         const reset = await this.validResetRecord(token);

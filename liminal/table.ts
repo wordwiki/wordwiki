@@ -1277,6 +1277,7 @@ export class TableRenderer<T extends Tuple> {
     /**
      * Convenience function for single row re-render.
      */
+    @route(authenticated)
     renderRowById(rowId: number): Markup {
         return this.renderRow(this.table.getById(rowId));
     }
@@ -1315,6 +1316,7 @@ export class TableView<T extends Tuple> {
     /**
      * Convenience function for single row re-render.
      */
+    @route(authenticated)
     renderRowById(rowId: number): Markup {
         return this.tableRenderer.renderRow(this.tableRenderer.table.getById(rowId));
     }

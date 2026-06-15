@@ -15,6 +15,7 @@ import * as timestamp from '../liminal/timestamp.ts';
 import * as date from '../liminal/date.ts';
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
 
 export const routes = ()=> ({
@@ -161,6 +162,7 @@ export class ServiceTable extends Table<Service> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderServiceRowById(id: number): Markup {
         return this.renderServiceRow(this.getById(id));
     }
@@ -178,12 +180,14 @@ export class ServiceTable extends Table<Service> {
     // --- Service detail page -------------------------------------------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     detailPage(service_id: number): templates.Page {
         const s = this.getById(service_id);
         return templates.page(`${s.client_name || 'Service'} — Service`, this.renderServiceDetail(service_id));
     }
 
     // Reloadable fragment (an edit save re-renders it).
+    @route(authenticated)
     renderServiceDetail(service_id: number): Markup {
         const s = this.getById(service_id);
         const f = this.fieldsByName;

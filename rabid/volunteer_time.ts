@@ -26,6 +26,12 @@ import {Markup, h} from "../liminal/markup.ts";
 import {reloadableItemProps, pencilIcon, ForeignKeyField} from "../liminal/table.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated, hostOrAdmin, selfArg} from "../liminal/security.ts";
+
+// Manage a volunteer's own time, or (host/admin) anyone's.  The volunteer id is
+// an arg, so the route can express it without loading a record.
+const ownTimeOrHost = security.or(hostOrAdmin, selfArg('volunteer_id'));            // object-arg routes
+const ownTimeOrHostPositional = security.or(hostOrAdmin, selfArg(a => Number(a[0]))); // positional-arg routes
 import * as templates from "./templates.ts";
 import * as date from "../liminal/date.ts";
 import {rabid} from "./rabid.ts";
@@ -221,12 +227,14 @@ export class VolunteerTimeService {
         return reconcileTime(volunteer_id, timesheets, checkins);
     }
 
+    @route(authenticated)
     renderForVolunteer(volunteer_id: number): Markup {
         return renderVolunteerTime(this.model(volunteer_id), volunteer_id);
     }
 
     // --- Adding ------------------------------------------------------------
 
+    @route(ownTimeOrHostPositional)
     addTimesheetDialog(volunteer_id: number): Markup {
         if(!canManage(volunteer_id)) throw new Error('Not permitted to add time for this volunteer');
         const f = rabid.timesheet_entry.fieldsByName;
@@ -242,6 +250,7 @@ export class VolunteerTimeService {
             });
     }
 
+    @route(ownTimeOrHost)
     addTimesheet(args: {volunteer_id?: string|number, start_time?: string, end_time?: string, notes?: string}): Markup {
         const volunteer_id = Number(args?.volunteer_id);
         if(!canManage(volunteer_id)) throw new Error('Not permitted to add time for this volunteer');
@@ -261,6 +270,7 @@ export class VolunteerTimeService {
         return reload(volunteer_id);
     }
 
+    @route(ownTimeOrHostPositional)
     checkIntoEventDialog(volunteer_id: number): Markup {
         if(!canManage(volunteer_id)) throw new Error('Not permitted to check in this volunteer');
         return action.renderParamForm(
@@ -276,6 +286,7 @@ export class VolunteerTimeService {
             });
     }
 
+    @route(ownTimeOrHost)
     checkIntoEvent(args: {volunteer_id?: string|number, event_id?: string|number}): Markup {
         const volunteer_id = Number(args?.volunteer_id);
         const event_id = Number(args?.event_id);

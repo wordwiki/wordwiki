@@ -34,6 +34,7 @@ import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
 
@@ -156,6 +157,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
 
     // Args arrive from our own add-member dialog's form (strings, like every
     // bodyArgs form - the same trust model as saveForm).
+    @route(authenticated)   // gated in-method by canEditMembers (owner delegation)
     addMember(args: {group_id?: string|number, volunteer_id?: string|number}): Markup {
         const group_id = Number(args?.group_id);
         const volunteer_id = Number(args?.volunteer_id);
@@ -171,6 +173,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
         return {action:'reload', targets:[`.-volunteer_group-${group_id}-`]} as unknown as Markup;
     }
 
+    @route(authenticated)   // gated in-method by canEditMembers
     removeMember(group_id: number, volunteer_id: number): Markup {
         const g = this.getById(group_id);
         if(!this.canEditMembers(g))
@@ -187,6 +190,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     // allowed (dz policy: in a volunteer org, "I'll take that" is the
     // dominant flow and must never need an editor).  No-op if already a
     // member (the unique index).
+    @route(authenticated)   // self-signup: always allowed for a logged-in volunteer
     addSelf(group_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(actorId === undefined)
@@ -200,6 +204,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
 
     // Clear the roster wholesale (the long-roster escape hatch; the one
     // removal that keeps a confirm - it's bulk).
+    @route(authenticated)   // gated in-method by canEditMembers
     removeAllMembers(group_id: number): Markup {
         const g = this.getById(group_id);
         if(!this.canEditMembers(g))
@@ -241,6 +246,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     //     actor's own entry; IMMEDIATE - picking a named item is already a
     //     deliberate act, and re-adding is trivial), and the confirm-gated
     //     Remove all… (bulk) once there are 2+.
+    @route(authenticated)
     renderMemberEditor(group_id: number, ownerRoute?: string, owner_id?: number): Markup {
         const g = this.getById(group_id);
         const members = this.members.all({group_id});
@@ -302,6 +308,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     // group, or a task showing its project's assignees): member edits there
     // must go through the explicit flows, never silently into the referenced
     // group.
+    @route(authenticated)
     renderMemberList(group_id: number): Markup {
         const members = this.members.all({group_id});
         return [h.span, {class: 'lm-name-list'},
@@ -318,6 +325,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
 
     // The add-member parameter dialog: one volunteer picker (remote type-ahead
     // via group_member's volunteer_id FK route) + the group id riding hidden.
+    @route(authenticated)   // gated in-method by canEditMembers
     addMemberDialog(group_id: number): Markup {
         const g = this.getById(group_id);
         if(!this.canEditMembers(g))

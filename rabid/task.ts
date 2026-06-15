@@ -42,6 +42,7 @@ import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as date from "../liminal/date.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
@@ -178,6 +179,7 @@ export class ProjectTable extends Table<Project> {
     // and the same actions as a task override: an adhoc set of volunteers, or
     // a committee's named group (live) with the explicit customize snapshot.
 
+    @route(authenticated)
     assignCommitteeDialog(project_id: number): Markup {
         const p = this.getById(project_id);
         if(!this.canEditRecord(p))
@@ -200,6 +202,7 @@ export class ProjectTable extends Table<Project> {
 
     // Point the project at the committee's named group (live), and drop the
     // project's own now-orphaned adhoc group.
+    @route(authenticated)
     assignCommittee(args: {project_id?: string|number, committee_id?: string|number}): Markup {
         const project_id = Number(args?.project_id);
         const committee_id = Number(args?.committee_id);
@@ -219,6 +222,7 @@ export class ProjectTable extends Table<Project> {
     }
 
     // The EXPLICIT committee->custom conversion (always behind a confirm).
+    @route(authenticated)
     customizeMembers(project_id: number): Markup {
         const p = this.getById(project_id);
         if(!this.canEditRecord(p))
@@ -268,9 +272,11 @@ export class ProjectTable extends Table<Project> {
     // terminal flag (the `deleted` column, presented as "Done" in the UI; the
     // edit dialog's Done checkbox is the same flag).  updateNamedFields above
     // stamps/clears the archived_time/archived_by provenance.
+    @route(authenticated)
     markDone(project_id: number): Markup {
         return this.setDone(project_id, 1);
     }
+    @route(authenticated)
     reopen(project_id: number): Markup {
         return this.setDone(project_id, 0);
     }
@@ -305,6 +311,7 @@ export class ProjectTable extends Table<Project> {
 
     // Self-fetching reloadable list wrapper: a "New project" insert reloads
     // `.-project-` (the pk-less reload target the base saveForm emits).
+    @route(authenticated)
     renderProjectList(): Markup {
         const projects = this.activeProjects.all({});
         const props = this.reloadableItemProps(undefined, `rabid.project.renderProjectList()`);
@@ -339,11 +346,13 @@ export class ProjectTable extends Table<Project> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderProjectRowById(id: number): Markup {
         return this.renderProjectRow(this.getById(id));
     }
 
     // The top-level Projects page body (dispatched from the navbar's /projects).
+    @route(authenticated)
     renderProjectsPage(): Markup {
         const canCreate = this.canEditRecord({} as Project);
         return [h.div, {class: 'container py-3'},
@@ -358,6 +367,7 @@ export class ProjectTable extends Table<Project> {
         ];
     }
 
+    @route(hostOrAdmin)
     newDialog(): Markup {
         return this.renderForm({} as Project);
     }
@@ -366,6 +376,7 @@ export class ProjectTable extends Table<Project> {
     // --- Project detail page --------------------------------------------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     detailPage(project_id: number): templates.Page {
         const p = this.getById(project_id);
         return templates.page(`${p.name || 'Project'} — Project`, this.renderProjectDetail(project_id));
@@ -373,6 +384,7 @@ export class ProjectTable extends Table<Project> {
 
     // Reloadable fragment (an edit save re-renders it); the task list below is
     // its own fragment, so a new/edited task reloads just that.
+    @route(authenticated)
     renderProjectDetail(project_id: number): Markup {
         const p = this.getById(project_id);
         const canCreateTask = rabid.task.canEditRecord({} as any);
@@ -702,6 +714,7 @@ export class TaskTable extends Table<Task> {
 
     // Self-fetching reloadable fragment, tagged with the pk-less `-task-` class
     // (the reload target a "New task" saveForm insert emits).
+    @route(authenticated)
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
         const props = this.reloadableItemProps(undefined, `rabid.task.renderProjectTasks(${project_id})`);
@@ -780,6 +793,7 @@ export class TaskTable extends Table<Task> {
     }
 
     // Reload target for a single block (after a toggle or an edit save).
+    @route(authenticated)
     renderTaskBlockById(id: number): Markup {
         return this.renderTaskBlock(this.getById(id));
     }
@@ -787,6 +801,7 @@ export class TaskTable extends Table<Task> {
     // The merged-page checkbox: open <-> done.  (in-progress counts as
     // not-done: checking completes it; unchecking a done task reopens to
     // 'open'.)  updateNamedFields stamps/clears the completion provenance.
+    @route(authenticated)
     toggleDone(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -799,7 +814,9 @@ export class TaskTable extends Table<Task> {
     // tasks, the done wall keeps its own order (the two never interleave on
     // screen, so a cross-partition move would be a visual no-op).  A move at
     // the end is a plain no-op; either way the list fragment reloads.
+    @route(authenticated)
     moveUp(task_id: number): Markup { return this.moveBy(task_id, -1); }
+    @route(authenticated)
     moveDown(task_id: number): Markup { return this.moveBy(task_id, +1); }
     private moveBy(task_id: number, dir: -1|1): Markup {
         const t = this.getById(task_id);
@@ -879,6 +896,7 @@ export class TaskTable extends Table<Task> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderTaskRowById(id: number): Markup {
         return this.renderTaskRow(this.getById(id));
     }
@@ -886,6 +904,7 @@ export class TaskTable extends Table<Task> {
     // The "new task in this project" dialog: the record form over a partial
     // record carrying the project (renderForm's empty before-snapshots on
     // inserts are what make the preset survive an untouched picker).
+    @route(hostOrAdmin)
     newDialog(project_id: number): Markup {
         return this.renderForm({project_id} as Task);
     }
@@ -898,6 +917,7 @@ export class TaskTable extends Table<Task> {
     // actor, most urgent first), then all open tasks grouped by project.  New
     // tasks are created from a project page (a task needs its project); rows
     // here reload individually after an edit (`.-task-<id>-`).
+    @route(authenticated)
     renderTasksPage(): Markup {
         const actorId = security.current()?.actorId;
         const mine = actorId === undefined ? []
@@ -943,6 +963,7 @@ export class TaskTable extends Table<Task> {
     // --- Task detail page ------------------------------------------------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     detailPage(task_id: number): templates.Page {
         const t = this.getById(task_id);
         return templates.page(`${t.title || 'Task'} — Task`, this.renderTaskDetail(task_id));
@@ -950,6 +971,7 @@ export class TaskTable extends Table<Task> {
 
     // Reloadable fragment; the assignee editor and the checklist below it are
     // their own fragments (their mutations reload just themselves).
+    @route(authenticated)
     renderTaskDetail(task_id: number): Markup {
         const t = this.getById(task_id);
         const project = security.runSystem(() => rabid.project.getById(t.project_id));
@@ -1064,6 +1086,7 @@ export class TaskTable extends Table<Task> {
     // Start an exclusive per-task assignment: an empty task-owned adhoc group,
     // ready for Add member.  (The two-step - override, then add - keeps this a
     // plain immediate action; the action row appears as soon as it reloads.)
+    @route(authenticated)
     overrideAssignees(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1077,6 +1100,7 @@ export class TaskTable extends Table<Task> {
 
     // Back to inheritance: drop the override (and its now-orphaned owned adhoc
     // group; a committee's group is never touched).
+    @route(authenticated)
     revertAssignees(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1092,6 +1116,7 @@ export class TaskTable extends Table<Task> {
 
     // The assign-committee parameter dialog: one committee picker (type-ahead
     // via project's committee_id FK route) + the task id riding hidden.
+    @route(authenticated)
     assignCommitteeDialog(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1116,6 +1141,7 @@ export class TaskTable extends Table<Task> {
     // and drop the task's own now-orphaned adhoc group if it had one.  Args
     // arrive from our own dialog's form (strings - the same trust model as
     // saveForm).
+    @route(authenticated)
     assignCommittee(args: {task_id?: string|number, committee_id?: string|number}): Markup {
         const task_id = Number(args?.task_id);
         const committee_id = Number(args?.committee_id);
@@ -1142,6 +1168,7 @@ export class TaskTable extends Table<Task> {
     // The EXPLICIT committee->custom conversion (always behind the confirm
     // button above): snapshot the committee's current members into a fresh
     // task-owned adhoc group, with derived_from keeping the provenance label.
+    @route(authenticated)
     customizeMembers(task_id: number): Markup {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
@@ -1268,6 +1295,7 @@ export class SubtaskTable extends Table<Subtask> {
     // "Add completed item" path: this is a SHARED task system, also used to
     // tell others what got done - insert() stamps the born-done provenance
     // (who/when) so the item reads "Hazel, Jun 12" immediately.
+    @route(authenticated)
     addItem(args: {task_id?: string|number, title?: string, done?: string|number}): Markup {
         const task_id = Number(args?.task_id);
         const title = String(args?.title ?? '').trim();
@@ -1281,6 +1309,7 @@ export class SubtaskTable extends Table<Subtask> {
     }
 
     // Checking stamps who/when; unchecking clears (current-state provenance).
+    @route(authenticated)
     toggle(subtask_id: number): Markup {
         const s = this.getById(subtask_id);
         if(!canEditTask(s.task_id))
@@ -1293,6 +1322,7 @@ export class SubtaskTable extends Table<Subtask> {
         return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
     }
 
+    @route(authenticated)
     remove(subtask_id: number): Markup {
         const s = this.getById(subtask_id);
         if(!canEditTask(s.task_id))
@@ -1305,7 +1335,9 @@ export class SubtaskTable extends Table<Subtask> {
 
     // Reorder within the task's checklist; a move at the end is a plain
     // no-op.  Reloads the checklist fragment (and stamps the task).
+    @route(authenticated)
     moveUp(subtask_id: number): Markup { return this.moveBy(subtask_id, -1); }
+    @route(authenticated)
     moveDown(subtask_id: number): Markup { return this.moveBy(subtask_id, +1); }
     private moveBy(subtask_id: number, dir: -1|1): Markup {
         const s = this.getById(subtask_id);
@@ -1335,6 +1367,7 @@ export class SubtaskTable extends Table<Subtask> {
     // OUTSIDE this fragment so reloads never eat them).  Keyed by the TASK's
     // id: the fragment is "this task's checklist", so its mutations reload
     // `.-subtask-<task_id>-`.
+    @route(authenticated)
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
@@ -1384,6 +1417,7 @@ export class SubtaskTable extends Table<Subtask> {
 
     // The add-item parameter dialog: one title input + the task id (and, for
     // the Add-completed-item variant, done=1) riding hidden.
+    @route(authenticated)
     addItemDialog(task_id: number, completed: boolean = false): Markup {
         if(!canEditTask(task_id))
             throw new Error('Not permitted to edit this task');

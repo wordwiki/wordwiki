@@ -13,6 +13,7 @@ import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";
 
 // 'host' is a volunteer trusted with a bit more visibility - hosts run events
 // (e.g. volunteer nights) and are keyholders.  We deliberately use 'host' rather
@@ -228,6 +229,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // strings, checkboxes as booleans - see lmNavigateFormRoute); routes
     // trust their forms, no per-route normalizers.  Absent only_active
     // defaults to true (active volunteers are the common case).
+    @route(authenticated)
     search(args: {text?: string, only_active?: boolean} = {}): templates.Page {
         const text = args.text ?? '';
         const only_active = args.only_active ?? true;
@@ -268,6 +270,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // edit affordance.  Phone is deliberately NOT shown here - it is on the
     // detail page (keeps the list compact, and keeps the mostly-'***'
     // redacted column out of everyone's face).
+    @route(authenticated)
     renderVolunteerList(text: string, only_active: boolean): Markup {
         const rows = this.searchVolunteers.all({text, only_active: only_active ? 1 : 0});
         const scopeLabel = only_active ? 'active ' : '';
@@ -308,6 +311,7 @@ export class VolunteerTable extends Table<Volunteer> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderVolunteerRowById(id: number): Markup {
         return this.renderVolunteerRow(this.getById(id));
     }
@@ -316,6 +320,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // refines rather than restarts.  Submitting navigates (lmNavigateFormRoute
     // builds the route expression from the form: text fields as JSON-escaped
     // strings, checkboxes as booleans) - the result is the search PAGE.
+    @route(authenticated)
     searchDialog(args: {text?: string, only_active?: boolean} = {}): Markup {
         const text = args.text ?? '';
         const only_active = args.only_active ?? true;
@@ -337,12 +342,14 @@ export class VolunteerTable extends Table<Volunteer> {
     // Full page for one volunteer (navigated to by clicking the name in the list):
     // contact info at the top.  Timesheet entries, committed tasks, etc. will be
     // added below later.
+    @route(authenticated)
     detailPage(volunteer_id: number): templates.Page {
         const v = this.getById(volunteer_id);
         return templates.page(`${v.name} — Volunteer`, this.renderDetail(volunteer_id));
     }
 
     // The detail body, as a reloadable fragment (so an edit save re-renders it).
+    @route(authenticated)
     renderDetail(volunteer_id: number): Markup {
         const v = this.getById(volunteer_id);
         const f = this.fieldsByName;

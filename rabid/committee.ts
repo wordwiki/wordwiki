@@ -16,6 +16,7 @@ import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as templates from './templates.ts';
 import {OwnedGroupField, createOwnedGroup} from './group.ts';
 import {rabid} from './rabid.ts';
@@ -100,6 +101,7 @@ export class CommitteeTable extends Table<Committee> {
     // The list as a reloadable fragment that self-fetches: a "New committee"
     // insert reloads `.-committee-` (the classless-pk reload target the base
     // saveForm emits), which is this wrapper.
+    @route(authenticated)
     renderCommitteeList(): Markup {
         const committees = this.activeCommittees.all({});
         const props = this.reloadableItemProps(undefined, `rabid.committee.renderCommitteeList()`);
@@ -132,6 +134,7 @@ export class CommitteeTable extends Table<Committee> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderCommitteeRowById(id: number): Markup {
         return this.renderCommitteeRow(this.getById(id));
     }
@@ -156,6 +159,7 @@ export class CommitteeTable extends Table<Committee> {
 
     // The create dialog: the record edit form over an empty record (renderForm
     // gates on recordEdit, so non-hosts are refused server-side too).
+    @route(hostOrAdmin)
     newDialog(): Markup {
         return this.renderForm({} as Committee);
     }
@@ -164,6 +168,7 @@ export class CommitteeTable extends Table<Committee> {
     // --- Committee detail page -----------------------------------------------
     // ------------------------------------------------------------------------
 
+    @route(authenticated)
     detailPage(committee_id: number): templates.Page {
         const c = this.getById(committee_id);
         return templates.page(`${c.name || 'Committee'} — Committee`, this.renderCommitteeDetail(committee_id));
@@ -171,6 +176,7 @@ export class CommitteeTable extends Table<Committee> {
 
     // Reloadable fragment (an edit save re-renders it); the member editor below
     // it is its own reloadable fragment (membership edits reload just that).
+    @route(authenticated)
     renderCommitteeDetail(committee_id: number): Markup {
         const c = this.getById(committee_id);
         const props = this.reloadableItemProps(committee_id, `rabid.committee.renderCommitteeDetail(${committee_id})`);

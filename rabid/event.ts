@@ -10,6 +10,7 @@ import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
+import {route, authenticated, selfArg} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as templates from './templates.ts';
 import * as action from "../liminal/action.ts";
 import {rabid} from './rabid.ts';
@@ -191,6 +192,7 @@ export class EventTable extends Table<Event> {
     }
 
     // Reload target for a single list row (after an edit save).
+    @route(authenticated)
     renderEventRowById(id: number): Markup {
         return this.renderEventRow(this.getById(id));
     }
@@ -201,12 +203,14 @@ export class EventTable extends Table<Event> {
 
     // The navigable destination for list rows: the summary card (time,
     // location, committed volunteers) under a header with the host-only pencil.
+    @route(authenticated)
     detailPage(event_id: number): templates.Page {
         const e = this.getById(event_id);
         return templates.page(`${e.description || 'Event'} — Event`, this.renderEventDetail(event_id));
     }
 
     // Reloadable fragment (an edit save re-renders it).
+    @route(authenticated)
     renderEventDetail(event_id: number): Markup {
         const e = this.getById(event_id);
         const props = this.reloadableItemProps(event_id, `rabid.event.renderEventDetail(${event_id})`);
@@ -297,6 +301,7 @@ export class EventTable extends Table<Event> {
     // The summary card.  titleLink: the title links to the event's detail page
     // (the home upcoming-events cards) - the detail page itself passes false,
     // since there it would be a pointless self-link.
+    @route(authenticated)
     renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean} = {}): Markup {
         const titleLink = opts.titleLink ?? true;
 
@@ -704,6 +709,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // "Check me in": sign the CURRENT actor in.  Ungated (self-signup is always
     // allowed); idempotent (no-op if already checked in).  insert() snapshots
     // was_staff from the volunteer's current is_staff.
+    @route(authenticated)   // self-signup: any logged-in volunteer checks themselves in
     checkSelfIn(event_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(actorId === undefined) throw new Error('Not logged in as a volunteer');
@@ -714,6 +720,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
 
     // "Check someone in": host/admin checks another volunteer in (args from the
     // check-in dialog's form - strings, like every bodyArgs form).
+    @route(hostOrAdmin)     // checking SOMEONE ELSE in
     checkIn(args: {event_id?: string|number, volunteer_id?: string|number}): Markup {
         const event_id = Number(args?.event_id);
         const volunteer_id = Number(args?.volunteer_id);
@@ -728,6 +735,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
 
     // Check a volunteer out (remove their check-in).  Own check-in always; anyone
     // else's needs host/admin.  Immediate (picking the named item is deliberate).
+    @route(security.or(hostOrAdmin, selfArg(args => Number(args[1]))))   // own check-out, or host
     checkOut(event_id: number, volunteer_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(!this.canManageCheckins() && actorId !== volunteer_id)
@@ -739,6 +747,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
     }
 
     // Clear the whole attendance list (host/admin; confirm-gated - it's bulk).
+    @route(hostOrAdmin)
     checkOutAll(event_id: number): Markup {
         if(!this.canManageCheckins())
             throw new Error('Not permitted to check out volunteers for this event');
@@ -751,6 +760,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
     }
 
     // The check-someone-in dialog: one volunteer picker, event id riding hidden.
+    @route(hostOrAdmin)
     checkInDialog(event_id: number): Markup {
         if(!this.canManageCheckins())
             throw new Error('Not permitted to check volunteers into this event');
@@ -775,6 +785,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
             throw new Error('Not permitted to edit this check-in');
     }
 
+    @route(authenticated)   // pk-keyed: the method's assertCanManageCheckin does self-or-host
     editCheckinDialog(event_checkin_id: number): Markup {
         const c = this.getById(event_checkin_id);
         this.assertCanManageCheckin(c);
@@ -794,6 +805,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
             });
     }
 
+    @route(authenticated)   // pk-keyed: the method's assertCanManageCheckin does self-or-host
     editCheckin(args: {event_checkin_id?: string|number, start_time?: string, end_time?: string, notes?: string}): Markup {
         const id = Number(args?.event_checkin_id);
         if(!Number.isInteger(id)) throw new Error('bad check-in id');
@@ -812,6 +824,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // The reloadable attendance fragment: the attendee names + the one ☰.  Lives
     // inside the fragment so a check-in reload regenerates it (the per-person
     // check-out items must track the roster).
+    @route(authenticated)
     renderCheckinEditor(event_id: number): Markup {
         const checkins = this.checkinsForEvent.all({event_id});
         const ctx = security.current();
