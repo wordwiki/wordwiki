@@ -221,6 +221,27 @@ test("review: full-history reveals settled facts + versions before the baseline"
     });
 });
 
+test("review count: excludes imported-unapproved drafts, matching the visible groups", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, sub} = seedClean(fx);   // a clean, born-approved baseline
+            // Two new pending drafts: one from the automated import, one human.
+            fx.ww.applyTransaction([mkChild(sub, "cat", 1130, tl.next(),
+                                            {attr1: "imported-cat", order_key: "0.55",
+                                             change_by_username: "~category-import"})], {quiet: true});
+            fx.ww.applyTransaction([mkChild(sub, "cat", 1140, tl.next(),
+                                            {attr1: "human-cat", order_key: "0.6",
+                                             change_by_username: "djz"})], {quiet: true});
+
+            const html = reviewHtml(fx);   // queue, everyone
+            // The human draft is a group + counted; the imported draft is neither.
+            assertStringIncludes(html, "human-cat");
+            assertEquals(html.includes("imported-cat"), false);
+            assertStringIncludes(html, "1 change pending approval");   // not "2"
+        });
+    });
+});
+
 test("review: full history hides the imported base set (automated authorship)", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
@@ -237,7 +258,7 @@ test("review: full history hides the imported base set (automated authorship)", 
             fx.ww.applyTransaction([mkChild(sub, "cat", 1110, tl.next(),
                                             {attr1: "imported-cat", order_key: "0.5",
                                              change_by_username: "~category-import"})], {quiet: true});
-            fx.ww.applyTransaction([mkChild(sub, "cat", 1120, tl.next(),
+            fx.ww.applyTransaction([mkChild(sub, "cat", 1140, tl.next(),
                                             {attr1: "human-cat", order_key: "0.6",
                                              change_by_username: "djz"})], {quiet: true});
             bornApprove(fx.ww);

@@ -475,13 +475,13 @@ export class LexemeEditor {
         if(mode === 'review') {
             return ['div', {class: 'd-flex align-items-center gap-2 mb-2 lm-review-bar flex-wrap'},
                     ['span', {class: 'badge text-bg-warning'}, 'Reviewing'],
-                    this.renderReviewPending(entry_id),
+                    this.renderReviewPending(entry_id, opts.participant),
                     this.participantControl(entry_id, entryTuple, opts),
                     this.fullHistoryToggle(entry_id, opts),
                     this.modeSwapButton(entry_id, 'edit', 'Edit entry',
                                         'btn btn-sm btn-outline-secondary ms-auto')];
         }
-        const n = this.entryPendingCount(entryTuple);
+        const n = this.entryPendingCount(entryTuple, 'everyone');
         return ['div', {class: 'd-flex mb-2'},
                 this.modeSwapButton(entry_id, 'review', `Review changes${n>0?` (${n})`:''}`,
                      `btn btn-sm ms-auto ${n>0?'btn-outline-warning':'btn-outline-secondary'}`)];
@@ -535,13 +535,19 @@ export class LexemeEditor {
     /** Pending facts in this entry's subtree (added / edited / removed): the
      *  review badge's count.  Walks the VersionedTuples directly (pending
      *  deletions are not in the current view). */
-    private entryPendingCount(entryTuple: VersionedTuple): number {
+    private entryPendingCount(entryTuple: VersionedTuple, participant: string): number {
         let n = 0;
         entryTuple.forEachVersionedTuple(t => {
             if(t.tupleVersions.length === 0) return;
+            if(participant !== 'everyone' && !this.participantActiveOnFact(t, participant)) return;
             const s = classifyFact(t.tupleVersions.map(v => v.assertion),
                                    timestamp.END_OF_TIME).state;
-            if(s === 'added' || s === 'edited' || s === 'removed') n++;
+            if(s !== 'added' && s !== 'edited' && s !== 'removed') return;
+            // Same gate as the queue groups: a pending fact whose only events
+            // are the imported base set produces NO group, so it must not be
+            // counted (else "15 pending" over 7 visible groups).
+            if(this.factChangeEvents(t.schema, t, false, true).length === 0) return;
+            n++;
         });
         return n;
     }
@@ -959,10 +965,11 @@ export class LexemeEditor {
 
     /** The pending-count fragment in the review bar (reloaded after an action,
      *  so the count tracks without re-rendering the whole entry). */
-    renderReviewPending(entry_id: number): Markup {
-        const n = this.entryPendingCount(this.entryTuple(entry_id));
+    renderReviewPending(entry_id: number, participant: string = ''): Markup {
+        const p = this.reviewOpts(participant, '').participant;
+        const n = this.entryPendingCount(this.entryTuple(entry_id), p);
         return ['span', {class: `-review-pending-${entry_id}- text-muted small`,
-                         'hx-get': `${R}.renderReviewPending(${entry_id})`,
+                         'hx-get': `${R}.renderReviewPending(${entry_id}, '${p}')`,
                          'hx-trigger': 'reload', 'hx-swap': 'outerHTML'},
                 n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`];
     }
