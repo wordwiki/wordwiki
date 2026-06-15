@@ -369,6 +369,21 @@
 .lm-cl-dval { overflow-wrap: anywhere; }
 .lm-cl-from { color: var(--bs-secondary-color, #6c757d); }   /* the prior value, quiet */
 
+/* Within a from/to diff: deleted text struck on the "from" row, inserted text
+   highlighted on the "to" row - so a one-letter change pops. */
+.lm-diff-del {
+    color: #842029;
+    text-decoration: line-through;
+}
+.lm-diff-ins {
+    color: #0f5132;
+    background: #d1e7dd;
+    border-radius: 0.15rem;
+    padding: 0 0.05rem;
+}
+/* Elided unchanged context in a long value's diff. */
+.lm-diff-elide { color: var(--bs-secondary-color, #6c757d); }
+
 /* A comment's text, inline (it is the content of a comment event). */
 .lm-cl-comment { font-style: italic; }
 

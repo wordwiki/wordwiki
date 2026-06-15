@@ -62,6 +62,7 @@ import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexe
 import {classifyFact, isComment, type FactReview} from './versioned-model.ts';
 import {renderGroupedChangeList, initials, type ChangeEvent, type ChangeKind,
         type ChangeGroup} from './change-list.ts';
+import {diffValues} from './diff.ts';
 import {isAutomatedUsername} from './user.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
@@ -375,6 +376,27 @@ function changeNoteWidget(): table.Field {
 function formChangeNote(form: Record<string, any>): string | undefined {
     const n = typeof form.change_note === 'string' ? form.change_note.trim() : '';
     return n || undefined;
+}
+
+/** A field whose value is free text (so a character/word diff is meaningful) -
+ *  i.e. a plain string, not an enum/variant (whole-value vocab), audio/image
+ *  (a path), or a bounding-group reference. */
+function isFreeTextField(f: model.ScalarField): boolean {
+    return f instanceof model.StringField
+        && !(f instanceof model.EnumField)       // VariantField < EnumField too
+        && !(f instanceof model.AudioField)
+        && !(f instanceof model.ImageField);
+}
+
+/** A fact's free-text content, for diffing one version against another (empty
+ *  when the fact carries no text - e.g. a recording or a reference). */
+function factText(rf: model.RelationField, a: Assertion | undefined): string {
+    if(!a) return '';
+    return rf.scalarFields
+        .filter(f => !(f instanceof model.PrimaryKeyField) && isFreeTextField(f))
+        .map(f => (a as any)[f.bind])
+        .filter(v => v !== null && v !== undefined && v !== '')
+        .join(' · ');
 }
 
 /** Every non-pk scalar of a relation, rendered from one assertion's values. */
@@ -769,12 +791,17 @@ export class LexemeEditor {
             const comment = isComment(a);
             const tomb = isTombstone(a);
 
+            // An explicit action (comment / revert / approve) names itself even
+            // when that version is the current published baseline - otherwise an
+            // approval that became the baseline (the usual case) would render as
+            // a quiet baseline and lose its "approved by" chip.  (tomb stays
+            // ahead of approved: an approved DELETION reads as 'deleted'.)
             const kind: ChangeKind =
-                isBaseline                       ? 'baseline'
-              : comment                          ? 'commented'
+                comment                          ? 'commented'
               : a.change_action === 'reverted'   ? 'reverted'
               : tomb                             ? 'deleted'
               : a.change_action === 'approved'   ? 'approved'
+              : isBaseline                       ? 'baseline'
               : (!review.baseline && i === startIdx) ? 'added'
               :                                    'changed';
 
@@ -794,11 +821,21 @@ export class LexemeEditor {
             };
             switch(kind) {
                 case 'changed':
-                case 'reverted':                    // a change: show before -> after, aligned
-                    ev.from = val(prevContent);
-                    ev.to = val(a);
+                case 'reverted': {                  // a change: before -> after, aligned
+                    // Diff the free text so the DIFFERENCE draws the eye (a
+                    // single-letter lexeme tweak vs a reworded sentence pick
+                    // their own nicest rendering); a non-text change (audio,
+                    // enum, ...) falls back to the plain rendered values.
+                    const fromText = factText(rf, prevContent), toText = factText(rf, a);
+                    if(fromText !== toText) {
+                        const d = diffValues(fromText, toText);
+                        ev.from = d.from; ev.to = d.to;
+                    } else {
+                        ev.from = val(prevContent); ev.to = val(a);
+                    }
                     prevContent = a;
                     break;
+                }
                 case 'deleted':                      // show what is being removed
                     ev.value = val(prevContent);
                     break;

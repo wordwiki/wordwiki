@@ -107,10 +107,10 @@ test("single-fact context: factChangeEvents feeds the same component", async () 
             const events = fx.ww.lexeme.factChangeEvents(tuple.schema, tuple, false);
             const html = markupToString(renderChangeList(events, {showSubject: false}));
 
-            assertStringIncludes(html, "samqwan");      // baseline value / the change's 'from'
-            assertStringIncludes(html, "samqwann");     // the change's 'to'
-            assertStringIncludes(html, "lm-cl-detail"); // the change's aligned from/to block
-            assertEquals(events.length, 2);             // baseline + one edit, since published
+            assertStringIncludes(html, "samqwan");          // baseline value / the change's 'from'
+            assertStringIncludes(html, "lm-cl-detail");      // the change's aligned from/to block
+            assertStringIncludes(html, "lm-diff-ins'>n</span>"); // the added letter, char-diffed
+            assertEquals(events.length, 2);                  // baseline + one edit, since published
         });
     });
 });

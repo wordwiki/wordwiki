@@ -135,6 +135,20 @@ test("review queue: a pending EDIT is one group with the field header, from/to, 
     });
 });
 
+test("review queue: a small edit shows a char-level diff (the changed letter highlighted)", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            // A one-letter change (samqwan -> samqwann), not a total rewrite.
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "samqwann"})],
+                                   {quiet: true});
+            const html = reviewHtml(fx);
+            assertStringIncludes(html, "lm-cl-detail");          // the change block
+            assertStringIncludes(html, "lm-diff-ins'>n</span>"); // only the added letter is marked
+        });
+    });
+});
+
 test("review queue: an edit NOTE rides the event as a sub-line", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
@@ -200,6 +214,8 @@ test("review: full-history reveals settled facts + versions before the baseline"
             assertStringIncludes(full, "lm-cl-group");
             assertStringIncludes(full, "samqwan");           // pre-baseline value
             assertStringIncludes(full, "XYZZY");             // accepted value
+            // The approval (now the baseline) keeps its "approved" chip.
+            assertStringIncludes(full, "lm-cl-chip-approved");
             assertStringIncludes(full, "Full history ✓");
         });
     });
