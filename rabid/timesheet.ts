@@ -130,6 +130,19 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         this.updateNamedFields(id, Object.keys(fields) as Array<keyof P>, fields);
     }
 
+    // An edit may be shown inside a volunteer's reconciled time view (volunteer_time.ts),
+    // so also reload that fragment - htmx ignores the selector when it isn't present
+    // (e.g. an edit from the global Timesheets list).
+    override saveForm(form: Record<string, string>): Markup {
+        const result = super.saveForm(form) as any;
+        const id = Number(form?.timesheet_entry_id);
+        if(result && result.action === 'reload' && Array.isArray(result.targets) && Number.isInteger(id)) {
+            const e = security.runSystem(() => this.getById(id));
+            if(e) result.targets.push(`.-volunteer_time-${e.volunteer_id}-`);
+        }
+        return result;
+    }
+
     // A timesheet entry belongs to its volunteer (drives isSelf).
     ownerId(e: TimesheetEntry): number|undefined { return e.volunteer_id; }
 
@@ -181,37 +194,9 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
 /**/          ORDER BY start_time DESC`);
     }
 
-    // Renders a volunteer's timesheet as a section for the volunteer detail page.
-    // (This is explicit recorded time only; event attendance is rendered
-    // separately from event_checkin.)
-    renderForVolunteer(volunteer_id: number): Markup {
-        const entries = this.entriesForVolunteer.all({volunteer_id});
-        if(entries.length === 0)
-            return [h.p, {class: 'text-muted'}, 'No timesheet entries yet.'];
-
-        const totalHours = entries.reduce((sum, e) => sum + entryHours(e), 0);
-
-        return [h.table, {class: 'table table-sm'},
-            [h.tbody, {},
-             [h.tr, {},
-              [h.th, {}, 'Date'],
-              [h.th, {class: 'text-end'}, 'Hours'], [h.th, {}, 'Notes']],
-             entries.map(e => this.renderEntryRow(e)),
-             [h.tr, {},
-              [h.td, {class: 'text-end fw-bold'}, 'Total'],
-              [h.td, {class: 'text-end fw-bold'}, totalHours.toFixed(1)],
-              [h.td, {}]],
-            ]];
-    }
-
-    renderEntryRow(e: TimesheetEntry): Markup {
-        const hrs = e.end_time ? entryHours(e) : null;
-        return [h.tr, {},
-            [h.td, {}, date.sqliteDateTimeToDateString(e.start_time)],
-            [h.td, {class: 'text-end'}, hrs == null ? '—' : hrs.toFixed(1)],
-            [h.td, {}, e.notes || ''],
-        ];
-    }
+    // (The per-volunteer timesheet view now lives in volunteer_time.ts, which
+    // reconciles these entries with event check-ins into one chronological,
+    // week-grouped view; it reads entriesForVolunteer above.)
 
     // ------------------------------------------------------------------------
     // --- Standard editable-item list (the baseline; structured per-period

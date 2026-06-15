@@ -94,7 +94,9 @@ test("check-in: self-signup is always allowed and idempotent", async () => {
         // A regular volunteer checks themselves in (no host role needed).
         const res = await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
         assertEquals(res.action, "reload");
-        assertEquals(res.targets, [`.-event_checkin-${id}-`]);
+        // Reloads the event fragment AND bob's time fragment (cross-context).
+        assert(res.targets.includes(`.-event_checkin-${id}-`));
+        assert(res.targets.includes(`.-volunteer_time-${bob}-`));
         // Idempotent: checking in again is a no-op (one row).
         await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
         const checkins = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));

@@ -12,6 +12,7 @@ import * as home from './home-page.ts';
 import * as volunteer from './volunteer.ts';
 import * as timesheet from './timesheet.ts';
 import * as event from './event.ts';
+import * as volunteer_time from './volunteer_time.ts';
 import * as sale from './sale.ts';
 import * as service from './service.ts';
 import * as group from './group.ts';
@@ -58,6 +59,8 @@ export class Rabid extends LiminalApp {
     @path get event() { return new event.EventTable(); }
     @path get event_commitment() { return new event.EventCommitmentTable(); }
     @path get event_checkin() { return new event.EventCheckinTable(); }
+    // A view-service (not a table): the reconciled per-volunteer time view.
+    @path get volunteer_time() { return new volunteer_time.VolunteerTimeService(); }
     @path get sale() { return new sale.SaleTable(); }
     @path get service() { return new service.ServiceTable(); }
     @path get volunteer_group() { return new group.VolunteerGroupTable(); }

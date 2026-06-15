@@ -668,35 +668,6 @@ export class EventCheckinTable extends Table<EventCheckin> {
 /**/          ORDER BY volunteer.name`);
     }
 
-    // Event-attendance section for the volunteer detail page (sibling of the
-    // timesheet section): the events this volunteer checked into, with hours.
-    renderForVolunteer(volunteer_id: number): Markup {
-        const checkins = this.checkinsForVolunteer.all({volunteer_id});
-        if(checkins.length === 0)
-            return [h.p, {class: 'text-muted'}, 'No event check-ins yet.'];
-        const hoursOf = (c: EventCheckin & {event_start_time: string|null, event_end_time: string|null}) =>
-            checkinHours(c.start_time ?? c.event_start_time, c.end_time ?? c.event_end_time);
-        const totalHours = checkins.reduce((sum, c) => sum + hoursOf(c), 0);
-        return [h.table, {class: 'table table-sm'},
-            [h.tbody, {},
-             [h.tr, {},
-              [h.th, {}, 'Date'], [h.th, {}, 'Event'], [h.th, {class: 'text-end'}, 'Hours']],
-             checkins.map(c => {
-                 const eff = c.start_time ?? c.event_start_time;
-                 const hrs = hoursOf(c);
-                 return [h.tr, {},
-                     [h.td, {}, eff ? date.sqliteDateTimeToDateString(eff) : '—'],
-                     [h.td, {}, c.event_description
-                         ? templates.pageLink(`/rabid.event.detailPage(${c.event_id})`, c.event_description)
-                         : '—'],
-                     [h.td, {class: 'text-end'}, hrs ? hrs.toFixed(1) : '—']];
-             }),
-             [h.tr, {},
-              [h.td, {colspan: '2', class: 'text-end fw-bold'}, 'Total'],
-              [h.td, {class: 'text-end fw-bold'}, totalHours.toFixed(1)]],
-            ]];
-    }
-
     // ------------------------------------------------------------------------
     // --- Check-in editor (the attendance UI) ---------------------------------
     // ------------------------------------------------------------------------
@@ -721,8 +692,13 @@ export class EventCheckinTable extends Table<EventCheckin> {
             .first({event_id, volunteer_id});
     }
 
-    private reloadEditor(event_id: number): Markup {
-        return {action: 'reload', targets: [`.-event_checkin-${event_id}-`]} as unknown as Markup;
+    // Reload the event's check-in fragment, and the time view of every affected
+    // volunteer (their check-in shows in their reconciled time view) - htmx only
+    // re-renders selectors actually present on the page.
+    private reloadEditor(event_id: number, volunteerIds: number[] = []): Markup {
+        const targets = [`.-event_checkin-${event_id}-`,
+                         ...volunteerIds.map(v => `.-volunteer_time-${v}-`)];
+        return {action: 'reload', targets} as unknown as Markup;
     }
 
     // "Check me in": sign the CURRENT actor in.  Ungated (self-signup is always
@@ -733,7 +709,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
         if(actorId === undefined) throw new Error('Not logged in as a volunteer');
         if(!this.hasCheckin(event_id, actorId))
             this.insert({event_id, volunteer_id: actorId, notes: ''});
-        return this.reloadEditor(event_id);
+        return this.reloadEditor(event_id, [actorId]);
     }
 
     // "Check someone in": host/admin checks another volunteer in (args from the
@@ -747,7 +723,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
             throw new Error('Not permitted to check volunteers into this event');
         if(!this.hasCheckin(event_id, volunteer_id))
             this.insert({event_id, volunteer_id, notes: ''});
-        return this.reloadEditor(event_id);
+        return this.reloadEditor(event_id, [volunteer_id]);
     }
 
     // Check a volunteer out (remove their check-in).  Own check-in always; anyone
@@ -759,16 +735,19 @@ export class EventCheckinTable extends Table<EventCheckin> {
         db().execute<{event_id: number, volunteer_id: number}>(
             'DELETE FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id',
             {event_id, volunteer_id});
-        return this.reloadEditor(event_id);
+        return this.reloadEditor(event_id, [volunteer_id]);
     }
 
     // Clear the whole attendance list (host/admin; confirm-gated - it's bulk).
     checkOutAll(event_id: number): Markup {
         if(!this.canManageCheckins())
             throw new Error('Not permitted to check out volunteers for this event');
+        const vids = db().prepare<{volunteer_id: number}, {event_id: number}>(
+            'SELECT volunteer_id FROM event_checkin WHERE event_id = :event_id')
+            .all({event_id}).map(r => r.volunteer_id);
         db().execute<{event_id: number}>(
             'DELETE FROM event_checkin WHERE event_id = :event_id', {event_id});
-        return this.reloadEditor(event_id);
+        return this.reloadEditor(event_id, vids);
     }
 
     // The check-someone-in dialog: one volunteer picker, event id riding hidden.
@@ -827,7 +806,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
             end_time: trim(args.end_time),
             notes: args.notes ?? '',
         } as Partial<EventCheckin>);
-        return this.reloadEditor(c.event_id);
+        return this.reloadEditor(c.event_id, [c.volunteer_id]);
     }
 
     // The reloadable attendance fragment: the attendee names + the one ☰.  Lives
@@ -890,15 +869,6 @@ export class EventCheckinTable extends Table<EventCheckin> {
 function joinNames(parts: Markup[]): Markup[] {
     return parts.flatMap((p, i) =>
         i === 0 ? [p] : [i === parts.length - 1 ? ' and ' : ', ', p]);
-}
-
-// Duration of a check-in in hours, given its effective start/end (0 if either
-// is missing - e.g. an event with no times, or someone still checked in).
-function checkinHours(start: string|null|undefined, end: string|null|undefined): number {
-    if(!start || !end) return 0;
-    return date.sqliteDateTimeToTemporal(end)
-        .since(date.sqliteDateTimeToTemporal(start))
-        .total({unit: 'hours'});
 }
 
 //export const eventMetaData = new EventTable();

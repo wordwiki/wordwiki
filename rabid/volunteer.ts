@@ -386,11 +386,8 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.join_date, v.join_date) || '—'],
             ],
 
-            [h.h4, {class: 'mt-4'}, 'Event attendance'],
-            rabid.event_checkin.renderForVolunteer(volunteer_id),
-
-            [h.h4, {class: 'mt-4'}, 'Timesheet'],
-            rabid.timesheet_entry.renderForVolunteer(volunteer_id),
+            [h.h4, {class: 'mt-4'}, 'Time'],
+            rabid.volunteer_time.renderForVolunteer(volunteer_id),
 
             // TODO: committed tasks, etc.
         ];
