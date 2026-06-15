@@ -1170,9 +1170,9 @@ export class WordWiki extends LiminalApp {
     // @route(publicRoute(...)), so the strict route interpreter lets them
     // through and only NON-public routes reach this bounce.  (The puppeteer GET
     // login shortcut - /ww/wordwiki.loginRequest(queryArgs)?username=...&password=...
-    // - still works because loginRequest is publicRoute; NOTE this also allows it
-    // on production, where the old gate blocked the GET form to keep the password
-    // out of the URL.  Re-add a production GET guard in requestHandler if wanted.)
+    // - still works because loginRequest is publicRoute.  A GET puts the password
+    // in the URL, so on PRODUCTION it is bounced to the login form by the GET
+    // guard in requestHandler; on dev it goes through.)
     // The root-level /page/<Book>/<N>.html vanity endpoint is handled before this
     // gate in requestHandler and remains ungated.
     protected override loginRouteFor(requestUrl: string): string | undefined {
@@ -1305,6 +1305,16 @@ export class WordWiki extends LiminalApp {
             const html = await asyncRenderToStringViaLinkeDOM(body);
             return {status: 200, headers: {}, body: html};
         }
+        // Production GET guard for the login submit: loginRequest is publicRoute
+        // (so the puppeteer/test single-navigation GET login shortcut works), but
+        // a GET puts the password in the URL - tolerable on dev, not on the real
+        // db.  Bounce a production GET at loginRequest to the login form so the
+        // credentials in the query string are never read.  POST is unaffected.
+        if(request.method === 'GET' &&
+           /\bwordwiki\.loginRequest\b/.test(filepath) &&
+           this.getDbPurpose() === 'production')
+            return server.forwardResponse(`${this.routePrefix}wordwiki.login(${JSON.stringify('/ww/')})`, 303);
+
         return super.requestHandler(request);
     }
 }
