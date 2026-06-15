@@ -26,6 +26,11 @@ import type { Markup } from '../liminal/markup.ts';
 import { db } from '../liminal/db.ts';
 import { openTestDb, clearAllData } from '../liminal/testing/db-harness.ts';
 import { backfillPublication } from './publication-backfill.ts';
+import { setRouteEval } from "../liminal/liminal.ts";
+
+// wordwiki is fully @route-annotated, so the suite runs under the shipped config
+// (routeterp, strict) - exercising the route gate, not the legacy jsterp.
+setRouteEval('routeterp', 'strict');
 
 // The legacy raw-DML tables (created by createAllTables, cleared here
 // by name - they are not liminal Tables).
@@ -97,7 +102,8 @@ export function bornApprove(ww: WordWiki): void {
 // Render a route and return its markup (a page() is unwrapped to its body).
 export async function renderRoute(ww: WordWiki, path: string,
                                   opts: { queryArgs?: Record<string, any> } = {}): Promise<Markup> {
-    const result = await ww.dispatch(path, { queryArgs: opts.queryArgs });
+    // Renders are reads -> GET (so a mutates route rendered this way is rejected).
+    const result = await ww.dispatch(path, { queryArgs: opts.queryArgs, httpMethod: 'GET' });
     return templates.isPage(result) ? result.body : result;
 }
 
@@ -107,7 +113,7 @@ export async function renderRoute(ww: WordWiki, path: string,
 export async function invoke(ww: WordWiki, path: string, ...args: any[]): Promise<any> {
     const bodyArgs: Record<string, any> = {};
     args.forEach((a, i) => bodyArgs[`$arg${i}`] = a);
-    return await ww.dispatch(path, { bodyArgs });
+    return await ww.dispatch(path, { bodyArgs, httpMethod: 'POST' });
 }
 
 // --- Assertion builders ------------------------------------------------------
