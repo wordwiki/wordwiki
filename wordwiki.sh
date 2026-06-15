@@ -102,4 +102,12 @@ fi
 if [ "$#" -eq 0 ]; then
     set -- serve
 fi
+
+# Route-security migration: wordwiki stays on the legacy jsterp interpreter until
+# rabid (the test bed) finishes migrating to routeterp; then wordwiki follows.
+# Pinned explicitly here - not relying on the liminal default - so that default
+# can move to routeterp without affecting wordwiki.  Override on the command
+# line, e.g. `LIMINAL_ROUTE_EVAL=routeterp ./wordwiki.sh`.
+export LIMINAL_ROUTE_EVAL="${LIMINAL_ROUTE_EVAL:-jsterp}"
+
 deno run --check --allow-all "$WORDWIKI_SRC/wordwiki/wordwiki.ts" "$@"
