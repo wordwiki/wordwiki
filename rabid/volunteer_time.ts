@@ -418,7 +418,8 @@ export class VolunteerTimeService {
 // --- The renderer (pure: model → Markup) ----------------------------------------
 // --------------------------------------------------------------------------------
 
-const WEEK_WINDOW = 8;   // default to the most recent N weeks (recent-first)
+// Default to the most recent N weeks (recent-first); "Show all" reveals the rest.
+export const WEEK_WINDOW = 8;
 
 export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
                                     showOrphanTasks = false, showAllWeeks = false): Markup {

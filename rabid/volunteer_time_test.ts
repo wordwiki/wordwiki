@@ -7,7 +7,7 @@ import { assert, assertEquals, assertRejects } from "../liminal/testing/assert.t
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
 import { hasText, findAll, testIdOf } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
-import { reconcileTime, spanHours, type TimeSpan, type TaskSpan } from "./volunteer_time.ts";
+import { reconcileTime, spanHours, WEEK_WINDOW, type TimeSpan, type TaskSpan } from "./volunteer_time.ts";
 
 function tk(id: number, doneTime: string,
             opts: {eventId?: number, eventStart?: string, eventEnd?: string|null,
@@ -199,11 +199,12 @@ test("renderForVolunteer renders the week-grouped table with a total", () => {
     });
 });
 
-test("renderForVolunteer windows to the last 8 weeks by default; 'show all' reveals the rest", () => {
+test("renderForVolunteer windows to the last WEEK_WINDOW weeks by default; 'show all' reveals the rest", () => {
+    const total = WEEK_WINDOW + 4;   // more than a window, so both states differ
     return withTestDb(({ bob }) => {
-        // Twelve distinct weeks of time (one entry each, 1h, N weeks back).
+        // `total` distinct weeks of time (one entry each, 1h, N weeks back).
         asSystem(() => {
-            for(let wk = 0; wk < 12; wk++) {
+            for(let wk = 0; wk < total; wk++) {
                 const d = `2026-${String(3).padStart(2,'0')}-01`;   // anchor; offset by weeks below
                 const start = new Date(`${d}T09:00:00Z`); start.setUTCDate(start.getUTCDate() - wk * 7);
                 const end = new Date(start.getTime() + 3600_000);
@@ -218,13 +219,13 @@ test("renderForVolunteer windows to the last 8 weeks by default; 'show all' reve
         const weekCount = (m: any) => findAll(m, n => testIdOf(n) === 'time-week').length;
         return asUser(bob, async () => {
             const def = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob})`);
-            assertEquals(weekCount(def), 8);                       // default window
-            assert(hasText(def, 'Show all 12 weeks'));
-            assert(hasText(def, 'Last 8 weeks'));                  // total reflects the window
+            assertEquals(weekCount(def), WEEK_WINDOW);             // default window
+            assert(hasText(def, `Show all ${total} weeks`));
+            assert(hasText(def, `Last ${WEEK_WINDOW} weeks`));     // total reflects the window
 
             const all = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob},false,true)`);
-            assertEquals(weekCount(all), 12);
-            assert(hasText(all, 'Show last 8 weeks'));
+            assertEquals(weekCount(all), total);
+            assert(hasText(all, `Show last ${WEEK_WINDOW} weeks`));
         });
     });
 });
