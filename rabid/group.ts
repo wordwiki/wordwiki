@@ -29,6 +29,7 @@
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField } from "../liminal/table.ts";
+import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -331,7 +332,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
         if(!this.canEditMembers(g))
             throw new Error(`Not permitted to edit the members of ${this.displayName(g)}`);
         return action.renderParamForm(
-            [new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name')],
+            [new VolunteerForeignKeyField('volunteer_id', {})],
             {},
             {
                 title: `Add member to ${this.displayName(g)}`,
@@ -362,7 +363,7 @@ export class GroupMemberTable extends Table<GroupMember> {
         super ('group_member', [
             new PrimaryKeyField('group_member_id', {}),
             new ForeignKeyField('group_id', 'volunteer_group', 'group_id', {indexed: true}),
-            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {indexed: true}, 'name'),
+            new VolunteerForeignKeyField('volunteer_id', {indexed: true}),
         ], [
             // One membership row per (group, volunteer) - addMember's
             // INSERT OR IGNORE leans on this.

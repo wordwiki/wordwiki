@@ -14,6 +14,7 @@ import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
 import * as security from "../liminal/security.ts";
 import {route, authenticated} from "../liminal/security.ts";
+import {activeVolunteerIdsWithin} from "./volunteer-activity.ts";
 
 // 'host' is a volunteer trusted with a bit more visibility - hosts run events
 // (e.g. volunteer nights) and are keyholders.  We deliberately use 'host' rather
@@ -274,13 +275,24 @@ export class VolunteerTable extends Table<Volunteer> {
     renderVolunteerList(text: string, only_active: boolean): Markup {
         const rows = this.searchVolunteers.all({text, only_active: only_active ? 1 : 0});
         const scopeLabel = only_active ? 'active ' : '';
+
+        // Split into two lists: recently-active (a timesheet entry or event
+        // check-in in the last 30 days) and everyone else - the long tail of
+        // mostly-inactive volunteers shouldn't bury the people currently around.
+        const active = activeVolunteerIdsWithin(30);
+        const recent = rows.filter(v => active.has(v.volunteer_id));
+        const others = rows.filter(v => !active.has(v.volunteer_id));
+        const section = (title: string, list: Volunteer[]): Markup => list.length ? [
+            [h.h3, {class: 'h6 text-muted mt-3 mb-1'}, title],
+            [h.div, {class: 'list-group lm-list'}, list.map(v => this.renderVolunteerRow(v))],
+        ] : undefined;
+
         return [
             [h.p, {class: 'text-muted small mb-2'},
              text ? `${rows.length} ${scopeLabel}volunteer(s) matching “${text}”`
                   : `${rows.length} ${scopeLabel}volunteer(s)`],
-            [h.div, {class: 'list-group lm-list'},
-             rows.map(v => this.renderVolunteerRow(v)),
-            ],
+            section('Active — last 30 days', recent),
+            section('Other volunteers', others),
         ];
     }
 

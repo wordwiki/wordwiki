@@ -5,6 +5,7 @@ import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
 import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron } from "../liminal/table.ts";
+import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
@@ -542,7 +543,7 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         super ('event_commitment', [
             new PrimaryKeyField('event_commitment_id', {}),
             new ForeignKeyField('event_id', 'event', 'event_id', {}, 'description'),
-            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name'),
+            new VolunteerForeignKeyField('volunteer_id', {}),
             new StringField('requested_role', {default:''}),
             new MarkdownField('notes', {default:''}),
             new BooleanField('will_drive_supplies', {default: 0}),
@@ -614,7 +615,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
         super ('event_checkin', [
             new PrimaryKeyField('event_checkin_id', {}),
             new ForeignKeyField('event_id', 'event', 'event_id', {}, 'description'),
-            new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name'),
+            new VolunteerForeignKeyField('volunteer_id', {}),
             new BooleanField('was_staff', {default: 0}),
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
@@ -765,7 +766,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
         if(!this.canManageCheckins())
             throw new Error('Not permitted to check volunteers into this event');
         return action.renderParamForm(
-            [new ForeignKeyField('volunteer_id', 'volunteer', 'volunteer_id', {}, 'name')],
+            [new VolunteerForeignKeyField('volunteer_id', {})],
             {},
             {
                 title: 'Check a volunteer in',

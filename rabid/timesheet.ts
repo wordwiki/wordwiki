@@ -4,6 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navChevron, PublicViewable } from "../liminal/table.ts";
+import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
@@ -79,9 +80,8 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             // and volunteers can be paid (in which case is_paid_time is true).  Also,
             // the same person can be staff for a month, then transition to being a volunteer -
             // so for historical reporting purposes the important bit is the is_paid_time field.
-            // labelField 'name' so the edit form's picker shows volunteer names
-            // (without it the dropdown would list raw numeric ids).
-            new ForeignKeyField('volunteer_id', "volunteer", "volunteer_id", {indexed: true}, 'name'),
+            // VolunteerForeignKeyField: picker shows names, recently-active first.
+            new VolunteerForeignKeyField('volunteer_id', {indexed: true}),
 
             // The actual time worked.  This is EXPLICIT time (staff timesheets,
             // or volunteer work outside an event); event attendance lives in

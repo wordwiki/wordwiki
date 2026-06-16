@@ -5,6 +5,7 @@ import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron } from "../liminal/table.ts";
+import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -59,7 +60,7 @@ export class SaleTable extends Table<Sale> {
             new DateTimeField('sale_time', {}),
             // (was unique:true - a copy-paste bug that would have limited each
             // volunteer to recording ONE sale ever)
-            new ForeignKeyField('sale_recorded_by', 'volunteer', 'volunteer_id', {indexed: true}, 'name'),
+            new VolunteerForeignKeyField('sale_recorded_by', {indexed: true}),
             new EnumField('sale_kind', sale_kind_enum, {}),
             new StringField('description', {default: ''}),
             new ImageField('photo', 'rabid.photo', {nullable: true, prompt: 'Photo'}),
