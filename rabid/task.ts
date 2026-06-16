@@ -603,6 +603,9 @@ export class TaskTable extends Table<Task> {
             // The concurrent-change poll ("what changed since :t?") - covers
             // completions and soft-deletes too, since both are UPDATEs.
             'CREATE INDEX IF NOT EXISTS task_by_change ON task(last_change_time);',
+            // Completed-by-volunteer (the Time view's task layer): WHERE done_by
+            // ORDER BY done_time.
+            'CREATE INDEX IF NOT EXISTS task_by_done_by ON task(done_by, done_time);',
         ])
     };
 
@@ -717,6 +720,26 @@ export class TaskTable extends Table<Task> {
         return this.prepare<{n: number}, {project_id: number}>(block`
 /**/   SELECT COUNT(*) AS n FROM task
 /**/          WHERE project_id = :project_id AND deleted = 0 AND status != 'done'`);
+    }
+
+    // Tasks a volunteer COMPLETED (done_by them), each with its project's owner
+    // and - when event-owned - the event's context.  Feeds the Time view's
+    // completed-task layer (see volunteer_time CompletedTaskRow / taskToSpan).
+    @path
+    get completedByVolunteer() {
+        return this.prepare<{
+            task_id: number, title: string, done_time: string,
+            project_owner_table: string | null, project_owner_id: number | null,
+            event_start: string | null, event_end: string | null, event_label: string | null,
+        }, {volunteer_id: number}>(block`
+/**/   SELECT t.task_id, t.title, t.done_time,
+/**/          p.owner_table AS project_owner_table, p.owner_id AS project_owner_id,
+/**/          e.start_time AS event_start, e.end_time AS event_end, e.description AS event_label
+/**/          FROM task t
+/**/               JOIN project p ON p.project_id = t.project_id
+/**/               LEFT JOIN event e ON p.owner_table = 'event' AND e.event_id = p.owner_id
+/**/          WHERE t.done_by = :volunteer_id AND t.status = 'done' AND t.done_time IS NOT NULL
+/**/          ORDER BY t.done_time`);
     }
 
     // The cross-project work views (the queries the assigned-to group model

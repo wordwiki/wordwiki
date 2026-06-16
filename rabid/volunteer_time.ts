@@ -42,24 +42,41 @@ import {EventCheckin} from "./event.ts";
 // --- The intermediate model (plain data; no db, no Markup) -----------------------
 // --------------------------------------------------------------------------------
 
-// One span of time from either source, normalized to effective start/end.
+// One span of time, normalized to effective start/end.  'timesheet'/'checkin'
+// carry real time (and hours); 'event'/'task' are zero-hour CARRIERS for
+// completed-task grouping (a synthesized event row when the volunteer did an
+// event's task without checking in; a per-day bucket of standalone tasks).
 export interface TimeSpan {
-    source: 'timesheet' | 'checkin';
-    id: number;                 // timesheet_entry_id | event_checkin_id
+    source: 'timesheet' | 'checkin' | 'event' | 'task';
+    id: number;                 // timesheet_entry_id | event_checkin_id | event_id | 0
     start: string;              // effective start (sqlite datetime)
     end: string | null;        // effective end; null = open (not checked out / ongoing)
-    hours: number;             // 0 when open
+    hours: number;             // 0 when open / for event|task carriers
     label: string;             // notes / "Other work"  |  event name
-    eventId?: number;          // check-ins → link target
+    eventId?: number;          // check-ins / event carriers → link target
     paid: boolean;             // timesheet.is_paid_time
     wasStaff: boolean;         // check-in snapshot
     notes: string;
 }
 
-// A counted entry, with any check-ins it subsumes hanging off it (not counted).
+// A completed task, credited to the volunteer who finished it (done_by).  A point
+// in time (done_time), carrying no hours - it annotates the timeline.
+export interface TaskSpan {
+    id: number;                 // task_id
+    doneTime: string;           // sqlite datetime (task.done_time)
+    title: string;
+    eventId?: number;           // set when the task's project is event-owned
+    eventStart?: string;        // event context, to synthesize a grouping row
+    eventEnd?: string | null;   // when the volunteer didn't check in
+    eventLabel?: string;
+}
+
+// A counted entry, with any check-ins it subsumes hanging off it (not counted)
+// and any completed tasks attached to it (event- or shift-subordinate).
 export interface TimeEntry {
     span: TimeSpan;
     nested: TimeSpan[];
+    tasks: TaskSpan[];
 }
 
 export interface TimeWeek {
@@ -92,6 +109,9 @@ function overlaps(a: TimeSpan, b: TimeSpan): boolean {
 function byStart(a: TimeSpan, b: TimeSpan): number {
     return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
 }
+function byDone(a: TaskSpan, b: TaskSpan): number {
+    return a.doneTime < b.doneTime ? -1 : a.doneTime > b.doneTime ? 1 : 0;
+}
 function sum(xs: number[]): number { return xs.reduce((s, x) => s + x, 0); }
 
 export function spanHours(start: string, end: string | null): number {
@@ -108,10 +128,18 @@ function weekStartOf(sqliteDateTime: string): string {
     return date.temporalToSqliteDate(sunday);
 }
 
-// PURE: given a volunteer's timesheet + check-in spans, produce the reconciled,
-// week-grouped, totalled model.  Overlapping check-ins nest under the EARLIEST
-// timesheet they overlap and are not counted; the rest stand alone.
-export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], checkins: TimeSpan[]): VolunteerTime {
+// PURE: given a volunteer's timesheet + check-in spans (and optionally their
+// completed tasks), produce the reconciled, week-grouped, totalled model.
+// Overlapping check-ins nest under the EARLIEST timesheet they overlap and are
+// not counted; the rest stand alone.  Completed tasks (no hours) are placed:
+//   1. event-subordinate (task's project is event-owned) -> under that event's
+//      entry, synthesizing a zero-hour event row if the volunteer didn't check
+//      in.  Event grouping OVERRIDES done_time (it lands in the event's week).
+//   2. else shift-subordinate -> under the timesheet whose window contains
+//      done_time.
+//   3. else standalone -> a per-day task row at done_time.
+export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], checkins: TimeSpan[],
+                              tasks: TaskSpan[] = []): VolunteerTime {
     const tsByStart = [...timesheets].sort(byStart);
 
     const nestedByTs = new Map<number, TimeSpan[]>();
@@ -127,9 +155,13 @@ export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], check
     }
 
     const entries: TimeEntry[] = [
-        ...tsByStart.map(ts => ({span: ts, nested: (nestedByTs.get(ts.id) ?? []).sort(byStart)})),
-        ...standaloneCheckins.map(c => ({span: c, nested: [] as TimeSpan[]})),
-    ].sort((x, y) => byStart(x.span, y.span));
+        ...tsByStart.map(ts => ({span: ts, nested: (nestedByTs.get(ts.id) ?? []).sort(byStart), tasks: [] as TaskSpan[]})),
+        ...standaloneCheckins.map(c => ({span: c, nested: [] as TimeSpan[], tasks: [] as TaskSpan[]})),
+    ];
+
+    placeTasks(entries, tsByStart, tasks);
+    for(const e of entries) e.tasks.sort(byDone);
+    entries.sort((x, y) => byStart(x.span, y.span));
 
     const byWeek = new Map<string, TimeEntry[]>();
     for(const e of entries) {
@@ -152,6 +184,56 @@ export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], check
     const hours = sum(weeks.map(w => w.hours));
     const paidHours = sum(weeks.map(w => w.paidHours));
     return {volunteerId, weeks, hours, paidHours, volunteerHours: hours - paidHours};
+}
+
+// Attach completed tasks to entries (mutating), appending synthesized carrier
+// entries for event tasks with no check-in and for standalone tasks.  See the
+// three-way priority in reconcileTime's comment.
+function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan[]): void {
+    if(tasks.length === 0) return;
+
+    // 1. Event-subordinate: the entry that represents the event is a standalone
+    // check-in (span.eventId) or a check-in nested under a timesheet.
+    const entryForEvent = (eid: number) => entries.find(e =>
+        e.span.eventId === eid || e.nested.some(n => n.eventId === eid));
+    const byEvent = new Map<number, TaskSpan[]>();
+    for(const t of tasks.filter(t => t.eventId != null)) {
+        const arr = byEvent.get(t.eventId!);
+        if(arr) arr.push(t); else byEvent.set(t.eventId!, [t]);
+    }
+    for(const [eid, group] of byEvent) {
+        const host = entryForEvent(eid);
+        if(host) { host.tasks.push(...group); continue; }
+        // No check-in: synthesize a zero-hour event row so the event still groups
+        // its tasks (event grouping overrides done_time -> the event's week).
+        const s = group[0];
+        entries.push({
+            span: {source: 'event', id: eid, start: s.eventStart ?? s.doneTime,
+                   end: s.eventEnd ?? null, hours: 0, label: s.eventLabel ?? 'Event',
+                   eventId: eid, paid: false, wasStaff: false, notes: ''},
+            nested: [], tasks: group,
+        });
+    }
+
+    // 2/3. Non-event tasks: under the timesheet whose window contains done_time,
+    // else a per-day standalone bucket.
+    const standaloneByDay = new Map<string, TaskSpan[]>();
+    for(const t of tasks.filter(t => t.eventId == null)) {
+        const host = tsByStart.find(ts => ts.start <= t.doneTime && t.doneTime <= (ts.end ?? OPEN_END));
+        if(host) {
+            entries.find(e => e.span.source === 'timesheet' && e.span.id === host.id)!.tasks.push(t);
+        } else {
+            const day = date.extractDateFromDateTime(t.doneTime);
+            const arr = standaloneByDay.get(day);
+            if(arr) arr.push(t); else standaloneByDay.set(day, [t]);
+        }
+    }
+    for(const [day, dayTasks] of standaloneByDay)
+        entries.push({
+            span: {source: 'task', id: 0, start: `${day} 00:00:00`, end: null,
+                   hours: 0, label: '', paid: false, wasStaff: false, notes: ''},
+            nested: [], tasks: dayTasks,
+        });
 }
 
 // --------------------------------------------------------------------------------
@@ -196,6 +278,25 @@ export function checkinToSpan(c: CheckinRow): TimeSpan | null {
     };
 }
 
+// A completed-task row (the volunteer's done_by tasks, joined to project owner and
+// - when event-owned - the event), as returned by task.completedByVolunteer.
+export type CompletedTaskRow = {
+    task_id: number, title: string, done_time: string,
+    project_owner_table: string | null, project_owner_id: number | null,
+    event_start: string | null, event_end: string | null, event_label: string | null,
+};
+
+export function taskToSpan(t: CompletedTaskRow): TaskSpan {
+    const isEvent = t.project_owner_table === 'event' && t.project_owner_id != null;
+    return {
+        id: t.task_id, doneTime: t.done_time, title: t.title,
+        eventId: isEvent ? t.project_owner_id! : undefined,
+        eventStart: isEvent ? (t.event_start ?? undefined) : undefined,
+        eventEnd: isEvent ? t.event_end : undefined,
+        eventLabel: isEvent ? (t.event_label ?? undefined) : undefined,
+    };
+}
+
 // --------------------------------------------------------------------------------
 // --- The service (queries + dispatch) -------------------------------------------
 // --------------------------------------------------------------------------------
@@ -217,19 +318,24 @@ function reload(volunteer_id: number, event_id?: number): Markup {
 
 export class VolunteerTimeService {
 
-    // Build the intermediate model: query both sources, normalize, reconcile.
-    model(volunteer_id: number): VolunteerTime {
+    // Build the intermediate model: query the sources, normalize, reconcile.
+    // Completed tasks (the volunteer's own, by done_by) are folded in only when
+    // showTasks - they can get noisy, and are off by default.
+    model(volunteer_id: number, showTasks = false): VolunteerTime {
         const timesheets = rabid.timesheet_entry.entriesForVolunteer.all({volunteer_id})
             .map(timesheetToSpan);
         const checkins = (rabid.event_checkin.checkinsForVolunteer.all({volunteer_id}) as CheckinRow[])
             .map(checkinToSpan)
             .filter((s): s is TimeSpan => s !== null);
-        return reconcileTime(volunteer_id, timesheets, checkins);
+        const tasks = showTasks
+            ? (rabid.task.completedByVolunteer.all({volunteer_id}) as CompletedTaskRow[]).map(taskToSpan)
+            : [];
+        return reconcileTime(volunteer_id, timesheets, checkins, tasks);
     }
 
     @route(authenticated)
-    renderForVolunteer(volunteer_id: number): Markup {
-        return renderVolunteerTime(this.model(volunteer_id), volunteer_id);
+    renderForVolunteer(volunteer_id: number, showTasks = false): Markup {
+        return renderVolunteerTime(this.model(volunteer_id, showTasks), volunteer_id, showTasks);
     }
 
     // --- Adding ------------------------------------------------------------
@@ -304,15 +410,24 @@ export class VolunteerTimeService {
 // --- The renderer (pure: model → Markup) ----------------------------------------
 // --------------------------------------------------------------------------------
 
-export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number): Markup {
+export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number, showTasks = false): Markup {
+    const domId = `volunteer-time-${volunteer_id}`;
+    // The reload URL carries showTasks, so a reload (after an add/edit) keeps the
+    // current view; the toggle swaps the fragment to the other state in place.
     const props = reloadableItemProps('volunteer_time', volunteer_id,
-        `rabid.volunteer_time.renderForVolunteer(${volunteer_id})`);
+        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${showTasks})`, {id: domId});
     const addMenu = canManage(volunteer_id) ? renderAddMenu(volunteer_id) : undefined;
+    const toggle: Markup = [h.button,
+        {type: 'button', class: 'btn btn-sm btn-link p-0',
+         'hx-get': `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${!showTasks})`,
+         'hx-target': `#${domId}`, 'hx-swap': 'outerHTML'},
+        showTasks ? 'Hide completed tasks' : 'Show completed tasks'];
+    const footer: Markup = [h.div, {class: 'd-flex align-items-center gap-3 mt-1'}, toggle, addMenu];
 
     if(model.weeks.length === 0)
         return [h.div, props,
             [h.p, {class: 'text-muted'}, 'No time recorded yet.'],
-            addMenu];
+            footer];
 
     return [h.div, props,
         [h.table, {class: 'table table-sm'},
@@ -325,7 +440,7 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number):
            [h.td, {colspan: '4', class: 'text-end text-muted small'},
             `volunteer ${model.volunteerHours.toFixed(1)} · paid ${model.paidHours.toFixed(1)}`]],
          ]],
-        addMenu,
+        footer,
     ];
 }
 
@@ -341,6 +456,17 @@ function renderWeek(w: TimeWeek, volunteer_id: number): Markup[] {
 
 function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
     const sp = e.span;
+
+    // A per-day bucket of standalone completed tasks (no event, no shift).
+    if(sp.source === 'task')
+        return [[h.tr, {class: 'small'},
+            [h.td, {class: 'text-nowrap text-muted'}, dayLabel(sp.start)],
+            [h.td, {colspan: '3'}, renderTaskChips(e.tasks)]]];
+
+    // timesheet | checkin | event(synthesized).  'event' is a zero-hour carrier:
+    // the volunteer did an event's task without checking in - show the event so
+    // its tasks group under it, but no times/hours/edit.
+    const carrier = sp.source === 'event';
     const label: Markup = sp.eventId
         ? templates.pageLink(`/rabid.event.detailPage(${sp.eventId})`, sp.label)
         : sp.label;
@@ -353,10 +479,10 @@ function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
          [h.td, {class: 'text-nowrap'},
           dayLabel(sp.start),
           // Begin–end clock times for the work period (elapsed is the hours column).
-          [h.div, {class: 'text-muted small'}, timeRange(sp)]],
-         [h.td, {}, label, tags],
-         [h.td, {class: 'text-end text-nowrap'}, sp.end ? sp.hours.toFixed(1) : 'open'],
-         [h.td, {class: 'text-end'}, canManage(volunteer_id) ? editAffordance(sp) : undefined]],
+          [h.div, {class: 'text-muted small'}, carrier ? 'event' : timeRange(sp)]],
+         [h.td, {}, label, tags, e.tasks.length ? renderTaskChips(e.tasks) : undefined],
+         [h.td, {class: 'text-end text-nowrap'}, carrier ? '—' : (sp.end ? sp.hours.toFixed(1) : 'open')],
+         [h.td, {class: 'text-end'}, (!carrier && canManage(volunteer_id)) ? editAffordance(sp) : undefined]],
     ];
     for(const n of e.nested)
         rows.push([h.tr, {class: 'text-muted small'},
@@ -367,6 +493,16 @@ function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
              ` · event ${timeRange(n)}`],
             [h.td, {}]]);
     return rows;
+}
+
+// Completed tasks as compact chips (several per line) - the "what got done" layer.
+function renderTaskChips(tasks: TaskSpan[]): Markup {
+    return [h.div, {class: 'mt-1 d-flex flex-wrap gap-1'},
+        tasks.map(t =>
+            [h.a, {...templates.pageLinkProps(`/rabid.task.detailPage(${t.id})`),
+                   class: 'badge text-bg-light border text-decoration-none',
+                   'data-testid': `done-task-${t.id}`},
+             '✓ ', t.title])];
 }
 
 // The pencil routes to the right editor for the row's source.

@@ -7,7 +7,14 @@ import { assert, assertEquals, assertRejects } from "../liminal/testing/assert.t
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
 import { hasText } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
-import { reconcileTime, spanHours, type TimeSpan } from "./volunteer_time.ts";
+import { reconcileTime, spanHours, type TimeSpan, type TaskSpan } from "./volunteer_time.ts";
+
+function tk(id: number, doneTime: string,
+            opts: {eventId?: number, eventStart?: string, eventEnd?: string|null,
+                   eventLabel?: string, title?: string} = {}): TaskSpan {
+    return {id, doneTime, title: opts.title ?? `task ${id}`, eventId: opts.eventId,
+            eventStart: opts.eventStart, eventEnd: opts.eventEnd, eventLabel: opts.eventLabel};
+}
 
 function ts(id: number, start: string, end: string | null, paid = false): TimeSpan {
     return {source: 'timesheet', id, start, end, hours: spanHours(start, end),
@@ -100,6 +107,56 @@ function insertEvent(): number {
     }));
 }
 
+// --- Completed-task placement (pure) -------------------------------------------
+
+test("task: event-subordinate task nests under the event's check-in entry", () => {
+    const m = reconcileTime(1, [],
+        [ci(5, '2026-06-03 17:00:00', '2026-06-03 20:00:00')],          // checked into event 105
+        [tk(9, '2026-06-05 10:00:00', {eventId: 105})]);               // task done 2 days later
+    assertEquals(m.weeks[0].entries.length, 1);
+    assertEquals(m.weeks[0].entries[0].span.source, 'checkin');
+    assertEquals(m.weeks[0].entries[0].tasks.map(t => t.id), [9]);     // attached to the event
+});
+
+test("task: event-subordinate with NO check-in synthesizes a zero-hour event row in the EVENT's week", () => {
+    const m = reconcileTime(1, [], [],
+        [tk(9, '2026-06-20 10:00:00',                                   // done much later
+            {eventId: 105, eventStart: '2026-06-03 17:00:00', eventEnd: '2026-06-03 20:00:00',
+             eventLabel: 'Repair Night'})]);
+    assertEquals(m.weeks.length, 1);
+    assertEquals(m.weeks[0].weekStart, '2026-05-31');                  // the event's week, NOT done_time's
+    const e = m.weeks[0].entries[0];
+    assertEquals(e.span.source, 'event');
+    assertEquals(e.span.hours, 0);                                     // no attendance hours
+    assertEquals(e.tasks.map(t => t.id), [9]);
+    assertEquals(m.hours, 0);                                          // tasks add no hours
+});
+
+test("task: a non-event task done during a timesheet shift attaches to that shift", () => {
+    const m = reconcileTime(1,
+        [ts(1, '2026-06-01 09:00:00', '2026-06-01 17:00:00')],         // an 8h shift
+        [],
+        [tk(9, '2026-06-01 11:00:00')]);                               // done mid-shift
+    assertEquals(m.weeks[0].entries.length, 1);
+    assertEquals(m.weeks[0].entries[0].span.source, 'timesheet');
+    assertEquals(m.weeks[0].entries[0].tasks.map(t => t.id), [9]);
+    assertEquals(m.hours, 8);                                          // task adds nothing
+});
+
+test("task: a standalone task (no event, no shift) becomes a per-day task row", () => {
+    const m = reconcileTime(1, [], [],
+        [tk(9, '2026-06-02 14:00:00'), tk(10, '2026-06-02 16:00:00')]);// same day -> one bucket
+    assertEquals(m.weeks[0].entries.length, 1);
+    assertEquals(m.weeks[0].entries[0].span.source, 'task');
+    assertEquals(m.weeks[0].entries[0].tasks.map(t => t.id), [9, 10]);
+    assertEquals(m.hours, 0);
+});
+
+test("task: tasks default off (empty tasks arg = the old behavior)", () => {
+    const m = reconcileTime(1, [ts(1, '2026-06-01 09:00:00', '2026-06-01 12:00:00')], []);
+    assertEquals(m.weeks[0].entries.every(e => e.tasks.length === 0), true);
+});
+
 test("model: a real timesheet + an overlapping event check-in reconcile to one counted entry", () => {
     return withTestDb(({ bob }) => {
         const eid = insertEvent();
@@ -177,5 +234,32 @@ test("checking a volunteer out also reloads their time fragment (cross-context)"
         const res = await asUser(alice, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, eid, bob));
         assert(res.targets.includes(`.-event_checkin-${eid}-`));
         assert(res.targets.includes(`.-volunteer_time-${bob}-`));
+    });
+});
+
+test("model(showTasks): a task bob completed for an event shows under the event; off by default", () => {
+    return withTestDb(({ bob }) => {
+        const eid = insertEvent();
+        // An event-owned task, completed BY bob (done_by = bob), and bob checked in.
+        const tid = asSystem(() => {
+            const pid = rabid.project.forOwner('event', eid, /*create*/ true)!;
+            return rabid.task.insert({project_id: pid, title: 'Set up tables', status: 'open', deleted: 0} as any);
+        });
+        asUser(bob, () => rabid.task.update(tid, {status: 'done'}));          // stamps done_by = bob
+        asSystem(() => rabid.event_checkin.insert({event_id: eid, volunteer_id: bob, notes: ''}));
+
+        // Off by default.
+        const off = asSystem(() => rabid.volunteer_time.model(bob, false));
+        assertEquals(off.weeks.flatMap(w => w.entries).every(e => e.tasks.length === 0), true);
+
+        // On: the completed task hangs off the event's entry.
+        const on = asSystem(() => rabid.volunteer_time.model(bob, true));
+        const eventEntry = on.weeks.flatMap(w => w.entries).find(e => e.span.eventId === eid);
+        assert(eventEntry, 'expected an entry for the event');
+        assertEquals(eventEntry!.tasks.map(t => t.title), ['Set up tables']);
+
+        // A task someone ELSE completed isn't credited to bob.
+        const otherView = asSystem(() => rabid.volunteer_time.model(bob, true));
+        assertEquals(otherView.weeks.flatMap(w => w.entries).flatMap(e => e.tasks).length, 1);
     });
 });
