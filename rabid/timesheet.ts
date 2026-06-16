@@ -234,8 +234,12 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
 
     renderTimesheetRow(e: TimesheetEntry & {volunteer_name: string}): Markup {
         const id = e.timesheet_entry_id;
+        // Show the work period as date · begin–end · elapsed.
+        const times = e.end_time
+            ? `${date.sqliteDateTimeToTimeString(e.start_time)} – ${date.sqliteDateTimeToTimeString(e.end_time)}`
+            : `from ${date.sqliteDateTimeToTimeString(e.start_time)}`;
         const hrs = e.end_time ? `${entryHours(e).toFixed(1)} hrs` : 'not checked out';
-        const secondary = [date.sqliteDateTimeToDateString(e.start_time), hrs].filter(Boolean).join(' · ');
+        const secondary = [date.sqliteDateTimeToDateString(e.start_time), times, hrs].filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
         // tap anywhere drills in via the lm-nav-link name); the pencil - shown

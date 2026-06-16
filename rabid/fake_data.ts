@@ -492,7 +492,8 @@ export function seedEventCommitments(rabid: Rabid, opts: { baseSeed?: number } =
     rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('commitments.rand')) >>> 0);
     const volunteers = rabid.volunteer.allVolunteersByName.all();
     const events = rabid.event.allEvents.all();
-    
+    const staffIds = new Set(volunteers.filter(v => v.is_staff).map(v => v.volunteer_id));
+
     console.info('Event count', events.length);
     if(volunteers.length < 2)
         throw new Error('Must be at least 2 volunteers');
@@ -553,39 +554,40 @@ export function seedEventCommitments(rabid: Rabid, opts: { baseSeed?: number } =
             min: minVolunteers, 
             max: maxVolunteers 
         }));
+        const commitFor = (volunteer_id: number) => rabid.event_commitment.insert({
+            event_id: event.event_id,
+            volunteer_id,
+            requested_role: faker.helpers.arrayElement(['', 'repair', 'greeter', 'setup', 'cleanup']),
+            notes: faker.helpers.maybe(() =>
+                faker.helpers.arrayElement([
+                    'Can help with electronics',
+                    'Will bring tools',
+                    'Available for full shift',
+                    'Can only stay 2 hours',
+                    ''
+                ]), { probability: 0.3 }) || '',
+            will_drive_supplies: faker.datatype.boolean({ probability: 0.1 }) ? 1 : 0,
+            will_drive_passengers_count: faker.helpers.maybe(() =>
+                faker.helpers.rangeToNumber({ min: 1, max: 4 }),
+                { probability: 0.1 }) || 0,
+        });
+
+        // Staff work every event - sign them up unconditionally (they are extra:
+        // the target governs how many *other* volunteers turn out).
+        for(const volunteer of volunteers)
+            if(staffIds.has(volunteer.volunteer_id))
+                commitFor(volunteer.volunteer_id);
+
+        // Then fill up to the target with non-staff, priority by participation rate.
         let commitmentCount = 0;
-        
-        // First, let super volunteers sign up based on their participation rate
         const shuffledVolunteers = shuffled(volunteers);
-        
         for(const volunteer of shuffledVolunteers) {
+            if(staffIds.has(volunteer.volunteer_id)) continue;   // already committed above
             const participationRate = volunteerParticipationRates.get(volunteer.volunteer_id)!;
-            
-            // Higher participation rate volunteers get priority
             if (rand() < participationRate) {
-                rabid.event_commitment.insert({
-                    event_id: event.event_id,
-                    volunteer_id: volunteer.volunteer_id,
-                    requested_role: faker.helpers.arrayElement(['', 'repair', 'greeter', 'setup', 'cleanup']),
-                    notes: faker.helpers.maybe(() => 
-                        faker.helpers.arrayElement([
-                            'Can help with electronics',
-                            'Will bring tools',
-                            'Available for full shift',
-                            'Can only stay 2 hours',
-                            ''
-                        ]), { probability: 0.3 }) || '',
-                    will_drive_supplies: faker.datatype.boolean({ probability: 0.1 }) ? 1 : 0,
-                    will_drive_passengers_count: faker.helpers.maybe(() => 
-                        faker.helpers.rangeToNumber({ min: 1, max: 4 }), 
-                        { probability: 0.1 }) || 0,
-                });
+                commitFor(volunteer.volunteer_id);
                 commitmentCount++;
-                
-                // Stop if we've reached our target
-                if (commitmentCount >= targetVolunteers) {
-                    break;
-                }
+                if (commitmentCount >= targetVolunteers) break;
             }
         }
     }
@@ -623,6 +625,7 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
     const currentDate = new Date();
     const events = rabid.event.allEvents.all();
     const volunteers = rabid.volunteer.allVolunteersByName.all();
+    const staffIds = new Set(volunteers.filter(v => v.is_staff).map(v => v.volunteer_id));
 
     // Only events that have started can have check-ins.
     const startedEvents = events.filter(e => e.start_time && new Date(e.start_time) <= currentDate);
@@ -637,10 +640,12 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
         const commitments = rabid.event_commitment.commitmentsForEvent.all({ event_id: event.event_id });
 
         // Most committed volunteers show up; a bit fewer for a still-ongoing event
-        // (not everyone has arrived yet).  Check-ins inherit the event's times.
+        // (not everyone has arrived yet).  Staff work every event, so they always
+        // check in.  Check-ins inherit the event's times.
         const showRate = isPast ? 0.9 : 0.7;
         for (const commitment of commitments) {
-            if (rand() < showRate) {
+            const rate = staffIds.has(commitment.volunteer_id) ? 1.0 : showRate;
+            if (rand() < rate) {
                 rabid.event_checkin.insert({
                     event_id: event.event_id,
                     volunteer_id: commitment.volunteer_id,
@@ -754,8 +759,11 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
                 if(loggedMs >= targetMs) break;
                 if(rand() >= p.attendRate) continue;
                 const evEnd = ev.end ?? new Date(ev.start.getTime() + 4 * 3600_000);
-                const tsStart = new Date(ev.start.getTime() - 30 * 60_000);
-                const tsEnd = new Date(evEnd.getTime() + 30 * 60_000);
+                // Sometimes a margin (setup before / teardown after), sometimes the
+                // shift matches the event exactly - so both kinds of overlap appear.
+                const margin = () => faker.helpers.arrayElement([0, 0, 15, 30, 60]) * 60_000;
+                const tsStart = new Date(ev.start.getTime() - margin());
+                const tsEnd = new Date(evEnd.getTime() + margin());
                 if(tsEnd > now) continue;
                 rabid.timesheet_entry.insert({
                     volunteer_id: v.volunteer_id,

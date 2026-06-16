@@ -350,7 +350,10 @@ function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
     ];
     const rows: Markup[] = [
         [h.tr, {},
-         [h.td, {class: 'text-nowrap'}, dayLabel(sp.start)],
+         [h.td, {class: 'text-nowrap'},
+          dayLabel(sp.start),
+          // Begin–end clock times for the work period (elapsed is the hours column).
+          [h.div, {class: 'text-muted small'}, timeRange(sp)]],
          [h.td, {}, label, tags],
          [h.td, {class: 'text-end text-nowrap'}, sp.end ? sp.hours.toFixed(1) : 'open'],
          [h.td, {class: 'text-end'}, canManage(volunteer_id) ? editAffordance(sp) : undefined]],
