@@ -341,8 +341,9 @@ export class VolunteerTimeService {
     }
 
     @route(authenticated)
-    renderForVolunteer(volunteer_id: number, showOrphanTasks = false): Markup {
-        return renderVolunteerTime(this.model(volunteer_id, showOrphanTasks), volunteer_id, showOrphanTasks);
+    renderForVolunteer(volunteer_id: number, showOrphanTasks = false, showAllWeeks = false): Markup {
+        return renderVolunteerTime(this.model(volunteer_id, showOrphanTasks), volunteer_id,
+                                   showOrphanTasks, showAllWeeks);
     }
 
     // --- Adding ------------------------------------------------------------
@@ -417,37 +418,54 @@ export class VolunteerTimeService {
 // --- The renderer (pure: model → Markup) ----------------------------------------
 // --------------------------------------------------------------------------------
 
-export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number, showOrphanTasks = false): Markup {
+const WEEK_WINDOW = 8;   // default to the most recent N weeks (recent-first)
+
+export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
+                                    showOrphanTasks = false, showAllWeeks = false): Markup {
     const domId = `volunteer-time-${volunteer_id}`;
-    // The reload URL carries showOrphanTasks, so a reload (after an add/edit)
-    // keeps the current view; the toggle swaps the fragment in place.  (Tasks
-    // done during a shift/event are shown inline regardless - this toggle only
-    // governs the off-shift / un-attended-event "other" tasks.)
+    const route = (orphans: boolean, all: boolean) =>
+        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${orphans},${all})`;
+    // The reload URL carries both view flags, so a reload (after an add/edit)
+    // keeps the current view; each toggle swaps the fragment in place.
     const props = reloadableItemProps('volunteer_time', volunteer_id,
-        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${showOrphanTasks})`, {id: domId});
+        route(showOrphanTasks, showAllWeeks), {id: domId});
+    const linkBtn = (label: string, hxGet: string): Markup =>
+        [h.button, {type: 'button', class: 'btn btn-sm btn-link p-0',
+            'hx-get': hxGet, 'hx-target': `#${domId}`, 'hx-swap': 'outerHTML'}, label];
     const addMenu = canManage(volunteer_id) ? renderAddMenu(volunteer_id) : undefined;
-    const toggle: Markup = [h.button,
-        {type: 'button', class: 'btn btn-sm btn-link p-0',
-         'hx-get': `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${!showOrphanTasks})`,
-         'hx-target': `#${domId}`, 'hx-swap': 'outerHTML'},
-        showOrphanTasks ? 'Hide other completed tasks' : 'Show other completed tasks'];
-    const footer: Markup = [h.div, {class: 'd-flex align-items-center gap-3 mt-1'}, toggle, addMenu];
+    // The orphans toggle governs only the off-shift / un-attended-event tasks;
+    // tasks done during a shift/event are shown inline regardless.
+    const orphanToggle = linkBtn(showOrphanTasks ? 'Hide other completed tasks' : 'Show other completed tasks',
+                                 route(!showOrphanTasks, showAllWeeks));
+    const windowed = !showAllWeeks && model.weeks.length > WEEK_WINDOW;
+    const weeksToggle: Markup = model.weeks.length > WEEK_WINDOW
+        ? linkBtn(showAllWeeks ? `Show last ${WEEK_WINDOW} weeks` : `Show all ${model.weeks.length} weeks`,
+                  route(showOrphanTasks, !showAllWeeks))
+        : undefined;
+    const footer: Markup = [h.div, {class: 'd-flex align-items-center flex-wrap gap-3 mt-1'},
+                            weeksToggle, orphanToggle, addMenu];
 
     if(model.weeks.length === 0)
         return [h.div, props,
             [h.p, {class: 'text-muted'}, 'No time recorded yet.'],
             footer];
 
+    // Show the most recent N weeks by default; the total reflects what's shown.
+    const shown = showAllWeeks ? model.weeks : model.weeks.slice(0, WEEK_WINDOW);
+    const sum = (f: (w: TimeWeek) => number) => shown.reduce((s, w) => s + f(w), 0);
+    const hours = sum(w => w.hours), paidHours = sum(w => w.paidHours);
+    const totalLabel = windowed ? `Last ${WEEK_WINDOW} weeks` : 'Total';
+
     return [h.div, props,
         [h.table, {class: 'table table-sm'},
          [h.tbody, {},
-          model.weeks.flatMap((w, i) => renderWeek(w, volunteer_id, i === 0)),
+          shown.flatMap((w, i) => renderWeek(w, volunteer_id, i === 0)),
           [h.tr, {class: 'fw-bold border-top'},
-           [h.td, {}, 'Total'], [h.td, {}],
-           [h.td, {class: 'text-end'}, model.hours.toFixed(1)], [h.td, {}]],
+           [h.td, {}, totalLabel], [h.td, {}],
+           [h.td, {class: 'text-end'}, hours.toFixed(1)], [h.td, {}]],
           [h.tr, {},
            [h.td, {colspan: '4', class: 'text-end text-muted small'},
-            `volunteer ${model.volunteerHours.toFixed(1)} · paid ${model.paidHours.toFixed(1)}`]],
+            `volunteer ${(hours - paidHours).toFixed(1)} · paid ${paidHours.toFixed(1)}`]],
          ]],
         footer,
     ];
@@ -461,7 +479,7 @@ function renderWeek(w: TimeWeek, volunteer_id: number, isFirst: boolean): Markup
         isFirst ? undefined
             : [h.tr, {'aria-hidden': 'true'},
                [h.td, {colspan: '4', style: 'height: 1.25rem; border: 0;'}]],
-        [h.tr, {class: 'table-light border-top'},
+        [h.tr, {class: 'table-light border-top', 'data-testid': 'time-week'},
          [h.td, {colspan: '2', class: 'fw-semibold'}, `Week of ${weekLabel(w)}`],
          [h.td, {class: 'text-end fw-semibold'}, w.hours.toFixed(1)],
          [h.td, {}]],
