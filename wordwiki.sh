@@ -3,9 +3,19 @@ set -e
 
 # wordwiki run script (adapted from rabid.sh).
 #
-# The server runs with ~/mmo as its working directory: the SQLite db, the
-# published static site, the content stores, and the runtime files (pidfile,
-# shutdown password) all live there.  The code lives in ~/wordwiki.
+# The server runs with an INSTANCE DIRECTORY as its working directory: the
+# SQLite db, the published static site, the content stores, and the runtime
+# files (pidfile, shutdown password) all live there.  The code lives in the repo
+# (this script's dir).
+#
+#   Instance dir : $WORDWIKI_DIR  (default: <repo>/mmo)
+#   Port         : $WORDWIKI_PORT (default: 9000)
+#
+# To run a second instance in parallel: point WORDWIKI_DIR at another set-up
+# instance dir (its own database/ + published output; the big read-only stores
+# content/imports/derived can be symlinks to a shared store) on a free
+# WORDWIKI_PORT.  The server verifies the dir on startup and refuses to run an
+# unconfigured one (rather than silently serving empty stores).
 #
 # Usage:
 #   ./wordwiki.sh                      # (re)start the server on :9000
@@ -42,16 +52,28 @@ set -e
 # except `publish`, which only reads the db.
 
 WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
-RUN_DIR="$HOME/mmo"
+RUN_DIR="${WORDWIKI_DIR:-$WORDWIKI_SRC/mmo}"
 PIDFILE="wordwiki.pid"
 PWFILE="wordwiki-shutdown-password.txt"
-PORT=9000
+PORT="${WORDWIKI_PORT:-9000}"
+
+# Refuse on a missing instance dir rather than silently creating an empty one
+# (transpile's mkdir -p would otherwise conjure it into existence).  The server
+# does the deeper store checks; this is the fast, obvious one.
+if [ ! -d "$RUN_DIR" ]; then
+    echo "wordwiki instance dir '$RUN_DIR' does not exist." >&2
+    echo "Create it and provide its data: production = a real dir (copy/rsync the" >&2
+    echo "data in); dev = symlink content/imports/derived to a shared store and give" >&2
+    echo "it its own database/.  Override the location with WORDWIKI_DIR=..." >&2
+    exit 1
+fi
 
 # Always refresh the browser-side scripts and /resources first (transpile.sh
-# compiles page-editor/page-viewer into ~/mmo/scripts and rsyncs resources/).
-# A bit hoaky to run it on every invocation, but starting with stale client
-# scripts breaks things in confusing ways, and it's cheap.
-(cd "$WORDWIKI_SRC" && ./transpile.sh)
+# compiles page-editor/page-viewer into <instance>/scripts and rsyncs resources/
+# into <instance>/resources).  A bit hoaky to run it on every invocation, but
+# starting with stale client scripts breaks things in confusing ways, and it's
+# cheap.
+(cd "$WORDWIKI_SRC" && ./transpile.sh "$RUN_DIR")
 
 cd "$RUN_DIR"
 

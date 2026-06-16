@@ -40,6 +40,7 @@ import * as user from './user.ts';
 import * as category from './category.ts';
 import * as categoryImport from './category-import.ts';
 import * as lexicalForm from './lexical-form.ts';
+import * as instanceDir_ from './instance-dir.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
 import * as migrationVerify from './migration-verify.ts';
 import { validateVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
@@ -1384,14 +1385,37 @@ if (import.meta.main) {
     const command = args[0];
     const ww = getWordWiki();
     switch(command) {
-        case 'serve':
+        case 'serve': {
+            const port = Number(Deno.env.get('WORDWIKI_PORT') ?? '9000');
+            const instanceDir = Deno.cwd();
+
+            // Verify the instance is actually set up (don't silently serve an
+            // empty/mis-pointed dir), then take the db write-lock.
+            const {errors, warnings} = instanceDir_.checkInstanceStores(instanceDir);
+            for(const w of warnings) console.warn(`WARNING: instance store ${w}`);
+            if(errors.length > 0) {
+                console.error(`wordwiki instance dir '${instanceDir}' is not set up - refusing to start:`);
+                for(const e of errors) console.error(`  ${e}`);
+                Deno.exit(1);
+            }
+            instanceDir_.acquireDbLock(instanceDir);
+
             security.runSystem(() => ww.ensureNewStyleTables());
+
+            // Announce exactly which instance/db/port we are on (so a glance at
+            // the log catches "I thought this was the dev/prod instance").
+            console.info(`wordwiki serving:`);
+            console.info(`  instance dir : ${instanceDir}`);
+            console.info(`  database     : ${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()}  [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`);
+            console.info(`  port         : ${port}`);
+
             // Legacy-template pages don't go through coercePageResult, so the
             // navbar's test-client-link default is set once here instead.
             templates.setDefaultShowTestClientLink(ww.isTestDb);
-            ww.startServer({hostname: 'localhost', port: 9000,
+            ww.startServer({hostname: 'localhost', port,
                             allowSchemaMismatch: args.includes('--allow-schema-mismatch')});
             break;
+        }
 
         // Compare the db against the declared (new-style) table model; with
         // --apply, bring it up to date (additive changes only - see

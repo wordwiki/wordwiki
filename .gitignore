@@ -1,5 +1,10 @@
 /web-build/*
 
+# The default instance directory (data: db, content/derived/imports, the
+# published static site, runtime files) - ~66GB, never tracked.  Other
+# instances live elsewhere via WORDWIKI_DIR.
+/mmo/
+
 # Runtime files written by the rabid server at startup (see Rabid.startServer).
 /rabid.pid
 /rabid-shutdown-password.txt

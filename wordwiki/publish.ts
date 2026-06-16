@@ -481,6 +481,11 @@ export class Publish {
         // --- If publish root dir does not exist, create it.
         await Deno.mkdir(this.publishRoot, {recursive: true});
 
+        // --- Record which instance/db this site was built from, and warn if the
+        //     output dirs are shared (two instances publishing into one tree
+        //     clobber each other) - part of the off-the-rails net.
+        this.recordPublishContext();
+
         // --- Publish top level pages
         await this.publishItem('Home Page', ()=>this.publishHomePage());
         await this.publishItem('404 Page', ()=>this.publish404Page());
@@ -509,6 +514,25 @@ export class Publish {
         //     heavily guarded - see pruneOrphanedPages).  Only meaningful after
         //     a FULL publish() like this one; never called from publishTargets.
         await this.pruneOrphanedPages();
+    }
+
+    // Note the building instance + db_purpose in the publish log, and warn if a
+    // publish OUTPUT dir is a symlink (a shared output tree means two instances
+    // publishing will clobber each other).
+    recordPublishContext(): void {
+        let instanceDir = '?';
+        try { instanceDir = Deno.cwd(); } catch { /* ignore */ }
+        let purpose = 'unmarked';
+        try { purpose = this.wordWiki.getDbPurpose() ?? 'unmarked'; } catch { /* ignore */ }
+        this.status.log.push(`Publishing from instance '${instanceDir}' [db_purpose: ${purpose}].`);
+        for(const dir of ['entries', 'categories', 'top-words', 'books', 'servlet']) {
+            try {
+                if(Deno.lstatSync(this.fsPath(dir)).isSymlink)
+                    this.status.warnings.push(
+                        `Publish output dir '${dir}' is a symlink - if another instance shares it, `+
+                        `concurrent publishes will clobber each other.`);
+            } catch { /* not present yet - fine */ }
+        }
     }
 
     /**

@@ -6,11 +6,15 @@ set -e
 # import rewriting, REMOVE_FOR_WEB stripping, CDN remapping) is needed any
 # more - that all served the retired client-side lexeme editor.
 
-SCRIPTS=../mmo/scripts
+# Target instance dir (where <dir>/scripts and <dir>/resources are written).
+# Defaults to the repo-relative ./mmo; wordwiki.sh passes the active instance
+# dir (absolute, or elsewhere via WORDWIKI_DIR).
+DEST="${1:-mmo}"
+SCRIPTS="$DEST/scripts"
 
-mkdir -p $SCRIPTS
+mkdir -p "$SCRIPTS"
 
-cp resources/resource_dir_marker.txt $SCRIPTS
-swc compile --config-file .swcrc wordwiki/page-editor.ts wordwiki/page-viewer.ts --out-dir $SCRIPTS
+cp resources/resource_dir_marker.txt "$SCRIPTS"
+swc compile --config-file .swcrc wordwiki/page-editor.ts wordwiki/page-viewer.ts --out-dir "$SCRIPTS"
 
-rsync -a resources/ ../mmo/resources/
+rsync -a resources/ "$DEST/resources/"
