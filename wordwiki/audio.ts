@@ -253,58 +253,110 @@ export class AudioRoutes {
 // ===========================================================================
 // THROWAWAY: audio-trim threshold listening test.  A one-off decision fixture
 // so a fluent speaker can pick the most aggressive trim threshold that does not
-// cut the spoken word.  The clips are the recordings most affected by an
-// aggressive trim (top removed-region peak at 0.3%, from audio-trim-audit.ts),
-// with their headwords looked up once and hard-coded.  Each variant is generated
-// on demand via the normal derived store (getTrimmedRecordingPath) and cached.
-// DELETE this block + the trimTuningPage route once the threshold is settled.
+// cut the spoken word.  Two sections: the words MOST affected by an aggressive
+// trim (worst cases), and a RANDOM sample (typical case).  Clip lists + their
+// headwords are looked up once and hard-coded; each variant is generated on
+// demand via the normal derived store (getTrimmedRecordingPath) and cached.
+//
+// HOW TO REBUILD / make a variant (new words, thresholds, etc.): see the recipe
+// in wordwiki/audio-trim-tuning.md.  DELETE this whole block + the trimTuningPage
+// route on AudioRoutes once the language staff settle the threshold.
 // ===========================================================================
+// The candidate thresholds to A/B, plus the fixed rest of the trim params.
+// To compare a DIFFERENT axis (e.g. minDuration), change these / the cell loop.
 const TRIM_TUNING_THRESHOLDS = ['0.03%', '0.05%', '0.1%', '0.2%', '0.3%'];
+const TRIM_TUNING_MIN_DURATION = 0.1;
+const TRIM_TUNING_FADE = 0.01;
 
-const TRIM_TUNING_CLIPS: { word: string, entryId: number, src: string }[] = [
-    { word: "pgesign",         entryId: 110794, src: "content/Recordings/be7/be76a88665f953900fc643bc774b39ce84323a09bbc6ff48b188518a1938cf1a.wav" },
-    { word: "ugtlu'sue'sgwul", entryId: 146566, src: "content/Recordings/844/844f5705fcf42e416517d075e2535b913bb6427e5585e60d7b7636f814f4a5ca.wav" },
-    { word: "apso'qonigatat",  entryId:  11046, src: "content/Recordings/828/8286372e0c8dd3103ce16c2346f07449821d2436643661a72896c116c80ed703.wav" },
-    { word: "tgupoq",          entryId: 141302, src: "content/Recordings/dac/dac203160f6499b9da6d1b66e6b777b9abf9d38835fdd9e8f4dd266da9c440ac.wav" },
-    { word: "pgesign'ji'j",    entryId: 110812, src: "content/Recordings/f17/f178009f90a6cfef29bc46e2ef131768883e226ef16505c1b5c6e1e598079973.wav" },
-    { word: "ugpitn",          entryId: 145227, src: "content/Recordings/487/48775f6dd52522ab1df57e17dce45b4d47b1ae9ef07490825fee4c5cd0ded688.wav" },
-    { word: "pqwanm",          entryId: 117408, src: "content/Recordings/ba4/ba41082338f4e2a05e286e6308504b14d0c80eaeaabcce2f1ad79ad7e55e7020.wav" },
-    { word: "toqwaqji'jit",    entryId: 143189, src: "content/Recordings/954/954436ce2de6ca78d31536d1ad7fa8ff878b9d57d6a0fc5ad2133f4b00ae18ae.wav" },
-    { word: "egs'pugua'latl",  entryId:  16387, src: "content/Recordings/e78/e78cd6b6088e5b117b0700f9e8a64550743f81334dcaf396941333bb3032676a.wav" },
-    { word: "pugsigna'qewit",  entryId: 118207, src: "content/Recordings/41d/41d1e372af8cf766a9e4d347aee2f8da645ffdb9c48c6ee625b61d8842a5e1c4.wav" },
-    { word: "ugji'g'j",        entryId: 144627, src: "content/Recordings/b1f/b1f9c49370e5d4da90413a805a19a68f91b9b2e98e7a011be59eef5c7662c17e.wav" },
-    { word: "ugju'sn",         entryId: 145048, src: "content/Recordings/645/645deaec909fbbf05a3a6a82077af26e1b694184970c390ed6e6b8e4a6cf88a6.wav" },
-    { word: "tg'snugowa'j",    entryId: 141203, src: "content/Recordings/afd/afd17d87455d46096f87b902631b44335464c898cc1a846e8a50d1864cec48e1.wav" },
+interface TuningClip { word: string; entryId: number; src: string; }
+interface TuningSection { heading: string; blurb: string; clips: TuningClip[]; }
+
+// Each section is its own table.  Regenerate the clip lists with the recipe in
+// wordwiki/audio-trim-tuning.md (run audio-trim-audit.ts, resolve headwords via
+// the documented SQL, paste here).
+const TRIM_TUNING_SECTIONS: TuningSection[] = [
+    {
+        heading: 'Most affected words',
+        blurb: 'The recordings the trimmer changes the MOST — the worst cases, where an ' +
+               'aggressive threshold cuts a loud word onset (largest removed-region peak at 0.3%). ' +
+               'Listen for a clipped start or end.',
+        clips: [
+            { word: "pgesign",         entryId: 110794, src: "content/Recordings/be7/be76a88665f953900fc643bc774b39ce84323a09bbc6ff48b188518a1938cf1a.wav" },
+            { word: "ugtlu'sue'sgwul", entryId: 146566, src: "content/Recordings/844/844f5705fcf42e416517d075e2535b913bb6427e5585e60d7b7636f814f4a5ca.wav" },
+            { word: "apso'qonigatat",  entryId:  11046, src: "content/Recordings/828/8286372e0c8dd3103ce16c2346f07449821d2436643661a72896c116c80ed703.wav" },
+            { word: "tgupoq",          entryId: 141302, src: "content/Recordings/dac/dac203160f6499b9da6d1b66e6b777b9abf9d38835fdd9e8f4dd266da9c440ac.wav" },
+            { word: "pgesign'ji'j",    entryId: 110812, src: "content/Recordings/f17/f178009f90a6cfef29bc46e2ef131768883e226ef16505c1b5c6e1e598079973.wav" },
+            { word: "ugpitn",          entryId: 145227, src: "content/Recordings/487/48775f6dd52522ab1df57e17dce45b4d47b1ae9ef07490825fee4c5cd0ded688.wav" },
+            { word: "pqwanm",          entryId: 117408, src: "content/Recordings/ba4/ba41082338f4e2a05e286e6308504b14d0c80eaeaabcce2f1ad79ad7e55e7020.wav" },
+            { word: "toqwaqji'jit",    entryId: 143189, src: "content/Recordings/954/954436ce2de6ca78d31536d1ad7fa8ff878b9d57d6a0fc5ad2133f4b00ae18ae.wav" },
+            { word: "egs'pugua'latl",  entryId:  16387, src: "content/Recordings/e78/e78cd6b6088e5b117b0700f9e8a64550743f81334dcaf396941333bb3032676a.wav" },
+            { word: "pugsigna'qewit",  entryId: 118207, src: "content/Recordings/41d/41d1e372af8cf766a9e4d347aee2f8da645ffdb9c48c6ee625b61d8842a5e1c4.wav" },
+            { word: "ugji'g'j",        entryId: 144627, src: "content/Recordings/b1f/b1f9c49370e5d4da90413a805a19a68f91b9b2e98e7a011be59eef5c7662c17e.wav" },
+            { word: "ugju'sn",         entryId: 145048, src: "content/Recordings/645/645deaec909fbbf05a3a6a82077af26e1b694184970c390ed6e6b8e4a6cf88a6.wav" },
+            { word: "tg'snugowa'j",    entryId: 141203, src: "content/Recordings/afd/afd17d87455d46096f87b902631b44335464c898cc1a846e8a50d1864cec48e1.wav" },
+        ],
+    },
+    {
+        heading: 'Random sample (typical words)',
+        blurb: 'A random spread of ordinary recordings (NOT cherry-picked), to hear what the trim ' +
+               'does to a typical word — usually it removes only a few ms of silence and leaves the word intact.',
+        clips: [
+            { word: "a'jela's'g",      entryId:   538, src: "content/Recordings/8b7/8b7baaaddbad40f58aeedc643ea2f3fca6953e27bd3da2f80189d43529070477.wav" },
+            { word: "alasumteget",     entryId:  2375, src: "content/Recordings/9d2/9d209a2984b7254881e9909462d37dbdc49bfc9c282c6bf7f7ab74b7a2e3c96e.wav" },
+            { word: "aps'sqate'get",   entryId: 11178, src: "content/Recordings/f57/f57a1f1a35551c34ffe62f00210762dcf76bea99c1cdaa1e0295153e93df6b77.wav" },
+            { word: "a'sugwesugwijig", entryId: 14222, src: "content/Recordings/731/73153052fa66f5de9c8a68c14727ae437cfbbd6c2b2f461419276965a66825dd.wav" },
+            { word: "eltoq",           entryId: 21926, src: "content/Recordings/e32/e32dbdf6b42747726f257264b4fd49678fb908b0417218d474b08cf6e772e84e.wav" },
+            { word: "gaqapijing",      entryId: 33100, src: "content/Recordings/e0b/e0b43c111870ae61b73bc1339b4565e1d92651ae38e359ce8f85f3f7353823d2.wav" },
+            { word: "gi's_sa'q",       entryId: 48769, src: "content/Recordings/d95/d95c29ca0540ad3179c09c9c86aeb74e02f021e0636f5800d2a175f46ad5bc4d.wav" },
+            { word: "glusgapewit",     entryId: 50694, src: "content/Recordings/ff9/ff9015b9bf0430ebbc9a398f74e4fae6955e84737cb8cc938ac000e0dccfd824.wav" },
+        ],
+    },
 ];
+
+// Duration of a WAV (seconds), via soxi.  Server cwd is the data dir, so the
+// content-store-relative paths resolve directly.
+async function soxiDurationSeconds(path: string): Promise<number> {
+    const { stdout } = await new Deno.Command(config.soxiPath, { args: ['-D', path] }).output();
+    return parseFloat(new TextDecoder().decode(stdout).trim()) || 0;
+}
 
 // deno-lint-ignore no-explicit-any
 async function renderTrimTuningPage(): Promise<templates.Page> {
     const player = (src: string) =>
         ['audio', { controls: 'controls', preload: 'none', src, style: 'width: 150px; height: 34px;' }];
+    // A removed-amount readout under each player (the headline number, so the
+    // 0.2%->0.3% cliff is visible at a glance) + a hover tooltip with the
+    // before/after lengths.  − is a real minus sign (U+2212).
+    const caption = (text: string) => ['div', { class: 'small text-muted', style: 'margin-top: 2px;' }, text];
+    const removedMs = (durSrc: number, durTrim: number) => {
+        const ms = Math.round((durSrc - durTrim) * 1000);
+        return ms <= 0 ? '0 ms' : '−' + ms + ' ms';
+    };
 
     // deno-lint-ignore no-explicit-any
-    const rows: any[] = [];
-    for(const c of TRIM_TUNING_CLIPS) {
-        const trimmed = await Promise.all(TRIM_TUNING_THRESHOLDS.map(async (threshold) => {
-            const p = await getTrimmedRecordingPath(c.src, { threshold, minDuration: 0.1, fade: 0.01 });
-            return ['td', { class: 'text-center' }, player('/' + p)];
-        }));
-        rows.push(['tr', {},
-            ['td', { style: 'white-space: nowrap;' },
-                ['a', { href: `/ww/wordwiki.lexeme.entryPage(${c.entryId})`, target: '_blank' }, ['b', {}, c.word]]],
-            ['td', { class: 'text-center' }, player('/' + c.src)],
-            ...trimmed]);
-    }
-
-    const body =
-        ['div', { class: 'container my-4' },
-            ['h3', {}, 'Audio trim — threshold listening test'],
-            ['p', { class: 'text-muted', style: 'max-width: 48rem;' },
-                'These are the recorded words the auto-trimmer changes the most. For each, play ',
-                ['b', {}, 'Original'], ' first, then each threshold — a higher % trims more silence (and risks ',
-                'cutting into the word). Choose the highest % that still plays the ', ['b', {}, 'whole word'],
-                ', with no clipped start or end. The original recording is never changed; this only decides ',
-                'how aggressively new recordings get auto-trimmed.'],
+    async function renderSection(sec: TuningSection): Promise<any> {
+        // deno-lint-ignore no-explicit-any
+        const rows: any[] = [];
+        for(const c of sec.clips) {
+            const durSrc = await soxiDurationSeconds(c.src);
+            const trimmed = await Promise.all(TRIM_TUNING_THRESHOLDS.map(async (threshold) => {
+                const p = await getTrimmedRecordingPath(
+                    c.src, { threshold, minDuration: TRIM_TUNING_MIN_DURATION, fade: TRIM_TUNING_FADE });
+                const durTrim = await soxiDurationSeconds(p);
+                return ['td', { class: 'text-center',
+                                title: `${durSrc.toFixed(2)} s → ${durTrim.toFixed(2)} s` },
+                    player('/' + p), caption(removedMs(durSrc, durTrim))];
+            }));
+            rows.push(['tr', {},
+                ['td', { style: 'white-space: nowrap;' },
+                    ['a', { href: `/ww/wordwiki.lexeme.entryPage(${c.entryId})`, target: '_blank' }, ['b', {}, c.word]]],
+                ['td', { class: 'text-center', title: 'untrimmed original' },
+                    player('/' + c.src), caption(`${durSrc.toFixed(2)} s`)],
+                ...trimmed]);
+        }
+        return ['div', { class: 'mb-5' },
+            ['h4', {}, sec.heading],
+            ['p', { class: 'text-muted', style: 'max-width: 48rem;' }, sec.blurb],
             ['table', { class: 'table table-sm table-bordered align-middle' },
                 ['thead', {},
                     ['tr', {},
@@ -312,6 +364,22 @@ async function renderTrimTuningPage(): Promise<templates.Page> {
                         ['th', { class: 'text-center' }, 'Original'],
                         ...TRIM_TUNING_THRESHOLDS.map(t => ['th', { class: 'text-center' }, t])]],
                 ['tbody', {}, rows]]];
+    }
+
+    // deno-lint-ignore no-explicit-any
+    const sections: any[] = [];
+    for(const sec of TRIM_TUNING_SECTIONS) sections.push(await renderSection(sec));
+
+    const body =
+        ['div', { class: 'container my-4' },
+            ['h3', {}, 'Audio trim — threshold listening test'],
+            ['p', { class: 'text-muted', style: 'max-width: 48rem;' },
+                'Pick the most aggressive threshold that still plays the ', ['b', {}, 'whole word'],
+                ' — no clipped start or end. A higher % trims more silence (and risks cutting the word). ',
+                'The number under each player is how much that threshold removed; hover it for the ',
+                'before/after length. Originals are never changed — this only sets how new recordings ',
+                'are auto-trimmed.'],
+            ...sections];
 
     return templates.page('Audio Trim Tuning', body);
 }
