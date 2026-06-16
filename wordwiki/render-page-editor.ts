@@ -143,7 +143,8 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
     ]; // body
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
-    return {title, head, body};
+    // The scanned-page image + bounding boxes need the full viewport width.
+    return {title, head, body, fullBleed: true};
 }
 
 /**
@@ -179,7 +180,8 @@ export function renderPageViewer(cfg: PageViewerConfig, page_id: number, pageJum
     ]; // body
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
-    return {title, head, body};
+    // The scanned-page image + bounding boxes need the full viewport width.
+    return {title, head, body, fullBleed: true};
 }
 
 /**

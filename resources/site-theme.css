@@ -35,15 +35,29 @@ body {
 /* Links inside the page content (NOT the dark navbar): drop Bootstrap's
    blanket underline; underline only on hover / keyboard focus, so a
    link-dense page reads cleanly.  Scoped to the two content wrappers -
-   `.page-content` (public) and `#content` (editor) - so the navbar and
+   `.page-content` (public) and `.ww-content` (editor) - so the navbar and
    button-links are untouched. */
 .page-content a,
-#content a {
+.ww-content a {
   text-decoration: none;
 }
 .page-content a:hover,
 .page-content a:focus-visible,
-#content a:hover,
-#content a:focus-visible {
+.ww-content a:hover,
+.ww-content a:focus-visible {
   text-decoration: underline;
+}
+
+/* The editor's centred reading column - the counterpart of the public site's
+   `.page-content`.  Every editor page (htmx + legacy) wraps its body in
+   `.ww-content`; a wide tool (the scanned-page editor) opts out with
+   `.ww-full`. */
+.ww-content {
+  max-width: 75rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2.5rem;
+}
+.ww-content.ww-full {
+  max-width: none;
+  padding: 0;
 }

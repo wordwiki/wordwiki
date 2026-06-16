@@ -9,6 +9,9 @@ export interface PageContent {
     head?: any;
     body?: any;
     showTestClientLink?: boolean;
+    // Opt out of the centred reading column (a wide tool like the page-image
+    // editor needs the full viewport width).
+    fullBleed?: boolean;
 }
 
 // --- Page results -----------------------------------------------------------
@@ -88,7 +91,9 @@ export function htmxPageTemplate(content: PageContent): any {
            ['source', {src:'', type:'audio/mpeg'}]],
           // The page body lives in #content, the swap target for hx-boosted
           // nav links (the navbar, modal skeleton and scripts persist).
-          ['main', {id:'content'}, content.body],
+          // .ww-content gives it the shared centred column + link treatment.
+          ['main', {id:'content', class: content.fullBleed ? 'ww-content ww-full' : 'ww-content'},
+           content.body],
           renderHtmxModalEditorSkeleton(),
           config.bootstrapScriptTag,
           ['script', {src: '/resources/liminal-scripts.js'}],
@@ -243,7 +248,10 @@ export function pageTemplate(content: PageContent): any {
           ['audio', {id:'audioPlayer', preload:'none'},
            ['source', {src:'', type:'audio/mpeg'}]],
 
-          content.body,
+          // Same centred column + link treatment as the htmx pages
+          // (.ww-content); fullBleed pages - e.g. the page-image editor - opt out.
+          ['main', {class: content.fullBleed ? 'ww-content ww-full' : 'ww-content'},
+           content.body],
 
           config.bootstrapScriptTag
 
