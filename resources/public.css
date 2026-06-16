@@ -45,6 +45,12 @@
 .page-content ul { padding-left: 1.25rem; }
 .page-content li { margin: .2rem 0; }
 
+/* The list "play" speaker (🔉) hugs the gloss on the baseline by default,
+   which reads as ragged.  Give it a little room and lift it onto the text's
+   optical centre; no underline on hover (an underlined emoji looks broken). */
+.page-content a.audio-icon          { margin-left: .4em; font-size: .9em; vertical-align: middle; }
+.page-content a.audio-icon:hover    { text-decoration: none; }
+
 div.public-search-box {
   margin: 1em 0;   /* vertical only - no left indent, so it aligns with headings */
 }

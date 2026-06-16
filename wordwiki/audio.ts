@@ -58,7 +58,7 @@ export async function uploadRecording(args: {recordingBytesAsBase64: string}): P
 /**
  *
  */
-export function renderAudio(recording: string|null|undefined, label: string, hoverText: string|undefined=undefined, rootPath: string=''): any {
+export function renderAudio(recording: string|null|undefined, label: string, hoverText: string|undefined=undefined, rootPath: string='', className: string|undefined=undefined): any {
     // A missing recording must never break the page: render a calm marker
     // instead.  (The publisher separately reports these as WARNINGS - it is
     // the final validation pass - see Publish.warnMissingRecordings.)
@@ -71,7 +71,10 @@ export function renderAudio(recording: string|null|undefined, label: string, hov
             audioUrl = await getCompressedRecordingPath(recording);  // REMOVE_FOR_WEB
             audioUrl = rootPath+audioUrl;
             return ['a',
-                    {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`, href: audioUrl},
+                    {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`,
+                     href: audioUrl,
+                     ...(className ? {class: className} : {}),
+                     ...(hoverText ? {title: hoverText} : {})},
                     label]
         } catch(ex) {
             // Degrade, don't break the page: a raw Error object is not valid

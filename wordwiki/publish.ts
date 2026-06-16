@@ -1041,7 +1041,7 @@ including remixing, transforming, and building upon the material, for any non-co
         return [
             ['a', {href: rootPath+this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
             (includeAudioLink && sampleRecording) ?
-                audio.renderAudio(sampleRecording.recording, '🔉', undefined, rootPath) : [],
+                audio.renderAudio(sampleRecording.recording, '🔉', 'Play recording', rootPath, 'audio-icon') : [],
         ];
     }
 
