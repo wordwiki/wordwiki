@@ -631,9 +631,16 @@ export class EventCheckinTable extends Table<EventCheckin> {
             new MarkdownField('notes', {default: ''}),
             new ManagedDateTimeField('created_time', {nullable: true}),
         ], [
-            // One check-in per volunteer per event.
+            // One check-in per volunteer per event.  (event_id-leading, so it
+            // also serves the "recent events -> their check-ins" join in the
+            // active-volunteer query.)
             'CREATE UNIQUE INDEX IF NOT EXISTS event_checkin_unique ON event_checkin(event_id, volunteer_id);',
             'CREATE INDEX IF NOT EXISTS event_checkin_by_volunteer_id ON event_checkin(volunteer_id);',
+            // Partial index for the rare explicit arrival-time override: lets the
+            // "active in last N days" query find override-recent check-ins without
+            // scanning the table.  Most check-ins inherit the event time
+            // (start_time NULL), so this index stays tiny.
+            'CREATE INDEX IF NOT EXISTS event_checkin_by_start_time ON event_checkin(start_time) WHERE start_time IS NOT NULL;',
         ])
     };
 

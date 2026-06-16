@@ -25,11 +25,23 @@ export function cutoffSince(days: number): string {
 // The ONE active-set query, as a reusable fragment (used standalone below, and
 // as an IN (...) subquery by the picker).  :since is the only parameter, so the
 // same statement serves every window.  Trusted constant - safe to interpolate.
+//
+// Written to be INDEX-DRIVEN, not a linear scan (these tables grow for years):
+//   1. timesheet by start_time              -> timesheet_entry_by_start_time
+//   2. check-ins on a recent EVENT (the common case: no arrival override) -
+//      drive off recent events, join their check-ins
+//                                            -> event_by_start_time + event_checkin_unique
+//   3. check-ins with an explicit recent arrival OVERRIDE (rare)
+//                                            -> event_checkin_by_start_time (partial)
+// Parts 2+3 split on (ec.start_time IS NULL) so together they reproduce exactly
+// COALESCE(ec.start_time, e.start_time) >= :since, while each side can use an index.
 export const ACTIVE_VOLUNTEER_IDS_SINCE = `
     SELECT volunteer_id FROM timesheet_entry WHERE start_time >= :since
     UNION
-    SELECT ec.volunteer_id FROM event_checkin ec JOIN event e USING (event_id)
-           WHERE COALESCE(ec.start_time, e.start_time) >= :since`;
+    SELECT ec.volunteer_id FROM event e JOIN event_checkin ec USING (event_id)
+           WHERE ec.start_time IS NULL AND e.start_time >= :since
+    UNION
+    SELECT volunteer_id FROM event_checkin WHERE start_time >= :since`;
 
 // The set of volunteer ids active within `days` days.  Used to split the
 // volunteer list into two sections, and (in future) for 60/120-day situations.

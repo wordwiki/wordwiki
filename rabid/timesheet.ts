@@ -109,6 +109,16 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             // Both are system-managed: stamped on insert, the edit time re-stamped on every save.
             new ManagedDateTimeField('entry_last_edit_time', {nullable: true}),
             new ManagedDateTimeField('entry_creation_time', {nullable: true}),
+        ], [
+            // (Field `indexed: true` is a no-op - createIndexesDML is a stub - so
+            // indexes are declared explicitly here.)  This table grows without
+            // bound over the years; index the columns the hot reads filter/sort on:
+            //   - (volunteer_id, start_time): the per-volunteer Time view
+            //     (entriesForVolunteer: WHERE volunteer_id ORDER BY start_time).
+            //   - (start_time): the "active in last N days" scan (WHERE start_time
+            //     >= :since) - see volunteer-activity.ts.
+            'CREATE INDEX IF NOT EXISTS timesheet_entry_by_volunteer_start ON timesheet_entry(volunteer_id, start_time);',
+            'CREATE INDEX IF NOT EXISTS timesheet_entry_by_start_time ON timesheet_entry(start_time);',
         ])
     };
 
