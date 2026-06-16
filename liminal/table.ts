@@ -471,12 +471,12 @@ export class Table<T extends Tuple> {
         return `CREATE TABLE IF NOT EXISTS ${this.name}(\n${createFieldsDML});\n`;
     }
 
-    // TODO this is not done yet!!!
+    // Per-field indexes for every field flagged `indexed: true` (a foreign key, or
+    // any column hot reads filter/sort on).  Spliced into createDML(), so they run
+    // wherever the table is created.  Composite/partial indexes still go in the
+    // constructor's extraDML.  (Was a stub - `indexed: true` was silently a no-op.)
     createIndexesDML(): string[] {
-        const createIndexesDMLStatements =
-            this.fields.filter(f=>f.options.indexed).flatMap(f=>f.createIndexDML(this.name));
-        //return createIndexesDMLStatements.map(s=>s+';\n');
-        return [];
+        return this.fields.flatMap(f => f.createIndexDML(this.name));
     }
 }
 
@@ -576,13 +576,13 @@ export class Field {
         return [];
     }
     
+    // DDL for a single-column index when the field is flagged `indexed: true`
+    // (named ${table}_by_${col}).  Composite or partial indexes still go in the
+    // table constructor's extraDML.
     createIndexDML(tableName: string): string[] {
-        const indexes:string[] = [];
-        if(this.options.indexed) {
-            indexes.push(`CREATE ${this.options.unique?'UNIQUE ':''}INDEX IF NOT EXISTS ON ${tableName}(${this.name})`);
-        }
-
-        return indexes;
+        if(!this.options.indexed) return [];
+        const kind = this.options.unique ? 'UNIQUE INDEX' : 'INDEX';
+        return [`CREATE ${kind} IF NOT EXISTS ${tableName}_by_${this.name} ON ${tableName}(${this.name});`];
     }
     
     render(value: any): Markup {
