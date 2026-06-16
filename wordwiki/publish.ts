@@ -12,6 +12,7 @@ import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
+import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
 import * as entryschema from './entry-schema.ts';
 import * as category from './category.ts';
 import {Entry} from './entry-schema.ts';
@@ -22,6 +23,49 @@ import * as renderPageEditor from './render-page-editor.ts';
 
 export const REFERENCE_BOOK_IDS =
     ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'];
+
+// --------------------------------------------------------------------------------
+// --- Stale-page pruning (orphan GC) ---------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// The publisher only ever WROTE pages; it never deleted them.  So when a
+// category (or entry) stops being public - e.g. the free-text category
+// `astronomy` was migrated to the internal `~old-astronomy` and its words moved
+// to `sky` - the page it left behind on disk (categories/astronomy.html) keeps
+// being served and indexed forever.  pruneOrphanedPages() deletes those
+// orphans: any *.html under a publisher-owned directory that was NOT written
+// during a full publish this run.
+//
+// Deleting files from a publish root is dangerous, so this is wrapped in layers
+// of paranoia (see pruneOrphanedPages):
+//   - OPT-IN MARKER: prune only runs if PUBLISH_MARKER_FILE exists in the
+//     publish root.  The publisher NEVER creates it - a human places it once to
+//     bless a directory as a real publish root.  Misconfigured root => no marker
+//     => nothing deleted.
+//   - FULL-PUBLISH ONLY: prune runs from publish() (the complete run), never
+//     from publishTargets() (partial), and only over sections that actually ran.
+//   - MANIFEST-DRIVEN: it deletes only files NOT in emittedPaths (the exact set
+//     of paths written this run), never a recomputed/guessed set.
+//   - ERROR GATE: it refuses to run if the publish logged any error (an
+//     incomplete manifest could make a failed page look orphaned).
+//   - SANITY FLOOR: it refuses to run if implausibly few pages were emitted.
+//   - EXTENSION ALLOWLIST: it only ever removes files ending in `.html`.
+//   - SCOPE: it only walks PRUNE_*_DIRS (categories / entries / forwarders);
+//     resources, books, images, and everything else are never touched.
+
+// Operator-placed marker that opts a publish root in to pruning.  Created by a
+// human (`touch`), never by the publisher.
+export const PUBLISH_MARKER_FILE = '.wordwiki-publish-root';
+
+// Publisher-owned directories that pruneOrphanedPages may delete orphan *.html
+// from.  Each group is only pruned when its section actually ran this publish.
+const PRUNE_CATEGORY_DIRS = ['categories'];
+const PRUNE_ENTRY_DIRS    = ['entries', 'servlet/words'];
+
+// If a "full" publish emitted fewer than this many pages, treat the manifest as
+// broken (something failed upstream) and refuse to prune anything.  The live
+// site emits ~17k pages; this only trips on an obviously-broken run.
+const PRUNE_MIN_MANIFEST = 100;
 
 export class PublishStatus {
     startTime?: number = undefined;
@@ -278,6 +322,11 @@ export class Publish {
     entryToPublicId: Map<Entry, string>;
     defaultVariant: string = 'mm-li';
 
+    // The manifest of SITE-RELATIVE paths actually written this run.  Routing
+    // every page write through writePage() keeps this complete and authoritative
+    // - pruneOrphanedPages() deletes only *.html files NOT in this set.
+    emittedPaths: Set<string> = new Set();
+
     constructor(public status: PublishStatus, public wordWiki: WordWiki,
                 public entries: Entry[],
                 public publishRoot: string = '.',
@@ -291,6 +340,17 @@ export class Publish {
     // fsPath(), the ONE place publishRoot is applied.
     fsPath(sitePath: string): string {
         return `${this.publishRoot}/${sitePath}`;
+    }
+
+    // Write a public page AND record it in the emitted-path manifest.  EVERY
+    // page write must go through here (not writePageFromMarkupIfChanged
+    // directly) so the manifest stays complete - pruneOrphanedPages() trusts it
+    // to decide what on disk is a live page vs a stale orphan.  Takes the
+    // SITE-RELATIVE path (fsPath() is applied here, the one place publishRoot is
+    // joined for writes).
+    async writePage(sitePath: string, pageMarkup: any): Promise<boolean> {
+        this.emittedPaths.add(sitePath);
+        return writePageFromMarkupIfChanged(this.fsPath(sitePath), pageMarkup);
     }
 
     // ------------------------------------------------------------------------
@@ -418,6 +478,91 @@ export class Publish {
         if(!this.options.suppressPublishEntries) {
             await this.publishEntries();
         }
+
+        // --- Remove stale orphan pages left by earlier publishes (opt-in,
+        //     heavily guarded - see pruneOrphanedPages).  Only meaningful after
+        //     a FULL publish() like this one; never called from publishTargets.
+        await this.pruneOrphanedPages();
+    }
+
+    /**
+     * Delete orphaned published pages: *.html under a publisher-owned directory
+     * that was NOT (re)written during this full publish.  This is how a category
+     * page survives its category becoming internal/renamed (the reported
+     * `astronomy.html` bug) - the publisher stopped emitting it but never
+     * removed the file.
+     *
+     * Deleting from a publish root is dangerous, so every layer here is a
+     * fail-SAFE (skip/abort rather than risk a wrong delete).  See the block
+     * comment by PUBLISH_MARKER_FILE for the rationale of each guard.  Call this
+     * ONLY at the end of a full publish() - the manifest (emittedPaths) must be
+     * complete for "not in the manifest" to mean "orphan".
+     */
+    async pruneOrphanedPages(): Promise<void> {
+        // GUARD 1 - opt-in marker.  The publisher never creates it; a human
+        // places it to bless a directory as a real publish root.  No marker =>
+        // never delete anything (e.g. a misconfigured publishRoot).
+        if(!(await fsExists(this.fsPath(PUBLISH_MARKER_FILE)))) {
+            this.status.log.push(
+                `Stale-page prune SKIPPED: no '${PUBLISH_MARKER_FILE}' marker in publish root `+
+                `'${this.publishRoot}'. Create it (touch) to enable pruning of orphaned pages.`);
+            return;
+        }
+
+        // GUARD 2 - error gate.  A publish that logged errors may have an
+        // incomplete manifest, which would make a merely-failed page look like
+        // an orphan.  Don't delete after a troubled run.
+        if(this.status.errors.length > 0) {
+            this.status.log.push(
+                `Stale-page prune SKIPPED: ${this.status.errors.length} publish error(s) this run; `+
+                `the emitted-page manifest may be incomplete, so pruning is unsafe.`);
+            return;
+        }
+
+        // GUARD 3 - sanity floor.  An implausibly small manifest means something
+        // broke upstream; refuse rather than risk deleting a live site.
+        if(this.emittedPaths.size < PRUNE_MIN_MANIFEST) {
+            this.status.errors.push(
+                `Stale-page prune ABORTED: only ${this.emittedPaths.size} pages emitted `+
+                `(< ${PRUNE_MIN_MANIFEST}); manifest looks broken - refusing to delete anything.`);
+            return;
+        }
+
+        // Only prune directories whose section actually ran this publish - a
+        // suppressed section emits nothing, so its whole tree would look
+        // orphaned.
+        const dirs: string[] = [];
+        if(!this.options.suppressPublishCategories) dirs.push(...PRUNE_CATEGORY_DIRS);
+        if(!this.options.suppressPublishEntries)    dirs.push(...PRUNE_ENTRY_DIRS);
+        if(dirs.length === 0) return;
+
+        // publishRoot-prefixed paths from the walk map back to site-relative
+        // (manifest) keys by stripping this exact prefix.
+        const prefix = this.publishRoot.replace(/\/+$/, '') + '/';
+
+        let pruned = 0;
+        const removed: string[] = [];
+        for(const dir of dirs) {
+            const dirFs = this.fsPath(dir);
+            if(!(await fsExists(dirFs))) continue;
+            // followSymlinks:false => never traverse out of the publish tree.
+            for await (const ent of fsWalk(dirFs, {includeDirs: false, followSymlinks: false})) {
+                // GUARD 4 - extension allowlist.  ONLY *.html is ever deletable.
+                if(!ent.name.endsWith('.html')) continue;
+                // GUARD 5 - must sit under the publish root (defends against any
+                // symlink/path surprise from the walk).
+                if(!ent.path.startsWith(prefix)) continue;
+                const sitePath = ent.path.slice(prefix.length);
+                if(this.emittedPaths.has(sitePath)) continue;   // live page - keep
+                await Deno.remove(ent.path);
+                pruned++;
+                if(removed.length < 50) removed.push(sitePath);
+            }
+        }
+        for(const p of removed) this.status.log.push(`Pruned stale page: ${p}`);
+        this.status.log.push(
+            `Stale-page prune complete: removed ${pruned} orphaned .html page(s) `+
+            `from [${dirs.join(', ')}]` + (pruned > removed.length ? ` (first ${removed.length} listed)` : '') + '.');
     }
 
     /**
@@ -596,7 +741,7 @@ export class Publish {
              ],
             ];
         
-        await writePageFromMarkupIfChanged(this.fsPath(this.homePath), this.publicPageTemplate('', {title, head, body}));
+        await this.writePage(this.homePath, this.publicPageTemplate('', {title, head, body}));
     }
 
     async publish404Page(): Promise<void> {
@@ -610,7 +755,7 @@ export class Publish {
              ['p', {}, 'You can ', ['a', {href:`https://${this.publicSiteDomain}`},  'start again at our home page.']],
             ];
         
-        await writePageFromMarkupIfChanged(this.fsPath(this.fourOhFourPath), this.publicPageTemplate('', {title, body}));
+        await this.writePage(this.fourOhFourPath, this.publicPageTemplate('', {title, body}));
     }
     
     get allWordsPath(): string {
@@ -633,8 +778,8 @@ export class Publish {
              ]
             ];
         
-        await writePageFromMarkupIfChanged(this.fsPath(this.allWordsPath),
-                                           this.publicPageTemplate('', {title, body}));
+        await this.writePage(this.allWordsPath,
+                             this.publicPageTemplate('', {title, body}));
     }
 
     get aboutUsPath(): string {
@@ -651,8 +796,8 @@ export class Publish {
              this.renderAboutUsBody()
             ];
         
-        await writePageFromMarkupIfChanged(this.fsPath(this.aboutUsPath),
-                                           this.publicPageTemplate('', {title, body}));
+        await this.writePage(this.aboutUsPath,
+                             this.publicPageTemplate('', {title, body}));
     }
 
     /**
@@ -915,7 +1060,7 @@ including remixing, transforming, and building upon the material, for any non-co
             relatedCategoryMarkup,
         ];
                                 
-        await writePageFromMarkupIfChanged(this.fsPath(entryPath), this.publicPageTemplate(rootPath, {title, body}));
+        await this.writePage(entryPath, this.publicPageTemplate(rootPath, {title, body}));
     }
 
     // <meta http-equiv="refresh" content="3;url=https://www.mozilla.org" />
@@ -953,7 +1098,7 @@ including remixing, transforming, and building upon the material, for any non-co
              ['a', {href: siteUrl}, siteUrl]]
         ];
                                 
-        await writePageFromMarkupIfChanged(this.fsPath(entryForwarderPath), this.publicPageTemplate('../../', {title, head, body}));
+        await this.writePage(entryForwarderPath, this.publicPageTemplate('../../', {title, head, body}));
     }
 
     get categoriesDir(): string {
@@ -985,7 +1130,7 @@ including remixing, transforming, and building upon the material, for any non-co
                                  c.name, ` (${c.count} entries)`]])],
             ]),
         ];
-        await writePageFromMarkupIfChanged(this.fsPath(this.categoriesDirectoryPath), this.publicPageTemplate('', {title, body}));
+        await this.writePage(this.categoriesDirectoryPath, this.publicPageTemplate('', {title, body}));
     }
 
     /**
@@ -1020,7 +1165,7 @@ including remixing, transforming, and building upon the material, for any non-co
             ] // div
         ];
 
-        await writePageFromMarkupIfChanged(this.fsPath(this.pathForCategory(category)), this.publicPageTemplate('../', {title, body}));
+        await this.writePage(this.pathForCategory(category), this.publicPageTemplate('../', {title, body}));
     }
         
     dirForEntry(entry: Entry): string {
@@ -1171,8 +1316,8 @@ including remixing, transforming, and building upon the material, for any non-co
         
         await Deno.mkdir(this.fsPath(this.dirForBookPage(publicBookId, page_number)), {recursive: true});
 
-        await writePageFromMarkupIfChanged(this.fsPath(this.pathForBookPage(publicBookId, page_number)),
-                                           this.publicPageTemplate(rootPath, {head, body}));
+        await this.writePage(this.pathForBookPage(publicBookId, page_number),
+                             this.publicPageTemplate(rootPath, {head, body}));
     }
 
     async renderBookPageTopNote(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
