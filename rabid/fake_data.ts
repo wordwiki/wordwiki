@@ -88,6 +88,78 @@ function shuffled<T>(vals: readonly T[]): T[] {
 }
 
 // --------------------------------------------------------------------------------
+// --- Activity profiles ----------------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// A volunteer's *activity profile* is assigned once and then drives ALL of their
+// activity together - event commitments, check-ins, and timesheets - so an
+// "active" volunteer is active everywhere, not active on one axis and silent on
+// another.  (The old generator rolled is_staff, participation rate, and
+// timesheets as three independent dice, so the staffer you wanted to inspect
+// usually had no events and no recorded hours.)  The point is variation for
+// testing the UI and reports: a dense, paid, every-event staffer sitting next to
+// a once-a-month volunteer - without making everyone active.
+//
+// The profile is encoded as a *middle initial* in the name (S/H/R/O - the tier's
+// first letter): subtle enough to read as an ordinary name (most volunteers - the
+// long tail - have no middle initial at all), but it lets you pick a
+// representative user while browsing, and it lets the later builders (which
+// re-fetch volunteers from the db) recover each volunteer's profile.
+
+interface ActivityProfile {
+    key: 'staff' | 'heavy' | 'regular' | 'occasional';
+    initial: string;      // middle initial carried in the name (the tier's first letter)
+    count: number;        // how many in a full (~99-volunteer) dataset
+    isStaff: boolnum;     // paid staff (snapshotted into check-ins for grant reporting)
+    attendRate: number;   // P(commit to / attend any given event)
+    weeklyHours: number;  // target recorded timesheet hours per week (0 = ~none)
+    paid: boolnum;        // is_paid_time for those timesheet entries (staff are paid)
+}
+
+// Ordered most-active first.  Events alone are only ~8h/week (a Sat 5h + a Wed
+// evening), so the higher tiers' hours come mostly from timesheets ON TOP of
+// attendance: staff ~35h/wk (paid), heavy ~20h, regular ~10h (~2 events/wk),
+// occasional 2-10h.
+const ACTIVITY_PROFILES: ActivityProfile[] = [
+    {key: 'staff',      initial: 'S', count: 3,  isStaff: 1, attendRate: 1.0,  weeklyHours: 27, paid: 1},
+    {key: 'heavy',      initial: 'H', count: 1,  isStaff: 0, attendRate: 0.95, weeklyHours: 12, paid: 0},
+    {key: 'regular',    initial: 'R', count: 5,  isStaff: 0, attendRate: 0.85, weeklyHours: 2,  paid: 0},
+    {key: 'occasional', initial: 'O', count: 10, isStaff: 0, attendRate: 0.35, weeklyHours: 0,  paid: 0},
+];
+// Everyone past the profiled cohort is the "tail": no middle initial, sparse
+// attendance, no timesheets.
+const PROFILE_BY_INITIAL = new Map(ACTIVITY_PROFILES.map(p => [p.initial, p]));
+const profileByKey = (k: string): ActivityProfile | null =>
+    ACTIVITY_PROFILES.find(p => p.key === k) ?? null;
+
+// Recover a volunteer's activity profile from the middle initial in their name
+// (null = the unprofiled long tail).  This is the channel the commitment /
+// check-in / timesheet builders use to stay consistent with seedVolunteers.
+export function activityProfileOf(v: {name: string}): ActivityProfile | null {
+    const m = v.name.match(/^\S+\s+([A-Z])\.\s/);
+    return m ? (PROFILE_BY_INITIAL.get(m[1]) ?? null) : null;
+}
+
+// Compose a name carrying the profile's middle initial (tail volunteers stay plain).
+function nameWithProfile(first: string, last: string, p: ActivityProfile | null): string {
+    return p ? `${first} ${p.initial}. ${last}` : `${first} ${last}`;
+}
+
+// The per-loop-volunteer profile assignment for a dataset of `count` volunteers,
+// after the fixed canonical logins have already consumed one slot each.  Profiles
+// fill in priority order, then the rest are tail (null).  Small scenarios just
+// get a clamped (still varied) prefix.
+function profileSlots(count: number, consumed: Record<string, number>): (ActivityProfile | null)[] {
+    const slots: (ActivityProfile | null)[] = [];
+    for(const p of ACTIVITY_PROFILES) {
+        const remaining = Math.max(0, p.count - (consumed[p.key] ?? 0));
+        for(let k = 0; k < remaining; k++) slots.push(p);
+    }
+    while(slots.length < count) slots.push(null);
+    return slots.slice(0, count);
+}
+
+// --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
@@ -114,7 +186,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     const rockyId = rabid.volunteer.insert({
         join_date: '2023-01-07',               // join_date is a DateField
 
-        name: 'Rocky Raccoon',
+        // Rocky is the canonical *staff* exemplar (the 'S' middle initial) - log
+        // in as Rocky to see a dense, paid, every-event timesheet.
+        name: 'Rocky S. Raccoon',
         email: 'rocky@redraccoon.org',
         email_visible_to_all_volunteers: 1,  // Rocky shares their email
         phone: '(555) 010-0010',
@@ -122,6 +196,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         skills: 'event planning, fundraising, social media',
         emergency_contact_name: 'The Beatles',
         emergency_contact_phone: '(555) 010-0011',
+        is_staff: 1,
         // 'testing' lets the canonical dev login drive the browser-test harness
         // (the test-client page + evalInBrowser); see liminal/browser-agent.ts.
         permissions: 'admin,testing',
@@ -140,24 +215,38 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         last_change_time: rockyJoin,
     });
 
-    // Canonical fixed logins for the other role tiers, so role-dependent UI
-    // (e.g. which rows present an edit affordance) can be checked by hand
-    // without hunting for credentials:
-    //   hazel@redraccoon.org / hzl   - host
-    //   vinnie@redraccoon.org / vnny - regular volunteer (no roles)
-    seedFixedLogin(rabid, 'Hazel Host', 'hazel@redraccoon.org', 'hzl', 'host');
-    seedFixedLogin(rabid, 'Vinnie Volunteer', 'vinnie@redraccoon.org', 'vnny', undefined);
+    // Canonical fixed logins for the other role/activity tiers, so role-dependent
+    // UI (e.g. which rows present an edit affordance) and the timesheet/check-in
+    // views can be checked by hand without hunting for credentials.  Each is also
+    // an activity exemplar (middle initial): pick the one whose density you want.
+    //   hazel@redraccoon.org / hzl   - host,    regular activity    (Hazel R. Host)
+    //   vinnie@redraccoon.org / vnny - no roles, occasional activity (Vinnie O. Volunteer)
+    seedFixedLogin(rabid, 'Hazel', 'Host', 'hazel@redraccoon.org', 'hzl', 'host', profileByKey('regular'));
+    seedFixedLogin(rabid, 'Vinnie', 'Volunteer', 'vinnie@redraccoon.org', 'vnny', undefined, profileByKey('occasional'));
+
+    // Rocky (staff), Hazel (regular), Vinnie (occasional) have each consumed one
+    // slot of their tier; the rest fill in priority order, then tail.
+    const slots = profileSlots(count, {staff: 1, regular: 1, occasional: 1});
 
     for(let i = 0; i < count; i++) {
+        const profile = slots[i];
         const firstName = idS.person.firstName();
         const lastName = idS.person.lastName();
         const joinDate = statusS.date.past({ years: 3 });
-        const isInactive = statusS.datatype.boolean({ probability: 0.15 });
-        const hasExitFeedback = isInactive && statusS.datatype.boolean({ probability: 0.4 });
+        // Profiled (active) volunteers are always active+undeleted: an "active
+        // staffer" who is also marked inactive/deleted would be contradictory (and
+        // the activity builders skip inactive/deleted people, so they'd show no
+        // data).  The unprofiled long tail keeps the inactive/exit/deleted churn.
+        // We still draw the rolls (so the tail's stream is unperturbed), then
+        // override them for profiled volunteers.
+        const isInactiveRoll = statusS.datatype.boolean({ probability: 0.15 });
+        const hasExitFeedbackRoll = isInactiveRoll && statusS.datatype.boolean({ probability: 0.4 });
+        const isInactive = profile ? false : isInactiveRoll;
+        const hasExitFeedback = profile ? false : hasExitFeedbackRoll;
 
         const newVolunteerId = rabid.volunteer.insert({
             join_date: statusS.helpers.maybe(() => isoDate(joinDate), { probability: 0.9 }), // 10% unknown
-            name: `${firstName} ${lastName}`,
+            name: nameWithProfile(firstName, lastName, profile),
             email: idS.internet.email({ firstName, lastName }).toLowerCase(),
             email_visible_to_all_volunteers: contactS.datatype.boolean({ probability: 0.85 }) ? 1 : 0, // opt-out
             phone: contactS.phone.number({ style: 'national' }),
@@ -178,9 +267,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
                 'carpentry, welding',
                 ''
             ]),
-            // A small fraction are staff (the rest volunteers); event check-ins
-            // snapshot this for grant reporting.
-            is_staff: statusS.datatype.boolean({ probability: 0.08 }) ? 1 : 0,
+            // Staff is now an attribute of the activity profile (the rest are
+            // volunteers); event check-ins snapshot this for grant reporting.
+            is_staff: profile?.isStaff ?? 0,
             emergency_contact_name: contactS.helpers.maybe(
                 () => `${contactS.person.firstName()} ${contactS.person.lastName()}`, { probability: 0.7 }) || '',
             emergency_contact_phone: contactS.helpers.maybe(
@@ -205,7 +294,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
                     ''
                 ])
                 : undefined,
-            deleted: statusS.datatype.boolean({ probability: 0.05 }) ? 1 : 0,
+            // Always draw (keeps the tail's stream stable), but profiled
+            // volunteers are never deleted.
+            deleted: (statusS.datatype.boolean({ probability: 0.05 }) && !profile) ? 1 : 0,
         });
 
         // Only ~10% have a password set (login 'volunteer123'); rest are null.
@@ -224,13 +315,14 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
 
 // One fixed, role-tiered login (see the canonical-logins block in
 // seedVolunteers).  Fixed values, not faker streams, so the credentials and
-// records are stable across runs.
-function seedFixedLogin(rabid: Rabid, name: string, email: string, pw: string,
-                        permissions: string|undefined): number {
+// records are stable across runs.  `profile` carries the activity tier (its
+// middle initial goes into the name, and is_staff comes from it).
+function seedFixedLogin(rabid: Rabid, first: string, last: string, email: string, pw: string,
+                        permissions: string|undefined, profile: ActivityProfile|null): number {
     const join = '2023-02-01 10:00:00';        // last_change_time (a datetime)
     const id = rabid.volunteer.insert({
         join_date: '2023-02-01',               // join_date is a DateField
-        name,
+        name: nameWithProfile(first, last, profile),
         email,
         email_visible_to_all_volunteers: 1,
         phone: undefined,
@@ -238,6 +330,7 @@ function seedFixedLogin(rabid: Rabid, name: string, email: string, pw: string,
         skills: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
+        is_staff: profile?.isStaff ?? 0,
         permissions,
         inactive: 0,
         marked_inactive_date: undefined,
@@ -268,7 +361,10 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
     {
         // Generate events for every Saturday from May 1st 2022 to mid-October 2025
         const startDate = new Date('2022-05-07');
-        const endDate = new Date('2025-10-15');
+        // Track today (plus ~6 weeks of upcoming events) rather than a fixed past
+        // date, so the recent weeks the Time view / timesheets cover actually have
+        // events to attend (and "upcoming events" is non-empty).
+        const endDate = new Date(today.getTime() + 42 * 24 * 60 * 60 * 1000);
 
         // Find the first Saturday on or after May 1st
         const firstSaturday = new Date(startDate);
@@ -311,13 +407,16 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
         }
 
         {
-            // Generate events
+            // Generate midweek (Wednesday) events.
             const startDate = new Date('2022-05-07');
-            const endDate = new Date('2025-10-15');
+            // Track today (plus ~6 weeks of upcoming events) rather than a fixed
+            // past date, so the recent weeks the Time view / timesheets cover
+            // actually have events to attend (and "upcoming events" is non-empty).
+            const endDate = new Date(today.getTime() + 42 * 24 * 60 * 60 * 1000);
 
-            // Find the first Wednesday on or after the start date
+            // Find the first Wednesday (getDay() === 3) on or after the start date.
             const firstWednesday = new Date(startDate);
-            while (firstWednesday.getDay() !== 6) {
+            while (firstWednesday.getDay() !== 3) {
                 firstWednesday.setDate(firstWednesday.getDate() + 1);
             }
 
@@ -400,32 +499,16 @@ export function seedEventCommitments(rabid: Rabid, opts: { baseSeed?: number } =
     if(events.length < 2)
         throw new Error('Must be at least 2 events');
     
-    // Assign each volunteer a participation rate
+    // Participation rate comes from each volunteer's activity profile (recovered
+    // from the middle initial in their name - see activityProfileOf), so a
+    // volunteer who is "active" here is the same one who is active in the
+    // timesheet/check-in builders.  The unprofiled long tail is sparse: mostly
+    // near-zero, a minority occasional.
     const volunteerParticipationRates = new Map<number, number>();
-    
-    volunteers.forEach(volunteer => {
-        // Create a distribution where:
-        // ~10% volunteer for almost every event (80-100% participation)
-        // ~20% are regular volunteers (40-80% participation)
-        // ~40% are occasional volunteers (10-40% participation)
-        // ~30% rarely or never volunteer (0-10% participation)
-        const bucket = rand();
-        let participationRate: number;
 
-        if (bucket < 0.1) {
-            // Super volunteers - attend almost everything
-            participationRate = 0.8 + rand() * 0.2;
-        } else if (bucket < 0.3) {
-            // Regular volunteers
-            participationRate = 0.4 + rand() * 0.4;
-        } else if (bucket < 0.7) {
-            // Occasional volunteers
-            participationRate = 0.1 + rand() * 0.3;
-        } else {
-            // Rare volunteers
-            participationRate = rand() * 0.1;
-        }
-        
+    volunteers.forEach(volunteer => {
+        const p = activityProfileOf(volunteer);
+        const participationRate = p ? p.attendRate : (rand() < 0.4 ? rand() * 0.1 : 0);
         volunteerParticipationRates.set(volunteer.volunteer_id, participationRate);
     });
     
@@ -597,49 +680,127 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
     console.info(`Total event check-ins created: ${checkinCount} (${walkInCount} walk-ins) across ${startedEvents.length} started events`);
 }
 
-// Explicit recorded time NOT tied to an event - volunteers/staff doing work like
-// shop maintenance, admin, or supply runs.  (Event attendance lives in
-// event_checkin - see seedEventCheckins.)
-export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number } = {}) {
+// Explicit recorded time - volunteers/staff doing work like shop maintenance,
+// admin, or supply runs.  Driven by the activity profile (the active tiers log a
+// weekly load; the long tail logs nothing), over a bounded recent window of
+// `opts.weeks` weeks (default 12).  Crank it up - e.g. `... full 520` - to
+// simulate years of data when hunting for slowdowns.
+//
+// Two kinds of entry per active week:
+//   (1) OVERLAP entries that bracket an event the volunteer attended (start 30min
+//       before, end 30min after) - so the unified Time view exercises its
+//       reconciliation rule: the timesheet is authoritative and the event
+//       check-in nests inside it as a non-counted detail.
+//   (2) TOP-UP standalone entries (no event) on weekdays, until the week reaches
+//       the profile's target hours.
+// (Event attendance itself lives in event_checkin - see seedEventCheckins.)
+export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: number } = {}) {
     faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('timesheets')) >>> 0);
     rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('timesheets.rand')) >>> 0);
-    const currentDate = new Date();
-    const volunteers = rabid.volunteer.allVolunteersByName.all();
+    const weeks = opts.weeks ?? 12;
+    const now = new Date();
 
-    const activeVolunteers = volunteers.filter(v => !v.inactive && !v.deleted);
-    const numEntries = Math.max(1, Math.floor(activeVolunteers.length * 0.05)); // ~5% of active volunteers
+    // Week windows aligned Sun..Sat (the Time view groups weeks ending Saturday).
+    // week 0 starts on the Sunday of the current week; each step goes back 7 days.
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setHours(0, 0, 0, 0);
+    startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay()); // back to Sunday
 
-    for (let i = 0; i < numEntries; i++) {
-        const volunteer = faker.helpers.arrayElement(activeVolunteers);
-        const daysAgo = faker.helpers.rangeToNumber({ min: 1, max: 30 });
-        const workDate = new Date(currentDate.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    const volunteers = rabid.volunteer.allVolunteersByName.all()
+        .filter(v => !v.inactive && !v.deleted);
+    const allEvents = rabid.event.allEvents.all()
+        .filter(e => e.start_time)
+        .map(e => ({start: new Date(e.start_time!),
+                    end: e.end_time ? new Date(e.end_time) : null}));
 
-        // Random work duration between 1-4 hours
-        const duration = faker.helpers.rangeToNumber({ min: 1, max: 4 }) * 60 * 60 * 1000;
-        const startTime = new Date(workDate.setHours(faker.helpers.rangeToNumber({ min: 9, max: 18 }), 0, 0, 0));
-        const endTime = new Date(startTime.getTime() + duration);
+    const stamp = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+    const note = (paid: boolnum) => faker.helpers.arrayElement(paid ? [
+        'Shop supervision and repairs',
+        'Coordinating volunteers and intake',
+        'Admin: grant reporting and scheduling',
+        'Workshop teardown and inventory',
+    ] : [
+        'Shop maintenance and organization',
+        'Tool inventory and sorting',
+        'Preparing materials for next event',
+        'Picking up donated supplies',
+    ]);
 
-        rabid.timesheet_entry.insert({
-            volunteer_id: volunteer.volunteer_id,
-            start_time: startTime.toISOString().replace('T', ' ').slice(0, 19),
-            end_time: endTime.toISOString().replace('T', ' ').slice(0, 19),
-            notes: faker.helpers.arrayElement([
-                'Shop maintenance and organization',
-                'Tool inventory and sorting',
-                'Preparing materials for next event',
-                'Admin work - updating volunteer database',
-                'Picking up donated supplies',
-                'Meeting with community partners'
-            ]),
-            km_driven_for_reimbursement: faker.datatype.boolean({ probability: 0.3 }) ?
-                faker.helpers.rangeToNumber({ min: 10, max: 100 }) : 0,
-            km_driven_processed: 0,
-            is_paid_time: faker.datatype.boolean({ probability: 0.1 }) ? 1 : 0, // 10% might be paid
-            paid_time_processed: 0,
-        });
+    let entryCount = 0;
+    let overlapCount = 0;
+    for(const v of volunteers) {
+        const p = activityProfileOf(v);
+        if(!p || p.weeklyHours <= 0) continue;   // only the active tiers log time
+
+        for(let w = 0; w < weeks; w++) {
+            const weekStart = new Date(startOfThisWeek);
+            weekStart.setDate(weekStart.getDate() - w * 7);
+            if(weekStart > now) continue;
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 7);
+
+            const targetMs = p.weeklyHours * (0.8 + rand() * 0.4) * 3600_000;  // +/-20%
+            let loggedMs = 0;
+
+            // (1) Overlap pass (paid staff only - they log paid time AROUND
+            // events; ordinary volunteers just check in).  Bracket events this
+            // week the volunteer attended - this is what exercises the Time view's
+            // reconciliation: the timesheet is authoritative and the event
+            // check-in nests inside it as a non-counted detail.
+            const weekEvents = p.paid
+                ? allEvents.filter(e => e.start >= weekStart && e.start < weekEnd && e.start <= now)
+                : [];
+            for(const ev of weekEvents) {
+                if(loggedMs >= targetMs) break;
+                if(rand() >= p.attendRate) continue;
+                const evEnd = ev.end ?? new Date(ev.start.getTime() + 4 * 3600_000);
+                const tsStart = new Date(ev.start.getTime() - 30 * 60_000);
+                const tsEnd = new Date(evEnd.getTime() + 30 * 60_000);
+                if(tsEnd > now) continue;
+                rabid.timesheet_entry.insert({
+                    volunteer_id: v.volunteer_id,
+                    start_time: stamp(tsStart),
+                    end_time: stamp(tsEnd),
+                    notes: note(p.paid),
+                    km_driven_for_reimbursement: 0,
+                    km_driven_processed: 0,
+                    is_paid_time: p.paid,
+                    paid_time_processed: 0,
+                });
+                loggedMs += tsEnd.getTime() - tsStart.getTime();
+                entryCount++; overlapCount++;
+            }
+
+            // (2) Top-up pass: standalone weekday entries until we reach the target.
+            let guard = 0;
+            while(loggedMs < targetMs - 3600_000 && guard++ < 20) {
+                const day = new Date(weekStart);
+                day.setDate(day.getDate() + faker.helpers.rangeToNumber({min: 0, max: 6}));
+                const durHours = Math.min(4, Math.max(2,
+                    Math.round((targetMs - loggedMs) / 3600_000)));
+                const tsStart = new Date(day);
+                tsStart.setHours(faker.helpers.rangeToNumber({min: 9, max: 16}), 0, 0, 0);
+                const tsEnd = new Date(tsStart.getTime() + durHours * 3600_000);
+                if(tsStart > now) continue;
+                if(tsEnd > now) break;
+                rabid.timesheet_entry.insert({
+                    volunteer_id: v.volunteer_id,
+                    start_time: stamp(tsStart),
+                    end_time: stamp(tsEnd),
+                    notes: note(p.paid),
+                    km_driven_for_reimbursement: faker.datatype.boolean({probability: 0.2})
+                        ? faker.helpers.rangeToNumber({min: 10, max: 80}) : 0,
+                    km_driven_processed: 0,
+                    is_paid_time: p.paid,
+                    paid_time_processed: 0,
+                });
+                loggedMs += tsEnd.getTime() - tsStart.getTime();
+                entryCount++;
+            }
+        }
     }
 
-    console.info(`Total (non-event) timesheet entries created: ${numEntries}`);
+    console.info(`Total timesheet entries created: ${entryCount} (${overlapCount} overlap an event) over ${weeks} week(s)`);
 }
 
 // --------------------------------------------------------------------------------
@@ -762,8 +923,11 @@ export interface Scenario {
     commitments: boolean;
     // Event attendance (the bulk activity).  Needs events + commitments first.
     checkins: boolean;
-    // Explicit non-event recorded time (a small slice).
+    // Explicit recorded time (driven by activity profile - see seedTimesheets).
     timesheets: boolean;
+    // History window for seeded timesheets, in weeks back from today.  Bump it
+    // (or override on the CLI - see main) to simulate years of data.
+    timesheetWeeks: number;
     baseSeed: number;
 }
 
@@ -771,12 +935,12 @@ export type ScenarioName = 'minimal' | 'dev' | 'full' | 'activityReport';
 
 export const SCENARIOS: Record<ScenarioName, Scenario> = {
     // tiny + fast, for a quick poke
-    minimal:        { volunteers: 8,  events: true, commitments: true, checkins: false, timesheets: false, baseSeed: 1 },
+    minimal:        { volunteers: 8,  events: true, commitments: true, checkins: false, timesheets: false, timesheetWeeks: 12, baseSeed: 1 },
     // the everyday dataset: people, events, who's coming - but NOT the bulk attendance
-    dev:            { volunteers: 99, events: true, commitments: true, checkins: false, timesheets: false, baseSeed: 1 },
+    dev:            { volunteers: 99, events: true, commitments: true, checkins: false, timesheets: false, timesheetWeeks: 12, baseSeed: 1 },
     // everything, incl. the bulk attendance + timesheets the activity report needs
-    full:           { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  baseSeed: 1 },
-    activityReport: { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  baseSeed: 1 },
+    full:           { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, baseSeed: 1 },
+    activityReport: { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, baseSeed: 1 },
 };
 
 // Run the builders for a scenario (order matters: later builders read earlier data).
@@ -787,7 +951,7 @@ export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.checkins)    seedEventCheckins(rabid, { baseSeed: scenario.baseSeed });
-    if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed });
+    if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed, weeks: scenario.timesheetWeeks });
 }
 
 // Create the schema from the table metadata (the on-disk db's schema-of-record).
@@ -813,11 +977,21 @@ function main(args: string[]) {
     switch(cmd) {
         case 'destroy_all_and_fill_with_fake_data': {
             const name = (args[1] ?? 'dev') as ScenarioName;
-            const scenario = SCENARIOS[name];
-            if(!scenario) {
+            const base = SCENARIOS[name];
+            if(!base) {
                 console.info(`unknown scenario '${name}'; known: ${Object.keys(SCENARIOS).join(', ')}`);
                 break;
             }
+            // Optional 3rd arg overrides the timesheet history window (weeks back),
+            // e.g. `... full 520` for ~10 years of simulated data.
+            const weeksOverride = args[2] !== undefined ? Number(args[2]) : undefined;
+            if(weeksOverride !== undefined && !Number.isFinite(weeksOverride)) {
+                console.info(`bad weeks override '${args[2]}' (expected a number)`);
+                break;
+            }
+            const scenario = weeksOverride !== undefined
+                ? {...base, timesheets: true, timesheetWeeks: weeksOverride}
+                : base;
             console.info(`scenario '${name}':`, scenario);
             // getRabid (not new Rabid()): it also sets the module-level `rabid`
             // binding that table code (e.g. CommitteeTable.insert) reaches for.
