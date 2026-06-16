@@ -1032,6 +1032,16 @@ including remixing, transforming, and building upon the material, for any non-co
     /**
      *
      */
+    // A crisp inline speaker icon for the list "play" control.  An SVG (not the
+    // 🔉 emoji) so it aligns predictably with the text baseline and inherits the
+    // link colour via currentColor; sized + nudged in public.css (.audio-icon).
+    static readonly PLAY_ICON =
+        ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true'},
+         ['path', {d: 'M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z'}],
+         ['path', {d: 'M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z'}],
+         ['path', {d: 'M8.707 11.182A4.486 4.486 0 0 0 10.025 8a4.486 4.486 0 0 0-1.318-3.182L8 5.525A3.489 3.489 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475z'}],
+         ['path', {d: 'M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z'}]];
+
     renderEntryPublicLink(rootPath: string, e: Entry, includeAudioLink: boolean=true): any {
         // TODO handle dialects here.
         const spellings = entryschema.getSpellings(e).map(s=>s.text);
@@ -1041,7 +1051,7 @@ including remixing, transforming, and building upon the material, for any non-co
         return [
             ['a', {href: rootPath+this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
             (includeAudioLink && sampleRecording) ?
-                audio.renderAudio(sampleRecording.recording, '🔉', 'Play recording', rootPath, 'audio-icon') : [],
+                audio.renderAudio(sampleRecording.recording, Publish.PLAY_ICON, 'Play recording', rootPath, 'audio-icon') : [],
         ];
     }
 

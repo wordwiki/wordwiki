@@ -58,7 +58,9 @@ export async function uploadRecording(args: {recordingBytesAsBase64: string}): P
 /**
  *
  */
-export function renderAudio(recording: string|null|undefined, label: string, hoverText: string|undefined=undefined, rootPath: string='', className: string|undefined=undefined): any {
+// `label` is usually a string (e.g. "Recording by X") but may be markup (the
+// list speaker passes an inline SVG icon - see Publish.PLAY_ICON).
+export function renderAudio(recording: string|null|undefined, label: any, hoverText: string|undefined=undefined, rootPath: string='', className: string|undefined=undefined): any {
     // A missing recording must never break the page: render a calm marker
     // instead.  (The publisher separately reports these as WARNINGS - it is
     // the final validation pass - see Publish.warnMissingRecordings.)

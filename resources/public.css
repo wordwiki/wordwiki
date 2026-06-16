@@ -45,11 +45,13 @@
 .page-content ul { padding-left: 1.25rem; }
 .page-content li { margin: .2rem 0; }
 
-/* The list "play" speaker (🔉) hugs the gloss on the baseline by default,
-   which reads as ragged.  Give it a little room and lift it onto the text's
-   optical centre; no underline on hover (an underlined emoji looks broken). */
-.page-content a.audio-icon          { margin-left: .4em; font-size: .9em; vertical-align: middle; }
-.page-content a.audio-icon:hover    { text-decoration: none; }
+/* The list "play" speaker: an inline SVG (Publish.PLAY_ICON) coloured by the
+   link accent (currentColor).  Give it room from the gloss, size it to the
+   text and nudge it onto the baseline the way text icons sit; no underline on
+   hover. */
+.page-content a.audio-icon       { margin-left: .4em; }
+.page-content a.audio-icon:hover { text-decoration: none; }
+.page-content a.audio-icon svg   { width: 1em; height: 1em; vertical-align: -.125em; }
 
 div.public-search-box {
   margin: 1em 0;   /* vertical only - no left indent, so it aligns with headings */
