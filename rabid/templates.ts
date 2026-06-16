@@ -3,6 +3,7 @@
 import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
 import {h} from '../liminal/markup.ts';
+import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
 
 export interface PageContent {
     title?: any;
@@ -57,18 +58,9 @@ export function pageTemplate(content: PageContent): any {
          [h.head, {},
           [h.meta, {charset:"utf-8"}],
           [h.meta, {name:"viewport", content:"width=device-width, initial-scale=1"}],
-          // hx-boost targets #content (not <body>), so htmx's default would scroll
-          // #content's top to the viewport top - hiding the navbar above it.  Turn
-          // that off so a boosted nav leaves the navbar in view.
-          //
-          // History: NO snapshot cache.  htmx's default back-button behaviour
-          // restores a saved copy of the old DOM, which (a) shows stale data
-          // on live pages and (b) resurrects widget state Bootstrap no longer
-          // knows about (☰ dropdowns came back inoperable).  With the cache
-          // off + refreshOnHistoryMiss, Back is a real page load: always
-          // fresh, everything works.
-          [h.meta, {name:"htmx-config",
-                    content:'{"scrollIntoViewOnBoost":false,"historyCacheSize":0,"refreshOnHistoryMiss":true}'}],
+          // htmx config (boost scroll + the back-button/history fix) lives in
+          // the shared liminal helper - see liminal/htmx.ts for the rationale.
+          htmxConfigMeta(),
           content.title !== undefined ? [h.title, {}, content.title] : undefined,
           config.bootstrapCssLink,
           [h.link, {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
@@ -83,7 +75,7 @@ export function pageTemplate(content: PageContent): any {
           [h.link, {href: 'https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css', rel:'stylesheet'}],
           [h.script, {src: 'https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js'}],
           [h.script, {src: '/resources/context-menu.js'}],
-          [h.script, {src: 'https://unpkg.com/htmx.org@2.0.4'}],
+          htmxScriptTag(),
           [h.script, {}, block`
 /**/           let imports = {};
 /**/           let activeViews = undefined`],

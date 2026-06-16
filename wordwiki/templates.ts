@@ -2,6 +2,7 @@
 
 import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
+import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
 
 export interface PageContent {
     title?: any;
@@ -63,12 +64,12 @@ export function htmxPageTemplate(content: PageContent): any {
          ['head', {},
           ['meta', {charset:'utf-8'}],
           ['meta', {name:'viewport', content:'width=device-width, initial-scale=1'}],
-          ['meta', {name:'htmx-config', content:'{"scrollIntoViewOnBoost":false}'}],
+          htmxConfigMeta(),
           content.title !== undefined ? ['title', {}, content.title] : undefined,
           config.bootstrapCssLink,
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['link', {href: '/resources/liminal.css', rel:'stylesheet', type:'text/css'}],
-          ['script', {src: 'https://unpkg.com/htmx.org@2.0.4'}],
+          htmxScriptTag(),
           ['script', {}, block`
 /**/       function playAudio(src) {
 /**/         const audioPlayer = document.getElementById("audioPlayer");
