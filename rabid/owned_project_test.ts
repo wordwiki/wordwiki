@@ -102,3 +102,35 @@ test("volunteer-owned: a host may add tasks for any volunteer", () =>
         asUser(alice, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'Onboarding chat'}));
         assert(asSystem(() => r.project.forOwner('volunteer', bob, false)) !== undefined);
     }));
+
+// --- Committee-owned projects + the committee's assigned-projects list ---------
+
+test("committee-owned: a host may add committee tasks; the name derives from the committee", () =>
+    withTestDb(({ alice }) => {
+        const r = getRabid();
+        const cid = asSystem(() => r.committee.insert(
+            {name: 'Logistics', description: '', notes: '', deleted: 0} as any));
+        asUser(alice, () => r.task.addOwnerTask({owner_table: 'committee', owner_id: cid, title: 'Order parts'}));
+        const pid = asSystem(() => r.project.forOwner('committee', cid, false));
+        assert(pid !== undefined, 'first committee task materializes its project');
+        assertEquals(asSystem(() => r.project.recordLabel(r.project.getById(pid!))), 'Logistics — tasks');
+    }));
+
+test("committee page lists ASSIGNED projects, not the committee's own task-list project", () =>
+    withTestDb(({ alice }) => {
+        const r = getRabid();
+        const cid = asSystem(() => r.committee.insert(
+            {name: 'Logistics', description: '', notes: '', deleted: 0} as any));
+        const g = asSystem(() => r.committee.getById(cid).group_id);
+        // A standalone project assigned to the committee (group_id = its group).
+        const assigned = asSystem(() => r.project.insert(
+            {name: 'Spring Bike Drive', group_id: g, deleted: 0} as any));
+        // The committee's OWN owned project (direct task list).
+        asUser(alice, () => r.task.addOwnerTask({owner_table: 'committee', owner_id: cid, title: 'Order parts'}));
+        const owned = asSystem(() => r.project.forOwner('committee', cid, false))!;
+
+        const listed = asSystem(() =>
+            r.project.projectsForCommittee.all({committee_id: cid}).map(p => p.project_id));
+        assertEquals(listed, [assigned]);              // the assigned project shows
+        assert(!listed.includes(owned), 'the owned task-list project is excluded');
+    }));

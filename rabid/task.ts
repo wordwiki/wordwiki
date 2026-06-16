@@ -353,6 +353,30 @@ export class ProjectTable extends Table<Project> {
 /**/          ORDER BY name`);
     }
 
+    // Projects ASSIGNED to a committee (project.group_id is the committee's
+    // group) - distinct from the committee's own owned project (which carries
+    // owner_table='committee' and has its own group; excluded here).
+    @path
+    get projectsForCommittee() {
+        return this.prepare<Project & {open_task_count: number}, {committee_id: number}>(block`
+/**/   SELECT ${this.allFields},
+/**/          (SELECT COUNT(*) FROM task t WHERE t.project_id = project.project_id
+/**/                  AND t.deleted = 0 AND t.status != 'done') AS open_task_count
+/**/          FROM project
+/**/          WHERE owner_table IS NULL AND deleted = 0
+/**/            AND group_id = (SELECT group_id FROM committee WHERE committee_id = :committee_id)
+/**/          ORDER BY name`);
+    }
+
+    // The committee's assigned-projects list, for embedding on the committee page.
+    @route(authenticated)
+    renderForCommittee(committee_id: number): Markup {
+        const projects = this.projectsForCommittee.all({committee_id});
+        if(projects.length === 0)
+            return [h.p, {class: 'text-muted small mb-0'}, 'No projects assigned.'];
+        return [h.div, {class: 'list-group lm-list'}, projects.map(p => this.renderProjectRow(p))];
+    }
+
     // ------------------------------------------------------------------------
     // --- Standard editable-item list -----------------------------------------
     // ------------------------------------------------------------------------

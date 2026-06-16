@@ -190,6 +190,16 @@ export class CommitteeTable extends Table<Committee> {
             c.notes ? this.fieldsByName.notes.render(c.notes) : undefined,
             [h.h4, {class: 'mt-3'}, 'Members'],
             rabid.volunteer_group.renderMemberEditor(c.group_id),
+
+            // Projects the committee is responsible for (assigned via its group),
+            // each drilling in to its own page.
+            [h.h4, {class: 'mt-4'}, 'Projects'],
+            rabid.project.renderForCommittee(committee_id),
+
+            // The committee's own task list - a 1-1 owned project, created lazily
+            // on the first task (renderOwnerTasks emits its own "Tasks" heading).
+            [h.div, {class: 'mt-4'},
+             rabid.task.renderOwnerTasks('committee', committee_id)],
         ];
     }
 }
