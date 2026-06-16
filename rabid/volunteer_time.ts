@@ -441,7 +441,7 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number, 
     return [h.div, props,
         [h.table, {class: 'table table-sm'},
          [h.tbody, {},
-          model.weeks.flatMap(w => renderWeek(w, volunteer_id)),
+          model.weeks.flatMap((w, i) => renderWeek(w, volunteer_id, i === 0)),
           [h.tr, {class: 'fw-bold border-top'},
            [h.td, {}, 'Total'], [h.td, {}],
            [h.td, {class: 'text-end'}, model.hours.toFixed(1)], [h.td, {}]],
@@ -453,9 +453,15 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number, 
     ];
 }
 
-function renderWeek(w: TimeWeek, volunteer_id: number): Markup[] {
+function renderWeek(w: TimeWeek, volunteer_id: number, isFirst: boolean): Markup[] {
     return [
-        [h.tr, {class: 'table-light'},
+        // A blank spacer row before each week (except the first) so the week
+        // header - which carries that week's total - reads as the start of the
+        // block BELOW it, not a footer for the rows above.
+        isFirst ? undefined
+            : [h.tr, {'aria-hidden': 'true'},
+               [h.td, {colspan: '4', style: 'height: 1.25rem; border: 0;'}]],
+        [h.tr, {class: 'table-light border-top'},
          [h.td, {colspan: '2', class: 'fw-semibold'}, `Week of ${weekLabel(w)}`],
          [h.td, {class: 'text-end fw-semibold'}, w.hours.toFixed(1)],
          [h.td, {}]],
