@@ -92,7 +92,9 @@ All in `wordwiki/audio.ts`, in the block fenced by
   (linked to its lexeme entry), columns = Original + each threshold; each cell is
   an `<audio preload=none>` + a removed-amount caption (`−353 ms`) + a hover title
   (`0.93 s → 0.58 s`). Variants are generated on demand via `getTrimmedRecordingPath`
-  and cached; `soxiDurationSeconds` reads durations for the readout.
+  and cached (generated concurrently via `mapPool` on first render; the
+  removed-amount readout reads durations straight from the WAV header via
+  `wavDurationSeconds`, no `soxi` spawn, so even a 100+-row page renders fast).
 
 Audio is served as static files: `<audio src="/content/…">` (original) and
 `<audio src="/derived/trimmed-audio/…">` (variants) both resolve (the data dir is
