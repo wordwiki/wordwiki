@@ -811,6 +811,86 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
     console.info(`Total timesheet entries created: ${entryCount} (${overlapCount} overlap an event) over ${weeks} week(s)`);
 }
 
+// Completed tasks CREDITED to the volunteer who did them (done_by) - what the
+// Time view's completed-task layer surfaces ("who did what").  Attributed to the
+// active tiers (staff most), placed to exercise all three layer paths:
+//   - event-nested  : an event-owned task done by someone who attended that event
+//                     (its project is event-owned -> shows under that event);
+//   - shift-nested  : a personal task done during one of their timesheet shifts;
+//   - standalone    : a personal task done off any shift/event (a per-day row).
+// Needs check-ins + timesheets to anchor against (run after both).
+export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {}) {
+    faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('completed_tasks')) >>> 0);
+    rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('completed_tasks.rand')) >>> 0);
+    const now = new Date();
+    const recentCut = new Date(now.getTime() - 90 * 24 * 3600_000);
+    const stamp = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+
+    const titles = [
+        'Sort donated parts', 'Fix the repair stand', 'Update the intake sheet',
+        'Restock the first-aid kit', 'Confirm volunteers', 'Post event photos',
+        'Inventory the tools', 'Clean the workspace', 'Pick up supplies',
+        'Greet attendees', 'Set up tables', 'Tear down the booth',
+        'Log cash collected', 'Email community partners', 'Label spare parts',
+        'Book the pickup truck', 'Refill consumables', 'Test the donated bikes',
+    ];
+    // How many completions per activity tier (staff do the most; tail none).
+    const countByTier: Record<string, number> = {staff: 10, heavy: 7, regular: 4, occasional: 1};
+
+    const completeTask = (project_id: number, title: string, doneAt: Date, done_by: number) =>
+        rabid.task.insert({project_id, title, status: 'done',
+            done_time: stamp(doneAt), done_by, deleted: 0} as any);
+
+    let made = 0;
+    const volunteers = rabid.volunteer.allVolunteersByName.all().filter(v => !v.deleted);
+    for(const v of volunteers) {
+        const profile = activityProfileOf(v);
+        const n = profile ? (countByTier[profile.key] ?? 0) : 0;
+        if(n === 0) continue;
+        const vid = v.volunteer_id;
+
+        const checkins = (rabid.event_checkin.checkinsForVolunteer.all({volunteer_id: vid}) as Array<{
+            event_id: number, start_time: string|null,
+            event_start_time: string|null, event_end_time: string|null}>)
+            .filter(c => {
+                const t = c.start_time ?? c.event_start_time;
+                return !!t && new Date(t) >= recentCut && new Date(t) <= now;
+            });
+        const shifts = rabid.timesheet_entry.entriesForVolunteer.all({volunteer_id: vid})
+            .filter(t => t.end_time && new Date(t.start_time) >= recentCut);
+
+        for(let i = 0; i < n; i++) {
+            const title = faker.helpers.arrayElement(titles);
+            const roll = rand();
+            if(roll < 0.5 && checkins.length) {
+                // event-nested: an event-owned task done around the event.
+                const c = checkins[Math.floor(rand() * checkins.length)];
+                const end = c.event_end_time ?? c.event_start_time ?? c.start_time!;
+                const doneAt = new Date(new Date(end).getTime() + Math.floor(rand() * 60) * 60_000);
+                if(doneAt > now) continue;
+                completeTask(rabid.project.forOwner('event', c.event_id, true)!, title, doneAt, vid);
+                made++;
+            } else if(roll < 0.8 && shifts.length) {
+                // shift-nested: a personal task done inside a timesheet window.
+                const s = shifts[Math.floor(rand() * shifts.length)];
+                const a = new Date(s.start_time).getTime(), b = new Date(s.end_time!).getTime();
+                completeTask(rabid.project.forOwner('volunteer', vid, true)!, title,
+                             new Date(a + Math.floor(rand() * (b - a))), vid);
+                made++;
+            } else {
+                // standalone: a personal task done off-shift (early-morning -> usually
+                // outside the daytime shifts, so it lands as its own per-day row).
+                const d = new Date(now.getTime() - (1 + Math.floor(rand() * 80)) * 24 * 3600_000);
+                d.setHours(7 + Math.floor(rand() * 2), 0, 0, 0);
+                if(d > now) continue;
+                completeTask(rabid.project.forOwner('volunteer', vid, true)!, title, d, vid);
+                made++;
+            }
+        }
+    }
+    console.info(`Completed (credited) tasks created: ${made}`);
+}
+
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -936,6 +1016,9 @@ export interface Scenario {
     // History window for seeded timesheets, in weeks back from today.  Bump it
     // (or override on the CLI - see main) to simulate years of data.
     timesheetWeeks: number;
+    // Tasks marked done by volunteers (done_by) - the Time view's completed-task
+    // layer.  Needs checkins + timesheets to anchor against.
+    completedTasks: boolean;
     baseSeed: number;
 }
 
@@ -943,12 +1026,12 @@ export type ScenarioName = 'minimal' | 'dev' | 'full' | 'activityReport';
 
 export const SCENARIOS: Record<ScenarioName, Scenario> = {
     // tiny + fast, for a quick poke
-    minimal:        { volunteers: 8,  events: true, commitments: true, checkins: false, timesheets: false, timesheetWeeks: 12, baseSeed: 1 },
+    minimal:        { volunteers: 8,  events: true, commitments: true, checkins: false, timesheets: false, timesheetWeeks: 12, completedTasks: false, baseSeed: 1 },
     // the everyday dataset: people, events, who's coming - but NOT the bulk attendance
-    dev:            { volunteers: 99, events: true, commitments: true, checkins: false, timesheets: false, timesheetWeeks: 12, baseSeed: 1 },
-    // everything, incl. the bulk attendance + timesheets the activity report needs
-    full:           { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, baseSeed: 1 },
-    activityReport: { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, baseSeed: 1 },
+    dev:            { volunteers: 99, events: true, commitments: true, checkins: false, timesheets: false, timesheetWeeks: 12, completedTasks: false, baseSeed: 1 },
+    // everything, incl. the bulk attendance + timesheets + credited task completions
+    full:           { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, completedTasks: true,  baseSeed: 1 },
+    activityReport: { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, completedTasks: true,  baseSeed: 1 },
 };
 
 // Run the builders for a scenario (order matters: later builders read earlier data).
@@ -960,6 +1043,7 @@ export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.checkins)    seedEventCheckins(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed, weeks: scenario.timesheetWeeks });
+    if(scenario.completedTasks) seedCompletedTasks(rabid, { baseSeed: scenario.baseSeed });
 }
 
 // Create the schema from the table metadata (the on-disk db's schema-of-record).
