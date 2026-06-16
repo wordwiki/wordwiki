@@ -47,7 +47,7 @@ test("prune: NO marker => nothing deleted (opt-in)", async () => {
         await pub.pruneOrphanedPages();
         assert(await there(root, 'categories/orphan.html'), 'orphan kept (no marker)');
         assert(await there(root, 'categories/live.html'));
-        assertStringIncludes(pub.status.log.join('\n'), PUBLISH_MARKER_FILE);
+        assertStringIncludes(pub.status.warnings.join('\n'), PUBLISH_MARKER_FILE);
         await Deno.remove(root, {recursive: true});
     });
 });

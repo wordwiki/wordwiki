@@ -507,7 +507,7 @@ export class Publish {
         // places it to bless a directory as a real publish root.  No marker =>
         // never delete anything (e.g. a misconfigured publishRoot).
         if(!(await fsExists(this.fsPath(PUBLISH_MARKER_FILE)))) {
-            this.status.log.push(
+            this.status.warnings.push(
                 `Stale-page prune SKIPPED: no '${PUBLISH_MARKER_FILE}' marker in publish root `+
                 `'${this.publishRoot}'. Create it (touch) to enable pruning of orphaned pages.`);
             return;
