@@ -188,13 +188,16 @@ export async function getDerived(contentStorePath: string,
         // --- Make content parent dir if it does not exist
         await fs.ensureDir(posix.dirname(outputContentPath));
 
-        // --- Make a tmp target name in the same dir for atomic update
-        const tmpTargetName = outputContentPath.replace('.'+extension, '_tmp.'+extension);
-        if(await fs.exists(tmpTargetName)) {
-            await Deno.remove(tmpTargetName, { recursive: true });
-            if(await fs.exists(tmpTargetName))
-                throw new Error(`failed to erase existing tmp target name ${tmpTargetName}`);
-        }
+        // --- Make a UNIQUE tmp target name in the same dir for atomic update.
+        //     Unique-per-invocation (pid + uuid) so two concurrent generations
+        //     of the SAME content id don't share temp files and clobber each
+        //     other.  This was a real hazard during a from-cold publish: the
+        //     audio trim's intermediate (`<tmp>.pre-fade.wav`, derived from the
+        //     tmp name) was getting deleted out from under a racing generation,
+        //     whose fade pass then failed with "No such file" and fell back to
+        //     the untrimmed source.
+        const tmpTargetName = outputContentPath.replace(
+            '.'+extension, `_tmp-${Deno.pid}-${crypto.randomUUID()}.`+extension);
         
         // --- Run closure functin with args
         const rawOutput = await Promise.resolve(fn.apply(null, [tmpTargetName, ...closure.slice(1)]));
@@ -223,8 +226,14 @@ export async function getDerived(contentStorePath: string,
             }
         }
 
-        // --- Use a move to install the output
-        await fs.move(tmpTargetName, outputContentPath);
+        // --- Install the output.  If a concurrent generation already produced
+        //     it (content-addressed, so byte-identical), discard our temp
+        //     rather than racing on the move.
+        if(await fs.exists(outputContentPath)) {
+            await Deno.remove(tmpTargetName, { recursive: true }).catch(() => {});
+        } else {
+            await fs.move(tmpTargetName, outputContentPath, { overwrite: true });
+        }
     }
     
     return Promise.resolve(outputContentId);
