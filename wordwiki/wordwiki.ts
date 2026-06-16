@@ -1654,9 +1654,9 @@ if (import.meta.main) {
                 }
                 status.end();
                 for(const w of status.warnings)
-                    console.info(`WARNING: ${w}`);
+                    console.info(`WARNING: ${publish.publishMessageText(w)}`);
                 for(const err of status.errors)
-                    console.error(`ERROR: ${err}`);
+                    console.error(`ERROR: ${publish.publishMessageText(err)}`);
                 const secs = Math.round(((status.endTime ?? 0) - (status.startTime ?? 0)) / 1000);
                 console.info(`publish${targets.length ? ` of ${targets.join(', ')}` : ''} ` +
                              `completed in ${secs}s: ` +

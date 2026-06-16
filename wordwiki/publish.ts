@@ -67,16 +67,30 @@ const PRUNE_ENTRY_DIRS    = ['entries', 'servlet/words'];
 // site emits ~17k pages; this only trips on an obviously-broken run.
 const PRUNE_MIN_MANIFEST = 100;
 
+// A publish status message: plain text, optionally tagged with the lexeme
+// (entry) it is about, so the status page can link to that lexeme's editor.
+export type PublishMessage = string | {text: string, entryId?: number};
+
+// The plain text of a message (for the console / CLI and as a fallback).
+export function publishMessageText(m: PublishMessage): string {
+    return typeof m === 'string' ? m : m.text;
+}
+
+// The lexeme this message references, if any.
+export function publishMessageEntryId(m: PublishMessage): number | undefined {
+    return typeof m === 'string' ? undefined : m.entryId;
+}
+
 export class PublishStatus {
     startTime?: number = undefined;
     endTime?: number = undefined;
-    log: string[] = [];
-    errors: string[] = [];
+    log: PublishMessage[] = [];
+    errors: PublishMessage[] = [];
     // Warnings vs errors: an ERROR means a page could not be published (and
     // reads as "the site is broken"); a WARNING means the page published but
     // the publish - as the final validation of everything - noticed a
     // data problem to deal with (e.g. a recording with no audio file).
-    warnings: string[] = [];
+    warnings: PublishMessage[] = [];
 
     constructor() {
     }
@@ -103,6 +117,18 @@ export class PublishStatus {
 // We only want one publish running at a time, we model this
 // by having the publish status be a singleton.
 export const publishStatusSingleton = new PublishStatus();
+
+// One status message as an <li>: the text, plus - when the message references
+// a lexeme - a link to open that lexeme in the editor.
+function renderPublishMessage(m: PublishMessage): any {
+    const entryId = publishMessageEntryId(m);
+    return ['li', {},
+            publishMessageText(m),
+            entryId !== undefined
+                ? [' ', ['a', {href: `/ww/wordwiki.lexeme.entryPage(${entryId})`},
+                         '✎ edit lexeme']]
+                : []];
+}
 
 export function publishStatus(joiningExistingPublish: boolean=false,
                               publishStatus: PublishStatus = publishStatusSingleton) {
@@ -132,9 +158,7 @@ export function publishStatus(joiningExistingPublish: boolean=false,
         (publishStatus.errors.length > 0) ? [
             ['h2', {style: "color: red"}, 'Errors'],
             ['ul', {},
-             publishStatus.errors.map(e=>[
-                 ['li', {}, e]
-             ])
+             publishStatus.errors.map(renderPublishMessage)
             ]] : [],
 
         // Deliberately calm (amber, not red): the pages ARE published; these
@@ -144,17 +168,13 @@ export function publishStatus(joiningExistingPublish: boolean=false,
              `Warnings (${publishStatus.warnings.length})`],
             ['p', {}, 'These pages published fine - each warning is a data item to fix when convenient.'],
             ['ul', {},
-             publishStatus.warnings.map(e=>[
-                 ['li', {}, e]
-             ])
+             publishStatus.warnings.map(renderPublishMessage)
             ]] : [],
 
         (publishStatus.log.length > 0) ? [
             ['h2', {}, 'Recent Tasks'],
             ['ul', {},
-             publishStatus.log.slice(-500).toReversed().map(e=>[
-                 ['li', {}, e]
-             ])
+             publishStatus.log.slice(-500).toReversed().map(renderPublishMessage)
             ]] : [],
     ];
 
@@ -233,7 +253,7 @@ export async function publish(publishOptions: PublishOptions) {
     }
     if(publishStatusSingleton.errors.length > 0) {
         console.info('*** PUBLISH ERRORS');
-        publishStatusSingleton.errors.forEach(e=>console.info(e));
+        publishStatusSingleton.errors.forEach(e=>console.info(publishMessageText(e)));
         throw new Error('Publish failed');
     }
  }
@@ -399,13 +419,15 @@ export class Publish {
         for(const r of entry.recording ?? [])
             if(missing(r.recording))
                 this.status.warnings.push(
-                    `Entry '${name}': recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`);
+                    {text: `Entry '${name}': recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`,
+                     entryId: entry.entry_id});
         for(const sub of entry.subentry ?? [])
             for(const ex of sub.example ?? [])
                 for(const r of ex.example_recording ?? [])
                     if(missing(r.recording))
                         this.status.warnings.push(
-                            `Entry '${name}': example recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`);
+                            {text: `Entry '${name}': example recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`,
+                             entryId: entry.entry_id});
     }
 
     /** An entry's categories as shown on the public site (internal filtered). */
@@ -620,7 +642,7 @@ export class Publish {
                 case 'entries-all':
                     for(const entry of this.entries)
                         await this.publishItem(`Entry ${entryschema.renderEntrySpellingsSummary(entry)}`,
-                                               ()=>this.publishEntry(entry));
+                                               ()=>this.publishEntry(entry), entry.entry_id);
                     break;
                 case 'entry-public-id': {
                     const entry = this.entryByPublicId.get(t.publicId);
@@ -630,7 +652,7 @@ export class Publish {
                             `(public ids are the entry-page filenames, e.g. 'samqwan')`);
                         break;
                     }
-                    await this.publishItem(`Entry ${t.publicId}`, ()=>this.publishEntry(entry));
+                    await this.publishItem(`Entry ${t.publicId}`, ()=>this.publishEntry(entry), entry.entry_id);
                     break;
                 }
                 case 'entry-id': {
@@ -642,7 +664,7 @@ export class Publish {
                             `(unpublished/deleted entries have no public page)`);
                         break;
                     }
-                    await this.publishItem(`Entry ${tid}`, ()=>this.publishEntry(entry));
+                    await this.publishItem(`Entry ${tid}`, ()=>this.publishEntry(entry), entry.entry_id);
                     break;
                 }
             }
@@ -655,7 +677,10 @@ export class Publish {
             Array.from(this.entryToPublicId.entries()).map(([e, id]) => [id, e]));
     }
 
-    async publishItem(itemDesc: string, itemPromise: ()=>Promise<void>): Promise<void> {
+    // entryId: when this item is a lexeme (an entry page/forwarder), tag any
+    // error with it so the status page can link to that lexeme's editor.
+    async publishItem(itemDesc: string, itemPromise: ()=>Promise<void>,
+                      entryId?: number): Promise<void> {
         let error: Error|undefined = undefined;
         //console.info(`publish ${itemDesc}`);
         try {
@@ -664,10 +689,12 @@ export class Publish {
             error = e as Error; // bad cast XXX
         } finally {
         }
-        if(error)
-            this.status.errors.push(`${itemDesc}: ${error.toString()}`);
-        else
-            this.status.log.push(itemDesc);
+        if(error) {
+            const text = `${itemDesc}: ${error.toString()}`;
+            this.status.errors.push(entryId !== undefined ? {text, entryId} : text);
+        } else {
+            this.status.log.push(entryId !== undefined ? {text: itemDesc, entryId} : itemDesc);
+        }
     }
     
     get homePath(): string {
@@ -1026,13 +1053,15 @@ including remixing, transforming, and building upon the material, for any non-co
     async publishEntries(): Promise<void> {
 
         for(const entry of this.entries) {
-            await this.publishItem(`Entry ${this.getPublicIdForEntry(entry)}`, ()=>this.publishEntry(entry));
+            await this.publishItem(`Entry ${this.getPublicIdForEntry(entry)}`,
+                                   ()=>this.publishEntry(entry), entry.entry_id);
         }
 
         // Generate .html files that forward our old URLS to our new ones (using meta refresh)
         await Deno.mkdir(this.fsPath('servlet/words'), {recursive: true});
         for(const entry of this.entries) {
-            await this.publishItem(`Entry Forwarder ${this.getPublicIdForEntry(entry)}`, ()=>this.publishEntryForwarder(entry));
+            await this.publishItem(`Entry Forwarder ${this.getPublicIdForEntry(entry)}`,
+                                   ()=>this.publishEntryForwarder(entry), entry.entry_id);
         }
     }
     
