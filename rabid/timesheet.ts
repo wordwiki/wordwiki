@@ -262,7 +262,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
              [h.div, {class: 'lm-item-primary'},
               [h.a, {...templates.pageLinkProps(`/rabid.timesheet_entry.detailPage(${id})`),
                      class: 'lm-nav-link'}, e.volunteer_name],
-              latePaidBadge(latePaidReconstruction(e))],
+              lateEntryBadge(lateEntryWarning(e))],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
             this.canEditRecord(e) ? this.editPencil(id) : undefined,
             navChevron(),
@@ -311,7 +311,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, `${e.volunteer_name} — time`],
              this.canEditRecord(e) ? this.editPencil(timesheet_entry_id) : undefined],
-            latePaidAlert(latePaidReconstruction(e)),
+            lateEntryAlert(lateEntryWarning(e)),
             [h.dl, {class: 'row mb-0'},
              row('Volunteer', templates.pageLink(`/rabid.volunteer.detailPage(${e.volunteer_id})`, e.volunteer_name)),
              row('Start', date.sqliteDateTimeToString(e.start_time, '—')),
@@ -363,9 +363,9 @@ function entryHours(e: TimesheetEntry): number {
 // flag it LOUDLY and ALWAYS (every place a paid entry renders).  Non-paid time
 // doesn't get the warning: a late volunteer-hours entry doesn't really matter.
 
-const LATE_PAID_HOURS = 24;   // grace window after end_time before it's "late"
+const LATE_ENTRY_HOURS = 24;   // grace window after end_time before it's "late"
 
-export interface LatePaid { kind: 'entered' | 'edited'; daysLate: number; }
+export interface LateEntry { kind: 'entered' | 'edited'; daysLate: number; }
 
 // Hours from `endStr` to `t` (positive when t is after the work ended).
 function hoursAfterEnd(endStr: string, t: string): number {
@@ -376,18 +376,18 @@ function hoursAfterEnd(endStr: string, t: string): number {
 
 // The late-paid finding for an entry, or null.  Only paid, ended entries qualify;
 // "entered late" (born after the window) takes precedence over "edited late".
-export function latePaidReconstruction(e: {
+export function lateEntryWarning(e: {
         is_paid_time?: number | boolean, end_time?: string | null,
-        entry_creation_time?: string | null, entry_last_edit_time?: string | null}): LatePaid | null {
+        entry_creation_time?: string | null, entry_last_edit_time?: string | null}): LateEntry | null {
     if(!e.is_paid_time || !e.end_time) return null;
-    if(e.entry_creation_time && hoursAfterEnd(e.end_time, e.entry_creation_time) > LATE_PAID_HOURS)
+    if(e.entry_creation_time && hoursAfterEnd(e.end_time, e.entry_creation_time) > LATE_ENTRY_HOURS)
         return {kind: 'entered', daysLate: hoursAfterEnd(e.end_time, e.entry_creation_time) / 24};
-    if(e.entry_last_edit_time && hoursAfterEnd(e.end_time, e.entry_last_edit_time) > LATE_PAID_HOURS)
+    if(e.entry_last_edit_time && hoursAfterEnd(e.end_time, e.entry_last_edit_time) > LATE_ENTRY_HOURS)
         return {kind: 'edited', daysLate: hoursAfterEnd(e.end_time, e.entry_last_edit_time) / 24};
     return null;
 }
 
-export function latePaidMessage(d: LatePaid): string {
+export function lateEntryMessage(d: LateEntry): string {
     const days = Math.max(1, Math.round(d.daysLate));
     // "late entry" / "entered ... after the work" - about WHEN IT WAS RECORDED,
     // never about when the volunteer was paid.
@@ -396,17 +396,17 @@ export function latePaidMessage(d: LatePaid): string {
 }
 
 // Inline (badge) for compact contexts - list rows, the Time view.
-export function latePaidBadge(d: LatePaid | null | undefined): Markup {
+export function lateEntryBadge(d: LateEntry | null | undefined): Markup {
     if(!d) return undefined;
     return [h.span, {class: 'badge text-bg-danger ms-1', 'data-testid': 'late-entry',
-                     title: latePaidMessage(d)}, '⚠ late entry'];
+                     title: lateEntryMessage(d)}, '⚠ late entry'];
 }
 
 // Block alert for the detail page.
-export function latePaidAlert(d: LatePaid | null | undefined): Markup {
+export function lateEntryAlert(d: LateEntry | null | undefined): Markup {
     if(!d) return undefined;
     return [h.div, {class: 'alert alert-danger py-1 px-2 my-2', role: 'alert', 'data-testid': 'late-entry'},
-            '⚠ ', latePaidMessage(d)];
+            '⚠ ', lateEntryMessage(d)];
 }
 
 
