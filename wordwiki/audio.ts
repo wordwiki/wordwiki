@@ -8,6 +8,7 @@ import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
 import {ScannedDocument, ScannedDocumentOpt, selectScannedDocument, ScannedPage, ScannedPageOpt} from './scanned-document.ts';
 import * as config from "./config.ts";
+import * as templates from './templates.ts';
 import * as server from '../liminal/http-server.ts';
 import {route, authenticated} from '../liminal/security.ts';
 import {
@@ -243,4 +244,74 @@ async function preCompressDictionaryAudio() {
 export class AudioRoutes {
     @route(authenticated, {mutates: true}) uploadRecording(...a: Parameters<typeof uploadRecording>) { return uploadRecording(...a); }
     @route(authenticated) forwardToCompressedRecording(...a: Parameters<typeof forwardToCompressedRecording>) { return forwardToCompressedRecording(...a); }
+
+    // THROWAWAY (delete with renderTrimTuningPage + TRIM_TUNING_CLIPS once the
+    // language staff have chosen a trim threshold): /ww/wordwiki.audio.trimTuningPage()
+    @route(authenticated) trimTuningPage() { return renderTrimTuningPage(); }
+}
+
+// ===========================================================================
+// THROWAWAY: audio-trim threshold listening test.  A one-off decision fixture
+// so a fluent speaker can pick the most aggressive trim threshold that does not
+// cut the spoken word.  The clips are the recordings most affected by an
+// aggressive trim (top removed-region peak at 0.3%, from audio-trim-audit.ts),
+// with their headwords looked up once and hard-coded.  Each variant is generated
+// on demand via the normal derived store (getTrimmedRecordingPath) and cached.
+// DELETE this block + the trimTuningPage route once the threshold is settled.
+// ===========================================================================
+const TRIM_TUNING_THRESHOLDS = ['0.03%', '0.05%', '0.1%', '0.2%', '0.3%'];
+
+const TRIM_TUNING_CLIPS: { word: string, entryId: number, src: string }[] = [
+    { word: "pgesign",         entryId: 110794, src: "content/Recordings/be7/be76a88665f953900fc643bc774b39ce84323a09bbc6ff48b188518a1938cf1a.wav" },
+    { word: "ugtlu'sue'sgwul", entryId: 146566, src: "content/Recordings/844/844f5705fcf42e416517d075e2535b913bb6427e5585e60d7b7636f814f4a5ca.wav" },
+    { word: "apso'qonigatat",  entryId:  11046, src: "content/Recordings/828/8286372e0c8dd3103ce16c2346f07449821d2436643661a72896c116c80ed703.wav" },
+    { word: "tgupoq",          entryId: 141302, src: "content/Recordings/dac/dac203160f6499b9da6d1b66e6b777b9abf9d38835fdd9e8f4dd266da9c440ac.wav" },
+    { word: "pgesign'ji'j",    entryId: 110812, src: "content/Recordings/f17/f178009f90a6cfef29bc46e2ef131768883e226ef16505c1b5c6e1e598079973.wav" },
+    { word: "ugpitn",          entryId: 145227, src: "content/Recordings/487/48775f6dd52522ab1df57e17dce45b4d47b1ae9ef07490825fee4c5cd0ded688.wav" },
+    { word: "pqwanm",          entryId: 117408, src: "content/Recordings/ba4/ba41082338f4e2a05e286e6308504b14d0c80eaeaabcce2f1ad79ad7e55e7020.wav" },
+    { word: "toqwaqji'jit",    entryId: 143189, src: "content/Recordings/954/954436ce2de6ca78d31536d1ad7fa8ff878b9d57d6a0fc5ad2133f4b00ae18ae.wav" },
+    { word: "egs'pugua'latl",  entryId:  16387, src: "content/Recordings/e78/e78cd6b6088e5b117b0700f9e8a64550743f81334dcaf396941333bb3032676a.wav" },
+    { word: "pugsigna'qewit",  entryId: 118207, src: "content/Recordings/41d/41d1e372af8cf766a9e4d347aee2f8da645ffdb9c48c6ee625b61d8842a5e1c4.wav" },
+    { word: "ugji'g'j",        entryId: 144627, src: "content/Recordings/b1f/b1f9c49370e5d4da90413a805a19a68f91b9b2e98e7a011be59eef5c7662c17e.wav" },
+    { word: "ugju'sn",         entryId: 145048, src: "content/Recordings/645/645deaec909fbbf05a3a6a82077af26e1b694184970c390ed6e6b8e4a6cf88a6.wav" },
+    { word: "tg'snugowa'j",    entryId: 141203, src: "content/Recordings/afd/afd17d87455d46096f87b902631b44335464c898cc1a846e8a50d1864cec48e1.wav" },
+];
+
+// deno-lint-ignore no-explicit-any
+async function renderTrimTuningPage(): Promise<templates.Page> {
+    const player = (src: string) =>
+        ['audio', { controls: 'controls', preload: 'none', src, style: 'width: 150px; height: 34px;' }];
+
+    // deno-lint-ignore no-explicit-any
+    const rows: any[] = [];
+    for(const c of TRIM_TUNING_CLIPS) {
+        const trimmed = await Promise.all(TRIM_TUNING_THRESHOLDS.map(async (threshold) => {
+            const p = await getTrimmedRecordingPath(c.src, { threshold, minDuration: 0.1, fade: 0.01 });
+            return ['td', { class: 'text-center' }, player('/' + p)];
+        }));
+        rows.push(['tr', {},
+            ['td', { style: 'white-space: nowrap;' },
+                ['a', { href: `/ww/wordwiki.lexeme.entryPage(${c.entryId})`, target: '_blank' }, ['b', {}, c.word]]],
+            ['td', { class: 'text-center' }, player('/' + c.src)],
+            ...trimmed]);
+    }
+
+    const body =
+        ['div', { class: 'container my-4' },
+            ['h3', {}, 'Audio trim — threshold listening test'],
+            ['p', { class: 'text-muted', style: 'max-width: 48rem;' },
+                'These are the recorded words the auto-trimmer changes the most. For each, play ',
+                ['b', {}, 'Original'], ' first, then each threshold — a higher % trims more silence (and risks ',
+                'cutting into the word). Choose the highest % that still plays the ', ['b', {}, 'whole word'],
+                ', with no clipped start or end. The original recording is never changed; this only decides ',
+                'how aggressively new recordings get auto-trimmed.'],
+            ['table', { class: 'table table-sm table-bordered align-middle' },
+                ['thead', {},
+                    ['tr', {},
+                        ['th', {}, 'Word'],
+                        ['th', { class: 'text-center' }, 'Original'],
+                        ...TRIM_TUNING_THRESHOLDS.map(t => ['th', { class: 'text-center' }, t])]],
+                ['tbody', {}, rows]]];
+
+    return templates.page('Audio Trim Tuning', body);
 }
