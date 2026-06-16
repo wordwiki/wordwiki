@@ -70,11 +70,20 @@ const INDEX_RE = /^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+IF\s+NOT\s+EXISTS\s+([A-Za-
 
 interface ParsedExtraDML { name?: string; sql: string; }
 
-function parseExtraDML(t: Table<any>): ParsedExtraDML[] {
-    return t.extraDML.map(sql => {
+function parseIndexStatements(sqls: string[]): ParsedExtraDML[] {
+    return sqls.map(sql => {
         const m = sql.match(INDEX_RE);
         return m ? {name: m[1], sql} : {sql};
     });
+}
+
+// Every index the model declares for a table: the field-level ones (fields
+// flagged `indexed: true`, via createIndexesDML) plus the constructor's extraDML
+// (composite/partial indexes + any raw statements).  The planner treats both the
+// same - names them as declared (so they're not flagged as drift) and creates
+// them when missing.
+function declaredIndexes(t: Table<any>): ParsedExtraDML[] {
+    return [...parseIndexStatements(t.createIndexesDML()), ...parseIndexStatements(t.extraDML)];
 }
 
 // Loose equivalence between a declared default and PRAGMA's literal text.  Our
@@ -106,7 +115,7 @@ export function planUpgrade(tables: Table<any>[]): UpgradePlan {
     const declaredIndexNames = new Set<string>();
 
     for(const t of tables) {
-        const extra = parseExtraDML(t);
+        const extra = declaredIndexes(t);
         for(const e of extra)
             if(e.name) declaredIndexNames.add(e.name);
 
