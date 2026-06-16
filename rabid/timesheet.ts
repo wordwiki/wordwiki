@@ -79,7 +79,9 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             // and volunteers can be paid (in which case is_paid_time is true).  Also,
             // the same person can be staff for a month, then transition to being a volunteer -
             // so for historical reporting purposes the important bit is the is_paid_time field.
-            new ForeignKeyField('volunteer_id', "volunteer", "volunteer_id", {indexed: true}),
+            // labelField 'name' so the edit form's picker shows volunteer names
+            // (without it the dropdown would list raw numeric ids).
+            new ForeignKeyField('volunteer_id', "volunteer", "volunteer_id", {indexed: true}, 'name'),
 
             // The actual time worked.  This is EXPLICIT time (staff timesheets,
             // or volunteer work outside an event); event attendance lives in

@@ -339,6 +339,7 @@ export class Table<T extends Tuple> {
     // field's own (target table, columns) - trusted server constants - so the
     // client never supplies raw SQL identifiers; only the search term `q` and the
     // (validated) field name come from the request.
+    @route(authenticated)
     fieldPickerOptions(fieldName: string, args: {q?: string}): Array<{id: any, label: any}> {
         const field = this.fieldsByName[fieldName];
         if(!(field instanceof ForeignKeyField))
