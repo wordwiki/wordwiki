@@ -59,7 +59,7 @@ export const PUBLISH_MARKER_FILE = '.wordwiki-publish-root';
 
 // Publisher-owned directories that pruneOrphanedPages may delete orphan *.html
 // from.  Each group is only pruned when its section actually ran this publish.
-const PRUNE_CATEGORY_DIRS = ['categories'];
+const PRUNE_CATEGORY_DIRS = ['categories', 'top-words'];
 const PRUNE_ENTRY_DIRS    = ['entries', 'servlet/words'];
 
 // If a "full" publish emitted fewer than this many pages, treat the manifest as
@@ -257,6 +257,7 @@ interface PublishOptions {
  *   404 | all-words | about-us       the other top-level pages
  *   categories                       categories directory + every category page
  *   categories/water                 one category page
+ *   top-words                        Top Words directory + its tier pages
  *   books                            every book
  *   books/PDM                        one book (all pages)
  *   books/PDM/page-0101              one book page (also books/PDM/101)
@@ -270,6 +271,7 @@ export type PublishTarget =
     | {kind: 'home'} | {kind: '404'} | {kind: 'all-words'} | {kind: 'about-us'}
     | {kind: 'categories-all'}
     | {kind: 'category', slug: string}
+    | {kind: 'top-words'}
     | {kind: 'books-all'}
     | {kind: 'book', book: string}
     | {kind: 'book-page', book: string, page: number}
@@ -290,6 +292,7 @@ export function parsePublishTarget(raw: string): PublishTarget {
     if(t === '404') return {kind: '404'};
     if(t === 'all-words') return {kind: 'all-words'};
     if(t === 'about-us') return {kind: 'about-us'};
+    if(t === 'top-words') return {kind: 'top-words'};
 
     const parts = t.split('/');
     switch(parts[0]) {
@@ -314,7 +317,7 @@ export function parsePublishTarget(raw: string): PublishTarget {
     }
     throw new Error(
         `unrecognized publish target '${raw}' - targets are site-relative paths, e.g. ` +
-        `index.html, categories, categories/water, books/PDM/page-0101, ` +
+        `index.html, categories, categories/water, top-words, books/PDM/page-0101, ` +
         `entries/samqwan, entry:121590 (see parsePublishTarget in publish.ts)`);
 }
 
@@ -468,10 +471,11 @@ export class Publish {
                 await this.publishBook(book);
         }
 
-        // --- Publish categories
+        // --- Publish categories (and the Top Words listing, same curation)
         if(!this.options.suppressPublishCategories) {
             await this.publishCategoriesDirectory();
             await this.publishCategories();
+            await this.publishItem('Top Words', ()=>this.publishTopWords());
         }
 
         // --- Publish all entries
@@ -592,6 +596,9 @@ export class Publish {
                 case 'category':
                     await Deno.mkdir(this.fsPath(this.categoriesDir), {recursive: true});
                     await this.publishItem(`Category ${t.slug}`, ()=>this.publishCategory((t as any).slug));
+                    break;
+                case 'top-words':
+                    await this.publishItem('Top Words', ()=>this.publishTopWords());
                     break;
                 case 'books-all':
                     for(const book of REFERENCE_BOOK_IDS)
@@ -1104,33 +1111,82 @@ including remixing, transforming, and building upon the material, for any non-co
     get categoriesDir(): string {
         return 'categories';
     }
-    
+
     get categoriesDirectoryPath(): string {
         return 'categories.html';
     }
 
-    pathForCategory(category: string): string {
-        return `${this.categoriesDir}/${category.replaceAll(/[^a-zA-Z0-9-']/g, '_')}.html`;
+    get topWordsDir(): string {
+        return 'top-words';
     }
-    
+
+    get topWordsDirectoryPath(): string {
+        return 'top-words.html';
+    }
+
+    // Site-relative path to a bucket's entry-list page, within a listing dir.
+    // (Categories and Top Words are two listings sharing this scheme.)
+    pathForListingPage(dir: string, slug: string): string {
+        return `${dir}/${slug.replaceAll(/[^a-zA-Z0-9-']/g, '_')}.html`;
+    }
+
+    pathForCategory(category: string): string {
+        return this.pathForListingPage(this.categoriesDir, category);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Listings: a directory page of buckets, each linking to a page of
+    //     its entries.  Categories and Top Words are two instances - they
+    //     share publishListingDirectory + publishEntryListPage so the markup
+    //     lives in ONE place.
+    // ------------------------------------------------------------------------
+
+    /** Render & write a listing's DIRECTORY page (grouped buckets, each
+     *  linking to its entry-list page under `dir`).  A group with an empty
+     *  theme renders no heading (a single unnamed group, e.g. Top Words). */
+    async publishListingDirectory(opts: {
+        directoryPath: string, dir: string, title: string, intro?: any,
+        groups: Array<{theme: string, cats: Array<{slug: string, name: string, count: number}>}>,
+    }): Promise<void> {
+        const body = [
+            ['h1', {}, opts.title],
+            opts.intro ?? [],
+            opts.groups.map(group => [
+                group.theme ? ['h2', {}, group.theme] : [],
+                ['ul', {},
+                 group.cats.map(c =>
+                     ['li', {}, ['a',
+                                 {href:this.pathForListingPage(opts.dir, c.slug)},
+                                 c.name, ` (${c.count} entries)`]])],
+            ]),
+        ];
+        await this.writePage(opts.directoryPath, this.publicPageTemplate('', {title: opts.title, body}));
+    }
+
+    /** Render & write ONE bucket's entry-list page (its pages live one level
+     *  deep, so links use '../'). */
+    async publishEntryListPage(dir: string, slug: string, title: any, entries: Entry[]): Promise<void> {
+        const body = [
+            ['h2', {}, title],
+            ['div', {},
+             ['ul', {},
+              entries.map(e=>['li', {}, this.renderEntryPublicLink('../', e)]),
+             ] // ul
+            ] // div
+        ];
+        await this.writePage(this.pathForListingPage(dir, slug), this.publicPageTemplate('../', {title, body}));
+    }
+
     /**
      *
      */
     async publishCategoriesDirectory(): Promise<void> {
-        const title = `Categories Directory`;
-
-        const body = [
-            ['h1', {}, title],
-            this.publicCategoryGroups().map(group => [
-                ['h2', {}, group.theme],
-                ['ul', {},
-                 group.cats.map(c =>
-                     ['li', {}, ['a',
-                                 {href:this.pathForCategory(c.slug)},
-                                 c.name, ` (${c.count} entries)`]])],
-            ]),
-        ];
-        await this.writePage(this.categoriesDirectoryPath, this.publicPageTemplate('', {title, body}));
+        await this.publishListingDirectory({
+            directoryPath: this.categoriesDirectoryPath,
+            dir: this.categoriesDir,
+            title: 'Categories Directory',
+            groups: this.publicCategoryGroups(),
+        });
     }
 
     /**
@@ -1142,30 +1198,69 @@ including remixing, transforming, and building upon the material, for any non-co
             await this.publishItem(`Category ${category}`, ()=>this.publishCategory(category));
         }
     }
-    
+
     /**
      *
      */
     async publishCategory(category: string): Promise<void> {
-
-        //const entriesForCategory = this.wordWiki.getEntriesForCategory(category);
         const entriesForCategory = this.wordWiki.entriesByCategory.get(category)??[];
-        
-        const title = ['Entries for category ', this.publicCategoryName(category)];
-        
-        const body = [
-            ['h2', {}, title],
+        await this.publishEntryListPage(
+            this.categoriesDir, category,
+            ['Entries for category ', this.publicCategoryName(category)],
+            entriesForCategory);
+    }
 
-            // --- Add new entry button
-            ['div', {},
-             ['ul', {},
-              entriesForCategory
-                  .map(e=>['li', {}, this.renderEntryPublicLink('../', e)]),
-             ] // ul
-            ] // div
+    // ------------------------------------------------------------------------
+    // --- Top Words: the same listing markup as Categories, but the buckets
+    //     are the learner tiers (top 10 / 100 / 1000).  Tier tags are stored
+    //     MOST-SPECIFIC (an entry carries only its tightest tier), so each
+    //     bucket is CUMULATIVE - it unions every tier up to and including its
+    //     own (Top 100 = top-10 ∪ top-100 = 100 words).
+    // ------------------------------------------------------------------------
+
+    // Smallest bucket first; tierSlugs is the cumulative set unioned for it.
+    get topWordsBuckets(): Array<{slug: string, name: string, tierSlugs: string[]}> {
+        return [
+            {slug: 'top-10',   name: 'Top 10 words',   tierSlugs: ['~tier-top-10']},
+            {slug: 'top-100',  name: 'Top 100 words',  tierSlugs: ['~tier-top-10', '~tier-top-100']},
+            {slug: 'top-1000', name: 'Top 1000 words', tierSlugs: ['~tier-top-10', '~tier-top-100', '~tier-top-1000']},
         ];
+    }
 
-        await this.writePage(this.pathForCategory(category), this.publicPageTemplate('../', {title, body}));
+    // The entries in a cumulative tier bucket: union the tier tags (deduped by
+    // entry id), then sort by spelling like entriesByCategory does.
+    cumulativeTierEntries(tierSlugs: string[]): Entry[] {
+        const seen = new Set<number>();
+        const out: Entry[] = [];
+        for(const slug of tierSlugs)
+            for(const e of this.wordWiki.entriesByCategory.get(slug) ?? [])
+                if(!seen.has(e.entry_id)) { seen.add(e.entry_id); out.push(e); }
+        return out.toSorted((a, b) =>
+            this.wordWiki.sourceLangCollator.compare(
+                a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
+    }
+
+    async publishTopWords(): Promise<void> {
+        const buckets = this.topWordsBuckets.map(b =>
+            ({...b, entries: this.cumulativeTierEntries(b.tierSlugs)}));
+
+        // The directory page (single unnamed group).
+        await this.publishListingDirectory({
+            directoryPath: this.topWordsDirectoryPath,
+            dir: this.topWordsDir,
+            title: 'Top Words',
+            intro: ['p', {}, 'The most frequently used Mi’gmaq words, grouped by ',
+                    'how many of the top words to learn first.'],
+            groups: [{theme: '', cats: buckets.map(b =>
+                ({slug: b.slug, name: b.name, count: b.entries.length}))}],
+        });
+
+        // One entry-list page per bucket (reuses the category page markup).
+        await Deno.mkdir(this.fsPath(this.topWordsDir), {recursive: true});
+        for(const b of buckets)
+            await this.publishItem(`Top Words ${b.slug}`,
+                ()=>this.publishEntryListPage(this.topWordsDir, b.slug,
+                    ['Entries: ', b.name], b.entries));
     }
         
     dirForEntry(entry: Entry): string {
@@ -1466,6 +1561,10 @@ including remixing, transforming, and building upon the material, for any non-co
 
                 ['li', {class:"nav-item"},
                  ['a', {class:"nav-link", href:rootPath+this.categoriesDirectoryPath}, 'Categories'],
+                ], //li
+
+                ['li', {class:"nav-item"},
+                 ['a', {class:"nav-link", href:rootPath+this.topWordsDirectoryPath}, 'Top Words'],
                 ], //li
 
                 ['li', {class:"nav-item"},

@@ -6,7 +6,7 @@
  * follows the table, and a pre-import db degrades gracefully.
  */
 import { test } from "../liminal/testing/test.ts";
-import { assertEquals } from "../liminal/testing/assert.ts";
+import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, as, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
 import { Publish, PublishStatus } from "./publish.ts";
 
@@ -110,5 +110,72 @@ test("public categories: pre-import db (empty table) degrades to raw values", as
                            cats: [{slug: 'fish', name: 'fish', count: 1},
                                   {slug: 'kinship', name: 'kinship', count: 1}]}]);
         });
+    });
+});
+
+// --- Top Words -------------------------------------------------------------
+// Tier tags are stored most-specific (an entry carries only its tightest
+// tier), so each Top Words bucket is CUMULATIVE: it unions every tier up to
+// and including its own.  cumulativeTierEntries does that union + dedup + sort.
+
+test("Top Words: buckets are cumulative, deduped, and spelling-sorted", async () => {
+    await withTestDb((fx) => {
+        as(fx, 'djz', () => {
+            const tl = new TestTimeline();
+            // ccc is in the top-10; aaa in top-100; bbb in top-1000.  ddd is
+            // double-tagged (top-10 AND top-100) to exercise dedup.
+            seedPublishedEntry(fx.ww, tl, 1000, 'ccc', ['~tier-top-10']);
+            seedPublishedEntry(fx.ww, tl, 1500, 'ddd', ['~tier-top-10', '~tier-top-100']);
+            seedPublishedEntry(fx.ww, tl, 2000, 'aaa', ['~tier-top-100']);
+            seedPublishedEntry(fx.ww, tl, 3000, 'bbb', ['~tier-top-1000']);
+
+            const pub = mkPublish(fx);
+            const ids = (slugs: string[]) =>
+                pub.cumulativeTierEntries(slugs).map((e: any) => e.entry_id);
+
+            // top-10 bucket: just the two top-10 entries, spelling-sorted (ccc,ddd).
+            assertEquals(ids(['~tier-top-10']), [1000, 1500]);
+            // top-100 = top-10 ∪ top-100, ddd appears ONCE; sorted aaa,ccc,ddd.
+            assertEquals(ids(['~tier-top-10', '~tier-top-100']), [2000, 1000, 1500]);
+            // top-1000 = all three: aaa,bbb,ccc,ddd.
+            assertEquals(ids(['~tier-top-10', '~tier-top-100', '~tier-top-1000']),
+                         [2000, 3000, 1000, 1500]);
+        });
+    });
+});
+
+test("Top Words: publishTopWords emits a directory + a page per tier with cumulative counts", async () => {
+    await withTestDb(async (fx) => {
+        // Seed under the actor (synchronous prefix), then do file IO after.
+        const root = as(fx, 'djz', () => {
+            const tl = new TestTimeline();
+            seedPublishedEntry(fx.ww, tl, 1000, 'ccc', ['~tier-top-10']);
+            seedPublishedEntry(fx.ww, tl, 2000, 'aaa', ['~tier-top-100']);
+            seedPublishedEntry(fx.ww, tl, 3000, 'bbb', ['~tier-top-1000']);
+            bornApprove(fx.ww);
+            return undefined;
+        });
+        void root;
+        const tmp = await Deno.makeTempDir({prefix: 'wordwiki-topwords-test-'});
+        const pub = new Publish(new PublishStatus(), fx.ww, fx.ww.publishedEntries, tmp);
+
+        await pub.publishTopWords();
+
+        // The directory page and one page per tier were written...
+        assert(pub.emittedPaths.has('top-words.html'));
+        assert(pub.emittedPaths.has('top-words/top-10.html'));
+        assert(pub.emittedPaths.has('top-words/top-100.html'));
+        assert(pub.emittedPaths.has('top-words/top-1000.html'));
+
+        // ...with cumulative counts (1 / 2 / 3) on the directory page.
+        const dir = await Deno.readTextFile(`${tmp}/top-words.html`);
+        assertStringIncludes(dir, 'Top 10 words');
+        assertStringIncludes(dir, '(1 entries)');
+        assertStringIncludes(dir, 'Top 100 words');
+        assertStringIncludes(dir, '(2 entries)');
+        assertStringIncludes(dir, 'Top 1000 words');
+        assertStringIncludes(dir, '(3 entries)');
+
+        await Deno.remove(tmp, {recursive: true});
     });
 });
