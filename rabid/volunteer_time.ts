@@ -511,25 +511,25 @@ function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
         lateEntryBadge(sp.lateEntry),
         sp.wasStaff ? [h.span, {class: 'text-muted small ms-1'}, '(staff)'] : undefined,
     ];
-    const rows: Markup[] = [
+    // Check-ins this entry subsumes are PART of the entry (the timesheet's times
+    // are authoritative) - render them as muted sub-lines inside the entry, not
+    // as separate rows divided from it.
+    const nestedLines: Markup = e.nested.map(n =>
+        [h.div, {class: 'text-muted small'},
+         '↳ ',
+         n.eventId ? templates.pageLink(`/rabid.event.detailPage(${n.eventId})`, n.label) : n.label,
+         ` · event ${timeRange(n)}`]);
+    return [
         [h.tr, {},
          [h.td, {class: 'text-nowrap'},
           dayLabel(sp.start),
           // Begin–end clock times for the work period (elapsed is the hours column).
           [h.div, {class: 'text-muted small'}, carrier ? 'event' : timeRange(sp)]],
-         [h.td, {}, label, tags, e.tasks.length ? renderTaskChips(e.tasks) : undefined],
+         [h.td, {}, label, tags, nestedLines,
+          e.tasks.length ? renderTaskChips(e.tasks) : undefined],
          [h.td, {class: 'text-end text-nowrap'}, carrier ? '—' : (sp.end ? sp.hours.toFixed(1) : 'open')],
          [h.td, {class: 'text-end'}, (!carrier && canManage(volunteer_id)) ? editAffordance(sp) : undefined]],
     ];
-    for(const n of e.nested)
-        rows.push([h.tr, {class: 'text-muted small'},
-            [h.td, {}],
-            [h.td, {colspan: '2'},
-             '↳ ',
-             n.eventId ? templates.pageLink(`/rabid.event.detailPage(${n.eventId})`, n.label) : n.label,
-             ` · event ${timeRange(n)}`],
-            [h.td, {}]]);
-    return rows;
 }
 
 // Completed tasks as compact chips (several per line) - the "what got done" layer.
