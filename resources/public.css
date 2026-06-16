@@ -1,22 +1,13 @@
 /* ============================================================
-   Public site (mikmaqonline) - lightweight refinements over the
-   Bootstrap defaults.  Scope is the public pages only: everything
-   here is under `.page-content` (or body type), so the editor and
-   the dark navbar are untouched.  CSS-only, no markup changes.
+   Public site (mikmaqonline) - layout/typography specific to the
+   public pages.  The shared visual identity (accent colour, link
+   underline behaviour, base type) lives in site-theme.css, shared
+   with the editor.  Imported here too so already-published pages
+   (which only <link> public.css) still pick it up without a
+   re-publish.  Everything below is scoped to `.page-content` so the
+   navbar is untouched.
    ============================================================ */
-
-:root {
-  --mmo-link:        #155a9c;   /* calmer than Bootstrap's bright #0d6efd */
-  --mmo-link-hover:  #0e3f70;
-  --mmo-ink:         #222;      /* body text */
-  --mmo-muted:       #5a5a5a;   /* sub-headings, secondary text */
-  --mmo-rule:        #e7e7e7;
-}
-
-body {
-  color: var(--mmo-ink);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
+@import url("site-theme.css");
 
 /* A centred, comfortably-wide reading column (was edge-to-edge). */
 .page-content {
@@ -26,28 +17,18 @@ body {
   line-height: 1.6;
 }
 
-/* Headings: a little air; secondary headings read as labels, not links. */
+/* Headings: a little air; here h1 is the page title and h2 the section
+   heads (the public pages have a single h1), so size them accordingly. */
 .page-content h1 { font-size: 2rem;    font-weight: 600; margin: .25rem 0 1rem; }
 .page-content h2 { font-size: 1.4rem;  font-weight: 600; margin: 1.75rem 0 .6rem;
                    padding-bottom: .25rem; border-bottom: 1px solid var(--mmo-rule); }
 .page-content h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 .4rem;
                    color: var(--mmo-muted); }
 
-/* Links: no blanket underline (the main eyesore on a link-dense site);
-   underline only on hover / keyboard focus so they stay discoverable. */
-.page-content a {
-  color: var(--mmo-link);
-  text-decoration: none;
-}
-.page-content a:hover {
-  color: var(--mmo-link-hover);
-  text-decoration: underline;
-}
-.page-content a:focus-visible {
-  outline: 2px solid var(--mmo-link);
-  outline-offset: 2px;
-  text-decoration: underline;
-}
+/* Calmer link colour on hover/focus (the base colour + no-underline come
+   from site-theme.css). */
+.page-content a:hover         { color: var(--mmo-link-hover); }
+.page-content a:focus-visible { outline: 2px solid var(--mmo-link); outline-offset: 2px; }
 
 /* Word-list entries render as `<a><strong>headword</strong> : gloss</a>`.
    Make the headword the coloured, clickable-looking part and let the gloss
@@ -63,8 +44,6 @@ body {
 /* Roomier, easier-to-scan lists (the bulk of the site). */
 .page-content ul { padding-left: 1.25rem; }
 .page-content li { margin: .2rem 0; }
-
-/* --- existing rules (kept) ------------------------------------------------ */
 
 div.public-search-box {
   margin: 1em 0;   /* vertical only - no left indent, so it aligns with headings */

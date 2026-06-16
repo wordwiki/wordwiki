@@ -1,0 +1,49 @@
+/* ============================================================
+   Shared MMO visual theme - loaded (after Bootstrap) by BOTH the
+   public site and the editor, so the accent colour, link
+   treatment and base typography are identical across them.
+
+   It works by driving Bootstrap's OWN link variables rather than
+   hard-overriding selectors, so component styles that set their
+   own colour (buttons, .lm-item rows, muted secondary links)
+   keep winning.  Page-specific layout (the public reading column,
+   editor list widths, heading roles) stays in public.css /
+   liminal.css.
+   ============================================================ */
+
+:root {
+  --mmo-link:        #155a9c;   /* calmer than Bootstrap's bright #0d6efd */
+  --mmo-link-hover:  #0e3f70;
+  --mmo-ink:         #222;      /* body text */
+  --mmo-muted:       #5a5a5a;   /* sub-headings, secondary text */
+  --mmo-rule:        #e7e7e7;
+
+  /* Recolour every Bootstrap-driven link to the calm accent.  Component
+     rules that set their own colour (e.g. .lm-item-secondary a {color:inherit})
+     still override this, because they set `color` directly. */
+  --bs-link-color:           var(--mmo-link);
+  --bs-link-color-rgb:       21, 90, 156;
+  --bs-link-hover-color:     var(--mmo-link-hover);
+  --bs-link-hover-color-rgb: 14, 63, 112;
+}
+
+body {
+  color: var(--mmo-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Links inside the page content (NOT the dark navbar): drop Bootstrap's
+   blanket underline; underline only on hover / keyboard focus, so a
+   link-dense page reads cleanly.  Scoped to the two content wrappers -
+   `.page-content` (public) and `#content` (editor) - so the navbar and
+   button-links are untouched. */
+.page-content a,
+#content a {
+  text-decoration: none;
+}
+.page-content a:hover,
+.page-content a:focus-visible,
+#content a:hover,
+#content a:focus-visible {
+  text-decoration: underline;
+}

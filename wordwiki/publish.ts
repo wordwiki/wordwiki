@@ -1514,6 +1514,9 @@ including remixing, transforming, and building upon the material, for any non-co
               ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
               content.title !== undefined ? ['title', {}, content.title] : undefined,
               config.bootstrapCssLink,
+              // Shared theme (accent + link treatment + type) - same file the
+              // editor loads, so the two sites match; then public-only layout.
+              ['link', {href: `${rootPath}resources/site-theme.css`, rel:'stylesheet', type:'text/css'}],
               // TODO remove most of these css for the public side
               ['link', {href: `${rootPath}resources/public.css`, rel:'stylesheet', type:'text/css'}],
               ['link', {href: `${rootPath}resources/instance.css`, rel:'stylesheet', type:'text/css'}],

@@ -67,6 +67,9 @@ export function htmxPageTemplate(content: PageContent): any {
           htmxConfigMeta(),
           content.title !== undefined ? ['title', {}, content.title] : undefined,
           config.bootstrapCssLink,
+          // Shared MMO theme (accent + link treatment + type), same file the
+          // public site loads; then framework + app styles.
+          ['link', {href: '/resources/site-theme.css', rel:'stylesheet', type:'text/css'}],
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['link', {href: '/resources/liminal.css', rel:'stylesheet', type:'text/css'}],
           htmxScriptTag(),
@@ -217,6 +220,9 @@ export function pageTemplate(content: PageContent): any {
           ['meta', {name:"viewport", content:"width=device-width, initial-scale=1"}],
           content.title !== undefined ? ['title', {}, content.title] : undefined,
           config.bootstrapCssLink,
+          // Shared MMO theme (accent + link treatment + type), same file the
+          // public site and the htmx editor load.
+          ['link', {href: '/resources/site-theme.css', rel:'stylesheet', type:'text/css'}],
           ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
           ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
