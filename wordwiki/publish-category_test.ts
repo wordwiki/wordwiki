@@ -78,11 +78,13 @@ test("publicCategoryGroups: theme groups, internal filtered, un-tabled trail", a
             seedPublishedEntry(fx.ww, tl, 2000, 'bbb', ['weather', 'zz-not-in-table']);
 
             const groups = mkPublish(fx).publicCategoryGroups();
+            // Themes alphabetical by title; the un-tabled 'Other categories'
+            // group always trails.
             assertEquals(groups.map(g => g.theme),
-                         ['People & Relationships', 'Land, Water & Sky', 'Other categories']);
+                         ['Land, Water & Sky', 'People & Relationships', 'Other categories']);
             // Sorted by display name within the theme; counts attached;
             // the internal ~old-* category is nowhere.
-            assertEquals(groups[0].cats,
+            assertEquals(groups[1].cats,
                          [{slug: 'family', name: 'Family & Kinship', count: 1},
                           {slug: 'people', name: 'People', count: 1}]);
             assertEquals(groups[2].cats,

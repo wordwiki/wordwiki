@@ -104,27 +104,30 @@ test("retired categories are excluded from the picker query, kept in the list", 
     });
 });
 
-test("groupByTheme: themes keep table order, names sort within, internal last", async () => {
+test("groupByTheme: themes sort alphabetically by title, catch-alls trail, names sort within", async () => {
     await withTestDb((fx) => {
         as(fx, 'djz', () => {
             const cats = fx.ww.categories;
-            // Table order: People theme first (with names NOT in alpha order),
-            // then Land, then the internal/old tail.
+            // Seed in NON-alphabetical theme order (People before Land) and the
+            // internal/old tail in the middle of the table, to prove neither the
+            // table order nor seed position drives the result.
             cats.insert({slug: 'family', name: 'Family & Kinship', theme: 'People & Relationships'});
             cats.insert({slug: 'people', name: 'People', theme: 'People & Relationships'});
             cats.insert({slug: 'character', name: 'Character & Behaviour', theme: 'People & Relationships'});
-            cats.insert({slug: 'weather', name: 'Weather', theme: 'Land, Water & Sky'});
             cats.insert({slug: '~needs-human', name: 'Needs human attention', theme: 'Internal'});
+            cats.insert({slug: 'weather', name: 'Weather', theme: 'Land, Water & Sky'});
             cats.insert({slug: '~old-zebra', name: 'zebra (old)', theme: 'Old categories', retired: 1});
             cats.insert({slug: '~old-aboard', name: 'aboard (old)', theme: 'Old categories', retired: 1});
 
             const groups = groupByTheme(cats.allByOrder.all({}));
+            // Real themes alphabetical first; the Internal/Old catch-alls trail
+            // (themselves alphabetical).
             assertEquals(groups.map(g => g.theme),
-                         ['People & Relationships', 'Land, Water & Sky',
+                         ['Land, Water & Sky', 'People & Relationships',
                           'Internal', 'Old categories']);
-            // Within a theme: alphabetical by display name, regardless of
-            // table order (character seeded last in its theme, sorts first).
-            assertEquals(groups[0].cats.map(c => c.slug),
+            // Within a theme: alphabetical by display name, regardless of table
+            // order (character seeded last in its theme, sorts first).
+            assertEquals(groups[1].cats.map(c => c.slug),
                          ['character', 'family', 'people']);
             assertEquals(groups[3].cats.map(c => c.name),
                          ['aboard (old)', 'zebra (old)']);

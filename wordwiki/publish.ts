@@ -428,8 +428,8 @@ export class Publish {
 
     /**
      * The public categories as THEME GROUPS (the shared grouping from
-     * category.ts: themes in table order, names sorted within), for the
-     * public categories page.  Un-tabled values (pre-import) trail in an
+     * category.ts: themes sorted alphabetically by title, names sorted within),
+     * for the public categories page.  Un-tabled values (pre-import) trail in an
      * 'Other categories' group; on a fully pre-import db that is the only
      * group.  Counts ride along for the listing.
      */

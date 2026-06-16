@@ -59,12 +59,9 @@ export function isInternalCategorySlug(slug: string): boolean {
  * Group categories into theme groups for presentation - THE grouping, shared
  * by the Category Table admin page, the lexeme editor's category select, the
  * editor's by-category report and the public categories page:
- *  - themes keep their first-appearance order (pass categories in table
- *    order, i.e. allByOrder/activeByOrder - so the scheme's theme order,
- *    with Internal and Old categories at the end);
- *  - WITHIN a theme, categories sort alphabetically by display name (the
- *    table order drives theme order; alphabetical is what eyes want inside
- *    a group).
+ *  - themes sort alphabetically by title, EXCEPT the synthetic catch-all
+ *    themes (Internal, Other) which always trail at the end;
+ *  - WITHIN a theme, categories sort alphabetically by display name.
  */
 // (Generic over the minimal vocab-row shape so the lexical-form table - the
 // same controlled-vocabulary treatment for parts of speech - shares it.)
@@ -83,8 +80,20 @@ export function groupByTheme<T extends VocabRow>(cats: T[]): ThemeGroup<T>[] {
     }
     for(const g of groups)
         g.cats.sort((a, b) => nameCollator.compare(a.name || a.slug, b.name || b.slug));
+    // Themes sort alphabetically by title; the synthetic catch-alls trail.
+    groups.sort((a, b) => {
+        const ax = CATCHALL_THEMES.has(a.theme) ? 1 : 0;
+        const bx = CATCHALL_THEMES.has(b.theme) ? 1 : 0;
+        return ax - bx || nameCollator.compare(a.theme, b.theme);
+    });
     return groups;
 }
+
+// Administrative tail themes: not part of the scheme's alphabetical run, so
+// they always sort to the end (see groupByTheme).  'Internal'/'Other' are also
+// the synthetic fallbacks for categories with no theme; 'Old categories' is the
+// seeded theme for retired ~old-* imports (category-import.ts).
+const CATCHALL_THEMES = new Set(['Internal', 'Old categories', 'Other']);
 
 // A column managed by the table code (the global ordering): hidden from the
 // generic record form; insert() supplies it.
