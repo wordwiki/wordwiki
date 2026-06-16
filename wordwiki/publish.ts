@@ -733,13 +733,11 @@ export class Publish {
               ['img', {id:'headerImage', class: 'img-fluid', src: 'resources/mmo-bead-image-1080x360.jpg'}]],
              
              // --- Search Box
+             ['h2', {}, 'Dictionary Search'],
              ['div', {class: 'public-search-box'},
               ['form', {onsubmit:"updateCurrentSearchFromInput(); event.preventDefault();"},
 
-               ['h3', {}, 'Dictionary Search'],
-
-               
-               ['label', {for:"search", style:"font-size: larger; font-weight: bold;"}, 'Search: '],
+               ['label', {for:"search", style:"font-weight: bold;"}, 'Search: '],
                ['input', {type:"text", size:"30",
                           name:"search", id:"search", label:"Dictionary Search", autofocus:"",
                           placeholder:"Mi'gmaq or English Search",
@@ -840,7 +838,7 @@ export class Publish {
     renderAboutUsBody(): any {
         return [
             // --- MMO info
-            ['h3', {}, 'The Talking Dictionary'],
+            ['h2', {}, 'The Talking Dictionary'],
 
             ['p', {}, `The talking dictionary (Nnuigtug Ugsituna’tas’g Glusuaqanei) is a resource for the Mi'gmaq/Mi’kmaq language. Each headword is recorded by a minimum of three speakers. Multiple speakers allow one to hear differences and variations in how a word is pronounced. Each recorded word is used in an accompanying phrase. This permits learners the opportunity to develop the important skill of distinguishing individual words when they are spoken in a phrase.`],
 
@@ -852,8 +850,8 @@ export class Publish {
              ['a', {href:'https://x.com/Pemaptoq'}, 'X'], ' or on ',
              ['a', {href:'https://bsky.app/profile/pemaptoq.bsky.social'}, 'Bluesky']],
             
-            ['h3', {}, 'Pacifique Dictionary Manuscripts project'],
-            
+            ['h2', {}, 'Pacifique Dictionary Manuscripts project'],
+
             ['img', {class: 'img-fluid', src: 'resources/pdm-sample.png'}],
             
             ['p', {}, `The `,
@@ -905,21 +903,21 @@ export class Publish {
             //['p', {}, `The words, handwritten in Pacifique’s orthography with French translations, are transcribed, transliterated to the contemporary Listuguj orthography and translated to English.  Historic written materials are consulted to find related entries. These related entries are particularly useful as a context for words that have gone out of use. Terms that have gone out of use are a rich part of the information provided by these manuscripts, naturally the manuscripts also contain well-known still used words, that have not yet been added to the dictionary. All material is reviewed with local Listuguj speakers. From there a collective decision is made on whether to record the word and add it to the online talking dictionary.`,
              ],
 
-            ['h3', {}, 'Watch Us Working'],
+            ['h2', {}, 'Watch Us Working'],
             ['iframe',  {width:"560", height:"315", src:"https://www.youtube.com/embed/8Sq4Z_5xdUw?si=eIFs7BqZQ8-WkA8B", title:"YouTube video player", frameborder:"0", allow:"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy:"strict-origin-when-cross-origin", allowfullscreen:''}],
             ['br', {}],
             
-            ['h3', {}, 'Contact Us'],
+            ['h2', {}, 'Contact Us'],
             ['p', {},
               'Email:', ['a', {href:'mailto:info@mikmaqonline.org'}, 'info@mikmaqonline.org']],
 
-            ['h3', {}, 'Thanks'],
+            ['h2', {}, 'Thanks'],
 
             ['p', {}, "Ta'n te'sijig mimajuinu'g apoqonmugsieg ula ntlugowaqannen wesgo'tmeg we'gwiwela'lieg aq we'gwimi'watmuleg."],
 
             ['p', {}, "We gratefully acknowledge and appreciate the support of all the people who have helped us with our work."],
             
-            ['h3', {}, "We gratefully acknowledge the financial support of:"],
+            ['h2', {}, "We gratefully acknowledge the financial support of:"],
             ['ul', {},
 
              ['li', {}, "Listuguj Mi'gmaq Government ",

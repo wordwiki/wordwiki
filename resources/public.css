@@ -67,7 +67,7 @@ body {
 /* --- existing rules (kept) ------------------------------------------------ */
 
 div.public-search-box {
-  margin: 1em;
+  margin: 1em 0;   /* vertical only - no left indent, so it aligns with headings */
 }
 
 div.public-search-box > form > label {
