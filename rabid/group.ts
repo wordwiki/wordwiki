@@ -36,6 +36,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated} from "../liminal/security.ts";
+import {ownerLabel, ownerCanEdit} from "./owned.ts";
 import * as templates from './templates.ts';
 import {rabid} from './rabid.ts';
 
@@ -119,23 +120,18 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     canEditMembers(g: VolunteerGroup): boolean {
         const ctx = security.current();
         if(!ctx || ctx.system) return true;
-        if(g.owner_table != null && g.owner_id != null) {
-            const ownerTable = tableByName(g.owner_table);
-            const owner = security.runSystem(() => ownerTable.getById(g.owner_id!));
-            return ownerTable.canEditRecord(owner);
-        }
+        if(g.owner_table != null && g.owner_id != null)
+            return ownerCanEdit(g.owner_table, g.owner_id);
         return hostOrAdmin({ctx, record: g});
     }
 
     // What to call this group in UI text: an owned group goes by its owner's
-    // name (single source of truth - the group's own name stays '' there).
-    // 'name' then 'title' covers our owner tables (committee / task).
+    // label (single source of truth - the group's own name stays '' there).
+    // ownerLabel chains through Table.recordLabel, so an owner that itself
+    // derives its name (an owned project -> its event) resolves correctly.
     displayName(g: VolunteerGroup): string {
-        if(g.owner_table != null && g.owner_id != null) {
-            const owner = security.runSystem(() => tableByName(g.owner_table!).getById(g.owner_id!)) as Record<string, unknown>;
-            const name = owner['name'] ?? owner['title'];
-            if(typeof name === 'string' && name) return name;
-        }
+        if(g.owner_table != null && g.owner_id != null)
+            return ownerLabel(g.owner_table, g.owner_id);
         return g.name || `group ${g.group_id}`;
     }
 
@@ -391,14 +387,6 @@ export class GroupMemberTable extends Table<GroupMember> {
 export function canEditMembersOfGroup(group_id: number): boolean {
     const g = security.runSystem(() => rabid.volunteer_group.getById(group_id));
     return rabid.volunteer_group.canEditMembers(g);
-}
-
-// Resolve an owner_table backlink to its Table.  Generic over rabid.tables, so
-// new owner types (tasks etc.) need no registration beyond being a table.
-function tableByName(name: string): Table<any> {
-    const t = rabid.tables.find(t => t.name === name);
-    if(!t) throw new Error(`Unknown group owner table '${name}'`);
-    return t;
 }
 
 // --------------------------------------------------------------------------------

@@ -99,6 +99,12 @@ export class EventTable extends Table<Event> {
         return `Edit ${e.description || 'event'}`;
     }
 
+    // Events label by description (no 'name'/'title' column) - so an owned
+    // project's derived name resolves to the event's description.
+    override recordLabel(e: Event): string {
+        return e.description || `event ${e.event_id}`;
+    }
+
     @path
     get allEvents() {
         return db().prepare<Event, {}>(block`
@@ -221,6 +227,9 @@ export class EventTable extends Table<Event> {
              [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
              this.canEditRecord(e) ? this.editPencil(event_id) : undefined],
             this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true}),
+            // The event's own 1-1 project: tasks to do for this event, created
+            // lazily on the first add (see task.renderOwnerTasks).
+            rabid.task.renderOwnerTasks('event', event_id),
         ];
     }
 

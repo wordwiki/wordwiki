@@ -36,8 +36,9 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
+import {ownerLabel, ownerCanEdit} from "./owned.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
@@ -119,6 +120,15 @@ export interface Project {
     // escape hatch.  (Subsumes the old informational committee_id FK.)
     group_id: number;
 
+    // Soft backlink to a single owning record (e.g. 'event', 12) for a project
+    // that IS another tuple's task list - an event/volunteer/bike owns a 1-1
+    // project.  Null for a standalone project.  An owned project's name is kept
+    // '' (it renders through its owner - see recordLabel), and its edit
+    // permission delegates to the owner (see recordEdit).  1-1 enforced by a
+    // unique index; created lazily on the owner's first task (see forOwner).
+    owner_table?: string;
+    owner_id?: number;
+
     // Archived projects are soft-deleted: their tasks/history keep working.
     deleted: boolnum;
 
@@ -142,14 +152,20 @@ export class ProjectTable extends Table<Project> {
     constructor() {
         super ('project', [
             new PrimaryKeyField('project_id', {}),
-            new StringField('name', {}),
+            new StringField('name', {default: ''}),
             new MarkdownField('description', {default: ''}),
             new OwnedGroupField('group_id'),
+            new StringField('owner_table', {nullable: true}),
+            new IntegerField('owner_id', {nullable: true}),
             new BooleanField('deleted', {default: 0, prompt: 'Done'}),
             new ManagedDateTimeField('archived_time', {nullable: true}),
             new ManagedForeignKeyField('archived_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
             new ManagedDateTimeField('created_time', {nullable: true}),
             new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
+        ], [
+            // 1-1: at most one project per owner.  (NULLs are distinct in SQLite,
+            // so standalone projects - owner_table/owner_id NULL - are unconstrained.)
+            'CREATE UNIQUE INDEX IF NOT EXISTS project_by_owner ON project(owner_table, owner_id);',
         ])
     };
 
@@ -191,7 +207,7 @@ export class ProjectTable extends Table<Project> {
                 [new ForeignKeyField('committee_id', 'committee', 'committee_id', {}, 'name')],
                 {},
                 {
-                    title: `Assign a committee to ${p.name || 'this project'}`,
+                    title: `Assign a committee to ${this.recordLabel(p)}`,
                     submitLabel: 'Assign',
                     hidden: {project_id},
                     dispatch: {onsubmit:
@@ -236,12 +252,44 @@ export class ProjectTable extends Table<Project> {
         return {action:'reload', targets:[`.-project-${project_id}-`]} as unknown as Markup;
     }
 
-    // Hosts run the org: projects (like committees) are host/admin-managed.
-    defaultFieldEdit: security.Permission = hostOrAdmin;
-    override get recordEdit(): security.Permission { return hostOrAdmin; }
+    // Standalone projects are host/admin-managed; an OWNED project delegates to
+    // its owner (whoever may edit the event may manage the event's tasks).
+    private canEditProject: security.Permission = a => {
+        const p = a.record as Project | undefined;
+        if(p && p.owner_table != null && p.owner_id != null)
+            return ownerCanEdit(p.owner_table, p.owner_id);
+        return hostOrAdmin(a);
+    };
+    defaultFieldEdit: security.Permission = a => this.canEditProject(a);
+    override get recordEdit(): security.Permission { return this.canEditProject; }
 
     override formTitle(p: Project): string {
-        return p.project_id ? `Edit ${p.name || 'project'}` : 'New project';
+        return p.project_id ? `Edit ${this.recordLabel(p)}` : 'New project';
+    }
+
+    // An owned project renders through its owner (suffixed so it reads as a
+    // task list in mixed lists); a standalone project goes by its own name.
+    override recordLabel(p: Project): string {
+        if(p.owner_table != null && p.owner_id != null)
+            return `${ownerLabel(p.owner_table, p.owner_id)} — tasks`;
+        return p.name || 'Unnamed project';
+    }
+
+    // The owner's 1-1 project, found by backlink (any state - the unique index
+    // means there's at most one ever).  `create` materializes it lazily, which
+    // is how an owned project comes into being: on the owner's first task.
+    @path
+    get ownedProjectByOwner() {
+        return this.prepare<Project, {owner_table: string, owner_id: number}>(block`
+/**/   SELECT ${this.allFields} FROM project
+/**/          WHERE owner_table = :owner_table AND owner_id = :owner_id
+/**/          LIMIT 1`);
+    }
+    forOwner(owner_table: string, owner_id: number, create = false): number | undefined {
+        const existing = security.runSystem(() => this.ownedProjectByOwner.first({owner_table, owner_id}));
+        if(existing) return existing.project_id;
+        if(!create) return undefined;
+        return this.insert({owner_table, owner_id, name: ''} as Partial<Project>);
     }
 
     // A `deleted` change across the archive boundary sets/clears the archive
@@ -338,7 +386,7 @@ export class ProjectTable extends Table<Project> {
             [h.div, {class: 'lm-item-body'},
              [h.div, {class: 'lm-item-primary'},
               [h.a, {...templates.pageLinkProps(`/rabid.project.detailPage(${id})`),
-                     class: 'lm-nav-link'}, p.name || 'Unnamed project']],
+                     class: 'lm-nav-link'}, this.recordLabel(p)]],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
             this.canEditRecord(p) ? this.editPencil(id) : undefined,
             navChevron(),
@@ -379,7 +427,7 @@ export class ProjectTable extends Table<Project> {
     @route(authenticated)
     detailPage(project_id: number): templates.Page {
         const p = this.getById(project_id);
-        return templates.page(`${p.name || 'Project'} — Project`, this.renderProjectDetail(project_id));
+        return templates.page(`${this.recordLabel(p)} — Project`, this.renderProjectDetail(project_id));
     }
 
     // Reloadable fragment (an edit save re-renders it); the task list below is
@@ -393,7 +441,7 @@ export class ProjectTable extends Table<Project> {
         props.class = 'container py-3 ' + props.class;
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
-             [h.h2, {class: 'mb-0'}, p.name || 'Unnamed project'],
+             [h.h2, {class: 'mb-0'}, this.recordLabel(p)],
              p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Done'] : undefined,
              this.canEditRecord(p) ? this.editPencil(project_id) : undefined,
              // The project's own ☰: its terminal mark-done/reopen transition
@@ -405,13 +453,13 @@ export class ProjectTable extends Table<Project> {
                        p.deleted
                            ? {label: 'Reopen project…',
                               mode: {kind: 'confirm', expr: `rabid.project.reopen(${project_id})`,
-                                     message: `Reopen ${p.name || 'this project'}?`}}
+                                     message: `Reopen ${this.recordLabel(p)}?`}}
                            : {label: 'Mark project done…',
                               mode: {kind: 'confirm', expr: `rabid.project.markDone(${project_id})`,
                                      message: openCount > 0
                                          ? `${openCount} open task${openCount === 1 ? '' : 's'} remain - ` +
-                                           `mark ${p.name || 'this project'} done anyway?`
-                                         : `Mark ${p.name || 'this project'} done?`}},
+                                           `mark ${this.recordLabel(p)} done anyway?`
+                                         : `Mark ${this.recordLabel(p)} done?`}},
                    ], {ariaLabel: 'Project actions'})
                  : undefined],
             p.deleted && p.archived_time
@@ -512,10 +560,23 @@ export type TaskOpt = Partial<Task>;
 // shape the cross-project queries return.
 export type TaskWithContext = Task & {
     project_name: string;
+    // The owning record of the task's project, when it is an OWNED project - so
+    // the cross-project lists can derive its label (see projectRowLabel).
+    project_owner_table?: string | null;
+    project_owner_id?: number | null;
     subtask_count: number;
     subtask_done_count: number;
     assignee_count: number;
 };
+
+// The label to show for a task row's project: the stored name, or - for an owned
+// project (name kept '') - the owner's label, suffixed.
+export function projectRowLabel(t: Partial<TaskWithContext>): string {
+    if(t.project_name && t.project_name.trim()) return t.project_name;
+    if(t.project_owner_table && t.project_owner_id != null)
+        return `${ownerLabel(t.project_owner_table, t.project_owner_id)} — tasks`;
+    return 'Unnamed project';
+}
 
 export class TaskTable extends Table<Task> {
 
@@ -670,6 +731,7 @@ export class TaskTable extends Table<Task> {
         return this.prepare<TaskWithContext, {volunteer_id: number}>(block`
 /**/   SELECT ${this.fieldNames.map(n => 'task.'+n).join(',')},
 /**/          p.name AS project_name,
+/**/          p.owner_table AS project_owner_table, p.owner_id AS project_owner_id,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
 /**/              AS subtask_done_count,
@@ -689,6 +751,8 @@ export class TaskTable extends Table<Task> {
         return this.prepare<TaskWithContext, {}>(block`
 /**/   SELECT ${this.allFields},
 /**/          (SELECT p.name FROM project p WHERE p.project_id = task.project_id) AS project_name,
+/**/          (SELECT p.owner_table FROM project p WHERE p.project_id = task.project_id) AS project_owner_table,
+/**/          (SELECT p.owner_id FROM project p WHERE p.project_id = task.project_id) AS project_owner_id,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id) AS subtask_count,
 /**/          (SELECT COUNT(*) FROM subtask s WHERE s.task_id = task.task_id AND s.done = 1)
 /**/              AS subtask_done_count,
@@ -697,7 +761,7 @@ export class TaskTable extends Table<Task> {
 /**/              AS assignee_count
 /**/          FROM task
 /**/          WHERE deleted = 0 AND status != 'done'
-/**/          ORDER BY project_name, order_key`);
+/**/          ORDER BY project_name, project_id, order_key`);
     }
 
     // ------------------------------------------------------------------------
@@ -869,8 +933,9 @@ export class TaskTable extends Table<Task> {
                        ? [h.span, {class: 'text-danger'}, `Due ${date.sqliteDateToString(t.due)}`]
                        : `Due ${date.sqliteDateToString(t.due)}`)
                     : undefined,
-            // Cross-project lists say which project the task lives in.
-            t.project_name,
+            // Cross-project lists say which project the task lives in (undefined
+            // project_name = a single-row reload / grouped row, where it's hidden).
+            t.project_name === undefined ? undefined : projectRowLabel(t),
             assignees ? `${assignees} assigned` : 'unassigned',
             subtotal ? `${subDone}/${subtotal} done` : undefined,
         ].filter(p => p !== undefined);
@@ -910,6 +975,76 @@ export class TaskTable extends Table<Task> {
     }
 
     // ------------------------------------------------------------------------
+    // --- Owner-embedded task list (event/volunteer/bike own a 1-1 project) ----
+    // ------------------------------------------------------------------------
+    //
+    // A reloadable "Tasks" fragment for embedding on an owner's detail page.  The
+    // owned project is created LAZILY (on the first task, via addOwnerTask) - so
+    // owners with no tasks stay project-free and don't clutter global lists.
+
+    @route(authenticated)
+    renderOwnerTasks(owner_table: string, owner_id: number): Markup {
+        const project_id = rabid.project.forOwner(owner_table, owner_id, false);
+        const props = reloadableItemProps(`owner_tasks_${owner_table}`, owner_id,
+            `rabid.task.renderOwnerTasks('${owner_table}',${owner_id})`);
+        return [h.div, props,
+            [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
+             [h.h4, {class: 'mb-0'}, 'Tasks'],
+             ownerCanEdit(owner_table, owner_id)
+                 ? action.actionButton(action.plusIcon(),
+                     {kind: 'modal', dialogUrl: `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id})`},
+                     'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
+                 : undefined],
+            project_id !== undefined
+                ? this.renderProjectTasks(project_id)
+                : [h.p, {class: 'text-muted small mb-0'}, 'No tasks yet.'],
+        ];
+    }
+
+    // New-task dialog for an owner (no project picker - the project is the
+    // owner's own).  Submit funnels through addOwnerTask, which creates the
+    // owned project if this is the first task.
+    @route(authenticated)
+    newOwnerTaskDialog(owner_table: string, owner_id: number): Markup {
+        if(!ownerCanEdit(owner_table, owner_id))
+            throw new Error('Not permitted to add tasks here');
+        const f = this.fieldsByName;
+        return action.renderParamForm(
+            [f.title, f.details, f.priority, f.due],
+            {priority: 'normal'} as Partial<Task>,
+            {
+                title: 'New task',
+                submitLabel: 'Add',
+                hidden: {owner_table, owner_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.task.addOwnerTask(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(authenticated)
+    addOwnerTask(args: {owner_table?: string, owner_id?: string|number,
+                        title?: string, details?: string, priority?: string, due?: string}): Markup {
+        const owner_table = String(args?.owner_table ?? '');
+        const owner_id = Number(args?.owner_id);
+        if(!owner_table || !Number.isInteger(owner_id) || !owner_id)
+            throw new Error('Missing owner');
+        if(!ownerCanEdit(owner_table, owner_id))
+            throw new Error('Not permitted to add tasks here');
+        const title = (args.title ?? '').trim();
+        if(!title) throw new Error('Title is required');
+        const project_id = rabid.project.forOwner(owner_table, owner_id, /*create*/ true)!;
+        this.insert({
+            project_id, title,
+            details: args.details ?? '',
+            priority: (args.priority as any) || 'normal',
+            due: (args.due ?? '') || null,
+            status: 'open', deleted: 0,
+        } as Partial<Task>);
+        return {action: 'reload',
+                targets: [`.-owner_tasks_${owner_table}-${owner_id}-`]} as unknown as Markup;
+    }
+
+    // ------------------------------------------------------------------------
     // --- The top-level Tasks page (cross-project work view) -------------------
     // ------------------------------------------------------------------------
 
@@ -946,7 +1081,7 @@ export class TaskTable extends Table<Task> {
             if(group.length === 0) return;
             out.push([h.h6, {class: 'mt-2 mb-1'},
                       templates.pageLink(`/rabid.project.detailPage(${group[0].project_id})`,
-                                         group[0].project_name)]);
+                                         projectRowLabel(group[0]))]);
             out.push([h.div, {class: 'list-group lm-list'},
                       group.map(t => this.renderTaskRow({...t, project_name: undefined as any}))]);
             group = [];

@@ -210,6 +210,18 @@ export class Table<T extends Tuple> {
         return `Edit ${typeof name === 'string' && name ? name : this.name}`;
     }
 
+    // A short human label for one record - used by polymorphic owner backlinks
+    // (volunteer_group / project render an OWNED row through its owner, so a
+    // single source of truth needn't be denormalized).  Default: the 'name' or
+    // 'title' column; override for tables that label differently (e.g. event ->
+    // description).  Override may itself derive (an owned project's label comes
+    // from ITS owner) - the derivation chains through recordLabel.
+    recordLabel(record: T): string {
+        const r = record as Record<string, unknown>;
+        const v = r['name'] ?? r['title'];
+        return (typeof v === 'string' && v) ? v : `${this.name} ${r[this.pkName] ?? ''}`.trim();
+    }
+
     // Props for a record rendered as a whole-surface *navigable* list item -
     // THE standard list-row presentation: tap anywhere drills in to the
     // record's detail page; editing (when the viewer may) is ONLY via the
