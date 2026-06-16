@@ -125,7 +125,7 @@ class AudioUploadField extends table.StringField {
             ['div', {'class':'col-12'},
              ['label', {class:'form-label'}, this.prompt],
              value ? ['div', {class:'mb-1'},
-                      audio.renderAudio(String(value), '🔉 Current recording', undefined, '/')]
+                      audio.renderAudio(String(value), [audio.audioPlayIcon, ' Current recording'], undefined, '/')]
                    : undefined,
              ['input', {type:'hidden', name:this.name, id:inputId, value: value ?? ''}],
              ['input', {type:'file', class:'form-control', accept:'.wav,audio/*',
@@ -334,7 +334,7 @@ export interface ReviewOpts { participant: string; full: boolean; }
 function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
     if(v === null || v === undefined || v === '') return undefined;
     if(f instanceof model.AudioField)
-        return audio.renderAudio(String(v), '🔉 Recording', undefined, '/');
+        return audio.renderAudio(String(v), [audio.audioPlayIcon, ' Recording'], undefined, '/');
     if(f instanceof model.ImageField)
         return ['img', {src: '/'+String(v), style: 'max-width: 10em; max-height: 10em;'}];
     if(f instanceof model.VariantField)

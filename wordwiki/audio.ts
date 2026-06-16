@@ -58,8 +58,21 @@ export async function uploadRecording(args: {recordingBytesAsBase64: string}): P
 /**
  *
  */
+// The shared "play recording" speaker glyph: an inline SVG (volume-up), NOT the
+// 🔉 emoji - emoji vertical metrics are inconsistent and can't be reliably
+// baseline-aligned.  Sized/coloured by `.audio-icon-svg` in site-theme.css so it
+// matches across the public site and the editor.  One shared, read-only markup
+// const, referenced wherever a speaker glyph is shown (lists, the home-page
+// hint, example recordings, the editor audio field).
+export const audioPlayIcon: any =
+    ['svg', {viewBox: '0 0 16 16', class: 'audio-icon-svg', fill: 'currentColor', 'aria-hidden': 'true'},
+     ['path', {d: 'M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z'}],
+     ['path', {d: 'M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z'}],
+     ['path', {d: 'M8.707 11.182A4.486 4.486 0 0 0 10.025 8a4.486 4.486 0 0 0-1.318-3.182L8 5.525A3.489 3.489 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475z'}],
+     ['path', {d: 'M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z'}]];
+
 // `label` is usually a string (e.g. "Recording by X") but may be markup (the
-// list speaker passes an inline SVG icon - see Publish.PLAY_ICON).
+// list speaker passes the audioPlayIcon SVG).
 export function renderAudio(recording: string|null|undefined, label: any, hoverText: string|undefined=undefined, rootPath: string='', className: string|undefined=undefined): any {
     // A missing recording must never break the page: render a calm marker
     // instead.  (The publisher separately reports these as WARNINGS - it is

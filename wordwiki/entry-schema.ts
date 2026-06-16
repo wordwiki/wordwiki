@@ -949,7 +949,7 @@ export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
     return [
         example.example_text.filter(t=>t.variant==defaultVariant || !t.variant).map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
         example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
-        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, `Recording by ${r.speaker} 🔉`, undefined, ctx.rootPath)])
+        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, [`Recording by ${r.speaker} `, audio.audioPlayIcon], undefined, ctx.rootPath)])
     ];
 }
 

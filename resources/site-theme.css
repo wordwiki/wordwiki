@@ -61,3 +61,14 @@ body {
   max-width: none;
   padding: 0;
 }
+
+/* The shared "play recording" speaker icon (audio.audioPlayIcon): size it to
+   the surrounding text, sit it on the baseline like a text icon, and colour it
+   with the accent so it reads as the clickable "play" affordance everywhere -
+   the public lists, the home-page hint, and the editor's audio field. */
+.audio-icon-svg {
+  width: 1em;
+  height: 1em;
+  vertical-align: -.125em;
+  fill: var(--mmo-link);
+}
