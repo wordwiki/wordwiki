@@ -89,10 +89,105 @@ export async function getCompressedRecordingPath(audioPath: string): Promise<str
     // XXX todo add safe check of audioPath (must be relative, no .., also
     //     for this APIs peers.
     // XXX may insist in in content/ or derived/
+    // The delivery chain: source (as-given, archival) -> trimmed (full-fidelity
+    // WAV with leading/trailing silence + edge clicks removed) -> mp3 (lossy).
+    // Each hop is its own content-addressed derived artifact, so the trim is
+    // preserved at full fidelity independently of the mp3 encoder, and changing
+    // the trim params (which ride in the closure) yields a NEW artifact instead
+    // of a stale cache hit.  The mp3 derives from the TRIMMED wav, not the source.
+    const trimmedPath = await getTrimmedRecordingPath(audioPath);
     return 'derived/'+
         await content.getDerived(`derived/compressed-audio`,
                                  {compressAudioCmd},
-                                 ['compressAudioCmd', audioPath], 'mp3');
+                                 ['compressAudioCmd', trimmedPath], 'mp3');
+}
+
+// --- Silence/click trimming (derived store #1) ------------------------------
+
+/**
+ * Trim parameters.  These ride INSIDE the getDerived closure (see
+ * getTrimmedRecordingPath), so they are part of the content hash: change a
+ * value and you get a brand-new trimmed artifact rather than a stale cache hit,
+ * and every prior variant stays on disk under its own hash (nothing is lost -
+ * archival-safe, and you can A/B settings).  Tuned against the hand-trimmed
+ * corpus by wordwiki/audio-trim-audit.ts (an already-tight clip should lose ~0).
+ */
+export interface TrimParams {
+    threshold: string;     // SoX silence threshold, fraction of full scale, e.g. '0.3%'
+    minDuration: number;   // seconds of sound above threshold that count as onset (ignores brief clicks)
+    fade: number;          // seconds of linear edge fade to kill the start/end click (0 = none)
+}
+
+export const RECORDING_TRIM_PARAMS: TrimParams = {
+    threshold: '0.1%',
+    minDuration: 0.1,
+    fade: 0.01,
+};
+
+/**
+ * The SoX argument vector for the silence trim: strip leading silence, then
+ * trailing silence via the reverse/reverse sandwich.  This is the ONLY
+ * length-changing part of the transform, so the audit (audio-trim-audit.ts)
+ * uses exactly these args to measure how much each clip loses.  The edge fade is
+ * a SEPARATE pass (see trimAudioCmd): `fade` cannot compute a fade-out length
+ * when it sits downstream of `silence` in a single chain.
+ */
+export function soxTrimArgs(sourceAudioPath: string, targetAudioPath: string, params: TrimParams): string[] {
+    const dur = String(params.minDuration), thr = params.threshold;
+    return [
+        sourceAudioPath, targetAudioPath,
+        'silence', '1', dur, thr,
+        'reverse', 'silence', '1', dur, thr, 'reverse',
+    ];
+}
+
+/**
+ * Derived-store command: produce the trimmed WAV from the source WAV.  Pass 1 is
+ * the silence trim; pass 2 (when fade > 0) ramps the edges to kill the start/end
+ * click - run separately because the fade-out length is unknown downstream of
+ * `silence`.  SAFETY: never lose audio - if SoX fails or yields an empty
+ * (header-only) file (e.g. a pathological all-silence input), fall back to
+ * copying the source verbatim, so the trimmed artifact is at worst the original.
+ */
+async function trimAudioCmd(targetAudioPath: string, sourceAudioPath: string, params: TrimParams) {
+    if(!await fileExists(sourceAudioPath))
+        throw new Error(`expected source audio '${sourceAudioPath}' to exist`);
+
+    const fade = !!(params.fade && params.fade > 0);
+    const trimTarget = fade ? targetAudioPath + '.pre-fade.wav' : targetAudioPath;
+
+    let { code, stderr } = await new Deno.Command(
+        config.soxPath, { args: soxTrimArgs(sourceAudioPath, trimTarget, params) }).output();
+    let ok = code === 0;
+    if(ok) { try { ok = (await Deno.stat(trimTarget)).size > 44; } catch { ok = false; } }
+
+    if(ok && fade) {
+        const r = await new Deno.Command(config.soxPath, {
+            args: [trimTarget, targetAudioPath, 'fade', 't', String(params.fade), '0', String(params.fade)],
+        }).output();
+        code = r.code; stderr = r.stderr;
+        ok = code === 0;
+        if(ok) { try { ok = (await Deno.stat(targetAudioPath)).size > 44; } catch { ok = false; } }
+        try { await Deno.remove(trimTarget); } catch { /* ignore */ }
+    }
+
+    if(!ok) {
+        console.warn(`audio trim fell back to the source for ${sourceAudioPath} ` +
+                     `(sox code ${code}): ${new TextDecoder().decode(stderr)}`);
+        await Deno.copyFile(sourceAudioPath, targetAudioPath);
+    }
+}
+
+/**
+ * The trimmed (full-fidelity) WAV for a source recording - derived store #1.
+ * On-demand and content-addressed; the params are part of the hash.
+ */
+export async function getTrimmedRecordingPath(audioPath: string,
+                                              params: TrimParams = RECORDING_TRIM_PARAMS): Promise<string> {
+    return 'derived/'+
+        await content.getDerived(`derived/trimmed-audio`,
+                                 {trimAudioCmd},
+                                 ['trimAudioCmd', audioPath, params], 'wav');
 }
 
 /**

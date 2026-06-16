@@ -6,6 +6,8 @@ import { block } from "../liminal/strings.ts";
 // TODO: move this to a config file.
 export const awsCmdPath = '/usr/local/bin/aws';
 export const lameEncPath = '/usr/bin/lame';
+export const soxPath = '/usr/bin/sox';
+export const soxiPath = '/usr/bin/soxi';
 
 export const defaultTileWidth = 1024;
 export const defaultTileHeight = 128;
