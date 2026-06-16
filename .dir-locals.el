@@ -7,7 +7,8 @@
 ((nil
   ;; spaces, never tabs - and a tab still reads as 4 columns
   (indent-tabs-mode . nil)
-  (tab-width . 4))
+  ;;(tab-width . 4)
+  )
 
  ;; TypeScript (the bulk of the project: .ts)
  (typescript-mode
