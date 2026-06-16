@@ -705,11 +705,12 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
     const weeks = opts.weeks ?? 12;
     const now = new Date();
 
-    // Week windows aligned Sun..Sat (the Time view groups weeks ending Saturday).
-    // week 0 starts on the Sunday of the current week; each step goes back 7 days.
+    // Week windows aligned Mon..Sun (the Time view groups payroll weeks ending
+    // Sunday night).  Week 0 starts on the Monday of the current week; each step
+    // goes back 7 days.
     const startOfThisWeek = new Date(now);
     startOfThisWeek.setHours(0, 0, 0, 0);
-    startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay()); // back to Sunday
+    startOfThisWeek.setDate(startOfThisWeek.getDate() - ((startOfThisWeek.getDay() + 6) % 7)); // back to Monday
 
     const volunteers = rabid.volunteer.allVolunteersByName.all()
         .filter(v => !v.inactive && !v.deleted);

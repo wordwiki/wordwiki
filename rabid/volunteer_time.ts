@@ -81,8 +81,8 @@ export interface TimeEntry {
 }
 
 export interface TimeWeek {
-    weekStart: string;          // Sunday (sqlite date)
-    weekEnd: string;            // Saturday (sqlite date)
+    weekStart: string;          // Monday (sqlite date)
+    weekEnd: string;            // Sunday (sqlite date) - payroll week ends Sunday night
     entries: TimeEntry[];       // chronological within the week
     hours: number;
     paidHours: number;
@@ -122,11 +122,12 @@ export function spanHours(start: string, end: string | null): number {
         .total({unit: 'hours'});
 }
 
-// The Sunday that starts the (Sun..Sat) week containing this datetime.
+// The Monday that starts the (Mon..Sun) PAYROLL week containing this datetime.
+// Payroll weeks end Sunday night, so a week runs Monday through Sunday.
 function weekStartOf(sqliteDateTime: string): string {
     const day = date.sqliteDateToTemporal(date.extractDateFromDateTime(sqliteDateTime));
-    const sunday = day.subtract({days: day.dayOfWeek % 7});  // Temporal: Mon=1..Sun=7
-    return date.temporalToSqliteDate(sunday);
+    const monday = day.subtract({days: day.dayOfWeek - 1});  // Temporal: Mon=1..Sun=7
+    return date.temporalToSqliteDate(monday);
 }
 
 // PURE: given a volunteer's timesheet + check-in spans (and optionally their

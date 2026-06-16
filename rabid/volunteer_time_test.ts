@@ -128,7 +128,7 @@ test("task: event-subordinate with NO check-in is an ORPHAN (hidden unless inclu
     // With orphans: a synthesized zero-hour event row in the EVENT's week.
     const m = reconcileTime(...args, /*includeOrphans*/ true);
     assertEquals(m.weeks.length, 1);
-    assertEquals(m.weeks[0].weekStart, '2026-05-31');                  // the event's week, NOT done_time's
+    assertEquals(m.weeks[0].weekStart, '2026-06-01');                  // Mon of the event's week, NOT done_time's
     const e = m.weeks[0].entries[0];
     assertEquals(e.span.source, 'event');
     assertEquals(e.span.hours, 0);                                     // no attendance hours
