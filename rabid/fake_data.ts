@@ -719,6 +719,14 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
                     end: e.end_time ? new Date(e.end_time) : null}));
 
     const stamp = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+    // When the entry was recorded: usually promptly (same day), but a fraction of
+    // PAID entries are entered late on purpose, to exercise the late-paid warning.
+    const recordedAt = (end: Date, paid: boolnum): string => {
+        const lateMs = (paid && rand() < 0.2)
+            ? (3 + Math.floor(rand() * 18)) * 24 * 3600_000   // 3-21 days late
+            : Math.floor(rand() * 12) * 3600_000;             // 0-12h after end (prompt)
+        return stamp(new Date(Math.min(now.getTime(), end.getTime() + lateMs)));
+    };
     const note = (paid: boolnum) => faker.helpers.arrayElement(paid ? [
         'Shop supervision and repairs',
         'Coordinating volunteers and intake',
@@ -765,6 +773,7 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
                 const tsStart = new Date(ev.start.getTime() - margin());
                 const tsEnd = new Date(evEnd.getTime() + margin());
                 if(tsEnd > now) continue;
+                const recorded = recordedAt(tsEnd, p.paid);
                 rabid.timesheet_entry.insert({
                     volunteer_id: v.volunteer_id,
                     start_time: stamp(tsStart),
@@ -774,6 +783,8 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
                     km_driven_processed: 0,
                     is_paid_time: p.paid,
                     paid_time_processed: 0,
+                    entry_creation_time: recorded,
+                    entry_last_edit_time: recorded,
                 });
                 loggedMs += tsEnd.getTime() - tsStart.getTime();
                 entryCount++; overlapCount++;
@@ -791,6 +802,7 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
                 const tsEnd = new Date(tsStart.getTime() + durHours * 3600_000);
                 if(tsStart > now) continue;
                 if(tsEnd > now) break;
+                const recorded = recordedAt(tsEnd, p.paid);
                 rabid.timesheet_entry.insert({
                     volunteer_id: v.volunteer_id,
                     start_time: stamp(tsStart),
@@ -801,6 +813,8 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
                     km_driven_processed: 0,
                     is_paid_time: p.paid,
                     paid_time_processed: 0,
+                    entry_creation_time: recorded,
+                    entry_last_edit_time: recorded,
                 });
                 loggedMs += tsEnd.getTime() - tsStart.getTime();
                 entryCount++;

@@ -261,7 +261,8 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             [h.div, {class: 'lm-item-body'},
              [h.div, {class: 'lm-item-primary'},
               [h.a, {...templates.pageLinkProps(`/rabid.timesheet_entry.detailPage(${id})`),
-                     class: 'lm-nav-link'}, e.volunteer_name]],
+                     class: 'lm-nav-link'}, e.volunteer_name],
+              latePaidBadge(latePaidReconstruction(e))],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
             this.canEditRecord(e) ? this.editPencil(id) : undefined,
             navChevron(),
@@ -310,6 +311,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, `${e.volunteer_name} — time`],
              this.canEditRecord(e) ? this.editPencil(timesheet_entry_id) : undefined],
+            latePaidAlert(latePaidReconstruction(e)),
             [h.dl, {class: 'row mb-0'},
              row('Volunteer', templates.pageLink(`/rabid.volunteer.detailPage(${e.volunteer_id})`, e.volunteer_name)),
              row('Start', date.sqliteDateTimeToString(e.start_time, '—')),
@@ -350,6 +352,59 @@ function entryHours(e: TimesheetEntry): number {
     return date.sqliteDateTimeToTemporal(e.end_time)
         .since(date.sqliteDateTimeToTemporal(e.start_time))
         .total({unit: 'hours'});
+}
+
+// --------------------------------------------------------------------------------
+// --- Late-paid-entry warning ----------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// A PAID entry first recorded, or last edited, well after the work ended is a
+// hazy reconstruction - and paid time drives payroll, so it must be checked.  We
+// flag it LOUDLY and ALWAYS (every place a paid entry renders).  Non-paid time
+// doesn't get the warning: a late volunteer-hours entry doesn't really matter.
+
+const LATE_PAID_HOURS = 24;   // grace window after end_time before it's "late"
+
+export interface LatePaid { kind: 'entered' | 'edited'; daysLate: number; }
+
+// Hours from `endStr` to `t` (positive when t is after the work ended).
+function hoursAfterEnd(endStr: string, t: string): number {
+    return date.sqliteDateTimeToTemporal(t)
+        .since(date.sqliteDateTimeToTemporal(endStr))
+        .total({unit: 'hours'});
+}
+
+// The late-paid finding for an entry, or null.  Only paid, ended entries qualify;
+// "entered late" (born after the window) takes precedence over "edited late".
+export function latePaidReconstruction(e: {
+        is_paid_time?: number | boolean, end_time?: string | null,
+        entry_creation_time?: string | null, entry_last_edit_time?: string | null}): LatePaid | null {
+    if(!e.is_paid_time || !e.end_time) return null;
+    if(e.entry_creation_time && hoursAfterEnd(e.end_time, e.entry_creation_time) > LATE_PAID_HOURS)
+        return {kind: 'entered', daysLate: hoursAfterEnd(e.end_time, e.entry_creation_time) / 24};
+    if(e.entry_last_edit_time && hoursAfterEnd(e.end_time, e.entry_last_edit_time) > LATE_PAID_HOURS)
+        return {kind: 'edited', daysLate: hoursAfterEnd(e.end_time, e.entry_last_edit_time) / 24};
+    return null;
+}
+
+export function latePaidMessage(d: LatePaid): string {
+    const days = Math.max(1, Math.round(d.daysLate));
+    return `Paid time ${d.kind} ${days} day${days === 1 ? '' : 's'} after the work ended — `
+         + `late paid entries are hazy reconstructions; verify it.`;
+}
+
+// Inline (badge) for compact contexts - list rows, the Time view.
+export function latePaidBadge(d: LatePaid | null | undefined): Markup {
+    if(!d) return undefined;
+    return [h.span, {class: 'badge text-bg-danger ms-1', 'data-testid': 'late-paid',
+                     title: latePaidMessage(d)}, '⚠ late paid'];
+}
+
+// Block alert for the detail page.
+export function latePaidAlert(d: LatePaid | null | undefined): Markup {
+    if(!d) return undefined;
+    return [h.div, {class: 'alert alert-danger py-1 px-2 my-2', role: 'alert', 'data-testid': 'late-paid'},
+            '⚠ ', latePaidMessage(d)];
 }
 
 

@@ -35,7 +35,7 @@ const ownTimeOrHostPositional = security.or(hostOrAdmin, selfArg(a => Number(a[0
 import * as templates from "./templates.ts";
 import * as date from "../liminal/date.ts";
 import {rabid} from "./rabid.ts";
-import {TimesheetEntry} from "./timesheet.ts";
+import {TimesheetEntry, latePaidReconstruction, latePaidBadge, type LatePaid} from "./timesheet.ts";
 import {EventCheckin} from "./event.ts";
 
 // --------------------------------------------------------------------------------
@@ -55,6 +55,7 @@ export interface TimeSpan {
     label: string;             // notes / "Other work"  |  event name
     eventId?: number;          // check-ins / event carriers → link target
     paid: boolean;             // timesheet.is_paid_time
+    latePaid?: LatePaid | null; // paid entry recorded/edited long after the work (loud warning)
     wasStaff: boolean;         // check-in snapshot
     notes: string;
 }
@@ -264,7 +265,8 @@ export function timesheetToSpan(t: TimesheetEntry): TimeSpan {
         start: t.start_time, end,
         hours: spanHours(t.start_time, end),
         label: (t.notes && t.notes.trim()) ? firstLine(t.notes) : 'Other work',
-        paid: !!t.is_paid_time, wasStaff: false, notes: t.notes ?? '',
+        paid: !!t.is_paid_time, latePaid: latePaidReconstruction(t),
+        wasStaff: false, notes: t.notes ?? '',
     };
 }
 
@@ -506,6 +508,7 @@ function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
         : sp.label;
     const tags: Markup = [
         sp.paid ? [h.span, {class: 'badge text-bg-light ms-1'}, 'paid'] : undefined,
+        latePaidBadge(sp.latePaid),
         sp.wasStaff ? [h.span, {class: 'text-muted small ms-1'}, '(staff)'] : undefined,
     ];
     const rows: Markup[] = [
