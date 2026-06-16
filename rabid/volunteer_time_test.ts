@@ -118,11 +118,15 @@ test("task: event-subordinate task nests under the event's check-in entry", () =
     assertEquals(m.weeks[0].entries[0].tasks.map(t => t.id), [9]);     // attached to the event
 });
 
-test("task: event-subordinate with NO check-in synthesizes a zero-hour event row in the EVENT's week", () => {
-    const m = reconcileTime(1, [], [],
-        [tk(9, '2026-06-20 10:00:00',                                   // done much later
+test("task: event-subordinate with NO check-in is an ORPHAN (hidden unless includeOrphans)", () => {
+    const args: [number, TimeSpan[], TimeSpan[], TaskSpan[]] = [1, [], [],
+        [tk(9, '2026-06-20 10:00:00',
             {eventId: 105, eventStart: '2026-06-03 17:00:00', eventEnd: '2026-06-03 20:00:00',
-             eventLabel: 'Repair Night'})]);
+             eventLabel: 'Repair Night'})]];
+    // Default: no host entry to attach to -> nothing shown.
+    assertEquals(reconcileTime(...args).weeks.length, 0);
+    // With orphans: a synthesized zero-hour event row in the EVENT's week.
+    const m = reconcileTime(...args, /*includeOrphans*/ true);
     assertEquals(m.weeks.length, 1);
     assertEquals(m.weeks[0].weekStart, '2026-05-31');                  // the event's week, NOT done_time's
     const e = m.weeks[0].entries[0];
@@ -143,9 +147,10 @@ test("task: a non-event task done during a timesheet shift attaches to that shif
     assertEquals(m.hours, 8);                                          // task adds nothing
 });
 
-test("task: a standalone task (no event, no shift) becomes a per-day task row", () => {
-    const m = reconcileTime(1, [], [],
-        [tk(9, '2026-06-02 14:00:00'), tk(10, '2026-06-02 16:00:00')]);// same day -> one bucket
+test("task: a standalone task (no event, no shift) is an ORPHAN per-day row only with includeOrphans", () => {
+    const tasks = [tk(9, '2026-06-02 14:00:00'), tk(10, '2026-06-02 16:00:00')]; // same day
+    assertEquals(reconcileTime(1, [], [], tasks).weeks.length, 0);              // hidden by default
+    const m = reconcileTime(1, [], [], tasks, /*includeOrphans*/ true);
     assertEquals(m.weeks[0].entries.length, 1);
     assertEquals(m.weeks[0].entries[0].span.source, 'task');
     assertEquals(m.weeks[0].entries[0].tasks.map(t => t.id), [9, 10]);
@@ -237,29 +242,34 @@ test("checking a volunteer out also reloads their time fragment (cross-context)"
     });
 });
 
-test("model(showTasks): a task bob completed for an event shows under the event; off by default", () => {
+test("model: a completed event task bob attended shows INLINE always; an off-shift task is orphan", () => {
     return withTestDb(({ bob }) => {
         const eid = insertEvent();
-        // An event-owned task, completed BY bob (done_by = bob), and bob checked in.
-        const tid = asSystem(() => {
+        // An event-owned task completed BY bob, who checked in -> a hosted entry.
+        const evTask = asSystem(() => {
             const pid = rabid.project.forOwner('event', eid, /*create*/ true)!;
             return rabid.task.insert({project_id: pid, title: 'Set up tables', status: 'open', deleted: 0} as any);
         });
-        asUser(bob, () => rabid.task.update(tid, {status: 'done'}));          // stamps done_by = bob
+        asUser(bob, () => rabid.task.update(evTask, {status: 'done'}));       // stamps done_by = bob
         asSystem(() => rabid.event_checkin.insert({event_id: eid, volunteer_id: bob, notes: ''}));
+        // A personal task done off any shift/event -> orphan.
+        const orphan = asSystem(() => {
+            const pid = rabid.project.forOwner('volunteer', bob, true)!;
+            return rabid.task.insert({project_id: pid, title: 'Read manuals', status: 'open', deleted: 0} as any);
+        });
+        asUser(bob, () => rabid.task.update(orphan, {status: 'done'}));
 
-        // Off by default.
-        const off = asSystem(() => rabid.volunteer_time.model(bob, false));
-        assertEquals(off.weeks.flatMap(w => w.entries).every(e => e.tasks.length === 0), true);
-
-        // On: the completed task hangs off the event's entry.
-        const on = asSystem(() => rabid.volunteer_time.model(bob, true));
-        const eventEntry = on.weeks.flatMap(w => w.entries).find(e => e.span.eventId === eid);
+        // Default (orphans off): the event task shows inline; the orphan does not.
+        const def = asSystem(() => rabid.volunteer_time.model(bob, false));
+        const eventEntry = def.weeks.flatMap(w => w.entries).find(e => e.span.eventId === eid);
         assert(eventEntry, 'expected an entry for the event');
         assertEquals(eventEntry!.tasks.map(t => t.title), ['Set up tables']);
+        assertEquals(def.weeks.flatMap(w => w.entries).flatMap(e => e.tasks).map(t => t.title),
+                     ['Set up tables']);                                      // ONLY the inline one
 
-        // A task someone ELSE completed isn't credited to bob.
-        const otherView = asSystem(() => rabid.volunteer_time.model(bob, true));
-        assertEquals(otherView.weeks.flatMap(w => w.entries).flatMap(e => e.tasks).length, 1);
+        // With orphans on: the off-shift task appears too (its own row).
+        const on = asSystem(() => rabid.volunteer_time.model(bob, true));
+        const titles = on.weeks.flatMap(w => w.entries).flatMap(e => e.tasks).map(t => t.title).sort();
+        assertEquals(titles, ['Read manuals', 'Set up tables']);
     });
 });

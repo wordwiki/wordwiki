@@ -133,13 +133,16 @@ function weekStartOf(sqliteDateTime: string): string {
 // Overlapping check-ins nest under the EARLIEST timesheet they overlap and are
 // not counted; the rest stand alone.  Completed tasks (no hours) are placed:
 //   1. event-subordinate (task's project is event-owned) -> under that event's
-//      entry, synthesizing a zero-hour event row if the volunteer didn't check
-//      in.  Event grouping OVERRIDES done_time (it lands in the event's week).
+//      entry.  Event grouping OVERRIDES done_time (it lands in the event's week).
 //   2. else shift-subordinate -> under the timesheet whose window contains
 //      done_time.
-//   3. else standalone -> a per-day task row at done_time.
+// Those two are INLINE annotations on an entry that already exists - always
+// shown (they're the data-driven description of that shift/event).  An ORPHAN
+// task (an event-owned one the volunteer never checked into, or one done off any
+// shift) has no host entry; it only appears - as its own carrier row - when
+// includeOrphans is set (the noisier, list-like part, toggled in the UI).
 export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], checkins: TimeSpan[],
-                              tasks: TaskSpan[] = []): VolunteerTime {
+                              tasks: TaskSpan[] = [], includeOrphans = false): VolunteerTime {
     const tsByStart = [...timesheets].sort(byStart);
 
     const nestedByTs = new Map<number, TimeSpan[]>();
@@ -159,7 +162,7 @@ export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], check
         ...standaloneCheckins.map(c => ({span: c, nested: [] as TimeSpan[], tasks: [] as TaskSpan[]})),
     ];
 
-    placeTasks(entries, tsByStart, tasks);
+    placeTasks(entries, tsByStart, tasks, includeOrphans);
     for(const e of entries) e.tasks.sort(byDone);
     entries.sort((x, y) => byStart(x.span, y.span));
 
@@ -186,10 +189,12 @@ export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], check
     return {volunteerId, weeks, hours, paidHours, volunteerHours: hours - paidHours};
 }
 
-// Attach completed tasks to entries (mutating), appending synthesized carrier
-// entries for event tasks with no check-in and for standalone tasks.  See the
-// three-way priority in reconcileTime's comment.
-function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan[]): void {
+// Attach completed tasks to entries (mutating).  Hosted tasks (event the
+// volunteer attended, or a shift containing done_time) attach INLINE always.
+// Orphan tasks (un-attended event, or off any shift) only appear - as their own
+// carrier row - when includeOrphans is set.
+function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan[],
+                    includeOrphans: boolean): void {
     if(tasks.length === 0) return;
 
     // 1. Event-subordinate: the entry that represents the event is a standalone
@@ -203,7 +208,8 @@ function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan
     }
     for(const [eid, group] of byEvent) {
         const host = entryForEvent(eid);
-        if(host) { host.tasks.push(...group); continue; }
+        if(host) { host.tasks.push(...group); continue; }   // inline (always)
+        if(!includeOrphans) continue;                        // orphan: hidden by default
         // No check-in: synthesize a zero-hour event row so the event still groups
         // its tasks (event grouping overrides done_time -> the event's week).
         const s = group[0];
@@ -215,14 +221,14 @@ function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan
         });
     }
 
-    // 2/3. Non-event tasks: under the timesheet whose window contains done_time,
-    // else a per-day standalone bucket.
+    // 2/3. Non-event tasks: inline under the timesheet whose window contains
+    // done_time; else (orphan) a per-day bucket, only when includeOrphans.
     const standaloneByDay = new Map<string, TaskSpan[]>();
     for(const t of tasks.filter(t => t.eventId == null)) {
         const host = tsByStart.find(ts => ts.start <= t.doneTime && t.doneTime <= (ts.end ?? OPEN_END));
         if(host) {
             entries.find(e => e.span.source === 'timesheet' && e.span.id === host.id)!.tasks.push(t);
-        } else {
+        } else if(includeOrphans) {
             const day = date.extractDateFromDateTime(t.doneTime);
             const arr = standaloneByDay.get(day);
             if(arr) arr.push(t); else standaloneByDay.set(day, [t]);
@@ -319,23 +325,24 @@ function reload(volunteer_id: number, event_id?: number): Markup {
 export class VolunteerTimeService {
 
     // Build the intermediate model: query the sources, normalize, reconcile.
-    // Completed tasks (the volunteer's own, by done_by) are folded in only when
-    // showTasks - they can get noisy, and are off by default.
-    model(volunteer_id: number, showTasks = false): VolunteerTime {
+    // Completed tasks (the volunteer's own, by done_by) are ALWAYS folded in -
+    // the ones done during a shift/event annotate that entry inline (the
+    // data-driven description).  showOrphanTasks additionally surfaces the
+    // un-hosted ones (off-shift / un-attended-event) as their own rows.
+    model(volunteer_id: number, showOrphanTasks = false): VolunteerTime {
         const timesheets = rabid.timesheet_entry.entriesForVolunteer.all({volunteer_id})
             .map(timesheetToSpan);
         const checkins = (rabid.event_checkin.checkinsForVolunteer.all({volunteer_id}) as CheckinRow[])
             .map(checkinToSpan)
             .filter((s): s is TimeSpan => s !== null);
-        const tasks = showTasks
-            ? (rabid.task.completedByVolunteer.all({volunteer_id}) as CompletedTaskRow[]).map(taskToSpan)
-            : [];
-        return reconcileTime(volunteer_id, timesheets, checkins, tasks);
+        const tasks = (rabid.task.completedByVolunteer.all({volunteer_id}) as CompletedTaskRow[])
+            .map(taskToSpan);
+        return reconcileTime(volunteer_id, timesheets, checkins, tasks, showOrphanTasks);
     }
 
     @route(authenticated)
-    renderForVolunteer(volunteer_id: number, showTasks = false): Markup {
-        return renderVolunteerTime(this.model(volunteer_id, showTasks), volunteer_id, showTasks);
+    renderForVolunteer(volunteer_id: number, showOrphanTasks = false): Markup {
+        return renderVolunteerTime(this.model(volunteer_id, showOrphanTasks), volunteer_id, showOrphanTasks);
     }
 
     // --- Adding ------------------------------------------------------------
@@ -410,18 +417,20 @@ export class VolunteerTimeService {
 // --- The renderer (pure: model → Markup) ----------------------------------------
 // --------------------------------------------------------------------------------
 
-export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number, showTasks = false): Markup {
+export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number, showOrphanTasks = false): Markup {
     const domId = `volunteer-time-${volunteer_id}`;
-    // The reload URL carries showTasks, so a reload (after an add/edit) keeps the
-    // current view; the toggle swaps the fragment to the other state in place.
+    // The reload URL carries showOrphanTasks, so a reload (after an add/edit)
+    // keeps the current view; the toggle swaps the fragment in place.  (Tasks
+    // done during a shift/event are shown inline regardless - this toggle only
+    // governs the off-shift / un-attended-event "other" tasks.)
     const props = reloadableItemProps('volunteer_time', volunteer_id,
-        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${showTasks})`, {id: domId});
+        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${showOrphanTasks})`, {id: domId});
     const addMenu = canManage(volunteer_id) ? renderAddMenu(volunteer_id) : undefined;
     const toggle: Markup = [h.button,
         {type: 'button', class: 'btn btn-sm btn-link p-0',
-         'hx-get': `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${!showTasks})`,
+         'hx-get': `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${!showOrphanTasks})`,
          'hx-target': `#${domId}`, 'hx-swap': 'outerHTML'},
-        showTasks ? 'Hide completed tasks' : 'Show completed tasks'];
+        showOrphanTasks ? 'Hide other completed tasks' : 'Show other completed tasks'];
     const footer: Markup = [h.div, {class: 'd-flex align-items-center gap-3 mt-1'}, toggle, addMenu];
 
     if(model.weeks.length === 0)

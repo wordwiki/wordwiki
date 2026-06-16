@@ -822,9 +822,16 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
 export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {}) {
     faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('completed_tasks')) >>> 0);
     rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('completed_tasks.rand')) >>> 0);
-    const now = new Date();
-    const recentCut = new Date(now.getTime() - 90 * 24 * 3600_000);
-    const stamp = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+
+    // The seeded timesheet/event datetimes are wall-clock strings; parse and
+    // FORMAT them in the same (UTC-anchored) space so a done_time computed inside
+    // a shift round-trips to a string that really is BETWEEN that shift's
+    // start/end.  (Naive new Date(str)/toISOString double-shifts by the server's
+    // offset, which pushed done_times outside their windows -> 0 shift-nested.)
+    const ms = (s: string) => Date.parse(s.replace(' ', 'T') + 'Z');
+    const stamp = (m: number) => new Date(m).toISOString().replace('T', ' ').slice(0, 19);
+    const nowMs = Date.now();
+    const recentCutMs = nowMs - 90 * 24 * 3600_000;
 
     const titles = [
         'Sort donated parts', 'Fix the repair stand', 'Update the intake sheet',
@@ -837,11 +844,11 @@ export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {
     // How many completions per activity tier (staff do the most; tail none).
     const countByTier: Record<string, number> = {staff: 10, heavy: 7, regular: 4, occasional: 1};
 
-    const completeTask = (project_id: number, title: string, doneAt: Date, done_by: number) =>
+    const completeTask = (project_id: number, title: string, doneMs: number, done_by: number) =>
         rabid.task.insert({project_id, title, status: 'done',
-            done_time: stamp(doneAt), done_by, deleted: 0} as any);
+            done_time: stamp(doneMs), done_by, deleted: 0} as any);
 
-    let made = 0;
+    let made = 0, inline = 0;
     const volunteers = rabid.volunteer.allVolunteersByName.all().filter(v => !v.deleted);
     for(const v of volunteers) {
         const profile = activityProfileOf(v);
@@ -854,41 +861,42 @@ export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {
             event_start_time: string|null, event_end_time: string|null}>)
             .filter(c => {
                 const t = c.start_time ?? c.event_start_time;
-                return !!t && new Date(t) >= recentCut && new Date(t) <= now;
+                return !!t && ms(t) >= recentCutMs && ms(t) <= nowMs;
             });
         const shifts = rabid.timesheet_entry.entriesForVolunteer.all({volunteer_id: vid})
-            .filter(t => t.end_time && new Date(t.start_time) >= recentCut);
+            .filter(t => !!t.end_time && ms(t.start_time) >= recentCutMs);
 
         for(let i = 0; i < n; i++) {
             const title = faker.helpers.arrayElement(titles);
             const roll = rand();
+            // Weight toward the INLINE cases (event 50% / shift 35%) so the chips
+            // mostly land next to the hours; standalone (~15%) is the off-shift tail.
             if(roll < 0.5 && checkins.length) {
                 // event-nested: an event-owned task done around the event.
                 const c = checkins[Math.floor(rand() * checkins.length)];
                 const end = c.event_end_time ?? c.event_start_time ?? c.start_time!;
-                const doneAt = new Date(new Date(end).getTime() + Math.floor(rand() * 60) * 60_000);
-                if(doneAt > now) continue;
-                completeTask(rabid.project.forOwner('event', c.event_id, true)!, title, doneAt, vid);
-                made++;
-            } else if(roll < 0.8 && shifts.length) {
-                // shift-nested: a personal task done inside a timesheet window.
+                const doneMs = Math.min(nowMs, ms(end) + Math.floor(rand() * 60) * 60_000);
+                completeTask(rabid.project.forOwner('event', c.event_id, true)!, title, doneMs, vid);
+                made++; inline++;
+            } else if(roll < 0.85 && shifts.length) {
+                // shift-nested: a personal task done INSIDE a timesheet window.
                 const s = shifts[Math.floor(rand() * shifts.length)];
-                const a = new Date(s.start_time).getTime(), b = new Date(s.end_time!).getTime();
+                const a = ms(s.start_time), b = ms(s.end_time!);
                 completeTask(rabid.project.forOwner('volunteer', vid, true)!, title,
-                             new Date(a + Math.floor(rand() * (b - a))), vid);
-                made++;
+                             a + Math.floor(rand() * (b - a)), vid);
+                made++; inline++;
             } else {
-                // standalone: a personal task done off-shift (early-morning -> usually
-                // outside the daytime shifts, so it lands as its own per-day row).
-                const d = new Date(now.getTime() - (1 + Math.floor(rand() * 80)) * 24 * 3600_000);
-                d.setHours(7 + Math.floor(rand() * 2), 0, 0, 0);
-                if(d > now) continue;
-                completeTask(rabid.project.forOwner('volunteer', vid, true)!, title, d, vid);
+                // standalone (orphan): a personal task done off-shift - 05:00 UTC on a
+                // recent day, before the daytime shifts, so it stays its own row.
+                const dayMid = Math.floor((nowMs - (1 + Math.floor(rand() * 80)) * 24 * 3600_000)
+                                          / 86400_000) * 86400_000;
+                completeTask(rabid.project.forOwner('volunteer', vid, true)!, title,
+                             dayMid + 5 * 3600_000, vid);
                 made++;
             }
         }
     }
-    console.info(`Completed (credited) tasks created: ${made}`);
+    console.info(`Completed (credited) tasks created: ${made} (${inline} inline on a shift/event)`);
 }
 
 // --------------------------------------------------------------------------------
