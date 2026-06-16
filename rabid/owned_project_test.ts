@@ -71,3 +71,34 @@ test("addOwnerTask: denied for someone who can't edit the owner", () =>
         assert(threw, 'a non-owner-editor must not add owner tasks');
         assertEquals(asSystem(() => r.project.forOwner('event', eid, false)), undefined);
     }));
+
+// --- Volunteer-owned projects: the owner-edit delegation is self-OR-host, so a
+//     volunteer manages their OWN tasks (unlike an event, which is host-only). ---
+
+test("volunteer-owned: a volunteer may add their OWN tasks; its name derives from them", () =>
+    withTestDb(({ bob }) => {
+        const r = getRabid();
+        asUser(bob, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'Renew first-aid cert'}));
+        const pid = asSystem(() => r.project.forOwner('volunteer', bob, false));
+        assert(pid !== undefined, 'a volunteer adding their own task materializes their project');
+        assertEquals(asSystem(() => r.project.recordLabel(r.project.getById(pid!))), 'Bob Shares — tasks');
+    }));
+
+test("volunteer-owned: another regular volunteer may NOT add to someone else's", () =>
+    withTestDb(({ bob, carol }) => {
+        const r = getRabid();
+        // carol (regular) cannot edit bob -> cannot add bob's tasks; bob's stays uncreated.
+        let threw = false;
+        try { asUser(carol, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'x'})); }
+        catch { threw = true; }
+        assert(threw, "a peer must not add another volunteer's tasks");
+        assertEquals(asSystem(() => r.project.forOwner('volunteer', bob, false)), undefined);
+    }));
+
+test("volunteer-owned: a host may add tasks for any volunteer", () =>
+    withTestDb(({ alice, bob }) => {
+        const r = getRabid();
+        // alice is a host -> may edit bob -> may add bob's tasks.
+        asUser(alice, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'Onboarding chat'}));
+        assert(asSystem(() => r.project.forOwner('volunteer', bob, false)) !== undefined);
+    }));

@@ -408,7 +408,10 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.h4, {class: 'mt-4'}, 'Time'],
             rabid.volunteer_time.renderForVolunteer(volunteer_id),
 
-            // TODO: committed tasks, etc.
+            // The volunteer's own 1-1 project: personal tasks, created lazily on
+            // the first add (self-or-host editable, via the owner delegation).
+            [h.div, {class: 'mt-4'},
+             rabid.task.renderOwnerTasks('volunteer', volunteer_id)],
         ];
     }
 }
