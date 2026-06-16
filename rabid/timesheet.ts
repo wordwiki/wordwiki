@@ -389,21 +389,23 @@ export function latePaidReconstruction(e: {
 
 export function latePaidMessage(d: LatePaid): string {
     const days = Math.max(1, Math.round(d.daysLate));
+    // "late entry" / "entered ... after the work" - about WHEN IT WAS RECORDED,
+    // never about when the volunteer was paid.
     return `Paid time ${d.kind} ${days} day${days === 1 ? '' : 's'} after the work ended — `
-         + `late paid entries are hazy reconstructions; verify it.`;
+         + `entries logged this late are hazy reconstructions; verify it.`;
 }
 
 // Inline (badge) for compact contexts - list rows, the Time view.
 export function latePaidBadge(d: LatePaid | null | undefined): Markup {
     if(!d) return undefined;
-    return [h.span, {class: 'badge text-bg-danger ms-1', 'data-testid': 'late-paid',
-                     title: latePaidMessage(d)}, '⚠ late paid'];
+    return [h.span, {class: 'badge text-bg-danger ms-1', 'data-testid': 'late-entry',
+                     title: latePaidMessage(d)}, '⚠ late entry'];
 }
 
 // Block alert for the detail page.
 export function latePaidAlert(d: LatePaid | null | undefined): Markup {
     if(!d) return undefined;
-    return [h.div, {class: 'alert alert-danger py-1 px-2 my-2', role: 'alert', 'data-testid': 'late-paid'},
+    return [h.div, {class: 'alert alert-danger py-1 px-2 my-2', role: 'alert', 'data-testid': 'late-entry'},
             '⚠ ', latePaidMessage(d)];
 }
 

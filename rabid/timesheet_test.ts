@@ -43,8 +43,8 @@ test("renderers: badge/alert present for a finding, absent (undefined) otherwise
     const d = latePaidReconstruction(entry({entry_creation_time: '2026-06-05 12:00:00',
                                             entry_last_edit_time: '2026-06-05 12:00:00'}))!;
     const badge = latePaidBadge(d);
-    assert(findByTestId(badge, 'late-paid'), 'badge renders');
-    assert(hasText(badge, 'late paid'));
+    assert(findByTestId(badge, 'late-entry'), 'badge renders');
+    assert(hasText(badge, 'late entry'));
     assert(hasText(latePaidAlert(d), 'hazy reconstructions'));
     assertEquals(latePaidBadge(null), undefined);
     assertEquals(latePaidAlert(null), undefined);
