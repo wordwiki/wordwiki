@@ -610,9 +610,12 @@ if (import.meta.main) {
     let rabid = getRabid();
     const args = Deno.args;
     const command = args[0];
+    // Listen port comes from $RABID_PORT (set by rabid.sh from the checkout's
+    // --N suffix / port file), defaulting to 8888 when unset.
+    const port = Number(Deno.env.get('RABID_PORT') ?? '8888');
     switch(command) {
         case 'serve':
-            rabid.startServer({hostname: 'localhost', port: 8888,
+            rabid.startServer({hostname: 'localhost', port,
                                allowSchemaMismatch: args.includes('--allow-schema-mismatch')});
             break;
 
@@ -631,7 +634,7 @@ if (import.meta.main) {
             // client, then exit with a pass/fail code.  startServer() resolves once
             // Deno.serve is listening, so the run and the server run concurrently.
             const runName = args[1] ?? 'demo';
-            await rabid.startServer({hostname: 'localhost', port: 8888});
+            await rabid.startServer({hostname: 'localhost', port});
             const code = await rabid.runNamedTestRun(runName);
             Deno.exit(code);
             break;

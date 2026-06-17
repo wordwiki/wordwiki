@@ -76,6 +76,10 @@ if [ -z "$PORT" ]; then
     esac
 fi
 PORT="${PORT:-9000}"
+# The server reads its listen port from $WORDWIKI_PORT (see wordwiki.ts `serve`).
+# Export the resolved value so the deno process below actually binds $PORT
+# rather than falling back to its own 9000 default.
+export WORDWIKI_PORT="$PORT"
 
 # Refuse on a missing instance dir rather than silently creating an empty one
 # (transpile's mkdir -p would otherwise conjure it into existence).  The server

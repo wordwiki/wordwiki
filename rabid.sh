@@ -25,6 +25,10 @@ if [ -z "$PORT" ]; then
     esac
 fi
 PORT="${PORT:-8888}"
+# The server reads its listen port from $RABID_PORT (see rabid.ts `serve`).
+# Export the resolved value so the deno process below actually binds $PORT
+# rather than falling back to its own 8888 default.
+export RABID_PORT="$PORT"
 
 # Only one rabid server may run at a time on a given port (SQLite single-writer);
 # parallel checkouts coexist by pinning different ports (see above).  Before
