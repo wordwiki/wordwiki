@@ -55,12 +55,25 @@ WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
 RUN_DIR="${WORDWIKI_DIR:-$WORDWIKI_SRC/mmo}"
 PIDFILE="wordwiki.pid"
 PWFILE="wordwiki-shutdown-password.txt"
-# Port resolution, in order: $WORDWIKI_PORT, then this checkout's (git-ignored)
-# wordwiki_port.txt, then 9000.  The file lets a parallel checkout pin its own
-# port once instead of exporting WORDWIKI_PORT on every invocation.
+# Port resolution, in order:
+#   1. $WORDWIKI_PORT
+#   2. this checkout's (git-ignored) wordwiki_port.txt
+#   3. a trailing --N in the checkout dir name (wordwiki--1 -> 9001), so a
+#      numbered pool of worktrees needs no port file at all
+#   4. 9000
+# The env var / file let a parallel checkout pin its own port without exporting
+# WORDWIKI_PORT on every invocation.
 PORT="${WORDWIKI_PORT:-}"
 if [ -z "$PORT" ] && [ -f "$WORDWIKI_SRC/wordwiki_port.txt" ]; then
     PORT="$(tr -d '[:space:]' < "$WORDWIKI_SRC/wordwiki_port.txt")"
+fi
+if [ -z "$PORT" ]; then
+    base="$(basename "$WORDWIKI_SRC")"
+    suffix="${base##*--}"            # text after the last '--', or $base if none
+    case "$suffix" in
+        "$base"|""|*[!0-9]*) : ;;    # no '--', or empty / non-numeric suffix
+        *) PORT=$((9000 + 10#$suffix)) ;;   # 10# forces base-10 (avoid octal on 08/09)
+    esac
 fi
 PORT="${PORT:-9000}"
 

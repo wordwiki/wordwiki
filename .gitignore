@@ -9,6 +9,9 @@
 /wordwiki_port.txt
 /rabid_port.txt
 
+# Per-checkout "current unit of work" label (read by the Emacs modeline chip).
+/current-task.txt
+
 # Runtime files written by the rabid server at startup (see Rabid.startServer).
 /rabid.pid
 /rabid-shutdown-password.txt
