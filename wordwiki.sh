@@ -55,7 +55,14 @@ WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
 RUN_DIR="${WORDWIKI_DIR:-$WORDWIKI_SRC/mmo}"
 PIDFILE="wordwiki.pid"
 PWFILE="wordwiki-shutdown-password.txt"
-PORT="${WORDWIKI_PORT:-9000}"
+# Port resolution, in order: $WORDWIKI_PORT, then this checkout's (git-ignored)
+# wordwiki_port.txt, then 9000.  The file lets a parallel checkout pin its own
+# port once instead of exporting WORDWIKI_PORT on every invocation.
+PORT="${WORDWIKI_PORT:-}"
+if [ -z "$PORT" ] && [ -f "$WORDWIKI_SRC/wordwiki_port.txt" ]; then
+    PORT="$(tr -d '[:space:]' < "$WORDWIKI_SRC/wordwiki_port.txt")"
+fi
+PORT="${PORT:-9000}"
 
 # Refuse on a missing instance dir rather than silently creating an empty one
 # (transpile's mkdir -p would otherwise conjure it into existence).  The server

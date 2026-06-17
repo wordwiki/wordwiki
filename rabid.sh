@@ -3,12 +3,21 @@ set -e
 
 PIDFILE="rabid.pid"
 PWFILE="rabid-shutdown-password.txt"
-PORT=8888
 
-# Only one rabid server may run at a time: it binds a fixed port (8888) and uses
-# SQLite in a single-writer configuration.  So before starting, stop any rabid
-# that is already running - whether launched from here, from emacs M-x compile,
-# or by hand.  This makes "just run rabid.sh again" a reliable restart.
+# Port resolution, in order: $RABID_PORT, then this checkout's (git-ignored)
+# rabid_port.txt, then 8888.  The file lets a parallel checkout pin its own port
+# once instead of exporting RABID_PORT on every invocation.
+PORT="${RABID_PORT:-}"
+if [ -z "$PORT" ] && [ -f "rabid_port.txt" ]; then
+    PORT="$(tr -d '[:space:]' < rabid_port.txt)"
+fi
+PORT="${PORT:-8888}"
+
+# Only one rabid server may run at a time on a given port (SQLite single-writer);
+# parallel checkouts coexist by pinning different ports (see above).  Before
+# starting, stop any rabid already running for THIS checkout - whether launched
+# from here, from emacs M-x compile, or by hand (the pidfile is per-checkout).
+# This makes "just run rabid.sh again" a reliable restart.
 #
 # We stop it the clean way: ask the server to shut itself down via its
 # authenticated shutdown route, so SQLite closes properly.  We only fall back to

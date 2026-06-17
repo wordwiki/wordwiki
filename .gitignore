@@ -5,6 +5,10 @@
 # instances live elsewhere via WORDWIKI_DIR.
 /mmo/
 
+# Per-checkout port pins for the run scripts (overridden by the *_PORT env vars).
+/wordwiki_port.txt
+/rabid_port.txt
+
 # Runtime files written by the rabid server at startup (see Rabid.startServer).
 /rabid.pid
 /rabid-shutdown-password.txt
