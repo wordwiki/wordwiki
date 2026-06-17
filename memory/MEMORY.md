@@ -1,0 +1,18 @@
+- [UI mutation model](ui-mutation-model.md) — read-only pages; every mutation is a button → immediate / confirm / modal-of-action-arguments; rows navigate, pencil-only edit (rollout complete 2026-06-11; lexeme-editor facts still tap-to-edit)
+- [Puppeteer session reuse](puppeteer-session-reuse.md) — only pass launchOptions on the FIRST navigate; reuse the running browser to stay logged in
+- [Server restart protocol](server-restart-protocol.md) — just re-run ./rabid.sh (or wordwiki.sh); it cleanly shuts down the running server itself — never pkill
+- [Audio trim tuning](audio-trim-tuning.md) — silence/click trim pipeline (derived stores) + throwaway staff page to pick the threshold by ear; rebuild recipe in wordwiki/audio-trim-tuning.md
+- [Field security model](field-security-model.md) — open-books org; per-field view/edit perms enforced at query/render/save; phone opt-in, email opt-out, redacted to '***'
+- [Route security migration](route-security-migration.md) — staged routeterp permissive→strict; same Permission model for routes; rabid testbed, wordwiki stays jsterp; stage 1 done
+- [Testing approach](testing-approach.md) — render→act→render as a library (no HTTP/browser); in-memory db; generic test layer; seeded/scenario fake_data
+- [Wordwiki assertion model](wordwiki-assertion-model.md) — lexeme data as immutable assertion versions in `dict` table; full notes at /home/dziegler/wordwiki/assertion-model.md
+- [Publication/approval model](publication-approval-model.md) — PROPOSED published_from/published_to dimension + senior-approval workflow; design at /home/dziegler/wordwiki/publication-model.md (not built)
+- [VersionedDb validation](versioned-db-validation.md) — store self-checking (validator/repair/throw-on-load) done as publication-model pre-project step 1; reference-oracle property test is step 2 (not built)
+- [Lexeme editor v2](lexeme-editor-v2.md) — approved: parallel server-side htmx editor (rabid model); design at /home/dziegler/wordwiki/lexeme-editor-design.md; public renderer stays separate
+- [Wordwiki top-level upgrade](wordwiki-toplevel-upgrade.md) — rabid-standard sessions/login/user+config tables/wordwiki.sh; dev login djz/djz-dev; change_by_username stamped
+- [Wordwiki categorization](wordwiki-categorization.md) — v1 complete: 8,822 entries × 85 cats + top-10/100/1000; review/ is Markdown for the team; design doc has rerun recipe for v2
+- [Wordwiki db location](wordwiki-db-location.md) — live db is ~/mmo/database/db.db, assertions in `dict` table
+- [Liminal audit series](liminal-audit-series.md) — module-by-module correctness audits; the per-module recipe dz approves
+- [Wordwiki transpiled resources](wordwiki-transpiled-resources.md) — wordwiki serves /resources/*.js from a transpile OUTPUT dir; stale js until transpile reruns ("works in rabid, not wordwiki" = stale output)
+- [Publish orphan prune](publish-orphan-prune.md) — publisher now deletes stale orphan .html (e.g. astronomy.html), but OPT-IN: touch ~/mmo/.wordwiki-publish-root to enable; heavily guarded
+- [Liminal htmx config](liminal-htmx-config.md) — shared htmx meta/script in liminal/htmx.ts; historyCacheSize:0 fix keeps navbar menus/JS alive after Back (the snapshot-restore breakage)

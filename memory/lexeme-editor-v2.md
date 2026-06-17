@@ -1,0 +1,27 @@
+---
+name: lexeme-editor-v2
+description: "Approved project — replace wordwiki's client-side lexeme editor with a server-side htmx editor (rabid model); design doc at /home/dziegler/wordwiki/lexeme-editor-design.md"
+metadata: 
+  node_type: memory
+  type: project
+  originSessionId: c4675fb2-aad8-4afe-a51d-24117428b622
+---
+
+Approved 2026-06-10: build a NEW PARALLEL lexeme editor for wordwiki on the rabid/liminal htmx model ([[ui-mutation-model]]) — server-rendered, metadata-driven from dictSchemaJson, mutations as assertions built server-side via the existing WordWiki workspace + applyTransaction. Old editor (datawiki/view.ts) stays untouched until parity, then retired with the datawiki browser transpile. Full design + phasing: /home/dziegler/wordwiki/lexeme-editor-design.md
+
+Key decisions from dz:
+- ~~change_by_username keeps the hacky user-selector for now~~ DONE 2026-06-10: rabid-style sessions landed ([[wordwiki-toplevel-upgrade]]); every editor assertion is stamped with the logged-in username via changeStamp().
+- The PUBLIC renderer stays separate and hand-tuned (entry-schema.ts renderEntry / publish.ts) — do NOT unify it with the metadata-driven editor render; tightness beats genericity there.
+- v1 secondary actions (move/delete/history) live in the edit dialog; read surface stays clean; context menus dropped.
+- Conflict detection via replaces_assertion_id hidden param (not rabid before-values).
+- Audio/images: eager upload on file selection to uploadRecording, form carries content-store path.
+
+**Why:** editor longevity — the htmx model is simple enough to keep runnable long-term; the client workspace had made the editor a scary distributed system.
+
+**How to apply:** implement in wordwiki/lexeme-editor.ts + a new page template; follow the phases in the design doc. Related: [[wordwiki-assertion-model]], [[testing-approach]].
+
+**Status 2026-06-10 (final): ALL PHASES COMPLETE — the v2 editor IS the editor.** `wordwiki.entry()` serves it (every existing link follows); "Add New Entry" = navbar POST → `wordwiki.newLexemeAction()` → redirect. datawiki/view.ts DELETED; workspace.ts client-sync scaffolding (RemoteDb/rpc/persistProposedAssertions//workspace-rpc-and-sync) removed; legacy pageTemplate no longer loads module scripts (kept only as the document shell for not-yet-migrated pages like home/search/reports). transpile.sh builds ONLY scannedpage/page-editor.ts + page-viewer.ts (both standalone, zero imports — tagger + public site); all sed hackery gone; ~/mmo/scripts cleaned to just those two. Remaining polish: image upload, in-browser recorder, insert-above/below, "(moved)" history annotation, migrating home/search/report pages to templates.page().
+
+**Earlier status (1-6):** Phases 1-6 implemented and verified on the dev site (plus image upload, in-browser recorder, insert-above/below, "(moved)" history annotation outstanding). Three-level refresh scoping is live: self `.-fact-<id>-` / parent `.-rel-<parentid>-<tag>-` / root `.-entry-<id>-`, chosen in `mutationTargets()` (spelling mutations widen to root — they feed the heading). History/restore re-asserts old versions (undo = re-assert, never mute); restore-after-delete required relaxing `applyProposedAssertion` (assert over closed predecessor OK) and `untrackedApplyAssertion` (valid-time GAPS on load OK — a gap is a deletion period) in wordwiki/workspace.ts. Audio = eager upload (`lmAudioUploadChange` in resources/lexeme-editor-scripts.js → existing uploadRecording). Doc refs = per-book buttons → server creates group+ref → tx `{action:'open'}` (new case in rabid-scripts.js) opens tagger; tagger's postMessage reloads the ref fragment. Gotcha: dialogs opened from buttons INSIDE the modal must self-lift their title via inline `setTimeout(showModalEditor)` (the swap detaches the button before after-request fires); showModalEditor now preserves the header when content has no inline title. /resources/*.js has no cache versioning — stale tabs need hard refresh after script changes. dz has been live-testing in the UI (his edits appear in entry 133's history).
+
+**Earlier status:** Phases 1-3 implemented and verified on the dev site. `wordwiki/lexeme-editor.ts` (LexemeEditor, reachable as `wordwiki.lexeme.*`, page at `/ww/wordwiki.lexeme.entryPage(<entry_id>)`): own htmx page template (separate from old pageTemplate), metadata-driven entry render (whole entry = one reloadable fragment `.-entry-<id>-`), edit/insert dialogs via renderParamForm with `replaces_assertion_id` conflict guard (verified: stale save → alert), saveTuple/deleteTuple(tombstone)/move(order_key) via applyTransaction. Widget adapter `widgetFor()` maps soft-schema fields → liminal table widgets; audio/image/boundingGroup are dialog-read-only (`isDialogReadOnly`) and their relations get no "+" button yet. Remaining: history/restore (phase 4 — needs applyProposedAssertion to allow asserting over a deleted assertion), audio eager-upload (5), doc-ref creation + tagger reload hook (6), insert-above/below peers, link switchover + old-editor retirement (7). Restart server WITHOUT transpile (no client changes): shutdown via `/ww/wordwiki.shutdown($(cat ~/mmo/wordwiki-shutdown-password.txt))` then `cd ~/mmo && deno run --check --allow-all ~/wordwiki/wordwiki/wordwiki.ts serve`. Note: tx`...` exprs are page-relative (resolve under /ww/); hx-get URLs must be absolute `/ww/...`.
