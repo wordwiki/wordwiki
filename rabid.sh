@@ -4,12 +4,25 @@ set -e
 PIDFILE="rabid.pid"
 PWFILE="rabid-shutdown-password.txt"
 
-# Port resolution, in order: $RABID_PORT, then this checkout's (git-ignored)
-# rabid_port.txt, then 8888.  The file lets a parallel checkout pin its own port
-# once instead of exporting RABID_PORT on every invocation.
+# Port resolution, in order:
+#   1. $RABID_PORT
+#   2. this checkout's (git-ignored) rabid_port.txt
+#   3. a trailing --N in the checkout dir name (wordwiki--1 -> 8881), so a
+#      numbered pool of worktrees needs no port file at all
+#   4. 8888
+# The env var / file let a parallel checkout pin its own port without exporting
+# RABID_PORT on every invocation.
 PORT="${RABID_PORT:-}"
 if [ -z "$PORT" ] && [ -f "rabid_port.txt" ]; then
     PORT="$(tr -d '[:space:]' < rabid_port.txt)"
+fi
+if [ -z "$PORT" ]; then
+    base="$(basename "$PWD")"        # rabid runs from the checkout root
+    suffix="${base##*--}"            # text after the last '--', or $base if none
+    case "$suffix" in
+        "$base"|""|*[!0-9]*) : ;;    # no '--', or empty / non-numeric suffix
+        *) PORT=$((8880 + 10#$suffix)) ;;   # 10# forces base-10 (avoid octal on 08/09)
+    esac
 fi
 PORT="${PORT:-8888}"
 
