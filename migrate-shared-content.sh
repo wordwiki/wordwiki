@@ -61,46 +61,49 @@ else
     run mv "$TMP" "$SHARED/content"
 fi
 
-# --- Step 2: ensure derived/ and imports/ children exist. ------------------
-echo "Step 2: ensuring '$SHARED/derived' and '$SHARED/imports' exist"
-run mkdir -p "$SHARED/imports"
-
-# --- Step 3: promote this checkout's real local derived/ into the store. ----
-LOCAL_DERIVED="$RUN_DIR/derived"
-if [ -L "$LOCAL_DERIVED" ]; then
-    echo "Step 3: local '$LOCAL_DERIVED' is already a symlink - derived already shared, skipping promote."
-    run mkdir -p "$SHARED/derived"
-elif [ -d "$LOCAL_DERIVED" ]; then
-    if [ -d "$SHARED/derived" ] && [ -n "$(ls -A "$SHARED/derived" 2>/dev/null)" ]; then
-        echo "Step 3: WARNING - both local '$LOCAL_DERIVED' and shared '$SHARED/derived' have content." >&2
-        echo "  Not auto-merging (could clobber). Merge by hand, e.g.:" >&2
-        echo "    rsync -a '$LOCAL_DERIVED/' '$SHARED/derived/' && rm -rf '$LOCAL_DERIVED'" >&2
-        echo "  then re-run this script (or mmo-use-shared-content.sh)." >&2
-        exit 1
+# --- Step 2: promote this checkout's real local derived/ and imports/. ------
+# A real local dir is renamed into the shared store (instant on one filesystem)
+# so every other checkout reuses it.  Already a symlink -> already shared.  No
+# local dir -> create an empty shared one.  Refuses to merge when BOTH the local
+# and the shared copy have content (avoids a silent clobber).
+for store in derived imports; do
+    local_dir="$RUN_DIR/$store"
+    sh_dir="$SHARED/$store"
+    if [ -L "$local_dir" ]; then
+        echo "Step 2 [$store]: local is already a symlink - already shared, skipping promote."
+        run mkdir -p "$sh_dir"
+    elif [ -d "$local_dir" ]; then
+        if [ -d "$sh_dir" ] && [ -n "$(ls -A "$sh_dir" 2>/dev/null)" ]; then
+            echo "Step 2 [$store]: WARNING - both local '$local_dir' and shared '$sh_dir' have content." >&2
+            echo "  Not auto-merging (could clobber). Merge by hand, e.g.:" >&2
+            echo "    rsync -a '$local_dir/' '$sh_dir/' && rm -rf '$local_dir'" >&2
+            echo "  then re-run this script (or mmo-use-shared-content.sh)." >&2
+            exit 1
+        fi
+        echo "Step 2 [$store]: promoting local $store ($(du -sh "$local_dir" 2>/dev/null | cut -f1)) -> '$sh_dir'"
+        # Drop the empty placeholder (if any) so we can rename the whole dir in.
+        run rmdir "$sh_dir" 2>/dev/null || true
+        run mv "$local_dir" "$sh_dir"
+    else
+        echo "Step 2 [$store]: no local '$local_dir' - creating empty shared $store."
+        run mkdir -p "$sh_dir"
     fi
-    echo "Step 3: promoting local derived ($(du -sh "$LOCAL_DERIVED" 2>/dev/null | cut -f1)) -> '$SHARED/derived'"
-    # Remove the empty placeholder (if any) so we can rename the whole dir in.
-    run rmdir "$SHARED/derived" 2>/dev/null || true
-    run mv "$LOCAL_DERIVED" "$SHARED/derived"
-else
-    echo "Step 3: no local derived at '$LOCAL_DERIVED' - creating empty shared derived."
-    run mkdir -p "$SHARED/derived"
-fi
+done
 
-# --- Step 4: drop the old content symlink (pointed at the flat root). -------
+# --- Step 3: drop the old content symlink (pointed at the flat root). -------
 # It pointed at $SHARED itself; the linker will repoint it at $SHARED/content.
 # Only remove it if it still resolves to the flat root - leave an already
 # repointed (-> $SHARED/content) link alone so re-runs don't churn it.
 if [ -L "$RUN_DIR/content" ] && \
    [ "$(readlink -f "$RUN_DIR/content")" = "$(readlink -f "$SHARED")" ]; then
-    echo "Step 4: removing old content symlink (was -> flat shared root)"
+    echo "Step 3: removing old content symlink (was -> flat shared root)"
     run rm "$RUN_DIR/content"
 else
-    echo "Step 4: content symlink already repointed (or absent) - leaving as is."
+    echo "Step 3: content symlink already repointed (or absent) - leaving as is."
 fi
 
-# --- Step 5: wire the symlinks. --------------------------------------------
-echo "Step 5: wiring symlinks via mmo-use-shared-content.sh"
+# --- Step 4: wire the symlinks. --------------------------------------------
+echo "Step 4: wiring symlinks via mmo-use-shared-content.sh"
 if [ "$DRY" = 1 ]; then
     echo "  [dry-run] $WORDWIKI_SRC/mmo-use-shared-content.sh"
 else
