@@ -227,6 +227,9 @@ export abstract class LiminalApp {
     get pidFileName(): string { return `${this.appName}.pid`; }
     get shutdownPasswordFileName(): string { return `${this.appName}-shutdown-password.txt`; }
     get evalPasswordFileName(): string { return `${this.appName}-eval-password.txt`; }
+    /** Holds the advertised base URL (e.g. http://wordwiki--2.localhost:8882/) so
+     *  test code can read where to point a browser without re-deriving the port. */
+    get baseUrlFileName(): string { return `${this.appName}-base-url.txt`; }
 
     /** The request-handler mount points (default: routePrefix and '/'). */
     requestHandlerPaths(): Record<string, (request: server.Request) => Promise<server.Response>> {
@@ -265,6 +268,7 @@ export abstract class LiminalApp {
 
     shutdownPassword: string | undefined = undefined;
     pidFilePath: string | undefined = undefined;
+    baseUrlFilePath: string | undefined = undefined;
     // Authorises the dev-only /eval endpoint; generated ONLY on a non-production
     // db (endpoint hard-off otherwise).  Separate secret from shutdownPassword.
     evalPassword: string | undefined = undefined;
@@ -300,6 +304,19 @@ export abstract class LiminalApp {
         Deno.writeTextFileSync(this.shutdownPasswordFileName, this.shutdownPassword + '\n', {mode: 0o600});
         console.info(`Wrote ${this.pidFilePath} (pid ${Deno.pid}) and ${this.shutdownPasswordFileName} (mode 0600)`);
 
+        // The advertised base URL: the host a browser/puppeteer should use to reach
+        // this server.  Distinct from the BIND hostname (always loopback): parallel
+        // checkouts advertise <checkout-dir>.localhost (set by the launcher in
+        // LIMINAL_PUBLIC_HOST) so each keeps its own cookie jar while still counting
+        // as a localhost secure-context.  Falls back to the bind host when unset.
+        // We write it to a pidfile-peer so test code can point a browser here
+        // without re-deriving the (launcher-resolved) port + host itself.
+        const publicHost = Deno.env.get('LIMINAL_PUBLIC_HOST') || config.hostname;
+        const baseUrl = `http://${publicHost}:${config.port}/`;
+        this.baseUrlFilePath = this.baseUrlFileName;
+        Deno.writeTextFileSync(this.baseUrlFilePath, baseUrl + '\n');
+        console.info(`Wrote ${this.baseUrlFilePath} (${baseUrl})`);
+
         // The /eval endpoint (dev god-mode) is enabled ONLY on a non-production db.
         if(this.isTestDb) {
             this.evalPassword = generateLargeRandomPassword();
@@ -319,6 +336,7 @@ export abstract class LiminalApp {
         const contentdirs = await this.resourceContentDirs();
         await new DenoHttpServer({port: config.port,
                                   hostname: config.hostname,
+                                  baseUrl,
                                   contentdirs, contentfiles: {},
                                   requestHandlerPaths: this.requestHandlerPaths()}
                                  ).run();
@@ -732,6 +750,9 @@ export abstract class LiminalApp {
         console.info('*** Shutdown requested with valid password - exiting.');
         if(this.pidFilePath) {
             try { Deno.removeSync(this.pidFilePath); } catch(_e) { /* already gone - ignore */ }
+        }
+        if(this.baseUrlFilePath) {
+            try { Deno.removeSync(this.baseUrlFilePath); } catch(_e) { /* already gone - ignore */ }
         }
         setTimeout(() => Deno.exit(0), 100);
         return server.htmlResponse(`${this.appName}: shutting down\n`);

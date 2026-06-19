@@ -54,7 +54,7 @@ export function createElement(tag: Tag|undefined, props: Record<string, any>, ..
     }
 }
 
-export module JSX {
+export namespace JSX {
     export interface IntrinsicElements {
         [elemName: string]: any;
     }

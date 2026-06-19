@@ -16,14 +16,34 @@ export class DenoHttpServer extends HttpServer {
         if (!this.config.port) {
             throw new Error('config must include port for a DenoHttpServer');
         }
-        
-        let serve_config: Deno.ServeTcpOptions = { port: this.config.port };
-        serve_config.port = this.config.port;
-        if (this.config.hostname) serve_config.hostname = this.config.hostname;
-        
-        console.log(`Starting HTTP webserver.  Access it at:  http://${serve_config.hostname||'localhost'}:${serve_config.port}/`);
-        
-        Deno.serve(serve_config, async (req, info) => this.serveRequest(req, info));
+
+        const port = this.config.port;
+        const bindHost = this.config.hostname || 'localhost';
+        const accessUrl = this.config.baseUrl ?? `http://${bindHost}:${port}/`;
+        console.log(`Starting HTTP webserver.  Access it at:  ${accessUrl}`);
+
+        const handler = async (req: Request, info: Deno.ServeHandlerInfo) =>
+            this.serveRequest(req, info);
+
+        // Bind loopback on BOTH IP stacks.  The advertised <name>.localhost can
+        // resolve to ::1 (IPv6) or 127.0.0.1 (IPv4) depending on the resolver,
+        // and Deno binds a single address per serve() - so a browser that picks
+        // the stack we didn't bind would get a dead connection.  We listen on
+        // both loopback addresses explicitly (NOT on :: / 0.0.0.0, which would
+        // expose the dev server - including /eval - on every interface).
+        const isLoopback = bindHost === 'localhost' || bindHost === '127.0.0.1' || bindHost === '::1';
+        if (isLoopback) {
+            Deno.serve({port, hostname: '127.0.0.1', onListen() {}}, handler);
+            // IPv6 loopback may be unavailable (disabled stack); tolerate failure.
+            try {
+                Deno.serve({port, hostname: '::1', onListen() {}}, handler);
+            } catch (e) {
+                console.warn(`(IPv6 loopback bind skipped: ${String(e)})`);
+            }
+            console.log(`Listening on loopback (127.0.0.1 + ::1) port ${port}`);
+        } else {
+            Deno.serve({port, hostname: bindHost}, handler);
+        }
     }
 
     async requestHandler(request: Request): Promise<Response> {

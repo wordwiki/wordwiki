@@ -124,6 +124,10 @@ export function parseCookies(cookieHeader: string | null | undefined): { [key: s
 interface HttpServerConfig {
     port?: number,
     hostname?: string,
+    /** The URL to ADVERTISE (e.g. http://wordwiki--2.localhost:8882/) - distinct
+     *  from the bind hostname, which is always loopback.  Used only for the
+     *  startup "Access it at" line; defaults to the bind host when unset. */
+    baseUrl?: string,
     contentdirs?: Record<string,string>;
     contentfiles?: Record<string,string>;
     requestHandlerPaths?: Record<string, (request: Request) => Promise<Response>>;

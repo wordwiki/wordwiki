@@ -4,31 +4,15 @@ set -e
 PIDFILE="rabid.pid"
 PWFILE="rabid-shutdown-password.txt"
 
-# Port resolution, in order:
-#   1. $RABID_PORT
-#   2. this checkout's (git-ignored) rabid_port.txt
-#   3. a trailing --N in the checkout dir name (wordwiki--1 -> 8881), so a
-#      numbered pool of worktrees needs no port file at all
-#   4. 8888
-# The env var / file let a parallel checkout pin its own port without exporting
-# RABID_PORT on every invocation.
-PORT="${RABID_PORT:-}"
-if [ -z "$PORT" ] && [ -f "rabid_port.txt" ]; then
-    PORT="$(tr -d '[:space:]' < rabid_port.txt)"
-fi
-if [ -z "$PORT" ]; then
-    base="$(basename "$PWD")"        # rabid runs from the checkout root
-    suffix="${base##*--}"            # text after the last '--', or $base if none
-    case "$suffix" in
-        "$base"|""|*[!0-9]*) : ;;    # no '--', or empty / non-numeric suffix
-        *) PORT=$((8880 + 10#$suffix)) ;;   # 10# forces base-10 (avoid octal on 08/09)
-    esac
-fi
-PORT="${PORT:-8888}"
-# The server reads its listen port from $RABID_PORT (see rabid.ts `serve`).
-# Export the resolved value so the deno process below actually binds $PORT
-# rather than falling back to its own 8888 default.
-export RABID_PORT="$PORT"
+# Resolve this checkout's port + advertised host (see liminal/run-env.sh for the
+# resolution order and the per-checkout cookie-isolation rationale).  rabid runs
+# from the checkout root, so $PWD names the checkout.  This exports RABID_PORT
+# (read by rabid.ts `serve`) and LIMINAL_PUBLIC_HOST (read by liminal's
+# startServer), so the deno process below binds the right port and advertises
+# <checkout-dir>.localhost.
+. "$(dirname "$0")/liminal/run-env.sh"
+resolve_run_env "$PWD" RABID_PORT "rabid_port.txt" 8880 8888
+PORT="$RABID_PORT"
 
 # Only one rabid server may run at a time on a given port (SQLite single-writer);
 # parallel checkouts coexist by pinning different ports (see above).  Before
