@@ -4,8 +4,21 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
-import { find, byClass, hasClass, tagOf, attr, hasText } from "../liminal/testing/markup-assert.ts";
+import { find, findAll, byClass, hasClass, tagOf, attr, hasText, text } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
+import * as date from "../liminal/date.ts";
+
+// A datetime `days` ago, for landing fixtures inside the 30-day active window.
+const daysAgo = (days: number) => date.temporalToSqliteDateTime(date.orgNow().subtract({days}));
+
+// Make a volunteer "active in the last 30 days" via a recent timesheet entry.
+function makeActive(volunteer_id: number): void {
+    asSystem(() => rabid.timesheet_entry.insert({
+        volunteer_id, start_time: daysAgo(3), end_time: daysAgo(3), notes: '',
+        is_paid_time: 0, km_driven_for_reimbursement: 0,
+        km_driven_processed: 0, paid_time_processed: 0,
+    }));
+}
 
 function insertEvent(): number {
     return asSystem(() => rabid.event.insert({
@@ -207,5 +220,149 @@ test("check-in editor: editing times/notes round-trips; blank clears the overrid
         await asUser(alice, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
             {event_checkin_id: String(checkinId), notes: 'host note'}));
         assertEquals(asSystem(() => rabid.event_checkin.getById(checkinId)).notes, 'host note');
+    });
+});
+
+test("check-in editor: host gets recent-volunteer quick-adds; regulars don't", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        makeActive(carol);   // carol is active in the last 30 days
+
+        // The host sees a one-tap "Check in Carol Private" (active, not yet in).
+        const hostView = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(hasText(hostView, "Check in Carol Private"));
+
+        // A regular volunteer gets only their own self verb, no host quick-adds.
+        const bobView = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(!hasText(bobView, "Check in Carol Private"));
+
+        // Tapping it checks carol in; the quick-add gives way to her check-out verb.
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, carol));
+        assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}))
+            .map(c => c.volunteer_name), ["Carol Private"]);
+        const after = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(!hasText(after, "Check in Carol Private"));
+        assert(hasText(after, "Check out Carol Private"));
+    });
+});
+
+test("check-in editor: per-person verbs are action-primary (all check-outs, then all edits)", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, bob));
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, carol));
+
+        const view = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        const labels = findAll(view, n => tagOf(n) === 'button' && hasClass(n, 'dropdown-item'))
+            .map(b => text(b).trim());
+        // Grouped by ACTION, not by person: both check-outs (alpha), then both edits.
+        assertEquals(labels.filter(l => l.startsWith('Check out')),
+            ['Check out Bob Shares', 'Check out Carol Private']);
+        assertEquals(labels.filter(l => l.startsWith('Edit')),
+            ["Edit Bob Shares's check-in…", "Edit Carol Private's check-in…"]);
+        // Every check-out precedes every edit.
+        assert(labels.lastIndexOf('Check out Carol Private')
+               < labels.indexOf("Edit Bob Shares's check-in…"),
+               'all check-outs come before all edits');
+    });
+});
+
+// --- Event sign-up (commitment) editor -----------------------------------------
+
+test("sign-up: self-signup is always allowed, idempotent, and removable", async () => {
+    await withTestDb(async ({ bob }) => {
+        const id = insertEvent();
+        // A regular volunteer signs themselves up (no host role needed).
+        const res = await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, id));
+        assertEquals(res.action, "reload");
+        assert(res.targets.includes(`.-event_commitment-${id}-`));
+        // Idempotent: signing up again is a no-op (one row).
+        await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, id));
+        assertEquals(asSystem(() => rabid.event_commitment.commitmentsForEventWithVolunteerName
+            .all({event_id: id})).map(c => c.volunteer_name), ["Bob Shares"]);
+        // ...and they can remove their own sign-up.
+        await asUser(bob, () => invoke(`rabid.event_commitment.uncommit($arg0,$arg1)`, id, bob));
+        assertEquals(asSystem(() => rabid.event_commitment.commitmentsForEvent.all({event_id: id})).length, 0);
+    });
+});
+
+test("sign-up: signing OTHERS up/removing needs host/admin", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        // bob (regular) may not sign carol up, nor open the dialog.
+        await asUser(bob, () => assertRejects(
+            () => invoke(`rabid.event_commitment.commit($arg0)`,
+                         {event_id: String(id), volunteer_id: String(carol)}),
+            Error, "not permitted"));   // route layer (@route hostOrAdmin) denies first
+        await asUser(bob, () => assertRejects(
+            () => renderRoute(`rabid.event_commitment.commitDialog(${id})`),
+            Error, "not permitted"));
+
+        // alice (host) signs carol up; bob still can't remove her.
+        await asUser(alice, () => invoke(`rabid.event_commitment.commit($arg0)`,
+            {event_id: String(id), volunteer_id: String(carol)}));
+        assertEquals(asSystem(() => rabid.event_commitment.commitmentsForEventWithVolunteerName
+            .all({event_id: id})).map(c => c.volunteer_name), ["Carol Private"]);
+        await asUser(bob, () => assertRejects(
+            () => invoke(`rabid.event_commitment.uncommit($arg0,$arg1)`, id, carol),
+            Error, "not permitted"));   // route layer (@route or(hostOrAdmin, selfArg)) denies first
+        await asUser(alice, () => invoke(`rabid.event_commitment.uncommit($arg0,$arg1)`, id, carol));
+        assertEquals(asSystem(() => rabid.event_commitment.commitmentsForEvent.all({event_id: id})).length, 0);
+    });
+});
+
+test("sign-up editor: self verb for everyone, host verbs only for hosts", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();
+
+        // Logged-in non-signee: "Sign me up", but NOT the host's "Sign someone up…".
+        const before = await asUser(bob, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
+        assert(!!find(before, byClass("lm-action-menu")));
+        assert(hasText(before, "Sign me up"));
+        assert(!hasText(before, "Sign someone up…"));
+
+        // Once signed up, the self verb flips to "Remove me".
+        await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, id));
+        const after = await asUser(bob, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
+        assert(hasText(after, "Bob Shares"));
+        assert(!hasText(after, "Sign me up"));
+        assert(hasText(after, "Remove me"));
+
+        // The host gets the management verbs (sign someone up, remove others).
+        const hostView = await asUser(alice, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
+        assert(hasText(hostView, "Sign someone up…"));
+        assert(hasText(hostView, "Remove Bob Shares"));
+    });
+});
+
+test("sign-up editor: host gets recent-volunteer quick-adds; regulars don't", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        makeActive(carol);   // carol is active in the last 30 days
+
+        // The host sees a one-tap "Sign up Carol Private" (active, not yet signed up).
+        const hostView = await asUser(alice, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
+        assert(hasText(hostView, "Sign up Carol Private"));
+
+        // A regular volunteer gets only their own self verb, no host quick-adds.
+        const bobView = await asUser(bob, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
+        assert(!hasText(bobView, "Sign up Carol Private"));
+
+        // Tapping it signs carol up; the quick-add gives way to her remove verb.
+        await asUser(alice, () => invoke(`rabid.event_commitment.commitVolunteer($arg0,$arg1)`, id, carol));
+        const after = await asUser(alice, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
+        assert(!hasText(after, "Sign up Carol Private"));
+        assert(hasText(after, "Remove Carol Private"));
+    });
+});
+
+test("the event detail page renders the sign-up and check-in editors", async () => {
+    await withTestDb(async ({ bob }) => {
+        const id = insertEvent();
+        const detail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assert(hasText(detail, "Signed up:"));
+        // Both editors are reachable on the detail page (their fragments present).
+        assert(!!find(detail, byClass(`-event_commitment-${id}-`)));
+        assert(!!find(detail, byClass(`-event_checkin-${id}-`)));
     });
 });

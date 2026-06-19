@@ -51,6 +51,17 @@ export function activeVolunteerIdsWithin(days: number): Set<number> {
     return new Set(rows.map(r => r.volunteer_id));
 }
 
+// The recently-active volunteers as {id, name}, alpha by name.  Same active-set
+// definition as activeVolunteerIdsWithin, but carries names so callers can build
+// quick-add menu items ("Sign up Barry", "Check in Barry") on the event page.
+export function activeVolunteersWithin(days: number): Array<{volunteer_id: number, name: string}> {
+    return db().all<{volunteer_id: number, name: string}, {since: string}>(`
+        SELECT volunteer_id, name FROM volunteer
+         WHERE deleted = 0 AND volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
+         ORDER BY name`,
+        {since: cutoffSince(days)});
+}
+
 // The window the picker surfaces, and the marker that flags where the active
 // block ends.  The marker is PICKER-ONLY: it is appended to an option label in
 // the dropdown, never to loadLabel (the selected-option display) or render()

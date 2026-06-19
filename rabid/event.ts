@@ -5,7 +5,7 @@ import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
 import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron } from "../liminal/table.ts";
-import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
+import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
@@ -442,8 +442,17 @@ export class EventTable extends Table<Event> {
             );
         }
         
-        // Signed-up row (commitments)
-        if (commitments.length > 0) {
+        // Signed-up row (commitments).  On the detail page (editableCheckins) the
+        // value IS the sign-up editor (always shown, so the ☰ is reachable even
+        // with nobody signed up yet); elsewhere (cards) it's a read-only names list.
+        if (opts.editableCheckins) {
+            gridRows.push(
+                [h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Signed up:'],
+                    [h.div, {}, rabid.event_commitment.renderCommitmentEditor(event_id)]
+                ]
+            );
+        } else if (commitments.length > 0) {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Signed up:'],
@@ -578,7 +587,174 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         return db().prepare<(EventCommitment&{volunteer_name: string}), {event_id: number}>(block`
 /**/   SELECT ${this.allFields}, volunteer.name AS volunteer_name
 /**/          FROM event_commitment LEFT JOIN volunteer USING (volunteer_id)
-/**/          WHERE event_id = :event_id`);
+/**/          WHERE event_id = :event_id
+/**/          ORDER BY volunteer.name`);
+    }
+
+    // A commitment belongs to its volunteer (drives isSelf / self-edit gating),
+    // like a check-in.
+    ownerId(c: EventCommitment): number|undefined { return c.volunteer_id; }
+
+    // ------------------------------------------------------------------------
+    // --- Sign-up editor (the commitment UI) ----------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // Same interaction language as the check-in editor and the group member
+    // editor: the signed-up names as a document phrase plus ONE ☰ holding every
+    // sign-up verb.  "Sign me up" is the always-allowed self-signup; signing
+    // OTHERS up (the recent-volunteer quick-adds and the picker) needs host/admin.
+
+    // Can the current actor manage anyone's sign-up on this event (host/admin)?
+    // Self sign-up / removal is allowed regardless and handled per-action.
+    private canManageCommitments(): boolean {
+        const ctx = security.current();
+        if(!ctx || ctx.system) return true;
+        return hostOrAdmin({ctx});
+    }
+
+    private hasCommitment(event_id: number, volunteer_id: number): boolean {
+        return !!db().prepare<{n: number}, {event_id: number, volunteer_id: number}>(
+            'SELECT 1 AS n FROM event_commitment WHERE event_id = :event_id AND volunteer_id = :volunteer_id')
+            .first({event_id, volunteer_id});
+    }
+
+    // Reload the event's sign-up fragment (htmx re-renders only selectors present).
+    private reloadEditor(event_id: number): Markup {
+        return {action: 'reload', targets: [`.-event_commitment-${event_id}-`]} as unknown as Markup;
+    }
+
+    // "Sign me up": commit the CURRENT actor.  Ungated (self-signup is always
+    // allowed); idempotent (no-op if already signed up).
+    @routeMutation(authenticated)   // self-signup: any logged-in volunteer signs themselves up
+    commitSelf(event_id: number): Markup {
+        const actorId = security.current()?.actorId;
+        if(actorId === undefined) throw new Error('Not logged in as a volunteer');
+        if(!this.hasCommitment(event_id, actorId))
+            this.insert({event_id, volunteer_id: actorId, notes: ''});
+        return this.reloadEditor(event_id);
+    }
+
+    // Quick-add: host/admin signs one named volunteer up (the recent-volunteer
+    // menu shortcuts; the dialog's commit() funnels here too).  Positional, so it
+    // can be an immediate menu action like uncommit.
+    @routeMutation(hostOrAdmin)
+    commitVolunteer(event_id: number, volunteer_id: number): Markup {
+        if(!this.canManageCommitments())
+            throw new Error('Not permitted to sign volunteers up for this event');
+        if(!Number.isInteger(volunteer_id) || !volunteer_id)
+            throw new Error('Please choose a volunteer');
+        if(!this.hasCommitment(event_id, volunteer_id))
+            this.insert({event_id, volunteer_id, notes: ''});
+        return this.reloadEditor(event_id);
+    }
+
+    // "Sign someone up": host/admin signs another volunteer up (args from the
+    // sign-up dialog's form - strings, like every bodyArgs form).
+    @routeMutation(hostOrAdmin)
+    commit(args: {event_id?: string|number, volunteer_id?: string|number}): Markup {
+        const event_id = Number(args?.event_id);
+        const volunteer_id = Number(args?.volunteer_id);
+        if(!Number.isInteger(event_id) || !Number.isInteger(volunteer_id) || !volunteer_id)
+            throw new Error('Please choose a volunteer');
+        return this.commitVolunteer(event_id, volunteer_id);
+    }
+
+    // Remove a volunteer's sign-up.  Own always; anyone else's needs host/admin.
+    // Immediate (picking the named item is deliberate, and re-adding is trivial).
+    @routeMutation(security.or(hostOrAdmin, selfArg(args => Number(args[1]))))   // own removal, or host
+    uncommit(event_id: number, volunteer_id: number): Markup {
+        const actorId = security.current()?.actorId;
+        if(!this.canManageCommitments() && actorId !== volunteer_id)
+            throw new Error('Not permitted to remove this sign-up');
+        db().execute<{event_id: number, volunteer_id: number}>(
+            'DELETE FROM event_commitment WHERE event_id = :event_id AND volunteer_id = :volunteer_id',
+            {event_id, volunteer_id});
+        return this.reloadEditor(event_id);
+    }
+
+    // Clear the whole sign-up list (host/admin; confirm-gated - it's bulk).
+    @routeMutation(hostOrAdmin)
+    uncommitAll(event_id: number): Markup {
+        if(!this.canManageCommitments())
+            throw new Error('Not permitted to remove sign-ups for this event');
+        db().execute<{event_id: number}>(
+            'DELETE FROM event_commitment WHERE event_id = :event_id', {event_id});
+        return this.reloadEditor(event_id);
+    }
+
+    // The sign-someone-up dialog: one volunteer picker, event id riding hidden.
+    @route(hostOrAdmin)
+    commitDialog(event_id: number): Markup {
+        if(!this.canManageCommitments())
+            throw new Error('Not permitted to sign volunteers up for this event');
+        return action.renderParamForm(
+            [new VolunteerForeignKeyField('volunteer_id', {})],
+            {},
+            {
+                title: 'Sign a volunteer up',
+                submitLabel: 'Sign up',
+                hidden: {event_id},
+                fieldContext: {ownerPath: 'rabid.event_commitment'},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.event_commitment.commit(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    // The reloadable sign-up fragment: the signed-up names + the one ☰.  Lives
+    // inside the fragment so a sign-up reload regenerates it (the per-person
+    // remove items and the recent quick-adds must track the roster).  Menu order
+    // is ACTION-primary, not target-primary: all the adds, then all the removes.
+    @route(authenticated)
+    renderCommitmentEditor(event_id: number): Markup {
+        const commitments = this.commitmentsForEventWithVolunteerName.all({event_id});
+        const actorId = security.current()?.actorId;
+        const canManage = this.canManageCommitments();
+        const isCommitted = actorId !== undefined && commitments.some(c => c.volunteer_id === actorId);
+        const committedIds = new Set(commitments.map(c => c.volunteer_id));
+        const props = this.reloadableItemProps(event_id, `rabid.event_commitment.renderCommitmentEditor(${event_id})`);
+
+        const items: action.ActionMenuItem[] = [];
+        // Add verbs: self-signup, then the recent-volunteer quick-adds, then the
+        // catch-all picker for anyone not in the recent list.
+        if(actorId !== undefined && !isCommitted)
+            items.push({label: 'Sign me up',
+                        mode: {kind: 'immediate', expr: `rabid.event_commitment.commitSelf(${event_id})`}});
+        if(canManage) {
+            for(const v of activeVolunteersWithin(30)
+                    .filter(v => !committedIds.has(v.volunteer_id) && v.volunteer_id !== actorId))
+                items.push({label: `Sign up ${v.name}`,
+                            mode: {kind: 'immediate',
+                                   expr: `rabid.event_commitment.commitVolunteer(${event_id},${v.volunteer_id})`}});
+            items.push({label: 'Sign someone up…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.event_commitment.commitDialog(${event_id})`}});
+        }
+        // Remove verbs (own row always; others only with host/admin), grouped.
+        const manageable = commitments.filter(c => canManage || c.volunteer_id === actorId);
+        if(items.length > 0 && manageable.length > 0) items.push('divider');
+        for(const c of manageable)
+            items.push({label: c.volunteer_id === actorId ? 'Remove me' : `Remove ${c.volunteer_name}`,
+                        mode: {kind: 'immediate',
+                               expr: `rabid.event_commitment.uncommit(${event_id},${c.volunteer_id})`}});
+        if(canManage && commitments.length >= 2)
+            items.push({label: 'Remove everyone…',
+                        mode: {kind: 'confirm',
+                               expr: `rabid.event_commitment.uncommitAll(${event_id})`,
+                               message: `Remove all ${commitments.length} sign-ups?`}});
+
+        return [h.span, {...props, class: 'lm-name-list ' + props.class},
+            commitments.length === 0
+                ? [h.span, {class: 'text-muted small'}, 'nobody yet']
+                : joinNames(commitments.map(c => this.renderCommitmentName(c))),
+            items.length > 0
+                ? [commitments.length > 0 ? ' ' : '', action.actionMenu(items, {ariaLabel: 'Sign-up actions'})]
+                : undefined,
+        ];
+    }
+
+    // One signed-up volunteer as inline text: name, a quiet link to the volunteer page.
+    renderCommitmentName(c: EventCommitment & {volunteer_name: string}): Markup {
+        return [h.span, {class: 'lm-member', 'data-testid': `commitment-${c.volunteer_id}`},
+            templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, c.volunteer_name)];
     }
 }
 
@@ -735,6 +911,20 @@ export class EventCheckinTable extends Table<EventCheckin> {
         return this.reloadEditor(event_id, [actorId]);
     }
 
+    // Quick-add: host/admin checks one named volunteer in (the recent-volunteer
+    // menu shortcuts; the dialog's checkIn() funnels here too).  Positional, so it
+    // can be an immediate menu action like checkOut.
+    @routeMutation(hostOrAdmin)
+    checkInVolunteer(event_id: number, volunteer_id: number): Markup {
+        if(!this.canManageCheckins())
+            throw new Error('Not permitted to check volunteers into this event');
+        if(!Number.isInteger(volunteer_id) || !volunteer_id)
+            throw new Error('Please choose a volunteer');
+        if(!this.hasCheckin(event_id, volunteer_id))
+            this.insert({event_id, volunteer_id, notes: ''});
+        return this.reloadEditor(event_id, [volunteer_id]);
+    }
+
     // "Check someone in": host/admin checks another volunteer in (args from the
     // check-in dialog's form - strings, like every bodyArgs form).
     @routeMutation(hostOrAdmin)     // checking SOMEONE ELSE in
@@ -743,11 +933,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
         const volunteer_id = Number(args?.volunteer_id);
         if(!Number.isInteger(event_id) || !Number.isInteger(volunteer_id) || !volunteer_id)
             throw new Error('Please choose a volunteer');
-        if(!this.canManageCheckins())
-            throw new Error('Not permitted to check volunteers into this event');
-        if(!this.hasCheckin(event_id, volunteer_id))
-            this.insert({event_id, volunteer_id, notes: ''});
-        return this.reloadEditor(event_id, [volunteer_id]);
+        return this.checkInVolunteer(event_id, volunteer_id);
     }
 
     // Check a volunteer out (remove their check-in).  Own check-in always; anyone
@@ -850,25 +1036,38 @@ export class EventCheckinTable extends Table<EventCheckin> {
         const isCheckedIn = actorId !== undefined && checkins.some(c => c.volunteer_id === actorId);
         const props = this.reloadableItemProps(event_id, `rabid.event_checkin.renderCheckinEditor(${event_id})`);
 
+        const checkedInIds = new Set(checkins.map(c => c.volunteer_id));
         const items: action.ActionMenuItem[] = [];
+        // Add verbs: self check-in, then the recent-volunteer quick-adds, then the
+        // catch-all picker for anyone not in the recent list.
         if(actorId !== undefined && !isCheckedIn)
             items.push({label: 'Check me in',
                         mode: {kind: 'immediate', expr: `rabid.event_checkin.checkSelfIn(${event_id})`}});
-        if(canManage)
+        if(canManage) {
+            for(const v of activeVolunteersWithin(30)
+                    .filter(v => !checkedInIds.has(v.volunteer_id) && v.volunteer_id !== actorId))
+                items.push({label: `Check in ${v.name}`,
+                            mode: {kind: 'immediate',
+                                   expr: `rabid.event_checkin.checkInVolunteer(${event_id},${v.volunteer_id})`}});
             items.push({label: 'Check someone in…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.event_checkin.checkInDialog(${event_id})`}});
-        // Per-person verbs (own row always; others only with host/admin): the
-        // detailed Edit (times/notes) then the one-tap Check out, kept adjacent.
+        }
+        // Per-person verbs (own row always; others only with host/admin), ordered
+        // ACTION-primary, not target-primary: all the check-outs, then all the
+        // detailed edits (times/notes).
         const manageable = checkins.filter(c => canManage || c.volunteer_id === actorId);
         if(items.length > 0 && manageable.length > 0) items.push('divider');
+        for(const c of manageable) {
+            const self = c.volunteer_id === actorId;
+            items.push({label: self ? 'Check me out' : `Check out ${c.volunteer_name}`,
+                        mode: {kind: 'immediate',
+                               expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
+        }
         for(const c of manageable) {
             const self = c.volunteer_id === actorId;
             items.push({label: self ? 'Edit my check-in…' : `Edit ${c.volunteer_name}'s check-in…`,
                         mode: {kind: 'modal',
                                dialogUrl: `/rabid.event_checkin.editCheckinDialog(${c.event_checkin_id})`}});
-            items.push({label: self ? 'Check me out' : `Check out ${c.volunteer_name}`,
-                        mode: {kind: 'immediate',
-                               expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
         }
         if(canManage && checkins.length >= 2)
             items.push({label: 'Check everyone out…',
