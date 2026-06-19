@@ -72,6 +72,14 @@ export class Db {
 
     static open(path: string): Db {
         console.info('opening ', path);
+        // The sqlite lib creates the db FILE on demand but not its parent
+        // DIRECTORY: opening 'database/db.db' when 'database/' is missing fails
+        // with NotFound.  Create the parent dir first so a fresh checkout can go
+        // from no-db to a running system (servers + create_fake_data alike).
+        // Skip ':memory:' and bare filenames (no directory component).
+        const slash = path.lastIndexOf('/');
+        if(path !== ':memory:' && slash > 0)
+            Deno.mkdirSync(path.slice(0, slash), {recursive: true});
         return new Db(new denoSqlite.DB(path));
     }
 
