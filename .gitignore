@@ -13,9 +13,11 @@
 /current-task.txt
 
 # Runtime files written by the rabid server at startup (see Rabid.startServer).
+# (wordwiki's equivalents live in its instance dir, /mmo/, already ignored above.)
 /rabid.pid
 /rabid-shutdown-password.txt
 /rabid-eval-password.txt
+/rabid-base-url.txt
 
 # The rabid dev database (rebuilt by rabid_create_fake_data.sh at the repo
 # root); throwaway fake data, never tracked.
