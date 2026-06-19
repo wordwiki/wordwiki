@@ -16,3 +16,7 @@
 /rabid.pid
 /rabid-shutdown-password.txt
 /rabid-eval-password.txt
+
+# The rabid dev database (rebuilt by rabid_create_fake_data.sh at the repo
+# root); throwaway fake data, never tracked.
+/database/

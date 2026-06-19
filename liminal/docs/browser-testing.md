@@ -121,7 +121,7 @@ directly) and in-browser checks (`evalInBrowser`).
    the restart; the tab reconnects on its own (opt-in is durable, the client
    re-polls), so the run targets it with no interaction. Repeat 2–3.
 
-Caveat: this holds for **code** changes. A **db rebuild** (`create_fake_data.sh`)
+Caveat: this holds for **code** changes. A **db rebuild** (`rabid_create_fake_data.sh`)
 wipes the session table, so the cookie/opt-in are gone — log in and re-open the
 page once.
 
