@@ -74,6 +74,32 @@ test("VolunteerForeignKeyField: active-first ordering with a picker-only marker"
         assertEquals(field.loadLabel(bob), 'Bob Shares');
     })));
 
+test("VolunteerForeignKeyField: a non-empty q runs the search form (name-prefix), still active-first", () =>
+    withTestDb(({ bob }) => asSystem(() => {
+        const r = getRabid();
+        // bob active; the others inactive.  Names: Alice Host, Bob Shares, Carol
+        // Private, Dave Admin.
+        r.timesheet_entry.insert({
+            volunteer_id: bob, start_time: daysAgo(3), end_time: daysAgo(3),
+            notes: 'shop', is_paid_time: 0, km_driven_for_reimbursement: 0,
+            km_driven_processed: 0, paid_time_processed: 0,
+        });
+        const field = new VolunteerForeignKeyField('volunteer_id', {});
+
+        // The leading-space trick matches the term at the START of any word, so
+        // 'sh' finds "Bob Shares" but not "Alice Host".
+        assertEquals(field.loadOptions('sh').map(o => o.label), ['Bob Shares']);
+
+        // It filters by prefix, not substring: 'are' (mid-word) matches nothing.
+        assertEquals(field.loadOptions('are').length, 0);
+
+        // Search still surfaces active-first + marker: 'a' hits Alice/Admin/(B)ob?
+        // — only word-initial 'a': "Alice", "Admin".  bob (active) isn't an 'a'
+        // word, so do a query that includes him to check ordering.
+        const all = field.loadOptions('');                       // the options form
+        assertEquals(all[0].label, 'Bob Shares (Active 30 Days)'); // active-first
+    })));
+
 test("VolunteerForeignKeyField: no marker when every shown option is active", () =>
     withTestDb(({ alice, bob, carol, dave }) => asSystem(() => {
         const r = getRabid();

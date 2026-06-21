@@ -69,6 +69,32 @@ export function activeVolunteersWithin(days: number): Array<{volunteer_id: numbe
 const PICKER_DAYS = 30;
 const PICKER_MARKER = ` (Active ${PICKER_DAYS} Days)`;
 
+// One picker row: a volunteer's id/label plus an `active` flag (1 = active within
+// PICKER_DAYS) that drives both the active-first ordering and the boundary marker.
+type PickerRow = {id: number, label: string, active: number};
+
+// Two query forms, so the common option-population path doesn't carry the search
+// machinery: PICKER_OPTIONS_SQL (q === '') runs no LIKE; PICKER_SEARCH_SQL adds
+// the word-prefix name filter for the type-ahead.  Each is a single, distinct,
+// prepared-once statement.
+const PICKER_OPTIONS_SQL = `
+    SELECT volunteer_id AS id, name AS label,
+           CASE WHEN volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
+                THEN 1 ELSE 0 END AS active
+      FROM volunteer
+      WHERE deleted = 0
+      ORDER BY active DESC, name
+      LIMIT :limit`;
+const PICKER_SEARCH_SQL = `
+    SELECT volunteer_id AS id, name AS label,
+           CASE WHEN volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
+                THEN 1 ELSE 0 END AS active
+      FROM volunteer
+      WHERE deleted = 0
+        AND (' ' || name) LIKE '% ' || :q || '%'
+      ORDER BY active DESC, name
+      LIMIT :limit`;
+
 // A volunteer foreign-key picker that lists recently-active volunteers first
 // (alpha), then the rest (alpha), with a marker on the last active option so the
 // boundary is obvious.  Ordering happens in SQL so the active ones survive the
@@ -79,17 +105,12 @@ export class VolunteerForeignKeyField extends ForeignKeyField {
     }
 
     override loadOptions(q: string = '', limit: number = 1000): Array<{id: any, label: any}> {
-        const rows = db().all<{id: number, label: string, active: number},
-                              {q: string, since: string, limit: number}>(`
-            SELECT volunteer_id AS id, name AS label,
-                   CASE WHEN volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
-                        THEN 1 ELSE 0 END AS active
-              FROM volunteer
-              WHERE deleted = 0
-                AND (:q = '' OR (' ' || name) LIKE '% ' || :q || '%')
-              ORDER BY active DESC, name
-              LIMIT :limit`,
-            {q, since: cutoffSince(PICKER_DAYS), limit});
+        const since = cutoffSince(PICKER_DAYS);
+        const rows = q === ''
+            ? db().all<PickerRow, {since: string, limit: number}>(
+                PICKER_OPTIONS_SQL, {since, limit})
+            : db().all<PickerRow, {q: string, since: string, limit: number}>(
+                PICKER_SEARCH_SQL, {q, since, limit});
 
         const out = rows.map(r => ({id: r.id, label: r.label}));
         // Mark the last active option, but only when inactive options follow it -
