@@ -277,6 +277,36 @@ test("timesheet confirmation: host confirms, non-host edit clears it", () => {
     });
 });
 
+test("timesheet confirmation: an unpaid confirmed entry counts in confirmedHours and renders a badge", () => {
+    return withTestDb(async ({ alice, bob }) => {
+        asSystem(() => rabid.volunteer.update(bob, {volunteer_hours_need_confirmation: 1} as any));
+        const tid = asSystem(() => rabid.timesheet_entry.insert({
+            volunteer_id: bob, start_time: '2026-06-20 09:00:00', end_time: '2026-06-20 12:00:00',  // 3h, unpaid
+            notes: 'desk work', is_paid_time: 0, km_driven_for_reimbursement: 0,
+            km_driven_processed: 0, paid_time_processed: 0,
+        } as any));
+
+        // Unconfirmed: the 3 volunteer hours are all unconfirmed.
+        let m = asSystem(() => rabid.volunteer_time.model(bob));
+        assertEquals(m.volunteerHours, 3);
+        assertEquals(m.confirmedHours, 0);
+        assertEquals(m.unconfirmedHours, 3);
+
+        // A host confirms the timesheet -> the hours move to confirmed.
+        await asUser(alice, () => invoke(`rabid.timesheet_entry.confirm($arg0)`, tid));
+        m = asSystem(() => rabid.volunteer_time.model(bob));
+        assertEquals(m.confirmedHours, 3);
+        assertEquals(m.unconfirmedHours, 0);
+
+        // The confirmed badge renders for the volunteer's own (timesheet) row.
+        await asUser(bob, async () => {
+            const view = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob})`);
+            assert(hasText(view, 'confirmed'));
+            assert(hasText(view, 'desk work'));   // it's the timesheet row, not a check-in
+        });
+    });
+});
+
 test("confirmation privacy: self & host see status; other volunteers do NOT", () => {
     return withTestDb(async ({ alice, bob, carol }) => {
         asSystem(() => rabid.volunteer.update(bob, {volunteer_hours_need_confirmation: 1} as any));
