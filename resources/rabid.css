@@ -141,6 +141,38 @@
     color: #555;
 }
 
+/* Prep times (shop load, setup) stacked under the headline event time in the
+   Time row - secondary but unmissable, so nobody reads only the start time. */
+.card-time-main {
+    color: #333;
+}
+
+.card-subtime {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.card-subtime-label {
+    color: #888;
+}
+
+/* Event notes: the event's own prose (no field label).  A left accent rule and
+   slightly larger type give it weight so it reads as primary content on the
+   detail page, without the box/heading that made it look like a field again. */
+.event-notes {
+    margin: 6px 0 24px;
+    padding: 2px 0 2px 16px;
+    border-left: 5px solid #FF9800;
+    font-size: 1.1em;
+    line-height: 1.55;
+    color: #222;
+}
+
+.event-notes > :first-child,
+.event-notes .lm-markdown > :first-child { margin-top: 0; }
+.event-notes > :last-child,
+.event-notes .lm-markdown > :last-child { margin-bottom: 0; }
+
 
 /* ============================= */
 /* Upcoming Events Styles        */

@@ -226,11 +226,24 @@ export class EventTable extends Table<Event> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
              this.canEditRecord(e) ? this.editPencil(event_id) : undefined],
-            this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true}),
+            this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true, hideNotes: true}),
+            // Notes are primary event content: give them their own prominent
+            // block below the summary card (not buried as a card field), above
+            // the tasks.
+            this.renderEventNotes(e),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add (see task.renderOwnerTasks).
             rabid.task.renderOwnerTasks('event', event_id),
         ];
+    }
+
+    // The detail page's notes: the event's own prose, not a labelled field - so
+    // no heading.  A left accent rule + slightly larger type give it weight so it
+    // reads as primary content instead of dying between the card and the tasks.
+    renderEventNotes(e: Event): Markup {
+        if (!e.notes || !e.notes.trim()) return undefined as unknown as Markup;
+        return [h.div, {class: 'event-notes'},
+            this.fieldsByName.notes.render(e.notes)];
     }
 
     renderUpcomingEvents(): Markup {
@@ -312,7 +325,7 @@ export class EventTable extends Table<Event> {
     // (the home upcoming-events cards) - the detail page itself passes false,
     // since there it would be a pointless self-link.
     @route(authenticated)
-    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean} = {}): Markup {
+    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean} = {}): Markup {
         const titleLink = opts.titleLink ?? true;
 
         // Get the event
@@ -392,17 +405,34 @@ export class EventTable extends Table<Event> {
         
         // Build grid rows for details
         const gridRows: Markup[] = [];
-        
-        // Time row
-        if (timeParts.length > 0) {
+
+        // Schedule row: the headline event time, with the prep times (shop load,
+        // setup) stacked BENEATH it - same row, same label - so a volunteer
+        // reading for "the time" can't one-and-done on the start time and miss
+        // when they're actually needed.
+        const mainTime = timeParts.join('');
+        const subTimes: Markup[] = [];
+        if (event.shop_load_time) {
+            subTimes.push([h.div, {class: 'card-subtime'},
+                [h.span, {class: 'card-subtime-label'}, 'Shop load '],
+                date.sqliteDateTimeToTimeString(event.shop_load_time)]);
+        }
+        if (event.setup_time) {
+            subTimes.push([h.div, {class: 'card-subtime'},
+                [h.span, {class: 'card-subtime-label'}, 'Setup '],
+                date.sqliteDateTimeToTimeString(event.setup_time)]);
+        }
+        if (mainTime || subTimes.length > 0) {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Time:'],
-                    [h.div, {}, timeParts.join('')]
+                    [h.div, {},
+                        mainTime ? [h.div, {class: 'card-time-main'}, mainTime] : undefined,
+                        ...subTimes]
                 ]
             );
         }
-        
+
         // Location row
         if (event.location_description) {
             const locationValue: Markup[] = [];
@@ -420,24 +450,6 @@ export class EventTable extends Table<Event> {
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Location:'],
                     [h.div, {}, ...locationValue]
-                ]
-            );
-        }
-        
-        // Special timing rows
-        if (event.shop_load_time) {
-            gridRows.push(
-                [h.div, {class: 'card-detail-row'},
-                    [h.div, {}, 'Shop load:'],
-                    [h.div, {}, date.sqliteDateTimeToTimeString(event.shop_load_time)]
-                ]
-            );
-        }
-        if (event.setup_time) {
-            gridRows.push(
-                [h.div, {class: 'card-detail-row'},
-                    [h.div, {}, 'Setup:'],
-                    [h.div, {}, date.sqliteDateTimeToTimeString(event.setup_time)]
                 ]
             );
         }
@@ -505,8 +517,10 @@ export class EventTable extends Table<Event> {
             );
         }
         
-        // Notes row (only show if present)
-        if (event.notes && event.notes.trim()) {
+        // Notes row (only show if present).  The detail page passes hideNotes
+        // and renders notes as its own prominent block below the card instead -
+        // notes are primary event content, not a small card field.
+        if (!opts.hideNotes && event.notes && event.notes.trim()) {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Notes:'],
