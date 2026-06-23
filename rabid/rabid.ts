@@ -92,7 +92,7 @@ export class Rabid extends LiminalApp {
     }
 
     home() { return templates.page('home', home.home()); }
-    volunteers() { return templates.page('Volunteers', this.volunteer.renderSearchableVolunteers()); }
+    volunteers() { return templates.page('Volunteers', this.volunteer.renderVolunteersPage()); }
     events() { return templates.page('Events', this.event.renderEventsPage()); }
     sales() { return templates.page('Sales', this.sale.renderSalesPage()); }
     servicePage() { return templates.page('Service', this.service.renderServicePage()); }

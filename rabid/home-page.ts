@@ -10,8 +10,8 @@ import * as passwordUtils from '../liminal/password.ts';
 
 export function home(): Markup {
     const title = "Rabid - The Red Raccoon Volunteer System"
-    return [
-        [h.h1, {}, title],
+    return [h.div, {class: 'container py-3'},
+        [h.h2, {}, title],
 
         [h.br, {}],
 
@@ -20,7 +20,7 @@ export function home(): Markup {
 
         [h.h3, {}, 'Your recent activity'],
         //rabid.volunteer.timesheet_entry.renderRecentActivity(0),
-        
+
         [h.h3, {}, 'Volunteers'],
         rabid.volunteer.renderSearchableVolunteers(),
 

@@ -255,6 +255,16 @@ export class VolunteerTable extends Table<Volunteer> {
                                    'btn btn-outline-primary btn-sm');
     }
 
+    // The top-level Volunteers page body (dispatched from the navbar's
+    // /volunteers).  Mirrors renderEventsPage: a container with an h2 title
+    // wrapping the standard searchable list.
+    renderVolunteersPage(): Markup {
+        return [h.div, {class: 'container py-3'},
+            [h.h2, {}, 'Volunteers'],
+            this.renderSearchableVolunteers(),
+        ];
+    }
+
     // The Volunteers section of the home/volunteers pages (a standin - these
     // will grow into structured summaries; search lives on its own page).
     renderSearchableVolunteers(): Markup {
