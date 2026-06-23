@@ -137,6 +137,23 @@
     text-decoration: underline;
 }
 
+/* A navigable row's name is its TITLE, not a link: the whole row is the link
+   (cursor + hover tint + chevron say so), so the name should read as the most
+   important thing on the line - body colour, semibold, never underlined - not
+   as generic link-blue chrome.  Used by every navigable list + the events
+   table; overrides the .lm-item-primary a link styling above. */
+.lm-nav-link {
+    color: var(--bs-body-color);
+    font-weight: 600;
+    text-decoration: none;
+}
+.lm-nav-link:hover,
+.lm-nav-link:focus,
+.lm-item-primary a.lm-nav-link:hover {
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
 /* The navigable counterpart of the pencil: a muted chevron marking a row whose
    whole surface drills in to a detail page (navigableItemProps). */
 .lm-nav-chevron {

@@ -443,9 +443,10 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
             rabid.event.insert({
                 event_kind: 'public',
                 description: "Saturday in Victoria Park",
-                location_description: 'Victoria Park - Behind 79 Joseph Street',
-                location_url: '',
-                is_remote_event: 0,
+                // Off-site (the park) -> remote, so it carries a location.
+                location_description: 'Victoria Park - Near the Lake',
+                location_url: 'https://maps.google.com/?q=Victoria+Park+Kitchener',
+                is_remote_event: 1,
                 volunteer_only: 0,
                 shop_load_time: undefined,
                 setup_time: setupTime,
@@ -485,12 +486,14 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
                 const endTime = `${dateStr} ${(startHour + duration).toString().padStart(2, '0')}:00:00`;
                 const setupTime = `${dateStr} ${(startHour - 1).toString().padStart(2, '0')}:30:00`;
 
-                // Vary the event details slightly
+                // Vary the event details slightly.  An at-shop event carries no
+                // location (it's the default home); off-site events are remote
+                // and carry a location (which is what the UI surfaces).
                 const locations = [
-                    { desc: "Behind 79 Joseph Street", url: "" },
-                    { desc: "Victoria Park - Main Pavilion", url: "https://maps.google.com/?q=Victoria+Park+Kitchener" },
-                    { desc: "Victoria Park - Near the Lake", url: "" },
-                    { desc: "Downtown Kitchener - City Hall", url: "https://maps.google.com/?q=Kitchener+City+Hall" }
+                    { desc: "", url: "", remote: false },   // our shop (no location needed)
+                    { desc: "Victoria Park - Main Pavilion", url: "https://maps.google.com/?q=Victoria+Park+Kitchener", remote: true },
+                    { desc: "Victoria Park - Near the Lake", url: "", remote: true },
+                    { desc: "Downtown Kitchener - City Hall", url: "https://maps.google.com/?q=Kitchener+City+Hall", remote: true }
                 ];
 
                 const location = faker.helpers.arrayElement(locations);
@@ -513,7 +516,7 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
                     ]),
                     location_description: location.desc,
                     location_url: location.url,
-                    is_remote_event: location.desc.includes("Downtown") ? 1 : 0,
+                    is_remote_event: location.remote ? 1 : 0,
                     volunteer_only: faker.datatype.boolean({ probability: 0.1 }) ? 1 : 0,
                     shop_load_time: faker.helpers.maybe(() => {
                         return `${dateStr} ${(startHour - 1).toString().padStart(2, '0')}:00:00`;

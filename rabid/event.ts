@@ -170,18 +170,32 @@ export class EventTable extends Table<Event> {
         return s;
     }
 
+    // Quiet metadata tags: only the EXCEPTIONAL facts.  'public' is the default
+    // kind, so it gets no badge (an unbadged event is public) - that removes the
+    // green-on-every-row noise; only Training/Shop Time and the volunteers-only
+    // flag show.  'Remote' is NOT a badge: it rides the location line instead
+    // (see remoteText) - non-remote events are at our shop and need no location.
     eventBadges(e: Event): Markup {
         return [
-            [h.span, {class: `card-badge event-${e.event_kind}`},
-             event_kind_enum[e.event_kind] ?? e.event_kind],
+            e.event_kind && e.event_kind !== 'public'
+                ? [h.span, {class: `card-badge event-${e.event_kind}`},
+                   event_kind_enum[e.event_kind] ?? e.event_kind]
+                : undefined,
             e.volunteer_only ? [h.span, {class: 'volunteer-only-badge'}, 'Volunteers only'] : undefined,
-            e.is_remote_event ? [h.span, {class: 'remote-event-badge'}, 'Remote'] : undefined,
         ];
+    }
+
+    // The location line, shown ONLY for remote events (non-remote are at our
+    // shop, so a location is noise).  This line also carries the "Remote" signal,
+    // which is why there's no separate Remote badge.  '' for at-shop events.
+    remoteText(e: Event): string {
+        if (!e.is_remote_event) return '';
+        return e.location_description ? `Remote · ${e.location_description}` : 'Remote';
     }
 
     renderEventRow(e: Event): Markup {
         const id = e.event_id;
-        const secondary = [this.timeRangeText(e), e.location_description].filter(Boolean).join(' · ');
+        const secondary = [this.timeRangeText(e), this.remoteText(e)].filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
         // tap anywhere drills in via the lm-nav-link title); the pencil - shown
@@ -317,7 +331,8 @@ export class EventTable extends Table<Event> {
     }
 
     // One week of the upcoming-events table: a gap (except the first), a header
-    // band (week label + event count), then a row per event.
+    // band (week label + event count), then a row per event.  Three columns:
+    // WHEN · WHAT · the right-edge action zone.
     private renderUpcomingWeek(weekKey: string, events: Event[],
                                going: Map<number, Array<{id: number, name: string}>>,
                                actorId: number|undefined, isFirst: boolean): Markup[] {
@@ -332,11 +347,11 @@ export class EventTable extends Table<Event> {
             // reads as a heading for the rows BELOW it (mirrors the Time view).
             isFirst ? undefined
                 : [h.tr, {'aria-hidden': 'true', 'data-testid': 'upcoming-week-gap'},
-                   [h.td, {colspan: '4', style: 'height: 1.5rem; border: 0; padding: 0;'}]],
+                   [h.td, {colspan: '3', style: 'height: 1.5rem; border: 0; padding: 0;'}]],
             [h.tr, {class: 'table-light fw-semibold', 'data-testid': 'upcoming-week',
                     style: 'border-top: 0; border-bottom: 2px solid var(--bs-secondary-color);'},
-             [h.td, {colspan: '3', style: 'border-bottom: 0;'}, `Week of ${sStr} – ${eStr}`],
-             [h.td, {class: 'text-end text-muted small', style: 'border-bottom: 0;'},
+             [h.td, {colspan: '2', style: 'border-bottom: 0;'}, `Week of ${sStr} – ${eStr}`],
+             [h.td, {class: 'text-end text-muted small text-nowrap', style: 'border-bottom: 0;'},
               `${events.length} ${events.length === 1 ? 'event' : 'events'}`]],
             ...events.map(e => this.renderUpcomingEventRow(e, going.get(e.event_id) ?? [], actorId)),
         ];
@@ -352,20 +367,28 @@ export class EventTable extends Table<Event> {
         return this.renderUpcomingEventRow(e, going, security.current()?.actorId);
     }
 
-    // One event as a compact table row: WHEN (day + time) · WHAT (name, badges,
-    // location, who's going - self first and distinct) · how many going · a self
-    // sign-up toggle + a chevron.  The WHOLE row navigates to the detail page
-    // (the standard navigable-row convention); there is no edit pencil - this is
-    // a navigation surface, and the event's primary data (the full sign-up list
-    // etc) lives on the detail page.
+    // One event as a compact table row: WHEN (day + from–to time) · WHAT (name,
+    // badges, remote line, who's going IN FULL) · a self sign-up toggle + a
+    // chevron.  The WHOLE row navigates to the detail page (the standard
+    // navigable-row convention); there is no edit pencil - this is a navigation
+    // surface, and the event's editable data lives on the detail page.  There is
+    // deliberately NO "N going" count column: the full attendee list is shown
+    // (volunteers gauge who'll be there by name), and dropping a whole column
+    // buys real width on narrow/mobile screens.
     renderUpcomingEventRow(e: Event, going: Array<{id: number, name: string}>,
                            actorId: number|undefined): Markup {
         const id = e.event_id;
         const day = e.start_time
             ? date.sqliteDateTimeToString(e.start_time, '', {weekday: 'short', month: 'short', day: 'numeric'})
             : '';
-        const time = e.start_time ? date.sqliteDateTimeToTimeString(e.start_time) : '';
+        // From–to, not just from (e.g. "5:00 PM – 8:00 PM").
+        const time = e.start_time
+            ? (e.end_time
+                ? `${date.sqliteDateTimeToTimeString(e.start_time)} – ${date.sqliteDateTimeToTimeString(e.end_time)}`
+                : date.sqliteDateTimeToTimeString(e.start_time))
+            : '';
         const isGoing = actorId !== undefined && going.some(g => g.id === actorId);
+        const remote = this.remoteText(e);
 
         // The whole row navigates (lmNavigableClick → the event-name lm-nav-link).
         // It ALSO stays in the event_commitment reload group so the inline sign-up
@@ -378,40 +401,47 @@ export class EventTable extends Table<Event> {
         props.class = 'lm-navigable ' + props.class;
 
         return [h.tr, props,
-            [h.td, {class: 'text-nowrap'},
+            [h.td, {class: 'text-nowrap align-top'},
              day,
-             time ? [h.div, {class: 'text-muted small'}, time] : undefined],
-            [h.td, {},
+             time ? [h.div, {class: 'text-muted small'}, time] : undefined,
+             // Remote events: the prep times volunteers plan around (load up at
+             // the shop, set up at the venue), under the main time - same as the
+             // detail card.  At-shop events don't need them here.
+             e.is_remote_event && e.shop_load_time
+                ? [h.div, {class: 'text-muted small'},
+                   [h.span, {class: 'card-subtime-label'}, 'Shop load '],
+                   date.sqliteDateTimeToTimeString(e.shop_load_time)] : undefined,
+             e.is_remote_event && e.setup_time
+                ? [h.div, {class: 'text-muted small'},
+                   [h.span, {class: 'card-subtime-label'}, 'Setup '],
+                   date.sqliteDateTimeToTimeString(e.setup_time)] : undefined],
+            [h.td, {class: 'align-top'},
              [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`), class: 'lm-nav-link'},
               e.description || 'Untitled Event'],
              this.eventBadges(e),
-             e.location_description
-                ? [h.div, {class: 'text-muted small'}, e.location_description] : undefined,
+             remote ? [h.div, {class: 'text-muted small'}, remote] : undefined,
              this.renderGoing(going, actorId)],
-            [h.td, {class: 'text-end text-nowrap'},
-             going.length > 0 ? `${going.length} going` : [h.span, {class: 'text-muted'}, '—']],
-            [h.td, {class: 'text-end text-nowrap'},
+            [h.td, {class: 'text-end text-nowrap align-top'},
              [h.div, {class: 'd-inline-flex align-items-center gap-2'},
               this.renderSelfGoingToggle(id, isGoing, actorId),
               navChevron()]],
         ];
     }
 
-    // The "who's going" sub-line: self first and visually distinct ("You"), so a
-    // volunteer can see at a glance which events they're in - and is NEVER hidden
-    // by the cap, which is the whole point in the truncated "+N" case.
+    // The "who's going" line - shown IN FULL (no cap).  Volunteers span a wide
+    // range of skill, and skilled volunteers decide whether they're needed by
+    // seeing exactly who else is coming; we don't (and culturally can't) label
+    // skill in the UI, so the whole roster has to be visible.  Self comes first
+    // and visually distinct ("You") so a volunteer can spot their own events.
     private renderGoing(going: Array<{id: number, name: string}>, actorId: number|undefined): Markup {
-        if (going.length === 0) return undefined;
-        const CAP = 4;
+        if (going.length === 0)
+            return [h.div, {class: 'text-muted small fst-italic'}, 'No one signed up yet'];
         const selfGoing = actorId !== undefined && going.some(g => g.id === actorId);
         const others = going.filter(g => g.id !== actorId);
-        const shownOthers = others.slice(0, selfGoing ? CAP - 1 : CAP);
-        const hidden = others.length - shownOthers.length;
         const parts: Markup[] = [];
         if (selfGoing) parts.push([h.span, {class: 'upcoming-going-self'}, 'You']);
-        for (const o of shownOthers) parts.push(o.name);
+        for (const o of others) parts.push(o.name);
         const joined: Markup[] = parts.flatMap((p, i) => i === 0 ? [p] : [', ', p]);
-        if (hidden > 0) joined.push(` +${hidden}`);
         return [h.div, {class: 'text-muted small upcoming-going'}, ...joined];
     }
 
@@ -494,16 +524,17 @@ export class EventTable extends Table<Event> {
                 : [h.span, {class: 'card-title'}, title]
         );
         
-        // Event kind badge
-        if (event.event_kind) {
+        // Event kind badge - only for the exceptional kinds (public is the
+        // unmarked default; Remote rides the location row, not a badge).
+        if (event.event_kind && event.event_kind !== 'public') {
             headerElements.push(' ');
             headerElements.push(
-                [h.span, {class: `card-badge event-${event.event_kind}`}, 
+                [h.span, {class: `card-badge event-${event.event_kind}`},
                     event_kind_enum[event.event_kind] || event.event_kind
                 ]
             );
         }
-        
+
         // Volunteer-only indicator
         if (event.volunteer_only) {
             headerElements.push(' ');
@@ -512,14 +543,6 @@ export class EventTable extends Table<Event> {
             );
         }
 
-        // Remote indicator
-        if (event.is_remote_event) {
-            headerElements.push(' ');
-            headerElements.push(
-                [h.span, {class: 'remote-event-badge'}, '(Remote)']
-            );
-        }
-        
         // Build grid rows for details
         const gridRows: Markup[] = [];
 
@@ -550,22 +573,25 @@ export class EventTable extends Table<Event> {
             );
         }
 
-        // Location row
-        if (event.location_description) {
+        // Location row - only for remote events (non-remote are at our shop, so a
+        // location is noise).  The label says "Remote" since that's the point.
+        if (event.is_remote_event) {
             const locationValue: Markup[] = [];
-            if (event.location_url) {
+            if (event.location_description && event.location_url) {
                 locationValue.push(
-                    [h.a, {href: event.location_url, target: '_blank', class: 'location-link'}, 
+                    [h.a, {href: event.location_url, target: '_blank', class: 'location-link'},
                         event.location_description
                     ]
                 );
-            } else {
+            } else if (event.location_description) {
                 locationValue.push(event.location_description);
+            } else {
+                locationValue.push([h.span, {class: 'text-muted'}, 'location TBD']);
             }
-            
+
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
-                    [h.div, {}, 'Location:'],
+                    [h.div, {}, 'Remote:'],
                     [h.div, {}, ...locationValue]
                 ]
             );

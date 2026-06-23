@@ -38,50 +38,35 @@
     font-weight: 600;
 }
 
-/* Card Badges */
-.card-badge {
+/* Badges = quiet metadata tags.  Soft same-hue tint + darker text (not solid
+   fills), small and light, so they sit beside the title without shouting -
+   "attractive documents that happen to be interactive".  The title is what the
+   eye should land on, not these.  (No .event-public: public is the unmarked
+   default; no Remote badge: it rides the location line.) */
+.card-badge,
+.volunteer-only-badge {
     display: inline-block;
-    padding: 2px 8px;
+    margin-left: 6px;
+    padding: 0.05rem 0.4rem;
     border-radius: 4px;
-    font-size: 0.85em;
+    font-size: 0.75rem;
     font-weight: 500;
-    margin-left: 8px;
-}
-
-/* Event-specific badge colors */
-.card-badge.event-public {
-    background-color: #4CAF50;
-    color: white;
+    vertical-align: middle;
 }
 
 .card-badge.event-training {
-    background-color: #2196F3;
-    color: white;
+    background-color: #e3f2fd;
+    color: #1565c0;
 }
 
 .card-badge.event-shopTime {
-    background-color: #FF9800;
-    color: white;
+    background-color: #fff3e0;
+    color: #e65100;
 }
 
 .volunteer-only-badge {
-    display: inline-block;
-    background-color: #9C27B0;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    margin-left: 5px;
-}
-
-.remote-event-badge {
-  display: inline-block;
-  background-color: #344193;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  margin-left: 5px;
+    background-color: #f3e5f5;
+    color: #6a1b9a;
 }
 
 
