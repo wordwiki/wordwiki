@@ -6,6 +6,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 import * as date from "../liminal/date.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron } from "../liminal/table.ts";
 import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
+import { shortName } from "./volunteer.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -158,8 +159,8 @@ export class SaleTable extends Table<Sale> {
     renderSaleDetail(sale_id: number): Markup {
         const s = this.getById(sale_id);
         const recordedBy = security.runSystem(() =>
-            db().prepare<{name: string}, {id: number}>(
-                'SELECT name FROM volunteer WHERE volunteer_id = :id').first({id: s.sale_recorded_by}));
+            db().prepare<{name: string, short_name: string}, {id: number}>(
+                'SELECT name, short_name FROM volunteer WHERE volunteer_id = :id').first({id: s.sale_recorded_by}));
         const props = this.reloadableItemProps(sale_id, `rabid.sale.renderSaleDetail(${sale_id})`);
         props.class = 'container py-3 ' + props.class;
         const row = (label: string, value: Markup) =>
@@ -175,7 +176,7 @@ export class SaleTable extends Table<Sale> {
              row('Amount', `$${(s.amount ?? 0).toFixed(2)}`),
              row('Payment', payment_method_enum[s.payment_method] ?? s.payment_method),
              row('Recorded by', recordedBy
-                 ? templates.pageLink(`/rabid.volunteer.detailPage(${s.sale_recorded_by})`, recordedBy.name)
+                 ? templates.pageLink(`/rabid.volunteer.detailPage(${s.sale_recorded_by})`, shortName(recordedBy))
                  : '—'),
              row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
             ],

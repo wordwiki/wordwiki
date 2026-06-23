@@ -30,6 +30,7 @@
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, EnumField, IntegerField } from "../liminal/table.ts";
 import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
+import { memberShortName, type MemberName } from "./volunteer.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -79,11 +80,10 @@ export interface VolunteerGroup {
 export type VolunteerGroupOpt = Partial<VolunteerGroup>;
 
 // A group_member row joined with the volunteer's name (the member-list shape).
-export interface GroupMemberWithName {
+export interface GroupMemberWithName extends MemberName {
     group_member_id: number;
     group_id: number;
     volunteer_id: number;
-    volunteer_name: string;
 }
 
 export class VolunteerGroupTable extends Table<VolunteerGroup> {
@@ -138,7 +138,8 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     @path
     get members() {
         return this.prepare<GroupMemberWithName, {group_id: number}>(block`
-/**/   SELECT gm.group_member_id, gm.group_id, gm.volunteer_id, v.name AS volunteer_name
+/**/   SELECT gm.group_member_id, gm.group_id, gm.volunteer_id,
+/**/          v.name AS volunteer_name, v.short_name AS volunteer_short_name
 /**/          FROM group_member gm JOIN volunteer v USING (volunteer_id)
 /**/          WHERE gm.group_id = :group_id
 /**/          ORDER BY v.name`);
@@ -275,7 +276,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
             }
             if(members.length > 0) items.push('divider');
             for(const m of members)
-                items.push({label: m.volunteer_id === actorId ? 'Remove me' : `Remove ${m.volunteer_name}`,
+                items.push({label: m.volunteer_id === actorId ? 'Remove me' : `Remove ${memberShortName(m)}`,
                             mode: {kind: 'immediate',
                                    expr: `rabid.volunteer_group.removeMember(${group_id},${m.volunteer_id})`}});
             if(members.length >= 2)
@@ -317,7 +318,7 @@ export class VolunteerGroupTable extends Table<VolunteerGroup> {
     // One member as inline text: the name, a quiet link to the volunteer page.
     renderMemberName(m: GroupMemberWithName): Markup {
         return [h.span, {class: 'lm-member', 'data-testid': `member-row-${m.volunteer_id}`},
-            templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, m.volunteer_name)];
+            templates.pageLink(`/rabid.volunteer.detailPage(${m.volunteer_id})`, memberShortName(m))];
     }
 
     // The add-member parameter dialog: one volunteer picker (remote type-ahead

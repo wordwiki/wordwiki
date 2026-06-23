@@ -110,13 +110,10 @@ export interface Volunteer {
 }
 export type VolunteerOpt = Partial<Volunteer>;
 
-// A volunteer's name for compact contexts (sign-up lists, etc): the curated
-// short_name when set, else the first word of the full name.  Takes any row
-// that carries the two columns, so query projections can use it directly.
-export function shortName(v: {short_name?: string|null, name: string}): string {
-    const s = v.short_name?.trim();
-    return s ? s : (v.name?.split(/\s+/)[0] ?? '');
-}
+// shortName (compact display name) lives in its own dependency-free module so
+// the import-cycle-sensitive volunteer-activity.ts can share it; re-exported here
+// so existing `import {shortName} from "./volunteer.ts"` callers keep working.
+export {shortName, memberShortName, type NamedVolunteer, type MemberName} from "./volunteer-name.ts";
 
 export class VolunteerTable extends Table<Volunteer> {
     

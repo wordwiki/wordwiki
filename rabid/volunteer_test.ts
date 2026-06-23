@@ -7,6 +7,14 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "../li
 import { withTestDb, renderRoute, invoke, asUser, asAnon, asSystem } from "./testing.ts";
 import { rabid } from "./rabid.ts";
 import { getByTestId, text, hasText, find, byClass, tagOf, attr } from "../liminal/testing/markup-assert.ts";
+import { shortName } from "./volunteer.ts";
+
+test("shortName: curated short_name wins; else the first word; blank/whitespace falls back", () => {
+    assertEquals(shortName({name: "Bob Shares"}), "Bob");                            // no short_name -> first word
+    assertEquals(shortName({name: "Bob Shares", short_name: "Bobby Q"}), "Bobby Q"); // curated wins (not first word)
+    assertEquals(shortName({name: "Cher", short_name: ""}), "Cher");                 // empty -> whole name
+    assertEquals(shortName({name: "Ada Lovelace", short_name: "  "}), "Ada");        // whitespace-only -> first word
+});
 
 const detail = (id: number) => renderRoute(`rabid.volunteer.detailPage(${id})`);
 const phoneText = (markup: any) => text(getByTestId(markup, "detail-phone")).trim();

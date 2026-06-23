@@ -5,6 +5,7 @@ import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
 import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, TableRenderer, TableView, reloadableItemProps, editButtonProps, navChevron, PublicViewable } from "../liminal/table.ts";
 import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
+import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
@@ -213,9 +214,9 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
 
     override formTitle(e: TimesheetEntry): string {
         const v = security.runSystem(() =>
-            db().prepare<{name: string}, {id: number}>(
-                'SELECT name FROM volunteer WHERE volunteer_id = :id').first({id: e.volunteer_id}));
-        return `Edit time for ${v?.name ?? 'volunteer'}`;
+            db().prepare<{name: string, short_name: string}, {id: number}>(
+                'SELECT name, short_name FROM volunteer WHERE volunteer_id = :id').first({id: e.volunteer_id}));
+        return `Edit time for ${v ? shortName(v) : 'volunteer'}`;
     }
 
     @path
@@ -268,8 +269,9 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
     // All entries with the volunteer name, most recent first.
     @path
     get allEntriesWithNames() {
-        return this.prepare<TimesheetEntry & {volunteer_name: string}, {}>(block`
-/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name
+        return this.prepare<TimesheetEntry & MemberName, {}>(block`
+/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name,
+/**/          volunteer.short_name AS volunteer_short_name
 /**/          FROM timesheet_entry
 /**/          LEFT JOIN volunteer USING (volunteer_id)
 /**/          ORDER BY timesheet_entry.start_time DESC`);
@@ -277,22 +279,23 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
 
     @path
     get entryWithNamesById() {
-        return this.prepare<TimesheetEntry & {volunteer_name: string},
+        return this.prepare<TimesheetEntry & MemberName,
                             {timesheet_entry_id: number}>(block`
-/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name
+/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name,
+/**/          volunteer.short_name AS volunteer_short_name
 /**/          FROM timesheet_entry
 /**/          LEFT JOIN volunteer USING (volunteer_id)
 /**/          WHERE timesheet_entry_id = :timesheet_entry_id`);
     }
 
-    renderTimesheetList(entries: Array<TimesheetEntry & {volunteer_name: string}>): Markup {
+    renderTimesheetList(entries: Array<TimesheetEntry & MemberName>): Markup {
         if(entries.length === 0)
             return [h.p, {class: 'text-muted'}, 'No timesheet entries yet.'];
         return [h.div, {class: 'list-group lm-list'},
                 entries.map(e => this.renderTimesheetRow(e))];
     }
 
-    renderTimesheetRow(e: TimesheetEntry & {volunteer_name: string}): Markup {
+    renderTimesheetRow(e: TimesheetEntry & MemberName): Markup {
         const id = e.timesheet_entry_id;
         // Show the work period as date · begin–end · elapsed.
         const times = e.end_time
@@ -309,7 +312,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             [h.div, {class: 'lm-item-body'},
              [h.div, {class: 'lm-item-primary'},
               [h.a, {...templates.pageLinkProps(`/rabid.timesheet_entry.detailPage(${id})`),
-                     class: 'lm-nav-link'}, e.volunteer_name],
+                     class: 'lm-nav-link'}, memberShortName(e)],
               lateEntryBadge(lateEntryWarning(e))],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
             this.canEditRecord(e) ? this.editPencil(id) : undefined,
@@ -342,7 +345,7 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
     detailPage(timesheet_entry_id: number): templates.Page {
         const e = this.entryWithNamesById.first({timesheet_entry_id});
         if(!e) throw new Error(`No timesheet entry ${timesheet_entry_id}`);
-        return templates.page(`${e.volunteer_name} — Timesheet entry`,
+        return templates.page(`${memberShortName(e)} — Timesheet entry`,
                               this.renderTimesheetDetail(timesheet_entry_id));
     }
 
@@ -357,11 +360,11 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             [[h.dt, {class: 'col-sm-3'}, label], [h.dd, {class: 'col-sm-9'}, value]];
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
-             [h.h2, {class: 'mb-0'}, `${e.volunteer_name} — time`],
+             [h.h2, {class: 'mb-0'}, `${memberShortName(e)} — time`],
              this.canEditRecord(e) ? this.editPencil(timesheet_entry_id) : undefined],
             lateEntryAlert(lateEntryWarning(e)),
             [h.dl, {class: 'row mb-0'},
-             row('Volunteer', templates.pageLink(`/rabid.volunteer.detailPage(${e.volunteer_id})`, e.volunteer_name)),
+             row('Volunteer', templates.pageLink(`/rabid.volunteer.detailPage(${e.volunteer_id})`, memberShortName(e))),
              row('Start', date.sqliteDateTimeToString(e.start_time, '—')),
              row('End', e.end_time
                  ? date.sqliteDateTimeToString(e.end_time)

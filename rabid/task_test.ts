@@ -323,7 +323,7 @@ test("completion provenance: done_time/done_by stamped on the done transition, c
         assert(s.done_time! > '2020');
         // The checklist row shows the provenance quietly.
         const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
-        assert(hasText(checklist, 'Bob Shares,'));
+        assert(hasText(checklist, 'Bob,'));
         asUser(bob, () => rabid.subtask.toggle(sid));
         s = asSystem(() => rabid.subtask.getById(sid));
         assertEquals(s.done_time ?? null, null);
@@ -337,7 +337,7 @@ test("completion provenance: done_time/done_by stamped on the done transition, c
         assert(t.done_time! > '2020');
         // ...the detail page says who...
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(hasText(detail, 'by Bob Shares'));
+        assert(hasText(detail, 'by Bob'));
         // ...an unrelated edit leaves the stamp alone...
         asUser(bob, () => rabid.task.saveForm({
             task_id: String(task_id), details: 'note', 'before-details': ''}));
@@ -403,7 +403,7 @@ test("pages: one navigable row species, pencil follows recordEdit; task detail e
         assert(!!find(bobBlock, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox'
                                      && attr(n, 'disabled') === undefined));
         assert(hasText(bobBlock, 'Get quotes'));                  // checklist inline
-        assert(hasText(getByTestId(bobTasks, `task-${task_id}-override`), 'Bob Shares'));
+        assert(hasText(getByTestId(bobTasks, `task-${task_id}-override`), 'Bob'));
         const carolTasks = await asUser(carol, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
         const carolBlock = getByTestId(carolTasks, `task-block-${task_id}`);
         assert(!find(carolBlock, byClass('lm-edit-pencil')));
@@ -512,10 +512,10 @@ test("projects and tasks record creation provenance (who to ask about it)", asyn
         // Both detail pages say who to ask.
         const projPage = await asUser(alice, () => renderRoute(`rabid.project.detailPage(${p.project_id})`));
         assert(hasText(projPage, 'Created'));
-        assert(hasText(projPage, 'Alice Host'));
+        assert(hasText(projPage, 'Alice'));
         const taskPage = await asUser(alice, () => renderRoute(`rabid.task.detailPage(${t.task_id})`));
         assert(hasText(taskPage, 'Created'));
-        assert(hasText(taskPage, 'Alice Host'));
+        assert(hasText(taskPage, 'Alice'));
 
         // System writes (seeds, imports) stamp the time but no creator.
         const {project_id} = seedTask();
@@ -720,7 +720,7 @@ test("membership ☰: Add me is always allowed (self-signup); named removes; Rem
 
         // The ☰ speaks in sentences about you: carol (now a member+editor)
         // sees 'Remove me'; alice (host, not a member) sees 'Add me' and
-        // 'Remove Carol Private'.
+        // 'Remove Carol'.
         const carolView = await asUser(carol, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(carolView, 'Remove me'));
@@ -729,7 +729,7 @@ test("membership ☰: Add me is always allowed (self-signup); named removes; Rem
         const aliceView = await asUser(alice, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
         assert(hasText(aliceView, 'Add me'));
-        assert(hasText(aliceView, 'Remove Carol Private'));
+        assert(hasText(aliceView, 'Remove Carol'));
 
         // Remove all: bulk, confirm-gated in the UI, and canEditMembers-gated
         // on the server - bob, an outsider (not assignee, not host), is

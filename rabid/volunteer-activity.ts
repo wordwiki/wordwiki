@@ -16,6 +16,9 @@
 import {db} from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
 import {ForeignKeyField, type FieldOptions} from "../liminal/table.ts";
+// shortName lives in its own dependency-free module (NOT volunteer.ts) precisely
+// so this import-cycle-sensitive module can use it - see volunteer-name.ts.
+import {shortName} from "./volunteer-name.ts";
 
 // The (Sun-agnostic) cutoff datetime for "within `days` days": now minus N days.
 export function cutoffSince(days: number): string {
@@ -51,12 +54,12 @@ export function activeVolunteerIdsWithin(days: number): Set<number> {
     return new Set(rows.map(r => r.volunteer_id));
 }
 
-// The recently-active volunteers as {id, name}, alpha by name.  Same active-set
-// definition as activeVolunteerIdsWithin, but carries names so callers can build
-// quick-add menu items ("Sign up Barry", "Check in Barry") on the event page.
-export function activeVolunteersWithin(days: number): Array<{volunteer_id: number, name: string}> {
-    return db().all<{volunteer_id: number, name: string}, {since: string}>(`
-        SELECT volunteer_id, name FROM volunteer
+// The recently-active volunteers, alpha by name.  Same active-set definition as
+// activeVolunteerIdsWithin, but carries name + short_name so callers can build
+// quick-add menu items with shortName ("Sign up Barry", "Check in Barry").
+export function activeVolunteersWithin(days: number): Array<{volunteer_id: number, name: string, short_name: string}> {
+    return db().all<{volunteer_id: number, name: string, short_name: string}, {since: string}>(`
+        SELECT volunteer_id, name, short_name FROM volunteer
          WHERE deleted = 0 AND volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
          ORDER BY name`,
         {since: cutoffSince(days)});
@@ -69,16 +72,19 @@ export function activeVolunteersWithin(days: number): Array<{volunteer_id: numbe
 const PICKER_DAYS = 30;
 const PICKER_MARKER = ` (Active ${PICKER_DAYS} Days)`;
 
-// One picker row: a volunteer's id/label plus an `active` flag (1 = active within
-// PICKER_DAYS) that drives both the active-first ordering and the boundary marker.
-type PickerRow = {id: number, label: string, active: number};
+// One picker row: a volunteer's id, name + short_name (the label is shortName,
+// computed in JS), plus an `active` flag (1 = active within PICKER_DAYS) that
+// drives both the active-first ordering and the boundary marker.
+type PickerRow = {id: number, name: string, short_name: string, active: number};
 
 // Two query forms, so the common option-population path doesn't carry the search
 // machinery: PICKER_OPTIONS_SQL (q === '') runs no LIKE; PICKER_SEARCH_SQL adds
 // the word-prefix name filter for the type-ahead.  Each is a single, distinct,
-// prepared-once statement.
+// prepared-once statement.  We select name + short_name (the displayed label is
+// shortName) but the search still matches the FULL name, so typing a last name
+// finds someone whose label is just their first name.
 const PICKER_OPTIONS_SQL = `
-    SELECT volunteer_id AS id, name AS label,
+    SELECT volunteer_id AS id, name, short_name,
            CASE WHEN volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
                 THEN 1 ELSE 0 END AS active
       FROM volunteer
@@ -86,7 +92,7 @@ const PICKER_OPTIONS_SQL = `
       ORDER BY active DESC, name
       LIMIT :limit`;
 const PICKER_SEARCH_SQL = `
-    SELECT volunteer_id AS id, name AS label,
+    SELECT volunteer_id AS id, name, short_name,
            CASE WHEN volunteer_id IN (${ACTIVE_VOLUNTEER_IDS_SINCE})
                 THEN 1 ELSE 0 END AS active
       FROM volunteer
@@ -112,7 +118,7 @@ export class VolunteerForeignKeyField extends ForeignKeyField {
             : db().all<PickerRow, {q: string, since: string, limit: number}>(
                 PICKER_SEARCH_SQL, {q, since, limit});
 
-        const out = rows.map(r => ({id: r.id, label: r.label}));
+        const out = rows.map(r => ({id: r.id, label: shortName(r)}));
         // Mark the last active option, but only when inactive options follow it -
         // the marker is a separator, pointless when everything shown is active.
         const lastActive = rows.reduce((idx, r, i) => r.active ? i : idx, -1);

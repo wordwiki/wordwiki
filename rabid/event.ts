@@ -6,7 +6,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPa
 import * as date from "../liminal/date.ts";
 import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableItemProps } from "../liminal/table.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
-import { shortName } from "./volunteer.ts";
+import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
@@ -585,16 +585,16 @@ export class EventTable extends Table<Event> {
         }
         
         // Get commitments ("signed up") for this event
-        const commitments = db().prepare<{volunteer_name: string}, {event_id: number}>(block`
-            SELECT volunteer.name AS volunteer_name
+        const commitments = db().prepare<{name: string, short_name: string}, {event_id: number}>(block`
+            SELECT volunteer.name, volunteer.short_name
             FROM event_commitment
             LEFT JOIN volunteer USING (volunteer_id)
             WHERE event_id = :event_id
             ORDER BY volunteer.name`).all({event_id});
 
         // Get check-ins ("showed up") for this event.
-        const checkins = db().prepare<{volunteer_name: string, was_staff: boolnum}, {event_id: number}>(block`
-            SELECT volunteer.name AS volunteer_name, event_checkin.was_staff
+        const checkins = db().prepare<{name: string, short_name: string, was_staff: boolnum}, {event_id: number}>(block`
+            SELECT volunteer.name, volunteer.short_name, event_checkin.was_staff
             FROM event_checkin
             LEFT JOIN volunteer USING (volunteer_id)
             WHERE event_id = :event_id
@@ -711,7 +711,7 @@ export class EventTable extends Table<Event> {
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Signed up:'],
                     [h.div, {},
-                        `(${commitments.length}) ${commitments.map(c => c.volunteer_name).join(', ')}`
+                        `(${commitments.length}) ${commitments.map(c => shortName(c)).join(', ')}`
                     ]
                 ]
             );
@@ -743,7 +743,7 @@ export class EventTable extends Table<Event> {
                     [h.div, {}, 'Checked in:'],
                     [h.div, {},
                         `(${checkins.length}) ` +
-                        checkins.map(c => c.was_staff ? `${c.volunteer_name} (staff)` : c.volunteer_name).join(', ')
+                        checkins.map(c => c.was_staff ? `${shortName(c)} (staff)` : shortName(c)).join(', ')
                     ]
                 ]
             );
@@ -845,8 +845,9 @@ export class EventCommitmentTable extends Table<EventCommitment> {
 
     @path
     get commitmentsForEventWithVolunteerName() {
-        return db().prepare<(EventCommitment&{volunteer_name: string}), {event_id: number}>(block`
-/**/   SELECT ${this.allFields}, volunteer.name AS volunteer_name
+        return db().prepare<(EventCommitment&MemberName), {event_id: number}>(block`
+/**/   SELECT ${this.allFields}, volunteer.name AS volunteer_name,
+/**/          volunteer.short_name AS volunteer_short_name
 /**/          FROM event_commitment LEFT JOIN volunteer USING (volunteer_id)
 /**/          WHERE event_id = :event_id
 /**/          ORDER BY volunteer.name`);
@@ -983,7 +984,7 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         if(canManage) {
             for(const v of activeVolunteersWithin(30)
                     .filter(v => !committedIds.has(v.volunteer_id) && v.volunteer_id !== actorId))
-                items.push({label: `Sign up ${v.name}`,
+                items.push({label: `Sign up ${shortName(v)}`,
                             mode: {kind: 'immediate',
                                    expr: `rabid.event_commitment.commitVolunteer(${event_id},${v.volunteer_id})`}});
             items.push({label: 'Sign someone up…',
@@ -993,7 +994,7 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         const manageable = commitments.filter(c => canManage || c.volunteer_id === actorId);
         if(items.length > 0 && manageable.length > 0) items.push('divider');
         for(const c of manageable)
-            items.push({label: c.volunteer_id === actorId ? 'Remove me' : `Remove ${c.volunteer_name}`,
+            items.push({label: c.volunteer_id === actorId ? 'Remove me' : `Remove ${memberShortName(c)}`,
                         mode: {kind: 'immediate',
                                expr: `rabid.event_commitment.uncommit(${event_id},${c.volunteer_id})`}});
         if(canManage && commitments.length >= 2)
@@ -1012,10 +1013,10 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         ];
     }
 
-    // One signed-up volunteer as inline text: name, a quiet link to the volunteer page.
-    renderCommitmentName(c: EventCommitment & {volunteer_name: string}): Markup {
+    // One signed-up volunteer as inline text: short name, a quiet link to the volunteer page.
+    renderCommitmentName(c: EventCommitment & MemberName): Markup {
         return [h.span, {class: 'lm-member', 'data-testid': `commitment-${c.volunteer_id}`},
-            templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, c.volunteer_name)];
+            templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, memberShortName(c))];
     }
 }
 
@@ -1137,8 +1138,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // An event's check-ins, with the volunteer name.
     @path
     get checkinsForEvent() {
-        return db().prepare<EventCheckin & {volunteer_name: string}, {event_id: number}>(block`
-/**/   SELECT event_checkin.*, volunteer.name AS volunteer_name
+        return db().prepare<EventCheckin & MemberName, {event_id: number}>(block`
+/**/   SELECT event_checkin.*, volunteer.name AS volunteer_name,
+/**/          volunteer.short_name AS volunteer_short_name
 /**/          FROM event_checkin
 /**/          LEFT JOIN volunteer USING (volunteer_id)
 /**/          WHERE event_checkin.event_id = :event_id
@@ -1271,10 +1273,10 @@ export class EventCheckinTable extends Table<EventCheckin> {
     editCheckinDialog(event_checkin_id: number): Markup {
         const c = this.getById(event_checkin_id);
         this.assertCanManageCheckin(c);
-        const name = security.runSystem(() =>
-            db().prepare<{name: string}, {id: number}>(
-                'SELECT name FROM volunteer WHERE volunteer_id = :id').first({id: c.volunteer_id}))?.name
-            ?? 'volunteer';
+        const v = security.runSystem(() =>
+            db().prepare<{name: string, short_name: string}, {id: number}>(
+                'SELECT name, short_name FROM volunteer WHERE volunteer_id = :id').first({id: c.volunteer_id}));
+        const name = v ? shortName(v) : 'volunteer';
         return action.renderParamForm(
             [this.fieldsByName.start_time, this.fieldsByName.end_time,
              this.fieldsByName.time_volunteered_minutes, this.fieldsByName.notes],
@@ -1358,7 +1360,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
         if(canManage) {
             for(const v of activeVolunteersWithin(30)
                     .filter(v => !checkedInIds.has(v.volunteer_id) && v.volunteer_id !== actorId))
-                items.push({label: `Check in ${v.name}`,
+                items.push({label: `Check in ${shortName(v)}`,
                             mode: {kind: 'immediate',
                                    expr: `rabid.event_checkin.checkInVolunteer(${event_id},${v.volunteer_id})`}});
             items.push({label: 'Check someone in…',
@@ -1371,13 +1373,13 @@ export class EventCheckinTable extends Table<EventCheckin> {
         if(items.length > 0 && manageable.length > 0) items.push('divider');
         for(const c of manageable) {
             const self = c.volunteer_id === actorId;
-            items.push({label: self ? 'Check me out' : `Check out ${c.volunteer_name}`,
+            items.push({label: self ? 'Check me out' : `Check out ${memberShortName(c)}`,
                         mode: {kind: 'immediate',
                                expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
         }
         for(const c of manageable) {
             const self = c.volunteer_id === actorId;
-            items.push({label: self ? 'Edit my check-in…' : `Edit ${c.volunteer_name}'s check-in…`,
+            items.push({label: self ? 'Edit my check-in…' : `Edit ${memberShortName(c)}'s check-in…`,
                         mode: {kind: 'modal',
                                dialogUrl: `/rabid.event_checkin.editCheckinDialog(${c.event_checkin_id})`}});
         }
@@ -1397,11 +1399,11 @@ export class EventCheckinTable extends Table<EventCheckin> {
         ];
     }
 
-    // One attendee as inline text: name (quiet link to the volunteer page), staff
-    // marked (attendance mixes volunteers and staff).
-    renderCheckinName(c: EventCheckin & {volunteer_name: string}): Markup {
+    // One attendee as inline text: short name (quiet link to the volunteer page),
+    // staff marked (attendance mixes volunteers and staff).
+    renderCheckinName(c: EventCheckin & MemberName): Markup {
         return [h.span, {class: 'lm-member', 'data-testid': `checkin-${c.volunteer_id}`},
-            templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, c.volunteer_name),
+            templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, memberShortName(c)),
             c.was_staff ? [h.span, {class: 'text-muted small'}, ' (staff)'] : undefined];
     }
 }

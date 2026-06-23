@@ -77,7 +77,9 @@ test("the event detail page shows the summary; the pencil only for hosts", async
         const id = insertEvent();
         const bobDetail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
         assert(hasText(bobDetail, "Repair Night"));
-        assert(hasText(bobDetail, "The shop"));
+        // (A non-remote event shows no location line - it's at our shop; the
+        // summary's always-present sign-up row stands in as the summary check.)
+        assert(hasText(bobDetail, "Signed up"));
         assert(!find(bobDetail, byClass("lm-edit-pencil")));
 
         const aliceDetail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
@@ -173,15 +175,34 @@ test("check-in editor: self verb for everyone, host verbs only for hosts", async
         // Once checked in, the self verb flips to "Check me out".
         await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
         const after = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
-        assert(hasText(after, "Bob Shares"));
+        assert(hasText(after, "Bob"));
         assert(!hasText(after, "Check me in"));
         assert(hasText(after, "Check me out"));
 
         // The host gets the management verbs (check someone in, check others out).
         const hostView = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
         assert(hasText(hostView, "Check someone in…"));
-        assert(hasText(hostView, "Check out Bob Shares"));
-        assert(hasText(hostView, "Edit Bob Shares's check-in…"));
+        assert(hasText(hostView, "Check out Bob"));
+        assert(hasText(hostView, "Edit Bob's check-in…"));
+    });
+});
+
+test("display names: a curated short_name shows in the check-in editor; the full name stays on the volunteer's page", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        // A curated short_name that is NOT just the first word, to prove it's honored.
+        asSystem(() => rabid.volunteer.update(bob, {short_name: "Bobby Q"} as any));
+        const id = insertEvent();
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+
+        // The check-in editor (attendee list + ☰ menu) uses the short name.
+        const editor = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(hasText(editor, "Bobby Q"));
+        assert(hasText(editor, "Check out Bobby Q"));
+        assert(!hasText(editor, "Bob Shares"));        // the full name does NOT appear here
+
+        // But the volunteer's OWN detail page keeps the full name (the boundary).
+        const page = await asUser(bob, () => renderRoute(`rabid.volunteer.detailPage(${bob})`));
+        assert(hasText(page, "Bob Shares"));
     });
 });
 
@@ -228,21 +249,21 @@ test("check-in editor: host gets recent-volunteer quick-adds; regulars don't", a
         const id = insertEvent();
         makeActive(carol);   // carol is active in the last 30 days
 
-        // The host sees a one-tap "Check in Carol Private" (active, not yet in).
+        // The host sees a one-tap "Check in Carol" (active, not yet in).
         const hostView = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
-        assert(hasText(hostView, "Check in Carol Private"));
+        assert(hasText(hostView, "Check in Carol"));
 
         // A regular volunteer gets only their own self verb, no host quick-adds.
         const bobView = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
-        assert(!hasText(bobView, "Check in Carol Private"));
+        assert(!hasText(bobView, "Check in Carol"));
 
         // Tapping it checks carol in; the quick-add gives way to her check-out verb.
         await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, carol));
         assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}))
             .map(c => c.volunteer_name), ["Carol Private"]);
         const after = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
-        assert(!hasText(after, "Check in Carol Private"));
-        assert(hasText(after, "Check out Carol Private"));
+        assert(!hasText(after, "Check in Carol"));
+        assert(hasText(after, "Check out Carol"));
     });
 });
 
@@ -257,12 +278,12 @@ test("check-in editor: per-person verbs are action-primary (all check-outs, then
             .map(b => text(b).trim());
         // Grouped by ACTION, not by person: both check-outs (alpha), then both edits.
         assertEquals(labels.filter(l => l.startsWith('Check out')),
-            ['Check out Bob Shares', 'Check out Carol Private']);
+            ['Check out Bob', 'Check out Carol']);
         assertEquals(labels.filter(l => l.startsWith('Edit')),
-            ["Edit Bob Shares's check-in…", "Edit Carol Private's check-in…"]);
+            ["Edit Bob's check-in…", "Edit Carol's check-in…"]);
         // Every check-out precedes every edit.
-        assert(labels.lastIndexOf('Check out Carol Private')
-               < labels.indexOf("Edit Bob Shares's check-in…"),
+        assert(labels.lastIndexOf('Check out Carol')
+               < labels.indexOf("Edit Bob's check-in…"),
                'all check-outs come before all edits');
     });
 });
@@ -324,14 +345,14 @@ test("sign-up editor: self verb for everyone, host verbs only for hosts", async 
         // Once signed up, the self verb flips to "Remove me".
         await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, id));
         const after = await asUser(bob, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
-        assert(hasText(after, "Bob Shares"));
+        assert(hasText(after, "Bob"));
         assert(!hasText(after, "Sign me up"));
         assert(hasText(after, "Remove me"));
 
         // The host gets the management verbs (sign someone up, remove others).
         const hostView = await asUser(alice, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
         assert(hasText(hostView, "Sign someone up…"));
-        assert(hasText(hostView, "Remove Bob Shares"));
+        assert(hasText(hostView, "Remove Bob"));
     });
 });
 
@@ -340,19 +361,19 @@ test("sign-up editor: host gets recent-volunteer quick-adds; regulars don't", as
         const id = insertEvent();
         makeActive(carol);   // carol is active in the last 30 days
 
-        // The host sees a one-tap "Sign up Carol Private" (active, not yet signed up).
+        // The host sees a one-tap "Sign up Carol" (active, not yet signed up).
         const hostView = await asUser(alice, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
-        assert(hasText(hostView, "Sign up Carol Private"));
+        assert(hasText(hostView, "Sign up Carol"));
 
         // A regular volunteer gets only their own self verb, no host quick-adds.
         const bobView = await asUser(bob, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
-        assert(!hasText(bobView, "Sign up Carol Private"));
+        assert(!hasText(bobView, "Sign up Carol"));
 
         // Tapping it signs carol up; the quick-add gives way to her remove verb.
         await asUser(alice, () => invoke(`rabid.event_commitment.commitVolunteer($arg0,$arg1)`, id, carol));
         const after = await asUser(alice, () => renderRoute(`rabid.event_commitment.renderCommitmentEditor(${id})`));
-        assert(!hasText(after, "Sign up Carol Private"));
-        assert(hasText(after, "Remove Carol Private"));
+        assert(!hasText(after, "Sign up Carol"));
+        assert(hasText(after, "Remove Carol"));
     });
 });
 

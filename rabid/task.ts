@@ -50,6 +50,7 @@ import * as templates from './templates.ts';
 import {OwnedGroupField, createOwnedGroup, snapshotAsOwnedAdhocGroup, dropOrphanedAdhocGroup,
         renderAssignmentLine, renderGroupRef, VolunteerGroup} from './group.ts';
 import {rabid} from './rabid.ts';
+import {shortName, memberShortName} from './volunteer.ts';
 
 export const routes = ()=> ({
 });
@@ -93,11 +94,13 @@ class ManagedBooleanField extends BooleanField {
 }
 
 // Display name for a provenance column (null-safe: system writes - seeds,
-// imports - leave no actor).
+// imports - leave no actor).  Uses the compact shortName, like volunteer
+// references elsewhere.
 function volunteerName(volunteer_id: number|null|undefined): string|undefined {
     if(volunteer_id == null) return undefined;
-    return security.runSystem(() => db().first<{name: string}>(
-        'SELECT name FROM volunteer WHERE volunteer_id = :id', {id: volunteer_id}))?.name;
+    const v = security.runSystem(() => db().first<{name: string, short_name: string}>(
+        'SELECT name, short_name FROM volunteer WHERE volunteer_id = :id', {id: volunteer_id}));
+    return v ? shortName(v) : undefined;
 }
 
 // (The shared assigned-to line now lives in group.ts - renderAssignmentLine /
@@ -855,7 +858,7 @@ export class TaskTable extends Table<Task> {
             overrideLabel = g.group_kind === 'named'
                 ? rabid.volunteer_group.displayName(g)
                 : security.runSystem(() => rabid.volunteer_group.members.all({group_id: t.group_id!}))
-                    .map(m => m.volunteer_name).join(', ') || 'nobody yet';
+                    .map(m => memberShortName(m)).join(', ') || 'nobody yet';
         }
 
         return [h.div, {...props, class: 'lm-task-block ' + props.class,

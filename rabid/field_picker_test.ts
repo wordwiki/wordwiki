@@ -35,14 +35,14 @@ test("fieldPickerOptions: the volunteer picker returns names, not ids", () =>
             // The whole point: the label is a name, not the stringified id.
             assertEquals(String(o.id) === String(o.label), false);
         }
-        assert(opts.some(o => o.label === "Bob Shares"),
+        assert(opts.some(o => o.label === "Bob"),
             "the picker should list volunteers by name");
     })));
 
 test("fieldPickerOptions: the q term filters by word-prefix on the label", () =>
     withTestDb(({ bob }) => asUser(bob, async () => {
         const opts = pick(await renderRoute(PICKER, { queryArgs: { q: "Carol" } }));
-        assertEquals(opts.map(o => o.label), ["Carol Private"]);
+        assertEquals(opts.map(o => o.label), ["Carol"]);
         // '' returns everyone (the four fixture volunteers).
         const all = pick(await renderRoute(PICKER, { queryArgs: { q: "" } }));
         assertEquals(all.length, 4);

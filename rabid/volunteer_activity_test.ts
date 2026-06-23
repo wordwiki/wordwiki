@@ -64,11 +64,11 @@ test("VolunteerForeignKeyField: active-first ordering with a picker-only marker"
         // The active volunteer comes first and carries the marker; the marker is
         // exactly the boundary (only one option has it).
         assertEquals(opts[0].id, bob);
-        assertEquals(opts[0].label, 'Bob Shares (Active 30 Days)');
+        assertEquals(opts[0].label, 'Bob (Active 30 Days)');
         assertEquals(opts.filter(o => String(o.label).includes('(Active 30 Days)')).length, 1);
         // The rest follow, alpha, unmarked.
         const rest = opts.slice(1).map(o => o.label);
-        assertEquals(rest, ['Alice Host', 'Carol Private', 'Dave Admin']);
+        assertEquals(rest, ['Alice', 'Carol', 'Dave']);
 
         // The marker is PICKER-ONLY: loadLabel (selected display) stays plain.
         assertEquals(field.loadLabel(bob), 'Bob Shares');
@@ -88,7 +88,7 @@ test("VolunteerForeignKeyField: a non-empty q runs the search form (name-prefix)
 
         // The leading-space trick matches the term at the START of any word, so
         // 'sh' finds "Bob Shares" but not "Alice Host".
-        assertEquals(field.loadOptions('sh').map(o => o.label), ['Bob Shares']);
+        assertEquals(field.loadOptions('sh').map(o => o.label), ['Bob']);
 
         // It filters by prefix, not substring: 'are' (mid-word) matches nothing.
         assertEquals(field.loadOptions('are').length, 0);
@@ -97,7 +97,7 @@ test("VolunteerForeignKeyField: a non-empty q runs the search form (name-prefix)
         // — only word-initial 'a': "Alice", "Admin".  bob (active) isn't an 'a'
         // word, so do a query that includes him to check ordering.
         const all = field.loadOptions('');                       // the options form
-        assertEquals(all[0].label, 'Bob Shares (Active 30 Days)'); // active-first
+        assertEquals(all[0].label, 'Bob (Active 30 Days)'); // active-first
     })));
 
 test("VolunteerForeignKeyField: no marker when every shown option is active", () =>

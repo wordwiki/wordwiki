@@ -73,16 +73,16 @@ test("member editor: edit affordances for the host only; dialog gated server-sid
         // at all - his one open verb, Add me, doesn't apply to a member.
         const hostView = await asUser(alice, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
-        assert(hasText(hostView, "Bob Shares"));
+        assert(hasText(hostView, "Bob"));
         assert(!!find(hostView, byClass("lm-member")));
         assert(!!find(hostView, byClass("lm-action-menu")));
         assert(hasText(hostView, "Add me"));
         assert(hasText(hostView, "Add member…"));
-        assert(hasText(hostView, "Remove Bob Shares"));
+        assert(hasText(hostView, "Remove Bob"));
 
         const regularView = await asUser(bob, () =>
             renderRoute(`rabid.volunteer_group.renderMemberEditor(${group_id})`));
-        assert(hasText(regularView, "Bob Shares"));
+        assert(hasText(regularView, "Bob"));
         assert(!find(regularView, byClass("lm-action-menu")));
 
         await asUser(bob, () => assertRejects(
@@ -153,6 +153,6 @@ test("committee detail embeds the member editor; insert via saveForm creates the
         const detail = await asUser(bob, () => renderRoute(`rabid.committee.detailPage(${c.committee_id})`));
         assert(hasText(detail, "Outreach Committee"));
         assert(hasText(detail, "Members"));
-        assert(hasText(detail, "Bob Shares"));
+        assert(hasText(detail, "Bob"));
     });
 });
