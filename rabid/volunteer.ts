@@ -50,6 +50,13 @@ export interface Volunteer {
     join_date?: string;
     
     name: string;
+
+    // An optional shorter name for compact contexts (event sign-up lists, etc).
+    // Usually just the first name; people add an initial only to disambiguate
+    // duplicate first names ("David Z" while there was also a "David B").  When
+    // blank, callers fall back to the first word of `name` (see shortName()).
+    short_name: string;
+
     email: string;
     email_visible_to_all_volunteers: boolnum;
     phone: string;
@@ -101,6 +108,14 @@ export interface Volunteer {
 }
 export type VolunteerOpt = Partial<Volunteer>;
 
+// A volunteer's name for compact contexts (sign-up lists, etc): the curated
+// short_name when set, else the first word of the full name.  Takes any row
+// that carries the two columns, so query projections can use it directly.
+export function shortName(v: {short_name?: string|null, name: string}): string {
+    const s = v.short_name?.trim();
+    return s ? s : (v.name?.split(/\s+/)[0] ?? '');
+}
+
 export class VolunteerTable extends Table<Volunteer> {
     
     constructor() {
@@ -110,6 +125,9 @@ export class VolunteerTable extends Table<Volunteer> {
             // contact, then the incidentals (join_date was previously first,
             // burying Name in the dialog).
             new StringField('name', {indexed: true}),
+            // Optional short name for compact lists; blank falls back to the
+            // first word of `name` (see shortName()).
+            new StringField('short_name', {default: '', prompt: 'Short name (optional)'}),
             new EmailField('email', {indexed: true, unique: true, view: emailViewable, redact: true}),
             // Volunteers may opt their email out of being shown to others (shared by default).
             new BooleanField('email_visible_to_all_volunteers', {default: 1}),

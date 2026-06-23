@@ -185,46 +185,32 @@
     margin: 0;
 }
 
-.upcoming-events h2 {
-    color: #333;
-    font-size: 1.8em;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #2c5aa0;
-    padding-bottom: 10px;
-}
-
-.no-upcoming-events {
-    padding: 20px;
-    text-align: center;
-    color: #666;
-    font-style: italic;
-}
-
-.event-count {
-    color: #666;
-    font-size: 0.95em;
-    margin-bottom: 20px;
-}
-
-.week-header {
+/* 'You' in a row's who's-going list: distinct at a glance so a volunteer can
+   scan which events they're signed up for (and it's always shown - never lost
+   in the "+N" overflow). */
+.upcoming-going-self {
+    font-weight: 600;
     color: #2c5aa0;
-    font-size: 1.3em;
-    margin-top: 25px;
-    margin-bottom: 15px;
-    padding: 8px 0;
-    border-bottom: 1px solid #ddd;
 }
 
-.event-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 25px 0;
+/* An inline primary action on a navigable row (e.g. the sign-up toggle): a
+   pill-shaped, finger-sized button at the row's right edge.  The whole row
+   navigates, so this needs to be an unmistakable, comfortably-large tap target;
+   lmNavigableClick already declines taps that land on the button itself. */
+.lm-row-action {
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
-.event-item {
-    margin-bottom: 20px;
-    animation: fadeIn 0.3s ease-in;
+/* Whole-row hover/press tint for navigable TABLE rows.  The generic
+   .lm-navigable rule sets the background on the element, but Bootstrap paints
+   per-cell backgrounds on a .table, so for a <tr> we have to tint the cells. */
+@media (hover: hover) {
+    tr.lm-navigable:hover > * { background-color: var(--bs-tertiary-bg); }
 }
+tr.lm-navigable:active > * { background-color: var(--bs-secondary-bg); }
 
 /* ============================= */
 /* Responsive Design             */
@@ -270,16 +256,6 @@
 /* Utility Animations            */
 /* ============================= */
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
 /* ============================= */
 /* Print Styles                  */

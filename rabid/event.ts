@@ -4,8 +4,9 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableItemProps } from "../liminal/table.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
+import { shortName } from "./volunteer.ts";
 import {block} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
@@ -246,19 +247,18 @@ export class EventTable extends Table<Event> {
             this.fieldsByName.notes.render(e.notes)];
     }
 
+    // The home page's upcoming events, as a week-grouped compact table (the same
+    // shape as the volunteer Time view): a header band per week, then one tight
+    // row per event - far less bulky than the old summary cards, so other home
+    // sections below it actually get seen.  Heading is an h3 to match the page's
+    // sibling sections (Volunteers, Events).
     renderUpcomingEvents(): Markup {
-        // --- Query all events in the next 6 weeks, including all events today.
-
-        // --- Render as a ul with the body given by renderEventSummary
-
-        // All date math in org wall-clock time via Temporal (the previous
-        // new Date()/toISOString() version computed its bounds and week labels
-        // through UTC, shifting both by a day depending on the server's zone).
+        // All date math in org wall-clock time via Temporal (a new Date()/UTC
+        // version would shift the bounds and week labels by the server's zone).
         const today = date.orgToday();
         const startDate = `${today.toString()} 00:00:00`;
         const endDate = `${today.add({days: 42}).toString()} 23:59:59`; // 6 weeks = 42 days
 
-        // Query upcoming events
         const upcomingEvents = db().prepare<Event, {start_date: string, end_date: string}>(block`
             SELECT ${this.allFields}
             FROM event
@@ -266,53 +266,170 @@ export class EventTable extends Table<Event> {
               AND start_time <= :end_date
             ORDER BY start_time`).all({start_date: startDate, end_date: endDate});
 
-        if (upcomingEvents.length === 0) {
-            return [h.div, {class: 'no-upcoming-events'},
-                [h.p, {}, 'No upcoming events scheduled in the next 6 weeks.']
-            ];
-        }
+        if (upcomingEvents.length === 0)
+            return [h.div, {class: 'upcoming-events'},
+                [h.h3, {}, 'Upcoming Events'],
+                [h.p, {class: 'text-muted'}, 'No upcoming events scheduled in the next 6 weeks.']];
 
-        // Group events by week (Sunday-start; Temporal dayOfWeek is Mon=1..Sun=7)
+        // One query for all the sign-up short-names in this set, so the compact
+        // "going" summary on each row costs nothing per-row.
+        const going = this.goingByEvents(upcomingEvents.map(e => e.event_id));
+        const actorId = security.current()?.actorId;
+
+        // Group by week (Sunday-start; Temporal dayOfWeek is Mon=1..Sun=7), in
+        // start_time order so weeks (and events within them) stay chronological.
         const eventsByWeek = new Map<string, Event[]>();
-
         for (const event of upcomingEvents) {
             if (!event.start_time) continue;
-
             const eventDay = date.sqliteDateToTemporal(date.extractDateFromDateTime(event.start_time));
-            const weekStart = eventDay.subtract({days: eventDay.dayOfWeek % 7});
-            const weekKey = weekStart.toString();
-
-            if (!eventsByWeek.has(weekKey)) {
-                eventsByWeek.set(weekKey, []);
-            }
+            const weekKey = eventDay.subtract({days: eventDay.dayOfWeek % 7}).toString();
+            if (!eventsByWeek.has(weekKey)) eventsByWeek.set(weekKey, []);
             eventsByWeek.get(weekKey)!.push(event);
         }
 
-        // Build the markup
-        const sections: Markup[] = [];
-
+        const rows: Markup[] = [];
+        let first = true;
         for (const [weekKey, events] of eventsByWeek) {
-            const weekStart = date.sqliteDateToTemporal(weekKey);
-            const weekEnd = weekStart.add({days: 6});
-
-            // Week header
-            sections.push([h.h3, {class: 'week-header'},
-                `Week of ${date.dateToString(weekStart)} - ${date.dateToString(weekEnd)}`
-            ]);
-
-            // Events for this week
-            const eventItems = events.map(event =>
-                [h.li, {class: 'event-item'}, this.renderEventSummary(event.event_id)]
-            );
-
-            sections.push([h.ul, {class: 'event-list'}, ...eventItems]);
+            rows.push(...this.renderUpcomingWeek(weekKey, events, going, actorId, first));
+            first = false;
         }
 
         return [h.div, {class: 'upcoming-events'},
-            [h.h2, {}, 'Upcoming Events'],
-            [h.p, {class: 'event-count'}, `${upcomingEvents.length} events scheduled in the next 6 weeks`],
-            ...sections
+            [h.h3, {}, 'Upcoming Events'],
+            [h.table, {class: 'table table-sm align-middle'}, [h.tbody, {}, ...rows]]];
+    }
+
+    // Sign-up short-names (with ids, so callers can pick out 'self') for a set of
+    // events, in one query: event_id -> [{id, name}], alpha by full name.
+    private goingByEvents(eventIds: number[]): Map<number, Array<{id: number, name: string}>> {
+        const out = new Map<number, Array<{id: number, name: string}>>();
+        if (eventIds.length === 0) return out;
+        const rows = db().all<{event_id: number, volunteer_id: number, name: string, short_name: string|null}, {}>(`
+            SELECT ec.event_id, v.volunteer_id, v.name, v.short_name
+              FROM event_commitment ec JOIN volunteer v USING (volunteer_id)
+             WHERE v.deleted = 0 AND ec.event_id IN (${eventIds.map(Number).join(',')})
+             ORDER BY v.name`, {});
+        for (const r of rows) {
+            if (!out.has(r.event_id)) out.set(r.event_id, []);
+            out.get(r.event_id)!.push({id: r.volunteer_id, name: shortName(r)});
+        }
+        return out;
+    }
+
+    // One week of the upcoming-events table: a gap (except the first), a header
+    // band (week label + event count), then a row per event.
+    private renderUpcomingWeek(weekKey: string, events: Event[],
+                               going: Map<number, Array<{id: number, name: string}>>,
+                               actorId: number|undefined, isFirst: boolean): Markup[] {
+        const weekStart = date.sqliteDateToTemporal(weekKey);
+        const weekEnd = weekStart.add({days: 6});
+        const sStr = weekStart.toLocaleString('en-US', {month: 'short', day: 'numeric'});
+        const eStr = weekEnd.month === weekStart.month
+            ? String(weekEnd.day)
+            : weekEnd.toLocaleString('en-US', {month: 'short', day: 'numeric'});
+        return [
+            // A generous gap before each week but the first, so the header band
+            // reads as a heading for the rows BELOW it (mirrors the Time view).
+            isFirst ? undefined
+                : [h.tr, {'aria-hidden': 'true', 'data-testid': 'upcoming-week-gap'},
+                   [h.td, {colspan: '4', style: 'height: 1.5rem; border: 0; padding: 0;'}]],
+            [h.tr, {class: 'table-light fw-semibold', 'data-testid': 'upcoming-week',
+                    style: 'border-top: 0; border-bottom: 2px solid var(--bs-secondary-color);'},
+             [h.td, {colspan: '3', style: 'border-bottom: 0;'}, `Week of ${sStr} – ${eStr}`],
+             [h.td, {class: 'text-end text-muted small', style: 'border-bottom: 0;'},
+              `${events.length} ${events.length === 1 ? 'event' : 'events'}`]],
+            ...events.map(e => this.renderUpcomingEventRow(e, going.get(e.event_id) ?? [], actorId)),
         ];
+    }
+
+    // Reload one upcoming-events row (after a self sign-up toggle).  The row joins
+    // the event_commitment reload group (see its props below), so commitSelf /
+    // uncommit re-render it in place.
+    @route(authenticated)
+    renderUpcomingEventRowById(event_id: number): Markup {
+        const e = this.getById(event_id);
+        const going = this.goingByEvents([event_id]).get(event_id) ?? [];
+        return this.renderUpcomingEventRow(e, going, security.current()?.actorId);
+    }
+
+    // One event as a compact table row: WHEN (day + time) · WHAT (name, badges,
+    // location, who's going - self first and distinct) · how many going · a self
+    // sign-up toggle + a chevron.  The WHOLE row navigates to the detail page
+    // (the standard navigable-row convention); there is no edit pencil - this is
+    // a navigation surface, and the event's primary data (the full sign-up list
+    // etc) lives on the detail page.
+    renderUpcomingEventRow(e: Event, going: Array<{id: number, name: string}>,
+                           actorId: number|undefined): Markup {
+        const id = e.event_id;
+        const day = e.start_time
+            ? date.sqliteDateTimeToString(e.start_time, '', {weekday: 'short', month: 'short', day: 'numeric'})
+            : '';
+        const time = e.start_time ? date.sqliteDateTimeToTimeString(e.start_time) : '';
+        const isGoing = actorId !== undefined && going.some(g => g.id === actorId);
+
+        // The whole row navigates (lmNavigableClick → the event-name lm-nav-link).
+        // It ALSO stays in the event_commitment reload group so the inline sign-up
+        // toggle re-renders it in place.  The toggle and the name link are real
+        // controls, so the navigable-click guard declines their taps - no
+        // accidental navigation when the toggle (or its padded area) is hit.
+        const props = reloadableItemProps('event_commitment', id,
+            `rabid.event.renderUpcomingEventRowById(${id})`,
+            {'data-testid': `upcoming-event-${id}`, onclick: 'lmNavigableClick(event)'});
+        props.class = 'lm-navigable ' + props.class;
+
+        return [h.tr, props,
+            [h.td, {class: 'text-nowrap'},
+             day,
+             time ? [h.div, {class: 'text-muted small'}, time] : undefined],
+            [h.td, {},
+             [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`), class: 'lm-nav-link'},
+              e.description || 'Untitled Event'],
+             this.eventBadges(e),
+             e.location_description
+                ? [h.div, {class: 'text-muted small'}, e.location_description] : undefined,
+             this.renderGoing(going, actorId)],
+            [h.td, {class: 'text-end text-nowrap'},
+             going.length > 0 ? `${going.length} going` : [h.span, {class: 'text-muted'}, '—']],
+            [h.td, {class: 'text-end text-nowrap'},
+             [h.div, {class: 'd-inline-flex align-items-center gap-2'},
+              this.renderSelfGoingToggle(id, isGoing, actorId),
+              navChevron()]],
+        ];
+    }
+
+    // The "who's going" sub-line: self first and visually distinct ("You"), so a
+    // volunteer can see at a glance which events they're in - and is NEVER hidden
+    // by the cap, which is the whole point in the truncated "+N" case.
+    private renderGoing(going: Array<{id: number, name: string}>, actorId: number|undefined): Markup {
+        if (going.length === 0) return undefined;
+        const CAP = 4;
+        const selfGoing = actorId !== undefined && going.some(g => g.id === actorId);
+        const others = going.filter(g => g.id !== actorId);
+        const shownOthers = others.slice(0, selfGoing ? CAP - 1 : CAP);
+        const hidden = others.length - shownOthers.length;
+        const parts: Markup[] = [];
+        if (selfGoing) parts.push([h.span, {class: 'upcoming-going-self'}, 'You']);
+        for (const o of shownOthers) parts.push(o.name);
+        const joined: Markup[] = parts.flatMap((p, i) => i === 0 ? [p] : [', ', p]);
+        if (hidden > 0) joined.push(` +${hidden}`);
+        return [h.div, {class: 'text-muted small upcoming-going'}, ...joined];
+    }
+
+    // A self sign-up toggle, modelled on the timesheet 'confirmed' badge: a green
+    // "Going ✓" you click to cancel, or a quiet "Sign up" you click to join.
+    // Only for logged-in volunteers (host management of others stays on the
+    // detail page's sign-up menu).  A finger-sized button (lm-row-action), set at
+    // the row's right edge, so it's an unmistakable tap target alongside the
+    // whole-row navigation.
+    private renderSelfGoingToggle(event_id: number, isGoing: boolean, actorId: number|undefined): Markup {
+        if (actorId === undefined) return undefined;
+        return isGoing
+            ? action.actionButton('Going ✓',
+                {kind: 'immediate', expr: `rabid.event_commitment.uncommit(${event_id},${actorId})`},
+                'btn btn-success lm-row-action', {title: "You're signed up — click to cancel"})
+            : action.actionButton('Sign up',
+                {kind: 'immediate', expr: `rabid.event_commitment.commitSelf(${event_id})`},
+                'btn btn-outline-primary lm-row-action', {title: 'Sign up for this event'});
     }
 
        // TODO make single line version for rendering in home page etc.

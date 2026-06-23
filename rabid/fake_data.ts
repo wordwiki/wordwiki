@@ -336,6 +336,34 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     return { rockyId };
 }
 
+// Curated short names, the way the org actually does it: a volunteer's short
+// name is normally just their first name (left BLANK here so the shortName()
+// first-word fallback is exercised), and people add a last initial only to
+// disambiguate a shared first name ("David Z" while there was also a "David B").
+// So we set short_name ONLY for first-name collisions among active volunteers.
+export function seedShortNames(rabid: Rabid) {
+    const vols = rabid.volunteer.allVolunteersByName.all().filter(v => !v.deleted);
+    const byFirst = new Map<string, typeof vols>();
+    for(const v of vols) {
+        const first = v.name.split(/\s+/)[0] ?? '';
+        if(!byFirst.has(first)) byFirst.set(first, []);
+        byFirst.get(first)!.push(v);
+    }
+    let disambiguated = 0;
+    for(const group of byFirst.values()) {
+        if(group.length < 2) continue;   // unique first name -> blank (fallback)
+        for(const v of group) {
+            const parts = v.name.split(/\s+/);
+            const first = parts[0] ?? '';
+            const lastInitial = (parts[parts.length - 1] ?? '').charAt(0).toUpperCase();
+            rabid.volunteer.update(v.volunteer_id,
+                {short_name: lastInitial ? `${first} ${lastInitial}` : first});
+            disambiguated++;
+        }
+    }
+    console.info(`Short names: ${disambiguated} disambiguated (rest fall back to first name)`);
+}
+
 // One fixed, role-tiered login (see the canonical-logins block in
 // seedVolunteers).  Fixed values, not faker streams, so the credentials and
 // records are stable across runs.  `profile` carries the activity tier (its
@@ -1115,6 +1143,7 @@ export const SCENARIOS: Record<ScenarioName, Scenario> = {
 // Run the builders for a scenario (order matters: later builders read earlier data).
 export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     seedVolunteers(rabid, { count: scenario.volunteers, baseSeed: scenario.baseSeed });
+    seedShortNames(rabid);
     seedCommittees(rabid);
     seedProjects(rabid);
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
