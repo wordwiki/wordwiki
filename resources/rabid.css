@@ -179,9 +179,10 @@
 /* ============================= */
 
 .upcoming-events {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
+    /* Flow within the page's .container like every other home-page section -
+       no extra max-width/centering/padding, which offset it from the page
+       title and the sibling h3 sections. */
+    margin: 0;
 }
 
 .upcoming-events h2 {
@@ -230,10 +231,6 @@
 /* ============================= */
 
 @media (max-width: 768px) {
-    .upcoming-events {
-        padding: 10px;
-    }
-    
     .event-summary {
         padding: 12px;
     }
