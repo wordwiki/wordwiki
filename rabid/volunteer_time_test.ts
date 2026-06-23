@@ -7,7 +7,8 @@ import { assert, assertEquals, assertRejects } from "../liminal/testing/assert.t
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
 import { hasText, findAll, testIdOf } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
-import { reconcileTime, spanHours, WEEK_WINDOW, type TimeSpan, type TaskSpan } from "./volunteer_time.ts";
+import { reconcileTime, spanHours, hoursBreakdown, WEEK_WINDOW,
+         type TimeSpan, type TaskSpan, type HoursTotals, type ConfirmOpts } from "./volunteer_time.ts";
 
 function tk(id: number, doneTime: string,
             opts: {eventId?: number, eventStart?: string, eventEnd?: string|null,
@@ -108,6 +109,48 @@ test("reconcile: confirmed/unconfirmed split the volunteer (unpaid) hours", () =
         [ts(1, '2026-06-01 09:00:00', '2026-06-01 12:00:00')],
         [ci(2, '2026-06-01 10:00:00', '2026-06-01 11:00:00', false, true)]);
     assertEquals(nested.confirmedHours, 0);   // the check-in nested under the timesheet
+});
+
+// --- hoursBreakdown (pure: a labelled subtotal/total) --------------------------
+
+function totals(p: Partial<HoursTotals>): HoursTotals {
+    const volunteerHours = p.volunteerHours ?? 0;
+    const paidHours = p.paidHours ?? 0;
+    const confirmedHours = p.confirmedHours ?? 0;
+    return {
+        hours: p.hours ?? (volunteerHours + paidHours),
+        paidHours, volunteerHours, confirmedHours,
+        unconfirmedHours: p.unconfirmedHours ?? (volunteerHours - confirmedHours),
+    };
+}
+const SHOWN: ConfirmOpts = {show: true, canConfirm: false};   // viewer may see confirmation
+const HIDDEN: ConfirmOpts = {show: false, canConfirm: false}; // viewer may not
+
+test("hoursBreakdown: the common single-kind cases are just a number + label", () => {
+    assertEquals(hoursBreakdown(totals({volunteerHours: 5.5}), HIDDEN), '5.5 volunteer');
+    assertEquals(hoursBreakdown(totals({paidHours: 8}), HIDDEN), '8.0 paid hours');
+});
+
+test("hoursBreakdown: confirmed/unconfirmed shown only to permitted viewers", () => {
+    const t = totals({volunteerHours: 4.5, confirmedHours: 3, unconfirmedHours: 1.5});
+    assertEquals(hoursBreakdown(t, SHOWN), '3.0 confirmed · 1.5 unconfirmed');
+    // all-confirmed collapses to a single part
+    assertEquals(hoursBreakdown(totals({volunteerHours: 4.5, confirmedHours: 4.5, unconfirmedHours: 0}), SHOWN),
+                 '4.5 confirmed');
+    // a viewer who may NOT see confirmation reads plain "volunteer" - NO leak,
+    // and a regular volunteer (all hours "unconfirmed" internally) never reads it.
+    assertEquals(hoursBreakdown(t, HIDDEN), '4.5 volunteer');
+});
+
+test("hoursBreakdown: a genuine mix joins parts; zero/residue parts are dropped", () => {
+    assertEquals(hoursBreakdown(totals({volunteerHours: 2, paidHours: 6}), HIDDEN),
+                 '2.0 volunteer · 6.0 paid hours');
+    // carrier-only week (no counted hours) -> a bare "0.0"
+    assertEquals(hoursBreakdown(totals({hours: 0}), HIDDEN), '0.0');
+    // a floating-point residue (0.3 - (0.1+0.2) = -5.6e-17) must not show "-0.0 unconfirmed"
+    assertEquals(hoursBreakdown(
+        totals({volunteerHours: 0.3, confirmedHours: 0.1 + 0.2, unconfirmedHours: 0.3 - (0.1 + 0.2)}), SHOWN),
+        '0.3 confirmed');
 });
 
 // --- Integration: query + render + mutations -----------------------------------
@@ -346,6 +389,53 @@ test("needsConfirmation off (the common case): no confirmation UI", () => {
         await asUser(bob, async () => {
             const view = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob})`);
             assert(!hasText(view, 'unconfirmed'));
+        });
+    });
+});
+
+test("Time view renders labelled subtotals/total (volunteer vs paid hours)", () => {
+    return withTestDb(async ({ bob, carol }) => {
+        asSystem(() => rabid.timesheet_entry.insert({
+            volunteer_id: bob, start_time: '2026-06-20 09:00:00', end_time: '2026-06-20 12:00:00',  // 3h unpaid
+            notes: 'desk', is_paid_time: 0, km_driven_for_reimbursement: 0,
+            km_driven_processed: 0, paid_time_processed: 0,
+        } as any));
+        asSystem(() => rabid.timesheet_entry.insert({
+            volunteer_id: carol, start_time: '2026-06-20 09:00:00', end_time: '2026-06-20 17:00:00',  // 8h paid
+            notes: 'shift', is_paid_time: 1, km_driven_for_reimbursement: 0,
+            km_driven_processed: 0, paid_time_processed: 0,
+        } as any));
+        // bob's week + total read "3.0 volunteer"; no paid-hours label.
+        await asUser(bob, async () => {
+            const v = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob})`);
+            assert(hasText(v, '3.0 volunteer'));
+            assert(!hasText(v, 'paid hours'));
+        });
+        // carol's are all paid -> "8.0 paid hours"; no volunteer label.
+        await asUser(carol, async () => {
+            const v = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${carol})`);
+            assert(hasText(v, '8.0 paid hours'));
+            assert(!hasText(v, 'volunteer'));
+        });
+    });
+});
+
+test("week grouping: a gap separates consecutive weeks (none before the first)", () => {
+    return withTestDb(({ bob }) => {
+        asSystem(() => {
+            // Three entries in three distinct (Monday-started) weeks.
+            for(const d of ['2026-06-01', '2026-06-08', '2026-06-15']) {
+                rabid.timesheet_entry.insert({
+                    volunteer_id: bob, start_time: `${d} 09:00:00`, end_time: `${d} 10:00:00`,
+                    notes: 'w', is_paid_time: 0, km_driven_for_reimbursement: 0,
+                    km_driven_processed: 0, paid_time_processed: 0,
+                } as any);
+            }
+        });
+        return asUser(bob, async () => {
+            const v = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob})`);
+            assertEquals(findAll(v, n => testIdOf(n) === 'time-week').length, 3);   // three week headers
+            assertEquals(findAll(v, n => testIdOf(n) === 'week-gap').length, 2);    // a gap BETWEEN weeks only
         });
     });
 });

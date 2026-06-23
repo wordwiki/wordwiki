@@ -530,21 +530,20 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
         show: model.needsConfirmation && canViewHoursConfirmation(volunteer_id),
         canConfirm: viewerIsHostOrAdmin(),
     };
+    // Grand total over the shown weeks, as a labelled breakdown (same mechanism
+    // as the per-week subtotals - see hoursBreakdown).
     const confirmedHours = sum(w => w.confirmedHours);
-    const summaryLine = `volunteer ${(hours - paidHours).toFixed(1)} · paid ${paidHours.toFixed(1)}`
-        + (conf.show
-            ? ` · confirmed ${confirmedHours.toFixed(1)} · unconfirmed ${((hours - paidHours) - confirmedHours).toFixed(1)}`
-            : '');
+    const volunteerHours = hours - paidHours;
+    const totals: HoursTotals = {hours, paidHours, volunteerHours,
+                                 confirmedHours, unconfirmedHours: volunteerHours - confirmedHours};
 
     return [h.div, props,
         [h.table, {class: 'table table-sm'},
          [h.tbody, {},
           shown.flatMap((w, i) => renderWeek(w, volunteer_id, i === 0, conf)),
           [h.tr, {class: 'fw-bold border-top'},
-           [h.td, {}, totalLabel], [h.td, {}],
-           [h.td, {class: 'text-end'}, hours.toFixed(1)], [h.td, {}]],
-          [h.tr, {},
-           [h.td, {colspan: '4', class: 'text-end text-muted small'}, summaryLine]],
+           [h.td, {colspan: '2'}, totalLabel],
+           [h.td, {colspan: '2', class: 'text-end'}, hoursBreakdown(totals, conf)]],
          ]],
         footer,
     ];
@@ -553,20 +552,51 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
 // Per-render confirmation context, threaded into the row renderers.  `show`:
 // may this viewer see confirmation state at all (self/host).  `canConfirm`: may
 // they act on it (host only) - false means read-only badges.
-interface ConfirmOpts { show: boolean; canConfirm: boolean; }
+export interface ConfirmOpts { show: boolean; canConfirm: boolean; }
+
+// The fields hoursBreakdown reads (a TimeWeek subtotal or the grand total).
+export type HoursTotals = {hours: number, paidHours: number, volunteerHours: number,
+                           confirmedHours: number, unconfirmedHours: number};
+
+// A subtotal/total as a labelled breakdown of its non-zero kinds, e.g.
+// "5.5 volunteer", "8.0 paid hours", "3.0 confirmed · 1.5 unconfirmed".  In
+// practice a person has one kind per week (regular -> volunteer, staff -> paid),
+// so this is usually just a number plus a label; community-service people
+// mid-confirmation show a confirmed/unconfirmed mix.
+//
+// confirmed/unconfirmed (a sub-split of the volunteer hours) appear ONLY when
+// the viewer may see confirmation state (conf.show).  Otherwise those same hours
+// read as plain "volunteer" - so a regular volunteer never reads "unconfirmed",
+// and a community-service person's status never leaks to other volunteers.
+export function hoursBreakdown(t: HoursTotals, conf: ConfirmOpts): string {
+    // Round to a tenth and drop zero (and -0.0) parts.
+    const part = (v: number, label: string): string | null => {
+        const r = Math.round(v * 10) / 10;
+        return r === 0 ? null : `${r.toFixed(1)} ${label}`;
+    };
+    const parts = (conf.show
+        ? [part(t.confirmedHours, 'confirmed'), part(t.unconfirmedHours, 'unconfirmed')]
+        : [part(t.volunteerHours, 'volunteer')]
+    ).concat(part(t.paidHours, 'paid hours'));
+    const shown = parts.filter((x): x is string => x !== null);
+    return shown.length ? shown.join(' · ') : t.hours.toFixed(1);
+}
 
 function renderWeek(w: TimeWeek, volunteer_id: number, isFirst: boolean, conf: ConfirmOpts): Markup[] {
     return [
-        // A blank spacer row before each week (except the first) so the week
-        // header - which carries that week's total - reads as the start of the
-        // block BELOW it, not a footer for the rows above.
+        // A generous blank gap before each week (except the first).  The week
+        // header carries that week's total at the TOP of its block, which is
+        // unconventional (a total usually sits below its rows), so the grouping
+        // must be unmistakable: a big gap above + the header band capped by a
+        // heavy bottom rule (and NO top rule) makes it read as a heading for the
+        // rows BELOW it, not a footer for the rows above.
         isFirst ? undefined
-            : [h.tr, {'aria-hidden': 'true'},
-               [h.td, {colspan: '4', style: 'height: 1.25rem; border: 0;'}]],
-        [h.tr, {class: 'table-light border-top', 'data-testid': 'time-week'},
-         [h.td, {colspan: '2', class: 'fw-semibold'}, `Week of ${weekLabel(w)}`],
-         [h.td, {class: 'text-end fw-semibold'}, w.hours.toFixed(1)],
-         [h.td, {}]],
+            : [h.tr, {'aria-hidden': 'true', 'data-testid': 'week-gap'},
+               [h.td, {colspan: '4', style: 'height: 2rem; border: 0; padding: 0;'}]],
+        [h.tr, {class: 'table-light fw-semibold', 'data-testid': 'time-week',
+                style: 'border-top: 0; border-bottom: 2px solid var(--bs-secondary-color);'},
+         [h.td, {colspan: '2', style: 'border-bottom: 0;'}, `Week of ${weekLabel(w)}`],
+         [h.td, {colspan: '2', class: 'text-end', style: 'border-bottom: 0;'}, hoursBreakdown(w, conf)]],
         ...w.entries.flatMap(e => renderEntry(e, volunteer_id, conf)),
     ];
 }
