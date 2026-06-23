@@ -88,10 +88,12 @@ export interface Volunteer {
 
     permissions: string;
 
-    // Once a volunteer is manually marked inactive, they will not show up in the common
-    // lists etc.
-    inactive: boolnum;
-    marked_inactive_date: string;
+    // Once a volunteer is archived, they will not show up in the common lists
+    // etc. (their history is kept).  This is the manual roster on/off switch -
+    // distinct from soft-`deleted`, and distinct from the 30-day "active"
+    // convention (recently volunteered) used to order the lists.
+    archived: boolnum;
+    archived_date: string;
     
     // For volunteers with long inactivity, we may request exit feedback.
     exit_feedback_requested: boolnum;
@@ -157,8 +159,8 @@ export class VolunteerTable extends Table<Volunteer> {
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
             new StringField('emergency_contact_phone', {default: '', view: selfOrHost, redact: true}),
             new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
-            new BooleanField('inactive', {default: 0}),
-            new DateField('marked_inactive_date', {nullable: true}),
+            new BooleanField('archived', {default: 0}),
+            new DateField('archived_date', {nullable: true}),
             new BooleanField('exit_feedback_requested', {default: 0}),
             new EnumField('exit_reason', exit_reason_enum, {nullable: true}),
             new StringField('exit_feedback', {nullable: true}),
@@ -196,7 +198,7 @@ export class VolunteerTable extends Table<Volunteer> {
         return this.prepare<Volunteer, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
-/**/          WHERE deleted = 0 AND inactive = 0
+/**/          WHERE deleted = 0 AND archived = 0
 /**/          ORDER BY name`);
     }
 
@@ -235,8 +237,8 @@ export class VolunteerTable extends Table<Volunteer> {
     // ------------------------------------------------------------------------
     //
     // The popup-action model where the action's result is a PAGE: the dialog
-    // collects {text, only_active} and navigates to
-    //   /rabid.volunteer.search({text:"Dav",only_active:true})
+    // collects {text, include_archived} and navigates to
+    //   /rabid.volunteer.search({text:"Dav",include_archived:false})
     // (lmNavigateFormRoute builds the route expression from the form), so a
     // search has a real URL - sharable, back-button-able, refresh-stable - and
     // both the page's own Search button and the dialog pre-populate from the
@@ -249,11 +251,11 @@ export class VolunteerTable extends Table<Volunteer> {
     // connection open - ASCII folding only).
     @path
     get searchVolunteers() {
-        return this.prepare<Volunteer, {text: string, only_active: number}>(block`
+        return this.prepare<Volunteer, {text: string, include_archived: number}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM volunteer
 /**/          WHERE deleted = 0
-/**/            AND (:only_active = 0 OR inactive = 0)
+/**/            AND (:include_archived = 1 OR archived = 0)
 /**/            AND ( email LIKE :text || '%'
 /**/                  OR (' ' || name) LIKE '% ' || :text || '%' )
 /**/          ORDER BY name`);
@@ -262,31 +264,39 @@ export class VolunteerTable extends Table<Volunteer> {
     // The search results page.  Args arrive from the URL's object literal,
     // which our own dialog produced with these exact types (text fields as
     // strings, checkboxes as booleans - see lmNavigateFormRoute); routes
-    // trust their forms, no per-route normalizers.  Absent only_active
-    // defaults to true (active volunteers are the common case).
+    // trust their forms, no per-route normalizers.  Absent include_archived
+    // defaults to false (the current roster is the common case; archived
+    // volunteers are hidden unless explicitly asked for).
     @route(authenticated)
-    search(args: {text?: string, only_active?: boolean} = {}): templates.Page {
+    search(args: {text?: string, include_archived?: boolean} = {}): templates.Page {
         const text = args.text ?? '';
-        const only_active = args.only_active ?? true;
-        return templates.page('Volunteers — Search', this.renderSearch(text, only_active));
+        const include_archived = args.include_archived ?? false;
+        return templates.page('Volunteers — Search', this.renderSearch(text, include_archived));
     }
 
-    renderSearch(text: string, only_active: boolean): Markup {
+    renderSearch(text: string, include_archived: boolean): Markup {
         return [h.div, {class: 'container py-3'},
-            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
-             [h.h2, {class: 'mb-0'}, 'Volunteers'],
-             this.searchButton(text, only_active)],
-            this.renderVolunteerList(text, only_active),
+            [h.h2, {}, 'Volunteers'],
+            this.renderVolunteerList(text, include_archived),
         ];
     }
 
-    // The Search button: opens the dialog pre-populated with the CURRENT
-    // search, so a search can be refined rather than retyped.
-    searchButton(text: string, only_active: boolean): Markup {
+    // The search menu: a quiet ☰ that sits next to the results line.  The
+    // common "shaped" searches (current roster vs everyone, incl. archived)
+    // navigate straight to the matching results page - one tap, no dialog;
+    // "Search by name…" opens the full parameter dialog, pre-populated with the
+    // CURRENT search so it refines rather than restarts.
+    searchMenu(text: string, include_archived: boolean): Markup {
         const dialogUrl =
-            `/rabid.volunteer.searchDialog({text:${JSON.stringify(text)},only_active:${only_active}})`;
-        return action.actionButton('Search', {kind: 'modal', dialogUrl},
-                                   'btn btn-outline-primary btn-sm');
+            `/rabid.volunteer.searchDialog({text:${JSON.stringify(text)},include_archived:${include_archived}})`;
+        return action.actionMenu([
+            {label: 'Current volunteers',
+             link: templates.pageLinkProps('/rabid.volunteer.search({include_archived:false})')},
+            {label: 'All volunteers',
+             link: templates.pageLinkProps('/rabid.volunteer.search({include_archived:true})')},
+            'divider',
+            {label: 'Search by name…', mode: {kind: 'modal', dialogUrl}},
+        ], {ariaLabel: 'Search volunteers'});
     }
 
     // The top-level Volunteers page body (dispatched from the navbar's
@@ -302,10 +312,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // The Volunteers section of the home/volunteers pages (a standin - these
     // will grow into structured summaries; search lives on its own page).
     renderSearchableVolunteers(): Markup {
-        return [
-            [h.div, {class: 'mb-2'}, this.searchButton('', true)],
-            this.renderVolunteerList('', true),
-        ];
+        return this.renderVolunteerList('', false);
     }
 
     // Hand-coded volunteer list, in the standard "navigable item list" markup
@@ -316,13 +323,13 @@ export class VolunteerTable extends Table<Volunteer> {
     // detail page (keeps the list compact, and keeps the mostly-'***'
     // redacted column out of everyone's face).
     @route(authenticated)
-    renderVolunteerList(text: string, only_active: boolean): Markup {
-        const rows = this.searchVolunteers.all({text, only_active: only_active ? 1 : 0});
-        const scopeLabel = only_active ? 'active ' : '';
+    renderVolunteerList(text: string, include_archived: boolean): Markup {
+        const rows = this.searchVolunteers.all({text, include_archived: include_archived ? 1 : 0});
+        const scopeLabel = include_archived ? '' : 'current ';
 
         // Split into two lists: recently-active (a timesheet entry or event
         // check-in in the last 30 days) and everyone else - the long tail of
-        // mostly-inactive volunteers shouldn't bury the people currently around.
+        // not-recently-seen volunteers shouldn't bury the people currently around.
         const active = activeVolunteerIdsWithin(30);
         const recent = rows.filter(v => active.has(v.volunteer_id));
         const others = rows.filter(v => !active.has(v.volunteer_id));
@@ -332,9 +339,11 @@ export class VolunteerTable extends Table<Volunteer> {
         ] : undefined;
 
         return [
-            [h.p, {class: 'text-muted small mb-2'},
-             text ? `${rows.length} ${scopeLabel}volunteer(s) matching “${text}”`
-                  : `${rows.length} ${scopeLabel}volunteer(s)`],
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.p, {class: 'text-muted small mb-0'},
+              text ? `${rows.length} ${scopeLabel}volunteer(s) matching “${text}”`
+                   : `${rows.length} ${scopeLabel}volunteer(s)`],
+             this.searchMenu(text, include_archived)],
             section('Active — last 30 days', recent),
             section('Other volunteers', others),
         ];
@@ -349,8 +358,8 @@ export class VolunteerTable extends Table<Volunteer> {
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
-        const inactiveBadge = v.inactive
-            ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Inactive'] : undefined;
+        const archivedBadge = v.archived
+            ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Archived'] : undefined;
 
         const item = this.detailItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
         return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
@@ -358,7 +367,7 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.div, {class: 'lm-item-primary'},
               [h.a, {...templates.pageLinkProps(`/rabid.volunteer.detailPage(${id})`),
                      class: 'lm-nav-link'}, v.name],
-              inactiveBadge],
+              archivedBadge],
              [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
               renderFieldValue(f.email, v.email)]],
             this.canEditRecord(v) ? this.editPencil(id) : undefined,
@@ -377,13 +386,13 @@ export class VolunteerTable extends Table<Volunteer> {
     // builds the route expression from the form: text fields as JSON-escaped
     // strings, checkboxes as booleans) - the result is the search PAGE.
     @route(authenticated)
-    searchDialog(args: {text?: string, only_active?: boolean} = {}): Markup {
+    searchDialog(args: {text?: string, include_archived?: boolean} = {}): Markup {
         const text = args.text ?? '';
-        const only_active = args.only_active ?? true;
+        const include_archived = args.include_archived ?? false;
         return action.renderParamForm(
             [new StringField('text', {prompt: 'Name or email starts with…', nullable: true}),
-             new CheckboxField('only_active', {prompt: 'Only active volunteers'})],
-            {text, only_active},
+             new CheckboxField('include_archived', {prompt: 'Include archived volunteers'})],
+            {text, include_archived},
             {
                 title: 'Search volunteers',
                 submitLabel: 'Search',
@@ -426,7 +435,7 @@ export class VolunteerTable extends Table<Volunteer> {
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, v.name],
-             v.inactive ? [h.span, {class: 'badge text-bg-secondary'}, 'Inactive'] : undefined,
+             v.archived ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
              this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined,
              viewerIsHost
                  ? action.actionButton('Reset password',

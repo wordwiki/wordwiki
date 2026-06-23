@@ -191,7 +191,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     const idS = s('volunteer.identity');      // name + email (kept correlated)
     const contactS = s('volunteer.contact');  // phone + visibility + emergency contact
     const skillS = s('volunteer.skills');
-    const statusS = s('volunteer.status');     // join / inactive / exit
+    const statusS = s('volunteer.status');     // join / archived / exit
     const roleS = s('volunteer.role');         // permissions
     const acctS = s('volunteer.account');      // whether a password is set
     const confS = s('volunteer.needs_confirmation'); // community-service hours flag
@@ -215,8 +215,8 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         // 'testing' lets the canonical dev login drive the browser-test harness
         // (the test-client page + evalInBrowser); see liminal/browser-agent.ts.
         permissions: 'admin,testing',
-        inactive: 0,
-        marked_inactive_date: undefined,
+        archived: 0,
+        archived_date: undefined,
         exit_feedback_requested: 0,
         exit_reason: undefined,
         exit_feedback: undefined,
@@ -251,15 +251,15 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         const firstName = idS.person.firstName();
         const lastName = idS.person.lastName();
         const joinDate = statusS.date.past({ years: 3 });
-        // Profiled (active) volunteers are always active+undeleted: an "active
-        // staffer" who is also marked inactive/deleted would be contradictory (and
-        // the activity builders skip inactive/deleted people, so they'd show no
-        // data).  The unprofiled long tail keeps the inactive/exit/deleted churn.
+        // Profiled (active) volunteers are always on-roster+undeleted: an "active
+        // staffer" who is also archived/deleted would be contradictory (and the
+        // activity builders skip archived/deleted people, so they'd show no
+        // data).  The unprofiled long tail keeps the archived/exit/deleted churn.
         // We still draw the rolls (so the tail's stream is unperturbed), then
         // override them for profiled volunteers.
-        const isInactiveRoll = statusS.datatype.boolean({ probability: 0.15 });
-        const hasExitFeedbackRoll = isInactiveRoll && statusS.datatype.boolean({ probability: 0.4 });
-        const isInactive = profile ? false : isInactiveRoll;
+        const isArchivedRoll = statusS.datatype.boolean({ probability: 0.15 });
+        const hasExitFeedbackRoll = isArchivedRoll && statusS.datatype.boolean({ probability: 0.4 });
+        const isArchived = profile ? false : isArchivedRoll;
         const hasExitFeedback = profile ? false : hasExitFeedbackRoll;
 
         const newVolunteerId = rabid.volunteer.insert({
@@ -300,8 +300,8 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
             // Roles the security model understands: most volunteers have none,
             // some are hosts (extra visibility), a few are admins.
             permissions: roleS.helpers.arrayElement(['', '', '', '', '', '', '', 'host', 'host', 'admin']),
-            inactive: isInactive ? 1 : 0,
-            marked_inactive_date: isInactive
+            archived: isArchived ? 1 : 0,
+            archived_date: isArchived
                 ? isoDate(statusS.date.between({ from: joinDate, to: new Date() }))
                 : undefined,
             exit_feedback_requested: hasExitFeedback ? 1 : 0,
@@ -385,8 +385,8 @@ function seedFixedLogin(rabid: Rabid, first: string, last: string, email: string
         is_staff: profile?.isStaff ?? 0,
         volunteer_hours_need_confirmation: needsConfirmation ? 1 : 0,
         permissions,
-        inactive: 0,
-        marked_inactive_date: undefined,
+        archived: 0,
+        archived_date: undefined,
         exit_feedback_requested: 0,
         exit_reason: undefined,
         exit_feedback: undefined,
@@ -796,7 +796,7 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
     startOfThisWeek.setDate(startOfThisWeek.getDate() - ((startOfThisWeek.getDay() + 6) % 7)); // back to Monday
 
     const volunteers = rabid.volunteer.allVolunteersByName.all()
-        .filter(v => !v.inactive && !v.deleted);
+        .filter(v => !v.archived && !v.deleted);
     const allEvents = rabid.event.allEvents.all()
         .filter(e => e.start_time)
         .map(e => ({start: new Date(e.start_time!),
@@ -1013,7 +1013,7 @@ export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {
 // with).  Cheap, so seeded in every scenario.
 export function seedCommittees(rabid: Rabid): void {
     const volunteers = rabid.volunteer.allVolunteersByName.all()
-        .filter(v => !v.inactive && !v.deleted);
+        .filter(v => !v.archived && !v.deleted);
     const byEmail = (email: string) => volunteers.find(v => v.email === email);
 
     const committees: Array<{name: string, description: string, members: number[]}> = [
@@ -1047,7 +1047,7 @@ export function seedCommittees(rabid: Rabid): void {
 // in every scenario.
 export function seedProjects(rabid: Rabid): void {
     const volunteers = rabid.volunteer.allVolunteersByName.all()
-        .filter(v => !v.inactive && !v.deleted);
+        .filter(v => !v.archived && !v.deleted);
     const byEmail = (email: string) => volunteers.find(v => v.email === email);
     const logistics = rabid.committee.activeCommittees.all({})
         .find(c => c.name === 'Logistics Committee');

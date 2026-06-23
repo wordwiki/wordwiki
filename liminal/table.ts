@@ -997,7 +997,7 @@ export class DateTimeField extends Field {
 }
 
 /**
- * A date WITHOUT a time of day (join date, inactive-since, ...), stored as
+ * A date WITHOUT a time of day (join date, archived-on, ...), stored as
  * SQLite 'YYYY-MM-DD'.  Distinct from DateTimeField so day-granularity facts
  * get a date picker (not a datetime picker with meaningless time noise) and
  * render as "Jan 23, 2025".

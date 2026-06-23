@@ -143,23 +143,23 @@ test("an anonymous viewer cannot read volunteer records (non-redactable field th
     });
 });
 
-// --- The search page (rabid.volunteer.search({text, only_active})) ----------
+// --- The search page (rabid.volunteer.search({text, include_archived})) -----
 
-test("search matches name-word/email prefixes case-insensitively, and filters by only_active", async () => {
+test("search matches name-word/email prefixes case-insensitively, and filters by include_archived", async () => {
     await withTestDb(async ({ alice, bob, carol, dave }) => {
-        // Mark carol inactive so the only_active filter has something to filter.
-        asSystem(() => rabid.volunteer.updateNamedFields(carol, ["inactive"], {inactive: 1}));
+        // Archive carol so the include_archived filter has something to filter.
+        asSystem(() => rabid.volunteer.updateNamedFields(carol, ["archived"], {archived: 1}));
 
         // Case-insensitive prefix on a name word ('private' matches 'Carol Private'),
-        // only_active:false includes the inactive carol...
-        const all = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private", only_active:false})`));
+        // include_archived:true includes the archived carol...
+        const all = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private", include_archived:true})`));
         assert(hasText(all, "Carol Private"));
         assert(hasText(all, "1 volunteer(s) matching"));
 
-        // ...and the default (only_active absent -> true) excludes her.
-        const active = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private"})`));
-        assert(!hasText(active, "Carol Private"));
-        assert(hasText(active, "0 active volunteer(s) matching"));
+        // ...and the default (include_archived absent -> false) excludes her.
+        const current = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private"})`));
+        assert(!hasText(current, "Carol Private"));
+        assert(hasText(current, "0 current volunteer(s) matching"));
 
         // Email prefix works too.
         const byEmail = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"BOB@"})`));
@@ -170,15 +170,15 @@ test("search matches name-word/email prefixes case-insensitively, and filters by
 test("the search page's dialog pre-populates with the current search (refinement)", async () => {
     await withTestDb(async ({ dave }) => {
         const dialog = await asUser(dave, () =>
-            renderRoute(`rabid.volunteer.searchDialog({text:"Dav", only_active:false})`));
+            renderRoute(`rabid.volunteer.searchDialog({text:"Dav", include_archived:true})`));
         const textInput = find(dialog, n => tagOf(n) === "input" && attr(n, "name") === "text");
         assertEquals(attr(textInput!, "value"), "Dav");
-        const checkbox = find(dialog, n => tagOf(n) === "input" && attr(n, "name") === "only_active");
-        assertEquals(attr(checkbox!, "checked"), undefined); // only_active:false -> unchecked
-        // and the page's own Search button carries the current search into the dialog url
-        const page = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"Dav", only_active:false})`));
+        const checkbox = find(dialog, n => tagOf(n) === "input" && attr(n, "name") === "include_archived");
+        assertEquals(attr(checkbox!, "checked"), ""); // include_archived:true -> checked
+        // and the page's own search menu carries the current search into the dialog url
+        const page = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"Dav", include_archived:true})`));
         const btn = find(page, n => tagOf(n) === "button" && String(attr(n, "hx-get") ?? "").includes("searchDialog"));
-        assertStringIncludes(String(attr(btn!, "hx-get")), `{text:"Dav",only_active:false}`);
+        assertStringIncludes(String(attr(btn!, "hx-get")), `{text:"Dav",include_archived:true}`);
     });
 });
 

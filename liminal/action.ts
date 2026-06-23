@@ -86,7 +86,15 @@ export function actionButton(label: Markup, mode: ActionMode,
  * editable.  (Bootstrap's dropdown data-api is delegation-based, so menus
  * inside htmx-swapped fragments work without re-initialization.)
  */
-export type ActionMenuItem = {label: string, mode: ActionMode, btnClass?: string} | 'divider';
+export type ActionMenuItem =
+    // An action item: dispatches one of the three standard action forms.
+    {label: string, mode: ActionMode, btnClass?: string}
+    // A navigation item: a plain link.  `link` is the full set of anchor props
+    // (href + any boosting attrs) - the caller supplies them so this liminal
+    // primitive stays ignorant of the app's navigation convention (e.g. rabid's
+    // pageLinkProps).  Lets a menu offer "go here" alongside "do this".
+  | {label: string, link: Record<string, string>}
+  | 'divider';
 
 export function actionMenu(items: ActionMenuItem[],
                            opts: {ariaLabel?: string} = {}): Markup {
@@ -98,6 +106,8 @@ export function actionMenu(items: ActionMenuItem[],
         [h.ul, {class: 'dropdown-menu'},
          items.map(it => it === 'divider'
              ? [h.li, {}, [h.hr, {class: 'dropdown-divider'}]]
+             : 'link' in it
+             ? [h.li, {}, [h.a, {class: 'dropdown-item', ...it.link}, it.label]]
              : [h.li, {}, actionButton(
                    it.label, it.mode,
                    // An item's extra class lets a menu item double as a surface's

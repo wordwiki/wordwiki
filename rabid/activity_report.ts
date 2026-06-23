@@ -120,7 +120,7 @@ export function activeVolunteersByDay(startDate: PlainDate, endDate: PlainDate):
         for (const [volunteerId, lastActiveDate] of lastActiveDateByVolunteerId) {
             if (Temporal.PlainDate.compare(lastActiveDate, cutoffDate) >= 0) {
                 const volunteer = volunteerMap.get(volunteerId);
-                if (volunteer && !volunteer.inactive) {
+                if (volunteer && !volunteer.archived) {
                     activeVolunteers.push(volunteer);
                 }
             }
