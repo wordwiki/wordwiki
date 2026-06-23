@@ -24,10 +24,7 @@ export function home(): Markup {
         [h.h3, {}, 'Volunteers'],
         rabid.volunteer.renderSearchableVolunteers(),
 
-        // Standard editable-item list (a standin like the volunteer section -
-        // this page will grow into structured summaries).  Replaces both the
-        // old generic column table and the scratch <ul> event list.
-        [h.h3, {}, 'Events'],
-        rabid.event.renderEventList(rabid.event.allEvents.all()),
+        // (The full event list lives on the /events page now - the home page
+        // shows just the upcoming window above.)
     ];
 }

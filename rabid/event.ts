@@ -148,13 +148,22 @@ export class EventTable extends Table<Event> {
                 events.map(e => this.renderEventRow(e))];
     }
 
-    // The top-level Events page body (dispatched from the navbar's /events).
-    // For now just the full standard list; about to grow more structured
-    // content (upcoming highlights, per-period summaries, etc).
+    // The top-level Events page body (dispatched from the navbar's /events): the
+    // same week-grouped, phase-aware schedule table the home page uses, over ALL
+    // events - ordered UPCOMING FIRST (soonest first), THEN started events most-
+    // recent first, so you land on what's coming and history is below.
     renderEventsPage(): Markup {
+        const now = date.temporalToSqliteDateTime(date.orgNow());
+        const all = this.allEvents.all();                                  // ascending by start_time
+        const future = all.filter(e => e.start_time && e.start_time > now);          // soonest first
+        const started = all.filter(e => e.start_time && e.start_time <= now).reverse(); // most recent first
+        const undated = all.filter(e => !e.start_time);
+        const ordered = [...future, ...started, ...undated];
         return [h.div, {class: 'container py-3'},
             [h.h2, {}, 'Events'],
-            this.renderEventList(this.allEvents.all()),
+            ordered.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No events yet.']
+                : this.renderEventScheduleTable(ordered),
         ];
     }
 
@@ -280,24 +289,33 @@ export class EventTable extends Table<Event> {
               AND start_time <= :end_date
             ORDER BY start_time`).all({start_date: startDate, end_date: endDate});
 
-        if (upcomingEvents.length === 0)
-            return [h.div, {class: 'upcoming-events'},
-                [h.h3, {}, 'Upcoming Events'],
-                [h.p, {class: 'text-muted'}, 'No upcoming events scheduled in the next 6 weeks.']];
+        return [h.div, {class: 'upcoming-events'},
+            [h.h3, {}, 'Upcoming Events'],
+            upcomingEvents.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No upcoming events scheduled in the next 6 weeks.']
+                : this.renderEventScheduleTable(upcomingEvents)];
+    }
 
+    // The reusable week-grouped, phase-aware schedule table for a set of events
+    // (the home upcoming list and the Events page both render through this).
+    // Events are grouped/ordered as given - the caller chooses the window and
+    // sort.  Undated events (no start_time) can't be week-grouped, so they get
+    // their own trailing "No date set" section rather than being dropped.
+    renderEventScheduleTable(events: Event[]): Markup {
         // Two batch queries for the whole set: who committed (sign-ups) and who
         // checked in (attendance).  Each row picks the right one by phase, and
         // 'ghosts' (committed but absent) is a free set-diff of the two.
-        const ids = upcomingEvents.map(e => e.event_id);
+        const ids = events.map(e => e.event_id);
         const commitments = this.peopleByEvents('event_commitment', ids);
         const checkins = this.peopleByEvents('event_checkin', ids);
         const actorId = security.current()?.actorId;
 
-        // Group by week (Sunday-start; Temporal dayOfWeek is Mon=1..Sun=7), in
-        // start_time order so weeks (and events within them) stay chronological.
+        // Group by week (Sunday-start; Temporal dayOfWeek is Mon=1..Sun=7),
+        // preserving the caller's order so weeks stay in sequence.
         const eventsByWeek = new Map<string, Event[]>();
-        for (const event of upcomingEvents) {
-            if (!event.start_time) continue;
+        const undated: Event[] = [];
+        for (const event of events) {
+            if (!event.start_time) { undated.push(event); continue; }
             const eventDay = date.sqliteDateToTemporal(date.extractDateFromDateTime(event.start_time));
             const weekKey = eventDay.subtract({days: eventDay.dayOfWeek % 7}).toString();
             if (!eventsByWeek.has(weekKey)) eventsByWeek.set(weekKey, []);
@@ -306,14 +324,18 @@ export class EventTable extends Table<Event> {
 
         const rows: Markup[] = [];
         let first = true;
-        for (const [weekKey, events] of eventsByWeek) {
-            rows.push(...this.renderUpcomingWeek(weekKey, events, commitments, checkins, actorId, first));
+        for (const [weekKey, evs] of eventsByWeek) {
+            rows.push(...this.renderUpcomingWeek(weekKey, evs, commitments, checkins, actorId, first));
             first = false;
         }
+        if (undated.length) {
+            rows.push(this.renderScheduleSectionHeader('No date set', undated.length, !first));
+            for (const e of undated)
+                rows.push(this.renderEventScheduleRow(
+                    e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId));
+        }
 
-        return [h.div, {class: 'upcoming-events'},
-            [h.h3, {}, 'Upcoming Events'],
-            [h.table, {class: 'table table-sm align-middle'}, [h.tbody, {}, ...rows]]];
+        return [h.table, {class: 'table table-sm align-middle'}, [h.tbody, {}, ...rows]];
     }
 
     // The current phase of an event by its times: future (not started), running
@@ -346,9 +368,25 @@ export class EventTable extends Table<Event> {
         return out;
     }
 
-    // One week of the schedule table: a gap (except the first), a header band
-    // (week label + event count), then a row per event.  Three columns:
-    // WHEN · WHAT · the right-edge action zone.
+    // A schedule-table section header band (a week, or "No date set"): a gap
+    // above it (so it reads as a heading for the rows BELOW, like the Time view)
+    // plus the label and the event count.  Three columns: label spans 2, count
+    // right-aligned in the third.
+    private renderScheduleSectionHeader(label: string, count: number, withGap: boolean): Markup {
+        return [
+            withGap
+                ? [h.tr, {'aria-hidden': 'true', 'data-testid': 'upcoming-week-gap'},
+                   [h.td, {colspan: '3', style: 'height: 1.5rem; border: 0; padding: 0;'}]]
+                : undefined,
+            [h.tr, {class: 'table-light fw-semibold', 'data-testid': 'upcoming-week',
+                    style: 'border-top: 0; border-bottom: 2px solid var(--bs-secondary-color);'},
+             [h.td, {colspan: '2', style: 'border-bottom: 0;'}, label],
+             [h.td, {class: 'text-end text-muted small text-nowrap', style: 'border-bottom: 0;'},
+              `${count} ${count === 1 ? 'event' : 'events'}`]],
+        ];
+    }
+
+    // One week of the schedule table: a section header, then a row per event.
     private renderUpcomingWeek(weekKey: string, events: Event[],
                                commitments: Map<number, Array<{id: number, name: string}>>,
                                checkins: Map<number, Array<{id: number, name: string}>>,
@@ -360,16 +398,7 @@ export class EventTable extends Table<Event> {
             ? String(weekEnd.day)
             : weekEnd.toLocaleString('en-US', {month: 'short', day: 'numeric'});
         return [
-            // A generous gap before each week but the first, so the header band
-            // reads as a heading for the rows BELOW it (mirrors the Time view).
-            isFirst ? undefined
-                : [h.tr, {'aria-hidden': 'true', 'data-testid': 'upcoming-week-gap'},
-                   [h.td, {colspan: '3', style: 'height: 1.5rem; border: 0; padding: 0;'}]],
-            [h.tr, {class: 'table-light fw-semibold', 'data-testid': 'upcoming-week',
-                    style: 'border-top: 0; border-bottom: 2px solid var(--bs-secondary-color);'},
-             [h.td, {colspan: '2', style: 'border-bottom: 0;'}, `Week of ${sStr} – ${eStr}`],
-             [h.td, {class: 'text-end text-muted small text-nowrap', style: 'border-bottom: 0;'},
-              `${events.length} ${events.length === 1 ? 'event' : 'events'}`]],
+            this.renderScheduleSectionHeader(`Week of ${sStr} – ${eStr}`, events.length, !isFirst),
             ...events.map(e => this.renderEventScheduleRow(
                 e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId)),
         ];
