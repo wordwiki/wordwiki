@@ -178,6 +178,18 @@
     color: #2c5aa0;
 }
 
+/* The "Going:" / "Here now:" / "Attended:" lead on a who's-involved line - a
+   touch lighter than the names that follow. */
+.upcoming-people-label {
+    color: #888;
+}
+
+/* The committed-but-absent ('ghosts') line: italic, set apart from the
+   attendees line above it. */
+.upcoming-ghosts {
+    font-style: italic;
+}
+
 /* An inline primary action on a navigable row (e.g. the sign-up toggle): a
    pill-shaped, finger-sized button at the row's right edge.  The whole row
    navigates, so this needs to be an unmistakable, comfortably-large tap target;

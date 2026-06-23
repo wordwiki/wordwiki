@@ -285,9 +285,12 @@ export class EventTable extends Table<Event> {
                 [h.h3, {}, 'Upcoming Events'],
                 [h.p, {class: 'text-muted'}, 'No upcoming events scheduled in the next 6 weeks.']];
 
-        // One query for all the sign-up short-names in this set, so the compact
-        // "going" summary on each row costs nothing per-row.
-        const going = this.goingByEvents(upcomingEvents.map(e => e.event_id));
+        // Two batch queries for the whole set: who committed (sign-ups) and who
+        // checked in (attendance).  Each row picks the right one by phase, and
+        // 'ghosts' (committed but absent) is a free set-diff of the two.
+        const ids = upcomingEvents.map(e => e.event_id);
+        const commitments = this.peopleByEvents('event_commitment', ids);
+        const checkins = this.peopleByEvents('event_checkin', ids);
         const actorId = security.current()?.actorId;
 
         // Group by week (Sunday-start; Temporal dayOfWeek is Mon=1..Sun=7), in
@@ -304,7 +307,7 @@ export class EventTable extends Table<Event> {
         const rows: Markup[] = [];
         let first = true;
         for (const [weekKey, events] of eventsByWeek) {
-            rows.push(...this.renderUpcomingWeek(weekKey, events, going, actorId, first));
+            rows.push(...this.renderUpcomingWeek(weekKey, events, commitments, checkins, actorId, first));
             first = false;
         }
 
@@ -313,15 +316,28 @@ export class EventTable extends Table<Event> {
             [h.table, {class: 'table table-sm align-middle'}, [h.tbody, {}, ...rows]]];
     }
 
-    // Sign-up short-names (with ids, so callers can pick out 'self') for a set of
-    // events, in one query: event_id -> [{id, name}], alpha by full name.
-    private goingByEvents(eventIds: number[]): Map<number, Array<{id: number, name: string}>> {
+    // The current phase of an event by its times: future (not started), running
+    // (started, not yet ended), or past (ended).  Drives whether a schedule row
+    // shows sign-ups (future) or attendance (running/past).
+    private eventPhase(e: Event): 'future' | 'running' | 'past' {
+        const now = date.temporalToSqliteDateTime(date.orgNow());
+        if (!e.start_time || e.start_time > now) return 'future';
+        if (e.end_time && e.end_time < now) return 'past';
+        return 'running';
+    }
+
+    // People (short-names + ids) attached to a set of events, in one query, from
+    // either the commitment ('signed up') or check-in ('was there') table.
+    // event_id -> [{id, name}], alpha by full name.  The table name is a trusted
+    // literal (the union type), so interpolating it is safe.
+    private peopleByEvents(table: 'event_commitment' | 'event_checkin',
+                           eventIds: number[]): Map<number, Array<{id: number, name: string}>> {
         const out = new Map<number, Array<{id: number, name: string}>>();
         if (eventIds.length === 0) return out;
         const rows = db().all<{event_id: number, volunteer_id: number, name: string, short_name: string|null}, {}>(`
-            SELECT ec.event_id, v.volunteer_id, v.name, v.short_name
-              FROM event_commitment ec JOIN volunteer v USING (volunteer_id)
-             WHERE v.deleted = 0 AND ec.event_id IN (${eventIds.map(Number).join(',')})
+            SELECT t.event_id, v.volunteer_id, v.name, v.short_name
+              FROM ${table} t JOIN volunteer v USING (volunteer_id)
+             WHERE v.deleted = 0 AND t.event_id IN (${eventIds.map(Number).join(',')})
              ORDER BY v.name`, {});
         for (const r of rows) {
             if (!out.has(r.event_id)) out.set(r.event_id, []);
@@ -330,11 +346,12 @@ export class EventTable extends Table<Event> {
         return out;
     }
 
-    // One week of the upcoming-events table: a gap (except the first), a header
-    // band (week label + event count), then a row per event.  Three columns:
+    // One week of the schedule table: a gap (except the first), a header band
+    // (week label + event count), then a row per event.  Three columns:
     // WHEN · WHAT · the right-edge action zone.
     private renderUpcomingWeek(weekKey: string, events: Event[],
-                               going: Map<number, Array<{id: number, name: string}>>,
+                               commitments: Map<number, Array<{id: number, name: string}>>,
+                               checkins: Map<number, Array<{id: number, name: string}>>,
                                actorId: number|undefined, isFirst: boolean): Markup[] {
         const weekStart = date.sqliteDateToTemporal(weekKey);
         const weekEnd = weekStart.add({days: 6});
@@ -353,31 +370,36 @@ export class EventTable extends Table<Event> {
              [h.td, {colspan: '2', style: 'border-bottom: 0;'}, `Week of ${sStr} – ${eStr}`],
              [h.td, {class: 'text-end text-muted small text-nowrap', style: 'border-bottom: 0;'},
               `${events.length} ${events.length === 1 ? 'event' : 'events'}`]],
-            ...events.map(e => this.renderUpcomingEventRow(e, going.get(e.event_id) ?? [], actorId)),
+            ...events.map(e => this.renderEventScheduleRow(
+                e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId)),
         ];
     }
 
-    // Reload one upcoming-events row (after a self sign-up toggle).  The row joins
-    // the event_commitment reload group (see its props below), so commitSelf /
-    // uncommit re-render it in place.
+    // Reload one schedule row (after a self sign-up / check-in toggle, or a
+    // host check-in from the running-row menu).  The row joins the reload group
+    // of whichever table its phase mutates (event_commitment for future,
+    // event_checkin for running/past), so the matching mutation re-renders it.
     @route(authenticated)
-    renderUpcomingEventRowById(event_id: number): Markup {
+    renderEventScheduleRowById(event_id: number): Markup {
         const e = this.getById(event_id);
-        const going = this.goingByEvents([event_id]).get(event_id) ?? [];
-        return this.renderUpcomingEventRow(e, going, security.current()?.actorId);
+        const commitments = this.peopleByEvents('event_commitment', [event_id]).get(event_id) ?? [];
+        const checkins = this.peopleByEvents('event_checkin', [event_id]).get(event_id) ?? [];
+        return this.renderEventScheduleRow(e, commitments, checkins, security.current()?.actorId);
     }
 
-    // One event as a compact table row: WHEN (day + from–to time) · WHAT (name,
-    // badges, remote line, who's going IN FULL) · a self sign-up toggle + a
-    // chevron.  The WHOLE row navigates to the detail page (the standard
-    // navigable-row convention); there is no edit pencil - this is a navigation
-    // surface, and the event's editable data lives on the detail page.  There is
-    // deliberately NO "N going" count column: the full attendee list is shown
-    // (volunteers gauge who'll be there by name), and dropping a whole column
-    // buys real width on narrow/mobile screens.
-    renderUpcomingEventRow(e: Event, going: Array<{id: number, name: string}>,
+    // One event as a compact, PHASE-AWARE table row: WHEN (day + from–to time,
+    // plus remote prep times) · WHAT (name, badges, remote line, and who is
+    // signed up / here / attended IN FULL, with the committed-but-absent 'ghosts'
+    // below) · a self toggle (sign up / check in) + a running-event check-in menu
+    // + a chevron.  The WHOLE row navigates to the detail page; there is no edit
+    // pencil - editing lives there.  No "N" count column: the full roster is
+    // shown (volunteers gauge who'll be there by name) and dropping a column buys
+    // real width on narrow/mobile screens.
+    renderEventScheduleRow(e: Event, commitments: Array<{id: number, name: string}>,
+                           checkins: Array<{id: number, name: string}>,
                            actorId: number|undefined): Markup {
         const id = e.event_id;
+        const phase = this.eventPhase(e);
         const day = e.start_time
             ? date.sqliteDateTimeToString(e.start_time, '', {weekday: 'short', month: 'short', day: 'numeric'})
             : '';
@@ -387,17 +409,28 @@ export class EventTable extends Table<Event> {
                 ? `${date.sqliteDateTimeToTimeString(e.start_time)} – ${date.sqliteDateTimeToTimeString(e.end_time)}`
                 : date.sqliteDateTimeToTimeString(e.start_time))
             : '';
-        const isGoing = actorId !== undefined && going.some(g => g.id === actorId);
         const remote = this.remoteText(e);
 
-        // The whole row navigates (lmNavigableClick → the event-name lm-nav-link).
-        // It ALSO stays in the event_commitment reload group so the inline sign-up
-        // toggle re-renders it in place.  The toggle and the name link are real
-        // controls, so the navigable-click guard declines their taps - no
-        // accidental navigation when the toggle (or its padded area) is hit.
-        const props = reloadableItemProps('event_commitment', id,
-            `rabid.event.renderUpcomingEventRowById(${id})`,
-            {'data-testid': `upcoming-event-${id}`, onclick: 'lmNavigableClick(event)'});
+        // Future shows commitments; running/past show attendance, with 'ghosts'
+        // (committed but not checked in) as a quiet second line.
+        const future = phase === 'future';
+        const attending = future ? commitments : checkins;
+        const selfAttending = actorId !== undefined && attending.some(p => p.id === actorId);
+        const checkedInIds = new Set(checkins.map(p => p.id));
+        const ghosts = future ? [] : commitments.filter(c => !checkedInIds.has(c.id));
+        const line = ({
+            future:  {label: 'Going',    empty: 'No one signed up yet'},
+            running: {label: 'Here now', empty: 'No one here yet'},
+            past:    {label: 'Attended', empty: 'No one checked in'},
+        } as const)[phase];
+        const ghostLabel = phase === 'running' ? 'Not here yet' : 'Not checked in';
+
+        // The toggle mutates event_commitment (future) or event_checkin
+        // (running/past) - join THAT reload group so the mutation re-renders us.
+        const reloadType = future ? 'event_commitment' : 'event_checkin';
+        const props = reloadableItemProps(reloadType, id,
+            `rabid.event.renderEventScheduleRowById(${id})`,
+            {'data-testid': `event-schedule-${id}`, onclick: 'lmNavigableClick(event)'});
         props.class = 'lm-navigable ' + props.class;
 
         return [h.tr, props,
@@ -420,46 +453,83 @@ export class EventTable extends Table<Event> {
               e.description || 'Untitled Event'],
              this.eventBadges(e),
              remote ? [h.div, {class: 'text-muted small'}, remote] : undefined,
-             this.renderGoing(going, actorId)],
+             this.renderPeopleLine(line.label, attending, actorId, line.empty),
+             ghosts.length ? this.renderPeopleLine(ghostLabel, ghosts, actorId, undefined, {ghost: true}) : undefined],
             [h.td, {class: 'text-end text-nowrap align-top'},
              [h.div, {class: 'd-inline-flex align-items-center gap-2'},
-              this.renderSelfGoingToggle(id, isGoing, actorId),
+              this.renderSelfAttendToggle(id, phase, selfAttending, actorId),
+              phase === 'running' ? this.renderRowCheckinMenu(e, checkedInIds, actorId) : undefined,
               navChevron()]],
         ];
     }
 
-    // The "who's going" line - shown IN FULL (no cap).  Volunteers span a wide
+    // A "who's involved" line, shown IN FULL (no cap).  Volunteers span a wide
     // range of skill, and skilled volunteers decide whether they're needed by
     // seeing exactly who else is coming; we don't (and culturally can't) label
     // skill in the UI, so the whole roster has to be visible.  Self comes first
     // and visually distinct ("You") so a volunteer can spot their own events.
-    private renderGoing(going: Array<{id: number, name: string}>, actorId: number|undefined): Markup {
-        if (going.length === 0)
-            return [h.div, {class: 'text-muted small fst-italic'}, 'No one signed up yet'];
-        const selfGoing = actorId !== undefined && going.some(g => g.id === actorId);
-        const others = going.filter(g => g.id !== actorId);
+    // `ghost` styles the committed-but-absent line apart from the attendees.
+    private renderPeopleLine(label: string, people: Array<{id: number, name: string}>,
+                             actorId: number|undefined, emptyText: string|undefined,
+                             opts: {ghost?: boolean} = {}): Markup {
+        if (people.length === 0)
+            return emptyText ? [h.div, {class: 'text-muted small fst-italic'}, emptyText] : undefined;
+        const selfIn = actorId !== undefined && people.some(p => p.id === actorId);
+        const others = people.filter(p => p.id !== actorId);
         const parts: Markup[] = [];
-        if (selfGoing) parts.push([h.span, {class: 'upcoming-going-self'}, 'You']);
+        if (selfIn) parts.push([h.span, {class: 'upcoming-going-self'}, 'You']);
         for (const o of others) parts.push(o.name);
         const joined: Markup[] = parts.flatMap((p, i) => i === 0 ? [p] : [', ', p]);
-        return [h.div, {class: 'text-muted small upcoming-going'}, ...joined];
+        return [h.div, {class: 'text-muted small ' + (opts.ghost ? 'upcoming-ghosts' : 'upcoming-going')},
+            [h.span, {class: 'upcoming-people-label'}, label + ': '], ...joined];
     }
 
-    // A self sign-up toggle, modelled on the timesheet 'confirmed' badge: a green
-    // "Going ✓" you click to cancel, or a quiet "Sign up" you click to join.
-    // Only for logged-in volunteers (host management of others stays on the
-    // detail page's sign-up menu).  A finger-sized button (lm-row-action), set at
-    // the row's right edge, so it's an unmistakable tap target alongside the
-    // whole-row navigation.
-    private renderSelfGoingToggle(event_id: number, isGoing: boolean, actorId: number|undefined): Markup {
+    // The self toggle (finger-sized lm-row-action pill, modelled on the timesheet
+    // 'confirmed' badge), phase-tuned: future = sign up / Going ✓ (commitment);
+    // running = Check in / Here ✓ and past = I was there / Was there ✓ (check-in,
+    // which works retroactively).  Logged-in volunteers only.
+    private renderSelfAttendToggle(event_id: number, phase: 'future'|'running'|'past',
+                                   selfAttending: boolean, actorId: number|undefined): Markup {
         if (actorId === undefined) return undefined;
-        return isGoing
-            ? action.actionButton('Going ✓',
-                {kind: 'immediate', expr: `rabid.event_commitment.uncommit(${event_id},${actorId})`},
-                'btn btn-success lm-row-action', {title: "You're signed up — click to cancel"})
-            : action.actionButton('Sign up',
-                {kind: 'immediate', expr: `rabid.event_commitment.commitSelf(${event_id})`},
-                'btn btn-outline-primary lm-row-action', {title: 'Sign up for this event'});
+        if (phase === 'future') {
+            return selfAttending
+                ? action.actionButton('Going ✓',
+                    {kind: 'immediate', expr: `rabid.event_commitment.uncommit(${event_id},${actorId})`},
+                    'btn btn-success lm-row-action', {title: "You're signed up — click to cancel"})
+                : action.actionButton('Sign up',
+                    {kind: 'immediate', expr: `rabid.event_commitment.commitSelf(${event_id})`},
+                    'btn btn-outline-primary lm-row-action', {title: 'Sign up for this event'});
+        }
+        const onLabel = phase === 'running' ? 'Here ✓' : 'Was there ✓';
+        const offLabel = phase === 'running' ? 'Check in' : 'I was there';
+        const offTitle = phase === 'running' ? 'Check yourself in' : 'Record that you were there';
+        return selfAttending
+            ? action.actionButton(onLabel,
+                {kind: 'immediate', expr: `rabid.event_checkin.checkOut(${event_id},${actorId})`},
+                'btn btn-success lm-row-action', {title: "You're checked in — click to undo"})
+            : action.actionButton(offLabel,
+                {kind: 'immediate', expr: `rabid.event_checkin.checkSelfIn(${event_id})`},
+                'btn btn-outline-primary lm-row-action', {title: offTitle});
+    }
+
+    // On a RUNNING event, a host can check in people who are there without leaving
+    // the list: a ☰ of the recently-active volunteers not yet checked in, plus the
+    // full picker.  Host/admin only (checkInVolunteer is gated) - others just
+    // self check in.  Mirrors the detail page's check-in menu (adds only).
+    private renderRowCheckinMenu(e: Event, checkedInIds: Set<number>, actorId: number|undefined): Markup {
+        const ctx = security.current();
+        const canManage = !ctx || ctx.system ? true : hostOrAdmin({ctx});
+        if (!canManage) return undefined;
+        const id = e.event_id;
+        const items: action.ActionMenuItem[] = [];
+        for (const v of activeVolunteersWithin(30)
+                .filter(v => !checkedInIds.has(v.volunteer_id) && v.volunteer_id !== actorId))
+            items.push({label: `Check in ${v.name}`,
+                        mode: {kind: 'immediate',
+                               expr: `rabid.event_checkin.checkInVolunteer(${id},${v.volunteer_id})`}});
+        items.push({label: 'Check someone in…',
+                    mode: {kind: 'modal', dialogUrl: `/rabid.event_checkin.checkInDialog(${id})`}});
+        return action.actionMenu(items, {ariaLabel: 'Check someone in'});
     }
 
        // TODO make single line version for rendering in home page etc.
