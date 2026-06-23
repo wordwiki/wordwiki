@@ -183,6 +183,38 @@ test("model: a real timesheet + an overlapping event check-in reconcile to one c
     });
 });
 
+test("model: time_volunteered_minutes counts that duration, not the whole event", () => {
+    return withTestDb(({ bob }) => {
+        const eid = insertEvent();   // event is 19:00–21:30 = 2.5h
+        asSystem(() => rabid.event_checkin.insert(
+            {event_id: eid, volunteer_id: bob, notes: '', time_volunteered_minutes: 90}));
+        const m = asSystem(() => rabid.volunteer_time.model(bob));
+        assertEquals(m.hours, 1.5);                          // 90 min, not the 2.5h event
+        const span = m.weeks[0].entries[0].span;
+        assertEquals(span.start, '2026-06-20 19:00:00');     // anchored at the event start
+        assertEquals(span.end, '2026-06-20 20:30:00');       // start + 90 min (window agrees with hours)
+    });
+});
+
+test("editCheckin sets and clears time_volunteered_minutes (self-or-host)", () => {
+    return withTestDb(async ({ bob }) => {
+        const eid = insertEvent();
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, eid));
+        const cid = asSystem(() =>
+            rabid.event_checkin.checkinsForEvent.all({event_id: eid})[0].event_checkin_id);
+
+        // Set it (host posthumously rounding to 90 min).
+        await asUser(bob, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
+            {event_checkin_id: String(cid), time_volunteered_minutes: '90', notes: ''}));
+        assertEquals(asSystem(() => rabid.volunteer_time.model(bob)).hours, 1.5);
+
+        // Empty input clears it -> back to the whole-event default (2.5h).
+        await asUser(bob, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
+            {event_checkin_id: String(cid), time_volunteered_minutes: '', notes: ''}));
+        assertEquals(asSystem(() => rabid.volunteer_time.model(bob)).hours, 2.5);
+    });
+});
+
 test("renderForVolunteer renders the week-grouped table with a total", () => {
     return withTestDb(({ bob }) => {
         asSystem(() => rabid.timesheet_entry.insert({

@@ -276,11 +276,25 @@ export function timesheetToSpan(t: TimesheetEntry): TimeSpan {
 export function checkinToSpan(c: CheckinRow): TimeSpan | null {
     const start = c.start_time ?? c.event_start_time;
     if(!start) return null;
-    const end = c.end_time ?? c.event_end_time ?? null;
+    // An explicit time_volunteered wins: anchor at the effective start and run for
+    // exactly that long, so the displayed window and the counted hours agree (and
+    // overlap-nesting under a timesheet still works).  It may exceed the event
+    // length (extra setup time).  Otherwise fall back to the event window (or an
+    // explicit start/end override).
+    let end: string | null;
+    let hours: number;
+    if(c.time_volunteered_minutes != null) {
+        hours = c.time_volunteered_minutes / 60;
+        end = date.temporalToSqliteDateTime(
+            date.sqliteDateTimeToTemporal(start).add({minutes: c.time_volunteered_minutes}));
+    } else {
+        end = c.end_time ?? c.event_end_time ?? null;
+        hours = spanHours(start, end);
+    }
     return {
         source: 'checkin', id: c.event_checkin_id,
         start, end,
-        hours: spanHours(start, end),
+        hours,
         label: c.event_description ?? 'Event',
         eventId: c.event_id,
         paid: false, wasStaff: !!c.was_staff, notes: c.notes ?? '',

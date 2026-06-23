@@ -800,6 +800,14 @@ export interface EventCheckin {
     start_time?: string;
     end_time?: string;
 
+    // Optional duration the volunteer actually contributed, in minutes.  This is
+    // the simplified partial-attendance affordance for volunteers (and the host
+    // posthumously recording "they were here ~90 min"): when set it is the
+    // authoritative "how long", winning over the event window and any start/end
+    // override, and it may exceed the event length (e.g. extra setup time).  NULL
+    // means "use the event's times" (the common, default case).
+    time_volunteered_minutes?: number;
+
     notes: string;
 
     // When the check-in record was created (managed, hidden from the form).
@@ -818,6 +826,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
             new BooleanField('was_staff', {default: 0}),
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
+            new IntegerField('time_volunteered_minutes', {nullable: true, prompt: 'Time volunteered (minutes)'}),
             new MarkdownField('notes', {default: ''}),
             new ManagedDateTimeField('created_time', {nullable: true}),
         ], [
@@ -1011,8 +1020,10 @@ export class EventCheckinTable extends Table<EventCheckin> {
                 'SELECT name FROM volunteer WHERE volunteer_id = :id').first({id: c.volunteer_id}))?.name
             ?? 'volunteer';
         return action.renderParamForm(
-            [this.fieldsByName.start_time, this.fieldsByName.end_time, this.fieldsByName.notes],
-            {start_time: c.start_time, end_time: c.end_time, notes: c.notes},
+            [this.fieldsByName.start_time, this.fieldsByName.end_time,
+             this.fieldsByName.time_volunteered_minutes, this.fieldsByName.notes],
+            {start_time: c.start_time, end_time: c.end_time,
+             time_volunteered_minutes: c.time_volunteered_minutes, notes: c.notes},
             {
                 title: `Edit ${name}'s check-in`,
                 submitLabel: 'Save',
@@ -1023,16 +1034,28 @@ export class EventCheckinTable extends Table<EventCheckin> {
     }
 
     @routeMutation(authenticated)   // pk-keyed: the method's assertCanManageCheckin does self-or-host
-    editCheckin(args: {event_checkin_id?: string|number, start_time?: string, end_time?: string, notes?: string}): Markup {
+    editCheckin(args: {event_checkin_id?: string|number, start_time?: string, end_time?: string,
+                       time_volunteered_minutes?: string|number, notes?: string}): Markup {
         const id = Number(args?.event_checkin_id);
         if(!Number.isInteger(id)) throw new Error('bad check-in id');
         const c = this.getById(id);
         this.assertCanManageCheckin(c);
         // Empty time inputs clear the override (revert to the event's times).
         const trim = (s?: string) => (s != null && String(s).trim() !== '') ? String(s) : null;
+        // Empty time_volunteered clears it (revert to the whole-event default);
+        // otherwise a non-negative whole number of minutes.
+        const minutes = (() => {
+            const raw = args.time_volunteered_minutes;
+            if(raw == null || String(raw).trim() === '') return null;
+            const n = Math.round(Number(raw));
+            if(!Number.isFinite(n) || n < 0)
+                throw new Error('Time volunteered must be a non-negative number of minutes');
+            return n;
+        })();
         this.update(id, {
             start_time: trim(args.start_time),
             end_time: trim(args.end_time),
+            time_volunteered_minutes: minutes,
             notes: args.notes ?? '',
         } as Partial<EventCheckin>);
         return this.reloadEditor(c.event_id, [c.volunteer_id]);

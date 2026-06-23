@@ -74,6 +74,20 @@ function mulberry32(seed: number): () => number {
 // Reset at the start of each builder that needs it (commitments / timesheets).
 let rand: () => number = mulberry32(1);
 
+// Format a Date's LOCAL calendar date/time as a SQLite string.  We must NOT use
+// toISOString() here: it formats in UTC, so in a negative-offset timezone the
+// local evening rolls into the next UTC day - which made "Wednesday" events land
+// on Thursday (and shifted walk-in arrival times by the UTC offset).  The weekday
+// loops and Date arithmetic in seedEvents use local time (getDay/setDate), so the
+// stored string must be local too.
+const pad2 = (n: number) => String(n).padStart(2, '0');
+function localDateStr(d: Date): string {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function localDateTimeStr(d: Date): string {
+    return `${localDateStr(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
 // Seeded Fisher-Yates over a copy.  (Not `.sort(() => rand() - 0.5)`: a
 // random comparator is measurably biased and engine-dependent - see
 // liminal/random.ts shuffle for the uniform algorithm; this is the same
@@ -375,7 +389,7 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
         // Generate events for each Saturday
         const currentDate = new Date(firstSaturday);
         while (currentDate <= endDate) {
-            const dateStr = currentDate.toISOString().split('T')[0];
+            const dateStr = localDateStr(currentDate);
 
             const startHour = 10
             const duration = 5
@@ -423,8 +437,8 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
             // Generate events for each Wednesday
             const currentDate = new Date(firstWednesday);
             while (currentDate <= endDate) {
-                const dateStr = currentDate.toISOString().split('T')[0];
-                
+                const dateStr = localDateStr(currentDate);
+
                 // Main event details similar to createFakeWednesdayEvent
                 const startHour = faker.helpers.arrayElement([17, 18, 19]);
                 const duration = faker.helpers.arrayElement([2, 3, 4]);
@@ -630,6 +644,11 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
     // Only events that have started can have check-ins.
     const startedEvents = events.filter(e => e.start_time && new Date(e.start_time) <= currentDate);
 
+    // The volunteer Time view defaults to roughly the last 8 weeks, so bias
+    // partial time_volunteered durations toward recent events - otherwise they'd
+    // all land in the long tail and the default view would never show one.
+    const recentCutoff = new Date(currentDate.getTime() - 8 * 7 * 24 * 60 * 60 * 1000);
+
     let checkinCount = 0;
     let walkInCount = 0;
     // A walk-in attends at most one event in this dataset (keeps the data legible).
@@ -646,10 +665,21 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
         for (const commitment of commitments) {
             const rate = staffIds.has(commitment.volunteer_id) ? 1.0 : showRate;
             if (rand() < rate) {
+                // By far the common case is checking into the whole event (no
+                // duration).  But occasionally - and only for a past event a host
+                // could look back on - record a partial time_volunteered instead,
+                // a rounded "they were here ~90 min".  Staff work the whole event,
+                // so never for them.  Recent events (in the Time view's default
+                // window) get partials more often, so the default view shows some.
+                const isRecent = new Date(event.start_time!) >= recentCutoff;
+                const partialRate = isRecent ? 0.6 : 0.15;
+                const partialMinutes = isPast && !staffIds.has(commitment.volunteer_id) && rand() < partialRate
+                    ? faker.helpers.arrayElement([30, 45, 60, 90, 120]) : undefined;
                 rabid.event_checkin.insert({
                     event_id: event.event_id,
                     volunteer_id: commitment.volunteer_id,
                     notes: '',
+                    ...(partialMinutes !== undefined ? {time_volunteered_minutes: partialMinutes} : {}),
                 });
                 checkinCount++;
             }
@@ -674,7 +704,7 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
             rabid.event_checkin.insert({
                 event_id: event.event_id,
                 volunteer_id: walkIn.volunteer_id,
-                start_time: arrival.toISOString().replace('T', ' ').slice(0, 19),
+                start_time: localDateTimeStr(arrival),
                 notes: 'Walk-in',
             });
             checkinCount++;
@@ -719,7 +749,10 @@ export function seedTimesheets(rabid: Rabid, opts: { baseSeed?: number, weeks?: 
         .map(e => ({start: new Date(e.start_time!),
                     end: e.end_time ? new Date(e.end_time) : null}));
 
-    const stamp = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 19);
+    // Stamp in LOCAL wall-clock (these Dates derive from event start_times, which
+    // are stored local) so a staff shift bracketing an event really overlaps it on
+    // the stored strings - that's what the Time view's reconciliation nests on.
+    const stamp = (d: Date) => localDateTimeStr(d);
     // When the entry was recorded: usually promptly (same day), but a fraction of
     // PAID entries are entered late on purpose, to exercise the late-paid warning.
     const recordedAt = (end: Date, paid: boolnum): string => {
