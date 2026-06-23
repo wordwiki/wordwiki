@@ -57,6 +57,7 @@ export interface TimeSpan {
     paid: boolean;             // timesheet.is_paid_time
     lateEntry?: LateEntry | null; // paid entry recorded/edited long after the work (loud warning)
     wasStaff: boolean;         // check-in snapshot
+    confirmed: boolean;        // hours vouched for by a host (confirmed_by set)
     notes: string;
 }
 
@@ -87,6 +88,8 @@ export interface TimeWeek {
     hours: number;
     paidHours: number;
     volunteerHours: number;
+    confirmedHours: number;     // counted volunteer hours a host has confirmed
+    unconfirmedHours: number;   // counted volunteer hours awaiting confirmation
 }
 
 export interface VolunteerTime {
@@ -95,6 +98,11 @@ export interface VolunteerTime {
     hours: number;
     paidHours: number;
     volunteerHours: number;
+    confirmedHours: number;
+    unconfirmedHours: number;
+    // This volunteer's hours must be host-confirmed (community service etc):
+    // drives whether the Time view shows confirmed/unconfirmed state at all.
+    needsConfirmation: boolean;
 }
 
 // --------------------------------------------------------------------------------
@@ -179,16 +187,25 @@ export function reconcileTime(volunteerId: number, timesheets: TimeSpan[], check
         const hours = sum(es.map(e => e.span.hours));
         const paidHours = sum(es.filter(e => e.span.source === 'timesheet' && e.span.paid)
                                 .map(e => e.span.hours));
+        const volunteerHours = hours - paidHours;
+        // Confirmed/unconfirmed split the VOLUNTEER (unpaid) hours - paid staff
+        // time isn't part of the vouch-for-my-hours workflow.
+        const confirmedHours = sum(es.filter(e => !e.span.paid && e.span.confirmed)
+                                     .map(e => e.span.hours));
         const weekEnd = date.temporalToSqliteDate(
             date.sqliteDateToTemporal(weekStart as any).add({days: 6}));
-        return {weekStart, weekEnd, entries: es, hours, paidHours, volunteerHours: hours - paidHours};
+        return {weekStart, weekEnd, entries: es, hours, paidHours, volunteerHours,
+                confirmedHours, unconfirmedHours: volunteerHours - confirmedHours};
     });
     // Recent week first.
     weeks.sort((a, b) => a.weekStart < b.weekStart ? 1 : a.weekStart > b.weekStart ? -1 : 0);
 
     const hours = sum(weeks.map(w => w.hours));
     const paidHours = sum(weeks.map(w => w.paidHours));
-    return {volunteerId, weeks, hours, paidHours, volunteerHours: hours - paidHours};
+    const confirmedHours = sum(weeks.map(w => w.confirmedHours));
+    return {volunteerId, weeks, hours, paidHours, volunteerHours: hours - paidHours,
+            confirmedHours, unconfirmedHours: (hours - paidHours) - confirmedHours,
+            needsConfirmation: false};
 }
 
 // Attach completed tasks to entries (mutating).  Hosted tasks (event the
@@ -218,7 +235,7 @@ function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan
         entries.push({
             span: {source: 'event', id: eid, start: s.eventStart ?? s.doneTime,
                    end: s.eventEnd ?? null, hours: 0, label: s.eventLabel ?? 'Event',
-                   eventId: eid, paid: false, wasStaff: false, notes: ''},
+                   eventId: eid, paid: false, wasStaff: false, confirmed: false, notes: ''},
             nested: [], tasks: group,
         });
     }
@@ -239,7 +256,7 @@ function placeTasks(entries: TimeEntry[], tsByStart: TimeSpan[], tasks: TaskSpan
     for(const [day, dayTasks] of standaloneByDay)
         entries.push({
             span: {source: 'task', id: 0, start: `${day} 00:00:00`, end: null,
-                   hours: 0, label: '', paid: false, wasStaff: false, notes: ''},
+                   hours: 0, label: '', paid: false, wasStaff: false, confirmed: false, notes: ''},
             nested: [], tasks: dayTasks,
         });
 }
@@ -267,7 +284,7 @@ export function timesheetToSpan(t: TimesheetEntry): TimeSpan {
         hours: spanHours(t.start_time, end),
         label: (t.notes && t.notes.trim()) ? firstLine(t.notes) : 'Other work',
         paid: !!t.is_paid_time, lateEntry: lateEntryWarning(t),
-        wasStaff: false, notes: t.notes ?? '',
+        wasStaff: false, confirmed: t.confirmed_by != null, notes: t.notes ?? '',
     };
 }
 
@@ -297,7 +314,8 @@ export function checkinToSpan(c: CheckinRow): TimeSpan | null {
         hours,
         label: c.event_description ?? 'Event',
         eventId: c.event_id,
-        paid: false, wasStaff: !!c.was_staff, notes: c.notes ?? '',
+        paid: false, wasStaff: !!c.was_staff, confirmed: c.confirmed_by != null,
+        notes: c.notes ?? '',
     };
 }
 
@@ -331,6 +349,31 @@ function canManage(volunteer_id: number): boolean {
     return ctx.actorId === volunteer_id || ctx.roles.has('host') || ctx.roles.has('admin');
 }
 
+// Whether the CURRENT viewer may SEE this volunteer's hours-confirmation state
+// (the confirmed/unconfirmed badges + the summary split).  SENSITIVE: that a
+// volunteer's hours need confirming reveals they're doing community service
+// (sometimes court-ordered), which must not leak to OTHER volunteers - this is
+// an open-books org where anyone can view anyone's page.  The volunteer
+// themselves may see their own status, and hosts (who do the confirming and are
+// trusted to be discreet) may see anyone's.
+//
+// SINGLE CHANGE POINT for the VIEW rule - tighten here (e.g. a dedicated
+// permission/role) without touching the renderers.  Distinct from the confirm
+// ACTION, which stays host/admin-only at the route (viewerIsHostOrAdmin below).
+function canViewHoursConfirmation(volunteer_id: number): boolean {
+    const ctx = security.current();
+    if(!ctx || ctx.system) return true;
+    return ctx.actorId === volunteer_id || ctx.roles.has('host') || ctx.roles.has('admin');
+}
+
+// Confirming hours is host/admin-only (NOT self - the whole point is a vouch by
+// someone other than the person whose hours they are).
+function viewerIsHostOrAdmin(): boolean {
+    const ctx = security.current();
+    if(!ctx || ctx.system) return true;
+    return ctx.roles.has('host') || ctx.roles.has('admin');
+}
+
 // Reload the volunteer's time fragment (and, when an event was touched, the
 // event page's check-in fragment too - htmx only re-renders selectors present).
 function reload(volunteer_id: number, event_id?: number): Markup {
@@ -354,7 +397,12 @@ export class VolunteerTimeService {
             .filter((s): s is TimeSpan => s !== null);
         const tasks = (rabid.task.completedByVolunteer.all({volunteer_id}) as CompletedTaskRow[])
             .map(taskToSpan);
-        return reconcileTime(volunteer_id, timesheets, checkins, tasks, showOrphanTasks);
+        const m = reconcileTime(volunteer_id, timesheets, checkins, tasks, showOrphanTasks);
+        const needsConfirmation = !!security.runSystem(() =>
+            db().prepare<{n: boolean}, {id: number}>(
+                'SELECT volunteer_hours_need_confirmation AS n FROM volunteer WHERE volunteer_id = :id')
+                .first({id: volunteer_id}))?.n;
+        return {...m, needsConfirmation};
     }
 
     @route(authenticated)
@@ -474,22 +522,40 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
     const hours = sum(w => w.hours), paidHours = sum(w => w.paidHours);
     const totalLabel = windowed ? `Last ${WEEK_WINDOW} weeks` : 'Total';
 
+    // Confirmation surface (badges + confirmed split + confirm action) appears
+    // only when this volunteer's hours need vouching AND the viewer is allowed to
+    // see that fact (self or host - see canViewHoursConfirmation).  Acting on it
+    // (confirm/unconfirm) is host-only, a separate check.
+    const conf: ConfirmOpts = {
+        show: model.needsConfirmation && canViewHoursConfirmation(volunteer_id),
+        canConfirm: viewerIsHostOrAdmin(),
+    };
+    const confirmedHours = sum(w => w.confirmedHours);
+    const summaryLine = `volunteer ${(hours - paidHours).toFixed(1)} · paid ${paidHours.toFixed(1)}`
+        + (conf.show
+            ? ` · confirmed ${confirmedHours.toFixed(1)} · unconfirmed ${((hours - paidHours) - confirmedHours).toFixed(1)}`
+            : '');
+
     return [h.div, props,
         [h.table, {class: 'table table-sm'},
          [h.tbody, {},
-          shown.flatMap((w, i) => renderWeek(w, volunteer_id, i === 0)),
+          shown.flatMap((w, i) => renderWeek(w, volunteer_id, i === 0, conf)),
           [h.tr, {class: 'fw-bold border-top'},
            [h.td, {}, totalLabel], [h.td, {}],
            [h.td, {class: 'text-end'}, hours.toFixed(1)], [h.td, {}]],
           [h.tr, {},
-           [h.td, {colspan: '4', class: 'text-end text-muted small'},
-            `volunteer ${(hours - paidHours).toFixed(1)} · paid ${paidHours.toFixed(1)}`]],
+           [h.td, {colspan: '4', class: 'text-end text-muted small'}, summaryLine]],
          ]],
         footer,
     ];
 }
 
-function renderWeek(w: TimeWeek, volunteer_id: number, isFirst: boolean): Markup[] {
+// Per-render confirmation context, threaded into the row renderers.  `show`:
+// may this viewer see confirmation state at all (self/host).  `canConfirm`: may
+// they act on it (host only) - false means read-only badges.
+interface ConfirmOpts { show: boolean; canConfirm: boolean; }
+
+function renderWeek(w: TimeWeek, volunteer_id: number, isFirst: boolean, conf: ConfirmOpts): Markup[] {
     return [
         // A blank spacer row before each week (except the first) so the week
         // header - which carries that week's total - reads as the start of the
@@ -501,11 +567,11 @@ function renderWeek(w: TimeWeek, volunteer_id: number, isFirst: boolean): Markup
          [h.td, {colspan: '2', class: 'fw-semibold'}, `Week of ${weekLabel(w)}`],
          [h.td, {class: 'text-end fw-semibold'}, w.hours.toFixed(1)],
          [h.td, {}]],
-        ...w.entries.flatMap(e => renderEntry(e, volunteer_id)),
+        ...w.entries.flatMap(e => renderEntry(e, volunteer_id, conf)),
     ];
 }
 
-function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
+function renderEntry(e: TimeEntry, volunteer_id: number, conf: ConfirmOpts): Markup[] {
     const sp = e.span;
 
     // A per-day bucket of standalone completed tasks (no event, no shift).
@@ -525,6 +591,7 @@ function renderEntry(e: TimeEntry, volunteer_id: number): Markup[] {
         sp.paid ? [h.span, {class: 'badge text-bg-light ms-1'}, 'paid'] : undefined,
         lateEntryBadge(sp.lateEntry),
         sp.wasStaff ? [h.span, {class: 'text-muted small ms-1'}, '(staff)'] : undefined,
+        confirmAffordance(sp, conf),
     ];
     // Check-ins this entry subsumes are PART of the entry (the timesheet's times
     // are authoritative) - render them as muted sub-lines inside the entry, not
@@ -555,6 +622,33 @@ function renderTaskChips(tasks: TaskSpan[]): Markup {
                    class: 'badge text-bg-light border text-decoration-none',
                    'data-testid': `done-task-${t.id}`},
              '✓ ', t.title])];
+}
+
+// Confirmation state for a counted entry, only for volunteers whose hours must
+// be vouched for.  A host sees an actionable confirm/unconfirm toggle; the
+// volunteer themselves sees a read-only badge of the current state.  Carriers
+// (synthesized event/task rows) and paid time carry no confirmation.
+function confirmAffordance(sp: TimeSpan, conf: ConfirmOpts): Markup {
+    if(!conf.show || sp.paid) return undefined;
+    if(sp.source !== 'timesheet' && sp.source !== 'checkin') return undefined;
+    const expr = (verb: string) => sp.source === 'timesheet'
+        ? `rabid.timesheet_entry.${verb}(${sp.id})`
+        : `rabid.event_checkin.${verb}Checkin(${sp.id})`;
+    if(sp.confirmed) {
+        // host: click to revoke; self: read-only confirmed badge.
+        return conf.canConfirm
+            ? action.actionButton('confirmed ✓', {kind: 'immediate', expr: expr('unconfirm')},
+                                  'badge text-bg-success border-0 ms-1',
+                                  {title: 'Confirmed — click to revoke'})
+            : [h.span, {class: 'badge text-bg-success ms-1', title: 'Hours confirmed by a host'}, 'confirmed'];
+    }
+    // host: offer to confirm; self: read-only "awaiting" badge.
+    return conf.canConfirm
+        ? action.actionButton('Confirm', {kind: 'immediate', expr: expr('confirm')},
+                              'badge text-bg-warning border-0 ms-1',
+                              {title: 'Confirm these hours'})
+        : [h.span, {class: 'badge text-bg-light text-muted ms-1', title: 'Awaiting host confirmation'},
+           'unconfirmed'];
 }
 
 // The pencil routes to the right editor for the row's source.

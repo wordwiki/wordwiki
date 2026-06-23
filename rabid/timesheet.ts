@@ -54,6 +54,11 @@ export interface TimesheetEntry {
     paid_time_processed: boolnum;
     paid_time_processed_note?: string;
 
+    // For volunteers whose hours must be vouched for (volunteer.volunteer_hours_
+    // _need_confirmation): the host/admin who confirmed this entry.  NULL =
+    // unconfirmed.  Cleared automatically when a non-host edits the entry.
+    confirmed_by?: number | null;
+
     entry_last_edit_time?: string;
     entry_creation_time?: string;
 }
@@ -65,6 +70,20 @@ export type TimesheetEntryOpt = Partial<TimesheetEntry>;
 // form (mirrors the Managed* fields in task.ts).
 class ManagedDateTimeField extends DateTimeField {
     override isVisible(): boolean { return false; }
+}
+
+// A volunteer-id set programmatically (here: confirmed_by, set by the host's
+// confirm action, cleared on a non-host edit), never shown in the edit form.
+class HiddenVolunteerRefField extends IntegerField {
+    override isVisible(): boolean { return false; }
+}
+
+// host/admin (the confirm action; also "does an edit clear the confirmation?").
+const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
+function actorIsHostOrAdmin(): boolean {
+    const ctx = security.current();
+    if(!ctx || ctx.system) return true;   // seeds / system edits are trusted
+    return ctx.roles.has('host') || ctx.roles.has('admin');
 }
 
 
@@ -98,6 +117,11 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             // A free-text note explaining the paid-time processing (e.g. payroll
             // batch reference, or why an entry was held back).
             new StringField('paid_time_processed_note', {nullable: true}),
+
+            // The host/admin who confirmed this entry (community-service hours
+            // etc); NULL = unconfirmed.  Hidden: set by the confirm action and
+            // cleared on a non-host edit, never edited directly in the form.
+            new HiddenVolunteerRefField('confirmed_by', {nullable: true}),
 
             // This may happen quite a while after the driving happens (so that our treasurer
             // does not have to do this bi-weekly etc).
@@ -137,6 +161,13 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
     override updateNamedFields<P extends Partial<TimesheetEntry>>(id: number, fieldNames: Array<keyof P>, fields: P) {
         const amended: any = {...fields, entry_last_edit_time: date.currentSqliteDateTime()};
         const names: any[] = [...fieldNames, 'entry_last_edit_time'];
+        // A non-host edit invalidates any host confirmation (the volunteer who
+        // owns the hours changed them) - unless this update IS setting confirmed_by
+        // (the host's own confirm action funnels through here too).
+        if(!actorIsHostOrAdmin() && !names.includes('confirmed_by')) {
+            amended.confirmed_by = null;
+            names.push('confirmed_by');
+        }
         super.updateNamedFields(id, names, amended);
     }
     override update<P extends Partial<TimesheetEntry>>(id: number, fields: P) {
@@ -155,6 +186,23 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
             if(e) result.targets.push(`.-volunteer_time-${e.volunteer_id}-`);
         }
         return result;
+    }
+
+    // Host/admin confirms (or un-confirms) a volunteer's hours, stamping who
+    // vouched for them.  Reloads the volunteer's reconciled Time fragment (where
+    // the confirm affordance lives).  Self cannot confirm their own hours.
+    @routeMutation(hostOrAdmin)
+    confirm(timesheet_entry_id: number): Markup {
+        const e = this.getById(timesheet_entry_id);
+        const actorId = security.current()?.actorId ?? null;
+        this.update(timesheet_entry_id, {confirmed_by: actorId} as Partial<TimesheetEntry>);
+        return {action: 'reload', targets: [`.-volunteer_time-${e.volunteer_id}-`]} as unknown as Markup;
+    }
+    @routeMutation(hostOrAdmin)
+    unconfirm(timesheet_entry_id: number): Markup {
+        const e = this.getById(timesheet_entry_id);
+        this.update(timesheet_entry_id, {confirmed_by: null} as Partial<TimesheetEntry>);
+        return {action: 'reload', targets: [`.-volunteer_time-${e.volunteer_id}-`]} as unknown as Markup;
     }
 
     // A timesheet entry belongs to its volunteer (drives isSelf).

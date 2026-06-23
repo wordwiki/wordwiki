@@ -541,6 +541,11 @@ class ManagedDateTimeField extends DateTimeField {
     override isVisible(): boolean { return false; }
 }
 
+// A volunteer-id set programmatically (here: confirmed_by), never shown in the form.
+class HiddenVolunteerRefField extends IntegerField {
+    override isVisible(): boolean { return false; }
+}
+
 // --------------------------------------------------------------------------------
 // --- EventCommitment ------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -800,6 +805,11 @@ export interface EventCheckin {
     start_time?: string;
     end_time?: string;
 
+    // For volunteers whose hours must be vouched for (volunteer.volunteer_hours_
+    // _need_confirmation): the host/admin who confirmed this check-in.  NULL =
+    // unconfirmed.  Cleared automatically when a non-host edits the check-in.
+    confirmed_by?: number | null;
+
     // Optional duration the volunteer actually contributed, in minutes.  This is
     // the simplified partial-attendance affordance for volunteers (and the host
     // posthumously recording "they were here ~90 min"): when set it is the
@@ -827,6 +837,10 @@ export class EventCheckinTable extends Table<EventCheckin> {
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
             new IntegerField('time_volunteered_minutes', {nullable: true, prompt: 'Time volunteered (minutes)'}),
+            // Host/admin who confirmed this check-in (community-service hours etc);
+            // NULL = unconfirmed.  Hidden: set by the confirm action, cleared on a
+            // non-host edit (see editCheckin), never edited in the form.
+            new HiddenVolunteerRefField('confirmed_by', {nullable: true}),
             new MarkdownField('notes', {default: ''}),
             new ManagedDateTimeField('created_time', {nullable: true}),
         ], [
@@ -1057,7 +1071,26 @@ export class EventCheckinTable extends Table<EventCheckin> {
             end_time: trim(args.end_time),
             time_volunteered_minutes: minutes,
             notes: args.notes ?? '',
+            // A non-host editing the hours invalidates any host confirmation.
+            ...(this.canManageCheckins() ? {} : {confirmed_by: null}),
         } as Partial<EventCheckin>);
+        return this.reloadEditor(c.event_id, [c.volunteer_id]);
+    }
+
+    // Host/admin confirms (or un-confirms) a volunteer's check-in hours, stamping
+    // who vouched for them.  Reloads the check-in fragment + the volunteer's Time
+    // fragment (where the confirm affordance lives).  Self cannot confirm.
+    @routeMutation(hostOrAdmin)
+    confirmCheckin(event_checkin_id: number): Markup {
+        const c = this.getById(event_checkin_id);
+        const actorId = security.current()?.actorId ?? null;
+        this.update(event_checkin_id, {confirmed_by: actorId} as Partial<EventCheckin>);
+        return this.reloadEditor(c.event_id, [c.volunteer_id]);
+    }
+    @routeMutation(hostOrAdmin)
+    unconfirmCheckin(event_checkin_id: number): Markup {
+        const c = this.getById(event_checkin_id);
+        this.update(event_checkin_id, {confirmed_by: null} as Partial<EventCheckin>);
         return this.reloadEditor(c.event_id, [c.volunteer_id]);
     }
 

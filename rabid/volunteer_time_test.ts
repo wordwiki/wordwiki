@@ -16,13 +16,13 @@ function tk(id: number, doneTime: string,
             eventStart: opts.eventStart, eventEnd: opts.eventEnd, eventLabel: opts.eventLabel};
 }
 
-function ts(id: number, start: string, end: string | null, paid = false): TimeSpan {
+function ts(id: number, start: string, end: string | null, paid = false, confirmed = false): TimeSpan {
     return {source: 'timesheet', id, start, end, hours: spanHours(start, end),
-            label: 'work', paid, wasStaff: false, notes: ''};
+            label: 'work', paid, wasStaff: false, confirmed, notes: ''};
 }
-function ci(id: number, start: string, end: string | null, wasStaff = false): TimeSpan {
+function ci(id: number, start: string, end: string | null, wasStaff = false, confirmed = false): TimeSpan {
     return {source: 'checkin', id, start, end, hours: spanHours(start, end),
-            label: 'Event', eventId: 100 + id, paid: false, wasStaff, notes: ''};
+            label: 'Event', eventId: 100 + id, paid: false, wasStaff, confirmed, notes: ''};
 }
 
 // --- The pure reducer ----------------------------------------------------------
@@ -93,6 +93,21 @@ test("reconcile: paid/volunteer split (paid timesheet vs unpaid + check-ins)", (
     assertEquals(m.hours, 6);
     assertEquals(m.paidHours, 2);
     assertEquals(m.volunteerHours, 4);
+});
+
+test("reconcile: confirmed/unconfirmed split the volunteer (unpaid) hours", () => {
+    const m = reconcileTime(1,
+        [ts(1, '2026-06-01 09:00:00', '2026-06-01 11:00:00', /*paid*/ true)],   // 2h paid (not in split)
+        [ci(2, '2026-06-02 09:00:00', '2026-06-02 12:00:00', false, /*confirmed*/ true),   // 3h confirmed
+         ci(3, '2026-06-03 09:00:00', '2026-06-03 10:00:00', false, /*confirmed*/ false)]); // 1h unconfirmed
+    assertEquals(m.volunteerHours, 4);
+    assertEquals(m.confirmedHours, 3);
+    assertEquals(m.unconfirmedHours, 1);
+    // A nested (subsumed) check-in's confirmation never counts - it's not counted hours.
+    const nested = reconcileTime(1,
+        [ts(1, '2026-06-01 09:00:00', '2026-06-01 12:00:00')],
+        [ci(2, '2026-06-01 10:00:00', '2026-06-01 11:00:00', false, true)]);
+    assertEquals(nested.confirmedHours, 0);   // the check-in nested under the timesheet
 });
 
 // --- Integration: query + render + mutations -----------------------------------
@@ -212,6 +227,96 @@ test("editCheckin sets and clears time_volunteered_minutes (self-or-host)", () =
         await asUser(bob, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
             {event_checkin_id: String(cid), time_volunteered_minutes: '', notes: ''}));
         assertEquals(asSystem(() => rabid.volunteer_time.model(bob)).hours, 2.5);
+    });
+});
+
+test("check-in confirmation: host confirms, self cannot, non-host edit clears it", () => {
+    return withTestDb(async ({ alice, bob }) => {
+        const eid = insertEvent();
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, eid));
+        const cid = asSystem(() =>
+            rabid.event_checkin.checkinsForEvent.all({event_id: eid})[0].event_checkin_id);
+
+        // The volunteer cannot confirm their own hours (route is host/admin only).
+        await asUser(bob, () => assertRejects(
+            () => invoke(`rabid.event_checkin.confirmCheckin($arg0)`, cid), Error));
+
+        // A host confirms - stamping who vouched.
+        await asUser(alice, () => invoke(`rabid.event_checkin.confirmCheckin($arg0)`, cid));
+        assertEquals(asSystem(() => rabid.event_checkin.getById(cid)).confirmed_by, alice);
+
+        // The volunteer then edits their own check-in -> confirmation is cleared.
+        await asUser(bob, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
+            {event_checkin_id: String(cid), time_volunteered_minutes: '60', notes: ''}));
+        assertEquals(asSystem(() => rabid.event_checkin.getById(cid)).confirmed_by, null);
+
+        // A host editing it, however, preserves an existing confirmation.
+        await asUser(alice, () => invoke(`rabid.event_checkin.confirmCheckin($arg0)`, cid));
+        await asUser(alice, () => invoke(`rabid.event_checkin.editCheckin($arg0)`,
+            {event_checkin_id: String(cid), time_volunteered_minutes: '90', notes: ''}));
+        assertEquals(asSystem(() => rabid.event_checkin.getById(cid)).confirmed_by, alice);
+    });
+});
+
+test("timesheet confirmation: host confirms, non-host edit clears it", () => {
+    return withTestDb(async ({ alice, bob }) => {
+        const tid = asSystem(() => rabid.timesheet_entry.insert({
+            volunteer_id: bob, start_time: '2026-06-20 09:00:00', end_time: '2026-06-20 11:00:00',
+            notes: 'shop', is_paid_time: 0, km_driven_for_reimbursement: 0,
+            km_driven_processed: 0, paid_time_processed: 0,
+        } as any));
+        await asUser(alice, () => invoke(`rabid.timesheet_entry.confirm($arg0)`, tid));
+        assertEquals(asSystem(() => rabid.timesheet_entry.getById(tid)).confirmed_by, alice);
+
+        // bob edits his own entry through the generic save form -> cleared.
+        await asUser(bob, () => invoke(`rabid.timesheet_entry.saveForm($arg0)`, {
+            timesheet_entry_id: String(tid),
+            notes: 'shop work', 'before-notes': 'shop',
+        }));
+        assertEquals(asSystem(() => rabid.timesheet_entry.getById(tid)).confirmed_by, null);
+    });
+});
+
+test("confirmation privacy: self & host see status; other volunteers do NOT", () => {
+    return withTestDb(async ({ alice, bob, carol }) => {
+        asSystem(() => rabid.volunteer.update(bob, {volunteer_hours_need_confirmation: 1} as any));
+        const eid = insertEvent();   // 2.5h event
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, eid));
+        const cid = asSystem(() =>
+            rabid.event_checkin.checkinsForEvent.all({event_id: eid})[0].event_checkin_id);
+
+        // Totals are computed regardless of viewer (server-side only).
+        let m = asSystem(() => rabid.volunteer_time.model(bob));
+        assert(m.needsConfirmation);
+        assertEquals(m.unconfirmedHours, 2.5);
+        await asUser(alice, () => invoke(`rabid.event_checkin.confirmCheckin($arg0)`, cid));
+        m = asSystem(() => rabid.volunteer_time.model(bob));
+        assertEquals(m.confirmedHours, 2.5);
+
+        const view = (vid: number) => renderRoute(`rabid.volunteer_time.renderForVolunteer(${vid})`);
+        // Self sees their own confirmed status (read-only badge).
+        await asUser(bob, async () => assert(hasText(await view(bob), 'confirmed')));
+        // A host sees anyone's.
+        await asUser(alice, async () => assert(hasText(await view(bob), 'confirmed')));
+        // Another (non-host) volunteer viewing bob's page sees NOTHING about it -
+        // this is the leak we're preventing in an open-books org.
+        await asUser(carol, async () => {
+            const v = await view(bob);
+            assert(!hasText(v, 'confirmed'));    // also excludes the 'unconfirmed' substring
+        });
+    });
+});
+
+test("needsConfirmation off (the common case): no confirmation UI", () => {
+    return withTestDb(async ({ bob }) => {
+        const eid = insertEvent();
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, eid));
+        const m = asSystem(() => rabid.volunteer_time.model(bob));
+        assertEquals(m.needsConfirmation, false);
+        await asUser(bob, async () => {
+            const view = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob})`);
+            assert(!hasText(view, 'unconfirmed'));
+        });
     });
 });
 

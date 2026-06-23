@@ -194,6 +194,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     const statusS = s('volunteer.status');     // join / inactive / exit
     const roleS = s('volunteer.role');         // permissions
     const acctS = s('volunteer.account');      // whether a password is set
+    const confS = s('volunteer.needs_confirmation'); // community-service hours flag
 
     // Rocky uses fixed values so the canonical admin login is stable across runs.
     const rockyJoin = '2023-01-07 10:00:00';   // last_change_time (a datetime)
@@ -237,6 +238,9 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     //   vinnie@redraccoon.org / vnny - no roles, occasional activity (Vinnie O. Volunteer)
     seedFixedLogin(rabid, 'Hazel', 'Host', 'hazel@redraccoon.org', 'hzl', 'host', profileByKey('regular'));
     seedFixedLogin(rabid, 'Vinnie', 'Volunteer', 'vinnie@redraccoon.org', 'vnny', undefined, profileByKey('occasional'));
+    //   cody@redraccoon.org / cody   - community-service volunteer (hours need host confirmation)
+    seedFixedLogin(rabid, 'Cody', 'Service', 'cody@redraccoon.org', 'cody', undefined,
+                   profileByKey('regular'), /*needsConfirmation*/ true);
 
     // Rocky (staff), Hazel (regular), Vinnie (occasional) have each consumed one
     // slot of their tier; the rest fill in priority order, then tail.
@@ -284,6 +288,11 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
             // Staff is now an attribute of the activity profile (the rest are
             // volunteers); event check-ins snapshot this for grant reporting.
             is_staff: profile?.isStaff ?? 0,
+            // A small minority of (non-staff) volunteers are doing community
+            // service: their hours must be host-confirmed.  Draw always (keeps the
+            // stream stable); only non-staff qualify.
+            volunteer_hours_need_confirmation:
+                (!(profile?.isStaff) && confS.datatype.boolean({ probability: 0.08 })) ? 1 : 0,
             emergency_contact_name: contactS.helpers.maybe(
                 () => `${contactS.person.firstName()} ${contactS.person.lastName()}`, { probability: 0.7 }) || '',
             emergency_contact_phone: contactS.helpers.maybe(
@@ -332,7 +341,8 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
 // records are stable across runs.  `profile` carries the activity tier (its
 // middle initial goes into the name, and is_staff comes from it).
 function seedFixedLogin(rabid: Rabid, first: string, last: string, email: string, pw: string,
-                        permissions: string|undefined, profile: ActivityProfile|null): number {
+                        permissions: string|undefined, profile: ActivityProfile|null,
+                        needsConfirmation = false): number {
     const join = '2023-02-01 10:00:00';        // last_change_time (a datetime)
     const id = rabid.volunteer.insert({
         join_date: '2023-02-01',               // join_date is a DateField
@@ -345,6 +355,7 @@ function seedFixedLogin(rabid: Rabid, first: string, last: string, email: string
         emergency_contact_name: '',
         emergency_contact_phone: '',
         is_staff: profile?.isStaff ?? 0,
+        volunteer_hours_need_confirmation: needsConfirmation ? 1 : 0,
         permissions,
         inactive: 0,
         marked_inactive_date: undefined,
@@ -640,6 +651,11 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
     const events = rabid.event.allEvents.all();
     const volunteers = rabid.volunteer.allVolunteersByName.all();
     const staffIds = new Set(volunteers.filter(v => v.is_staff).map(v => v.volunteer_id));
+    // Community-service volunteers (hours need host confirmation), and a host to
+    // play the confirmer - so some of their past check-ins come pre-confirmed.
+    const needsConfirmIds = new Set(
+        volunteers.filter(v => v.volunteer_hours_need_confirmation).map(v => v.volunteer_id));
+    const confirmerId = volunteers.find(v => /host|admin/.test(v.permissions ?? ''))?.volunteer_id ?? null;
 
     // Only events that have started can have check-ins.
     const startedEvents = events.filter(e => e.start_time && new Date(e.start_time) <= currentDate);
@@ -675,11 +691,17 @@ export function seedEventCheckins(rabid: Rabid, opts: { baseSeed?: number } = {}
                 const partialRate = isRecent ? 0.6 : 0.15;
                 const partialMinutes = isPast && !staffIds.has(commitment.volunteer_id) && rand() < partialRate
                     ? faker.helpers.arrayElement([30, 45, 60, 90, 120]) : undefined;
+                // A community-service volunteer's past hours are mostly (but not
+                // all) host-confirmed - leaving a realistic unconfirmed remainder.
+                const confirmedBy = isPast && confirmerId != null
+                    && needsConfirmIds.has(commitment.volunteer_id) && rand() < 0.6
+                    ? confirmerId : undefined;
                 rabid.event_checkin.insert({
                     event_id: event.event_id,
                     volunteer_id: commitment.volunteer_id,
                     notes: '',
                     ...(partialMinutes !== undefined ? {time_volunteered_minutes: partialMinutes} : {}),
+                    ...(confirmedBy !== undefined ? {confirmed_by: confirmedBy} : {}),
                 });
                 checkinCount++;
             }

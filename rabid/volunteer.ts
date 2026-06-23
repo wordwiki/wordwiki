@@ -64,6 +64,13 @@ export interface Volunteer {
     // so changing it here does not rewrite history.  Host/admin managed.
     is_staff: boolnum;
 
+    // A small minority of volunteers (e.g. high-school community-service hours)
+    // need their recorded hours vouched for: they enter time themselves, and a
+    // host confirms it (see confirmed_by on timesheet_entry / event_checkin).
+    // When set, the Time view shows confirmed/unconfirmed state and a host can
+    // confirm.  Host/admin managed.
+    volunteer_hours_need_confirmation: boolnum;
+
     // Optional photo: a content-store path ('content/photos/…' - see
     // liminal/photo.ts).  Volunteer-supplied by choice.
     photo?: string;
@@ -113,6 +120,15 @@ export class VolunteerTable extends Table<Volunteer> {
             // Employment status (host/admin managed) - snapshotted into event
             // check-ins for grant reporting.  See the interface field comment.
             new BooleanField('is_staff', {default: 0, prompt: 'Staff member', edit: host}),
+            // Community-service hours etc: this person's time must be host-confirmed.
+            // SENSITIVE - that someone needs confirmation reveals they're doing
+            // community service (sometimes court-ordered).  Unlike the open-books
+            // default, only the volunteer themselves and hosts may see it (hosts
+            // manage it); to others it's redacted.  Mirrors the VIEW rule in
+            // volunteer_time.canViewHoursConfirmation.
+            new BooleanField('volunteer_hours_need_confirmation',
+                             {default: 0, prompt: 'Hours need host confirmation',
+                              view: selfOrHost, redact: true, edit: host}),
             // Optional photo (a content-store path - see liminal/photo.ts).
             // Uploading one is the volunteer's own choice: the point is to help
             // other volunteers on a shift learn each other's names.
