@@ -103,6 +103,15 @@ function volunteerName(volunteer_id: number|null|undefined): string|undefined {
     return v ? shortName(v) : undefined;
 }
 
+// A compact date for the task lists: "Jun 20" (year only when it isn't the
+// current year).  Accepts a sqlite DATE or DATETIME (takes the date part).
+function compactDate(d: string): string {
+    const t = date.sqliteDateToTemporal(d.slice(0, 10));
+    const opts: Record<string, string> = {month: 'short', day: 'numeric'};
+    if (t.year !== date.orgToday().year) opts.year = 'numeric';
+    return t.toLocaleString('en-US', opts);
+}
+
 // (The shared assigned-to line now lives in group.ts - renderAssignmentLine /
 // renderGroupRef - packaged with the groups mechanism, since every owner
 // table renders it.)
@@ -467,14 +476,16 @@ export class ProjectTable extends Table<Project> {
         const props = this.reloadableItemProps(project_id, `rabid.project.renderProjectDetail(${project_id})`);
         props.class = 'container py-3 ' + props.class;
         return [h.div, props,
-            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+            // Header: the title (a heading) + a soft Done pill + edit + the
+            // project's ☰ (its terminal mark-done/reopen transition; the confirm
+            // carries the open-task count - finishing with work outstanding
+            // should be deliberate).
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
              [h.h2, {class: 'mb-0'}, this.recordLabel(p)],
-             p.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Done'] : undefined,
+             p.deleted
+                 ? [h.span, {class: 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis'}, 'Done']
+                 : undefined,
              this.canEditRecord(p) ? this.editPencil(project_id) : undefined,
-             // The project's own ☰: its terminal mark-done/reopen transition
-             // (the confirm carries the open-task count - finishing a project
-             // with work outstanding should be deliberate); more project-level
-             // actions will join it.
              this.canEditRecord(p)
                  ? action.actionMenu([
                        p.deleted
@@ -489,30 +500,20 @@ export class ProjectTable extends Table<Project> {
                                          : `Mark ${this.recordLabel(p)} done?`}},
                    ], {ariaLabel: 'Project actions'})
                  : undefined],
-            p.deleted && p.archived_time
-                ? [h.p, {class: 'text-muted small mb-1'},
-                   `Done ${date.sqliteDateTimeToDateString(p.archived_time)}`,
-                   p.archived_by != null
-                       ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${p.archived_by})`,
-                                                     volunteerName(p.archived_by) ?? `volunteer ${p.archived_by}`)]
-                       : undefined]
+            // The project's own prose, given prominence (the "what is this") -
+            // not buried beneath provenance metadata as before.
+            p.description
+                ? [h.div, {class: 'lm-prose mb-3'}, this.fieldsByName.description.render(p.description)]
                 : undefined,
-            // Creation provenance: who to ask about this project.
-            p.created_time
-                ? [h.p, {class: 'text-muted small mb-1'},
-                   `Created ${date.sqliteDateTimeToDateString(p.created_time)}`,
-                   p.created_by != null
-                       ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${p.created_by})`,
-                                                     volunteerName(p.created_by) ?? `volunteer ${p.created_by}`)]
-                       : undefined]
-                : undefined,
-            p.description ? this.fieldsByName.description.render(p.description) : undefined,
             // The project's assignment: THE assigned-to its tasks inherit.
             renderAssignmentLine('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
-            // The Tasks heading: a quiet + for the common verb (new task),
-            // plus the ☰ naming it for discoverability.
-            [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
+            // The Tasks heading: the open count at a glance, then a quiet + for
+            // the common verb (new task) and the ☰ naming it for discoverability.
+            [h.div, {class: 'd-flex align-items-center gap-2 mt-4'},
              [h.h4, {class: 'mb-0'}, 'Tasks'],
+             openCount > 0
+                 ? [h.span, {class: 'text-muted small'}, `${openCount} open`]
+                 : undefined,
              canCreateTask
                  ? action.actionButton(action.plusIcon(),
                      {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
@@ -525,7 +526,27 @@ export class ProjectTable extends Table<Project> {
                    ], {ariaLabel: 'Task list actions'})
                  : undefined],
             rabid.task.renderProjectTasks(project_id),
+            // Provenance: who to ask, quiet, at the FOOT of the page (it's
+            // reference, not the headline).
+            this.renderProjectProvenance(p),
         ];
+    }
+
+    // The quiet provenance footer: when/by-whom the project was created (and
+    // marked done).  Nothing rendered when there's nothing to say.
+    private renderProjectProvenance(p: Project): Markup {
+        const who = (id: number|undefined) =>
+            id != null
+                ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${id})`,
+                                              volunteerName(id) ?? `volunteer ${id}`)]
+                : undefined;
+        const lines: Markup[] = [];
+        if (p.deleted && p.archived_time)
+            lines.push([h.div, {}, `Done ${date.sqliteDateTimeToDateString(p.archived_time)}`, who(p.archived_by)]);
+        if (p.created_time)
+            lines.push([h.div, {}, `Created ${date.sqliteDateTimeToDateString(p.created_time)}`, who(p.created_by)]);
+        if (lines.length === 0) return undefined as unknown as Markup;
+        return [h.div, {class: 'text-muted small mt-4 pt-2 border-top'}, ...lines];
     }
 }
 
@@ -832,11 +853,18 @@ export class TaskTable extends Table<Task> {
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
         const props = this.reloadableItemProps(undefined, `rabid.task.renderProjectTasks(${project_id})`);
-        return [h.div, props,
-            tasks.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No tasks yet.']
-                : tasks.map(t => this.renderTaskBlock(t)),
-        ];
+        if (tasks.length === 0)
+            return [h.div, props, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
+        // Tasks come open-first then done (tasksForProject ORDER BY status='done').
+        // A quiet "Done" divider marks the wall, so what's LEFT reads at a glance.
+        const firstDone = tasks.findIndex(t => t.status === 'done');
+        const blocks: Markup[] = [];
+        tasks.forEach((t, i) => {
+            if (i === firstDone && firstDone > 0)
+                blocks.push([h.div, {class: 'lm-done-divider', 'data-testid': 'tasks-done-divider'}, 'Done']);
+            blocks.push(this.renderTaskBlock(t));
+        });
+        return [h.div, props, ...blocks];
     }
 
     // One task on the project page: a compact task line (checkbox toggles
@@ -851,7 +879,9 @@ export class TaskTable extends Table<Task> {
         const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
         const props = this.reloadableItemProps(id, `rabid.task.renderTaskBlockById(${id})`);
 
-        // The override marker: the committee's name, or the override members.
+        // The override marker: the committee's name, or the override members as
+        // short names (the project header already says who everything else
+        // belongs to; this is just the exception).
         let overrideLabel: string|undefined;
         if(t.group_id != null) {
             const g = security.runSystem(() => rabid.volunteer_group.getById(t.group_id!));
@@ -863,7 +893,12 @@ export class TaskTable extends Table<Task> {
 
         return [h.div, {...props, class: 'lm-task-block ' + props.class,
                         'data-testid': `task-block-${id}`},
-            [h.div, {class: 'd-flex align-items-center gap-2'},
+            // The task line: whole row navigates to the task detail (lm-navigable);
+            // the checkbox toggles done and the ☰ holds the rest - both real
+            // controls the navigable-click guard declines, so tapping them never
+            // navigates.  No separate pencil: Edit lives in the ☰.
+            [h.div, {class: 'd-flex align-items-center gap-2 lm-navigable',
+                     onclick: 'lmNavigableClick(event)'},
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
                         ...(canEdit
@@ -875,22 +910,24 @@ export class TaskTable extends Table<Task> {
                      class: 'lm-nav-link' + (done ? ' text-decoration-line-through' : '')},
                t.title || 'Untitled task'],
               t.status === 'in-progress'
-                  ? [h.span, {class: 'badge text-bg-info ms-2'}, 'In progress'] : undefined,
+                  ? [h.span, {class: 'badge rounded-pill bg-info-subtle text-info-emphasis fw-normal ms-2'},
+                     'In progress'] : undefined,
               t.priority === 'high' && !done
-                  ? [h.span, {class: 'badge text-bg-danger ms-2'}, 'High'] : undefined],
+                  ? [h.span, {class: 'badge rounded-pill bg-danger-subtle text-danger-emphasis fw-normal ms-2'},
+                     'High'] : undefined],
              t.due && !done
                  ? [h.span, {class: 'small flex-shrink-0 ' + (overdue ? 'text-danger' : 'text-muted')},
-                    `Due ${date.sqliteDateToString(t.due)}`]
+                    compactDate(t.due), overdue ? ' · overdue' : '']
                  : undefined,
              overrideLabel
                  ? [h.span, {class: 'text-muted small flex-shrink-0',
                              'data-testid': `task-${id}-override`}, `→ ${overrideLabel}`]
                  : undefined,
-             canEdit ? this.editPencil(id) : undefined,
-             // The less-common actions, one tap behind the ☰ (in place, so
-             // casual users find them without knowing about detail pages).
+             // One ☰ for everything beyond the checkbox: edit, checklist, reorder.
              canEdit
                  ? action.actionMenu([
+                       {label: 'Edit…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.task.renderForm(rabid.task.getById(${id}))`}},
                        {label: 'Add checklist item…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id})`}},
                        {label: 'Add completed item…',
@@ -1566,11 +1603,13 @@ export class SubtaskTable extends Table<Subtask> {
     }
 
     renderChecklistRow(s: Subtask, canEdit: boolean): Markup {
-        // Check-off provenance, shown quietly beside a done item ("Hazel, Jun 10").
+        // Check-off provenance, shown quietly beside a done item ("Hazel · Jun 10")
+        // - short name + compact date, matching the rest of the page.
+        const doneByName = s.done ? volunteerName(s.done_by) : undefined;
         const prov = s.done
-            ? [volunteerName(s.done_by),
-               s.done_time ? date.sqliteDateTimeToDateString(s.done_time) : undefined]
-                  .filter(Boolean).join(', ')
+            ? [doneByName ? shortName({name: doneByName}) : undefined,
+               s.done_time ? compactDate(s.done_time) : undefined]
+                  .filter(Boolean).join(' · ')
             : '';
         return [h.div, {class: 'list-group-item lm-item d-flex align-items-center gap-2',
                         'data-testid': `subtask-row-${s.subtask_id}`},
@@ -1582,11 +1621,13 @@ export class SubtaskTable extends Table<Subtask> {
             [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
              s.title],
             prov ? [h.span, {class: 'text-muted small flex-shrink-0'}, prov] : undefined,
-            canEdit ? this.editPencil(s.subtask_id) : undefined,
-            // Remove lives in the ☰ too (rarely used; an inline × made the
-            // line flow ragged).  Destructive item last.
+            // One ☰ for everything beyond the checkbox (no separate pencil):
+            // edit, reorder, remove.  Lighter than the parent task line.
             canEdit
                 ? action.actionMenu([
+                      {label: 'Edit…',
+                       mode: {kind: 'modal',
+                              dialogUrl: `/rabid.subtask.renderForm(rabid.subtask.getById(${s.subtask_id}))`}},
                       {label: 'Move up',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`}},
                       {label: 'Move down',

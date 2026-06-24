@@ -144,7 +144,8 @@
 /* Event notes: the event's own prose (no field label).  A left accent rule and
    slightly larger type give it weight so it reads as primary content on the
    detail page, without the box/heading that made it look like a field again. */
-.event-notes {
+.event-notes,
+.lm-prose {
     margin: 6px 0 24px;
     padding: 2px 0 2px 16px;
     border-left: 5px solid #FF9800;
@@ -154,9 +155,25 @@
 }
 
 .event-notes > :first-child,
-.event-notes .lm-markdown > :first-child { margin-top: 0; }
+.event-notes .lm-markdown > :first-child,
+.lm-prose > :first-child,
+.lm-prose .lm-markdown > :first-child { margin-top: 0; }
 .event-notes > :last-child,
-.event-notes .lm-markdown > :last-child { margin-bottom: 0; }
+.event-notes .lm-markdown > :last-child,
+.lm-prose > :last-child,
+.lm-prose .lm-markdown > :last-child { margin-bottom: 0; }
+
+/* The quiet "Done" wall on a task list: open tasks above, completed below, so
+   what's left to do reads at a glance. */
+.lm-done-divider {
+    margin: 0.75rem 0 0.25rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--bs-border-color);
+    color: var(--bs-secondary-color);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
 
 
 /* ============================= */
