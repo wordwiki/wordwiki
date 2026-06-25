@@ -418,11 +418,28 @@ export class VolunteerTable extends Table<Volunteer> {
         const props = this.reloadableItemProps(volunteer_id, `rabid.volunteer.renderDetail(${volunteer_id})`);
         props.class = 'container py-3 ' + props.class;
 
-        // Emergency contact is two redactable fields; if hidden, show one '***'.
-        const emergencyHidden = security.isRedacted(v.emergency_contact_name);
-        const emergency = emergencyHidden
-            ? renderFieldValue(f.emergency_contact_name, v.emergency_contact_name)
-            : ([v.emergency_contact_name, v.emergency_contact_phone].filter(Boolean).join(' · ') || '—');
+        // Empty fields are ELIDED (no "Label: —" rows) - even on your own
+        // profile - so the card shows only what's actually filled in.  A REDACTED
+        // value ('***') is kept: it deliberately signals a value exists but is
+        // private (the open-books model), which is information, not emptiness.
+        const dtdd = (label: string, valueMarkup: Markup, testid?: string): Markup =>
+            [[h.dt, {class: 'col-sm-3'}, label],
+             [h.dd, {class: 'col-sm-9', ...(testid ? {'data-testid': testid} : {})}, valueMarkup]];
+        const fieldRow = (label: string, fld: Field, value: any, testid?: string): Markup => {
+            if (!security.isRedacted(value) && (value == null || String(value).trim() === ''))
+                return undefined;   // elide empty (but never an existing-but-private '***')
+            return dtdd(label, renderFieldValue(fld, value), testid);
+        };
+
+        // Emergency contact is two redactable fields shown as one row: '***' when
+        // hidden, the combined value when present, elided when truly empty.
+        const emergencyRow: Markup = security.isRedacted(v.emergency_contact_name)
+            ? dtdd('Emergency contact',
+                   renderFieldValue(f.emergency_contact_name, v.emergency_contact_name), 'detail-emergency')
+            : (() => {
+                const combined = [v.emergency_contact_name, v.emergency_contact_phone].filter(Boolean).join(' · ');
+                return combined ? dtdd('Emergency contact', combined, 'detail-emergency') : undefined;
+              })();
 
         // Host-only tools (issuing a password-reset link is a host/admin act).
         const ctx = security.current();
@@ -443,16 +460,11 @@ export class VolunteerTable extends Table<Volunteer> {
             v.photo ? rabid.photo.img(v.photo, 512, {class: 'lm-photo-detail'}) : undefined,
 
             [h.dl, {class: 'row mb-0'},
-             [h.dt, {class: 'col-sm-3'}, 'Email'],
-             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-email'}, renderFieldValue(f.email, v.email) || '—'],
-             [h.dt, {class: 'col-sm-3'}, 'Phone'],
-             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-phone'}, renderFieldValue(f.phone, v.phone) || '—'],
-             [h.dt, {class: 'col-sm-3'}, 'Skills'],
-             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-skills'}, v.skills || '—'],
-             [h.dt, {class: 'col-sm-3'}, 'Emergency contact'],
-             [h.dd, {class: 'col-sm-9', 'data-testid': 'detail-emergency'}, emergency],
-             [h.dt, {class: 'col-sm-3'}, 'Joined'],
-             [h.dd, {class: 'col-sm-9'}, renderFieldValue(f.join_date, v.join_date) || '—'],
+             fieldRow('Email', f.email, v.email, 'detail-email'),
+             fieldRow('Phone', f.phone, v.phone, 'detail-phone'),
+             fieldRow('Skills', f.skills, v.skills, 'detail-skills'),
+             emergencyRow,
+             fieldRow('Joined', f.join_date, v.join_date),
             ],
 
             [h.h4, {class: 'mt-4'}, 'Time'],
