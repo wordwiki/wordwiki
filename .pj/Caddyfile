@@ -1,0 +1,3 @@
+# wordwiki serves both its published static pages and dynamic routes (/ww/, etc.)
+# from its own server on internal port 9000 — so proxy everything there.
+reverse_proxy {{PJ_PROXY_9000}}
