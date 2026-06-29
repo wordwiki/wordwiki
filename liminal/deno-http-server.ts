@@ -18,19 +18,24 @@ export class DenoHttpServer extends HttpServer {
         }
 
         const port = this.config.port;
-        const bindHost = this.config.hostname || 'localhost';
+        // HOST env wins when set: pj injects HOST=0.0.0.0 inside its container so the
+        // server is reachable through `podman -p 127.0.0.1:<ext>:<port>` (which pins
+        // host-side exposure to host loopback). Absent HOST, default to loopback-only.
+        const bindHost = Deno.env.get('HOST') || this.config.hostname || 'localhost';
         const accessUrl = this.config.baseUrl ?? `http://${bindHost}:${port}/`;
         console.log(`Starting HTTP webserver.  Access it at:  ${accessUrl}`);
 
         const handler = async (req: Request, info: Deno.ServeHandlerInfo) =>
             this.serveRequest(req, info);
 
-        // Bind loopback on BOTH IP stacks.  The advertised <name>.localhost can
-        // resolve to ::1 (IPv6) or 127.0.0.1 (IPv4) depending on the resolver,
-        // and Deno binds a single address per serve() - so a browser that picks
-        // the stack we didn't bind would get a dead connection.  We listen on
-        // both loopback addresses explicitly (NOT on :: / 0.0.0.0, which would
-        // expose the dev server - including /eval - on every interface).
+        // Default (loopback host): bind BOTH IP stacks.  The advertised
+        // <name>.localhost can resolve to ::1 (IPv6) or 127.0.0.1 (IPv4) depending on
+        // the resolver, and Deno binds a single address per serve() - so a browser
+        // that picks the stack we didn't bind would get a dead connection.  We listen
+        // on both loopback addresses explicitly.  A non-loopback bindHost (e.g.
+        // HOST=0.0.0.0 in a container) takes the single-bind else branch; outside a
+        // container that would expose the dev server - including /eval - on every
+        // interface, so it only happens when HOST is set deliberately.
         const isLoopback = bindHost === 'localhost' || bindHost === '127.0.0.1' || bindHost === '::1';
         if (isLoopback) {
             Deno.serve({port, hostname: '127.0.0.1', onListen() {}}, handler);
