@@ -1,18 +1,22 @@
 {
-  "name": "wordwiki",
   "template": "base",
-  "created": "2026-06-25T14:16:37+00:00",
   "github_repo": "wordwiki/wordwiki",
   "caches": [
     "deno"
   ],
-  "web": {},
+  "web": {
+    "enabled": true,
+    "public": false
+  },
   "ports": {
     "base_external_port": 9000,
     "internal_port": 9000,
     "port_env": "WORDWIKI_PORT"
   },
   "extra_mounts": [
-    "~/projects/mmo-shared-content"
+    {
+      "host": "~/projects/mmo-shared-content",
+      "mode": "rw"
+    }
   ]
 }
