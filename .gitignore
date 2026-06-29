@@ -22,3 +22,4 @@
 # The rabid dev database (rebuilt by rabid_create_fake_data.sh at the repo
 # root); throwaway fake data, never tracked.
 /database/
+/.claude-home/
