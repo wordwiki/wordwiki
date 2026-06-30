@@ -54,8 +54,7 @@ export interface Service {
     service_check_in_time?: string;
     service_done: boolnum;
     // Will often be quite a bit after service is complete so should not
-    // be used to compute total service time.  For example will be closed
-    // when the customer
+    // be used to compute total service time.
     service_record_closed_time?: string;
 
     will_pick_up: boolnum;
