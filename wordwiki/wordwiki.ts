@@ -1532,7 +1532,7 @@ if (import.meta.main) {
         //                  [--username=NAME] [--allow-production]
         case 'import-categories': {
             const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
-                ?? `${Deno.env.get('HOME')}/wordwiki/categorization`;
+                ?? new URL('../categorization', import.meta.url).pathname;
             // Stamped with the reserved automation identity by default
             // (history UI collapses '~' authors; restore refuses to cross
             // the migration) - --username=NAME for a human-attributed run.
@@ -1630,7 +1630,7 @@ if (import.meta.main) {
 
         case 'verify-migration': {
             const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
-                ?? `${Deno.env.get('HOME')}/wordwiki/categorization`;
+                ?? new URL('../categorization', import.meta.url).pathname;
             const schemeText = (() => {
                 try { return Deno.readTextFileSync(`${dir}/scheme.md`); }
                 catch (_e) { return undefined; }

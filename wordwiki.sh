@@ -23,8 +23,8 @@ set -e
 #   ./wordwiki.sh set-password djz pw  # set a user's password
 #   ./wordwiki.sh set-db-purpose dev   # mark the db (production|dev|test)
 #   ./wordwiki.sh import-categories    # seed category table + rewrite entry
-#                                      # categories from ~/wordwiki/categorization
-#                                      # (idempotent; refuses production db;
+#                                      # categories from <repo>/categorization
+#                                      # (or a dir arg; idempotent; refuses production db;
 #                                      # stamps '~category-import' unless
 #                                      # --username=NAME)
 #   ./wordwiki.sh import-lexical-forms # seed the part-of-speech vocabulary +
