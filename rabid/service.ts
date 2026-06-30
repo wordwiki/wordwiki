@@ -41,7 +41,7 @@ export const service_kind_enum: Record<string, string> = {
 export interface Service {
     service_id: number;
 
-    // Nullable because we can do service outside of an event.
+    // Nullable because we can do service outside of an event
     event_id?: number;
 
     client_name: string;
