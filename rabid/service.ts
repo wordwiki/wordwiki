@@ -76,14 +76,21 @@ export class ServiceTable extends Table<Service> {
     constructor() {
         super ('service', [
             new PrimaryKeyField('service_id', {}),
+
+            // If the service occurred during an event (note: each regular opening hour is also an event)
             new ForeignKeyField('event_id', "event", "event_id", {indexed: true, nullable: true}),
-            
+
+            // Note: we don't track customers - thus no separate customer table.
             new StringField('client_name', {}),
+            // Not full postal code - just prefix that is long enough to know general area.
+            // (First 3 characters of Canadian postal code for us).
             new StringField('client_postal', {nullable: true}),
+            
             // Client PII: clients are not volunteers and never opted into the
             // open-books model - their phone is host/admin-only, redacted for
             // everyone else.
             new StringField('client_phone', {nullable: true, view: hostOrAdmin, redact: true}),
+
             new IntegerField('client_number_of_people_served', {default: 1}),
             
             new EnumField('service_kind', service_kind_enum, {default: 'diy'}),

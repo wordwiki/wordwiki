@@ -27,13 +27,15 @@ export const sale_kind_enum: Record<string, string> = {
     'bike': 'Bike',
     'free-bike': 'Free Adult Bike',
     'free-kids-bike': 'Free Kids Bike',
+    'free-helmet': 'Free Helmet',
+    'balance-bike-loan': 'Balance Bike Loan',
     'parts': 'Parts',
     'other': 'Other',
 };
 
 export const payment_method_enum: Record<string, string> = {
     'cash': 'Cash',
-    'square': 'Square',
+    'card': 'Card',
     'etransfer': 'Etransfer',
     'other': 'Other',
 };
@@ -44,7 +46,7 @@ export interface Sale {
     sale_recorded_by: number;
     sale_kind: string;
     description: string;
-    // Optional photo of the bike (a content-store path - see liminal/photo.ts).
+    // Optional photo of the item (a content-store path - see liminal/photo.ts).
     photo?: string;
     amount: number;
     payment_method: string;
@@ -56,7 +58,7 @@ export type SaleOpt = Partial<Sale>;
 export class SaleTable extends Table<Sale> {
 
     constructor() {
-        super ('bike_sale', [
+        super ('sale', [
             new PrimaryKeyField('sale_id', {}),
             new DateTimeField('sale_time', {}),
             // (was unique:true - a copy-paste bug that would have limited each
@@ -82,7 +84,7 @@ export class SaleTable extends Table<Sale> {
     get allSales() {
         return this.prepare<Sale, {}>(block`
 /**/   SELECT ${this.allFields}
-/**/          FROM bike_sale
+/**/          FROM sale
 /**/          ORDER BY sale_time DESC`);
     }
 
