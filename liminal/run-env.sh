@@ -22,8 +22,16 @@
 #   port_base     a numeric --N suffix maps to port_base + N
 #   default_port  used when there is no env / file / numeric --N suffix
 #
-# Resolution order for the port (first hit wins): $port_env_var, port_file,
-# a trailing --N in the checkout dir name, then default_port.
+# Resolution order for the port (first hit wins): $port_env_var, $LIMINAL_PORT,
+# port_file, a trailing --N in the checkout dir name, then default_port.
+#
+# $LIMINAL_PORT is the framework-level port the container environment injects
+# (pj sets it per-container): several co-developed liminal apps share a checkout
+# and whichever one you launch binds the container's assigned port.  It ranks
+# just below the app-specific $port_env_var (still the explicit override) and
+# ABOVE the per-checkout file / --N conventions, since a container's injected
+# port must win over the dirname/file heuristics inside that container.  Unset on
+# the host, so host behaviour is unchanged.
 #
 # Exports the resolved port under $port_env_var and the advertised host under
 # LIMINAL_PUBLIC_HOST (both read by liminal's startServer / DenoHttpServer).
@@ -32,6 +40,11 @@ resolve_run_env() {
     local identity_dir="$1" port_env_var="$2" port_file="$3" port_base="$4" default_port="$5"
 
     local port="${!port_env_var:-}"
+    # Framework-level port injected by the container env (pj); wins over the
+    # per-checkout file/suffix conventions below, loses to the app-specific var.
+    if [ -z "$port" ] && [ -n "${LIMINAL_PORT:-}" ]; then
+        port="$LIMINAL_PORT"
+    fi
     if [ -z "$port" ] && [ -n "$port_file" ] && [ -f "$port_file" ]; then
         port="$(tr -d '[:space:]' < "$port_file")"
     fi

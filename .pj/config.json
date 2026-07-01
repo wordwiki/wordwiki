@@ -11,7 +11,7 @@
   "ports": {
     "base_external_port": 9000,
     "internal_port": 9000,
-    "port_env": "WORDWIKI_PORT"
+    "port_env": "LIMINAL_PORT"
   },
   "extra_mounts": [
     {
