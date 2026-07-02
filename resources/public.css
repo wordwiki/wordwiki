@@ -25,6 +25,16 @@
 .page-content h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 .4rem;
                    color: var(--mmo-muted); }
 
+/* Entry pages: the meanings, slash-joined, ride on the title line after the
+   headword (`headword : meanings`) - the audience is largely non-fluent, so
+   the English must be right up front.  Smaller and muted so the headword
+   still owns the line, echoing the word-list `headword : gloss` rows. */
+.page-content h1 .entry-gloss-title {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--mmo-muted);
+}
+
 /* Calmer link colour on hover/focus (the base colour + no-underline come
    from site-theme.css). */
 .page-content a:hover         { color: var(--mmo-link-hover); }

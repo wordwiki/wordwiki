@@ -801,6 +801,11 @@ interface RenderCtx {
     renderInternalNotes?: boolean,
     noTargetOnRefImages?: boolean;
     docRefsFirst?: boolean;
+    // Entry pages: repeat the meanings on the title line after the headword
+    // (`headword : meanings`) - the audience is largely non-fluent, so the
+    // English must be right up front.  Same slash-joined form as the
+    // published word lists.
+    glossInTitle?: boolean;
 }
 
 /**
@@ -808,9 +813,16 @@ interface RenderCtx {
  * Switch to mm-li query for now.
  */
 export function renderEntry(ctx: RenderCtx, e: Entry): any {
+    const glosses = ctx.glossInTitle
+        ? e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss))
+        : [];
     return [
         //contextMenuPlay(),
-        ['h1', {class: 'entry-scope'}, renderEntrySpellings(ctx, e, getSpellings(e))],
+        ['h1', {class: 'entry-scope'},
+         renderEntrySpellings(ctx, e, getSpellings(e)),
+         glosses.length > 0
+             ? ['span', {class: 'entry-gloss-title'}, ' : ', glosses.join(' / ')]
+             : []],
         renderEntryRecordings(ctx, e, e.recording),
         renderSubentriesCompact(ctx, e, e.subentry),
     ];

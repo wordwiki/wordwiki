@@ -1098,13 +1098,16 @@ including remixing, transforming, and building upon the material, for any non-co
         await Deno.mkdir(this.fsPath(entryDir), {recursive: true});
         const spellingsSummary = entryschema.renderEntrySpellingsSummary(entry);
         const title = entryschema.renderEntryTitle(entry);
-        const entryMarkup:any[] = entryschema.renderEntry({rootPath}, entry);
+        const entryMarkup:any[] = entryschema.renderEntry({rootPath, glossInTitle: true}, entry);
         // renderCategoriesForEntry here.
 
         const entryCategories = this.publicEntryCategories(entry);
         const relatedCategoryMarkup =
             entryCategories.map(category=>[
-                ['h3', {}, `Related entries for category "${this.publicCategoryName(category)}"`],
+                // h2, not h3: this is a whole separate page feature, not a
+                // data field of the word - it gets the full ruled section
+                // head so the page visibly changes subject here.
+                ['h2', {}, `Related entries for category "${this.publicCategoryName(category)}"`],
                 ['div', {},
                  ['ul', {},
                   (this.wordWiki.entriesByCategory.get(category)??[])
