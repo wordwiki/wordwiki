@@ -71,16 +71,21 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 - Entries whose only English is `?`/TBA/empty → flag needs-human, cats [].
 - Archived entries: tagged normally (cheap), separated in views.
 
-### Faith / legends / spirits (elder-reviewed; get these right)
+### Faith / traditional stories / spirits (elder-reviewed; get these right)
 - God, Creator, Great Spirit (Nisgam, Gisu'lgw, Gjinisgam, Mestagisiteget),
   Jesus, Virgin Mary, saints, angels, heaven, hell, purgatory, devil/Satan,
   soul, holy/blessed, sin-as-concept, resurrection, salvation, end of the
-  world → faith. NEVER legends or spirits.
+  world → faith. NEVER traditional-stories or spirits.
 - Mass, prayer, sacraments, confession, communion, Lent, priests/nuns/bishops,
   churches, altars, holy water, church weddings → church-rituals.
-- Glooscap, jenu, gu'gwes, little people (pugulatmu'j, wiglatmu'j,
+- Glusgap, jenu, gu'gwes, little people (pugulatmu'j, wiglatmu'j,
   tmigalmji'j), horned serpent, Thunderer, Tune'l, wild man, mi'gmuessu
-  → legends.
+  → traditional-stories. These are core cultural figures, not entertainment:
+  never describe them as "legendary"/"mythical" in notes or review text
+  (entry glosses are the editors', not ours to change).
+- Generic storytelling craft (a'tugwaqan 'story', a'tugwet 'tells a story',
+  storyteller words) → stories-and-writing; a story ABOUT the figures above
+  or naming them → traditional-stories.
 - Ghosts, apparitions, spirit/shadow, shamans (puowin), spells/hexes/charms,
   fortune-telling, premonitions, stage magic and illusions → spirits.
 - mjijaqamij-family (spirit|soul|shadow) → faith first, spirits second.

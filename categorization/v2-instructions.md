@@ -13,7 +13,8 @@ of the language (root families, prefix system, big systematic series).*
 Re-categorize all ~8,838 dictionary entries against the v2 scheme (96
 categories, `scheme.md`). This v2 output goes to a **large community review
 group** — most reviewers will look exactly once, so correctness on the
-sensitive points (faith/legends/spirits separation, no "traditions" bucket,
+sensitive points (faith/traditional-stories/spirits separation, no
+"traditions" bucket,
 category order) matters more than anywhere else.
 
 v1 (85 categories, all 8,822 entries) is frozen in `assignments-v1.jsonl`
@@ -21,12 +22,14 @@ and appears in the batch view as `v1:` evidence.
 
 ## 2. What changed since v1 — the non-negotiables
 
-1. **faith / church-rituals / legends / spirits are separate.** Christian
-   sacred vocabulary (Jesus, Mary, God, Creator words, angels, saints,
-   heaven, hell, devil, soul) → `faith`; church practice → `church-rituals`;
-   Glooscap-and-company → `legends`; ghosts/shamans/spells/fortune-telling →
-   `spirits`. Never file sacred Christian words with legends or spirits.
-   Full rules: notes.md "Faith / legends / spirits".
+1. **faith / church-rituals / traditional-stories / spirits are separate.**
+   Christian sacred vocabulary (Jesus, Mary, God, Creator words, angels,
+   saints, heaven, hell, devil, soul) → `faith`; church practice →
+   `church-rituals`; Glusgap-and-company → `traditional-stories` (named
+   A'tugwaqan — these are core cultural figures, never "legends"/"myths" in
+   any text we write); ghosts/shamans/spells/fortune-telling → `spirits`.
+   Never file sacred Christian words with traditional stories or spirits.
+   Full rules: notes.md "Faith / traditional stories / spirits".
 2. **No customs/traditions bucket.** Its members go to first-class homes
    (quillwork-and-beadwork, tobacco-and-smoking, games, leadership-and-law,
    stories-and-writing, family, plants, clothing...). notes.md "Dissolved-
@@ -52,7 +55,7 @@ and appears in the batch view as `v1:` evidence.
 | water | water OR sea-and-rivers |
 | character | character OR wrongdoing |
 | ceremony | church-rituals (Mary/saints/sin → faith; wakes → death-and-mourning) |
-| spirit-world | faith OR legends OR spirits — decide per word |
+| spirit-world | faith OR traditional-stories OR spirits — decide per word |
 | customs | see "Dissolved-customs homes" in notes.md |
 | everything else | same slug, same meaning |
 
@@ -101,9 +104,10 @@ carry everything needed.
 ## 4. After tagging: audits
 
 1. **Category sweeps** (`dictq.py members CAT`): read as a set, at minimum
-   every judgment-boundary category — all of Faith & Church and Legends,
-   Music & Games; both halves of every split pair (checking the boundary
-   held); quillwork-and-beadwork and tobacco-and-smoking; plus the v1
+   every judgment-boundary category — all of Faith & Church, Traditional
+   Stories & Spirits, and Music & Games; both halves of every split pair
+   (checking the boundary held); quillwork-and-beadwork and
+   tobacco-and-smoking; plus the v1
    judgment list (social-life, character, wrongdoing, appearance, thinking,
    seeing, hearing, smell-and-taste, talking, work, occupations,
    making-and-fixing, good-and-bad, condition, amounts, greetings...).
@@ -121,7 +125,8 @@ carry everything needed.
 2. `python3 make_review_views.py` — regenerates `review/` (overview,
    by-category, tiers, needs-human, old-to-new, low-confidence).
 3. Spot-check `review/by-category/` for the sensitive categories: faith must
-   contain no legends, legends no faith, and there must be no customs file.
+   contain no traditional-story figures, traditional-stories no Christian
+   sacred words, and there must be no customs file.
 4. Commit everything; the diff of interest for the team is
    `review/` v1 → v2.
 

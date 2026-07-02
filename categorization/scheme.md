@@ -1,6 +1,6 @@
 # Mi'gmaq Dictionary Category Scheme — v2 DRAFT for community review
 
-A fixed, controlled vocabulary of **96 categories in 13 themes**, designed from
+A fixed, controlled vocabulary of **96 categories in 14 themes**, designed from
 a full read of all entries and the existing hand categories, then revised with
 language-team feedback on the v1 draft. Each entry gets **1-3 categories**
 (most get 1-2). Categories are chosen for *language learners browsing by
@@ -355,18 +355,24 @@ top-100 / top-1000) — see the last section.
   Ex: alame's (mass), a'sutmat (pray), gmnie'wit (take communion),
   pa'qapuguet (confess), pa'tlia's (priest), malie'wit (marry).
 
-## Legends, Music & Games
+## Traditional Stories & Spirits
 
-- **Legends & Legendary Beings** (`legends`) — the beings and heroes of
-  Mi'gmaq stories: Glooscap, giants, little people, the horned serpent,
-  Thunderers, tricksters, legendary strongmen and wild men.
-  Ex: Glusgap (Glooscap), jenu (giant), pugulatmu'j (little person/elf),
+- **A'tugwaqan — Traditional Stories** (`traditional-stories`) — the figures
+  and stories at the heart of Mi'gmaq culture: Glusgap (culture hero), the
+  jenu, gu'gwes, the little people, the horned serpent, the Thunderers,
+  Tune'l, the wild man, mi'gmuessu. (The right name for this category is the
+  team's to choose — candidates: "A'tugwaqan — Traditional Stories",
+  "Traditional Stories"; see Changes from v1, item 7.)
+  Ex: Glusgap (culture hero), jenu (giant), pugulatmu'j (little person),
   jipijga'm (horned serpent), gaqtugwewe'sm (Thunderer).
-- **Ghosts, Spirits & Wonders** (`spirits`) — ghosts and apparitions, spirits
+- **Ghosts & Spirits** (`spirits`) — ghosts and apparitions, spirits
   and shadows, shamans and their power, spells and charms, fortune-telling,
   premonitions, magic and illusions.
   Ex: sg'te'gmuj (ghost), puowin (shaman), puntat (cast spell), wesiget
   (tell fortunes), welo'gt'g (premonition).
+
+## Music & Games
+
 - **Music, Song & Dance** (`music-and-dance`) — singing, songs, drums,
   fiddles, whistling, instruments, dancing (including dancing Mi'gmaq style).
   Ex: etlintoq (sing), gtapegiaqan (song), tapia'ji'jg (fiddle), amalgat (dance).
@@ -409,9 +415,9 @@ Decisions from language-team review of the v1 draft:
    saints beside ghosts, spells and tricksters — wrong and hurtful to the
    many Catholic readers. v2 splits it three ways: **Faith & Belief** (the
    sacred vocabulary, including Creator/Great Spirit words, which this
-   community uses as words for God), **Legends & Legendary Beings** (Glooscap,
-   jenu, the little people...), and **Ghosts, Spirits & Wonders** (ghosts,
-   shamans, spells, fortune-telling).
+   community uses as words for God), **A'tugwaqan — Traditional Stories**
+   (Glusgap, the jenu, the little people...), and **Ghosts & Spirits**
+   (ghosts, shamans, spells, fortune-telling).
 2. **"Church & Ceremony" is renamed "Church Rituals"** — in this community
    *ceremony* refers to Mi'gmaq ceremony, so the v1 name was confusing. The
    slug `ceremony` is retired (kept free in case a Mi'gmaq ceremonies
@@ -438,6 +444,15 @@ Decisions from language-team review of the v1 draft:
 6. **Categories are explicitly ordered, most pertinent first** (see the note
    at the top) — the first category drives what a reader sees on the word's
    page.
+7. **"Legends" was dropped as a name.** In English, *legend* quietly says
+   "entertaining fiction" — but Glusgap is a culture hero (the dictionary's
+   own gloss) and these stories carry teachings; the name should not decide
+   their weight or reality. The category leads with the Mi'gmaq word for
+   these stories, **A'tugwaqan**, and its final name is the team's call —
+   this is the community's canon to name, not ours. For the same reason the
+   category is no longer grouped in a theme with music and games (keeping
+   that company understates it); it now stands with Ghosts & Spirits in its
+   own theme, directly after Faith & Church.
 
 Slugs retired in v2 (do not use): `spirit-world`, `customs`, `ceremony`,
 `body`, `movement`, `position`, `emotions`, `health`.
