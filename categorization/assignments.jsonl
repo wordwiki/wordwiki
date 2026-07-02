@@ -8836,3 +8836,16 @@
 {"e": 8977823281473599, "cats": [], "flag": "needs-human", "note": "placeholder #id headword"}
 {"e": 8984401979676302, "cats": ["fear-anger-sadness"], "conf": "m"}
 {"e": 8986719142204526, "cats": ["sewing-and-textiles"]}
+{"e": 23359, "cats": ["love-and-joy", "faith"], "conf": "m", "note": "audit: match family sibling emtoqwalatl (worship)"}
+{"e": 107088, "cats": ["sea-and-rivers"], "conf": "m", "note": "audit: tide word belongs with sea-and-rivers"}
+{"e": 130533, "cats": ["boats", "trees"], "note": "audit: raft is a watercraft; boats first"}
+{"e": 148713, "cats": ["body-descriptions"], "note": "audit: have-BODYPART verb belongs in body-descriptions"}
+{"e": 4248, "cats": ["spirits", "seeing"], "conf": "m", "note": "order-audit: spirit/shadow sense leads"}
+{"e": 10130, "cats": ["death-and-mourning", "sickness"], "note": "order-audit: dying words death-first"}
+{"e": 29152, "cats": ["tobacco-and-smoking", "fire"], "note": "order-audit: cigar smoking, tobacco leads"}
+{"e": 32587, "cats": ["death-and-mourning", "body-actions"], "note": "order-audit: dying words death-first"}
+{"e": 43286, "cats": ["death-and-mourning", "conflict"], "note": "order-audit: death words death-first"}
+{"e": 62301, "cats": ["tobacco-and-smoking", "household"], "note": "order-audit: cigarette paper, tobacco leads"}
+{"e": 88246, "cats": ["death-and-mourning", "church-rituals"], "note": "order-audit: funeral mass death-first per notes.md"}
+{"e": 106058, "cats": ["tobacco-and-smoking", "fire"], "note": "order-audit: person smoking, tobacco leads"}
+{"e": 148509, "cats": ["sky", "weather"], "note": "order-audit: match walqwan (rainbow) ordering"}
