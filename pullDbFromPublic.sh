@@ -28,8 +28,9 @@ else
 fi
 
 # Make the pulled production db runnable as the dev db (stops any running
-# server, recreates/seeds the user tables, marks the db 'dev', sets djz's
-# dev password).  Idempotent; needed until the new version IS production.
+# server, recreates/seeds the user tables, seeds passwords from the never-
+# checked-in user-passwords.json, marks the db 'dev').  Idempotent; needed
+# until the new version IS production.
 cd "$WORDWIKI_SRC" && WORDWIKI_DIR="$RUN_DIR" ./wordwiki.sh post-pull
 
 echo

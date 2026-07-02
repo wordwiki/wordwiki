@@ -1479,9 +1479,9 @@ if (import.meta.main) {
 
         // Everything a freshly-pulled PRODUCTION db needs to run as the dev
         // db: upgrade/seed the user table (production still has the old empty
-        // one), mark the db 'dev', and set a dev password for djz.  Re-run
-        // after every pull until the new version IS production.
-        //   ./wordwiki.sh post-pull [djz-password]   (default: djz-dev)
+        // one), seed passwords from user-passwords.json, and mark the db
+        // 'dev'.  Re-run after every pull until the new version IS production.
+        //   ./wordwiki.sh post-pull
         // Stop the server and nothing else.  (wordwiki.sh stops any running
         // server before dispatching ANY command, so by the time we get here
         // the work is done - this command just gives the stop a name for
@@ -1492,7 +1492,6 @@ if (import.meta.main) {
             break;
 
         case 'post-pull': {
-            const djzPassword = args[1] ?? 'djz-dev';
             security.runSystem(() => {
                 // Same logic as upgrade-users: replace an old-shape (empty)
                 // user table, create anything missing, seed from the
@@ -1513,19 +1512,14 @@ if (import.meta.main) {
                 }
                 ww.ensureNewStyleTables();
                 const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
-                // The team keeps the passwords they had on the old version -
-                // seeded from the (never-checked-in) user-passwords.json.
-                // Fills in only users with no password yet, so the djz dev
-                // override below always wins.
+                // Everyone (including the 'test' user) keeps the password
+                // from the (never-checked-in) user-passwords.json - fills in
+                // only users with no password yet.
                 const pw = user.seedPasswordsFromFile(ww.users, ww.passwordHash,
                     new URL('../user-passwords.json', import.meta.url).pathname);
                 ww.config.setDbPurpose('dev');
-                const djz = ww.users.byUsername.first({username: 'djz'})
-                    ?? panic('djz missing after seed?');
-                ww.passwordHash.setPassword(djz.user_id, djzPassword);
                 console.info(`post-pull complete: ${inserted} users seeded (${skipped} already present), ` +
-                             `${pw.set} passwords seeded (${pw.kept} already set), ` +
-                             `db marked 'dev', djz password set${args[1] ? '' : " to the default 'djz-dev'"}`);
+                             `${pw.set} passwords seeded (${pw.kept} already set), db marked 'dev'`);
             });
             Deno.exit(0);
             break;

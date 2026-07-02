@@ -32,6 +32,17 @@ spurious exit-144s. Run it backgrounded: `nohup ./rabid.sh >/tmp/rabid.log 2>&1 
 disown`, then verify with curl. **Why:** dz built the clean-shutdown protocol
 into the run scripts on purpose. Relates to [[wordwiki-toplevel-upgrade]].
 
+**Stale-pidfile gotcha (seen 2026-07-02):** if a restart doesn't seem to take
+effect (server still shows pre-change behavior, e.g. old passwords), check
+`pgrep -af "wordwiki/wordwiki.ts"` against `mmo/wordwiki.pid`. A serve attempt
+that loses the port-bind race still OVERWRITES the pidfile + shutdown-password
+file before dying, after which the surviving old server can't be stopped the
+clean way (wrong pid in the pidfile AND wrong shutdown password). Remedy: a
+targeted `kill <real pid>` (same last resort the script itself uses), `rm` the
+stale pidfile, re-run the .sh, and verify the running pid changed. Avoid the
+race in the first place: never launch `serve` while another wordwiki.sh command
+may still be in its stop-dance; wait for the previous command to fully exit.
+
 **Publish gotcha:** the in-app Publish button (`wordwiki.publish.startPublish`)
 runs INSIDE the live server process, so it uses whatever code the server was
 started with. After editing any publish/render code you MUST restart the server

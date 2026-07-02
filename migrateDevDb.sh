@@ -11,8 +11,9 @@ set -e
 # Steps:
 #   1. stop the server (BEFORE the rsync replaces the db under it)
 #   2. pull db + content from staging (pullDbFromPublic.sh, whose post-pull
-#      recreates/seeds users - including the '~' automation identities -
-#      marks the db 'dev' and sets djz's dev password)
+#      recreates/seeds users - including the '~' automation identities and
+#      the 'test' robot - seeds passwords from the never-checked-in
+#      user-passwords.json, and marks the db 'dev')
 #   3. repair-assertions: idempotent structural fixes of pre-existing store
 #      corruption (dangling chain heads + clearing the legacy published_*
 #      placeholder, which must go before any workspace load); no-op once clean
@@ -84,10 +85,15 @@ for _ in $(seq 1 60); do
 done
 CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/ww/)
 [ "$CODE" = "200" ] || { echo "SMOKE FAIL: server answered $CODE"; exit 1; }
+# Smoke-check as the dedicated 'test' robot (NEVER a human's account - tests
+# must not depend on any particular human existing), password from the same
+# never-checked-in user-passwords.json post-pull seeds from.
+TESTPW=$(jq -r '.test // empty' user-passwords.json)
+[ -n "$TESTPW" ] || { echo "SMOKE FAIL: no 'test' entry in user-passwords.json"; exit 1; }
 COOKIES=$(mktemp)
 trap 'rm -f "$COOKIES"' EXIT
-curl -s -c "$COOKIES" -o /dev/null \
-    'http://localhost:9000/ww/wordwiki.loginRequest(queryArgs)?username=djz&password=djz-dev'
+curl -s -c "$COOKIES" -o /dev/null --data-urlencode "username=test" --data-urlencode "password=$TESTPW" -G \
+    'http://localhost:9000/ww/wordwiki.loginRequest(queryArgs)'
 NCATS=$(curl -s -b "$COOKIES" 'http://localhost:9000/ww/wordwiki.categoriesPage()' \
         | tr '<' '\n' | grep -c 'data-testid="category-row-')
 [ "$NCATS" -ge 85 ] || { echo "SMOKE FAIL: categories page shows only $NCATS rows"; exit 1; }

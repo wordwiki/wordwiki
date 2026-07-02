@@ -227,6 +227,15 @@ export const SYSTEM_USERS: {username: string, name: string}[] = [
     {username: '~lexical-form-import', name: 'Lexical form import (automated)'},
 ];
 
+// The dedicated test identity: tests and smoke checks log in as THIS user,
+// never as a human's account (a human leaving the project must not break the
+// test code).  Seeded enabled with only the 'testing' role; it can actually
+// log in only where user-passwords.json supplies a password for it.  Not
+// '~'-prefixed: that convention marks batch-migration identities that can
+// never log in, while this one exists precisely to log in.
+export const TEST_USER = {username: 'test', name: 'Test robot (automated tests)',
+                          permissions: 'testing'};
+
 export function seedUsersFromEntrySchema(users: UserTable): {inserted: number, skipped: number} {
     const initialPermissions: Record<string, string> = {
         'djz': 'admin,publish,testing',
@@ -244,6 +253,10 @@ export function seedUsersFromEntrySchema(users: UserTable): {inserted: number, s
         users.insert({username, name, permissions: '', disabled: 1});
         inserted++;
     }
+    if(!users.byUsername.first({username: TEST_USER.username})) {
+        users.insert({...TEST_USER, disabled: 0});
+        inserted++;
+    } else skipped++;
     return {inserted, skipped};
 }
 
