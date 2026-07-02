@@ -247,6 +247,41 @@ export function seedUsersFromEntrySchema(users: UserTable): {inserted: number, s
     return {inserted, skipped};
 }
 
+// Seed passwords from a (never-checked-in) JSON file mapping username ->
+// plaintext password (<repo>/user-passwords.json, originally carried over
+// from the old basic-auth caddy config so the team keeps the passwords they
+// had on the old version).  Only fills in users who have NO password yet: a
+// password someone has since changed is never overwritten.  The file is the
+// ONLY copy of the team's passwords, so a checkout without it must FAIL the
+// seeding recipes (post-pull/upgrade-users) rather than quietly produce
+// passwordless team accounts - copy the file over by hand.
+export function seedPasswordsFromFile(users: UserTable, passwordHash: PasswordHashTable,
+                                      jsonPath: string):
+        {set: number, kept: number, unknown: string[]} {
+    let text: string;
+    try { text = Deno.readTextFileSync(jsonPath); }
+    catch (_e) {
+        throw new Error(`password seed file ${jsonPath} is missing - it is gitignored ` +
+                        `(plaintext passwords) and must be copied to this checkout by hand`);
+    }
+    const passwords = JSON.parse(text) as Record<string, unknown>;
+    let set = 0, kept = 0;
+    const unknown: string[] = [];
+    for(const [username, password] of Object.entries(passwords)) {
+        if(typeof password !== 'string' || password === '')
+            throw new Error(`${jsonPath}: password for '${username}' is not a non-empty string`);
+        const u = users.byUsername.first({username});
+        if(!u) { unknown.push(username); continue; }
+        if(passwordHash.byUserId.first({user_id: u.user_id})) { kept++; continue; }
+        passwordHash.setPassword(u.user_id, password);
+        set++;
+    }
+    if(unknown.length > 0)
+        console.info(`password seed file names users not in the user table ` +
+                     `(ignored): ${unknown.join(', ')}`);
+    return {set, kept, unknown};
+}
+
 // --------------------------------------------------------------------------------
 // --- PasswordHash ----------------------------------------------------------------
 // --------------------------------------------------------------------------------

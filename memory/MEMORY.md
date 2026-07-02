@@ -10,6 +10,7 @@
 - [VersionedDb validation](versioned-db-validation.md) — store self-checking (validator/repair/throw-on-load) done as publication-model pre-project step 1; reference-oracle property test is step 2 (not built)
 - [Lexeme editor v2](lexeme-editor-v2.md) — approved: parallel server-side htmx editor (rabid model); design at /home/dziegler/wordwiki/lexeme-editor-design.md; public renderer stays separate
 - [Wordwiki top-level upgrade](wordwiki-toplevel-upgrade.md) — rabid-standard sessions/login/user+config tables/wordwiki.sh; dev login djz/djz-dev; change_by_username stamped
+- [User passwords seed file](user-passwords-seed-file.md) — gitignored user-passwords.json is the ONLY copy of team passwords; post-pull/upgrade-users seed from it; copy by hand to new checkouts
 - [Wordwiki categorization](wordwiki-categorization.md) — v2 prepped from elder feedback (faith/legends split, no traditions bucket, smaller ordered cats); v2-instructions.md is the tagging brief; v1 frozen
 - [Wordwiki db location](wordwiki-db-location.md) — live db is <repo>/mmo/database/db.db (~/mmo is GONE); versioned `dict` table — use dump scripts
 - [Liminal audit series](liminal-audit-series.md) — module-by-module correctness audits; the per-module recipe dz approves

@@ -1,5 +1,9 @@
 /web-build/*
 
+# PLAINTEXT team passwords ({username: password} JSON, loaded by
+# post-pull/upgrade-users - see user.seedPasswordsFromFile).  Never tracked.
+/user-passwords.json
+
 # The default instance directory (data: db, content/derived/imports, the
 # published static site, runtime files) - ~66GB, never tracked.  Other
 # instances live elsewhere via WORDWIKI_DIR.

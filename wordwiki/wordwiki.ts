@@ -1450,7 +1450,10 @@ if (import.meta.main) {
                 }
                 ww.ensureNewStyleTables();
                 const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
-                console.info(`user table upgraded: ${inserted} users seeded, ${skipped} already present`);
+                const pw = user.seedPasswordsFromFile(ww.users, ww.passwordHash,
+                    new URL('../user-passwords.json', import.meta.url).pathname);
+                console.info(`user table upgraded: ${inserted} users seeded, ${skipped} already present, ` +
+                             `${pw.set} passwords seeded (${pw.kept} already set)`);
                 console.info('set a password with: wordwiki.ts set-password <username> <password>');
             });
             Deno.exit(0);
@@ -1510,11 +1513,18 @@ if (import.meta.main) {
                 }
                 ww.ensureNewStyleTables();
                 const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
+                // The team keeps the passwords they had on the old version -
+                // seeded from the (never-checked-in) user-passwords.json.
+                // Fills in only users with no password yet, so the djz dev
+                // override below always wins.
+                const pw = user.seedPasswordsFromFile(ww.users, ww.passwordHash,
+                    new URL('../user-passwords.json', import.meta.url).pathname);
                 ww.config.setDbPurpose('dev');
                 const djz = ww.users.byUsername.first({username: 'djz'})
                     ?? panic('djz missing after seed?');
                 ww.passwordHash.setPassword(djz.user_id, djzPassword);
                 console.info(`post-pull complete: ${inserted} users seeded (${skipped} already present), ` +
+                             `${pw.set} passwords seeded (${pw.kept} already set), ` +
                              `db marked 'dev', djz password set${args[1] ? '' : " to the default 'djz-dev'"}`);
             });
             Deno.exit(0);
