@@ -1,0 +1,182 @@
+# Pushing, Pulling & Throwing (`pushing-and-pulling`)
+
+Theme: *Movement & Physical Actions* — 170 entries (+5 archived)
+
+- **a'siseget** — throw over \| He/she throws it over something
+- **asoqomigsma'latl** — push across \| He/she pushes him across
+- **asoqomigsma'toq** — push across \| He/she pushes it across
+- **ejigleget** — throw away \| He/she throws it away
+- **ejigligsma'latl** — push away \| He/she pushes him/her away
+- **ejigligsmaqalatl** — shove away \| He/she shoves him/her away
+- **ejigligsma'toq** — push away \| He/she pushes it away
+- **elaqalatl** — hurl \| let's go of \| throw toward (ball) \| He/she throws it toward \| He/she lets go of him/her
+- **elaqtoq** — fling \| throw toward \| He/she throws it towards
+- **elatejimatl** — drag toward \| pull toward \| He/she drags him/her towards
+- **elatejitoq** — drag over \| drag toward \| pull to \| He/she drags it over
+- **eleget** — throw \| run (for office) \| release \| play (a game) \| He/she throws it \| He/she runs for office  *(also: leadership-and-law)*
+- **eligwalatl** — scoop it towards \| push towards \| He/she scoops it towards
+- **eligwatg** — push it toward \| pry toward \| He/she pushes it toward
+- **elipqama'toq** — roll toward \| slide toward \| He/she rolls it toward
+- **elipqamu'latl** — slide toward \| roll toward \| He/she slides him/her toward
+- **elipqamu'toq** — slide toward \| roll toward \| He/she slides it toward
+- **eliputoq** — rub toward \| push toward \| brush toward \| He/she rubs it toward
+- **eloqtesmatl** — fell (tree) toward \| push down toward \| He/she fell it toward
+- **eloqtestoq** — fell (pipe) towards \| push down towards \| He/she fells it towards
+- **eltaqa'q** — spray \| shoot toward \| He/she shoots it toward  *(confidence: m)*
+- **epatgwigsma'latl** — push him/her against something \| He/she pushes him/her against something
+- **epatgwigsma'toq** — push it(sofa) against something \| He/she pushes it against something
+- **esetegja'latl** — move backward \| He/she moves it (stove) backwards  *(confidence: m)*
+- **esetegja'toq** — move it backwards \| He/she moves it backwards  *(confidence: m)*
+- **esetigsma'toq** — push to the side \| He/she pushes it to the side
+- **esintesg'g** — pack down \| stamp down \| He/she packs it down
+- **esintesguaji** — pack down \| stamp down \| He/she packs them down
+- **esnamqa'toq** — squeeze together \| press together \| He/she squeezes it together
+- **esna'toq** — pack down \| press down \| He/she/it packs it down
+- **esnpitgmas'g** — pack down while loading \| It is packed down while being loaded
+- **esnpitgmatg** — pack down while loading \| He/she packs it down while he/she loads it
+- **etegjigsma'latl** — push backwards \| He/she pushes him/her backwards
+- **etegjigsma'toq** — push backwards \| He/she pushes it backwards
+- **geptaqalatl** — throw off \| He/she throws him/her/it off
+- **geptaqtoq** — throw off from the top \| He/she throws it off from the top
+- **geptegetl** — throws off \| He/she/it throws him/her/it off
+- **gept'jiegetl** — throws off \| He/she/it throws him/her/it off
+- **gesma'latl** — push \| He/she pushes him/her
+- **gesmaqalatl** — shove \| He/she shoves him/her
+- **gesmaqtoq** — shove \| He/she shoves it
+- **gesma'toq** — push \| He/she pushes it
+- **gesmeget** — shove \| He/she shoves it
+- **gesmjiegetl** — shoves \| He/she shoves him/her
+- **gesmoqja'latl** — push \| push (with vehicle) \| push (by hand) \| He/she pushes him/her
+- **gesmoqja'toq** — push \| push (with vehicle) \| push (by hand) \| He/she pushes it
+- **gesmoqjeget** — give a quick push \| give a quick shove \| He/she gives it a quick push
+- **gesmtesg'g** — move by bumping \| shove \| He/she moves it by bumping it
+- **gesmtesguatl** — move by bumping \| He/she moves him/her by bumping him/her
+- **gewg'g** — force it (that is upright) down with one's weight \| He/she forces it (that is upright) down with his/her weight
+- **gewguatl** — force ...(that is upright) down with one's weight \| He/she forces him/her (that is upright) down with his/her weight
+- **giwto'qigsma'latl** — push around in a circle \| He/she pushes him/her around in a circle
+- **giwto'qigsma'toq** — push around in a circle \| He/she pushes it around in a circle
+- **jing'ja'latl** — pinch \| squeeze \| He/she pinches him
+- **jing'ja'toq** — pinch \| squeeze \| He/she pinches it
+- **mattaqa'toq** — pull on to make sound (as bell) \| He/she pulls on it to make a sound  *(also: hearing)*
+- **mattaqta'tl** — pluck (as string) \| tug (a string) \| pull (a string) \| jerk (a string) \| He/she plucks it (a string)  *(also: music-and-dance)*  *(confidence: m)*
+- **mattaqte'g** — pluck \| tug (a string) \| pull (a string) \| jerk (a string) \| He/she plucks it (guitar)  *(also: music-and-dance)*  *(confidence: m)*
+- **mena'latl** — remove \| take off \| He/she removes it(shirt)  *(confidence: m)*
+- **mena'qigwalatl** — pry off \| scrape off \| He/she pries him/her/it off
+- **mena'qigwatg** — pry off \| scrape off \| He/she pries it off
+- **mena'toq** — remove \| take off \| pluck \| He/she removes it  *(confidence: m)*
+- **menigwalatl** — scrape off \| pry off (with hands or tool) \| rub off \| He/she scrapes it (paint) off
+- **menigwatg** — scrape off \| pry off (with hands or tool) \| He/she pries it off
+- **menipga'latl** — pull off \| peel off \| pry off \| He/she pulls him/her off
+- **menipga'toq** — pull off \| peel off \| pry off \| He/she pulls it off
+- **mesatgwigsma'latl** — push up against \| He/she pushes him/her/it(fridge) up against
+- **mntawa'latl** — twist \| He/she twists him/her/it  *(confidence: m)*
+- **mntawaqalatl** — twist quickly \| He/she twists him/her/it quickly  *(confidence: m)*
+- **mntawaqtoq** — twist quickly \| He/she twists it quickly  *(confidence: m)*
+- **mntawa'toq** — twist \| He/she twists it  *(confidence: m)*
+- **munsigsma'latl** — pushes persistently \| He/she pushes him/her persistently
+- **munsigsma'toq** — pushes persistently \| He/she pushes it persistently
+- **munsigsmeget** — persistent in shoving \| persistent in pushing \| He/she is persistent in shoving it
+- **musiga'latl** — strip \| clean out \| undress \| remove \| He/she strips it(tree)  *(confidence: m)*
+- **musiga'toq** — clear \| strip \| He/she clears it  *(confidence: m)*
+- **musigo'latl** — strip \| He/she strips him/her/it  *(confidence: m)*
+- **musigo'toq** — strip \| remove from \| He/she strips it  *(confidence: m)*
+- **natqapilatl** — rope in from water \| reel or rope to shore \| reel in from water \| He/she ropes him/her in from the water  *(also: fishing)*
+- **natqapilawet** — pull out of water by rope or fish line \| remove from water \| He/she pulls him/her out of water by rope  *(also: fishing)*
+- **natqapilg** — rope in from water \| reel in from water \| remove from water by rope \| He/she ropes it in from the water  *(also: fishing)*
+- **ne'gigsma'latl** — push all along the way \| He/she pushes him/her all along the way
+- **ne'gigsma'toq** — push all along the way \| He/she pushes it all along the way
+- **nespatejimatl** — drag along while occupied with something else \| He/she drags him/her along while occupied with something else
+- **nespatejitoq** — drag along while occupied with something else \| He/she drags it along while occupied with something else
+- **niganigsma'latl** — push someone ahead \| He/she pushes someone ahead
+- **niganigsma'toq** — push ahead \| He/she pushes it ahead
+- **nisapega'toq** — throw it downward \| throw it down \| He/she throws it downward
+- **nisaqalatl** — throw down \| He/she throws him/her/it down
+- **nisaqtoq** — throw down \| He/she throws it down
+- **nisega'latl** — pull down \| He/she pulls...down
+- **nisega'toq** — pull down \| extend down \| He/she pulls it down
+- **niseget** — drop \| He/she drops it
+- **nisegetl** — drop \| He/she drops him/her
+- **nisigsma'latl** — push down \| He/she pushes him/her/it down
+- **nisigsma'toq** — push down \| He/she pushes it down
+- **nispilatl** — lower (by rope) \| He/she lowers him/her by rope or cable
+- **nispilg** — lower (by rope) \| He/she lowers it by rope
+- **pajijigsma'latl** — push too far \| push too hard \| He/she pushes him/her too far
+- **pajijigsma'toq** — pushes it too far \| push too hard \| He/she pushes it too far
+- **paqaiatgweitesmatl** — slam down \| body slam \| He/she slams him/her/it down
+- **paqaiatgweitestoq** — slam down \| He/she slams it down
+- **paqasaqalatl** — throw in water \| launch \| He/she throws him/her in the water  *(also: water)*
+- **paqasaqtoq** — throw in the water \| launch \| He/she throws it in the water  *(also: water)*
+- **pasgija'latl** — flatten \| squeeze \| run over \| He/she/it flattens him/her/it
+- **pasgija'toq** — squeeze \| flatten \| run over \| He/she squeezes it
+- **pegwigwalatl** — able to budge \| able to pry loose \| He/she is able to pry it loose
+- **pegwigwatg** — able to budge \| able to pry loose \| He/she is able to pry it loose
+- **pejigu'ta'tl** — knock down unintentionally \| He/she knocks him/her/it(statue) down unintentionally
+- **pejigu'te'g** — knock it down unintentionally \| He/she knocks it down unintentionally
+- **pejijing'ja'latl** — squeeze unintentionally \| squeeze accidently \| pinch unintentionally \| pinch accidently \| He/she squeezes him/her/it unintentionally
+- **pematejimatl** — drag along \| He/she is dragging him/her along
+- **pematejitoq** — drag along \| pull (sled) \| He/she is dragging it along
+- **pempilg** — tow along \| He/she is towing it along
+- **pepueget** — shake \| He/she shakes it  *(confidence: m)*
+- **pepuegetl** — shake \| He/she shakes him/her/it  *(confidence: m)*
+- **petatejitoq** — comes dragging it \| He/she comes dragging it
+- **pijeget** — throw in \| throw under \| He/she throws it in
+- **pijigsma'latl** — push into \| He/she pushes him/her into
+- **pijigsma'toq** — push in \| He/she pushes it in
+- **pijigwalatl** — press into(container) \| squeeze into(container) \| He/she presses something into(container)
+- **poqtatejimatl** — drag away \| He/she/it drags him/her/it away
+- **sewtaqa'latl** — tow \| He/she tows him/her
+- **sewtaqa'toq** — tow \| He/she tows it
+- **sina'latl** — pack down (to make more room) \| compact it \| He/she packs him/her/it down (to make more room)
+- **sina'toq** — pack down (make more room) \| compact it \| He/she packs it down (make more room)
+- **siptaqa'latl** — stretch \| He/she stretches him/her
+- **siptaqanatl** — stretch \| holding a steady tension \| He/she stretches him/her/it
+- **siptaqan'g** — stretching \| holding a steady tension \| He/she is stretching it
+- **siptaqa's'g** — stretches \| It stretches
+- **siptaqa'sit** — stretches \| He/she stretches
+- **siptaqa'toq** — stretch \| He/she stretches it
+- **siptaqo'latl** — stretch out \| He/she stretching him/her/it out
+- **taqamoqigsma'latl** — push across \| He/she pushes him/her across
+- **taqamoqigsma'toq** — push across \| He/she pushes it across
+- **teppilatl** — hoist aboard \| haul or rope on board \| He/she hoists him/her on board  *(also: boats)*
+- **teppilg** — hoist aboard \| haul or rope aboard \| He/she hoists it on board  *(also: boats)*
+- **te'tipja'latl** — roll \| roll over \| He/she rolls him/her  *(confidence: m)*
+- **te'tipja'toq** — roll \| roll over \| He/she rolls it  *(confidence: m)*
+- **tewajjieget** — throw out \| He/she throws it out
+- **tewalqatestoq** — shake out \| dislocate \| He/she shakes it out  *(confidence: m)*
+- **tewatejimatl** — drag out \| He/she drags him/her out
+- **tewatejitoq** — drag out \| He/she drags it out
+- **teweget** — throw out \| toss away \| throw outside \| He/she throws it out
+- **tewegetl** — throw out \| toss away \| throw outside \| He/she throws him/her/it out
+- **tewigsma'latl** — push out \| He/she pushes him/her out
+- **tewigsma'toq** — push out \| He/she pushes it out
+- **toqju'pilatl** — hoist \| He/she hoists him/her
+- **toqju'pilaweg** — hoist \| It hoists
+- **toqju'pilawet** — hoist \| He/she hoists
+- **toqju'pilg** — hoist \| He/she hoists it
+- **wenaqeget** — throw up in air \| flip \| He/she throws it up in the air
+- **wenaqpilatl** — hoist (by rope or cable) \| He/she hoists him/her
+- **wenaqpilg** — hoist (by rope or cable) \| He/she hoists it
+- **wesuatejimatl** — pull and drag \| He/she pulls and drags him/her/it
+- **wesuatejitoq** — pull and drag \| He/she pulls and drags it
+- **wesueget** — pulls suddenly \| jerk \| grab \| He/she pulls suddenly
+- **wesuepilatl** — pull in (by rope) \| He/she pulls him/her/it in by rope
+- **wesuepilg** — pull in (by rope) \| He/she pulls it in by rope
+- **wesuw'tqa'latl** — pull \| pull on something lineair(rope) \| He/she pulls him/her
+- **wesuw'tqanatl** — pulling on \| He/she is pulling on him/her
+- **wesuw'tqang** — pulling on \| He/she is pulling on it
+- **wesuw'tqa'toq** — pull \| stretch out \| unwind \| He/she pulls it
+- **wetnatl** — pull \| haul \| He/she pulls him /her
+- **wetnng** — pull \| haul \| He/she/it pulls it
+- **wisqeget** — throw quickly \| He/she throws him/her/it quickly
+- **guntewgte'get** — throw stones \| stone someone \| He/she throws stones
+- **guntewte'get** — throws rocks \| throws stones \| He/she throws rocks
+- **saptesguatl** — push him/her go through something \| help him/her go through something \| He/she pushes him/her go through something
+- **pepg'ja'latl** — flattens him/her/it \| thins him/her/it down \| He/she/it flattens him/her/it
+
+## Archived entries (lower priority)
+
+- **esetigsma'latl** — push backwards \| He/she pushes him/her backwards
+- **negwigsma'latl\*\*** — push underneath \| He/she pushes him /herunderneath
+- **negwigsma'toq\*\*** — push underneath \| He/she pushes it underneath
+- **pejijing'ja'toq** — squeeze unintentionally \| pinch unintentionally \| He/she squeezes it unintentionally
+- **pempilatl** — tow along \| He/she is towing him/her along

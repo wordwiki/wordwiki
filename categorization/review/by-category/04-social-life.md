@@ -1,36 +1,37 @@
 # Social Life (`social-life`)
 
-Theme: *People & Relationships* — 196 entries (+14 archived)
+Theme: *People & Relationships* — 212 entries (+16 archived)
 
 - **ajipjulatl** — encourage \| He/she encourages him/her
 - **ajipjutoq** — encourage (lifestyle) \| encourage (virtue) \| encourage (behaviour) \| He/she encourages it
-- **ale'g** — hanging around \| hanging out \| He/she/it is hanging around  *(confidence: m)*
-- **alo'tasit** — hint \| throw \| insult \| He/she hints \| He/she throws things around  *(confidence: m)*
+- **ale'g** — hanging around \| hanging out \| He/she/it is hanging around
+- **alo'tasit** — hint \| throw \| insult \| He/she hints \| He/she throws things around  *(also: talking)*  *(confidence: m)*
 - **altawet** — go about to beg \| go about to  collect donations \| He/she goes about to beg
 - **amalgewaqan** — dance \| dance event  *(also: music-and-dance)*
 - **amsala'latl** — do something wrong to \| do something incorrect to \| He/she does something wrong or incorrect to someone else  *(also: good-and-bad)*
 - **amsalimatl** — insult \| say something to irritate someone \| mislead \| He/she gives him/her wrong information  *(also: talking)*
-- **ango'tg** — take care of \| care for \| look after \| bring up \| raise \| He/she takes care of it  *(confidence: m)*  *(note: caring for -> social-life)*
+- **ango'tg** — take care of \| care for \| look after \| bring up \| raise \| He/she takes care of it
 - **angua'latl** — give additional amount \| give extra \| He/she gives someone an additional amount  *(also: amounts)*
-- **angweiwatl** — take care of \| care for \| look after \| bring up \| raise \| He/she takes care of him  *(confidence: m)*
+- **angweiwatl** — take care of \| care for \| look after \| bring up \| raise \| He/she takes care of him
 - **apajitqwa'majig** — reunite \| They (two) reunite
-- **apgnualatl** — pacify \| soothe \| calm \| He/she is pacifying someone  *(also: emotions)*
-- **apigsigtuatl** — forgive \| pardon \| overlook offense \| He/she forgives someone  *(also: emotions)*
+- **apgnualatl** — pacify \| soothe \| calm \| He/she is pacifying someone  *(also: love-and-joy)*  *(confidence: m)*
+- **apigsigtuatl** — forgive \| pardon \| overlook offense \| He/she forgives someone
 - **apoqonmati** — assistance \| help \| Assistance
 - **apoqonmatimg** — assistance \| help \| assisting time \| helping time \| Assistance
 - **apoqonmuatl** — help \| assist \| He/she helps him
 - **apsute'gan** — doll \| gift \| present \| Doll \| Gift  *(also: games)*
-- **a's'gg** — meet \| He/she meets up with it  *(confidence: m)*  *(note: meet)*
+- **asgate'lmatl** — spare feelings \| pity \| He/she spares his/her feelings  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **a's'gg** — meet \| He/she meets up with it
 - **a's'guatl** — come across \| meet \| encounter \| He/she meets someone
 - **a'su'ngewatl** — provide clothing \| clothe \| provide household goods \| He/she provides clothing for someone  *(also: clothing)*
-- **ejaqjematl** — belittle \| humiliate \| shame \| He/she belittles him/her  *(also: character)*
+- **ejaqjematl** — belittle \| humiliate \| shame \| He/she belittles him/her  *(confidence: m)*
 - **ejela'latl** — have no control \| in no position to do otherwise \| unable to help or assist \| He/she has no control over someone  *(confidence: m)*
 - **ejela'teget** — can't do more (influencing or convincing) \| unable to influence \| unable to change \| He/she has no control over it  *(confidence: m)*
 - **ejela'toq** — in no position to change \| unable to help \| have no control over \| He/she has no control over it  *(confidence: m)*
-- **ela'muet** — ladle out \| dish out the food \| He/she dishes out the food  *(also: food)*
-- **elita'sit** — depend on \| count on \| He/she depends on  *(confidence: m)*  *(note: depend on)*
-- **elita'sualatl** — depend on \| count on \| trust \| He/she depends on someone  *(confidence: m)*
-- **elita'suatg** — depend on \| count on \| trust \| He/she depends on it  *(confidence: m)*
+- **ela'muet** — ladle out \| dish out the food \| He/she dishes out the food  *(also: food)*  *(confidence: m)*
+- **elita'sit** — depend on \| count on \| He/she depends on
+- **elita'sualatl** — depend on \| count on \| trust \| He/she depends on someone
+- **elita'suatg** — depend on \| count on \| trust \| He/she depends on it
 - **emittugwalatl** — keep company \| visit \| He/she visits him/her
 - **emittugwatg** — visits it \| He/she visits it
 - **emittugwet** — visit \| He/she visits
@@ -40,41 +41,44 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **eptoqalatl** — leave in care of somebody \| leave for safekeeping \| temporarily custody \| He/she leaves him in care of somebody
 - **eptoqatg** — leave in care of somebody \| leave for safekeeping \| He/she leaves it for safekeeping
 - **esamuqo'tlatl** — give a drink to \| He/she gives him/her a drink  *(also: eating-and-drinking)*
-- **ese'g** — send away \| refuse \| banish \| turn down \| He/she sends it away  *(confidence: m)*  *(note: refuse)*
+- **esa'tl** — send away \| dismiss \| banish \| fire \| He/she sends him away  *(confidence: m)*
+- **ese'g** — send away \| refuse \| banish \| turn down \| He/she sends it away  *(confidence: m)*
 - **esmatl** — feed \| He/she feeds him/her  *(also: food)*
 - **essu'tmuatl** — blame \| He/she blames him/her/it  *(also: talking)*
 - **ewsimatl** — joke \| bluff \| kid \| He/she is kidding someone
-- **ge'gulusgwa'latl** — put arms around shoulder \| hug \| He/she hugs someone  *(note: hug)*
+- **ge'gulusgwa'latl** — put arms around shoulder \| hug \| He/she hugs someone  *(also: love-and-joy)*  *(confidence: m)*
 - **geleiwatl** — protect \| keep watch over \| hold in safekeeping \| He/she protects him/her
 - **geliget** — protect \| guard \| watch over \| He/she(dog) protects
 - **gelo'tg** — guard \| keep watch over \| hold in safekeeping \| He/she guards it
-- **gepmite'lmatl** — honor \| pay homage \| respect \| He/she honors someone  *(also: emotions)*
-- **gepmite'tg** — honor \| pay homage \| respect \| He/she honors it  *(also: emotions)*
+- **gepmite'lmatl** — honor \| pay homage \| respect \| He/she honors someone
+- **gepmite'tg** — honor \| pay homage \| respect \| He/she honors it
+- **gesnoqowite'tg** — not take seriously \| not think highly of \| disrespect \| disregard \| He/she does not take it seriously  *(also: character)*  *(confidence: m)*
 - **geta'muatl** — agree with \| He/she agrees with him/her/it  *(also: talking)*
 - **getgunit** — spend the night \| sleep over \| He/she spends the night  *(also: sleep)*
 - **getlamite'lmatl** — believes in \| trusts in \| He/she believes in him/her/it  *(also: thinking)*
 - **getlams'tuatl** — believe someone \| listen to \| He/she believes him/her  *(also: thinking)*
-- **getuapematl** — need for assistance \| long for support \| desire his/her help \| He/she desires his/her support  *(also: emotions)*
-- **getuapetg** — seek help from \| seek solace from \| want for satisfaction \| desires \| He/she seeks help from it  *(also: emotions)*
-- **gi'gajeiwatl** — aggravate \| tease \| do for spite \| He/she teases him  *(also: character)*
-- **gi'gassit** — tease \| He/she teases  *(also: character)*
-- **gisa'latl** — prompted \| compel to do \| motivate \| cause \| He/she compels him/her to do  *(confidence: m)*  *(note: motivate)*
+- **getuapematl** — need for assistance \| long for support \| desire his/her help \| He/she desires his/her support  *(confidence: m)*
+- **getuapetg** — seek help from \| seek solace from \| want for satisfaction \| desires \| He/she seeks help from it  *(confidence: m)*
+- **gi'gajeiwatl** — aggravate \| tease \| do for spite \| He/she teases him
+- **gi'gassit** — tease \| He/she teases
+- **gisa'latl** — prompted \| compel to do \| motivate \| cause \| He/she compels him/her to do  *(confidence: m)*
 - **gise'g** — have good time \| fun to be with \| have fun \| enjoyable \| He/she is having a good time \| He/she is fun to be with  *(also: games)*
 - **gitnmeiwatl** — give a hard time to \| He/she gives him/her a hard time  *(also: conflict)*
-- **giwto'qopia'tijig** — sit in a circle \| They (plural) are sitting in a circle  *(also: position)*
-- **giwto'qopultijig** — sit around in a circle \| They are sitting in a circle  *(also: position)*
+- **giwto'qopia'tijig** — sit in a circle \| They (plural) are sitting in a circle  *(also: posture)*
+- **giwto'qopultijig** — sit around in a circle \| They are sitting in a circle  *(also: posture)*
+- **gweltanat** — feast \| He/she feasts  *(also: food)*
 - **igalatl** — protect \| defend \| fight for \| take side of \| favor \| He/she defends him/her  *(also: conflict)*
 - **igatg** — protect \| defend \| fight for \| take side of \| favor \| He/she defends it  *(also: conflict)*
-- **ignmuatl** — give to \| allow \| permit \| He/she gives it to him/her  *(note: give)*
+- **ignmuatl** — give to \| allow \| permit \| He/she gives it to him/her
 - **ignmuetoq** — give away \| He/she gives it away
 - **lgowaqana'latl** — bother \| trouble \| He/she troubles him
 - **lgowaqana'toq** — bother \| trouble \| He/she bothers it
 - **majiaqa'latl** — scold \| He/she scolds him/her  *(also: talking)*
 - **maligeiwatl** — play with \| amuse \| He/she plays with him/her  *(also: games)*
-- **maligmatl** — mock \| tease \| He/she mocks him/her  *(also: character)*
+- **maligmatl** — mock \| tease \| He/she mocks him/her
 - **matgwetuatl** — bow to \| nod to \| He/she bows to him/her  *(also: body-actions)*
 - **mawa'tajig** — share expense \| chip in \| They (two) chip in  *(also: money-and-trade)*
-- **mawa'teget** — gather \| collect \| offerings collector (at church) \| fund-raise \| he/she gathers  *(note: gather/collect -> social-life or holding by sense)*
+- **mawa'teget** — gather \| collect \| offerings collector (at church) \| fund-raise \| he/she gathers
 - **mawe'gig** — live together \| hang out together \| gathered together \| They live together  *(also: family)*
 - **mawia'tijig** — gather \| swarm (as bees) \| They gather
 - **mawiejig** — gather together \| congregate \| They congregate
@@ -82,57 +86,57 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **mawita'jig** — gather together \| hold meeting \| They gather together
 - **mawita'mg** — gathering \| Gathering
 - **mawitqo'tmu'tijig** — help each other \| They help each other
-- **mawpugueta'jig** — gather and stand together \| They gather and stand together  *(also: position)*
+- **mawpugueta'jig** — gather and stand together \| They gather and stand together  *(also: posture)*
 - **mawqatmu'tijig** — live all together \| stay together (hotel) \| They live all together  *(also: family)*
 - **mega'sualatl** — make a big fuss over \| He/she makes a big fuss over him/her  *(also: character)*
-- **megite'tas'g** — highly praised \| honored \| highly regarded \| prized \| It is highly praised  *(also: emotions)*
-- **megite'tasit** — highly praised \| honored \| highly  regarded \| prized \| He/she is highly praised  *(also: emotions)*
+- **megite'tas'g** — highly praised \| honored \| highly regarded \| prized \| It is highly praised  *(confidence: m)*
+- **megite'tasit** — highly praised \| honored \| highly  regarded \| prized \| He/she is highly praised  *(confidence: m)*
 - **munsaiwatl** — persuade \| persistent persuasion \| coax \| He/she persuades him/her  *(also: talking)*
 - **munsisapa'latl** — persevere to pull through \| persevere to save \| He/she perseveres to pull him/her/it through  *(also: character)*
 - **najimittugwet** — going to visit \| He/she is going to visit
 - **najine'iamatl** — go to look in on \| go to take a brief look \| go to glimpse at \| He/she goes to look in on him/her  *(also: seeing)*
-- **naqalatl** — abandon \| leave behind \| He/she leaves him/her behind  *(confidence: m)*  *(note: abandon)*
+- **naqalatl** — abandon \| leave behind \| He/she leaves him/her behind  *(confidence: m)*
 - **naqt'g** — abandon \| leave behind \| He/she leaves it behind  *(confidence: m)*
 - **nasgwa'tatijig** — share evenly \| They share evenly  *(also: amounts)*
 - **neiamatl** — look in on briefly \| check on briefly \| call upon (for visit) \| He/she looks in on him/her briefly  *(also: seeing)*
-- **nenuite'lmatl** — respect \| He/she respects him/her  *(also: emotions)*
-- **nenuite'tg** — respect \| He/she respects it  *(also: emotions)*
-- **nesgawet** — console \| offer condolences \| join in bereavement \| He/she consoles  *(also: ceremony)*
-- **nesguatl** — console \| He/she consoles him/her  *(also: emotions)*
-- **netago'qona'latl** — shame \| He/she shames him/her  *(also: emotions)*
-- **nigtua'tijig** — separate \| go separate ways \| They (two) go their separate ways
+- **nenuite'lmatl** — respect \| He/she respects him/her
+- **nenuite'tg** — respect \| He/she respects it
+- **nesgawet** — console \| offer condolences \| join in bereavement \| He/she consoles  *(also: death-and-mourning)*
+- **nesguatl** — console \| He/she consoles him/her  *(also: death-and-mourning)*  *(confidence: m)*
+- **netago'qona'latl** — shame \| He/she shames him/her  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **nigtua'tijig** — separate \| go separate ways \| They (two) go their separate ways  *(also: family)*  *(confidence: m)*
 - **nijipjulatl** — encourage \| He/she encourages him/her
 - **nimji'muatl** — encourage \| support \| agree with \| He/she encourages him/her
-- **ntaqo'qon** — shame \| disgrace \| Shame  *(also: emotions)*
+- **ntaqo'qon** — shame \| disgrace \| Shame  *(also: fear-anger-sadness)*
 - **nujigeluet** — matchmaker \| Matchmaker  *(also: occupations)*
 - **nujipostewit** — marriage (or divorce) broker \| marriage (or divorce) broker \| matchmaker \| matchmaker \| who acts as go between (in marriage or divorce) \| who acts as go·between (in marriage or divorce) \| One who acts as a go between(in marriage or divorce) \| He/she acts as a go·between (in relationships)  *(also: occupations)*
 - **oqotqomatl** — tease (about member of opposite sex) \| tease about a potential romantic partner \| Tease about member of opposite sex
 - **papuaqan** — amusement \| fun time \| celebration \| Amusement  *(also: games)*
-- **pela'latl** — excluded \| omitted \| miss connecting with \| He/she excludes him/her  *(confidence: m)*  *(note: exclude/omit)*
+- **pela'latl** — excluded \| omitted \| miss connecting with \| He/she excludes him/her  *(confidence: m)*
 - **penoqwite'lmatl** — look down on \| snub \| discriminate against \| He/she looks down on him/her  *(also: character)*
 - **pepsite'lmatl** — disrespect \| rude \| discourteous \| He/she disrespects him/her  *(also: character)*
-- **pisguije'watl** — accompany inside \| He/she accompanies him/her inside  *(also: movement)*
+- **pisguije'watl** — accompany inside \| He/she accompanies him/her inside  *(also: going-and-coming)*  *(confidence: m)*
 - **pisgwapa'sit** — peek in \| He/she peeks in  *(also: seeing)*
 - **poqtatpematl** — begin to nag \| begin to scold \| He/she begins to scold someone  *(also: talking)*
 - **pugweliget** — live together in group \| There are many living together in a group
+- **pujite'lmatl** — trust \| He/she trusts him/her  *(also: thinking)*  *(confidence: m)*
 - **punajeiwatl** — stop doing \| let someone be \| He/she lets someone be
 - **punajo'tg** — stop doing \| leave alone \| He/she leaves it alone
-- **puna'latl** — leave or separate \| desert \| abandon \| He/she leaves or separates from someone  *(also: family)*
+- **puna'latl** — leave or separate \| desert \| abandon \| He/she leaves or separates from someone  *(also: family)*  *(confidence: m)*
 - **pusgialigs'ta'gwet** — frequently visits at meal-time for free meals \| He/she frequently visits at meal-time for free meals  *(also: food)*
 - **pusu'lewugtuatl** — shake hands with \| greet \| He/she shakes hands with someone  *(also: greetings)*
 - **salitewa'teget** — give charity \| He/she gives for charity  *(also: money-and-trade)*
 - **salite'wit** — collecting for charity \| He/she collects for charity  *(also: money-and-trade)*
-- **sapa'latl** — save (from mishap) \| get through \| He/she gets him/her through  *(note: save/rescue)*
-- **sapa'toq** — save (from mishap) \| get through \| He/she it gets through
-- **sespeiatijig** — involved in relationship \| having an affair \| fooling around with each other \| They are fooling around with each other
-- **sespo'teget** — molest \| unfaithful in  marriage \| cheater(in love) \| unfaithful with a married person \| playboy/girl \| cheat (in love) \| act the playboy/girl \| He/she molests \| He/she is unfaithful \| Cheater  *(also: character)*
-- **tagala'latl** — anger \| irritate \| annoy \| He/she angers him/her  *(also: emotions)*
+- **sapa'latl** — save (from mishap) \| get through \| He/she gets him/her through  *(confidence: m)*
+- **sapa'toq** — save (from mishap) \| get through \| He/she it gets through  *(confidence: m)*
+- **sespeiatijig** — involved in relationship \| having an affair \| fooling around with each other \| They are fooling around with each other  *(confidence: m)*
+- **sespo'teget** — molest \| unfaithful in  marriage \| cheater(in love) \| unfaithful with a married person \| playboy/girl \| cheat (in love) \| act the playboy/girl \| He/she molests \| He/she is unfaithful \| Cheater  *(also: character)*  *(confidence: m)*
 - **teleiwatl** — treat so \| treat as such \| He/she treats him/her in such a way
 - **tepi'getoq** — distribute \| He/she distributes it
 - **tepi'timg** — time of distribution \| time of sharing \| welfare time (slang) \| Time of distribution  *(also: leadership-and-law)*
 - **tetapua'latl** — treat correctly or appropriately \| treat right \| do right by \| satisfy \| He/she treats him/her correctly  *(also: good-and-bad)*
 - **tetapueiwatl** — treat properly \| take care of properly \| look after properly \| He/she treats him/her correctly/properly
-- **te'tipoqja'latl** — put arm around waist of \| He/she puts arm or arms around the waist  *(also: holding)*
+- **te'tipoqja'latl** — put arm around waist of \| He/she puts arm or arms around the waist  *(also: love-and-joy)*  *(confidence: m)*
 - **toqolugwejig** — work together \| work in tandem \| work in pairs \| They work together  *(also: work)*
 - **toqtesingig** — dance together \| involved in same accident/mishap \| They dance together \| They are involved in the same accident/mishap  *(also: music-and-dance)*
 - **toqwa'majig** — stay or live together \| They (two) stay/live together  *(also: family)*
@@ -142,22 +146,22 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **ugpaqama'latl** — give support to \| backup \| He/she gives support to him/her
 - **uleiatimgewei** — kindness \| Kindness  *(also: character)*
 - **wantaqo'ti** — peace \| Peace
-- **wejamoqsualatl** — embrace \| hug and squeeze \| He/she embraces him/her
+- **wejamoqsualatl** — embrace \| hug and squeeze \| He/she embraces him/her  *(also: love-and-joy)*  *(confidence: m)*
 - **wejeiatijig** — they are testing each other \| they are challenging each other \| They are testing each other
 - **wela'latl** — do something good for \| to please \| He/she does something good for someone
 - **wela'luet** — charitable \| pleases \| He/she is charitable  *(also: character)*
-- **welapematl** — benefit \| is useful \| obtain favor or something good from \| He/she benefits from him/her
+- **welapematl** — benefit \| is useful \| obtain favor or something good from \| He/she benefits from him/her  *(confidence: m)*
 - **weleiasit** — treat self well \| He/she treats himself/herself well
 - **weleiatijig** — treat each other well \| kind to each other \| They treat each other well
 - **weleiugsit** — treated well \| cared for well \| He/she is treated well
 - **weleiwatl** — treat well \| take good care of \| He/she takes good care of him/her
-- **weleiwet** — treat others well \| kind to others \| He/she treats others well
-- **welgwija'latl** — uplift spirit \| put in good·humor \| make more confident \| He/she uplifts his/her spirit  *(also: emotions)*
-- **welgwijimatl** — put in good humor \| encouraging \| He/she puts him/her in a good humor  *(also: emotions)*
+- **weleiwet** — treat others well \| kind to others \| He/she treats others well  *(also: character)*
+- **welgwija'latl** — uplift spirit \| put in good·humor \| make more confident \| He/she uplifts his/her spirit  *(also: love-and-joy)*
+- **welgwijimatl** — put in good humor \| encouraging \| He/she puts him/her in a good humor  *(also: love-and-joy)*
 - **welinqana'mat** — has a good time drinking \| He/she has a good time drinking  *(also: eating-and-drinking)*
 - **wellu'alatl** — praise \| He/she praises someone  *(also: talking)*
 - **welo'tasit** — treat well \| He/she is treated well
-- **welo'teget** — feel well \| treat others well \| doing well \| kind to others \| He/she is feeling well \| He/she treats others well  *(also: health)*
+- **welo'teget** — feel well \| treat others well \| doing well \| kind to others \| He/she is feeling well \| He/she treats others well  *(also: healing)*  *(confidence: m)*
 - **welo'tg** — take good care of \| He/she takes good care of it
 - **welo'tmasit** — treat it (possession) well for self \| take care of it (possession) well for self \| take good care of it (possession) for self \| He/she treats it (possession) well for himself/herself
 - **welo'tmat** — keep possessions in good condition \| keep own things in good condition for self \| He/she keeps his/her possessions in good condition
@@ -165,18 +169,17 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **welo'tmuatl** — keep something in good condition for someone \| He/she keeps something in good condition for him/her
 - **welo'tmuet** — treat others and their possessions well \| He/she treats others and their possessions well
 - **welo'tmugsit** — possession(s) treated well (by  others) \| possession(s) well taken care of (by  others) \| possession(s) well looked after (by others) \| His/her possession is treated well (by others)
-- **welta'tl** — hit well \| meet up with \| catch \| He/she hits him/her well \| He/she met up with him/her  *(also: hitting)*  *(note: hit well / meet up)*
+- **welta'tl** — hit well \| meet up with \| catch \| He/she hits him/her well \| He/she met up with him/her  *(also: hitting)*
 - **weltesg'g** — meet up with (on foot) \| meet or arrive on time \| He/she meets up with it  *(also: time)*
 - **weltesguatl** — meet \| meet up with (on foot) \| He/she meets him/her
-- **wesgowa's'g** — taking place \| place of activity \| It is taking place
-- **wesmoqsuwalatl** — embrace \| hug \| smooch \| He/she embraces him/her
-- **wespaiwatl** — disturb while asleep \| He/she disturbs someone while sleeping  *(also: sleep)*
-- **westawiatl** — save \| redeem \| He/she saves him/her/it  *(note: save/rescue)*
-- **westawitoq** — save \| redeem \| He/she saves it
+- **wesgowa's'g** — taking place \| place of activity \| It is taking place  *(confidence: m)*
+- **wesmoqsuwalatl** — embrace \| hug \| smooch \| He/she embraces him/her  *(also: love-and-joy)*  *(confidence: m)*
+- **westawiatl** — save \| redeem \| He/she saves him/her/it  *(confidence: m)*
+- **westawitoq** — save \| redeem \| He/she saves it  *(confidence: m)*
 - **wetapulatl** — scold \| punish \| He/she scolds him/her  *(also: talking)*
 - **wetmeiwatl** — keep busy \| use occasionally as needed \| disturb \| He/she keeps him/her busy  *(also: work)*
-- **wetmuatl** — give smoke (cigarette) to \| He/she gives someone a smoke(cigarette)  *(also: customs)*
-- **wetqolatl** — forbid \| He/she forbids someone  *(also: leadership-and-law)*
+- **wetmuatl** — give smoke (cigarette) to \| He/she gives someone a smoke(cigarette)  *(also: tobacco-and-smoking)*
+- **wetqolatl** — forbid \| He/she forbids someone  *(also: leadership-and-law)*  *(confidence: m)*
 - **wiaqqatmu'tijig** — variety of inhabits \| different or unrelated people living together in one place \| They are a variety of inhabitants
 - **wigumatl** — call for \| invite \| send for \| He/she calls for him/her  *(also: talking)*
 - **wigumgusimgewei** — invitation \| An invitation  *(also: stories-and-writing)*
@@ -186,18 +189,31 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **wijitgweiwatl** — keep company \| join \| He/she keeps him/her company
 - **winigwetuatl** — make a face at \| sticks tongue out at \| scowl at \| squint at \| He/she makes a face at him/her  *(also: body-actions)*
 - **wisqatesguatl** — drops in on someone suddenly and unexpectedly \| take by surprise \| He/she drops in on him/her suddenly and unexpectedly
+- **ewlite'lmatl** — has pity for him/her/it \| He/she has pity for him/her/it.  *(confidence: m)*
 - **ewleiwatl** — treats him/her poorly \| He/she treats him/her poorly.  *(also: character)*
 - **ewla'latl** — treats him/her miserably \| He/she treats him/her miserably.  *(also: character)*
 - **mi'waltijig** — thank each other  \| They thank each other   *(also: greetings)*
 - **papapuguet** — joke \| word play \| jest \| humor \| He/she jests  *(also: talking)*
+- **ewlitelget** — has compassion \| He/she has compassion.  *(confidence: m)*
+- **ewlite'teget** — has pity \| has compassion \| He/she has pity/compassion.  *(confidence: m)*
 - **ewlistmuatl** — heeds his/her request \| He/she heeds his/her request.  *(also: hearing)*
+- **ewlite'tg** — has compassion for it \| has pity for it \| has empathy for it \| He/she has compassion/pity/empathy for it.  *(confidence: m)*
 - **ewlistuatl** — heeds his/her request \| He/she heeds his/her request.  *(also: hearing)*
+- **ewlite'tmuatl** —  feels pity for his/her animate/inanimate object \| feels compassion for his/her animate/inanimate object \| He/she feels pity/compassion for his/her animate/inanimate object.  *(confidence: m)*
 - **gepmimi'walatl** — humbly with respect thank \| humbly with respect is grateful to \| He/she humbly with respect thanks him/her \| He/she humbly with respect is grateful to him/her  *(also: greetings)*
+- **ewlitelget** — has compassion \| has pity \| He/she has compassion/pity.  *(confidence: m)*
 - **papewistoq** — joke \| He/she jokes  *(also: talking)*
+- **ewlite'teget** — has compassion \| He/she has compassion.  *(confidence: m)*
 - **aniaps'tg** — gives something little or no consideration \| He/she gives something little or no consideration.  *(confidence: m)*
-- **oqolomgwetuatl** — bows/leans toward him/her/it \| He/she bows/leans toward him/her/it.  *(also: position)*
+- **ewlite'lmugsit** — others have compassion/pity for him/her \| Others have compassion/pity for him/her.  *(confidence: m)*
+- **oqolomgwetuatl** — bows/leans toward him/her/it \| He/she bows/leans toward him/her/it.  *(also: posture)*  *(confidence: m)*
+- **ewlite'tasit** — others have compassion for him/her \| Others have compassion for him/her.  *(confidence: m)*
+- **ewliteltultijig** — have pity for each other \| They have pity for each other.  *(confidence: m)*
 - **tenolewa'latl** — Give gifts to him/her \| He/she gives gifts to him/her
 - **ewleiwaqan** — poor treatment \| It is poor treatment.
+- **ewlite'lmatl** — has compassion for him/her \| He/she has compassion for him/her.  *(confidence: m)*
+- **ewlite'tasit** — thought of with pity \| thought of with compassion \| He/she is thought of with pity/compassion.  *(confidence: m)*
+- **ewlite'tg** — has pity for a situation \| He/she has pity for a situation.  *(confidence: m)*
 
 ## Archived entries (lower priority)
 
@@ -206,6 +222,7 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **gepmite'taqan** — respect \| honour \| homage
 - **mawimijijultijig\*\*** — gathered together
 - **nujipostewit\*\*** — marriage (or divorce) broker \| who acts as go·between (in marriage or divorce) \| He/she acts as a go·between (in relationships)
+- **postewit** — matchmaker \| matchmaker \| scout \| scout \| He/she is matchmaking \| Matchmaker
 - **tage'latl** — offensive remark \| offend by remarking \| annoy by remarking \| He/she offends him/her with an offensive remark
 - **tegweiwatl** — aware of \| in close touch with \| He/she is in close touch with him/her
 - **tepjignatl** — keep up with \| maintain \| He/she keeps up with him/her/it
@@ -215,3 +232,4 @@ Theme: *People & Relationships* — 196 entries (+14 archived)
 - **wejimatl** — make out with \| try out (sexually)
 - **wejmoqsualatl** — embrace \| He/she embraces him/her
 - **wesgaqanmatl** — kiss \| He/she kisses him/her
+- **wi'gupaltimg** — feast

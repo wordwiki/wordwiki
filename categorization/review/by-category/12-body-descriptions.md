@@ -1,0 +1,144 @@
+# Body Descriptions (`body-descriptions`)
+
+Theme: *Body & Health* — 130 entries (+7 archived)
+
+- **alu'sat** — skinny \| lean \| He/she is skinny
+- **amnaqwa'teget** — turn toes in \| He/she turns toes in  *(confidence: m)*
+- **apjoqji'jit** — tiny in girth \| slender \| thin \| He/she is tiny in girth  *(also: size-and-shape)*  *(confidence: m)*
+- **apsalqigwa'ji'jit** — have tiny eyes \| have small eyes \| He/she has tiny eyes
+- **apsalqigwat** — have small eyes \| He/she has small eyes
+- **apsalqutnat** — have small mouth \| He/she has a small mouth
+- **apsatpat** — have small head \| He/she has a small head
+- **aps'gilg** — little \| small \| He/she is little  *(confidence: m)*
+- **apsigjat** — have small buttocks \| He/she has small buttocks
+- **apsiptnat** — have small hands \| have small paws \| He/she has small hands
+- **apsisqonat** — have small nose \| have narrow nose \| He/she has a small nose
+- **apso'qonigatat** — skinny legged \| slim legged \| thin legged \| He/she has small legs in girth
+- **aps'sitat** — have small feet \| He/she has small feet
+- **aptegwat** — freckled face \| He/she has a freckled face
+- **atgigwa't** — wrinkled (of head and neck) \| He/she is wrinkled  *(also: age)*
+- **atgigwati** — wrinkle \| Wrinkle  *(confidence: m)*
+- **elg'g** — cause soreness from sitting too long \| cause body part to be sore (from being on it) \| temporarily misshapen by pressing against \| He/she causes a body part to be sore from being on it  *(confidence: l)*  *(note: body part pressure-marked/misshapen; awkward fit anywhere)*
+- **eli'tuat** — have a beard \| have a mustache \| He/she has a mustache or a beard
+- **eloqtnema't** — have bad breath \| He/she has bad breath  *(also: smell-and-taste)*  *(confidence: m)*
+- **emegwaltugwepit** — messy hair \| awful looking hairdo \| bad hair day \| He/she has messy hair  *(also: appearance)*
+- **emisqapit** — topless \| naked on upper body \| He/she is topless
+- **emisqe'g** — naked \| bare \| He/she is naked
+- **eptegwat** — have freckles \| freckled \| He/she has freckles
+- **eptegwati** — freckle \| Freckle
+- **gesgiaqasit** — has a broad back \| He/she has a broad back
+- **gesgitlmaqanat** — have broad shoulders \| He/she has broad shoulders
+- **gesgitlmaqasit** — broad shouldered \| broad·beamed \| He/she is broad shouldered
+- **gesgoqomaqasit** — broad beamed \| He/she is broad beamed
+- **gesimlgignat** — very strong \| He/she is very strong  *(confidence: m)*
+- **gesitowaqji'jit** — very short \| He/she is very short  *(confidence: m)*
+- **gesmigit** — shapely \| well·built \| well·proportioned \| He/she is well·built  *(also: appearance)*
+- **glitam** — birthmark \| Birthmark  *(confidence: m)*
+- **inaqanmit** — right·handed \| He/she is right-handed
+- **istuigata't** — have clubfoot \| clubfooted \| He/she is clubfooted
+- **loqtnema't** — have bad breath \| He/she has bad breath  *(also: smell-and-taste)*  *(confidence: m)*
+- **maligatat** — weak legs or feet \| fragile-legged \| feeble-legged \| frail-legged \| He/she has weak legs or feet  *(also: sickness)*  *(confidence: m)*
+- **malugunat** — have weak back \| He/she has a weak back  *(also: sickness)*  *(confidence: m)*
+- **maqalqigwat** — have large eyes \| He/she has large eyes
+- **maqapsg'tiat** — have a big and round belly \| plump \| corpulent \| rotund \| He/she has a big and round belly
+- **maqapsgusuat** — have large testicles \| He has large testicles
+- **maqatpat** — big headed \| He/she has a big head
+- **maqigjat** — have big buttocks \| He/she has big buttocks
+- **maqiptnat** — have big hands \| He/she has big hands
+- **maqisqonat** — have a big nose \| He/she has a big nose
+- **maqistaqanat** — have big ears \| eavesdrop (slang) \| He/she/it has big ears
+- **maqitnat** — have big nostrils \| He/she has big nostrils
+- **maqo'iptnat** — have big arms (in girth) \| have thick arms \| He/she has big arms
+- **maqo'qonigata't** — have big legs (in girth) \| have thick legs \| He/she has big legs in girth
+- **maqoqsit** — big (in girth) \| big and round (cylindrical) \| He/she is big (in girth)  *(also: size-and-shape)*  *(confidence: m)*
+- **maqsitat** — have big feet \| He/she has big feet
+- **maqtawigjat** — black·bottomed \| He/she is black-bottomed  *(also: colors)*
+- **maqtawignegsit** — dark complexioned \| dark tanned \| He/she is dark complexioned  *(also: colors)*
+- **maqtawi'tuat** — have a black beard \| He/she has a black beard  *(also: colors)*
+- **maqtawoqsit** — darkened from fire \| dark tanned \| charred \| He/she/it is dark tanned  *(also: colors)*  *(confidence: m)*
+- **maqtunat** — have big mouth \| He/she has a big mouth
+- **mawgamig** — corpulent \| fattest \| It is corpulent  *(confidence: m)*
+- **mawgamit** — corpulent \| fattest \| He/she is the fattest  *(confidence: m)*
+- **megwaltugwat** — red haired \| red head \| He/she has red hair  *(also: colors)*
+- **megwe'saqsit** — ruddy complexion \| red faced \| red cheeked \| He/she has a ruddy complexion  *(also: colors)*
+- **melgaqanatpat** — bald (headed) \| He/she is bald headed
+- **melgiaqasit** — muscular \| tough \| He/she is muscular
+- **melgigit** — solidly built \| He/she is solidly built
+- **melgignat** — strong \| He/she is strong
+- **melgiji'nm** — strong man \| solid man \| giant (from Pacifique's Grammer glossery) \| Strong man  *(also: people)*
+- **melgi'taqanat** — have strong neck \| He/she has a strong neck
+- **menaqanat** — weak \| He/she is weak  *(also: condition)*  *(confidence: m)*
+- **metaqapit** — underdressed for weather (torso area) \| bare chested \| He/she is underdressed for weather  *(also: clothing)*  *(confidence: m)*
+- **metgatat** — barefooted \| He/she is barefooted  *(also: clothing)*  *(confidence: m)*
+- **mlgignewinu** — strong person \| Strong person  *(also: people)*
+- **newtalqigwat** — one·eyed \| have one eye \| He/she is one-eyed
+- **newtigatat** — have one leg or foot \| He/she has one leg or foot
+- **newtiptnat** — one handed \| He/she is one handed
+- **nigoqji'juigatat** — bow-legged \| He/she is bow-legged
+- **pasaltugwat** — thick hair \| He/she/it has thick hair
+- **pasi'tuat** — thick bearded \| He/she is thick bearded
+- **patalapit** — cross·eyed (strabismus) \| He/she/it is cross·eyed (has strabismus)  *(also: seeing)*  *(confidence: m)*
+- **patang** — left·handed \| He/she is left·handed
+- **patanmit** — left·handed \| He/she is left·handed
+- **pepgaltugwat** — have thin hair \| have fine hair \| He/she has thin or fine hair
+- **pepgijatpat** — flat·headed \| He/she is flat·headed
+- **peqanqasita'teget** — get flat feet \| get flatfooted \| He/she gets flat feet
+- **pesqojiguiptnat** — have sticky fingers \| He/she has sticky fingers  *(also: wrongdoing)*  *(confidence: m)*
+- **pijigatat** — long·legged \| He/she is long·legged
+- **pijiptnat** — have long reach \| have long arms \| He/she has a long reach
+- **pijisqonat** — have a long nose \| He/she has a long nose
+- **pijistaqanat** — have long ears \| He/she has long ears
+- **pito'qiptnat** — long·armed \| He/she is long·armed
+- **pitoqoluajit** — animal with long neck \| crane - tmgwalignej \| Animal with long neck  *(also: animals)*
+- **pitoqoluat** — long neck \| He/she has a long neck
+- **pitoqsit** — tall \| He/she is tall  *(also: size-and-shape)*  *(confidence: m)*
+- **piwgsmig** — bushy \| fluffy·haired \| It is bushy  *(confidence: m)*
+- **piwgsmit** — bushy·haired \| fluffy·haired \| He/she is bushy·haired
+- **pugwistina'gewit** — hairy (of body) \| He/she is hairy (of the body)
+- **sasqasitat** — flat-footed \| He/she is flat-footed
+- **sasqigatat** — flat-footed \| He/she is flat-footed
+- **sasqitnat** — pug-nosed \| He/she is pug-nosed
+- **sa'ugwat** — long·haired (of man) \| He/she is long·haired
+- **sawiptnat** — have deformed or crippled hand or arm \| He/she has a deformed or crippled hand or arm  *(also: sickness)*  *(confidence: m)*
+- **sesagi'g** — barefooted \| He/she is barefooted  *(confidence: m)*
+- **se'saltugwepit** — have messy hair \| He/she has messy hair  *(also: appearance)*
+- **taqamoqsitat** — pigeon-toed \| intoeing \| He/she is pigeon-toed
+- **temawigna't** — hunchback \| He/she is a hunchback
+- **temgwe'g** — headless \| headless \| He/she is headless \| It is headless  *(confidence: m)*
+- **temigatat** — have foot or leg cut off \| He/she has a foot or leg cut off  *(also: sickness)*  *(confidence: m)*
+- **temiptnat** — have hand or arm cut off \| He/she has a hand or arm cut off  *(also: sickness)*  *(confidence: m)*
+- **tmawignessu** — hunchback \| Hunchback  *(also: people)*
+- **toqopsgigatat** — short·legged \| He/she is short·legged
+- **toqopsg'ji'jit** — short and round \| He/she is short and round  *(confidence: m)*
+- **toqwanqisgat** — double·jointed \| He/she is double·jointed
+- **usapunit** — have hair (of head) \| He/she has hair  *(note: audit: have-BODYPART verb belongs in body-descriptions)*
+- **walnoqsitat** — have instep or arch \| He/she has arched feet
+- **wapaltugwat** — white haired \| He/she has white hair
+- **wapgwan** — grey or white hair \| Grey or white hair  *(confidence: m)*
+- **wapgwat** — have white hair \| He/she has white hair
+- **wapignegsit** — light-complexioned \| He/she is light-complexioned  *(also: colors)*
+- **wap'staqe'g** — pale \| He/she is pale.  *(confidence: m)*
+- **waqgaje'g** — physically weak \| not strong \| He/she is physically weak  *(also: sickness)*  *(confidence: m)*
+- **waqantewatpat** — head of bone \| he/she has a head of bone  *(confidence: m)*
+- **wesamgamit** — too fat \| obese \| He/she too fat
+- **wigamit** — lean (Nova Scotia) \| He/she is lean  *(confidence: m)*
+- **wigewit** — fat \| He/she is fat
+- **wipitmit** — have teeth \| He/she has teeth  *(confidence: m)*
+- **wisawaltugwat** — blonde haired \| blonde headed \| He/she has blonde hair
+- **wise'g** — scarred \| scarred \| He/she/it is scarred \| It is scarred
+- **wisigat** — scar-faced \| scarred \| He/she is scar-faced
+- **wisigwat** — scar-faced \| scarred \| He/she is scar-faced
+- **wituit** — whiskered \| He is whiskered
+- **pastugopit** — thick skin \| thick headed \| He/she has thick skin/ he/she is thick headed.  *(also: character)*  *(confidence: m)*
+- **anesit** — lacking (a hand or foot) \| Lacking (ugpitn moqwa' eitnug(??), gisna ogoat(??)), mutilated.  *(also: sickness)*  *(confidence: m)*
+- **ugpitnit** — has hands \| He/she has hands  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **emegwaltugwat** — messy hair \| he/she has messy hair
+- **maqi·wilnuit\*** — have large tongue
+- **metaqaptiat\*\*** — barebottomed
+- **peguiptnat** — sticky·fingered \| thief \| gummy fingered \| kleptomaniac \| He/she is sticky·fingered \| He/she is a thief
+- **piwetmit** — hairy (of body) \| He/she is hairy
+- **poqji·mm'gatpat** — start to bald \| He/she starts to bald
+- **uggwat\_istuig** — twisted foot \| clubfoot \| He/she has a clubfoot

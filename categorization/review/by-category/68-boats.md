@@ -1,0 +1,113 @@
+# Boats & Paddling (`boats`)
+
+Theme: *Travel & Outdoor Life* — 97 entries (+9 archived)
+
+- **alaqteget** — sail about \| He/she sails about
+- **alaqtegewinu** — mariner \| sailor \| Mariner  *(also: occupations)*
+- **alu'latl** — row about \| He/she rows him about
+- **a'lulatl** — guide (by boat) \| He/she guides him/her by boat  *(also: fishing)*
+- **a'lutasit** — guide (by boat) \| fishing guide \| He/she guides by boat  *(also: occupations, fishing)*
+- **asoqomm'taqan** — ferry \| boat \| Ferry boat
+- **asoqomo'teget** — ferry across \| He/she ferries across
+- **asoqo'mutaqan** — ferry \| boat \| Ferry boat
+- **a'sugwesugwijig** — meet on water(by canoe) \| come together (by rowboat) \| They meet on water by rowboat
+- **eguma'toq** — anchor \| He/she anchors it (boat)
+- **egumig** — anchored \| It is anchored
+- **egumit** — anchored \| He/she is on a boat that is anchored
+- **elaqteget** — sail to... \| sail in a direction (north) \| He/she/it sails to
+- **elisugwit** — paddle toward \| He/she paddles toward
+- **gapiten** — captain \| Captain  *(also: occupations)*
+- **gi'gamgo'n** — pole (for poling boat) \| Boat pole  *(also: tools)*
+- **gisigu'lgw** — old canoe or boat \| Old canoe or boat
+- **glpisun** — anchor \| Anchor
+- **gwitn** — canoe \| Canoe
+- **gwitna'q** — go by canoe \| He/she goes by canoe
+- **jigalugg** — paddle alone or singlehandedly \| pole alone or singlehandedly \| He/she/it is paddling or poling singlehandedly
+- **jijigulqeg** — narrow and shallow (of canoe) \| It is narrow and shallow (canoe)  *(also: size-and-shape)*
+- **ji'matg** — paddle \| row \| He/she rows it
+- **ji'met** — row \| paddle \| He/she rows
+- **lapugwan** — three masted sailing ship \| Three masted sailing ship
+- **lnuipi** — native paddle \| Native paddle
+- **maqigtulit** — have a big boat \| He/she has a big boat  *(also: size-and-shape)*
+- **matlot** — sailor \| Sailor  *(also: occupations)*
+- **mistug** — oakum \| Oakum  *(also: tools)*
+- **mllawa'latl** — take from shore \| take off-shore \| He/she takes him/her from shore
+- **mnnawa'latl** — take from shore \| take off-shore \| He/she takes him/her/it from shore
+- **naqani'get** — bail \| scoop out \| He/she bails out water  *(also: water)*
+- **na'taqama'latl** — bring ashore \| He/she brings him/her ashore  *(confidence: m)*
+- **na'taqama'sit** — go ashore \| He/she goes ashore  *(confidence: m)*
+- **na'taqama'toq** — bring ashore \| He/she brings it ashore  *(confidence: m)*
+- **oqtatqa'toq** — put into drydock \| He/she puts in drydock
+- **oqwa'q** — arrive \| land \| dock \| It arrives  *(also: travel)*  *(confidence: m)*
+- **oqwasa'toq** — beach (canoe) \| pull up on the shore \| He/she beaches it
+- **paltaqan** — gunwale (of boat) \| trim (door, window, baseboard, crown molding) \| Gunwale (of boat)
+- **papga'lugwet** — drift down the coast \| drift down river \| He/she drifts down the coast (by water)
+- **paqasa'toq** — put in the water (river) \| launch into water \| He/she puts it in the water  *(also: water)*
+- **paqaste'g** — launch \| cause to fall into water, river or lake \| knock into water \| hit into water \| He/she launches it  *(also: water)*
+- **pemamgwe'get** — pole along \| He/she is poling along
+- **pemaqteget** — sail along \| He/she sails along
+- **pemgwi't'g** — steer along \| He/she is steering it along
+- **pemijajigisugwit** — paddle along the shore \| He/she is paddling along the shore
+- **pemiji'met** — paddle along \| row along \| He/she is paddling or rowing along
+- **pemisiawaqteget** — sail along by \| He/she is sailing along by
+- **pemisugwit** — paddle along \| He/she is paddling along
+- **pemji'malatl** — paddle along \| row along \| He/she is paddling or rowing him/her along
+- **pemji'matg** — paddle along \| row along \| He/she is paddling or rowing it along
+- **pemji'met** — paddle along \| row along \| He/she is paddling or rowing along
+- **pi'tisignta'tl** — caulk \| He/she caulks it  *(also: making-and-fixing)*
+- **pi'tisignte'g** — caulk \| He/she caulks it  *(also: making-and-fixing)*
+- **pnasu'lgw** — ship \| vessel \| Ship
+- **poqjigwitna'q** — start off by canoe \| goes by canoe \| He/she starts off by canoe
+- **poqtamgwe'get** — start off poling (in boat) \| He/she starts off poling a boat
+- **poqtisugwit** — start off by boat \| begin or start paddling \| He/she starts off by boat
+- **pugtewu'lgw** — steamboat \| steamship \| Steamboat
+- **pusig** — depart (vessal) \| embark \| It (vessal) departs  *(also: travel)*
+- **salpo'l** — sailboat \| ship \| Sailboat
+- **salpolgu'j** — small sailboat \| Small sailboat
+- **segi'gn** — sail \| Sail
+- **setamg** — in rear or stern (of boat) \| At the rear or stern(boat)
+- **sewtaqa'taqan** — barge \| raft \| trailer \| Barge
+- **si'n'g** — bail water (from boat) \| He/she bails water from it  *(also: water)*
+- **si'niget** — bails water (from boat) \| He/she bails water  *(also: water)*
+- **sngatigna'taqan** — raft (of logs) \| Raft of logs  *(also: trees)*  *(note: audit: raft is a watercraft; boats first)*
+- **sno'pi** — stern paddle \| steering  paddle \| sculling oar \| Stern paddle
+- **teppilatl** — hoist aboard \| haul or rope on board \| He/she hoists him/her on board  *(also: pushing-and-pulling)*
+- **teppilg** — hoist aboard \| haul or rope aboard \| He/she hoists it on board  *(also: pushing-and-pulling)*
+- **ugtul** — boat \| vehicle \| car \| His/her boat  *(also: vehicles)*
+- **u'ta'qan** — paddle \| oar \| Paddle
+- **we'gwamgwe'get** — pole (boat) to a certain spot \| He/she poles a boat to a certain spot
+- **we'gwiji'met** — paddle or row until... \| He/she paddles or rows until (area, place)
+- **wejgwaqteget** — come sailing toward \| He/she is sailing toward here
+- **wejgwigwitna'q** — come by canoe \| He/she is coming by canoe
+- **wejgwina'taqamisugwit** — paddle to shore \| He/she is coming paddling to the shore
+- **wejgwisugwit** — come rowing or paddling toward \| He/she is coming paddling
+- **welipot** — rowboat \| Rowboat
+- **witua'tijig** — partners in boat (used in guiding) \| They go as partners  *(also: fishing)*
+- **nipaqteget** — sails at night \| He/she sails at night
+- **gopugwet** — filled with sea water \| is swamped \| He/she/it is filled with sea water, is swamped.  *(also: sea-and-rivers)*  *(confidence: m)*
+- **na'nugumeg** — go five in a canoe \| We go five in a canoe.  *(also: numbers)*
+- **ne'naqpega'toq** — lightens it (ship) \| reduce the load \| reduce the weight \| He/she lightens it, reduces the load or weight  *(also: carrying)*
+- **nipisugwit** — canoes by night \| paddles small boat at night \| He/she canoes/paddles a small boat at night
+- **pi'gun** — Feather \| Canoe stave \| Feather, stave for canoe  *(also: birds)*
+- **tmigalaw** — rib of ship \| Rib of a ship
+- **nipaqtegewatl** — sails at night for  \| He/she sails at night for him/her/someone
+- **pepg'pa'q** — shallow (vessel) \| shallow draft (canoe, boat) \| Shallow (vessel)
+- **gotlomi** — landin place \| quay \| dock \| wharf \| Landing place/quay/dock/wharf.  *(also: sea-and-rivers)*
+- **pi'gune'get** — Collects/makes ribs for canoe \| Collects/makes ribs for boat. \| He/she collects/makes ribs of canoe/ship.
+- **pigaqan** — Rib of a canoe and ship. \| Rib of a basket. \| Rib of a canoe and ship, rib of a basket.  *(also: basket-making)*
+- **wejgwisugwit** — come paddling or rowing \| come by water \| he/she comes paddling by water
+- **paspa'q** — large draft (boat), boat is very deep \| deep draft boat \| Large draft (boat), boat is very deep.
+- **pastesgu'gwig** — waves break and enter the canoe \| Waves break and enter the canoe.  *(also: sea-and-rivers)*
+- **nipiji'mat** — paddles by night \| He/she paddles by night.
+
+## Archived entries (lower priority)
+
+- **lamulgug** — below deck \| Below deck
+- **manasulgw\*\*** — warship
+- **megwulgw\*\*** — red canoe
+- **mejigulgw\*\*** — dirty canoe
+- **negulpit** — sit in bottom of canoe \| He/she sits in the bottom of canoe
+- **negulq'pit** — sit in canoe \| He/she sits in canoe
+- **negulq'teg** — set in canoe \| It is set in a canoe
+- **negulteg\*\*** — set in bottom of canoe \| It is set in the bottom of a canoe
+- **-tul** — boat \| his boat

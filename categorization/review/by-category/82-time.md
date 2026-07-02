@@ -1,0 +1,182 @@
+# Time (`time`)
+
+Theme: *Time* — 157 entries (+18 archived)
+
+- **amgwes** — first \| in the past \| first time \| First \| In the past  *(also: numbers)*
+- **apangitatimg** — pay day \| Pay day  *(also: money-and-trade)*
+- **apjiw** — always \| each time \| every time \| Always
+- **apugjig** — soon \| after a while \| Soon
+- **aqtatpa'q** — midnight \| It is midnight
+- **atel** — just now \| a while ago \| Just now
+- **awisiw** — seldom \| only once in a while \| Seldom
+- **egel** — occasionally \| once in a while \| now and then \| Occasionally
+- **egsitpu'g** — morning \| Morning
+- **egsitpu'gowei** — breakfast \| item pertaining to morning \| event pertaining to morning \| Breakfast \| Pertaining to morning  *(also: food)*
+- **egsitpugwatalg** — eat breakfast \| He/she/it eats breakfast  *(also: eating-and-drinking)*
+- **egsitpu'gwewulgw** — morning train, boat, etc. \| morning vessel \| Morning vessel  *(also: vehicles)*
+- **egsitpugwiet** — early riser \| He/she rises early in the morning  *(also: sleep)*
+- **egsitpu'nug** — tomorrow morning \| Tomorrow morning
+- **enmiaq** — goes home \| when (it comes to pass) \| goes onward \| It goes onward or home \| When (it comes to pass)  *(also: going-and-coming)*
+- **enmilugweg** — works until... \| It works until ...  *(also: work)*
+- **enmilugwet** — work until...(midnight) \| He/she works until...(midnight)  *(also: work)*
+- **esgipa'tl** — wait \| expect \| He/she waits for someone  *(confidence: m)*
+- **esgipetoq** — wait \| expect \| He/she waits for it  *(confidence: m)*
+- **esgmalatl** — wait for \| He/she waits for someone  *(confidence: m)*
+- **esgmat** — await \| wait \| He/she awaits  *(confidence: m)*
+- **esgmatg** — wait for \| He/she waits for it  *(confidence: m)*
+- **ga'l** — one quarter (of time, etc.) \| Quarter of an hour  *(also: amounts)*
+- **galqwasiet** — sunset \| The sun is setting  *(also: sky)*
+- **gaqawa's'g** — go by quickly \| It goes by quickly
+- **gaqi'sg** — often \| frequently \| many times \| Often
+- **gegapniet** — rises before dawn \| He/she rises before the dawn  *(also: sleep)*
+- **geget** — soon \| almost \| Soon
+- **gejigow** — recently \| short while ago \| Recently
+- **ge's** — while \| during \| While
+- **ge's'g** — just a minute! \| hold on! \| Hold on  *(also: greetings)*  *(confidence: m)*
+- **gesgmnaq** — before \| Before
+- **gesgute'g** — catch on time \| get in time \| He/she catches it on time  *(confidence: m)*
+- **gesgutesg'g** — just in time \| get there on time before it departs \| get there on time just before it starts \| He/she gets there on time before it departs/starts  *(confidence: m)*
+- **gesgutesgmat** — on time (for) \| just in time \| He/she is on time  *(confidence: m)*
+- **gesgutesguatl** — caught in the act \| catch by surprise \| catch on time \| He/she catches him/her in the act  *(confidence: m)*
+- **ge's\_mu** — before \| Before
+- **getu'pgising** — expected to arrive \| He/she is expected to arrive  *(also: travel)*
+- **giaspiaq** — result \| end \| last \| It is the result  *(confidence: m)*
+- **giaspigisg'g** — last day \| It is the last day
+- **giaspilugwet** — last time worked \| Last time he/she worked  *(also: work)*
+- **giaspiw** — since \| Since
+- **gisgug** — today \| Today
+- **gi's\_sa'q** — long ago \| once upon a time \| Long ago
+- **glapis** — finally \| eventually \| Finally
+- **gne'g** — soon \| shortly in time \| later \| It is soon
+- **gtigisapo'nug** — day after tomorrow \| The day after tomorrow
+- **gtigiwela'gwe'g** — night before last \| other night \| The night before last
+- **gtigulagu** — day before yesterday \| other day \| The day before yesterday
+- **iapjiw** — forever \| Forever
+- **iapjiwowei** — pertains to forever \| Pertains to forever
+- **jensi** — suddenly \| before you know it \| all of a sudden \| Suddenly
+- **jijuaqa** — sometimes \| Sometimes
+- **jiniw** — suddenly \| Suddenly
+- **mejit\_newt** — one more time \| One more time  *(also: numbers)*
+- **messa'latl** — miss making a connection with \| miss appointment \| miss rendez·vous \| He/she misses making a connection with him/her  *(confidence: m)*
+- **messa'toq** — miss making a connection with \| miss appointment \| miss rendez·vous \| He/she misses making a connection with it  *(confidence: m)*
+- **mes'tesg'g** — miss \| miss a connection \| arrive too late for \| He/she misses it  *(confidence: m)*
+- **mes'tesgmat** — miss a connection \| miss \| arrive too late for \| He/she misses a connection  *(confidence: m)*
+- **mes'tesguatl** — arrive late and miss someone entirely \| miss meeting someone because of timing \| He/she misses a connection with him/her  *(confidence: m)*
+- **metla'sipunqeg** — ten years \| It is ten years  *(also: numbers)*
+- **mewlia'gowei** — dinner (noon meal) \| lunch time meal \| noon meal \| Noon meal  *(also: food)*
+- **mewlia'gweg** — noon \| midday \| Noon
+- **miawitpa'q** — middle of night \| It is the middle of the night
+- **miawna'gweg** — midday \| noon \| middle of day \| It is midday
+- **mi'soqo** — up to \| as for as \| until \| Up to  *(also: location-words)*  *(confidence: m)*
+- **na'gu'setewei** — clock \| watch \| Clock  *(also: household)*
+- **na'gweg** — day \| day \| daylight \| It is day \| Day
+- **nangmiw** — immediately \| right away \| Immediately
+- **nanipunqeg** — five years \| It is five years  *(also: numbers)*
+- **nanuguna'q** — five days \| It is five days  *(also: numbers)*
+- **naqsipgising** — arrive early \| arrive ahead of time \| He/she/it arrives early  *(also: travel)*
+- **na\_tujiw** — at that time \| then \| At that time
+- **ne'gaw** — all the time \| always \| all along \| All the time
+- **newisgegipunqeg** — forty years \| Forty years  *(also: numbers)*
+- **newte'** — one \| still \| yet \| continues \| One \| Still  *(also: numbers)*
+- **newtigisg'g** — all day long \| all day \| All day long
+- **newtipug** — all winter \| one winter \| It is all winter  *(also: calendar)*
+- **newtipunqeg** — one year \| year \| One year
+- **newtitpa'q** — all-night \| all-night long \| All night
+- **nige'** — now \| Now
+- **nugu'** — so now \| then \| any more (no longer) \| all ready \| come on now! \| So now
+- **nutaiw** — interruption (before completion) \| Interruption (before completion)
+- **nutatesgewet** — miss arriving at destination by a short distance \| did not make it  to destination \| fail to reach destination by a short distance \| fail to arrive on time \| His/her failed to arrive at destination by a short distance  *(also: travel)*  *(confidence: m)*
+- **oqonitpa'q** — dark (night) \| It is dark (night)  *(also: sky)*
+- **oqonitpaqamugwiaq** — getting dark \| It is getting dark  *(also: sky)*
+- **pegije'g** — long time \| It is a long time
+- **pegijiesgmalatl** — wait long time for \| He/she waits for him/her/it a long time
+- **pegijiesgmatg** — wait long time for \| He/she waits a long time for it
+- **pegitapegsig** — long lasting \| take a long time to unfold \| It is long lasting
+- **pegitapematl** — useful for a long time \| He/she is useful to him/her for a long time  *(also: work)*
+- **pegitapetg** — useful for long time \| It is useful to him/her for a long time  *(also: work)*
+- **pegitapit** — stay up late \| He/she/it stays up late  *(also: sleep)*
+- **pegitqatg** — stay long time \| He/she/it stays a long time  *(also: travel)*
+- **pegittoq** — is taking a long time to return \| is taking a long time \| He/she/it is taking a long time to return  *(also: travel)*
+- **pe'l** — for now \| for the time being \| while \| For now
+- **pe'l\_ap\_ta'n\_tujiw** — wait until some other time \| wait until the next time \| until some other time \| Wait until some other time
+- **pe'l\_tmg** — first of all \| First of all
+- **pempisgiaq** — become twilight \| It is becoming dusk
+- **pesgiaq** — get dark \| night falls \| It is getting dark
+- **piluamugwiaq** — become dusk \| change color \| It becomes dusk \| It changes color  *(also: colors)*
+- **pisgiaq** — get dark \| night falls \| It is getting dark
+- **qalqwasiet** — sun sets \| The sun sets  *(also: sky)*
+- **sapo'nug** — tomorrow \| Tomorrow
+- **sa'q** — long ago \| Long ago
+- **sepei** — this morning \| This morning
+- **sipeliw** — seldom \| rarely \| often (Listuguj) \| Seldom
+- **siwiesgmat** — tired of waiting \| He/she is tired of waiting  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **smtug** — right away \| immediately \| Right away
+- **ta'nug** — when (in the future) \| When (in the future)  *(also: question-words)*
+- **ta'n\_telinqase'g** — as soon as \| As soon as
+- **ta'n\_te's** — every time \| each time \| Every time
+- **ta'n\_tlipgije'g** — as long as \| As long as
+- **ta'n\_tujiw** — when \| whenever \| at that time \| When
+- **tapuguna'q** — two days \| It is two days  *(also: numbers)*
+- **tapuipunqeg** — two years \| Two years  *(also: numbers)*
+- **tapuitpa'q** — two nights \| It is two nights  *(also: numbers)*
+- **ta'sitpa'q** — how many nights? \| How many nights?  *(also: question-words)*
+- **ta's\_ajiet** — what time is it? \| What time is it?  *(also: question-words)*
+- **telipgitqatg** — stay such length of time \| He/she stays such a length of time
+- **tepgig** — night \| Night
+- **te's** — every time \| every \| Everytime
+- **te'sigisg'g** — every day \| daily \| Everyday
+- **te'sipug** — every winter \| Every winter  *(also: calendar)*
+- **te'sipunqeg** — annually \| so many years \| Annually
+- **te'sitpa'q** — every night \| Every night
+- **te'sitqwa'q** — every fall \| every autumn \| Every fall  *(also: calendar)*
+- **tmg** — first \| before \| First
+- **toqosi'p** — and then \| then \| And then
+- **tujiw** — at that time \| At that time
+- **ulagu** — yesterday \| Yesterday
+- **ulo'nug** — this evening \| tonight \| This evening
+- **wapg** — dawn \| daylight \| It is dawn
+- **wapn** — first light \| daylight \| First light
+- **wapnamugwiaq** — dawning \| daybreak \| It is dawning
+- **we'gow** — until \| all along \| during \| Until
+- **weja'tegemg** — from there on \| from now on \| From there on
+- **weja'tegemgeg** — from that time on \| From that time on
+- **wejgwapniaq** — daybreak \| It is becoming daybreak
+- **wejgwa'tegemg** — in the past \| In the past
+- **wejgwa'tegemgeg** — in the past until now \| In the past until now
+- **wejgwitpa'q** — approach or come nightfall \| The approaching nightfall
+- **wejigs'gutesg'g** — try to catch on time \| He/she tries to catch something on time  *(confidence: m)*
+- **wejigsugutesguatl** — try to catch on time \| He/she tries to catch him/her on time  *(confidence: m)*
+- **wela'gowei** — supper \| Supper  *(also: food)*
+- **wela'gw** — evening \| dusk \| night \| Evening
+- **wela'gwe'g** — last night \| Last night
+- **wela'gwe'l** — toward evening \| Toward evening
+- **weliegsitpu'g** — nice morning \| It is a nice morning  *(also: weather)*
+- **welitpa'q** — nice evening or night \| It is a nice evening or night  *(also: weather)*
+- **weloqotalg** — eat supper \| have supper \| He/she eats supper  *(also: eating-and-drinking)*
+- **weltesg'g** — meet up with (on foot) \| meet or arrive on time \| He/she meets up with it  *(also: social-life)*
+- **jiptuege'l** — from time to time \| From time to time
+- **metla'suguna'q jel ugumuljin** — ten days plus eight \| 18 days \| Eighteen days  *(also: numbers)*
+- **nangma'toq** — do it immediately/without delay \| He/she does it immediately/without delay.  *(confidence: m)*
+- **ugumuljin te'sugunaq** — 8 days and nights \| 8 days and nights  *(also: numbers)*
+- **nangma'teget** — does it immediately/without delay \| He/she is doing it immediately/without delay.  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **ajiet** — o'clock \| advance time \| He/she/it advances
+- **ajiw** — always
+- **aluamugiaq** — evening twilight \| darken \| It is evening twilight
+- **anqanei\*\*** — ancient
+- **apji-** — constantly
+- **enmigiaspia'q** — since time immemorial \| from the beginning of time
+- **malgaq\*\*** — put off schedule
+- **na'gu'a'sig\*\*** — dawn
+- **nantawa's'g** — in the-future
+- **negwtigisg'g\*\*** — one day
+- **negwtitpa'q\*\*** — one night
+- **negwtugna'q\*\*** — one day
+- **negwt\_sa'q\*\*** — once long ago \| once upon a time
+- **newtsiniw** — all at the same time \| at once \| all of a sudden \| suddenly
+- **pegu'lags\*\*** — day before yesterday
+- **pusgi·** — usually (dmm 04Jul08) \| often (dmm 04Jul08) \| generally (dmm 04Jul08) \| mostly (dmm 04Jul08) \| habitually (dmm 2016-Mar-08) \| repeatedly (dmm 2016-Mar-08)
+- **siawiw** — continuous \| Continuous
+- **wigipjig** — soon

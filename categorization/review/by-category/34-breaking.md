@@ -1,0 +1,99 @@
+# Breaking & Crushing (`breaking`)
+
+Theme: *Movement & Physical Actions* — 85 entries (+6 archived)
+
+- **esgutesmatl** — he/she broke all but one \| keep one unbroken \| He/she keeps one unbroken
+- **getmete'gl** — win all \| break all \| destroy all \| He/she wins all of them \| He/she breaks all of them  *(also: games)*
+- **mawisetesg'g** — crumple with feet \| kicks it together \| He/she crumples it with his/her feet
+- **mawisetesguatl** — crumple \| crumple with feet \| kicks it together \| He/she crumples...with feet
+- **menina'latl** — rip off \| tear off (or out) \| He/she rips it off
+- **menina'toq** — rip off \| rip out \| tear off \| tear out \| He/she rips it off
+- **nasgoqwa'latl** — split (by hand) \| He/she splits him/her/it by hand
+- **nasgoqwa'toq** — split (by hand) \| divide (by hand) \| He/she splits it by hand
+- **nasgwina'latl** — tear in half \| He/she tears it(photo) in half
+- **nasgwina'toq** — tear in half \| He/she tears it in half
+- **nasgwine'g** — torn in half \| torn in half \| It(picture) is torn in half \| It is torn in half
+- **nugjaqa'latl** — squash \| crush it \| He/she squashes it (berry)
+- **nugjaqa'toq** — squash \| crush it \| He/she squashes it
+- **nugjaqta'tl** — smash to bits \| mash \| He/she smashes it to bits
+- **nugjaqtesg'g** — crush by stomping \| stomp \| He crushes by stomping
+- **nugjaqtesguatl** — stomp to bits \| crush by stomping \| He/she stomps him/her/it to bits
+- **nugtesg'g** — crush (with feet) \| soften (with feet) \| He/she crushes it with feet
+- **nugtesguatl** — crush (with feet) \| soften (with feet) \| He/she crushes it with feet
+- **nugwa'gipulatl** — grind \| He/she grinds it
+- **nugwa'gittoq** — grind \| He/she grinds it
+- **pasge'g** — crushed or shattered \| crushed or shattered \| busted \| busted \| It(bottle) is crushed or shattered \| It is crushed or shattered
+- **pasgina'latl** — tear or rip \| He/she/it tears him/her/it
+- **pasgina'toq** — tear or rip \| He/she/it tears it
+- **pasgine'g** — ripped or torn \| ripped or torn \| It(shirt) is ripped \| It is torn
+- **pasginoqjing** — tear or split (from freezing) \| It tears or splits (from freezing)  *(also: temperature)*
+- **pasginoqsit** — cracked (from excessive heat) \| It (plank) is cracked from excessive heat.  *(also: fire)*
+- **pasginoqteg** — cracked (from excessive heat) \| It is cracked from excessive heat  *(also: fire)*
+- **pasgipiasit** — split or cracked (from dryness) \| It(plank) splits or cracks from dryness
+- **pasgipiateg** — split or cracked (from dryness) \| It is split or crack from dryness
+- **pasgoqjing** — cracked or split (from excessive cold) \| It (bottle) is cracked or split from excessive cold  *(also: temperature)*
+- **pasgoqsit** — shattered (from excessive heat) \| pierced (from heat) \| burst (from excessive heat) \| It shattered\_(from\_excessive\_heat)  *(also: fire)*
+- **pasgoqteg** — burst (from excessive heat) \| shatter (from excessive heat) \| It bursts from excessive heat  *(also: temperature)*
+- **pasgoqt'g** — crack or split (from excessive cold) \| It cracks or splits from excessive cold  *(also: temperature)*
+- **pastesg** — burst \| It bursts
+- **pastesing** — burst \| It (tire) bursts
+- **pemitma's'g** — start to break (ice) \| It is starting to break  *(also: water)*
+- **pemitma'sit** — start to break \| It(tree) is starting to break
+- **pesipga'latl** — sever, cut, split, or break off (thread, rope) with force \| sever, cut, split, or break off (thread, rope) with tool \| He/she severs, cuts, splits or breaks off a thread or rope with
+force
+- **pesipga'toq** — breaks wire \| breaks leather thong \| He/she breaks wire
+- **pesipgeget** — break (rope, string or chain) in two \| He/she breaks a rope, string or chain in two
+- **pesipgegetl** — break rope or cable \| break line \| He/she breaks a rope or cable
+- **pnegwiaqal** — fragments \| Fragments
+- **sewisga'latl** — break \| break in (horse) \| He/she breaks him/her  *(also: farm-animals)*
+- **sewisga'toq** — break \| He/she breaks it
+- **sewisgiaq** — shred \| come apart \| break up \| It is coming apart
+- **sewisgiet** — come apart \| break up \| shred \| It(animate) is coming apart
+- **sewisgina'latl** — rip or tear apart \| He/she rips or tears it apart
+- **sewisgina'toq** — rip or tear apart \| He/she rips or tears it apart
+- **sewisgoqsit** — break up (in fire) \| come apart (in fire) \| He/she/it breaks up the in fire  *(also: fire)*
+- **sewisgoqteg** — break up (in fire) \| It breaks up in the fire  *(also: fire)*
+- **sewistamit** — destroy by gnawing \| break up by gnawing \| He/she destroys something(s) by gnawing  *(also: animals)*
+- **sewista'tl** — pound or hack to bits \| He/she pounds or hacks...to bits  *(also: hitting)*
+- **sewiste'g** — pound or hack to bits \| He/she pounds or hacks it to bits  *(also: hitting)*
+- **sewistestoq** — smash \| He/she smashes it  *(also: hitting)*
+- **sewisto'gweg** — break up (through action of water) \| It breaks up through the action of the water  *(also: water)*
+- **sewisto'gwet** — break up (through action of water) \| ...breaks up through the action of the water  *(also: water)*
+- **tema'latl** — break in two \| He/she breaks...slowly in two by the hand
+- **temalua'latl** — break off at tail or rear end \| He/she breaks off the tail or rear end
+- **temalua'toq** — shorten \| break off at tail or rear end \| dock \| He/she shortens it 
+- **temalueget** — snap off at tail \| He/she snaps off the tail
+- **temalueitesmatl** — break off at tail end (by slamming) \| He/she breaks off the tail end by slamming
+- **tema's'g** — breaks off slowly \| It breaks off slowly
+- **tema'sit** — breaks off \| ...breaks off
+- **tema'toq** — break slowly in two by hand \| break off a piece \| break in two \| He/she breaks it slowly in two by hand
+- **temeget** — snap in two \| snap off \| He/she snaps it in two
+- **temgwa'latl** — break off the head slowly by hand \| break off the top \| He/she breaks off the head by hand
+- **temina'latl** — tear or rip \| He/she tears or rips
+- **temina'toq** — tear or rip \| He/she tears or rips it
+- **temine'g** — ripped \| ripped \| torn \| He/she/it is ripped \| It is ripped
+- **temisgipeget** — snap off at neck \| Snap him/her off at neck
+- **temisqona'latl** — break off nose \| break off at nose end \| He/she breaks off his/her/its nose
+- **temisqona'toq** — break off at nose end \| He/she breaks it off at the nose end
+- **temtesg** — breaks in two \| It breaks in two
+- **temtesg'g** — break by kicking or stomping \| He/she breaks it by kicking or stomping  *(also: hitting)*
+- **temtesguatl** — break by kicking or stomping \| He/she breaks...by kicking or stomping  *(also: hitting)*
+- **temtesing** — breaks in two \| He/she/it breaks in two
+- **temtesmatl** — break in two \| fracture \| He/she breaks...in two
+- **temtestoq** — break in two \| fracture \| He/she breaks it in two
+- **pastestoq** — breaks it by throwing it against something \| He/she breaks it by throwing it against something.
+- **pastesguatl** — breaks him/her/it \| He/she breaks him/her/it.
+- **teminetesg** — it cracks \| It cracks (window)
+- **pastesg'g** — breaks it by stepping on it \| breaks it by kicking it \| He/she breaks it by stepping on it.
+- **pasteluatl** — breaks him/her/it by shooting or throwing something at him/her/it. \| He/she breaks him/her/it by shooting/throwing something at him/her/it.
+- **pastelg** — breaks it by shooting it \| breaks it by throwing it \| He/she breaks it by shooting/throwing.
+- **temilqunta'tl** — breaks its wings  \| He/she breaks its wings   *(also: birds)*
+
+## Archived entries (lower priority)
+
+- **menastatg\*\*** — break off spruce bough
+- **menastet\*\*** — break off spruce boughs
+- **nawswoqwa't\*\*** — split open
+- **seggwistesmatl** — smash \| He/she smashes him/her
+- **seioqwa'toq** — take apart \| disassemble \| he/she/it takes apart something
+- **sewisge'g** — broken \| broken \| It is broken \| He/she/it is broken

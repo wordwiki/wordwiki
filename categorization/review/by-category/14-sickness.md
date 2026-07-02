@@ -1,0 +1,197 @@
+# Sickness & Pain (`sickness`)
+
+Theme: *Body & Health* — 180 entries (+10 archived)
+
+- **aluso'l** — measles \| Measles
+- **aluso'lewit** — have measles \| He/she has measles
+- **amatpa't** — have mental deficiency \| retarded \| He/she is mental deficient
+- **amig'pistaqanat** — slightly deaf \| somewhat hard of hearing \| He/she is somewhat hard of hearing  *(also: hearing)*
+- **amnapegalatl** — quarantine \| put in quarantine \| He/she quarantines him/her  *(confidence: m)*
+- **apita't** — bloated \| swell \| rises (as dough) \| He/she gets bloated  *(confidence: m)*
+- **apjigu'niet** — bleed to death \| He/she bleeds to death  *(also: death-and-mourning)*  *(note: order-audit: dying words death-first)*
+- **aptlamit** — suffocate \| He/she is suffocating  *(also: body-actions)*
+- **asgaja't** — walk with a limp \| limp \| He/she moves with a limp  *(also: ways-of-moving)*
+- **asga'sit** — limp \| He/she walks with a limp  *(also: ways-of-moving)*
+- **asgatesing** — limp \| He/she limps  *(also: ways-of-moving)*
+- **elu'gwit** — something gets stuck in throat \| choke (food) \| He/she has something stuck in throat  *(also: body-actions)*
+- **epsguninet** — have dry tuberculosis \| He/she has dry tuberculosis
+- **epsimgewei** — fever \| Fever
+- **epsimgeweia'sit** — becomes feverish \| He/she becomes feverish
+- **epugtaqanat** — have heartburn \| He/she has heartburn
+- **etligu'niet** — bleed profusely \| bleed heavily \| He/she is bleeding profusely
+- **etlinisigu'niet** — bleed down \| He/she is bleeding down
+- **etltesing** — where one got struck \| beat or move rythmically \| where one got injured \| dance \| shake \| He/she is struck there \| He/she is moving rythmically  *(also: ways-of-moving)*  *(confidence: m)*
+- **ewlamgwiet** — become peaked \| become sickly in appearance \| become run down \| He/she becomes peaked  *(also: appearance)*
+- **ewlamugsit** — be peaked \| sickly in appearance \| run down in appearance \| He/she is run down in appearance  *(also: appearance)*  *(confidence: m)*
+- **ewlmaje'g** — suffer \| He/she is suffering  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **ewnasgwa'latl** — make dizzy \| He/she makes him/her/it dizzy  *(confidence: m)*
+- **ewnasgwatpetesing** — dazed from a fall \| confused from a head injury \| He/she is confused from a head injury
+- **ewnasgwetesing** — dizzy caused by a blow or fall \| dazed caused by a blow or fall \| confused caused by a blow or fall \| dizzy caused by a lot of head movement \| He/she is dizzy from a blow or fall
+- **ewnasgwiet** — dizzy \| He/she is dizzy
+- **gaqsusit** — unintentionally burns oneself \| accidentally burns oneself \| He/she unintentionly burns himself/herself  *(also: fire)*  *(confidence: m)*
+- **gelgwisge'g** — sprained \| fractured \| It is sprained
+- **gelgwisgetesg** — sprained (due fall or strain) \| fractured \| It is sprained (due to fall or strain)
+- **gelgwisgetestoq** — fracture \| sprain \| He/she fractures it
+- **gepa'tat** — have hoarse voice \| He/she has a hoarse voice  *(also: talking)*  *(confidence: m)*
+- **gepe'g** — blocked \| plugged (of ear or nose) \| It is plugged  *(confidence: m)*
+- **gepiet** — become hoarse \| It becomes hoarse  *(also: talking)*  *(confidence: m)*
+- **gepi'sit** — speak huskily \| speak hoarsely \| He/she speaks huskily  *(also: talking)*  *(confidence: m)*
+- **gepistaqanat** — deaf \| He/she is deaf  *(also: hearing)*
+- **gepitnetoqsit** — sounds nasal \| sounds hoarse \| Sounds nasal  *(also: hearing)*  *(confidence: m)*
+- **gesa'latl** — hurt \| He/she hurts him/her  *(also: conflict)*  *(confidence: m)*
+- **gesaqtiat** — diarrhea \| He/she has diarrhea
+- **gesigsnugwat** — very sick \| He/she is very sick
+- **gesipiaq** — itchy \| It is itchy  *(confidence: m)*
+- **gesipiemgewei** — eczema \| itchiness \| Eczema
+- **gesipiet** — itchy \| He/she is itchy  *(confidence: m)*
+- **gesisewigna't** — very weak(from being ill) \| He/she is very weak from being ill
+- **gesitesing** — get hurt badly (from a fall or an accident) \| He/she gets hurt badly  *(also: falling)*
+- **gesnuguig** — hurt \| uncomfortably sore \| ache \| It aches or is sore
+- **gesnuguit** — ache \| hurt \| sore \| It(knee) is sore or aches me
+- **gesnugwaj** — ache \| hurt \| sore \| uncomfortably sore \| It aches or is sore on him/her
+- **gesnugwapewit** — look sick \| He/she looks sick  *(also: appearance)*
+- **gesnugwat** — sick \| He/she is sick
+- **gesnugwe'galsit** — pretend to be ill \| pretend to be sick \| feign illness \| He/she pretends to be ill  *(also: character)*  *(confidence: m)*
+- **gesnugwetoqsit** — sound sickly \| He/she sounds sickly  *(also: hearing)*
+- **gesnugwiangamgusit** — appear sickly \| He/she appears sickly  *(also: appearance)*
+- **gesoqsit** — feel the burn badly \| get a bad burn \| get a painful burn \| He/she gets a bad burn  *(also: fire)*
+- **gitaqasit** — muscle ache \| sore muscles \| sore (of person) \| He/she aches
+- **gitaqeg** — muscle ache \| sore (of body part) \| It aches
+- **gitaqet** — sore (of body part) \| sore muscle \| It(neck) is sore
+- **gjipulgowei** — epilepsy \| Epilepsy
+- **glmuej** — mosquito \| boil \| carbuncle \| Mosquito \| Boil  *(also: insects)*
+- **go'gwejij** — spider \| cancer \| Spider \| Cancer  *(also: insects)*
+- **gsnugowaqan** — sickness \| illness \| virus \| Illness
+- **gsnugowinu** — sick person \| Sick person  *(also: people)*
+- **igeggwet** — fall sick \| in heat (said of dog) \| lose mind suddenly \| He/she falls sick \| She is in heat (dog) \| He/she looses his/her mind suddenly  *(confidence: m)*
+- **jaqalipnet** — illness progresses quickly \| His/her illness progresses quickly
+- **jile'g** — injured \| hurt \| He/she is injured
+- **lapigot** — smallpox \| smallpox mark \| Smallpox mark
+- **lapigotewit** — have smallpox \| He/she has smallpox
+- **la'qan** — wound \| gash \| cut \| Wound
+- **mala'sit** — not doing well (health) \| progressing slowly \| He/she is not doing well  *(confidence: m)*
+- **maligatat** — weak legs or feet \| fragile-legged \| feeble-legged \| frail-legged \| He/she has weak legs or feet  *(also: body-descriptions)*  *(confidence: m)*
+- **maltewiaq** — bleed \| It bleeds
+- **maltewiet** — bleed \| He/she bleeds
+- **maltewig** — bloody \| It is bloody  *(confidence: m)*
+- **maltewit** — bloody \| He/she is bloody  *(confidence: m)*
+- **maltewsatl** — cause to bleed by cutting \| He/she causes him/her/it to bleed by cutting  *(also: cutting)*
+- **maltews'g** — cause to bleed by cutting \| He/she causes blood to flow by cutting it  *(also: cutting)*
+- **maltewta'tl** — cause to bleed by striking \| cause to bleed by hitting \| He/she causes him/her/it to bleed by striking  *(also: hitting)*
+- **maltewte'g** — cause to bleed by striking \| He/she causes it to bleed by striking  *(also: hitting)*
+- **maltewtesg** — bleed as a result of a fall \| It bleeds as a result of a fall  *(also: falling)*
+- **maltewtesing** — bleed as a result of a fall \| He/she bleeds as a result of a fall  *(also: falling)*
+- **maltewtesmatl** — cause to bleed by a fall \| He/she causes him/her to bleed by a fall  *(also: falling)*
+- **maltewtestoq** — causes to bleed by a fall \| He/she causes it to bleed by a fall  *(also: falling)*
+- **malugunat** — have weak back \| He/she has a weak back  *(also: body-descriptions)*  *(confidence: m)*
+- **melg'jat** — constipated \| have hard stool \| He/she is constipated
+- **menaje'jit** — frail \| fragile \| delicate \| He/she is frail  *(also: condition)*  *(confidence: m)*
+- **mesiatl** — infect \| influence \| affect \| He/she infects him/her
+- **me'sipmiet** — incapable of walking \| He/she is incapable of walking  *(also: ways-of-moving)*
+- **mesqolit** — pierced (by nail or sliver) \| He/she has it pierced in the body  *(also: cutting)*  *(confidence: m)*
+- **me's'tugwi'g** — incapable of running \| He/she is incapable of running  *(also: ways-of-moving)*
+- **misues** — ringworm \| Ringworm
+- **moqpeg** — bloated \| swollen \| It is swollen
+- **moqpet** — bloated \| swollen \| He/she is swollen
+- **mu\_gesiuleiug** — not too healthy \| not too well \| He/she is not too healthy
+- **mu\_giaspiuleiug** — not entirely well \| in questionable health \| He/she is not entirely well
+- **nenestawe'g** — timid \| delicate \| sickly \| He/she is timid  *(also: character)*  *(confidence: m)*
+- **nepapigwa't** — blind \| He/she is blind  *(also: seeing)*
+- **nisqanane'g** — bruise \| bruise \| He/she is bruised \| It is bruised
+- **no'q'g** — cough \| He/she coughs  *(also: body-actions)*
+- **noqt'g** — choke \| gag (on food) \| He/she chokes  *(also: body-actions)*
+- **nujintus** — barren \| sterile \| a person who is barren  *(also: people)*  *(confidence: m)*
+- **nujumu** — with gastric tuberculosis \| Someone who has gastric tuberculosis
+- **nujumuit** — have gastric tuberculosis \| He/she has gastric tuberculosis
+- **nutagnat** — infirmed \| feeble in body or health \| ailing \| He/she is infirmed
+- **o'plisqatesg** — sprain \| It sprains
+- **o'plisqatesing** — sprain \| ...sprains
+- **o'plisqatesmatl** — sprain \| He/she sprains...
+- **o'plisqatestoq** — sprain \| He/she sprains it
+- **oqonitpaqaiet** — faint \| He/she/it faints  *(also: body-actions)*
+- **pegijipnet** — suffers from long term illness \| He/she suffers from a long term illness
+- **pe'gitnet** — have nose bleed \| bleed from nostril \| He/she has a nose bleed
+- **pe'sit** — have something in eye \| He/she has something in the eye  *(confidence: m)*
+- **pesqa'gipusit** — chafed \| It(heel) is chafed  *(confidence: m)*
+- **pesqaiet** — skin peels (as from sunburn) \| His/her skin is peeling  *(confidence: m)*
+- **pesqatesmatl** — scrape \| He/she scrapes it(knee)  *(also: cutting)*  *(confidence: m)*
+- **pestaqa'latl** — strain \| He/she strains it(neck)
+- **pestaqalsit** — strains self \| He/she strains himself/herself
+- **pestaqa'toq** — strain \| He/she strains it
+- **pestmat** — starve \| He/she starves  *(also: food)*  *(confidence: m)*
+- **pestmo'qon** — starvation \| Starvation  *(also: food)*  *(confidence: m)*
+- **pijigweg** — grow inward \| ingrown \| It grows inward  *(confidence: m)*
+- **pijigwet** — grows inward \| ingrown \| It(toenail) grows inward  *(confidence: m)*
+- **pipqoqsitat** — has a bunion \| He/she has a bunion
+- **poqwa'lat** — dry throat \| He/she has a dry throat  *(confidence: m)*
+- **puglie'wei** — pimple \| boil \| Pimple  *(confidence: m)*
+- **pugweligu'niet** — bleed profusely \| bleed a lot \| He/she bleeds profusely
+- **pusgigjipulgwet** — frequent epileptic seizures \| He/she has frequent epileptic seizures
+- **putapega's'g** — becomes bloated \| It becomes bloated  *(confidence: m)*
+- **putapega'sit** — becomes bloated \| He/she becomes bloated  *(confidence: m)*
+- **putewisgwa's'g** — blister \| It blisters
+- **putewisgwa'sit** — blister \| It blisters
+- **put'pegiaq** — swell up \| bloat \| It swells up
+- **put'pegiet** — swell up \| bloat \| He/she swells up
+- **putuisgwa's'g** — blister \| It blisters
+- **sawiptn** — deformed or crippled hand or arm \| Deformed or crippled hand or arm  *(also: body-parts)*  *(confidence: m)*
+- **sawiptnat** — have deformed or crippled hand or arm \| He/she has a deformed or crippled hand or arm  *(also: body-descriptions)*  *(confidence: m)*
+- **sewigna't** — ill \| weak (from illness) \| listless \| feverish \| He/she is ill
+- **sewtia't** — have stomach ache \| He/she has a stomach ache
+- **si'guig** — irritate \| irritates my skin \| feels irritating \| It irritates me  *(confidence: m)*
+- **sismo'qoniet** — diabetic \| diabetes \| He/she is diabetic
+- **so'qotemit** — vomit \| He/she vomits  *(also: body-actions)*
+- **so'qotemun** — vomit \| Vomit
+- **temigatat** — have foot or leg cut off \| He/she has a foot or leg cut off  *(also: body-descriptions)*  *(confidence: m)*
+- **temiptnat** — have hand or arm cut off \| He/she has a hand or arm cut off  *(also: body-descriptions)*  *(confidence: m)*
+- **tewalqatesg** — dislocated \| popped out \| fall out \| It is dislocated
+- **tewalqatesing** — dislocated \| popped out \| fall out \| ...is dislocated
+- **tewalqatesmatl** — shake out \| dislocate \| He/she dislocates...
+- **tewalqe'g** — dislocated \| It is dislocated
+- **tgeia'tat** — have cold \| He/she has a cold
+- **ugjigi** — scab \| Scab  *(also: body-parts)*  *(confidence: m)*
+- **ugjipulgewinu** — epileptic \| Epileptic  *(also: people)*
+- **ulugwe'get** — have mumps \| have swollen gland or tonsil \| He/she has the mumps
+- **ulugwiet** — have tonsillitis \| He/she has tonsillitis
+- **wap'staqapewit** — look pale \| He/she looks pale  *(also: appearance)*  *(confidence: m)*
+- **waqaiew** — pus \| Pus
+- **waqaiewiaq** — filled with pus \| It is filled with pus
+- **waqgaje'g** — physically weak \| not strong \| He/she is physically weak  *(also: body-descriptions)*  *(confidence: m)*
+- **wata's'g** — become cataract (of eye) \| It becomes a cataract
+- **wate'g** — cataract (of eye) \| It is a cataract
+- **wa'tugwaw** — blood clot \| Blood clot  *(also: body-parts)*  *(confidence: m)*
+- **wejgiemgewei** — chicken pox \| scabbiness \| Chicken pox
+- **wejgiet** — scabby \| He/she is scabby
+- **wejigsitesing** — get injured from \| He/she got injured from there
+- **wejipulgwa's'g** — have cramp \| He/she has cramps
+- **wejipulgwet** — have an epileptic fit \| He/she has an epileptic fit
+- **welmaje'g** — suffer \| He/she is suffering  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **wenmaje'g** — suffer \| He/she is suffering  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **wigwiet** — collapse from exhaustion \| faint \| He/she collapses (from exhaustion)
+- **wijgwe'j** — blister \| Blister
+- **wijgwe'jua's'g** — blister \| It blisters
+- **wijgwe'jua'sit** — blister \| He/she/it blisters
+- **winpnet** — have venereal disease \| He/she has venereal disease
+- **wisawow** — yellow jaundice \| Yellow jaundice
+- **wi'segesit** — burn sensation \| feel as if on fire \| He/she has a burning sensation  *(confidence: m)*
+- **wi'segeteg** — burn sensation \| feel as if on fire \| It has a burning sensation  *(confidence: m)*
+- **ewlamugsit** — looks poorly \| He/she looks poorly  *(also: appearance)*  *(confidence: m)*
+- **la'qana'latl** — inflicts a wound on him/her/it \| He/she inflicts a wound on him/her/it.  *(also: conflict)*  *(confidence: m)*
+- **la'qana'toq** — inflicts a wound on it \| makes an injury to it \| He/she makes an injury/inflicts a wound on it.  *(also: conflict)*  *(confidence: m)*
+- **anesit** — lacking (a hand or foot) \| Lacking (ugpitn moqwa' eitnug(??), gisna ogoat(??)), mutilated.  *(also: body-descriptions)*  *(confidence: m)*
+- **ewuljewe'jit** — is a poor frail one \| is a poor sick one \| He/she is a poor frail/sick one.  *(confidence: m)*
+- **pastu'gopa'sig** — it swells \| it puffs up \| It swells/puffs up.
+- **moqpa's'g** — Swelling
+
+## Archived entries (lower priority)
+
+- **ejgwqan** — allergy \| Allergy
+- **glug\*\*** — gland \| lump \| swelling \| abscess
+- **gmuej** — boil
+- **me'gigsitesing\*\*** — badly injured \| He/she is badly injured
+- **megwig** — swollen \| It is swollen
+- **megwit** — swollen \| It(elbow) is swollen
+- **musgulgugumat** — uncomfortable (in body) from outside object \| He/she is uncomfortable from outside object
+- **pemimgwig** — swell \| It is swelling
+- **putawiaq** — bloat \| Its bloated
+- **saputat** — have diarrhea \| He /she has diarrhea

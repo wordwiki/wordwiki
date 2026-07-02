@@ -1,0 +1,118 @@
+# Occupations (`occupations`)
+
+Theme: *Work & Livelihood* — 97 entries (+14 archived)
+
+- **alaqtegewinu** — mariner \| sailor \| Mariner  *(also: boats)*
+- **alsusit** — boss \| boss \| supervise \| direct \| oversee \| Boss \| He/she bosses  *(also: work)*
+- **aluse'wit** — carpenter \| carpentry \| Carpenter \| He/she does carpentry  *(also: work)*
+- **a'lutasit** — guide (by boat) \| fishing guide \| He/she guides by boat  *(also: fishing, boats)*
+- **assusit** — boss \| boss \| supervise \| direct \| oversee \| Boss \| He/she bosses  *(also: work)*
+- **a'tugwewinu** — storyteller \| Storyteller  *(also: stories-and-writing)*
+- **e'jnt** — indian agent \| Indian agent  *(also: leadership-and-law)*
+- **gapiten** — captain \| Captain  *(also: boats)*
+- **gast'pl** — police officer \| Police officer  *(also: leadership-and-law)*
+- **gegina'muet** — teach \| He/she teaches  *(also: learning-and-teaching)*
+- **getanteget** — hunter \| spiteful person \| gatherer \| He/she hunts \| He/she is a spiteful person  *(also: hunting)*
+- **ge'tipnewinu** — harvester \| Harvester  *(also: farming)*
+- **gjipa'tlia's** — bishop \| Bishop  *(also: church-rituals)*
+- **glaptan** — blacksmith \| Blacksmith
+- **g'pnno'lewa'j** — member of government \| government employee \| Member of government  *(also: leadership-and-law)*
+- **gtantegewinu** — hunter \| Hunter  *(also: hunting)*
+- **lugowinu** — worker \| laborer \| Worker  *(also: work)*
+- **lugowinu'sgw** — worker (female) \| laborer (female) \| Female worker  *(also: work)*
+- **malpale'wi'sgw** — woman doctor \| female doctor \| Female doctor  *(also: healing)*
+- **malpale'wit** — doctor \| Doctor  *(also: healing)*
+- **matlot** — sailor \| Sailor  *(also: boats)*
+- **mesegit** — cook \| camp cook \| Cook  *(also: cooking)*
+- **msigue'gewinu** — hay harvester \| Hay harvester  *(also: farming)*
+- **nepiteget** — healer \| curer \| He/she is a healer  *(also: healing)*
+- **niganawtiget** — trail blazer \| head swamper \| head swamper \| blaze trail \| Tail blazer \| He/she is a head swamper  *(also: travel)*
+- **nme'j'gowinu** — fisher \| Fisher  *(also: fishing)*
+- **ntugsuinu** — hunter \| provider \| Hunter  *(also: hunting)*
+- **nugtoqtejgwej** — house keeper \| maid \| servant \| House keeper  *(also: cleaning)*
+- **nuja'gitteget** — sawyer \| He/she is a sawyer  *(also: trees)*
+- **nujagnutmewinu** — lawyer \| reporter \| Lawyer \| Reporter  *(also: leadership-and-law)*
+- **nujatejo'tasit** — twitcher (person who by horse or machine, pulls logs from woods) \| twitch (person who by horse or machine, pulls logs from woods) \| Twitcher \| He/she twitches  *(also: trees)*
+- **nujatejo'teget** — twitch logs (person who by horse or machine, pulls logs from woods) \| hauls logs \| He/she twitches logs  *(also: trees)*
+- **nujiajig** — make (professionally) \| He/she makes them  *(also: making-and-fixing)*
+- **nujialapit** — watchman \| watchman \| Watchman \| He/she is a watchman  *(also: seeing)*  *(confidence: m)*
+- **nujialawlet** — carrier \| carrier \| porter \| porter \| He/she is a carrier \| A carrier  *(also: carrying)*
+- **nujiamalgat** — dancer \| dancer \| Dancer \| He/she is a dancer  *(also: music-and-dance)*
+- **nujiasigetg** — teamster \| Teamster
+- **nujielutuet** — imitator \| impersonator \| Imitator  *(confidence: m)*
+- **nujiewjo'lajig** — hauler \| transporter \| Hauler  *(also: carrying)*
+- **nujiewjo'tasit** — hauler \| Hauler  *(also: carrying)*
+- **nujiewjo'teget** — delivery person \| deliver \| hauler \| transport \| haul \| Delivery person \| He/she delivers...  *(also: carrying)*
+- **nujigeluet** — matchmaker \| Matchmaker  *(also: social-life)*
+- **nujigina'muet** — educator \| teacher \| teacher \| educator \| The teacher \| He/she is a teacher  *(also: learning-and-teaching)*
+- **nujigoqwa'luet** — wrestler \| wrestler \| repossesser (Nova Scotia) \| repossesser (Nova Scotia) \| Wrestler \| He/she is a wrestler  *(also: games)*
+- **nujigsmoqja'teget** — foreman \| foreman \| pusher \| pusher \| He/she is the forman \| He/she is a foreman  *(also: work)*
+- **nujigtu'muet** — musicial entertainer \| entertainer (with musical instrument) \| He/she is a musical entertainer \| He/she is an entertainer (with musical instrument)  *(also: music-and-dance)*
+- **nujiilsuteget** — judge \| He/she is a judge  *(also: leadership-and-law)*
+- **nujimila'teget** — prankster \| joker \| joker \| prankster \| jester \| jester \| Prankster \| He/she is a prankster  *(also: character)*  *(confidence: m)*
+- **nujimuet** — counsellor \| counsel \| advisor \| advise \| He/she is a counsellor \| He/she advises  *(also: talking)*
+- **nujinapui'giget** — photographer \| take photograph \| Photographer \| He/she takes photographs  *(also: seeing)*
+- **nujine'pateget** — executioner \| serial killer \| murderer \| Executioner \| Serial killer  *(also: conflict)*
+- **nujinget** — scaler (in lumbering) \| scale (in lumbering) \| one who does the measuring \| Scaler \| He/she scales (in lumbering)  *(also: trees)*
+- **nujinpiteget** — healer \| Healer  *(also: healing)*
+- **nujinqasui'get** — firefighter \| Firefighter  *(also: fire)*
+- **nujins'pit** — baby sitter \| house sitter \| He/she is a baby sitter or a house sitter  *(also: family)*
+- **nujintoq** — singer \| singer \| Singer \| He/she is a singer  *(also: music-and-dance)*
+- **nujintuisget** — salesperson \| peddler \| vendor \| Salesperson  *(also: money-and-trade)*
+- **nujinutmaqaniget** — storyteller \| tattletale \| gossiper \| Storyteller  *(also: stories-and-writing)*  *(confidence: m)*
+- **nujipestung** — preacher \| preacher \| Preacher \| He/she is a preacher  *(also: church-rituals)*
+- **nujipetqa'muet** — referee \| mediator \| umpire \| Referee  *(also: games)*
+- **nujipgwateliget** — buyer \| buyer \| purchaser \| purchaser \| Buyer \| He/she is a buyer  *(also: money-and-trade)*
+- **nujipipnet** — baker \| Baker  *(also: cooking)*
+- **nujipipugwet** — musician \| musician \| whistler \| whistler \| horn blower \| horn blower \| Musican \| He/she is a musician  *(also: music-and-dance)*
+- **nuji'pit** — runner (professional) \| runner (professional) \| errand runner \| errand runner \| Runner \| He/she is a professional runner  *(also: ways-of-moving)*
+- **nujipi't'pet** — bartender \| bootlegger \| Bartender
+- **nujipostewit** — marriage (or divorce) broker \| marriage (or divorce) broker \| matchmaker \| matchmaker \| who acts as go between (in marriage or divorce) \| who acts as go·between (in marriage or divorce) \| One who acts as a go between(in marriage or divorce) \| He/she acts as a go·between (in relationships)  *(also: social-life)*
+- **nujiputaqiget** — butcher \| butcher \| Butcher \| He/she is a butcher
+- **nujisa'se'wamugwa'teget** — magician \| one who changes things \| Magician  *(also: spirits)*
+- **nujitmasaqte'muet** — barber \| Barber
+- **nujitoq** — make professionally \| He/she makes it professionally  *(also: making-and-fixing)*
+- **nujitoqtet** — baker (professional) \| Baker  *(also: cooking)*
+- **nujiwi'giget** — writer \| He/she is a writer  *(also: stories-and-writing)*
+- **nujiwsiget** — fortuneteller \| fortuneteller \| Fortuneteller \| He/she is a fortuneteller  *(also: spirits)*
+- **nussaqiget** — clerk \| clerk \| He/she is a clerk \| Clerk
+- **nuta'gitteget** — sawyer \| sawyer \| He/she is a sawyer  *(also: trees)*
+- **nuta'gittegewinu** — sawyer \| Sawyer  *(also: trees)*
+- **nutagnutmewinu** — lawyer \| reporter \| Lawyer \| Reporter  *(also: leadership-and-law)*
+- **nutanteget** — hunter \| hunter \| killer \| killer \| He/she is a hunter \| Hunter  *(also: hunting)*
+- **nutapit** — scout (around) \| scout \| He/she scouts \| Scout  *(also: seeing)*
+- **nutapsgo'teget** — scribe \| writer \| He/she scribes  *(also: stories-and-writing)*
+- **nutapteget** — coroner \| Coronor
+- **nutateji'puteget** — delivery person \| Delivery person  *(also: carrying)*
+- **nutawlet** — carrier \| porter \| He/she is a carrier  *(also: carrying)*
+- **nutpet** — bartender \| Bartender
+- **nutpipnet** — bread-baker \| Bread baker  *(also: cooking)*
+- **nutsegnewet** — bricklayer \| mason \| Bricklayer  *(also: dwellings)*
+- **pa'tlia's** — priest \| clergy \| Priest  *(also: church-rituals)*
+- **pa'tlia'si'sgw** — nun \| Nun  *(also: church-rituals)*
+- **pa'tliatji'j** — brother (religious) \| Brother (religious)  *(also: church-rituals)*
+- **pipugwaqane'j** — bugler \| Bugler  *(also: music-and-dance)*
+- **sma'gnis** — soldier \| Soldier  *(also: conflict)*
+- **sngatigna'tegewinu** — rafter \| one who gathers logs into booms destined for mill \| Rafter  *(also: trees)*
+- **temastaqte'muet** — cut hair \| barber \| barber \| hairdresser \| hairdresser \| He/she cuts hair \| Barber or hairdresser  *(also: cutting)*
+- **usgewinu** — fisher \| Fisher  *(also: fishing)*
+- **wa'we'j** — egg person (deliverer) \| Egg person (deliverer)
+- **wiuse'j** — butcher \| meat handler (cutter) \| Butcher
+- **tmoqta’wsm** — cut logs \| lumberjack \| log-cutter \| He/she cuts logs (log-cutter/lumberjack)  *(also: trees)*
+
+## Archived entries (lower priority)
+
+- **nuji-** — person skilled in \| person whose occupation is \| person whose trade is \| person who is
+- **nujiapoqonmuet\_usgijinutigtug** — midwife \| Midwife
+- **nujigsiget** — fortuneteller \| fortune teller \| He/she is a fortune\_teller
+- **nujigwtapet\*\*** — diver \| diver \| He/she is a diver
+- **nujimilamugwa'teget\*\*** — magician \| magician \| who puts things in every direction \| who puts things in every direction
+- **nujimilaplgigwa'teget\*\*** — illusionist
+- **nujine'patat** — butcher \| slaughterer \| The butcher
+- **nujinpisuniget** — charmer \| charmer \| Charmer \| He/she is a charmer
+- **nujipostewit\*\*** — marriage (or divorce) broker \| who acts as go·between (in marriage or divorce) \| He/she acts as a go·between (in relationships)
+- **nuji·pejo'lajig#** — conduct \| chauffeur
+- **nuj·ne'pateget** — executioner \| He/she is an executioner
+- **nutsa'qaniget** — who dismisses or fires \| discharger, dismisser, firer \| He/she dismisses or fires
+- **postewit** — matchmaker \| matchmaker \| scout \| scout \| He/she is matchmaking \| Matchmaker
+- **te'sipowe'j** — horse handler \| horse trainer \| horseman/horsewoman \| Horse handler

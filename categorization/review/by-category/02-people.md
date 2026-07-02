@@ -1,13 +1,11 @@
 # People (`people`)
 
-Theme: *People & Relationships* — 144 entries (+13 archived)
+Theme: *People & Relationships* — 135 entries (+12 archived)
 
 - **ala'suinu** — traveler \| Traveler  *(also: travel)*
 - **alje'muinu** — baseball player \| Baseball player  *(also: games)*
-- **aniapsuinu** — penitent \| one who sacrifices \| missionary \| Penitent  *(also: ceremony)*
-- **aniapsuinu'sgw** — female penitent \| female who sacrifices \| female saint \| female missionary \| nun \| Female penitent  *(also: ceremony)*
-- **antaguej** — black man \| black person \| African-Canadian person \| Black person
-- **antaguejgwej** — black woman \| African-Canadian woman \| Black woman
+- **aniapsuinu** — penitent \| one who sacrifices \| missionary \| Penitent.  *(also: church-rituals)*
+- **aniapsuinu'sgw** — female penitent \| female who sacrifices \| female saint \| female missionary \| nun \| Female penitent  *(also: church-rituals)*
 - **elege'wi'sgw** — queen \| queen in deck of cards \| Queen  *(also: games)*
 - **elege'wi'sgwe'j** — princess \| Princess
 - **elege'wit** — king \| king in deck of-cards \| King  *(also: games)*
@@ -34,19 +32,17 @@ Theme: *People & Relationships* — 144 entries (+13 archived)
 - **gisigwenign** — adopted child \| Adopted child  *(also: family)*
 - **gisteju** — slave \| Slave
 - **gjiaplue'w** — rascal \| Rascal  *(also: character)*
-- **gmutnes** — thief \| Thief  *(also: character)*
-- **gsigawa'suinu** — fast runner \| Fast runner  *(also: movement)*
-- **gsnugowinu** — sick person \| Sick person  *(also: health)*
-- **gtigiewinuj** — drunkard \| Drunkard  *(also: character)*
+- **gmutnes** — thief \| Thief  *(also: wrongdoing)*
+- **gsigawa'suinu** — fast runner \| Fast runner  *(also: ways-of-moving)*
+- **gsnugowinu** — sick person \| Sick person  *(also: sickness)*
+- **gtigiewinuj** — drunkard \| Drunkard  *(also: character)*  *(confidence: m)*
 - **igatne'suinu** — racer \| Racer  *(also: games)*
 - **Ji'me'j** — James \| Jim \| Jimmy \| James
 - **ji'nm** — man \| Man
 - **ji'nmji'j** — young man \| unmarried man \| Young man  *(also: age)*
-- **ji'nmji'ju'et** — become a young man \| enter manhood (post puberty) \| He/she becomes a young man  *(also: age)*
 - **ji'nmue'sm** — man chaser \| likes the company of men (usually refers to a woman) \| He/she is a man\_chaser  *(also: character)*
 - **ji'nmuit** — is a man \| He is a man
-- **ji'nmu'qamigsit** — act like a man \| He/she acts like a man  *(also: character)*
-- **jipaluejit** — phobic \| fearful person \| Phobic  *(also: emotions)*
+- **jipaluejit** — phobic \| fearful person \| Phobic  *(also: fear-anger-sadness)*
 - **jipugtugwewa'j** — Haligonian \| Haligonian  *(also: places)*
 - **lnu'sgw** — native woman \| aboriginal woman \| first nations  woman \| Native woman  *(also: peoples-and-nations)*
 - **lpa'tuj** — boy \| Boy
@@ -58,12 +54,11 @@ Theme: *People & Relationships* — 144 entries (+13 archived)
 - **malo'pj** — lazy person \| Lazy person  *(also: character)*
 - **matnaggewinu** — fighter \| warrior \| Fighter  *(also: conflict)*
 - **me'go'pj** — snob \| snobbish person \| vain person \| stuck up person \| Snob  *(also: character)*
-- **melgiji'nm** — strong man \| solid man \| giant (from Pacifique's Grammer glossery) \| Strong man  *(also: body)*
+- **melgiji'nm** — strong man \| solid man \| giant (from Pacifique's Grammer glossery) \| Strong man  *(also: body-descriptions)*
 - **me'\_wen** — anyone else \| Anyone else  *(also: question-words)*
 - **mijua'ji'j** — baby \| child \| Baby or child  *(also: family)*
 - **mimajuinu** — human being \| person \| Human being
-- **mlgignewinu** — strong person \| Strong person  *(also: body)*
-- **moqwa'\_wen** — nobody \| no one \| Nobody  *(also: small-words)*
+- **mlgignewinu** — strong person \| Strong person  *(also: body-descriptions)*
 - **ms't\_wen** — everybody \| Everybody  *(also: amounts)*
 - **Munig** — Monique \| Mona \| Monique, Mona
 - **nanupe'j** — quintuplet \| Quintuplet  *(also: family)*
@@ -75,7 +70,7 @@ Theme: *People & Relationships* — 144 entries (+13 archived)
 - **nesupe'j** — triplet \| Triplet  *(also: family)*
 - **newtugo'pj** — loner \| He/she is a loner  *(also: character)*
 - **ngutilj** — bachelor \| bachelorette \| spinster \| Bachelor
-- **nguto'pj** — loner \| solitary one \| He/she is a loner
+- **nguto'pj** — loner \| solitary one \| He/she is a loner  *(also: character)*
 - **niganpuguit** — leader \| stand ahead \| stand at the front \| leader \| Leader \| He/she stands ahead  *(also: leadership-and-law)*
 - **niganus** — leader \| Leader  *(also: leadership-and-law)*
 - **niganu'sgw** — female leader \| Female Leader  *(also: leadership-and-law)*
@@ -84,29 +79,29 @@ Theme: *People & Relationships* — 144 entries (+13 archived)
 - **ninenewei** — ours (exclusive) \| ours (exclusive) \| Ours \| Ours
 - **ni'newei** — mine \| mine \| Mine \| Mine
 - **nnu'sgw** — native woman \| aboriginal woman \| first nations  woman \| Native woman  *(also: peoples-and-nations)*
-- **npuinu** — dead person \| corpse \| Dead person  *(also: health)*
+- **npuinu** — dead person \| corpse \| Dead person  *(also: death-and-mourning)*
 - **ns'tnaqan** — orphan \| Orphan  *(also: family)*
 - **Nuel** — Christmas (name) \| Christmas \| Christmas (name) \| Christmas  *(also: calendar)*
 - **nuja'q** — swimmer \| Swimmer  *(also: swimming)*
-- **nujintus** — barren \| sterile \| a person who is barren  *(also: health)*
+- **nujintus** — barren \| sterile \| a person who is barren  *(also: sickness)*  *(confidence: m)*
 - **nutateji'putasit** — passenger \| passenger \| person who takes a cab \| He/she is a passenger \| Passenger  *(also: vehicles)*
-- **nutnewet** — assist at mass \| altar boy/girl \| serve mass \| acolyte \| He/she assists at a mass \| Alter boy/girl/assistant  *(also: ceremony)*
+- **nutnewet** — assist at mass \| altar boy/girl \| serve mass \| acolyte \| He/she assists at a mass \| Alter boy/girl/assistant  *(also: church-rituals)*
 - **oqote'tut** — friends! \| Friends!  *(also: greetings)*
 - **oqoti** — dear \| friend \| affection term between spouses \| Dear  *(also: family)*
 - **papge'gewa'j** — person from down the coast \| person from down river \| A person from down the coast
 - **papge'gewi'sgw** — female from down the coast \| female from down river \| A female from down the coast
 - **pastungewa'j** — American male \| American \| American\_male  *(also: peoples-and-nations)*
 - **pastungewi'sgw** — American woman \| American female \| American\_woman  *(also: peoples-and-nations)*
-- **pata'tegewinu** — sinner \| Sinner  *(also: ceremony)*
-- **pile'sm** — novice \| rookie \| Novice  *(also: age)*
+- **pata'tegewinu** — sinner \| Sinner  *(also: faith)*
+- **pile'sm** — novice \| rookie \| Novice
 - **pi'tawgowa'j** — person from up river \| person from up the coast \| Person from up river
 - **pi'tawgowi'sgw** — female from up river \| female from up the coast \| Female from up river
 - **Plasua** — Frank \| Francis \| Frank
-- **plgoq** — sweetheart (male or female) \| lover (male or female) \| Sweetheart (male or female)  *(also: emotions)*
+- **plgoq** — sweetheart (male or female) \| lover (male or female) \| Sweetheart (male or female)  *(also: love-and-joy)*
 - **qopisun** — infant \| Infant  *(also: age)*
 - **qwa'niej** — phoney person \| Phoney person  *(also: character)*
 - **Sapatis** — Jean·Baptiste \| Jean·Baptiste
-- **sape'winu** — saint \| Saint  *(also: ceremony)*
+- **sape'winu** — saint \| Saint  *(also: faith)*
 - **saqama'j** — young gentleman \| Young gentleman
 - **saqama'sgw** — lady \| female chief \| gentlewoman \| woman of high rank \| Lady  *(also: leadership-and-law)*
 - **saqamaw** — gentleman \| chief \| man of high rank \| big shot \| Gentleman  *(also: leadership-and-law)*
@@ -117,26 +112,22 @@ Theme: *People & Relationships* — 144 entries (+13 archived)
 - **siguapji'j** — young widower \| Young widower  *(also: family)*
 - **sigu'sgw** — widow \| Widow  *(also: family)*
 - **sigu'sgwe'j** — young widow \| Young widow  *(also: family)*
-- **sqapantiej** — beginner \| rookie \| amateur \| Beginner  *(also: age)*
+- **sqapantiej** — beginner \| rookie \| amateur \| Beginner
 - **ta'n\_wen** — whomever \| somebody \| Whomever
 - **tapia'ji'jge'j** — fiddler \| violinist \| Fiddler  *(also: music-and-dance)*
 - **tepgise'g** — loner \| loner \| Loner \| He/she is a loner  *(also: character)*
 - **tg'snugowa'j** — male westerner \| Male westerner
 - **tg'snugowi'sgw** — female westerner \| Female westerner
-- **tmawignessu** — hunchback \| Hunchback  *(also: body)*
+- **tmawignessu** — hunchback \| Hunchback  *(also: body-descriptions)*
 - **tp'te'snugowa'j** — southerner \| male southerner \| Southerner
 - **tp'te'snugowi'sgw** — female southerner \| Female southerner
 - **tqonasu** — person who lives common·law \| Person living common-law  *(also: family)*
 - **tqope'j** — twin \| Twin  *(also: family)*
-- **Tune'l** — legendary strong man with supernatural powers \| Tune'l, legendary strong man with supernatural powers  *(also: spirit-world)*
 - **ugjipenugowa'j** — easterner \| Easterner
-- **ugjipulgewinu** — epileptic \| Epileptic  *(also: health)*
-- **ugplgoqoml** — sweetheart \| lover \| His/her sweetheart  *(also: emotions)*
+- **ugjipulgewinu** — epileptic \| Epileptic  *(also: sickness)*
+- **ugplgoqoml** — sweetheart \| lover \| His/her sweetheart  *(also: love-and-joy)*
 - **unaqapeml** — disciple \| follower \| councillor \| friend \| His/her disciple  *(also: leadership-and-law)*
 - **we'jitaqan** — foundling \| Foundling  *(also: family)*
-- **wen** — who \| Who is that  *(also: question-words)*
-- **wen\_net** — who's that? \| who's this? \| Who's that?  *(also: question-words)*
-- **wen\_tana** — who is that? \| who's this? \| who is he/she? \| Who is that?  *(also: question-words)*
 - **witapal** — friend \| buddy \| male friend \| His/her male friend
 - **witape'sgwal** — female friend \| His/her female friend
 - **witapji'jl** — little friend \| His/her little friend
@@ -145,12 +136,11 @@ Theme: *People & Relationships* — 144 entries (+13 archived)
 - **papuaqani'sgw** — social butterfly (female) \| social person (female) \| Society/sociable/socialite  *(also: character)*
 - **usgitqamugewa'j** — worldly \| To be worldly  *(also: character)*
 - **ewle'juinu'sgw** — a poor woman \| A poor woman.  *(also: money-and-trade)*
-- **pa'pe'wit** — pope \| pope  *(also: ceremony)*
+- **pa'pe'wit** — pope \| pope  *(also: church-rituals)*
 
 ## Archived entries (lower priority)
 
 - **ami'\*\*** — elderly person (term of respect and affection)
-- **an'tague'sgw\*\*** — black woman
 - **awisgu'g\*\*** — spy
 - **gjiaplue'w\_** — rascal \| rat (Nova Scotia) \| Rascal \| Rat
 - **mespit\*\*** — all there \| virgin \| He/she is a virgin

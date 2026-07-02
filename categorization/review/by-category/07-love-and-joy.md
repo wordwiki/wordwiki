@@ -1,0 +1,89 @@
+# Love, Joy & Laughter (`love-and-joy`)
+
+Theme: *People & Relationships* — 75 entries (+7 archived)
+
+- **apgnualatl** — pacify \| soothe \| calm \| He/she is pacifying someone  *(also: social-life)*  *(confidence: m)*
+- **apjelmit** — unable to stop laughing \| He/she is unable to stop laughing
+- **emtoqwalatl** — worship \| He/she worships him/her/it  *(also: faith)*  *(confidence: m)*  *(note: worship: affectionate use in example; religious sense secondary)*
+- **emtoqwatg** — worship \| He/she worships it  *(also: faith)*  *(confidence: m)*  *(note: audit: match family sibling emtoqwalatl (worship))*
+- **etlenmit** — laugh \| He/she is laughing
+- **ge'gulusgwa'latl** — put arms around shoulder \| hug \| He/she hugs someone  *(also: social-life)*  *(confidence: m)*
+- **gesalatl** — like \| love \| He/she loves him/her
+- **gesaltimgewei** — act of love \| Act of love
+- **gesaluet** — love \| He/she loves
+- **gesatg** — like \| enjoys \| love \| He/she enjoys it
+- **gesgelmatl** — hold dearly \| reluctant to part with \| He/she holds him/her dearly  *(confidence: m)*
+- **gesgelt'g** — hold dearly \| reluctant to part with \| He/she holds it dearly  *(confidence: m)*
+- **gesite'lmatl** — think highly of \| especially fond of \| extremely  fond of \| proud of \| He/she thinks highly of someone
+- **gesite'tg** — think highly of \| really, especially, or extremely  fond of \| proud \| value \| He/she thinks highly of it
+- **gimelmit** — laugh to oneself \| laugh secretly \| He/she laughs secretly  *(confidence: m)*
+- **gimelmugtasit** — laugh at oneself in a secret manner \| He/she laughs at self in a secret manner  *(confidence: m)*
+- **gi'nujing** — proud \| look proud \| prideful \| He/she is proud \| He/she looks proud  *(confidence: m)*
+- **gsite'taqan** — someone cherished or valued \| something cherished or valued \| someone precious \| something precious \| Someone cherished or valued \| Something cherished or valued  *(also: good-and-bad)*  *(confidence: m)*
+- **ma'munigsalatl** — love very much \| like very much \| He/she likes or loves him/her very much
+- **mawigsalatl** — like the most \| like very much \| He/she likes him/her/it the most
+- **mawigsatg** — like the most \| like very much \| He/she likes it the most
+- **mawiulta'sit** — become ecstatic \| very happy or pleased \| He/she becomes ecstatic
+- **mawiulta'suaqan** — joyful time \| joyful occasion \| Joyful time
+- **megite'lmatl** — think highly of \| overly fond of \| He/she thinks highly of him/her  *(confidence: m)*
+- **megite'tg** — think highly of \| very fond of \| He/she thinks highly of it  *(confidence: m)*
+- **migua'latl** — satisfied with \| He/she is satisfied with him/her  *(confidence: m)*
+- **migua'toq** — satisfied with \| He/she is satisfied with it  *(confidence: m)*
+- **mi'walatl** — thankful for \| grateful \| appreciate \| He/she is grateful for him/her  *(also: greetings)*  *(confidence: m)*
+- **mi'watg** — thankful for \| grateful \| appreciate \| He/she is grateful for it  *(also: greetings)*  *(confidence: m)*
+- **paqsipgelmit** — burst out laughing \| laugh hard \| He/she bursts out laughing
+- **pe'gwamatl** — pleased to see again after a long time \| He/she is pleased to see him/her/it again after a long time  *(also: seeing)*  *(confidence: m)*
+- **pe'gwamu'g** — it is nice to see again after a long time \| It is nice to see again after a long time (has passed)  *(also: seeing)*  *(confidence: m)*
+- **pe'gwamugsit** — it is nice to see again after a long time \| It is nice to see him/her/it again after a long time (has passed)  *(also: seeing)*  *(confidence: m)*
+- **pe'gwapt'g** — is pleased to see again after long time \| He/she is pleased to see it again after a long time  *(also: seeing)*  *(confidence: m)*
+- **pemelmit** — pass by laughing \| He/she is passing by and laughing  *(also: going-and-coming)*  *(confidence: m)*
+- **piamigsalatl** — prefer \| likes better \| He/she prefers him/her  *(confidence: m)*
+- **piamigsatg** — likes better \| prefer \| He/she likes it better  *(confidence: m)*
+- **piamite'lmatl** — think more of \| He/she thinks more of him/her  *(confidence: m)*
+- **piamite'tg** — think more of \| He/she thinks more of it  *(confidence: m)*
+- **plgoq** — sweetheart (male or female) \| lover (male or female) \| Sweetheart (male or female)  *(also: people)*
+- **poqjiws'ggewe'g** — start to laugh \| He/she starts to laugh
+- **punelmit** — stop laughing \| He/she stops laughing  *(confidence: m)*
+- **pusgelmit** — laugh a lot \| laugh repeatedly \| laughs often \| He/she laughs a lot
+- **pusgenmit** — laugh a lot \| laugh repeatedly \| laughs often \| He/she laughs a lot
+- **pusgigsatg'p** — used to like \| He/she used to like it  *(confidence: m)*
+- **te'tipoqja'latl** — put arm around waist of \| He/she puts arm or arms around the waist  *(also: social-life)*  *(confidence: m)*
+- **ugplgoqoml** — sweetheart \| lover \| His/her sweetheart  *(also: people)*
+- **ulta'suaqan** — happiness \| gladness \| pleasure \| Happiness
+- **ulta'suti** — gladness \| Gladness
+- **wejamoqsualatl** — embrace \| hug and squeeze \| He/she embraces him/her  *(also: social-life)*  *(confidence: m)*
+- **welamatl** — attracted to appearance \| like looks of \| He/she is attracted to the appearance of him/her  *(also: seeing)*  *(confidence: m)*
+- **welapt'g** — attracted to \| like the appearance \| He/she is attracted to it  *(also: seeing)*  *(confidence: m)*
+- **wela'sit** — relieved \| feeling good (from being ill) \| turn out well \| He/she is relieved  *(also: healing)*  *(confidence: m)*
+- **welgwija'latl** — uplift spirit \| put in good·humor \| make more confident \| He/she uplifts his/her spirit  *(also: social-life)*
+- **welgwijimatl** — put in good humor \| encouraging \| He/she puts him/her in a good humor  *(also: social-life)*
+- **welgwijing** — in good·humor \| good·spirits \| He/she is in a good·humor
+- **weligwetutg** — pleasant expression \| wear smile \| He/she has a pleasant expression  *(also: appearance)*
+- **weljesing** — happy \| He/she is happy
+- **welta'sit** — happy \| glad \| He/she is happy
+- **welta'sualatl** — happy for someone \| He/she is happy for someone
+- **welta'suatg** — happy for \| He/she is happy for it
+- **welte'lmatl** — approve of \| thinks well of \| He/she approves of someone  *(confidence: m)*
+- **welte'teget** — joyful \| He/she is joyful
+- **welte'tg** — approve of \| He/she approves of it  *(confidence: m)*
+- **wesgewe'g** — laugh \| He/she laughs
+- **wesgewigwetutg** — grin \| He/she is grinning  *(also: body-actions)*  *(confidence: m)*
+- **wesgewina'q** — happy, joyful or pleasureable place \| It is a happy, joyful or pleasureable place
+- **wesgowigwa'sit** — smile \| He/she smiles  *(also: body-actions)*
+- **wesmoqsuwalatl** — embrace \| hug \| smooch \| He/she embraces him/her  *(also: social-life)*  *(confidence: m)*
+- **wi'guamatl** — find amusing \| laugh at \| He/she finds someone amusing
+- **wi'guapt'g** — find amusing \| lauqh at \| He/she finds it amusing
+- **mestaulo'ti** — great happiness \| bliss \|  heavenly joy \| Great happiness, bliss, heavenly joy.
+- **wesgewite'tg** — look forward to (doing/having/seeing) \| He/she looks forward to doing...  *(confidence: m)*
+- **mi'wet** — thankful \| grateful \| He/she is thankful  *(also: greetings)*
+- **wejgwenmit** — come laughing \| He/she comes laughing  *(also: going-and-coming)*  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **gimenmit** — laugh to oneself \| laugh secretly \| He/she laughs secretly
+- **paqsipgenmit** — burst out laughing \| laugh hard \| He/she bursts out laughing
+- **plgoqowit** — sweetheart \| lover \| He/she is a sweetheart
+- **tapuapt'g** — immediately drawn to upon seeing it \| happy to see \| He/she is immediately drawn to it upon seeing it
+- **te'tipoqja'toq\*\*** — put arm around waist of \| hug \| embrace \| He/she embraces it
+- **wejmoqsualatl** — embrace \| He/she embraces him/her
+- **wesgaqanmatl** — kiss \| He/she kisses him/her

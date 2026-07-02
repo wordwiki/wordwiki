@@ -1,0 +1,179 @@
+# Household Things (`household`)
+
+Theme: *Home & Daily Life* — 144 entries (+28 archived)
+
+- **alapilaqan** — knapsack \| carrier \| Carrier  *(also: carrying)*
+- **alapilawemgewei** — stretcher \| briefcase \| Stretcher  *(also: carrying)*
+- **amqwan** — spoon \| Spoon
+- **amqwanji'j** — spoon \| Spoon
+- **angamsutiei** — mirror \| looking glass \| Mirror  *(also: seeing)*
+- **a'papi'j** — thread \| twine \| string \| Thread  *(also: sewing-and-textiles)*
+- **apt'sqi'gn** — key \| Key  *(also: fastening)*
+- **a'su'n** — blanket \| Blanket
+- **ejina'gwit** — low-sided container (plate, cake pan, cookie sheet, platter) \| Low-sided container (plate, cake pan, cookie sheet, platter)  *(also: size-and-shape)*
+- **elegepilawet** — to drape \| He/she drapes something  *(also: fastening)*
+- **eloqta's'g** — shelf \| trim \| Shelf  *(also: dwellings)*
+- **epsaqtejg** — stove \| Stove
+- **eptaqan** — dish \| plate \| Dish
+- **eptaqano'guom** — china cabinet \| cupboard \| Cupboard
+- **espa'gwit** — high-sided container (churn, glass, vase, cup) \| High-sided container (churn, glass, vase, cup)  *(also: size-and-shape)*
+- **gapji'j** — cup \| Cup
+- **ga'qan** — door \| Door  *(also: dwellings)*
+- **gasa'taqanei** — cleaning cloth \| dish cloth \| Cleaning cloth  *(also: cleaning)*
+- **ga'sign** — kitchen towel \| dish towel \| Kitchen towel  *(also: cleaning)*
+- **gasigo's'ti** — towel \| bath towel \| hand towel \| Towel  *(also: cleaning)*
+- **gasigo's'ti'j** — face cloth \| small towel \| Face cloth  *(also: cleaning)*
+- **gawioqolaqan** — quill box \| Quill box  *(also: quillwork-and-beadwork)*
+- **gepjoqign** — bottle cover \| lid \| plug \| cork \| Lid  *(also: fastening)*
+- **gispasawemgewei** — dryer \| Clothes dryer  *(also: cleaning)*  *(confidence: m)*
+- **glmuejuapsgw** — piece of coal \| coal \| Coal  *(also: fire)*
+- **gna'taqan** — decoration \| Decoration  *(confidence: m)*
+- **go'lail** — kerosene \| coal oil \| Kerosene  *(also: fire)*  *(confidence: m)*
+- **gups'ji'j** — cup (little, small) \| Cup (little, small)
+- **ilanqa'latl** — fold \| He/she folds it(shirt)  *(confidence: m)*
+- **ilanqa'toq** — fold \| He/she folds it  *(confidence: m)*
+- **ilanqo'tasit** — folding \| folding bedding \| folding clothing \| He/she/it is folding...  *(confidence: m)*
+- **iloqomoqwa'taqan** — wrapping paper \| Wrapping paper  *(also: fastening)*
+- **ji'gitlo'q** — kettle \| teakettle \| Kettle
+- **jijuejg** — bell \| Bell  *(also: hearing)*
+- **jinqamistaqanei** — strainer \| sieve \| colander \| Strainer
+- **jitlo'mugwaqan** — rocking chair \| cradle \| Rocking chair
+- **jitnaqe'gnei** — clothing iron \| iron \| Iron  *(also: cleaning)*
+- **lagga'p** — cellar \| basement \| underground food storage \| Cellar  *(also: dwellings)*
+- **la'maqan** — dipper \| ladle \| Dipper
+- **lapai** — tub \| Tub
+- **lapol** — bowl \| Bowl
+- **lapue'l** — frying pan \| Frying pan
+- **laqpilaqan** — drape \| wooden hoop support around inside of wigwam \| curtain \| Drape \| Wooden support hoop
+- **laqpisuti** — apron \| Apron  *(also: clothing)*
+- **laqsun** — sheet \| Sheet
+- **lasiet** — plate \| Plate
+- **la'taqsun** — bucket \| pail \| chamber pot \| Pail
+- **legepilaqan** — window shade \| blind \| curtain \| Blind
+- **lesqe'gn** — clothes trunk \| coffin \| casket \| Trunk \| Coffin  *(also: death-and-mourning)*
+- **lgusuaqan** — steps \| ladder \| stairs \| Steps  *(also: dwellings)*
+- **ligpenign** — basket \| Basket  *(also: basket-making)*
+- **lnuoqta'w** — statue \| Statue  *(confidence: m)*
+- **loqomoqwa'taqan** — wrapper \| cigarette paper \| Wrapper  *(also: tobacco-and-smoking)*  *(note: order-audit: cigarette paper, tobacco leads)*
+- **malige'w** — keg \| barrel \| Barrel
+- **masu'mi** — perfume \| Perfume  *(also: smell-and-taste)*
+- **menjapsgeg** — door knob \| Door knob  *(also: dwellings)*
+- **menqawet** — bring in the wash (laundry) \| He/she brings in the wash (laundry)  *(also: cleaning)*
+- **migwije'maqan** — table fork \| Table fork  *(also: eating-and-drinking)*
+- **mi'jano'guom** — bathroom \| outhouse \| washroom \| Bathroom  *(also: dwellings)*
+- **mimei** — oil \| grease \| Oil  *(also: food)*
+- **misegnuj** — rag \| Rag
+- **misegnu'j** — small rag \| Small Rag
+- **mlagejuo'q** — milk container \| milk bottle \| milk pitcher \| Milk container
+- **mpo'qon** — bed \| A bed
+- **msaqtaqt** — floor \| Floor  *(also: dwellings)*
+- **mulinji'j** — sewing machine \| Sewing machine  *(also: sewing-and-textiles)*
+- **munte'j** — little sack \| small bag \| Little sack
+- **munti** — bag \| sack \| Bag
+- **musgusi** — creosote \| chimney flue \| Creosote  *(also: fire)*
+- **mutputi** — chair \| Chair
+- **na'gu'setewei** — clock \| watch \| Clock  *(also: time)*
+- **nanamiaqawei** — rocking chair \| swing \| Rocking chair
+- **nango'n** — fine·tooth comb \| Fine tooth comb
+- **napui'gigemgewei** — camera \| tracing paper \| Camera \| Tracing paper  *(also: seeing)*
+- **napui'gign** — photograph \| picture \| Photograph  *(also: seeing)*
+- **naqsun** — bedsheet \| Bedsheet
+- **nme'juo'q** — fish bowl \| fish tank \| Fish bowl  *(also: fish)*
+- **npo'qon** — bed \| A bed
+- **nqana'paqsun** — well bucket \| Well bucket  *(also: sea-and-rivers)*  *(confidence: m)*
+- **nugwaltugo'n** — comb \| Comb
+- **nutawletat'g** — backpack \| Backpack  *(also: carrying)*
+- **nutoqto'guom** — kitchen \| Kitchen  *(also: dwellings)*
+- **oqonoqopisaqan** — wrap \| receiving blanket \| bundle (for infant) \| privacy curtain \| Wrap  *(also: family)*  *(confidence: m)*
+- **pa'pnji'j** — spool \| bobbin \| Bobbin  *(also: sewing-and-textiles)*
+- **pata'wti** — table \| Table
+- **patawtiewegn** — tablecloth \| Tablecloth
+- **pgijoqign** — bottle cap \| bottle cover \| lid \| cork \| plug \| Bottle cap  *(also: fastening)*
+- **piglewji'j** — lamp globe \| oil lamp chimney \| Lamp globe  *(also: fire)*
+- **pijimaqan** — funnel \| Funnel
+- **pismuti** — mattress \| Mattress  *(also: sleep)*
+- **plu'jaqamati** — mirror \| Mirror  *(also: seeing)*
+- **ponjn** — oversized (molasses) barrel \| Oversized (molasses) barrel
+- **poqwatign** — umbrella \| Umbrella  *(also: weather)*
+- **p'teweio'q** — teapot \| Teapot
+- **puesu** — bushel \| Bushel  *(also: amounts)*
+- **pugsugwei\_epsaqtejg** — wood stove \| Wood stove  *(also: fire)*
+- **pui'gn** — broom \| Broom  *(also: cleaning)*
+- **pui'gnji'j** — whisk broom \| little broom \| Whisk brook  *(also: cleaning)*
+- **pu'tai** — bottle \| jar \| Bottle
+- **qasawo'qei** — iron item (pot) \| iron item (spade) \| Iron item (pot) \| Iron item (spade)  *(also: texture-and-materials)*
+- **samqwano'q** — water pitcher \| water container \| Water container  *(also: water)*
+- **sa'slji'j** — saucer \| Saucer
+- **sasqa'gwiji'jit** — small pot (for cooking) \| Small pot (for cooking)  *(also: cooking)*
+- **sasqa'gwit** — pot (for cooking) \| Cooking pot  *(also: cooking)*
+- **sinqamistaqanei** — strainer \| sieve \| colander \| Strainer
+- **sipistaqano'suti** — safety pin \| Safety pin  *(also: sewing-and-textiles)*
+- **sisla'gwa'tegemgewei** — frying pan \| Frying pan  *(also: cooking)*
+- **sismo'qono'q** — sugar bowl \| Sugar bowl
+- **suppin** — pint dipper \| cup \| Pint dipper
+- **suspanign** — detergent \| hand soap \| Detergent  *(also: cleaning)*
+- **ti'g'tlo'q** — teakettle \| Teakettle
+- **tlawo'q** — butcher knife \| bread knife \| hunting knife \| Butcher knife  *(also: tools)*
+- **tmletji'j** — glass tumbler \| Glass tumbler
+- **tm'tqe'gnn** — scissors \| pair of scissors \| Scissors  *(also: tools)*
+- **tqa'la'j** — wick \| Wick  *(also: fire)*
+- **tu'gwesmun** — pillow \| cushion \| Pillow  *(also: sleep)*
+- **tuop'ti** — window \| Window  *(also: dwellings)*
+- **ugju'snei** — fan \| propeller \| Fan
+- **ugpugugwe'l** — eyeglasses \| glasses \| His/her eyeglasses  *(also: seeing)*
+- **ugsitnei** — stove pipe \| Stove pipe  *(also: fire)*
+- **ugsuateja'taqan** — drawer \| Drawer
+- **ugtuoml** — pot (cooking vessel) \| pan \| His/her pot (cooking vessel)
+- **ulaqanml** — plate \| pan \| dish \| His/her plate
+- **wape'jgo'q** — flour container \| flour cannister \| Flour container
+- **wapsgw** — coal \| Coal  *(also: fire)*
+- **wa'qan** — knife \| blade \| Knife  *(also: tools)*
+- **wasoqonmaqan** — candle \| lamp \| lantern \| Candle  *(also: fire)*
+- **wasuego'q** — flower pot \| vase \| Flower pot
+- **wijgwe'tlaqan** — birch bark dish or platter \| Birch bark dish or platter  *(confidence: m)*
+- **wisgipgo'q** — ash bin \| ash container from woodstove \| Ash bin  *(also: fire)*
+- **wow** — pot (cooking vessel) \| sauce pan \| Pot (cooking vessel)
+- **tempuesu** — half-bushel \| Half-bushel  *(also: amounts)*
+- **laglus** — pitcher \| Pitcher (where rancid oil is kept)
+- **qopilsaqanapi** — cradle lace \| Cradle lace.  *(also: family)*
+- **mpo'qonmit** — has a bed \| He/she has a bed
+- **gastio’mio’q** — molasses container \| syrup container \| Molasses container  *(also: food)*
+- **tmlet** — glass tumbler \| Glass tumbler
+- **gnaqan** — cradle \| Cradle  *(also: family)*
+- **usgitaqaiei** — cup made of bark \| A cup made of bark
+- **sasqa'gwit** — Flat bottom pot \| Flat bottom cauldron \| Flat bottom pot/cauldron  *(also: cooking)*
+- **qopilsaqan** — cradle board \| Cradle board.  *(also: family)*
+- **qopilsun** — cradle blanket \| receiving blanket \| Cradle blanket/receiving blanket.  *(also: family)*
+- **pig'lew** — glass \| tumbler \| Glass (material), tumbler  *(also: texture-and-materials)*
+- **pugtewgsit** — it is red hot (stove) \| it is over heating \| It is red hot (from overheating)  *(also: fire)*
+
+## Archived entries (lower priority)
+
+- **anqonign\*\*** — covering \| sheet
+- **anqono'simgewei\*\*** — bedding
+- **anqono'sun\*\*** — blanket \| shawl
+- **gelusimgewei\*\*** — telephone NS
+- **gjitloqomuaqan** — rocking chair \| cradle \| Rocking chair
+- **glo'qowei\*\*** — closet \| clothes hanger
+- **goqosigna'gw** — baking pan \| pan
+- **gu'la'ji'j\*\*** — tub
+- **jitnanqa'teget** — iron \| He/she is ironing
+- **jitnanqa'toq** — He/she irons it
+- **jitnaqa'latl** — He/she irons it (shirt)
+- **laglus** — pitcher
+- **lasiantejg\*\*** — lantern
+- **lessow\*\*** — bucket
+- **mattaqtemgewei** — telephone \| Telephone
+- **mijigulgw\*\*** — dirty sink
+- **mjigapu'lgw\*\*** — sink \| trough
+- **muspusi\*\*** — chimney flare \| soot
+- **nanamiaqan\*\*** — swing \| rocking chair (dmm ewm 03-07-02)
+- **nastestmgewei** — latch \| hook \| attachment(?) \| Latch
+- **nigantugo'n** — large·tooth comb \| Large·tooth comb
+- **nnuoqta'w** — statue \| Statue
+- **nutputi** — chair \| Chair
+- **pugtewig** — hearth
+- **semqa'lug** — table ('case') knife
+- **soppei** — couch \| sofa \| Sofa
+- **sq'sigwetestaqan** — match \| Match
+- **wejaqama'temgewei** — boiling kettle

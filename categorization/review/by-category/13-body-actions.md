@@ -1,0 +1,136 @@
+# Body Actions (`body-actions`)
+
+Theme: *Body & Health* — 119 entries (+10 archived)
+
+- **apjitoq** — out of breath (as a result of a tantrum) \| out of breath \| He/she is breathless
+- **apsgu'lapa'sit** — turns head around to look \| turn head around \| He/she looks back  *(also: seeing)*
+- **aptlama'latl** — smother \| block off air from \| He/she smothers him  *(also: conflict)*
+- **aptlamit** — suffocate \| He/she is suffocating  *(also: sickness)*
+- **aptlamsing** — lose breath (in gale) \| He/she loses breath (in gale)
+- **aptluat** — hold breath \| He/she is holding breath
+- **atgitemit** — cry \| weep \| He/she cries  *(also: fear-anger-sadness)*
+- **atlasmit** — relax \| rest \| He/she is resting  *(also: sleep)*  *(confidence: m)*
+- **ejgwe'mat** — sob \| He/she is sobbing  *(also: fear-anger-sadness)*
+- **ejgwit** — hiccup \| He/she hiccups
+- **elu'gwalatl** — point at \| He/she pointed at him/her
+- **elu'gwatg** — point at \| He/she points at it
+- **elu'gwet** — point toward \| He/she is pointing
+- **elu'gwit** — something gets stuck in throat \| choke (food) \| He/she has something stuck in throat  *(also: sickness)*
+- **elusgwatamit** — spit \| He/she spits
+- **enmlamit** — gasp \| He/she is gasping
+- **epetoqsit** — groan \| make moans \| He/she moans  *(also: hearing)*
+- **e'pite'su'et** — becomes a young woman \| menarche \| enter womanhood \| She becomes a young woman  *(also: age)*  *(confidence: m)*
+- **ewe'gisga'latl** — exercise \| break in \| He/she exercises it(knee)
+- **ewe'gisga'lsit** — stretch \| loosen up bones and muscles \| He/she loosens up his/her bones and muscles
+- **ewsgwapeg** — twitch \| It twitches
+- **ewsgwapet** — twitch \| He/she/it twitches
+- **ewsgwit** — sneeze \| He/she sneezes
+- **gamlamit** — breathe \| He/she breathes
+- **gaqalamiet** — out of breath \| He/she is out of breath
+- **gaqalamit** — stop breathing \| He/she stops breathing  *(also: death-and-mourning)*  *(note: order-audit: dying words death-first)*
+- **gaqi'gwesmat** — finished bearing or producing children \| She is finished bearing children  *(also: age)*  *(confidence: m)*
+- **gesgma'qa'latl** — causes shivers \| He/she causes him/her to get shivers up his/her spine  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **gesgma'qiet** — shivers up spine \| shudder \| He/she has shivers up his/her spine  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **gesigawitnet** — snort \| snore loudly \| It(horse) snorts  *(also: hearing)*
+- **gesigawlamit** — breathe hard and fast \| He/she breathes hard and fast
+- **gesipa'latl** — relieve an itch by scratching \| scratch \| He/she scratches it(knee)
+- **gesipa'toq** — scratch \| relives an itch by scratching \| He/she scratches it
+- **gesipa'tuaj** — scratches it \| He/she scratches it for him/her
+- **gesipa'tuatl** — scratches it \| He/she scratches it for him/her
+- **gesipta'tl** — scratch with an object \| scratch \| He/she scratches him/her with an object
+- **gesipte'g** — quick scratch \| a distracted scratch \| scratch with an object \| He/she gives it a quick scratch
+- **gesipto'sit** — scratch self (like an animal) \| He/she scratches his/herself  *(also: animals)*
+- **gesitewipnet** — groan \| He/she groans  *(also: hearing)*
+- **getu'\_unjanit** — pregnant \| expect baby \| He/she is expecting a baby  *(also: family)*  *(confidence: m)*
+- **igto'sit** — yawn \| He/she yawns  *(also: sleep)*
+- **japigwet** — wink \| face covered in a substance \| He/she winks \| His/her face is covered in a substance
+- **japigwetuatl** — wink \| He/she winks at him/her
+- **japigwetuet** — winks \| He/she is a winker
+- **jigapito'jing** — tooth bared smile \| forced smile \| exaggerated smile \| He/she has a tooth bared smile  *(confidence: m)*
+- **maqijjigwat** — have big bowel movement \| He/she has a big bowel movement
+- **massaqiet** — sexually aroused or stimulated \| He/she is sexually aroused  *(confidence: m)*
+- **matgwa'sit** — bow down \| bow \| He/she bows down  *(also: posture)*  *(confidence: m)*
+- **matgwetoq** — bow to \| nod to \| He/she bows to it
+- **matgwetuatl** — bow to \| nod to \| He/she bows to him/her  *(also: social-life)*
+- **megwe'saqa'sit** — turn red \| blush \| He/she blushes  *(also: colors)*
+- **mejjigwat** — defecate \| have bowel movement \| He/she defecates
+- **mejjilsit** — defecate on oneself \| He/she defecates on self
+- **mesa'latl** — swallow \| He/she swallows it(gum)  *(also: eating-and-drinking)*
+- **mesa'tamit** — swallow \| He/she swallows  *(also: eating-and-drinking)*
+- **mesa'toq** — swallow \| swallow slowly \| He/she swallows it  *(also: eating-and-drinking)*
+- **migultiat** — experience (by male) pregnancy symptoms of partner \| become irritated (as first child) when mother carries her second child \| sympathy pains (by male) \| He experiences the pregnancy symptoms of partner  *(also: family)*  *(confidence: m)*
+- **mi'jan** — excrement \| feces \| Excrement  *(confidence: m)*
+- **musgomatl** — lick someone/something \| He/she licks him/her/it  *(also: eating-and-drinking)*
+- **musgumatl** — lick \| He/she licks him/her
+- **musgwatamit** — lick \| He/she licks
+- **musgwatg** — lick \| He/she licks it  *(also: eating-and-drinking)*
+- **najijjigwat** — go to defecate \| He/she goes to defecate
+- **najisgit** — goes to urinate \| He/she goes to urinate
+- **neng'tesing** — tremble \| quiver \| shake \| shiver \| He/she trembles  *(confidence: m)*
+- **no'q'g** — cough \| He/she coughs  *(also: sickness)*
+- **noqt'g** — choke \| gag (on food) \| He/she chokes  *(also: sickness)*
+- **nunat** — suck \| He/she sucks
+- **nunatg** — suck \| He/she sucks it
+- **nusalatl** — suckle (infant) \| breastfeed \| She (mother) suckles him/her (infant)  *(also: family)*
+- **nuse'sgwet** — nurse \| breastfeeder \| breastfeed \| nurser \| wet nurse \| She nurses (child) \| Breastfeeder  *(also: family)*  *(confidence: m)*
+- **nuset** — breast-feed \| She breast-feeds  *(also: family)*
+- **oqolema'sit** — puts in mouth \| He/she puts something in his/her mouth
+- **oqolumgwa'sit** — bow head \| He/she bows his/her head  *(also: posture)*
+- **oqonitpaqaiet** — faint \| He/she/it faints  *(also: sickness)*
+- **pantuna'sit** — open mouth \| He/she/it opens one's mouth
+- **pantunepit** — agape \| open (container) \| He/she/it is agape  *(confidence: m)*
+- **pantuno'jing** — have mouth open \| He/she has mouth open  *(confidence: m)*
+- **pene'sugwa't** — drool \| He/she drools
+- **pigtit** — fart \| He/she farts
+- **pisewtuna't** — foam at mouth \| He/she foams at the mouth  *(confidence: m)*
+- **poqtapa'teget** — start to scratch \| He/she starts to scratch
+- **putualatl** — blow on \| He/she blows on him/her
+- **putuatamit** — blow \| He/she blows
+- **putuatg** — blow on \| He/she blows on it
+- **saqpigu'niet** — shed tears \| forms tears \| become tearful \| He/she is shedding tears  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **segit** — urinate \| He/she urinates
+- **sepigwa'sit** — close eyes \| He/she closes his/her eyes  *(also: seeing)*
+- **sepigwet** — have eyes closed \| He/she has his/her eyes closed  *(also: seeing)*
+- **sipit** — stretch \| stretch and yawn \| He/she stretches
+- **sitnigwit** — blow nose \| He/she blows his/her nose
+- **so'qotemit** — vomit \| He/she vomits  *(also: sickness)*
+- **tegniaq** — sweat \| It sweats
+- **tegniet** — sweat \| He/she sweats
+- **tele'g** — be in such a way \| pregnant \| be that way \| He/she is in such a way \| She is pregnant  *(also: family)*  *(confidence: m)*
+- **tetuipsguna't** — rumble (inside stomach) \| His/her stomach rumbles  *(confidence: m)*
+- **tewa'lsit** — urinate \| He/she urinates
+- **tewulamit** — exhale \| He/she exhales
+- **tgniewuti** — sweat \| Sweat  *(confidence: m)*
+- **tgnu** — sweat \| Sweat  *(confidence: m)*
+- **ugs'tqamua'latl** — give birth \| bear (child) \| bring into the world \| She gives birth to him/her  *(also: family)*
+- **ugs'tqamuit** — born \| come into world \| He/she comes into the world  *(also: family)*
+- **wapa'sit** — open eyes \| turn white \| He/she opens his/her eyes \| He/she turns white  *(also: colors)*
+- **waqjuiga'sit** — bend \| droop \| He/she bends  *(also: size-and-shape)*
+- **wasuega'tat** — menstruate \| She menstruates
+- **we'ji'wet** — give birth \| bear child (said of woman when she bears child) \| She gives birth  *(also: family)*
+- **wejjelamit** — sigh \| He/she sighs
+- **welat** — burp \| belch \| He/she burps
+- **wesgewigwetutg** — grin \| He/she is grinning  *(also: love-and-joy)*  *(confidence: m)*
+- **wesgijinuit** — bring to life \| born \| He/she is born  *(also: family)*
+- **wesgowigwa'sit** — smile \| He/she smiles  *(also: love-and-joy)*
+- **wesuelamit** — inhale \| He/she inhales
+- **wetajigwet** — frown \| scowl \| He/she is frowning  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **wetlamit** — breathe from \| He/she breathes from
+- **winigwa'sit** — scowl \| make funny face \| put on face \| He/she scowls  *(also: appearance)*
+- **winigwetuatl** — make a face at \| sticks tongue out at \| scowl at \| squint at \| He/she makes a face at him/her  *(also: social-life)*
+- **saqapja'sit** — closes hand \| He/she closes his/her hand
+- **mimtoqopsga'toq** — makes a fist \|  He/she makes a fist
+- **nanamtesguatl** — rocks him/her/it on his/her knees \| He/she rocks him/her/it on his/her knees.  *(also: family)*
+
+## Archived entries (lower priority)
+
+- **aligja't\*\*** — show buttocks
+- **alisma'sit** — stretch self
+- **alsipisgitat** — stretch out hands
+- **aptluajig\*\*** — locked together \| clenched \| copulating
+- **enqalatl\*\*** — strain
+- **enqang** — strain
+- **sitnigu'g** — blow nose \| he/she blows his/her nose
+- **ta'utna'latl** — open (mouth) wide \| He opens...mouth wide
+- **ta'utna'sit** — open (mouth) wide \| He opens...mouth wide
+- **ta'utna'toq** — open (mouth) wide \| He opens it wide

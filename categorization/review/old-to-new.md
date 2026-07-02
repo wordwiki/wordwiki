@@ -2,266 +2,330 @@
 
 Where the members of each old hand-made category ended up in the new scheme (old categories sorted by size).
 
-- **body** (440 entries) → body ×276, health ×107, body-actions ×65, cleaning ×19, size-and-shape ×16, eating-and-drinking ×12, animals ×12, emotions ×11, +35 more
-- **motion** (397 entries) → movement ×260, position ×24, water ×17, swimming ×13, boats ×12, body-actions ×11, carrying ×11, pushing-and-pulling ×7, +39 more
-- **work** (283 entries) → work ×146, occupations ×94, making-and-fixing ×17, farming ×13, trees ×12, dwellings ×8, carrying ×8, leadership-and-law ×7, +40 more
-- **water** (263 entries) → water ×168, boats ×51, swimming ×32, fishing ×9, temperature ×7, condition ×6, land ×6, eating-and-drinking ×6, +27 more
-- **behaviour** (249 entries) → character ×139, social-life ×41, emotions ×23, talking ×19, good-and-bad ×16, movement ×9, people ×9, conflict ×7, +29 more
-- **time** (246 entries) → time ×146, calendar ×56, numbers ×14, work ×11, age ×9, ceremony ×6, travel ×6, question-words ×6, +27 more
-- **food** (241 entries) → food ×166, eating-and-drinking ×53, plants ×31, cooking ×22, smell-and-taste ×16, household ×7, time ×5, fish ×4, +16 more
-- **location** (236 entries) → places ×66, location-words ×54, position ×36, water ×20, travel ×17, land ×15, movement ×9, dwellings ×8, +27 more
-- **\_** (232 entries) → (uncategorized) ×29, position ×16, movement ×11, household ×10, body ×10, time ×9, water ×9, small-words ×8, +64 more
-- **position** (222 entries) → position ×186, movement ×7, body ×5, location-words ×5, fastening ×4, numbers ×3, making-and-fixing ×3, sleep ×3, +20 more
-- **people** (213 entries) → people ×122, occupations ×42, family ×31, peoples-and-nations ×22, character ×16, leadership-and-law ×15, age ×10, ceremony ×7, +31 more
-- **feel** (203 entries) → emotions ×152, body ×12, social-life ×10, thinking ×8, health ×8, smell-and-taste ×8, character ×7, ceremony ×7, +18 more
-- **health** (190 entries) → health ×174, body ×37, body-actions ×12, character ×5, hearing ×5, movement ×5, occupations ×5, conflict ×4, +25 more
-- **structure** (181 entries) → dwellings ×157, household ×9, trees ×6, ceremony ×5, position ×4, land ×4, cleaning ×4, question-words ×4, +21 more
-- **state** (175 entries) → condition ×58, health ×17, texture-and-materials ×13, position ×10, food ×9, breaking ×8, cleaning ×7, fire ×7, +33 more
-- **animal** (155 entries) → animals ×111, farm-animals ×27, hunting ×12, food ×8, hearing ×4, birds ×4, sewing-and-textiles ×4, fish ×3, +16 more
-- **size** (152 entries) → size-and-shape ×114, body ×28, amounts ×12, cutting ×5, seeing ×5, tools ×4, sewing-and-textiles ×3, work ×3, +12 more
-- **direction** (147 entries) → movement ×59, directions ×20, position ×16, travel ×12, carrying ×8, pushing-and-pulling ×6, water ×6, boats ×5, +19 more
-- **sight** (137 entries) → seeing ×118, emotions ×10, appearance ×5, body-actions ×4, size-and-shape ×4, spirit-world ×4, household ×3, movement ×3, +15 more
-- **household** (137 entries) → household ×97, dwellings ×23, sewing-and-textiles ×12, cleaning ×10, fire ×9, tools ×7, seeing ×6, travel ×6, +17 more
-- **plant** (132 entries) → plants ×90, food ×36, trees ×35, farming ×10, health ×4, water ×4, condition ×2, customs ×2, +5 more
-- **communication** (125 entries) → talking ×102, hearing ×11, character ×8, stories-and-writing ×7, social-life ×7, peoples-and-nations ×7, occupations ×4, animals ×3, +13 more
-- **cut** (124 entries) → cutting ×111, cooking ×9, trees ×8, health ×6, breaking ×6, conflict ×5, body ×5, hitting ×4, +11 more
-- **fire** (118 entries) → fire ×115, customs ×11, household ×7, cooking ×4, breaking ×4, tools ×2, dwellings ×2, smell-and-taste ×2, +7 more
-- **hear** (107 entries) → hearing ×94, talking ×15, animals ×7, music-and-dance ×5, health ×4, body-actions ×4, emotions ×3, sleep ×2, +9 more
-- **tool** (106 entries) → tools ×74, household ×12, hunting ×12, fishing ×9, farming ×6, farm-animals ×5, making-and-fixing ×5, sewing-and-textiles ×5, +17 more
-- **hit** (103 entries) → hitting ×85, cutting ×18, hunting ×15, breaking ×6, conflict ×4, music-and-dance ×3, fire ×3, games ×2, +12 more
-- **value** (102 entries) → money-and-trade ×56, good-and-bad ×34, emotions ×8, work ×4, amounts ×2, appearance ×2, travel ×2, social-life ×2, +10 more
-- **clothing** (100 entries) → clothing ×93, condition ×5, appearance ×5, sewing-and-textiles ×5, temperature ×3, body ×3, vehicles ×2, customs ×2, +9 more
-- **tree** (99 entries) → trees ×86, plants ×8, dwellings ×5, work ×4, texture-and-materials ×2, fire ×2, tools ×2, basket-making ×2, +12 more
-- **shape** (99 entries) → size-and-shape ×73, body ×8, cutting ×4, appearance ×3, sewing-and-textiles ×3, household ×2, seeing ×2, position ×2, +11 more
-- **weather** (94 entries) → weather ×90, temperature ×8, calendar ×4, water ×2, animals ×2, sky ×2, time ×2, clothing ×1, +5 more
-- **fish** (93 entries) → fish ×52, fishing ×40, food ×9, boats ×3, tools ×3, animals ×3, body ×3, occupations ×2, +6 more
-- **speech** (92 entries) → talking ×80, hearing ×11, peoples-and-nations ×7, character ×7, health ×4, stories-and-writing ×3, social-life ×3, animals ×3, +7 more
-- **quantity** (90 entries) → amounts ×61, eating-and-drinking ×8, money-and-trade ×5, character ×4, small-words ×4, question-words ×4, time ×3, social-life ×2, +14 more
-- **speed** (89 entries) → movement ×39, work ×11, water ×6, games ×4, health ×4, talking ×4, travel ×4, character ×3, +18 more
-- **numbers** (87 entries) → numbers ×80, time ×7, money-and-trade ×3, calendar ×3, amounts ×2, games ×2, age ×1, body ×1, +1 more
-- **appearance** (82 entries) → appearance ×48, seeing ×16, size-and-shape ×15, body ×9, colors ×6, clothing ×5, body-actions ×3, emotions ×2, +11 more
-- **ritual** (81 entries) → ceremony ×70, spirit-world ×8, calendar ×7, customs ×6, family ×5, occupations ×4, leadership-and-law ×3, music-and-dance ×2, +7 more
-- **carry** (80 entries) → carrying ×69, household ×4, boats ×3, vehicles ×3, occupations ×3, travel ×3, pushing-and-pulling ×2, ceremony ×2, +6 more
-- **hold** (80 entries) → holding ×63, fastening ×4, leadership-and-law ×3, fishing ×3, money-and-trade ×2, hunting ×2, body ×2, seeing ×2, +7 more
-- **travel** (80 entries) → travel ×56, movement ×15, carrying ×8, boats ×6, vehicles ×6, directions ×3, money-and-trade ×2, time ×2, +9 more
-- **color** (79 entries) → colors ×72, body ×10, appearance ×5, health ×4, fire ×3, condition ×2, size-and-shape ×2, body-actions ×2, +4 more
-- **liquid** (77 entries) → water ×37, food ×13, eating-and-drinking ×10, temperature ×6, cooking ×6, cleaning ×6, amounts ×4, farm-animals ×3, +10 more
-- **kinship** (74 entries) → family ×74, appearance ×3, customs ×1
-- **cognition** (72 entries) → thinking ×54, learning-and-teaching ×11, character ×3, talking ×3, dwellings ×2, making-and-fixing ×2, age ×2, stories-and-writing ×1, +5 more
-- **not classified** (71 entries) → small-words ×62, greetings ×4, location-words ×2, time ×2, amounts ×1
-- **temperature** (71 entries) → temperature ×64, weather ×11, water ×7, clothing ×4, body ×4, cooking ×3, health ×2, dwellings ×2, +3 more
-- **spirituality** (71 entries) → ceremony ×46, spirit-world ×29, dwellings ×3, land ×2, calendar ×1, family ×1, peoples-and-nations ×1, occupations ×1, +3 more
-- **body part** (71 entries) → body ×71, animals ×3, birds ×3, health ×1, games ×1, talking ×1
-- **tend** (69 entries) → social-life ×22, family ×9, cleaning ×8, body-actions ×7, work ×6, temperature ×4, farming ×3, occupations ×3, +18 more
-- **cook** (66 entries) → cooking ×66, food ×2, fire ×2, household ×1
-- **land** (65 entries) → land ×55, water ×5, farming ×4, carrying ×4, travel ×3, places ×2, position ×2, peoples-and-nations ×2, +6 more
-- **game** (63 entries) → games ×62, customs ×5, people ×3, position ×1, breaking ×1, good-and-bad ×1, hitting ×1, occupations ×1, +4 more
-- **push** (63 entries) → pushing-and-pulling ×57, hitting ×3, boats ×2, hunting ×1, water ×1
-- **break** (63 entries) → breaking ×61, hitting ×5, temperature ×4, fire ×3, water ×3, cutting ×2, farm-animals ×1, animals ×1, +2 more
-- **bird** (61 entries) → birds ×61, farm-animals ×6, hunting ×5, body ×2, stories-and-writing ×1, tools ×1
-- **transportation** (57 entries) → vehicles ×20, boats ×18, carrying ×11, travel ×9, water ×3, pushing-and-pulling ×2, trees ×2, money-and-trade ×1, +7 more
-- **clean** (57 entries) → cleaning ×53, body ×17, household ×6, character ×3, cutting ×2, animals ×2, dwellings ×2, eating-and-drinking ×1, +3 more
-- **hunt** (57 entries) → hunting ×53, birds ×7, fishing ×5, occupations ×3, animals ×2, money-and-trade ×1, work ×1, movement ×1, +2 more
-- **remove** (54 entries) → pushing-and-pulling ×12, cutting ×9, carrying ×6, trees ×6, hitting ×4, body ×3, movement ×3, cleaning ×2, +15 more
-- **activity** (53 entries) → movement ×10, swimming ×7, vehicles ×6, work ×6, position ×4, making-and-fixing ×4, cutting ×3, social-life ×3, +13 more
-- **age** (50 entries) → age ×35, people ×13, condition ×10, body ×2, texture-and-materials ×2, numbers ×2, animals ×2, dwellings ×2, +6 more
-- **decorative** (49 entries) → making-and-fixing ×12, colors ×7, clothing ×7, customs ×6, household ×6, sewing-and-textiles ×5, cutting ×4, appearance ×3, +6 more
-- **sleep** (49 entries) → sleep ×47, position ×4, body-actions ×2, travel ×2, time ×2, work ×1, social-life ×1, dwellings ×1, +3 more
-- **cover** (46 entries) → fastening ×33, household ×6, land ×5, clothing ×4, family ×3, customs ×2, weather ×2, fire ×2, +8 more
-- **texture** (46 entries) → texture-and-materials ×31, condition ×10, trees ×2, land ×2, colors ×2, sewing-and-textiles ×2, body ×2, basket-making ×1, +6 more
-- **touch** (45 entries) → smell-and-taste ×35, health ×4, body ×4, holding ×3, cooking ×2, texture-and-materials ×2, work ×2, social-life ×1, +2 more
-- **arrange** (44 entries) → position ×24, pushing-and-pulling ×4, household ×3, social-life ×2, customs ×2, games ×1, dwellings ×1, good-and-bad ×1, +11 more
-- **language arts** (44 entries) → talking ×24, stories-and-writing ×18, peoples-and-nations ×6, learning-and-teaching ×3, occupations ×2, numbers ×1, food ×1, thinking ×1, +2 more
-- **pull** (43 entries) → pushing-and-pulling ×39, music-and-dance ×2, fishing ×2, fastening ×2, hunting ×1, hearing ×1, work ×1, boats ×1
-- **prepare** (42 entries) → making-and-fixing ×19, travel ×6, hunting ×5, pushing-and-pulling ×4, clothing ×3, household ×2, cleaning ×2, occupations ×2, +8 more
-- **fall** (41 entries) → falling ×37, health ×6, weather ×3, cutting ×2, hitting ×2, movement ×1, water ×1, money-and-trade ×1
-- **effect** (40 entries) → condition ×9, fastening ×7, temperature ×5, social-life ×2, good-and-bad ×2, water ×2, fire ×2, conflict ×2, +11 more
-- **eat** (39 entries) → eating-and-drinking ×35, character ×3, amounts ×3, food ×2, emotions ×2, body-actions ×2, body ×1, smell-and-taste ×1, +1 more
-- **boat** (39 entries) → boats ×39, fishing ×1, numbers ×1, basket-making ×1
-- **light** (38 entries) → fire ×38, customs ×3, colors ×2, household ×2, hunting ×2, seeing ×1, weather ×1, movement ×1
-- **harm** (38 entries) → conflict ×22, health ×5, hitting ×4, hunting ×4, cutting ×3, fire ×2, character ×2, emotions ×1, +6 more
-- **pierce** (38 entries) → cutting ×35, hitting ×6, insects ×2, hunting ×2, condition ×2, falling ×1, conflict ×1, movement ×1
-- **information** (38 entries) → question-words ×26, talking ×4, amounts ×4, stories-and-writing ×3, seeing ×3, good-and-bad ×2, money-and-trade ×2, age ×2, +8 more
-- **social** (37 entries) → social-life ×24, character ×9, leadership-and-law ×4, talking ×3, good-and-bad ×2, amounts ×2, people ×2, music-and-dance ×2, +6 more
-- **alter** (37 entries) → breaking ×8, temperature ×6, size-and-shape ×3, making-and-fixing ×3, colors ×3, condition ×3, social-life ×2, good-and-bad ×2, +7 more
-- **mark** (37 entries) → cutting ×13, travel ×7, condition ×5, hitting ×4, conflict ×3, stories-and-writing ×2, money-and-trade ×2, position ×2, +4 more
-- **bring** (36 entries) → carrying ×32, vehicles ×4, pushing-and-pulling ×3, travel ×3, trees ×1
-- **tie** (36 entries) → fastening ×26, farming ×3, pushing-and-pulling ×3, position ×2, carrying ×1, clothing ×1, farm-animals ×1, amounts ×1, +4 more
-- **dry** (35 entries) → condition ×28, cleaning ×6, farm-animals ×3, water ×3, trees ×2, household ×1, eating-and-drinking ×1, body ×1
-- **smell** (34 entries) → smell-and-taste ×32, fire ×2, animals ×1, body ×1, trees ×1, appearance ×1, food ×1, plants ×1, +1 more
-- **insect** (33 entries) → insects ×32, health ×2, animals ×2
-- **season** (33 entries) → calendar ×27, weather ×7, travel ×3, vehicles ×2, water ×1, movement ×1, time ×1, trees ×1
-- **run** (33 entries) → movement ×30, games ×2, health ×1, travel ×1, hitting ×1, character ×1
-- **turn** (32 entries) → movement ×20, position ×7, fastening ×3, body ×1, falling ×1, farming ×1
-- **assistance** (32 entries) → social-life ×20, money-and-trade ×5, emotions ×2, conflict ×2, carrying ×2, movement ×1, health ×1, work ×1, +10 more
-- **spread** (31 entries) → position ×18, smell-and-taste ×7, food ×2, appearance ×1, fire ×1, character ×1, movement ×1
-- **gather** (31 entries) → holding ×9, social-life ×5, food ×4, farming ×3, hunting ×3, work ×3, plants ×3, fastening ×2, +11 more
-- **perform** (30 entries) → music-and-dance ×13, spirit-world ×6, stories-and-writing ×5, occupations ×2, games ×2, hitting ×2, work ×2, customs ×2, +4 more
-- **throw** (29 entries) → pushing-and-pulling ×23, water ×3, fishing ×2, cutting ×2, leadership-and-law ×1, hitting ×1, conflict ×1
-- **attach** (28 entries) → fastening ×19, clothing ×4, making-and-fixing ×2, texture-and-materials ×2, household ×1, dwellings ×1, farm-animals ×1
-- **use** (28 entries) → work ×13, good-and-bad ×7, emotions ×3, time ×2, ceremony ×2, fastening ×1, question-words ×1, social-life ×1
-- **exhaust** (28 entries) → amounts ×9, eating-and-drinking ×6, water ×5, work ×3, boats ×3, condition ×3, hitting ×1, conflict ×1, +2 more
-- **container** (28 entries) → household ×14, amounts ×12, water ×5, customs ×2, food ×2, pushing-and-pulling ×1, hunting ×1, clothing ×1, +1 more
-- **injure** (28 entries) → health ×25, body ×9, falling ×5, cutting ×2, hitting ×2, conflict ×1, breaking ×1
-- **degree** (27 entries) → position ×5, land ×5, good-and-bad ×4, small-words ×3, size-and-shape ×3, pushing-and-pulling ×2, amounts ×2, thinking ×2, +2 more
-- **nationality** (26 entries) → peoples-and-nations ×26, talking ×2, people ×2, land ×1, customs ×1
-- **sew** (26 entries) → sewing-and-textiles ×24, making-and-fixing ×7, size-and-shape ×2, tools ×2
-- **walk** (26 entries) → movement ×23, health ×3, falling ×3, travel ×2, age ×1, water ×1, fire ×1, cleaning ×1, +1 more
-- **fix** (26 entries) → making-and-fixing ×18, sewing-and-textiles ×5, work ×3, good-and-bad ×2, position ×2, smell-and-taste ×2, household ×1, vehicles ×1, +2 more
-- **exchange** (25 entries) → money-and-trade ×18, dwellings ×2, colors ×2, talking ×2, conflict ×1, games ×1, travel ×1, condition ×1
-- **bind** (25 entries) → fastening ×19, position ×2, carrying ×1, clothing ×1, making-and-fixing ×1, farming ×1, basket-making ×1, sewing-and-textiles ×1, +1 more
-- **weight** (25 entries) → size-and-shape ×12, boats ×4, carrying ×4, holding ×2, pushing-and-pulling ×2, position ×1, tools ×1, body ×1, +1 more
-- **strength** (24 entries) → body ×9, condition ×6, character ×4, appearance ×2, people ×2, breaking ×2, conflict ×2, position ×1, +3 more
-- **return** (24 entries) → movement ×7, carrying ×5, games ×3, travel ×3, holding ×2, good-and-bad ×1, social-life ×1, water ×1, +3 more
-- **domestic** (24 entries) → farm-animals ×24, birds ×7, tools ×1
-- **fruit** (23 entries) → plants ×20, food ×19, trees ×1
-- **event** (23 entries) → family ×6, body ×5, social-life ×2, spirit-world ×2, games ×2, leadership-and-law ×2, good-and-bad ×2, music-and-dance ×1, +13 more
-- **deception** (23 entries) → character ×15, talking ×6, spirit-world ×3, seeing ×2, sleep ×1, leadership-and-law ×1, money-and-trade ×1
-- **vocal** (23 entries) → music-and-dance ×18, hearing ×7, occupations ×2, animals ×2, birds ×1, talking ×1, movement ×1
-- **relationship** (22 entries) → family ×13, social-life ×10, holding ×1, ceremony ×1, emotions ×1, conflict ×1, places ×1
-- **make** (22 entries) → making-and-fixing ×19, dwellings ×3, occupations ×2, sewing-and-textiles ×1, money-and-trade ×1, hunting ×1, farm-animals ×1, tools ×1
-- **wind** (22 entries) → weather ×19, falling ×2, fire ×2, cutting ×1, dwellings ×1, household ×1, tools ×1, smell-and-taste ×1
-- **play** (22 entries) → games ×19, social-life ×4, movement ×1, breaking ×1, music-and-dance ×1, pushing-and-pulling ×1, swimming ×1, people ×1, +1 more
-- **geography** (21 entries) → land ×8, water ×8, places ×6, trees ×1
-- **condition** (20 entries) → good-and-bad ×7, condition ×6, body ×3, money-and-trade ×2, appearance ×1, work ×1, small-words ×1, breaking ×1, +1 more
-- **special relationship** (20 entries) → emotions ×10, people ×6, family ×4, social-life ×2, ceremony ×2, customs ×2, good-and-bad ×1, animals ×1, +2 more
-- **open** (20 entries) → fastening ×10, body-actions ×3, seeing ×3, cutting ×2, body ×2, health ×1, position ×1, thinking ×1, +1 more
-- **close** (19 entries) → fastening ×15, sewing-and-textiles ×2, household ×1, making-and-fixing ×1, boats ×1, body-actions ×1, seeing ×1
-- **write** (19 entries) → stories-and-writing ×19, customs ×4, tools ×2, occupations ×2, travel ×1
-- **property** (18 entries) → people ×7, land ×3, money-and-trade ×2, farming ×2, dwellings ×2, amounts ×2, holding ×1, animals ×1
-- **laugh** (18 entries) → emotions ×18, movement ×2, body ×1, body-actions ×1
-- **capability** (18 entries) → character ×11, work ×4, stories-and-writing ×1, fishing ×1, games ×1, conflict ×1, thinking ×1, movement ×1
-- **fear** (18 entries) → emotions ×17, movement ×1, people ×1
-- **name** (18 entries) → talking ×11, places ×4, people ×3, family ×1
-- **knit** (17 entries) → sewing-and-textiles ×17, tools ×2, basket-making ×1
-- **fibre** (17 entries) → sewing-and-textiles ×16, hunting ×2, household ×2, clothing ×1
-- **grow** (17 entries) → age ×10, plants ×4, food ×3, condition ×3, farming ×2, body ×2, family ×1
-- **flight** (16 entries) → movement ×13, hearing ×2, travel ×1, vehicles ×1, birds ×1
-- **compare** (16 entries) → emotions ×6, good-and-bad ×5, small-words ×2, condition ×1, conflict ×1, amounts ×1
-- **treat** (16 entries) → social-life ×15, character ×4
-- **interact** (15 entries) → social-life ×13, talking ×2, character ×2, thinking ×1, games ×1, emotions ×1, sleep ×1
-- **dig** (15 entries) → land ×10, animals ×2, work ×2, fishing ×1, seeing ×1, thinking ×1, tools ×1
-- **send** (15 entries) → carrying ×13, pushing-and-pulling ×2
-- **request** (15 entries) → talking ×10, money-and-trade ×3, emotions ×2, work ×1, customs ×1, family ×1
-- **acquire** (15 entries) → money-and-trade ×9, seeing ×2, holding ×2, hunting ×1, carrying ×1, family ×1, customs ×1
-- **calendar** (14 entries) → calendar ×14
-- **lock** (14 entries) → fastening ×13, household ×1, holding ×1
-- **hide** (14 entries) → seeing ×11, position ×2, holding ×2, movement ×1, basket-making ×1, money-and-trade ×1, clothing ×1
-- **cry** (14 entries) → emotions ×14, movement ×3, body-actions ×1, time ×1, travel ×1
-- **special day** (14 entries) → calendar ×14, ceremony ×9, greetings ×3, people ×1
-- **bite** (13 entries) → eating-and-drinking ×12, conflict ×3, body ×1, cutting ×1
-- **harvest** (13 entries) → farming ×11, food ×2, plants ×2, occupations ×1, cutting ×1, tools ×1, numbers ×1
-- **posture** (13 entries) → position ×9, body-actions ×4, health ×1, body ×1, size-and-shape ×1, character ×1, social-life ×1
-- **basket** (13 entries) → basket-making ×12, sewing-and-textiles ×2, cutting ×1, talking ×1, household ×1, trees ×1, boats ×1
-- **need** (13 entries) → emotions ×9, eating-and-drinking ×1, social-life ×1, good-and-bad ×1, amounts ×1, body ×1, health ×1
-- **vehicle** (13 entries) → vehicles ×8, boats ×5, movement ×2, carrying ×1, size-and-shape ×1, ceremony ×1
-- **wash** (13 entries) → cleaning ×12, body-actions ×1
-- **peel** (13 entries) → cutting ×11, trees ×5, cooking ×4, hunting ×1
-- **clothes** (13 entries) → clothing ×13, ceremony ×3, condition ×1
-- **distance** (12 entries) → location-words ×6, travel ×3, position ×2, water ×1, time ×1, movement ×1
-- **greeting** (12 entries) → greetings ×11, calendar ×3, social-life ×2
-- **discard** (12 entries) → pushing-and-pulling ×6, social-life ×3, breaking ×1, food ×1, family ×1, work ×1
-- **hang** (12 entries) → position ×5, pushing-and-pulling ×4, fastening ×2, household ×1, clothing ×1
-- **accident** (12 entries) → pushing-and-pulling ×4, cutting ×4, hitting ×3, conflict ×1
-- **quality** (12 entries) → work ×11, good-and-bad ×1, appearance ×1
-- **mix** (12 entries) → cooking ×4, fire ×3, social-life ×2, amounts ×2, position ×1, family ×1
-- **aboard** (12 entries) → vehicles ×10, carrying ×4, travel ×2, boats ×2, pushing-and-pulling ×2
-- **government** (11 entries) → leadership-and-law ×11, peoples-and-nations ×4, occupations ×2, pushing-and-pulling ×1
-- **legal** (11 entries) → leadership-and-law ×9, money-and-trade ×2, ceremony ×1, people ×1, character ×1, dwellings ×1, occupations ×1, games ×1, +1 more
-- **fight** (11 entries) → conflict ×11, people ×1
-- **environment** (11 entries) → sky ×7, time ×4, weather ×3, trees ×1
-- **add** (10 entries) → amounts ×5, numbers ×4, social-life ×1, money-and-trade ×1
-- **give** (10 entries) → social-life ×7, carrying ×2, money-and-trade ×2, games ×1, amounts ×1
-- **want** (10 entries) → emotions ×10, social-life ×2, eating-and-drinking ×2, travel ×1
-- **wait** (10 entries) → time ×7, emotions ×4
-- **volume** (10 entries) → amounts ×5, work ×2, hearing ×1, size-and-shape ×1, food ×1, carrying ×1
-- **negative** (10 entries) → small-words ×6, good-and-bad ×2, people ×1, talking ×1, character ×1, leadership-and-law ×1, social-life ×1
-- **wrong** (10 entries) → good-and-bad ×6, talking ×2, conflict ×2, eating-and-drinking ×1, position ×1
-- **instrument** (9 entries) → music-and-dance ×7, occupations ×2, health ×1, tools ×1, travel ×1, pushing-and-pulling ×1
-- **agriculture** (9 entries) → farming ×7, dwellings ×1, farm-animals ×1, tools ×1, land ×1, ceremony ×1
-- **stop** (9 entries) → work ×3, talking ×3, eating-and-drinking ×1, travel ×1, dwellings ×1, emotions ×1
-- **metal** (9 entries) → texture-and-materials ×7, hunting ×2, money-and-trade ×2, tools ×1, household ×1
-- **raise** (8 entries) → carrying ×4, family ×2, movement ×2, spirit-world ×1
-- **fact** (8 entries) → good-and-bad ×5, places ×2, small-words ×1
-- **tobacco** (8 entries) → customs ×8, social-life ×1, character ×1
-- **tradition** (8 entries) → customs ×6, ceremony ×3, leadership-and-law ×1, family ×1, occupations ×1, peoples-and-nations ×1, clothing ×1
-- **search** (7 entries) → seeing ×6, trees ×1
-- **climb** (7 entries) → movement ×6, vehicles ×1
-- **financial** (7 entries) → money-and-trade ×7, falling ×1, hitting ×1
-- **follow** (7 entries) → movement ×5, thinking ×1, character ×1
-- **blow air** (7 entries) → cleaning ×4, body-actions ×3, weather ×2
-- **house** (7 entries) → dwellings ×7, cleaning ×1, question-words ×1
-- **slang expression** (6 entries) → ceremony ×2, social-life ×1, thinking ×1, family ×1, animals ×1, body ×1, character ×1
-- **reptile** (6 entries) → animals ×6
-- **smother** (6 entries) → body-actions ×4, conflict ×1, fire ×1, condition ×1, health ×1
-- **point** (6 entries) → body-actions ×3, carrying ×2, directions ×1
-- **lost** (6 entries) → holding ×3, seeing ×2, games ×1
-- **enter** (6 entries) → movement ×4, seeing ×1, social-life ×1, carrying ×1
-- **wealth** (6 entries) → money-and-trade ×5, character ×3, people ×1, health ×1
-- **steal** (6 entries) → character ×6, body ×1
-- **phenomenon** (6 entries) → sky ×4, spirit-world ×2
-- **trade** (6 entries) → money-and-trade ×5, customs ×1, occupations ×1
-- **flavour** (6 entries) → smell-and-taste ×4, food ×3, eating-and-drinking ×1
-- **music** (6 entries) → music-and-dance ×6, occupations ×2
-- **number** (6 entries) → numbers ×6, farming ×1
-- **meet** (5 entries) → social-life ×4, boats ×1, hitting ×1, time ×1
-- **release** (5 entries) → pushing-and-pulling ×3, holding ×1, position ×1, movement ×1
-- **decision** (5 entries) → leadership-and-law ×5, thinking ×1
-- **exclamation** (5 entries) → greetings ×3, time ×1, small-words ×1
-- **repeat** (5 entries) → talking ×2, cooking ×2, temperature ×2, work ×1
-- **affirmative** (5 entries) → good-and-bad ×2, small-words ×2, talking ×1, social-life ×1
-- **kill** (5 entries) → conflict ×5, occupations ×1
-- **seperate** (5 entries) → movement ×2, breaking ×1, social-life ×1, family ×1
-- **affect** (5 entries) → work ×3, emotions ×2, talking ×1
-- **commerce** (5 entries) → money-and-trade ×5, occupations ×1
-- **danger** (5 entries) → good-and-bad ×4, land ×1, hunting ×1
-- **toy** (4 entries) → games ×4, social-life ×1, hunting ×1
-- **geology** (4 entries) → land ×4
-- **contract** (4 entries) → movement ×2, breaking ×2
-- **stick** (4 entries) → cutting ×4
-- **medicine** (4 entries) → health ×4, plants ×2, trees ×1, eating-and-drinking ×1
-- **settle** (3 entries) → holding ×2, social-life ×1
-- **weave** (3 entries) → basket-making ×2, sewing-and-textiles ×1
-- **exclude** (3 entries) → social-life ×2, thinking ×1
-- **sharpen** (3 entries) → tools ×3, cutting ×2, making-and-fixing ×1
-- **astronomy** (3 entries) → sky ×3, time ×1
-- **reproduction** (3 entries) → family ×2, animals ×1, birds ×1, body ×1
-- **culture** (3 entries) → spirit-world ×1, talking ×1, peoples-and-nations ×1, customs ×1, clothing ×1
-- **farm** (3 entries) → farming ×2, farm-animals ×1, birds ×1, tools ×1
-- **behavior** (3 entries) → movement ×1, greetings ×1, emotions ×1, sleep ×1
-- **amount** (2 entries) → amounts ×2, position ×1
-- **challenge** (2 entries) → conflict ×2
-- **defeat** (2 entries) → hitting ×2
-- **skill** (2 entries) → work ×2
-- **select** (2 entries) → holding ×2, thinking ×2
-- **mathematics** (2 entries) → numbers ×2, learning-and-teaching ×1
-- **civic** (2 entries) → leadership-and-law ×2, ceremony ×1
-- **absent** (2 entries) → amounts ×2
-- **chance** (2 entries) → good-and-bad ×2
-- **save** (2 entries) → social-life ×2
-- **appearance ** (2 entries) → appearance ×2, good-and-bad ×1, colors ×1
-- **density** (1 entries) → texture-and-materials ×1
-- **extinct** (1 entries) → condition ×1
-- **expect** (1 entries) → travel ×1, time ×1
-- **baby talk** (1 entries) → food ×1, talking ×1
-- **chew** (1 entries) → sewing-and-textiles ×1
-- **sequence** (1 entries) → movement ×1
-- **p** (1 entries) → dwellings ×1
-- **spiritually ** (1 entries) → spirit-world ×1
-- **spiritualty** (1 entries) → spirit-world ×1
-- **fishing** (1 entries) → fishing ×1
-- **place** (1 entries) → location-words ×1
-- **structrue** (1 entries) → dwellings ×1
-- **sail** (1 entries) → boats ×1
-- **Tradition** (1 entries) → ceremony ×1, clothing ×1
-- **Speed** (1 entries) → music-and-dance ×1
-- **language** (1 entries) → talking ×1
-- **religious** (1 entries) → ceremony ×1, dwellings ×1
-- **cognitive** (1 entries) → (uncategorized) ×1
-- **structural** (1 entries) → dwellings ×1, cleaning ×1
-- **construction material** (1 entries) → texture-and-materials ×1, making-and-fixing ×1
-- **paper** (1 entries) → stories-and-writing ×1
-- **Water** (1 entries) → water ×1
-- **undo** (1 entries) → fastening ×1
-- **press** (1 entries) → pushing-and-pulling ×1
-- **poosition** (1 entries) → movement ×1
+- **~tier-top-1000** (900 entries) → food ×69, time ×54, household ×48, family ×44, body-parts ×35, small-words ×33, calendar ×32, animals ×30, +87 more
+- **~needs-human** (712 entries) → (uncategorized) ×705, time ×2, ways-of-moving ×1, fishing ×1, carrying ×1, amounts ×1, numbers ×1, going-and-coming ×1
+- **body** (596 entries) → body-parts ×146, body-descriptions ×133, sickness ×116, body-actions ×92, cleaning ×22, animals ×19, healing ×15, eating-and-drinking ×13, +44 more
+- **movement** (405 entries) → ways-of-moving ×216, going-and-coming ×134, putting-and-placing ×18, pushing-and-pulling ×12, falling ×7, sickness ×6, fear-anger-sadness ×6, carrying ×4, +31 more
+- **~old-motion** (400 entries) → ways-of-moving ×147, going-and-coming ×77, putting-and-placing ×19, pushing-and-pulling ×18, posture ×18, carrying ×15, swimming ×13, boats ×12, +42 more
+- **position** (347 entries) → putting-and-placing ×183, posture ×124, ways-of-moving ×6, location-words ×6, social-life ×4, fastening ×4, going-and-coming ×4, boats ×4, +28 more
+- **work** (331 entries) → work ×192, occupations ×96, making-and-fixing ×17, trees ×14, farming ×13, dwellings ×9, carrying ×9, leadership-and-law ×8, +42 more
+- **water** (328 entries) → water ×115, sea-and-rivers ×103, boats ×53, swimming ×34, fishing ×9, land ×9, condition ×8, temperature ×8, +34 more
+- **food** (296 entries) → food ×220, eating-and-drinking ×54, plants ×46, cooking ×24, smell-and-taste ×19, fish ×9, household ×7, animals ×7, +19 more
+- **time** (283 entries) → time ×178, calendar ×57, numbers ×21, work ×11, age ×8, church-rituals ×6, sky ×6, travel ×6, +29 more
+- **health** (269 entries) → sickness ×176, healing ×57, body-actions ×12, body-descriptions ×10, ways-of-moving ×9, plants ×8, death-and-mourning ×7, appearance ×7, +32 more
+- **emotions** (267 entries) → fear-anger-sadness ×129, love-and-joy ×75, social-life ×32, thinking ×22, seeing ×10, body-actions ×9, going-and-coming ×8, character ×5, +22 more
+- **people** (249 entries) → people ×148, occupations ×42, family ×31, peoples-and-nations ×25, character ×18, leadership-and-law ×17, age ×11, games ×7, +39 more
+- **~old-behaviour** (249 entries) → character ×129, social-life ×39, talking ×19, good-and-bad ×16, fear-anger-sadness ×11, love-and-joy ×10, people ×9, ways-of-moving ×8, +33 more
+- **~old-location** (236 entries) → places ×66, location-words ×54, putting-and-placing ×23, travel ×18, sea-and-rivers ×18, posture ×16, land ×12, dwellings ×8, +28 more
+- **character** (221 entries) → character ×193, wrongdoing ×20, people ×15, social-life ×14, talking ×10, eating-and-drinking ×6, conflict ×5, work ×4, +20 more
+- **~old-sym-5f** (218 entries) → (uncategorized) ×26, putting-and-placing ×9, household ×9, thinking ×8, time ×7, cleaning ×7, water ×6, size-and-shape ×6, +70 more
+- **household** (215 entries) → household ×171, dwellings ×26, fire ×17, cleaning ×16, sewing-and-textiles ×12, cooking ×8, seeing ×7, fastening ×6, +31 more
+- **social-life** (210 entries) → social-life ×208, talking ×13, love-and-joy ×10, character ×10, family ×6, leadership-and-law ×5, games ×4, money-and-trade ×4, +26 more
+- **dwellings** (210 entries) → dwellings ×207, making-and-fixing ×10, household ×8, church-rituals ×6, cleaning ×6, trees ×5, travel ×4, question-words ×4, +24 more
+- **~old-feel** (203 entries) → fear-anger-sadness ×78, love-and-joy ×31, social-life ×26, thinking ×23, smell-and-taste ×9, character ×8, sickness ×7, church-rituals ×7, +22 more
+- **size-and-shape** (190 entries) → size-and-shape ×170, body-descriptions ×20, seeing ×5, tools ×4, appearance ×3, sewing-and-textiles ×2, household ×2, work ×2, +11 more
+- **talking** (183 entries) → talking ×182, social-life ×12, hearing ×11, peoples-and-nations ×9, character ×7, wrongdoing ×4, sickness ×3, conflict ×3, +16 more
+- **cutting** (182 entries) → cutting ×179, hitting ×10, cooking ×9, trees ×8, travel ×4, sickness ×4, tools ×3, conflict ×3, +13 more
+- **~old-structure** (181 entries) → dwellings ×155, household ×9, trees ×6, church-rituals ×5, putting-and-placing ×4, cleaning ×4, question-words ×4, making-and-fixing ×3, +20 more
+- **fire** (178 entries) → fire ×175, household ×14, tobacco-and-smoking ×10, cooking ×5, breaking ×5, tools ×4, leadership-and-law ×3, colors ×3, +13 more
+- **~old-state** (175 entries) → condition ×58, texture-and-materials ×13, sickness ×11, food ×9, putting-and-placing ×8, breaking ×8, cleaning ×7, fire ×7, +35 more
+- **pushing-and-pulling** (164 entries) → pushing-and-pulling ×163, fishing ×3, music-and-dance ×2, water ×2, boats ×2, leadership-and-law ×1, hearing ×1, carrying ×1, +1 more
+- **animals** (156 entries) → animals ×153, hearing ×9, body-parts ×8, food ×7, hunting ×6, cleaning ×4, fish ×3, sewing-and-textiles ×3, +18 more
+- **~old-animal** (155 entries) → animals ×108, farm-animals ×29, hunting ×12, food ×8, hearing ×5, birds ×5, fish ×4, sewing-and-textiles ×4, +16 more
+- **seeing** (153 entries) → seeing ×152, love-and-joy ×6, household ×5, size-and-shape ×5, fear-anger-sadness ×4, body-actions ×3, social-life ×3, dwellings ×3, +16 more
+- **condition** (152 entries) → condition ×137, water ×7, clothing ×7, good-and-bad ×7, sickness ×5, food ×4, body-descriptions ×3, trees ×3, +13 more
+- **~old-size** (151 entries) → size-and-shape ×94, body-descriptions ×31, amounts ×12, cutting ×5, seeing ×5, tools ×4, sewing-and-textiles ×3, work ×3, +13 more
+- **family** (150 entries) → family ×149, people ×14, body-actions ×11, church-rituals ×5, social-life ×5, household ×5, appearance ×4, animals ×2, +9 more
+- **~old-direction** (147 entries) → going-and-coming ×36, directions ×18, ways-of-moving ×15, travel ×13, posture ×11, carrying ×9, putting-and-placing ×9, pushing-and-pulling ×9, +19 more
+- **clothing** (145 entries) → clothing ×137, condition ×7, church-rituals ×6, appearance ×5, temperature ×5, sewing-and-textiles ×5, vehicles ×2, cleaning ×2, +12 more
+- **carrying** (144 entries) → carrying ×141, vehicles ×10, occupations ×6, travel ×6, household ×3, putting-and-placing ×2, work ×2, land ×2, +3 more
+- **travel** (140 entries) → travel ×103, going-and-coming ×18, carrying ×10, ways-of-moving ×9, vehicles ×9, boats ×7, time ×6, dwellings ×5, +17 more
+- **~old-sight** (137 entries) → seeing ×117, love-and-joy ×6, body-actions ×5, appearance ×5, size-and-shape ×4, spirits ×4, fear-anger-sadness ×4, household ×3, +16 more
+- **~old-plant** (132 entries) → plants ×90, food ×37, trees ×35, farming ×11, healing ×4, condition ×2, basket-making ×2, water ×2, +6 more
+- **weather** (131 entries) → weather ×125, temperature ×11, water ×6, calendar ×5, sky ×3, directions ×2, falling ×2, clothing ×2, +13 more
+- **~old-communication** (125 entries) → talking ×101, hearing ×12, stories-and-writing ×7, social-life ×7, peoples-and-nations ×7, character ×7, occupations ×4, animals ×3, +13 more
+- **trees** (125 entries) → trees ×125, cutting ×8, occupations ×8, dwellings ×5, plants ×4, basket-making ×3, condition ×3, work ×3, +15 more
+- **~old-cut** (124 entries) → cutting ×110, cooking ×9, trees ×8, breaking ×6, conflict ×5, sickness ×5, hitting ×4, tools ×3, +11 more
+- **money-and-trade** (123 entries) → money-and-trade ×122, work ×5, social-life ×4, travel ×3, condition ×3, hunting ×3, character ×3, people ×2, +13 more
+- **ceremony** (123 entries) → church-rituals ×101, death-and-mourning ×14, faith ×12, calendar ×11, clothing ×7, people ×6, dwellings ×5, family ×5, +12 more
+- **fastening** (122 entries) → fastening ×111, household ×7, putting-and-placing ×7, clothing ×2, farm-animals ×2, farming ×2, weather ×2, family ×2, +1 more
+- **amounts** (121 entries) → amounts ×121, eating-and-drinking ×3, question-words ×3, social-life ×2, putting-and-placing ×2, location-words ×2, household ×2, water ×2, +9 more
+- **plants** (118 entries) → plants ×118, food ×46, healing ×8, trees ×4, condition ×3, age ×3, farming ×2, tobacco-and-smoking ×2, +5 more
+- **numbers** (115 entries) → numbers ×111, time ×9, calendar ×7, money-and-trade ×3, amounts ×2, age ×2, games ×2, stories-and-writing ×1, +4 more
+- **hunting** (115 entries) → hunting ×115, hitting ×14, birds ×7, tools ×6, animals ×6, occupations ×4, sewing-and-textiles ×3, money-and-trade ×2, +12 more
+- **land** (114 entries) → land ×89, putting-and-placing ×7, sea-and-rivers ×7, farming ×5, going-and-coming ×4, carrying ×4, peoples-and-nations ×3, travel ×3, +13 more
+- **hearing** (112 entries) → hearing ×112, talking ×10, animals ×8, music-and-dance ×5, sickness ×4, body-actions ×3, sleep ×2, fire ×2, +10 more
+- **cooking** (112 entries) → cooking ×112, cutting ×9, food ×6, household ×6, fire ×4, occupations ×4, temperature ×2, hitting ×2, +2 more
+- **occupations** (111 entries) → occupations ×110, trees ×8, work ×7, leadership-and-law ×6, healing ×6, carrying ×6, church-rituals ×5, music-and-dance ×5, +27 more
+- **~old-hear** (107 entries) → hearing ×94, talking ×15, animals ×7, music-and-dance ×5, sickness ×4, body-actions ×4, fear-anger-sadness ×3, sleep ×2, +8 more
+- **~old-tool** (106 entries) → tools ×67, household ×12, hunting ×12, fishing ×9, farming ×6, farm-animals ×5, making-and-fixing ×5, sewing-and-textiles ×5, +17 more
+- **cleaning** (105 entries) → cleaning ×105, body-parts ×19, household ×11, dwellings ×6, water ×4, animals ×4, character ×3, farm-animals ×2, +3 more
+- **boats** (104 entries) → boats ×104, water ×5, occupations ×4, fishing ×3, sea-and-rivers ×3, tools ×2, size-and-shape ×2, posture ×2, +10 more
+- **games** (103 entries) → games ×103, people ×5, social-life ×4, ways-of-moving ×4, occupations ×2, numbers ×2, money-and-trade ×1, putting-and-placing ×1, +10 more
+- **~old-hit** (103 entries) → hitting ×85, cutting ×17, hunting ×16, breaking ×6, conflict ×4, music-and-dance ×3, fire ×3, games ×2, +12 more
+- **fish** (102 entries) → fish ×60, fishing ×41, food ×9, boats ×3, tools ×3, animals ×3, occupations ×2, work ×2, +6 more
+- **~old-value** (102 entries) → money-and-trade ×56, good-and-bad ×34, love-and-joy ×6, work ×4, amounts ×2, appearance ×2, travel ×2, social-life ×2, +9 more
+- **body-actions** (102 entries) → body-actions ×102, sickness ×6, fear-anger-sadness ×5, eating-and-drinking ×5, hearing ×3, family ×3, seeing ×2, sleep ×2, +9 more
+- **appearance** (102 entries) → appearance ×65, seeing ×17, size-and-shape ×15, body-descriptions ×8, colors ×7, clothing ×5, family ×4, sickness ×4, +15 more
+- **hitting** (102 entries) → hitting ×102, hunting ×16, cutting ×8, breaking ×5, conflict ×4, music-and-dance ×2, sickness ×2, cooking ×2, +8 more
+- **tools** (101 entries) → tools ×94, farming ×7, household ×7, fishing ×6, hunting ×6, farm-animals ×5, size-and-shape ×4, fire ×4, +13 more
+- **~old-tree** (99 entries) → trees ×87, plants ×8, dwellings ×5, basket-making ×4, work ×4, texture-and-materials ×2, fire ×2, tools ×2, +11 more
+- **~old-shape** (99 entries) → size-and-shape ×70, body-descriptions ×9, cutting ×4, appearance ×3, sewing-and-textiles ×3, household ×2, seeing ×2, putting-and-placing ×2, +12 more
+- **smell-and-taste** (98 entries) → smell-and-taste ×98, food ×10, healing ×4, eating-and-drinking ×4, work ×2, fire ×2, body-descriptions ×1, household ×1, +5 more
+- **eating-and-drinking** (97 entries) → eating-and-drinking ×97, character ×5, body-actions ×5, food ×4, smell-and-taste ×4, amounts ×3, social-life ×2, conflict ×2, +6 more
+- **small-words** (96 entries) → small-words ×93, amounts ×3, (uncategorized) ×2
+- **good-and-bad** (94 entries) → good-and-bad ×94, appearance ×3, social-life ×2, character ×2, leadership-and-law ×1, talking ×1, love-and-joy ×1, conflict ×1
+- **making-and-fixing** (93 entries) → making-and-fixing ×93, dwellings ×10, sewing-and-textiles ×5, tools ×4, travel ×3, colors ×3, thinking ×2, occupations ×2, +6 more
+- **temperature** (93 entries) → temperature ×85, weather ×11, water ×8, clothing ×5, breaking ×4, cooking ×3, sickness ×2, dwellings ×2, +2 more
+- **~old-speech** (92 entries) → talking ×79, hearing ×12, peoples-and-nations ×7, character ×6, sickness ×4, stories-and-writing ×3, social-life ×3, animals ×3, +7 more
+- **breaking** (91 entries) → breaking ×91, fire ×5, hitting ×5, temperature ×4, water ×3, trees ×2, games ×1, farm-animals ×1, +2 more
+- **~old-quantity** (90 entries) → amounts ×61, eating-and-drinking ×8, money-and-trade ×5, character ×4, small-words ×4, question-words ×4, time ×3, social-life ×2, +14 more
+- **~tier-top-100** (90 entries) → people ×9, time ×6, talking ×4, food ×4, family ×4, small-words ×3, weather ×3, eating-and-drinking ×3, +40 more
+- **~old-speed** (90 entries) → ways-of-moving ×39, work ×11, sea-and-rivers ×5, games ×4, talking ×4, travel ×4, character ×3, people ×2, +21 more
+- **holding** (89 entries) → holding ×86, putting-and-placing ×3, food ×2, thinking ×2, seeing ×2, leadership-and-law ×1, love-and-joy ×1, social-life ×1, +2 more
+- **places** (84 entries) → places ×84, people ×3, peoples-and-nations ×2, location-words ×1, trees ×1, death-and-mourning ×1, quillwork-and-beadwork ×1, family ×1, +1 more
+- **~old-ritual** (81 entries) → church-rituals ×59, death-and-mourning ×9, faith ×7, calendar ×7, family ×5, occupations ×4, spirits ×4, leadership-and-law ×3, +8 more
+- **~old-hold** (81 entries) → holding ×60, fastening ×4, putting-and-placing ×3, leadership-and-law ×3, fishing ×3, money-and-trade ×2, hunting ×2, seeing ×2, +9 more
+- **colors** (81 entries) → colors ×79, body-descriptions ×8, fire ×3, making-and-fixing ×3, condition ×2, size-and-shape ×2, body-actions ×2, appearance ×2, +6 more
+- **sewing-and-textiles** (81 entries) → sewing-and-textiles ×80, household ×5, making-and-fixing ×5, hunting ×4, tools ×4, animals ×3, clothing ×2, basket-making ×1, +2 more
+- **~old-carry** (80 entries) → carrying ×66, household ×4, putting-and-placing ×4, boats ×3, vehicles ×3, occupations ×3, travel ×3, pushing-and-pulling ×2, +6 more
+- **calendar** (79 entries) → calendar ×79, church-rituals ×11, weather ×5, numbers ×4, travel ×3, time ×3, greetings ×3, age ×1, +4 more
+- **thinking** (79 entries) → thinking ×79, social-life ×2, making-and-fixing ×2, leadership-and-law ×2, talking ×2, holding ×2, seeing ×2, age ×1, +1 more
+- **~old-color** (79 entries) → colors ×70, body-descriptions ×8, appearance ×6, fire ×3, sickness ×3, condition ×2, size-and-shape ×2, body-actions ×2, +4 more
+- **birds** (79 entries) → birds ×78, farm-animals ×9, hunting ×7, body-parts ×3, hearing ×1, cooking ×1, ways-of-moving ×1, boats ×1, +3 more
+- **~old-liquid** (77 entries) → water ×33, food ×12, eating-and-drinking ×10, temperature ×6, cooking ×6, cleaning ×6, amounts ×4, farm-animals ×3, +10 more
+- **location-words** (74 entries) → location-words ×73, sea-and-rivers ×5, dwellings ×3, amounts ×2, land ×1, putting-and-placing ×1, time ×1, directions ×1, +3 more
+- **~old-kinship** (74 entries) → family ×74, appearance ×3, leadership-and-law ×1
+- **~old-cognition** (72 entries) → thinking ×54, learning-and-teaching ×11, character ×3, talking ×3, dwellings ×2, making-and-fixing ×2, age ×2, occupations ×1, +6 more
+- **~old-not-classified** (71 entries) → small-words ×61, greetings ×4, amounts ×3, location-words ×2, time ×2
+- **conflict** (71 entries) → conflict ×71, hitting ×4, cutting ×3, sickness ×3, talking ×3, social-life ×3, hunting ×3, character ×2, +10 more
+- **age** (71 entries) → age ×52, people ×14, condition ×10, numbers ×3, plants ×3, body-actions ×2, texture-and-materials ×2, character ×2, +10 more
+- **~old-spirituality** (71 entries) → church-rituals ×34, faith ×25, spirits ×6, traditional-stories ×6, death-and-mourning ×6, dwellings ×3, calendar ×1, family ×1, +6 more
+- **~old-body-part** (71 entries) → body-parts ×67, body-descriptions ×3, animals ×3, birds ×3, sickness ×1, games ×1, talking ×1
+- **~old-tend** (69 entries) → social-life ×22, family ×9, body-actions ×8, cleaning ×8, work ×6, temperature ×4, farming ×3, fastening ×2, +15 more
+- **customs** (69 entries) → tobacco-and-smoking ×21, fire ×10, quillwork-and-beadwork ×8, family ×6, games ×5, leadership-and-law ×5, household ×4, stories-and-writing ×4, +15 more
+- **~old-cook** (66 entries) → cooking ×66, food ×2, fire ×2, household ×1
+- **~old-game** (63 entries) → games ×62, people ×3, numbers ×2, money-and-trade ×1, putting-and-placing ×1, breaking ×1, good-and-bad ×1, hitting ×1, +4 more
+- **~old-push** (63 entries) → pushing-and-pulling ×57, hitting ×3, boats ×2, hunting ×1, water ×1
+- **~old-break** (63 entries) → breaking ×61, hitting ×5, temperature ×4, fire ×3, water ×3, cutting ×2, farm-animals ×1, animals ×1, +2 more
+- **fishing** (61 entries) → fishing ×61, tools ×6, boats ×3, occupations ×3, pushing-and-pulling ×3, hunting ×2, work ×2, cooking ×2
+- **~old-bird** (61 entries) → birds ×61, farm-animals ×6, hunting ×5, body-parts ×2, stories-and-writing ×1, tools ×1
+- **spirit-world** (59 entries) → faith ×27, spirits ×23, traditional-stories ×12, occupations ×5, going-and-coming ×1, leadership-and-law ×1
+- **~old-transportation** (57 entries) → vehicles ×20, boats ×19, carrying ×11, travel ×9, pushing-and-pulling ×2, trees ×2, money-and-trade ×1, time ×1, +6 more
+- **texture-and-materials** (57 entries) → texture-and-materials ×57, food ×3, trees ×2, condition ×2, household ×2, money-and-trade ×2, water ×1, weather ×1, +2 more
+- **~old-clean** (57 entries) → cleaning ×53, body-parts ×17, household ×6, character ×3, cutting ×2, animals ×2, dwellings ×2, eating-and-drinking ×1, +3 more
+- **~old-hunt** (57 entries) → hunting ×53, birds ×7, fishing ×5, occupations ×3, animals ×2, money-and-trade ×1, work ×1, ways-of-moving ×1, +2 more
+- **stories-and-writing** (56 entries) → stories-and-writing ×56, occupations ×4, talking ×2, tools ×2, travel ×2, seeing ×2, numbers ×1, wrongdoing ×1, +5 more
+- **leadership-and-law** (56 entries) → leadership-and-law ×55, people ×7, occupations ×6, social-life ×5, church-rituals ×4, peoples-and-nations ×4, work ×3, talking ×2, +11 more
+- **music-and-dance** (55 entries) → music-and-dance ×55, hearing ×5, occupations ×5, social-life ×2, hitting ×2, pushing-and-pulling ×2, ways-of-moving ×2, people ×1
+- **sleep** (55 entries) → sleep ×53, posture ×4, time ×3, body-actions ×2, travel ×2, hearing ×2, household ×2, work ×1, +3 more
+- **farming** (54 entries) → farming ×54, tools ×7, land ×4, occupations ×2, dwellings ×2, fastening ×2, work ×2, cutting ×2, +3 more
+- **farm-animals** (54 entries) → farm-animals ×54, birds ×9, tools ×3, fastening ×2, cleaning ×2, games ×1, going-and-coming ×1, posture ×1, +6 more
+- **~old-remove** (54 entries) → pushing-and-pulling ×13, cutting ×9, carrying ×6, trees ×6, hitting ×4, cleaning ×2, farming ×2, fastening ×2, +14 more
+- **~old-activity** (53 entries) → ways-of-moving ×8, swimming ×7, vehicles ×7, work ×6, making-and-fixing ×4, cutting ×3, social-life ×3, boats ×2, +15 more
+- **vehicles** (49 entries) → vehicles ×49, carrying ×10, travel ×4, dwellings ×1, time ×1, games ×1, making-and-fixing ×1, death-and-mourning ×1, +4 more
+- **~old-decorative** (49 entries) → making-and-fixing ×12, colors ×7, quillwork-and-beadwork ×6, household ×6, clothing ×6, sewing-and-textiles ×5, cutting ×4, appearance ×3, +6 more
+- **peoples-and-nations** (48 entries) → peoples-and-nations ×47, talking ×9, people ×4, leadership-and-law ×4, land ×3, places ×2, (uncategorized) ×1, games ×1
+- **falling** (48 entries) → falling ×48, sickness ×5, weather ×2, cutting ×1, hitting ×1, water ×1, money-and-trade ×1
+- **~old-cover** (46 entries) → fastening ×23, putting-and-placing ×8, household ×7, clothing ×4, family ×3, weather ×2, fire ×2, seeing ×2, +7 more
+- **~old-texture** (46 entries) → texture-and-materials ×31, condition ×10, trees ×2, land ×2, colors ×2, basket-making ×1, sewing-and-textiles ×1, food ×1, +6 more
+- **~old-touch** (45 entries) → smell-and-taste ×35, healing ×4, holding ×3, cooking ×2, texture-and-materials ×2, work ×2, love-and-joy ×1, social-life ×1, +3 more
+- **~old-language-arts** (44 entries) → talking ×24, stories-and-writing ×18, peoples-and-nations ×6, learning-and-teaching ×3, occupations ×2, numbers ×1, food ×1, thinking ×1, +1 more
+- **~old-arrange** (43 entries) → putting-and-placing ×24, pushing-and-pulling ×4, household ×3, social-life ×2, tobacco-and-smoking ×2, games ×1, dwellings ×1, good-and-bad ×1, +10 more
+- **~old-pull** (43 entries) → pushing-and-pulling ×38, music-and-dance ×2, fishing ×2, fastening ×2, hunting ×1, hearing ×1, carrying ×1, work ×1, +1 more
+- **~old-prepare** (42 entries) → making-and-fixing ×19, travel ×6, hunting ×5, pushing-and-pulling ×4, clothing ×3, household ×2, cleaning ×2, occupations ×2, +8 more
+- **~old-fall** (41 entries) → falling ×37, sickness ×6, weather ×3, cutting ×2, hitting ×2, ways-of-moving ×1, water ×1, money-and-trade ×1
+- **~old-effect** (40 entries) → condition ×9, fastening ×7, temperature ×5, social-life ×2, good-and-bad ×2, water ×2, fire ×2, conflict ×2, +12 more
+- **swimming** (39 entries) → swimming ×39, water ×4, animals ×1, people ×1, occupations ×1, sleep ×1
+- **~old-eat** (39 entries) → eating-and-drinking ×35, character ×3, amounts ×3, food ×2, smell-and-taste ×2, body-actions ×2, hearing ×1
+- **~old-boat** (39 entries) → boats ×39, fishing ×1, numbers ×1, basket-making ×1
+- **~old-light** (38 entries) → fire ×38, tobacco-and-smoking ×3, colors ×2, household ×2, hunting ×2, seeing ×1, weather ×1
+- **~old-harm** (38 entries) → conflict ×24, hunting ×5, hitting ×4, sickness ×3, cutting ×3, fire ×2, character ×2, death-and-mourning ×2, +7 more
+- **insects** (38 entries) → insects ×38, sickness ×2, cutting ×2, spirits ×1, animals ×1
+- **~old-pierce** (38 entries) → cutting ×33, hitting ×6, insects ×2, hunting ×2, condition ×2, falling ×1, conflict ×1, going-and-coming ×1
+- **~old-information** (38 entries) → question-words ×26, talking ×4, amounts ×4, stories-and-writing ×3, seeing ×3, time ×3, good-and-bad ×2, money-and-trade ×2, +8 more
+- **~old-social** (37 entries) → social-life ×24, character ×7, talking ×4, leadership-and-law ×4, good-and-bad ×2, amounts ×2, people ×2, music-and-dance ×2, +5 more
+- **greetings** (37 entries) → greetings ×37, love-and-joy ×3, social-life ×3, calendar ×3, time ×1, healing ×1, people ×1
+- **~old-alter** (37 entries) → breaking ×8, temperature ×6, size-and-shape ×3, making-and-fixing ×3, colors ×3, condition ×3, social-life ×2, good-and-bad ×2, +7 more
+- **~old-mark** (37 entries) → cutting ×13, travel ×7, condition ×5, hitting ×4, conflict ×3, stories-and-writing ×2, money-and-trade ×2, hunting ×2, +5 more
+- **question-words** (37 entries) → question-words ×37, dwellings ×4, time ×3, amounts ×3, money-and-trade ×2, work ×2, age ×2, people ×1, +4 more
+- **~old-bring** (36 entries) → carrying ×30, vehicles ×4, pushing-and-pulling ×3, travel ×3, putting-and-placing ×2, trees ×1
+- **~old-tie** (36 entries) → fastening ×26, farming ×3, pushing-and-pulling ×3, carrying ×1, clothing ×1, farm-animals ×1, putting-and-placing ×1, amounts ×1, +4 more
+- **~old-dry** (35 entries) → condition ×28, cleaning ×7, farm-animals ×3, trees ×2, water ×2, cooking ×2, household ×1, sea-and-rivers ×1, +1 more
+- **~old-smell** (34 entries) → smell-and-taste ×32, fire ×2, animals ×1, body-descriptions ×1, trees ×1, appearance ×1, food ×1, plants ×1
+- **~old-insect** (33 entries) → insects ×32, sickness ×2, animals ×2
+- **~old-season** (33 entries) → calendar ×27, weather ×7, travel ×3, vehicles ×2, water ×1, ways-of-moving ×1, time ×1, trees ×1
+- **~old-run** (33 entries) → ways-of-moving ×17, going-and-coming ×13, games ×2, wrongdoing ×2, sickness ×1, travel ×1, hitting ×1
+- **~old-turn** (32 entries) → putting-and-placing ×13, ways-of-moving ×4, posture ×4, going-and-coming ×3, fastening ×3, falling ×2, making-and-fixing ×2, body-descriptions ×1, +1 more
+- **~old-assistance** (32 entries) → social-life ×20, money-and-trade ×5, conflict ×2, carrying ×2, leadership-and-law ×2, ways-of-moving ×1, work ×1, vehicles ×1, +7 more
+- **~old-spread** (31 entries) → putting-and-placing ×18, smell-and-taste ×7, food ×2, appearance ×1, fire ×1, character ×1, going-and-coming ×1
+- **~old-gather** (31 entries) → holding ×9, social-life ×5, food ×4, farming ×3, hunting ×3, work ×3, plants ×3, fastening ×2, +12 more
+- **~old-perform** (30 entries) → music-and-dance ×13, spirits ×6, stories-and-writing ×5, occupations ×2, games ×2, hitting ×2, work ×2, social-life ×1, +3 more
+- **~old-throw** (29 entries) → pushing-and-pulling ×23, water ×3, fishing ×2, cutting ×2, leadership-and-law ×1, hitting ×1, conflict ×1
+- **~old-attach** (28 entries) → fastening ×18, clothing ×5, making-and-fixing ×2, texture-and-materials ×2, household ×1, dwellings ×1, farm-animals ×1
+- **~old-use** (28 entries) → work ×13, good-and-bad ×7, thinking ×3, time ×2, church-rituals ×2, fastening ×1, question-words ×1, social-life ×1
+- **~old-exhaust** (28 entries) → amounts ×9, eating-and-drinking ×6, water ×5, condition ×4, work ×3, boats ×3, hitting ×1, conflict ×1, +2 more
+- **~old-container** (28 entries) → household ×13, amounts ×12, water ×5, quillwork-and-beadwork ×1, pushing-and-pulling ×1, hunting ×1, clothing ×1, money-and-trade ×1, +1 more
+- **~old-injure** (28 entries) → sickness ×25, falling ×5, body-descriptions ×3, cutting ×2, hitting ×2, conflict ×1, breaking ×1
+- **directions** (27 entries) → directions ×23, travel ×6, sea-and-rivers ×5, location-words ×1, body-parts ×1
+- **~old-degree** (27 entries) → putting-and-placing ×5, land ×5, good-and-bad ×4, small-words ×3, size-and-shape ×3, pushing-and-pulling ×2, amounts ×2, thinking ×2, +2 more
+- **~old-nationality** (26 entries) → peoples-and-nations ×26, talking ×2, people ×2, land ×1
+- **~old-sew** (26 entries) → sewing-and-textiles ×24, making-and-fixing ×7, tools ×2
+- **~old-walk** (26 entries) → ways-of-moving ×16, going-and-coming ×4, falling ×4, age ×1, sickness ×1, fire ×1, cleaning ×1, fear-anger-sadness ×1, +2 more
+- **~old-fix** (26 entries) → making-and-fixing ×18, work ×5, sewing-and-textiles ×5, good-and-bad ×2, putting-and-placing ×2, smell-and-taste ×2, household ×1, vehicles ×1, +2 more
+- **~old-exchange** (25 entries) → money-and-trade ×18, dwellings ×2, colors ×2, talking ×2, conflict ×1, games ×1, travel ×1, condition ×1
+- **~old-bind** (25 entries) → fastening ×19, carrying ×1, clothing ×1, making-and-fixing ×1, putting-and-placing ×1, farming ×1, basket-making ×1, sewing-and-textiles ×1, +1 more
+- **~old-weight** (25 entries) → size-and-shape ×12, boats ×4, carrying ×4, holding ×2, pushing-and-pulling ×2, posture ×1, tools ×1, body-descriptions ×1, +1 more
+- **~old-strength** (24 entries) → condition ×7, body-descriptions ×6, character ×4, appearance ×2, people ×2, breaking ×2, conflict ×2, posture ×1, +3 more
+- **~old-return** (24 entries) → going-and-coming ×7, carrying ×5, games ×3, holding ×2, ways-of-moving ×2, good-and-bad ×1, social-life ×1, sea-and-rivers ×1, +5 more
+- **~old-domestic** (24 entries) → farm-animals ×24, birds ×7, tools ×1
+- **sky** (24 entries) → sky ×24, time ×5, weather ×2, colors ×1, calendar ×1, land ×1, seeing ×1
+- **~old-fruit** (23 entries) → plants ×20, food ×19, trees ×1
+- **~old-event** (23 entries) → family ×6, body-actions ×5, social-life ×2, faith ×2, games ×2, leadership-and-law ×2, good-and-bad ×2, music-and-dance ×1, +14 more
+- **~old-deception** (23 entries) → wrongdoing ×11, talking ×6, character ×4, spirits ×3, seeing ×2, sleep ×1, money-and-trade ×1
+- **~old-vocal** (23 entries) → music-and-dance ×18, hearing ×7, occupations ×2, animals ×2, birds ×1, talking ×1
+- **~old-relationship** (22 entries) → family ×13, social-life ×10, holding ×1, church-rituals ×1, love-and-joy ×1, conflict ×1, places ×1
+- **~old-make** (22 entries) → making-and-fixing ×19, dwellings ×3, occupations ×2, sewing-and-textiles ×1, money-and-trade ×1, hunting ×1, farm-animals ×1, tools ×1
+- **~old-wind** (22 entries) → weather ×19, directions ×2, falling ×2, fire ×2, cutting ×1, dwellings ×1, household ×1, smell-and-taste ×1
+- **~old-play** (22 entries) → games ×19, social-life ×4, ways-of-moving ×1, breaking ×1, music-and-dance ×1, pushing-and-pulling ×1, swimming ×1, people ×1, +1 more
+- **basket-making** (21 entries) → basket-making ×21, sewing-and-textiles ×1, cutting ×1, talking ×1, household ×1, trees ×1, boats ×1
+- **~old-geography** (21 entries) → sea-and-rivers ×8, land ×7, places ×6, trees ×1
+- **~old-special-relationship** (20 entries) → love-and-joy ×7, people ×6, family ×4, leadership-and-law ×3, social-life ×2, church-rituals ×2, faith ×1, fear-anger-sadness ×1, +3 more
+- **~old-open** (20 entries) → fastening ×10, body-actions ×5, seeing ×3, cutting ×2, healing ×1, thinking ×1, colors ×1
+- **~old-close** (19 entries) → fastening ×15, sewing-and-textiles ×2, household ×1, making-and-fixing ×1, boats ×1, body-actions ×1, seeing ×1
+- **~old-write** (19 entries) → stories-and-writing ×19, tools ×2, occupations ×2, travel ×1
+- **~old-property** (18 entries) → people ×7, land ×3, money-and-trade ×2, farming ×2, dwellings ×2, amounts ×2, holding ×1, animals ×1
+- **~old-laugh** (18 entries) → love-and-joy ×18, going-and-coming ×2, body-actions ×2
+- **~old-capability** (18 entries) → character ×11, work ×4, stories-and-writing ×1, fishing ×1, games ×1, conflict ×1, thinking ×1, ways-of-moving ×1
+- **~old-fear** (18 entries) → fear-anger-sadness ×17, going-and-coming ×1, people ×1, spirits ×1
+- **~old-name** (18 entries) → talking ×11, places ×4, people ×3
+- **~old-knit** (17 entries) → sewing-and-textiles ×17, tools ×2, basket-making ×1
+- **~old-fibre** (17 entries) → sewing-and-textiles ×15, hunting ×2, household ×2, clothing ×1
+- **~old-grow** (17 entries) → age ×8, plants ×4, condition ×3, food ×3, farming ×2, sickness ×2, family ×1
+- **~old-flight** (16 entries) → ways-of-moving ×13, vehicles ×2, hearing ×2, travel ×1
+- **learning-and-teaching** (16 entries) → learning-and-teaching ×16, occupations ×2, dwellings ×2, numbers ×1
+- **~old-compare** (16 entries) → love-and-joy ×6, good-and-bad ×5, small-words ×2, condition ×1, conflict ×1, amounts ×1
+- **~old-treat** (16 entries) → social-life ×15, character ×5
+- **~old-interact** (15 entries) → social-life ×12, character ×3, talking ×2, thinking ×1, games ×1, love-and-joy ×1, sleep ×1
+- **~old-dig** (15 entries) → land ×10, animals ×2, work ×2, fishing ×1, seeing ×1, thinking ×1, tools ×1
+- **~old-send** (15 entries) → carrying ×12, pushing-and-pulling ×2, social-life ×1
+- **~old-request** (15 entries) → talking ×10, money-and-trade ×3, thinking ×2, work ×1, family ×1
+- **~old-acquire** (15 entries) → money-and-trade ×9, seeing ×2, holding ×2, hunting ×1, carrying ×1, family ×1
+- **~old-lock** (14 entries) → fastening ×13, household ×1, holding ×1
+- **~old-hide** (14 entries) → seeing ×11, holding ×2, posture ×1, putting-and-placing ×1, going-and-coming ×1, basket-making ×1, money-and-trade ×1, clothing ×1
+- **~old-cry** (14 entries) → fear-anger-sadness ×14, going-and-coming ×3, body-actions ×1, travel ×1
+- **~old-special-day** (14 entries) → calendar ×14, church-rituals ×9, greetings ×3, people ×1
+- **~old-bite** (13 entries) → eating-and-drinking ×12, conflict ×3, cutting ×1
+- **~old-harvest** (13 entries) → farming ×11, plants ×2, food ×2, occupations ×1, cutting ×1, tools ×1, numbers ×1
+- **~old-posture** (13 entries) → posture ×9, body-actions ×4, healing ×1, size-and-shape ×1, character ×1, social-life ×1
+- **~old-basket** (13 entries) → basket-making ×12, sewing-and-textiles ×2, cutting ×1, talking ×1, household ×1, trees ×1, boats ×1
+- **~old-need** (13 entries) → thinking ×7, amounts ×2, eating-and-drinking ×1, social-life ×1, good-and-bad ×1, body-descriptions ×1, sickness ×1
+- **~old-vehicle** (13 entries) → vehicles ×8, boats ×5, carrying ×1, size-and-shape ×1, death-and-mourning ×1, going-and-coming ×1
+- **~old-wash** (13 entries) → cleaning ×12, body-actions ×1
+- **~old-peel** (13 entries) → cutting ×11, trees ×5, cooking ×4, hunting ×1
+- **~old-clothes** (13 entries) → clothing ×13, church-rituals ×3, condition ×1
+- **~old-distance** (12 entries) → location-words ×6, travel ×3, putting-and-placing ×2, sea-and-rivers ×1, time ×1, going-and-coming ×1
+- **~old-greeting** (12 entries) → greetings ×11, calendar ×3, social-life ×2, love-and-joy ×1
+- **~old-discard** (12 entries) → pushing-and-pulling ×6, social-life ×3, breaking ×1, food ×1, family ×1, work ×1
+- **~old-hang** (12 entries) → putting-and-placing ×4, pushing-and-pulling ×4, fastening ×2, cleaning ×1, clothing ×1, posture ×1
+- **~old-accident** (12 entries) → pushing-and-pulling ×4, cutting ×4, hitting ×3, conflict ×1
+- **~old-quality** (12 entries) → work ×11, good-and-bad ×1, appearance ×1
+- **~old-mix** (12 entries) → cooking ×4, fire ×3, social-life ×2, amounts ×2, putting-and-placing ×1, family ×1
+- **~old-aboard** (12 entries) → vehicles ×10, carrying ×4, travel ×2, boats ×2, pushing-and-pulling ×2
+- **~old-government** (11 entries) → leadership-and-law ×11, peoples-and-nations ×4, occupations ×2, pushing-and-pulling ×1
+- **~old-legal** (11 entries) → leadership-and-law ×9, money-and-trade ×2, church-rituals ×1, wrongdoing ×1, people ×1, dwellings ×1, occupations ×1, games ×1, +1 more
+- **~old-fight** (11 entries) → conflict ×11, people ×1
+- **~old-environment** (11 entries) → sky ×7, time ×4, weather ×3, trees ×1
+- **~old-add** (10 entries) → amounts ×5, numbers ×4, social-life ×1, money-and-trade ×1
+- **~old-give** (10 entries) → social-life ×7, carrying ×2, money-and-trade ×2, games ×1, amounts ×1
+- **~tier-top-10** (10 entries) → greetings ×3, small-words ×2, people ×2, question-words ×2, water ×1
+- **~old-want** (10 entries) → thinking ×5, social-life ×2, eating-and-drinking ×2, going-and-coming ×1
+- **~old-wait** (10 entries) → time ×7, fear-anger-sadness ×4
+- **~old-volume** (10 entries) → amounts ×5, work ×2, hearing ×1, size-and-shape ×1, food ×1, carrying ×1
+- **~old-negative** (10 entries) → small-words ×6, good-and-bad ×2, wrongdoing ×1, talking ×1, leadership-and-law ×1, social-life ×1
+- **~old-wrong** (10 entries) → good-and-bad ×6, talking ×2, conflict ×2, eating-and-drinking ×1, putting-and-placing ×1
+- **~old-instrument** (9 entries) → music-and-dance ×7, occupations ×2, healing ×1, travel ×1, tools ×1, pushing-and-pulling ×1
+- **~old-agriculture** (9 entries) → farming ×7, dwellings ×1, farm-animals ×1, tools ×1, land ×1
+- **~old-stop** (9 entries) → work ×3, talking ×3, eating-and-drinking ×1, travel ×1, dwellings ×1, fear-anger-sadness ×1
+- **~old-metal** (9 entries) → texture-and-materials ×7, hunting ×2, money-and-trade ×2, tools ×1, household ×1
+- **~old-tradition** (9 entries) → death-and-mourning ×3, clothing ×2, quillwork-and-beadwork ×1, leadership-and-law ×1, family ×1, occupations ×1, social-life ×1, peoples-and-nations ×1, +1 more
+- **~old-raise** (8 entries) → carrying ×4, family ×2, faith ×1, going-and-coming ×1, posture ×1
+- **~old-fact** (8 entries) → good-and-bad ×5, places ×2, small-words ×1
+- **~old-tobacco** (8 entries) → tobacco-and-smoking ×8, social-life ×1, character ×1
+- **~old-search** (7 entries) → seeing ×6, trees ×1
+- **~old-climb** (7 entries) → ways-of-moving ×5, vehicles ×1, going-and-coming ×1
+- **~old-financial** (7 entries) → money-and-trade ×7, falling ×1, hitting ×1
+- **~old-follow** (7 entries) → going-and-coming ×5, thinking ×1, character ×1
+- **~old-blow-air** (7 entries) → cleaning ×4, body-actions ×3
+- **~old-house** (7 entries) → dwellings ×7, cleaning ×1, question-words ×1
+- **~old-slang-expression** (6 entries) → church-rituals ×2, social-life ×1, thinking ×1, animals ×1, family ×1, body-parts ×1, character ×1
+- **~old-reptile** (6 entries) → animals ×6
+- **~old-smother** (6 entries) → body-actions ×4, conflict ×1, fire ×1, condition ×1, sickness ×1
+- **~old-point** (6 entries) → body-actions ×3, carrying ×2, directions ×1
+- **~old-lost** (6 entries) → holding ×3, seeing ×2, games ×1
+- **~old-enter** (6 entries) → going-and-coming ×4, seeing ×1, social-life ×1, carrying ×1
+- **~old-wealth** (6 entries) → money-and-trade ×5, character ×3, people ×1, healing ×1
+- **~old-steal** (6 entries) → wrongdoing ×6, body-descriptions ×1
+- **~old-phenomenon** (6 entries) → sky ×4, traditional-stories ×2
+- **~old-trade** (6 entries) → money-and-trade ×5, quillwork-and-beadwork ×1, occupations ×1
+- **~old-flavour** (6 entries) → smell-and-taste ×4, food ×3, eating-and-drinking ×1
+- **~old-music** (6 entries) → music-and-dance ×6, occupations ×2
+- **~old-number** (6 entries) → numbers ×6, farming ×1
+- **~old-meet** (5 entries) → social-life ×4, boats ×1, love-and-joy ×1, hitting ×1, time ×1
+- **~old-release** (5 entries) → pushing-and-pulling ×4, putting-and-placing ×1, holding ×1
+- **~old-decision** (5 entries) → leadership-and-law ×5, thinking ×1
+- **~old-exclamation** (5 entries) → greetings ×3, time ×1, small-words ×1
+- **~old-repeat** (5 entries) → talking ×2, cooking ×2, temperature ×2, work ×1
+- **~old-affirmative** (5 entries) → good-and-bad ×2, small-words ×2, talking ×1, social-life ×1
+- **~old-kill** (5 entries) → conflict ×5, occupations ×1
+- **~old-seperate** (5 entries) → putting-and-placing ×2, family ×2, breaking ×1, social-life ×1
+- **~old-affect** (5 entries) → work ×3, talking ×1, fear-anger-sadness ×1
+- **~old-commerce** (5 entries) → money-and-trade ×5, occupations ×1
+- **~old-danger** (5 entries) → good-and-bad ×4, land ×1, hunting ×1
+- **~old-toy** (4 entries) → games ×4, social-life ×1, hunting ×1
+- **~old-geology** (4 entries) → land ×4
+- **~old-contract** (4 entries) → ways-of-moving ×2, breaking ×2
+- **~old-stick** (4 entries) → cutting ×4
+- **~old-medicine** (4 entries) → healing ×4, plants ×2, trees ×1, eating-and-drinking ×1
+- **~old-settle** (3 entries) → holding ×2, social-life ×1
+- **~old-weave** (3 entries) → basket-making ×2, sewing-and-textiles ×1
+- **~old-exclude** (3 entries) → social-life ×2, thinking ×1
+- **~old-sharpen** (3 entries) → tools ×3, cutting ×2, making-and-fixing ×1
+- **~old-astronomy** (3 entries) → sky ×3, time ×1
+- **~old-reproduction** (3 entries) → family ×2, animals ×1, birds ×1, body-actions ×1
+- **~old-culture** (3 entries) → traditional-stories ×1, talking ×1, peoples-and-nations ×1, quillwork-and-beadwork ×1
+- **~old-farm** (3 entries) → farming ×2, farm-animals ×1, birds ×1, tools ×1
+- **~old-behavior** (3 entries) → going-and-coming ×1, greetings ×1, love-and-joy ×1, sleep ×1
+- **~old-amount** (2 entries) → amounts ×2, putting-and-placing ×1
+- **~old-challenge** (2 entries) → conflict ×2
+- **~old-defeat** (2 entries) → hitting ×2
+- **~old-skill** (2 entries) → work ×2
+- **~old-select** (2 entries) → holding ×2, thinking ×2
+- **~old-mathematics** (2 entries) → numbers ×2, learning-and-teaching ×1
+- **~old-civic** (2 entries) → leadership-and-law ×2, church-rituals ×1
+- **~old-absent** (2 entries) → amounts ×2
+- **~old-chance** (2 entries) → good-and-bad ×2
+- **~old-save** (2 entries) → social-life ×2
+- **~old-appearance** (2 entries) → appearance ×2, good-and-bad ×1, colors ×1
+- **~old-density** (1 entries) → texture-and-materials ×1
+- **~old-extinct** (1 entries) → condition ×1
+- **~old-expect** (1 entries) → travel ×1, time ×1
+- **~old-baby-talk** (1 entries) → food ×1, talking ×1
+- **~old-chew** (1 entries) → sewing-and-textiles ×1
+- **~old-sequence** (1 entries) → going-and-coming ×1
+- **~old-p** (1 entries) → dwellings ×1
+- **~old-spiritually** (1 entries) → faith ×1
+- **~old-spiritualty** (1 entries) → faith ×1
+- **~old-place** (1 entries) → location-words ×1
+- **~old-structrue** (1 entries) → dwellings ×1
+- **~old-sail** (1 entries) → boats ×1
+- **~old-language** (1 entries) → talking ×1
+- **~old-religious** (1 entries) → church-rituals ×1, dwellings ×1
+- **~old-cognitive** (1 entries) → (uncategorized) ×1
+- **~old-structural** (1 entries) → dwellings ×1, cleaning ×1
+- **~old-construction-material** (1 entries) → texture-and-materials ×1, making-and-fixing ×1
+- **~old-paper** (1 entries) → stories-and-writing ×1
+- **~old-water** (1 entries) → water ×1
+- **~old-undo** (1 entries) → fastening ×1
+- **~old-press** (1 entries) → pushing-and-pulling ×1
+- **~old-poosition** (1 entries) → ways-of-moving ×1

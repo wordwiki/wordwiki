@@ -1,0 +1,122 @@
+# Cooking & Baking (`cooking`)
+
+Theme: *Home & Daily Life* — 109 entries (+6 archived)
+
+- **apita'q** — rise (as dough) \| swell \| bloated \| proof (dough) \| It rises
+- **apita'taqan** — baking powder \| baking soda \| rising agent \| yeast \| leavening \| Baking powder or baking soda  *(also: food)*
+- **aps'satl** — mince \| cut into small pieces \| He/she cuts it (fish) into small pieces  *(also: cutting)*
+- **aps'sg** — mince \| cut into small pieces \| He/she cuts it into small pieces  *(also: cutting)*
+- **elusgnawet** — knead dough \| He/she kneads
+- **epipnatg** — make bread \| bake bread \| He/she makes bread
+- **epipnet** — bake bread \| He/she bakes bread
+- **esgoqsit** — undercooked \| left untouched by fire \| It is undercooked
+- **esgoqteg** — undercooked \| left untouched by fire \| It is undercooked
+- **etlapu'teg** — brew \| It brews
+- **etligmiet** — boiling \| It (kettle) is boiling
+- **etloqsatl** — cook \| He/she is cooking it (rabbit)
+- **etloqs'g** — cook \| bake \| He/she is cooking it
+- **etloqsit** — cooking \| sun-bathing \| It (chicken) is cooking
+- **etloqteg** — cooking \| It is cooking
+- **etoqtalatl** — roast \| bake \| cook \| He/she roasts it (pig)
+- **etoqtasit** — roast \| It (pig) is roasted
+- **etoqtatg** — roast \| bake \| cook \| He/she roasts it
+- **etoqtet** — roast \| bake \| He/she roasts
+- **gaqoqsit** — burned through \| finished cooking \| It is burned through  *(also: fire)*
+- **gaqoqteg** — burned through \| It is burned through  *(also: fire)*
+- **gi'satl** — finished cooking \| He/she is finished cooking it(turkey)
+- **gi's'g** — finished cooking \| He/she is finished cooking it
+- **gi'sit** — cooked \| It(chicken) is cooked
+- **gisoqsit** — ready cooked \| cooked \| It(chicken) is cooked
+- **gisoqteg** — ready cooked \| cooked \| It is cooked
+- **gi'teg** — cooked \| It is cooked
+- **gutapigwalatl** — desalinate \| desalt (by soaking in several changes of water) \| He/she desalinates it(salted\_fish)
+- **gutapigwatg** — desalinate \| desalt by soaking in several changes of water \| He/she desalinates it
+- **jinqamisteget** — strain (through strainer) \| He/she strains (through strainer)
+- **mawigma'toq** — boil all together (stew) \| He/she boils it all together (stew)
+- **mesegit** — cook \| camp cook \| Cook  *(also: occupations)*
+- **mesiapo'qatl** — stir \| He/she stirs him/her/it(paint)
+- **mesiapo'q'g** — stir \| He/she stirs it
+- **mesiapoqta'tl** — stir fast with an instrument \| He/she stirs it(paint)fast with an instrument
+- **mesiapoqte'g** — stir (with an instrument) \| He/she stirs it with an instrument
+- **miloqsatl** — cook in different ways \| He/she cooks it(chicken) in different ways
+- **miloqsawet** — bake variety of pastry \| make desserts \| make sweets \| He/she bakes a variety of pastry
+- **miloqs'g** — cook in different ways \| He/she cooks it different ways
+- **mima'gwa'taqan** — used for greasing \| greaser (for pan) \| Greaser (for pan)
+- **mima'latl** — grease \| anoint \| He/she anoints him/her  *(confidence: m)*
+- **mima'toq** — grease \| anoint \| He/she greases it  *(confidence: m)*
+- **minuoqsatl** — recook \| He/she recooks it (fish)
+- **minuoqs'g** — recook \| He/she recooks it
+- **minu'p'satl** — reheat \| He/she reheats it(fish)  *(also: temperature)*
+- **minu'p'sg** — reheat \| He/she reheats it  *(also: temperature)*
+- **nata'toqtet** — know how to bake \| good or excellent baker \| He/she knows how to bake
+- **nata'wisugwateget** — good cook \| excellent cook \| know how to cook \| He/she is a good cook
+- **natawoqsawet** — know how to cook \| good or excellent cook \| He/she knows how to cook
+- **netawitoqtet** — know how to cook \| He/she knows how to cook
+- **niwoqsit** — dried out (from heat) \| It ( ) dries out from heat  *(also: condition)*  *(confidence: m)*
+- **niwoqteg** — dried out (from heat) \| It dries out from heat  *(also: condition)*  *(confidence: m)*
+- **nugjaqsatl** — mince \| cut to tiny bits \| He/she minces it (animate entity)  *(also: cutting)*
+- **nugsatl** — cut to pieces \| mince \| He/she cuts it (fish) to pieces  *(also: cutting)*
+- **nugs'g** — mince \| shred \| cut into pieces \| He/she minces it  *(also: cutting)*
+- **nugta'tl** — soften by pounding \| soften  by hitting \| tenderise \| He/she softens it by pounding  *(also: hitting)*
+- **nugte'g** — tenderise \| soften by pounding \| soften  by hitting \| He/she tenderises it  *(also: hitting)*
+- **nujipipnet** — baker \| Baker  *(also: occupations)*
+- **nujitoqtet** — baker (professional) \| Baker  *(also: occupations)*
+- **nutpipnet** — bread-baker \| Bread baker  *(also: occupations)*
+- **passoqsatl** — thicken by boiling \| thicken by cooking \| He/she thickens it by boiling or cooking
+- **pegwaja'latl** — clean dress or gut (as fish, chicken) \| He/she cleans him/her.  *(also: fishing)*
+- **pelgoqa'toq** — peel by hand \| He/she peels it by hand  *(also: cutting)*
+- **pelgoqsatl** — peel with knife \| He/she peels something animate with a knife  *(also: cutting)*
+- **pelgoqsewet** — peel \| He/she peels  *(also: cutting)*
+- **pelgoqs'g** — peel with knife \| He/she peels it with a knife  *(also: cutting)*
+- **pesa'latl** — skin fish \| He/she skins him/her (fish)  *(also: fishing)*
+- **pesqo'latl** — pluck (as chicken) \| He/she plucks him/her (chicken)  *(also: birds)*
+- **puggwana'latl** — smoke (fish, etc.) \| He/she smokes fish, etc.
+- **puggwana'taqan** — smoker \| place, apparatus or utensil for smoking meat, etc... \| Smoker
+- **puggwana'teget** — smoke (food) \| He/she smokes meat, fish, etc.
+- **puggwana'toq** — smoke (fish, etc.) \| He/she smokes it
+- **puggwanaw** — smoked food (e.g. fish or meat) \| Smoked food  *(also: food)*
+- **sasqa'gwiji'jit** — small pot (for cooking) \| Small pot (for cooking)  *(also: household)*
+- **sasqa'gwit** — pot (for cooking) \| Cooking pot  *(also: household)*
+- **sinqamisteget** — strain (through strainer) \| He/she strains (through strainer)
+- **sisla'gwa'latl** — fry \| He/she fries...
+- **sisla'gwa'tegemgewei** — frying pan \| Frying pan  *(also: household)*
+- **sisla'gwa'toq** — fry \| He/she fries it
+- **so'gwistaqan** — yeast \| Yeast  *(also: food)*
+- **teloqsas'g** — cooked in such a way \| cooked thus \| It is cooked in a such a way
+- **teloqsasit** — cooked in such a way \| cooked thus \| He/she/it is cooked in such a way
+- **teloqsatl** — cook in such a way \| cook thus \| He/she cooks...in such a way
+- **teloqs'g** — cook in such a way \| cook thus \| He/she cooks it in such a way
+- **wejaqama'latl** — boil \| He/she boils him/her
+- **wejaqama'toq** — boil \| He/she boils it
+- **wejaqamiaq** — boil \| It is boiling
+- **wejaqamiet** — boil \| It is boiling
+- **wesamoqsatl** — overcook \| He/she overcooks him/her/it
+- **wesamoqs'g** — overcook \| He/she overcooks it
+- **wesamoqsit** — overcooked \| He/she/it (chicken) is overcooked
+- **wesamoqteg** — overcooked \| It is overcooked
+- **wesawa'latl** — put on to boil \| put on to cook \| He/she puts...on to boil or cook
+- **wesawa'toq** — put on to boil \| put on to cook \| He/she puts it on to boil or cook
+- **wigplasit** — smoked (as a salmon) \| smoke residue (coated) \| ...is smoked (as salmon)  *(also: fire)*
+- **wisgu'patl** — cook for \| He/she cooks for him/her
+- **wissugwalatl** — cooks him/her/it \| He/she cooks him/her/it
+- **wissugwat** — cook (for oneself) \| He/she cooks for self
+- **wissugwatg** — cooks it \| He/she cooks it
+- **wissugwatiget** — cook \| He/she cooks
+- **pepg'ja'toq** — flatten \| thin out \| He/she/it flattens it, he/she/it thins it out(dough)
+- **nipetesmat** — cooks overnight \| overnight cooking \| He/she cooks (rice, etc.) overnight
+- **sasqapa'sit** — grills \|  cooks food on a grill over charcoals \| cooks food over embers \| He/she grills
+- **nipetesmuatl** — cooks (rice, etc.) overnight for him/her/it \| He/she cooks (rice, etc.) overnight for him/her/it
+- **wesgite’n’g** — put embers on top \| put fire on top \| He/she puts embers on the top of it (cooking technique)  *(also: fire)*
+- **nipiapetesmat** — cooks overnight for self \| He/she cooks overnight for himself/herself
+- **sasqa'gwit** — Flat bottom pot \| Flat bottom cauldron \| Flat bottom pot/cauldron  *(also: household)*
+- **gastio’ma’teget** — makes syrup \| He/she makes syrup  *(also: food)*
+- **nipiwisugwet** — cooks at night (for others) \|  he/she cooks at night (for others)
+
+## Archived entries (lower priority)
+
+- **gaqaqw\*\*** — smoke moosemeat \| dried moosemeat
+- **gegnuoqs'g** — cook properly \| He/she cooks it properly
+- **goqosigna'gw** — baking pan \| pan
+- **passoqsawet** — make jam \| thicken by boiling \| He/she is making jam
+- **passoqs'g** — make into jam \| He/she makes it into jam
+- **wejaqama'temgewei** — boiling kettle

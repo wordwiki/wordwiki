@@ -1,0 +1,110 @@
+# Sea, Rivers & Lakes (`sea-and-rivers`)
+
+Theme: *Land, Water & Sky* — 96 entries (+7 archived)
+
+- **alitg** — flows about \| flows in different directions \| it flows about  *(confidence: m)*
+- **apaqt** — sea \| off shore \| Sea
+- **apaqtu'jg** — inshore \| short distance offshore \| Inshore  *(also: location-words)*
+- **apatpa'q** — returning tide \| The tide is returning
+- **apsgwitg** — form eddy \| back water eddy \| It reverses flow
+- **aps'tgu'j** — narrow stream \| brook \| small stream \| Narrow stream
+- **enmigiaq** — falling of the tide \| receding (tide) \| The tide is receding
+- **enmitg** — flow away \| It flows away  *(confidence: m)*
+- **gapsgu'j** — little waterfall \| Little waterfall
+- **gapsguji'j** — tiny waterfall \| Tiny waterfall
+- **gapsgw** — waterfall \| Waterfall
+- **gapsgwamgitg** — rapid water \| rapid water preceeding a waterfall \| It is rapid water
+- **gawasg'pa'q** — reversing tide \| reverses \| The tide is reversing
+- **gesigawitg** — flow swiftly \| swift current \| It flows swiftly
+- **gjigapa'n** — tide \| Tide
+- **gta'n** — ocean \| Ocean
+- **jigwapa'n** — tide (Bear River) \| Tide (Bear River)
+- **jipu'ji'j** — brook \| Brook
+- **lampo'q** — bottom of lake \| bottom of river \| River bed
+- **lmu'ju'pa'q** — neap tide \| dog tide \| It is neap tide
+- **maqatgwig** — big waves \| heavy seas \| They are big waves
+- **mespo'qweg** — flooded \| It is flooded  *(confidence: m)*
+- **mespo'qwet** — flooded \| He/she/it is flooded  *(confidence: m)*
+- **milpegitg** — flow in many directions \| It flows in many directions  *(confidence: m)*
+- **na'taqamtug** — at the shore \| at the riverbank \| At the shore  *(also: location-words)*
+- **niweteg** — low tide \| It is low tide
+- **nqana'paqsun** — well bucket \| Well bucket  *(also: household)*  *(confidence: m)*
+- **nqano'pati** — well (of water) \| Well (of water)  *(confidence: m)*
+- **pagwe'jg** — shallow water \| The water is shallow  *(confidence: m)*
+- **paqo'si** — seaweed \| Seaweed  *(also: plants)*
+- **paqtlusg'teg** — extremely low tide \| Extremely low tide
+- **pemitg** — flow along \| It is flowing  *(confidence: m)*
+- **pempa'q** — rise (of tide) \| The tide is rising
+- **pempega's'g** — start to rise (of tide) \| It is starting to rise  *(confidence: m)*  *(note: audit: tide word belongs with sea-and-rivers)*
+- **pempegitg** — flow along \| It flows along  *(confidence: m)*
+- **pi'taw** — up river \| up stream \| Up river  *(also: directions)*
+- **pi'tawa'latl** — take up river \| take up stream \| He/she takes him/her/it up river  *(also: travel)*  *(confidence: m)*
+- **pi'tawa's'g** — goes up river \| goes up the coast \| It goes up river  *(also: travel)*  *(confidence: m)*
+- **pi'tawa'sit** — going up river \| goes up the coast \| He/she goes up river  *(also: travel)*  *(confidence: m)*
+- **pi'tawa'toq** — take it up river \| take up the coast \| He/she takes it up river  *(also: travel)*  *(confidence: m)*
+- **po'gwin** — lagoon \| Lagoon
+- **psitn** — river channel \| River channel
+- **psitnu'j** — small river channel \| Small river channel
+- **qospem** — lake \| Lake
+- **sipu** — river \| River
+- **sipu'ji'j** — brook \| Brook
+- **sitm** — shore \| beach \| Shore  *(also: land)*
+- **temig** — deep \| It is deep  *(confidence: m)*
+- **tg'poq** — spring water \| a spring of water \| Spring water  *(also: water)*
+- **tgu** — wave \| Wave
+- **tguig** — wavy (of sea) \| It is wavy(of the sea)
+- **tgupoq** — bubbling spring \| Bubbling spring
+- **tuitn** — narrows \| Narrows
+- **waju'pa'q** — high tide \| It is high tide
+- **wantaqpa'q** — calm water \| The water is calm  *(confidence: m)*
+- **wantaqpegitg** — flows calmly \| still flowing water \| It is flowing calmly
+- **waqamitg** — clean flowing water \| It is a clean flowing water  *(also: water)*
+- **we'gwamgug** — where waterway ends at falls \| Where the waterway ends at falls
+- **we'gwapsgw** — falls end \| Falls end
+- **wejgwapa'q** — incoming or rising tide \| The tide is coming in
+- **wintsug** — Windsor, Nova Scotia \|  rising tide flows up and divides off into another river \| the rising tide flows up and divides off into another river \| Windsor, Nova Scotia  *(also: places)*  *(confidence: m)*
+- **gesigawamgwitg** — fast current \| It is a fast current
+- **gopugwet** — filled with sea water \| is swamped \| He/she/it is filled with sea water, is swamped.  *(also: boats)*  *(confidence: m)*
+- **pemijuig** — flowing along \| It is flowing along   *(confidence: m)*
+- **matamgejuig ** — confluence of waterways \| It is a confluence of waterways  *(also: places)*  *(confidence: m)*
+- **mespa'q** — the water rises up to something \| The water rises up to something.  *(confidence: m)*
+- **mespo'q** — flood, overflow \| Flood, overflow.
+- **winpegitg** —  bad current \| dangerous current \| Bad, dangerous current.
+- **gasgipsitn** — edge of channel \| Edge of a canal or channel.
+- **giwgto’quamgwitg** — flows in a circular motion \| flows around something \|  Water flows in a circular motion, or water flows around something   *(confidence: m)*
+- **elmitg** — flow away \| It flows away from  *(confidence: m)*
+- **winpegijuig** — rough current \| bad current \| dangerous current \| It is a rough, bad or dangerous current
+- **qomuti** — harbour \| haven \| Harbour, haven 
+- **papgitg** — flows downstream  \| The water or current flows downstream  *(confidence: m)*
+- **gasgipnaqtug** — on the shore \| On the shore  *(also: location-words)*
+- **gotlomi** — landin place \| quay \| dock \| wharf \| Landing place/quay/dock/wharf.  *(also: boats)*
+- **gesigawitg** — Fast current
+- **guntewapsgitg** — rocky shore \| A rocky shore  *(also: land)*  *(confidence: m)*
+- **welpegitg** — nice current \| Nice current
+- **wejitg** — flows from  \| Flows from  *(confidence: m)*
+- **elitg** — Flowing in that direction. \| Flowing in that direction.  *(confidence: m)*
+- **pesigitg ** — fork in a river \| A fork in a river
+- **wantaqpegitg** — Calm flowing river. \| Calm flowing water. \| Calm flowing (water/river)
+- **pugwelijipu'ji’juig** — multiple streams come together into one \| Multiple streams coming together into one
+- **qasqisipug** — on the shore \| On the shore  *(also: location-words)*
+- **qaspem** — lake edge \| border of a lake \| The lake edge, border of a lake  *(also: land)*
+- **qaspemg** — lake edge \| At the lake edge  *(also: land)*
+- **gegwitg** — flows slowly \| Flows slowly (river)
+- **tatujitg** — how fast is the current?  \| How fast is the current?   *(also: question-words)*
+- **jipu'ji’juig** — Many small streams there. \| There are many small streams there.
+- **pastesgu'gwig** — waves break and enter the canoe \| Waves break and enter the canoe.  *(also: boats)*
+- **pawitg** — slow current \| slow flowing river \| It is a slow current
+- **qasgisipug** — edge of river \| edge of water \| At the edge of the river/water  *(also: location-words)*
+- **pi'tawitg** — water flows upstream \| current flows upstream \| The water or current flows upstream
+- **oqonoqo'piteg** — it curls like a breaking wave \| coiled like a breaking wave \| It curls over/coiled (like a breaking wave)  *(confidence: m)*
+- **wejijuig** — flow from \| Flows from (a certain place)  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **gispa'q\*\*** — floodtide
+- **lampo'q\*\*** — spring (water)
+- **me'ga'sig\*\*** — flow rapidly \| It flows rapidly
+- **migpa'q\*\*** — weak tide
+- **msg'tgw\*\*** — deadwater \| eddy
+- **suegaw** — tidal bore
+- **ugjigapa'n** — incoming tide

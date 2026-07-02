@@ -1,0 +1,111 @@
+# Hitting & Striking (`hitting`)
+
+Theme: *Movement & Physical Actions* — 98 entries (+6 archived)
+
+- **apatta'tl** — hit back \| win back \| send back \| He/she wins him back
+- **asu'tesguatl** — kick back and forth \| walk back and forth \| repeatedly return/go to... \| He/she kicks him/her/it back and forth  *(confidence: m)*
+- **ejiglta'tl** — strike or drive away \| hit away \| shoo away \| He/she drives him/her/it away  *(confidence: m)*
+- **ejiglte'g** — drive it away \| hit it away \| beat it away \| He/she drives it away  *(confidence: m)*
+- **eltesguatl** — chase toward \| kick toward \| He/she chases someone toward  *(confidence: m)*
+- **ennmta'tl** — hammer in \| drive in \| embed in \| He/she hammers it in  *(also: cutting)*
+- **ennmte'g** — drive in \| hammer in \| embed in \| He/she drives it in with an instrunment  *(also: cutting)*
+- **etlta'tl** — beat \| strike \| hit \| He/she is beating him/her
+- **etlte'g** — beat on \| hit \| strum \| knock \| play(musical instrument) \| He/she is beating on it \| He/she is hitting it  *(also: music-and-dance)*
+- **gaqta'tl** — finish striking or beating \| He/she/it finishes striking him/her/it
+- **geitapaqte'g** — drive in (as nail) \| He/she drives it in/into  *(also: making-and-fixing)*
+- **gesita'tl** — hit hard \| beat-up badly \| He/she hits him/her hard  *(also: conflict)*
+- **gewta'tl** — knock down \| He/she knocks him/her down
+- **gewte'g** — knock down \| He/she knocks it down
+- **gipoqtelg** — graze (by shooting) \| He/she grazes it (by shooting)  *(also: hunting)*  *(confidence: m)*
+- **gipoqteluatl** — graze (by shooting) \| He/she grazes him/her  *(also: hunting)*  *(confidence: m)*
+- **gista'tl** — beat-up \| finish beating \| He/she beat-up him/her  *(also: conflict)*
+- **giste'g** — finish playing(instrument) \| finish beating \| able to play instrument \| finish hitting \| He/she finished playing it \| He/she finished beating it  *(also: music-and-dance)*  *(confidence: m)*
+- **gmutta'tl** — beat with a stick \| He/she beats him/her with a stick
+- **gmutte'g** — beat with a stick \| He/she beats it with a stick
+- **jilta'tl** — make a mark(by striking) \| He/she makes a mark on it(tree) by striking
+- **jilte'g** — mark or scar on it (by beating or hitting) \| He/she makes a mark on it by beating or hitting it
+- **maltewta'tl** — cause to bleed by striking \| cause to bleed by hitting \| He/she causes him/her/it to bleed by striking  *(also: sickness)*
+- **maltewte'g** — cause to bleed by striking \| He/she causes it to bleed by striking  *(also: sickness)*
+- **matta'tl** — spank \| beat \| He/she spanks him/her
+- **matte'g** — beat \| spank \| thrash \| He/she beats it
+- **mattelg** — shooting at \| He/she is shooting at it  *(also: hunting)*
+- **matteluatl** — shoot at \| He/she shoots at him/her  *(also: hunting)*
+- **menta'tl** — beat or strike  out(in a game) \| knock off \| remove by striking \| He/she beat him/her out  *(also: games)*
+- **mente'g** — knock off \| remove by striking \| He/she knocks it off
+- **mesaqaneita'tl** — knock down \| collaspes as a result of a punch \| He/she knocks him/her down  *(also: falling)*
+- **mesqaneiteluatl** — take down by a shot \| He/she shoots him/her down  *(also: hunting)*
+- **me'ta'tl** — successfully hit \| successfully strike \| He/she successfully hit him/her
+- **me'te'g** — successfully hit \| He/she successfully hits it
+- **me'telg** — successfully hits with a shot \| successfully shoots it \| He/she successfully hits it with a shot  *(also: hunting)*
+- **me'teluatl** — succeed at shooting \| He/she suceeds at shooting him/her/it  *(also: hunting)*
+- **metete'get** — knocking \| pounding \| He/she is knocking  *(also: hearing)*
+- **migutesg'g** — bump into \| run into \| He/she runs into it
+- **migutesguatl** — bump into \| run into \| run over \| He/she bumps into him/her
+- **nipispaqanta'tl** — beat with switch \| beat with twigs \| He/she beats him/her with a switch
+- **nipispaqante'g** — beat with switch \| He/she beats with a switch
+- **nistelg** — shoot down \| He/she shoots it down  *(also: hunting)*
+- **nisteluatl** — shoot down \| He/she shoots him/her down  *(also: hunting)*
+- **nugta'tl** — soften by pounding \| soften  by hitting \| tenderise \| He/she softens it by pounding  *(also: cooking)*
+- **nugte'g** — tenderise \| soften by pounding \| soften  by hitting \| He/she tenderises it  *(also: cooking)*
+- **o'p'lta'tl** — hit wrongly \| strike wrongly \| He/she strikes him/her wrongly
+- **o'p'lte'g** — strike wrongly \| hit wrongly \| He/she strikes it wrongly
+- **paqsipgeitelua'tl** — shoot and kill instantly (with gun or bow and arrow) \| He/she shot and kills him/her/it instantly  *(also: hunting)*
+- **peji'taqane'ita'tl** — slap on neck \| He/she slaps him/her on the neck
+- **pe'sg'g** — shoot at \| He/she shoots it  *(also: hunting)*
+- **pe'sgigeg** — shoot \| It shoots  *(also: hunting)*
+- **pe'sgiget** — fire \| shoot \| He/she fires a gun  *(also: hunting)*
+- **pe'sguatl** — shoot at \| He/she shoots at him/her  *(also: hunting)*
+- **pesigweita'tl** — slap face \| He/she slaps his/her face
+- **pesoqopsg'ta'tl** — miss (in swinging, or striking) \| fumble \| He/she misses in swinging (like a ball)
+- **pesoqopsg'te'g** — fumble \| partially block \| miss (in swinging, or striking) \| He/she misses it in swinging (like a rock)
+- **pesoqta'tl** — miss aimed at \| fail to hit (aimed) \| He/she fails to hit him/her
+- **pesoqte'g** — miss \| fail to hit (something aimed) \| He/she fails to hit it
+- **pesoqtelg** — fail to shoot something aimed at \| miss (in shooting) \| He/she misses it in shooting  *(also: hunting)*
+- **pesoqteluatl** — fail to hit someone aimed at \| miss (in shooting) \| He/she misses him/her in shooting  *(also: hunting)*
+- **pesoqtesguatl** — miss \| fail to meet \| fail to come into contact with it(ball) \| He/she fails to come into contact with it  *(confidence: m)*
+- **petguta'tl** — knock out \| He/she knocks him/her out
+- **petta'tl** — strike unintentionally \| hit unintentionally \| He/she strikes or hits him/her unintentionally
+- **pette'g** — stikes unintentionally \| hit unintentionally \| He/she strikes or hits it unintentionally
+- **pettesguatl** — accidentally bump into \| chases here \| He/she accidentally bumps into him/her \| He/she chases him/her here
+- **saputeta'tl** — pierce through by a blow \| cut or knock through \| He/she pierces through...by a blow  *(also: cutting)*
+- **saputete'g** — pierce through by a blow \| cut or knock through \| He/she pierces it through by a blow  *(also: cutting)*
+- **saputetesg'g** — kick through \| run through \| He/she kicks through it
+- **saputetesguatl** — kick through \| run through \| He/she kicks through him/her/it
+- **sewista'tl** — pound or hack to bits \| He/she pounds or hacks...to bits  *(also: breaking)*
+- **sewiste'g** — pound or hack to bits \| He/she pounds or hacks it to bits  *(also: breaking)*
+- **sewistestoq** — smash \| He/she smashes it  *(also: breaking)*
+- **sigta'tl** — strike dead \| He/she strikes someone dead  *(also: conflict)*
+- **taqamatl** — hit \| jab \| punch \| He/she hits him/her
+- **taqt'g** — hit \| strike \| jab \| punch \| He/she hits it
+- **tegtesgewet** — kick \| complain \| object \| He/she kicks \| He/she complains  *(also: character)*
+- **tegtesg'g** — kick \| He/she kicks it
+- **tegtesguatl** — kick \| He/she kicks him/her
+- **telta'tl** — hit in such a way \| cut or chop \| He/she hits him/her in such a way
+- **telte'g** — cut or chop \| hits \| He/she cuts or chops it  *(also: cutting)*
+- **temtesg'g** — break by kicking or stomping \| He/she breaks it by kicking or stomping  *(also: breaking)*
+- **temtesguatl** — break by kicking or stomping \| He/she breaks...by kicking or stomping  *(also: breaking)*
+- **tewa'gweitesguatl** — kick out \| He/she kicks someone out  *(confidence: m)*
+- **tewigt'tesguatl** — kick out \| He/she kicks him/her out  *(confidence: m)*
+- **tlawo'qta'tl** — strikes with knife \| He/she strikes him/her with a knife  *(also: cutting)*
+- **tlawo'qte'g** — strike with knife \| He/she strikes it with a knife  *(also: cutting)*
+- **tmi'gnta'tl** — strike with axe \| He/she strikes him/her/it with an axe
+- **tmi'gnte'g** — strike with axe \| He/she strikes it with an axe
+- **welta'tl** — hit well \| meet up with \| catch \| He/she hits him/her well \| He/she met up with him/her  *(also: social-life)*
+- **welte'g** — hit well \| earn well \| strike well \| make good money \| play well \| He/she hits it well \| He/she earns well  *(also: money-and-trade)*
+- **temte'get** — cut by hitting \| cut by hitting with knife \| cut wood \| Cut by hitting with axe or knife  *(also: cutting)*
+- **pewgweteget** — he/she beats \| He/she beats.  *(confidence: m)*
+- **nipisoqonta'tl** — hits/strikes with a stick \| hits/strikes with a cane \| hits/strikes with a rod \| He/she hits/strikes him/her with a stick, cane, or rod
+- **nena'q'te'get** — Forges quickly. \| Hammers quickly. \| He/she forges and hammers quickly.  *(also: work)*  *(confidence: m)*
+- **ela'qate'get** — forges into certain shape \| hammers into certain shape \| He/she forges  *(also: work)*  *(confidence: m)*
+- **gasgigweta'tl** — strike face \| slap face \| Strike or slap the face
+- **sasqate'get** — slap something \| He/she slaps something
+- **guntewgta'tl** — stone him/her/it \| He/she stones him/her/it  *(also: conflict)*
+
+## Archived entries (lower priority)
+
+- **epme'tgweta'tl\*\*** — slap on the side of the head \| He/she slaps someone on the side of the head
+- **ewaiatpeta'tl\*\*** — knock senseless or silly \| He/she knocks someone senseless by a blow on the head
+- **jaqjeita'tl\*** — knock down to stoop position \| He/she knocks him/her down to stoop position
+- **jaqjeite'g\*** — knock to stoop position \| He/she knocks it to stoop position
+- **jaqpijeite'g\*\*** — slap \| He/she slaps it
+- **wetaqanigatg** — hit with club \| He/she hits it with a club

@@ -1,0 +1,128 @@
+# Hunting & Trapping (`hunting`)
+
+Theme: *Travel & Outdoor Life* — 106 entries (+13 archived)
+
+- **gegnu'teluatl** — purchase correctly \| shoot accurately \| purchase appropriately \| shoot in the right place \| He/she buys the proper one \| He/she shoots it (animate) in the right place  *(also: money-and-trade)*
+- **getanatl** — hunt \| spiteful \| track \| chase \| seek \| He/she hunts it(deer) \| He/she is spiteful to another
+- **getanqigalatl** — stalk \| He/she stalks him/her
+- **getanteget** — hunter \| spiteful person \| gatherer \| He/she hunts \| He/she is a spiteful person  *(also: occupations)*
+- **getantoq** — hunt \| strive to obtain \| gather \| work to earn \| He/she hunts it  *(also: work)*
+- **gimteluatl** — shoot by ambush \| ambush \| He/she shoots him/her by ambush
+- **gipoqtelg** — graze (by shooting) \| He/she grazes it (by shooting)  *(also: hitting)*  *(confidence: m)*
+- **gipoqteluatl** — graze (by shooting) \| He/she grazes him/her  *(also: hitting)*  *(confidence: m)*
+- **gopitewe'get** — trap beaver \| He/she traps beaver
+- **gtantegewinu** — hunter \| Hunter  *(also: occupations)*
+- **ilsaqa'toq** — cock (gun) \| set (trap) \| He/she cocks a gun or a trap
+- **la'pugtaqan** — snare \| Snare
+- **la'pugtaqanigalatl** — set snare \| He/she sets a snare to catch it
+- **la'pugtaqaniget** — set snares \| He/she sets snares
+- **loqte'gn** — trap \| Trap
+- **loqte'gnigalatl** — to trap \| set trap for \| He/she sets a trap for him/her/it
+- **loqte'gniget** — trap \| set traps \| He/she traps
+- **majjoqtelign** — arrow \| Arrow  *(also: tools)*
+- **mattelg** — shooting at \| He/she is shooting at it  *(also: hitting)*
+- **matteluatl** — shoot at \| He/she shoots at him/her  *(also: hitting)*
+- **mesqaneiteluatl** — take down by a shot \| He/she shoots him/her down  *(also: hitting)*
+- **me'telg** — successfully hits with a shot \| successfully shoots it \| He/she successfully hits it with a shot  *(also: hitting)*
+- **me'teluatl** — succeed at shooting \| He/she suceeds at shooting him/her/it  *(also: hitting)*
+- **m'gegn** — hide \| leather \| skin \| Leather  *(also: sewing-and-textiles)*
+- **najigtanteget** — goes to hunt \| He/she goes hunting
+- **najine'pateget** — going (to location) to kill \| going (to location) to hunt \| going (to location) to murder \| He/she is going (to location) to kill  *(confidence: m)*
+- **najintugsigtmat** — set out to hunt provisions \| set out to hunt for food \| He/she sets out to hunt provisions
+- **najipi'mat** — set out to hunt waterfowl \| He/she sets out to hunt waterfowl  *(also: birds)*
+- **najitia'mue'get** — go moose hunting \| He/she goes moose hunting
+- **najsigwet** — check traps or nets \| He/she is going to check traps or nets  *(also: fishing)*
+- **natlutmu'tijig** — ducks lured ashore by duck calls \| They (ducks) are lured ashore by duck calls  *(also: birds)*
+- **ne'pa'tl** — kill \| He/she kills him/her  *(also: conflict)*  *(confidence: m)*
+- **ne'patoq** — earn \| kill something \| He/she earns it \| He/she kills something  *(also: money-and-trade)*
+- **netugulimg** — provisioning (time) \| Provisioning time  *(also: food)*
+- **netugulit** — get provisions \| provide \| He/she gets provisions  *(also: food)*
+- **nistelg** — shoot down \| He/she shoots it down  *(also: hitting)*
+- **nisteluatl** — shoot down \| He/she shoots him/her down  *(also: hitting)*
+- **ntugsuinu** — hunter \| provider \| Hunter  *(also: occupations)*
+- **nutanteget** — hunter \| hunter \| killer \| killer \| He/she is a hunter \| Hunter  *(also: occupations)*
+- **paqsipgeitelua'tl** — shoot and kill instantly (with gun or bow and arrow) \| He/she shot and kills him/her/it instantly  *(also: hitting)*
+- **pawnigwet** — dress hides \| tan hides \| He/she tans or dresses hides  *(also: sewing-and-textiles)*
+- **pe'sgewei** — gun \| rifle \| shotgun \| Gun
+- **pe'sg'g** — shoot at \| He/she shoots it  *(also: hitting)*
+- **pe'sgigeg** — shoot \| It shoots  *(also: hitting)*
+- **pe'sgiget** — fire \| shoot \| He/she fires a gun  *(also: hitting)*
+- **pe'sg'teg** — fire (as gun) \| It fires (as gun)  *(also: hearing)*
+- **pe'sguatl** — shoot at \| He/she shoots at him/her  *(also: hitting)*
+- **pesoqtelg** — fail to shoot something aimed at \| miss (in shooting) \| He/she misses it in shooting  *(also: hitting)*
+- **pesoqteluatl** — fail to hit someone aimed at \| miss (in shooting) \| He/she misses him/her in shooting  *(also: hitting)*
+- **pesqa'latl** — skin animal \| He/she skins an animal
+- **pgegn** — hide (of skin) \| Hide (of skin)  *(also: sewing-and-textiles)*
+- **piluowei** — bullet \| projectile \| Bullet
+- **pi'mat** — hunt waterfowl \| He/she hunts waterfowl  *(also: birds)*
+- **pitaqan** — quiver \| arrow pouch \| Quiver
+- **pitqasawet** — load (gun) with gunpowder and ramrod \| arm gun \| He/she loads a gun with gunpowder and ramrod
+- **pqoqte'gn** — deadfall (kind of trap) \| Deadfall trap
+- **psew** — gun powder \| Gun powder
+- **pugwaja'latl** — dress (animal) \| prepare for use \| He/she dresses an animal
+- **saputetelg** — penetrate or pierce through (with bullet or arrow or compressed air/water) \| He/she penetrates or pierces through it with a bullet or an arrow or
+compressed air/water  *(also: cutting)*
+- **saputeteluatl** — penetrate or pierce through (with bullet or arrow or compressed
+air water) \| penetrates or pierces through him/her with a bullet or an  arrow  *(also: cutting)*
+- **saqsigwemgewei** — torchlight \| Torchlight  *(also: fire)*
+- **saqsigwet** — hunt with light (at night) \| hunt with torchlight (at night) \| fish with light or torchlight (at night) \| He/she hunts by light at night  *(also: fire)*
+- **se'siaqawei** — birdshot \| birdshot shell \| Birdshot
+- **sigteluatl** — shoot dead \| He/she shoots someone dead  *(also: conflict)*  *(confidence: m)*
+- **sipitaqan** — hide·stretcher \| Hide·stretcher  *(also: tools)*
+- **sqolu'sguji'j** — small lead pellet \| beebee \| Small lead pellet
+- **sqolusgw** — lead, gunshot \| lead, wheel balancers \| sinkers \| Lead  *(also: texture-and-materials)*
+- **tapi** — bow \| Bow
+- **tia'mugwet** — hunt moose \| He/she hunts moose
+- **tia'mui'sit** — moose·call \| He/she moose·calls
+- **tia'mui'suti** — moose caller \| Moose caller
+- **ugtapiml** — bow \| His/her bow
+- **utapi'j** — little bow \| His/her little bow  *(also: games)*
+- **waqatign** — bait \| Bait  *(also: fishing)*
+- **wenaqtesguatl** — flush out... \| kick upward \| flush bird out of field \| He/she/it flushes out... \| He/she kicks it upward  *(also: ways-of-moving)*  *(confidence: m)*
+- **wisnuti** — moose trail \| deer trail \| Moose trail  *(also: animals)*
+- **egtapluit** — hunts \| He/she hunts
+- **mnmgwet** — bird hunts prey \| The bird hunts its prey  *(also: birds)*
+- **netumsgwet** — hunts beaver \| traps beaver \| He/she hunts/traps beaver
+- **oqonaqateg** — pitfall \| covered pitfall \| Pitfall  *(also: land)*
+- **poqtapluit** — sets out to hunt \| He/she sets out to hunt.
+- **mui'ne'get** — hunt bear
+- **nipepit** — hunts at night \| He/she hunts at night
+- **anguoweie'get** — hunts for fur \| He/she hunts for fur
+- **goma'luateget** — hunts with a decoy. (bird) \| He/she hunts with (bird) decoy.
+- **netua'gwet** — Hunts porcupine seal \| He/she hunts porcupine seal.
+- **ewltugulit** — having a poor hunting outcome \| He/she is having a poor hunting outcome.
+- **sisipewe'get** — Hunts birds. \| He/she hunts birds.  *(also: birds)*
+- **nipeloqte'gnei** — tool used to set traps at night \| something used to set night traps \| Tool used to set night traps  *(also: tools)*
+- **nanimat** — successfully hunt waterfowl \| I successfully hunt waterfowl.  *(also: birds)*
+- **anguoweie'gaqan** — fur pelt \| Fur pelt  *(also: animals)*
+- **wisqome'set** — pursues a moose \| He/she pursues a moose
+- **gtantaqan** — Hunting \| Hunt, in general.
+- **giwset** — come upon moose in their yard \| come upon caribou in their yard \| He/she comes upon moose or caribou in their yard  *(also: animals)*
+- **nipepituaji** — watches for animals (foxes, predators) to protect his/her flock \| He/she watches for animals (foxes, predators) to protect his/her flock.  *(also: farm-animals)*  *(confidence: m)*
+- **gesgusgwet** — hunt bear \| He/she hunts bears  *(also: animals)*
+- **alipe'sgmg** — shoot randomly \| Shooting randomly  *(confidence: m)*
+- **nipeteluatl** — shot at him/her/it (beaver) at night \| He/she shots at him/her/it (beaver) at night
+- **nipeloqte'gniget** — set traps at night \| He/she sets traps at night.
+- **nipuslat** — hunt porcupines at night \| hunt foxes at night \| He/she hunts porcupines, foxes at night
+- **netuagwe'set** — hunts porcupine \| He/she hunts porcupine  *(also: animals)*
+- **gopitewegn** — beaver pelt \| beaver fur \| Beaver fur or pelt  *(also: animals)*
+- **go'pliaqan** — hatch pole \| trap pole \| Hatch pole, trap pole.
+- **welo'gwet** — hunt at night \| hunt after dark \| He/she hunts at night
+- **nipetluat** — monitors for (beaver, moose, other animals) at night \| watches for (beaver, moose, other animals) at night \| scouts for (beaver, moose, other animals) at night \| He/she monitors for or follows (beaver, moose, other animals) at night
+- **tmgeligenejue'get** — hunts feathers of heron/cranes \| He/she hunts feathers of heron/cranes.  *(also: birds)*
+
+## Archived entries (lower priority)
+
+- **esetegjipsa'toq** — skin it inside out \| He/she skins it inside out
+- **esetegjipsqa'latl** — skin inside out \| He/she skins him/her inside out
+- **gepsipsa'latl\*\*** — skin \| He/she skins him/her
+- **l'tqa'mun** — arrow \| an arrow
+- **l'tqa'mun\*\*** — arrowhead \| harpoon
+- **malsa'sig\*\*** — flinted (as gun)
+- **mattelign\*\*** — arrow
+- **mta'i\*\*** — green (undressed) hide
+- **netugsigtmat\*\*** — kill for provisions \| He/she kills for provisions
+- **netugulue'set\*\*** — provision with porcupine \| He/she provisions with porcupine
+- **netuguluo'mi\*\*** — hunting ground \| market place
+- **sisqa'tuatl** — pull back gun hammer \| cock gun \| He/she pulls back gun hammer for him/her
+- **wesaqalatl** — shoot dead \| He/she shoots him/her dead

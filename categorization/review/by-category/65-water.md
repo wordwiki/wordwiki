@@ -1,0 +1,122 @@
+# Water, Ice & Wetness (`water`)
+
+Theme: *Land, Water & Sky* — 103 entries (+12 archived)
+
+- **alm'stapueg** — shriveled up \| It shriveled up from soaking in liquid  *(also: condition)*
+- **alm'stapuet** — shriveled up from soaking in water \| He is shriveled up from soaking in the water  *(also: condition)*
+- **amisisguapua'q** — slightly muddy water \| somewhat muddy liquid \| The liquid is slightly muddy
+- **apitapueg** — waterlogged \| It is swollen by moisture  *(also: condition)*
+- **apitapuet** — waterlogged \| He/she is waterlogged  *(also: condition)*
+- **egwija'latl** — immerse \| dip into the water (or liquid) \| He/she immerses him/her into the water (or liquid)
+- **egwija'toq** — immerse \| dip into a liquid \| He/she dips..into a liquid
+- **egwijatpa'latl** — dip the head into the water (or liquid) \| He/she dips his/her head into the water
+- **egwijing** — in water \| in liquid \| He/she is in water
+- **egwitg** — in water \| in liquid \| It is in water
+- **elapaqta'tl** — splash \| squirts \| He/she splashes him/her
+- **elapaqte'g** — splash water on \| spray on \| squirt  on \| He/she splashes it
+- **elapaqto'sit** — splash oneself \| spray oneself \| He/she splashes self  *(also: cleaning)*  *(confidence: m)*
+- **elguta'latl** — pour on \| pour into \| pour toward \| He/she pours it into
+- **elguta'toq** — pour on \| pour into \| pour toward \| He/she pours it into
+- **eligua'laq** — liquid dripping down from an opening \| leaks \| It is drips or leaks
+- **eligua'lat** — dripping down from \| leaks \| He/she/it drips or leaks
+- **espeg** — leak \| drip \| It leaks
+- **espet** — leak \| drip \| It (pail) leaks
+- **gep't'g** — frozen over (water) \| It is frozen over  *(also: weather)*
+- **getapa'q** — sink into water \| sink into liquid \| It sinks\_into\_the\_water
+- **getapa't** — sink \| He/she sinks
+- **guta'latl** — pour \| He/she pours it(paint)  *(confidence: m)*
+- **gutatesmatl** — spill \| He/she spills it(paint)
+- **gutatestat\*\*** — spill \| He/she spills
+- **gutatestoq** — spill \| He/she spills it
+- **guta'toq** — pour \| He/she pours it
+- **guteget** — spill \| spill intentionally \| He/she spills it
+- **magu'n** — iceberg \| big block of ice \| Iceburg
+- **mawpega'toq** — mix liquid \| add liquid \| collect liquid \| He/she mixes liquid  *(confidence: m)*
+- **mgumi** — ice \| icecube \| Ice  *(also: temperature)*
+- **mgumi'gn** — icicle \| Icicle
+- **mgumi'gnig** — icy (in patches) \| It is icy  *(also: weather)*
+- **mgumi'gnit** — icy (in patches) \| It(board) is icy  *(also: weather)*
+- **mjigapu** — dirty water \| used (scrubbing) water \| Dirty water  *(also: cleaning)*
+- **naqana'pet** — draw water from (well or river) \| He/she draws water from (well or river)
+- **naqana'q** — dip out \| ladle out \| He/she dips it out
+- **naqani'get** — bail \| scoop out \| He/she bails out water  *(also: boats)*
+- **natqa'latl** — remove from water \| He/she/it removes him/her/it from the water
+- **natqa'sit** — get out of water \| He/she gets out of the water  *(also: swimming)*  *(confidence: m)*
+- **natqa'toq** — remove from water \| He/she removes it from the water
+- **nenmue'g** — damp \| damp \| It(shirt) is damp \| It is damp  *(also: condition)*
+- **newapalatl** — cool off with water \| He/she cools him/her off with water  *(also: temperature)*
+- **newapatoq** — cool off with water \| He/she cools it off with water  *(also: temperature)*
+- **newugulasing** — moist underneath \| It is moist underneath
+- **niwa's'g** — become dry \| get dry \| all liquid empties out \| evaporate \| It becomes dry  *(also: condition)*
+- **niwa'sit** — become dry \| get dry \| all liquid empties out \| evaporate \| It becomes dry  *(also: condition)*
+- **pa'itepega'sit** — overflow \| ...overflows
+- **pa'it'pega's'g** — overflow \| It overflows
+- **paqasa'latl** — place in the water (river) \| He/she places him/her/it in the water
+- **paqasaqalatl** — throw in water \| launch \| He/she throws him/her in the water  *(also: pushing-and-pulling)*
+- **paqasaqtoq** — throw in the water \| launch \| He/she throws it in the water  *(also: pushing-and-pulling)*
+- **paqasa'sit** — goes in the water \| He/she/it goes in the water  *(also: swimming)*  *(confidence: m)*
+- **paqasa'toq** — put in the water (river) \| launch into water \| He/she puts it in the water  *(also: boats)*
+- **paqasiet** — fall into the water \| He/she/it falls into the water  *(also: falling)*
+- **paqaste'g** — launch \| cause to fall into water, river or lake \| knock into water \| hit into water \| He/she launches it  *(also: boats)*
+- **pemapaqto'sit** — splash self (as going along) \| He/she is going along splashing self
+- **pemitma's'g** — start to break (ice) \| It is starting to break  *(also: breaking)*
+- **petgutatestoq** — spill unintentionally \| He/she spills it unintentionally
+- **petguteget** — spill unintentionally \| He/she spills it
+- **pisaqqan** — bubble \| Bubble
+- **pisew** — foam \| suds \| Foam  *(also: texture-and-materials)*
+- **salawapu** — salty water \| salt water \| salted water \| Salty water  *(also: food)*
+- **samqwan** — water \| Water
+- **samqwanapua'q** — watery \| diluted with water \| It is watery
+- **samqwano'q** — water pitcher \| water container \| Water container  *(also: household)*
+- **samuqwaniaq** — becomes watery \| It becomes watery
+- **samuqwaniet** — becomes watery \| He/she/it becomes watery
+- **saqpe'g** — wet \| wet \| He/she is wet \| It is wet
+- **saqpejaq** — damp \| boggy \| It is damp  *(also: land)*
+- **saqpejaqamig** — swamp \| damp ground \| wet lands \| Swamp  *(also: land)*
+- **saqpiaq** — get wet \| get damp \| Get damp
+- **saqpiet** — get moist \| Get moist
+- **saqpigjat** — have a wet bottom \| He/she has a wet bottom  *(confidence: m)*
+- **sewisto'gweg** — break up (through action of water) \| It breaks up through the action of the water  *(also: breaking)*
+- **sewisto'gwet** — break up (through action of water) \| ...breaks up through the action of the water  *(also: breaking)*
+- **siguapatign** — rinse (water) \| Rinse water  *(also: cleaning)*
+- **si'n'g** — bail water (from boat) \| He/she bails water from it  *(also: boats)*
+- **si'niget** — bails water (from boat) \| He/she bails water  *(also: boats)*
+- **sipuasaptas'g** — transparent as clear water \| It is as transparent as clear water  *(also: seeing)*  *(confidence: m)*
+- **sisguapu** — muddy water \| Muddy water
+- **tegpa'q** — cold (of liquid) \| It(liquid) is cold  *(also: temperature)*
+- **tg'poq** — spring water \| a spring of water \| Spring water  *(also: sea-and-rivers)*
+- **waju'pega'latl** — fill up (with liquid) \| soak \| He/she fills him/her/it up with liquid  *(also: amounts)*
+- **waju'pega'toq** — fill up (with liquid) \| soak \| He/she fills it up with liquid  *(also: amounts)*
+- **waqamitg** — clean flowing water \| It is a clean flowing water  *(also: sea-and-rivers)*
+- **wasapa'q** — crystal·clear water \| It is crystal·clear water
+- **wesgitpega's'g** — flow over \| It flows over
+- **wesgitpega'sit** — flow over \| He/she/it flows over
+- **wesgitpegiaq** — flows over \| It flows over it
+- **wesgitpegiet** — flows on top \| coating \| It flows on top
+- **wesgitqo'qweg** — float \| It floats  *(also: swimming)*
+- **wetqapalatl** — soak \| immerse in water \| He/she soaks him/her/it  *(also: cleaning)*
+- **wetqapalsit** — soak \| immerse in water \| bathe \| He/she soaks one's self  *(also: cleaning)*
+- **wetqapatoq** — soak \| immerse in water \| He/she soaks it  *(also: basket-making)*  *(confidence: m)*
+- **paqasasugwet** — walks into the water \| He/she walks down to the river into the water.  *(also: swimming)*
+- **past'g** — frozen thick \| Thick ice.  *(also: temperature)*
+- **temgwatign** — aquatic plant (i.e. nymphaea water lilies) \| Aquatic plant (i.e. nymphaea water lilies)  *(also: plants)*  *(confidence: m)*
+- **wejgwaqo'qwet** — comes adrifting (floating in water)  \| He/she/it comes adrifting (floating in water)   *(also: swimming)*
+- **gutajuig** — pours out \| It pours out  *(also: weather)*  *(confidence: m)*
+- **etlijuig ** — flowing \| It is flowing  *(confidence: m)*
+- **pemijuig** — liquid flowing along \| Liquid flowing along  *(confidence: m)*
+- **sasmuqwatign** — aquatic plant \| sweet flag plant \| Aquatic plant, sweet flag plant  *(also: plants)*  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **alispet\*** — soaked \| wet
+- **alm'sta'q\*\*** — soggy \| soggy \| It is soggy \| It is soggy
+- **alm'sta't\*\*** — soggy \| It is soggy
+- **elmipisagganiet** — bubble along \| He/she is bubbling along
+- **megunig** — icy \| It is icy
+- **mesamu'g\*\*** — murky (of liquids)
+- **pawnatqa'sit** — get out of water slowly \| He/she gets out of the water slowly
+- **putlaq** — seep in
+- **samuqwanig\*\*** — water
+- **samuqwanit\*\*** — 
+- **sapoqwan** — water (sweet)
+- **wijigmualug** — iceberg \| Iceberg

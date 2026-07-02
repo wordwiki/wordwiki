@@ -1,0 +1,184 @@
+# Fire & Light (`fire`)
+
+Theme: *Land, Water & Sky* — 160 entries (+17 archived)
+
+- **alasenmat** — walk around with light \| use a light \| He/she goes about with a light
+- **amsaloqteg** — unfortunately damaged by fire \| sadly harmed by fire \| It is unfortunately/sadly damaged by fire
+- **ansuoqteg** — unfortunately burnt \| It is unfortunately burnt
+- **aps'sqate'get** — chop kindling \| split to make thinner \| He/she is chopping kindling  *(also: cutting)*
+- **aptlama'toq** — smother (fire) \| block off air from \| He/she smothers it
+- **aqjigateg** — shade \| It is shady  *(confidence: m)*
+- **eligp'ta'q** — smoke \| smoke drifts toward \| It smokes
+- **etligp'ta'q** — smoke \| steam \| It (campfire) is smoking
+- **etligp'ta't** — smoking \| steaming \| It (cigar) is smoking  *(also: tobacco-and-smoking)*  *(note: order-audit: cigar smoking, tobacco leads)*
+- **gaqamgleg** — finished burning \| It is finished burning
+- **gaqamglet** — finished burning \| It (tree) is finished burning
+- **gaqanu'gwa'teget** — finish burning \| He/she is finished burning (the brush)
+- **gaqanu'gwa'toq** — finish burning up \| He/she is finished burning it up
+- **gaqoqsit** — burned through \| finished cooking \| It is burned through  *(also: cooking)*
+- **gaqoqteg** — burned through \| It is burned through  *(also: cooking)*
+- **gaqsatl** — burn \| He/she burns him/her
+- **gaqs'g** — burn \| He/she burns it
+- **gaqsit** — burn \| He/she burns
+- **gaqsusit** — unintentionally burns oneself \| accidentally burns oneself \| He/she unintentionly burns himself/herself  *(also: sickness)*  *(confidence: m)*
+- **gaqteg** — burn \| It (meat) is burned
+- **gesaseg** — shine \| shines bright \| bright \| It shines
+- **gesaset** — shine \| shines bright \| bright \| It shines bright
+- **gesasit** — shining bright \| He/she/it is shining bright
+- **gesateg** — bright \| It is bright
+- **gesmateg** — great rousing fire \| Great rousing fire
+- **gesoqsit** — feel the burn badly \| get a bad burn \| get a painful burn \| He/she gets a bad burn  *(also: sickness)*
+- **getmoqsijig** — all burned \| They(trees) are all burned
+- **getmoqtegl** — all burned \| They(firewood) are all burned
+- **gijitpa'qtug** — in total darkness \| in the dark \| In total darkness  *(confidence: m)*
+- **ginipewa'j** — branch (holds tea kettle over fire) \| stick (holds tea kettle over fire) \| branch (holds a tea kettle over fire)  *(also: tools)*
+- **glmuejuapsgw** — piece of coal \| coal \| Coal  *(also: household)*
+- **go'lail** — kerosene \| coal oil \| Kerosene  *(also: household)*  *(confidence: m)*
+- **gpugteminu** — Council fire \| Our council fire  *(also: leadership-and-law)*
+- **lu'segn** — fire poker \| furnace poker \| Fire poker  *(also: tools)*
+- **maqtawoqteg** — dark tanned \| darkened by fire \| charred \| It is darkly tanned  *(also: colors)*
+- **mawgpugtem** — council fire \| Council fire  *(also: leadership-and-law)*
+- **mawigpugtem** — council fire \| Council fire  *(also: leadership-and-law)*
+- **mawigsateg** — very bright \| brightest \| It is very bright
+- **mawsa'latl** — build a fire in the stove or furnace \| He/she builds a fire in the stove or furnace
+- **mawsaqa'latl** — prod the fire in the stove \| stir the fire in the stove \| He/she prods the fire in the stove
+- **mawsaqa'teget** — prod the fire (with something) \| stir the fire (with something) \| He/she prods the fire (with something like a poker)
+- **mawsaqa'toq** — prod fire (with poker) \| stir fire (with poker) \| He/she prods the fire (with a poker)
+- **mawsa'tat** — make fire inside \| start and maintain a fire in a stove \| heat source \| He/she makes a fire inside
+- **mawsa'teget** — make a fire (in stove or furnace) \| build a fire (in stove or furnace) \| He/she builds a fire in a stove or furnace
+- **mawsa'toq** — put in fire to burn \| put in stove to burn \| He/she puts it in the fire to burn
+- **megwatetesg** — flash red \| It flashes red  *(also: colors)*
+- **megwatetesing** — flash red \| It(bulb) flashes red  *(also: colors)*
+- **mtlu'tew** — smoke \| Smoke
+- **musgusi** — creosote \| chimney flue \| Creosote  *(also: household)*
+- **naqasua'latl** — turn off \| butt out \| extinguish \| put out \| He/she turns it (stove) off
+- **naqasua'q** — extinguish with water \| douse fire with water \| put out (fire) with water \| He/she extinguishes the fire with water
+- **naqasua'toq** — extinguish \| put out \| turn off \| He/she extinguishes it
+- **naqasueta'tl** — beat out fire \| He/she beats out the fire on him/her/it
+- **naqasuete'g** — beat out (extinguish) fire \| He/she beats out (extinguishes) the fire
+- **naqasuetesg'g** — stamp out fire \| He/she stamps out the fire
+- **naqasuetesguatl** — stamp out fire \| He/she stamps out the fire on it (small tree)
+- **naqasuiputualatl** — blow out fire \| extinguish by air \| He/she blows out its fire
+- **naqasuiputuatg** — blow out the fire \| extinguish by air \| He/she blows out the fire on it
+- **neiamgleg** — appear as or in blaze \| fire becomes apparent \| It appears ablaze
+- **neiamglet** — appears in ablaze \| appears burning \| He/she/it appears ablaze
+- **neiaseniget** — appear shining (as sun) \| shining through (the clouds) \| come into view with a light source \| It appears shining  *(also: weather)*
+- **nugsaqatew** — ember \| charcoal \| Ember
+- **nu'gwa'latl** — set on fire \| burn \| He/she sets it (tree) on fire
+- **nu'gwa'q** — burn \| on fire \| ablaze \| It burns
+- **nu'gwa't** — burn \| dwelling  on fire \| ablaze \| belongings on fire \| He/she/it is burning \| His/her dwelling or belongings are on fire
+- **nu'gwa'toq** — set ablaze \| burn \| He/she sets it ablaze
+- **nujinqasui'get** — firefighter \| Firefighter  *(also: occupations)*
+- **nu'te'nmaqan** — campfire \| outdoor kitchen \| Campfire
+- **paqtasit** — shining bright \| He/she/it is shining bright
+- **paqtateg** — shining bright \| It is shining bright
+- **pasgesetmat** — light up \| smoke \| He/she lights up  *(also: tobacco-and-smoking)*
+- **pasginoqsit** — cracked (from excessive heat) \| It (plank) is cracked from excessive heat.  *(also: breaking)*
+- **pasginoqteg** — cracked (from excessive heat) \| It is cracked from excessive heat  *(also: breaking)*
+- **pasgoqsit** — shattered (from excessive heat) \| pierced (from heat) \| burst (from excessive heat) \| It shattered\_(from\_excessive\_heat)  *(also: breaking)*
+- **pasg'sa'latl** — light up \| set on fire \| He/she sets him/her/it on fire
+- **pasg'sa'toq** — set on fire \| light up \| He/she sets it on fire
+- **pasg'sematl** — light up (tobacco pipe) \| light up a cigarette \| He/she lights it (tobacco pipe) up  *(also: tobacco-and-smoking)*
+- **pasg'setmat** — light up (to smoke) \| He/she lights up to smoke  *(also: tobacco-and-smoking)*
+- **pasg'setmuatl** — light up (cigarette or pipe) for \| He/she lights up (a cigarette or pipe) for him/her  *(also: tobacco-and-smoking)*
+- **pasg'teg** — pop (as log on fire or as corn) \| It pops  *(also: hearing)*
+- **pa'sg'teg** — explode (moisture in log on fire) \| It explodes  *(also: hearing)*
+- **pegn'g** — dark (without light) \| It is dark  *(confidence: m)*
+- **pejoqsatl** — burns accidently \| burns unintentionlly \| He/she burns him/her/it accidently
+- **pejoqs'g** — cook unintentionally \| burn unintentionally \| burns accidently \| He/she cooks it unintentionally
+- **pemigp'ta'q** — puff along \| smoke along \| It is smoking along  *(confidence: m)*
+- **pemigp'ta't** — smoke along \| puff along \| He/she/it is smoking along  *(also: tobacco-and-smoking)*  *(note: order-audit: person smoking, tobacco leads)*
+- **pesigte'get** — split wood (kindling) \| He/she splits wood (kindling)  *(also: cutting)*
+- **pe's'teg** — burst into flame \| It bursts into a flame
+- **petasenmat** — come walking with light or torch \| He/she comes walking with a light or a torch
+- **piglewji'j** — lamp globe \| oil lamp chimney \| Lamp globe  *(also: household)*
+- **pigsa'q** — cloudy from smoke \| cloudy from dust \| It is cloudy from dust or smoke
+- **pigsa't** — cloud of smoke or dust or steam from... \| He/she/it makes a cloud of dust or smoke or steam
+- **pitamgletesg** — flare up (toward inside) \| It flares inward
+- **pitamgletesing** — flares inward \| flare up (toward inside) \| It (flame) flares inward
+- **pitiasit** — lit up \| bright \| He/she is lit up
+- **pitiateg** — all lit up \| bright \| all the lights are on \| It is all lit up
+- **pitoqteg** — burn underneath \| set underneath \| penetrate beneath \| It is burning underneath \| It is set underneath  *(also: putting-and-placing)*  *(confidence: m)*
+- **pugsaqatew** — ember of firewood or coal \| Ember of firewood or coal
+- **pugsetew** — soot \| Soot
+- **pugsetewig** — sooty \| It is sooty
+- **pugsetewit** — sooty \| He/she is sooty
+- **pugsug** — firewood \| Firewood  *(also: trees)*
+- **pugsugwei\_epsaqtejg** — wood stove \| Wood stove  *(also: household)*
+- **pugtew** — fire \| Fire
+- **pugteweiei** — related to fire \| from fire \| of fire \| Related to fire
+- **pugto'guom** — chimney \| Chimney  *(also: dwellings)*
+- **saqsigwemgewei** — torchlight \| Torchlight  *(also: hunting)*
+- **saqsigwet** — hunt with light (at night) \| hunt with torchlight (at night) \| fish with light or torchlight (at night) \| He/she hunts by light at night  *(also: hunting)*
+- **sewisgoqsit** — break up (in fire) \| come apart (in fire) \| He/she/it breaks up the in fire  *(also: breaking)*
+- **sewisgoqteg** — break up (in fire) \| It breaks up in the fire  *(also: breaking)*
+- **sisuei** — blaze (of fire) \| firey blaze \| Blaze
+- **t'pgwano'q** — ash bin \| Ash bin
+- **tqa'la'j** — wick \| Wick  *(also: household)*
+- **ugjijaqamiju'et** — have shadow \| He/she has a shadow  *(confidence: m)*
+- **ugsitnei** — stove pipe \| Stove pipe  *(also: household)*
+- **wapsgw** — coal \| Coal  *(also: household)*
+- **wasateg** — bright \| illuminated \| It is bright
+- **wasoqeg** — illuminated \| bright (of hue) \| It is illuminated
+- **wasoqon** — light \| Light
+- **wasoqonatl** — illuminate \| keep light on \| He/she keeps him/her/it illuminated
+- **wasoqonaweg** — give off light \| radiate \| It gives off light
+- **wasoqonawet** — give off light \| radiate \| He/she gives off light
+- **wasoqong** — illuminate \| keeps lit \| He/she keeps it lit
+- **wasoqonmaqan** — candle \| lamp \| lantern \| Candle  *(also: household)*
+- **wasoqotesing** — sparkle \| flashing \| He/she/it sparkles
+- **wasoqwa'latl** — light up \| He/she lights him/her/it up
+- **wasoqwa'toq** — light up \| He/she lights it up
+- **wasoqweg** — lit \| bright \| shiny \| It is lit
+- **welaseg** — shine \| brightness \| It is shiny
+- **welaset** — shine \| brightness \| He/she is shiny
+- **wigplasit** — smoked (as a salmon) \| smoke residue (coated) \| ...is smoked (as salmon)  *(also: cooking)*
+- **wigplateg** — smoke residue (coated) \| smoked \| It's coated with smoke residue
+- **wigplatewma'q** — smell smoky \| smell of smoke \| It smells smoky  *(also: smell-and-taste)*
+- **wigplatewma't** — smell smokey \| smell of smoke \| He/she smells smokey  *(also: smell-and-taste)*
+- **wisgipg** — stove ashes \| fire ash \| Stove ashes
+- **wisgipgo'q** — ash bin \| ash container from woodstove \| Ash bin  *(also: household)*
+- **tmjign** — fireplace \| Fireplace  *(also: dwellings)*
+- **papgestoq** — lights it \| He/she lights it (a pipe)  *(also: tobacco-and-smoking)*
+- **papg'sestoq** — lights it \| He/she lights it.  *(confidence: m)*
+- **sepawe’nmat** — lights up the morning fire \| He/she lights up the morning fire
+- **pugtewei** — related to fire \| of fire \| from fire \| belonging to fire \| Related to fire
+- **ge'seget** — throws it in the fire \| He/she throws it in the fire.
+- **pugtewa’taqan** — fire making tools (matches, flint and steel) \| lighter \| Fire making tools (matches, flint and steel)  *(also: tools)*
+- **ge’sa’toq** — throws it into the fire \| He/she throws it into the fire
+- **pugtewigtug** — at the fire \| in the fire \| At or in the fire  *(also: location-words)*
+- **saqtat** — strikes a flint to start a fire \| light a lighter to start a fire \| He/she uses (strikes) a flint to start a fire
+- **gisnu'gwa'q** — has burned \| is combustible \| It has burned
+- **papgesestaqan** — wood kindling
+- **ge'sa'latl** — throws him/her/it into the fire \| He/she throws him/her/it into (the fire)
+- **ginate’nmat** — has a good fire \| has a beautiful fire \| has a bright fire \| He/she has a good bright fire.
+- **wesgite’n’g** — put embers on top \| put fire on top \| He/she puts embers on the top of it (cooking technique)  *(also: cooking)*
+- **pugte’nmat** — has fire on the go \| He/she has fire (on the go)
+- **mawgsaqa’toq** — kindle a fire \| He/she/it kindles a fire
+- **naqasua'teget** — extinguish a fire (or candle) \| turn off an on/off switch \| He/she extinguishes a fire
+- **mawgsaqate'g** — rekindle the fire \| stir the fire \| He/she rekindles or stirs the fire
+- **naqasueg ** — fire is extinguished \| fire has gone out \| The fire is extinguished
+- **nu’gwa’luejg** — fireworks \| cattails \| fireworks  *(also: plants)*  *(confidence: m)*
+- **pugtewgsit** — it is red hot (stove) \| it is over heating \| It is red hot (from overheating)  *(also: household)*
+- **elamgleg ** — burn toward \|  burn in a direction \| burn along a path \|  Fire burns towards...
+- **pugtewapsg’ta'tl** — strike fire from flint \| He/she strikes fire from flint
+
+## Archived entries (lower priority)
+
+- **gesatenmat** — affected by bright light \| He/she is affected by the bright light
+- **lasiantejg\*\*** — lantern
+- **metlu'sit** — smoke \| smoky \| It(stove) is smoky
+- **metlu'teg** — smoke \| smoky \| It is smoky
+- **muspusi\*\*** — chimney flare \| soot
+- **naqasuo'tasit** — turn off \| extinguish \| he/she turns things off
+- **neia'ta'q\*\*** — shine through
+- **nu'gwa'qewei** — flammable substance \| Flammable substance
+- **nu'se'gn** — poker (fire)
+- **oqon\*\*** — fagot \| bundle of sticks (used for fuel)
+- **pasgesematl** — light it up \| light (pipe) \| He/she lights it(cigarette) up
+- **pe's'sit** — burst into flame \| It(stove) bursts into a flame
+- **pugtewig** — hearth
+- **saqtat** — light up and smoke \| He/she lights up and smokes
+- **sq'sigwetestaqan** — match \| Match
+- **tmsaqatew** — hot coal or log \| Hot coal or log
+- **t'pgwaniptaqan** — ash pan \| Ash pan

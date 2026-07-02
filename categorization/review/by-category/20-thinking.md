@@ -1,0 +1,108 @@
+# Thinking & Knowing (`thinking`)
+
+Theme: *Mind & Language* — 89 entries (+12 archived)
+
+- **amins'tue'g** — somewhat rational \| partly sane \| He/she is somewhat rational
+- **angita'sit** — think \| He/she thinks
+- **angita'suaqan** — thought \| Thought
+- **aqatatpa't** — half·witted \| He/she is half-witted  *(confidence: m)*
+- **awanta'sit** — forget \| He/she forgets
+- **awanta'sualatl** — forget about \| He/she forgets about him/her
+- **awanta'suatg** — forget about \| He/she forgets about it
+- **elpualatl** — want there \| He/she wants him/her/it there  *(confidence: m)*  *(note: want-words: no clean v2 home; convention = thinking)*
+- **elpuatg** — want there \| He/she wants it there  *(confidence: m)*
+- **elue'wiaq** — crazy \| It is crazy  *(confidence: m)*
+- **elue'wiet** — crazy \| He/she is crazy  *(confidence: m)*
+- **etlite'lmatl** — expect \| suspect \| He/she suspects someone
+- **etlite'tg** — expect \| suspect \| think \| He/she suspects it
+- **ewnasgwatpa'latl** — confuse \| drive crazy \| make dizzy \| He/she confuses him/her  *(confidence: m)*
+- **ewnasiet** — confused \| gone awry \| mixed up \| topsy turvy \| He/she is confused  *(confidence: m)*
+- **gaqigjijiatl** — know all about \| He/she knows all about him/her
+- **gaqigji'toq** — know all about \| He/she knows all about it
+- **geiteget** — intelligent \| knowledgeable \| He/she is knowledgeable
+- **geitmg** — it is known \| known \| It is known
+- **geitoq** — know about \| know \| have knowledge of \| aware of \| He/she knows about it
+- **gejiatl** — aware \| know about \| have knowledge of \| He/she is aware of him
+- **gepaqs'te'g** — guess it correctly \| He/she guesses it correctly
+- **gesipualatl** — want very much \| covet \| He/she wants him/her very much  *(confidence: m)*
+- **gesipuatg** — wants very much \| covet \| He/she covets it  *(confidence: m)*
+- **getlamite'lmatl** — believes in \| trusts in \| He/she believes in him/her/it  *(also: social-life)*
+- **getlams'tg** — believe \| obey \| follow, as in beliving in something \| He/she believes it
+- **getlams'tuatl** — believe someone \| listen to \| He/she believes him/her  *(also: social-life)*
+- **gisite'lmatl** — invent \| He/she invents it(robot)  *(also: making-and-fixing)*
+- **gisite'tg** — invent \| He/she invents it  *(also: making-and-fixing)*
+- **ilsutg** — judge \| make a decision \| He/she judges it  *(also: leadership-and-law)*
+- **ji'guteget** — daydream \| He/she is daydreaming
+- **maqana'latl** — outwit \| embarrass \| He/she outwits him/her
+- **maqanat** — outwitted \| baffled by situation \| He/she is outwitted
+- **maqanimatl** — verbally outwit \| verbally embrass \| verballly baffle \| He/she verbally outwits him/her  *(also: talking)*
+- **megnatl** — pick up \| choose \| gather \| select \| He/she picks him/her up \| He/she chooses him/her  *(also: holding)*
+- **megng** — pick up \| choose \| He/she picks it up \| He/she chooses it  *(also: holding)*
+- **megt'g** — doubt \| disbelieve \| He/she doubts it
+- **megtuatl** — doubt \| disbelieve \| He/she doubts him/her
+- **menuega'tl** — need \| need the services \| He/she needs him/her  *(confidence: m)*
+- **menueget** — need \| has use for \| could use \| require \| He/she needs  *(confidence: m)*
+- **menuegetoq** — need \| has use for \| could use \| require \| He/she needs it  *(confidence: m)*
+- **migwite'lmatl** — remember \| call to mind \| He/she remembers him/her
+- **migwite'tg** — remember \| call to mind \| He/she remembers it
+- **milita'sit** — imagine many things \| think about various things \| He/she has different kinds of thoughts
+- **na'jigat** — strong desire \| yearn for \| He/she has strong desire for(money)  *(confidence: m)*
+- **nata'ilsuteget** — have good judgement \| good advisor \| He/she is a good advisor  *(also: leadership-and-law)*  *(confidence: m)*
+- **neng** — know of \| recognize \| He/she recognizes it
+- **nenuatl** — know \| recognize \| He/she recognizes him/her
+- **nest'g** — understand \| He/she understands
+- **nestuapuguet** — speak truthfully \| speak wisely \| speak intelligently \| He/she speaks wisely or truthfully  *(also: talking)*
+- **nestue'g** — wise \| sensible \| of sound mind \| He/she is wise
+- **nestu'et** — become wiser \| regain consciousness \| become knowledgeable [right and wrong] \| mature \| grow into maturity \| He/she becomes wiser \| He/she regains consciousness  *(also: age)*
+- **nestuita'sit** — recollect \| recall \| remember \| become aware \| He/she recollects
+- **nestu'tesing** — come back to one's senses \| He/she comes back to his/her senses
+- **ne'tata'sit** — wise \| quick thinker \| He/she is quick thinker
+- **ne'tata'suaqan** — wisdom \| Wisdom
+- **niganite'tg** — plan ahead \| predict \| He/she plans ahead
+- **panuijgatg** — examine \| study \| He/she examines it  *(also: seeing)*
+- **pasatpat** — thick·headed \| He/she is thick·headed  *(also: character)*
+- **pela'toq** — omit \| miss connecting with \| He/she omits it  *(confidence: m)*
+- **pewalatl** — want \| He/she wants him/her  *(confidence: m)*
+- **pewatg** — want \| desire \| He/she wants it  *(confidence: m)*
+- **poqwajite'lmatl** — mistrust \| He/she mistrusts someone  *(confidence: m)*
+- **poqwajite'tg** — mistrust \| He/she mistrusts it  *(confidence: m)*
+- **pujite'lmatl** — trust \| He/she trusts him/her  *(also: social-life)*  *(confidence: m)*
+- **pujite'tg** — trust \| He/she trusts it  *(confidence: m)*
+- **pusgiweniet** — forgetful \| absent·minded \| He/she is forgetful
+- **sangewite'lmatl** — trust \| He/she trusts someone  *(confidence: m)*
+- **sangewite'tg** — trust \| He/she trusts it  *(confidence: m)*
+- **sangewi\_angita'sit** — think slowly \| He/she thinks slowly
+- **sinu'et** — back to senses (after drinking) \| He/she is back to his/her senses  *(confidence: m)*
+- **sipita'sit** — has a good memory \| remembers far back \| He/she has a good memory
+- **sma'tewit** — smart \| alert \| He/she is smart
+- **tego'tg** — attends mass \| aware of \| in close touch with \| pays attention to \| He/she attends mass \| He/she pays attention to it  *(also: church-rituals)*  *(confidence: m)*
+- **teleiaq** — seems as such \| He/she seems as such  *(confidence: m)*
+- **telo'tg** — treat so \| perceive that \| treat as such \| seems that \| find that \| He/she treats it such \| He/she perceives that...  *(confidence: m)*
+- **telta'sit** — think so \| He/she thinks so
+- **telte'lmatl** — think about as such \| He/she thinks about someone as such
+- **telte'tg** — think about as such \| He/she thinks about it as such
+- **wejigji'toq** — come to know \| know from \| He/she comes to know
+- **wejuowita'sit** — absent·minded \| He/she is absent·minded
+- **weniet** — forgetful \| He/she is forgetful
+- **wetmite'lmatl** — have need for \| have use for \| He/she has need for him/her  *(confidence: m)*
+- **wetmite'tg** — have need for \| have use for \| care for \| He/she has a need for it  *(confidence: m)*
+- **nenaq'ta'sit** — thinks quickly \| brain racing  \| anxious \| He/she thinks quickly  *(confidence: m)*
+- **jiptugewet** — doubtful \| He/she is doubtful
+- **anestoq** — understand or misunderstand, in a bad way \| To understand or misunderstand, in a bad way.  *(confidence: m)*
+- **jiptuo'wet** — is doubtful \| He/she is doubtful
+- **jiptugwet** — is doubtful \| He/she is doubtful
+
+## Archived entries (lower priority)
+
+- **alita'suaqan** — thought \| thinking about (wandering thought)
+- **angite'lmatl** — think of \| He/she thinks of him/her/it
+- **angite'tg** — think of \| He/she thinks of it
+- **awanitpluteget\*\*** — judgement \| He/she judges in poor manner
+- **geitate'tg** — take seriously \| regard as important \| He/she takes it seriously
+- **geitmite'lmatl** — take seriously \| He/she takes him/her/it seriously
+- **geitmite'tg** — take seriously \| He/she takes it seriously
+- **miguimatl** — remind
+- **nestuet\*\*** — understand
+- **pannujguatg** — examines \| explores \| researches \| looks closely \| He/she examines it
+- **sinutesing** — regain senses \| He/she regains senses
+- **wesgewite'tg** — fell like doing \| hankering for something

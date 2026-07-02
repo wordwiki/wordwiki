@@ -1,0 +1,189 @@
+# Cutting & Piercing (`cutting`)
+
+Theme: *Movement & Physical Actions* — 169 entries (+10 archived)
+
+- **amaligsatl** — carve \| wittle \| He/she carves him (statue)
+- **amaligsawet** — carve \| whittle \| He/she whittles
+- **amaligs'g** — carve \| wittle \| He/she carves it
+- **amalsawet** — whittle \| jig sawing \| He/she whittles
+- **aps'sas'g** — cut into small pieces \| minced \| It is cut into small pieces
+- **aps'satl** — mince \| cut into small pieces \| He/she cuts it (fish) into small pieces  *(also: cooking)*
+- **aps'sg** — mince \| cut into small pieces \| He/she cuts it into small pieces  *(also: cooking)*
+- **aps'sqate'get** — chop kindling \| split to make thinner \| He/she is chopping kindling  *(also: fire)*
+- **aps'te'g** — chop small \| He/she chops to make smaller
+- **ela'gipulatl** — to cut (tree) with a saw \| He/she cuts him/her/it (tree) with a saw
+- **ela'gittoq** — cut with a saw \| He/she cuts it with a saw
+- **eloqomgwalatl** — trim to fit \| He/she trims him/her/it to fit
+- **eloqomgwatoq** — trim to fit \| He/she trims it to fit
+- **eloqsatl** — carve \| He/she carves him/her/it
+- **eloqs'g** — carve \| He/she carves it
+- **eltaqsewet** — cut strips(for basket making) \| cut strips \| He/she cuts something into strips  *(also: basket-making)*
+- **ennma'latl** — stick (needle) into \| pierce \| embed into \| He/she sticks it into
+- **ennma's'g** — stick into \| pierce \| embed into \| It sticks into
+- **ennma'sit** — stick into \| pierce \| He/she sticks into
+- **ennma'toq** — stick it into \| pierces it into \| embed in \| He/she sticks it into
+- **ennmig** — penetrate into \| pierces into \| embedded in \| It penetrates into
+- **ennmit** — stick into \| pierces into \| embedded in \| It (arrow) sticks into
+- **ennmta'tl** — hammer in \| drive in \| embed in \| He/she hammers it in  *(also: hitting)*
+- **ennmte'g** — drive in \| hammer in \| embed in \| He/she drives it in with an instrunment  *(also: hitting)*
+- **ennmtesg** — sticks into (unassisted) \| sticks into (when going along) \| penetrates by falling \| pierces \| embeds itself \| It penetrates by falling
+- **ennmtesing** — stick into (unassisted) \| sticks into (when going along) \| penetrates by falling \| pierces \| embeds itself \| It (spear) penetrates by force  *(also: falling)*
+- **ennmtesmatl** — throw to penetrate into \| stick (knife) into by force \| He/she sticks it into something by force
+- **ennmtestoq** — drive it into something by force \| throw to penetrate into \| stick into by force \| He/she drives it into something by force
+- **ennmtestuatl** — stick it into someone by force \| drive it into someone by force \| He/she sticks it into him/her/it by force
+- **esipulatl** — sharpen \| file \| grind \| He/she sharpens it (knife)  *(also: tools)*
+- **esiputoq** — sharpen \| file \| grind \| He/she sharpens it  *(also: tools)*
+- **espoqwasigtuatl** — pierce with sword \| He/she pierces him/her with a sword  *(also: conflict)*
+- **gewsatl** — topple by cutting \| fell (by cutting) \| He/she fells it(tree) by cutting
+- **gews'g** — toppled by the wind \| topple by cutting \| blown over by the wind \| fell (by cutting) \| blown down \| It is toppled by the wind \| He/she fells it by cutting  *(also: weather)*
+- **istu'satl** — cut crookedly \| cut unevenly \| He/she cuts it(picture) unevenly
+- **istu's'g** — cut crookedly \| cut unevenly \| He/she cuts it unevenly
+- **ji'gata'tl** — hew \| dress \| trim \| He/she hews it (plank)
+- **ji'gate'g** — blaze \| hew \| dress \| trim \| He/she hews it
+- **ji'gate'get** — blaze \| hew \| dress \| trim (wood) \| He/she hews
+- **jila'gipulatl** — mark (with a saw) \| He/she marks it with a saw
+- **jila'gittoq** — mark with a saw \| He/she marks it with a saw
+- **jilapaqta'tl** — make a mark \| scratches \| He/she makes a mark on him/her/it
+- **jilapaqte'g** — make a mark on \| scratches \| He/she makes a line mark on it
+- **jilapa'tegeg** — makes scratch marks \| scratches \| It makes scratch marks
+- **jilapa'teget** — make scratch marks \| scratches \| He/she makes scratch marks
+- **jilapa'toq** — makes scratch marks \| He/she makes scratch marks on it
+- **jiloqsa'tl** — blaze (with knife) \| blaze by cutting \| He/she blazes it with a knife  *(also: travel)*
+- **jiloqs'g** — blaze (with knife) \| blaze by cutting \| He/she blazes it with a knife  *(also: travel)*
+- **jiloqta'tl** — blaze (with axe) \| blaze by hitting \| He/she blazes it with an axe  *(also: travel)*
+- **jiloqte'g** — blaze (with axe) \| blaze by hitting \| He/she blazes it with an axe  *(also: travel)*
+- **jilsatl** — nick with a knife \| He/she nicks it with a knife
+- **jilsawet** — mark with a knife \| score with a knife \| He/she marks with a knife
+- **jils'g** — nick (with knife) \| nick by cutting \| He/she nicks it with a knife
+- **maltewsatl** — cause to bleed by cutting \| He/she causes him/her/it to bleed by cutting  *(also: sickness)*
+- **maltews'g** — cause to bleed by cutting \| He/she causes blood to flow by cutting it  *(also: sickness)*
+- **matu'te'muatl** — trim hair \| He/she trims his/her hair  *(confidence: m)*
+- **memgoqte'g** — make a clearing \| deforest \| clear cut \| He/she makes a clearing  *(also: trees)*
+- **memgoqte'get** — make a clearing \| deforest \| clear cutting \| He/she is making a clearing  *(also: trees)*
+- **menapsg'te'g** — chip off the protuberance \| He/she chips off the protuberance
+- **mensatl** — cut off \| He/she cuts it(rope) off
+- **mens'g** — cut off \| He/she cuts it off
+- **mesqolit** — pierced (by nail or sliver) \| He/she has it pierced in the body  *(also: sickness)*  *(confidence: m)*
+- **milsatl** — carve different ways \| whittle \| cut in many ways or directions \| He/she carves it(board) different ways
+- **mils'g** — whittle it \| carve in different ways \| cut in different ways \| He/she whittles it
+- **musigatgunta'ji** — delimb logs with axe \| remove branches from logs with axe \| He/she delimbs logs with an axe  *(also: trees)*
+- **musigta's'g** — clear by cutting \| clear by chopping off \| It is cleared by cutting
+- **musigta'sit** — clear by cutting \| clear by chopping off \| It(tree) is cleared by cutting
+- **musigte'get** — cutting underbrush \| clear brush or thicket by cutting \| He/she clears the brush or thicket by cutting
+- **nasgoqsatl** — slice in half \| cut in half \| He/she slices it(board) in half
+- **nasgoqta'tl** — split lengthwise (with heavy blow) \| He/she splits it(log) lengthwise (with heavy blow)
+- **nasgoqte'g** — split lengthwise (by striking) \| split in half (by striking) \| He/she splits it lengthwise (by striking)
+- **nasgoqte'get** — splitting wood \| splitting (by striking with a tool) \| He/she is splitting wood
+- **nasgwa'toq** — halve \| divide in half \| He/she divides it in half  *(also: amounts)*
+- **nasgwoqs'g** — slice in half \| He/she slices it in half
+- **nugjaqsatl** — mince \| cut to tiny bits \| He/she minces it (animate entity)  *(also: cooking)*
+- **nugsatl** — cut to pieces \| mince \| He/she cuts it (fish) to pieces  *(also: cooking)*
+- **nugs'g** — mince \| shred \| cut into pieces \| He/she minces it  *(also: cooking)*
+- **pansatl** — cut open \| operate on \| He/she cuts him/her/it open  *(also: healing)*  *(confidence: m)*
+- **pans'g** — cut open \| operate on \| He/she cuts it open
+- **pejitmsatl** — cut accidentally \| He/she cuts him/her/it accidentally
+- **pejitms'g** — cuts accidentally \| He/she cuts it accidentally
+- **pelgoqa'latl** — peel by hand \| He/she peels it(tree) by hand
+- **pelgoqa'toq** — peel by hand \| He/she peels it by hand  *(also: cooking)*
+- **pelgo'qiget** — debark \| He/she debarks  *(also: trees)*
+- **pelgoqsatl** — peel with knife \| He/she peels something animate with a knife  *(also: cooking)*
+- **pelgoqsewet** — peel \| He/she peels  *(also: cooking)*
+- **pelgoqs'g** — peel with knife \| He/she peels it with a knife  *(also: cooking)*
+- **pelgoqta'tl** — strip off with sharp tool \| He/she strips it(tree) off with a sharp tool  *(also: trees)*
+- **pelgoqte'g** — strip off with sharp tool \| He/she strips it off with a sharp tool  *(also: trees)*
+- **pelqa'latl** — peel \| husk \| He/she peels it
+- **pelqa'toq** — peel \| husk \| He/she peels it
+- **pepga'gipulatl** — grind down \| file down \| saw thin \| He/she grinds it(board) down
+- **pepga'gittoq** — thin by grinding down \| thin by filing down \| thin by sawing down \| He/she grinds it down to make it thin
+- **pepg'te'muatl** — thin out (head hair) by cutting \| He/she thins out his/her hair by cutting
+- **pesgutua'tl** — shave \| He/she shaves him/her  *(confidence: m)*
+- **pesgutue'g** — shave \| He/she shaves it  *(confidence: m)*
+- **pesgutuo'sit** — shave oneself \| He/she shaves oneself
+- **pesigte'get** — split wood (kindling) \| He/she splits wood (kindling)  *(also: fire)*
+- **pesqata'tl** — scrape (with instrument) \| He/she scrapes it with an instrument
+- **pesqate'g** — scrape (with instrument) \| He/she scrapes it with an instrument
+- **pesqatesmatl** — scrape \| He/she scrapes it(knee)  *(also: sickness)*  *(confidence: m)*
+- **pesqatestoq** — scrape \| He/she scrapes it
+- **pessatl** — cut accidentally \| He/she cuts  him/her accidentally
+- **pess'g** — cut accidentally \| He/she cuts it accidentally
+- **sangewsawet** — trim slowly \| plow slowly \| He/she cuts or plows slowly  *(also: farming)*  *(confidence: m)*
+- **sapalqata'tl** — stab \| pierce \| He/she stabs him/her/it  *(also: conflict)*
+- **sapalqate'g** — pierce or pierce through \| stab or stab through \| jab or jab through \| He/she pierces through it
+- **sapa'qe'g** — a hole through (as tunnel) \| pass through (as tunnel) \| It is an opening that goes through  *(confidence: m)*
+- **sapaqqata'tl** — stab \| He/she stabs someone  *(also: conflict)*
+- **sa'p'g** — pierce \| He/she pierces it
+- **sapta'tl** — sting \| pierce \| He/she stings/pierces him/her  *(also: insects)*  *(confidence: m)*
+- **sapte'g** — sting \| pierce \| He/she stings it  *(also: insects)*  *(confidence: m)*
+- **saputasgiaq** — penetrate through \| poke out of \| It penetrates through  *(confidence: m)*
+- **saputasgiet** — penetrate through \| poke out of \| He/she penetrates through  *(confidence: m)*
+- **saputeta'tl** — pierce through by a blow \| cut or knock through \| He/she pierces through...by a blow  *(also: hitting)*
+- **saputete'g** — pierce through by a blow \| cut or knock through \| He/she pierces it through by a blow  *(also: hitting)*
+- **saputetelg** — penetrate or pierce through (with bullet or arrow or compressed air/water) \| He/she penetrates or pierces through it with a bullet or an arrow or
+compressed air/water  *(also: hunting)*
+- **saputeteluatl** — penetrate or pierce through (with bullet or arrow or compressed
+air water) \| penetrates or pierces through him/her with a bullet or an  arrow  *(also: hunting)*
+- **sepp'saqa'latl** — stick into \| penetrate into \| pierce into \| He/she/it sticks it into
+- **sepp'saqapit** — penetrated into \| pierce \| stick into \| He/she is penetrated into
+- **sepp'saqa's'g** — penetrates \| pierce \| It is penetrating
+- **sepp'saqa'sit** — penetrate \| pierce \| He/she/it penetrates...
+- **sepp'saqateg** — penetrate into \| pierce \| It is penetrated into
+- **sepp'saqa'toq** — penetrate \| He/she penetrates it
+- **tela'gipulatl** — saw \| He/she saws him/her
+- **tela'gittoq** — saw in a certain manner \| He/she saws it in a certain manner
+- **telsatl** — cut \| cut in such a way \| He/she cuts...in such a way
+- **tels'g** — cut in such a way \| cut this way \| He/she cuts it in such a way
+- **telte'g** — cut or chop \| hits \| He/she cuts or chops it  *(also: hitting)*
+- **tema'gipulatl** — saw down \| cut by sawing \| He/she saws...down
+- **tema'gittoq** — saw down \| cut by sawing \| He/she saws it down
+- **temapsg'satl** — cut into segments or chunks \| He/she cuts...into chunks
+- **temapsg'sg** — cut into segments or chunks \| He/she cuts it into chunks
+- **temastaqte'muet** — cut hair \| barber \| barber \| hairdresser \| hairdresser \| He/she cuts hair \| Barber or hairdresser  *(also: occupations)*
+- **temgwepatl** — bite head off \| bite top off \| He/she bites...head off  *(also: eating-and-drinking)*  *(confidence: m)*
+- **temgwesatl** — cut the head off \| cut the top off \| He/she cuts...head off
+- **temgwesg** — cut the head off \| cut the top off \| He/she cuts it's head off
+- **temgweta'tl** — chop off the head \| chop off the top \| He/she chops off...head
+- **temgwete'g** — chop off the head \| chop off the top \| He/she chops it's head off
+- **temsatl** — cut \| slice \| sever (by knife) \| He/she cuts him/her
+- **tems'g** — cut \| slice \| sever (by knife) \| He/she slices it
+- **temta'tl** — chop in two \| chop off \| cut off \| He/she chops him/her/it in two
+- **temte'g** — chop in two \| chop off \| He/she chops it in two
+- **tetapu'satl** — slice or cut right way or correctly \| He/she slices it (turkey) the right way
+- **tetapu's'g** — slice or cut right way or correctly \| He/she slices it correctly
+- **tetpaqsatl** — cut straight \| He/she cuts (plank) straight
+- **tetpaqs'g** — cut straight \| slice straight \| He/she cuts it straight
+- **tlawo'qsatl** — cut with knife \| He/she cuts him/her with a knife
+- **tlawo'qta'tl** — strikes with knife \| He/she strikes him/her with a knife  *(also: hitting)*
+- **tlawo'qte'g** — strike with knife \| He/she strikes it with a knife  *(also: hitting)*
+- **tmoqta'we'get** — cut logs \| cut beams \| He/she cuts logs  *(also: trees)*
+- **waljigta'tl** — hollow out (by striking with axe) \| gouge \| He/she hollows...out by striking with an axe
+- **waljigte'g** — hollow out (by striking with axe) \| gouge \| He/she hollows it out by striking with an axe
+- **wannoqs'g** — carve concave \| curved inward \| He/she carves a concave in it
+- **wa'qansatl** — knife \| cut with knife \| He/she cuts him/her/
+it with a knife
+- **wa'qans'g** — cut with knife \| knife \| He/she cuts it with a knife
+- **weligpa'q** — split well \| strip off well \| It splits well  *(confidence: m)*
+- **weligpa't** — strip or split well \| It strips or splits well  *(confidence: m)*
+- **welto'gsit** — cut well \| felled well \| Cut well
+- **tmsawet** — harvests/cuts grain \| He/she harvests/cuts grain.  *(also: farming)*
+- **nasgwa’gittaqan** — saw used to cut logs lengthwise \| lengthwise cutting saw \| Lengthwise cutting saw  *(also: tools)*
+- **saps'g** — cuts through it \| He/she cuts through it.
+- **temte'get** — cut by hitting \| cut by hitting with knife \| cut wood \| Cut by hitting with axe or knife  *(also: hitting)*
+- **jipigja'toq** — pierces \| He/she pierces it
+- **sapte'get** — pierce with a spear \| pierce with punch \| pierce with an awl \| He/she pierces with a spear, a punch or an awl
+- **jipigja'latl** — pierces him/her \| He/she pierces him/her/it
+- **temisguna’toq** — cut the bud or sprout \| break off bud or sprout \| He/she cuts/breaks off the bud or sprout  *(also: plants)*
+- **nipete'get** — minces/grinds/chops by night \| He/she minces/grinds/chops by night
+- **tema'gitteget** — saw \| He/she saws
+
+## Archived entries (lower priority)
+
+- **elasg'te'g\*\*** — split up (as kindling) \| He/she splits it
+- **gesipoqwat\*\*** — scrape
+- **memg'te'muatl\*\*** — cut hair thin or off \| He/she cuts his/her hair thin or off
+- **menapa'toq** — scratch out
+- **na'p'g** — pierce \| He/she/it pierces something
+- **pelqoqte'gniget** — scrape ground?? \| debark (mmo 2019.03.27) \| debranch (mmo 2018-10-09)
+- **sa'pa'tl\*\*** — pierce
+- **temastaqte'mat** — get hair cut \| His/she/it is getting a hair cut
+- **waljigsatl\*\*** — gouge \| hollow out (with knife)
+- **waljigs'g\*\*** — gouge \| hollow out (with knife)

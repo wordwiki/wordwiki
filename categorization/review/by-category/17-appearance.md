@@ -1,0 +1,76 @@
+# Looks & Appearance (`appearance`)
+
+Theme: *Body & Health* — 63 entries (+6 archived)
+
+- **aluamatl** — find unsatisfactory in appearance \| find unattractive \| He/she finds his/her appearance unsatisfactory  *(also: good-and-bad)*
+- **aluapt'g** — find the appearance unsatisfactory \| find unattractive \| He/she finds its appearance unsatisfactory  *(also: good-and-bad)*
+- **amalamatl** — looks weak \| appears inadequate \| He/she thinks he/she looks too weak
+- **amalapt'g** — looks weak \| appears inadequate \| He/she thinks it looks too weak
+- **asamaja'latl** — do fancily \| do elegantly \| He/she does him fancily
+- **asamaja'toq** — do fancily \| do elegantly \| He/she does it fancily
+- **asamaje'g** — fancy \| elegant \| overly fussy \| He/she is fancy  *(confidence: m)*
+- **asamatteg** — fancy \| It is fancy
+- **elatijig** — resemble one another \| They resemble one another  *(also: family)*
+- **eluatl** — resemble \| bear family resemblance \| He/she resembles him/her  *(also: family)*
+- **emegwaltugwepit** — messy hair \| awful looking hairdo \| bad hair day \| He/she has messy hair  *(also: body-descriptions)*
+- **emegwamugsit** — look  filthy \| dirty appearance \| He/she/it looks filthy
+- **esma'teg** — neat and tidy \| It is neat and tidy  *(also: cleaning)*
+- **esmatmu'g** — attractive \| pretty \| lovely \| nice \| It is attractive
+- **esmatmugsit** — attractive \| pretty \| lovely \| nice \| He/she/it is attractive
+- **ewlamgwiet** — become peaked \| become sickly in appearance \| become run down \| He/she becomes peaked  *(also: sickness)*
+- **ewlamugsit** — be peaked \| sickly in appearance \| run down in appearance \| He/she is run down in appearance  *(also: sickness)*  *(confidence: m)*
+- **ewlapewit** — have a sad expression \| look sad \| look sickly \| He/she looks sad  *(also: fear-anger-sadness)*
+- **gesite'wet** — very attractive \| He/she is very attractive
+- **gesmapewit** — strange looking \| weird looking \| unusual looking \| He/she is weird looking
+- **gesmigit** — shapely \| well·built \| well·proportioned \| He/she is well·built  *(also: body-descriptions)*
+- **gesm'pisit** — strangely dressed \| well dressed \| fancily dressed \| He/she is fancily dressed  *(also: clothing)*
+- **gesnugwapewit** — look sick \| He/she looks sick  *(also: sickness)*
+- **gesnugwiangamgusit** — appear sickly \| He/she appears sickly  *(also: sickness)*
+- **gispnapewit** — have a tired look \| He/she looks tired  *(also: condition)*
+- **ilapewnusit** — groom \| put on make up \| He/she is grooming
+- **jajigamugsit** — look healthy \| He/she looks healthy  *(also: healing)*  *(confidence: m)*
+- **megwa'taqan** — rouge \| blushing powder \| Rouge
+- **megwa'tat** — put on a rouge \| He/she puts on a rouge
+- **mejigamugsit** — have dirty appearance \| look dirty \| He/she has a dirty appearance
+- **mejigapewit** — have dirty face \| He/she has a dirty face
+- **mejiggumet** — wear dirty clothes \| He/she wears dirty clothes  *(also: clothing)*
+- **metuamugsit** — looks bad \| looks terrible \| looks awful \| Looks bad
+- **mimgwat** — wear perfume, lotion or oil \| He/she wears perfume, lotion or oil  *(also: smell-and-taste)*
+- **mimsit** — covered with grease and oil (as mechanic) \| He/she is covered with grease and oil
+- **nango'sit** — comb hair with fine·tooth comb \| He/she combs his/her hair with a fine·tooth comb  *(confidence: m)*
+- **nugwaltugo'sit** — comb hair \| He/she combs his/her hair  *(confidence: m)*
+- **pegaqamgiet** — grimy \| filthy \| He/she is grimy
+- **se'saltugwepit** — have messy hair \| He/she has messy hair  *(also: body-descriptions)*
+- **siwnoqigwatg** — straighten it out by hand \| straighten it out by hand with a tool \| straighten out by combing \| He/she straighten it out by hand  *(confidence: m)*
+- **teligg** — shaped like \| dressed as such \| It is shaped like  *(also: size-and-shape)*
+- **teligit** — shaped like \| dressed as such \| He/she/it is shaped like  *(also: size-and-shape)*
+- **wap'staqapewit** — look pale \| He/she looks pale  *(also: sickness)*  *(confidence: m)*
+- **welamu'g** — look good \| look attractive \| nice colour \| It looks good/attractive
+- **welamugsit** — look good \| nice colour \| He/she/it is looks good
+- **welgutat** — well·dressed \| He/she is well·dressed  *(also: clothing)*
+- **welia'su'na'q** — well·dressed \| He/she is well·dressed  *(also: clothing)*
+- **weligwetutg** — pleasant expression \| wear smile \| He/she has a pleasant expression  *(also: love-and-joy)*
+- **welpisit** — well·dressed \| He/she is well·dressed  *(also: clothing)*
+- **welteg** — nice \| well done \| well·placed \| It is nice
+- **wigwasamu'g** — look pretty \| look attractive \| It looks pretty
+- **wigwasamugsit** — look cute \| look attractive \| look pretty \| He/she/it looks cute
+- **wigwasapewit** — attractive \| good·looking \| handsome \| beautiful \| pretty \| He/she is attractive
+- **winapewit** — unattractive \| ugly \| He/she is unattractive
+- **winigg** — ugly (in appearance, shape or dress) \| It is ugly in appearance, shape or dress
+- **winigit** — ugly (in appearance, shape or dress) \| He/she/it is ugly in appearance, shape or dress
+- **winigwa'sit** — scowl \| make funny face \| put on face \| He/she scowls  *(also: body-actions)*
+- **winigwetutg** — mean facial expression \| frown \| unplesant facial expression \| He/she has a mean facial expression
+- **ewlamugsit** — looks poorly \| He/she looks poorly  *(also: sickness)*  *(confidence: m)*
+- **sa'se'wamugwa'sit** — changes appearance \| transforms \| He/she changes their appearance or transforms  *(confidence: m)*
+- **ewlangamgusit** — looks poor \| appears poor \| He/she looks/appears poor.  *(also: money-and-trade)*  *(confidence: m)*
+- **piamiglu'sit** — better (quality) \| more beautiful \| more handsome \| more attractive \| more good looking \| Better (quality); (older meaning about appearance) more beautiful, handsome, attractive, good looking  *(also: good-and-bad)*
+- **sa'se'wamugwa'sit** — transforms   \| changes color/appearance \| He/she/it transforms, he/she/it changes color/appearance  *(also: colors)*
+
+## Archived entries (lower priority)
+
+- **amugsit** — appear \| look so
+- **elat** — resemble \| He/she resembles him/her
+- **elat** — bear family resemblance \| He/she bears a resemblance
+- **emegwaltugwat** — messy hair \| he/she has messy hair
+- **ginamugsit** — is, looks, appears  large, heavy, imposing, big \| He/she TBA
+- **mgwa'taqan\*\*** — rouge

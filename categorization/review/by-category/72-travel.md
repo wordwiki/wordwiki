@@ -1,0 +1,113 @@
+# Travel & Journeys (`travel`)
+
+Theme: *Travel & Outdoor Life* — 102 entries (+4 archived)
+
+- **ala'suinu** — traveler \| Traveler  *(also: people)*
+- **alqatg** — stay here and there \| He/she stays here and there
+- **apipunsit** — spend winter \| pass winter \| He/she returns from spending winter  *(also: calendar)*
+- **apja'sit** — gone for good \| unable to return \| He/she gone somewhere and stayed  *(confidence: m)*
+- **aptaqatg** — stay permanently \| He/she stays permanently
+- **awti** — road \| trail \| Road
+- **awtiget** — make road \| charge fee \| clear path \| He/she clears a road \| He/she charges a fee  *(also: money-and-trade)*
+- **awti'j** — path \| trail \| Trail
+- **ejigliwsit** — move away \| change place of residence \| He/she moves away
+- **elaqsing** — fly toward \| flying to \| He/she flies towards  *(also: ways-of-moving)*  *(confidence: m)*
+- **elqwanig** — direction \| heading \| bearing \| It goes/heads in a direction  *(also: directions)*
+- **elqwanit** — direction \| heading \| bearing \| He/she goes/heads in a direction  *(also: directions)*
+- **etligtugunit** — spend the night \| pass the night \| He/she is spending the night  *(also: sleep)*
+- **gegnugwatiget** — mark made to indicate a place \| blaze \| He/she blazes a trail
+- **gesga't** — lost \| He/she is lost
+- **gesgma'latl** — take by shortcut \| bring by shortest route \| He/she takes him/her through a shortcut
+- **gesgma'sit** — take shortcut \| He/she takes a shortcut
+- **gesgma'toq** — take or bring by shortest route \| take it on a shortcut \| He/she takes it by a shortcut
+- **gesgmteg** — shortcut \| It is a shortcut
+- **getu'pgising** — expected to arrive \| He/she is expected to arrive  *(also: time)*
+- **gnugwaqan** — marker \| blaze (on tree) \| Marker  *(also: stories-and-writing)*  *(confidence: m)*
+- **gutana'sit** — go to town \| go to east end (of  Listuguj) \| go up mission (Listuguj) \| He/she goes to town  *(confidence: m)*
+- **iga'q** — arrive \| It arrives  *(confidence: m)*
+- **iga't** — arrive \| He/she arrives  *(confidence: m)*
+- **ilajit** — get ready \| prepare \| pack \| He/she gets ready  *(also: making-and-fixing)*
+- **ilaju'latl** — pack for \| prepare for \| get ready for \| He/she packs for him/her  *(also: making-and-fixing)*
+- **jilaptoq** — make footprints \| He/she makes footprints  *(confidence: m)*
+- **jilaqami'g** — make snowshoe tracks \| He/she makes snowshoe tracks  *(also: vehicles)*
+- **jiloqsa'tl** — blaze (with knife) \| blaze by cutting \| He/she blazes it with a knife  *(also: cutting)*
+- **jiloqs'g** — blaze (with knife) \| blaze by cutting \| He/she blazes it with a knife  *(also: cutting)*
+- **jiloqta'tl** — blaze (with axe) \| blaze by hitting \| He/she blazes it with an axe  *(also: cutting)*
+- **jiloqte'g** — blaze (with axe) \| blaze by hitting \| He/she blazes it with an axe  *(also: cutting)*
+- **l'sg'j** — map \| directory marked out \| Map  *(also: stories-and-writing)*
+- **lu'gwejg** — compass \| pointer \| Compass  *(also: tools)*
+- **magasana'sit** — go to a store \| He/she goes to a store  *(also: money-and-trade)*
+- **maqamigewa'sit** — go by land \| He/she goes by land
+- **metoqwiwsit** — move to lower land \| move down to \| He/she moves to lower land
+- **metuatqeg** — hard going (through thicket) \| Hard going through thicket  *(also: trees)*
+- **mgatawti** — footpath \| Footpath
+- **najiilajit** — go to get ready \| start to pack \| go get prepared \| go to get dressed \| He/she goes to pack  *(also: making-and-fixing)*
+- **naqsipgising** — arrive early \| arrive ahead of time \| He/she/it arrives early  *(also: time)*
+- **naqs'tesg'g** — makes the distance in a short time \| travels quickly \| He/she makes the distance in a short time
+- **niganawtiget** — trail blazer \| head swamper \| head swamper \| blaze trail \| Tail blazer \| He/she is a head swamper  *(also: occupations)*
+- **nutatesgewet** — miss arriving at destination by a short distance \| did not make it  to destination \| fail to reach destination by a short distance \| fail to arrive on time \| His/her failed to arrive at destination by a short distance  *(also: time)*  *(confidence: m)*
+- **nutatesg'g** — have not reached destination \| He/she has not reached their destination
+- **nutawtigmuatl** — guide \| make trail \| He/she guides him/her
+- **nutawtigmuet** — make trail \| guide \| He/she makes trails
+- **oqwa'q** — arrive \| land \| dock \| It arrives  *(also: boats)*  *(confidence: m)*
+- **oqwa't** — arrive \| land \| dock \| He/she arrives
+- **papga'latl** — take down the coast \| He/she takes him/her down the coast  *(also: carrying)*
+- **papga'sit** — goes down the coast \| goes down river \| He/she goes down the coast
+- **papga'toq** — take down the coast \| take down river \| He/she takes it down the coast  *(also: carrying)*
+- **pegising** — arrive \| get there \| He/she arrives
+- **pegitqatg** — stay long time \| He/she/it stays a long time  *(also: time)*
+- **pegittoq** — is taking a long time to return \| is taking a long time \| He/she/it is taking a long time to return  *(also: time)*
+- **peigwaqatg** — stay here and there \| live all over \| He/she stays here and there
+- **pejila'sit** — arrive unannounced or unexpectedly or by surprise \| He/she arrives unexpectedly
+- **pejilugwet** — came here to work \| arrive here to work \| He/she came here to work  *(also: work)*
+- **peji'pit** — arrive hurriedly \| drop by \| hurry over \| He/she arrives hurriedly
+- **pejipunmit** — come to experience winter \| He/she comes to experience winter  *(also: calendar)*
+- **pejipunsit** — comes to spend winter \| settle in for winter \| He/she comes here to spend winter  *(also: calendar)*
+- **pejiwsit** — move here to settle down \| He/she moves here to settle down
+- **pesga'latl** — lead off the trail or road \| take off trail or road \| He/she leads or takes him/her off the trail or the road
+- **pesga'sit** — go off the trail or road \| leave off the trail or road \| He/she leaves or goes off the trail or the road
+- **pesga'toq** — lead off the trail or road \| take off trail or road \| He/she leads or takes it off the trail or the road
+- **pesg'teg** — lead off to (path) \| It leads off
+- **petgnejig** — arrive at destination \| They arrive at destination
+- **pettemit** — gets here crying \| arrives crying \| He/she gets here crying  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **petteppit** — arrive as a passenger \| He/she arrives as a passenger  *(also: vehicles)*
+- **pisgwiwsit** — move in \| He/she move in  *(also: dwellings)*
+- **pi'tawa'latl** — take up river \| take up stream \| He/she takes him/her/it up river  *(also: sea-and-rivers)*  *(confidence: m)*
+- **pi'tawa's'g** — goes up river \| goes up the coast \| It goes up river  *(also: sea-and-rivers)*  *(confidence: m)*
+- **pi'tawa'sit** — going up river \| goes up the coast \| He/she goes up river  *(also: sea-and-rivers)*  *(confidence: m)*
+- **pi'tawa'toq** — take it up river \| take up the coast \| He/she takes it up river  *(also: sea-and-rivers)*  *(confidence: m)*
+- **poqjiwsit** — move or vacate a residence \| He/she moves or vacates a residence  *(also: dwellings)*
+- **poqtamga'latl** — carry away or take along \| He/she carries him/her away or take him/her along  *(also: carrying)*
+- **poqtamga'sit** — set off on journey \| He/she sets off on a journey
+- **poqtamga'toq** — carry away or take along \| He/she carries it away or takes it along  *(also: carrying)*
+- **punqatg** — cease living there \| He/she ceases living there  *(also: dwellings)*
+- **pusig** — depart (vessal) \| embark \| It (vessal) departs  *(also: boats)*
+- **pusit** — depart \| embark \| He/she departs
+- **siawa'latl** — keeps on going with \| continue with \| He/she keeps on going with him/her  *(also: carrying)*
+- **te'sipowa'q** — go by a horse \| travel by horse \| He/she goes by a horse  *(also: farm-animals)*
+- **tewiwsit** — move out \| vacate \| He/she moves out  *(also: dwellings)*
+- **uggwata'q** — go by foot \| travel by walking \| walk \| He/she goes by foot.  *(also: ways-of-moving)*
+- **uggwatawti** — footpath \| Footpath
+- **wanna'sit** — go up mission \| He/she goes up the mission
+- **we'gwa's'g** — go as far as \| reach destination \| It goes as far as there
+- **we'gwa'sit** — reach destination \| go as far as \| He/she reaches his/her destination
+- **wejgwatejimgwet** — come riding on or in \| He/she is coming riding on something  *(also: vehicles)*
+- **wejiet** — come from there \| return from \| He/she comes from there
+- **wesg'g** — goes via that path, road \| travel along designated path \| He/she goes that way, takes that road, path
+- **wije'watl** — accompany \| go with \| He/she accompanies him/her/it  *(also: social-life)*
+- **wije'wet** — tag along \| accompany \| He/she tags along  *(also: social-life)*
+- **wije'w'g** — go with \| accompany \| He/she goes with it
+- **pettelasit** — fund own travel to here \| self-funded travel to here \| He/she funded his/her own travel to here.  *(also: money-and-trade)*
+- **gasgawgtig** — at roadside \| At the roadside
+- **oqosit** — approaches \| arrives \| lands with cargo \| He/she approaches/arrives/lands with cargo.  *(also: carrying)*
+- **gasgawgti** — roadside \| Roadside
+- **nipetesg'g** — journey by night to destination \| travel by night to destination \| He/she journeys by night towards a destination
+- **wejgwimaqamigewa'sit** — coming by land \| coming over land \| He/she/it comes by land
+- **nipa'sit** — travel at night \| take an overnight trip \| He/she travels at night, or takes an overnight trip
+
+## Archived entries (lower priority)
+
+- **awaqan\*\*** — trail
+- **pegisg** — arrive \| get there \| It arrives
+- **pettepit** — arrive as a passenger by train, car, or other vehicle \| He/she arrives as a passenger by train, car, or other vehicle
+- **unigan\*\*** — portage trail

@@ -1,0 +1,152 @@
+# Body Parts (`body-parts`)
+
+Theme: *Body & Health* — 126 entries (+19 archived)
+
+- **angwisgaqan** — joint \| wrist joint \| Joint
+- **elsita'sit** — sole \| paw pad \| instep \| Sole \| Paw pad
+- **galqign** — earwax \| Earwax
+- **gasiptna'sit** — wash hands \| He/she washes his/her hands  *(also: cleaning)*
+- **ge'gwatpan** — top of the head \| Top of the head
+- **guign** — marrow bone \| Marrow bone  *(also: food)*
+- **gulgwigmg\*\*** — earwax
+- **lamipgigwan** — eyeball \| Eyeball
+- **lamiptn** — palm (of hand) \| Palm of the hand
+- **lusgwatign** — spit \| saliva \| Saliva  *(confidence: m)*
+- **maltew** — blood \| Blood
+- **maltewa'latl** — get blood on \| He/she gets blood on him/her  *(confidence: m)*
+- **maltewa'toq** — get blood on \| He/she gets blood on it  *(confidence: m)*
+- **mija'qaj** — vein \| Vein
+- **mtijin** — inch \| thumb \| Inch  *(also: size-and-shape)*
+- **patanjuei** — left hand \| item used for or  by left hand \| Left hand  *(also: directions)*
+- **pene'sugwati** — saliva \| drool \| Saliva  *(confidence: m)*
+- **pne'sugwati** — saliva \| drool \| Saliva  *(confidence: m)*
+- **puguluan** — kidney \| Kidney
+- **sapun** — contrary person(slang) \| hair \| Contrary person(slang) \| Hair  *(also: character)*  *(confidence: m)*
+- **saqpigu'n** — tear·drop \| Tear drop  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **sawiptn** — deformed or crippled hand or arm \| Deformed or crippled hand or arm  *(also: sickness)*  *(confidence: m)*
+- **sguti** — urine \| Urine  *(confidence: m)*
+- **sisteg** — pull back foreskin \| It (foreskin) is pulled back  *(confidence: m)*
+- **tnuan** — sinew \| tendon \| cord \| Tendon
+- **tnuanapi** — tendon \| sinew \| Tendon
+- **uggamlamun** — heart \| heart (in cards) \| His/her heart \| Heart (in playing cards)  *(also: games)*
+- **uggamlamuti** — breath \| His/her breath  *(confidence: m)*
+- **uggata'lal** — calf of leg \| His/her calf
+- **uggwajign** — lower part of leg \| His/her lower part of leg
+- **uggwat** — foot \| His/her/its foot
+- **ugjigi** — scab \| Scab  *(also: sickness)*  *(confidence: m)*
+- **ugjigunn** — knee \| His/her knee
+- **ugji'taqann** — neck \| His/her neck
+- **ugjoqolqote'gnm** — palate \| His/her palate
+- **uglusgnignml** — elbow \| His/her elbow
+- **ugmlagejml** — mammary \| breast \| His/her mammary
+- **ugpaqam** — back \| His/her back
+- **ugpitn** — hand \| His/her hand
+- **ugpitnoqom** — arm \| His/her arm
+- **ugplaqan** — lap \| His/her lap
+- **ugpnn** — lung \| His/her lung
+- **ugpugugw** — eye \| His/her eye
+- **ugpusgun** — breast \| chest \| His/her chest
+- **ugqonn** — heel \| His/her heel
+- **ugqosi'l** — fingernail \| toenail \| hoof \| claw \| His/her fingernail or toenail
+- **ugqotaqann** — throat \| His/her throat
+- **ugsi** — lip \| His/her lip
+- **ugsisgw** — face \| His/her face
+- **ugsisqon** — nose \| His/her nose
+- **ugsitun** — voice \| voice box (larynx) \| language \| His/her voice  *(also: talking)*
+- **ugsitunapi'l** — vocal cords \| His/her vocal cords
+- **ugsmu'l** — antler \| horn \| He/she has antlers  *(also: animals)*
+- **ugs'tuaqan** — ear \| His/her ear
+- **ugsuguni** — tail \| His/her tail  *(also: animals)*
+- **ugtatqa'lam** — artery \| Artery
+- **ugtijin** — thumb \| His/her thumb
+- **ugtinin** — body \| His/her body
+- **ugtinneg** — body \| self \| person \| His/her body
+- **ugtlal** — shoulder blade \| His/her shoulder blade
+- **ugtlaminu** — stomach \| His/her stomach
+- **ugtlmaqan** — shoulder \| His/her shoulder
+- **ugtluign** — finger \| His/her finger
+- **ugto'jm** — toe \| His/her toe
+- **ugt'pl** — brain \| His/her brain
+- **ugtugwape'gn** — jaw \| His/her jaw
+- **ugtugwejan** — forehead \| His/her forehead
+- **ugtun** — mouth \| His/her mouth
+- **uja'law** — mucus \| snot \| phlegm \| Mucus  *(confidence: m)*
+- **ulaqan** — antler \| antler rack \| antler plate \| Antler  *(also: animals)*
+- **uligsi** — intestine \| His/her intestine
+- **ulisqi'l** — wing \| His/her wing  *(also: birds)*
+- **ulugul** — gland \| His/her gland
+- **ulugun** — thigh \| Her/his thigh
+- **ulugwi** — armpit \| underarm \| His/her armpit
+- **umaltem** — blood \| His/her blood
+- **umaqjigeweim** — big toe \| His/her big toe
+- **umsigwang** — eyelashes \| His/her eyelashes
+- **umusti** — belly \| His/her belly
+- **unji** — head \| His/her head
+- **un'sqe'l** — wing \| His/her wing  *(also: birds)*
+- **upmepigaj** — hip or side of body \| His/her hip
+- **usapun** — hair of head \| hair \| His/her hair
+- **usaqan** — shoulder blade \| Shoulder blade
+- **usgun** — liver \| Liver  *(also: food)*
+- **walgwi'taqanat** — nape (of neck) \| Nape
+- **waqamalqutnat** — clean mouth \| He/she has a clean mouth  *(also: cleaning)*
+- **waqamapitat** — clean teeth \| He/she has clean teeth  *(also: cleaning)*
+- **waqamapsg'tiat** — clean belly \| He/she has a clean belly  *(also: cleaning)*
+- **waqamapsqonat** — clean heels \| He/she has clean heels  *(also: cleaning)*
+- **waqamatpat** — have a clean scalp \| He/she has a clean scalp  *(also: cleaning)*
+- **waqam'gue'gwatpat** — head is clean \| Top of his/her head is clean.  *(also: cleaning)*
+- **waqamigsiat** — clean nails \| He/she has clean nails  *(also: cleaning)*
+- **waqamilgigwat** —   *(also: cleaning)*
+- **waqamilnuat** — clean tongue \| He/she has a clean tongue  *(also: cleaning)*
+- **waqamipsgunat** — clean chest \| clean breast \| He/she has a clean chest  *(also: cleaning)*
+- **waqamiptnat** — clean hand(s) \| He/she has clean hands  *(also: cleaning)*
+- **waqamipusit** — clean feet \| He/she has clean feet  *(also: cleaning)*
+- **waqamisqonat** — clean nose \| He/she has a clean nose  *(also: cleaning)*
+- **waqamistaqanat** — clean ears \| He/she has clean ears  *(also: cleaning)*
+- **waqamitnat** — clean nostrils \| He/she has clean nostrils  *(also: cleaning)*
+- **waqamlgigwat** — clean eyes \| He/she has clean eyes  *(also: cleaning)*
+- **waqamoqunigatat** — clean legs and feet \| He/she has clean legs and feet  *(also: cleaning)*
+- **waqamugtugwejanit** — clean forehead \| He/she has a clean forehead  *(also: cleaning)*
+- **waqantew** — bone \| Bone
+- **wa'qi** — flesh \| skin \| body \| His/her flesh
+- **wa'tugwaw** — blood clot \| Blood clot  *(also: sickness)*  *(confidence: m)*
+- **wa'tugwawa's'g** — clot \| It is clotting  *(confidence: m)*
+- **wigew** — fat (animal) \| lardon \| Fat  *(also: food)*
+- **wijinuan** — cheek \| His/her cheek
+- **wili** — navel \| belly button \| belly button stub \| His/her navel
+- **wiliapi** — umbilical cord \| Umbilical cord
+- **wi'n** — marrow \| Marrow  *(also: food)*
+- **wi'nei\_waqantew** — marrow bone \| Marrow bone  *(also: food)*
+- **winnu** — tongue \| his/her tongue
+- **wipit** — tooth \| His/her tooth
+- **wipitoqom** — gums \| His/her gums
+- **wisgaqan** — gristle \| Gristle  *(also: food)*
+- **wisgaqanig** — cartilage \| gristle \| It has cartliage
+- **witn** — nostril \| His/her nostril
+- **witu** — whisker \| His/her whisker
+- **wo'gwin** — backbone \| His/her backbone
+- **ugtasuign** — breastbone, sternum
+- **ugpigaqan** — a rib (of a body) \| His/her rib (of a body)
+- **ugsugun** — tailbone (his/hers/its) \| His/her/its tailbone
+- **mp's** — fish fin \| Fin (of fish)  *(also: fish)*
+
+## Archived entries (lower priority)
+
+- **epme'tgwaj\*\*** — temple \| side of head
+- **glug\*\*** — gland \| lump \| swelling \| abscess
+- **ma'qi** — carcass \| flesh \| Carcass
+- **memgwan\*\*** — temple (of head)
+- **mi'jane'gmuti\*\*** — bowels
+- **mijimij\*\*** — ass \| buttocks \| rump
+- **mi'saqatp\*\*** — animal skull
+- **pigaqan** — rib
+- **sepulgomat** — armpit \| Armpit
+- **ugjoqj'te'gn** — palate \| His/her palate
+- **ugtlamiptn** — His/her palm
+- **umi'sigwann** — eyelash \| His/her eyelash
+- **umsetgunn** — eyelash \| Eyelash
+- **un'sqei** — wing \| Wing
+- **usaqatp\*\*** — human skull
+- **wa'naw\*\*** — part of animal between ribs and belly
+- **wasapun\*\*** — white hair
+- **wisqan** — gall \| gizzard \| Gizzard
+- **wisqo'pit** — fang

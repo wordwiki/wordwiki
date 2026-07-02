@@ -1,0 +1,134 @@
+# Sitting, Standing & Lying (`posture`)
+
+Theme: *Movement & Physical Actions* — 117 entries (+10 archived)
+
+- **a'jelising** — lie in way \| He/she lies in the way  *(also: putting-and-placing)*
+- **a'jelpit** — sit in way \| He/she sits in the way  *(also: putting-and-placing)*
+- **a'jelpuguit** — stand in way \| hinderance \| He/she stands in the way  *(also: putting-and-placing)*
+- **algopit** — sit about \| He/she is sitting about
+- **aligjo'gwet** — go about bent over \| go about bent over with buttocks up \| go about with buttocks stuck out \| He/she goes about bent over  *(also: ways-of-moving)*  *(confidence: m)*
+- **apt'pugu'et** — unable to move while standing from standing too long \| He/she is unable to move while standing  *(confidence: m)*
+- **aqupit** — hidden and sitting \| He/she is sitting somewhere and is hidden from view  *(also: seeing)*  *(confidence: m)*
+- **a'sispit** — sit over \| sit across \| He/she is sitting over it  *(confidence: m)*
+- **atuasgwesing** — lie on back \| He/she is lying on his/her back
+- **ejaqjepit** — squat \| He/she is squatting
+- **ejigla'go'jing** — head turned away \| His/her head is turned away  *(confidence: m)*
+- **ejiglu'jing** — bent (at waist) away \| He/she is bent away from
+- **ejinpit** — low \| He/she is low (position)  *(confidence: m)*
+- **elatpo'jing** — lean head toward \| His/her head leans toward  *(confidence: m)*
+- **elgo'jing** — face toward \| He/she faces toward  *(confidence: m)*
+- **eligjo'gmuatl** — bent over towards \| turn buttocks toward \| He/she is bent over towards
+- **elising** — laying down \| He/she is laying down
+- **elmu'jing** — bent towards something but away from speaker \| bent away from \| turned away from \| He/she is bent away from
+- **eloqosing** — lying stretched out \| lie prone \| He/she is laid out
+- **elqamgwejat** — brace to keep balance \| brace to slow down \| He/she braces self  *(confidence: m)*
+- **elsma'latl** — lay down \| He/she lays him/herdown  *(confidence: m)*
+- **elsma'sit** — lie down \| He/she lies down
+- **elu'jing** — bent(at waist) gaping toward \| lean toward \| crane toward \| He/she is bent (at waist) gaping toward
+- **enaqsit** — laying on... \| He/she/it is laying on ...  *(confidence: m)*
+- **enmejepit** — sit facing the other direction \| sit with back turned \| He/she sits facing the other direction
+- **enmejepuguit** — stand with back toward viewer \| stand with back facing viewer \| He/she stands with back toward viewer
+- **enmigjepit** — sits backwards \| reversed \| He/she sits backwards  *(confidence: m)*
+- **enmigjesing** — lie facing away \| lie facing the other direction \| He/she lies facing away
+- **enmigjo'gwet** — stooped over facing away \| bent over with buttocks up \| He/she is stooped over facing away
+- **epa'latl** — seat \| He/she sits someone down  *(confidence: m)*
+- **epa'sit** — sit down \| He/she sits down
+- **epa'sualatl** — sit on... \| sit next to... \| He/she sits on him/her/it \| He/she sits next to him/her/it
+- **epa'suatg** — sit on \| He/she sits on
+- **epit** — sitting \| seated \| placed \| located \| He/she is sitting
+- **e'tmapit** — sit (set) forefront \| be at forefront \| located at forefront \| He/she is sitting at the forefront  *(confidence: m)*
+- **e'tmapuguit** — stand at the forefront \| He/she is standing at the forefront  *(confidence: m)*
+- **ewnasising** — lie awkwardly \| lie in uncomfortable looking manner \| He/she lies in an awkward position
+- **ewt'pasg'g** — sit on \| He/she is sitting on it  *(confidence: m)*
+- **ewt'pasguatl** — sit on \| He/she is sitting on it (coat)  *(confidence: m)*
+- **ewt'pa'sitl** — sits on \| sit down atop \| He/she sits on him/her/it  *(confidence: m)*
+- **ewt'pa'sualatl** — sit on top of \| sit atop \| He/she sits on top of him/her/it  *(confidence: m)*
+- **ewt'pa'suatg** — sit on top of \| sit atop \| He/she sits on top of it  *(confidence: m)*
+- **gaqama'sit** — stand up \| He/she stands up
+- **gaqamit** — stand \| He/she is standing
+- **gawasgisma'sit** — turn self over while in lying down \| turn over in bed \| He/she turns self over while in lying down
+- **gawasg'pa'sit** — turn around while seated \| He/she turns around while seated
+- **gawasg'smtesing** — turn over quickly while prone \| turn over quickly  in bed \| He/she turns over quickly
+- **ge'gupa'sit** — get on top of \| He/she gets on top of  *(confidence: m)*
+- **ge'gupit** — sit on top \| He/she is sitting on top  *(confidence: m)*
+- **ge'gupuguit** — stand on the top \| He/she is standing on the top  *(confidence: m)*
+- **ge'gwising** — lie on the top \| He/she lies on the top
+- **gejimoqpit** — sits obstructing the way \| He/she sits obstructing the way  *(also: putting-and-placing)*  *(confidence: m)*
+- **gigj'pa'sualatl** — sit close to \| He/she sits close to him/her/it  *(confidence: m)*
+- **gigto'qopugua'sit** — turn around while standing \| turn about while in standing position \| He/she turns about while he/she is standing
+- **giwto'qopia'tijig** — sit in a circle \| They (plural) are sitting in a circle  *(also: social-life)*
+- **giwto'qopultijig** — sit around in a circle \| They are sitting in a circle  *(also: social-life)*
+- **ilapsg'smu'gwet** — curl up and go to sleep \| reposition during sleep \| lie down for a nap \| lie down for a rest \| He/she curls up and goes to sleep  *(also: sleep)*
+- **ilgopa'sit** — change position while sitting \| He/she changes position while sitting
+- **ilisma'sit** — change position (while lying) \| He/she changes position while lying  *(also: sleep)*
+- **ilpugua'sit** — stand into position \| change position while standing \| He/she stands into position
+- **jenpit** — sit quietly \| sit calmly \| He/she sits quietly  *(confidence: m)*
+- **matgwa'sit** — bow down \| bow \| He/she bows down  *(also: body-actions)*  *(confidence: m)*
+- **mawisultijig** — lay together \| They are laying together  *(confidence: m)*
+- **mawpugueta'jig** — gather and stand together \| They gather and stand together  *(also: social-life)*
+- **mawpugultijig** — stand together \| They stand together
+- **mawpultijig** — sit together \| They are sitting together
+- **melg'pugua'sit** — stands hard or strong \| take a stand \| unrelenting \| insist \| He/she stands hard or strong \| He/she takes a stand  *(also: character)*  *(confidence: m)*
+- **menja'sit** — get up from lying position \| rise from lying position \| He/she rises from lying position
+- **menj'puguit** — now standing from a lying position \| He/she is now standing from a lying position
+- **mesqana'sit** — go down to the ground or floor \| He/she goes down to the ground or floor  *(confidence: m)*
+- **mesqanepit** — crouching position \| flat on the ground \| He/she is in crouching position
+- **metaqasing** — lay on bare surface \| He/she lays on bare surface  *(confidence: m)*
+- **nasuoqg'g** — straddle \| He/she straddles it
+- **nasuoqguatl** — straddle \| He/she straddles it(horse)  *(also: farm-animals)*
+- **nasuoqpa'sit** — sit astraddle \| get astride \| He/she sits astraddle
+- **nasuoqpit** — sit or set astride \| He/she sits astride  *(confidence: m)*
+- **nasuoqpugua'sit** — stand astraddle \| stand astride \| He/she stands astraddle
+- **natpa'sit** — go to sit down \| He/she goes to sit down
+- **niganpit** — sit ahead \| He/she sits ahead  *(confidence: m)*
+- **nisnusit** — lower oneself \| hold oneself lower \| He/she lowers self  *(confidence: m)*
+- **nutgulpa'sit** — kneel \| He/she kneels
+- **nutgulpit** — kneeling \| He/she is kneeling
+- **nutgulpugua'sit** — genuflect \| He/she genuflects  *(also: church-rituals)*
+- **oqolumgwa'sit** — bow head \| He/she bows his/her head  *(also: body-actions)*
+- **panjasgiet** — legs outspread while in lying position \| He/she/it spreads his/her/its legs while in lying position
+- **pasg'g** — sit or lie on \| He/she/it sits or lies on it  *(confidence: m)*
+- **pasguatl** — have one's weight on \| He/she/it has his/her/its weight on him/her/it  *(confidence: m)*
+- **pemiqama'sit** — standing up \| He/she is standing up
+- **pempa'sit** — start to sit down \| He/she is in the process of sitting down
+- **pempugua'sit** — start to get on feet \| start to recover from bad times \| He/she is starting to get on his/her feet  *(confidence: m)*
+- **pijatpo'jing** — head inside something \| His/her head is inside something  *(confidence: m)*
+- **saqanqapit** — lie on the floor or ground \| sit on the floor or ground \| He/she lies on the floor or the ground  *(confidence: m)*
+- **sawepit** — slouched over \| hunched over \| hung or drooped over \| He/she is slouched over
+- **siptaqising** — lying stretched out \| He/she is lying stretched out
+- **taqamoqisma'sit** — lie down crossways or across \| He/she lies down crossways
+- **tetpaqapuguit** — stands straight \| He/she/it is standing straight  *(confidence: m)*
+- **tetpaqqamit** — stand straight up \| He/she is standing straight  *(confidence: m)*
+- **tetpaqqopit** — sit straight \| He/she sits straight
+- **tewpuguit** — stand outside door \| step outside for fresh air \| He/she stands outside the door  *(confidence: m)*
+- **toqosingig** — sleep together \| lay together \| They sleep together  *(also: sleep)*
+- **toqwanqapit** — folded in two \| bent over double \| He/she is folded in two  *(confidence: m)*
+- **upmejising** — laying on side \| He/she is laying on his/her side
+- **upmejisma'sit** — lie down on side \| He/she lies down on his/her side
+- **wantaqpit** — sits quietly \| sit calmly \| He/she sits quietly  *(also: character)*  *(confidence: m)*
+- **waqju'pit** — sit crooked \| He/she sits crooked
+- **wejgu'jing** — bend and  face toward \| Bent and facing towards here
+- **wejgupuguit** — stand facing toward \| He/she is standing faced towards here
+- **wejgwajepit** — sit or set facing toward here \| He/she sits facing toward here  *(confidence: m)*
+- **wejgwapit** — sit facing \| He/she is sitting facing toward here  *(confidence: m)*
+- **wejgwatpo'jing** — bent toward here (from head) \| He/she is bent toward here
+- **wejgwiqolomgopit** — sit facing towards with head hanging down \| He/she sits facing toward here with head hanging down
+- **wenaqa'sit** — rise \| He/she rises  *(confidence: m)*
+- **wesawa't** — hang over or on edge \| He/she/it hangs over or on the edge  *(confidence: m)*
+- **wesgija'sit** — goes on top of \| He/she goes on top of  *(confidence: m)*
+- **oqolomgo'jing** — head bowed \| head tilted forward \| His/her head is bowed/tilted forward
+- **oqolomgwa'latl** — bends him/her forward \| He/she bends him/her forward  *(confidence: m)*
+- **oqolomgwetuatl** — bows/leans toward him/her/it \| He/she bows/leans toward him/her/it.  *(also: social-life)*  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **anapo·pemgopit** — sit on the edge \| He/she sits on the edge
+- **ginawsgipugua'sit\*\*** — turn around (while in standing) \| He/she turns around while in standing position
+- **nasuoqgat** — astraddle \| He/she astraddles
+- **negulpit** — sit in bottom of canoe \| He/she sits in the bottom of canoe
+- **negulq'pit** — sit in canoe \| He/she sits in canoe
+- **petgwa'sit** — lean head over toward...
+- **upmesing\*\*** — lie on side \| He/she lies on the side
+- **upmesma'sit\*\*** — lie down on side \| He/she lies down on the side
+- **wejgwiqolomqo'jing** — approach with head hanging down \| He/she is approaches with head hanging down
+- **wejgwistepit** — sit humped over facing toward \| Sit humped over facing toward

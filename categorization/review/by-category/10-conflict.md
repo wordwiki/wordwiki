@@ -1,0 +1,82 @@
+# Fighting & Conflict (`conflict`)
+
+Theme: *People & Relationships* — 72 entries (+3 archived)
+
+- **agase'wit** — enlist \| sign up \| trade (Cape Breton) \| hire (New Brunswick) \| He/she enlists  *(also: work)*  *(confidence: m)*
+- **amasgipnnatl** — weaken \| torture \| deprive \| He/she weakens him/her
+- **anesga'latl** — compromise someone \| make vulnerable \| expose to danger \| jeopardize \| weaken,  lessen,  lower \| He/she compromises someone
+- **aptlama'latl** — smother \| block off air from \| He/she smothers him  *(also: body-actions)*
+- **asgo'tg** — harm \| bother \| annoy \| disturb \| He/she bothers it
+- **asigetg** — instigate \| stir up trouble \| goad \| incite \| He/she instigates  *(also: character)*  *(confidence: m)*
+- **asimatl** — stir up \| egg on \| instigate \| goad \| incite \| He/she incites someone  *(also: character)*  *(confidence: m)*
+- **asita'teget** — revenge \| reciprocate \| pay back \| He/she gets revenge
+- **emego'teget** — treat badly \| abuse \| He/she is an abuser  *(also: character)*  *(confidence: m)*
+- **emegweiwatl** — treat badly \| abuse \| He/she treats someone badly  *(also: character)*  *(confidence: m)*
+- **espoqwasigtuatl** — pierce with sword \| He/she pierces him/her with a sword  *(also: cutting)*
+- **ewsa'latl** — threaten \| shake \| rough up \| He/she threatens him/her/it
+- **ewsa'toq** — pretend to hit \| threaten to hit \| He/she pretends to hit with (it)...
+- **ewsa'tuatl** — make threatening motion \| feign threatening motion \| lift hand in a threatening motion \| raise fist in a threatening motion \| He/she pretends to want to hit someone
+- **gaqamutoq** — challenge \| stand against \| put up with \| He/she challenges it  *(confidence: m)*
+- **gaqamutuatl** — challenge someone \| stand up to \| put up with \| He/she challenges someone  *(confidence: m)*
+- **gejgapa'latl** — leave a scratch mark \| scratches \| He/she scratches him/her  *(confidence: m)*
+- **gejgapa'toq** — leave a scratch mark \| scratches \| He/she scratches it  *(confidence: m)*
+- **gejgapeta'tl** — scratches quickly \| He/she scratches him/her quickly  *(confidence: m)*
+- **gesa'latl** — hurt \| He/she hurts him/her  *(also: sickness)*  *(confidence: m)*
+- **gesipatl** — painful bite \| hurt by biting \| hurt by biting hard \| He/she hurts someone by biting hard  *(confidence: m)*
+- **gesita'tl** — hit hard \| beat-up badly \| He/she hits him/her hard  *(also: hitting)*
+- **getemetesultijig** — all killed \| They are all killed  *(also: death-and-mourning)*  *(note: order-audit: death words death-first)*
+- **getmeta'tl** — wipe out \| finish off \| He/she wipes him/her/it out  *(confidence: m)*
+- **gi'gaja'latl** — force \| rape \| He/she forces him/her
+- **gi'gaja'sit** — argue \| He/she argues  *(also: talking)*
+- **gisanatl** — killed him/her/it \| destroyed him/her/it \| He/she/it killed him/her/it
+- **gista'tl** — beat-up \| finish beating \| He/she beat-up him/her  *(also: hitting)*
+- **gitnmeiwatl** — give a hard time to \| He/she gives him/her a hard time  *(also: social-life)*
+- **gitnmo'tg** — give a hard time \| He/she gives it a hard time  *(confidence: m)*
+- **gtantaqan** — plot against \| hatred \| scheme against \| connivery \| Plot against  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **igalatl** — protect \| defend \| fight for \| take side of \| favor \| He/she defends him/her  *(also: social-life)*
+- **igatg** — protect \| defend \| fight for \| take side of \| favor \| He/she defends it  *(also: social-life)*
+- **jilapa'latl** — make scratch marks \| scratches \| He/she makes scratch marks on him/her  *(confidence: m)*
+- **massaqte'get** — instigate \| make/cause disruption \| He/she instigates  *(also: character)*  *(confidence: m)*
+- **matnagget** — fight \| struggle \| He/she fights
+- **matnaggewaqan** — fight \| struggle \| battle \| Fight
+- **matnaggewinu** — fighter \| warrior \| Fighter  *(also: people)*
+- **matnatl** — fight or struggle against \| He/she fights him/her
+- **matng** — fight or struggle against \| He/she fights it
+- **matntijig** — fight \| They fight each other
+- **matntimg** — war \| battle \| War
+- **nata'matnagget** — know how to fight \| good fighter \| He/she knows how to fight
+- **ne'pateget** — murder \| He/she murders
+- **ne'pa'tl** — kill \| He/she kills him/her  *(also: hunting)*  *(confidence: m)*
+- **nujine'pateget** — executioner \| serial killer \| murderer \| Executioner \| Serial killer  *(also: occupations)*
+- **o'plagnutmajig** — have disagreement \| have misunderstanding \| Those two are having a disagreement  *(also: talking)*
+- **o'pla'latl** — do wrong \| do something wrong to \| He/she does him/her wrong  *(also: good-and-bad)*
+- **paqa'latl** — bite \| He/she/it bites him/her/it  *(also: eating-and-drinking)*  *(confidence: m)*
+- **paqa'luet** — bites \| He/she/it bites  *(also: eating-and-drinking)*  *(confidence: m)*
+- **pemanatl** — process of doing away with \| process of destroying \| process of killing \| He/she is in the process of doing away with him/her/it  *(confidence: m)*
+- **pemang** — process of doing away with \| process of destroying \| process of killing \| He/she is in the process of doing away with it  *(confidence: m)*
+- **poqjin'timg** — beginning of war \| Beginning of war
+- **pugumaqan** — weapon \| Weapon  *(also: tools)*
+- **sapalqata'tl** — stab \| pierce \| He/she stabs him/her/it  *(also: cutting)*
+- **sapaqqata'tl** — stab \| He/she stabs someone  *(also: cutting)*
+- **sespeiwatl** — molest \| bother with hands \| He/she molests someone  *(confidence: m)*
+- **sigta'tl** — strike dead \| He/she strikes someone dead  *(also: hitting)*
+- **sigteluatl** — shoot dead \| He/she shoots someone dead  *(also: hunting)*  *(confidence: m)*
+- **sma'gnis** — soldier \| Soldier  *(also: occupations)*
+- **sma'gnisuit** — is a soldier \| He/she is a soldier
+- **tulgowei** — cannon \| Cannon
+- **waqalusan** — fort \| Fort  *(also: dwellings)*
+- **wejignematl** — challenge \| He/she challenges him/her
+- **wejintijig** — fight over (something inanimate) \| fight over (something or someone animate) \| They fight over it \| They fight over him/her/it
+- **wissuignematl** — overpower \| overcome \| conquer \| He/she overpowers him/her/it
+- **wissuignetg** — overpower \| overcome \| conquer \| He/she overpowers it
+- **la'qana'latl** — inflicts a wound on him/her/it \| He/she inflicts a wound on him/her/it.  *(also: sickness)*  *(confidence: m)*
+- **la'qana'toq** — inflicts a wound on it \| makes an injury to it \| He/she makes an injury/inflicts a wound on it.  *(also: sickness)*  *(confidence: m)*
+- **nipimatnagget** — fight at night \| He/she fights at night
+- **ewlimatl** — puts him/her down with words \| He/she puts him/her down with words  *(also: talking)*
+- **guntewgta'tl** — stone him/her/it \| He/she stones him/her/it  *(also: hitting)*
+
+## Archived entries (lower priority)
+
+- **ajgnewa'toq\*\*** — harm
+- **manasulgw\*\*** — warship
+- **wesaqalatl** — shoot dead \| He/she shoots him/her dead

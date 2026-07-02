@@ -1,0 +1,153 @@
+# Going & Coming (`going-and-coming`)
+
+Theme: *Movement & Physical Actions* — 138 entries (+8 archived)
+
+- **ala's'g** — go about \| spread around (as sickness) \| It is going about
+- **ala'sit** — go about \| He/she is going about
+- **alsumugwat** — flee \| escape \| He/she flees
+- **aluggwalatl** — follow around \| accompany \| He/she follows him around
+- **aluggwatg** — follow around \| accompany \| He/she follows it around
+- **apaja's'g** — come back \| return \| It returns
+- **apaja'sit** — come back \| return \| He/she returns
+- **apajuggwalatl** — follow back \| He/she follows someone back
+- **apajuggwatg** — follow back \| He/she follows it back
+- **apatl'ga't** — walk back \| stride back \| He/she walks back
+- **aquoqomgwa's'g** — make turn \| veer off \| It is making a turn  *(confidence: m)*
+- **aquoqomgwa'sit** — make turn \| veer off \| He/she is making a turn  *(confidence: m)*
+- **a'sisa'sit** — go over something \| He/she goes over it
+- **asoqoma's'g** — cross over \| It crosses over
+- **asoqoma'sit** — cross over \| He/she crosses over
+- **asua's'g** — back and forth \| to and fro \| travel back and forth \| It goes back and forth
+- **asua'sit** — back and forth \| to and fro \| travel back and forth \| He/she goes back and forth
+- **asu'tesg'g** — walk back and forth \| kick back and forth \| go in and out \| He/she walks back and forth  *(confidence: m)*
+- **ejigla'sit** — go away \| He/she goes away
+- **ejiglateja'sit** — scoot \| go away quickly \| He/she scoots away  *(also: ways-of-moving)*  *(confidence: m)*
+- **ela'gwi'teget** — steer toward \| He/she steers toward  *(confidence: m)*
+- **ela'gwi't'g** — steer it toward \| He/she steers it toward  *(confidence: m)*
+- **ela'gwi'tmuatl** — steer toward \| He/she steers toward him/her/it  *(confidence: m)*
+- **elaptoq** — make tracks toward \| leave  footprints to \| He/she makes tracks toward  *(confidence: m)*
+- **elateja'sit** — scoot over \| go over quickly \| walk over quickly \| rush toward \| He/she scoots toward  *(also: ways-of-moving)*  *(confidence: m)*
+- **elenqwe'set** — rush over \| scoot over \| go toward on foot \| He/she scoot towards  *(also: ways-of-moving)*  *(confidence: m)*
+- **eliaq** — goes \| It goes
+- **eliet** — goes \| He/she goes to
+- **elsumugwat** — flee toward \| He/she flees toward
+- **eluggwalatl** — follow to \| follow toward \| He/she follows him towards
+- **eluggwatg** — follow to \| follow toward \| He/she follows it toward
+- **enmateja'sit** — hurry onward \| hurry home \| He/she hurries onward or home  *(also: ways-of-moving)*  *(confidence: m)*
+- **enm'gate'pit** — trot onward or home \| scoot onward or home \| beat it home \| He/she trots or scoots onward or home  *(also: ways-of-moving)*  *(confidence: m)*
+- **enmiaq** — goes home \| when (it comes to pass) \| goes onward \| It goes onward or home \| When (it comes to pass)  *(also: time)*
+- **enmiet** — goes home \| goes onward \| He/she goes onward or home
+- **enmipisgwa't** — in process of entering \| entering towards \| He/she is in the process of entering
+- **enml'ga't** — walk onward \| walk home \| He/she is walking home or onward  *(confidence: m)*
+- **enmnqwe'set** — go home quickly \| go on the way quickly \| He/she goes home quickly
+- **enm'tesguatl** — chase onward \| chase home \| He/she chases someone home or onward  *(confidence: m)*
+- **enmuggwalatl** — follow onward \| follow home \| He/she follows someone home or onward
+- **enmuggwatg** — follow onward \| follow home \| He/she follows it home or onward
+- **esetegja's'g** — moves backwards \| It moves backwards  *(confidence: m)*
+- **esetegja'sit** — move backward \| He/she moves backwards  *(confidence: m)*
+- **esetegjipija'sit** — enter backward \| He/she enters backwards
+- **gawasga'latl** — turn to opposite direction \| turn around \| He/she turns someone to the opposite direction  *(confidence: m)*
+- **gawasga's'g** — turns around \| It turns around  *(confidence: m)*
+- **gawasga'sit** — turns around \| He/she turns around  *(confidence: m)*
+- **gepta'sit** — get off of \| get out of \| He/she gets down from  *(confidence: m)*
+- **gesgija'sit** — go over \| climb over \| pass over \| He/she passes over
+- **getu'nmiet** — want to go home \| intend to go home \| He/she wants or intends to go home  *(confidence: m)*
+- **giwto'qa'latl** — circling with \| spin around \| He/she brings him/her around  *(confidence: m)*
+- **giwto'qa'sit** — circle \| turn around \| go around \| He/she turns around  *(confidence: m)*
+- **giwto'qugwaltultijig** — follow one another in a circle \| They follow one another in a circle  *(confidence: m)*
+- **giwto'qwa'sit** — circle \| goes around \| turns \| spin \| He/she circles  *(confidence: m)*
+- **ilgwenatl** — steer (by head) \| direct (by head) \| He/she steers him/her  *(also: farm-animals)*  *(confidence: m)*
+- **ilgweng** — steer \| directs \| He/she steers it  *(confidence: m)*
+- **ilgwi't'g** — steer \| He/she steers it  *(confidence: m)*
+- **jajiga'sit** — going along/beside the shore \| going along/beside edge \| Going along/beside the shore  *(confidence: m)*
+- **maja'sit** — leave \| move \| go \| He/she leaves
+- **majuggwalatl** — keep in time with \| follow \| He/she follows him/her
+- **majuggwatg** — keep in time with \| follow \| He/she follows it
+- **matama'sit** — walk towards the road \| heading towards the  road \| He/she walks towards the road
+- **matua'sit** — wander about (without purpose) \| He/she wanders about (without purpose)
+- **metoqiaq** — go down to \| come down to \| descend in elevation \| It(bus) descends (from the mountain) in elevation  *(confidence: m)*
+- **metoqiet** — descend in elevation \| go down to \| come down to \| He/she descends (from the mountain) in elevation  *(confidence: m)*
+- **na'ploqqatijig** — go single file \| follow one another in straight line \| They (dual) go in a single file  *(confidence: m)*
+- **nattesg'g** — go after \| chase \| try to catch \| He/she goes after it  *(confidence: m)*
+- **nattesguatl** — go after \| chase \| He/she goes after him/her  *(confidence: m)*
+- **nigana'sit** — goes ahead \| He/she goes ahead
+- **nigtua'sit** — branch off \| form crotch \| divide \| He/she branches off  *(confidence: m)*
+- **nisa'sit** — goes down \| descend \| He/she goes down
+- **pemelmit** — pass by laughing \| He/she is passing by and laughing  *(also: love-and-joy)*  *(confidence: m)*
+- **pemg'g** — go past \| pass \| go past in authority \| promote over \| He/she goes past it  *(confidence: m)*
+- **pemguatl** — go past \| pass \| go past in authority \| promote over \| He/she goes past him/her  *(confidence: m)*
+- **pemiaq** — move along \| going by \| It is going by
+- **pemiet** — go by \| move along \| He/she is going by
+- **pemijajiga'sit** — move along the shore \| walk along shore \| He/she is moving or walking along the shore
+- **pemisiawa'sit** — pass by \| He/she is passing by
+- **pemisiawtemit** — pass by while continuing to cry \| He/she is passing by while continuing to cry  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **pemtemit** — going by and crying \| He/she is going by and crying  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **pemtesg'g** — kick along \| pass by \| chase after \| He/she is kicking it along  *(confidence: m)*
+- **pemtesguatl** — kick along \| pass by \| chase after \| He/she is kicking him/her/it along  *(confidence: m)*
+- **pesoqtesg'g** — miss \| fail to meet it \| fail to come into contact with it \| He/she fails to meet or come into contact with it  *(confidence: m)*
+- **pija'sit** — go into \| go underneath \| He/she goes into
+- **pisguije'watl** — accompany inside \| He/she accompanies him/her inside  *(also: social-life)*  *(confidence: m)*
+- **pisgulgwalatl** — follow inside \| He/she follows him/her inside
+- **pisgulgwatg** — follow inside \| He/she/it follows it inside
+- **pisgwa'q** — enters \| It enters
+- **pisgwa't** — enters \| He/she enters
+- **pisgwetesguatl** — chase inside \| kick into \| He/she chases him/her/it inside  *(confidence: m)*
+- **poqtamgiaq** — begin \| start out \| It begins  *(confidence: m)*
+- **poqt'tesg'g** — chase \| start after \| He/she starts to chase it  *(confidence: m)*
+- **poqt'tesguatl** — chase \| start after \| He/she chases someone  *(confidence: m)*
+- **poqtuggwalatl** — begin to follow \| He/she begins to follow him/her/it
+- **poqtuggwatg** — begin to follow \| He/she begins to follow it
+- **saputa's'g** — pass through \| go through \| It passes through  *(confidence: m)*
+- **saputa'sit** — pass through \| go through \| He/she passes through  *(confidence: m)*
+- **se'sa'sit** — wander \| He/she wanders about
+- **siawa's'g** — keep on going \| continuing \| It keeps on going
+- **siawa'sit** — keep on going \| continue \| He/she/it keeps on going
+- **so'qiaq** — go to higher ground or level \| go up (in altitude) \| go up to the woods (Listuguj) \| It goes up (to higher ground or level)  *(confidence: m)*
+- **so'qiet** — go to higher ground or level \| go up (in altitude) \| go up to the woods (Listuguj) \| He/she goes up (to higher ground)  *(confidence: m)*
+- **tajiga'sit** — going along/beside the shore \| going along/beside edge \| Going along/beside the shore  *(confidence: m)*
+- **tewattesguatl** — chase out \| He/she chases someone out  *(confidence: m)*
+- **tewiet** — go outside \| exit \| He/she exits
+- **tewpugua'sit** — step out or outside \| step outside for fresh air \| He/she steps out  *(confidence: m)*
+- **tewuggwalatl** — follow out or outside \| He/she follows him/her out
+- **tewuggwatg** — follow out or outside \| He/she follows it out
+- **toqjua'q** — go up (stairs) \| mount (stairs) \| It goes up  *(confidence: m)*
+- **toqjua't** — go up (stairs) \| swim up stream \| mount (stairs) \| He/she goes up \| It swims up stream  *(confidence: m)*
+- **toqju'tesguatl** — chase up \| chase upstairs \| He/she chases someone up  *(confidence: m)*
+- **wejgu'aq** — approach \| come \| It is approaching
+- **wejgu'et** — approach \| come \| He/she is approaching
+- **wejgutemit** — come toward crying \| He/she comes towards here crying  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **wejgwateja's'g** — come in this direction \| hurry this way \| It is coming in this direction
+- **wejgwateja'sit** — hurry this way \| come in this direction \| He/she is hurrying this way
+- **wejiaq** — come from there \| It comes from there  *(confidence: m)*
+- **wejuaqatesg'g** — approach \| He/she approaches it
+- **wejuaqatesguatl** — approach \| He/she approaches him/her
+- **wenagiet** — accend \| He/she is accending  *(also: faith)*  *(confidence: m)*
+- **wesmugwat** — runs away \| flees \| escape from there \| He/she runs away
+- **wessmugt'g** — run away from \| escape from \| He/she is running away from it
+- **wessmugtuatl** — run away from \| escape from \| He/she is running away from him/her/it
+- **wisqipgising** — arrive suddenly \| He/she arrives suddenly  *(confidence: m)*
+- **wejguigaqawapuguet** — come scolding \| come reprimanding \| He/she comes scolding or reprimanding  *(also: talking)*  *(confidence: m)*
+- **pejila'sit** — come up \| He/she comes up.
+- **sitapa'sit** — move away from a table \| move away from a desk \| He/she moves away from (table)  *(confidence: m)*
+- ** jipaluwejitu'et** — leaving in fear \| He/she is leaving in fear  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **wejgwinisaqa'sit** — comes down descending ground  \| He/she comes down descending ground 
+- **wejgwatemit** — comes crying \| He/she/it comes crying.  *(also: fear-anger-sadness)*  *(confidence: m)*
+- **pisgwisga'sit** — reaches in \| He/she reaches in  *(confidence: m)*
+- **nipenat** — prowl around at night \| roam around at night \| lurk around at night \| He/she prowls/roams around at night  *(confidence: m)*
+- **wejgwiso'qwiet** — Comes up from the shore. \| Comes up the Hill. \| Comes up the Mountain. \| He/she comes up the shore, the hill, the mountain
+- **wejgwimusga'sit** — come into sight \| come into view \| He/she/it comes into sight, into view  *(also: seeing)*  *(confidence: m)*
+- **sa'sewgpa'sit** — change places (seats) \| He/she changes places (seats)  *(confidence: m)*
+- **wejitu'wet** — exit out of \| go out because \| exit from \| reason he/she leaves \| exit through \| goes outdoors from \| He/she/it exits from or through \| He/she goes out because
+- **nangma'sit** — moves forward with no obstacle \| moves immediately forward with no obstacle \| He/she moves forward with no obstacle.  *(confidence: m)*
+- **wejgwenmit** — come laughing \| He/she comes laughing  *(also: love-and-joy)*  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **aliet** — wander \| roam \| walk around
+- **alita'sit** — roam \| walk around \| wander \| go here and there
+- **elmoqwe'set\*\*** — scoot home \| He/she scoots home
+- **ilgwi'tatl** — steer \| He/she steers him/her/it
+- **nisgusua'sit\*\*** — descend \| takes a step downward (dmm 01-11-14) \| He/she descends
+- **siawiet** — keep going \| He/she keeps going
+- **toqwanqapultijig** — double file \| go two by two \| go in pairs
+- **wejipawnaqa't** — try to get out of the thicket \| He/she ties to get out of the thicket

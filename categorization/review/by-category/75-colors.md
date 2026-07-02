@@ -1,0 +1,86 @@
+# Colours (`colors`)
+
+Theme: *Qualities & Amounts* — 70 entries (+9 archived)
+
+- **amjaqamu'g** — colors smeared together \| mix of colors \| It has colors smeared together
+- **amjaqamugsit** — colors smeared together \| mix of colors \| It (shirt) has mixed colors
+- **atnaqan\_wi'gas'g** — checkered \| It is a checkered print
+- **atnaqan\_wi'gasit** — checkered \| checked \| He/she is checkered print
+- **essatl** — dye \| He/she dyes it (shirt)
+- **essawiaqan** — dye \| Dye
+- **ess'g** — dye \| He/she dyes it
+- **ewne'g** — blue \| foggy (Nova Scotia) \| It is blue
+- **ewniaq** — turn blue \| get foggy (Nova Scotia) \| It turns blue
+- **gajjamu'g** — of mixed colors \| unpleasant (ugly) color \| It is an unpleasant color
+- **gajjamugsit** — (ugly) unpleasant color \| It is an unpleasant color
+- **jijiwa'qiaq** — rusty \| It is rusty  *(also: condition)*
+- **jijiwa'qiet** — rusty \| It (pot) is rusty  *(also: condition)*
+- **laglemamu'g** — cream colored \| It is cream colored
+- **laglemamugsit** — cream colored \| It is cream colored
+- **maqtawamu'g** — blackish \| darkish \| It is blackish
+- **maqtawamugsit** — blackish \| darkish \| It(shirt) is blackish
+- **maqtawe'g** — black \| black \| He/she/it is black \| It is black
+- **maqtawigjat** — black·bottomed \| He/she is black-bottomed  *(also: body-descriptions)*
+- **maqtawignegsit** — dark complexioned \| dark tanned \| He/she is dark complexioned  *(also: body-descriptions)*
+- **maqtawi'tuat** — have a black beard \| He/she has a black beard  *(also: body-descriptions)*
+- **maqtawoqsit** — darkened from fire \| dark tanned \| charred \| He/she/it is dark tanned  *(also: body-descriptions)*  *(confidence: m)*
+- **maqtawoqteg** — dark tanned \| darkened by fire \| charred \| It is darkly tanned  *(also: fire)*
+- **megwa'latl** — make red \| He/she makes it(picture) red
+- **megwaltugwat** — red haired \| red head \| He/she has red hair  *(also: body-descriptions)*
+- **megwamu'g** — reddish \| It is reddish
+- **megwamugsit** — reddish \| He/she is reddish
+- **megwapsgeg** — red and round \| It is red and round  *(also: size-and-shape)*
+- **megwapsg'sit** — red and round \| It is red and round  *(also: size-and-shape)*
+- **megwatetesg** — flash red \| It flashes red  *(also: fire)*
+- **megwatetesing** — flash red \| It(bulb) flashes red  *(also: fire)*
+- **megwa'toq** — make red \| He/she makes it red
+- **megwe'g** — red \| red \| It (shirt) is red \| It is red
+- **megwe'saqa'sit** — turn red \| blush \| He/she blushes  *(also: body-actions)*
+- **megwe'saqsit** — ruddy complexion \| red faced \| red cheeked \| He/she has a ruddy complexion  *(also: body-descriptions)*
+- **milamu'g** — multi-colored \| many kinds of things \| different colors \| many sorts of things \| variety of colors \| many colors \| It is multi-colored or many colors \| Many kinds of things
+- **milamugsit** — multi-colored \| many different kinds \| different colors \| many different sorts \| variety of colors \| many colors \| It(shirt) is multi-colored or many colors \| Many different kinds
+- **musqunamu'g** — dark bluish \| It is dark bluish
+- **musqunamugsit** — dark bluish \| He/she/it is dark bluish
+- **newtamu'g** — one color \| flush (in poker) \| It is of one color  *(also: games)*
+- **penta'latl** — paint \| He/she paints it(board)  *(also: making-and-fixing)*
+- **penta'tegewatl** — paint for \| He/she paints for him/her  *(also: making-and-fixing)*
+- **penta'toq** — paint \| He/she paints it  *(also: making-and-fixing)*
+- **piluamugwiaq** — become dusk \| change color \| It becomes dusk \| It changes color  *(also: time)*
+- **piluamugwiet** — change color \| He/she/it changes color
+- **sa'se'wamugwa'latl** — change color \| He/she changes the color of him/her
+- **sa'se'wamugwa'toq** — change color \| He/she changes the color of it
+- **stoqonamu'g** — fir color \| dark green \| It is fir tree colored
+- **stoqonamugsit** — fir·color \| dark green \| He/she is the color of a fir tree
+- **talamu'g** — what color? \| what kind? \| What color is it?  *(also: question-words)*
+- **t'ssawiaqan** — dye \| Dye
+- **wapamu'g** — whitish \| It is whitish
+- **wapamugsit** — whitish \| He/she is whitish
+- **wapa's'g** — turn white \| It turns white
+- **wapa'sit** — open eyes \| turn white \| He/she opens his/her eyes \| He/she turns white  *(also: body-actions)*
+- **wape'g** — white \| white \| He/she is white \| It is white
+- **wape'ji'jg** — white small inanimate \| It is white and small
+- **wape'ji'jit** — tiny white animate \| He/she is white and tiny
+- **wape'jit** — whitish one \| Whitish one
+- **wapigat** — white foot \| white paw \| White foot  *(also: animals)*
+- **wapignegsit** — light-complexioned \| He/she is light-complexioned  *(also: body-descriptions)*
+- **wapoqsit** — sun bleached \| bleached \| is whitened (from sun) \| He/she is sun-bleached
+- **wapoqteg** — whitened (from sun) \| bleached \| sun bleached \| It is whitened from the sun
+- **wap'stoqonamu'g** — pale green \| It is pale green
+- **wap'stoqonamugsit** — pale green \| He/she/it is pale green
+- **watapteg** — yellow \| greyish \| slate colored \| It is yellow
+- **wisawe'g** — ochre brown \| brownish yellow \| brownish orange \| It is brown
+- **wisawimgwe'g** — orange (color) \| Orange (color)
+- **usgunamu'g** — color of liver (purple/brown) \| It is the color of liver (purple/brown)
+- **sa'se'wamugwa'sit** — transforms   \| changes color/appearance \| He/she/it transforms, he/she/it changes color/appearance  *(also: appearance)*
+
+## Archived entries (lower priority)
+
+- **aljat** — painted \| stained
+- **essawia'latl\*\*** — dye \| He/she dyes it (shirt)
+- **essawia'toq\*\*** — dye \| He/she dyes it
+- **essawiet\*\*** — dye runs
+- **megloqiaq\*\*** — turn red (as of sky)
+- **munqwanamugsit\*\*** — sky blue \| He/she is a sky blue color
+- **musgwanamugsit\*\*** — sky blue \| He/she is sky blue
+- **wisawamu'g** — brownish \| It is brownish
+- **wisawamugsit** — brownish \| He/she is brownish

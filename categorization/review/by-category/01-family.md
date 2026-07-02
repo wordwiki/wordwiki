@@ -2,15 +2,15 @@
 
 Theme: *People & Relationships* — 137 entries (+13 archived)
 
-- **atpi'sewatl** — change diaper \| He/she changes his/her diaper  *(confidence: m)*  *(note: baby care)*
+- **atpi'sewatl** — change diaper \| He/she changes his/her diaper
 - **elatijig** — resemble one another \| They resemble one another  *(also: appearance)*
 - **eluatl** — resemble \| bear family resemblance \| He/she resembles him/her  *(also: appearance)*
-- **geggunawet** — godparent \| He/she is a godparent  *(also: ceremony)*
-- **geluluet** — request permission from parents to marry their child \| He/she requests permission from parents to marry their child  *(also: customs)*
-- **getu'\_unjanit** — pregnant \| expect baby \| He/she is expecting a baby  *(also: body)*
+- **geggunawet** — godparent \| He/she is a godparent  *(also: church-rituals)*
+- **geluluet** — request permission from parents to marry their child \| He/she requests permission from parents to marry their child
+- **getu'\_unjanit** — pregnant \| expect baby \| He/she is expecting a baby  *(also: body-actions)*  *(confidence: m)*
 - **gigjagumatl** — closely related to \| He/she is closely related to him/her
 - **giju'** — mother \| mom \| Mom
-- **gisigwenatl** — grow \| raise \| adopt \| rear \| He/she raised him/her  *(note: raise child)*
+- **gisigwenatl** — grow \| raise \| adopt \| rear \| He/she raised him/her
 - **gisigweng** — full-grown \| raise \| rear \| He/she raised it until full-grown  *(confidence: m)*
 - **gisigwenign** — adopted child \| Adopted child  *(also: people)*
 - **gisteluatl** — impregnate (slang expression) \| He impregnated her (slang expression)  *(also: animals)*  *(confidence: m)*
@@ -20,41 +20,42 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **lu'suesgwewa'sit** — perform duties of prospective daughter·in·law \| become a prospective daughter·in·law \| become a daughter·in·law \| She performs the duties of a prospective  daughter-in-law
 - **lu'sue'sgwewit** — is a daughter·in·law \| She is a daughter-in-law
 - **lu'sugwewa'sit** — becomes a son·in·law \| He becomes a son-in-law
-- **malie'wit** — marry \| He/she marries  *(also: ceremony)*
-- **malie'wuti** — marriage \| Marriage  *(also: ceremony)*
-- **masgelget** — estrange \| separated (in marriage) \| He/she is estrange from him/her  *(also: emotions)*
+- **malie'wit** — marry \| He/she marries  *(also: church-rituals)*
+- **malie'wuti** — marriage \| Marriage  *(also: church-rituals)*
+- **masgelget** — estrange \| separated (in marriage) \| He/she is estrange from him/her  *(also: fear-anger-sadness)*  *(confidence: m)*
 - **mawe'gig** — live together \| hang out together \| gathered together \| They live together  *(also: social-life)*
 - **mawqatmu'tijig** — live all together \| stay together (hotel) \| They live all together  *(also: social-life)*
-- **migultiat** — experience (by male) pregnancy symptoms of partner \| become irritated (as first child) when mother carries her second child \| sympathy pains (by male) \| He experiences the pregnancy symptoms of partner  *(also: body)*
+- **migultiat** — experience (by male) pregnancy symptoms of partner \| become irritated (as first child) when mother carries her second child \| sympathy pains (by male) \| He experiences the pregnancy symptoms of partner  *(also: body-actions)*  *(confidence: m)*
 - **mijua'ji'j** — baby \| child \| Baby or child  *(also: people)*
 - **mtesan** — youngest child born in a family \| youngest born \| last born child \| Youngest child
-- **najigluluet** — ask permission to marry daughter \| He goes to ask permission to marry his/her/their daughter  *(also: customs)*
+- **najigluluet** — ask permission to marry daughter \| He goes to ask permission to marry his/her/their daughter
 - **najilu'sugowit** — go to live with in-laws \| He/she goes to live with his/her in-laws
-- **nanama'latl** — rock (baby) \| swing \| He/she rocks him/her  *(also: movement)*
+- **nanama'latl** — rock (baby) \| swing \| He/she rocks him/her  *(confidence: m)*
 - **nanupe'j** — quintuplet \| Quintuplet  *(also: people)*
 - **naqanu'set** — take care of baby \| He/she takes care of a baby
 - **nemijgami'** — grampa \| grandfather (term of respect for old man) \| It's grampa
 - **neps'tgwa'latl** — raise (child) \| rear \| bring up (child) \| He/she raises him /her
 - **nespit** — baby·sit \| house·sit \| He/she baby·sits or house·sits  *(also: work)*
 - **nesupe'j** — triplet \| Triplet  *(also: people)*
+- **nigtua'tijig** — separate \| go separate ways \| They (two) go their separate ways  *(also: social-life)*  *(confidence: m)*
 - **nmi'** — grandmother \| granny \| term of affection for grandmother \| Grandmother
 - **ns'tnaqan** — orphan \| Orphan  *(also: people)*
 - **nsugwi'** — aunty! \| Aunty!
 - **nugumi** — granny! \| grammie! \| Granny
 - **nujins'pit** — baby sitter \| house sitter \| He/she is a baby sitter or a house sitter  *(also: occupations)*
 - **nusalatl** — suckle (infant) \| breastfeed \| She (mother) suckles him/her (infant)  *(also: body-actions)*
-- **nuse'sgwet** — nurse \| breastfeeder \| breastfeed \| nurser \| wet nurse \| She nurses (child) \| Breastfeeder  *(also: occupations)*
+- **nuse'sgwet** — nurse \| breastfeeder \| breastfeed \| nurser \| wet nurse \| She nurses (child) \| Breastfeeder  *(also: body-actions)*  *(confidence: m)*
 - **nuset** — breast-feed \| She breast-feeds  *(also: body-actions)*
-- **oqonoqopisaqan** — wrap \| receiving blanket \| bundle (for infant) \| privacy curtain \| Wrap  *(also: fastening)*
-- **oqopisit** — wrapped up \| bundled (as infant) \| swadded (as infant) \| He/she is wrapped up  *(also: fastening)*
+- **oqonoqopisaqan** — wrap \| receiving blanket \| bundle (for infant) \| privacy curtain \| Wrap  *(also: household)*  *(confidence: m)*
+- **oqopisit** — wrapped up \| bundled (as infant) \| swadded (as infant) \| He/she is wrapped up  *(also: fastening)*  *(confidence: m)*
 - **oqoti** — dear \| friend \| affection term between spouses \| Dear  *(also: people)*
-- **pejigluluet** — comes to ask permission from parents to marry their daughter \| He comes to ask permission from parents to marry their daughter  *(also: customs)*
-- **pi'sano'tlatl** — put diaper on... \| to diaper \| He/she puts a diaper on him/her
+- **pejigluluet** — comes to ask permission from parents to marry their daughter \| He comes to ask permission from parents to marry their daughter
+- **pi'sano'tlatl** — put diaper on... \| to diaper \| He/she puts a diaper on him/her  *(also: clothing)*
 - **pitu'nmijgamij** — great·grandfather \| My great·grandfather
 - **pitu'nugumij** — great·grandmother \| My great·grandmother
 - **pitu'nuji'j** — great·grandchild \| My great grandchild
 - **pqotnanj** — love child \| bastard \| illegitimate person \| illegitimate child (dmm 08) \| person born to unmarried parents (dmm 08) \| Love child
-- **puna'latl** — leave or separate \| desert \| abandon \| He/she leaves or separates from someone  *(also: social-life)*
+- **puna'latl** — leave or separate \| desert \| abandon \| He/she leaves or separates from someone  *(also: social-life)*  *(confidence: m)*
 - **punaltijig** — leave each other \| separate \| divorce \| They leave each other
 - **segewe'get** — have illegitimate child or children \| beget illegitimate child or children \| He/she has an illegitimate child or children
 - **segewei** — illegitimate child \| bastard \| Illegitimate child  *(also: people)*
@@ -66,7 +67,7 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **tata't** — father! \| dad \| Father
 - **telagumatl** — related to someone as such \| thus related to someone \| related to someone in this way \| He/she is related to someone as such
 - **telagutijig** — related as such to each other \| thus related to each other \| related to each other in this way \| Related as such to each other
-- **tele'g** — be in such a way \| pregnant \| be that way \| He/she is in such a way \| She is pregnant  *(also: body)*
+- **tele'g** — be in such a way \| pregnant \| be that way \| He/she is in such a way \| She is pregnant  *(also: body-actions)*  *(confidence: m)*
 - **tepqatg** — married \| He/she is married
 - **tewitpaqatg** — married out (off the community) \| He/she is married out off the community
 - **tewmalie'wit** — marry out \| marry someone from outside of the community \| He/she marries out
@@ -78,8 +79,8 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **tqope'j** — twin \| Twin  *(also: people)*
 - **tu's** — daughter! girl! (term of affection) \| Daughter!(term of affection)
 - **tutji'j** — little daughter! (term of affection for child) \| Little daughter! (term of affection for girl child)
-- **uggeggusgl** — godparent \| His/her godparent  *(also: ceremony)*
-- **uggnnignn** — godchild \| His/her godchild  *(also: ceremony)*
+- **uggeggusgl** — godparent \| His/her godparent  *(also: church-rituals)*
+- **uggnnignn** — godchild \| His/her godchild  *(also: church-rituals)*
 - **uggwe'ji'jl** — younger sister \| His/her younger sister
 - **uggwijewigtug** — maternal side \| His/her mother's side of the family
 - **uggwisit** — have son \| He/she has a son
@@ -92,8 +93,8 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **ugjugwi'jijl** — mother-in-law \| His/her mother-in-law
 - **ugsisl** — older brother \| His/her older brother
 - **ugsml** — niece \| His/her niece
-- **ugs'tqamua'latl** — give birth \| bear (child) \| bring into the world \| She gives birth to him/her  *(also: body)*
-- **ugs'tqamuit** — born \| come into world \| He/she comes into the world  *(also: body)*
+- **ugs'tqamua'latl** — give birth \| bear (child) \| bring into the world \| She gives birth to him/her  *(also: body-actions)*
+- **ugs'tqamuit** — born \| come into world \| He/she comes into the world  *(also: body-actions)*
 - **ugsugwisl** — aunt \| His/her aunt
 - **ugte'piteml** — wife \| His/her wife
 - **ugti'l** — dog \| His/her dog  *(also: animals)*
@@ -101,7 +102,7 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **ugtlu'sue'sgwul** — daughter-in-law \| his/her daughter-in-law
 - **ugtlu'sugul** — son-in-law \| His/her son-in-law
 - **ugtusl** — daughter \| His/her daughter
-- **ugtutem** — clan \| totem \| His/her clan  *(also: customs)*
+- **ugtutem** — clan \| totem \| His/her clan  *(also: leadership-and-law)*
 - **ugumijl** — grandmother \| His/her grandmother
 - **uji'jl** — grandchild \| His/her grandchild
 - **ujjewei** — his/her father's... \| his/her father's... \| belongs to his/her father \| belongs to his/her father \| His/her father's \| His/her father's
@@ -118,10 +119,10 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **ungi'gug** — parents \| His/her parents
 - **ungi'gul** — parent \| ancestor \| His/her parent
 - **unjann** — child \| His/her child
-- **weja'teget** — get spouse from there \| He/she gets a spouse from there  *(also: customs)*
+- **weja'teget** — get spouse from there \| He/she gets a spouse from there
 - **we'jitaqan** — foundling \| Foundling  *(also: people)*
-- **we'ji'wet** — give birth \| bear child (said of woman when she bears child) \| She gives birth  *(also: body)*
-- **wesgijinuit** — bring to life \| born \| He/she is born  *(also: body)*
+- **we'ji'wet** — give birth \| bear child (said of woman when she bears child) \| She gives birth  *(also: body-actions)*
+- **wesgijinuit** — bring to life \| born \| He/she is born  *(also: body-actions)*
 - **wetagutg** — related through... \| He/she is related through...
 - **wetagutijig** — of common descent \| related by common ancestor \| have common ancestor \| They are related to one another through a common ancestor
 - **wetapaqamit** — orginate from \| spring from \| He/she orginates from  *(also: places)*
@@ -131,7 +132,6 @@ Theme: *People & Relationships* — 137 entries (+13 archived)
 - **wigmaq** — family \| relative \| His/her family
 - **wijig'tijig** — siblings \| related as brothers and/or sisters \| They are siblings
 - **wijigumatl** — sibling to \| have sibling, brother or sister \| He/she is his/her sibling
-- **wisungalatl** — give a name \| christen \| He/she gives him/her/it a name  *(also: talking)*
 - **wo'gumal** — cousin \| relative \| His/her cousin
 - **wo'gumatijig** — related (as kin) \| They are related
 - **qopilsaqanapi** — cradle lace \| Cradle lace.  *(also: household)*

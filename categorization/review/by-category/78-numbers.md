@@ -1,0 +1,117 @@
+# Numbers & Counting (`numbers`)
+
+Theme: *Qualities & Amounts* — 101 entries (+9 archived)
+
+- **amgwes** — first \| in the past \| first time \| First \| In the past  *(also: time)*
+- **amgwesewa'j** — first one \| oldest one \| First one
+- **amgwesewa'juit** — first person \| first one \| He/she is the first one
+- **amgwesewei** — first one \| first one \| He/she/it is the first one \| It is the first one
+- **as'gom** — six \| six (in counting) \| Six
+- **as'gom\_te'sisga'q** — sixty \| sixty (in counting) \| Sixty (six sets of ten)
+- **egimatl** — count \| recite \| read \| He/she reads it (greeting card)  *(also: stories-and-writing)*
+- **gasg'ptnnaqan** — one  hundred \| hundred (in counting) \| One hundred
+- **gasg'ptnnaqanipuna't** — one hundred years old \| He/she is one hundred years old  *(also: age)*
+- **gitg** — both \| Both  *(confidence: m)*
+- **lluigneg** — seven \| seven (in counting) \| Seven
+- **lluigneg\_te'sisga'q** — seventy \| Seventy
+- **mawgiljaqan** — addition (arithmetic) \| Addition (arithmetic)
+- **mawgiljet** — calculate \| figure \| add (in mathematics) \| He/she calculates
+- **mawgimatl** — include in the count \| He/she includes him/her in the count
+- **mawgitg** — include in the count \| add (in mathematics) \| He/she includes it in the count
+- **mejit\_newt** — one more time \| One more time  *(also: time)*
+- **mengitg** — subtract \| He/she subtracts it
+- **metla'saigl** — ten dollars \| Ten dollars  *(also: money-and-trade)*
+- **metla'sipuna't** — ten years old \| He/she is ten years old  *(also: age)*
+- **metla'sipunqeg** — ten years \| It is ten years  *(also: time)*
+- **metla'sisga'q** — ten times \| It is ten times
+- **na'n** — five (in counting) \| Na'n
+- **na'newa'j** — fifth \| fifth person \| five·card \| Fifth
+- **na'newei** — fifth one \| fifth one \| Fifth one \| Fifth one
+- **nangl** — five inanimate objects \| five things \| They are five inanimate objects
+- **na'nijig** — five (animate) \| They are five (animate)
+- **nanipunqeg** — five years \| It is five years  *(also: time)*
+- **nanisga'q** — fifty \| fifty (in counting) \| Fifty
+- **nanisga'qal** — fifty objects \| There are fifty objects (inanimate)
+- **nanisgegsijig** — fifty (animate) \| Fifty (animate)
+- **nanoqosgl** — five cylindrical inanimate objects lying flat \| five long objects lying side by side \| There are five cylindrical inanimate objects lying flat
+- **nanoqosmia'tijig** — five animates lying \| They are five animates lying
+- **nanoqsijig** — five cylindrical animate objects \| They are five cylindrical animate objects
+- **nanuguna'q** — five days \| It is five days  *(also: time)*
+- **nesisga'q** — thirty (in counting) \| It is thirthy
+- **ne'w** — four (in counting) \| Four (number)
+- **newisga'q** — forty \| forty (in counting) \| Forty (number)
+- **newisgegipunqeg** — forty years \| Forty years  *(also: time)*
+- **ne'wowei** — Thursday \| fourth one \| Thursday \| The fourth one  *(also: calendar)*
+- **newt** — one \| once \| one (in counting) \| in the past \| once \| One (number) \| Once
+- **newtaig** — one dollar \| dollar bill \| dollar coin \| One dollar  *(also: money-and-trade)*
+- **newte'** — one \| still \| yet \| continues \| One \| Still  *(also: time)*
+- **newte'jg** — alone \| one \| It is alone
+- **newte'jit** — one \| He/she is one
+- **newtisga'q** — ten \| ten (in counting) \| Ten
+- **newtisga'qewa'j** — tenth one \| ten·card \| Tenth one
+- **newtnemi'g** — one kind \| It is one kind  *(confidence: m)*
+- **newtugwa'lugwet** — alone \| He/she is alone  *(confidence: m)*
+- **newtunatl** — have one \| He/she has one
+- **pesgunateg** — nine \| nine (in counting) \| Nine
+- **pesgunateg\_te'sinsga'q** — ninety \| ninety (in counting) \| Ninety
+- **pesgunateg\_te'sisga'q** — ninety \| ninety (in counting) \| Ninety
+- **pituiptnnaqan** — thousand \| one thousand \| Thousand\_(in\_counting)
+- **si'st** — three (in counting) \| Three
+- **si'staq** — pair or more of treys (in cards) \| Pair or more of treys  *(also: games)*
+- **si'stewa'j** — third one \| trey (in cards) \| Third one
+- **sistewa'juit** — third one \| He/she is the third one
+- **si'stewei** — Wednesday \| third one \| Wednesday \| The third one  *(also: calendar)*
+- **ta'pu** — two \| two (in counting) \| Two
+- **tapuapsgegl** — two (of something globular) \| Two of something globular
+- **tapuapsg'sijig** — two (of something globular) \| Two (of something globular)
+- **tapua'ql** — two cylinders \| two sticks(wood) \| Two cylinderical pieces
+- **tapu'gl** — two of them \| two things \| It is two of them
+- **tapuguna'q** — two days \| It is two days  *(also: time)*
+- **tapuipuna't** — two years old \| He/she is two years old  *(also: age)*
+- **tapuipunqeg** — two years \| Two years  *(also: time)*
+- **tapuisga'q** — twenty (in counting) \| Twenty
+- **tapuisga'qal** — twenty things \| twenty (inanimates) \| Twenty things
+- **tapuisga'qewa'j** — twentieth one \| Twentieth one
+- **tapuisgegsijig** — twenty persons \| twenty (animates) \| Twenty animates
+- **tapuitpa'q** — two nights \| It is two nights  *(also: time)*
+- **tapunemi'g** — two different kinds \| two types \| two pair (of kind) \| Two different kinds
+- **tapungl** — have two of \| He/she has two of something
+- **tapunnajig** — have two \| hold two \| He/she has two of them
+- **tapuoqsijig** — two of something (cylindrical in shape) \| Two of something(cylindrical in shape)
+- **ta'puowa'j** — second one \| deuce(playing cards) \| Second one \| Duece  *(also: games)*
+- **ta'puowei** — Tuesday \| second one \| Tuesday \| The second one  *(also: calendar)*
+- **tapusijig** — two of them \| Two of them
+- **ugtejgewei** — last one \| last one \| The last one \| The last one  *(confidence: m)*
+- **ugumuljin** — eight \| eight (in counting) \| Eight
+- **ugumuljin\_te'sisga'q** — eighty \| eighty (in counting) \| Eighty
+- **ugumuljin te's'gl** — eight of those \| There are 8 of those
+- **na'nugumeg** — go five in a canoe \| We go five in a canoe.  *(also: boats)*
+- **ugumuljinewei** — the eight one \| He/she/it is the 8th one
+- **newtisga'q jel ugumuljin** — 18 \| eighteen
+- **mtln jel ugumuljin** — 18 \| Ten plus eight
+- **metla'suguna'q jel ugumuljin** — ten days plus eight \| 18 days \| Eighteen days  *(also: time)*
+- **ugumuljin te'sugunaq** — 8 days and nights \| 8 days and nights  *(also: time)*
+- **ugumuljin te'sisga'qawei** — eightieth one \| The eightieth one
+- **tmgewei** — first, first place \| First, first place.
+- **nanisga'qta'tiji** — caught fifty \|  harvested fifty \| gathered fifty \| They caught, harvested, gathered fifty.  *(also: farming)*  *(confidence: m)*
+- **tepesg** — even number \| Even number
+- **na'nunajig** — has five of them \| owns five of them \| He/she has five.  *(also: amounts)*  *(confidence: m)*
+- **ugumuljin te'sisga'qal** — there are eighty of those \| There are eighty of those. (third person plural inanimate)
+- **mengitm'g** — subtraction \| Act of subtraction  *(also: learning-and-teaching)*
+- **anesg** — odd number \| Odd (number)
+- **ugumuljin te'sijig** — there are eight of them \| There are eight of them.
+- **ugumuljin te'sugunit** — 8th day of the month \| The 8th day of the month.  *(also: calendar)*
+- **ugumuljin te'sisgegsijig** — there is 80 of them \| There are 80 of them. 
+- **ugumuljin te'sisga'q** — eighty \| Eighty (in counting)
+
+## Archived entries (lower priority)
+
+- **gjipituiptnnaqan** — million \| million (in counting) \| Million
+- **mtlenewei\*\*** — tenth(one) \| tenth (one)
+- **mtlnewa'j\*\*** — tenth person
+- **mtln\_jel\_ne'gwt\*\*** — eleven (in counting)
+- **mtln\_te's\_pituimtlnaqan\*\*** — ten thousand (in counting)
+- **mtln\*\*** — ten (in counting)
+- **negwte'jg\*\*** — only one
+- **negwte'jit\*\*** — alone
+- **negwtinsqa'g\*\*** — ten (in counting)

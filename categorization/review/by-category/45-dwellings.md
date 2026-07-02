@@ -1,0 +1,215 @@
+# Houses & Buildings (`dwellings`)
+
+Theme: *Home & Daily Life* — 195 entries (+13 archived)
+
+- **amgisitas'g** — partly built \| partly complete \| incomplete \| It is partly built  *(also: making-and-fixing)*
+- **amnast'ga'taqan** — bough/branch lining \| Bough or branch lining (for dwelling)
+- **amnast'ga'toq** — line it(wigwam/dwelling) with boughs/branches \| He/she lines it (wigwam/dwelling) with boughs/branches
+- **anapi'gan** — lean-to \| brush camp \| Lean to
+- **a's'tuo'guom** — church \| Church  *(also: church-rituals)*
+- **ellutas'g** — fenced \| It is fenced
+- **eloqta's'g** — shelf \| trim \| Shelf  *(also: household)*
+- **elsaqas'g** — wall \| Wall
+- **elsaqas'gigtug** — at  the wall \| on the wall \| At/on the wall  *(also: location-words)*
+- **elsegni'gan** — brick house \| Brick house
+- **enaqet** — spread spruce boughs \| He/she spreads spruce boughs  *(also: putting-and-placing)*  *(confidence: m)*
+- **epqwalatl** — shelter \| He/she shelters him/her  *(also: social-life)*
+- **epqwa's'g** — temporary shelter \| Temporary shelter
+- **epqwas'gewei** — roof \| Roof
+- **epqwatg** — shelter \| He/she shelters it
+- **epsmat** — keep own space hot \| maintain dwelling at a high temperature \| have own place at high temperature \| He/she he/she keeps his/her place hot  *(also: temperature)*
+- **espesegnas'g** — brick or stone wall built tall \| A brick or stone wall is build tall  *(also: making-and-fixing)*
+- **espesegng** — build high brick or stone wall \| He/she/it builds a high brick or stone wall  *(also: making-and-fixing)*
+- **espoqo'teget** — build high (fence) with wood or logs \| build high (palisade) with wood or logs \| He/she builds high with wood or logs  *(also: making-and-fixing)*
+- **espoqo'toq** — build high (fence) with wood or logs \| build high (palisade) with wood or logs \| He/she builds high with wood or logs  *(also: making-and-fixing)*
+- **etlsegnatl** — construct or build with brick or cement blocks \| He/she is building it (statue) with brick or cement blocks  *(also: making-and-fixing)*
+- **etlsegng** — construct or build with brick or cement blocks \| He/she is building it with brick or cement blocks  *(also: making-and-fixing)*
+- **ewi'gat** — build house \| make camp or dwelling \| He/she builds a house  *(also: making-and-fixing)*
+- **ga'qan** — door \| Door  *(also: household)*
+- **ga'qanei** — entranceway \| door \| Entranceway
+- **geji'gas'g** — corner closet \| enclosed space in corner of room \| corner \| It is a corner closet
+- **gejigiaq** — corner \| Corner  *(also: location-words)*
+- **gi'g** — sharp \| sharp \| house \| home \| It(knife) is sharp \| It is sharp \| Your house  *(also: condition)*
+- **gina'muo'guom** — school \| School  *(also: learning-and-teaching)*
+- **gmu'ji'gan** — wooden house \| wooden building \| Wooden house
+- **g'p'tai** — ceiling \| top \| Top
+- **gsnugo'guom** — hospital \| Hospital  *(also: healing)*
+- **gsusgwate'gn** — tent flap \| Tent flap
+- **gtuguno'guom** — bedroom \| dormatory \| hotel, motel room \| Bedroom  *(also: sleep)*
+- **jijuejgwatp** — steeple \| Steeple  *(also: church-rituals)*
+- **lagga'p** — cellar \| basement \| underground food storage \| Cellar  *(also: household)*
+- **lagla'ns** — barn \| Barn  *(also: farming)*
+- **lamuguom** — interior of the house \| Indoors  *(also: location-words)*
+- **laplusan** — prison \| jail \| Jail  *(also: leadership-and-law)*
+- **lasqo'plaw** — board \| plank \| Board  *(also: trees)*
+- **lgusuaqan** — steps \| ladder \| stairs \| Steps  *(also: household)*
+- **llutaqan** — fence \| Fence
+- **llutaqanatgw** — fence post \| Fence post
+- **lo'gsi'gan** — log house \| log cabin \| Log house
+- **magasan** — store \| Store  *(also: money-and-trade)*
+- **magasano'guom** — store \| store house \| Store  *(also: money-and-trade)*
+- **menjapsgeg** — door knob \| Door knob  *(also: household)*
+- **menjipuguejg** — post \| fence post \| Post
+- **mi'jano'guom** — bathroom \| outhouse \| washroom \| Bathroom  *(also: household)*
+- **msaqtaqt** — floor \| Floor  *(also: household)*
+- **mtuigan** — rafter \| gable \| Rafter
+- **mulin** — mill \| machine \| Mill  *(also: work)*
+- **naji'gat** — going to build own house at (location) \| going to build own camp at (location) \| He/she is going to build his/her house at (location)  *(also: making-and-fixing)*
+- **nasqo'plaw** — board \| plank \| Board  *(also: trees)*
+- **news'g** — draughty \| breezy \| It is draughty  *(also: weather)*
+- **nqani'guom** — manger \| well house \| shelter \| stable \| Manger \| Well house  *(confidence: m)*
+- **nujigina'muo'guom** — school \| School  *(also: learning-and-teaching)*
+- **nutoqto'guom** — kitchen \| Kitchen  *(also: household)*
+- **nutsegnewet** — bricklayer \| mason \| Bricklayer  *(also: occupations)*
+- **oqwatqigan** — lean·to \| Lean-to
+- **pejigisgiaq** — ceiling \| Ceiling
+- **pemsaqas'g** — wall \| partition \| It is partitioned
+- **piligan** — new house \| new camp \| New house
+- **pisgwiwsit** — move in \| He/she move in  *(also: travel)*
+- **pittaqapegisg** — long enclosed structure (arena) \| long open structure (wharf, air strip) \| long strip of  material (fabric) \| It is a long enclosed structure  *(also: size-and-shape)*
+- **poqjiwsit** — move or vacate a residence \| He/she moves or vacates a residence  *(also: travel)*
+- **poqonaqalusgw** — wigwam pole \| Wigwam pole
+- **pugsaqte'gn** — cedar shingle \| wooden shingle \| Cedar shingle
+- **pugto'guom** — chimney \| Chimney  *(also: fire)*
+- **pugweliganig** — have many buildings or houses \| It has many buildings or houses  *(also: amounts)*
+- **punqatg** — cease living there \| He/she ceases living there  *(also: travel)*
+- **qoti** — pole for hanging dried meat inside wigwam \| beam/crossbar \| Pole for hanging dried meat inside wigwam
+- **saqawi'gan** — old house \| old camp \| Old house  *(also: condition)*
+- **temsaqas'g** — partition \| partitioned \| wall \| Partition \| It is partitioned
+- **tewiwsit** — move out \| vacate \| He/she moves out  *(also: travel)*
+- **ti'ls** — plank \| long square timber \| beam \| Plank  *(also: trees)*
+- **ti'lsi'gan** — house of beams \| house of square timbers \| House of beams
+- **tmoqta'w** — log \| beam \| large post \| Log  *(also: trees)*
+- **tuop'ti** — window \| Window  *(also: household)*
+- **tu'sati** — house extension \| porch \| shed \| Shed
+- **waqalusan** — fort \| Fort  *(also: conflict)*
+- **waqami'gan** — clean house \| Clean house  *(also: cleaning)*
+- **waqamiganig** — clean house \| clean dwelling \| clean building \| It is a clean house  *(also: cleaning)*
+- **welp'smat** — have well·heated house \| He/she has a well·heated house  *(also: temperature)*
+- **wenji'guom** — house \| House
+- **wesgowa'sit** — occupied \| dwell there \| occupy \| stay, live or situated at \| He/she is occupied \| He/she dwells there  *(confidence: m)*
+- **wi'g** — house \| dwelling \| home \| His/her house
+- **wi'gatigno'guom** — library \| Library  *(also: stories-and-writing)*
+- **wigit** — reside or dwell there \| He/she resides or dwells there
+- **wiguaq** — home \| His/her home
+- **wigwom** — wigwam \| dwelling \| camp \| Wigwam
+- **wenjui'gan** — French house \| French house
+- **guntewi'ganmit** — has a stone house \| has a rock house \| He/she has a stone house
+- **elsegni'ganigan** — stone house \| rock house \| Stone house
+- **piliganelsegnigana'q** — live in new stone house \|  He/she lives in a new stone house
+- **sasqi'ganmit** — has a wooden house \| He/she has a wooden house
+- **tetmns'ganmit** — own four-square house \| have four-square house \| He/she owns a four-square house
+- **tmjign** — fireplace \| Fireplace  *(also: fire)*
+- **amiuligana'q** — live in a good house \| live in a tolerable house \| He/she lives in a good/tolerable house
+- **tetmns'gani'gan** — four square-house \| A four-square house
+- **wenjui'ganamu'g** — resembles a French house \| It resembles a French house.
+- **aniapsuinuo'guom** — convent/monastery \| Convent/monastery  *(also: church-rituals)*
+- **lagga'palqanasg** — has basement \| has footings \| foundation \| It has a basement, footings, foundations
+- **u'sega'gn** — deserted cabin \| A deserted cabin
+- **weligana'q** — lives in a good house \| He/she lives in a good house
+- **mejigan** — dirty house \| A dirty home  *(also: cleaning)*
+- **la'qign** — stanchion \| upright post, pole or support \| A stanchion is an upright pole, post, support.
+- **tmoqtawi'ganmit** — has a log house \| He/she has a log house.
+- **guntewi'gana'q** — lives in a stone house \| lives in a rock house \| He/she lives in a stone house
+- **elsegnignji'jiganmit** — has a small brick house \| He/she has a small brick house
+- **mejiganig** — home is dirty \| house is dirty \| The home is dirty.  *(also: cleaning)*
+- **pitui'gatg ** — lining the interior of the dwelling \| He/she lines the interior of the dwelling.
+- **nnui'gan** — Indigenous house \| Indigenous house
+- **taliganig** — what sort of build \| how many floors \| What sort of build, how many floors?  *(also: question-words)*
+- **elsegni'ganmit** — has a stone house \| has a brick house \| He/she has a stone house
+- **mawulisasqi'gan** — good wooden house \| A very good wooden house
+- **taligana'q** — What sort of house does he/she occupy? \| What sort of house does he/she occupy  *(also: question-words)*
+- **elsegnigani'gat** — builds self a stone house. \| He/she builds himself/herself a stone house
+- **mimgusgawi'guom** — round house \| A round house
+- **masgwi'ganmit** — has birch covered house. \| owns birch covered house \| He/she has a birch covered house.
+- **msigui'ganmit** — has thatched house \| He/she has a thatched house.
+- **masgwi'gana'q** — lives in a birch covered house \| He/she lives in a birch covered house.
+- **apsi'guom** — small house \| A small house
+- **usgijigwegua'toq** — cements it \| He/she cements it.  *(also: making-and-fixing)*
+- **sasqi'gan** — wooden board house \| A wooden board house
+- **sasqi'gano'guoma'q** — occupies a wooden house \| lives a wooden house \| He/she occupies a wooden house.
+- **teliganig** — built in that manner \| It is built in that manner
+- **mimgusgawo'guomgeg** — place of round houses \| A place of round houses
+- **tmoqta'wi'gana'q** — occupies a log house \| lives in a log house \| He/she occupies a log house.
+- **unisgi'guom** — dwelling with a hole to let smoke out \| A dwelling with a hole to let smoke out
+- **espiganig** — house is high \| house is multi-storied \| house is tall \| The house is high
+- **piliganlsegni'ganiganig** — new stone houses there \| There are new stone houses there
+- **guntewgse'gnign** — stone wall \| A stone wall
+- **newgtiganig** — one-story house \| One-story house
+- **weliguomgnmit** — Has a good house. \| He/she has a good house.
+- **tetmnsegani'gana'q** — live in a square house \| He/she lives in a square house
+- **elsegeni'ganji'jigana'q** — lives in a small brick house \| He/she lives in a small brick house.
+- **elsegeni'ganji'jiganamu'g** — looks like a brick house \| It looks like a brick house
+- **poqwasni'gan** — house roofed with birch bark \| A house roofed with birch bark
+- **welisasqi'gan** — nice wooden house \| A nice wooden house
+- **espi'gan** — A tall house \| A high house \| Multi-storied house. \| A high/tall house
+- **pgawi'guoma'q** — House covered in spruce bark. \| He/she lives in a house covered in spruce bark.
+- **apsi'ganmit** — have small house \| He/she has a small house
+- **masgwi'gan** — birch bark covered house \| A birch bark covered house
+- **teli'gana'q** — Lives in that kind of house. \| He/she lives in that kind of house.
+- **msigui'gan** — thatched house \| Thatched house
+- **piligana'q** — has new house \| He/she has a new a home
+- **guntewi'gat** — build self a stone house \| He/she builds themself a stone house.
+- **taligano'guomga'q** — What sort of house does he/she have? \| What sort of house does he/she have?  *(also: question-words)*
+- **aniapsuinui'sguo'guom** — convent for nuns \| A convent for nuns  *(also: church-rituals)*
+- **elsegeni'ganji'ji'gat** — builds a small brick house for him/her self \| He/she builds a small brick house for him/her self
+- **mu waqami'ganinug** — not a clean house \| Not a clean house  *(also: cleaning)*
+- **tmoqta'wi'gano'guoma'q** — occupies a log house \| He/she occupies a log house.
+- **tmoqta'wi'gan** — building made of logs \| building made of beams \| log house \| log cabin \| building made of logs (loghouse)
+- **weligano'guomga'q** — live in a good house \| He/she lives in a good house
+- **teligano'guomga'q** — have that kind of house \| He/she has that kind of house
+- **paqaqm** — Back of the house \| Back of the house
+- **elsegeni'ganji'ji'gan** — small brick house \| A small brick house
+- **piliganig** — new homes built there \| new houses there \| There are new homes built there
+- **elsegni'gana'q** — live in a stone house \| live in a brick house \| He/she lives in a stone house
+- **elisqi'gan** — front of a house \| The front of a house.
+- **tetmnsegani'gat** — builds a four square house \| He/she builds a four square house
+- **pitu'igit ** — covers the dwelling in branches \| He/she covers the dwelling in branches.
+- **msigui'ganapt'g** — it resembles a thatched house to him/her \| It resembles a thatched house to him/her.  *(also: seeing)*
+- **sasqi'gan** — wooden dwelling/house/cabin made of boards \| A wooden dwelling/house/cabin made of boards
+- **ewle'jigana'q** — live in a poor house \| He/she lives in a poor house
+- **sasqi'gana'q** — occupies a wooden house \| He/she occupies a wooden house.
+- **apsi'guoma'q** — live in small house \| He/she lives in a small house
+- **pijiganig** — There are long houses there. \| There are long houses there.
+- **temoqtawi'gano'guomit** — has a log house \| He/she has a log house.
+- **teliguomgnmit** — have that kind of house \| He/she has that kind of house
+- **piliganlsegni'ganigan** — new stone house \| A new stone house
+- **tetmnsegano'guom** — square house \| A square house 
+- **mu mejiganinug** — not a dirty house \| It is not a dirty house.  *(also: cleaning)*
+- **espi'guomgeg** — place of high houses \| place of tall houses \| A place of high houses
+- **msigui'gana'q** — occupy a thatched house \| He/she occupies a thatched house.
+- **piligana'q** — live in new house \| He/she lives in a new house
+- **apsi'gan** — small house \| Small house
+- **tali'guomgnmit** — what sort of house does he/she have \| What sort of house does he/she have?  *(also: question-words)*
+- **nqanigan** — old house \| An old house  *(also: condition)*
+- **gli'gn** — flagpole \| snack \| hold-over until... \| large post \| temporary support \| prop \| Flagpole \| Something to hold you over until the next...  *(also: food)*  *(confidence: m)*
+- **msigui'ganamu'g** — resembles a thatched house \| It resembles a thatched house.
+- **getuipiliganelsegni'gani'gat** — wants to build a new stone house \| He/she wants to build a new stone house.
+- **weliganig** — well built house \| good house \| A well built house
+- **ujigan** — house with no roof \| A house with no roof.
+- **elsegenigenji'jiganig** — all small brick houses \| They are all small brick houses.
+- **lamlotaqan** — an enclosure  *(confidence: m)*
+- **elsegenigenji'jiganuapt'g** — sees it as a small brick house \| He/she sees it as a small brick house.  *(also: seeing)*
+- **pgawi'gan** — spruce bark house \| A house covered in spruce bark.
+- **pqawi'ganmit** — have a spruce bark covered house \| He/she has a spruce bark covered house
+- **sasqi'gano'guomit** — has a wooden board house \| He/she has a wooden board house.
+- **pilisasqi'gan** — new wooden board house \| A new wooden board house.
+- **guntewi'gan** — rock house \| stone house \| A rock/stone house
+- **pqawi'gana'q** — live in a house covered in spruce bark \| He/she lives in a house covered in spruce bark
+- **maqi'gan** — large house \| A large house
+
+## Archived entries (lower priority)
+
+- **asoqon'gaqan\*\*** — railroad bridge
+- **a'sutmo'guom** — church
+- **enaqan** — spruce bough (used as floor covering in wigwam) \| Spruce bough
+- **ga'qanipsi\*\*** — entranceway pole (for wigwam)
+- **gataqam\*\*** — upper (rear) wigwam section
+- **gini'swiguom\*\*** — point of wigwam
+- **lasinamei** — chimney
+- **malqwi'gn\*\*** — pole or weighty object used to secure or hold down wigwam covering
+- **msgiguom\*\*** — hay den
+- **p'si** — wigwam pole
+- **tmoqta'wi'gan** — log house \| log cabin \| Log house
+- **ujigan\*\*** — abandoned camp \| wigwam \| house
+- **weliget** — live in good location \| Lives in a good location

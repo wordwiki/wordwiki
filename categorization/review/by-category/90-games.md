@@ -1,0 +1,110 @@
+# Games & Play (`games`)
+
+Theme: *Music & Games* — 94 entries (+9 archived)
+
+- **alje'maqan** — baseball \| Baseball
+- **alje'maqanatgw** — baseball bat \| Baseball bat
+- **alje'mat** — play ball \| He/she is playing ball
+- **alje'muinu** — baseball player \| Baseball player  *(also: people)*
+- **apatte'g** — win it back \| He/she wins it back
+- **apatte'mat** — win back a loss \| He/she wins back
+- **apatto'sit** — break even \| He/she wins back equal amount for him/herself  *(also: money-and-trade)*  *(confidence: m)*
+- **apigjilu'ta'tl** — skunk (in a game like cribbage) \| He/she skunks someone
+- **apsute'gan** — doll \| gift \| present \| Doll \| Gift  *(also: social-life)*
+- **atgnewatl** — deals to him/her \| distribute (playing) cards to \| He/she distributes (playing) cards to him/her
+- **atgnewet** — deal \| He/she deals
+- **atnamgewei** — checker game \| Checker game
+- **atnaqan** — checker \| Checker
+- **atnaqanei** — checker board \| Checker board
+- **atnat** — play checkers \| He/she plays checkers
+- **awanmila'sit** — plays poorly \| He/she plays poorly
+- **elamgo'lajig** — pile \| play solitaire \| He/she piles them (planks)  *(also: putting-and-placing)*
+- **elaqalsewatl** — play a gambling game for \| play for (in cards and board games) \| He/she plays for him/her
+- **elegetas'g** — item to be raffled off \| prize in game of chance \| Raffled item
+- **elegetoq** — raffle (off) \| He/she raffles it
+- **elege'wi'sgw** — queen \| queen in deck of cards \| Queen  *(also: people)*
+- **elege'wit** — king \| king in deck of-cards \| King  *(also: people)*
+- **elutuatl** — impersonate \| imitate \| He/she imitates someone  *(confidence: m)*
+- **gespu'tuatl** — defeat (in game) \| beat (in game) \| He/she beats him/her
+- **gespu'tuet** — wins \| win by overcoming \| He/she wins a game
+- **getmete'gl** — win all \| break all \| destroy all \| He/she wins all of them \| He/she breaks all of them  *(also: breaking)*
+- **gise'g** — have good time \| fun to be with \| have fun \| enjoyable \| He/she is having a good time \| He/she is fun to be with  *(also: social-life)*
+- **giso'qon** — fun time \| lots of fun! (interjection) \| Fun
+- **gitmaqan** — count stick (in waltes game) \| Count stick (in waltes game)
+- **giwto'qatesgatultijig** — chase around in a circle \| They (plural) chase each other around in a circle  *(also: ways-of-moving)*
+- **giwto'qoto'sit** — spins self \| skip rope (Nova Scotia) \| He/she spins self  *(also: ways-of-moving)*
+- **glap** — club (in cards) \| Club (in playing cards)
+- **igatne'suinu** — racer \| Racer  *(also: people)*
+- **igatne'we'sm** — racer (animal) \| race horse \| Racer (animal)  *(also: farm-animals)*
+- **igatne'wet** — race \| win a race \| He/she races
+- **ila'sgugutimg** — card playing time \| card playing place \| Card playing time or place
+- **ila'sgw** — playing card \| Playing\_card
+- **jampo'qiet** — somersault \| He/she somersaults  *(also: ways-of-moving)*
+- **jaqalta'tl** — finish off fast (in boxing, game or cards) \| He/she finishes him/her of fast
+- **je'g** — jack (in cards) \| Jack (name) \| Jack
+- **lasgugutimg** — card playing time \| card playing place \| Card playing time or place
+- **lasgugwaqan** — card game \| Card game
+- **lasgugwet** — plays a card game \| He/she is plays a card game
+- **la'sgw** — playing card \| Playing card
+- **maligeiwatl** — play with \| amuse \| He/she plays with him/her  *(also: social-life)*
+- **maligo'tg** — play with \| amuse \| He/she plays with it
+- **menta'tl** — beat or strike  out(in a game) \| knock off \| remove by striking \| He/she beat him/her out  *(also: hitting)*
+- **mgumie'jg** — horseshoe game \| Game of horseshoes
+- **mila'sit** — play \| He/she plays
+- **mila'sualatl** — plays with \| toy with \| He/she plays with him/her
+- **mila'suaqan** — toy \| Toy
+- **mila'suatg** — plays with \| toy with \| He/she plays with it
+- **mistun** — ace of spades \| Ace of spades
+- **na'goqom** — ice skate \| Ice skate  *(also: vehicles)*
+- **na'naq** — fives (in cards) \| fives (in sizes) \| fives (in pairs or more) \| Fives
+- **napto'sit** — break even (gambling) \| He/she breaks even
+- **newtamu'g** — one color \| flush (in poker) \| It is of one color  *(also: colors)*
+- **newtui'gasit** — have single mark \| ace card \| It has a single mark \| Ace card
+- **nujigoqwa'luet** — wrestler \| wrestler \| repossesser (Nova Scotia) \| repossesser (Nova Scotia) \| Wrestler \| He/she is a wrestler  *(also: occupations)*
+- **nujipetqa'muet** — referee \| mediator \| umpire \| Referee  *(also: occupations)*
+- **o'pliwenaqto'sit** — mistakenly raise the pot (poker) \| skip wrong (Shubenacadie) \| He/she mistakenly raises the pot
+- **papit** — amuse self \| He/she amuses himself/herself
+- **papitaqan** — toy \| item made for enjoyment \| Toy
+- **papuaqan** — amusement \| fun time \| celebration \| Amusement  *(also: social-life)*
+- **pemipqamit** — slide \| coast along \| skate along \| He/she is coasting or skating along  *(also: ways-of-moving)*
+- **pi'g** — spade (in cards) \| Spade (card suit)
+- **pisgweto't** — elected \| hit into (net, goal or hole) \| He/she/it is elected \| He/she/it hits it into (net, goal or hole)  *(also: leadership-and-law)*
+- **pitto'tultimg** — auction forty·five (card game) \| Auction forty five (card game)
+- **putmat** — come out empty·handed \| miss \| lose out on \| He/she comes out empty·handed  *(confidence: m)*
+- **sgu'taqa'm** — educated athlete \| amateur \| Educated athlete  *(also: people)*
+- **si'staq** — pair or more of treys (in cards) \| Pair or more of treys  *(also: numbers)*
+- **ta'puaq** — deuces \| Deuces
+- **ta'puowa'j** — second one \| deuce(playing cards) \| Second one \| Duece  *(also: numbers)*
+- **toqanqaja't** — paired up (in stud poker) \| Paired up(in stud poker)
+- **tu'aqan** — ball \| Ball
+- **tu'aqanatgw** — baseball bat \| Baseball bat
+- **tu'at** — play baseball \| play ball \| He/she plays baseball
+- **uggamlamun** — heart \| heart (in cards) \| His/her heart \| Heart (in playing cards)  *(also: body-parts)*
+- **utapi'j** — little bow \| His/her little bow  *(also: hunting)*
+- **wali'j** — snowball \| Snowball  *(also: weather)*
+- **waltes** — waltes game \| wooden plate used in dice game \| Mi'gmaw game of chance \| Game
+- **waltestaqan** — waltes dice \| round bones or dice used in dice game \| Waltes dice
+- **waltestat** — play waltes dice \| He/she plays the waltes dice game
+- **waltesta'timg** — playing Mi'gmaw game of chance \| dice game playing \| Playing Mi'gmaw game of chance
+- **welnat** — have good hand (in a card game) \| He/she has a good hand (in a card game)
+- **wenaqpmaqan** — lacrosse stick \| Lacross stick
+- **wenjujgwej** — French woman \| Queen of Spades in deck of cards \| French woman  *(also: peoples-and-nations)*
+- **wesua'teget** — haul in pot (in poker game) \| He/she hauls in a pot (in a poker game)
+- **wigji'jaqan** — toy \| Toy
+- **nipinigatne'get** — night racing \| night races \| He/she does night racing
+- **atam** — a checker that becomes "adam" after reaching the opposite end of the board \| A checker that becomes "adam" after reaching the opposite end of the board.
+- **papultimgewei** — object to play with (board game, toy, puzzle) \| Plaything
+- **qo'paniej** — pawn \| checker \| Pawn or checker
+- **papitaqan** — toy
+
+## Archived entries (lower priority)
+
+- **ge'l\*\*** — heart (playing cards)
+- **glujjewtaqta'sit\*\*** — skip with cross(jump rope)
+- **goqqajiwnaqto'sit\*\*** — skip correctly
+- **l'lipqama'taqan\*\*** — (toy) top
+- **maqtewipqaji'jit\*\*** — spade (in cards)
+- **ta'imn** — diamond card \| Diamond playing card
+- **waju'aq\_wen'ji'guom\*\*** — full house (in poker)
+- **wa'qalopsg'saw\*\*** — marble
+- **wette'get** — win \| he/she wins

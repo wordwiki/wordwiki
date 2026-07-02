@@ -1,0 +1,149 @@
+# Condition & State (`condition`)
+
+Theme: *Qualities & Amounts* — 132 entries (+10 archived)
+
+- **alm'stapueg** — shriveled up \| It shriveled up from soaking in liquid  *(also: water)*
+- **alm'stapuet** — shriveled up from soaking in water \| He is shriveled up from soaking in the water  *(also: water)*
+- **amjepit** — tipsy \| He/she is tipsy
+- **amjimoqpit** — stuck \| He/she frozen in position
+- **amjimoqteg** — stuck \| It is stuck
+- **amjimoqtesg** — caught and stuck \| It is caught and is stuck
+- **amjimoqtesing** — caught and stuck \| He/she is caught and stuck
+- **amjimoqwa'latl** — stuck inside of hole (pipe) \| stuck and laying down \| He/she gets someone/something animate that is lying down stuck
+- **amjimoqwa'sit** — stuck \| unable to move \| He/she is stuck
+- **amjimoqwa'toq** — cause to be stuck \| He/she caused it to be stuck
+- **an'stawe'g** — delicate \| fragile \| He/she is delicate
+- **apitapueg** — waterlogged \| It is swollen by moisture  *(also: water)*
+- **apitapuet** — waterlogged \| He/she is waterlogged  *(also: water)*
+- **aptlamig** — stuffy \| suffocate \| It is suffocating
+- **apt'tesg** — stuck \| It is stuck
+- **apt'tesing** — stuck \| He/she is stuck
+- **apt'tesmatl** — cause to get stuck \| He/she caused him to get stuck
+- **apt'testoq** — cause to get stuck \| stuck \| He/she causes it to get stuck
+- **a'qatapit** — half intoxicated \| somewhat intoxicated \| He/she is somewhat intoxicated
+- **ejaqan'jetesgmat** — wear out shoe(s) on one side \| He/she wears out him/her shoes on one side  *(also: clothing)*
+- **esge'g** — raw \| uncooked \| It is raw  *(also: food)*
+- **esgig** — green \| not dryed(firewood) \| uncured \| It is uncured  *(also: trees)*
+- **esgit** — green(of foliage) \| uncured \| It is green  *(also: plants)*
+- **essit** — ripe \| It is ripe  *(also: food)*
+- **etlipiasatl** — dry \| cure (plank) \| He/she is drying it (shirt)
+- **etlipiasg** — dry \| cure (wood) \| He/she is drying it
+- **etlipiasit** — dry \| It (tree) is drying
+- **etlipiateg** — drying up \| cure (of green wood) \| It is drying up
+- **etteg** — ripe \| It is ripe  *(also: food)*
+- **ewe'g'pit** — loose \| It(sweater) is loose
+- **ewe'g'teg** — loose \| It is loose
+- **ewle'jg** — poor \| poor condition \| It is in poor condition
+- **ewle'jit** — unfortunate \| needy \| poor \| poor condition \| He/she is needy  *(also: money-and-trade)*
+- **ewnasiaq** — gone awry \| mixed up \| topsy turvy \| confused \| Everything is gone awry  *(confidence: m)*
+- **gaqapiasit** — dried up \| finished drying up \| finished drying out \| thoroughly dry \| It (tree) is dried up
+- **gaqapiateg** — dried up \| thoroughly dry \| It is dried up
+- **gaqg'g** — wear out (clothing article) \| He/she wears it out  *(also: clothing)*
+- **gaqgmat** — wear out clothes \| He/she wears out his/her clothes  *(also: clothing)*
+- **gaqguatl** — wear out (clothing article) \| He/she wears it(shirt) out  *(also: clothing)*
+- **gaqiet** — exhausted \| come to an end \| finished \| ended \| He/she is finished  *(also: amounts)*  *(confidence: m)*
+- **gaqjeg** — brittle \| It is brittle  *(also: texture-and-materials)*
+- **gaqjet** — brittle \| He/she/it is brittle  *(also: texture-and-materials)*
+- **gaqtesgmat** — wear out footwear \| He/she wears out his/her footwear  *(also: clothing)*
+- **gesp'g** — dull \| blunt \| not sharp \| It is blunt
+- **gesplatl** — make dull \| make blunt \| He/she makes it(knife) dull
+- **gesp'toq** — make dull \| make it blunt \| He/she makes it dull
+- **getgiet** — drunk \| He/she is drunk  *(confidence: m)*
+- **getmenejig** — extinct \| totally wiped-out through death \| They are extinct  *(also: animals)*  *(confidence: m)*
+- **getmenet** — all dead \| extinct \| deceased \| They are all dead  *(confidence: m)*
+- **gi'g** — sharp \| sharp \| house \| home \| It(knife) is sharp \| It is sharp \| Your house  *(also: dwellings)*
+- **gisipiasit** — finished drying \| He/she is finished drying
+- **gisipiateg** — finished drying \| It is finished drying
+- **gislassit** — turn ripe \| It(berry) turns ripe  *(also: plants)*
+- **gislasteg** — turn ripe \| It turns ripe  *(also: plants)*
+- **gispasas'g** — cured \| dried out(wood) \| It is cured  *(also: trees)*
+- **gispasasit** — cured \| dried out \| It(plank) is cured  *(also: trees)*
+- **gispasatl** — dry \| He/she dries him/her/it
+- **gispasg** — dry \| He/she dries it
+- **gispasit** — dry \| He/she is dry
+- **gispateg** — dry \| It is dry
+- **gispnapewit** — have a tired look \| He/she looks tired  *(also: appearance)*
+- **gispneg** — tired \| It is tired
+- **gispnet** — tired \| He/she is tired
+- **gispniet** — become tired \| He/she becomes tired
+- **gispnulatl** — make tired \| He/she makes him/her tired
+- **gitnmat** — have difficulty \| have hard time \| He/she has difficulty  *(confidence: m)*
+- **gtigiewuti** — drunkenness \| Drunkeness  *(also: character)*  *(confidence: m)*
+- **jaqalipiasatl** — dry quickly (sweater) \| He/she dries it(sweater) quickly
+- **jaqalipiasg** — dry quickly (clothing) \| He/she dries it quickly
+- **jigaweteg** — inactive \| dull \| boring \| quiet \| It is dull  *(confidence: m)*
+- **jijiwa'qiaq** — rusty \| It is rusty  *(also: colors)*
+- **jijiwa'qiet** — rusty \| It (pot) is rusty  *(also: colors)*
+- **jilta's'g** — marked (from a strike) \| It is marked from a strike
+- **jilta'sit** — marked (from a strike) \| It (board) is marked from a strike
+- **maw\_pilei** — very new \| very new \| It is very new \| It(shirt) is very new
+- **mejige'g** — dirty \| dirty \| He/she is dirty \| It is dirty
+- **melgignaq** — strong \| It is strong  *(confidence: m)*
+- **menagwisg** — wobbly \| unbalanced \| tipsy \| It is wobbly
+- **menagwising** — wobbly \| unbalanced \| tipsy \| He/she is wobbly
+- **menaje'jg** — fragile \| delicate \| It is fragile
+- **menaje'jit** — frail \| fragile \| delicate \| He/she is frail  *(also: sickness)*  *(confidence: m)*
+- **menaqanaq** — weak \| It is weak
+- **menaqanat** — weak \| He/she is weak  *(also: body-descriptions)*  *(confidence: m)*
+- **mimajig** — alive \| It is alive  *(confidence: m)*
+- **mimajit** — alive \| He/she is alive  *(confidence: m)*
+- **mimajuaqan** — life \| living \| Life  *(confidence: m)*
+- **misissiaq** — get raggedy \| It is raggedy
+- **misissiet** — dressed raggedly \| get raggedy \| He/she is dressed raggedly  *(also: clothing)*
+- **musige'g** — bare \| bare \| empty \| empty \| clear \| clear \| It(ground) is bare \| It is bare
+- **nenmue'g** — damp \| damp \| It(shirt) is damp \| It is damp  *(also: water)*
+- **newtui'gas'g** — have single mark \| It has a single mark  *(confidence: m)*
+- **niwa'latl** — dry out \| empty all liquid out \| He/she dries it out
+- **niwa's'g** — become dry \| get dry \| all liquid empties out \| evaporate \| It becomes dry  *(also: water)*
+- **niwa'sit** — become dry \| get dry \| all liquid empties out \| evaporate \| It becomes dry  *(also: water)*
+- **niwa'toq** — dry out \| empties/removes all liquid out \| He/she dries it out
+- **niwe'g** — dry \| dry \| empty (of liquid) \| empty (of liquid) \| He/she is dry \| It is dry
+- **niwiga'satl** — wipe dry \| He/she wipes him/her dry  *(also: cleaning)*
+- **niwiga's'g** — wipe dry \| He/she wipes it dry  *(also: cleaning)*
+- **niwoqsit** — dried out (from heat) \| It ( ) dries out from heat  *(also: cooking)*  *(confidence: m)*
+- **niwoqteg** — dried out (from heat) \| It dries out from heat  *(also: cooking)*  *(confidence: m)*
+- **oqoqiaq** — mold \| fungal growth on damp or decaying matter \| It is moldy
+- **pa'ge'g** — sober \| He/she is sober  *(also: character)*  *(confidence: m)*
+- **pajijipilei** — newest \| newest one \| newer than new \| newer than new \| It is the newest \| The newest...
+- **pegaqanqaiaq** — grimy \| It is grimy
+- **pesga'qiputeg** — chafed \| It is chafed
+- **pesqaiaq** — peel \| It peels
+- **pilei** — new \| new \| New \| New
+- **pilijilta's'g** — newly blazed thing \| newly marked thing \| It is newly blazed
+- **sa'qawei** — old \| old \| Old \| Old
+- **sa'qawejjuei** — old or worn out \| It is old or worn out
+- **saqawi'gan** — old house \| old camp \| Old house  *(also: dwellings)*
+- **sa'se'wa's'g** — change \| It changes
+- **sa'se'wa'sit** — change \| He/she changes
+- **sugulegaq** — rotten \| It is rotten
+- **sugulegat** — rotten \| He/she is rotten
+- **telmnaqanaq** — so weak \| It is so weak
+- **telmnaqanat** — so weak \| He/she is so weak
+- **tepignaq** — strong enough \| It is strong enough
+- **tepignat** — strong enough \| He/she is strong enough
+- **tewje'g** — have hole \| have hole \| ...has a hole \| It has a hole
+- **welaqapit** — slightly intoxicated \| feel good (from drinking) \| He/she is slightly intoxicated
+- **welipiasit** — thoroughly dried \| kiln·dried \| He/she is thoroughly dry
+- **welipiateg** — thoroughly dry \| kiln-dried \| It is throughly dry
+- **weljepit** — tipsy \| feel good (from drinking) \| He/she is tipsy
+- **winjig** — bad condition \| spoiled \| It is in a bad condition
+- **winjit** — bad condition \| unclean \| He/she is in bad condition
+- **ewlawsuaqan** — a poor life \| A poor life  *(also: money-and-trade)*  *(confidence: m)*
+- **guntewiet** — turns into stone \| becomes petrified \| He/she turns into stone, becomes petrified  *(confidence: m)*
+- **ewlqwan** — shabby/ragged clothing \| Shabby/ragged clothing  *(also: clothing)*
+- **sa'se'wa'tasit** — is changed \| He/she/it is changed  *(confidence: m)*
+- **ewle'juti** — poverty \| poorness \| Poverty/poorness  *(also: money-and-trade)*
+- **nqanigan** — old house \| An old house  *(also: dwellings)*
+
+## Archived entries (lower priority)
+
+- **anastawto'gweg** — unsteady \| It is unsteady
+- **anastawto'gwet** — unsteady \| Unsteady
+- **ejela'sit\*\*** — helpless \| He/she is helpless
+- **gaqatejiaq** — worn out \| It is worn out
+- **gaqatejiet** — worn out \| He/she/it is worn out
+- **gatteg** — unripe \| green \| it is unripe
+- **piluei** — different \| different \| changed \| changed \| It is different \| They are different
+- **seie'g** — loose \| loose \| It is loose \| It is loose
+- **wasamgispasit** — too dry \| too dried out \| Too dry
+- **wasamgispateg** — too dry \| too dried out \| Too dry

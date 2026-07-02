@@ -1,0 +1,41 @@
+# Question Words (`question-words`)
+
+Theme: *Places & Little Words* — 37 entries (+0 archived)
+
+- **goqwei** — what \| What
+- **goqwei\_net** — what is this? \| what is that? \| What is that?
+- **goqwei\_ta** — what about it? \| what for? \| What about it?
+- **goqwei\_ugjit** — what for? \| why? \| What for?
+- **me'\_goqwei** — anything else? \| still what \| Anything else?
+- **me'\_wen** — anyone else \| Anyone else  *(also: people)*
+- **pipanigesit** — ask \| enquire \| He/she enquires  *(also: talking)*
+- **talamu'g** — what color? \| what kind? \| What color is it?  *(also: colors)*
+- **talawtig** — what is the cost? \| What is the cost of it?  *(also: money-and-trade)*
+- **talawtit** — what is the cost? \| What is the cost of him/her/it?  *(also: money-and-trade)*
+- **tale'g** — at what time? \| what is wrong with...? \| how is he/she? \| At what time...? \| What is wrong with him/her?
+- **tallugweg** — how does it work? \| How does it work?  *(also: work)*
+- **tallugwet** — what is he/she doing? \| what type of work does he/she do? \| what does he/she do? \| What is he/she doing? \| What type of work does he/she do?  *(also: work)*
+- **taluegeg** — what is it used for? \| what is its purpose? \| What is it used for?
+- **talueget** — what is it used for? \| what is its purpose? \| What is he/she/it used for?
+- **tal\_gis** — how come? \| why? \| How come?
+- **tami** — where? \| Where?
+- **ta'n** — when \| where \| When
+- **ta'nug** — when (in the future) \| When (in the future)  *(also: time)*
+- **ta's'g** — how much? \| some \| How much?  *(also: amounts)*
+- **ta'sipuna't** — how old? \| How old is he/she  *(also: age)*
+- **ta'sit** — how much? \| how many? \| How much is there?  *(also: amounts)*
+- **ta'sitpa'q** — how many nights? \| How many nights?  *(also: time)*
+- **ta'sugunit** — on what date \| what is the date? \| What date is it?  *(also: calendar)*
+- **ta'sunatl** — has how much (many) of? \| has what quantity? \| How much does he/she have?  *(also: amounts)*
+- **ta's\_ajiet** — what time is it? \| What time is it?  *(also: time)*
+- **tatuje'g** — how old? \| How old is he/she?  *(also: age)*
+- **tegen** — which? \| Which one?
+- **toqo\_na** — is that so? \| in fact \| Is that so?
+- **wen** — who \| Who is that
+- **wen\_net** — who's that? \| who's this? \| Who's that?
+- **wen\_tana** — who is that? \| who's this? \| who is he/she? \| Who is that?
+- **taliganig** — what sort of build \| how many floors \| What sort of build, how many floors?  *(also: dwellings)*
+- **taligana'q** — What sort of house does he/she occupy? \| What sort of house does he/she occupy  *(also: dwellings)*
+- **taligano'guomga'q** — What sort of house does he/she have? \| What sort of house does he/she have?  *(also: dwellings)*
+- **tatujitg** — how fast is the current?  \| How fast is the current?   *(also: sea-and-rivers)*
+- **tali'guomgnmit** — what sort of house does he/she have \| What sort of house does he/she have?  *(also: dwellings)*

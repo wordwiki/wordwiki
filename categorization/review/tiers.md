@@ -25,18 +25,18 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **e'pit** — woman \| Woman  *[people]*
 - **e'pite'ji'j** — young girl \| Young girl  *[people]*
 - **elugwet** — operates \| work \| He/she works  *[work]*
-- **epa'sit** — sit down \| He/she sits down  *[position]*
+- **epa'sit** — sit down \| He/she sits down  *[posture]*
 - **epteg** — hot \| hot temperature \| It is hot  *[temperature, weather]*
 - **esamqwat** — drink \| He/she drinks  *[eating-and-drinking]*
 - **etlatalg** — eat \| He/she is eating  *[eating-and-drinking]*
 - **geitoq** — know about \| know \| have knowledge of \| aware of \| He/she knows about it  *[thinking]*
 - **gelu'lg** — good \| nice \| It is good  *[good-and-bad]*
 - **gelusit** — speak \| talk \| He/she speaks  *[talking]*
-- **gesalatl** — like \| love \| He/she loves him/her  *[emotions]*
+- **gesalatl** — like \| love \| He/she loves him/her  *[love-and-joy]*
 - **gesig** — winter \| It is winter  *[calendar]*
-- **gesnugwat** — sick \| He/she is sick  *[health]*
-- **getgwi'g** — run \| He/she runs  *[movement]*
-- **gewising** — hungry \| He/she is hungry  *[eating-and-drinking]*
+- **gesnugwat** — sick \| He/she is sick  *[sickness]*
+- **getgwi'g** — run \| He/she runs  *[ways-of-moving]*
+- **gewising** — hungry \| He/she is hungry  *[food, eating-and-drinking]*
 - **gigpesaq** — rain \| It is raining  *[weather]*
 - **giju'** — mother \| mom \| Mom  *[family]*
 - **ginu** — we \| us(inclusive) \| We  *[people]*
@@ -45,10 +45,10 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **gwitn** — canoe \| Canoe  *[boats]*
 - **ji'nm** — man \| Man  *[people]*
 - **jipji'j** — bird \| Bird  *[birds]*
-- **lmu'j** — dog \| Dog  *[animals]*
+- **lmu'j** — dog \| Dog  *[farm-animals]*
 - **lnu** — Mi'kmaw person \| indigenous person \| native person \| aboriginal person \| first nations per  *[peoples-and-nations]*
 - **lpa'tuj** — boy \| Boy  *[people]*
-- **maja'sit** — leave \| move \| go \| He/she leaves  *[travel]*
+- **maja'sit** — leave \| move \| go \| He/she leaves  *[going-and-coming]*
 - **maqamigew** — land \| ground \| Land  *[land]*
 - **maqtawe'g** — black \| black \| He/she/it is black \| It is black  *[colors]*
 - **me'\_tale'g** — How is he/she? \| How is he/she?  *[greetings]*
@@ -59,7 +59,7 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **mila'sit** — play \| He/she plays  *[games]*
 - **mimajuinu** — human being \| person \| Human being  *[people]*
 - **miti's** — tree \| Tree  *[trees]*
-- **ms't** — all \| every \| All  *[small-words]*
+- **ms't** — all \| every \| All  *[small-words, amounts]*
 - **mu** — not  *[small-words]*
 - **mui'n** — bear \| Bear  *[animals]*
 - **na'gu'set** — sun \| sun  *[sky]*
@@ -74,7 +74,7 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **nugumi** — granny! \| grammie! \| Granny  *[family]*
 - **nutg** — hear \| He/she hears it  *[hearing]*
 - **p'tewei** — tea \| Tea  *[food]*
-- **pewalatl** — want \| He/she wants him/her  *[emotions]*
+- **pewalatl** — want \| He/she wants him/her  *[thinking]*
 - **pipnaqan** — bread \| Bread  *[food]*
 - **pjila'si** — welcome \| come in and sit down \| You are welcome  *[greetings]*
 - **plamu** — salmon \| Salmon  *[fish]*
@@ -82,11 +82,11 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **pugwelg** — lots \| lots \| several \| several \| many \| many \| much \| much \| Lots \| Lots  *[amounts]*
 - **sapo'nug** — tomorrow \| Tomorrow  *[time]*
 - **si'st** — three (in counting) \| Three  *[numbers]*
-- **sipu** — river \| River  *[water]*
+- **sipu** — river \| River  *[sea-and-rivers]*
 - **suliewei** — money \| silver \| Money  *[money-and-trade]*
 - **ta'n** — when \| where \| When  *[question-words]*
 - **ta'pu** — two \| two (in counting) \| Two  *[numbers]*
-- **taqawaje'g** — sad \| feel depressed \| He/she is sad  *[emotions]*
+- **taqawaje'g** — sad \| feel depressed \| He/she is sad  *[fear-anger-sadness]*
 - **tata't** — father! \| dad \| Father  *[family]*
 - **tegig** — cold \| It is cold  *[temperature]*
 - **teluet** — says \| He/she says  *[talking]*
@@ -94,15 +94,15 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **tepgig** — night \| Night  *[time]*
 - **tet** — here \| Here  *[location-words]*
 - **tia'm** — moose \| Moose  *[animals]*
-- **ugpitn** — hand \| His/her hand  *[body]*
-- **ugpugugw** — eye \| His/her eye  *[body]*
+- **ugpitn** — hand \| His/her hand  *[body-parts]*
+- **ugpugugw** — eye \| His/her eye  *[body-parts]*
 - **ulagu** — yesterday \| Yesterday  *[time]*
-- **unji** — head \| His/her head  *[body]*
+- **unji** — head \| His/her head  *[body-parts]*
 - **wape'g** — white \| white \| He/she is white \| It is white  *[colors]*
 - **waqame'g** — clean \| clean \| He/she is clean \| It is clean  *[cleaning]*
 - **wastew** — snow \| fallen snow \| Snow  *[weather]*
-- **welta'sit** — happy \| glad \| He/she is happy  *[emotions]*
-- **wen** — who \| Who is that  *[question-words, people]*
+- **welta'sit** — happy \| glad \| He/she is happy  *[love-and-joy]*
+- **wen** — who \| Who is that  *[question-words]*
 - **wenji'guom** — house \| House  *[dwellings]*
 - **wi'sis** — animal \| beast \| mammal \| Animal  *[animals]*
 - **wisun** — name \| Name  *[talking]*
@@ -110,59 +110,68 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 
 ## Top-1000 (the further 900)
 
+- **Elsipugtug** — Big Cove \| Big Cove  *[places]*
+- **Epegwitg** — Prince Edward Island \| calm water \| Prince Edward Island  *[places]*
+- **Esg'soqonig** — Eskasoni \| Eskasoni, Nova Scotia  *[places]*
 - **Ganata** — Canada \| Canada  *[places]*
-- **Gisu'lgw** — Creator \| Creator  *[spirit-world]*
-- **Glusgap** — Glooscap (culture hero) \| Glooscap  *[spirit-world]*
+- **Gepeg** — Quebec \| Quebec  *[places]*
+- **Gesgapegiaq** — Gesgapegiaq, Quebec \| Where the river widens \| Gesgapegiaq, Quebec  *[places]*
+- **Gespe'g** — Seventh Mi'gmaq district \| Gaspe \| Gaspe  *[places]*
+- **Gisu'lgw** — Creator \| Creator  *[faith]*
+- **Glusgap** — Glooscap (culture hero) \| Glooscap  *[traditional-stories]*
 - **Jipugtug** — Halifax, NS \| Halifax, Nova Scotia  *[places]*
 - **Mi'gma'gi** — territory of the Mi'gmaq nation \| Mi'gmaq territory  *[peoples-and-nations, land]*
+- **Mi'gmewei** — pertaining to Mi'gmaq \| pertaining to Mi'gmaq \| belongs to Mi'gmaq \| belongs to Mi'gmaq \|   *[peoples-and-nations]*
 - **Mi'gmewi'sit** — speak Micmac \| He/she speaks the Micmac language  *[talking, peoples-and-nations]*
 - **Mulian** — Montreal \| Montreal, Quebec  *[places]*
-- **Nisgam** — God \| God  *[spirit-world]*
+- **Nisgam** — God \| God  *[faith]*
 - **Nuelewumg** — Christmas Day \| Christmas time \| Christmas Day  *[calendar]*
-- **Pa'gewumg** — Easter \| time of Easter  *[calendar, ceremony]*
-- **Pusu'l\_Puna'ne** — Happy New Year! \| I wish you (singular) a Happy New Year!  *[greetings, calendar]*
-- **Se'suguli** — Jesus Christ \| Jesus Christ  *[spirit-world, ceremony]*
-- **Se'ta'n** — Saint·Anne \| Saint Anne  *[spirit-world, ceremony]*
-- **Se'tane'umg** — Saint·Anne's Day \| Saint·Anne's Day  *[calendar, ceremony]*
+- **Pa'gewumg** — Easter \| time of Easter  *[calendar, church-rituals]*
+- **Se'suguli** — Jesus Christ \| Jesus Christ  *[faith]*
+- **Se'sus** — Jesus \| Jesus  *[faith]*
+- **Se'ta'n** — Saint·Anne \| Saint Anne  *[faith]*
+- **Se'tane'umg** — Saint·Anne's Day \| Saint·Anne's Day  *[calendar, church-rituals]*
 - **Ugtaqamgug** — Newfoundland \| Newfoundland  *[places]*
 - **Ulnuelewi** — Merry Christmas! \| Merry Christmas to you (singular)!  *[greetings, calendar]*
+- **Unma'gi** — Fourth Mi'gmaq district \| Cape Breton Island \| Fourth district (Cape Breton Island)  *[places]*
 - **a'gwesn** — hat \| Hat  *[clothing]*
-- **a'jijgopilaqan** — bandage \| Bandage  *[health]*
+- **a'jijgopilaqan** — bandage \| Bandage  *[healing]*
 - **a'papi** — rope \| fishing line \| Rope  *[tools, fishing]*
 - **a'papi'j** — thread \| twine \| string \| Thread  *[sewing-and-textiles, household]*
 - **a'pi** — net \| fishnet \| Net  *[fishing]*
 - **a'qataig** — half \| It is half  *[amounts]*
-- **a's'tuo'guom** — church \| Church  *[ceremony, dwellings]*
+- **a's'tuo'guom** — church \| Church  *[church-rituals, dwellings]*
 - **a'su'n** — blanket \| Blanket  *[household]*
-- **a'sutmaqan** — prayer \| religion \| Prayer  *[ceremony]*
-- **a'sutmat** — pray \| He/she prays  *[ceremony]*
-- **a't** — that \| That  *[small-words]*
+- **a'sutmaqan** — prayer \| religion \| Prayer  *[church-rituals, faith]*
+- **a'sutmat** — pray \| He/she prays  *[church-rituals]*
 - **a'tugwaqan** — story \| tale \| Story  *[stories-and-writing]*
 - **a'tugwet** — tell story \| He/she tells a story  *[stories-and-writing]*
 - **agnutmaqan** — story \| news \| report \| message \| discussion \| Story  *[stories-and-writing, talking]*
 - **agumegw** — herring \| Herring  *[fish]*
-- **ajioqjemin** — blackberry \| Blackberry  *[plants, food]*
-- **ajipuna't** — birthday \| it is his/her birthday  *[calendar, age]*
+- **ajioqjemin** — blackberry \| Blackberry  *[food, plants]*
+- **ajipuna't** — birthday \| it is his/her birthday  *[age, calendar]*
 - **ala** — that \| there \| that or there  *[location-words]*
-- **alame's** — mass \| Mass  *[ceremony]*
+- **ala'q** — swim about \| He/she swims about  *[swimming]*
+- **ala'sit** — go about \| He/she is going about  *[going-and-coming]*
+- **alame's** — mass \| Mass  *[church-rituals]*
 - **alanguat** — shopping \| He/she shops  *[money-and-trade]*
-- **alapegit** — crawl about \| crawl around \| crawl on all fours \| He/she/it crawls about  *[movement]*
-- **alapilaqan** — knapsack \| carrier \| Carrier  *[household, carrying]*
-- **alaqsing** — fly around \| flying \| He/she/it flies around  *[movement]*
-- **alawe'ji'j** — pill \| tablet \| Pill  *[health]*
+- **alapegit** — crawl about \| crawl around \| crawl on all fours \| He/she/it crawls about  *[ways-of-moving]*
+- **alapilaqan** — knapsack \| carrier \| Carrier  *[carrying, household]*
+- **alaqsing** — fly around \| flying \| He/she/it flies around  *[ways-of-moving]*
+- **alawe'ji'j** — pill \| tablet \| Pill  *[healing]*
 - **alawei** — pea \| Pea  *[food, plants]*
-- **algusuet** — climb about \| climb \| He/she climbs about  *[movement]*
+- **algusuet** — climb about \| climb \| He/she climbs about  *[ways-of-moving]*
 - **aligew** — clothing \| clothes \| garments \| Clothing  *[clothing]*
 - **alisqotg** — chew \| He/she chews it in his mouth  *[eating-and-drinking]*
 - **alje'maqan** — baseball \| Baseball  *[games]*
 - **alje'mat** — play ball \| He/she is playing ball  *[games]*
-- **aloqoman** — grape \| Grape  *[plants, food]*
+- **aloqoman** — grape \| Grape  *[food, plants]*
 - **alsusit** — boss \| boss \| supervise \| direct \| oversee \| Boss \| He/she bosses  *[occupations, work]*
-- **alt** — some \| Some  *[small-words]*
-- **alu'sat** — skinny \| lean \| He/she is skinny  *[body]*
+- **alt** — some \| Some  *[amounts]*
+- **alu'sat** — skinny \| lean \| He/she is skinny  *[body-descriptions]*
 - **alug** — cloud \| Cloud  *[weather]*
+- **aluse'wit** — carpenter \| carpentry \| Carpenter \| He/she does carpentry  *[occupations, work]*
 - **amalgat** — dance \| He/she dances  *[music-and-dance]*
-- **amalgewaqan** — dance \| dance event  *[music-and-dance, social-life]*
 - **amaljugwej** — raccoon \| Raccoon  *[animals]*
 - **amalo'qoman** — fruit \| Fruit  *[food]*
 - **amaseg** — far \| It is far  *[location-words]*
@@ -173,34 +182,32 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **amu** — bee \| Bee  *[insects]*
 - **amujpa** — must \| have to \| necessary \| Must  *[small-words]*
 - **anagwe'j** — flounder \| Flounder  *[fish]*
-- **angamsutiei** — mirror \| looking glass \| Mirror  *[household, seeing]*
+- **angamsutiei** — mirror \| looking glass \| Mirror  *[seeing, household]*
 - **angita'sit** — think \| He/she thinks  *[thinking]*
 - **anguowei** — fur \| Fur  *[animals]*
-- **ansuite'tg** — regret \| feel bad about \| He/she feels bad about it  *[emotions]*
+- **ansuite'tg** — regret \| feel bad about \| He/she feels bad about it  *[fear-anger-sadness]*
 - **antawe's** — woodpecker \| black woodpecker (Rand) \| grey woodpecker (Pacifique) \| Russian (red·headed)   *[birds]*
 - **ap'tapegiejit** — turkey \| Turkey  *[farm-animals, birds]*
-- **apaja's'g** — come back \| return \| It returns  *[movement]*
-- **apaja'sit** — come back \| return \| He/she returns  *[movement]*
+- **apaja'sit** — come back \| return \| He/she returns  *[going-and-coming]*
 - **apalqaqamej** — chipmunk \| ground squirrel \| Chipmunk  *[animals]*
 - **apangitatimg** — pay day \| Pay day  *[money-and-trade, time]*
 - **apangitg** — pay for \| He/she pays for it  *[money-and-trade]*
-- **apaqt** — sea \| off shore \| Sea  *[water]*
+- **apaqt** — sea \| off shore \| Sea  *[sea-and-rivers]*
 - **apigji'j** — mouse \| Mouse  *[animals]*
 - **apigjilu** — skunk \| Skunk  *[animals]*
 - **apignajit** — February \| February  *[calendar]*
-- **apigsigtuatl** — forgive \| pardon \| overlook offense \| He/she forgives someone  *[social-life, emotions]*
+- **apigsigtuatl** — forgive \| pardon \| overlook offense \| He/she forgives someone  *[social-life]*
 - **apistanewj** — marten \| Marten  *[animals]*
-- **apita't** — bloated \| swell \| rises (as dough) \| He/she gets bloated  *[health]*
-- **apita'taqan** — baking powder \| baking soda \| rising agent \| yeast \| leavening \| Baking powder or baking s  *[food, cooking]*
+- **apita't** — bloated \| swell \| rises (as dough) \| He/she gets bloated  *[sickness]*
+- **apje'jit** — small \| He/she is small  *[size-and-shape]*
 - **apji'jgmuj** — black duck \| Black duck  *[birds]*
 - **apjiw** — always \| each time \| every time \| Always  *[time]*
 - **apli'gmuj** — hare \| rabbit \| Hare  *[animals]*
 - **app** — again \| repeat \| Again  *[small-words]*
 - **apsute'gan** — doll \| gift \| present \| Doll \| Gift  *[games, social-life]*
 - **apt'sqi'gn** — key \| Key  *[fastening, household]*
-- **aptu'n** — cane \| staff \| walking stick \| Cane  *[tools, health]*
+- **aptu'n** — cane \| staff \| walking stick \| Cane  *[tools, healing]*
 - **apua'latl** — thaw \| warm \| He/she thaws him (fish)  *[temperature]*
-- **apugjig** — soon \| after a while \| Soon  *[time]*
 - **apugsign** — lynx \| Lynx  *[animals]*
 - **aqalasie'w** — English person \| Englishman \| English  *[peoples-and-nations]*
 - **aqalasie'wi'sit** — speak the English language \| He/she speaks the English language  *[talking, peoples-and-nations]*
@@ -209,83 +216,79 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **aqantie'uti** — week \| Week  *[calendar]*
 - **aqtatpa'q** — midnight \| It is midnight  *[time]*
 - **as'gom** — six \| six (in counting) \| Six  *[numbers]*
-- **as'gom\_te'sisga'q** — sixty \| sixty (in counting) \| Sixty (six sets of ten)  *[numbers]*
-- **asga'sit** — limp \| He/she walks with a limp  *[health, movement]*
-- **asiteglulatl** — reply \| answer back \| He/she replies  *[talking]*
+- **asga'sit** — limp \| He/she walks with a limp  *[ways-of-moving, sickness]*
 - **asitematl** — reply \| answer \| He/she answers him/her  *[talking]*
-- **asoqoma'sit** — cross over \| He/she crosses over  *[movement]*
+- **asoqoma'sit** — cross over \| He/she crosses over  *[going-and-coming]*
 - **asoqomm'taqan** — ferry \| boat \| Ferry boat  *[boats]*
 - **atel** — just now \| a while ago \| Just now  *[time]*
-- **atgitemit** — cry \| weep \| He/she cries  *[emotions, body-actions]*
+- **atgitemit** — cry \| weep \| He/she cries  *[fear-anger-sadness, body-actions]*
 - **atie'wit** — say goodbye \| He/she says goodbye  *[greetings]*
 - **atla'wegn** — cloth \| Cloth  *[sewing-and-textiles]*
 - **atlai** — shirt \| Shirt  *[clothing]*
 - **atlasmit** — relax \| rest \| He/she is resting  *[sleep, body-actions]*
-- **atlasmu'teget** — take break \| take rest \| He/she takes a rest  *[sleep, work]*
+- **atlasmu'teget** — take break \| take rest \| He/she takes a rest  *[work, sleep]*
 - **atoqwa'su** — trout \| Trout  *[fish]*
 - **atu'tuej** — squirrel \| Squirrel  *[animals]*
 - **atuomg** — sand \| beach sand \| Sand  *[land]*
-- **atuomgomin** — strawberry \| Strawberry  *[plants, food]*
+- **atuomgomin** — strawberry \| Strawberry  *[food, plants]*
 - **awanta'sit** — forget \| He/she forgets  *[thinking]*
 - **awisiw** — seldom \| only once in a while \| Seldom  *[time]*
 - **awti** — road \| trail \| Road  *[travel]*
 - **awti'j** — path \| trail \| Trail  *[travel]*
 - **e'pite's** — young woman \| unmarried woman \| Young woman  *[people]*
 - **e's** — clam \| Clam  *[fish, food]*
+- **e'w'g** — use \| make use \| He/she uses it  *[work]*
 - **egel** — occasionally \| once in a while \| now and then \| Occasionally  *[time]*
 - **egiljet** — read \| He/she reads  *[stories-and-writing]*
-- **egimatl** — count \| recite \| read \| He/she reads it (greeting card)  *[stories-and-writing, numbers]*
+- **egimatl** — count \| recite \| read \| He/she reads it (greeting card)  *[numbers, stories-and-writing]*
 - **egsitpu'g** — morning \| Morning  *[time]*
 - **egsitpu'gowei** — breakfast \| item pertaining to morning \| event pertaining to morning \| Breakfast \| Pertain  *[food, time]*
 - **egsitpu'nug** — tomorrow morning \| Tomorrow morning  *[time]*
 - **egsitpugwatalg** — eat breakfast \| He/she/it eats breakfast  *[eating-and-drinking, time]*
-- **egsuet** — lie \| He/she is lying  *[character]*
-- **egwitamet** — fish \| He/she fishes  *[fishing]*
+- **egsuet** — lie \| He/she is lying  *[wrongdoing]*
 - **eig** — present \| be there (sicknesses, days) \| be there \| He/she is present \| It is there  *[location-words]*
 - **ejgujg** — squash \| pumpkin \| Pumpkin  *[food, plants]*
-- **ejigla'sit** — go away \| He/she goes away  *[travel]*
+- **ejigla'sit** — go away \| He/she goes away  *[going-and-coming]*
 - **ejigliwsit** — move away \| change place of residence \| He/she moves away  *[travel]*
 - **elg** — too \| also \| Also  *[small-words]*
-- **eli'satl** — sew \| He/she sews it (shirt)  *[sewing-and-textiles]*
-- **eliatl** — make \| build \| He/she makes it (shoe)  *[making-and-fixing]*
-- **eliet** — goes \| He/she goes to  *[movement, travel]*
+- **eli'sewet** — sew \| He/she sews  *[sewing-and-textiles]*
+- **eliet** — goes \| He/she goes to  *[going-and-coming]*
+- **elisgnuet** — knit \| weave \| braid \| He/she weaves  *[sewing-and-textiles]*
 - **elsaqas'g** — wall \| Wall  *[dwellings]*
-- **elsma'sit** — lie down \| He/she lies down  *[position]*
+- **elsma'sit** — lie down \| He/she lies down  *[posture]*
+- **eltoq** — make \| build \| earn \| He/she makes it  *[making-and-fixing]*
 - **eluatl** — resemble \| bear family resemblance \| He/she resembles him/her  *[family, appearance]*
-- **emisqe'g** — naked \| bare \| He/she is naked  *[body]*
+- **emisqe'g** — naked \| bare \| He/she is naked  *[body-descriptions]*
 - **emittugwet** — visit \| He/she visits  *[social-life]*
 - **enmapejit** — carrot \| Carrot  *[food, plants]*
-- **enmiaq** — goes home \| when (it comes to pass) \| goes onward \| It goes onward or home \| When (it come  *[travel, time]*
-- **enmiet** — goes home \| goes onward \| He/she goes onward or home  *[travel]*
-- **enqa's'g** — stop \| It stops  *[movement]*
+- **enmiet** — goes home \| goes onward \| He/she goes onward or home  *[going-and-coming]*
 - **epipnet** — bake bread \| He/she bakes bread  *[cooking]*
-- **epit** — sitting \| seated \| placed \| located \| He/she is sitting  *[position]*
+- **epit** — sitting \| seated \| placed \| located \| He/she is sitting  *[posture]*
 - **epqwas'gewei** — roof \| Roof  *[dwellings]*
 - **epsaqtejg** — stove \| Stove  *[household]*
 - **epsatl** — heat \| warm up \| He/she warms it up  *[temperature]*
-- **epsimgewei** — fever \| Fever  *[health]*
-- **epsimgeweia'sit** — becomes feverish \| He/she becomes feverish  *[health]*
+- **epsimgewei** — fever \| Fever  *[sickness]*
+- **epsimgeweia'sit** — becomes feverish \| He/she becomes feverish  *[sickness]*
 - **epsit** — feeling of hot body temperature \| hot \| He/she is hot  *[temperature]*
 - **eptaqan** — dish \| plate \| Dish  *[household]*
-- **eptaqano'guom** — china cabinet \| cupboard \| Cupboard  *[household]*
 - **epune'g** — below \| downstairs \| Downstairs  *[location-words]*
 - **esg'tmm'gewei** — cucumber \| something to be eaten raw \| Cucumber  *[food]*
 - **esgmat** — await \| wait \| He/she awaits  *[time]*
+- **esiamgeg** — Campbellton, New Brunswick \| Campbellton, New Brunswick  *[places]*
 - **esmatl** — feed \| He/she feeds him/her  *[food, social-life]*
 - **etamatl** — ask for something of him/her \| ask \| request \| He/she asks for something of him/her  *[talking]*
 - **eteg** — be at \| situated \| placed \| located \| It is there  *[location-words]*
-- **etlenmit** — laugh \| He/she is laughing  *[emotions]*
 - **etlewistoq** — talk \| He/she is talking  *[talking]*
 - **etlintoq** — sing \| He/she is singing  *[music-and-dance]*
-- **etloqsatl** — cook \| He/she is cooking it (rabbit)  *[cooking]*
 - **etlte'g** — beat on \| hit \| strum \| knock \| play(musical instrument) \| He/she is beating on it \| He/sh  *[hitting, music-and-dance]*
-- **etltemit** — cry \| He/she is crying  *[emotions]*
 - **etna** — well! \| well then! \| okay then! \| Well!  *[greetings]*
 - **etug** — perhaps \| should? \| Perhaps  *[small-words]*
 - **ewi'g'g** — write \| mark down \| He/she writes it down  *[stories-and-writing]*
 - **ewi'gat** — build house \| make camp or dwelling \| He/she builds a house  *[dwellings, making-and-fixing]*
-- **ewnasgwiet** — dizzy \| He/she is dizzy  *[health]*
+- **ewi'gigemgewei** — notepad \| pen \| pencil \| object used for writing \| Notepad \| Pen, pencil  *[stories-and-writing, tools]*
+- **ewnasgwiet** — dizzy \| He/she is dizzy  *[sickness]*
 - **ewne'g** — blue \| foggy (Nova Scotia) \| It is blue  *[colors]*
+- **ewsgwit** — sneeze \| He/she sneezes  *[body-actions]*
 - **g'p'ta'q** — up \| above \| overhead \| Up  *[location-words]*
 - **g'pnno'l** — government \| Government  *[leadership-and-law]*
 - **ga'qan** — door \| Door  *[dwellings, household]*
@@ -295,55 +298,57 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **gajuewj** — cat \| Cat  *[farm-animals]*
 - **gajuewji'j** — kitten \| kitten  *[farm-animals]*
 - **galgunawei** — hard cookie \| hardtack \| biscuit \| Hardtack  *[food]*
+- **galiulg** — sleigh \| Horse drawn sleigh  *[vehicles]*
 - **galqwasiet** — sunset \| The sun is setting  *[sky, time]*
 - **gamlamit** — breathe \| He/she breathes  *[body-actions]*
 - **gapjagwej** — robin \| Robin  *[birds]*
 - **gapji'j** — cup \| Cup  *[household]*
-- **gapsgu'j** — little waterfall \| Little waterfall  *[water]*
-- **gapsgw** — waterfall \| Waterfall  *[water]*
+- **gapsgu'j** — little waterfall \| Little waterfall  *[sea-and-rivers]*
+- **gapsgw** — waterfall \| Waterfall  *[sea-and-rivers]*
 - **gaqa'toq** — complete \| finish \| finish a task \| terminate \| end \| He/she completes it  *[work]*
-- **gaqama'sit** — stand up \| He/she stands up  *[position]*
+- **gaqama'sit** — stand up \| He/she stands up  *[posture]*
+- **gaqamit** — stand \| He/she is standing  *[posture]*
 - **gaqi'sg** — often \| frequently \| many times \| Often  *[time]*
 - **gaqpesaw** — smelt \| Smelt  *[fish, food]*
 - **gaqsit** — burn \| He/she burns  *[fire]*
 - **gaqtugwaw** — thunder \| Thunder  *[weather]*
-- **gaqtugwawig** — thunder \| It is thundering  *[weather]*
 - **gasg'ptnnaqan** — one  hundred \| hundred (in counting) \| One hundred  *[numbers]*
 - **gasigo's'ti** — towel \| bath towel \| hand towel \| Towel  *[cleaning, household]*
-- **gasiptna'sit** — wash hands \| He/she washes his/her hands  *[cleaning, body]*
+- **gasiptna'sit** — wash hands \| He/she washes his/her hands  *[cleaning, body-parts]*
 - **gast'pl** — police officer \| Police officer  *[occupations, leadership-and-law]*
 - **gastio'mi** — molasses \| syrup \| Molasses  *[food]*
 - **gatu** — but \| however \| for instance \| what about? \| what if? \| in spite of \| But  *[small-words]*
-- **gawaqtejg** — gooseberry \| Gooseberry  *[plants, food]*
-- **gawasga's'g** — turns around \| It turns around  *[movement]*
+- **gawaqtejg** — gooseberry \| Gooseberry  *[food, plants]*
+- **gawasga's'g** — turns around \| It turns around  *[going-and-coming]*
 - **gawatgw** — spruce tree \| Spruce tree  *[trees]*
 - **gawigsaw** — thorn \| thistle \| Thistle  *[plants]*
 - **ge's** — while \| during \| While  *[time]*
 - **geget** — soon \| almost \| Soon  *[time]*
 - **geggunatl** — have \| possess \| He/she has him in possession  *[holding]*
-- **geggunawet** — godparent \| He/she is a godparent  *[family, ceremony]*
+- **geggunawet** — godparent \| He/she is a godparent  *[family, church-rituals]*
 - **gegina'masit** — study \| learn \| He/she/it studies  *[learning-and-teaching]*
-- **gegina'muatl** — teach \| He/she teaches someone  *[learning-and-teaching]*
+- **gegina'muet** — teach \| He/she teaches  *[learning-and-teaching, occupations]*
 - **gegna'sit** — dress up \| He/she dresses up  *[clothing]*
+- **gejiatl** — aware \| know about \| have knowledge of \| He/she is aware of him  *[thinking]*
 - **gejigiaq** — corner \| Corner  *[dwellings, location-words]*
 - **gejigow** — recently \| short while ago \| Recently  *[time]*
-- **gelgwisge'g** — sprained \| fractured \| It is sprained  *[health]*
+- **gelgwisge'g** — sprained \| fractured \| It is sprained  *[sickness]*
 - **geljit** — frozen \| freeze \| He/she/it is frozen  *[temperature]*
-- **gelt'g** — frozen \| It is frozen  *[temperature]*
 - **gelu'sit** — good \| nice \| He/she is good  *[good-and-bad]*
 - **gelulatl** — speak to \| He/she speaks to him/her  *[talking]*
-- **gepmite'lmatl** — honor \| pay homage \| respect \| He/she honors someone  *[social-life, emotions]*
+- **gemutnet** — steal \| cheat \| He/she steals  *[wrongdoing]*
+- **gepmite'lmatl** — honor \| pay homage \| respect \| He/she honors someone  *[social-life]*
 - **gept'gewigu's** — November \| November  *[calendar]*
-- **gesatg** — like \| enjoys \| love \| He/she enjoys it  *[emotions]*
+- **gesatg** — like \| enjoys \| love \| He/she enjoys it  *[love-and-joy]*
 - **gesga't** — lost \| He/she is lost  *[travel]*
 - **gesge'g** — wide \| wide \| He/she is wide \| It is wide  *[size-and-shape]*
 - **gesgmnaq** — before \| Before  *[time]*
 - **gesgugg** — heavy \| It is heavy  *[size-and-shape]*
-- **gesigawa'sit** — goes at high speed \| move fast \| He/she moves fast  *[movement]*
+- **gesigawa'sit** — goes at high speed \| move fast \| He/she moves fast  *[ways-of-moving]*
 - **gesigawweg** — loud \| It is loud  *[hearing]*
 - **gesigewigu's** — December \| winter moon \| December  *[calendar]*
-- **gesimlgignat** — very strong \| He/she is very strong  *[body]*
-- **gesipiaq** — itchy \| It is itchy  *[body]*
+- **gesimlgignat** — very strong \| He/she is very strong  *[body-descriptions]*
+- **gesipiaq** — itchy \| It is itchy  *[sickness]*
 - **gesispa'lsit** — wash self \| take bath \| He/she washes himself/herself  *[cleaning]*
 - **gesistaqnewet** — wash clothes \| do laundry \| He/she does the laundry  *[cleaning]*
 - **gesleg** — stink \| It stinks  *[smell-and-taste]*
@@ -354,14 +359,13 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **getanatl** — hunt \| spiteful \| track \| chase \| seek \| He/she hunts it(deer) \| He/she is spiteful to ano  *[hunting]*
 - **getapa't** — sink \| He/she sinks  *[water]*
 - **getlams'tg** — believe \| obey \| follow, as in beliving in something \| He/she believes it  *[thinking]*
-- **getu'\_unjanit** — pregnant \| expect baby \| He/she is expecting a baby  *[body, family]*
+- **getu'\_unjanit** — pregnant \| expect baby \| He/she is expecting a baby  *[family, body-actions]*
 - **getugsit** — sleepy \| He/she is sleepy  *[sleep]*
 - **gewjit** — feel cold \| He/she feel cold  *[temperature]*
 - **gi'g** — sharp \| sharp \| house \| home \| It(knife) is sharp \| It is sharp \| Your house  *[condition, dwellings]*
 - **gi'gwesu** — muskrat \| Muskrat  *[animals]*
 - **gi'lewei** — your(singular) \| your(singular) \| yours(singular) \| yours(singular) \| He/she is yours(sing  *[people]*
 - **gi's** — completed action \| already happened \| Completed action  *[small-words]*
-- **gi's\_sa'q** — long ago \| once upon a time \| Long ago  *[time]*
 - **gigjiw** — near \| close by \| Close by  *[location-words]*
 - **gigpesan** — rain \| Rain  *[weather]*
 - **gijga'jijg** — little bit \| A little bit  *[amounts]*
@@ -369,7 +373,7 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **gimewistoq** — whisper \| He/she whispers  *[talking]*
 - **gina'masuti** — education \| lesson \| knowledge \| learning \| Education  *[learning-and-teaching]*
 - **gina'muo'guom** — school \| School  *[learning-and-teaching, dwellings]*
-- **gisa'toq** — fix \| able to \| repair \| can \| capable of \| He/she fixes it \| He/she is able to do it  *[making-and-fixing]*
+- **gisa'toq** — fix \| able to \| repair \| can \| capable of \| He/she fixes it \| He/she is able to do it  *[work, making-and-fixing]*
 - **gise'g** — have good time \| fun to be with \| have fun \| enjoyable \| He/she is having a good time \| He  *[games, social-life]*
 - **gisgaja'toq** — get it ready \| prepare \| He/she gets it ready  *[making-and-fixing]*
 - **gisigu** — old man \| elderly man \| Old man  *[age, people]*
@@ -381,56 +385,52 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **gitg** — both \| Both  *[numbers]*
 - **gitpu** — eagle \| Eagle  *[birds]*
 - **giwnig** — otter \| Otter  *[animals]*
-- **gjigapa'n** — tide \| Tide  *[water]*
-- **gjinisgam** — Great Spirit \| Great Spirit  *[spirit-world]*
-- **glitaw** — strawberry \| red raspberry (Nova Scotia and parts of New Brunswick) \| berry \| Strawberry  *[plants, food]*
+- **gjigapa'n** — tide \| Tide  *[sea-and-rivers]*
+- **gjinisgam** — Great Spirit \| Great Spirit  *[faith]*
 - **gloqontiej** — gull \| seagull \| Seagull  *[birds]*
 - **gloqowej** — star \| dormer \| Star \| Dormer  *[sky]*
 - **glusuaqan** — word \| news \| Word  *[talking, stories-and-writing]*
-- **gm'tginu** — our territory \| our country \| Our territory  *[land, peoples-and-nations]*
+- **gm'tginu** — our territory \| our country \| Our territory  *[peoples-and-nations, land]*
 - **gmtn** — mountain \| Mountain  *[land]*
 - **gmu'j** — stick \| wood \| piece of lumber \| pile of lumber \| Stick  *[trees]*
-- **gmu'jmin** — raspberry \| Raspberry  *[plants, food]*
-- **gneg** — far \| It is far  *[location-words]*
+- **gmu'jmin** — raspberry \| Raspberry  *[food, plants]*
+- **go'gwejij** — spider \| cancer \| Spider \| Cancer  *[insects, sickness]*
 - **go'qoli'gwej** — chicken \| hen \| Chichen  *[farm-animals, birds]*
 - **gopit** — beaver \| Beaver  *[animals]*
 - **goqwei\_net** — what is this? \| what is that? \| What is that?  *[question-words]*
-- **goqwei\_ugjit** — what for? \| why? \| What for?  *[question-words]*
 - **gp'te'sn** — south \| South  *[directions]*
 - **gsispa'taqan** — soap \| detergent \| hand soap \| Soap  *[cleaning]*
-- **gsnugo'guom** — hospital \| Hospital  *[health, dwellings]*
-- **gsnugowaqan** — sickness \| illness \| virus \| Illness  *[health]*
-- **gta'n** — ocean \| Ocean  *[water]*
-- **gtantaqan** — Hunting \| Hunt, in general.  *[hunting]*
+- **gsnugo'guom** — hospital \| Hospital  *[healing, dwellings]*
+- **gsnugowaqan** — sickness \| illness \| virus \| Illness  *[sickness]*
+- **gta'n** — ocean \| Ocean  *[sea-and-rivers]*
 - **gtapegiaqan** — song \| Song  *[music-and-dance]*
-- **gtigipun** — last year \| Last year  *[time]*
+- **gtigipun** — last year \| Last year  *[calendar]*
 - **gtigisapo'nug** — day after tomorrow \| The day after tomorrow  *[time]*
-- **gtuguno'guom** — bedroom \| dormatory \| hotel, motel room \| Bedroom  *[sleep, dwellings]*
+- **gtuguno'guom** — bedroom \| dormatory \| hotel, motel room \| Bedroom  *[dwellings, sleep]*
 - **gu'gu'gwes** — owl \| screech owl (Nova Scotia) \| Owl  *[birds]*
 - **gujm** — outside \| outdoors \| Outside  *[location-words]*
 - **gulgwi's** — pig \| hog \| swine \| Pig  *[farm-animals]*
 - **gulgwi'suei** — pork \| Pork  *[food]*
 - **guntew** — stone \| rock \| Stone  *[land]*
 - **guow** — pine \| Pine  *[trees]*
-- **gutan** — town \| village \| Town  *[places]*
 - **gwi's** — son \| boy \| little brother \| Son  *[family]*
 - **gwiluatl** — looks for \| search for \| He/she searches for him/her  *[seeing]*
 - **gwimu** — loon \| Loon  *[birds]*
 - **iapjiw** — forever \| Forever  *[time]*
 - **iga't** — arrive \| He/she arrives  *[travel]*
 - **iga'taqug** — plant \| put in garden \| sow \| He/she plants  *[farming]*
-- **iga'toq** — place \| put \| He/she places it  *[position]*
+- **iga'toq** — place \| put \| He/she places it  *[putting-and-placing]*
 - **ignmuatl** — give to \| allow \| permit \| He/she gives it to him/her  *[social-life]*
 - **igtig** — other \| other thing \| another \| Other \| Other thing  *[small-words]*
 - **ila'sgw** — playing card \| Playing\_card  *[games]*
-- **ila'sit** — get well \| recover \| He/she gets well  *[health]*
+- **ila'sit** — get well \| recover \| He/she gets well  *[healing]*
 - **inaqan** — right side \| Right side  *[directions]*
 - **j'gi'ges** — chickadee \| Chickadee  *[birds]*
 - **jagej** — lobster \| Lobster  *[fish, food]*
-- **jajige'g** — healthy \| He/she is healthy  *[health]*
-- **jaqala'sit** — rush \| go fast \| move fast \| He/she moves fast  *[movement]*
-- **jaqale'g** — quick \| fast \| fast \| quick \| He/she is fast \| It is fast  *[movement]*
-- **jenu** — giant \| Giant  *[spirit-world]*
+- **jajige'g** — healthy \| He/she is healthy  *[healing]*
+- **jaqala'sit** — rush \| go fast \| move fast \| He/she moves fast  *[ways-of-moving]*
+- **jaqale'g** — quick \| fast \| fast \| quick \| He/she is fast \| It is fast  *[ways-of-moving]*
+- **jenu** — giant \| Giant  *[traditional-stories]*
 - **ji'gitlo'q** — kettle \| teakettle \| Kettle  *[household]*
 - **ji'met** — row \| paddle \| He/she rows  *[boats]*
 - **ji'nmji'j** — young man \| unmarried man \| Young man  *[people, age]*
@@ -441,17 +441,15 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **jijjawignej** — raisin \| Raisin  *[food]*
 - **jijuaqa** — sometimes \| Sometimes  *[time]*
 - **jijuejg** — bell \| Bell  *[hearing, household]*
-- **jipalatl** — fear \| afraid of \| He/she fears him  *[emotions]*
-- **jipalsuti** — fear \| Fear  *[emotions]*
-- **jipaltimgewei** — fear \| fright \| Fear, fright  *[emotions]*
-- **jipasit** — afraid \| scared \| He/she is afraid  *[emotions]*
-- **jiptug** — perhaps \| maybe \| unless \| hopefully \| Perhaps  *[small-words]*
-- **jipu'ji'j** — brook \| Brook  *[water]*
+- **jipalatl** — fear \| afraid of \| He/she fears him  *[fear-anger-sadness]*
+- **jipalsuti** — fear \| Fear  *[fear-anger-sadness]*
+- **jipasit** — afraid \| scared \| He/she is afraid  *[fear-anger-sadness]*
+- **jipu'ji'j** — brook \| Brook  *[sea-and-rivers]*
 - **jujij** — insect \| crawling creature \| bug \| Insect  *[insects]*
 - **l'sg'j** — map \| directory marked out \| Map  *[travel, stories-and-writing]*
 - **la'jijjaqan** — glove \| Glove  *[clothing]*
 - **la'pugtaqan** — snare \| Snare  *[hunting]*
-- **la'qan** — wound \| gash \| cut \| Wound  *[health]*
+- **la'qan** — wound \| gash \| cut \| Wound  *[sickness]*
 - **la'taqsun** — bucket \| pail \| chamber pot \| Pail  *[household]*
 - **lagla'ns** — barn \| Barn  *[farming, dwellings]*
 - **laglem** — cream \| Cream  *[food]*
@@ -460,42 +458,44 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **laplusan** — prison \| jail \| Jail  *[leadership-and-law, dwellings]*
 - **lapol** — bowl \| Bowl  *[household]*
 - **lapue'l** — frying pan \| Frying pan  *[household]*
-- **lasguaw** — snowshoe \| Showshoe  *[vehicles]*
 - **lasgugwaqan** — card game \| Card game  *[games]*
 - **lasiet** — plate \| Plate  *[household]*
 - **lasup** — soup \| Soup  *[food]*
 - **latto'law** — bull \| Bull  *[farm-animals]*
 - **lentug** — deer \| Deer  *[animals]*
-- **lgetu** — mushroom \| Mushroom  *[food, plants]*
+- **lgetu** — mushroom \| Mushroom  *[plants, food]*
 - **lgowaqan** — job \| work \| task \| Work  *[work]*
 - **lgusuaqan** — steps \| ladder \| stairs \| Steps  *[dwellings, household]*
 - **ligpenign** — basket \| Basket  *[basket-making, household]*
 - **lluigneg** — seven \| seven (in counting) \| Seven  *[numbers]*
 - **llutaqan** — fence \| Fence  *[dwellings]*
 - **lmu'ji'j** — puppy \| pup \| young dog \| Puppy  *[farm-animals]*
+- **lnu'sgw** — native woman \| aboriginal woman \| first nations  woman \| Native woman  *[peoples-and-nations, people]*
+- **lnu'tesing** — dance native style \| dance aboriginal style \| He/she dances native style  *[music-and-dance]*
 - **lnu\_saqamaw** — native chief \| aboriginal chief \| first nations chief \| Native Chief  *[leadership-and-law, peoples-and-nations]*
 - **lnue'gati** — aboriginal community \| native village (reserve) \| Aboriginal community  *[places, peoples-and-nations]*
 - **lnui'sit** — speak native language \| speak aboriginal language \| speak first nations language \| He/she   *[talking, peoples-and-nations]*
+- **lo'gs** — log \| Log  *[trees]*
 - **loqte'gn** — trap \| Trap  *[hunting]*
 - **lugowaqan** — task \| work \| job \| jobs \| Work  *[work]*
-- **lugowinu** — worker \| laborer \| Worker  *[work, occupations]*
+- **lugowinu** — worker \| laborer \| Worker  *[occupations, work]*
 - **lusgnign** — bannock \| dough \| biscuit \| Bannock  *[food]*
-- **m'gegn** — hide \| leather \| skin \| Leather  *[sewing-and-textiles, hunting]*
-- **ma'gn** — moccasin \| Moccasin  *[clothing, customs]*
+- **ma'gn** — moccasin \| Moccasin  *[clothing]*
 - **ma'muniw** — much \| very \| Very much  *[small-words]*
 - **ma'susi** — fern \| fiddlehead \| Fern  *[plants, food]*
 - **magasan** — store \| Store  *[money-and-trade, dwellings]*
 - **magot** — dress \| Dress  *[clothing]*
 - **mala** — at home \| where I'm from \| Home  *[location-words]*
 - **male'g** — lazy \| He/she is lazy  *[character]*
-- **malie'wit** — marry \| He/she marries  *[family, ceremony]*
-- **malie'wuti** — marriage \| Marriage  *[family, ceremony]*
+- **malie'wit** — marry \| He/she marries  *[family, church-rituals]*
+- **malie'wuti** — marriage \| Marriage  *[family, church-rituals]*
+- **maljewe'j** — youngster \| young person \| Youngster  *[age, people]*
 - **maljewe'juit** — young \| He/she is young  *[age]*
-- **malpale'wit** — doctor \| Doctor  *[health, occupations]*
+- **malpale'wit** — doctor \| Doctor  *[occupations, healing]*
 - **maltejjuei** — hammer \| Hammer  *[tools]*
-- **maltew** — blood \| Blood  *[body]*
+- **maltew** — blood \| Blood  *[body-parts]*
 - **mapos** — pocket \| Pocket  *[clothing]*
-- **masgelmatl** — hate \| loath \| detest \| He/she hates him/her  *[emotions]*
+- **masgelmatl** — hate \| loath \| detest \| He/she hates him/her  *[fear-anger-sadness]*
 - **masgwi** — white birch tree \| white birch bark \| White birch bark or tree  *[trees]*
 - **matnagget** — fight \| struggle \| He/she fights  *[conflict]*
 - **matntimg** — war \| battle \| War  *[conflict]*
@@ -509,19 +509,20 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **megwe'jit** — beet \| Beet  *[food, plants]*
 - **mejige'g** — dirty \| dirty \| He/she is dirty \| It is dirty  *[condition]*
 - **melge'g** — hard \| hard \| It(ball) is hard \| It is hard  *[texture-and-materials]*
-- **melgignat** — strong \| He/she is strong  *[body]*
+- **melgignat** — strong \| He/she is strong  *[body-descriptions]*
 - **melgita't** — courageous \| brave \| He/she is courageous  *[character]*
 - **menigu** — island \| Island  *[land]*
-- **mesge'g** — sorry \| regret an act \| He/she regrets an act  *[emotions]*
+- **menueget** — need \| has use for \| could use \| require \| He/she needs  *[thinking]*
+- **mesge'g** — sorry \| regret an act \| He/she regrets an act  *[fear-anger-sadness]*
 - **metue'g** — difficult \| hard to do \| It is difficult  *[good-and-bad]*
-- **mewisit** — pick berries \| He/she is berry picking  *[food, plants]*
+- **mewisit** — pick berries \| He/she is berry picking  *[plants, food]*
 - **mewlia'gowei** — dinner (noon meal) \| lunch time meal \| noon meal \| Noon meal  *[food, time]*
 - **mewlia'gweg** — noon \| midday \| Noon  *[time]*
 - **mg'sn** — shoe \| Shoe  *[clothing]*
 - **mgign** — hook \| fish hook \| Hook  *[fishing, tools]*
 - **mgumi** — ice \| icecube \| Ice  *[water, temperature]*
 - **mi'jano'guom** — bathroom \| outhouse \| washroom \| Bathroom  *[dwellings, household]*
-- **mi'walatl** — thankful for \| grateful \| appreciate \| He/she is grateful for him/her  *[greetings, emotions]*
+- **mi'walatl** — thankful for \| grateful \| appreciate \| He/she is grateful for him/her  *[greetings, love-and-joy]*
 - **miamuj** — certainly \| for sure! \| affirmative \| yes \| Certainly  *[small-words]*
 - **miawe'g** — in middle \| between \| It is in the middle  *[location-words]*
 - **migjigj** — turtle \| tortoise \| Turtle  *[animals]*
@@ -532,29 +533,29 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **mila'suaqan** — toy \| Toy  *[games]*
 - **milesit** — rich \| He/she is rich  *[money-and-trade]*
 - **milita'j** — hummingbird \| Hummingbird  *[birds]*
-- **mimajit** — alive \| He/she is alive  *[health, condition]*
-- **mimajuaqan** — life \| living \| Life  *[health]*
+- **mimajit** — alive \| He/she is alive  *[condition]*
+- **mimajuaqan** — life \| living \| Life  *[condition]*
 - **mimei** — oil \| grease \| Oil  *[food, household]*
 - **mimiges** — butterfly \| Butterfly  *[insects]*
 - **mimugwasit** — hide \| He/she hides  *[seeing]*
 - **minijg** — berry \| fruit \| nut \| Berry  *[plants, food]*
 - **miti** — aspen \| poplar \| Aspen or poplar  *[trees]*
 - **mjigei** — dirt \| garbage \| Dirt  *[cleaning]*
-- **mjijaqamij** — spirit \| soul \| shadow \| A spirit  *[spirit-world]*
+- **mjijaqamij** — spirit \| soul \| shadow \| A spirit  *[faith, spirits]*
 - **mlagejg** — milk \| Milk  *[food]*
 - **mlageju'mi** — butter \| Butter  *[food]*
 - **mnaq** — not yet (takes negative verb) \| Not yet  *[small-words]*
 - **mntmu** — oyster \| Oyster  *[fish, food]*
-- **mntu** — devil \| Devil  *[spirit-world]*
-- **mntua'gi** — hell \| Hell  *[spirit-world]*
+- **mntu** — devil \| Devil  *[faith]*
+- **mntua'gi** — hell \| Hell  *[faith]*
 - **moqopa'q** — wine \| Wine  *[food]*
 - **moqwa'\_goqwei** — nothing \| not anything \| none \| Nothing  *[small-words]*
-- **moqwa'\_wen** — nobody \| no one \| Nobody  *[small-words, people]*
+- **moqwa'\_wen** — nobody \| no one \| Nobody  *[small-words]*
 - **mpo'qon** — bed \| A bed  *[household]*
 - **ms't\_goqwei** — everything \| Everything  *[small-words, amounts]*
-- **ms't\_wen** — everybody \| Everybody  *[people, amounts]*
+- **ms't\_wen** — everybody \| Everybody  *[amounts, people]*
 - **msaqtaqt** — floor \| Floor  *[dwellings, household]*
-- **msigu** — hay \| grass \| Hay or grass  *[plants]*
+- **msigu** — hay \| grass \| Hay or grass  *[farming, plants]*
 - **mtesgm** — snake \| Snake  *[animals]*
 - **mtlu'tew** — smoke \| Smoke  *[fire]*
 - **mtugunoqt** — storm \| Storm  *[weather]*
@@ -562,7 +563,7 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **munti** — bag \| sack \| Bag  *[household]*
 - **musgun** — atmosphere \| sky \| Atmosphere  *[sky]*
 - **musigisg** — sky \| Sky  *[sky]*
-- **musuet** — miss \| lonesome \| He/she is lonesome  *[emotions]*
+- **musuet** — miss \| lonesome \| He/she is lonesome  *[fear-anger-sadness]*
 - **muta** — because \| Because  *[small-words]*
 - **mutputi** — chair \| Chair  *[household]*
 - **mutt** — do not \| don't \| Do not  *[small-words]*
@@ -570,14 +571,15 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **na'goqom** — ice skate \| Ice skate  *[games, vehicles]*
 - **na'gu'setewei** — clock \| watch \| Clock  *[time, household]*
 - **na'gu'setewig** — sunny \| It is sunny  *[weather, sky]*
+- **na'jipugtaq'nej** — bat \| nocturnal flying mammal \| Bat  *[animals]*
 - **na'n** — five (in counting) \| Na'n  *[numbers]*
 - **na'tami** — somewhere \| someplace \| Somewhere  *[location-words]*
 - **na'te'l** — over there \| there \| Over there  *[location-words]*
 - **na'tuen** — someone \| Someone  *[people]*
-- **na\_tmg** — first \| first of all \| the beginning \| First  *[small-words]*
 - **nangmiw** — immediately \| right away \| Immediately  *[time]*
-- **napui'gign** — photograph \| picture \| Photograph  *[household, seeing]*
-- **naqa'sit** — stop \| halt \| He/she stops  *[movement]*
+- **napui'gign** — photograph \| picture \| Photograph  *[seeing, household]*
+- **naqa'sit** — stop \| halt \| He/she stops  *[ways-of-moving]*
+- **naqamase'g** — manageable \| easy (to do) \| at hand, handy \| It is manageable  *[good-and-bad]*
 - **naqasua'toq** — extinguish \| put out \| turn off \| He/she extinguishes it  *[fire]*
 - **nasg'g** — wear \| He/she wears it  *[clothing]*
 - **nasoqwa'taqan** — ring \| Ring  *[clothing]*
@@ -591,18 +593,16 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **negmow** — they \| them \| Them  *[people]*
 - **nemijgami'** — grampa \| grandfather (term of respect for old man) \| It's grampa  *[family]*
 - **nemitoq** — see \| He/she sees it  *[seeing]*
-- **nenaqa'sit** — hurry \| He/she hurries  *[movement]*
+- **nenaqa'sit** — hurry \| He/she hurries  *[ways-of-moving]*
 - **nenuatl** — know \| recognize \| He/she recognizes him/her  *[thinking]*
-- **nepapigwa't** — blind \| He/she is blind  *[seeing, health]*
-- **nepg** — dead \| He/she is dead  *[health]*
-- **nesisga'q** — thirty (in counting) \| It is thirthy  *[numbers]*
+- **nepapigwa't** — blind \| He/she is blind  *[seeing, sickness]*
+- **nepg** — dead \| He/she is dead  *[death-and-mourning]*
 - **nespiw** — also \| while \| at the same time \| including \| Also  *[small-words]*
 - **nest'g** — understand \| He/she understands  *[thinking]*
 - **nestue'g** — wise \| sensible \| of sound mind \| He/she is wise  *[thinking]*
 - **netage'g** — bashful \| shy \| He/she is shy  *[character]*
 - **netuisget** — sells \| salesperson \| He/she sells  *[money-and-trade]*
-- **newisga'q** — forty \| forty (in counting) \| Forty (number)  *[numbers]*
-- **newtaig** — one dollar \| dollar bill \| dollar coin \| One dollar  *[money-and-trade]*
+- **newtaig** — one dollar \| dollar bill \| dollar coin \| One dollar  *[money-and-trade, numbers]*
 - **newtigisg'g** — all day long \| all day \| All day long  *[time]*
 - **newtipunqeg** — one year \| year \| One year  *[time]*
 - **newtisga'q** — ten \| ten (in counting) \| Ten  *[numbers]*
@@ -616,69 +616,68 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **nipnigu's** — June \| June  *[calendar]*
 - **nipugt** — forest \| woods \| Forest  *[trees]*
 - **nisiet** — fall down \| He/she falls down  *[falling]*
-- **niwe'g** — dry \| dry \| empty (of liquid) \| empty (of liquid) \| He/she is dry \| It is dry  *[condition]*
-- **niwipsguna't** — thirsty \| He/she is thirsty  *[eating-and-drinking, body]*
+- **niwipsguna't** — thirsty \| He/she is thirsty  *[eating-and-drinking]*
 - **nmi'** — grandmother \| granny \| term of affection for grandmother \| Grandmother  *[family]*
-- **nmu'j** — dog \| Dog  *[animals]*
+- **nmu'j** — dog \| Dog  *[farm-animals]*
 - **nnu** — Mi'gmaw person \| indigenous person \| native person \| aboriginal person \| first nations per  *[peoples-and-nations]*
-- **no'q'g** — cough \| He/she coughs  *[health, body-actions]*
-- **npisun** — medicine \| Medicine  *[health]*
-- **npo'qon** — bed \| A bed  *[household]*
-- **npuaqan** — death \| Death  *[health]*
+- **nnui'sit** — speak indigenous language \| speak Mi'gmaw \| He/she speaks an indigenous language  *[talking, peoples-and-nations]*
+- **no'q'g** — cough \| He/she coughs  *[body-actions, sickness]*
+- **npisun** — medicine \| Medicine  *[healing]*
+- **npuaqan** — death \| Death  *[death-and-mourning]*
 - **nsanoqon** — danger \| Danger  *[good-and-bad]*
 - **nsugwi'** — aunty! \| Aunty!  *[family]*
 - **nu'gwa'q** — burn \| on fire \| ablaze \| It burns  *[fire]*
 - **nu'te'nmaqan** — campfire \| outdoor kitchen \| Campfire  *[fire]*
-- **nugwaltugo'n** — comb \| Comb  *[household, body]*
+- **nugu'** — so now \| then \| any more (no longer) \| all ready \| come on now! \| So now  *[time]*
+- **nugwaltugo'n** — comb \| Comb  *[household]*
 - **nugwe'g** — soft \| soft \| He/she (rabbit) is soft \| It is soft  *[texture-and-materials]*
 - **nujigina'muet** — educator \| teacher \| teacher \| educator \| The teacher \| He/she is a teacher  *[occupations, learning-and-teaching]*
 - **nujinqasui'get** — firefighter \| Firefighter  *[occupations, fire]*
 - **nujintoq** — singer \| singer \| Singer \| He/she is a singer  *[occupations, music-and-dance]*
 - **nujipipnet** — baker \| Baker  *[occupations, cooking]*
+- **nuta'q** — missing \| not there \| absent \| needs, requires \| It is missing  *[amounts]*
 - **nutawletat'g** — backpack \| Backpack  *[carrying, household]*
-- **nutoqto'guom** — kitchen \| Kitchen  *[household, dwellings]*
+- **nutoqto'guom** — kitchen \| Kitchen  *[dwellings, household]*
 - **nutuatl** — hear \| He/she hears someone  *[hearing]*
-- **oqo** — because \| thus \| so \| Because  *[small-words]*
 - **oqonitpa'q** — dark (night) \| It is dark (night)  *[time, sky]*
-- **oqoti** — dear \| friend \| affection term between spouses \| Dear  *[people, family]*
-- **oqwa't** — arrive \| land \| dock \| He/she arrives  *[travel]*
+- **oqoti** — dear \| friend \| affection term between spouses \| Dear  *[family, people]*
 - **oqwatn** — north \| North  *[directions]*
-- **oti** — friend \| Friend  *[people]*
 - **p'teweio'q** — teapot \| Teapot  *[household]*
-- **pa'qalaig** — surprised \| amazed \| He/she is surprised  *[emotions]*
-- **pa'tlia's** — priest \| clergy \| Priest  *[ceremony, occupations]*
+- **pa'qalaig** — surprised \| amazed \| He/she is surprised  *[fear-anger-sadness]*
+- **pa'tlia's** — priest \| clergy \| Priest  *[church-rituals, occupations]*
 - **pana'toq** — open \| He/she opens it  *[fastening]*
-- **paqo'si** — seaweed \| Seaweed  *[plants, water]*
+- **paqo'si** — seaweed \| Seaweed  *[plants, sea-and-rivers]*
 - **paqtaqamigt** — wilderness \| deserted area \| Wilderness  *[land]*
 - **paqtesm** — wolf \| Wolf  *[animals]*
 - **pas'g** — only \| just \| Only  *[small-words]*
 - **pase'g** — thick \| thick \| It(board) is thick \| It is thick  *[size-and-shape]*
 - **pasgoqsign** — jam \| Jam  *[food]*
 - **pastung** — United States \| United States  *[places]*
-- **pata'taqan** — sin \| Sin  *[ceremony]*
+- **pata'taqan** — sin \| Sin  *[faith]*
 - **pata'wti** — table \| Table  *[household]*
 - **pe'l** — for now \| for the time being \| while \| For now  *[time]*
-- **pe'l\_tmg** — first of all \| First of all  *[time]*
 - **pe'sgewei** — gun \| rifle \| shotgun \| Gun  *[hunting]*
+- **pegije'g** — long time \| It is a long time  *[time]*
 - **pegising** — arrive \| get there \| He/she arrives  *[travel]*
 - **pegwatelg** — buy \| purchase \| He/she purchases it  *[money-and-trade]*
 - **pejigisgiaq** — ceiling \| Ceiling  *[dwellings]*
 - **peju** — codfish \| Codfish  *[fish, food]*
 - **pema'toq** — carry \| He/she is carrying it  *[carrying]*
+- **pemiet** — go by \| move along \| He/she is going by  *[going-and-coming]*
 - **penatmuigu's** — April \| April  *[calendar]*
 - **pepge'jg** — thin \| It is thin  *[size-and-shape]*
 - **pesaq** — snowing \| It is snowing  *[weather]*
 - **pesetoq** — smell \| He/she smells it  *[smell-and-taste]*
 - **pesgiaq** — get dark \| night falls \| It is getting dark  *[time]*
 - **pesgunateg** — nine \| nine (in counting) \| Nine  *[numbers]*
-- **pesgutuo'sit** — shave oneself \| He/she shaves oneself  *[body, cutting]*
+- **pesgutuo'sit** — shave oneself \| He/she shaves oneself  *[cutting]*
 - **petaqan** — pie \| Piepestmat  *[food]*
 - **pewat** — dream \| He/she dreams  *[sleep]*
-- **pewatg** — want \| desire \| He/she wants it  *[emotions]*
+- **pewatg** — want \| desire \| He/she wants it  *[thinking]*
 - **pewi'get** — sweep \| He/she sweeps  *[cleaning]*
 - **pewitaqan** — dream \| Dream  *[sleep]*
 - **pgu** — gum \| pitch \| fudge \| Gum  *[food]*
-- **pguman** — blueberry \| Blueberry  *[plants, food]*
+- **pguman** — blueberry \| Blueberry  *[food, plants]*
 - **pi'gun** — feather \| Feather  *[birds]*
 - **piamiw** — more than \| over \| More than  *[amounts]*
 - **piesgmin** — corn \| Corn  *[food]*
@@ -688,22 +687,22 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **piptoqopsgeg** — round (globular) \| It is round  *[size-and-shape]*
 - **pipugwaqan** — wind instrument \| whistle \| horn \| musical instrument \| Wind instrument  *[music-and-dance]*
 - **pipugwes** — hawk \| Hawk  *[birds]*
-- **pisgwa't** — enters \| He/she enters  *[movement]*
+- **pisgwa't** — enters \| He/she enters  *[going-and-coming]*
 - **pismuti** — mattress \| Mattress  *[household, sleep]*
 - **pisoqos'ti** — button \| Button  *[clothing]*
 - **pita'q** — long \| tall \| It is long  *[size-and-shape]*
 - **pita'qawe'l** — trousers \| pants \| Trousers  *[clothing]*
 - **piteg** — inside of it \| It is inside of it  *[location-words]*
 - **pitlanji'j** — string bean \| String bean  *[food]*
-- **pitoqsit** — tall \| He/she is tall  *[size-and-shape]*
+- **pitoqsit** — tall \| He/she is tall  *[body-descriptions, size-and-shape]*
 - **pituiptnnaqan** — thousand \| one thousand \| Thousand\_(in\_counting)  *[numbers]*
 - **plawej** — partridge \| Partridge  *[birds]*
 - **plegu** — nail \| Nail  *[tools]*
 - **ples** — pigeon \| Pigeon  *[birds]*
-- **plgoq** — sweetheart (male or female) \| lover (male or female) \| Sweetheart (male or female)  *[people, emotions]*
+- **plgoq** — sweetheart (male or female) \| lover (male or female) \| Sweetheart (male or female)  *[people, love-and-joy]*
 - **pnamujuigu's** — January \| January  *[calendar]*
 - **pnasu'lgw** — ship \| vessel \| Ship  *[boats]*
-- **poqwatign** — umbrella \| Umbrella  *[weather, household]*
+- **poqwatign** — umbrella \| Umbrella  *[household, weather]*
 - **pqan** — nut \| Nut  *[food]*
 - **ps'guigu's** — July \| July  *[calendar]*
 - **psan** — snowfall \| snow \| Snowfall  *[weather]*
@@ -712,16 +711,18 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **psetgun** — branch (of tree) \| knot (of tree) \| Branch (of tree)  *[trees]*
 - **pu'tai** — bottle \| jar \| Bottle  *[household]*
 - **pugsug** — firewood \| Firewood  *[fire, trees]*
+- **pugtewijg** — liquor \| whiskey \| Liquor  *[food]*
+- **pugumaqan** — weapon \| Weapon  *[conflict, tools]*
 - **pui'gn** — broom \| Broom  *[cleaning, household]*
-- **pujite'lmatl** — trust \| He/she trusts him/her  *[emotions]*
-- **puowin** — shaman \| sorcerer or sorceress \| Shaman  *[spirit-world]*
+- **pujite'lmatl** — trust \| He/she trusts him/her  *[thinking, social-life]*
+- **puowin** — shaman \| sorcerer or sorceress \| Shaman  *[spirits]*
 - **pusit** — depart \| embark \| He/she departs  *[travel]*
 - **put'p** — whale \| Whale  *[fish, animals]*
 - **qalipu** — caribou \| Caribou  *[animals]*
 - **qaliputi** — shovel \| Shovel  *[tools]*
 - **qasgusi** — cedar \| cedar tree \| Cedar  *[trees]*
 - **qopisun** — infant \| Infant  *[people, age]*
-- **qospem** — lake \| Lake  *[water]*
+- **qospem** — lake \| Lake  *[sea-and-rivers]*
 - **sa'q** — long ago \| Long ago  *[time]*
 - **sa'qati** — needle \| knitting needle \| Needle \| Knitting needle  *[sewing-and-textiles, tools]*
 - **sa'qawei** — old \| old \| Old \| Old  *[condition]*
@@ -729,17 +730,17 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **salawei** — salt \| Salt  *[food]*
 - **sama'latl** — touch \| He/she touches him/her  *[smell-and-taste]*
 - **samqwani'j** — toad \| Toad  *[animals]*
-- **sangew** — slowly \| calmly \| carefully \| gently \| Slowly  *[movement]*
-- **sapawsit** — survive \| He/she survives  *[health]*
-- **saqamaw** — gentleman \| chief \| man of high rank \| big shot \| Gentleman  *[people, leadership-and-law]*
+- **sangew** — slowly \| calmly \| carefully \| gently \| Slowly  *[ways-of-moving]*
+- **sapawsit** — survive \| He/she survives  *[healing]*
+- **saqamaw** — gentleman \| chief \| man of high rank \| big shot \| Gentleman  *[leadership-and-law, people]*
 - **saqpe'g** — wet \| wet \| He/she is wet \| It is wet  *[water]*
 - **sasqa'gwit** — pot (for cooking) \| Cooking pot  *[household, cooking]*
 - **se'sgwet** — holler \| scream \| shout \| He/she screams  *[talking, hearing]*
 - **seggw** — sweet \| sweet \| It is sweet \| It is sweet  *[smell-and-taste, food]*
 - **sepei** — this morning \| This morning  *[time]*
-- **sespete'lmatl** — worry about \| He/she is worry about him/her  *[emotions]*
+- **sespete'lmatl** — worry about \| He/she is worry about him/her  *[fear-anger-sadness]*
 - **sewisga'toq** — break \| He/she breaks it  *[breaking]*
-- **sg'te'gmuj** — ghost \| Ghost  *[spirit-world]*
+- **sg'te'gmuj** — ghost \| Ghost  *[spirits]*
 - **sgilmin** — seed \| Seed  *[plants]*
 - **sgu'l** — school \| School  *[learning-and-teaching]*
 - **si'gewigu's** — March \| March  *[calendar]*
@@ -747,21 +748,19 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **siggw** — spring \| springtime \| It is springtime  *[calendar]*
 - **siglati** — shark \| Shark  *[fish]*
 - **sign** — stocking \| sock \| Stocking  *[clothing]*
-- **sigu'sgw** — widow \| Widow  *[people, family]*
+- **sigu'sgw** — widow \| Widow  *[family, people]*
 - **sigue'g** — empty \| empty \| He/she/it is empty \| It is empty  *[amounts]*
-- **sipeliw** — seldom \| rarely \| often (Listuguj) \| Seldom  *[time]*
 - **sisgu** — mud \| Mud  *[land]*
 - **sisip** — bird \| waterfowl \| Waterfowl  *[birds]*
 - **sisla'gwa'latl** — fry \| He/she fries...  *[cooking]*
 - **sisla'gwa'taqan** — fry bread \| pancake (fried cake) \| Fry bread  *[food]*
 - **sismo'qon** — sugar \| maple sugar \| Sugar  *[food]*
-- **sismo'qoniet** — diabetic \| diabetes \| He/she is diabetic  *[health]*
-- **sitm** — shore \| beach \| Shore  *[water, land]*
+- **sismo'qoniet** — diabetic \| diabetes \| He/she is diabetic  *[sickness]*
+- **sitm** — shore \| beach \| Shore  *[sea-and-rivers, land]*
 - **sma'gnis** — soldier \| Soldier  *[conflict, occupations]*
 - **sma'tewit** — smart \| alert \| He/she is smart  *[thinking]*
 - **smtug** — right away \| immediately \| Right away  *[time]*
 - **snawei** — maple tree \| hard rock maple \| sugar maple \| Maple tree  *[trees]*
-- **soppei** — couch \| sofa \| Sofa  *[household]*
 - **sqolj** — frog \| Frog  *[animals]*
 - **sqoljuigu's** — May \| May  *[calendar]*
 - **st'ge** — just like \| Just like  *[small-words]*
@@ -788,12 +787,12 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **te's** — every time \| every \| Everytime  *[time]*
 - **te'sigisg'g** — every day \| daily \| Everyday  *[time]*
 - **te'sipow** — horse \| Horse  *[farm-animals]*
-- **tege'g** — cold (of weather) \| The weather is cold  *[weather]*
+- **tege'g** — cold (of weather) \| The weather is cold  *[weather, temperature]*
 - **tegen** — which? \| Which one?  *[question-words]*
 - **tegismit** — swim \| He/she swims  *[swimming]*
 - **telimatl** — tell \| he/she tells him/her \| He/she tells someone  *[talking]*
 - **telta'sit** — think so \| He/she thinks so  *[thinking]*
-- **temig** — deep \| It is deep  *[water]*
+- **temig** — deep \| It is deep  *[sea-and-rivers]*
 - **temsatl** — cut \| slice \| sever (by knife) \| He/she cuts him/her  *[cutting]*
 - **tepaqan** — vehicle \| sleigh \| toboggan \| sled \| Vehicle  *[vehicles]*
 - **tepgunset** — moon \| month \| Moon  *[sky, calendar]*
@@ -802,100 +801,97 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **teplumatl** — promise \| He/she promises someone  *[talking]*
 - **tepqatg** — married \| He/she is married  *[family]*
 - **tetapu'teg** — correct \| proper \| It is correct  *[good-and-bad]*
-- **tetaqe'g** — hurry \| rush \| He/she is in a hurry  *[movement]*
 - **tettuatl** — owe \| He/she owes him/her  *[money-and-trade]*
 - **tewa'lutewei** — dandelion \| Dandelion  *[plants]*
-- **tewiet** — go outside \| exit \| He/she exits  *[movement]*
+- **tewiet** — go outside \| exit \| He/she exits  *[going-and-coming]*
 - **tg'sn** — west \| West  *[directions]*
-- **tgeia'tat** — have cold \| He/she has a cold  *[health]*
-- **tgu** — wave \| Wave  *[water]*
+- **tgeia'tat** — have cold \| He/she has a cold  *[sickness]*
+- **tgu** — wave \| Wave  *[sea-and-rivers]*
 - **tia'muei** — moose meat \| Moose meat  *[food, animals]*
 - **tia'mugwet** — hunt moose \| He/she hunts moose  *[hunting]*
 - **tities** — bluejay \| Bluejay  *[birds]*
+- **tleiawit** — originate from \| belongs there \| from there \| He/she originates from  *[places]*
 - **tli'suti** — language \| Language  *[talking, peoples-and-nations]*
 - **tm'tqe'gnn** — scissors \| pair of scissors \| Scissors  *[household, tools]*
 - **tma'gittaqan** — saw \| Saw  *[tools]*
-- **tmaqan** — pipe (for smoking) \| Pipe(for smoking)  *[customs]*
+- **tmaqan** — pipe (for smoking) \| Pipe(for smoking)  *[tobacco-and-smoking]*
 - **tmato's** — tomato \| Tomato  *[food, plants]*
-- **tmawei** — tobacco \| Tobacco  *[customs, plants]*
+- **tmawei** — tobacco \| Tobacco  *[tobacco-and-smoking, plants]*
 - **tmg** — first \| before \| First  *[time]*
 - **tmi'gn** — axe \| Axe  *[tools]*
 - **tmjign** — fireplace \| Fireplace  *[fire, dwellings]*
 - **toqo** — so \| So  *[small-words]*
 - **toqojiw** — and then \| And then  *[small-words]*
-- **toqosi'p** — and then \| then \| And then  *[time]*
 - **toqwa'q** — fall \| autumn \| It is Autumn  *[calendar]*
 - **toqwaqji'jg** — short \| It is short  *[size-and-shape]*
 - **tplutaqan** — law \| Law  *[leadership-and-law]*
-- **tqope'j** — twin \| Twin  *[people, family]*
+- **tqope'j** — twin \| Twin  *[family, people]*
 - **tqoqwej** — wild cat \| bobcat \| Wild cat  *[animals]*
 - **tu'aqan** — ball \| Ball  *[games]*
 - **tu'at** — play baseball \| play ball \| He/she plays baseball  *[games]*
 - **tu'gwesmun** — pillow \| cushion \| Pillow  *[household, sleep]*
 - **tu's** — daughter! girl! (term of affection) \| Daughter!(term of affection)  *[family]*
-- **tugwa'latl** — wake up \| He/she wakes someone up  *[sleep]*
 - **tugwiet** — wake up \| awaken \| He/she wakes up  *[sleep]*
 - **tujiw** — at that time \| At that time  *[time]*
 - **tuli'jeweie'l** — rice \| Rice  *[food]*
 - **tuop'ti** — window \| Window  *[dwellings, household]*
 - **u'j** — fly \| Fly  *[insects]*
 - **u'n** — fog \| Fog  *[weather]*
-- **u't** — this \| This  *[small-words]*
 - **u'ta'qan** — paddle \| oar \| Paddle  *[boats]*
-- **uggamlamun** — heart \| heart (in cards) \| His/her heart \| Heart (in playing cards)  *[body, games]*
-- **uggwat** — foot \| His/her/its foot  *[body]*
+- **uggamlamun** — heart \| heart (in cards) \| His/her heart \| Heart (in playing cards)  *[body-parts, games]*
+- **uggwat** — foot \| His/her/its foot  *[body-parts]*
 - **uggwe'ji'jl** — younger sister \| His/her younger sister  *[family]*
 - **uggwisl** — son \| His/her son  *[family]*
 - **uggwitl** — mother \| His/her mother  *[family]*
 - **ugji'nmuml** — husband \| His/her husband  *[family]*
-- **ugji'taqann** — neck \| His/her neck  *[body]*
+- **ugji'taqann** — neck \| His/her neck  *[body-parts]*
 - **ugjignaml** — younger brother \| His/her younger brother  *[family]*
 - **ugjigsu'g** — family \| Family  *[family]*
-- **ugjigunn** — knee \| His/her knee  *[body]*
+- **ugjigunn** — knee \| His/her knee  *[body-parts]*
 - **ugjiljl** — father-in-law \| His/her father-in-law  *[family]*
 - **ugjip'sg** — root \| Root  *[plants]*
 - **ugjipen** — east \| East  *[directions]*
 - **ugjit** — for \| because \| For  *[small-words]*
 - **ugju'sn** — wind \| air \| Wind  *[weather]*
 - **ugjugwi'jijl** — mother-in-law \| His/her mother-in-law  *[family]*
-- **uglusgnignml** — elbow \| His/her elbow  *[body]*
-- **ugpaqam** — back \| His/her back  *[body]*
+- **uglusgnignml** — elbow \| His/her elbow  *[body-parts]*
+- **ugpaqam** — back \| His/her back  *[body-parts]*
 - **ugpaqamg** — behind \| in rear of \| Behind  *[location-words]*
-- **ugpitnoqom** — arm \| His/her arm  *[body]*
-- **ugpnn** — lung \| His/her lung  *[body]*
+- **ugpitnoqom** — arm \| His/her arm  *[body-parts]*
+- **ugpnn** — lung \| His/her lung  *[body-parts]*
 - **ugpugugwe'l** — eyeglasses \| glasses \| His/her eyeglasses  *[seeing, household]*
-- **ugpusgun** — breast \| chest \| His/her chest  *[body]*
-- **ugqonn** — heel \| His/her heel  *[body]*
-- **ugqosi'l** — fingernail \| toenail \| hoof \| claw \| His/her fingernail or toenail  *[body]*
-- **ugqotaqann** — throat \| His/her throat  *[body]*
+- **ugpusgun** — breast \| chest \| His/her chest  *[body-parts]*
+- **ugqonn** — heel \| His/her heel  *[body-parts]*
+- **ugqosi'l** — fingernail \| toenail \| hoof \| claw \| His/her fingernail or toenail  *[body-parts]*
+- **ugqotaqann** — throat \| His/her throat  *[body-parts]*
 - **ugs'tqamu** — earth \| world \| Earth  *[land, sky]*
-- **ugs'tqamua'latl** — give birth \| bear (child) \| bring into the world \| She gives birth to him/her  *[family, body]*
-- **ugs'tqamuit** — born \| come into world \| He/she comes into the world  *[family, body]*
-- **ugs'tuaqan** — ear \| His/her ear  *[body]*
-- **ugsi** — lip \| His/her lip  *[body]*
-- **ugsisgw** — face \| His/her face  *[body]*
+- **ugs'tqamua'latl** — give birth \| bear (child) \| bring into the world \| She gives birth to him/her  *[family, body-actions]*
+- **ugs'tqamuit** — born \| come into world \| He/she comes into the world  *[family, body-actions]*
+- **ugs'tuaqan** — ear \| His/her ear  *[body-parts]*
+- **ugsi** — lip \| His/her lip  *[body-parts]*
+- **ugsisgw** — face \| His/her face  *[body-parts]*
 - **ugsisl** — older brother \| His/her older brother  *[family]*
-- **ugsisqon** — nose \| His/her nose  *[body]*
-- **ugsitun** — voice \| voice box (larynx) \| language \| His/her voice  *[body, talking]*
+- **ugsisqon** — nose \| His/her nose  *[body-parts]*
+- **ugsitun** — voice \| voice box (larynx) \| language \| His/her voice  *[body-parts, talking]*
 - **ugsml** — niece \| His/her niece  *[family]*
-- **ugsmu'l** — antler \| horn \| He/she has antlers  *[body, animals]*
-- **ugsuguni** — tail \| His/her tail  *[body, animals]*
+- **ugsmu'l** — antler \| horn \| He/she has antlers  *[body-parts, animals]*
+- **ugsuguni** — tail \| His/her tail  *[body-parts, animals]*
 - **ugsugwisl** — aunt \| His/her aunt  *[family]*
-- **ugt'pl** — brain \| His/her brain  *[body]*
+- **ugt'pl** — brain \| His/her brain  *[body-parts]*
 - **ugte'piteml** — wife \| His/her wife  *[family]*
 - **ugtejg** — in back \| behind \| at the back \| last \| In back  *[location-words]*
-- **ugtijin** — thumb \| His/her thumb  *[body]*
-- **ugtinin** — body \| His/her body  *[body]*
-- **ugtlaminu** — stomach \| His/her stomach  *[body]*
+- **ugtijin** — thumb \| His/her thumb  *[body-parts]*
+- **ugtinin** — body \| His/her body  *[body-parts]*
+- **ugtlaminu** — stomach \| His/her stomach  *[body-parts]*
 - **ugtlamugsisl** — uncle \| His/her uncle  *[family]*
-- **ugtlmaqan** — shoulder \| His/her shoulder  *[body]*
-- **ugtluign** — finger \| His/her finger  *[body]*
-- **ugto'jm** — toe \| His/her toe  *[body]*
+- **ugtlmaqan** — shoulder \| His/her shoulder  *[body-parts]*
+- **ugtluign** — finger \| His/her finger  *[body-parts]*
+- **ugto'jm** — toe \| His/her toe  *[body-parts]*
 - **ugtue'ml** — domesticated animal \| livestock \| pet \| His/her domesticated animal  *[farm-animals]*
 - **ugtul** — boat \| vehicle \| car \| His/her boat  *[vehicles, boats]*
-- **ugtun** — mouth \| His/her mouth  *[body]*
+- **ugtun** — mouth \| His/her mouth  *[body-parts]*
 - **ugtusl** — daughter \| His/her daughter  *[family]*
-- **ugtutem** — clan \| totem \| His/her clan  *[customs, family]*
+- **ugtutem** — clan \| totem \| His/her clan  *[leadership-and-law, family]*
 - **ugumijl** — grandmother \| His/her grandmother  *[family]*
 - **ugumuljin** — eight \| eight (in counting) \| Eight  *[numbers]*
 - **uji'jl** — grandchild \| His/her grandchild  *[family]*
@@ -904,62 +900,65 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **ula\_tett** — right here \| this here \| Right here  *[location-words]*
 - **uleiatimgewei** — kindness \| Kindness  *[character, social-life]*
 - **ulo'nug** — this evening \| tonight \| This evening  *[time]*
-- **ulta'suaqan** — happiness \| gladness \| pleasure \| Happiness  *[emotions]*
+- **ulta'suaqan** — happiness \| gladness \| pleasure \| Happiness  *[love-and-joy]*
 - **ulugsl** — nephew \| His/her nephew  *[family]*
+- **um'tgi** — territory \| land \| homeland \| His/her territory  *[peoples-and-nations, land]*
 - **umijgamijl** — grandfather \| His/her grandfather  *[family]*
 - **umisl** — older sister \| His/her older sister  *[family]*
-- **umusti** — belly \| His/her belly  *[body]*
+- **umusti** — belly \| His/her belly  *[body-parts]*
 - **ungi'gug** — parents \| His/her parents  *[family]*
 - **unjann** — child \| His/her child  *[family]*
-- **usapun** — hair of head \| hair \| His/her hair  *[body]*
+- **usapun** — hair of head \| hair \| His/her hair  *[body-parts]*
 - **utan** — town \| village \| Town  *[places]*
-- **utqotamg** — burial \| funeral \| Burial  *[ceremony]*
+- **utqotamg** — burial \| funeral \| Burial  *[death-and-mourning, church-rituals]*
 - **wa'qan** — knife \| blade \| Knife  *[tools, household]*
-- **wa'so'q** — heaven \| the heavens \| Heaven  *[spirit-world]*
+- **wa'so'q** — heaven \| the heavens \| Heaven  *[faith]*
 - **wa'w** — egg \| Egg  *[food]*
 - **waju'aq** — full (with non·liquid) \| It is full  *[amounts]*
-- **waju'pa'q** — high tide \| It is high tide  *[water]*
+- **waju'pa'q** — high tide \| It is high tide  *[sea-and-rivers]*
 - **wali'j** — snowball \| Snowball  *[games, weather]*
-- **walqwan** — rainbow \| Rainbow  *[weather, sky]*
-- **waltes** — waltes game \| wooden plate used in dice game \| Mi'gmaw game of chance \| Game  *[games, customs]*
+- **walqwan** — rainbow \| Rainbow  *[sky, weather]*
+- **waltes** — waltes game \| wooden plate used in dice game \| Mi'gmaw game of chance \| Game  *[games]*
 - **wantaqo'ti** — peace \| Peace  *[social-life]*
 - **wape'jg** — flour \| Flour  *[food]*
 - **wapg** — dawn \| daylight \| It is dawn  *[time]*
 - **wapus** — hare \| rabbit \| Hare  *[animals]*
 - **waqama'latl** — clean \| He/she cleans him/her  *[cleaning]*
-- **waqantew** — bone \| Bone  *[body]*
+- **waqantew** — bone \| Bone  *[body-parts]*
 - **waqatasg** — northern lights \| aurora borealis \| Northern lights  *[sky]*
 - **wasoqon** — light \| Light  *[fire]*
 - **wasoqonmaqan** — candle \| lamp \| lantern \| Candle  *[fire, household]*
 - **wasoqotesg** — lightning \| sparkle \| It is lightning  *[weather]*
-- **waspu** — seal \| Seal  *[animals]*
+- **waspu** — seal \| Seal  *[fish, animals]*
 - **wasueg** — flower \| blossom \| blossom \| bloom \| flower \| A flower \| It blossoms  *[plants]*
 - **watapteg** — yellow \| greyish \| slate colored \| It is yellow  *[colors]*
 - **we'gow** — until \| all along \| during \| Until  *[time]*
 - **we'jitoq** — find \| come upon \| He/she finds it  *[seeing]*
-- **wegaig** — angry \| He/she is angry  *[emotions]*
+- **wegaig** — angry \| He/she is angry  *[fear-anger-sadness]*
 - **wegilat** — bark \| He/she/it (dog) barks  *[animals, hearing]*
 - **wejgwa'tegemg** — in the past \| In the past  *[time]*
+- **wejiet** — come from there \| return from \| He/she comes from there  *[travel]*
 - **weju's'g** — windy \| It is windy  *[weather]*
 - **wejuow** — close by \| Close by  *[location-words]*
 - **wela'gowei** — supper \| Supper  *[food, time]*
 - **wela'gw** — evening \| dusk \| night \| Evening  *[time]*
 - **wela'gwe'g** — last night \| Last night  *[time]*
-- **wele'g** — living well \| fine \| alive \| healthy \| He/she is living well  *[health]*
+- **wele'g** — living well \| fine \| alive \| healthy \| He/she is living well  *[healing]*
 - **weligisg'g** — nice weather day \| It is a nice day  *[weather]*
 - **welima'q** — smell good \| It smells good  *[smell-and-taste]*
 - **welipot** — rowboat \| Rowboat  *[boats]*
-- **weljemajgewe'l** — sweetgrass \| lilacs \| Sweetgrass  *[plants, customs]*
-- **weljesing** — happy \| He/she is happy  *[emotions]*
+- **weljemajgewe'l** — sweetgrass \| lilacs \| Sweetgrass  *[plants]*
+- **weljesing** — happy \| He/she is happy  *[love-and-joy]*
+- **wellugwet** — do good work \| do well (in general) \| succeed (in general) \| work well \| He/she does good   *[work]*
 - **welm'toq** — kind·hearted \| He/she is kind·hearted  *[character]*
-- **weloqotalg** — eat supper \| have supper \| He/she eats supper  *[food, time]*
+- **weloqotalg** — eat supper \| have supper \| He/she eats supper  *[eating-and-drinking, time]*
 - **welp'teg** — nice and warm \| It is nice and warm  *[temperature, weather]*
 - **welqamigsit** — good·natured \| have good disposition or character \| He/she is good natured  *[character]*
 - **weltamultimg** — Friday \| Friday  *[calendar]*
 - **weltesguatl** — meet \| meet up with (on foot) \| He/she meets him/her  *[social-life]*
-- **wen\_net** — who's that? \| who's this? \| Who's that?  *[question-words, people]*
+- **wen\_net** — who's that? \| who's this? \| Who's that?  *[question-words]*
 - **wenaqa'latl** — pick up \| lift up \| He/she picks him/her/it up  *[carrying]*
-- **wenaqiet** — jump \| He/she jumps  *[movement]*
+- **wenaqiet** — jump \| He/she jumps  *[ways-of-moving]*
 - **wenjitia'm** — cow \| Cow  *[farm-animals]*
 - **wenju's'gapun** — turnip \| Turnip  *[food]*
 - **wenju'su'n** — apple \| Apple  *[food]*
@@ -967,11 +966,11 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **wenuj** — Frenchman \| French person \| Frenchman  *[peoples-and-nations]*
 - **wesamelg** — too much \| too much \| Too much of it \| Too much of him/her/it  *[amounts]*
 - **wesget** — fish \| He/she fishes  *[fishing]*
-- **wesgewe'g** — laugh \| He/she laughs  *[emotions]*
-- **wesgijinuit** — bring to life \| born \| He/she is born  *[family, body]*
-- **wesgowigwa'sit** — smile \| He/she smiles  *[emotions, body-actions]*
+- **wesgewe'g** — laugh \| He/she laughs  *[love-and-joy]*
+- **wesgijinuit** — bring to life \| born \| He/she is born  *[family, body-actions]*
+- **wesgowigwa'sit** — smile \| He/she smiles  *[love-and-joy, body-actions]*
 - **weti** — worm \| Worm  *[insects]*
-- **wetmat** — smoke \| He/she smokes  *[customs]*
+- **wetmat** — smoke \| He/she smokes  *[tobacco-and-smoking]*
 - **wetme'g** — busy \| He/she is busy  *[work]*
 - **wetnatl** — pull \| haul \| He/she pulls him /her  *[pushing-and-pulling]*
 - **wi'g** — house \| dwelling \| home \| His/her house  *[dwellings]*
@@ -981,7 +980,7 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **wi'gign** — pen \| pencil \| Pen  *[stories-and-writing, tools]*
 - **wigapu'g** — taste good \| It tastes good  *[smell-and-taste, food]*
 - **wigewigu's** — October \| October  *[calendar]*
-- **wigewit** — fat \| He/she is fat  *[body]*
+- **wigewit** — fat \| He/she is fat  *[body-descriptions]*
 - **wigit** — reside or dwell there \| He/she resides or dwells there  *[dwellings]*
 - **wigmaq** — family \| relative \| His/her family  *[family]*
 - **wiguaq** — home \| His/her home  *[dwellings]*
@@ -990,21 +989,22 @@ Tiers are **cumulative**: the top-100 includes the top-10, the top-1000 includes
 - **wigun** — bean \| Bean  *[food]*
 - **wigwa'smugwet** — whistle \| He/she whistles  *[music-and-dance]*
 - **wigwasapewit** — attractive \| good·looking \| handsome \| beautiful \| pretty \| He/she is attractive  *[appearance]*
-- **wigwom** — wigwam \| dwelling \| camp \| Wigwam  *[dwellings, customs]*
+- **wigwom** — wigwam \| dwelling \| camp \| Wigwam  *[dwellings]*
 - **wije'watl** — accompany \| go with \| He/she accompanies him/her/it  *[travel, social-life]*
 - **wijei** — same \| same \| Same \| Same  *[small-words]*
 - **wijig'tijig** — siblings \| related as brothers and/or sisters \| They are siblings  *[family]*
-- **wijinuan** — cheek \| His/her cheek  *[body]*
+- **wijinuan** — cheek \| His/her cheek  *[body-parts]*
 - **wilu** — food \| provisions \| His/her food  *[food]*
 - **winapewit** — unattractive \| ugly \| He/she is unattractive  *[appearance]*
 - **winjig** — bad condition \| spoiled \| It is in a bad condition  *[condition]*
-- **winnu** — tongue \| his/her tongue  *[body]*
-- **wipit** — tooth \| His/her tooth  *[body]*
+- **winnu** — tongue \| his/her tongue  *[body-parts]*
+- **wipit** — tooth \| His/her tooth  *[body-parts]*
 - **wisawimgwe'g** — orange (color) \| Orange (color)  *[colors]*
 - **wisawsuliewei** — gold \| Gold  *[money-and-trade]*
-- **wisguet** — jealous \| envious \| He/she is jealous  *[emotions]*
+- **wisguet** — jealous \| envious \| He/she is jealous  *[fear-anger-sadness]*
 - **wisqoq** — black ash \| ash tree \| brown ash \| basket ash \| Black ash  *[trees, basket-making]*
 - **wissei** — nest \| A nest  *[birds]*
+- **wissugwatiget** — cook \| He/she cooks  *[cooking]*
 - **witape'sgwal** — female friend \| His/her female friend  *[people]*
 - **wius** — meat \| Meat  *[food]*
 - **wo'gumal** — cousin \| relative \| His/her cousin  *[family]*

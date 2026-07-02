@@ -2,37 +2,41 @@
 
 These could not be categorized (placeholders, no English, editor notes, grammatical prefixes). Each needs a decision: finish the entry, delete it, or leave it uncategorized.
 
-- `110` **Terminaisons -omg**  *(French heading fragment, no English)*
-- `1161` **aji-\*\***  *(no English)*
+- `110` **Terminaisons -omg**  *(French grammatical note (verb endings), not a lexeme)*
+- `1161` **aji-\*\***  *(empty archived prefix stub)*
 - `1240` **alagweg**  *(no English)*
 - `2895` **aligjitatesing**  *(no English)*
-- `4597` **al'-\*\***  *(no English)*
-- `19594` **eli-**  *(prefix stub, no English)*
+- `4597` **al'-\*\***  *(empty archived prefix stub)*
+- `19594` **eli-**  *(empty archived prefix stub)*
 - `21500` **elsumatl\*\***  *(no English)*
 - `21617` **eltaqa'muatl\*\***  *(no English)*
 - `22963` **emisqateg\*\***  *(no English)*
-- `28886` **etl-** — -ing equivalent  *(grammatical prefix)*
-- `29484` **etli·** — where \| when \| -ing  *(grammatical prefix)*
+- `28886` **etl-** — -ing equivalent  *(grammatical prefix note, not a lexeme)*
+- `29484` **etli·** — where \| when \| -ing  *(grammatical prefix note, not a lexeme)*
 - `35958` **gegugjiet\*\***  *(no English)*
 - `36659` **gejapeta'tl\*\***  *(no English)*
 - `39336` **gesgasit**  *(no English)*
-- `44975` **gi'gaji-** — forcefully \| spitefully  *(grammatical prefix)*
+- `44975` **gi'gaji-** — forcefully \| spitefully  *(grammatical prefix note, not a lexeme)*
+- `50107` **gji·** — almighty \| great  *(grammatical prefix note, not a lexeme)*
+- `56585` **jaqali-** — quickly \| fast  *(grammatical prefix note, not a lexeme)*
 - `69091` **mawta'tl\*\***  *(no English)*
-- `69164` **mawtesultijig** — ,,,see my nq \| They ,,, see my nq  *(editor note only)*
-- `73446` **me'si·** — unable \| cannot (with non negative verb)  *(grammatical prefix)*
+- `69164` **mawtesultijig** — ,,,see my nq \| They ,,, see my nq  *(editor note, not a gloss)*
+- `73446` **me'si·** — unable \| cannot (with non negative verb)  *(grammatical prefix note, not a lexeme)*
 - `76315` **migute'g**  *(no English)*
 - `76353` **migutelg**  *(no English)*
 - `76366` **miguteluatl**  *(no English)*
 - `80516` **musgumsit\*\***  *(no English)*
-- `102928` **#102928**  *(placeholder entry)*
+- `93661` **n't**  *(no English)*
+- `102928` **#102928**  *(placeholder entry, no content)*
 - `106187` **pemimqapga's'g**  *(no English)*
 - `112876` **piptoqunge'wj**  *(no English)*
+- `121099` **qones\*\*** — seed beer \| Restigouche term for Micmac from Big Cove [I hav  *(garbled multi-sense archived entry)*
 - `131538` **sugwiet**  *(no English)*
 - `131912` **su'pale'wimg**  *(no English)*
 - `132068` **tagatu**  *(no English)*
-- `135161` **teli-**  *(grammatical prefix)*
-- `139598` **teto'qwi-** — prefix for totally (dmm 03-05-23) \| prefix for completely (d  *(grammatical prefix)*
-- `140102` **tetuji-, tewji-** — very  *(grammatical prefix)*
+- `135161` **teli-**  *(grammatical prefix note, not a lexeme)*
+- `139598` **teto'qwi-** — prefix for totally (dmm 03-05-23) \| prefix for completely (d  *(grammatical prefix note, not a lexeme)*
+- `140102` **tetuji-, tewji-** — very  *(grammatical prefix note, not a lexeme)*
 - `145922` **ugs'tqan**  *(no English)*
 - `163697` **wigplasign**  *(no English)*
 - `11500962673525` **apt'sqa'q**  *(no English)*
@@ -46,11 +50,12 @@ These could not be categorized (placeholders, no English, editor notes, grammati
 - `106106885005047` **jipugtuatuet**  *(no English)*
 - `129598435601368` **tba**  *(TBA placeholder)*
 - `153579075505727` **welita'si**  *(no English)*
+- `162135884434372` **aptaqan**  *(no English)*
 - `165793780511693` **pugwelewistoq**  *(no English)*
 - `181785905435800` **aptesqe'teg**  *(no English)*
-- `213885335459355` **Notre brouillon mots et expressions micmaques**  *(French editor note, not an entry)*
-- `224951419362577` **mestagsepiag tba**  *(TBA placeholder)*
-- `226240702597482` **mestasepgu tba**  *(TBA placeholder)*
+- `213885335459355` **Notre brouillon mots et expressions micmaques**  *(editor scratch note, not a lexeme)*
+- `224951419362577` **mestagsepiag / mestaqs'piaq tba**  *(TBA placeholder)*
+- `226240702597482` **mestagsepgu / mestags'pgw tba**  *(TBA placeholder)*
 - `297660862727833` **papiatl**  *(no English)*
 - `318686003098269` **gomign**  *(no English)*
 - `330997902453327` **nenaqji'j**  *(no English)*
@@ -61,12 +66,12 @@ These could not be categorized (placeholders, no English, editor notes, grammati
 - `394132513683220` **papg'sa'sit **  *(no English)*
 - `394826741916527` **asoqoman**  *(no English)*
 - `439202036903365` **guntewsn**  *(no English)*
-- `448711386238939` **#448711386238939**  *(placeholder)*
-- `453771458070636` **#453771458070636**  *(placeholder)*
+- `448711386238939` **#448711386238939**  *(placeholder #id headword)*
+- `453771458070636` **#453771458070636**  *(placeholder #id headword)*
 - `456082819567655` **jigapita'sit**  *(no English)*
-- `456833864526683` **qonwalis?**  *(no English)*
+- `456833864526683` **qonwalis?**  *(no English, headword has ?)*
 - `459472080909023` **alaweia’gi**  *(no English)*
-- `541878361044121` **papgug? papqu'g**  *(no English)*
+- `541878361044121` **papgug? papqu'g**  *(no English, headword has ?)*
 - `544102514828645` **papgugewei, papqu'gewei **  *(no English)*
 - `546470536574095` **pimewinu**  *(no English)*
 - `572208055483087` **nenaqsi'sit**  *(no English)*
@@ -81,26 +86,28 @@ These could not be categorized (placeholders, no English, editor notes, grammati
 - `794009672196839` **nipa'gwet**  *(no English)*
 - `804473542350164` **la'qans'g**  *(no English)*
 - `808703851524071` **mestegi'sasigewei/mest'gi'sas'gewei**  *(no English)*
-- `831270357892465` **ela'gittoq**  *(no English)*
+- `831270357892465` **ela'gittoq**  *(no English; duplicate headword of 646566912378396)*
 - `854142574794549` **tba**  *(TBA placeholder)*
 - `871399511785879` **wejgwimtmat**  *(no English)*
 - `895675217080613` **laqpisuti'gl**  *(no English)*
 - `927939301997521` **ususi**  *(no English)*
 - `930073488970949` **jipo'ji'j**  *(no English)*
+- `930788268629719` **sape'uti'l mestangl**  *(no English)*
+- `970435535634769` **mestapigwelgig / mestapugwelgig**  *(no English)*
 - `991064145405743` **Sataio**  *(no English)*
 - `1005877957128734` **nantmiw/nantmi'w**  *(no English)*
 - `1041723266610859` **lalispam**  *(no English)*
-- `1070563464840451` **waqaja'si**  *(no English)*
+- `1070563464840451` **waqaja'sit**  *(no English)*
 - `1088466099529132` **mespo'qweg**  *(no English)*
 - `1120360488945178` **pugtewniguo'm**  *(no English)*
 - `1125737633416581` **pasangiaq**  *(no English)*
 - `1125801558429787` **waqamagetiat**  *(no English)*
 - `1126562968299789` **gi'gem**  *(no English)*
-- `1140521318365799` **waqalusan**  *(no English)*
+- `1140521318365799` **#1140521318365799**  *(placeholder #id headword)*
 - `1147272122673675` **mespo'qwet**  *(no English)*
 - `1157485374164207` **nenatuimta'tl**  *(no English)*
-- `1160076983403535` **mesta-**  *(grammatical prefix)*
-- `1226800744149148` **#1226800744149148**  *(placeholder)*
+- `1160076983403535` **mesta-**  *(grammatical prefix note, not a lexeme)*
+- `1226800744149148` **#1226800744149148**  *(placeholder #id headword)*
 - `1226936802726505` **mestagtapa'q**  *(no English)*
 - `1236126193838309` **espei**  *(no English)*
 - `1240424163394502` **mestagpmite'lmugsit**  *(no English)*
@@ -116,10 +123,11 @@ These could not be categorized (placeholders, no English, editor notes, grammati
 - `1395175708537477` **sasqeia'toq**  *(no English)*
 - `1395829710041157` **Sataiewi'sg**  *(no English)*
 - `1408598049531797` **mestaespe'g**  *(no English)*
+- `1425026982297504` **waqajimgewei**  *(no English)*
 - `1429470231082599` **mestapita'q**  *(no English)*
 - `1446889588025243` **pigsapugia'q**  *(no English)*
 - `1466712039996911` **usa'gnig**  *(no English)*
-- `1468022916213017` **nenaqi-**  *(grammatical prefix)*
+- `1468022916213017` **nenaqi-**  *(grammatical prefix note, not a lexeme)*
 - `1568931660785047` **mawiejinteg**  *(no English)*
 - `1591568236938695` **lamatgutug**  *(no English)*
 - `1600108617027699` **guntewa'si**  *(no English)*
@@ -144,577 +152,582 @@ These could not be categorized (placeholders, no English, editor notes, grammati
 - `1953163748855540` **mestegi'sewei**  *(no English)*
 - `1954608461677381` **siplamgopit**  *(no English)*
 - `1961269572299615` **mestegipgwisasit**  *(no English)*
-- `1970386119290085` **#1970386119290085**  *(placeholder)*
+- `1970386119290085` **#1970386119290085**  *(placeholder #id headword)*
 - `1987244055882384` **aniamtijig**  *(no English)*
 - `1987865027832993` **TBA**  *(TBA placeholder)*
 - `1997948704986199` **aqamoqalati**  *(no English)*
-- `2013887582316407` **#2013887582316407**  *(placeholder)*
-- `2027902611607151` **#2027902611607151**  *(placeholder)*
+- `2013887582316407` **#2013887582316407**  *(placeholder #id headword)*
+- `2027902611607151` **#2027902611607151**  *(placeholder #id headword)*
 - `2035836089981168` **nantuimte'g**  *(no English)*
-- `2074035654856129` **#2074035654856129**  *(placeholder)*
+- `2074035654856129` **#2074035654856129**  *(placeholder #id headword)*
 - `2079526537530745` **sesugpegitg**  *(no English)*
-- `2085287786971644` **#2085287786971644**  *(placeholder)*
-- `2085485108741865` **#2085485108741865**  *(placeholder)*
-- `2106035740651497` **#2106035740651497**  *(placeholder)*
-- `2110006331234978` **#2110006331234978**  *(placeholder)*
+- `2085287786971644` **#2085287786971644**  *(placeholder #id headword)*
+- `2085485108741865` **#2085485108741865**  *(placeholder #id headword)*
+- `2106035740651497` **#2106035740651497**  *(placeholder #id headword)*
+- `2110006331234978` **#2110006331234978**  *(placeholder #id headword)*
 - `2125869614011145` **pugteg**  *(no English)*
-- `2126804229372301` **#2126804229372301**  *(placeholder)*
+- `2126804229372301` **#2126804229372301**  *(placeholder #id headword)*
 - `2129747988435252` **waqani'gan**  *(no English)*
 - `2130060990191022` **lame'g**  *(no English)*
-- `2133889675722925` **Plants AEI**  *(editor heading, not an entry)*
-- `2134128884812627` **#2134128884812627**  *(placeholder)*
-- `2144592385423495` **#2144592385423495**  *(placeholder)*
-- `2170436412043667` **Classifications**  *(editor heading, not an entry)*
-- `2174636597330445` **#2174636597330445**  *(placeholder)*
-- `2188242209114395` **#2188242209114395**  *(placeholder)*
-- `2193384853128397` **#2193384853128397**  *(placeholder)*
+- `2133889675722925` **Plants AEI**  *(editor scratch note, not a lexeme)*
+- `2134128884812627` **#2134128884812627**  *(placeholder #id headword)*
+- `2144592385423495` **#2144592385423495**  *(placeholder #id headword)*
+- `2170436412043667` **Classifications**  *(editor scratch note, not a lexeme)*
+- `2174636597330445` **#2174636597330445**  *(placeholder #id headword)*
+- `2188242209114395` **#2188242209114395**  *(placeholder #id headword)*
+- `2193384853128397` **#2193384853128397**  *(placeholder #id headword)*
 - `2210642711803943` **petateja'lut**  *(no English)*
 - `2213769837399534` **wagjuig**  *(no English)*
-- `2221107596210015` **#2221107596210015**  *(placeholder)*
-- `2248257646442837` **#2248257646442837**  *(placeholder)*
-- `2249225101075549` **#2249225101075549**  *(placeholder)*
-- `2256544867321727` **#2256544867321727**  *(placeholder)*
-- `2278069465034083` **#2278069465034083**  *(placeholder)*
-- `2285305324661980` **#2285305324661980**  *(placeholder)*
+- `2221107596210015` **#2221107596210015**  *(placeholder #id headword)*
+- `2248257646442837` **#2248257646442837**  *(placeholder #id headword)*
+- `2249225101075549` **#2249225101075549**  *(placeholder #id headword)*
+- `2256544867321727` **#2256544867321727**  *(placeholder #id headword)*
+- `2278069465034083` **#2278069465034083**  *(placeholder #id headword)*
+- `2285305324661980` **#2285305324661980**  *(placeholder #id headword)*
 - `2297532338473902` **pastoqopgas'g**  *(no English)*
 - `2310240804424137` **nipialsutmat**  *(no English)*
-- `2318562479685325` **#2318562479685325**  *(placeholder)*
-- `2320810780890776` **#2320810780890776**  *(placeholder)*
-- `2332410380612167` **#2332410380612167**  *(placeholder)*
+- `2318562479685325` **#2318562479685325**  *(placeholder #id headword)*
+- `2320810780890776` **#2320810780890776**  *(placeholder #id headword)*
+- `2332410380612167` **#2332410380612167**  *(placeholder #id headword)*
 - `2337876064094653` **pepgmegwit**  *(no English)*
-- `2345198916875081` **#2345198916875081**  *(placeholder)*
-- `2376108603345657` **#2376108603345657**  *(placeholder)*
+- `2345198916875081` **#2345198916875081**  *(placeholder #id headword)*
+- `2376108603345657` **#2376108603345657**  *(placeholder #id headword)*
 - `2386861903144217` **na'nungl**  *(no English)*
-- `2391612705552431` **#2391612705552431**  *(placeholder)*
+- `2391612705552431` **#2391612705552431**  *(placeholder #id headword)*
 - `2395776703657910` **temsaqateg**  *(no English)*
 - `2396039214427072` **ewleit**  *(no English)*
 - `2434626037481527` **espisonapi**  *(no English)*
 - `2434758715566313` **waqamisgegwat**  *(no English)*
-- `2484607716929993` **prefixes: ani-, ane-, anu-**  *(editor note on prefixes)*
+- `2484607716929993` **prefixes: ani-, ane-, anu-**  *(grammatical prefix note, not a lexeme)*
 - `2495656458035785` **pigjimsgwesu**  *(no English)*
 - `2496189463150901` **sasqeia'latl**  *(no English)*
 - `2511595789026113` **saptesguatl**  *(no English)*
+- `2522514283815030` **#2522514283815030**  *(placeholder #id headword)*
 - `2529641902575469` **waqgatmu'g**  *(no English)*
 - `2584699741836150` **sipaqate'g**  *(no English)*
-- `2593241029651661` **#2593241029651661**  *(placeholder)*
-- `2595280507795011` **#2595280507795011**  *(placeholder)*
+- `2593241029651661` **#2593241029651661**  *(placeholder #id headword)*
+- `2595280507795011` **#2595280507795011**  *(placeholder #id headword)*
 - `2601213673291614` **apu'letmuatl**  *(no English)*
 - `2609146968989931` **mpo'qonit**  *(no English)*
-- `2627451553966853` **#2627451553966853**  *(placeholder)*
+- `2627451553966853` **#2627451553966853**  *(placeholder #id headword)*
 - `2634038244988513` **esp'jit gmtn**  *(no English)*
-- `2637786620390254` **#2637786620390254**  *(placeholder)*
-- `2671230202285583` **#2671230202285583**  *(placeholder)*
-- `2671837037315469` **#2671837037315469**  *(placeholder)*
+- `2637786620390254` **#2637786620390254**  *(placeholder #id headword)*
+- `2671230202285583` **#2671230202285583**  *(placeholder #id headword)*
+- `2671837037315469` **#2671837037315469**  *(placeholder #id headword)*
 - `2677637768689553` **ugtua'qan**  *(no English)*
 - `2691343123402311` **waqpateget**  *(no English)*
 - `2695041182847585` **pewisteget**  *(no English)*
 - `2695053713969345` **apt'lugwet**  *(no English)*
 - `2701677153041905` **nenaqal'gasuinusgej?**  *(no English)*
-- `2716866531746683` **#2716866531746683**  *(placeholder)*
-- `2719366845655121` **#2719366845655121**  *(placeholder)*
+- `2716866531746683` **#2716866531746683**  *(placeholder #id headword)*
+- `2719366845655121` **#2719366845655121**  *(placeholder #id headword)*
 - `2721275694631844` **estaqsing**  *(no English)*
-- `2722271586576527` **#2722271586576527**  *(placeholder)*
+- `2722271586576527` **#2722271586576527**  *(placeholder #id headword)*
 - `2723462300909991` **pugwelgatultijig **  *(no English)*
-- `2734749419067615` **#2734749419067615**  *(placeholder)*
-- `2736929801780929` **#2736929801780929**  *(placeholder)*
-- `2738485277712457` **#2738485277712457**  *(placeholder)*
+- `2734749419067615` **#2734749419067615**  *(placeholder #id headword)*
+- `2736929801780929` **#2736929801780929**  *(placeholder #id headword)*
+- `2738485277712457` **#2738485277712457**  *(placeholder #id headword)*
 - `2743770627646749` **jipalugsit**  *(no English)*
-- `2747849989075831` **#2747849989075831**  *(placeholder)*
+- `2747849989075831` **#2747849989075831**  *(placeholder #id headword)*
 - `2747924067426691` **pegigmag**  *(no English)*
 - `2753543991220729` **oqonpasguatl**  *(no English)*
-- `2777430073305296` **#2777430073305296**  *(placeholder)*
-- `2786133349047671` **#2786133349047671**  *(placeholder)*
-- `2798089642760257` **#2798089642760257**  *(placeholder)*
+- `2777430073305296` **#2777430073305296**  *(placeholder #id headword)*
+- `2786133349047671` **#2786133349047671**  *(placeholder #id headword)*
+- `2798089642760257` **#2798089642760257**  *(placeholder #id headword)*
 - `2799149644844548` **aptamgleg**  *(no English)*
-- `2799174804402116` **nangmiaq**  *(no English)*
 - `2813273410342797` **waqamogwat**  *(no English)*
-- `2850381713460955` **#2850381713460955**  *(placeholder)*
-- `2870275373298103` **#2870275373298103**  *(placeholder)*
+- `2850381713460955` **#2850381713460955**  *(placeholder #id headword)*
+- `2870275373298103` **#2870275373298103**  *(placeholder #id headword)*
 - `2873718869884241` **ugs'smg**  *(no English)*
 - `2881181429129987` **gasgewigtapegiet**  *(no English)*
 - `2881870345467135` **usgunamu'gewaq**  *(no English)*
-- `2896578514419313` **#2896578514419313**  *(placeholder)*
+- `2896578514419313` **#2896578514419313**  *(placeholder #id headword)*
 - `2907559933565083` **paltemgetesg**  *(no English)*
 - `2914481400362317` **egomit**  *(no English)*
-- `2922241548020373` **nantusget**  *(no English)*
-- `2944729977480885` **#2944729977480885**  *(placeholder)*
+- `2944729977480885` **#2944729977480885**  *(placeholder #id headword)*
 - `2961644453139930` **lamatg**  *(no English)*
 - `2975507898815983` **ws'si**  *(no English)*
-- `2982220426885373` **#2982220426885373**  *(placeholder)*
-- `2989777027011725` **#2989777027011725**  *(placeholder)*
-- `2990606024268111` **#2990606024268111**  *(placeholder)*
-- `2995614278563577` **#2995614278563577**  *(placeholder)*
-- `2996281421882323` **#2996281421882323**  *(placeholder)*
-- `3002788911520659` **#3002788911520659**  *(placeholder)*
-- `3005977153572963` **#3005977153572963**  *(placeholder)*
+- `2982220426885373` **#2982220426885373**  *(placeholder #id headword)*
+- `2989777027011725` **#2989777027011725**  *(placeholder #id headword)*
+- `2990606024268111` **#2990606024268111**  *(placeholder #id headword)*
+- `2995614278563577` **#2995614278563577**  *(placeholder #id headword)*
+- `2996281421882323` **#2996281421882323**  *(placeholder #id headword)*
+- `3002788911520659` **#3002788911520659**  *(placeholder #id headword)*
+- `3005977153572963` **#3005977153572963**  *(placeholder #id headword)*
 - `3009817163107061` **apt'lu'sulug**  *(no English)*
-- `3016143084880555` **#3016143084880555**  *(placeholder)*
-- `3026009386539540` **#3026009386539540**  *(placeholder)*
-- `3028772338666551` **#3028772338666551**  *(placeholder)*
-- `3029186353702417` **#3029186353702417**  *(placeholder)*
+- `3016143084880555` **#3016143084880555**  *(placeholder #id headword)*
+- `3026009386539540` **#3026009386539540**  *(placeholder #id headword)*
+- `3028772338666551` **#3028772338666551**  *(placeholder #id headword)*
+- `3029186353702417` **#3029186353702417**  *(placeholder #id headword)*
 - `3042177511083426` **apt'lu'sulatl**  *(no English)*
 - `3058160547870845` **usgitangwi'getesg**  *(no English)*
-- `3058666725001243` **#3058666725001243**  *(placeholder)*
-- `3064895695703377` **#3064895695703377**  *(placeholder)*
+- `3058666725001243` **#3058666725001243**  *(placeholder #id headword)*
+- `3064895695703377` **#3064895695703377**  *(placeholder #id headword)*
 - `3065707721267264` **ewlite'tmasit**  *(no English)*
-- `3101350356190725` **#3101350356190725**  *(placeholder)*
+- `3101350356190725` **#3101350356190725**  *(placeholder #id headword)*
 - `3109077450089230` **nantawe'g**  *(no English)*
-- `3111967235744477` **apul [title]**  *(editor title)*
+- `3111967235744477` **apul [title]**  *(editor title note, not a lexeme)*
 - `3117203957943989` **mi'waltimg**  *(no English)*
-- `3117625537656711` **#3117625537656711**  *(placeholder)*
-- `3117946261716035` **#3117946261716035**  *(placeholder)*
-- `3136634109793994` **#3136634109793994**  *(placeholder)*
-- `3138283261944025` **#3138283261944025**  *(placeholder)*
-- `3142855607185067` **#3142855607185067**  *(placeholder)*
+- `3117625537656711` **#3117625537656711**  *(placeholder #id headword)*
+- `3117946261716035` **#3117946261716035**  *(placeholder #id headword)*
+- `3136634109793994` **#3136634109793994**  *(placeholder #id headword)*
+- `3138283261944025` **#3138283261944025**  *(placeholder #id headword)*
+- `3142855607185067` **#3142855607185067**  *(placeholder #id headword)*
 - `3160857275046825` **espetg**  *(no English)*
 - `3178829448288734` **aptesqa'sit**  *(no English)*
 - `3213169534999473` **jipalgug**  *(no English)*
-- `3241768033865835` **#3241768033865835**  *(placeholder)*
+- `3241768033865835` **#3241768033865835**  *(placeholder #id headword)*
 - `3264387969594041` **maqiguomguoma't**  *(no English)*
-- `3270908643274184` **#3270908643274184**  *(placeholder)*
+- `3270908643274184` **#3270908643274184**  *(placeholder #id headword)*
 - `3284491462978777` **TBA**  *(TBA placeholder)*
-- `3301060541995715` **#3301060541995715**  *(placeholder)*
+- `3301060541995715` **#3301060541995715**  *(placeholder #id headword)*
 - `3301097383055045` **temawigna’t**  *(no English)*
 - `3304760343873333` **jipalsuti**  *(no English)*
-- `3305063595326591` **#3305063595326591**  *(placeholder)*
-- `3305348274686295` **#3305348274686295**  *(placeholder)*
+- `3305063595326591` **#3305063595326591**  *(placeholder #id headword)*
+- `3305348274686295` **#3305348274686295**  *(placeholder #id headword)*
 - `3306649564564613` **wagjua'gatu**  *(no English)*
-- `3310858191265505` **#3310858191265505**  *(placeholder)*
-- `3340641542801321` **nangma'toq**  *(no English)*
+- `3310858191265505` **#3310858191265505**  *(placeholder #id headword)*
 - `3381476140227246` **lamimgamlamun**  *(no English)*
-- `3385062721572067` **#3385062721572067**  *(placeholder)*
-- `3392894435336781` **#3392894435336781**  *(placeholder)*
-- `3404489138321233` **#3404489138321233**  *(placeholder)*
-- `3406688592134523` **#3406688592134523**  *(placeholder)*
-- `3425805849056409` **#3425805849056409**  *(placeholder)*
-- `3437161997839471` **#3437161997839471**  *(placeholder)*
-- `3453640794057700` **#3453640794057700**  *(placeholder)*
+- `3385062721572067` **#3385062721572067**  *(placeholder #id headword)*
+- `3392894435336781` **#3392894435336781**  *(placeholder #id headword)*
+- `3404489138321233` **#3404489138321233**  *(placeholder #id headword)*
+- `3406688592134523` **#3406688592134523**  *(placeholder #id headword)*
+- `3425805849056409` **#3425805849056409**  *(placeholder #id headword)*
+- `3437161997839471` **#3437161997839471**  *(placeholder #id headword)*
+- `3453640794057700` **#3453640794057700**  *(placeholder #id headword)*
 - `3463567783817225` **aniaqatg**  *(no English)*
 - `3464056722600628` **lamasteg**  *(no English)*
+- `3469119858062173` **aptagwet**  *(no English)*
 - `3469945979714070` **aniapsua'latl**  *(no English)*
-- `3476639576121851` **#3476639576121851**  *(placeholder)*
-- `3478113480681295` **#3478113480681295**  *(placeholder)*
+- `3476639576121851` **#3476639576121851**  *(placeholder #id headword)*
+- `3478113480681295` **#3478113480681295**  *(placeholder #id headword)*
 - `3478707119231693` **jipato'qon**  *(no English)*
 - `3489868433201959` **espoqotegei**  *(no English)*
 - `3498230751218948` **waqsinugwiaq**  *(no English)*
-- `3503840832771651` **#3503840832771651**  *(placeholder)*
-- `3529590946154529` **#3529590946154529**  *(placeholder)*
-- `3529684323200159` **#3529684323200159**  *(placeholder)*
-- `3529844986953195` **#3529844986953195**  *(placeholder)*
-- `3537214381080161` **#3537214381080161**  *(placeholder)*
+- `3503840832771651` **#3503840832771651**  *(placeholder #id headword)*
+- `3529590946154529` **#3529590946154529**  *(placeholder #id headword)*
+- `3529684323200159` **#3529684323200159**  *(placeholder #id headword)*
+- `3529844986953195` **#3529844986953195**  *(placeholder #id headword)*
+- `3537214381080161` **#3537214381080161**  *(placeholder #id headword)*
+- `3537492032122502` **#3537492032122502**  *(placeholder #id headword)*
 - `3553558932085909` **uni'sign**  *(no English)*
 - `3553690857583673` **wagjuigiag**  *(no English)*
-- `3606924467189387` **#3606924467189387**  *(placeholder)*
-- `3622341713516829` **#3622341713516829**  *(placeholder)*
+- `3606924467189387` **#3606924467189387**  *(placeholder #id headword)*
+- `3622341713516829` **#3622341713516829**  *(placeholder #id headword)*
 - `3634675826240759` **nutge'gwet**  *(no English)*
 - `3655669540037541` **pgauiganuguomgnmit**  *(no English)*
-- `3661191180823053` **#3661191180823053**  *(placeholder)*
+- `3661191180823053` **#3661191180823053**  *(placeholder #id headword)*
 - `3664353023610732` **nangmjugwagitg**  *(no English)*
-- `3666438057629307` **#3666438057629307**  *(placeholder)*
+- `3666438057629307` **#3666438057629307**  *(placeholder #id headword)*
 - `3692627557683377` **us'seg**  *(no English)*
-- `3707833980172002` **#3707833980172002**  *(placeholder)*
-- `3713723705370663` **#3713723705370663**  *(placeholder)*
-- `3733071583542585` **#3733071583542585**  *(placeholder)*
-- `3758987287976944` **#3758987287976944**  *(placeholder)*
-- `3781247126790555` **#3781247126790555**  *(placeholder)*
+- `3707833980172002` **#3707833980172002**  *(placeholder #id headword)*
+- `3713723705370663` **#3713723705370663**  *(placeholder #id headword)*
+- `3733071583542585` **#3733071583542585**  *(placeholder #id headword)*
+- `3758987287976944` **#3758987287976944**  *(placeholder #id headword)*
+- `3781247126790555` **#3781247126790555**  *(placeholder #id headword)*
 - `3788155734759097` **waqjeg**  *(no English)*
-- `3794703706658065` **#3794703706658065**  *(placeholder)*
-- `3805517992458993` **#3805517992458993**  *(placeholder)*
-- `3811344341520920` **#3811344341520920**  *(placeholder)*
-- `3817960573963686` **#3817960573963686**  *(placeholder)*
-- `3824218514101982` **#3824218514101982**  *(placeholder)*
-- `3847709554837483` **AEI**  *(editor heading)*
-- `3853798005437325` **#3853798005437325**  *(placeholder)*
+- `3794703706658065` **#3794703706658065**  *(placeholder #id headword)*
+- `3805517992458993` **#3805517992458993**  *(placeholder #id headword)*
+- `3811344341520920` **#3811344341520920**  *(placeholder #id headword)*
+- `3817960573963686` **#3817960573963686**  *(placeholder #id headword)*
+- `3824218514101982` **#3824218514101982**  *(placeholder #id headword)*
+- `3847709554837483` **AEI**  *(editor scratch note, not a lexeme)*
+- `3853798005437325` **#3853798005437325**  *(placeholder #id headword)*
 - `3858428155635939` **sipaqtasit**  *(no English)*
-- `3866283866137355` **aniamuet** — see public note below for new meaning  *(editor note)*
+- `3866283866137355` **aniamuet** — see public note below for new meaning  *(gloss is an editor note)*
 - `3867384842275041` **waqtag**  *(no English)*
-- `3879738713917831` **#3879738713917831**  *(placeholder)*
-- `3884121243709240` **#3884121243709240**  *(placeholder)*
+- `3879738713917831` **#3879738713917831**  *(placeholder #id headword)*
+- `3884121243709240` **#3884121243709240**  *(placeholder #id headword)*
 - `3890456915046491` **nipignu'tmasit**  *(no English)*
-- `3896526986077063` **#3896526986077063**  *(placeholder)*
+- `3896526986077063` **#3896526986077063**  *(placeholder #id headword)*
 - `3913133095039879` **pigsapugiet**  *(no English)*
-- `3929927561257669` **#3929927561257669**  *(placeholder)*
+- `3929927561257669` **#3929927561257669**  *(placeholder #id headword)*
+- `3983650232654348` **apt'pit**  *(no English)*
 - `4005713852009579` **(p)ugsitun**  *(no English)*
-- `4013685703380771` **#4013685703380771**  *(placeholder)*
+- `4013685703380771` **#4013685703380771**  *(placeholder #id headword)*
 - `4013807879440040` **waqamieg**  *(no English)*
-- `4019855915326200` **#4019855915326200**  *(placeholder)*
+- `4019855915326200` **#4019855915326200**  *(placeholder #id headword)*
 - `4024067704012847` **ewleiut**  *(no English)*
 - `4041589176242177` **snasgw**  *(no English)*
-- `4062438405163855` **#4062438405163855**  *(placeholder)*
-- `4066441927363129` **#4066441927363129**  *(placeholder)*
+- `4062438405163855` **#4062438405163855**  *(placeholder #id headword)*
+- `4066441927363129` **#4066441927363129**  *(placeholder #id headword)*
 - `4072446087793629` **pijiguomg'g**  *(no English)*
-- `4076249944232709` **#4076249944232709**  *(placeholder)*
+- `4076249944232709` **#4076249944232709**  *(placeholder #id headword)*
 - `4093459386391601` **ugs'seg**  *(no English)*
-- `4100189876963545` **#4100189876963545**  *(placeholder)*
+- `4100189876963545` **#4100189876963545**  *(placeholder #id headword)*
 - `4100937008048945` **nipialm'get'g**  *(no English)*
-- `4150609254261721` **#4150609254261721**  *(placeholder)*
-- `4201305345604337` **#4201305345604337**  *(placeholder)*
+- `4150609254261721` **#4150609254261721**  *(placeholder #id headword)*
+- `4201305345604337` **#4201305345604337**  *(placeholder #id headword)*
 - `4220053531452316` **nantuet**  *(no English)*
-- `4246694270099893` **#4246694270099893**  *(placeholder)*
-- `4247266248109597` **#4247266248109597**  *(placeholder)*
+- `4246694270099893` **#4246694270099893**  *(placeholder #id headword)*
+- `4247266248109597` **#4247266248109597**  *(placeholder #id headword)*
 - `4247753987291931` **samuqwanl p'migt’tal**  *(no English)*
 - `4247786546207971` **pi'mat**  *(no English)*
 - `4261374200206869` **gestuna'latl**  *(no English)*
 - `4300164538788810` **sipuig / sipe'q'n**  *(no English)*
+- `4313266291114642` **aptetesg**  *(no English)*
 - `4313711103706399` **pepge'jitewei**  *(no English)*
-- `4319488839074345` **#4319488839074345**  *(placeholder)*
+- `4319488839074345` **#4319488839074345**  *(placeholder #id headword)*
 - `4323246471254417` **jipaqimatl**  *(no English)*
 - `4334215761656448` **pempnigeg**  *(no English)*
 - `4348259953618703` **usqal**  *(no English)*
 - `4379565099059607` **waqamiaq**  *(no English)*
 - `4382800206420255` **waqjit**  *(no English)*
-- `4389077948408515` **#4389077948408515**  *(placeholder)*
-- `4411069486482563` **#4411069486482563**  *(placeholder)*
-- `4411976814554371` **#4411976814554371**  *(placeholder)*
+- `4389077948408515` **#4389077948408515**  *(placeholder #id headword)*
+- `4411069486482563` **#4411069486482563**  *(placeholder #id headword)*
+- `4411976814554371` **#4411976814554371**  *(placeholder #id headword)*
 - `4423061808800733` **pugwelugwet**  *(no English)*
-- `4430646894322705` **#4430646894322705**  *(placeholder)*
+- `4430646894322705` **#4430646894322705**  *(placeholder #id headword)*
 - `4442223002061354` **Apt**  *(no English)*
-- `4452505655675935` **#4452505655675935**  *(placeholder)*
+- `4448134707026334` **#4448134707026334**  *(placeholder #id headword)*
+- `4452505655675935` **#4452505655675935**  *(placeholder #id headword)*
 - `4457969541131339` **apunapasi**  *(no English)*
-- `4464950254531563` **#4464950254531563**  *(placeholder)*
+- `4464950254531563` **#4464950254531563**  *(placeholder #id headword)*
 - `4510085869256129` **pepgueg**  *(no English)*
 - `4515407379172829` **oqonpasg'g**  *(no English)*
-- `4554943513094917` **#4554943513094917**  *(placeholder)*
+- `4554943513094917` **#4554943513094917**  *(placeholder #id headword)*
 - `4612559672316993` **pugtewei sqanaw**  *(no English)*
 - `4612636875133805` **jigata'sit**  *(no English)*
-- `4620429456797679` **#4620429456797679**  *(placeholder)*
-- `4624402165048731` **#4624402165048731**  *(placeholder)*
+- `4620429456797679` **#4620429456797679**  *(placeholder #id headword)*
+- `4624402165048731` **#4624402165048731**  *(placeholder #id headword)*
 - `4628270541594335` **sasgugwal't**  *(no English)*
-- `4636367496512145` **#4636367496512145**  *(placeholder)*
+- `4636367496512145` **#4636367496512145**  *(placeholder #id headword)*
 - `4658667017397098` **anesga'lsit**  *(no English)*
 - `4726475267355597` **espoqwasapte’mut**  *(no English)*
 - `4741152565109801` **Pugwelugowaqanig**  *(no English)*
-- `4747577158068652` **#4747577158068652**  *(placeholder)*
+- `4747577158068652` **#4747577158068652**  *(placeholder #id headword)*
 - `4749149748648625` **peugsaqate’m**  *(no English)*
-- `4755095620766083` **#4755095620766083**  *(placeholder)*
-- `4789489462594755` **#4789489462594755**  *(placeholder)*
-- `4796248273263619` **#4796248273263619**  *(placeholder)*
-- `4805691707796685` **#4805691707796685**  *(placeholder)*
+- `4755095620766083` **#4755095620766083**  *(placeholder #id headword)*
+- `4789489462594755` **#4789489462594755**  *(placeholder #id headword)*
+- `4796248273263619` **#4796248273263619**  *(placeholder #id headword)*
+- `4805691707796685` **#4805691707796685**  *(placeholder #id headword)*
 - `4807333450190971` **pi'gunatgw**  *(no English)*
-- `4828277520021582` **#4828277520021582**  *(placeholder)*
-- `4841517561310034` **#4841517561310034**  *(placeholder)*
+- `4828277520021582` **#4828277520021582**  *(placeholder #id headword)*
+- `4841517561310034` **#4841517561310034**  *(placeholder #id headword)*
 - `4843910542084311` **wigumatieg**  *(no English)*
 - `4852632471235311` **mpesewigen**  *(no English)*
 - `4861544830774954` **paselos**  *(no English)*
 - `4863017543448291` **jipaqa'taqan**  *(no English)*
-- `4887437354039739` **wagetigenegsi**  *(no English)*
-- `4896099313121711` **#4896099313121711**  *(placeholder)*
-- `4939271916107965` **#4939271916107965**  *(placeholder)*
-- `4940824732705251` **#4940824732705251**  *(placeholder)*
-- `4976751492412933` **#4976751492412933**  *(placeholder)*
+- `4887437354039739` **waqetigenegsit**  *(no English)*
+- `4896099313121711` **#4896099313121711**  *(placeholder #id headword)*
+- `4939271916107965` **#4939271916107965**  *(placeholder #id headword)*
+- `4940824732705251` **#4940824732705251**  *(placeholder #id headword)*
+- `4976751492412933` **#4976751492412933**  *(placeholder #id headword)*
 - `4985069968806737` **pigsa'teget**  *(no English)*
 - `4994858408136578` **sipaqt'g**  *(no English)*
-- `5039120006373191` **#5039120006373191**  *(placeholder)*
-- `5062514301334070` **#5062514301334070**  *(placeholder)*
-- `5063547901789433` **#5063547901789433**  *(placeholder)*
+- `5039120006373191` **#5039120006373191**  *(placeholder #id headword)*
+- `5062514301334070` **#5062514301334070**  *(placeholder #id headword)*
+- `5063547901789433` **#5063547901789433**  *(placeholder #id headword)*
 - `5080092047333112` **lamamgw**  *(no English)*
-- `5092579181650387` **#5092579181650387**  *(placeholder)*
+- `5092579181650387` **#5092579181650387**  *(placeholder #id headword)*
 - `5095282722089117` **nipigtuguni**  *(no English)*
-- `5133577259565011` **#5133577259565011**  *(placeholder)*
+- `5133577259565011` **#5133577259565011**  *(placeholder #id headword)*
 - `5153299178694243` **sasqeia**  *(no English)*
 - `5156186882268097` **pepg'sa'q**  *(no English)*
-- `5176415476432785` **#5176415476432785**  *(placeholder)*
+- `5176415476432785` **#5176415476432785**  *(placeholder #id headword)*
 - `5192299288241471` **m'tamu**  *(no English)*
 - `5208158820763630` **waqamgomutinew**  *(no English)*
-- `5224632984157505` **#5224632984157505**  *(placeholder)*
-- `5225636063379963` **#5225636063379963**  *(placeholder)*
+- `5224632984157505` **#5224632984157505**  *(placeholder #id headword)*
+- `5225636063379963` **#5225636063379963**  *(placeholder #id headword)*
 - `5268738948849251` **nipitesguatl**  *(no English)*
-- `5274801428607411` **#5274801428607411**  *(placeholder)*
-- `5278970552016399` **aniapsute'lugsit** — see note for info  *(editor note ref)*
-- `5280722591680357` **#5280722591680357**  *(placeholder)*
-- `5284882723566291` **waqajeg**  *(no English)*
+- `5274801428607411` **#5274801428607411**  *(placeholder #id headword)*
+- `5278970552016399` **aniapsute'lugsit** — see note for info  *(gloss is an editor note)*
+- `5280722591680357` **#5280722591680357**  *(placeholder #id headword)*
+- `5284882723566291` **waqaje'g**  *(no English)*
 - `5288348204405971` **jipaquntesgaltuit**  *(no English)*
 - `5293419728872513` **waqamisgipit**  *(no English)*
 - `5308448523983319` **mestagepegajit/mest'gipigajit**  *(no English)*
-- `5314954275527927` **#5314954275527927**  *(placeholder)*
+- `5314954275527927` **#5314954275527927**  *(placeholder #id headword)*
 - `5323960375339005` **sipaqepo'sit**  *(no English)*
-- `5328105804247606` **nangma'latl**  *(no English)*
-- `5346380514697653` **Dictionnaire Micmac Père Pacifique**  *(editor reference note)*
-- `5348807305593009` **#5348807305593009**  *(placeholder)*
-- `5353506200706797` **waqatign**  *(no English)*
+- `5346380514697653` **Dictionnaire Micmac Père Pacifique**  *(editor reference note, not a lexeme)*
+- `5348807305593009` **#5348807305593009**  *(placeholder #id headword)*
+- `5353506200706797` **#5353506200706797**  *(placeholder #id headword)*
 - `5373387729468441` **pugwela'tuatl**  *(no English)*
 - `5377955546205303` **aqalasiewi'gan**  *(no English)*
-- `5389962097500715` **#5389962097500715**  *(placeholder)*
-- `5393955686245503` **#5393955686245503**  *(placeholder)*
+- `5389962097500715` **#5389962097500715**  *(placeholder #id headword)*
+- `5393955686245503` **#5393955686245503**  *(placeholder #id headword)*
 - `5397207434631697` **gunugupisuti**  *(no English)*
-- `5407055750142831` **#5407055750142831**  *(placeholder)*
+- `5407055750142831` **#5407055750142831**  *(placeholder #id headword)*
 - `5417875530723075` **gunpiget**  *(no English)*
-- `5421294822858616` **#5421294822858616**  *(placeholder)*
-- `5421474447309021` **#5421474447309021**  *(placeholder)*
-- `5424779271891497` **#5424779271891497**  *(placeholder)*
+- `5421294822858616` **#5421294822858616**  *(placeholder #id headword)*
+- `5421474447309021` **#5421474447309021**  *(placeholder #id headword)*
+- `5424779271891497` **#5424779271891497**  *(placeholder #id headword)*
 - `5428909092247244` **ewlamugwet**  *(no English)*
 - `5473605588462813` **piganun**  *(no English)*
-- `5484931340085333` **#5484931340085333**  *(placeholder)*
+- `5484931340085333` **#5484931340085333**  *(placeholder #id headword)*
 - `5485939064077770` **aniapsultimgeg**  *(no English)*
 - `5490614983646520` **paslos**  *(no English)*
-- `5492265067711271` **#5492265067711271**  *(placeholder)*
-- `5528373995741345` **#5528373995741345**  *(placeholder)*
+- `5492265067711271` **#5492265067711271**  *(placeholder #id headword)*
+- `5524202978355509` **#5524202978355509**  *(placeholder #id headword)*
+- `5528373995741345` **#5528373995741345**  *(placeholder #id headword)*
 - `5541320513731809` **nepsiaqa’si**  *(no English)*
-- `5555134612929579` **#5555134612929579**  *(placeholder)*
-- `5566939464490421` **nipi-**  *(grammatical prefix)*
+- `5555134612929579` **#5555134612929579**  *(placeholder #id headword)*
+- `5566939464490421` **nipi-**  *(grammatical prefix note, not a lexeme)*
 - `5567498894777033` **mnepaiap**  *(no English)*
-- `5572289338061903` **#5572289338061903**  *(placeholder)*
+- `5572289338061903` **#5572289338061903**  *(placeholder #id headword)*
 - `5575630107026839` **pigtuaigl**  *(no English)*
 - `5586271656062367` **ugs'sei**  *(no English)*
 - `5603643153286835` **pepguet**  *(no English)*
 - `5610830225490965` **oqomulgwaq**  *(no English)*
-- `5617151702646673` **#5617151702646673**  *(placeholder)*
-- `5624544419230068` **#5624544419230068**  *(placeholder)*
-- `5637741512755169` **#5637741512755169**  *(placeholder)*
+- `5617151702646673` **#5617151702646673**  *(placeholder #id headword)*
+- `5624544419230068` **#5624544419230068**  *(placeholder #id headword)*
+- `5637741512755169` **#5637741512755169**  *(placeholder #id headword)*
 - `5654961505831179` **nenaqiaq**  *(no English)*
 - `5681147036857561` **aputapgiejit**  *(no English)*
+- `5689681945241698` **apt'te'g**  *(no English)*
 - `5698635619076354` **apt'lamit**  *(no English)*
 - `5699479475358724` **apt'lu'salatl**  *(no English)*
-- `5704105381389053` **#5704105381389053**  *(placeholder)*
+- `5704105381389053` **#5704105381389053**  *(placeholder #id headword)*
 - `5715907546763759` **ugs'sei**  *(no English)*
-- `5717189040498463` **#5717189040498463**  *(placeholder)*
+- `5717189040498463` **#5717189040498463**  *(placeholder #id headword)*
 - `5756459774863381` **sipaqan**  *(no English)*
-- `5756527593073385` **#5756527593073385**  *(placeholder)*
-- `5770695847503997` **#5770695847503997**  *(placeholder)*
-- `5772673314015171` **#5772673314015171**  *(placeholder)*
-- `5777395317604641` **#5777395317604641**  *(placeholder)*
-- `5784878198399181` **#5784878198399181**  *(placeholder)*
+- `5756527593073385` **#5756527593073385**  *(placeholder #id headword)*
+- `5770695847503997` **#5770695847503997**  *(placeholder #id headword)*
+- `5772673314015171` **#5772673314015171**  *(placeholder #id headword)*
+- `5777395317604641` **#5777395317604641**  *(placeholder #id headword)*
+- `5784878198399181` **#5784878198399181**  *(placeholder #id headword)*
 - `5826927090817207` **alagneteg**  *(no English)*
-- `5857070226125367` **#5857070226125367**  *(placeholder)*
-- `5880928486150953` **#5880928486150953**  *(placeholder)*
+- `5857070226125367` **#5857070226125367**  *(placeholder #id headword)*
+- `5880928486150953` **#5880928486150953**  *(placeholder #id headword)*
 - `5893475873859771` **piliganlsegniganigat**  *(no English)*
-- `5896132164817997` **#5896132164817997**  *(placeholder)*
-- `5896863665890486` **#5896863665890486**  *(placeholder)*
-- `5907192794059137` **#5907192794059137**  *(placeholder)*
+- `5896132164817997` **#5896132164817997**  *(placeholder #id headword)*
+- `5896863665890486` **#5896863665890486**  *(placeholder #id headword)*
+- `5907192794059137` **#5907192794059137**  *(placeholder #id headword)*
 - `5908146345627021` **pegwilja'sit**  *(no English)*
-- `5941580633820145` **#5941580633820145**  *(placeholder)*
+- `5941580633820145` **#5941580633820145**  *(placeholder #id headword)*
 - `5959419738580077` **esputem esputm**  *(no English)*
-- `5983816984468736` **#5983816984468736**  *(placeholder)*
+- `5983816984468736` **#5983816984468736**  *(placeholder #id headword)*
 - `5991163189878700` **anesaq**  *(no English)*
 - `5998837380098097` **elgenawet**  *(no English)*
-- `6000453978188445` **#6000453978188445**  *(placeholder)*
-- `6016269546299971` **#6016269546299971**  *(placeholder)*
-- `6019169265886257` **#6019169265886257**  *(placeholder)*
+- `6000453978188445` **#6000453978188445**  *(placeholder #id headword)*
+- `6016269546299971` **#6016269546299971**  *(placeholder #id headword)*
+- `6019169265886257` **#6019169265886257**  *(placeholder #id headword)*
 - `6025112336228945` **mpugugwe'l**  *(no English)*
 - `6048321989199947` **nangmi**  *(no English)*
-- `6057506327878537` **#6057506327878537**  *(placeholder)*
-- `6057640964342575` **#6057640964342575**  *(placeholder)*
+- `6057506327878537` **#6057506327878537**  *(placeholder #id headword)*
+- `6057640964342575` **#6057640964342575**  *(placeholder #id headword)*
 - `6061096077452793` **espogwasig**  *(no English)*
-- `6066374964526601` **#6066374964526601**  *(placeholder)*
-- `6076093192680314` **#6076093192680314**  *(placeholder)*
-- `6078508349987705` **#6078508349987705**  *(placeholder)*
-- `6109374410130261` **#6109374410130261**  *(placeholder)*
+- `6066374964526601` **#6066374964526601**  *(placeholder #id headword)*
+- `6076093192680314` **#6076093192680314**  *(placeholder #id headword)*
+- `6078508349987705` **#6078508349987705**  *(placeholder #id headword)*
+- `6109374410130261` **#6109374410130261**  *(placeholder #id headword)*
 - `6111508841705155` **wagjualeg**  *(no English)*
 - `6130333683555221` **waqamgujinuit**  *(no English)*
-- `6131727781941007` **na'nunajig**  *(no English)*
-- `6133979961231119` **#6133979961231119**  *(placeholder)*
-- `6135425121495959` **#6135425121495959**  *(placeholder)*
-- `6166149173729839` **#6166149173729839**  *(placeholder)*
+- `6133979961231119` **#6133979961231119**  *(placeholder #id headword)*
+- `6135425121495959` **#6135425121495959**  *(placeholder #id headword)*
+- `6166149173729839` **#6166149173729839**  *(placeholder #id headword)*
 - `6168796424012209` **espaliaq**  *(no English)*
 - `6169992422265827` **nantm**  *(no English)*
-- `6175997399494849` **nangma'sit**  *(no English)*
-- `6182658592243658` **#6182658592243658**  *(placeholder)*
-- `6187268615541915` **#6187268615541915**  *(placeholder)*
+- `6182658592243658` **#6182658592243658**  *(placeholder #id headword)*
+- `6187268615541915` **#6187268615541915**  *(placeholder #id headword)*
 - `6211952591261681` **ejingwasi**  *(no English)*
-- `6233266014684003` **#6233266014684003**  *(placeholder)*
-- `6239139858463682` **#6239139858463682**  *(placeholder)*
+- `6233266014684003` **#6233266014684003**  *(placeholder #id headword)*
+- `6239139858463682` **#6239139858463682**  *(placeholder #id headword)*
 - `6259655454213003` **wilni**  *(no English)*
-- `6274686785976253` **#6274686785976253**  *(placeholder)*
+- `6274686785976253` **#6274686785976253**  *(placeholder #id headword)*
 - `6279547596433615` **esnaqsawng**  *(no English)*
 - `6285928266194861` **niposlat**  *(no English)*
 - `6306221221898839` **espeseg**  *(no English)*
 - `6335434311492760` **ogonjena'ji'jg**  *(no English)*
-- `6344379830539525` **nil entry**  *(editor placeholder)*
+- `6344379830539525` **nil entry**  *(editor placeholder, not a lexeme)*
 - `6346051682234843` **elqanateg**  *(no English)*
-- `6359583169410377` **#6359583169410377**  *(placeholder)*
-- `6402916432136765` **#6402916432136765**  *(placeholder)*
+- `6359583169410377` **#6359583169410377**  *(placeholder #id headword)*
+- `6402916432136765` **#6402916432136765**  *(placeholder #id headword)*
 - `6415430948000477` **aptesqi'gn**  *(no English)*
-- `6437483706291141` **#6437483706291141**  *(placeholder)*
+- `6437483706291141` **#6437483706291141**  *(placeholder #id headword)*
 - `6438371904073503` **apt'lu'sit**  *(no English)*
 - `6476892128189175` **goma'law**  *(no English)*
 - `6495435036565201` **ni'sign**  *(no English)*
 - `6501764139892499` **usmual**  *(no English)*
-- `6513993176614888` **#6513993176614888**  *(placeholder)*
-- `6523003894272793` **#6523003894272793**  *(placeholder)*
+- `6513993176614888` **#6513993176614888**  *(placeholder #id headword)*
+- `6523003894272793` **#6523003894272793**  *(placeholder #id headword)*
 - `6524515615159355` **mpegigw**  *(no English)*
-- `6533933511954889` **#6533933511954889**  *(placeholder)*
+- `6533933511954889` **#6533933511954889**  *(placeholder #id headword)*
 - `6541172117940651` **nantawe's**  *(no English)*
 - `6545496279721205` **pugwelgwilutemuatal**  *(no English)*
-- `6593170088021133` **#6593170088021133**  *(placeholder)*
+- `6593170088021133` **#6593170088021133**  *(placeholder #id headword)*
 - `6600191186939385` **gaqigiwto’qwamgwitg**  *(no English)*
 - `6623537739610354` **waqanu'j**  *(no English)*
 - `6632883777561617` **atuomgominaqsi**  *(no English)*
-- `6636731744025195` **#6636731744025195**  *(placeholder)*
+- `6636731744025195` **#6636731744025195**  *(placeholder #id headword)*
 - `6639459891768659` **ewultugulit**  *(no English)*
-- `6640255338502368` **#6640255338502368**  *(placeholder)*
-- `6656557023966829` **#6656557023966829**  *(placeholder)*
-- `6660938557817939` **#6660938557817939**  *(placeholder)*
-- `6685078979373205` **#6685078979373205**  *(placeholder)*
+- `6640255338502368` **#6640255338502368**  *(placeholder #id headword)*
+- `6656557023966829` **#6656557023966829**  *(placeholder #id headword)*
+- `6660938557817939` **#6660938557817939**  *(placeholder #id headword)*
+- `6685078979373205` **#6685078979373205**  *(placeholder #id headword)*
 - `6724342603427368` **aptaqanet**  *(no English)*
 - `6740612471278179` **waqametgug**  *(no English)*
-- `6746202801132345` **#6746202801132345**  *(placeholder)*
+- `6746202801132345` **#6746202801132345**  *(placeholder #id headword)*
 - `6748236528088788` **sasnugwatigen**  *(no English)*
-- `6754821485554731` **#6754821485554731**  *(placeholder)*
-- `6761728037552711` **#6761728037552711**  *(placeholder)*
+- `6754821485554731` **#6754821485554731**  *(placeholder #id headword)*
+- `6761728037552711` **#6761728037552711**  *(placeholder #id headword)*
 - `6772085425133727` **semgwatigen **  *(no English)*
 - `6772896074038533` **pigsanuaqan**  *(no English)*
 - `6808366144321096` **ewlqwana'q**  *(no English)*
-- `6808853563545097` **#6808853563545097**  *(placeholder)*
-- `6830006246600765` **nangma'teget**  *(no English)*
+- `6808853563545097` **#6808853563545097**  *(placeholder #id headword)*
 - `6836160653501696` **waqjuatoq**  *(no English)*
 - `6859781954270531` **pugtewegei**  *(no English)*
 - `6869604016178740` **lame'gewei**  *(no English)*
-- `6878185334010689` **#6878185334010689**  *(placeholder)*
+- `6878185334010689` **#6878185334010689**  *(placeholder #id headword)*
 - `6880410616428787` **aptagnutmat**  *(no English)*
 - `6885057525467285` **usio'gitg**  *(no English)*
-- `6896218138040287` **#6896218138040287**  *(placeholder)*
-- `6899223637496273` **#6899223637496273**  *(placeholder)*
+- `6896218138040287` **#6896218138040287**  *(placeholder #id headword)*
+- `6899223637496273` **#6899223637496273**  *(placeholder #id headword)*
 - `6909783763054311` **tmoqta'wsmu’g**  *(no English)*
 - `6945952869684087` **moqwaj**  *(no English)*
-- `6945963024335173` **#6945963024335173**  *(placeholder)*
+- `6945963024335173` **#6945963024335173**  *(placeholder #id headword)*
 - `6947595836483799` **temsaqateg**  *(no English)*
-- `6965318745830995` **#6965318745830995**  *(placeholder)*
-- `6975902091146203` **#6975902091146203**  *(placeholder)*
+- `6965318745830995` **#6965318745830995**  *(placeholder #id headword)*
+- `6975902091146203` **#6975902091146203**  *(placeholder #id headword)*
 - `6984486039783651` **espaqatg**  *(no English)*
-- `6986838498837195` **#6986838498837195**  *(placeholder)*
-- `6988091566433493` **#6988091566433493**  *(placeholder)*
-- `6995256770009027` **#6995256770009027**  *(placeholder)*
+- `6986838498837195` **#6986838498837195**  *(placeholder #id headword)*
+- `6988091566433493` **#6988091566433493**  *(placeholder #id headword)*
+- `6995256770009027` **#6995256770009027**  *(placeholder #id headword)*
 - `7001620479614984` **nangmiewg**  *(no English)*
-- `7010634234604667` **#7010634234604667**  *(placeholder)*
+- `7010634234604667` **#7010634234604667**  *(placeholder #id headword)*
 - `7013181844493153` **pisgolasit**  *(no English)*
-- `7017345357019555` **#7017345357019555**  *(placeholder)*
-- `7032417716679103` **#7032417716679103**  *(placeholder)*
+- `7017345357019555` **#7017345357019555**  *(placeholder #id headword)*
+- `7032417716679103` **#7032417716679103**  *(placeholder #id headword)*
 - `7056232020525559` **crossed out entry**  *(crossed out entry)*
-- `7063893431114605` **#7063893431114605**  *(placeholder)*
+- `7063893431114605` **#7063893431114605**  *(placeholder #id headword)*
 - `7075459893608513` **ge’sai, siawige’sa’t**  *(no English)*
 - `7077520482750373` **aptagnutmamg**  *(no English)*
 - `7089959416990279` **jiloqsatl**  *(no English)*
 - `7096285208531346` **apt'sqo'guig**  *(no English)*
-- `7103265694806019` **#7103265694806019**  *(placeholder)*
+- `7103265694806019` **#7103265694806019**  *(placeholder #id headword)*
 - `7109968922469185` **nepisit**  *(no English)*
 - `7115145632187409` **temsaqas’g**  *(no English)*
-- `7145258625060749` **#7145258625060749**  *(placeholder)*
-- `7150515506899182` **#7150515506899182**  *(placeholder)*
-- `7159906652297531` **#7159906652297531**  *(placeholder)*
+- `7145258625060749` **#7145258625060749**  *(placeholder #id headword)*
+- `7150515506899182` **#7150515506899182**  *(placeholder #id headword)*
+- `7159906652297531` **#7159906652297531**  *(placeholder #id headword)*
 - `7171212299942925` **amuspegitg**  *(no English)*
 - `7181310927945184` **aptagnutmamgewei**  *(no English)*
 - `7183366000722293` **nenaqapegiet**  *(no English)*
-- `7196886195659961` **#7196886195659961**  *(placeholder)*
+- `7188456070225441` **apt'puguet**  *(no English)*
+- `7196886195659961` **#7196886195659961**  *(placeholder #id headword)*
 - `7225117439217393` **wejgwaqteget**  *(no English)*
-- `7238913326636739` **#7238913326636739**  *(placeholder)*
-- `7248771060446363` **#7248771060446363**  *(placeholder)*
+- `7238913326636739` **#7238913326636739**  *(placeholder #id headword)*
+- `7248771060446363` **#7248771060446363**  *(placeholder #id headword)*
 - `7263590029284571` **piliganlsegniganmit**  *(no English)*
 - `7270473877903209` **wagjuatagan**  *(no English)*
 - `7277793905675003` **saptaqs'g**  *(no English)*
-- `7284424144653901` **#7284424144653901**  *(placeholder)*
+- `7284424144653901` **#7284424144653901**  *(placeholder #id headword)*
 - `7290997060985930` **apt'ng**  *(no English)*
-- `7300314499037091` **#7300314499037091**  *(placeholder)*
+- `7300314499037091` **#7300314499037091**  *(placeholder #id headword)*
 - `7303220469512777` **alagujuigtesg**  *(no English)*
-- `7319090887485138` **#7319090887485138**  *(placeholder)*
-- `7337670414610401` **#7337670414610401**  *(placeholder)*
+- `7319090887485138` **#7319090887485138**  *(placeholder #id headword)*
+- `7337670414610401` **#7337670414610401**  *(placeholder #id headword)*
 - `7374235960610251` **papitoq**  *(no English)*
-- `7411542411241511` **#7411542411241511**  *(placeholder)*
-- `7418140873687082` **#7418140873687082**  *(placeholder)*
-- `7420500838333245` **#7420500838333245**  *(placeholder)*
+- `7411542411241511` **#7411542411241511**  *(placeholder #id headword)*
+- `7418140873687082` **#7418140873687082**  *(placeholder #id headword)*
+- `7420500838333245` **#7420500838333245**  *(placeholder #id headword)*
 - `7432785831587033` **lamatgeg**  *(no English)*
-- `7491927366150203` **#7491927366150203**  *(placeholder)*
-- `7506677978240733` **#7506677978240733**  *(placeholder)*
-- `7517261943957165` **#7517261943957165**  *(placeholder)*
-- `7554971502422717` **#7554971502422717**  *(placeholder)*
+- `7491927366150203` **#7491927366150203**  *(placeholder #id headword)*
+- `7506677978240733` **#7506677978240733**  *(placeholder #id headword)*
+- `7517261943957165` **#7517261943957165**  *(placeholder #id headword)*
+- `7554971502422717` **#7554971502422717**  *(placeholder #id headword)*
 - `7558917224303580` **ewlugtat**  *(no English)*
-- `7563178491686637` **unresolved**  *(unresolved placeholder)*
-- `7565573615957249` **#7565573615957249**  *(placeholder)*
-- `7572139004377931` **#7572139004377931**  *(placeholder)*
-- `7588336534501863` **#7588336534501863**  *(placeholder)*
-- `7593628625477899` **#7593628625477899**  *(placeholder)*
-- `7625420956489902` **anenaq ?**  *(no English)*
+- `7563178491686637` **unresolved**  *(editor placeholder 'unresolved')*
+- `7565573615957249` **#7565573615957249**  *(placeholder #id headword)*
+- `7572139004377931` **#7572139004377931**  *(placeholder #id headword)*
+- `7588336534501863` **#7588336534501863**  *(placeholder #id headword)*
+- `7593628625477899` **#7593628625477899**  *(placeholder #id headword)*
+- `7625420956489902` **anenaq ?**  *(no English, headword has ?)*
 - `7637903965209457` **nenqasing**  *(no English)*
 - `7648765281214897` **aniaps'tmuatl**  *(no English)*
 - `7665818477144020` **gaqagnutmamgewei**  *(no English)*
-- `7671851371248419` **#7671851371248419**  *(placeholder)*
-- `7684597404981411` **#7684597404981411**  *(placeholder)*
+- `7671851371248419` **#7671851371248419**  *(placeholder #id headword)*
+- `7684597404981411` **#7684597404981411**  *(placeholder #id headword)*
 - `7733742901056806` **esnoqonet**  *(no English)*
 - `7751065860978595` **wejgwotqaipi**  *(no English)*
-- `7752949030636581` **#7752949030636581**  *(placeholder)*
+- `7752949030636581` **#7752949030636581**  *(placeholder #id headword)*
 - `7762494668227691` **pigsa'tmg**  *(no English)*
-- `7773536843130735` **#7773536843130735**  *(placeholder)*
+- `7773536843130735` **#7773536843130735**  *(placeholder #id headword)*
 - `7773692903931381` **pigsa'n**  *(no English)*
 - `7784834355618693` **nangmliet**  *(no English)*
 - `7800419055278051` **paltitg**  *(no English)*
 - `7822975280921622` **lampo'g**  *(no English)*
-- `7830268913362999` **#7830268913362999**  *(placeholder)*
-- `7838812812236839` **#7838812812236839**  *(placeholder)*
+- `7830268913362999` **#7830268913362999**  *(placeholder #id headword)*
+- `7838812812236839` **#7838812812236839**  *(placeholder #id headword)*
 - `7857968263924759` **nanagl wasoqonemaqan**  *(no English)*
 - `7867948884112109` **tepnma'ta'taq**  *(no English)*
 - `7875541363035199` **nangmjugu'et**  *(no English)*
-- `7889013805916143` **#7889013805916143**  *(placeholder)*
+- `7889013805916143` **#7889013805916143**  *(placeholder #id headword)*
 - `7899749082460271` **nestua'latl**  *(no English)*
 - `7902177469428152` **TBA**  *(TBA placeholder)*
-- `7948746165902383` **#7948746165902383**  *(placeholder)*
-- `7959977911590871` **#7959977911590871**  *(placeholder)*
-- `7986406416419903` **#7986406416419903**  *(placeholder)*
-- `7998671496118679` **#7998671496118679**  *(placeholder)*
-- `7998975941063795` **#7998975941063795**  *(placeholder)*
-- `8005884730341971` **#8005884730341971**  *(placeholder)*
-- `8036287523004130` **#8036287523004130**  *(placeholder)*
-- `8040766666248821` **#8040766666248821**  *(placeholder)*
-- `8046691785670259` **#8046691785670259**  *(placeholder)*
+- `7948746165902383` **#7948746165902383**  *(placeholder #id headword)*
+- `7959977911590871` **#7959977911590871**  *(placeholder #id headword)*
+- `7986406416419903` **#7986406416419903**  *(placeholder #id headword)*
+- `7998671496118679` **#7998671496118679**  *(placeholder #id headword)*
+- `7998975941063795` **#7998975941063795**  *(placeholder #id headword)*
+- `8005884730341971` **#8005884730341971**  *(placeholder #id headword)*
+- `8036287523004130` **#8036287523004130**  *(placeholder #id headword)*
+- `8040766666248821` **#8040766666248821**  *(placeholder #id headword)*
+- `8046691785670259` **#8046691785670259**  *(placeholder #id headword)*
 - `8074044622055085` **wagapigan**  *(no English)*
 - `8095968516381739` **pastewig**  *(no English)*
+- `8097875821207390` **mestanm**  *(no English)*
 - `8120646572147559` **nnuwenjiguoma'q**  *(no English)*
 - `8124354134092343` **nnuwenjiguomit**  *(no English)*
 - `8148797527618759` **waqtian**  *(no English)*
-- `8151717409457522` **#8151717409457522**  *(placeholder)*
-- `8172212465263753` **#8172212465263753**  *(placeholder)*
+- `8151717409457522` **#8151717409457522**  *(placeholder #id headword)*
+- `8172212465263753` **#8172212465263753**  *(placeholder #id headword)*
 - `8174251440974155` **usqalug**  *(no English)*
-- `8174257362273080` **#8174257362273080**  *(placeholder)*
-- `8175171345829575` **#8175171345829575**  *(placeholder)*
+- `8174257362273080` **#8174257362273080**  *(placeholder #id headword)*
+- `8175171345829575` **#8175171345829575**  *(placeholder #id headword)*
 - `8177694033648677` **gugleqo'juitg **  *(no English)*
-- `8179338032159841` **#8179338032159841**  *(placeholder)*
+- `8179338032159841` **#8179338032159841**  *(placeholder #id headword)*
 - `8194978952283547` **aptawalset**  *(no English)*
 - `8201938996866506` **saptaqsing**  *(no English)*
 - `8205113438699659` **TBA**  *(TBA placeholder)*
-- `8205260699309243` **#8205260699309243**  *(placeholder)*
+- `8205260699309243` **#8205260699309243**  *(placeholder #id headword)*
 - `8236564319861771` **nantawa'sit**  *(no English)*
 - `8255321821526589` **antagwejuwi'gan**  *(no English)*
+- `8263818656404736` **gtaqan**  *(no English)*
 - `8265421992516283` **crossed-out page section**  *(crossed-out page section)*
-- `8323209670147561` **#8323209670147561**  *(placeholder)*
-- `8355769992444145` **#8355769992444145**  *(placeholder)*
-- `8367203058671231` **#8367203058671231**  *(placeholder)*
+- `8323209670147561` **#8323209670147561**  *(placeholder #id headword)*
+- `8355769992444145` **#8355769992444145**  *(placeholder #id headword)*
+- `8367203058671231` **#8367203058671231**  *(placeholder #id headword)*
 - `8389086846990661` **nantua'teget**  *(no English)*
-- `8441501474136829` **#8441501474136829**  *(placeholder)*
-- `8442276498858911` **#8442276498858911**  *(placeholder)*
-- `8443767719302293` **#8443767719302293**  *(placeholder)*
+- `8441501474136829` **#8441501474136829**  *(placeholder #id headword)*
+- `8442276498858911` **#8442276498858911**  *(placeholder #id headword)*
+- `8443767719302293` **#8443767719302293**  *(placeholder #id headword)*
 - `8444055685450375` **pugwelanteget**  *(no English)*
-- `8466690182096619` **#8466690182096619**  *(placeholder)*
+- `8466690182096619` **#8466690182096619**  *(placeholder #id headword)*
 - `8470647914096908` **eligateget**  *(no English)*
-- `8474835589898831` **#8474835589898831**  *(placeholder)*
-- `8480629554944195` **#8480629554944195**  *(placeholder)*
+- `8474835589898831` **#8474835589898831**  *(placeholder #id headword)*
+- `8480629554944195` **#8480629554944195**  *(placeholder #id headword)*
 - `8487629551676295` **puni'pit**  *(no English)*
 - `8506090025813407` **lomaqan**  *(no English)*
 - `8507782047502177` **nenqi'pit**  *(no English)*
 - `8512916884624363` **pugwelanatl**  *(no English)*
-- `8528752438248625` **#8528752438248625**  *(placeholder)*
+- `8528752438248625` **#8528752438248625**  *(placeholder #id headword)*
 - `8529432202385378` **lamamgutug**  *(no English)*
 - `8551089501023399` **piji'gan**  *(no English)*
-- `8574936845543649` **#8574936845543649**  *(placeholder)*
-- `8576425797014009` **#8576425797014009**  *(placeholder)*
-- `8624857479757797` **#8624857479757797**  *(placeholder)*
+- `8574936845543649` **#8574936845543649**  *(placeholder #id headword)*
+- `8576425797014009` **#8576425797014009**  *(placeholder #id headword)*
+- `8624857479757797` **#8624857479757797**  *(placeholder #id headword)*
 - `8632647391971945` **utesigtug**  *(no English)*
-- `8639022160596999` **#8639022160596999**  *(placeholder)*
-- `8666187998342372` **#8666187998342372**  *(placeholder)*
-- `8700467795279475` **#8700467795279475**  *(placeholder)*
-- `8714720149086077` **#8714720149086077**  *(placeholder)*
-- `8734587129053273` **#8734587129053273**  *(placeholder)*
+- `8639022160596999` **#8639022160596999**  *(placeholder #id headword)*
+- `8666187998342372` **#8666187998342372**  *(placeholder #id headword)*
+- `8700467795279475` **#8700467795279475**  *(placeholder #id headword)*
+- `8714720149086077` **#8714720149086077**  *(placeholder #id headword)*
+- `8734587129053273` **#8734587129053273**  *(placeholder #id headword)*
 - `8777051533042699` **apu'letg**  *(no English)*
 - `8788044709240687` **temawigna't**  *(no English)*
-- `8804781018586547` **#8804781018586547**  *(placeholder)*
-- `8811333988271865` **#8811333988271865**  *(placeholder)*
+- `8804781018586547` **#8804781018586547**  *(placeholder #id headword)*
+- `8811333988271865` **#8811333988271865**  *(placeholder #id headword)*
 - `8817914624163817` **waqapigatu**  *(no English)*
 - `8827091097655615` **panilja'sit**  *(no English)*
-- `8851236277018218` **#8851236277018218**  *(placeholder)*
+- `8851236277018218` **#8851236277018218**  *(placeholder #id headword)*
 - `8856271179220779` **nantmigjemsit**  *(no English)*
-- `8889622744756361` **#8889622744756361**  *(placeholder)*
+- `8889622744756361` **#8889622744756361**  *(placeholder #id headword)*
 - `8909414349679745` **TBA**  *(TBA placeholder)*
-- `8910978248941269` **#8910978248941269**  *(placeholder)*
-- `8922794068938692` **#8922794068938692**  *(placeholder)*
-- `8926653744503389` **#8926653744503389**  *(placeholder)*
-- `8938209354293772` **#8938209354293772**  *(placeholder)*
+- `8910978248941269` **#8910978248941269**  *(placeholder #id headword)*
+- `8915377098358209` **mestantawaja'teget**  *(no English)*
+- `8922794068938692` **#8922794068938692**  *(placeholder #id headword)*
+- `8926653744503389` **#8926653744503389**  *(placeholder #id headword)*
+- `8938209354293772` **#8938209354293772**  *(placeholder #id headword)*
 - `8942336877123992` **qopisun**  *(no English)*
-- `8955386450297883` **#8955386450297883**  *(placeholder)*
-- `8977823281473599` **#8977823281473599**  *(placeholder)*
+- `8955386450297883` **#8955386450297883**  *(placeholder #id headword)*
+- `8977823281473599` **#8977823281473599**  *(placeholder #id headword)*

@@ -1,0 +1,219 @@
+# Putting & Placing (`putting-and-placing`)
+
+Theme: *Movement & Physical Actions* — 195 entries (+17 archived)
+
+- **a'jela's'g** — hinderance \| in the way \| It gets in the way
+- **a'jela'sit** — be a hinderance \| hinderance \| in the way \| He/she gets in the way
+- **a'jelising** — lie in way \| He/she lies in the way  *(also: posture)*
+- **a'jelpit** — sit in way \| He/she sits in the way  *(also: posture)*
+- **a'jelpuguig** — stands in way \| It stands in the way
+- **a'jelpuguit** — stand in way \| hinderance \| He/she stands in the way  *(also: posture)*
+- **a'jelteg** — in the way \| hinderance \| in an odd place \| It is in an unusual place
+- **alamgistoq** — scatter it about \| He/she scatters it(seed) about
+- **alamg'pit** — scattered about \| He/she/it(pine) is scattered about
+- **alamg'teg** — scattered about \| It(wood) is scattered about
+- **alanga'toq** — scatter \| He/she scatters it
+- **alaqteg** — spread out (sail) \| It is spread(sail, sheet) out
+- **alaqte'g** — spread out (sail) \| He/she is spreading it (sail, sheet) out
+- **amaspit** — close by but out of immediate reach \| not close enough \| far apart \| He/she/it is close by but out of immediate reach
+- **amasteg** — close by but out of immediate reach \| not close enough \| far apart \| It is close by but out of immediate reach
+- **anapig** — lean toward \| It leans toward  *(confidence: m)*
+- **an'stawpit** — unsafe position \| He is in unsafe position
+- **an'stawteg** — unsafe \| unsafe position \| It is unsafe  *(confidence: m)*
+- **aputasga'latl** — turn upside down \| He/she turns him upside down  *(confidence: m)*
+- **aputasga'toq** — turn upside down \| He/she turns it upside down  *(confidence: m)*
+- **aputasgigwalatl** — turn over (using a tool) \| He/she turns him over using a tool  *(confidence: m)*
+- **aputasgigwatg** — turn over (using a tool) \| He/she turns it over using a tool  *(also: farming)*  *(confidence: m)*
+- **aquteg** — hidden \| hidden area \| It is hidden  *(also: seeing)*
+- **a'sisteg** — over \| across \| It is on top of something
+- **ejinteg** — low \| It is low  *(confidence: m)*
+- **elamgo'lajig** — pile \| play solitaire \| He/she piles them (planks)  *(also: games)*
+- **elamgo'toql** — piles things \| stacks things \| He/she piles things
+- **elaqpit** — spread out (bed sheet) \| It is spread out
+- **elaqteg** — spread out (blanket) \| It is spread out
+- **elega'latl** — spread out \| He/she spreads him/her/it out
+- **elego'latl** — lay out (rug) \| spread out \| He/she lays it out
+- **elego'toq** — lay out \| spread out \| He/she spreads it out
+- **eletqo'toq** — coil \| He/she coils it  *(confidence: m)*
+- **eloqosg** — laid out (pipe) \| It is laid out
+- **eloqwa'latl** — lay down \| He/she lays him/her down
+- **eloqwa'toq** — lay down \| He/she lays it down
+- **elsaqteg** — layered \| divided \| It is layered
+- **eltaqaiaq** — something long lying along a path \| wind toward \| string to \| extend to \| It extends toward  *(confidence: m)*
+- **eltaqaiet** — something long lying along a path \| wind toward \| string to \| extend to \| It (rope) extends towards  *(confidence: m)*
+- **eltaqa'latl** — laying something long along a path \| chase toward \| wind toward \| string to \| extend to \| drag toward \| He/she strings it (rope) towards \| He/she chases him/her towards  *(confidence: m)*
+- **eltaqa'toq** — string toward \| drag toward \| wind toward \| He/she strings it (wire) towards  *(confidence: m)*
+- **el'tqeg** — coiled \| It is coiled
+- **el'tqet** — coiled \| It (rope) is coiled
+- **el'tqo'latl** — coil (rope) \| He/she coils (rope)
+- **enaqet** — spread spruce boughs \| He/she spreads spruce boughs  *(also: dwellings)*  *(confidence: m)*
+- **enmejeteg** — set facing the other direction \| It is set facing the other direction
+- **enmigjeteg** — it sits backwards \| reversed \| It is reversed
+- **enqanapit** — beneath surface \| He/she/it is beneath the surface
+- **enqanateg** — beneath surface \| It is beneath the surface
+- **epatgupuguig** — standing in contact with \| standing leaning against something \| It is standing and leaning against something
+- **epatgupuguit** — standing in contact with \| standing leaning against something \| He/she is standing leaning against it  *(confidence: m)*
+- **epatgwa'latl** — place against \| He/she places him/her/it against something
+- **epatgwa'toq** — place it against... \| push it against... \| lean it against... \| He/she places it against...
+- **epatgwepit** — leaning against \| leaning up against \| He/she/it is leaning against...
+- **epatgweteg** — leaning against \| leaning up against \| It is leaning against ...
+- **epatuepit** — set against something \| He/she sits against something
+- **epatueteg** — set against something \| It is set against something
+- **espamgo'tas'g** — piled high \| stacked high \| It is piled high  *(also: amounts)*
+- **espamgo'tasit** — pile high \| stack high \| he/she piles objects high
+- **espamgo'toq** — pile high \| stack high \| he/she piles it high
+- **espamg'teg** — high pile \| high stack \| It is a high pile  *(also: amounts)*
+- **esp'pit** — sit (or set) up high \| high on drugs (slang) \| He/she sits high up  *(confidence: m)*
+- **esp'puguig** — stand tall \| stand on higher plane \| It stands tall
+- **esp'puguit** — stand on higher plane \| hold high rank \| stand up high \| He/she stands on a higher plane \| He/she holds a high rank  *(confidence: m)*
+- **esp'teg** — sit (or set) high up \| It is high up  *(confidence: m)*
+- **e'tmateg** — is (set) at forefront \| in front \| It is set at the forefront
+- **gaqama's'g** — stand up \| become erect \| It stands\_up  *(confidence: m)*
+- **gaqamig** — stand \| It is standing
+- **gaqapija'latl** — hang up \| He/she hangs someone  *(confidence: m)*
+- **gaqapija'toq** — hang up \| He/she hangs it  *(confidence: m)*
+- **gaqapijing** — hung up \| He/she/it is hung up  *(confidence: m)*
+- **gaqapitg** — it hangs \| It hangs  *(confidence: m)*
+- **gawasga'toq** — turn it around \| He/she turns it around  *(confidence: m)*
+- **gawasgega'latl** — turn over \| He/she turns it (bedsheet) over  *(confidence: m)*
+- **gawasgega'toq** — turn it over \| He/she turns it over  *(confidence: m)*
+- **gawasgeget** — flip \| turn it over quickly \| He/she turns it over quickly  *(confidence: m)*
+- **ge'goqpit** — lie on top and across \| He/she lies atop
+- **ge'goqteg** — lie atop \| lie on top \| It lies atop
+- **ge'gupa'latl** — put on top \| place atop \| He/she places him/her/it on top
+- **ge'guteg** — on the top \| It is on the top
+- **ge'gwa'latl** — place on the top \| He/she places him on the top
+- **ge'gwa's'g** — moves onto the top \| It moves onto the top  *(confidence: m)*
+- **ge'gwa'toq** — place on the top \| He/she places it on the top
+- **ge'gwisma'latl** — lay on the top \| lay on top of \| He/she lays someone on the top  *(confidence: m)*
+- **ge'gwisma'toq** — lay on the top \| lay on top of \| He/she lays it on the top
+- **gejimoqpit** — sits obstructing the way \| He/she sits obstructing the way  *(also: posture)*  *(confidence: m)*
+- **gejimoqteg** — is obstructing the way \| It is obstructing the way
+- **gesgija'latl** — place over \| put over \| He/she places him/her over
+- **gesgija'toq** — place over \| put over \| He/she places it over
+- **giwto'qasga'latl** — turn around to point in opposite direction \| pass around \| He/she turns him/her to point in opposite direction \| He/she passes him/her/it around  *(confidence: m)*
+- **giwto'qasga'toq** — turn around to point in opposite direction \| pass around \| He/she turns something around to point in opposite direction \| He/she passes something around  *(confidence: m)*
+- **iga'latl** — release \| place \| let go \| put \| He/she releases him/her/it \| He/she places him/her/it  *(also: holding)*  *(confidence: m)*
+- **iga'toq** — place \| put \| He/she places it
+- **ilamgo'tasit** — piles objects in organized fashion \| piles wood \| He/she/it piles objects in organized fashion
+- **iljo'qwa'latl** — put right side up \| place in order \| set straight \| settle \| He/she set him/her straight  *(confidence: m)*
+- **iljo'qwa'toq** — put right side up \| place in order \| set straight \| settle \| He/she set it straight  *(confidence: m)*
+- **iloqwa'latl** — reposition lengthwise \| place or put in proper position lengthwise \| straighten out lengthwise \| He/she reposition him/her lengthwise
+- **iloqwa'toq** — reposition lengthwise \| place or put in proper position lengthwise \| straighten out lenghtwise \| He/she repositions it lengthwise
+- **istua'latl** — set crooked \| treat differently \| He/she sets him/her crooked  *(confidence: m)*
+- **istua'toq** — do or make crooked \| He/she makes it crooked  *(confidence: m)*
+- **istu'pit** — sit crooked \| He/she sits crooked  *(confidence: m)*
+- **istu'teg** — set crooked \| It is set crooked
+- **jajigoqpit** — sit alongside \| He/she sits alongside
+- **jajigteg** — alongside \| It sits alongside
+- **jilpit** — leave an impression \| leave a mark \| He/she leaves a mark  *(confidence: m)*
+- **jilteg** — leaves an impression \| leave a mark \| It leaves a mark  *(confidence: m)*
+- **mawamgo'tas'g** — piled or stacked together \| It is piled or stacked together
+- **mawamgo'toqol** — pile or stack together \| He/she piles or stacks those together
+- **mawamg'pijig** — piled together \| They are piled together
+- **mawamg'tegl** — piled together \| They are piled together
+- **mawa'tigl** — come together \| all together \| go together \| those come together  *(confidence: m)*
+- **mawigtugja'lugsijig** — turn over together \| turn up side down together \| They are turned over together
+- **mawiilamgo'toqol** — repile or restack together \| He/she repiles or restacks those together
+- **mawito'latl** — wind something around itself or a core \| coil something around itself or a core \| roll something around itself or a core \| reel something around itself or a core \| He/she winds, coils, rolls, or reels something  *(confidence: m)*
+- **mawljo'qo'toql** — pile together in particular way \| stack together in organized way \| He/she piles those together in a particular way
+- **mawpit** — bunched together \| included \| He/she is bunched together  *(confidence: m)*
+- **mesatgwa'latl** — place against \| He/she places it(fridge) against
+- **mesatgwa'toq** — place against \| He/she places it against
+- **mesatgwepit** — placed against \| leaning against \| placed up against \| It is placed against...
+- **mesatgweteg** — placed against \| leaning against \| placed up against \| It is placed against...
+- **mesatgwisma'toq** — lay up against \| He/she lays it up against
+- **mesqana'latl** — lay down \| put down \| He/she puts him/her down to the ground or floor
+- **mesqana'toq** — lay down \| put down \| He/she puts it down on the floor or ground
+- **metaqateg** — on bare surface \| It is on a bare surface
+- **musgasg'pit** — protrude \| stick out \| It(pole) sticks out
+- **musgasg'teg** — protrude \| stick out \| It protrudes
+- **naqamasa'latl** — place where it can easily be found \| find easy to handle \| He/she places it (ball) where it can easily be found \| He/she finds him/her/it easy to handle
+- **naqamasa'toq** — place or  put where easily found \| easy to do \| easily found \| put in accessible place \| have facility with \| find easy to handle \| He/she places it where it can easily be found \| He/she finds it easy to do \| He/she found it easily
+- **naqamaspit** — easily accessible \| at hand \| handy \| He/she/it is easily accessible
+- **naqamasteg** — easily accessible \| at hand \| handy \| It is easily accessible
+- **nasuoqteg** — set astride \| sit astride \| It is set astride
+- **nigtua'latl** — separate from \| He/she separates him/her from the rest  *(confidence: m)*
+- **nigtua'toq** — separate \| He/she separates it  *(confidence: m)*
+- **nisoqpit** — pointed down (something of length) \| slanted down (something of length) \| It (something of length, like a pole) is pointed down
+- **nisoqteg** — point down (something of length) \| It(something of length) is pointed downward
+- **pija'latl** — put in \| He/she puts him/her/it in  *(confidence: m)*
+- **pija'toq** — put in \| He/she puts it in  *(confidence: m)*
+- **pitasg'pit** — stick in \| penetrate \| He/she/it is sticking in
+- **pitasg'teg** — stick in \| penetrate \| It is sticking in
+- **pitoqpit** — sit or set underneath \| He/she/it sits or is set underneath
+- **pitoqteg** — burn underneath \| set underneath \| penetrate beneath \| It is burning underneath \| It is set underneath  *(also: fire)*  *(confidence: m)*
+- **saqanqateg** — lie on the floor or ground \| sit on the floor or ground \| It lies on the floor or the ground
+- **saweteg** — slouched over \| hunched over \| hung or drooped over \| slack \| sag \| limp \| It is slouched over  *(confidence: m)*
+- **se'sa'latl** — spread out \| He/she spreads him/her/it out
+- **se'sa's'g** — spread \| It spreads  *(confidence: m)*
+- **se'sa'toq** — mess up \| spread \| disarray \| He/she messes it up \| He/she spreads it  *(confidence: m)*
+- **se'sigwalatl** — spread around by hand \| spread around with tool(rake) \| He/she spreads...(him/her/it)...around by hand
+- **se'sigwatg** — spread around by hand \| spread around with tool(rake) \| He/she spreads it around by hand  *(confidence: m)*
+- **seta'latl** — put aside \| set aside \| He/she puts him/her aside
+- **seta'toq** — put aside \| He/she puts it aside
+- **sipelega'latl** — spread out \| He/she spreads...out
+- **sipelega'toq** — spread out \| He/she spreads it out
+- **soqpit** — close by \| sit close to \| He/she is close by  *(confidence: m)*
+- **soqteg** — close by \| close to \| It is close by  *(confidence: m)*
+- **s'tapugua'latl** — stand aside \| He/she stands him/her aside  *(confidence: m)*
+- **s'tapugua'toq** — stands it aside \| He/she stands it aside  *(confidence: m)*
+- **taqamoqpit** — positioned crosswise or athwart \| He/she is positioned crosswise  *(confidence: m)*
+- **taqamoqteg** — lie crosswise or athwart \| It lies crosswise
+- **tepgisa'latl** — separate from \| set aside \| He/she separates him/her from  *(confidence: m)*
+- **tepgispit** — sits apart (from others) \| He/she sits apart from others  *(confidence: m)*
+- **tepgisteg** — set apart (from others) \| seperate \| It is set apart from others
+- **tetgueg** — be a hinderance \| in way \| It is in the way
+- **tetguet** — be a hinderance \| in way \| He/she is a hinderance  *(confidence: m)*
+- **tetpaqapugua'latl** — stands straight \| He/she stands him/her straight  *(confidence: m)*
+- **tetpaqapuguig** — stands straight \| It is standing straight
+- **tetpaqpit** — set straight \| It (picture) is set straight
+- **tetpaqqama'latl** — stand straight \| He/she stands him/her/it (statue) straight  *(confidence: m)*
+- **tetpaqqama'toq** — stand straight \| He/she stands it straight  *(confidence: m)*
+- **tetpaqqamig** — stand straight up \| It is standing straight
+- **tetpaqteg** — straight \| It is straight  *(confidence: m)*
+- **tewoqpit** — stick out \| ...sticks out
+- **tewoqteg** — stick out \| It sticks out
+- **ugumejepit** — tipped \| crooked \| He/she is tipped
+- **ugumejeteg** — tipped \| crooked \| It is tipped
+- **waqju'teg** — crooked \| set crooked \| It is crooked
+- **wejgwajeteg** — sit or set facing toward here \| It is facing toward here
+- **weljaqatl** — spread nicely or smoothly \| He/she spreads...nicely or smoothly  *(confidence: m)*
+- **weljaqq** — spread nicely or smoothly \| He/she spreads it nicely or smoothly  *(confidence: m)*
+- **welpit** — well·placed \| nice \| He/she/it is well placed
+- **wesawa'q** — hang over or on edge \| It hangs over or on the edge
+- **wesgija's'g** — goes on top of \| It goes on top of  *(confidence: m)*
+- **wesgijiama'latl** — spread over \| top coat \| paint over \| He/she spreads...over  *(confidence: m)*
+- **wesgijiama'toq** — spread over \| top coat \| paint over \| He/she spreads over it  *(confidence: m)*
+- **wesgitpit** — be on top \| sit or set on top \| He/she/it is set on top
+- **wesgitteg** — sit or set on top \| It sits or is set on top
+- **wetmguet** — in the way \| He/she is in the way  *(confidence: m)*
+- **oqonipgwa'q** — burying it in the (sand)  \| covering it over in the sand, snow, mud etc... \| He/she is burying it in sand  *(confidence: m)*
+- **oqonipgwa'sit** — covered with earth \| covered with grass, snow \| He/she is covered with earth.  *(confidence: m)*
+- **oqonaqamigiet** — becomes covered with earth \| He/she becomes covered with earth  *(confidence: m)*
+- **oqonipgwa'latl** — buries/covers him/her in earth or grass or blanket etc. \| He/she buries/covers him/her/it in earth or grass blanket etc.  *(confidence: m)*
+- **oqonipgwa'toq** — covers/buries it \| He/she cover/buries it.  *(confidence: m)*
+- **mestaqteg** — it is spread out \| it covers everything  *(confidence: m)*
+- **oqonaqamiga'teget** — covers with earth \| He/she covers with earth.  *(confidence: m)*
+- **epiga'latl** — put on top of \| He/she puts him/her/it on top of
+- **oqonaqamiga'toq** — covers it with earth \| He/she covers it with earth  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **a'jel-\*\*** — inappropriate (dmm 02-07-30) \| in the way (dmm jnw 02-07-30)
+- **as'gomoqteg\*\*** — lie \| across \| It lays crossways
+- **ejag'njepit** — abut \| border on \| touch along an edge \| lie adjacent to \| He/she abuts it
+- **ejag'njeteg** — abut \| border on \| touch along an edge \| lie adjacent to \| It abuts it
+- **e'taqaq\*\*** — stand next in line (of succession)
+- **gawasg'pit** — backward \| inverted, inverse
+- **gawasg'teg** — backward \| inverted, inverse
+- **gigjiweloqpit\*\*** — lie near
+- **jajigoqteg** — lie alongside \| It lies alongside
+- **jajigpit** — alongside \| He/she sits alongside
+- **negoqpit** — lie underneath \| He/she lies underneath
+- **negoqteg** — lie underneath \| It lies underneath
+- **negulq'teg** — set in canoe \| It is set in a canoe
+- **negulteg\*\*** — set in bottom of canoe \| It is set in the bottom of a canoe
+- **negwasa'latl\*\*** — put underneath \| He/she puts him/her underneath
+- **ne'gwasa'toq\*\*** — put underneath \| He/she puts it underneath
+- **te't'poqja'latl** — turns up side down \| He/she turns him/her up-side down

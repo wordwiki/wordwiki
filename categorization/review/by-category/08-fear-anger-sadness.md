@@ -1,0 +1,137 @@
+# Fear, Anger & Sadness (`fear-anger-sadness`)
+
+Theme: *People & Relationships* — 124 entries (+6 archived)
+
+- **amasgate'lmatl** — feel thoughtful of \| feel considerate for \| worry about \| He/she feels thoughtful of him/her/it  *(confidence: m)*
+- **amasgate'tg** — feel thoughtful of \| feel considerate for \| He/she feels thoughtful of it  *(confidence: m)*
+- **aniamugwet** — suffering for past wrongs \| punishment for past wrongs \| He/she is suffering for past wrongs  *(confidence: l)*  *(note: suffering/punishment for past wrongs; penance-like sense — review)*
+- **an'stawite'lmatl** — unsure of its safety \| He/she is unsure of its safety
+- **an'stawite'tg** — unsure of it's safety \| He/she is unsure of it's safety
+- **ansuite'lmatl** — feel sorry for \| feel bad about \| He/she feel bad about him
+- **ansuite'tg** — regret \| feel bad about \| He/she feels bad about it
+- **apjimt'g** — unable to stop crying \| He/she is unable to stop crying
+- **asgaiwatl** — causing hurt \| aggravate \| He/she aggravate someone  *(confidence: m)*
+- **asgate'lmatl** — spare feelings \| pity \| He/she spares his/her feelings  *(also: social-life)*  *(confidence: m)*
+- **atgitemit** — cry \| weep \| He/she cries  *(also: body-actions)*
+- **atgitemu'latl** — cause to cry \| He/she causes someone to cry
+- **ejgwe'mat** — sob \| He/she is sobbing  *(also: body-actions)*
+- **etltemit** — cry \| He/she is crying
+- **ewlapewit** — have a sad expression \| look sad \| look sickly \| He/she looks sad  *(also: appearance)*
+- **ewlmaje'g** — suffer \| He/she is suffering  *(also: sickness)*  *(confidence: m)*
+- **gesgma'qa'latl** — causes shivers \| He/she causes him/her to get shivers up his/her spine  *(also: body-actions)*  *(confidence: m)*
+- **gesgma'qiet** — shivers up spine \| shudder \| He/she has shivers up his/her spine  *(also: body-actions)*  *(confidence: m)*
+- **gesimt'g** — cry hard \| wail \| He/she wails
+- **gimtemit** — cry secretly \| cry silently \| He/she cries secretly
+- **giwajeiwatl** — long for \| yearn for \| He/she is longing for him/her
+- **giwajo'tg** — long for \| yearn for \| He/she yearns for it
+- **giwattesguatl** — sadden by his/her departure \| He/she is sadden by his/her departure
+- **gtantaqan** — plot against \| hatred \| scheme against \| connivery \| Plot against  *(also: conflict)*  *(confidence: m)*
+- **jigajiet** — irritable \| uncomfortable \| He/she is irritable  *(confidence: m)*
+- **jipalatl** — fear \| afraid of \| He/she fears him
+- **jipaluejit** — phobic \| fearful person \| Phobic  *(also: people)*
+- **jipaluet** — fearful \| He/she is fearful
+- **jipaqa'latl** — frighten \| He/she frightens him
+- **jipasit** — afraid \| scared \| He/she is afraid
+- **jipatg** — fear \| afraid of \| He/she is afraid of it
+- **jipguatl** — make uneasy \| make tense \| He/she make him uneasy
+- **masgelget** — estrange \| separated (in marriage) \| He/she is estrange from him/her  *(also: family)*  *(confidence: m)*
+- **masgelmatl** — hate \| loath \| detest \| He/she hates him/her
+- **masgelt'g** — hate \| loath \| detest \| He/she hates it
+- **mesge'g** — sorry \| regret an act \| He/she regrets an act
+- **metuite'tg** — apprehensive \| dread \| anxious about \| He/she is apprehenseive about it
+- **milgwija'sit** — mixed emotions \| apprehensive about the future \| imagine many possibilities \| He/she has mixed emotions  *(confidence: m)*
+- **musguaje'g** — frustrated \| upset \| He/she is frustrated
+- **musuet** — miss \| lonesome \| He/she is lonesome
+- **naqatgelsit** — self-conscious \| shy \| He/she is self-conscious  *(also: character)*  *(confidence: m)*
+- **nenaqite'tg** — anxious for \| eager for \| in a hurry for \| He/she is anxious for it  *(confidence: m)*
+- **nesasit** — fearful \| unnerved \| frightened \| phobia of ghosts and supernatural phenomena \| Fearful  *(also: spirits)*  *(confidence: m)*
+- **nesawet** — timid \| easily frightened \| He/she is timid  *(confidence: m)*
+- **netaga'latl** — embarrass \| He/she embarrasses him/her
+- **netaga'sit** — get embarrassed \| ashamed \| acting shy \| He/she get embarrassed
+- **netago'qona'latl** — shame \| He/she shames him/her  *(also: social-life)*  *(confidence: m)*
+- **ntaqo'qon** — shame \| disgrace \| Shame  *(also: social-life)*
+- **pa'qalaig** — surprised \| amazed \| He/she is surprised
+- **pa'qalaiwaqan** — surprising news or event \| amazing news or event \| astonishing news or event \| surprise \| Surprising news or event  *(also: stories-and-writing)*
+- **paqsipgetemit** — burst out crying \| crying hard \| He/she bursts out crying
+- **pegittemit** — cry long while \| He/she/it cries a long while
+- **pemisiawtemit** — pass by while continuing to cry \| He/she is passing by while continuing to cry  *(also: going-and-coming)*  *(confidence: m)*
+- **pemtemit** — going by and crying \| He/she is going by and crying  *(also: going-and-coming)*  *(confidence: m)*
+- **pettemit** — gets here crying \| arrives crying \| He/she gets here crying  *(also: travel)*  *(confidence: m)*
+- **poqjiatgitemit** — begin to cry \| He/she begins to cry
+- **puntemit** — stop crying \| He/she stops crying  *(confidence: m)*
+- **pusgimt'g** — cry repeatedly \| cry all the time \| He/she cries repeatedly
+- **pustemit** — cry repeatedly \| cry often \| He/she cries often
+- **qalipu'sitat** — jealous \| bitter jealousy \| He/she is jealous
+- **saqpigu'n** — tear·drop \| Tear drop  *(also: body-parts)*  *(confidence: m)*
+- **saqpigu'niet** — shed tears \| forms tears \| become tearful \| He/she is shedding tears  *(also: body-actions)*  *(confidence: m)*
+- **sespete'lmatl** — worry about \| He/she is worry about him/her
+- **sespete'tg** — worry about \| preoccupied with \| on one's mind \| He/she worries about it
+- **si'gasit** — agitated and uncomfortable \| He/she is agitated and uncomfortable  *(confidence: m)*
+- **si'guatl** — make uncomfortable \| irritate \| bother \| uneasy \| He/she makes him/her uncomfortable  *(confidence: m)*
+- **siwa'latl** — tiresome \| frustrate \| tired of \| He/she/it is tiresome to him/her  *(confidence: m)*
+- **siwe'g** — lonesome \| He/she is lonesome
+- **siwiesgmat** — tired of waiting \| He/she is tired of waiting  *(also: time)*  *(confidence: m)*
+- **siwiet** — become impatient \| frustrated \| bored \| fed up \| He/she becomes impatient
+- **siwlugwet** — tired of working \| He/she is tired of working  *(also: work)*  *(confidence: m)*
+- **siwogt'g** — lonesome for \| He/she is lonesome for it
+- **siwogtuatl** — lonesome for \| He/she is lonesome for someone
+- **siwpmiet** — tired of walking \| He/she is tired of walking  *(also: ways-of-moving)*  *(confidence: m)*
+- **siws'tuatl** — tired of listening to someone \| tired of listening to repetition \| tired of hearing someone \| He/she is tired of listening to him/her  *(also: hearing)*  *(confidence: m)*
+- **tagala'latl** — anger \| irritate \| annoy \| He/she angers him/her
+- **tagaliet** — feel anger \| He/she feels angered
+- **taqawaja'latl** — sadden \| He/she saddens him/her
+- **taqawaje'g** — sad \| feel depressed \| He/she is sad
+- **tetaqite'lmatl** — anxious for \| eager for \| He/she is anxious for him/her  *(confidence: m)*
+- **tetaqite'tg** — anxious for \| eager for \| in a hurry for \| He/she is anxious for it  *(confidence: m)*
+- **ulmaita'suaqan** — sorrowful thought \| sadness \| sorrow \| Sorrowful thought
+- **wegaia'latl** — anger someone \| He/she angers someone
+- **wegaig** — angry \| He/she is angry
+- **wegaiugt'g** — angry with \| mad at \| He/she is angry with it
+- **wegaiugtuatl** — angry with \| mad at \| He/she is angry with him/her
+- **we'gwata'latl** — frighten \| scare \| He/she frightens someone
+- **we'gwata'sit** — frightened \| scared \| He/she is frightened
+- **wejgutemit** — come toward crying \| He/she comes towards here crying  *(also: going-and-coming)*  *(confidence: m)*
+- **welmaita'sit** — sad \| suffer (in thinking) \| He/she is sad
+- **welmaje'g** — suffer \| He/she is suffering  *(also: sickness)*  *(confidence: m)*
+- **wenmaje'g** — suffer \| He/she is suffering  *(also: sickness)*  *(confidence: m)*
+- **wetajigwet** — frown \| scowl \| He/she is frowning  *(also: body-actions)*  *(confidence: m)*
+- **wettemit** — cry (Shubenacadie) \| bleat (Shubenacadie) \| He/she cries (Shubenacadie)
+- **wettemitl** — cry about \| cry over \| He/she cries about him/her/it
+- **wisguet** — jealous \| envious \| He/she is jealous
+- **wisqilue'wit** — quick·tempered \| He/she is quick·tempered  *(also: character)*  *(confidence: m)*
+- **jipaqa'toq** — scares it \| frightens it \| He/she scares/frightens it
+- **jipulatl** — startles \| He/she startles him/her.
+- ** jipaluwejitu'et** — leaving in fear \| He/she is leaving in fear  *(also: going-and-coming)*  *(confidence: m)*
+- **wejgwatemit** — comes crying \| He/she/it comes crying.  *(also: going-and-coming)*  *(confidence: m)*
+- **jipsit** — startled \| He/she is startled
+- **aniamsit** — looks at self with dissatisfaction \| looks at him/herself with discontent  \| He/she looks at him/herself with dissatisfaction.  *(also: seeing)*  *(confidence: m)*
+- **ewlita'sit** — is having sad thoughts  \| He/she is having sad thoughts.
+- **ewlite'lmgusit** — has self-pity \| He/she has self-pity.  *(confidence: m)*
+- **jipaluejituiet** — become hysterical \| He/she becomes hysterical
+- **ewlamatl** — looks at him/her with pity or sadness \| He/she looks at him/her with pity or sadness.  *(also: seeing)*  *(confidence: m)*
+- **aniamatl** — he/she is discontent with him/her  *(confidence: m)*
+- **aniaptg** — looks at it with contempt \| He/she looks at it with contempt.  *(also: seeing)*  *(confidence: m)*
+- **jipalgun** — scary \| Scary (situation)
+- **ewljewe'jit** — is miserable/sad \| He/she is miserable/sad.
+- **jipalsuti** — fear \| Fear
+- **aniamgui'tij** — they are hated by him   *(confidence: m)*
+- **aniamtultijig** — they (p) look at each other with discontent \| they (p) look at each other with discontent  *(also: seeing)*  *(confidence: m)*
+- **ewlo'ti** — poor state of mind \| sad state of mind \| Poor/sad state of mind.
+- **jipaqatesing** — startled \| terrified \| scared \| He/she is startled/terrified
+- **jipaltimgewei** — fear \| fright \| Fear, fright
+- **jipaqa'sit** — get scared \| He/she gets scared
+- **ewlite'lmsit** — compassion/pity for himself/herself \| He/she has compassion/pity for himself/herself.  *(confidence: m)*
+- **ewlite'temasit** — feels sorry for it for himself/herself \| He/she feels sorry for it for himself/herself.  *(confidence: m)*
+- **jipalsutigtug** — scream in fear \| In fear (scream out) 
+- **jipajita'sit** — fearful thoughts \| paranoid \| He/she has fearful thoughts
+- **jipajita’suaqan** — fear \| fearful thought/s \| Fear/fearful thought(s)
+- **ewlitelsit** — has compassion or self pity \| He/she has compassion and self pity.  *(confidence: m)*
+
+## Archived entries (lower priority)
+
+- **musguajo'tg** — frustrates (dmm 2016-Jun-25) \| He/she frustrates it (dmm 2016-Jun-25)
+- **musguajulatl** — frustrates (dmm 2016-Jun-25) \| He/she/it frustrates him/her (dmm 2016-Jun-25)
+- **netajit\*\*** — lonesome \| homesick \| He/she is homesick
+- **pa'qalaimg** — amazement \| surprising \| one is surprised or amazed
+- **si'gowiet** — have spring fever \| He/she has spring fever
+- **wetaiwatl\*\*** — frighten off

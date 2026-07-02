@@ -130,6 +130,28 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
   skilled/awkward/unable) → character; lying, cheating, stealing, deceiving,
   tricking → wrongdoing.
 
+### Accreted during the v2 tagging pass (2026-07-01)
+- want-words and need-words ("wants to...", "has need for") → thinking (conf m).
+- nuta'q / "missing, lacking, short of" → amounts.
+- Dogs and cats (incl. puppies, kittens, house dogs) → farm-animals (domestic),
+  not animals; wild canids/felids stay in animals.
+- drunk/tipsy/intoxicated → condition (m); "likes to drink" → character (m).
+- nuji- occupation nouns → [occupations, domain] — EXCEPT fortuneteller and
+  magician/illusionist → [spirits, occupations] (the spirits page serves them).
+- Speak-X-language family (lnui'sit, wenjui'sit...) → [talking,
+  peoples-and-nations], talking first.
+- Wakes/vigils (ni'pa'pit, nipapultimg) → death-and-mourning; funeral mass
+  → [death-and-mourning, church-rituals] (death first, per the death rule).
+- The aniaps- penance family → church-rituals (m where the gloss is the
+  secular "suffers the consequences").
+- House-by-material series (stone/log/birch/thatched/spruce-bark ×
+  has/lives-in/builds/resembles) → dwellings, one cat.
+- Rainbow → [sky, weather]; northern lights → sky; wind/gales → weather.
+- -pit/-teg "in the way / hindrance" entries → putting-and-placing
+  (animate posture readings keep posture too).
+- Grammatical-prefix notes and no-English placeholders → cats [],
+  flag needs-human (never guessed).
+
 ### Carried over from v1 (still in force, v2 slugs)
 - Body-part-description verbs ("have big hands", "red-haired") → body-descriptions.
 - "heard X" (metew-) → hearing, plus X's domain when strong.

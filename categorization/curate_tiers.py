@@ -99,78 +99,68 @@ T100 = [
 ]
 
 
-# Promotions into the top-1000 pool (entries never nominated during the
-# tagging pass).  Chosen from Completed, recorded, short-gloss entries in
-# core learner categories to bring the cumulative top-1000 to exactly 1000.
-T1000_PROMOTE = [
-    14729,   # atie'wit - say goodbye
-    29976,   # etna - well! / okay then!
-    16034,   # awti'j - path, trail
-    16280,   # egsitpugwatalg - eat breakfast
-    23954,   # enmiaq - goes home
-    4708,    # amalgewaqan - dance (event)
-    8921,    # a'papi'j - thread / string
-    33949,   # gaqtugwawig - thunder
-    33786,   # gaqsit - burn
-    37188,   # geljit - frozen
-    39389,   # gesga't - lost
-    41162,   # gesipiaq - itchy
-    43072,   # getapa't - sink
-    2534,    # alawe'ji'j - pill
-    852,     # a'jijgopilaqan - bandage
-    12053,   # apugsign - lynx
-    9780,    # apistanewj - marten
-    11299,   # ap'tapegiejit - turkey
-    6527,    # amlmaw - mackerel
-    7206,    # anagwe'j - flounder
-    3605,    # aloqoman - grape
-    34569,   # gawaqtejg - gooseberry
-    2509,    # alawei - pea
-    32086,   # galgunawei - biscuit / hardtack
-    26329,   # eptaqano'guom - cupboard
-    1893,    # alapilaqan - knapsack
-    36794,   # gejigiaq - corner
-    16126,   # egel - occasionally
-    15932,   # awisiw - seldom
-    36813,   # gejigow - recently
-    5628,    # amgwes - first / first time
-    16172,   # egimatl - count / read
-    13697,   # asiteglulatl - reply
-    35375,   # gegna'sit - dress up
-    23009,   # emisqe'g - naked / bare
-    8472,    # antawe's - woodpecker
-    10155,   # apji'jgmuj - black duck
-    32454,   # gapsgu'j - little waterfall
-    26208,   # epsimgeweia'sit - becomes feverish
-    31285,   # ewnasgwiet - dizzy
-    37070,   # gelgwisge'g - sprained
-    13246,   # asga'sit - limp
-    11945,   # aptu'n - cane / walking stick
-    2788,    # algusuet - climb about
-    1843,    # alapegit - crawl about
-    2115,    # alaqsing - fly around
-    34637,   # gawasga's'g - turns around
-    13832,   # asoqoma'sit - cross over
-    8495,    # apaja's'g - come back / return
-    14898,   # atlasmu'teget - take a rest
-    3215,    # alje'mat - play ball
-    4460,    # alu'sat - skinny / lean
-    22036,   # eluatl - resemble
-    35003,   # gawigsaw - thorn / thistle
-    17272,   # ejigliwsit - move away (residence)
-    35209,   # geggunawet - godparent
-    3046,    # alisqotg - chew
-    8316,    # ansuite'tg - regret
-    38225,   # gepmite'lmatl - honor / respect
-    37463,   # gelulatl - speak to
-    24946,   # enqa's'g - stop
-    26073,   # epsatl - heat / warm up
-    11968,   # apua'latl - thaw / warm
-    9889,    # apita't - bloated / swell
-    8786,    # apangitatimg - pay day
-    30658,   # ewi'gat - build a house
-    9913,    # apita'taqan - baking powder / yeast
-    29743,   # etlte'g - play (musical instrument) / strum
+# v2 (2026-07-01): the v1 T1000_PROMOTE list is retired - every one of its
+# 71 entries was independently re-nominated during the v2 tagging pass, so
+# promotion is a no-op.  The v2 pass over-nominated per instructions
+# (1052 cumulative), so v2 curation instead DEMOTES 52 nominations to bring
+# the cumulative top-1000 to exactly 1000 (10 + 90 + 900).  Selection:
+# archived or unrecorded entries; mid-decade numerals (30/40/50/60 - the
+# 1-10/100/1000 backbone stays); the weaker member of duplicate-gloss or
+# spelling-variant pairs; derived forms whose base word is already tiered;
+# narrow compounds.  The Mi'gmaq team should audit this list too.
+T1000_DEMOTE = [
+    99136,   # oti - friend (ARCHIVED)
+    130658,  # soppei - couch (ARCHIVED)
+    5605210604508289,  # gtantaqan - hunting (no recording)
+    7192904760486449,  # jipaltimgewei - fear (no recording; dup of jipalatl family)
+    88394,   # nesisga'q - thirty
+    89546,   # newisga'q - forty
+    82583,   # nanisga'q - fifty
+    13379,   # as'gom te'sisga'q - sixty
+    4708,    # amalgewaqan - dance event (amalgat kept)
+    8495,    # apaja's'g - come back vii (apaja'sit kept)
+    13697,   # asiteglulatl - reply (asitematl kept)
+    14472,   # a't - that (ala, na kept)
+    20079,   # eli'satl - sew vta (eli'sewet kept)
+    19633,   # eliatl - make vta (eltoq kept)
+    23954,   # enmiaq - goes home vii (enmiet kept)
+    29772,   # etltemit - crying (atgitemit kept)
+    33949,   # gaqtugwawig - it thunders (gaqtugwaw kept)
+    12027,   # apugjig - soon (geget kept)
+    35233,   # geggung - have it vti (geggunatl kept)
+    35306,   # gegina'muatl - teach vta (gegina'muet kept)
+    37438,   # gelt'g - frozen vti (geljit kept)
+    50360,   # glitaw - strawberry NS variant (atuomgomin kept)
+    51117,   # gneg - far (amaseg kept)
+    59408,   # jiptug - perhaps (etug kept)
+    60705,   # lasguaw - snowshoe loanword (aqam kept)
+    75577,   # m'gegn - hide (mimugwasit kept)
+    24946,   # enqa's'g - stop vii (naqa'sit kept)
+    86437,   # na tmg - first of all (amgwes, tmg kept)
+    92594,   # niwe'g - dry (gispateg kept)
+    93179,   # nnu'tesing - spelling variant (lnu'tesing kept)
+    93379,   # npo'qon - spelling variant (mpo'qon kept)
+    98492,   # oqo - because (muta kept)
+    99060,   # oqwa't - arrive/dock (iga't, pegising kept)
+    115051,  # pittaq - spelling variant (pita'q kept)
+    48769,   # gi's sa'q - long ago compound (sa'q kept)
+    128762,  # sipeliw - seldom (awisiw kept)
+    130884,  # soqtamit - chew (alisqotg kept)
+    139347,  # tetaqe'g - hurry (nenaqa'sit kept)
+    142981,  # toqosi'p - and then (toqojiw kept)
+    143807,  # tugwa'latl - wake someone vta (tugwiet kept)
+    86477,   # na tujiw - at that time compound (tujiw kept)
+    148915,  # u't - this (ula kept, t100)
+    53154,   # gutan - town variant (utan kept)
+    154673,  # we'jiatl - find vta (we'jitoq kept)
+    16615,   # egwitamet - fish (wesget kept)
+    29046,   # etlenmit - laughing (wesgewe'g kept)
+    29560,   # etloqsatl - cooking vta (wissugwatiget kept)
+    120028,  # pusu'l puna'ne - Happy New Year phrase (pusu'l kept, t10)
+    51874,   # goqwei ugjit - what for phrase (goqwei kept, t10)
+    105166,  # pe'l tmg - first of all phrase
+    9913,    # apita'taqan - baking powder (narrow)
+    26329,   # eptaqano'guom - china cabinet (narrow)
 ]
 
 
@@ -182,17 +172,17 @@ def main():
                 a = json.loads(line)
                 assigns[a['e']] = a
 
-    t10, t100, t1000p = set(T10), set(T100), set(T1000_PROMOTE)
+    t10, t100, demote = set(T10), set(T100), set(T1000_DEMOTE)
     assert len(t10) == 10, len(t10)
     assert len(t10 | t100) == 100, len(t10 | t100)
     assert not (t10 & t100)
-    assert not (t1000p & (t10 | t100))
+    assert not (demote & (t10 | t100))
 
     n = 0
     for eid, a in sorted(assigns.items()):
         final = ('t10' if eid in t10 else
                  't100' if eid in t100 else
-                 't1000' if a.get('tier') or eid in t1000p else None)
+                 't1000' if a.get('tier') and eid not in demote else None)
         if final != a.get('tier'):
             rec = dict(a)
             if final is None:

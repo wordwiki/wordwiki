@@ -1,35 +1,30 @@
-# Character & Behaviour (`character`)
+# Character & Personality (`character`)
 
-Theme: *People & Relationships* — 204 entries (+17 archived)
+Theme: *People & Relationships* — 183 entries (+15 archived)
 
 - **alsumgusit** — be obedient \| is directed about \| obey \| He/she is obedient
 - **amassit** — silly \| foolish \| He/she acts silly
 - **amassuat** — act foolish \| He/she acts foolish
 - **amatpesmat** — act foolishly \| He/she acts foolishly
-- **amiet** — silly \| foolish \| becoming mentally ill \| He/she is silly
+- **amiet** — silly \| foolish \| becoming mentally ill \| He/she is silly  *(confidence: m)*
 - **amsale'g** — troubled \| difficult \| He/she is troubled
-- **amsaliet** — troubled \| start to go wrong \| He/she is troubled
-- **asigetg** — instigate \| stir up trouble \| goad \| incite \| He/she instigates
-- **asimatl** — stir up \| egg on \| instigate \| goad \| incite \| He/she incites someone
-- **awana'qiet** — incapable \| not able to do \| He/she is incapable  *(confidence: m)*  *(note: capability -> character)*
-- **awane'g** — awkward \| inexperienced \| incapable of doing \| lacks ability \| He/she is awkward  *(confidence: m)*
-- **awaneiwatl** — awkward in handling \| inexperienced in handling \| incompetent in operating \| incompetent in handling \| He/she is awkward in handling someone  *(confidence: m)*
-- **awane'jit** — awkward one \| unskilled one \| He/she is the awkward one  *(confidence: m)*
+- **amsaliet** — troubled \| start to go wrong \| He/she is troubled  *(confidence: m)*
+- **asigetg** — instigate \| stir up trouble \| goad \| incite \| He/she instigates  *(also: conflict)*  *(confidence: m)*
+- **asimatl** — stir up \| egg on \| instigate \| goad \| incite \| He/she incites someone  *(also: conflict)*  *(confidence: m)*
+- **awana'qiet** — incapable \| not able to do \| He/she is incapable
+- **awane'g** — awkward \| inexperienced \| incapable of doing \| lacks ability \| He/she is awkward
+- **awaneiwatl** — awkward in handling \| inexperienced in handling \| incompetent in operating \| incompetent in handling \| He/she is awkward in handling someone
+- **awane'jit** — awkward one \| unskilled one \| He/she is the awkward one
 - **awano'tg** — operate poorly \| handle poorly \| handle awkwardly \| He/she operates it poorly  *(confidence: m)*
-- **egs'pugua'latl** — lie to \| He/she lies to someone
-- **egsuet** — lie \| He/she is lying
-- **egsuo'qon** — lie \| Lie
-- **ejaqjematl** — belittle \| humiliate \| shame \| He/she belittles him/her  *(also: social-life)*
 - **elist'g** — disobey \| He/she disobeys
 - **elistuatl** — disobey \| He/she disobeys him
-- **elue'wa'latl** — fool \| trick \| He/she fools someone
-- **elue'wipnnatl** — incites to wickedness \| causes to be wicked \| He/she incites him/her to wickedness
+- **elue'wipnnatl** — incites to wickedness \| causes to be wicked \| He/she incites him/her to wickedness  *(confidence: m)*
 - **elue'wit** — quick·tempered \| He/she is quick-tempered
-- **emego'teget** — treat badly \| abuse \| He/she is an abuser  *(also: conflict)*
-- **emego'tg** — treat badly \| abuse \| He/she abuses it
+- **emego'teget** — treat badly \| abuse \| He/she is an abuser  *(also: conflict)*  *(confidence: m)*
+- **emego'tg** — treat badly \| abuse \| He/she abuses it  *(confidence: m)*
 - **emegwatalg** — eat disgusting food \| eat in a disgusting manner \| messy eater \| He/she eats disgusting food  *(also: eating-and-drinking)*
 - **emegwe'g** — act improperly \| act disgustingly \| He/she acts improperly
-- **emegweiwatl** — treat badly \| abuse \| He/she treats someone badly  *(also: conflict)*
+- **emegweiwatl** — treat badly \| abuse \| He/she treats someone badly  *(also: conflict)*  *(confidence: m)*
 - **emtesgatalg** — fussy eater \| eat fussily \| finicky eater \| He/she is a fussy eater  *(also: eating-and-drinking)*
 - **emtesgit** — conceited \| arrogant \| vain \| snobbish \| He/she is a snobbish
 - **emtesgite'lmatl** — think superior over \| being arrogant toward \| place oneself above \| He/she thinks he/she is superior over someone
@@ -44,57 +39,44 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **gaqiga'lsit** — maximum effort \| puts all of himself/herself in \| He/she puts in maximum effort  *(also: work)*
 - **gegnue'g** — respectful \| certain time \| live according to proper upbringing \| special \| certain thing \| He/she is respectful \| At a certain time
 - **gegnu'qamigsit** — act accordingly \| behave appropriately \| behave \| He/she acts appropriately
-- **gegwe'g** — is a slowpoke \| is a slowpoke \| slow-moving \| slow-moving \| He/she is slow-moving \| It is slow-moving  *(also: movement)*
-- **gemutmatl** — steal from \| He/she steals from him/her
-- **gemutnalatl** — kidnap \| steal \| He/she kidnaps him/her
-- **gemutnatg** — steal \| He/she steals it
-- **gemutneg** — steal \| cheat \| It steals
-- **gemutnet** — steal \| cheat \| He/she steals
-- **gesnoqowite'tg** — not take seriously \| not think highly of \| disrespect \| disregard \| He/she does not take it seriously  *(also: emotions)*
-- **gesnugwe'galsit** — pretend to be ill \| pretend to be sick \| feign illness \| He/she pretends to be ill  *(also: health)*
-- **gespugua'latl** — lie \| He/she lies to him/her
+- **gegwe'g** — is a slowpoke \| is a slowpoke \| slow-moving \| slow-moving \| He/she is slow-moving \| It is slow-moving  *(also: ways-of-moving)*
+- **gesnoqowite'tg** — not take seriously \| not think highly of \| disrespect \| disregard \| He/she does not take it seriously  *(also: social-life)*  *(confidence: m)*
+- **gesnugwe'galsit** — pretend to be ill \| pretend to be sick \| feign illness \| He/she pretends to be ill  *(also: sickness)*  *(confidence: m)*
 - **getanuet** — spiteful \| He/she is spiteful
 - **getgaqamigsit** — ill·mannered \| He/she is ill-mannered
 - **getgatalg** — eat ill·manneredly \| eat disgusting food \| He/she eats ill-manneredly  *(also: eating-and-drinking)*
 - **getge'g** — act indecent \| He/she acts indecently
-- **getgiet** — drunk \| He/she is drunk  *(also: condition)*
 - **getuapsit** — fend for oneself \| help oneself \| He/she fends for self
-- **giaspiet** — make habit of \| He/she/it makes a habit of ...
-- **gi'gajeiwatl** — aggravate \| tease \| do for spite \| He/she teases him  *(also: social-life)*
+- **giaspiet** — make habit of \| He/she/it makes a habit of ...  *(confidence: m)*
 - **gi'gajimatl** — goad \| dare \| urge on \| taunt \| reply sarcastically or meanly \| answer back \| He/she dares him/her  *(also: talking)*
-- **gi'gassit** — tease \| He/she teases  *(also: social-life)*
 - **gi'gassuinu** — teaser \| jokester \| Teaser  *(also: people)*
 - **gime'g** — secretive \| He/she is secretive
-- **gimiet** — sneak around \| He/she sneaks around  *(also: movement)*
+- **gimiet** — sneak around \| He/she sneaks around  *(also: ways-of-moving)*  *(confidence: m)*
 - **ginualatl** — brag about \| He/she brags about him/her  *(also: talking)*
 - **ginuatg** — brag about \| He/she brags about it  *(also: talking)*
 - **ginuet** — brag \| He/she brags  *(also: talking)*
-- **gisgajiet** — have patience \| measure up to \| able \| He/she measures up to
+- **gisgajiet** — have patience \| measure up to \| able \| He/she measures up to  *(confidence: m)*
 - **gisigu'qamigsit** — act like an old person \| He/she acts like an old person  *(also: age)*
-- **giwaje'g** — listless \| dull \| He/she is listless
+- **giwaje'g** — listless \| dull \| He/she is listless  *(confidence: m)*
 - **gjiaplue'w** — rascal \| Rascal  *(also: people)*
-- **glusgapewit** — fib \| tell lies \| tell tall tales \| He/she fibs  *(also: stories-and-writing)*
-- **gmutnes** — thief \| Thief  *(also: people)*
 - **goqqaja'teget** — do the right thing \| do correctly \| He/she does the right thing  *(also: good-and-bad)*
-- **gtigiewinuj** — drunkard \| Drunkard  *(also: people)*
-- **gtigiewuti** — drunkenness \| Drunkeness  *(also: health)*
+- **gtigiewinuj** — drunkard \| Drunkard  *(also: people)*  *(confidence: m)*
+- **gtigiewuti** — drunkenness \| Drunkeness  *(also: condition)*  *(confidence: m)*
 - **istuigit** — crooked \| dishonest \| uneven \| different \| He/she is crooked \| He/she is dishonest  *(also: size-and-shape)*
 - **jageju'patl** — clean out (by eating) \| mooch excessively (expression) \| He/she cleans it (animate) out by eating  *(also: eating-and-drinking)*
-- **jenpit** — sit quietly \| sit calmly \| He/she sits quietly  *(also: position)*
-- **jigawepit** — inactive \| dull \| quite \| He/she is inactive  *(confidence: m)*  *(note: inactive/quiet)*
+- **jigawepit** — inactive \| dull \| quite \| He/she is inactive  *(confidence: m)*
 - **ji'nmue'sm** — man chaser \| likes the company of men (usually refers to a woman) \| He/she is a man\_chaser  *(also: people)*
-- **ji'nmu'qamigsit** — act like a man \| He/she acts like a man  *(also: people)*
+- **ji'nmu'qamigsit** — act like a man \| He/she acts like a man
 - **lugowaqana'teget** — bothersome \| nuisance \| He/she is bothersome
 - **lugowaqanit** — bothersome \| troublesome \| He/she is troublesome
 - **lutmaqaniget** — spread rumors \| spread gossip \| spread hear-say \| He/she spreads rumors  *(also: talking)*
 - **male'g** — lazy \| He/she is lazy
-- **maligmatl** — mock \| tease \| He/she mocks him/her  *(also: social-life)*
 - **malo'pj** — lazy person \| Lazy person  *(also: people)*
 - **massaqa'sit** — takes advantage of  the situation \| He/she takes advantage
-- **massaqte'get** — instigate \| make/cause disruption \| He/she instigates
-- **matue'g** — lives simply \| unsophisticated \| make do \| live marginally \| He/she lives simply  *(also: money-and-trade)*
-- **matu'mimajit** — lives simply \| lives marginally \| He/she lives simply  *(also: money-and-trade)*
-- **matu'nmat** — frugal \| manages with minimum resources \| He/she is a frugal person  *(also: money-and-trade)*
+- **massaqte'get** — instigate \| make/cause disruption \| He/she instigates  *(also: conflict)*  *(confidence: m)*
+- **matue'g** — lives simply \| unsophisticated \| make do \| live marginally \| He/she lives simply  *(also: money-and-trade)*  *(confidence: m)*
+- **matu'mimajit** — lives simply \| lives marginally \| He/she lives simply  *(also: money-and-trade)*  *(confidence: m)*
+- **matu'nmat** — frugal \| manages with minimum resources \| He/she is a frugal person  *(also: money-and-trade)*  *(confidence: m)*
 - **me'ga'sit** — overact \| make a big fuss \| over react \| He/she overacts
 - **mega'sualatl** — make a big fuss over \| He/she makes a big fuss over him/her  *(also: social-life)*
 - **me'ga'teget** — overdo \| do more than expected \| show off \| He/she overdoes something
@@ -102,7 +84,7 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **megitelsit** — conceited \| have high opinion of self \| He/she is conceited
 - **me'go'pj** — snob \| snobbish person \| vain person \| stuck up person \| Snob  *(also: people)*
 - **melgita't** — courageous \| brave \| He/she is courageous
-- **melg'pugua'sit** — stands hard or strong \| take a stand \| unrelenting \| insist \| He/she stands hard or strong \| He/she takes a stand  *(also: position)*
+- **melg'pugua'sit** — stands hard or strong \| take a stand \| unrelenting \| insist \| He/she stands hard or strong \| He/she takes a stand  *(also: posture)*  *(confidence: m)*
 - **menata't** — cowardly \| weak \| weak willed \| He/she is cowardly
 - **metu'qamigsit** — hard to get along with \| have bad disposition \| He/she has a bad disposition
 - **mila'teget** — mischievous \| practical joker \| He/she is mischievous
@@ -114,26 +96,27 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **munsisapa'toq** — persevere to save \| persevere to pull through \| He/she perseveres to save it
 - **munso'tg** — persistent in doing \| He/she is persistent in doing it
 - **nalagit** — energetic \| swift \| eager \| He/she is energetic
-- **naqana'mat** — drink alcoholic beverage \| He/she drinks alcoholic beverage  *(also: eating-and-drinking)*
-- **naqatgelsit** — self-conscious \| shy \| He/she is self-conscious  *(also: emotions)*
+- **naqajit** — doesn't feel like doing something \| delaying \| He/she doesn't fell like doing...  *(confidence: m)*
+- **naqatgelsit** — self-conscious \| shy \| He/she is self-conscious  *(also: fear-anger-sadness)*  *(confidence: m)*
 - **nata'nmat** — good at whatever they do \| capable person \| handy \| handyman \| jack of all trades \| He/she is good at whatever he/she does  *(also: work)*
-- **nata'tawet** — know how to beg \| He/she knows how to beg
+- **nata'tawet** — know how to beg \| He/she knows how to beg  *(confidence: m)*
 - **natawa'qa'latl** — skillful in handling \| competent in doing \| He/she is competent in handling it(horse)  *(also: work)*
 - **natawa'qa'toq** — skillful in handling \| competent in doing \| He/she is competent in doing or handling it  *(also: work)*
 - **natawe'g** — self sufficient \| know how to get by \| know one's way around \| worldly wise \| clever \| He/she is worldly-wise
-- **nenestawe'g** — timid \| delicate \| sickly \| He/she is timid  *(also: health)*
+- **nenestawe'g** — timid \| delicate \| sickly \| He/she is timid  *(also: sickness)*  *(confidence: m)*
 - **nepaqt'g** — stingy \| He/she is stingy
-- **nepe'g** — sensitive \| temperamental \| touchy \| easily offended \| easily agitated \| He/she is temperamental  *(also: emotions)*
+- **nepe'g** — sensitive \| temperamental \| touchy \| easily offended \| easily agitated \| He/she is temperamental
 - **netage'g** — bashful \| shy \| He/she is shy
 - **ne'tapit** — critical \| faultfinding \| nosey \| He/she is critical
 - **ne'tma'sit** — make center of attention \| He/she makes self the center of attention
-- **newtinqana'mat** — drink alone (usually alcoholic beverage) \| He/she drinks alone  *(also: eating-and-drinking)*
+- **newtinqana'mat** — drink alone (usually alcoholic beverage) \| He/she drinks alone  *(also: eating-and-drinking)*  *(confidence: m)*
 - **newtugo'pj** — loner \| He/she is a loner  *(also: people)*
+- **nguto'pj** — loner \| solitary one \| He/she is a loner  *(also: people)*
 - **ni'laje'g** — friendly \| outgoing \| He/she is friendly
-- **nujimila'teget** — prankster \| joker \| joker \| prankster \| jester \| jester \| Prankster \| He/she is a prankster  *(also: occupations)*
+- **nujimila'teget** — prankster \| joker \| joker \| prankster \| jester \| jester \| Prankster \| He/she is a prankster  *(also: occupations)*  *(confidence: m)*
 - **nutgwaje'g** — meek and mild \| He/she is meek and mild
 - **nutqwe'g** — immature \| undeveloped \| minor \| He/she is immature  *(also: age)*
-- **pa'ge'g** — sober \| He/she is sober  *(also: condition)*
+- **pa'ge'g** — sober \| He/she is sober  *(also: condition)*  *(confidence: m)*
 - **pajjaqamat** — spread-on thickly \| exaggerate (slang) \| overdo \| He/she spreads-on thickly  *(confidence: m)*
 - **pa'qamajeiwatl** — snooping \| meddlesome to him/her \| examine \| inspect \| investigate \| study \| He/she is snooping on someone  *(also: seeing)*
 - **pa'qamajo'tg** — snooping \| meddlesome to it \| examine \| inspect \| investigate \| study \| He/she snoops on it  *(also: seeing)*
@@ -144,24 +127,21 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **penoqwite'lmatl** — look down on \| snub \| discriminate against \| He/she looks down on him/her  *(also: social-life)*
 - **pepsitelget** — disrespectful \| rude \| He/she is disrespectful
 - **pepsite'lmatl** — disrespect \| rude \| discourteous \| He/she disrespects him/her  *(also: social-life)*
-- **pesqojiguiptnat** — have sticky fingers \| He/she has sticky fingers  *(also: body)*
-- **pilsimatl** — speak falsely of \| He/she speaks falsely of him/her  *(also: talking)*
 - **pilu'assit** — foolish \| silly \| He/she is foolish
 - **pisoqqoweiegsit** — greedy \| He/she is greedy
-- **pisuilsu'tmuatl** — accuse falsely \| He/she falsely accuses him/her  *(also: talking)*
-- **pisuimatl** — slander \| falsely acuse \| He/she slanders him/her  *(also: talking)*
 - **pusgialagnutg** — go around spreading rumors usually \| gossips usually \| He/she usually goes around spreading rumors  *(also: talking)*
 - **qwa'niej** — phoney person \| Phoney person  *(also: people)*
-- **qwa'niejuei** — imitation item \| fake item \| Imitation item  *(confidence: m)*  *(note: fake item)*
-- **sapun** — contrary person(slang) \| hair \| Contrary person(slang) \| Hair  *(also: body)*
-- **saputaqatg** — last or stay through \| endure \| He/she lasts or stays through it  *(also: time)*
+- **qwa'niejuei** — imitation item \| fake item \| Imitation item  *(confidence: m)*
+- **sapun** — contrary person(slang) \| hair \| Contrary person(slang) \| Hair  *(also: body-parts)*  *(confidence: m)*
+- **saputaqatg** — last or stay through \| endure \| He/she lasts or stays through it
 - **sesgwe'g** — lively \| smart \| active \| hard worker \| ambitious \| He/she is active
-- **sespa'sit** — restless \| fidgety \| squirm \| Restless
-- **sespo'teget** — molest \| unfaithful in  marriage \| cheater(in love) \| unfaithful with a married person \| playboy/girl \| cheat (in love) \| act the playboy/girl \| He/she molests \| He/she is unfaithful \| Cheater  *(also: social-life)*
-- **siwa'teget** — tiresome \| boring \| pest \| He/she is tiresome
+- **sespa'sit** — restless \| fidgety \| squirm \| Restless  *(confidence: m)*
+- **sespo'teget** — molest \| unfaithful in  marriage \| cheater(in love) \| unfaithful with a married person \| playboy/girl \| cheat (in love) \| act the playboy/girl \| He/she molests \| He/she is unfaithful \| Cheater  *(also: social-life)*  *(confidence: m)*
+- **sipge'g** — slow-moving \| slowpoke \| He/she is a slowpoke  *(also: ways-of-moving)*
+- **siwa'teget** — tiresome \| boring \| pest \| He/she is tiresome  *(confidence: m)*
 - **taqale'g** — grouchy \| He/she is grouchy
 - **tegtesgewet** — kick \| complain \| object \| He/she kicks \| He/she complains  *(also: hitting)*
-- **tela'lsit** — at fault (to self) \| cause own misfortune \| He/she is at fault (to self)
+- **tela'lsit** — at fault (to self) \| cause own misfortune \| He/she is at fault (to self)  *(confidence: m)*
 - **tela'sit** — behave or act in such manner \| He/she behaves or acts in such manner
 - **telisqatuatl** — obey \| He/she obeys someone
 - **telqamigsit** — act thus \| act in such manner \| He/she acts in such manner
@@ -170,41 +150,40 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **tetapu'qamigsit** — act accordingly \| behave properly \| He/she acts accordingly
 - **tetujintage'g** — so bashful \| so shy \| He/she is so bashful
 - **uleiatimgewei** — kindness \| Kindness  *(also: social-life)*
-- **unjaqajewa'teget** — take it easy \| He/she takes it easy
+- **unjaqajewa'teget** — take it easy \| He/she takes it easy  *(confidence: m)*
 - **wantaqe'g** — calm disposition \| quiet \| He/she has a calm disposition
-- **wantaqpit** — sits quietly \| sit calmly \| He/she sits quietly  *(also: position)*
+- **wantaqpit** — sits quietly \| sit calmly \| He/she sits quietly  *(also: posture)*  *(confidence: m)*
 - **waqamnmat** — keeps a clean place \| neat \| tidy \| He/she keeps a clean place  *(also: cleaning)*
 - **waqasit** — wild \| hyperactive \| untamed \| He/she (animal) is wild  *(also: animals)*
 - **wela'luet** — charitable \| pleases \| He/she is charitable  *(also: social-life)*
+- **weleiwet** — treat others well \| kind to others \| He/she treats others well  *(also: social-life)*
 - **weligsua'toq** — take well \| accept \| He/she accepts it well
-- **weljaqajewa'teget** — take it easy \| He/she takes it easy
+- **weljaqajewa'teget** — take it easy \| He/she takes it easy  *(confidence: m)*
 - **welm'toq** — kind·hearted \| He/she is kind·hearted
 - **welqamigsit** — good·natured \| have good disposition or character \| He/she is good natured
-- **wesama'muatl** — overcharge \| He/she overcharges someone  *(also: money-and-trade)*
 - **wesgewinoqsit** — joyful \| jolly \| He/she is jolly
 - **wesgu'muet** — talks back disrespectfully \| He/she talks back disrepectfully  *(also: talking)*
-- **wesmi'pulatl** — flee with \| run off with \| kidnap \| He/she flees with him/her/it  *(also: movement)*
 - **westawlet** — gifted \| He/she is gifted
 - **wetmo'teget** — bothersome \| prankster \| prankster \| botherer \| busybody \| He/she is bothersome \| Prankster
 - **wetqolsit** — abstain \| He/she abstains
-- **wigpet** — like to drink (alcoholic beverages) \| He/she likes to drink (alcoholic beverages)
+- **wigpet** — like to drink (alcoholic beverages) \| He/she likes to drink (alcoholic beverages)  *(confidence: m)*
 - **wi'gue'g** — strange \| unkind \| weird \| mean \| He/she is strange \| He/she is unkind
-- **wigumat** — heavy smoker \| He/she is a heavy smoker  *(also: customs)*
+- **wigumat** — heavy smoker \| He/she is a heavy smoker  *(also: tobacco-and-smoking)*
 - **wininuit** — have mean disposition \| grouchy \| He/she has a mean disposition
-- **winnmat** — keeps a dirty place \| unkempt \| messy \| sloppy \| He/she keeps a dirty place
+- **winnmat** — keeps a dirty place \| unkempt \| messy \| sloppy \| He/she keeps a dirty place  *(also: cleaning)*  *(confidence: m)*
 - **winqamigsit** — have bad character \| He/she has a bad character
 - **winsit** — act bad or improperly \| He/she is acting bad
-- **wisqilue'wit** — quick·tempered \| He/she is quick·tempered
+- **wisqilue'wit** — quick·tempered \| He/she is quick·tempered  *(also: fear-anger-sadness)*  *(confidence: m)*
 - **papuaqane'j** — social butterfly \| social person \| Society/sociable/socialite (Peter [Mit./Met.])  *(also: people)*
 - **ewleiwatl** — treats him/her poorly \| He/she treats him/her poorly.  *(also: social-life)*
 - **ewla'latl** — treats him/her miserably \| He/she treats him/her miserably.  *(also: social-life)*
-- **pastugopit** — thick skin \| thick headed \| He/she has thick skin/ he/she is thick headed.  *(also: body)*
+- **pastugopit** — thick skin \| thick headed \| He/she has thick skin/ he/she is thick headed.  *(also: body-descriptions)*  *(confidence: m)*
 - **papuaqani'sgw** — social butterfly (female) \| social person (female) \| Society/sociable/socialite  *(also: people)*
 - **usgitqamugewa'j** — worldly \| To be worldly  *(also: people)*
-- **ewla'sit** — fains being poor/unwell or miserable \| He/she fakes being poor/unwell or miserable.
-- **ewla'toq** — treats it miserably/poorly \| He/she treats it miserably/poorly.
+- **ewla'sit** — fains being poor/unwell or miserable \| He/she fakes being poor/unwell or miserable.  *(confidence: m)*
+- **ewla'toq** — treats it miserably/poorly \| He/she treats it miserably/poorly.  *(confidence: m)*
 - **ewlistg** — listen, abide, hearken \| lend an ear, listen mercifully \| He/she heeds.  *(also: hearing)*
-- **ewla'sit** — is doing poorly \| acting poorly \| He/she is doing poorly.
+- **ewla'sit** — is doing poorly \| acting poorly \| He/she is doing poorly.  *(confidence: m)*
 - **saptesg'g** — gone through something difficult \| forged a path \| has gone through a difficult situation \| He/she has gone through something, forges a path, has gone through a difficult situation  *(confidence: m)*
 
 ## Archived entries (lower priority)
@@ -213,7 +192,6 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **awan\*\*** — untrained \| inexperienced \| deficient \| not able
 - **e'pitewqamigsit** — act like a woman \| act effeminately \| He/she acts like a woman
 - **ewaiatpat\*\*** — silly \| foolish \| He/she is foolish
-- **ewlet** — lies \| He/she lies
 - **giso'teget** — capable \| able to cope \| able to do... \| He/she is capable
 - **giso'tg** — able to do... \| able to cope \| able to make it work \| He/she is able to...
 - **lugwewaqana'teget** — make or cause trouble
@@ -221,8 +199,7 @@ Theme: *People & Relationships* — 204 entries (+17 archived)
 - **melgnat'm'gewei** — patience \| Patience
 - **metu'pet\*\*** — stingy with drinks
 - **pasgugjat\*\*** — cranky \| He/she is cranky
-- **peguiptnat** — sticky·fingered \| thief \| gummy fingered \| kleptomaniac \| He/she is sticky·fingered \| He/she is a thief
-- **pguiptnat** — sticky·fingered \| kleptomaniac \| gummy fingered \| thief \| He/she is sticky·fingered \| Kleptomaniac
+- **poqwaitetg** — does not  feel  like doing \| disinclined to...
 - **sma'tewa'sit** — smarten up \| act or do smartly \| He/she smartens up
 - **winsm** — filthy·minded person \| Filthy minded person
 - **winsmuit** — filthy·minded \| He/she is a filthy·minded person
