@@ -3098,3 +3098,778 @@
 {"e": 69978, "cats": ["money-and-trade"]}
 {"e": 70001, "cats": ["thinking"]}
 {"e": 70026, "cats": ["thinking"]}
+{"e": 70047, "cats": ["water", "weather"], "conf": "m"}
+{"e": 70070, "cats": ["money-and-trade"]}
+{"e": 70089, "cats": ["location-words"], "tier": "t1000"}
+{"e": 70107, "cats": ["colors"]}
+{"e": 70133, "cats": ["body-descriptions", "colors"]}
+{"e": 70152, "cats": ["colors"]}
+{"e": 70174, "cats": ["colors"]}
+{"e": 70194, "cats": ["colors", "size-and-shape"]}
+{"e": 70223, "cats": ["colors", "size-and-shape"]}
+{"e": 70250, "cats": ["fastening"]}
+{"e": 70273, "cats": ["fastening"]}
+{"e": 70290, "cats": ["fastening"]}
+{"e": 70309, "cats": ["fastening"]}
+{"e": 70330, "cats": ["appearance"]}
+{"e": 70353, "cats": ["appearance"]}
+{"e": 70371, "cats": ["sky"]}
+{"e": 70389, "cats": ["colors", "fire"]}
+{"e": 70407, "cats": ["colors", "fire"]}
+{"e": 70428, "cats": ["colors"]}
+{"e": 70462, "cats": ["colors"], "tier": "t100"}
+{"e": 70489, "cats": ["trees"]}
+{"e": 70511, "cats": ["food", "plants"], "tier": "t1000"}
+{"e": 70536, "cats": ["body-actions", "colors"]}
+{"e": 70562, "cats": ["body-descriptions", "colors"]}
+{"e": 70579, "cats": ["sickness"]}
+{"e": 70591, "cats": ["sickness"]}
+{"e": 70602, "cats": ["boats"]}
+{"e": 70616, "cats": ["death-and-mourning"], "conf": "m"}
+{"e": 70642, "cats": ["appearance"]}
+{"e": 70667, "cats": ["appearance"]}
+{"e": 70704, "cats": ["condition"], "tier": "t1000"}
+{"e": 70732, "cats": ["clothing", "appearance"]}
+{"e": 70746, "cats": ["boats"]}
+{"e": 70762, "cats": ["time", "numbers"]}
+{"e": 70786, "cats": ["body-actions"]}
+{"e": 70809, "cats": ["body-actions"]}
+{"e": 70827, "cats": ["texture-and-materials"]}
+{"e": 70843, "cats": ["texture-and-materials", "food"]}
+{"e": 70855, "cats": ["texture-and-materials"]}
+{"e": 70874, "cats": ["holding"]}
+{"e": 70898, "cats": ["body-descriptions"]}
+{"e": 70918, "cats": ["texture-and-materials"]}
+{"e": 70936, "cats": ["texture-and-materials"]}
+{"e": 70960, "cats": ["texture-and-materials"]}
+{"e": 70992, "cats": ["texture-and-materials"], "tier": "t1000"}
+{"e": 71019, "cats": ["body-descriptions"]}
+{"e": 71041, "cats": ["body-descriptions"]}
+{"e": 71059, "cats": ["condition"], "conf": "m"}
+{"e": 71082, "cats": ["body-descriptions"], "tier": "t1000"}
+{"e": 71106, "cats": ["people", "body-descriptions"]}
+{"e": 71131, "cats": ["work"]}
+{"e": 71153, "cats": ["body-descriptions"]}
+{"e": 71176, "cats": ["character"], "tier": "t1000"}
+{"e": 71201, "cats": ["sickness"]}
+{"e": 71220, "cats": ["character"]}
+{"e": 71262, "cats": ["character", "posture"], "conf": "m"}
+{"e": 71285, "cats": ["tools"], "conf": "m"}
+{"e": 71309, "cats": ["sleep"]}
+{"e": 71329, "cats": ["greetings"]}
+{"e": 71352, "cats": ["greetings"]}
+{"e": 71372, "cats": ["farming", "land"]}
+{"e": 71396, "cats": ["trees", "cutting"]}
+{"e": 71423, "cats": ["trees", "cutting"]}
+{"e": 71441, "cats": ["cutting"]}
+{"e": 71452, "cats": ["body-parts"]}
+{"e": 71474, "cats": ["farming"]}
+{"e": 71494, "cats": ["condition"]}
+{"e": 71514, "cats": ["condition"]}
+{"e": 71534, "cats": ["condition"]}
+{"e": 71559, "cats": ["condition", "sickness"], "conf": "m"}
+{"e": 71578, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 71598, "cats": ["fastening"]}
+{"e": 71619, "cats": ["fastening"]}
+{"e": 71638, "cats": ["cutting"]}
+{"e": 71652, "cats": ["sewing-and-textiles"]}
+{"e": 71671, "cats": ["fishing"]}
+{"e": 71696, "cats": ["fishing"]}
+{"e": 71717, "cats": ["cutting"]}
+{"e": 71742, "cats": ["small-words"]}
+{"e": 71760, "cats": ["good-and-bad"]}
+{"e": 71782, "cats": ["good-and-bad"]}
+{"e": 71824, "cats": ["good-and-bad"]}
+{"e": 71843, "cats": ["condition"]}
+{"e": 71865, "cats": ["body-descriptions", "condition"], "conf": "m"}
+{"e": 71885, "cats": ["pushing-and-pulling"]}
+{"e": 71907, "cats": ["pushing-and-pulling"]}
+{"e": 71919, "cats": ["breaking", "trees"]}
+{"e": 71934, "cats": ["breaking", "trees"]}
+{"e": 71955, "cats": ["farming"]}
+{"e": 71983, "cats": ["character"]}
+{"e": 72006, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 72043, "cats": ["temperature"]}
+{"e": 72065, "cats": ["numbers"]}
+{"e": 72082, "cats": ["clothing"]}
+{"e": 72099, "cats": ["land"], "tier": "t1000"}
+{"e": 72119, "cats": ["pushing-and-pulling"]}
+{"e": 72141, "cats": ["pushing-and-pulling"]}
+{"e": 72159, "cats": ["age"], "conf": "m"}
+{"e": 72176, "cats": ["age"], "conf": "m"}
+{"e": 72201, "cats": ["trees"]}
+{"e": 72220, "cats": ["breaking"]}
+{"e": 72245, "cats": ["breaking"]}
+{"e": 72266, "cats": ["pushing-and-pulling"]}
+{"e": 72290, "cats": ["pushing-and-pulling"]}
+{"e": 72311, "cats": ["trees"]}
+{"e": 72333, "cats": ["trees"]}
+{"e": 72358, "cats": ["trees"]}
+{"e": 72376, "cats": ["household", "dwellings"]}
+{"e": 72400, "cats": ["size-and-shape"]}
+{"e": 72418, "cats": ["size-and-shape"]}
+{"e": 72442, "cats": ["posture"]}
+{"e": 72467, "cats": ["seeing"]}
+{"e": 72489, "cats": ["dwellings"]}
+{"e": 72512, "cats": ["posture"]}
+{"e": 72536, "cats": ["farming"], "conf": "m"}
+{"e": 72556, "cats": ["sky"]}
+{"e": 72573, "cats": ["eating-and-drinking"], "conf": "m"}
+{"e": 72599, "cats": ["cleaning", "household"]}
+{"e": 72619, "cats": ["cutting"]}
+{"e": 72642, "cats": ["cutting"]}
+{"e": 72660, "cats": ["fishing"]}
+{"e": 72685, "cats": ["games", "hitting"]}
+{"e": 72707, "cats": ["hitting"]}
+{"e": 72727, "cats": ["eating-and-drinking"], "conf": "m"}
+{"e": 72751, "cats": ["thinking"], "conf": "m"}
+{"e": 72778, "cats": ["thinking"], "conf": "m", "tier": "t1000"}
+{"e": 72803, "cats": ["thinking"], "conf": "m"}
+{"e": 72821, "cats": ["eating-and-drinking", "body-actions"]}
+{"e": 72833, "cats": ["water"]}
+{"e": 72850, "cats": ["holding"]}
+{"e": 72874, "cats": ["holding"]}
+{"e": 72898, "cats": ["hitting", "falling"]}
+{"e": 72921, "cats": ["body-actions", "eating-and-drinking"]}
+{"e": 72939, "cats": ["putting-and-placing"]}
+{"e": 72959, "cats": ["putting-and-placing"]}
+{"e": 72984, "cats": ["putting-and-placing"]}
+{"e": 73006, "cats": ["putting-and-placing"]}
+{"e": 73025, "cats": ["pushing-and-pulling"]}
+{"e": 73046, "cats": ["putting-and-placing"]}
+{"e": 73071, "cats": ["eating-and-drinking", "body-actions"]}
+{"e": 73103, "cats": ["amounts"]}
+{"e": 73127, "cats": ["eating-and-drinking"]}
+{"e": 73150, "cats": ["occupations", "cooking"]}
+{"e": 73173, "cats": ["fear-anger-sadness"], "tier": "t1000"}
+{"e": 73198, "cats": ["age"]}
+{"e": 73216, "cats": ["size-and-shape"], "tier": "t100"}
+{"e": 73240, "cats": ["size-and-shape"]}
+{"e": 73262, "cats": ["size-and-shape"], "conf": "m"}
+{"e": 73281, "cats": ["cooking"]}
+{"e": 73302, "cats": ["cooking"]}
+{"e": 73321, "cats": ["cooking"]}
+{"e": 73342, "cats": ["cooking"]}
+{"e": 73367, "cats": ["sickness"]}
+{"e": 73386, "cats": ["weather"]}
+{"e": 73411, "cats": ["talking"]}
+{"e": 73434, "cats": ["ways-of-moving", "sickness"]}
+{"e": 73446, "cats": [], "flag": "needs-human", "note": "grammatical prefix note, not a lexeme"}
+{"e": 73463, "cats": ["making-and-fixing"]}
+{"e": 73487, "cats": ["holding"]}
+{"e": 73511, "cats": ["making-and-fixing", "sewing-and-textiles"]}
+{"e": 73538, "cats": ["holding"]}
+{"e": 73561, "cats": ["making-and-fixing"]}
+{"e": 73584, "cats": ["making-and-fixing"]}
+{"e": 73606, "cats": ["making-and-fixing", "sewing-and-textiles"]}
+{"e": 73630, "cats": ["making-and-fixing", "sewing-and-textiles"]}
+{"e": 73652, "cats": ["smell-and-taste", "eating-and-drinking"]}
+{"e": 73670, "cats": ["people"]}
+{"e": 73686, "cats": ["sea-and-rivers"], "conf": "m"}
+{"e": 73711, "cats": ["sea-and-rivers"], "conf": "m"}
+{"e": 73737, "cats": ["putting-and-placing"]}
+{"e": 73761, "cats": ["posture"], "conf": "m"}
+{"e": 73786, "cats": ["putting-and-placing"]}
+{"e": 73806, "cats": ["hitting", "hunting"]}
+{"e": 73832, "cats": ["posture"]}
+{"e": 73856, "cats": ["falling"]}
+{"e": 73881, "cats": ["sickness", "cutting"], "conf": "m"}
+{"e": 73906, "cats": ["time"], "conf": "m"}
+{"e": 73929, "cats": ["time"], "conf": "m"}
+{"e": 73952, "cats": ["time"], "conf": "m"}
+{"e": 73978, "cats": ["time"], "conf": "m"}
+{"e": 74005, "cats": ["time"], "conf": "m"}
+{"e": 74028, "cats": ["smell-and-taste", "eating-and-drinking"]}
+{"e": 74053, "cats": ["ways-of-moving", "sickness"]}
+{"e": 74077, "cats": ["eating-and-drinking"], "conf": "m"}
+{"e": 74103, "cats": ["seeing"]}
+{"e": 74127, "cats": ["clothing", "body-descriptions"], "conf": "m"}
+{"e": 74149, "cats": ["holding"]}
+{"e": 74172, "cats": ["holding"]}
+{"e": 74192, "cats": ["holding"]}
+{"e": 74214, "cats": ["holding"]}
+{"e": 74236, "cats": ["holding"]}
+{"e": 74250, "cats": ["body-descriptions"]}
+{"e": 74269, "cats": ["posture"], "conf": "m"}
+{"e": 74287, "cats": ["putting-and-placing"]}
+{"e": 74312, "cats": ["hitting"]}
+{"e": 74332, "cats": ["hitting"]}
+{"e": 74354, "cats": ["hitting", "hunting"]}
+{"e": 74377, "cats": ["hitting", "hunting"]}
+{"e": 74396, "cats": ["places"]}
+{"e": 74420, "cats": ["land"]}
+{"e": 74443, "cats": ["hitting", "hearing"]}
+{"e": 74468, "cats": ["hearing"]}
+{"e": 74489, "cats": ["hearing"]}
+{"e": 74507, "cats": ["hearing"]}
+{"e": 74525, "cats": ["hearing"]}
+{"e": 74544, "cats": ["hearing"]}
+{"e": 74563, "cats": ["hearing"]}
+{"e": 74581, "cats": ["hearing"]}
+{"e": 74603, "cats": ["hearing"]}
+{"e": 74622, "cats": ["hearing"]}
+{"e": 74642, "cats": ["hearing"]}
+{"e": 74661, "cats": ["hearing", "music-and-dance"]}
+{"e": 74680, "cats": ["hearing", "animals"]}
+{"e": 74700, "cats": ["hearing"]}
+{"e": 74718, "cats": ["hearing", "sleep"]}
+{"e": 74737, "cats": ["hearing"]}
+{"e": 74761, "cats": ["clothing", "body-descriptions"], "conf": "m"}
+{"e": 74773, "cats": ["location-words"]}
+{"e": 74790, "cats": ["food", "texture-and-materials"]}
+{"e": 74815, "cats": ["clothing"], "conf": "m"}
+{"e": 74845, "cats": ["texture-and-materials"]}
+{"e": 74863, "cats": ["money-and-trade", "numbers"]}
+{"e": 74887, "cats": ["age", "numbers"]}
+{"e": 74906, "cats": ["time", "numbers"]}
+{"e": 74923, "cats": ["numbers"]}
+{"e": 74939, "cats": ["fire"]}
+{"e": 74955, "cats": ["fire"]}
+{"e": 74974, "cats": ["going-and-coming"], "conf": "m"}
+{"e": 75001, "cats": ["going-and-coming"], "conf": "m"}
+{"e": 75027, "cats": ["carrying"]}
+{"e": 75051, "cats": ["carrying"]}
+{"e": 75077, "cats": ["travel"]}
+{"e": 75094, "cats": ["weather"]}
+{"e": 75119, "cats": ["appearance"]}
+{"e": 75139, "cats": ["travel", "trees"]}
+{"e": 75160, "cats": ["good-and-bad"], "tier": "t1000"}
+{"e": 75182, "cats": ["weather"]}
+{"e": 75194, "cats": ["location-words"]}
+{"e": 75214, "cats": ["weather"]}
+{"e": 75235, "cats": ["smell-and-taste"]}
+{"e": 75254, "cats": ["smell-and-taste"]}
+{"e": 75277, "cats": ["fear-anger-sadness"]}
+{"e": 75288, "cats": ["character"]}
+{"e": 75303, "cats": ["character"]}
+{"e": 75329, "cats": ["plants", "food"], "tier": "t1000"}
+{"e": 75353, "cats": ["food", "time"], "tier": "t1000"}
+{"e": 75380, "cats": ["time"], "tier": "t1000"}
+{"e": 75399, "cats": ["amounts"]}
+{"e": 75417, "cats": ["question-words"]}
+{"e": 75437, "cats": ["amounts"], "tier": "t1000"}
+{"e": 75455, "cats": ["healing", "greetings"], "conf": "m"}
+{"e": 75473, "cats": ["small-words"]}
+{"e": 75495, "cats": ["greetings"], "tier": "t100"}
+{"e": 75513, "cats": ["greetings"]}
+{"e": 75533, "cats": ["question-words", "people"]}
+{"e": 75554, "cats": ["travel"]}
+{"e": 75577, "cats": ["sewing-and-textiles", "hunting"], "tier": "t1000"}
+{"e": 75597, "cats": ["land"]}
+{"e": 75619, "cats": ["fishing", "tools"], "tier": "t1000"}
+{"e": 75642, "cats": ["clothing"], "tier": "t1000"}
+{"e": 75664, "cats": ["clothing"]}
+{"e": 75688, "cats": ["clothing"]}
+{"e": 75709, "cats": ["water", "temperature"], "tier": "t1000"}
+{"e": 75734, "cats": ["farm-animals", "tools"]}
+{"e": 75752, "cats": ["farm-animals"]}
+{"e": 75770, "cats": ["games"]}
+{"e": 75791, "cats": ["farm-animals"]}
+{"e": 75811, "cats": ["water"]}
+{"e": 75832, "cats": ["water", "weather"]}
+{"e": 75851, "cats": ["water", "weather"]}
+{"e": 75865, "cats": ["appearance"]}
+{"e": 75882, "cats": ["small-words"], "tier": "t1000"}
+{"e": 75901, "cats": ["location-words"], "tier": "t1000"}
+{"e": 75919, "cats": ["time"]}
+{"e": 75935, "cats": ["farm-animals"]}
+{"e": 75944, "cats": ["food"]}
+{"e": 75962, "cats": ["time"]}
+{"e": 75984, "cats": ["animals"], "tier": "t1000"}
+{"e": 76004, "cats": ["peoples-and-nations", "land"], "tier": "t100"}
+{"e": 76026, "cats": ["peoples-and-nations"], "tier": "t10"}
+{"e": 76049, "cats": ["peoples-and-nations"]}
+{"e": 76086, "cats": ["peoples-and-nations"], "tier": "t1000"}
+{"e": 76115, "cats": ["talking", "peoples-and-nations"], "tier": "t100"}
+{"e": 76138, "cats": ["traditional-stories"]}
+{"e": 76155, "cats": ["traditional-stories", "spirits"], "conf": "m"}
+{"e": 76166, "cats": ["sea-and-rivers"]}
+{"e": 76186, "cats": ["love-and-joy"], "conf": "m"}
+{"e": 76206, "cats": ["love-and-joy"], "conf": "m"}
+{"e": 76223, "cats": ["thinking"]}
+{"e": 76252, "cats": ["family", "body-actions"], "conf": "m"}
+{"e": 76275, "cats": ["hearing"]}
+{"e": 76299, "cats": ["hearing"]}
+{"e": 76315, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 76337, "cats": ["making-and-fixing"]}
+{"e": 76353, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 76366, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 76384, "cats": ["hitting"]}
+{"e": 76409, "cats": ["hitting"]}
+{"e": 76429, "cats": ["household", "eating-and-drinking"], "tier": "t1000"}
+{"e": 76454, "cats": ["thinking"], "tier": "t1000"}
+{"e": 76477, "cats": ["thinking"]}
+{"e": 76494, "cats": ["body-actions"], "conf": "m"}
+{"e": 76507, "cats": ["body-parts"]}
+{"e": 76527, "cats": ["dwellings", "household"], "tier": "t1000"}
+{"e": 76550, "cats": ["body-parts"]}
+{"e": 76564, "cats": ["household"]}
+{"e": 76574, "cats": ["body-parts"]}
+{"e": 76589, "cats": ["food"], "tier": "t100"}
+{"e": 76614, "cats": ["eating-and-drinking"], "tier": "t10"}
+{"e": 76631, "cats": ["food"], "tier": "t1000"}
+{"e": 76654, "cats": ["people", "family"], "tier": "t100"}
+{"e": 76691, "cats": ["colors"]}
+{"e": 76722, "cats": ["colors"]}
+{"e": 76741, "cats": ["spirits"]}
+{"e": 76764, "cats": ["games"], "tier": "t100"}
+{"e": 76788, "cats": ["games"]}
+{"e": 76810, "cats": ["games"], "tier": "t1000"}
+{"e": 76832, "cats": ["games"]}
+{"e": 76857, "cats": ["character"]}
+{"e": 76880, "cats": ["money-and-trade"], "tier": "t1000"}
+{"e": 76903, "cats": ["sleep"]}
+{"e": 76928, "cats": ["fear-anger-sadness"], "conf": "m"}
+{"e": 76948, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 76972, "cats": ["ways-of-moving", "music-and-dance"], "conf": "m"}
+{"e": 76989, "cats": ["character"]}
+{"e": 77012, "cats": ["ways-of-moving"]}
+{"e": 77034, "cats": ["birds"], "tier": "t1000"}
+{"e": 77058, "cats": ["thinking"]}
+{"e": 77081, "cats": ["birds"]}
+{"e": 77105, "cats": ["work"]}
+{"e": 77125, "cats": ["cooking"]}
+{"e": 77153, "cats": ["cooking"]}
+{"e": 77175, "cats": ["cooking"]}
+{"e": 77194, "cats": ["sea-and-rivers"], "conf": "m"}
+{"e": 77214, "cats": ["land"]}
+{"e": 77235, "cats": ["cutting"]}
+{"e": 77258, "cats": ["cutting"]}
+{"e": 77283, "cats": ["talking"]}
+{"e": 77306, "cats": ["hearing"]}
+{"e": 77325, "cats": ["talking"]}
+{"e": 77347, "cats": ["talking"]}
+{"e": 77371, "cats": ["talking"]}
+{"e": 77394, "cats": ["talking"]}
+{"e": 77420, "cats": ["cooking"]}
+{"e": 77439, "cats": ["condition"], "conf": "m"}
+{"e": 77462, "cats": ["condition"], "conf": "m", "tier": "t1000"}
+{"e": 77480, "cats": ["condition"], "conf": "m", "tier": "t1000"}
+{"e": 77503, "cats": ["people"], "tier": "t100"}
+{"e": 77527, "cats": ["cooking"], "conf": "m"}
+{"e": 77549, "cats": ["cooking"], "conf": "m"}
+{"e": 77584, "cats": ["texture-and-materials", "food"]}
+{"e": 77605, "cats": ["food", "household"], "tier": "t1000"}
+{"e": 77639, "cats": ["smell-and-taste", "trees"]}
+{"e": 77659, "cats": ["trees"]}
+{"e": 77681, "cats": ["smell-and-taste", "appearance"]}
+{"e": 77703, "cats": ["insects"], "tier": "t1000"}
+{"e": 77727, "cats": ["appearance"]}
+{"e": 77752, "cats": ["seeing"]}
+{"e": 77775, "cats": ["seeing"], "tier": "t1000"}
+{"e": 77797, "cats": ["seeing"]}
+{"e": 77818, "cats": ["plants"]}
+{"e": 77845, "cats": ["plants", "food"], "tier": "t1000"}
+{"e": 77866, "cats": ["plants", "trees"]}
+{"e": 77883, "cats": ["fish"]}
+{"e": 77903, "cats": ["healing"]}
+{"e": 77926, "cats": ["work"], "conf": "m"}
+{"e": 77946, "cats": ["cooking"]}
+{"e": 77968, "cats": ["cooking"]}
+{"e": 77988, "cats": ["cooking", "temperature"]}
+{"e": 78012, "cats": ["cooking", "temperature"]}
+{"e": 78036, "cats": ["talking"]}
+{"e": 78050, "cats": ["body-parts", "animals"]}
+{"e": 78067, "cats": ["household"]}
+{"e": 78086, "cats": ["household"]}
+{"e": 78103, "cats": ["insects", "spirits"], "conf": "m"}
+{"e": 78120, "cats": ["condition"]}
+{"e": 78144, "cats": ["condition", "clothing"]}
+{"e": 78165, "cats": ["time", "location-words"], "conf": "m"}
+{"e": 78186, "cats": ["boats", "tools"]}
+{"e": 78208, "cats": ["games"]}
+{"e": 78229, "cats": ["sickness"]}
+{"e": 78252, "cats": ["trees"], "tier": "t1000"}
+{"e": 78275, "cats": ["trees"]}
+{"e": 78297, "cats": ["trees"], "tier": "t100"}
+{"e": 78321, "cats": ["greetings", "love-and-joy"], "conf": "m", "tier": "t1000"}
+{"e": 78343, "cats": ["greetings", "love-and-joy"], "conf": "m"}
+{"e": 78355, "cats": ["carrying"]}
+{"e": 78373, "cats": ["water", "cleaning"]}
+{"e": 78388, "cats": ["household"]}
+{"e": 78404, "cats": ["cleaning"], "tier": "t1000"}
+{"e": 78426, "cats": ["faith", "spirits"], "tier": "t1000"}
+{"e": 78446, "cats": ["food"], "tier": "t100"}
+{"e": 78470, "cats": ["eating-and-drinking", "food"]}
+{"e": 78489, "cats": ["food"], "tier": "t1000"}
+{"e": 78514, "cats": ["household"]}
+{"e": 78531, "cats": ["food"]}
+{"e": 78543, "cats": ["food"]}
+{"e": 78568, "cats": ["people", "body-descriptions"]}
+{"e": 78599, "cats": ["boats"]}
+{"e": 78611, "cats": ["food"]}
+{"e": 78628, "cats": ["small-words"], "tier": "t1000"}
+{"e": 78656, "cats": ["boats"]}
+{"e": 78678, "cats": ["trees"]}
+{"e": 78708, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 78730, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 78754, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 78779, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 78805, "cats": ["fish", "food"], "tier": "t1000"}
+{"e": 78835, "cats": ["land"]}
+{"e": 78862, "cats": ["holding"], "conf": "m"}
+{"e": 78887, "cats": ["holding"], "conf": "m"}
+{"e": 78913, "cats": ["faith"], "tier": "t1000"}
+{"e": 78936, "cats": ["faith"], "tier": "t1000"}
+{"e": 78958, "cats": ["character"]}
+{"e": 78977, "cats": ["greetings"]}
+{"e": 78994, "cats": ["birds"]}
+{"e": 79011, "cats": ["food"], "tier": "t1000"}
+{"e": 79035, "cats": ["sickness"]}
+{"e": 79057, "cats": ["sickness"]}
+{"e": 79075, "cats": ["small-words"], "tier": "t10"}
+{"e": 79094, "cats": ["small-words"], "tier": "t1000"}
+{"e": 79114, "cats": ["small-words"], "tier": "t1000"}
+{"e": 79134, "cats": ["household"], "tier": "t1000"}
+{"e": 79160, "cats": ["birds"]}
+{"e": 79183, "cats": ["fish"]}
+{"e": 79209, "cats": ["food"]}
+{"e": 79228, "cats": ["dwellings", "household"], "tier": "t1000"}
+{"e": 79242, "cats": ["farming", "dwellings"]}
+{"e": 79252, "cats": ["sea-and-rivers"]}
+{"e": 79261, "cats": ["places"]}
+{"e": 79280, "cats": ["farming", "plants"], "tier": "t1000"}
+{"e": 79300, "cats": ["farming", "land"]}
+{"e": 79327, "cats": ["farming"]}
+{"e": 79350, "cats": ["farming", "occupations"]}
+{"e": 79372, "cats": ["weather"]}
+{"e": 79391, "cats": ["small-words", "amounts"], "tier": "t100"}
+{"e": 79408, "cats": ["small-words", "amounts"], "tier": "t1000"}
+{"e": 79427, "cats": ["location-words", "amounts"]}
+{"e": 79446, "cats": ["amounts", "people"], "tier": "t1000"}
+{"e": 79458, "cats": ["sewing-and-textiles", "hunting"]}
+{"e": 79484, "cats": ["land"]}
+{"e": 79503, "cats": ["peoples-and-nations"]}
+{"e": 79529, "cats": ["family"]}
+{"e": 79553, "cats": ["animals"], "tier": "t1000"}
+{"e": 79573, "cats": ["size-and-shape", "body-parts"]}
+{"e": 79596, "cats": ["numbers"]}
+{"e": 79608, "cats": ["numbers"]}
+{"e": 79617, "cats": ["numbers"]}
+{"e": 79625, "cats": ["numbers"]}
+{"e": 79634, "cats": ["numbers"]}
+{"e": 79652, "cats": ["fire"], "tier": "t1000"}
+{"e": 79671, "cats": ["weather"], "tier": "t1000"}
+{"e": 79689, "cats": ["weather", "animals"]}
+{"e": 79711, "cats": ["dwellings"]}
+{"e": 79732, "cats": ["animals"], "tier": "t100"}
+{"e": 79753, "cats": ["animals"]}
+{"e": 79766, "cats": ["animals"]}
+{"e": 79781, "cats": ["character", "animals"]}
+{"e": 79803, "cats": ["food", "animals"]}
+{"e": 79820, "cats": ["good-and-bad"]}
+{"e": 79842, "cats": ["animals"]}
+{"e": 79863, "cats": ["fish"]}
+{"e": 79880, "cats": ["places"], "tier": "t1000"}
+{"e": 79901, "cats": ["dwellings", "work"]}
+{"e": 79921, "cats": ["sewing-and-textiles", "household"]}
+{"e": 79939, "cats": ["land"]}
+{"e": 79961, "cats": ["land"]}
+{"e": 79985, "cats": ["land"]}
+{"e": 80001, "cats": ["tools"]}
+{"e": 80021, "cats": ["animals"], "tier": "t1000"}
+{"e": 80043, "cats": ["people"]}
+{"e": 80055, "cats": ["colors"]}
+{"e": 80078, "cats": ["talking", "social-life"]}
+{"e": 80102, "cats": ["seeing"]}
+{"e": 80126, "cats": ["character"]}
+{"e": 80149, "cats": ["pushing-and-pulling"]}
+{"e": 80171, "cats": ["pushing-and-pulling"]}
+{"e": 80193, "cats": ["pushing-and-pulling"]}
+{"e": 80217, "cats": ["character", "social-life"]}
+{"e": 80239, "cats": ["character"]}
+{"e": 80261, "cats": ["character"]}
+{"e": 80284, "cats": ["household"]}
+{"e": 80309, "cats": ["household"], "tier": "t1000"}
+{"e": 80327, "cats": ["putting-and-placing"]}
+{"e": 80347, "cats": ["putting-and-placing"]}
+{"e": 80368, "cats": ["seeing"]}
+{"e": 80386, "cats": ["ways-of-moving"]}
+{"e": 80406, "cats": ["eating-and-drinking", "body-actions"]}
+{"e": 80429, "cats": ["fear-anger-sadness"]}
+{"e": 80451, "cats": ["fear-anger-sadness"]}
+{"e": 80467, "cats": ["fear-anger-sadness"]}
+{"e": 80486, "cats": ["sickness"], "conf": "m"}
+{"e": 80503, "cats": ["body-actions"]}
+{"e": 80516, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 80536, "cats": ["sky"], "tier": "t1000"}
+{"e": 80562, "cats": ["household", "fire"]}
+{"e": 80585, "cats": ["eating-and-drinking"]}
+{"e": 80602, "cats": ["colors"]}
+{"e": 80622, "cats": ["body-actions"]}
+{"e": 80646, "cats": ["body-actions", "eating-and-drinking"]}
+{"e": 80664, "cats": ["weather"]}
+{"e": 80684, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 80704, "cats": ["land"], "conf": "m"}
+{"e": 80721, "cats": ["size-and-shape"]}
+{"e": 80745, "cats": ["clothing"]}
+{"e": 80766, "cats": ["cutting", "trees"]}
+{"e": 80787, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 80821, "cats": ["condition"]}
+{"e": 80840, "cats": ["sky"], "tier": "t1000"}
+{"e": 80859, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 80895, "cats": ["clothing"]}
+{"e": 80916, "cats": ["pushing-and-pulling"], "conf": "m"}
+{"e": 80937, "cats": ["cutting"]}
+{"e": 80958, "cats": ["cutting"]}
+{"e": 80982, "cats": ["cutting"]}
+{"e": 81008, "cats": ["farming"]}
+{"e": 81030, "cats": ["insects"]}
+{"e": 81042, "cats": ["fire", "household"]}
+{"e": 81058, "cats": ["colors"]}
+{"e": 81079, "cats": ["colors"]}
+{"e": 81101, "cats": ["amounts"]}
+{"e": 81122, "cats": ["amounts"]}
+{"e": 81143, "cats": ["clothing"]}
+{"e": 81166, "cats": ["fear-anger-sadness"], "tier": "t1000"}
+{"e": 81184, "cats": ["small-words"], "tier": "t1000"}
+{"e": 81203, "cats": ["household"], "tier": "t1000"}
+{"e": 81222, "cats": ["small-words"], "tier": "t100"}
+{"e": 81241, "cats": ["sickness"]}
+{"e": 81264, "cats": ["sickness"]}
+{"e": 81283, "cats": ["small-words"]}
+{"e": 81304, "cats": ["small-words"], "tier": "t100"}
+{"e": 81326, "cats": ["games", "vehicles"], "tier": "t1000"}
+{"e": 81338, "cats": ["time", "sky"]}
+{"e": 81352, "cats": ["sky"], "tier": "t100"}
+{"e": 81373, "cats": ["time", "household"], "tier": "t1000"}
+{"e": 81393, "cats": ["weather", "sky"], "tier": "t1000"}
+{"e": 81428, "cats": ["time"], "tier": "t100"}
+{"e": 81451, "cats": ["work", "money-and-trade"]}
+{"e": 81478, "cats": ["dwellings", "making-and-fixing"]}
+{"e": 81501, "cats": ["thinking"], "conf": "m"}
+{"e": 81525, "cats": ["fishing"]}
+{"e": 81541, "cats": ["family"]}
+{"e": 81566, "cats": ["cleaning"]}
+{"e": 81588, "cats": ["hunting"]}
+{"e": 81614, "cats": ["making-and-fixing", "travel"]}
+{"e": 81636, "cats": ["clothing"]}
+{"e": 81658, "cats": ["body-actions"]}
+{"e": 81682, "cats": ["work"]}
+{"e": 81705, "cats": ["family"]}
+{"e": 81728, "cats": ["social-life"]}
+{"e": 81751, "cats": ["making-and-fixing", "vehicles"]}
+{"e": 81768, "cats": ["seeing", "social-life"]}
+{"e": 81793, "cats": ["hunting"], "conf": "m"}
+{"e": 81814, "cats": ["sleep"]}
+{"e": 81838, "cats": ["hunting"]}
+{"e": 81867, "cats": ["hunting", "birds"]}
+{"e": 81889, "cats": ["fishing"]}
+{"e": 81914, "cats": ["animals"], "tier": "t1000"}
+{"e": 81936, "cats": ["body-actions"]}
+{"e": 81962, "cats": ["swimming"]}
+{"e": 81987, "cats": ["church-rituals"]}
+{"e": 82010, "cats": ["hunting"]}
+{"e": 82034, "cats": ["sleep"]}
+{"e": 82056, "cats": ["fishing"]}
+{"e": 82084, "cats": ["hunting", "fishing"]}
+{"e": 82110, "cats": ["character"]}
+{"e": 82128, "cats": ["numbers"], "tier": "t100"}
+{"e": 82154, "cats": ["family"], "conf": "m"}
+{"e": 82177, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 82193, "cats": ["household"]}
+{"e": 82211, "cats": ["household"]}
+{"e": 82235, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 82255, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 82274, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 82292, "cats": ["food", "talking"]}
+{"e": 82312, "cats": ["games"]}
+{"e": 82336, "cats": ["numbers"]}
+{"e": 82370, "cats": ["numbers"]}
+{"e": 82388, "cats": ["numbers"]}
+{"e": 82407, "cats": ["time"], "tier": "t1000"}
+{"e": 82429, "cats": ["household"]}
+{"e": 82452, "cats": ["appearance"], "conf": "m"}
+{"e": 82480, "cats": ["sewing-and-textiles"]}
+{"e": 82499, "cats": ["animals"]}
+{"e": 82522, "cats": ["cleaning"]}
+{"e": 82541, "cats": ["numbers"]}
+{"e": 82562, "cats": ["time", "numbers"]}
+{"e": 82583, "cats": ["numbers"], "tier": "t1000"}
+{"e": 82602, "cats": ["numbers"]}
+{"e": 82620, "cats": ["numbers"]}
+{"e": 82640, "cats": ["numbers"]}
+{"e": 82658, "cats": ["numbers"]}
+{"e": 82678, "cats": ["numbers"]}
+{"e": 82695, "cats": ["time"]}
+{"e": 82721, "cats": ["fishing"]}
+{"e": 82745, "cats": ["smell-and-taste"]}
+{"e": 82772, "cats": ["smell-and-taste"]}
+{"e": 82798, "cats": ["smell-and-taste"]}
+{"e": 82818, "cats": ["time", "numbers"]}
+{"e": 82838, "cats": ["family", "people"]}
+{"e": 82858, "cats": ["fish"]}
+{"e": 82887, "cats": ["farm-animals", "birds"]}
+{"e": 82908, "cats": ["cutting"]}
+{"e": 82928, "cats": ["making-and-fixing"], "conf": "m"}
+{"e": 82950, "cats": ["animals"]}
+{"e": 82974, "cats": ["going-and-coming"], "conf": "m"}
+{"e": 82997, "cats": ["games"]}
+{"e": 83024, "cats": ["seeing", "stories-and-writing"]}
+{"e": 83052, "cats": ["seeing", "stories-and-writing"]}
+{"e": 83084, "cats": ["seeing", "household"]}
+{"e": 83109, "cats": ["seeing"]}
+{"e": 83132, "cats": ["seeing", "household"], "tier": "t1000"}
+{"e": 83158, "cats": ["character"], "conf": "m"}
+{"e": 83183, "cats": ["social-life"], "conf": "m"}
+{"e": 83206, "cats": ["ways-of-moving"]}
+{"e": 83240, "cats": ["putting-and-placing"]}
+{"e": 83290, "cats": ["putting-and-placing"]}
+{"e": 83311, "cats": ["good-and-bad"], "tier": "t1000"}
+{"e": 83337, "cats": ["putting-and-placing"]}
+{"e": 83359, "cats": ["putting-and-placing"]}
+{"e": 83381, "cats": ["eating-and-drinking"], "conf": "m"}
+{"e": 83404, "cats": ["water"]}
+{"e": 83426, "cats": ["water"]}
+{"e": 83452, "cats": ["holding"]}
+{"e": 83475, "cats": ["holding"]}
+{"e": 83500, "cats": ["boats", "water"]}
+{"e": 83522, "cats": ["family"]}
+{"e": 83538, "cats": ["people", "leadership-and-law"]}
+{"e": 83558, "cats": ["ways-of-moving"], "tier": "t1000"}
+{"e": 83579, "cats": ["fire"]}
+{"e": 83602, "cats": ["fire"]}
+{"e": 83626, "cats": ["fire"], "tier": "t1000"}
+{"e": 83649, "cats": ["fire"]}
+{"e": 83672, "cats": ["fire"]}
+{"e": 83694, "cats": ["fire"]}
+{"e": 83714, "cats": ["fire"]}
+{"e": 83735, "cats": ["fire"]}
+{"e": 83759, "cats": ["fire"]}
+{"e": 83777, "cats": ["fire"]}
+{"e": 83800, "cats": ["character", "fear-anger-sadness"], "conf": "m"}
+{"e": 83821, "cats": ["ways-of-moving"]}
+{"e": 83844, "cats": ["work"]}
+{"e": 83871, "cats": ["work"]}
+{"e": 83892, "cats": ["healing"]}
+{"e": 83911, "cats": ["healing"]}
+{"e": 83937, "cats": ["sleep"]}
+{"e": 83959, "cats": ["good-and-bad"]}
+{"e": 83981, "cats": ["good-and-bad"]}
+{"e": 84006, "cats": ["travel", "time"]}
+{"e": 84031, "cats": ["good-and-bad"]}
+{"e": 84056, "cats": ["good-and-bad"]}
+{"e": 84079, "cats": ["travel"]}
+{"e": 84103, "cats": ["household"]}
+{"e": 84129, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 84153, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 84175, "cats": ["social-life"], "conf": "m"}
+{"e": 84199, "cats": ["family", "money-and-trade"]}
+{"e": 84218, "cats": ["clothing"]}
+{"e": 84241, "cats": ["fastening"]}
+{"e": 84261, "cats": ["fastening"]}
+{"e": 84288, "cats": ["fastening"]}
+{"e": 84308, "cats": ["sewing-and-textiles"]}
+{"e": 84331, "cats": ["making-and-fixing"]}
+{"e": 84353, "cats": ["making-and-fixing"]}
+{"e": 84374, "cats": ["clothing"]}
+{"e": 84397, "cats": ["clothing"], "conf": "m"}
+{"e": 84419, "cats": ["clothing"], "tier": "t1000"}
+{"e": 84440, "cats": ["cutting"]}
+{"e": 84460, "cats": ["cutting"]}
+{"e": 84483, "cats": ["cutting"]}
+{"e": 84507, "cats": ["cutting"]}
+{"e": 84531, "cats": ["breaking"]}
+{"e": 84553, "cats": ["breaking"]}
+{"e": 84573, "cats": ["clothing"]}
+{"e": 84593, "cats": ["amounts"]}
+{"e": 84611, "cats": ["social-life", "amounts"]}
+{"e": 84632, "cats": ["amounts", "cutting"]}
+{"e": 84651, "cats": ["breaking"]}
+{"e": 84672, "cats": ["breaking"]}
+{"e": 84702, "cats": ["breaking"]}
+{"e": 84723, "cats": ["cutting"]}
+{"e": 84744, "cats": ["clothing"], "tier": "t1000"}
+{"e": 84769, "cats": ["fastening"]}
+{"e": 84794, "cats": ["talking"]}
+{"e": 84818, "cats": ["trees", "dwellings"]}
+{"e": 84837, "cats": ["clothing"]}
+{"e": 84861, "cats": ["cleaning"]}
+{"e": 84884, "cats": ["cleaning"]}
+{"e": 84901, "cats": ["cleaning"]}
+{"e": 84914, "cats": ["cleaning"]}
+{"e": 84930, "cats": ["farm-animals", "fastening"]}
+{"e": 84949, "cats": ["fastening"]}
+{"e": 84972, "cats": ["fishing"]}
+{"e": 84992, "cats": ["fastening", "household"]}
+{"e": 85013, "cats": ["fishing"]}
+{"e": 85039, "cats": ["posture"]}
+{"e": 85060, "cats": ["posture"]}
+{"e": 85078, "cats": ["posture", "farm-animals"]}
+{"e": 85104, "cats": ["posture"]}
+{"e": 85126, "cats": ["posture"], "conf": "m"}
+{"e": 85151, "cats": ["posture"]}
+{"e": 85170, "cats": ["putting-and-placing"]}
+{"e": 85197, "cats": ["talking"]}
+{"e": 85219, "cats": ["thinking", "leadership-and-law"], "conf": "m"}
+{"e": 85242, "cats": ["work"], "conf": "m"}
+{"e": 85262, "cats": ["work"], "conf": "m"}
+{"e": 85285, "cats": ["work"]}
+{"e": 85310, "cats": ["conflict"]}
+{"e": 85329, "cats": ["location-words"], "tier": "t1000"}
+{"e": 85353, "cats": ["money-and-trade"], "tier": "t1000"}
+{"e": 85376, "cats": ["money-and-trade"]}
+{"e": 85403, "cats": ["work", "character"]}
+{"e": 85426, "cats": ["boats"], "conf": "m"}
+{"e": 85449, "cats": ["boats"], "conf": "m"}
+{"e": 85470, "cats": ["boats"], "conf": "m"}
+{"e": 85490, "cats": ["sea-and-rivers", "location-words"]}
+{"e": 85513, "cats": ["character"], "conf": "m"}
+{"e": 85537, "cats": ["cooking"]}
+{"e": 85560, "cats": ["swimming"], "tier": "t1000"}
+{"e": 85584, "cats": ["work", "character"]}
+{"e": 85606, "cats": ["work", "character"]}
+{"e": 85630, "cats": ["talking"]}
+{"e": 85656, "cats": ["character"]}
+{"e": 85680, "cats": ["stories-and-writing"]}
+{"e": 85705, "cats": ["talking"]}
+{"e": 85729, "cats": ["music-and-dance"]}
+{"e": 85755, "cats": ["cooking"]}
+{"e": 85780, "cats": ["leadership-and-law"]}
+{"e": 85805, "cats": ["cooking"]}
+{"e": 85828, "cats": ["work"]}
+{"e": 85847, "cats": ["location-words"], "tier": "t1000"}
+{"e": 85871, "cats": ["money-and-trade", "talking"]}
+{"e": 85897, "cats": ["money-and-trade"]}
+{"e": 85919, "cats": ["money-and-trade"]}
+{"e": 85941, "cats": ["hunting", "birds"]}
+{"e": 85965, "cats": ["posture"]}
+{"e": 85988, "cats": ["water"]}
+{"e": 86011, "cats": ["fishing"]}
+{"e": 86036, "cats": ["fishing", "pushing-and-pulling"]}
+{"e": 86061, "cats": ["fishing", "pushing-and-pulling"]}
+{"e": 86085, "cats": ["fishing", "pushing-and-pulling"]}
+{"e": 86107, "cats": ["water", "swimming"], "conf": "m"}
+{"e": 86129, "cats": ["water"]}
+{"e": 86152, "cats": ["money-and-trade"]}
+{"e": 86174, "cats": ["money-and-trade"]}
+{"e": 86198, "cats": ["going-and-coming"], "conf": "m"}
+{"e": 86222, "cats": ["going-and-coming"], "conf": "m"}
+{"e": 86242, "cats": ["places"]}
+{"e": 86264, "cats": ["people"], "tier": "t1000"}
+{"e": 86285, "cats": ["carrying"]}
+{"e": 86305, "cats": ["carrying"]}
+{"e": 86322, "cats": ["small-words"], "tier": "t1000"}
+{"e": 86342, "cats": ["smell-and-taste"], "conf": "m"}
+{"e": 86363, "cats": ["smell-and-taste"], "conf": "m"}
+{"e": 86386, "cats": ["carrying"]}
+{"e": 86399, "cats": ["breaking"]}
+{"e": 86416, "cats": ["small-words"]}
+{"e": 86437, "cats": ["small-words"], "tier": "t1000"}
+{"e": 86457, "cats": ["small-words"]}
+{"e": 86477, "cats": ["time"], "tier": "t1000"}
+{"e": 86500, "cats": ["seeing"]}
+{"e": 86522, "cats": ["trees"]}
+{"e": 86542, "cats": ["time"], "tier": "t1000"}
+{"e": 86560, "cats": ["small-words"]}
+{"e": 86583, "cats": ["pushing-and-pulling"]}
+{"e": 86603, "cats": ["pushing-and-pulling"]}
+{"e": 86622, "cats": ["small-words"]}
+{"e": 86643, "cats": ["people"], "tier": "t100"}
+{"e": 86679, "cats": ["people"]}
+{"e": 86698, "cats": ["people"], "tier": "t1000"}
+{"e": 86731, "cats": ["people"]}
+{"e": 86753, "cats": ["putting-and-placing"]}
+{"e": 86768, "cats": ["putting-and-placing"]}
+{"e": 86787, "cats": ["boats", "posture"]}
+{"e": 86806, "cats": ["boats", "posture"]}
