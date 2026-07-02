@@ -128,6 +128,13 @@ export function renderHtmxModalEditorSkeleton(): any {
 // at server startup from isTestDb, so legacy-template pages (which don't go
 // through coercePageResult) get the same chrome as page() pages.
 let defaultShowTestClientLink = false;
+
+// Kill switch over BOTH paths (the startup default above and the explicit
+// per-page showTestClientLink): the link is hidden for now (dz 2026-07-02 -
+// rarely used, and it pushed the navbar past the hamburger breakpoint).
+// Flip to false to bring it back; the test-client PAGE itself stays reachable
+// at /ww/wordwiki.testClientPage().
+const testClientLinkHidden = true;
 export function setDefaultShowTestClientLink(v: boolean): void {
     defaultShowTestClientLink = v;
 }
@@ -191,7 +198,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
             ['li', {class:'nav-item'},
              ['a', {class:'nav-link text-nowrap', href:'/index.html'}, 'Public Site']],
 
-            showTestClientLink
+            showTestClientLink && !testClientLinkHidden
                 ? ['li', {class:'nav-item'},
                    ['button', {type:'button', class:'nav-link btn btn-link text-warning text-nowrap',
                                onclick:"window.location.href='/ww/wordwiki.testClientPage()'",
