@@ -1,5 +1,9 @@
 # Survey notes — full read of entries.jsonl (8,822 entries, 2026-06-11)
 
+*Updated 2026-07-01 for the v2 pass: the tagging conventions below use v2
+category slugs (see scheme.md). Survey/linguistic sections are from the v1
+read and remain valid.*
+
 Observations from the complete read-through that drive the scheme design and
 the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 
@@ -44,41 +48,105 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 - Genuinely good big domains worth keeping (renamed): body, motion, water,
   food, time, weather, kinship, fish, bird, tree, plant, game, fire...
 
-## Tagging conventions (accrete here as decisions come up during the pass)
-- 1-3 categories per entry, primary first. Prefer 1 strong over 3 weak.
+## Tagging conventions — v2 (the rules of the pass; accrete new ones here)
+
+### Core rules
+- 1-3 categories per entry. Prefer 1 strong over 3 weak.
+- **Categories are ORDERED, most pertinent first.** The first category is the
+  one whose related-words list best serves a learner on this word's page —
+  usually the most specific applicable category. Specific beats broad when
+  both apply (basket-making before household; occupations before work;
+  calendar before time). The public UI leads with the first category and many
+  users see only it.
 - Categorize the ROOT meaning; manner/direction/time-of-day prefixes don't
   add categories (exception: genuinely bi-domain words, e.g. "paddle at
   night" is boats; "hunt at night" is hunting).
+- A derivational family shares its primary category; the verb-class suffix
+  never changes the category. Tag family-at-a-time (dictq.py family STEM).
 - Examples are weak evidence: never let an example's incidental content
   (names, days) attract a category.
-- Body-part-description verbs ("have big hands", "red-haired") → body.
-- "heard X" (metew-) → hearing-and-sounds, plus X's domain when strong.
-- Sound-making (holler, cackle, chime) → hearing-and-sounds.
+- v1 assignments (shown in the batch view) are good evidence but were made
+  against the v1 scheme — re-decide, don't copy, wherever a v1 category was
+  split, renamed, or dissolved (see the mapping in v2-instructions.md).
+- Entries whose only English is `?`/TBA/empty → flag needs-human, cats [].
+- Archived entries: tagged normally (cheap), separated in views.
+
+### Faith / legends / spirits (elder-reviewed; get these right)
+- God, Creator, Great Spirit (Nisgam, Gisu'lgw, Gjinisgam, Mestagisiteget),
+  Jesus, Virgin Mary, saints, angels, heaven, hell, purgatory, devil/Satan,
+  soul, holy/blessed, sin-as-concept, resurrection, salvation, end of the
+  world → faith. NEVER legends or spirits.
+- Mass, prayer, sacraments, confession, communion, Lent, priests/nuns/bishops,
+  churches, altars, holy water, church weddings → church-rituals.
+- Glooscap, jenu, gu'gwes, little people (pugulatmu'j, wiglatmu'j,
+  tmigalmji'j), horned serpent, Thunderer, Tune'l, wild man, mi'gmuessu
+  → legends.
+- Ghosts, apparitions, spirit/shadow, shamans (puowin), spells/hexes/charms,
+  fortune-telling, premonitions, stage magic and illusions → spirits.
+- mjijaqamij-family (spirit|soul|shadow) → faith first, spirits second.
+- Death words: dying, the dead, mourning, consoling, wakes/vigils, coffins,
+  hearses, graves, pallbearers → death-and-mourning first; funeral masses and
+  church burial rites also church-rituals.
+
+### Dissolved-customs homes (elder-reviewed)
+- Quills, quillwork, quill boxes, beads, beadwork, wampum-as-bead
+  → quillwork-and-beadwork. Wampum-as-record/treaty → leadership-and-law.
+- Tobacco, pipes, cigarettes, snuff, chewing, lighting up, smoking
+  → tobacco-and-smoking (everyday and traditional alike).
+- Waltes and its gear → games. Council fire, clan, totem → leadership-and-law.
+- Mi'gmaq hieroglyphics → stories-and-writing. Sweetgrass → plants.
+- Marriage-permission words (asking parents) → family.
+- Feasts → social-life (+food or church-rituals by sense).
+- Dancing/singing native style → music-and-dance. Moccasins → clothing.
+
+### Split-category boundaries
+- Body: the parts themselves → body-parts; "have such/big/small X", bearded,
+  freckled, bald, skinny, naked, left-handed → body-descriptions;
+  "clean BODYPART" → cleaning + body-parts.
+- Motion: deictic/path (go, come, return, leave, follow, flee, wander, going
+  about) → going-and-coming; manner (run, jump, crawl, climb, tiptoe,
+  stagger, slide, glide, spin, shake) and speed (hurry, rush, slow, stop)
+  → ways-of-moving.
+- People's postures (sit, stand, lie, lean, kneel) → posture; things
+  placed/sitting/standing somewhere, scatter/spread/stack/pile, hidden
+  things, things in the way → putting-and-placing. (-pit/-teg with an
+  inanimate subject is usually putting-and-placing; a person holding a pose
+  is posture.)
+- Emotions: love, liking, happiness, comfort, laughing → love-and-joy;
+  fear, anger, sadness, crying, worry, longing/homesickness, jealousy,
+  shame, surprise → fear-anger-sadness.
+- Health: being sick, pain, wounds, bleeding, disease names → sickness;
+  healing, medicine, remedies, nursing, recovering → healing (doctor the
+  person → occupations + healing); death/mourning per the faith section.
+- Water as stuff/state (wet, dry(ing), soak, drip, splash, pour, ice,
+  freeze-over, thaw) → water; bodies of water and their behaviour (sea,
+  river, lake, tide, current, wave, shore, spring, flowing) → sea-and-rivers.
+- Character traits (lazy, brave, stingy, polite, conceited, boastful,
+  skilled/awkward/unable) → character; lying, cheating, stealing, deceiving,
+  tricking → wrongdoing.
+
+### Carried over from v1 (still in force, v2 slugs)
+- Body-part-description verbs ("have big hands", "red-haired") → body-descriptions.
+- "heard X" (metew-) → hearing, plus X's domain when strong.
+- Sound-making (holler, cackle, chime) → hearing.
 - Occupations: the nuji-/-winu person-nouns → occupations (+domain);
   the underlying activity verb stays in its domain.
 - Particles with topical content (time words: apjiw 'always'; place words:
   gigjiw 'near') go in their topical category, not small-words.
-- Proper-noun places → places; nationality/people-group nouns → peoples.
-- Entries whose only English is `?`/TBA/empty → flag needs-human, cats [].
-- Archived entries: tagged normally (cheap), separated in views.
+- Proper-noun places → places; nationality/people-group nouns → peoples-and-nations.
+- decorate (generic) → making-and-fixing; embroidery/crochet/sewn decoration
+  → sewing-and-textiles; quill/bead decoration → quillwork-and-beadwork.
+- rub/smear/massage → smell-and-taste (touch); medicinal rubbing also healing.
+- caring-for/helping/meeting/forgiving → social-life.
+- hide/conceal (make unseen) → seeing; hidden-position also putting-and-placing.
+- lock/unlock/key → fastening.
+- stuck/loose/tipsy/fragile → condition.
+- punish → leadership-and-law; revenge/instigate-harm → conflict.
+- floating (people/things on water) → swimming; gliding in air → ways-of-moving.
+- anchors/sails/ferries → boats.
+- breakfast/supper words → food (+time).
 
-## Conventions accreted during the tagging pass
-- scatter/spread/stack/pile (placing things in space) -> position
-- decorate (generic) -> making-and-fixing; embroidery/crochet/sewn decoration -> sewing-and-textiles
-- rub/smear/massage -> smell-and-taste (touch); medicinal rubbing also health
-- laughing/crying -> emotions (+body-actions when strongly physical)
-- caring-for/helping/meeting/forgiving -> social-life
-- capability words (skilled/awkward/unable) -> character
-- hide/conceal -> seeing (visibility); hidden-position also position
-- lock/unlock/key -> fastening
-- stuck/loose/tipsy/fragile -> condition
-- punish -> leadership-and-law; revenge/instigate-harm -> conflict or character
-- floating (people/things on water) -> swimming; gliding in air -> movement
-- anchors/sails/ferries -> boats
-- "in the way"/hinderance -> position
-- breakfast/supper words -> food (+time)
-
-## Category-sweep audit (pass 3, 2026-06-11)
+## Category-sweep audit — v1, historical (pass 3, 2026-06-11)
 
 Each audited category was re-read as a complete member list
 (`dictq.py members CAT`) looking for misfits. Fully swept: all 6 Places &

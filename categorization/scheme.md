@@ -1,19 +1,31 @@
-# Mi'gmaq Dictionary Category Scheme — DRAFT for review
+# Mi'gmaq Dictionary Category Scheme — v2 DRAFT for community review
 
-A fixed, controlled vocabulary of **85 categories in 13 themes**, designed from
-a full read of all 8,822 entries and the existing 264 hand categories. Each
-entry gets **1-3 categories** (most get 1-2; the first is primary). Categories
-are chosen for *language learners browsing by topic* — friendly names, no
-linguistics jargon, sized so each is a satisfying browse (target: roughly 20 to
-400 entries each).
+A fixed, controlled vocabulary of **96 categories in 13 themes**, designed from
+a full read of all entries and the existing hand categories, then revised with
+language-team feedback on the v1 draft. Each entry gets **1-3 categories**
+(most get 1-2). Categories are chosen for *language learners browsing by
+topic* — friendly names, no linguistics jargon, sized so each is a satisfying
+browse. v2 targets **smaller categories** than v1 (roughly 15 to 200 entries
+each); the v1 giants (body, movement, position, emotions, health, water) are
+split along natural seams.
 
-Review notes for the language team:
+**Category order matters.** The categories on an entry are ORDERED, most
+pertinent first: the first category is the one whose related-words list best
+serves a learner sitting on this word's page (usually the most specific
+applicable category). The public site leads with the first category, and many
+users only ever see that one. When a specific and a broad category both apply,
+the specific one comes first (basket-making before household; calendar before
+time; occupations before work).
+
+Review notes for the team:
 - Names are working English names; rename freely — the stable identifier is the
   `slug` in parentheses. Renames cost nothing.
 - The right question per category: "would a learner enjoy this page, and is it
   obvious what belongs here?"
-- Categories the old scheme had that are deliberately FOLDED into broader ones
-  are listed at the bottom, so you can check nothing beloved was lost.
+- Old hand categories folded into broader ones are listed at the bottom, so you
+  can check nothing beloved was lost.
+- Changes from the v1 draft (and why) are listed in the **Changes from v1**
+  section at the bottom.
 
 Separately from topics, each word may get a **learner tier** (top-10 /
 top-100 / top-1000) — see the last section.
@@ -23,7 +35,9 @@ top-100 / top-1000) — see the last section.
 ## People & Relationships
 
 - **Family & Kinship** (`family`) — kin terms (mother, son, aunt, in-laws,
-  grandparents), being related, marriage and married life, family groups.
+  grandparents), being related, marriage and married life, family groups;
+  also the traditional marriage-permission words (asking parents for a
+  daughter's hand).
   Ex: giju' (mother), gwi's (son), tepqatg (married), wigmaq (family).
 - **People** (`people`) — general words for persons: man, woman, child, baby,
   elder, friend, stranger, twins, named persons.
@@ -32,45 +46,68 @@ top-100 / top-1000) — see the last section.
   Canadian, other nations and their languages-as-identity; flags, territory.
   Ex: lnu, Mi'gmaw, aqalasie'w (English person), wenuj (French person).
 - **Social Life** (`social-life`) — visiting, gathering, sharing, generosity,
-  charity, teasing, keeping company, get-togethers.
+  charity, teasing, keeping company, get-togethers, feasts as gatherings.
   Ex: emittugwet (visit), mawita'jig (gather), salite'wit (collect charity).
-- **Character & Behaviour** (`character`) — how a person habitually acts:
-  lazy, brave, stingy, polite, conceited, mischievous; also lying, cheating,
-  stealing, bragging.
-  Ex: male'g (lazy), emtesgit (conceited), gemutnet (steal), egsuet (lie).
-- **Feelings & Emotions** (`emotions`) — love, fear, anger, joy, sadness,
-  worry, longing, jealousy, surprise, embarrassment.
-  Ex: gesalatl (love), jipasit (afraid), welta'sit (happy), wegaig (angry).
+- **Character & Personality** (`character`) — how a person habitually acts:
+  lazy, brave, stingy, polite, conceited, mischievous, boastful; skill and
+  awkwardness as traits.
+  Ex: male'g (lazy), emtesgit (conceited).
+- **Lying, Cheating & Stealing** (`wrongdoing`) — deceiving, lying, cheating,
+  stealing, robbing, tricking people, fooling someone.
+  Ex: gemutnet (steal), egsuet (lie).
+- **Love, Joy & Laughter** (`love-and-joy`) — love, liking, happiness,
+  gladness, comfort, contentment, laughing, having fun (the feeling).
+  Ex: gesalatl (love), welta'sit (happy).
+- **Fear, Anger & Sadness** (`fear-anger-sadness`) — fear, anger, sadness,
+  crying, worry, grief-as-feeling, longing and homesickness, jealousy,
+  shame and embarrassment, surprise and startlement.
+  Ex: jipasit (afraid), wegaig (angry).
 - **Leaders, Law & Community** (`leadership-and-law`) — chiefs, government,
-  council, elections, law, judging, courts, jail, welfare/relief.
-  Ex: saqamaw (chief), g'pnno'l (government), tplutaqan (law), laplusan (jail).
+  council and council fires, clans and totems, wampum-as-record, elections,
+  law, judging, courts, jail, welfare/relief.
+  Ex: saqamaw (chief), g'pnno'l (government), tplutaqan (law), gpugteminu
+  (council fire).
 - **Fighting & Conflict** (`conflict`) — fighting, war, warriors, weapons,
-  threatening, harming or attacking someone.
+  threatening, harming or attacking someone, revenge.
   Ex: matnagget (fight), matntimg (war), sma'gnis (soldier), pugumaqan (weapon).
 
 ## Body & Health
 
-- **Body** (`body`) — body parts, and descriptions of bodies: have big hands,
-  red-haired, bald, freckled, bearded, left-handed.
-  Ex: ugpitn (hand), unji (head), maqatpat (big-headed), eli'tuat (bearded).
+- **Body Parts** (`body-parts`) — the parts themselves: head, hand, heart,
+  bones, joints, skin, hair-as-part, organs; of people and animals.
+  Ex: ugpitn (hand), unji (head), angwisgaqan (joint), elsita'sit (sole/paw pad).
+- **Body Descriptions** (`body-descriptions`) — describing bodies: the big
+  "have such/big/small BODYPART" family, bearded, bald, freckled, wrinkled,
+  skinny, left-handed, naked.
+  Ex: maqatpat (big-headed), eli'tuat (bearded), aptegwat (freckled), alu'sat
+  (skinny).
 - **Body Actions** (`body-actions`) — things bodies do: breathe, sneeze, spit,
   yawn, sweat, shiver, defecate, give birth (the bodily event).
   Ex: gamlamit (breathe), ewsgwit (sneeze), tegniet (sweat), igto'sit (yawn).
-- **Health & Illness** (`health`) — sickness, healing, medicine, wounds and
-  injuries, bleeding, pain, disease names, dying and death.
-  Ex: gesnugwat (sick), nepilatl (heal), npisun (medicine), maltewiet (bleed).
-- **Looks & Appearance** (`appearance`) — how someone or something looks:
-  pretty, ugly, neat, scruffy, pale, strange-looking.
+- **Sickness & Pain** (`sickness`) — being sick, pain and aches, wounds and
+  injuries, bleeding, fevers, disease names, disability.
+  Ex: gesnugwat (sick), maltewiet (bleed).
+- **Healing & Medicine** (`healing`) — healing, curing, medicines, remedies,
+  treating and nursing, recovering, hospitals and doctoring-as-care.
+  Ex: nepilatl (heal), npisun (medicine).
+- **Death & Mourning** (`death-and-mourning`) — dying and death, the dead,
+  mourning, condolence, wakes and vigils, coffins, hearses, graves,
+  pallbearers. (Church funeral rites are also `church-rituals`.)
+  Ex: nipapultimg (wake), lesqe'gn (coffin), nesgawet (console), pema'teget
+  (pallbearer).
+- **Looks & Appearance** (`appearance`) — how someone or something looks
+  (judged, not anatomical): pretty, ugly, neat, scruffy, pale, strange-looking.
   Ex: wigwasapewit (good-looking), winapewit (ugly), gesmapewit (odd-looking).
 
 ## Mind & Language
 
 - **Talking** (`talking`) — saying, telling, asking, answering, calling,
-  whispering, shouting words, gossip, cursing, conversation.
+  whispering, shouting words, gossip, cursing, conversation, naming.
   Ex: gelusit (speak), telimatl (tell), etamatl (ask), gimewistoq (whisper).
 - **Stories, Reading & Writing** (`stories-and-writing`) — storytelling, news,
-  reading, writing, books, paper, letters, hieroglyphics, translation.
-  Ex: a'tugwet (tell story), egiljet (read), ewi'g'g (write), wi'gatign (book).
+  reading, writing, books, paper, letters, Mi'gmaq hieroglyphics, translation.
+  Ex: a'tugwet (tell story), egiljet (read), ewi'g'g (write), gomgwejui'gaqan
+  (Mi'gmaq hieroglyphics).
 - **Thinking & Knowing** (`thinking`) — knowing, thinking, remembering,
   forgetting, believing, doubting, deciding, wisdom, cleverness.
   Ex: geitoq (know), angita'sit (think), migwite'tg (remember), awanta'sit (forget).
@@ -78,7 +115,7 @@ top-100 / top-1000) — see the last section.
   studying, school, lessons.
   Ex: gegina'masit (learn), gegina'muatl (teach), gina'muo'guom (school).
 - **Seeing & Looking** (`seeing`) — looking, watching, peeking, appearing and
-  disappearing, eyesight, blindness, mirrors and lenses.
+  disappearing, hiding from view, eyesight, blindness, mirrors and lenses.
   Ex: nemiatl (see), angamatl (look at), gimapit (peek), nepapigwa't (blind).
 - **Hearing & Sounds** (`hearing`) — hearing, listening, and sounds: loud,
   quiet, echo, the whole "heard X-ing" family, bells, noises.
@@ -89,12 +126,24 @@ top-100 / top-1000) — see the last section.
 
 ## Movement & Physical Actions
 
-- **Moving & Going** (`movement`) — general motion: go, come, turn, spin,
-  shake, wander, hurry, rush, slow down, stop, jump, crawl, slide.
-  Ex: eliet (goes), aja'sit (move over), giwto'qa'sit (circle), naqa'sit (stop).
-- **Position & Posture** (`position`) — sitting, standing, lying, leaning,
-  kneeling, upside-down, in-the-way, where something sits or is placed.
+- **Going & Coming** (`going-and-coming`) — going somewhere and coming back:
+  go, come, return, arrive-nearby, leave, follow, chase off, flee, wander and
+  roam, going about.
+  Ex: eliet (goes), ala'sit (goes about), apaja'sit (returns), aluggwalatl
+  (follows around).
+- **Ways of Moving** (`ways-of-moving`) — how the body moves: run, jump,
+  crawl, climb, tiptoe, stagger, slide, glide, spin, shake, swing; hurrying,
+  rushing, slowing down, stopping.
+  Ex: getgwi'g (run), alapegit (crawl about), algimsgwet (tiptoe about),
+  alja't (stagger), naqa'sit (stop).
+- **Sitting, Standing & Lying** (`posture`) — people's postures: sitting,
+  standing, lying down, leaning, kneeling, crouching, upside-down.
   Ex: epit (sitting), gaqamit (stand), elsma'sit (lie down), nutgulpit (kneel).
+- **Putting & Placing** (`putting-and-placing`) — where things sit and how
+  they got there: putting, placing, spreading, scattering, stacking, piling;
+  things lying/standing somewhere, hidden things, things in the way.
+  Ex: alamgistoq (scatters it about), alaqte'g (spreads it out), aquteg
+  (hidden), a'jelteg (in the way).
 - **Carrying & Bringing** (`carrying`) — carry, lug, haul, bring, take, fetch,
   deliver, send.
   Ex: pema'toq (carry), elawlet (carry on back), nemisg'g (fetch), elgimatl (send).
@@ -124,7 +173,8 @@ top-100 / top-1000) — see the last section.
 ## Home & Daily Life
 
 - **Food** (`food`) — foodstuffs and dishes: bread, meat, soup, berries-as-food,
-  salt, sugar, tea, butter; hunger and food supply.
+  salt, sugar, tea, butter; hunger and food supply; meals like breakfast and
+  supper (the food).
   Ex: pipnaqan (bread), wius (meat), lasup (soup), p'tewei (tea), wilu (food).
 - **Cooking & Baking** (`cooking`) — cooking, baking, boiling, roasting,
   frying, smoking food, food preparation.
@@ -132,15 +182,20 @@ top-100 / top-1000) — see the last section.
 - **Eating & Drinking** (`eating-and-drinking`) — eating, drinking, chewing,
   swallowing, tasting food, appetite, meals as events.
   Ex: mijjit (eat), esamqwat (drink), soqtamit (chew), etlatalg (eating).
-- **Clothing & Dress** (`clothing`) — garments, footwear, hats, getting
-  dressed, wearing, dressing up.
-  Ex: aligew (clothing), a'gwesn (hat), mg'sn (shoe), gegnesit (dressed up).
+- **Clothing & Dress** (`clothing`) — garments, footwear, moccasins, hats,
+  getting dressed, wearing, dressing up.
+  Ex: aligew (clothing), a'gwesn (hat), mg'sn (shoe), ma'gn (moccasin),
+  gegnesit (dressed up).
 - **Sewing, Knitting & Cloth** (`sewing-and-textiles`) — sewing, knitting,
   weaving, spinning, mending, cloth, wool, hides and leather.
   Ex: eli'sewet (sew), elisgnuet (knit), atla'wegn (cloth), m'gegn (hide/leather).
 - **Basket Making** (`basket-making`) — baskets and their craft: splints,
-  hoops, ash strips, weaving baskets.
+  hoops, ash strips, pounding ash, weaving baskets.
   Ex: ligpenign (basket), eligpete'get (pound ash), wigpe'tlaqan (basket strip).
+- **Quillwork & Beadwork** (`quillwork-and-beadwork`) — porcupine quills and
+  quillwork, quill boxes, beads and beadwork, wampum beads.
+  Ex: gawi (porcupine quill), gawiei (quillwork), gawioqolaqan (quill box),
+  waio'psgw (bead), lnapsgu'g (wampum).
 - **Household Things** (`household`) — furniture, dishes, pots, lamps, brooms,
   containers, everyday objects of the home.
   Ex: mutputi (chair), eptaqan (dish), wow (pot), pu'tai (bottle), mpo'qon (bed).
@@ -153,6 +208,9 @@ top-100 / top-1000) — see the last section.
 - **Sleep & Dreams** (`sleep`) — sleeping, waking, naps, dreams, snoring,
   staying up.
   Ex: nepat (sleep), tugwiet (wake up), pewat (dream), getugsit (sleepy).
+- **Tobacco & Smoking** (`tobacco-and-smoking`) — tobacco, pipes, cigarettes,
+  chewing tobacco and snuff, lighting up, smoking.
+  Ex: tmawei (tobacco), tmaqan (pipe), wetmat (smoke), jawa'tat (chew tobacco).
 
 ## Work & Livelihood
 
@@ -173,7 +231,7 @@ top-100 / top-1000) — see the last section.
   fields, gardens, manure.
   Ex: elgesawet (plow), iga'taqalatl (plant), ge'tipnet (harvest), msigu (hay).
 - **Making & Fixing** (`making-and-fixing`) — making, building (generic),
-  repairing, mending, preparing, getting things ready.
+  repairing, mending, preparing, getting things ready, decorating (generic).
   Ex: eliatl (make), elugwalatl (repair), gisgaja'toq (prepare), mesna'latl (mend).
 
 ## Land, Water & Sky
@@ -187,7 +245,7 @@ top-100 / top-1000) — see the last section.
 - **Birds** (`birds`) — bird species and bird life: nests, feathers, eggs-as-bird.
   Ex: jipji'j (bird), gitpu (eagle), ga'qaquj (crow), sisip (waterfowl), pi'gun (feather).
 - **Fish & Sea Creatures** (`fish`) — fish species and other water creatures:
-  whales, seals via animals?, lobster, clams, eels.
+  whales, seals, lobster, clams, eels.
   Ex: nme'j (fish), plamu (salmon), ga't (eel), jagej (lobster), e's (clam).
 - **Insects & Crawlers** (`insects`) — insects, spiders, worms, fleas, lice.
   Ex: amu (bee), u'j (fly), go'gwejij (spider), weti (worm), piggw (flea).
@@ -195,8 +253,9 @@ top-100 / top-1000) — see the last section.
   stumps, the forest.
   Ex: miti's (tree), masgwi (white birch), guow (pine), nipugt (forest), lo'gs (log).
 - **Plants & Berries** (`plants`) — plants, flowers, berries on the bush,
-  mushrooms, roots, grasses, seeds.
-  Ex: wasueg (flower), pguman (blueberry), lgetu (mushroom), msigu (grass), sgilmin (seed).
+  mushrooms, roots, grasses, seeds, sweetgrass.
+  Ex: wasueg (flower), pguman (blueberry), lgetu (mushroom), sgilmin (seed),
+  weljemajgewe'l (sweetgrass).
 - **Weather** (`weather`) — rain, snow, wind, storms, fog, frost, clouds,
   thunder, forecast signs.
   Ex: gigpesan (rain), psan (snowfall), ewlamsn (gale), u'n (fog), gaqtugwaw (thunder).
@@ -206,10 +265,14 @@ top-100 / top-1000) — see the last section.
 - **Land & Landscape** (`land`) — ground, mountains, rocks, sand, mud, clay,
   islands, hills, caves, landscape features.
   Ex: maqamigew (land), gmtn (mountain), guntew (stone), menigu (island), sisgu (mud).
-- **Water & Rivers** (`water`) — water itself, rivers, lakes, sea, tides,
-  currents, waves, flowing, wetness, soaking, ice.
-  Ex: samqwan (water), sipu (river), qospem (lake), apaqt (sea), gjigapa'n (tide),
-  mgumi (ice).
+- **Water, Ice & Wetness** (`water`) — water as stuff and state: water, wet
+  and dry(ing), soaking, dripping, splashing, pouring, ice, freezing-over,
+  thawing of water.
+  Ex: samqwan (water), mgumi (ice).
+- **Sea, Rivers & Lakes** (`sea-and-rivers`) — the waters of the land: sea,
+  rivers, brooks, lakes, ponds, tides, currents, waves, shores, flowing;
+  springs and wells.
+  Ex: sipu (river), qospem (lake), apaqt (sea), gjigapa'n (tide).
 - **Fire & Light** (`fire`) — fire, burning, smoke, embers, ashes, kindling;
   light, shining, lamps' light.
   Ex: pugtew (fire), gaqsit (burn), mtlu'tew (smoke), wasoqon (light), gesaseg (shine).
@@ -228,9 +291,9 @@ top-100 / top-1000) — see the last section.
 - **Hunting & Trapping** (`hunting`) — hunting, tracking, snares, traps, guns,
   bows and arrows, bait, providing food from the woods.
   Ex: getanatl (hunt), la'pugtaqan (snare), loqte'gn (trap), pe'sgewei (gun), tapi (bow).
-- **Travel & Journeys** (`travel`) — journeys, arriving, departing, moving to
-  a new place, guides, roads, paths, trails.
-  Ex: poqtamga'sit (set off), pegising (arrive), eliet (goes), awti (road), ala'suinu (traveler).
+- **Travel & Journeys** (`travel`) — journeys, setting out and arriving from
+  afar, moving to a new place, guides, roads, paths, trails.
+  Ex: poqtamga'sit (set off), pegising (arrive), awti (road), ala'suinu (traveler).
 - **Vehicles & Riding** (`vehicles`) — sleds, wagons, trains, cars, snowshoes,
   riding horses, being aboard.
   Ex: tepaqan (sled), ga's (train), galiulg (sleigh), aqam (snowshoe), teppit (aboard).
@@ -279,27 +342,38 @@ top-100 / top-1000) — see the last section.
   maturing, birthdays-as-age, generations.
   Ex: gisigu (old man), maljewe'j (youngster), gisigwet (mature), ajipuna't (birthday).
 
-## Culture & Spirit
+## Faith & Church
 
-- **Church & Ceremony** (`ceremony`) — mass, prayer, baptism, communion,
-  confession, weddings, wakes and funerals, fasting, priests and nuns.
-  Ex: alame's (mass), a'sutmat (pray), malie'wit (marry), utqotamg (funeral),
-  pa'tlia's (priest).
-- **Spirit World & Legends** (`spirit-world`) — Creator, Glooscap, spirits,
-  ghosts, shamans, devils, spells, legendary beings, heaven and hell.
-  Ex: Gisu'lgw (Creator), Glusgap, sg'te'gmuj (ghost), puowin (shaman),
-  mntu (devil), jenu (giant).
-- **Customs & Traditions** (`customs`) — traditional practices and items:
-  wampum, totems, feasts, brideprice, quillwork-as-heritage, pipes and tobacco.
-  Ex: lnapsgu'g (wampum), ugtutem (totem), gweltanat (feast), tmawei (tobacco),
-  tmaqan (pipe).
+- **Faith & Belief** (`faith`) — God, the Creator, Jesus, the Virgin Mary, the
+  saints, angels; heaven, hell and purgatory; the soul; the devil; holiness,
+  blessing, sin-as-concept, resurrection, salvation.
+  Ex: Nisgam (God), Gisu'lgw (Creator), Se'sus (Jesus), Ma'li (Virgin Mary),
+  ansale'wit (angel), wa'so'q (heaven), sape'wig (holy).
+- **Church Rituals** (`church-rituals`) — the practices of church life: mass,
+  prayer, baptism, communion, confession, church weddings, funeral masses,
+  Lent and fasting, priests and nuns, churches and altars.
+  Ex: alame's (mass), a'sutmat (pray), gmnie'wit (take communion),
+  pa'qapuguet (confess), pa'tlia's (priest), malie'wit (marry).
+
+## Legends, Music & Games
+
+- **Legends & Legendary Beings** (`legends`) — the beings and heroes of
+  Mi'gmaq stories: Glooscap, giants, little people, the horned serpent,
+  Thunderers, tricksters, legendary strongmen and wild men.
+  Ex: Glusgap (Glooscap), jenu (giant), pugulatmu'j (little person/elf),
+  jipijga'm (horned serpent), gaqtugwewe'sm (Thunderer).
+- **Ghosts, Spirits & Wonders** (`spirits`) — ghosts and apparitions, spirits
+  and shadows, shamans and their power, spells and charms, fortune-telling,
+  premonitions, magic and illusions.
+  Ex: sg'te'gmuj (ghost), puowin (shaman), puntat (cast spell), wesiget
+  (tell fortunes), welo'gt'g (premonition).
 - **Music, Song & Dance** (`music-and-dance`) — singing, songs, drums,
-  fiddles, whistling, instruments, dancing.
+  fiddles, whistling, instruments, dancing (including dancing Mi'gmaq style).
   Ex: etlintoq (sing), gtapegiaqan (song), tapia'ji'jg (fiddle), amalgat (dance).
-- **Games & Play** (`games`) — waltes, cards, checkers, baseball, races,
-  gambling, toys, playing and fun.
-  Ex: waltes, ila'sgw (playing card), atnaqan (checker), alje'maqan (baseball),
-  mila'suaqan (toy), mila'sit (play).
+- **Games & Play** (`games`) — waltes and its count sticks, cards, checkers,
+  baseball, races, gambling, toys, playing and fun.
+  Ex: waltes, gitmaqan (count stick), ila'sgw (playing card), alje'maqan
+  (baseball), mila'sit (play).
 
 ## Places & Little Words
 
@@ -326,6 +400,51 @@ top-100 / top-1000) — see the last section.
 
 ---
 
+## Changes from v1 (and why)
+
+Decisions from language-team review of the v1 draft:
+
+1. **Sacred Christian vocabulary is no longer filed with legends.** v1's
+   *Spirit World & Legends* put Jesus, the Virgin Mary, God, angels and the
+   saints beside ghosts, spells and tricksters — wrong and hurtful to the
+   many Catholic readers. v2 splits it three ways: **Faith & Belief** (the
+   sacred vocabulary, including Creator/Great Spirit words, which this
+   community uses as words for God), **Legends & Legendary Beings** (Glooscap,
+   jenu, the little people...), and **Ghosts, Spirits & Wonders** (ghosts,
+   shamans, spells, fortune-telling).
+2. **"Church & Ceremony" is renamed "Church Rituals"** — in this community
+   *ceremony* refers to Mi'gmaq ceremony, so the v1 name was confusing. The
+   slug `ceremony` is retired (kept free in case a Mi'gmaq ceremonies
+   category is wanted someday); the church category is `church-rituals`.
+3. **"Customs & Traditions" is dissolved.** A residual "traditions" bucket
+   frames living culture as a museum exhibit — in a Mi'gmaq dictionary,
+   everything is Mi'gmaq culture. Culturally central practices instead get
+   their own first-class categories, the same way Basket Making already did:
+   new **Quillwork & Beadwork** and **Tobacco & Smoking**; waltes goes to
+   Games, council fires/clans/totems/wampum-as-record to Leaders, Law &
+   Community, hieroglyphics to Stories, Reading & Writing,
+   marriage-permission words to Family, sweetgrass to Plants, moccasins to
+   Clothing, feasts to Social Life.
+4. **Basket Making stays its own tight category** (not merged into any
+   broader "crafts") — a small, focused, culturally important page is
+   exactly what makes browsing good.
+5. **The giant categories are split** (smaller categories browse better):
+   body → Body Parts / Body Descriptions; movement → Going & Coming / Ways
+   of Moving; position → Sitting, Standing & Lying / Putting & Placing;
+   emotions → Love, Joy & Laughter / Fear, Anger & Sadness; health →
+   Sickness & Pain / Healing & Medicine / Death & Mourning; water → Water,
+   Ice & Wetness / Sea, Rivers & Lakes; character → Character & Personality /
+   Lying, Cheating & Stealing.
+6. **Categories are explicitly ordered, most pertinent first** (see the note
+   at the top) — the first category drives what a reader sees on the word's
+   page.
+
+Slugs retired in v2 (do not use): `spirit-world`, `customs`, `ceremony`,
+`body`, `movement`, `position`, `emotions`, `health`.
+Slugs kept but narrowed: `water` (now just water/ice/wetness — bodies of water
+went to `sea-and-rivers`), `character` (lying/cheating/stealing went to
+`wrongdoing`).
+
 ## Learner tiers (separate axis from topics)
 
 Cumulative learning-priority tiers, for learning tools and "where do I start":
@@ -345,25 +464,28 @@ there matter much more than anywhere else in this project.
 
 ## Old categories folded in (nothing lost)
 
-motion/speed/run/walk/climb/flight→movement; carry/bring/send→carrying;
-hold/lock→holding+fastening; push/pull/throw/discard→pushing-and-pulling;
-hit→hitting; cut/pierce/sharpen/peel→cutting; break→breaking;
+motion/speed/run/walk/climb/flight→going-and-coming or ways-of-moving;
+carry/bring/send→carrying; hold/lock→holding+fastening;
+push/pull/throw/discard→pushing-and-pulling; hit→hitting;
+cut/pierce/sharpen/peel→cutting; break→breaking;
 tie/bind/attach/cover/open/close/hang→fastening; fall→falling;
 cook/eat→cooking/eating-and-drinking; sew/knit/weave/fibre→sewing-and-textiles;
 basket→basket-making; structure/house→dwellings; clean/wash/dry→cleaning
 (drying of things→condition/water as fits); work/skill→work; value/exchange/
 financial/commerce/trade/wealth/property→money-and-trade; agriculture/farm/
 harvest→farming; make/fix/prepare/alter→making-and-fixing; tend/treat/
-assistance/raise→social-life or health or making-and-fixing by sense;
+assistance/raise→social-life or healing or making-and-fixing by sense;
 domestic→farm-animals; reptile→animals; tree/fruit(on tree)→trees/plants;
-season→calendar; ritual/spirituality→ceremony/spirit-world; tradition/culture/
-tobacco→customs; vocal/music/perform/instrument→music-and-dance (performing
-magic→spirit-world or games by sense); game/play/toy→games; nationality→
-peoples-and-nations; government/legal/civic→leadership-and-law; deception/
-steal→character; sight→seeing; hear→hearing; smell/touch/flavour→smell-and-taste;
+season→calendar; ritual/spirituality→church-rituals/faith/spirits by sense;
+tradition/culture→(dissolved; see Changes from v1); tobacco→tobacco-and-smoking;
+vocal/music/perform/instrument→music-and-dance (performing magic→spirits);
+game/play/toy→games; nationality→peoples-and-nations;
+government/legal/civic→leadership-and-law; deception/steal→wrongdoing;
+sight→seeing; hear→hearing; smell/touch/flavour→smell-and-taste;
 cognition→thinking; communication/speech→talking; language arts→stories-and-writing
 or talking by sense; information→question-words or talking; geography/land/
-geology→land; liquid→water (or food when a drink); light→fire; weight/volume/
-distance→size-and-shape or amounts by sense; quantity/degree/compare→amounts;
-state→condition; numbers/mathematics→numbers; name→talking (naming) or people;
-greeting/exclamation→greetings; not classified/_/p→(re-categorized properly).
+geology→land; liquid→water or sea-and-rivers (or food when a drink);
+light→fire; weight/volume/distance→size-and-shape or amounts by sense;
+quantity/degree/compare→amounts; state→condition; numbers/mathematics→numbers;
+name→talking (naming) or people; greeting/exclamation→greetings;
+not classified/_/p→(re-categorized properly).

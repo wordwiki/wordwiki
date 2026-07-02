@@ -2,6 +2,11 @@
 
 *2026-06-11. Status: complete first full pass, awaiting language-team review.*
 
+*Update 2026-07-01: team feedback received; v2 underway. The v2 scheme is in
+`scheme.md`, the v2 pass instructions in `v2-instructions.md`; v1 assignments
+frozen in `assignments-v1.jsonl`. This document remains the v1 record and the
+general method reference.*
+
 This document is three things at once:
 
 1. **For the language team** — what was produced and how to review it.

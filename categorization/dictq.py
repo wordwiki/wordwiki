@@ -19,6 +19,10 @@ report used to make a decision can be re-run later by anyone.
   grep REGEX               search the English side (gloss/translation/example)
   entry ID [ID...]         full record(s), pretty-printed
   batch START COUNT        compact tagging view of an entry-order slice
+  family STEM              all entries whose headword starts with STEM
+                           (tag derivational families as a unit)
+  order-audit [--ratio R]  multi-cat entries whose FIRST category is much
+                           bigger than their second (specific-first check)
 """
 import json, argparse, re, sys, os, collections
 
@@ -122,8 +126,18 @@ def cmd_entry(args):
         if eid in assigns:
             print("assigned:", json.dumps(assigns[eid], ensure_ascii=False))
 
+def load_v1(path=os.path.join(HERE, 'assignments-v1.jsonl')):
+    """Frozen v1 assignments, shown in the batch view as evidence for the v2
+    pass (like the old hand categories: informative, never authoritative)."""
+    v1 = {}
+    if os.path.exists(path):
+        for a in load_jsonl(path):
+            v1[a['e']] = a
+    return v1
+
 def cmd_batch(args):
     entries, assigns = load(args)
+    v1 = load_v1()
     for e in entries[args.start:args.start + args.count]:
         if args.untagged_only and e['e'] in assigns:
             continue
@@ -139,7 +153,43 @@ def cmd_batch(args):
         # first example translation as clearly-marked WEAK evidence (helps
         # thin/polysemous glosses; never keyword-matched)
         ex = f" ex:{e['ex'][0][:70]}" if e['ex'] else ''
-        print(f"{e['e']}|{headword(e)}|{pos}|{english(e)[:160]}|old:{old}{arch}{ex}")
+        prev = v1.get(e['e'])
+        v1s = f"|v1:{','.join(prev['cats'])}" if prev and prev.get('cats') else ''
+        print(f"{e['e']}|{headword(e)}|{pos}|{english(e)[:160]}|old:{old}{v1s}{arch}{ex}")
+
+def cmd_family(args):
+    """All entries whose headword starts with STEM, with their assignments -
+    derivational families share a primary category, so tag them as a unit."""
+    entries, assigns = load(args)
+    v1 = load_v1()
+    for e in entries:
+        if not headword(e).startswith(args.stem):
+            continue
+        a = assigns.get(e['e'])
+        new = f" -> {','.join(a['cats'])}" if a and a.get('cats') else ''
+        prev = v1.get(e['e'])
+        v1s = f" v1:{','.join(prev['cats'])}" if prev and prev.get('cats') else ''
+        mark = ' [ARCHIVED]' if is_archived(e) else ''
+        print(f"{e['e']:6}  {headword(e):30} {english(e)[:90]}{new}{v1s}{mark}")
+
+def cmd_order_audit(args):
+    """Specific-first check: list multi-category entries whose FIRST category
+    has more than --ratio times the members of their second.  Broad-before-
+    specific is sometimes right, so hits are re-look flags, not errors."""
+    entries, assigns = load(args)
+    counts = collections.Counter(c for a in assigns.values() for c in a['cats'])
+    by_id = {e['e']: e for e in entries}
+    hits = 0
+    for eid, a in assigns.items():
+        cats = a.get('cats', [])
+        if len(cats) < 2 or eid not in by_id:
+            continue
+        if counts[cats[0]] > args.ratio * counts[cats[1]]:
+            e = by_id[eid]
+            print(f"{eid:6}  {headword(e):28} [{', '.join(f'{c}({counts[c]})' for c in cats)}]"
+                  f"  {english(e)[:60]}")
+            hits += 1
+    print(f"{hits} entries with first category >{args.ratio}x its second")
 
 def cmd_scheme(args):
     scheme = load_scheme()
@@ -203,6 +253,10 @@ def main():
     s = sub.add_parser('batch'); s.add_argument('start', type=int); s.add_argument('count', type=int)
     s.add_argument('--untagged-only', action='store_true')
     s.add_argument('--terse', action='store_true'); s.set_defaults(fn=cmd_batch)
+
+    s = sub.add_parser('family'); s.add_argument('stem'); s.set_defaults(fn=cmd_family)
+    s = sub.add_parser('order-audit'); s.add_argument('--ratio', type=float, default=3.0)
+    s.set_defaults(fn=cmd_order_audit)
 
     s = sub.add_parser('tiers'); s.add_argument('tier', nargs='?', choices=['t10', 't100', 't1000'])
     s.set_defaults(fn=cmd_tiers)
