@@ -68,7 +68,9 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 - v1 assignments (shown in the batch view) are good evidence but were made
   against the v1 scheme — re-decide, don't copy, wherever a v1 category was
   split, renamed, or dissolved (see the mapping in v2-instructions.md).
-- Entries whose only English is `?`/TBA/empty → flag needs-human, cats [].
+- Entries whose only English is `?`/TBA/empty → flag needs-human, cats [] —
+  likewise grammatical-prefix notes (teli-, mesta-, nipi-...) and editor
+  scratch entries; never guess these.
 - Archived entries: tagged normally (cheap), separated in views.
 
 ### Faith / traditional stories / spirits (elder-reviewed; get these right)
@@ -77,7 +79,9 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
   soul, holy/blessed, sin-as-concept, resurrection, salvation, end of the
   world → faith. NEVER traditional-stories or spirits.
 - Mass, prayer, sacraments, confession, communion, Lent, priests/nuns/bishops,
-  churches, altars, holy water, church weddings → church-rituals.
+  churches, altars, holy water, church weddings → church-rituals; also the
+  aniaps- penance family (conf m where the gloss is the secular "suffers the
+  consequences").
 - Glusgap, jenu, gu'gwes, little people (pugulatmu'j, wiglatmu'j,
   tmigalmji'j), horned serpent, Thunderer, Tune'l, wild man, mi'gmuessu
   → traditional-stories. These are core cultural figures, not entertainment:
@@ -89,9 +93,10 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
 - Ghosts, apparitions, spirit/shadow, shamans (puowin), spells/hexes/charms,
   fortune-telling, premonitions, stage magic and illusions → spirits.
 - mjijaqamij-family (spirit|soul|shadow) → faith first, spirits second.
-- Death words: dying, the dead, mourning, consoling, wakes/vigils, coffins,
-  hearses, graves, pallbearers → death-and-mourning first; funeral masses and
-  church burial rites also church-rituals.
+- Death words: dying (incl. "stops breathing", "bleeds to death", "killed"),
+  the dead, mourning, consoling, wakes/vigils, coffins, hearses, graves,
+  pallbearers, death shrouds → death-and-mourning FIRST in the ordering;
+  funeral masses and church burial rites take church-rituals second.
 
 ### Dissolved-customs homes (elder-reviewed)
 - Quills, quillwork, quill boxes, beads, beadwork, wampum-as-bead
@@ -114,9 +119,11 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
   → ways-of-moving.
 - People's postures (sit, stand, lie, lean, kneel) → posture; things
   placed/sitting/standing somewhere, scatter/spread/stack/pile, hidden
-  things, things in the way → putting-and-placing. (-pit/-teg with an
-  inanimate subject is usually putting-and-placing; a person holding a pose
-  is posture.)
+  things, covered/buried-in-earth things, things in the way →
+  putting-and-placing. (-pit/-teg with an inanimate subject is usually
+  putting-and-placing; a person holding a pose is posture; "in the way /
+  hindrance" entries go putting-and-placing, with posture too when the
+  animate reading is a pose.)
 - Emotions: love, liking, happiness, comfort, laughing → love-and-joy;
   fear, anger, sadness, crying, worry, longing/homesickness, jealousy,
   shame, surprise → fear-anger-sadness.
@@ -130,48 +137,44 @@ the tagging conventions. (Working notes; the reviewable artifact is scheme.md.)
   skilled/awkward/unable) → character; lying, cheating, stealing, deceiving,
   tricking → wrongdoing.
 
-### Accreted during the v2 tagging pass (2026-07-01)
-- want-words and need-words ("wants to...", "has need for") → thinking (conf m).
-- nuta'q / "missing, lacking, short of" → amounts.
-- Dogs and cats (incl. puppies, kittens, house dogs) → farm-animals (domestic),
-  not animals; wild canids/felids stay in animals.
-- drunk/tipsy/intoxicated → condition (m); "likes to drink" → character (m).
-- nuji- occupation nouns → [occupations, domain] — EXCEPT fortuneteller and
-  magician/illusionist → [spirits, occupations] (the spirits page serves them).
-- Speak-X-language family (lnui'sit, wenjui'sit...) → [talking,
-  peoples-and-nations], talking first.
-- Wakes/vigils (ni'pa'pit, nipapultimg) → death-and-mourning; funeral mass
-  → [death-and-mourning, church-rituals] (death first, per the death rule).
-- The aniaps- penance family → church-rituals (m where the gloss is the
-  secular "suffers the consequences").
-- House-by-material series (stone/log/birch/thatched/spruce-bark ×
-  has/lives-in/builds/resembles) → dwellings, one cat.
-- Rainbow → [sky, weather]; northern lights → sky; wind/gales → weather.
-- -pit/-teg "in the way / hindrance" entries → putting-and-placing
-  (animate posture readings keep posture too).
-- Grammatical-prefix notes and no-English placeholders → cats [],
-  flag needs-human (never guessed).
-
-### Carried over from v1 (still in force, v2 slugs)
-- Body-part-description verbs ("have big hands", "red-haired") → body-descriptions.
+### Standing conventions (v1 + v2, current slugs)
+- Body-part-description verbs ("have big hands", "have teeth", "red-haired")
+  → body-descriptions.
 - "heard X" (metew-) → hearing, plus X's domain when strong.
 - Sound-making (holler, cackle, chime) → hearing.
 - Occupations: the nuji-/-winu person-nouns → occupations (+domain);
-  the underlying activity verb stays in its domain.
+  the underlying activity verb stays in its domain. EXCEPTION: fortuneteller
+  and magician/illusionist → [spirits, occupations] — the spirits page is
+  the one that serves a learner there.
+- Speak-X-language / named-in-X family (lnui'sit, wenjui'sit,
+  aqalasie'wi'sit...) → [talking, peoples-and-nations], talking first.
 - Particles with topical content (time words: apjiw 'always'; place words:
   gigjiw 'near') go in their topical category, not small-words.
 - Proper-noun places → places; nationality/people-group nouns → peoples-and-nations.
+- want-words and need-words ("wants to...", "has need/use for") → thinking
+  (conf m); nuta'q / "missing, lacking, short of" → amounts.
+- Dogs and cats (incl. puppies, kittens, house dogs) → farm-animals
+  (domestic animals); wild canids/felids stay in animals.
 - decorate (generic) → making-and-fixing; embroidery/crochet/sewn decoration
   → sewing-and-textiles; quill/bead decoration → quillwork-and-beadwork.
-- rub/smear/massage → smell-and-taste (touch); medicinal rubbing also healing.
-- caring-for/helping/meeting/forgiving → social-life.
+- rub/smear/massage/palpate/feel-for → smell-and-taste (touch); medicinal
+  rubbing also healing.
+- caring-for/helping/meeting/forgiving → social-life; compassion/pity FOR
+  someone → social-life (m), self-pity and sad states → fear-anger-sadness.
 - hide/conceal (make unseen) → seeing; hidden-position also putting-and-placing.
 - lock/unlock/key → fastening.
-- stuck/loose/tipsy/fragile → condition.
+- stuck/loose/fragile → condition; drunk/tipsy/intoxicated → condition (m);
+  "likes to drink" → character (m).
 - punish → leadership-and-law; revenge/instigate-harm → conflict.
-- floating (people/things on water) → swimming; gliding in air → ways-of-moving.
+- floating (people/things on water) → swimming; gliding/flying (birds,
+  insects, thrown things) → ways-of-moving.
 - anchors/sails/ferries → boats.
 - breakfast/supper words → food (+time).
+- House-by-material series (stone/log/birch/thatched/spruce-bark ×
+  has/lives-in/builds/resembles) → dwellings, one cat.
+- Rainbow → [sky, weather]; northern lights → sky; wind/gusts/gales → weather.
+- Tobacco: everything about smoking (pipes, cigarettes, snuff, lighting up,
+  heavy smoker) → tobacco-and-smoking first, before fire/household/character.
 
 ## Category-sweep audit — v1, historical (pass 3, 2026-06-11)
 
