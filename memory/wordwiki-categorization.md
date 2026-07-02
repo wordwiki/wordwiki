@@ -1,11 +1,53 @@
 ---
 name: wordwiki-categorization
-description: "Lexeme re-categorization v1 complete (2026-06-11) — 8,822 entries, 85 categories, curated top-10/100/1000; awaiting language-team review, may rerun as v2"
+description: "Lexeme re-categorization: v1 done, v2 pass prepped (2026-07-01) from elder feedback — faith/legends split, no traditions bucket, smaller cats, ordered cats; v2-instructions.md is the brief"
 metadata: 
   node_type: memory
   type: project
   originSessionId: c4675fb2-aad8-4afe-a51d-24117428b622
 ---
+
+**V2 STATUS (2026-07-01): COMPLETE and pushed.** All 8,838 entries tagged
+against the 96-cat/14-theme v2 scheme in one session (57 batches); §4 audits
+done (all sensitive + split-pair sweeps clean, ~12 corrections appended;
+order-audit yielded 9 reorders — death-first and tobacco-first rules);
+tiers curated to exactly 10/100/1000 (curate_tiers.py now uses a
+T1000_DEMOTE list — v2 over-nominated 1052, cut 52 by archived/unrecorded/
+dup-gloss/variant criteria); review/ regenerated (stale v1 by-category files
+git-rm'd first — make_review_views.py does NOT clean them). The v2 accreted
+conventions are FOLDED INTO notes.md permanently (commit 137dad7): no dated
+per-pass block — each rule lives in its home section (Core rules,
+Faith/stories/spirits, Split-category boundaries, and a merged "Standing
+conventions (v1 + v2, current slugs)" list). notes.md + scheme.md remain THE
+prompt for the next pass, current as-is. 729 needs-human. Team reviews the
+review/ v1→v2 diff on GitHub. **For v3 (after community feedback): read
+`categorization/v2-retrospective.md` FIRST** — it has the setup steps
+(freeze v2, add v2: evidence column to dictq, re-dump, re-batch the 729
+needs-human against fresh English), the settled mechanics, the weak-judgment
+families likely to draw feedback (pity/compassion, worship, aniaps-, ewl-),
+scheme size pressure points, and the tier promotion candidates.
+Original elder-feedback framing: The elder-reviewed decisions, which the next reviewer group
+will judge v2 by: (1) sacred Christian vocabulary (Jesus, Mary, God,
+Creator-words, angels, saints, heaven) got its own `faith` category — NEVER
+filed with legends/ghosts (v1's spirit-world did this; hurtful to the
+largely-Catholic readership); (2) "ceremony" means Mi'gmaq ceremony in this
+community → church category renamed "Church Rituals" (`church-rituals`),
+slug `ceremony` deliberately left free; (2b) "legend" is also a trivializing
+word here — Glusgap etc. are core cultural figures (dictionary glosses him
+"culture hero"), so the category is `traditional-stories`, display name
+"A'tugwaqan — Traditional Stories" (Mi'gmaq word leads; final name is the
+team's to choose), in its own theme with Ghosts & Spirits right after Faith &
+Church — NOT grouped with music/games (theme company is an importance
+signal); (3) no customs/traditions bucket —
+it frames living culture as a museum exhibit; culturally central practices
+get first-class categories instead (basket-making kept tight and standalone
+per elder; new quillwork-and-beadwork, tobacco-and-smoking); (4) giants
+split (body/movement/position/emotions/health/water/character); (5) cats
+are ORDERED most-pertinent-first (drives related-words on entry pages; users
+often see only the first). `categorization/v2-instructions.md` is the
+self-contained tagging brief; conventions in notes.md; v1 frozen in
+assignments-v1.jsonl (shown as evidence in dictq batch view; new dictq cmds:
+family, order-audit).
 
 The batch re-categorization of all wordwiki lexemes is complete (v1,
 2026-06-11) and lives in `~/wordwiki/categorization/`:
