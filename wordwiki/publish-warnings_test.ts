@@ -76,13 +76,16 @@ test("publishStatus page: lexeme messages link to that lexeme's editor", () => {
     status.start();
     status.warnings.push({text: "Entry 'samqwan': recording has no audio file", entryId: 1000});
     status.errors.push('books/PDM/page-0101: boom');   // not a lexeme -> no link
+    status.log.push({text: 'Publishing Entry samqwan', entryId: 1000});
     status.end();
 
     const html = markupToString(publishStatus(false, status));
     // The lexeme warning carries an editor link...
     assertStringIncludes(html, '/ww/wordwiki.lexeme.entryPage(1000)');
     assertStringIncludes(html, 'edit lexeme');
-    // ...and the non-lexeme error does NOT (exactly one editor link on the page).
+    // ...but neither the non-lexeme error nor the Recent Tasks log entry does
+    // (an edit link next to every published word is just noise) - so exactly
+    // one editor link on the page.
     const links = html.match(/wordwiki\.lexeme\.entryPage\(/g) ?? [];
     assertEquals(links.length, 1);
 });

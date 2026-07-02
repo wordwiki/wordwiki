@@ -119,12 +119,14 @@ export class PublishStatus {
 export const publishStatusSingleton = new PublishStatus();
 
 // One status message as an <li>: the text, plus - when the message references
-// a lexeme - a link to open that lexeme in the editor.
-function renderPublishMessage(m: PublishMessage): any {
+// a lexeme - a link to open that lexeme in the editor.  The link is for the
+// errors/warnings sections (things to fix); the Recent Tasks log suppresses
+// it - an edit link next to every published word is just noise.
+function renderPublishMessage(m: PublishMessage, withEditLink: boolean=true): any {
     const entryId = publishMessageEntryId(m);
     return ['li', {},
             publishMessageText(m),
-            entryId !== undefined
+            withEditLink && entryId !== undefined
                 ? [' ', ['a', {href: `/ww/wordwiki.lexeme.entryPage(${entryId})`},
                          '✎ edit lexeme']]
                 : []];
@@ -158,7 +160,7 @@ export function publishStatus(joiningExistingPublish: boolean=false,
         (publishStatus.errors.length > 0) ? [
             ['h2', {style: "color: red"}, 'Errors'],
             ['ul', {},
-             publishStatus.errors.map(renderPublishMessage)
+             publishStatus.errors.map(m=>renderPublishMessage(m))
             ]] : [],
 
         // Deliberately calm (amber, not red): the pages ARE published; these
@@ -168,13 +170,13 @@ export function publishStatus(joiningExistingPublish: boolean=false,
              `Warnings (${publishStatus.warnings.length})`],
             ['p', {}, 'These pages published fine - each warning is a data item to fix when convenient.'],
             ['ul', {},
-             publishStatus.warnings.map(renderPublishMessage)
+             publishStatus.warnings.map(m=>renderPublishMessage(m))
             ]] : [],
 
         (publishStatus.log.length > 0) ? [
             ['h2', {}, 'Recent Tasks'],
             ['ul', {},
-             publishStatus.log.slice(-500).toReversed().map(renderPublishMessage)
+             publishStatus.log.slice(-500).toReversed().map(m=>renderPublishMessage(m, false))
             ]] : [],
     ];
 
