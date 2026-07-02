@@ -7438,3 +7438,313 @@
 {"e": 165249, "cats": ["character"]}
 {"e": 165267, "cats": ["character", "people"]}
 {"e": 165289, "cats": ["character"]}
+{"e": 165310, "cats": ["traditional-stories"]}
+{"e": 165329, "cats": ["plants"]}
+{"e": 165349, "cats": ["body-parts"], "tier": "t100"}
+{"e": 165368, "cats": ["fish"]}
+{"e": 165389, "cats": ["body-descriptions"], "conf": "m"}
+{"e": 165413, "cats": ["body-parts"]}
+{"e": 165431, "cats": ["amounts"]}
+{"e": 165451, "cats": ["amounts"]}
+{"e": 165475, "cats": ["body-descriptions"]}
+{"e": 165491, "cats": ["colors"]}
+{"e": 165512, "cats": ["colors"]}
+{"e": 165533, "cats": ["colors"]}
+{"e": 165551, "cats": ["plants", "healing"]}
+{"e": 165570, "cats": ["colors"], "tier": "t1000"}
+{"e": 165596, "cats": ["healing"]}
+{"e": 165633, "cats": ["texture-and-materials", "money-and-trade"]}
+{"e": 165651, "cats": ["sickness"]}
+{"e": 165668, "cats": ["money-and-trade"], "tier": "t1000"}
+{"e": 165703, "cats": ["body-descriptions"]}
+{"e": 165727, "cats": ["sickness"], "conf": "m"}
+{"e": 165747, "cats": ["sickness"], "conf": "m"}
+{"e": 165765, "cats": ["food", "body-parts"]}
+{"e": 165786, "cats": ["body-parts"]}
+{"e": 165805, "cats": ["fire"]}
+{"e": 165829, "cats": ["fire", "household"]}
+{"e": 165853, "cats": ["fear-anger-sadness"], "tier": "t1000"}
+{"e": 165875, "cats": ["cooking"]}
+{"e": 165906, "cats": ["music-and-dance"]}
+{"e": 165931, "cats": ["body-descriptions"]}
+{"e": 165957, "cats": ["body-descriptions"]}
+{"e": 165984, "cats": ["animals"], "tier": "t100"}
+{"e": 166005, "cats": ["animals"]}
+{"e": 166027, "cats": ["fish"]}
+{"e": 166046, "cats": ["fish"]}
+{"e": 166068, "cats": ["hunting", "animals"]}
+{"e": 166088, "cats": ["animals", "body-parts"]}
+{"e": 166112, "cats": ["seeing", "weather"]}
+{"e": 166134, "cats": ["trees", "plants"]}
+{"e": 166159, "cats": ["social-life"]}
+{"e": 166179, "cats": ["smell-and-taste", "food"]}
+{"e": 166201, "cats": ["pushing-and-pulling"]}
+{"e": 166224, "cats": ["ways-of-moving"], "conf": "m"}
+{"e": 166246, "cats": ["character", "fear-anger-sadness"], "conf": "m"}
+{"e": 166270, "cats": ["going-and-coming"], "conf": "m"}
+{"e": 166295, "cats": ["ways-of-moving"]}
+{"e": 166313, "cats": ["body-parts", "animals"]}
+{"e": 166337, "cats": ["trees", "basket-making"], "tier": "t100"}
+{"e": 166358, "cats": ["birds"], "tier": "t1000"}
+{"e": 166379, "cats": ["animals"]}
+{"e": 166398, "cats": ["cooking"]}
+{"e": 166422, "cats": ["cooking"]}
+{"e": 166444, "cats": ["cooking"]}
+{"e": 166467, "cats": ["cooking"], "tier": "t1000"}
+{"e": 166494, "cats": ["conflict"]}
+{"e": 166517, "cats": ["conflict"]}
+{"e": 166535, "cats": ["talking"], "tier": "t100"}
+{"e": 166559, "cats": ["talking"]}
+{"e": 166581, "cats": ["talking"]}
+{"e": 166615, "cats": ["people"], "tier": "t100"}
+{"e": 166638, "cats": ["people"], "tier": "t1000"}
+{"e": 166661, "cats": ["people"]}
+{"e": 166685, "cats": ["body-parts"]}
+{"e": 166708, "cats": ["body-parts"]}
+{"e": 166725, "cats": ["boats", "fishing"]}
+{"e": 166747, "cats": ["body-descriptions"]}
+{"e": 166765, "cats": ["food"]}
+{"e": 166782, "cats": ["food"], "tier": "t100"}
+{"e": 166805, "cats": ["occupations"]}
+{"e": 166829, "cats": ["family"], "tier": "t100"}
+{"e": 166847, "cats": ["family"]}
+{"e": 166869, "cats": ["body-parts"]}
+{"e": 166892, "cats": ["household"], "tier": "t1000"}
+{"e": 166913, "cats": ["animals"], "tier": "t1000"}
+{"e": 166938, "cats": ["land"]}
+{"e": 11500962673525, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 13697192401841, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 18008158511787, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 24597464331622, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 33725022322257, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 40555038045441, "cats": ["appearance", "sickness"], "conf": "m"}
+{"e": 41819137914249, "cats": ["dwellings"]}
+{"e": 44214955641706, "cats": ["farming", "cutting"]}
+{"e": 55658129449633, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 71667976336679, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 80560062163880, "cats": ["faith"]}
+{"e": 86681166980081, "cats": ["carrying", "work"]}
+{"e": 97107753024865, "cats": ["dwellings"]}
+{"e": 97666432943073, "cats": ["places", "sea-and-rivers"], "conf": "m"}
+{"e": 104301039575599, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 105425017662173, "cats": ["dwellings"]}
+{"e": 106106885005047, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 107519483928463, "cats": ["dwellings"]}
+{"e": 112968347784109, "cats": ["seeing", "sky"]}
+{"e": 128914200568627, "cats": ["church-rituals"]}
+{"e": 129598435601368, "cats": [], "flag": "needs-human", "note": "TBA placeholder"}
+{"e": 136044703789057, "cats": ["dwellings"]}
+{"e": 153579075505727, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 158788121319331, "cats": ["dwellings"]}
+{"e": 161076931274313, "cats": ["travel", "money-and-trade"]}
+{"e": 162135884434372, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 165793780511693, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 181785905435800, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 181952439448988, "cats": ["places"]}
+{"e": 188903920615241, "cats": ["fire", "dwellings"], "tier": "t1000"}
+{"e": 213885335459355, "cats": [], "flag": "needs-human", "note": "editor scratch note, not a lexeme"}
+{"e": 214801017079081, "cats": ["texture-and-materials"]}
+{"e": 216152833098027, "cats": ["dwellings"]}
+{"e": 224951419362577, "cats": [], "flag": "needs-human", "note": "TBA placeholder"}
+{"e": 226240702597482, "cats": [], "flag": "needs-human", "note": "TBA placeholder"}
+{"e": 248136225875827, "cats": ["size-and-shape", "stories-and-writing"]}
+{"e": 252424161397936, "cats": ["faith"], "conf": "m"}
+{"e": 266444145862301, "cats": ["social-life"], "conf": "m"}
+{"e": 275107276889711, "cats": ["amounts", "household"]}
+{"e": 297660862727833, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 304369049271425, "cats": ["people", "character"]}
+{"e": 309361490180699, "cats": ["tobacco-and-smoking"]}
+{"e": 318686003098269, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 325459603491851, "cats": ["swimming", "water"]}
+{"e": 330997902453327, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 331804052855731, "cats": ["fishing"]}
+{"e": 332031340527113, "cats": ["dwellings"]}
+{"e": 340962282419889, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 341205586716966, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 349685748781965, "cats": ["birds"]}
+{"e": 368828090882561, "cats": ["body-actions"]}
+{"e": 376232063632681, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 388307432766323, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 394132513683220, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 394826741916527, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 394892674040997, "cats": ["clothing"], "conf": "m"}
+{"e": 405758348749787, "cats": ["church-rituals"]}
+{"e": 414089403307506, "cats": ["money-and-trade", "condition"], "conf": "m"}
+{"e": 427062779343486, "cats": ["social-life", "character"]}
+{"e": 433309615998281, "cats": ["animals"]}
+{"e": 439202036903365, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 448711386238939, "cats": [], "flag": "needs-human", "note": "placeholder #id headword"}
+{"e": 453771458070636, "cats": [], "flag": "needs-human", "note": "placeholder #id headword"}
+{"e": 456082819567655, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 456528804999991, "cats": ["boats"]}
+{"e": 456810841940739, "cats": ["amounts"], "conf": "m"}
+{"e": 456833864526683, "cats": [], "flag": "needs-human", "note": "no English, headword has ?"}
+{"e": 459472080909023, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 483815240397947, "cats": ["tobacco-and-smoking", "fire"]}
+{"e": 508848171921543, "cats": ["making-and-fixing", "tools"]}
+{"e": 521134993176850, "cats": ["leadership-and-law"], "conf": "m"}
+{"e": 525680723375218, "cats": ["clothing"]}
+{"e": 527231349718543, "cats": ["people"]}
+{"e": 541878361044121, "cats": [], "flag": "needs-human", "note": "no English, headword has ?"}
+{"e": 544102514828645, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 546470536574095, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 557462252955185, "cats": ["dwellings"]}
+{"e": 572208055483087, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 577481495747869, "cats": ["calendar", "trees"]}
+{"e": 587185155084746, "cats": ["numbers"]}
+{"e": 588500306976097, "cats": ["cooking"]}
+{"e": 588643358599283, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 595554430743177, "cats": ["animals"]}
+{"e": 608242766086379, "cats": ["farming", "tools"]}
+{"e": 612498708969785, "cats": ["fire"], "conf": "m"}
+{"e": 612802056691669, "cats": ["sickness", "conflict"], "conf": "m"}
+{"e": 613366077508215, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 613621267426627, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 628233070319343, "cats": ["sickness", "conflict"], "conf": "m"}
+{"e": 646566912378396, "cats": ["making-and-fixing"]}
+{"e": 647284451454127, "cats": ["church-rituals", "dwellings"]}
+{"e": 650495874755893, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 664154227002367, "cats": ["sea-and-rivers"]}
+{"e": 668295193663755, "cats": ["hunting"]}
+{"e": 698652441801277, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 708269250009538, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 726336389474258, "cats": ["boats", "sea-and-rivers"], "conf": "m"}
+{"e": 733989425263745, "cats": ["putting-and-placing"], "conf": "m"}
+{"e": 734889090631137, "cats": ["talking", "going-and-coming"], "conf": "m"}
+{"e": 736913344063585, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 738409004755035, "cats": ["birds", "hunting"]}
+{"e": 740318996674031, "cats": ["time"]}
+{"e": 745737643981689, "cats": ["appearance"], "conf": "m"}
+{"e": 764411956704699, "cats": ["dwellings"]}
+{"e": 767343393700679, "cats": ["trees"]}
+{"e": 775307432005763, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 794009672196839, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 803700911920111, "cats": ["sea-and-rivers"], "conf": "m"}
+{"e": 804473542350164, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 808703851524071, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 831270357892465, "cats": [], "flag": "needs-human", "note": "no English; duplicate headword of 646566912378396"}
+{"e": 850650936881622, "cats": ["social-life", "character"]}
+{"e": 851611705594596, "cats": ["tools"]}
+{"e": 854142574794549, "cats": [], "flag": "needs-human", "note": "TBA placeholder"}
+{"e": 871399511785879, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 872590227634654, "cats": ["dwellings"]}
+{"e": 875439249280809, "cats": ["household"]}
+{"e": 885560741582493, "cats": ["dwellings"]}
+{"e": 889312560972677, "cats": ["clothing"]}
+{"e": 889641286603367, "cats": ["dwellings", "cleaning"]}
+{"e": 890628904953157, "cats": ["thinking"], "conf": "m"}
+{"e": 891578395210747, "cats": ["clothing"]}
+{"e": 895675217080613, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 927939301997521, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 930073488970949, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 930788268629719, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 932642130923867, "cats": ["dwellings"]}
+{"e": 970435535634769, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 976260667926313, "cats": ["putting-and-placing"], "conf": "m"}
+{"e": 991064145405743, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1004183643101797, "cats": ["calendar"]}
+{"e": 1005877957128734, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1032786766489953, "cats": ["basket-making"]}
+{"e": 1033909940643629, "cats": ["birds"]}
+{"e": 1038763948530733, "cats": ["sewing-and-textiles", "vehicles"]}
+{"e": 1041723266610859, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1044598502907503, "cats": ["body-parts"]}
+{"e": 1055294705813847, "cats": ["trees"]}
+{"e": 1056246759186507, "cats": ["sea-and-rivers", "places"], "conf": "m"}
+{"e": 1070563464840451, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1083614013553387, "cats": ["sea-and-rivers"], "conf": "m"}
+{"e": 1088466099529132, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1100339211047057, "cats": ["fire"]}
+{"e": 1107346885602121, "cats": ["sea-and-rivers"]}
+{"e": 1112776467103592, "cats": ["dwellings"]}
+{"e": 1120360488945178, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1125737633416581, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1125801558429787, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1126562968299789, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1133353624076571, "cats": ["condition"], "conf": "m"}
+{"e": 1139561927900629, "cats": ["greetings", "social-life"]}
+{"e": 1140521318365799, "cats": [], "flag": "needs-human", "note": "placeholder #id headword"}
+{"e": 1147272122673675, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1150798063952637, "cats": ["faith"], "conf": "m"}
+{"e": 1152152631076565, "cats": ["greetings"]}
+{"e": 1157485374164207, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1160076983403535, "cats": [], "flag": "needs-human", "note": "grammatical prefix note, not a lexeme"}
+{"e": 1161177541449585, "cats": ["music-and-dance"]}
+{"e": 1180100874486135, "cats": ["hearing", "music-and-dance"]}
+{"e": 1196224797488666, "cats": ["trees"]}
+{"e": 1196579986507585, "cats": ["trees", "tools"]}
+{"e": 1220889731209078, "cats": ["posture"]}
+{"e": 1226800744149148, "cats": [], "flag": "needs-human", "note": "placeholder #id headword"}
+{"e": 1226936802726505, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1236126193838309, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1237113122880007, "cats": ["plants", "healing"]}
+{"e": 1240424163394502, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1269554736801289, "cats": ["church-rituals"]}
+{"e": 1282131078489413, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1286082406037183, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1294057116201428, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1298037725116693, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1298051916947763, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1309142602606101, "cats": ["good-and-bad"]}
+{"e": 1311090855777857, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1313314138688730, "cats": ["farm-animals"]}
+{"e": 1317716542161887, "cats": ["love-and-joy"]}
+{"e": 1337960308695117, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1347574982016521, "cats": ["dwellings"]}
+{"e": 1352065178681209, "cats": ["travel"]}
+{"e": 1352741132296563, "cats": ["hunting"]}
+{"e": 1353707872097737, "cats": ["location-words"]}
+{"e": 1359827815252851, "cats": ["sea-and-rivers"]}
+{"e": 1361926334888966, "cats": ["dwellings"]}
+{"e": 1363154789074205, "cats": ["faith", "leadership-and-law"], "conf": "m"}
+{"e": 1363177725346629, "cats": ["family", "household"]}
+{"e": 1363996104238589, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1374317915794787, "cats": ["clothing"]}
+{"e": 1390707134424331, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1392687828147580, "cats": ["farming", "land"]}
+{"e": 1395175708537477, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1395829710041157, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1396879119958603, "cats": ["putting-and-placing"], "conf": "m"}
+{"e": 1400882026670713, "cats": ["character", "body-descriptions"], "conf": "m"}
+{"e": 1403428992332981, "cats": ["amounts"], "conf": "m"}
+{"e": 1408598049531797, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1414951365656199, "cats": ["clothing", "church-rituals"], "conf": "m"}
+{"e": 1424610943029538, "cats": ["church-rituals"], "conf": "m"}
+{"e": 1425026982297504, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1429470231082599, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1446889588025243, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1466712039996911, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1468022916213017, "cats": [], "flag": "needs-human", "note": "grammatical prefix note, not a lexeme"}
+{"e": 1484627701318899, "cats": ["dwellings", "cleaning"]}
+{"e": 1489077408181085, "cats": ["going-and-coming"]}
+{"e": 1494907937272933, "cats": ["death-and-mourning"]}
+{"e": 1512618208115719, "cats": ["dwellings"]}
+{"e": 1520188328069023, "cats": ["breaking"]}
+{"e": 1521082115029461, "cats": ["stories-and-writing"]}
+{"e": 1533058916495825, "cats": ["fear-anger-sadness"]}
+{"e": 1552713974725463, "cats": ["land", "hunting"]}
+{"e": 1560324957606499, "cats": ["talking", "social-life"]}
+{"e": 1568931660785047, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1574962240536925, "cats": ["dwellings"]}
+{"e": 1591568236938695, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1600108617027699, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1613348752756453, "cats": ["breaking"]}
+{"e": 1618024752738103, "cats": ["social-life"], "conf": "m"}
+{"e": 1622380383495175, "cats": ["dwellings", "question-words"]}
+{"e": 1629492765695933, "cats": ["social-life"], "conf": "m"}
+{"e": 1634962693088916, "cats": ["animals", "sewing-and-textiles"]}
+{"e": 1636742143202933, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1638893175641995, "cats": ["hunting"]}
+{"e": 1652028196344725, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1655798670309521, "cats": ["dwellings"]}
+{"e": 1656218218096779, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1668336634360201, "cats": ["farming", "fastening"]}
+{"e": 1678916744599345, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1679597099698207, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1681422997433439, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1684375273490537, "cats": ["temperature", "weather"], "conf": "m"}
+{"e": 1689863049635937, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1698497713797007, "cats": [], "flag": "needs-human", "note": "no English"}
+{"e": 1701875882432623, "cats": ["places"]}
+{"e": 1703113610695429, "cats": ["household"]}
+{"e": 1706794600384191, "cats": ["breaking"]}
