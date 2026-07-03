@@ -181,6 +181,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
              ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               'Admin'],
              ['ul', {class:'dropdown-menu'},
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.changes()'}, 'Recent Changes']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.publish.startPublish()'}, 'Publish']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.usersPage()'}, 'Users']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.categoriesPage()'}, 'Category Table']],

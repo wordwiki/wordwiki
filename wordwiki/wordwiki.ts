@@ -35,6 +35,7 @@ import {serialize, path} from '../liminal/serializable.ts';
 import {route, routeMutation, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
+import {ChangeFeed} from './change-feed.ts';
 import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
@@ -120,6 +121,13 @@ export class WordWiki extends LiminalApp {
     #lexeme: LexemeEditor|undefined = undefined;
     @route(authenticated) @path get lexeme(): LexemeEditor {
         return this.#lexeme ??= new LexemeEditor(this);
+    }
+
+    // The global change feed, reachable as wordwiki.feed.* (page alias:
+    // wordwiki.changes(<before>)).  See change-feed.ts.
+    #feed: ChangeFeed|undefined = undefined;
+    @route(authenticated) @path get feed(): ChangeFeed {
+        return this.#feed ??= new ChangeFeed(this);
     }
 
     // The scanned-document / page editor, reachable as wordwiki.pages.*
@@ -430,6 +438,14 @@ export class WordWiki extends LiminalApp {
         return this.lexeme.entryPage(entry_id, 'edit', since);
     }
 
+    // The global change feed (see change-feed.ts).  One {}-literal query
+    // argument (feedQuery) fully determines the page; a visit with no to_time
+    // redirects here with it stamped, so the anchor rides in the browser URL.
+    @route(authenticated)
+    changes(q?: Record<string, any>): templates.Page | server.Response {
+        return this.feed.changesPage(q);
+    }
+
     @route(authenticated)
     home(): any {
         const title = "Dictionary Editor";
@@ -442,6 +458,11 @@ export class WordWiki extends LiminalApp {
             // --- Add new entry button
             // ['div', {},
             //  ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
+
+            ['br', {}],
+            ['h3', {}, 'Review'],
+            ['ul', {},
+             ['li', {}, ['a', {href:'/ww/wordwiki.changes()'}, 'Recent changes']]],
 
             ['br', {}],
             ['h3', {}, 'Reports'],

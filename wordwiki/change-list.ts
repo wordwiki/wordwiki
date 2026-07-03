@@ -92,6 +92,10 @@ export interface ChangeGroup {
     // fragment, so an action that touches one fact re-renders just its group -
     // not the whole page.  Defaults to a plain lm-cl-group div.
     attrs?: Record<string, any>;
+    // Show each line's subject.  Off (the default) for single-fact review
+    // groups, whose field is the header; on for groups spanning facts (a feed
+    // clump is one LEXEME's session, so its lines need their field).
+    showSubject?: boolean;
 }
 
 /** One group: its header + its event lines.  Rendered both inline (the list)
@@ -100,7 +104,7 @@ export function renderChangeGroup(g: ChangeGroup): Markup {
     return ["div", g.attrs ?? { class: "lm-cl-group" },
         ["div", { class: "lm-cl-group-header" }, g.header],
         ["div", { class: "lm-cl-group-body" },
-         g.events.map(e => renderChangeEvent(e, { showSubject: false }))]];
+         g.events.map(e => renderChangeEvent(e, { showSubject: g.showSubject ?? false }))]];
 }
 
 export function renderGroupedChangeList(groups: ChangeGroup[],
