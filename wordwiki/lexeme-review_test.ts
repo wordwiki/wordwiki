@@ -14,6 +14,7 @@ import { withTestDb, as, TestTimeline, mkEntry, mkChild, mkEdit, mkTombstone,
          bornApprove, type Fixture } from "./testing.ts";
 import { classifyFact } from "./versioned-model.ts";
 import { markupToString } from "../liminal/markup.ts";
+import { isRedirectResponse } from "../liminal/http-server.ts";
 import * as timestamp from "../liminal/timestamp.ts";
 
 const EOT = timestamp.END_OF_TIME;
@@ -89,8 +90,8 @@ function seedClean(fx: Fixture) {
     return {tl, e, spl, sub, cat};
 }
 
-const reviewHtml = (fx: Fixture, participant = "", full = "") =>
-    markupToString(fx.ww.lexeme.renderEntry(1000, "review", participant, full));
+const reviewHtml = (fx: Fixture, participant = "", full = "", since = 0) =>
+    markupToString(fx.ww.lexeme.renderEntry(1000, "review", participant, full, since));
 const editHtml = (fx: Fixture) =>
     markupToString(fx.ww.lexeme.renderEntry(1000, "edit"));
 
@@ -368,6 +369,123 @@ test("edit dialog: carries an optional change-note field", async () => {
             const dialog = markupToString(fx.ww.lexeme.editDialog(1000, 1010));
             assertStringIncludes(dialog, "change_note");
             assertStringIncludes(dialog, "Note (optional)");
+        });
+    });
+});
+
+// --- Sitting receipts (the since-anchor) -----------------------------------------
+//
+// A review sitting is anchored at the db's top tx timestamp when the page was
+// entered (`since`, stamped into the URL by entryPage).  A fact settled by a
+// review action NEWER than the anchor stays in the queue as a receipt - flipped
+// to "approved ✓"/"rejected" in place - instead of vanishing (which reads as
+// "did that work?").  A fresh sitting (new anchor) starts with a clean queue.
+
+test("review receipts: an approval during the sitting flips the group in place", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})],
+                                   {quiet: true});
+        });
+        const anchor = fx.ww.lastAllocatedTxTimestamp;   // the sitting opens on the pending edit
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1010));
+        as(fx, "dmm", () => {
+            // Within the sitting: the group stays, flipped to its outcome.
+            const html = reviewHtml(fx, "everyone", "", anchor);
+            assertStringIncludes(html, "lm-cl-group");
+            assertStringIncludes(html, "approved ✓");
+            assertStringIncludes(html, "XYZZY");                      // the accepted value
+            assertStringIncludes(html, "lm-cl-chip-approved");        // ...with the approver's chip
+            assertEquals(html.includes("needs approval"), false);     // no longer actionable
+            assertEquals(html.includes("reviewApprove"), false);
+            assertStringIncludes(html, "nothing pending");            // receipts aren't pending
+            // A NEW sitting (anchored now): the settled fact has left the queue.
+            const fresh = reviewHtml(fx, "everyone", "", fx.ww.lastAllocatedTxTimestamp);
+            assertEquals(fresh.includes("lm-cl-group"), false);
+            // No anchor (an old link / pre-anchor fragment URL): no receipts.
+            assertEquals(reviewHtml(fx).includes("lm-cl-group"), false);
+        });
+    });
+});
+
+test("review receipts: a reject (revert) shows as a rejected receipt with its note", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})],
+                                   {quiet: true});
+        });
+        const anchor = fx.ww.lastAllocatedTxTimestamp;
+        as(fx, "dmm", () => fx.ww.lexemeOps.revertFact(1010, "not attested in the sources"));
+        as(fx, "dmm", () => {
+            const html = reviewHtml(fx, "everyone", "", anchor);
+            assertStringIncludes(html, "rejected");
+            assertStringIncludes(html, "lm-cl-chip-reverted");
+            assertStringIncludes(html, "not attested in the sources");
+            assertEquals(html.includes("needs approval"), false);
+        });
+    });
+});
+
+test("review receipts: an approved DELETION stays visible as a receipt", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, cat} = seedClean(fx);
+            fx.ww.applyTransaction([mkTombstone(cat, 2110, tl.next())], {quiet: true});
+        });
+        const anchor = fx.ww.lastAllocatedTxTimestamp;
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1110));   // the category fact
+        as(fx, "dmm", () => {
+            const html = reviewHtml(fx, "everyone", "", anchor);
+            assertStringIncludes(html, "deletion approved ✓");
+            assertStringIncludes(html, "water");                  // what was removed
+            // A fresh sitting hides the settled deletion again.
+            const fresh = reviewHtml(fx, "everyone", "", fx.ww.lastAllocatedTxTimestamp);
+            assertEquals(fresh.includes("lm-cl-group"), false);
+        });
+    });
+});
+
+test("review receipts: the acted-on group fragment re-renders as a receipt, not empty", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "XYZZY"})],
+                                   {quiet: true});
+        });
+        const anchor = fx.ww.lastAllocatedTxTimestamp;
+        as(fx, "dmm", () => {
+            // The anchored queue's group fragment carries the anchor in its own
+            // hx-get, so the post-action reload re-renders with the same sitting.
+            assertStringIncludes(reviewHtml(fx, "everyone", "", anchor),
+                `renderReviewGroupFragment(1000, 1010, 'everyone', '', ${anchor})`);
+            fx.ww.lexeme.reviewApprove(1000, 1010);
+            const g = markupToString(fx.ww.lexeme.renderReviewGroupFragment(
+                1000, 1010, "everyone", "", anchor));
+            assertStringIncludes(g, "approved ✓");                // the in-place receipt
+            // Un-anchored (legacy), the fragment still removes itself.
+            assertEquals(markupToString(fx.ww.lexeme.renderReviewGroupFragment(
+                1000, 1010, "everyone", "")), "");
+        });
+    });
+});
+
+test("entry page: an un-anchored visit redirects to the canonical URL with the anchor", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            seedClean(fx);
+            const t = fx.ww.lastAllocatedTxTimestamp;
+            const r: any = fx.ww.lexeme.entryPage(1000);
+            assert(isRedirectResponse(r));
+            // No space in the canonical URL (it would show as %20 in the bar).
+            assertEquals(r.headers.Location, `/ww/wordwiki.entry(1000,${t})`);
+            // The review-mode form keeps the mode across the redirect.
+            const r2: any = fx.ww.lexeme.entryPage(1000, "review");
+            assertEquals(r2.headers.Location,
+                         `/ww/wordwiki.lexeme.entryPage(1000,'review',${t})`);
+            // An anchored visit renders the page - no loop.
+            assertEquals(isRedirectResponse(fx.ww.lexeme.entryPage(1000, "edit", t)), false);
         });
     });
 });

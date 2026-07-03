@@ -60,7 +60,8 @@ import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
 import {route, authenticated} from '../liminal/security.ts';
-import {classifyFact, isComment, type FactReview} from './versioned-model.ts';
+import {classifyFact, isComment, latestContentVersion, type FactReview} from './versioned-model.ts';
+import * as server from '../liminal/http-server.ts';
 import {renderGroupedChangeList, renderChangeGroup, initials,
         type ChangeEvent, type ChangeKind, type ChangeGroup} from './change-list.ts';
 import {diffValues} from './diff.ts';
@@ -322,8 +323,24 @@ export type EditMode = 'edit' | 'review';
 // Review-mode view state, carried in the entry fragment's hx-get so a reload
 // preserves it.  `participant` is a username whose threads to show, or
 // 'everyone'; `full` extends each fact's timeline back past the published
-// baseline to creation.
-export interface ReviewOpts { participant: string; full: boolean; }
+// baseline to creation.  `since` is the sitting's anchor - the db's top
+// tx timestamp when the page was entered (stamped into the URL by entryPage).
+// A fact settled by a review action NEWER than `since` stays visible as a
+// receipt (flipped to "approved ✓"/"rejected") instead of vanishing from the
+// queue; 0 = no anchor (an old link), which disables receipts.
+export interface ReviewOpts { participant: string; full: boolean; since: number; }
+
+/** The receipt outcome for a fact settled during this sitting: the review
+ *  action newer than the `since` anchor, or undefined.  Reads the latest
+ *  content version only - a fresh pending edit on top of a sitting's approval
+ *  puts the fact back in the queue, receipt gone. */
+function factReceipt(t: VersionedTuple, since: number): 'approved'|'reverted'|undefined {
+    if(!(since > 0)) return undefined;
+    const content = latestContentVersion(t.tupleVersions.map(v => v.assertion));
+    if(!content || content.valid_from <= since) return undefined;
+    const a = content.change_action;
+    return a === 'approved' || a === 'reverted' ? a : undefined;
+}
 
 // ---------------------------------------------------------------------------
 // --- Value rendering (module-level: drives both the edit surface and the ----
@@ -447,10 +464,23 @@ export class LexemeEditor {
     // ------------------------------------------------------------------------
 
     @route(authenticated)
-    entryPage(entry_id: number, mode: EditMode = 'edit'): templates.Page {
+    entryPage(entry_id: number, mode: EditMode = 'edit',
+              since: number = 0): templates.Page | server.Response {
+        // The sitting anchor: an un-anchored visit redirects to the canonical
+        // URL stamped with the db's top tx timestamp, so the anchor lives in
+        // the browser URL - refresh/back keep the sitting (review receipts
+        // persist); navigating in fresh re-stamps it (a clean queue).
+        if(!(since > 0)) {
+            const t = this.app.lastAllocatedTxTimestamp;
+            // No space after the comma: it would percent-encode to %20 in the
+            // address bar (this URL is the one users see and share).
+            return server.forwardResponse(mode === 'edit'
+                ? `/ww/wordwiki.entry(${entry_id},${t})`
+                : `${R}.entryPage(${entry_id},'${mode}',${t})`);
+        }
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
-        return templates.page(title, this.renderEntry(entry_id, mode));
+        return templates.page(title, this.renderEntry(entry_id, mode, '', '', since));
     }
 
     /** The root-level fragment: the whole entry (heading + all relations).  The
@@ -458,16 +488,17 @@ export class LexemeEditor {
      *  fragment's hx-get, so every in-place reload re-renders identically. */
     @route(authenticated)
     renderEntry(entry_id: number, mode: EditMode = 'edit',
-                participant: string = '', full: string = ''): Markup {
+                participant: string = '', full: string = '',
+                since: number = 0): Markup {
         const entryTuple = this.entryTuple(entry_id);
         const q = new CurrentTupleQuery(entryTuple);
         const e = this.app.entriesById.get(entry_id);
         const heading = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
 
-        const opts = this.reviewOpts(participant, full);
+        const opts = this.reviewOpts(participant, full, since);
         const hxGet = mode === 'review'
-            ? `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${opts.full ? 'full' : ''}')`
-            : `${R}.renderEntry(${entry_id}, 'edit')`;
+            ? `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${opts.full ? 'full' : ''}', ${opts.since})`
+            : `${R}.renderEntry(${entry_id}, 'edit', '', '', ${opts.since})`;
 
         return (
             ['div', {class: `-entry-${entry_id}- container py-3`,
@@ -495,20 +526,23 @@ export class LexemeEditor {
                     this.participantControl(entry_id, entryTuple, opts),
                     this.fullHistoryToggle(entry_id, opts),
                     this.modeSwapButton(entry_id, 'edit', 'Edit entry',
-                                        'btn btn-sm btn-outline-secondary ms-auto')];
+                                        'btn btn-sm btn-outline-secondary ms-auto', opts.since)];
         }
         const n = this.entryPendingCount(entryTuple, 'everyone');
         return ['div', {class: 'd-flex mb-2'},
                 this.modeSwapButton(entry_id, 'review', `Review changes${n>0?` (${n})`:''}`,
-                     `btn btn-sm ms-auto ${n>0?'btn-outline-warning':'btn-outline-secondary'}`)];
+                     `btn btn-sm ms-auto ${n>0?'btn-outline-warning':'btn-outline-secondary'}`,
+                     opts.since)];
     }
 
     // A button that swaps the entry fragment into the other mode (review opens
-    // with the default participant/full, resolved server-side).
-    private modeSwapButton(entry_id: number, to: EditMode, label: Markup, cls: string): Markup {
+    // with the default participant/full, resolved server-side).  The sitting's
+    // `since` anchor rides across the swap in both directions.
+    private modeSwapButton(entry_id: number, to: EditMode, label: Markup, cls: string,
+                           since: number): Markup {
         const url = to === 'review'
-            ? `${R}.renderEntry(${entry_id}, 'review')`
-            : `${R}.renderEntry(${entry_id}, 'edit')`;
+            ? `${R}.renderEntry(${entry_id}, 'review', '', '', ${since})`
+            : `${R}.renderEntry(${entry_id}, 'edit', '', '', ${since})`;
         return ['button', {type: 'button', class: cls,
                            'hx-get': url, 'hx-target': `.-entry-${entry_id}-`,
                            'hx-swap': 'outerHTML'}, label];
@@ -522,7 +556,7 @@ export class LexemeEditor {
         const me = this.app.currentUsername();
         if(me && !people.includes(me)) people.unshift(me);
         const reviewUrl = (p: string) =>
-            `${R}.renderEntry(${entry_id}, 'review', '${p}', '${opts.full ? 'full' : ''}')`;
+            `${R}.renderEntry(${entry_id}, 'review', '${p}', '${opts.full ? 'full' : ''}', ${opts.since})`;
         const item = (value: string, text: string) =>
             ['li', {}, ['button', {type: 'button',
                 class: `dropdown-item ${value === opts.participant ? 'active' : ''}`,
@@ -543,7 +577,7 @@ export class LexemeEditor {
         const to = opts.full ? '' : 'full';
         return ['button', {type: 'button',
             class: `btn btn-sm ${opts.full ? 'btn-secondary' : 'btn-outline-secondary'}`,
-            'hx-get': `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${to}')`,
+            'hx-get': `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${to}', ${opts.since})`,
             'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'},
             opts.full ? 'Full history ✓' : 'Full history'];
     }
@@ -931,18 +965,25 @@ export class LexemeEditor {
     /** One fact's review group, as its OWN reloadable fragment - or null when
      *  the fact does not belong in the current view (settled in the queue,
      *  filtered out, or pure import).  An action that touches this fact reloads
-     *  just `.-review-group-<fact_id>-`: it re-renders here (a comment lands),
-     *  or returns nothing and the fragment removes itself (an approval). */
+     *  just `.-review-group-<fact_id>-`: it re-renders here - reclassified, or
+     *  flipped to a receipt when the action settled it this sitting - or
+     *  returns nothing and the fragment removes itself (a fact settled BEFORE
+     *  the sitting's anchor, gone from the queue). */
     private reviewGroupFor(entry_id: number, t: VersionedTuple,
                            opts: ReviewOpts): ChangeGroup | null {
         if(t.tupleVersions.length === 0) return null;
         if(opts.participant !== 'everyone'
            && !this.participantActiveOnFact(t, opts.participant)) return null;
         const review = classifyFact(t.tupleVersions.map(v => v.assertion), timestamp.END_OF_TIME);
-        if(review.state === 'hidden') return null;   // settled, no-longer-public deletion
+        // A receipt keeps the group in view: settling a fact must flip it in
+        // place ("approved ✓"), not vanish it - disappearance reads as "did
+        // that work?", and rows vanishing shift the queue under the pointer.
+        const receipt = factReceipt(t, opts.since);
+        // settled, no-longer-public deletion - unless settled this sitting
+        if(review.state === 'hidden' && !receipt) return null;
         const pending = review.state === 'added' || review.state === 'edited'
             || review.state === 'removed';
-        if(!opts.full && !pending) return null;      // the queue: pending facts only
+        if(!opts.full && !pending && !receipt) return null;  // the queue: pending + receipts
         // The imported base set is filtered everywhere in the review (it is not
         // human activity); a fact left with no human events drops out.
         const events = this.factChangeEvents(t.schema, t, opts.full, true);
@@ -951,10 +992,11 @@ export class LexemeEditor {
             attrs: {
                 class: `-review-group-${t.id}- lm-cl-group`,
                 'hx-get': `${R}.renderReviewGroupFragment(${entry_id}, ${t.id}, `
-                        + `'${opts.participant}', '${opts.full ? 'full' : ''}')`,
+                        + `'${opts.participant}', '${opts.full ? 'full' : ''}', ${opts.since})`,
                 'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
             },
-            header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending),
+            header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending,
+                                           pending ? undefined : receipt),
             events,
         };
     }
@@ -962,12 +1004,13 @@ export class LexemeEditor {
     // The default review view-state (an approver lands on EVERYONE - their
     // queue; a plain contributor on their OWN threads), shared by renderEntry
     // and the per-group/count fragments so a reload keeps the same view.
-    private reviewOpts(participant: string, full: string): ReviewOpts {
+    private reviewOpts(participant: string, full: string, since: number = 0): ReviewOpts {
         return {
             participant: participant
                 || (this.app.lexemeOps.hasApprovePermission()
                     ? 'everyone' : (this.app.currentUsername() ?? 'everyone')),
             full: full === 'full',
+            since: since > 0 ? since : 0,
         };
     }
 
@@ -975,8 +1018,9 @@ export class LexemeEditor {
      *  nothing (so htmx removes it) when the fact has left the view. */
     @route(authenticated)
     renderReviewGroupFragment(entry_id: number, fact_id: number,
-                              participant: string = '', full: string = ''): Markup {
-        const opts = this.reviewOpts(participant, full);
+                              participant: string = '', full: string = '',
+                              since: number = 0): Markup {
+        const opts = this.reviewOpts(participant, full, since);
         const tuple = this.findTupleInEntry(entry_id, fact_id);
         const g = this.reviewGroupFor(entry_id, tuple, opts);
         return g ? renderChangeGroup(g) : [];
@@ -1004,10 +1048,19 @@ export class LexemeEditor {
     // with DIRECT Approve / Reject buttons (the primary decision shouldn't hide
     // in a menu).  A small ☰ holds the rarer actions (comment, edit, and
     // revert-to-a-past-value, which opens the history picker rather than putting
-    // a per-version menu on every row).
+    // a per-version menu on every row).  A fact settled during this sitting
+    // carries its outcome as a receipt badge instead - the reviewer's
+    // confirmation that the action landed (and who made it: the event's chip).
     private changeGroupHeader(entry_id: number, fact_id: number, rf: model.RelationField,
-                              review: FactReview<Assertion>, pending: boolean): Markup {
+                              review: FactReview<Assertion>, pending: boolean,
+                              receipt?: 'approved'|'reverted'): Markup {
         const parts: Markup[] = [['span', {class: 'lm-cl-field'}, rf.prompt]];
+        if(receipt) {
+            parts.push(receipt === 'approved'
+                ? ['span', {class: 'badge text-bg-success'},
+                   review.state === 'hidden' ? 'deletion approved ✓' : 'approved ✓']
+                : ['span', {class: 'badge text-bg-secondary'}, 'rejected']);
+        }
         if(pending) {
             parts.push(['span', {class: 'badge text-bg-warning'}, 'needs approval']);
             if(this.app.lexemeOps.mayApprove(review.content.change_by_username ?? null))

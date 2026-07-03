@@ -422,10 +422,12 @@ export class WordWiki extends LiminalApp {
     }
 
     // The entry editor (the server-side htmx lexeme editor - the old
-    // client-side editor is retired).
+    // client-side editor is retired).  `since` is the sitting anchor (see
+    // LexemeEditor.entryPage): an un-anchored visit redirects here with it
+    // stamped, so it rides in the browser URL.
     @route(authenticated)
-    entry(entry_id: number): templates.Page {
-        return this.lexeme.entryPage(entry_id);
+    entry(entry_id: number, since: number = 0): templates.Page | server.Response {
+        return this.lexeme.entryPage(entry_id, 'edit', since);
     }
 
     @route(authenticated)
