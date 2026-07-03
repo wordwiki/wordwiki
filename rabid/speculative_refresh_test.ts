@@ -1,15 +1,15 @@
 // deno-lint-ignore-file no-explicit-any
 // Speculative one-round-trip refresh (liminal.ts applySpeculation + the
-// txd/renderForm speculation declarations): a mutation whose ACTUAL dirty set
-// is a subset of the client's SPECULATED set gets its affected fragments
-// rendered into the same response ({action:'swap'}); anything else falls back
-// to the plain {action:'reload'} two-trip flow, annotated with a
-// speculation marker.  Section urls are client-supplied and go through the
-// normal route interpreter as GETs, so mutations/denied/undeclared routes all
-// fall back rather than render.
+// txd/renderForm speculation declarations), HYBRID semantics: the mutation's
+// actual dirty set (auto-emitted; see dirty_keys_test.ts) is partitioned
+// against the client's speculation - anticipated keys get their sections
+// rendered into the same response ({action:'swap'}), leftover keys ride along
+// as reloadTargets for the client to resolve (and mostly prune) the old way.
+// Only a round with NOTHING anticipated (or a malformed/failed speculation)
+// falls back to the plain {action:'reload'} flow with a speculation marker.
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals } from "../liminal/testing/assert.ts";
-import { withTestDb, asUser, asSystem, as } from "./testing.ts";
+import { withTestDb, asUser, asSystem, as, invoke } from "./testing.ts";
 import { rabid, getRabid } from "./rabid.ts";
 import * as markup from "../liminal/markup.ts";
 
@@ -25,65 +25,72 @@ function seedTask(): {project_id: number, task_id: number} {
 
 const blockUrl = (task_id: number) => `rabid.task.renderTaskBlockById(${task_id})`;
 
-test("speculation hit: mutation + section render in one response; over-speculated sections skipped", async () => {
+test("hybrid hit: anticipated section rendered in-response; leftover keys returned as reloadTargets", async () => {
     await withTestDb(async ({ alice }) => {
-        const { task_id } = seedTask();
+        const { project_id, task_id } = seedTask();
         await as(alice, async () => {
-            const result = rabid.task.toggleDone(task_id) as any;
-            assertEquals(result, {action: 'reload', targets: [`.-task-${task_id}-`]});
+            // invoke = production shape: hand result merged with the
+            // automatic emission (row + table + fk keys + provenance).
+            const result = await invoke(`rabid.task.toggleDone($arg0)`, task_id);
+            assert(result.targets.includes(`.-task-${task_id}-`));
+            assert(result.targets.includes('.-task-'));
+            assert(result.targets.includes(`.-task-project_id-${project_id}-`));
 
+            const rowKey = `.-task-${task_id}-`;
             const swapped = await getRabid().applySpeculation(result, {
-                deps: [`.-task-${task_id}-`, '.-volunteer-'],
+                deps: [rowKey, '.-volunteer-'],
                 sections: [
-                    {url: blockUrl(task_id), keys: [`.-task-${task_id}-`]},
+                    {url: blockUrl(task_id), keys: [rowKey]},
                     // matched only by an over-speculated (not actually dirty)
                     // key - must NOT be rendered.
                     {url: 'rabid.task.renderTaskBlockById(999999)', keys: ['.-volunteer-']},
                 ],
             });
             assertEquals(swapped.action, 'swap');
-            assertEquals(swapped.targets, [`.-task-${task_id}-`]);
             assertEquals(swapped.sections.length, 1);
             assertEquals(swapped.sections[0].url, blockUrl(task_id));
-            // The html is the bare fragment (no document wrapper), rendered
-            // with the post-mutation state.
+            // Unanticipated keys (table key, fk keys, done_by provenance)
+            // come back for the client to resolve/prune - NOT a miss.
+            assert(Array.isArray(swapped.reloadTargets));
+            assert(swapped.reloadTargets.includes('.-task-'));
+            assert(swapped.reloadTargets.includes(`.-task-project_id-${project_id}-`));
+            assert(!swapped.reloadTargets.includes(rowKey));
+            // The html is the bare fragment, rendered with post-mutation state.
             const expected = await markup.asyncRenderToStringViaLinkeDOM(
                 await getRabid().dispatch(blockUrl(task_id), {httpMethod: 'GET'}), false);
             assertEquals(swapped.sections[0].html, expected);
             assert(!swapped.sections[0].html.includes('<html'));
-            assert(swapped.sections[0].html.includes('Book truck'));
         });
     });
 });
 
-test("speculation hit: a leading '/' on a section url is tolerated (wordwiki-style hx-gets)", async () => {
+test("full-coverage speculation has no reloadTargets; leading '/' section urls tolerated", async () => {
     await withTestDb(async ({ alice }) => {
         const { task_id } = seedTask();
         await as(alice, async () => {
-            const result = rabid.task.toggleDone(task_id) as any;
+            const result = await invoke(`rabid.task.toggleDone($arg0)`, task_id);
             const swapped = await getRabid().applySpeculation(result, {
-                deps: [`.-task-${task_id}-`],
+                deps: result.targets,   // speculate everything actually emitted
                 sections: [{url: '/' + blockUrl(task_id), keys: [`.-task-${task_id}-`]}],
             });
             assertEquals(swapped.action, 'swap');
             assertEquals(swapped.sections.length, 1);
+            assertEquals(swapped.reloadTargets, undefined);
         });
     });
 });
 
-test("under-speculation: an unanticipated target falls back with speculation:'miss'", async () => {
+test("nothing anticipated -> plain reload with speculation:'miss'", async () => {
     await withTestDb(async ({ alice }) => {
         const { task_id } = seedTask();
         await as(alice, async () => {
-            // moveUp dirties the whole table ('.-task-'), which the (bad)
-            // speculation below did not anticipate.
-            const result = rabid.task.moveUp(task_id) as any;
-            assertEquals(result.targets, ['.-task-']);
+            const result = await invoke(`rabid.task.moveUp($arg0)`, task_id);
             const out = await getRabid().applySpeculation(result, {
-                deps: [`.-task-${task_id}-`],
-                sections: [{url: blockUrl(task_id), keys: [`.-task-${task_id}-`]}],
+                deps: ['.-task-999999-'],   // matches no actual target
+                sections: [{url: blockUrl(task_id), keys: ['.-task-999999-']}],
             });
-            assertEquals(out, {...result, speculation: 'miss'});
+            assertEquals(out.action, 'reload');
+            assertEquals(out.speculation, 'miss');
         });
     });
 });
@@ -92,7 +99,7 @@ test("a section url naming a mutation is rejected (GET) and falls back with spec
     await withTestDb(async ({ alice }) => {
         const { task_id } = seedTask();
         await as(alice, async () => {
-            const result = rabid.task.toggleDone(task_id) as any;
+            const result = await invoke(`rabid.task.toggleDone($arg0)`, task_id);
             const out = await getRabid().applySpeculation(result, {
                 deps: [`.-task-${task_id}-`],
                 sections: [{url: `rabid.task.toggleDone(${task_id})`, keys: [`.-task-${task_id}-`]}],
@@ -129,19 +136,23 @@ test("denied and undeclared section urls fall back with speculation:'error'", as
     });
 });
 
-test("insert: whole-table speculation ('.-table-') covers the no-pk saveForm path", async () => {
+test("insert: whole-table speculation anticipates the wrapper; the new row's pk key is leftover", async () => {
     await withTestDb(async ({ alice }) => {
         const { task_id } = seedTask();
         await as(alice, async () => {
-            const result = rabid.project.saveForm({name: 'Plant Sale', 'before-name': ''}) as any;
-            assertEquals(result, {action: 'reload', targets: ['.-project-']});
-            // The section stands in for a list wrapper tagged '.-project-'.
+            const result = await invoke(`rabid.project.saveForm($arg0)`,
+                                        {name: 'Plant Sale', 'before-name': ''});
+            assert(result.targets.includes('.-project-'));
+            // The section stands in for a list wrapper registered '.-project-'.
             const swapped = await getRabid().applySpeculation(result, {
                 deps: ['.-project-'],
                 sections: [{url: blockUrl(task_id), keys: ['.-project-']}],
             });
             assertEquals(swapped.action, 'swap');
             assertEquals(swapped.sections.length, 1);
+            // The new row's pk key can't be speculated - it rides as leftover
+            // (and the client prunes it: no fragment carries it yet).
+            assert((swapped.reloadTargets ?? []).some((t: string) => /^\.-project-\d+-$/.test(t)));
         });
     });
 });
@@ -165,33 +176,19 @@ test("malformed speculation and the section cap fall back ('error' / 'skipped')"
     });
 });
 
-test("speculatedSaveTargets mirrors saveForm: base pk/no-pk, subtask task-key, timesheet volunteer_time rider", async () => {
-    await withTestDb(({ bob }) => {
-        // Base default: pk -> row key; no pk -> table key.
-        assertEquals(rabid.project.speculatedSaveTargets({project_id: 7} as any), ['.-project-7-']);
-        assertEquals(rabid.project.speculatedSaveTargets({} as any), ['.-project-']);
-        // Subtask: keyed by the parent TASK (matches its saveForm retarget).
-        assertEquals(rabid.subtask.speculatedSaveTargets({subtask_id: 3, task_id: 9} as any),
-                     ['.-subtask-9-']);
-        // Timesheet: the volunteer_time fragment rides along on updates
-        // (matches its saveForm target-append).
-        assertEquals(rabid.timesheet_entry.speculatedSaveTargets(
-                         {timesheet_entry_id: 4, volunteer_id: bob} as any),
-                     ['.-timesheet_entry-4-', `.-volunteer_time-${bob}-`]);
-        assertEquals(rabid.timesheet_entry.speculatedSaveTargets({} as any),
-                     ['.-timesheet_entry-']);
-    });
-});
-
-test("renderForm's default dispatch speculates via txd(speculatedSaveTargets)", async () => {
+test("renderForm's default dispatch speculates via txd(dirtyKeysFor-derived defaults)", async () => {
     await withTestDb(async ({ alice }) => {
-        const { task_id } = seedTask();
+        const { project_id, task_id } = seedTask();
         const form = await as(alice, () =>
             rabid.task.renderForm(asSystem(() => rabid.task.getById(task_id))));
         const onsubmit = findOnsubmit(form);
         assert(typeof onsubmit === 'string', 'edit form has an onsubmit');
-        assert(onsubmit!.includes(`txd(["` + `.-task-${task_id}-` + `"])`),
+        assert(onsubmit!.startsWith('event.preventDefault(); txd('),
+               `onsubmit dispatches via txd: ${onsubmit}`);
+        assert(onsubmit!.includes(`.-task-${task_id}-`),
                `onsubmit speculates the row key: ${onsubmit}`);
+        assert(onsubmit!.includes(`.-task-project_id-${project_id}-`),
+               `onsubmit speculates the project fk key: ${onsubmit}`);
         assert(onsubmit!.includes('rabid.task.saveForm('),
                `onsubmit still dispatches saveForm: ${onsubmit}`);
     });

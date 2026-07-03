@@ -109,9 +109,10 @@ test("check-in: self-signup is always allowed and idempotent", async () => {
         // A regular volunteer checks themselves in (no host role needed).
         const res = await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
         assertEquals(res.action, "reload");
-        // Reloads the event fragment AND bob's time fragment (cross-context).
-        assert(res.targets.includes(`.-event_checkin-${id}-`));
-        assert(res.targets.includes(`.-volunteer_time-${bob}-`));
+        // Emits the event fk key (the check-in editor's registration) AND the
+        // volunteer fk key (bob's time fragment's registration, cross-context).
+        assert(res.targets.includes(`.-event_checkin-event_id-${id}-`));
+        assert(res.targets.includes(`.-event_checkin-volunteer_id-${bob}-`));
         // Idempotent: checking in again is a no-op (one row).
         await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
         const checkins = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
@@ -296,7 +297,7 @@ test("sign-up: self-signup is always allowed, idempotent, and removable", async 
         // A regular volunteer signs themselves up (no host role needed).
         const res = await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, id));
         assertEquals(res.action, "reload");
-        assert(res.targets.includes(`.-event_commitment-${id}-`));
+        assert(res.targets.includes(`.-event_commitment-event_id-${id}-`));
         // Idempotent: signing up again is a no-op (one row).
         await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, id));
         assertEquals(asSystem(() => rabid.event_commitment.commitmentsForEventWithVolunteerName
@@ -382,8 +383,9 @@ test("the event detail page renders the sign-up and check-in editors", async () 
         const id = insertEvent();
         const detail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
         assert(hasText(detail, "Signed up:"));
-        // Both editors are reachable on the detail page (their fragments present).
-        assert(!!find(detail, byClass(`-event_commitment-${id}-`)));
-        assert(!!find(detail, byClass(`-event_checkin-${id}-`)));
+        // Both editors are reachable on the detail page (their fragments
+        // present, registered under their event fk keys).
+        assert(!!find(detail, byClass(`-event_commitment-event_id-${id}-`)));
+        assert(!!find(detail, byClass(`-event_checkin-event_id-${id}-`)));
     });
 });

@@ -5,7 +5,7 @@
 // its task-stamp touching, and the standard list/detail markup.
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows, assertRejects } from "../liminal/testing/assert.ts";
-import { withTestDb, renderRoute, asUser, asSystem, as } from "./testing.ts";
+import { withTestDb, withDirtyTargets, renderRoute, asUser, asSystem, as } from "./testing.ts";
 import { find, byClass, tagOf, attr, hasText, text, getByTestId } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 import { db } from "../liminal/db.ts";
@@ -28,10 +28,11 @@ const addToGroup = (group_id: number, volunteer_id: number) =>
 
 test("projects: host-gated create via saveForm insert; managed defaults applied", async () => {
     await withTestDb(({ alice, bob }) => {
-        // Host: the no-pk saveForm path inserts.
+        // Host: the no-pk saveForm path inserts.  (Dirty keys are emitted via
+        // the ambient collector, not the return value - see dirty_keys_test.)
         const result = asUser(alice, () =>
             rabid.project.saveForm({name: 'Bike Drive', 'before-name': ''})) as any;
-        assertEquals(result, {action: 'reload', targets: ['.-project-']});
+        assertEquals(result, {action: 'reload'});
         const p = asSystem(() => rabid.project.activeProjects.all({})).find(p => p.name === 'Bike Drive');
         assert(p);
         assertEquals(p!.description, '');
@@ -86,7 +87,7 @@ test("assignees may edit the task (and its assignee list); other volunteers may 
         // The assignee can update the task (saveForm = the pencil-edit path).
         const result = asUser(bob, () => rabid.task.saveForm({
             task_id: String(task_id), status: 'in-progress', 'before-status': 'open'})) as any;
-        assertEquals(result.targets, [`.-task-${task_id}-`]);
+        assertEquals(result, {action: 'reload'});
         assertEquals(asSystem(() => rabid.task.getById(task_id)).status, 'in-progress');
 
         // ...and being an assignee delegates membership editing through the
@@ -114,7 +115,7 @@ test("new-task dialog: project preset survives an untouched picker (empty before
         const result = asUser(alice, () => rabid.task.saveForm({
             title: 'Posters', 'before-title': '',
             project_id: String(project_id), 'before-project_id': ''})) as any;
-        assertEquals(result, {action: 'reload', targets: ['.-task-']});
+        assertEquals(result, {action: 'reload'});
         const tasks = asSystem(() => rabid.task.tasksForProject.all({project_id}));
         assert(tasks.some(t => t.title === 'Posters'));
         // New tasks append at the end of the project's order.
@@ -148,7 +149,7 @@ test("subtask checklist: add/toggle/remove gated by the task; every mutation sta
         asSystem(() => db().execute<{task_id: number}>(
             `UPDATE task SET last_change_time = '${OLD}' WHERE task_id = :task_id`, {task_id}));
         const toggled = asUser(bob, () => rabid.subtask.toggle(items[0].subtask_id)) as any;
-        assertEquals(toggled.targets, [`.-subtask-${task_id}-`]);
+        assertEquals(toggled, {action: 'reload'});   // dirty keys ride the collector
         assertEquals(asSystem(() => rabid.subtask.getById(items[0].subtask_id)).done, 1);
         assert(asSystem(() => rabid.task.getById(task_id)).last_change_time > OLD);
 
@@ -548,11 +549,11 @@ test("checklist items edit via the pencil: title-only dialog, reload targets the
         assert(!find(form, n => (tagOf(n) === 'input' || tagOf(n) === 'select')
                                 && attr(n, 'name') === 'task_id'));
 
-        // Saving renames, and reloads the TASK's checklist fragment (not the
-        // generic pk target, which nothing on the page carries).
-        const res = asUser(bob, () => rabid.subtask.saveForm({
-            subtask_id: String(item.subtask_id), title: 'Get quotes', 'before-title': 'Get qotes'})) as any;
-        assertEquals(res.targets, [`.-subtask-${task_id}-`]);
+        // Saving renames; the emission (via the collector) includes the
+        // checklist's task fk key, which is what the fragment registers.
+        const res = await withDirtyTargets(() => asUser(bob, () => rabid.subtask.saveForm({
+            subtask_id: String(item.subtask_id), title: 'Get quotes', 'before-title': 'Get qotes'})));
+        assert(res.targets.includes(`.-subtask-task_id-${task_id}-`));
         assertEquals(asSystem(() => rabid.subtask.getById(item.subtask_id)).title, 'Get quotes');
 
         // Gated: a non-assignee cannot even render the form.
@@ -655,9 +656,9 @@ test("merged project page: toggleDone completes/reopens from the block checkbox 
         assertThrows(() => asUser(carol, () => rabid.task.toggleDone(task_id)),
                      Error, 'Not permitted');
 
-        // Check: done, provenance stamped, block reloads.
-        const res = asUser(bob, () => rabid.task.toggleDone(task_id)) as any;
-        assertEquals(res.targets, [`.-task-${task_id}-`]);
+        // Check: done, provenance stamped, block reloads (row key emitted).
+        const res = await withDirtyTargets(() => asUser(bob, () => rabid.task.toggleDone(task_id)));
+        assert(res.targets.includes(`.-task-${task_id}-`));
         const t = asSystem(() => rabid.task.getById(task_id));
         assertEquals(t.status, 'done');
         assertEquals(t.done_by, bob);

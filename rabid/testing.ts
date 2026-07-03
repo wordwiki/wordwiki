@@ -12,6 +12,7 @@
  */
 import { getRabid } from "./rabid.ts";
 import * as security from "../liminal/security.ts";
+import * as dirty from "../liminal/dirty.ts";
 import * as templates from "./templates.ts";
 import type { Markup } from "../liminal/markup.ts";
 import { openTestDb, clearAllData } from "../liminal/testing/db-harness.ts";
@@ -72,9 +73,29 @@ export async function renderRoute(
 // Invoke an action route with positional args (mirrors the client rpc/tx call),
 // returning the raw result (e.g. {action:'reload', targets}).  Throws on a
 // server-side error (e.g. a permission rejection), so tests can assertRejects.
+// Runs under a dirty-key collector and merges the emitted keys into the
+// response targets, exactly as rpcHandler does - tests see the same target
+// sets production produces.  (A DIRECT table-method call has no collector, so
+// its result carries only hand-written targets - use invoke, or wrap in
+// withDirtyTargets, when asserting on targets.)
 export async function invoke(path: string, ...args: any[]): Promise<any> {
     const bodyArgs: Record<string, any> = {};
     args.forEach((a, i) => bodyArgs[`$arg${i}`] = a);
     // Actions are mutations -> POST.
-    return await getRabid().dispatch(path, { bodyArgs, httpMethod: 'POST' });
+    const {result, keys} = await dirty.collectTargets(() =>
+        getRabid().dispatch(path, { bodyArgs, httpMethod: 'POST' }));
+    if(result !== null && typeof result === 'object'
+       && (result.action === 'reload' || result.action === 'open'))
+        return {...result, targets: dirty.mergeTargets(result.targets, keys)};
+    return result;
+}
+
+// Run a direct (non-route) mutation under a dirty-key collector, returning the
+// call's result plus the production-shape merged targets.
+export async function withDirtyTargets<T>(fn: () => T | Promise<T>):
+        Promise<{result: T, targets: string[]}> {
+    const {result, keys} = await dirty.collectTargets(fn);
+    const hand = (result !== null && typeof result === 'object')
+        ? (result as any).targets : undefined;
+    return {result, targets: dirty.mergeTargets(hand, keys)};
 }

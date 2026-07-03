@@ -5,11 +5,11 @@
 
 function reload(elementSelectorArray, eventName='reload', detail={}) {
     console.info('reloadElementsBySelector', elementSelectorArray);
-    for(const s of elementSelectorArray) {
-        console.info('- ', s, Array.from(document.querySelectorAll(s)));
-    }
+    // lm-read-only zones don't participate in refresh (lmRefreshable,
+    // liminal-scripts.js).
     const rootElems = Array.from(
-        elementSelectorArray.flatMap(selector=>Array.from(document.querySelectorAll(selector))));
+        elementSelectorArray.flatMap(selector=>Array.from(document.querySelectorAll(selector))))
+        .filter(el => lmRefreshable(el));
     console.info('  elems are', rootElems);
     reloadElements(rootElems, eventName, detail);
 }
@@ -190,7 +190,7 @@ function lmResolveSpeculation(deps) {
         let els;
         try { els = document.querySelectorAll(sel); } catch(_e) { return null; }
         for(const el of els)
-            if(el.getAttribute('hx-get') && !matched.includes(el))
+            if(el.getAttribute('hx-get') && lmRefreshable(el) && !matched.includes(el))
                 matched.push(el);
     }
     const sectionsByUrl = new Map();
@@ -220,6 +220,7 @@ function lmResolveSpeculation(deps) {
 function lmApplySwap(response, speculation) {
     hideModalEditor();
     const staleKeys = [];
+    const swappedRoots = [];
     for(const section of (Array.isArray(response.sections) ? response.sections : [])) {
         const entry = speculation.sectionsByUrl.get(section.url);
         if(!entry) continue;
@@ -239,13 +240,34 @@ function lmApplySwap(response, speculation) {
                 if(n.nodeType === Node.ELEMENT_NODE) {
                     htmx.process(n);
                     lmDebugMark(n, changed);
+                    swappedRoots.push(n);
                 }
         }
     }
+
+    // Leftover (unanticipated) dirty keys from the hybrid response: reload
+    // only the ones that MATCH something on the page - and not content that
+    // just arrived in this round's sections (it is already post-mutation
+    // fresh; e.g. an insert's new-row key now matches the row the list swap
+    // brought in).  Unmatched keys are routine emission noise (a provenance
+    // fk's new value, a new row's pk on a page without that fragment) and
+    // are pruned silently so they don't read as under-speculation.
+    const isFresh = (el) => swappedRoots.some(r => r === el || r.contains(el));
+    const stragglers = [];
+    for(const t of (Array.isArray(response.reloadTargets) ? response.reloadTargets : [])) {
+        let els;
+        try { els = Array.from(document.querySelectorAll(t)); } catch(_e) { els = []; }
+        if(els.some(el => lmRefreshable(el) && !isFresh(el)) && !stragglers.includes(t))
+            stragglers.push(t);
+    }
+    if(stragglers.length > 0)
+        lmDebugNoteStragglers(stragglers.length);
+
     if(typeof initPickers === 'function')
         initPickers(document);
-    if(staleKeys.length > 0)
-        reload(staleKeys);
+    const toReload = [...staleKeys, ...stragglers.filter(t => !staleKeys.includes(t))];
+    if(toReload.length > 0)
+        reload(toReload);
 }
 
 async function txCore(deps, rpcExprSegments /*:ReadonlyArray<string>*/, args /*: any[]*/) /*: Promise<any>*/ {

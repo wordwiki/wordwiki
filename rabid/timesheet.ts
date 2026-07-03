@@ -175,45 +175,24 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         this.updateNamedFields(id, Object.keys(fields) as Array<keyof P>, fields);
     }
 
-    // An edit may be shown inside a volunteer's reconciled time view (volunteer_time.ts),
-    // so also reload that fragment - htmx ignores the selector when it isn't present
-    // (e.g. an edit from the global Timesheets list).
-    @routeMutation(authenticated)   // override re-declares the route perm (base's marker is on Table.saveForm)
-    override saveForm(form: Record<string, string>): Markup {
-        const result = super.saveForm(form) as any;
-        const id = Number(form?.timesheet_entry_id);
-        if(result && result.action === 'reload' && Array.isArray(result.targets) && Number.isInteger(id)) {
-            const e = security.runSystem(() => this.getById(id));
-            if(e) result.targets.push(`.-volunteer_time-${e.volunteer_id}-`);
-        }
-        return result;
-    }
-
-    // Speculation counterpart to the target-append above: the edit form
-    // predicts the volunteer_time fragment too, so a timesheet edit saves in
-    // one round trip.
-    override speculatedSaveTargets(record: TimesheetEntry): string[] {
-        const targets = super.speculatedSaveTargets(record);
-        if(record.timesheet_entry_id && record.volunteer_id)
-            targets.push(`.-volunteer_time-${record.volunteer_id}-`);
-        return targets;
-    }
+    // No saveForm/speculatedSaveTargets overrides needed: the volunteer's
+    // reconciled Time view registers `-timesheet_entry-volunteer_id-<vid>-`
+    // (volunteer_time.ts), which every timesheet write notifies automatically.
 
     // Host/admin confirms (or un-confirms) a volunteer's hours, stamping who
-    // vouched for them.  Reloads the volunteer's reconciled Time fragment (where
-    // the confirm affordance lives).  Self cannot confirm their own hours.
+    // vouched for them.  The update's automatic emission (volunteer_id fk key)
+    // reloads the reconciled Time fragment, where the confirm affordance
+    // lives.  Self cannot confirm their own hours.
     @routeMutation(hostOrAdmin)
     confirm(timesheet_entry_id: number): Markup {
-        const e = this.getById(timesheet_entry_id);
         const actorId = security.current()?.actorId ?? null;
         this.update(timesheet_entry_id, {confirmed_by: actorId} as Partial<TimesheetEntry>);
-        return {action: 'reload', targets: [`.-volunteer_time-${e.volunteer_id}-`]} as unknown as Markup;
+        return {action: 'reload'} as unknown as Markup;
     }
     @routeMutation(hostOrAdmin)
     unconfirm(timesheet_entry_id: number): Markup {
-        const e = this.getById(timesheet_entry_id);
         this.update(timesheet_entry_id, {confirmed_by: null} as Partial<TimesheetEntry>);
-        return {action: 'reload', targets: [`.-volunteer_time-${e.volunteer_id}-`]} as unknown as Markup;
+        return {action: 'reload'} as unknown as Markup;
     }
 
     // A timesheet entry belongs to its volunteer (drives isSelf).

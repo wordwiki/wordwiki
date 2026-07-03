@@ -20,6 +20,7 @@ import { WordWiki, createAllTables } from './wordwiki.ts';
 import { Assertion, getAssertionPath, assertionPathToFields } from './assertion.ts';
 import * as user from './user.ts';
 import * as security from '../liminal/security.ts';
+import * as dirty from '../liminal/dirty.ts';
 import * as templates from './templates.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import type { Markup } from '../liminal/markup.ts';
@@ -109,11 +110,18 @@ export async function renderRoute(ww: WordWiki, path: string,
 
 // Invoke an action route with positional args (mirrors the client rpc/tx call),
 // returning the raw result (e.g. {action:'reload', targets}).  Throws on a
-// server-side error, so tests can assertRejects.
+// server-side error, so tests can assertRejects.  Runs under a dirty-key
+// collector and merges the emitted keys into the response targets, exactly as
+// rpcHandler does - so tests see the same target sets production produces.
 export async function invoke(ww: WordWiki, path: string, ...args: any[]): Promise<any> {
     const bodyArgs: Record<string, any> = {};
     args.forEach((a, i) => bodyArgs[`$arg${i}`] = a);
-    return await ww.dispatch(path, { bodyArgs, httpMethod: 'POST' });
+    const {result, keys} = await dirty.collectTargets(() =>
+        ww.dispatch(path, { bodyArgs, httpMethod: 'POST' }));
+    if(result !== null && typeof result === 'object'
+       && (result.action === 'reload' || result.action === 'open'))
+        return {...result, targets: dirty.mergeTargets(result.targets, keys)};
+    return result;
 }
 
 // --- Assertion builders ------------------------------------------------------

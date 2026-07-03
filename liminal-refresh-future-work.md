@@ -1,17 +1,21 @@
 # Liminal refresh: future change sets
 
-Two follow-on designs to the speculative one-round-trip refresh + debug mode work
-(see that change set / `.claude/plans/buzzing-squishing-hamming.md`).  Both were
-discussed and shaped 2026-07-03; neither is built.  Both treat the dep-key
-vocabulary (`.-table-`, `.-table-id-`, future FK-scoped keys) as opaque strings
-and ride the same chokepoints, so nothing in the current change set blocks them.
+Follow-on designs to the speculative one-round-trip refresh + debug mode work.
+Discussed and shaped 2026-07-03.  **Status: #3 (richer dependency model) is now
+BUILT** — see `liminal/dirty.ts`, `Table.dirtyKeysFor/fkKey/delete`,
+`reloadableProps`, the hybrid `applySpeculation`, and the `lm-read-only` gate;
+§3 below is kept as design rationale.  #1 and #2 remain unbuilt; #1's dirty log
+now has its concrete chokepoint: the collector drain in `rpcHandler`
+(`dirty.collectTargets`) is where the `(seq, key)` log append goes.
 
-A shared amplifier for both: **FK-scoped dep keys** (e.g. `.-task-project-88-`,
-"all tasks on project 88").  Planned separately; both designs below get markedly
-better once list fragments carry list-specific keys instead of the bare table key.
-Migration rule when that lands: mutations emit both the fine key and its coarse
-parent; fragments narrow their tagging at leisure (over-emission is harmless,
-like over-speculation).
+Two contract points settled while building #3 (also documented in code):
+- **Editable pages, not a live system**: fragments register only what the
+  page's own buttons can change; read-only contexts wrap shared views in
+  `lm-read-only` (suppresses refresh participation, not affordances).
+- **Registration = finest sufficient key; emission = all levels, uniformly**
+  (table + pk + every declared fk, before-values + changed new values), with
+  `task.touch`-style deliberately-silent raw writes as the documented escape
+  hatch in the other direction.
 
 ---
 
@@ -137,3 +141,67 @@ insert directive is the real fix.  Not mutually exclusive.
 **Paths not covered (acceptable):** the two-trip fallback and future live-refresh
 paths don't get fine-grained inserts — they reload the wrapper.  Those are the
 rare paths.
+
+---
+
+## 3. Richer dependency model: FK-scoped keys + automated emission (NEXT PRIORITY)
+
+**Goal.**  Dep keys become `(table)`, `(table, pk)`, or `(table, fk-name,
+fk-value)` — encoding `-table-fkname-v-` beside the existing `-table-` /
+`-table-pk-` (all keys single integers; SQL names have no hyphens, so exact
+string matching stays unambiguous).  Deliberately modest power: enough to kill
+the common global resets (nested lists) without query-level dependencies.
+Evidence the scope is right — both current hand-tuned hacks are expressible:
+
+- subtask's `-subtask-<task_id>-` is an FK key in disguise → `-subtask-task_id-<v>-`
+  (the saveForm retarget + speculatedSaveTargets override become deletable);
+- timesheet's hand-appended `-volunteer_time-<vid>-` rider disappears: the
+  volunteer_time fragment tags `-timesheet_entry-volunteer_id-<vid>-` and
+  `-event_checkin-volunteer_id-<vid>-` and is notified without any mutation
+  knowing it exists.
+
+One `depKey(...)` mint helper; nothing else parses keys.
+
+**The crux: emission must be automated.**  Today only the default
+`Table.saveForm` emits automatically; ~40 sites across rabid/wordwiki
+hand-assemble `targets`.  Hand-emitting `2 + #fks` keys per write (including
+OLD+NEW values when an fk changes) would rot immediately.  Automation is
+buildable because the funnel exists — `Table.insert` / `update` /
+`updateNamedFields` + declared `ForeignKeyField` metadata:
+
+- **Derive at the DML layer**: any write to T emits `-T-`, `-T-pk-`, and
+  `-T-fkname-v-` per non-null declared FK; fk-CHANGING updates read the
+  before-row (the save path already loads it) and emit old AND new fk keys.
+- **Ambient per-request dirty collector** in its OWN AsyncLocalStorage (NOT on
+  the security context — `runSystem` blocks inside mutations would drop keys).
+  `rpcHandler` drains it into the response `targets`; mutations return bare
+  `{action:'reload'}`.  Hand-added keys remain possible (additive) during
+  migration.
+- **Gap: deletes** are raw `db().execute` today (e.g. subtask.remove) — add a
+  `Table.delete` funnel so the before-row's keys emit (pairs with
+  delete-as-empty-render in §2).
+- The collector's drain point IS the long-poll dirty log's append point (§1):
+  one mechanism, two consumers.
+
+**Consequences to design for.**
+
+- Automated emission notifies MORE than the hand lists did (e.g. subtask.toggle
+  → task.touch → `-task-<id>-` now dirties the task block).  Mostly more
+  correct, sometimes wasteful — the debug mode's yellow refreshed-but-identical
+  marks are the tuning instrument; walk the app with the badge on after landing.
+- **Speculation's all-or-nothing subset test becomes too brittle** (a button
+  can't speculate a touch-chain → chronic misses).  Soften to a HYBRID
+  response: server swaps the anticipated sections AND returns leftover
+  unanticipated targets for client-side reload.  Strictly better than both
+  current behaviors.  Also derive `speculatedSaveTargets`' default from the
+  same mint/emission function — one source of truth.
+- wordwiki's `dict` table is not a liminal Table (raw assertion-model DML) —
+  lexeme-editor mutations keep hand-emitting or get their own mint helpers.
+
+**Migration property**: automation always emits fine keys AND coarse parents,
+so fragments retag from `-task-` to `-task-project_id-88-` one at a time, any
+order, no flag day.
+
+**Sequencing**: (1) mint + automated emission collector, debug-mode walk;
+(2) retag the worst fragments; (3) hybrid speculation response; (4) long-poll
+(§1) on the collector's log, watch sets built from fine keys.

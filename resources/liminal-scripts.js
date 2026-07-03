@@ -120,6 +120,22 @@ function lmNavigateFormRoute(event, routeFn) {
     window.location.assign(`/${routeFn}({${parts.join(',')}})`);
 }
 
+/**
+ * Refresh participation gate.
+ *
+ * The refresh machinery exists to reflect a page's OWN edits back into the
+ * page - it is not a live-update system.  A context that renders a shared
+ * editable view read-only (a report embedding a checklist, say) wraps it in
+ * class "lm-read-only": everything under such an element is excluded from
+ * refresh participation - it is neither collected as a speculated section
+ * nor reload-triggered.  This suppresses REFRESH only, not affordances: a
+ * read-only context should also be rendering the view affordance-less via
+ * the usual canEdit paths.
+ */
+function lmRefreshable(el) {
+    return !el.closest('.lm-read-only');
+}
+
 /* ---------------------------------------------------------------------------
    Refresh debug mode.
 
@@ -167,7 +183,20 @@ function lmDebugClearMarks() {
 function lmDebugRoundStart(info) {
     if(!lmDebugRefreshEnabled()) return;
     lmDebugClearMarks();
-    lmDebugRoundStats = {path: info.path, speculation: info.speculation, changed: 0, same: 0};
+    lmDebugRoundStats = {path: info.path, speculation: info.speculation,
+                         changed: 0, same: 0, stragglers: 0};
+    lmDebugUpdateBadge();
+}
+
+/* A 1-trip round had leftover (unanticipated) dirty keys that MATCHED
+   something on the page and were reloaded the two-trip way.  (Leftover keys
+   matching nothing are pruned before this is called - routine emission noise
+   like a new row's pk or a provenance fk value must not read as under-
+   speculation.) */
+function lmDebugNoteStragglers(count) {
+    if(!lmDebugRefreshEnabled() || !lmDebugRoundStats) return;
+    lmDebugRoundStats.speculation = 'partial';
+    lmDebugRoundStats.stragglers += count;
     lmDebugUpdateBadge();
 }
 
@@ -187,9 +216,9 @@ function lmDebugUpdateBadge() {
         document.body.appendChild(badge);
     }
     const s = lmDebugRoundStats;
-    const path = s.path === '1-trip'
-        ? '1-trip' : `2-trip fallback${s.speculation ? ` (${s.speculation})` : ''}`;
-    badge.textContent = `refresh: ${path} · ${s.changed} changed · ${s.same} unchanged`;
+    const base = s.path === '1-trip' ? '1-trip' : '2-trip fallback';
+    const spec = s.speculation ? ` (${s.speculation}${s.stragglers ? ` +${s.stragglers} reload` : ''})` : '';
+    badge.textContent = `refresh: ${base}${spec} · ${s.changed} changed · ${s.same} unchanged`;
 }
 
 /* DOM-level equality for the changed/identical verdict.  String comparison of

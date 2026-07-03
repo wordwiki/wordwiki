@@ -496,12 +496,13 @@ test("adding time is self-or-host; it reloads the volunteer's time fragment", ()
                           end_time: '2026-06-20 10:00:00', notes: 'x'}),
             Error, "not permitted"));   // route layer (@route ownTimeOrHost) denies first
 
-        // bob adds his own; the reload targets his time fragment.
+        // bob adds his own; the emitted volunteer fk key is what his time
+        // fragment registers (volunteer_time.ts).
         const res = await asUser(bob, () => invoke(`rabid.volunteer_time.addTimesheet($arg0)`,
             {volunteer_id: String(bob), start_time: '2026-06-20 09:00:00',
              end_time: '2026-06-20 10:30:00', notes: 'inventory'}));
         assertEquals(res.action, "reload");
-        assert(res.targets.includes(`.-volunteer_time-${bob}-`));
+        assert(res.targets.includes(`.-timesheet_entry-volunteer_id-${bob}-`));
         const m = asSystem(() => rabid.volunteer_time.model(bob));
         assertEquals(m.hours, 1.5);
     });
@@ -513,8 +514,8 @@ test("checking into an event from the volunteer page reloads both fragments", ()
         const res = await asUser(bob, () => invoke(`rabid.volunteer_time.checkIntoEvent($arg0)`,
             {volunteer_id: String(bob), event_id: String(eid)}));
         assertEquals(res.action, "reload");
-        assert(res.targets.includes(`.-volunteer_time-${bob}-`));
-        assert(res.targets.includes(`.-event_checkin-${eid}-`));
+        assert(res.targets.includes(`.-event_checkin-volunteer_id-${bob}-`));
+        assert(res.targets.includes(`.-event_checkin-event_id-${eid}-`));
         assertEquals(asSystem(() =>
             rabid.event_checkin.checkinsForEvent.all({event_id: eid})).length, 1);
     });
@@ -525,8 +526,8 @@ test("checking a volunteer out also reloads their time fragment (cross-context)"
         const eid = insertEvent();
         await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, eid));
         const res = await asUser(alice, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, eid, bob));
-        assert(res.targets.includes(`.-event_checkin-${eid}-`));
-        assert(res.targets.includes(`.-volunteer_time-${bob}-`));
+        assert(res.targets.includes(`.-event_checkin-event_id-${eid}-`));
+        assert(res.targets.includes(`.-event_checkin-volunteer_id-${bob}-`));
     });
 });
 

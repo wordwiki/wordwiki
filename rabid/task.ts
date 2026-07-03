@@ -36,7 +36,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps, reloadableProps, sel } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {ownerLabel, ownerCanEdit} from "./owned.ts";
 import {path} from "../liminal/serializable.ts";
@@ -730,6 +730,10 @@ export class TaskTable extends Table<Task> {
     }
 
     // A subtask mutation IS a change to its task (the poll watches tasks).
+    // DELIBERATELY a raw write with NO dirty-key emission: its consumer is the
+    // task_by_change poll, not page fragments - going through this.update
+    // would notify `-task-<id>-` (and the project fk key) and cascade a full
+    // task-block/list re-render on every checklist tick.
     touch(task_id: number): void {
         db().execute<{task_id: number, now: string}>(
             'UPDATE task SET last_change_time = :now WHERE task_id = :task_id',
@@ -847,12 +851,14 @@ export class TaskTable extends Table<Task> {
     // NOT collapsed - the strikethrough wall shows stuff is HAPPENING, which
     // is half the point in a volunteer-primarily org.
 
-    // Self-fetching reloadable fragment, tagged with the pk-less `-task-` class
-    // (the reload target a "New task" saveForm insert emits).
+    // Self-fetching reloadable fragment.  Its query is WHERE project_id, so it
+    // registers the fk key `-task-project_id-<pid>-` (finest-sufficient): task
+    // churn in THIS project notifies it, other projects' churn does not.
     @route(authenticated)
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
-        const props = this.reloadableItemProps(undefined, `rabid.task.renderProjectTasks(${project_id})`);
+        const props = reloadableProps([this.fkKey('project_id', project_id)],
+                                      `rabid.task.renderProjectTasks(${project_id})`);
         if (tasks.length === 0)
             return [h.div, props, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
         // Tasks come open-first then done (tasksForProject ORDER BY status='done').
@@ -902,7 +908,7 @@ export class TaskTable extends Table<Task> {
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
                         ...(canEdit
-                            ? {onclick: `txd(${JSON.stringify([`.-task-${id}-`])})\`rabid.task.toggleDone(${id})\``}
+                            ? {onclick: `txd(${JSON.stringify([sel(this.rowKey(id))])})\`rabid.task.toggleDone(${id})\``}
                             : {disabled: ''}),
                         'aria-label': `Mark ${t.title || 'task'} done`}],
              [h.div, {class: 'lm-item-primary' + (done ? ' text-muted' : '')},
@@ -933,9 +939,11 @@ export class TaskTable extends Table<Task> {
                        {label: 'Add completed item…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id},true)`}},
                        {label: 'Move up',
-                        mode: {kind: 'immediate', expr: `rabid.task.moveUp(${id})`, deps: ['.-task-']}},
+                        mode: {kind: 'immediate', expr: `rabid.task.moveUp(${id})`,
+                               deps: [sel(this.fkKey('project_id', t.project_id))]}},
                        {label: 'Move down',
-                        mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`, deps: ['.-task-']}},
+                        mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`,
+                               deps: [sel(this.fkKey('project_id', t.project_id))]}},
                    ], {ariaLabel: `More actions for ${t.title || 'task'}`})
                  : undefined],
             [h.div, {class: 'lm-task-block-checklist'},
@@ -958,7 +966,8 @@ export class TaskTable extends Table<Task> {
         if(!this.canEditRecord(t))
             throw new Error('Not permitted to edit this task');
         this.update(task_id, {status: t.status === 'done' ? 'open' : 'done'});
-        return {action:'reload', targets:[`.-task-${task_id}-`]} as unknown as Markup;
+        // Dirty keys are emitted automatically by the update funnel.
+        return {action:'reload'} as unknown as Markup;
     }
 
     // Reorder within the project, as DISPLAYED: open tasks move among open
@@ -984,7 +993,9 @@ export class TaskTable extends Table<Task> {
                 : orderkey.between(sibs[j].order_key, sibs[j+1]?.order_key);
             this.update(task_id, {order_key} as any);
         }
-        return {action:'reload', targets:['.-task-']} as unknown as Markup;
+        // The order_key update's automatic emission (incl. the project fk
+        // key) notifies the project's task list; a no-op move emits nothing.
+        return {action:'reload'} as unknown as Markup;
     }
 
     // ------------------------------------------------------------------------
@@ -1461,27 +1472,10 @@ export class SubtaskTable extends Table<Subtask> {
         return `Edit "${s.title || 'checklist item'}"`;
     }
 
-    // The pencil-edit save path.  The generic reload target would be
-    // `.-subtask-<pk>-`, but our reloadable fragment is the whole checklist,
-    // keyed by TASK id (renderChecklist) - retarget there so the rename shows.
-    override saveForm(form: Record<string, string>): Markup {
-        const result = super.saveForm(form) as any;
-        const subtask_id = Number(form.subtask_id);
-        if(Number.isInteger(subtask_id) && subtask_id) {
-            const task_id = security.runSystem(() => this.getById(subtask_id)).task_id;
-            return {...result, targets: [`.-subtask-${task_id}-`]} as unknown as Markup;
-        }
-        return result;
-    }
-
-    // Speculation counterpart to the saveForm retarget above: the edit form
-    // must predict the checklist (task-keyed) target for a rename to save in
-    // one round trip.
-    override speculatedSaveTargets(record: Subtask): string[] {
-        return (record.task_id !== undefined && record.task_id !== null)
-            ? [`.-subtask-${record.task_id}-`]
-            : super.speculatedSaveTargets(record);
-    }
+    // No saveForm/speculatedSaveTargets overrides needed: the checklist
+    // fragment registers the fk key `-subtask-task_id-<tid>-` (renderChecklist)
+    // and the automatic DML emission notifies it on every subtask write - the
+    // old hand retarget to a task-keyed fake id is gone.
 
     // Append at the end of the task's checklist; every insert stamps the task.
     override insert<P extends Partial<Subtask>>(tuple: P): number {
@@ -1536,7 +1530,9 @@ export class SubtaskTable extends Table<Subtask> {
         if(!canEditTask(task_id))
             throw new Error('Not permitted to edit this task');
         this.insert({task_id, title, done});
-        return {action:'reload', targets:[`.-subtask-${task_id}-`]} as unknown as Markup;
+        // Dirty keys (incl. the checklist's `-subtask-task_id-<tid>-`) are
+        // emitted automatically by the insert funnel.
+        return {action:'reload'} as unknown as Markup;
     }
 
     // Checking stamps who/when; unchecking clears (current-state provenance).
@@ -1550,7 +1546,7 @@ export class SubtaskTable extends Table<Subtask> {
             : {done: 1, done_time: date.currentSqliteDateTime(),
                done_by: security.current()?.actorId ?? null}) as any);
         rabid.task.touch(s.task_id);
-        return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
+        return {action:'reload'} as unknown as Markup;
     }
 
     @routeMutation(authenticated)
@@ -1558,10 +1554,9 @@ export class SubtaskTable extends Table<Subtask> {
         const s = this.getById(subtask_id);
         if(!canEditTask(s.task_id))
             throw new Error('Not permitted to edit this task');
-        db().execute<{subtask_id: number}>(
-            'DELETE FROM subtask WHERE subtask_id = :subtask_id', {subtask_id});
+        this.delete(subtask_id);   // the delete funnel emits the dirty keys
         rabid.task.touch(s.task_id);
-        return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
+        return {action:'reload'} as unknown as Markup;
     }
 
     // Reorder within the task's checklist; a move at the end is a plain
@@ -1584,7 +1579,7 @@ export class SubtaskTable extends Table<Subtask> {
             this.update(subtask_id, {order_key} as any);
             rabid.task.touch(s.task_id);
         }
-        return {action:'reload', targets:[`.-subtask-${s.task_id}-`]} as unknown as Markup;
+        return {action:'reload'} as unknown as Markup;
     }
 
     // ------------------------------------------------------------------------
@@ -1595,14 +1590,15 @@ export class SubtaskTable extends Table<Subtask> {
     // checklist renders nothing at all (the page is a document presenting the
     // project's state; "No checklist items." is noise, and the add actions
     // live in the task line's ☰ menu / the detail page's buttons, both
-    // OUTSIDE this fragment so reloads never eat them).  Keyed by the TASK's
-    // id: the fragment is "this task's checklist", so its mutations reload
-    // `.-subtask-<task_id>-`.
+    // OUTSIDE this fragment so reloads never eat them).  Its query is WHERE
+    // task_id, so it registers the fk key `-subtask-task_id-<tid>-` - which
+    // every subtask write notifies automatically.
     @route(authenticated)
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
-        const props = this.reloadableItemProps(task_id, `rabid.subtask.renderChecklist(${task_id})`);
+        const props = reloadableProps([this.fkKey('task_id', task_id)],
+                                      `rabid.subtask.renderChecklist(${task_id})`);
         return [h.div, props,
             items.length === 0
                 ? undefined
@@ -1625,7 +1621,7 @@ export class SubtaskTable extends Table<Subtask> {
             [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                        ...(s.done ? {checked: ''} : {}),
                        ...(canEdit
-                           ? {onclick: `txd(${JSON.stringify([`.-subtask-${s.task_id}-`])})\`rabid.subtask.toggle(${s.subtask_id})\``}
+                           ? {onclick: `txd(${JSON.stringify([sel(this.fkKey('task_id', s.task_id))])})\`rabid.subtask.toggle(${s.subtask_id})\``}
                            : {disabled: ''})}],
             [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
              s.title],
@@ -1639,15 +1635,15 @@ export class SubtaskTable extends Table<Subtask> {
                               dialogUrl: `/rabid.subtask.renderForm(rabid.subtask.getById(${s.subtask_id}))`}},
                       {label: 'Move up',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`,
-                              deps: [`.-subtask-${s.task_id}-`]}},
+                              deps: [sel(this.fkKey('task_id', s.task_id))]}},
                       {label: 'Move down',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveDown(${s.subtask_id})`,
-                              deps: [`.-subtask-${s.task_id}-`]}},
+                              deps: [sel(this.fkKey('task_id', s.task_id))]}},
                       {label: 'Remove…',
                        mode: {kind: 'confirm',
                               expr: `rabid.subtask.remove(${s.subtask_id})`,
                               message: `Remove "${s.title}"?`,
-                              deps: [`.-subtask-${s.task_id}-`]}},
+                              deps: [sel(this.fkKey('task_id', s.task_id))]}},
                   ], {ariaLabel: `More actions for ${s.title}`})
                 : undefined,
         ];
@@ -1667,7 +1663,7 @@ export class SubtaskTable extends Table<Subtask> {
                 submitLabel: 'Add',
                 hidden: completed ? {task_id, done: 1} : {task_id},
                 dispatch: {onsubmit:
-                    `event.preventDefault(); txd(${JSON.stringify([`.-subtask-${task_id}-`])})\`rabid.subtask.addItem(\${getFormJSON(event.target)})\``},
+                    `event.preventDefault(); txd(${JSON.stringify([sel(this.fkKey('task_id', task_id))])})\`rabid.subtask.addItem(\${getFormJSON(event.target)})\``},
             });
     }
 }

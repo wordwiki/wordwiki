@@ -8,6 +8,7 @@ import {serialize, serializeAny} from "../liminal/serializable.ts";
 
 import { db, Db, PreparedQuery, QueryClosure, RowObject, QueryParameterSet, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as action from "./action.ts";
+import * as dirty from "./dirty.ts";
 import * as security from "./security.ts";
 import {route, routeMutation, authenticated} from "./security.ts";
 import * as date from "./date.ts";
@@ -266,31 +267,139 @@ export class Table<T extends Tuple> extends FieldSet {
     // --- Default Update Methods ------------------------------------------------
     // ---------------------------------------------------------------------------
 
+    // Every write funnels its dirty-key emission through dirtyKeysFor +
+    // dirty.record (see the Dependency keys section below and dirty.ts).
+    // Emission is gated on an installed collector, so scripts / seeding /
+    // direct table calls in tests pay nothing (not even the before-row read).
+
     insert<P extends Partial<T>>(tuple: P): number {
-        return db().insert<P, string>(this.name, tuple, this.pkName);
+        const id = db().insert<P, string>(this.name, tuple, this.pkName);
+        if(dirty.isCollecting())
+            dirty.record(this.dirtyKeysFor(id, undefined, tuple as Record<string, unknown>));
+        return id;
     }
 
     update<P extends Partial<T>>(id: number, fields: P) {
-        const fieldNames:Array<keyof P> = Object.keys(fields);
-        db().update<P>(this.name, this.pkName, fieldNames, id, fields);
+        // Delegates so updateNamedFields is the single update funnel (both
+        // for subclass override chains and for dirty-key emission).
+        this.updateNamedFields(id, Object.keys(fields) as Array<keyof P>, fields);
     }
 
     updateNamedFields<P extends Partial<T>>(id: number, fieldNames:Array<keyof P>, fields: P) {
+        if(dirty.isCollecting() && fieldNames.length > 0) {
+            // The row's current fk values name the parents whose lists this
+            // row is in; changed fk values additionally name the parent the
+            // row is joining.  Read pre-write, unguarded (emission needs the
+            // true values; a raw read skips the field-permission guard and,
+            // unlike getById, doesn't throw on a nonexistent id - db().update
+            // silently no-ops there and so do we).
+            const before = this.rawRowById(id);
+            if(before !== undefined) {
+                const changed: Record<string, unknown> = {};
+                for(const n of fieldNames) changed[String(n)] = (fields as Tuple)[String(n)];
+                dirty.record(this.dirtyKeysFor(id, before, changed));
+            }
+        }
         db().update<P>(this.name, this.pkName, fieldNames, id, fields);
+    }
+
+    /**
+     * Delete one row by pk, with automatic dirty-key emission (the before-row
+     * names the parents whose lists lose a member).  Deliberately NOT @route'd
+     * - strict routeterp keeps it unreachable as a URL; deletion routes are
+     * declared per table with their own permission checks and call this.
+     */
+    delete(id: number): void {
+        const before = dirty.isCollecting() ? this.rawRowById(id) : undefined;
+        db().execute(`DELETE FROM ${this.name} WHERE ${this.pkName} = :id`, {id});
+        if(before !== undefined)
+            dirty.record(this.dirtyKeysFor(id, before, undefined));
+    }
+
+    // The row as stored, WITHOUT the field-permission guard (Table.prepare's
+    // guardResult) - for internal use where true column values are needed
+    // (dirty-key emission).  undefined when the row doesn't exist.
+    protected rawRowById(id: number): Record<string, unknown>|undefined {
+        return db().first<Record<string, unknown>>(
+            `SELECT ${this.allFields} FROM ${this.name} WHERE ${this.pkName} = :id`, {id});
     }
 
     // ---------------------------------------------------------------------------
     // ---------------------------------------------------------------------------
     // ---------------------------------------------------------------------------
     
+    // ------------------------------------------------------------------------
+    // --- Dependency keys ----------------------------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // The dependency-key vocabulary: the classes fragments REGISTER under and
+    // the keys mutations NOTIFY on (class form; '.'+key - see sel() - is the
+    // selector/target form):
+    //
+    //   -table-               whole table - any subset that is not a pk or
+    //                         single-fk select (whole renders, aggregates)
+    //   -table-<pk>-          one row
+    //   -table-<fkname>-<v>-  the rows WHERE fkname = v (a nested list)
+    //
+    // Registration rule: a fragment registers the FINEST key(s) sufficient
+    // for what it renders, and only on pages whose own buttons can change the
+    // data (this machinery reflects a page's own edits back into the page -
+    // it is not a live-update system; see reloadableProps).  Emission rule:
+    // every write notifies ALL levels (dirtyKeysFor) - readers control their
+    // refresh cost by registering precisely, writers just tell the truth.
+    // Keys are opaque strings everywhere but here; hand-minted keys (e.g.
+    // polymorphic owners) remain legal.
+
+    tableKey(): string { return `-${this.name}-`; }
+
+    rowKey(id: number): string { return `-${this.name}-${id}-`; }
+
+    /** Key for the subset WHERE fkName = v.  fkName must be a declared
+     *  ForeignKeyField on this table, so a typo throws at render time instead
+     *  of minting a key that nothing will ever notify. */
+    fkKey(fkName: string, v: number): string {
+        const field = this.fieldsByName[fkName];
+        if(!(field instanceof ForeignKeyField))
+            throw new Error(`Field '${fkName}' on table '${this.name}' is not a declared foreign key`);
+        return `-${this.name}-${fkName}-${v}-`;
+    }
+
+    /**
+     * The dirty keys (SELECTOR form) a write to row `pk` notifies: the whole-
+     * table key, the row key, and one fk key per declared foreign key - from
+     * the before-row's values always (the parents whose subsets contain this
+     * row), plus from `changedFields` (the parent a row joins when an fk
+     * changes).  Shared by the automatic DML emission (insert /
+     * updateNamedFields / delete) and by the edit form's speculation defaults
+     * (speculatedSaveTargets) - one source of truth for what a write says.
+     */
+    dirtyKeysFor(pk: number|undefined,
+                 beforeRow: Record<string, unknown>|undefined,
+                 changedFields: Record<string, unknown>|undefined): string[] {
+        const keys = [sel(this.tableKey())];
+        if(pk !== undefined && pk !== null)
+            keys.push(sel(this.rowKey(pk)));
+        for(const f of this.fields) {
+            if(!(f instanceof ForeignKeyField)) continue;
+            for(const src of [beforeRow, changedFields]) {
+                const v = src?.[f.name];
+                // fk values are integers; tolerate numeric strings (form-ish
+                // sources) and skip null/undefined/empty.
+                if(typeof v === 'number' || (typeof v === 'string' && v !== '')) {
+                    const key = sel(`-${this.name}-${f.name}-${v}-`);
+                    if(!keys.includes(key)) keys.push(key);
+                }
+            }
+        }
+        return keys;
+    }
+
+    /** Props for a reloadable fragment registered under this table's row key
+     *  (or, id-less, the whole-table key).  Rows register ONLY their row key
+     *  (finest-sufficient) - a fragment whose query is WHERE fk=v should use
+     *  reloadableProps with fkKey instead of the whole-table tag. */
     reloadableItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
-        return Object.assign({
-            'hx-get': reloadURL,
-            'hx-trigger':'reload', 'hx-swap': 'outerHTML',
-            'class': `-${this.name}-` + (id ? ` -${this.name}-${id}-` : ''),
-            //onclick: 'clickContainedButton(event.currentTarget)'},
-        },
-                             extraProps);
+        return reloadableProps(id ? [this.rowKey(id)] : [this.tableKey()], reloadURL, extraProps);
     }
 
     // A standard "edit" button for one row: opens the modal editor with this row's
@@ -542,33 +651,33 @@ export class Table<T extends Tuple> extends FieldSet {
         return {primaryKey, changedFieldValues};
     }
 
-    // The dirty set saveForm is EXPECTED to return for this record - the edit
-    // form's speculation (see renderForm), which must mirror what saveForm
-    // actually returns for a one-round-trip save.  A table whose saveForm
-    // override dirties more (e.g. a related table's fragments) overrides this
-    // beside it; when the override can't know at render time, returning the
-    // default just means those saves fall back to the two-trip flow.
+    // The dirty set saveForm is EXPECTED to emit for this record - the edit
+    // form's speculation (see renderForm).  Derived from the same
+    // dirtyKeysFor as the automatic DML emission, using the record's values
+    // known at render time (update: table + row + current fk keys; insert
+    // dialog: table + prefilled fk keys).  Keys emission adds that render
+    // time can't know (a changed fk's new value, provenance stamps, the new
+    // row's pk) come back as the swap response's reloadTargets and are pruned
+    // or reloaded client-side - so the default rarely needs overriding.
     speculatedSaveTargets(record: T): string[] {
         const pk = record[this.pkName];
-        return (pk !== undefined && pk !== null)
-            ? [`.-${this.name}-${pk}-`] : [`.-${this.name}-`];
+        return this.dirtyKeysFor(typeof pk === 'number' ? pk : undefined,
+                                 record as Record<string, unknown>, undefined);
     }
 
     // No primary key in the form means INSERT (the "new record" dialog is the
     // record form rendered over an empty record); with one, UPDATE.  parseForm
     // (not parseFormWithPrimaryKey, which requires the pk) handles both.
+    // No hand target list: the dirty keys are emitted automatically by the
+    // insert/update funnels and merged into the response by rpcHandler.
     @routeMutation(authenticated)
     saveForm(form: Record<string, string>): Markup {
         const {primaryKey, changedFieldValues} = this.parseForm(form);
-        if(primaryKey !== undefined) {
+        if(primaryKey !== undefined)
             this.updateNamedFields(primaryKey, Object.keys(changedFieldValues), changedFieldValues as T);
-            return {action:'reload', targets:[`.-${this.name}-${primaryKey}-`]};
-        } else {
+        else
             this.insert(changedFieldValues as T);
-            // Reload every fragment tagged with this table (e.g. the list
-            // wrapper) - there is no per-row class for a row that didn't exist.
-            return {action:'reload', targets:[`.-${this.name}-`]};
-        }
+        return {action:'reload'};
     }
 
     
@@ -1557,14 +1666,33 @@ export class TableView<T extends Tuple> {
 // --- Form Rendering convenience functions --------------------------------------
 // -------------------------------------------------------------------------------
 
-export function reloadableItemProps(type: string, id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
+/** Selector/target form of a dependency key: '-task-7-' -> '.-task-7-'. */
+export function sel(key: string): string { return '.' + key; }
+
+/**
+ * Props for a reloadable fragment: register it under `keys` (dependency-key
+ * class form - see Table.tableKey/rowKey/fkKey; hand-minted strings are legal
+ * for cases the vocabulary can't express, e.g. polymorphic owners) and give
+ * it its own re-render route.  Register the FINEST sufficient keys, and only
+ * in contexts whose own buttons can change the data - a context that renders
+ * a shared editable view read-only wraps it in class 'lm-read-only' instead,
+ * which excludes everything under it from refresh participation (see
+ * lmRefreshable in resources/liminal-scripts.js).
+ */
+export function reloadableProps(keys: string[], reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
     return Object.assign({
         'hx-get': reloadURL,
         'hx-trigger':'reload', 'hx-swap': 'outerHTML',
-        'class': `-${type}-` + (id ? ` -${type}-${id}-` : ''),
-        //onclick: 'clickContainedButton(event.currentTarget)'},
+        'class': keys.join(' '),
     },
                          extraProps);
+}
+
+/** Legacy escape-hatch form of reloadableProps for hand-named fragment types
+ *  (polymorphic owners etc.); registers the id key when given, else the bare
+ *  type key (finest-sufficient, like Table.reloadableItemProps). */
+export function reloadableItemProps(type: string, id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
+    return reloadableProps(id ? [`-${type}-${id}-`] : [`-${type}-`], reloadURL, extraProps);
 }
 
 export function editButtonProps(editFormURL: string): Record<string, string> {

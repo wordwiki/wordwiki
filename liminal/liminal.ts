@@ -30,6 +30,7 @@ import {parseCookies} from './http-server.ts';
 import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredError, RouteMethodError} from './routeterp.ts';
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
+import * as dirty from './dirty.ts';
 import {route, authenticated} from './security.ts';
 import * as browserAgent from './browser-agent.ts';
 import * as date from './date.ts';
@@ -449,9 +450,16 @@ export abstract class LiminalApp {
         const ctx = this.resolveSecurityContext(session_token);
         security.enterWith(ctx);
 
+        // The dirty-key collector wraps ONLY the mutation dispatch (scoped
+        // run, not enterWith): section renders in applySpeculation and the
+        // login-redirect dispatch below are reads and must not collect.
+        let collectedKeys: string[] = [];
         let result: any = null;
         try {
-            result = await this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token, httpMethod});
+            const collected = await dirty.collectTargets(() =>
+                this.dispatch(jsExprSrc, {queryArgs, bodyArgs, session_token, httpMethod}));
+            result = collected.result;
+            collectedKeys = collected.keys;
         } catch(e) {
             // A state-changing route reached via GET -> 405 (closes GET-CSRF).
             if(e instanceof RouteMethodError) {
@@ -488,6 +496,13 @@ export abstract class LiminalApp {
                 return server.jsonResponse({error: String(e)}, 400);
             }
         }
+
+        // Merge the automatically-emitted dirty keys into the mutation's
+        // response targets (union with any hand-written list, deduped).
+        // Mutations no longer need to hand-assemble their dirty sets.
+        if(result !== null && typeof result === 'object'
+           && (result.action === 'reload' || result.action === 'open'))
+            result = {...result, targets: dirty.mergeTargets(result.targets, collectedKeys)};
 
         // Speculative one-round-trip refresh: when the client speculated this
         // mutation's dirty set (and shipped the affected fragments' reload
@@ -537,12 +552,16 @@ export abstract class LiminalApp {
     // ('deps' are the speculated selectors; each 'section' is one matched
     // fragment's hx-get route, tagged with which deps matched it.)
     //
-    // When the mutation's ACTUAL dirty set is a subset of the speculated one,
-    // we render the affected sections here and return them in the same
-    // response ({action:'swap', sections:[{url, html}], targets}), saving the
-    // client's follow-up round trip.  Anything else - under-speculation, a bad
-    // section route, a render error - falls back to the plain
-    // {action:'reload'} two-trip flow, annotated with a 'speculation' marker
+    // HYBRID semantics: the actual dirty set is partitioned against the
+    // speculation - ANTICIPATED keys (∈ deps) get their sections rendered
+    // into this response ({action:'swap', sections:[{url, html}], targets});
+    // LEFTOVER keys ride along as `reloadTargets` for the client to resolve
+    // the old way (it prunes the ones matching nothing - with uniform
+    // automatic emission, keys like a new row's pk or a provenance fk's new
+    // value are routinely unspeculatable and usually match nothing).  Only
+    // when NOTHING was anticipated (or the speculation is malformed, over the
+    // cap, or a section render fails) do we fall back to the plain
+    // {action:'reload'} flow, annotated with a 'speculation' marker
     // ('miss'|'error'|'skipped') for the client's refresh-debug badge.
     //
     // SECURITY: section urls are client-supplied strings.  They are dispatched
@@ -585,17 +604,22 @@ export abstract class LiminalApp {
         if(sections.length > LiminalApp.MAX_SPECULATED_SECTIONS)
             return {...result, speculation: 'skipped'};
 
-        // Under-speculation: the mutation dirtied something the client did not
-        // anticipate, so its pre-computed section list can't cover the page.
+        // Partition the actual dirty set against the speculation.  Leftover
+        // (unanticipated) keys don't sink the round: they're returned for the
+        // client to resolve the old way.  Only a round with NO anticipated
+        // keys is a miss (nothing useful can be rendered here).
         const targets: string[] = result.targets;
-        if(!targets.every(t => (deps as string[]).includes(t)))
+        const anticipated = targets.filter(t => (deps as string[]).includes(t));
+        const leftover = targets.filter(t => !(deps as string[]).includes(t));
+        if(anticipated.length === 0)
             return {...result, speculation: 'miss'};
 
-        // Render only the sections an ACTUALLY-dirty key matched (a section
-        // matched only by over-speculated keys is unchanged), deduped by url.
+        // Render only the sections an ANTICIPATED dirty key matched (a
+        // section matched only by over-speculated keys is unchanged),
+        // deduped by url.
         const hitUrls: string[] = [];
         for(const s of sections as Array<{url: string, keys: string[]}>)
-            if(s.keys.some(k => targets.includes(k)) && !hitUrls.includes(s.url))
+            if(s.keys.some(k => anticipated.includes(k)) && !hitUrls.includes(s.url))
                 hitUrls.push(s.url);
 
         try {
@@ -611,7 +635,8 @@ export abstract class LiminalApp {
                 const html = await markup.asyncRenderToStringViaLinkeDOM(markupResult, false);
                 rendered.push({url, html});
             }
-            return {action: 'swap', sections: rendered, targets};
+            return {action: 'swap', sections: rendered, targets,
+                    ...(leftover.length > 0 ? {reloadTargets: leftover} : {})};
         } catch(e) {
             console.info('speculative section render failed - falling back to reload', e);
             return {...result, speculation: 'error'};

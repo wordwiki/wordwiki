@@ -4,7 +4,8 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableItemProps } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableProps, sel } from "../liminal/table.ts";
+import * as dirty from "../liminal/dirty.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
 import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
 import {block} from "../liminal/strings.ts";
@@ -455,9 +456,12 @@ export class EventTable extends Table<Event> {
         const ghostLabel = phase === 'running' ? 'Not here yet' : 'Not checked in';
 
         // The toggle mutates event_commitment (future) or event_checkin
-        // (running/past) - join THAT reload group so the mutation re-renders us.
-        const reloadType = future ? 'event_commitment' : 'event_checkin';
-        const props = reloadableItemProps(reloadType, id,
+        // (running/past) - register THAT table's event fk key so the mutation's
+        // automatic emission re-renders us.
+        const attendKey = future
+            ? rabid.event_commitment.fkKey('event_id', id)
+            : rabid.event_checkin.fkKey('event_id', id);
+        const props = reloadableProps([attendKey],
             `rabid.event.renderEventScheduleRowById(${id})`,
             {'data-testid': `event-schedule-${id}`, onclick: 'lmNavigableClick(event)'});
         props.class = 'lm-navigable ' + props.class;
@@ -880,9 +884,12 @@ export class EventCommitmentTable extends Table<EventCommitment> {
             .first({event_id, volunteer_id});
     }
 
-    // Reload the event's sign-up fragment (htmx re-renders only selectors present).
-    private reloadEditor(event_id: number): Markup {
-        return {action: 'reload', targets: [`.-event_commitment-${event_id}-`]} as unknown as Markup;
+    // The sign-up fragments register this table's event fk key
+    // (`-event_commitment-event_id-<eid>-`); inserts notify it via the
+    // automatic emission, and the raw-SQL deletes below hand-record the same
+    // keys (the escape hatch for writes that bypass the Table funnels).
+    private reloadEditor(_event_id: number): Markup {
+        return {action: 'reload'} as unknown as Markup;
     }
 
     // "Sign me up": commit the CURRENT actor.  Ungated (self-signup is always
@@ -931,6 +938,9 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         db().execute<{event_id: number, volunteer_id: number}>(
             'DELETE FROM event_commitment WHERE event_id = :event_id AND volunteer_id = :volunteer_id',
             {event_id, volunteer_id});
+        dirty.record([sel(this.tableKey()),
+                      sel(this.fkKey('event_id', event_id)),
+                      sel(this.fkKey('volunteer_id', volunteer_id))]);
         return this.reloadEditor(event_id);
     }
 
@@ -941,6 +951,9 @@ export class EventCommitmentTable extends Table<EventCommitment> {
             throw new Error('Not permitted to remove sign-ups for this event');
         db().execute<{event_id: number}>(
             'DELETE FROM event_commitment WHERE event_id = :event_id', {event_id});
+        // Bulk delete: the affected volunteers aren't enumerated (no fragment
+        // registers commitment volunteer keys today) - event + table keys only.
+        dirty.record([sel(this.tableKey()), sel(this.fkKey('event_id', event_id))]);
         return this.reloadEditor(event_id);
     }
 
@@ -973,7 +986,9 @@ export class EventCommitmentTable extends Table<EventCommitment> {
         const canManage = this.canManageCommitments();
         const isCommitted = actorId !== undefined && commitments.some(c => c.volunteer_id === actorId);
         const committedIds = new Set(commitments.map(c => c.volunteer_id));
-        const props = this.reloadableItemProps(event_id, `rabid.event_commitment.renderCommitmentEditor(${event_id})`);
+        // The roster is WHERE event_id, so register this table's event fk key.
+        const props = reloadableProps([this.fkKey('event_id', event_id)],
+            `rabid.event_commitment.renderCommitmentEditor(${event_id})`);
 
         const items: action.ActionMenuItem[] = [];
         // Add verbs: self-signup, then the recent-volunteer quick-adds, then the
@@ -1171,13 +1186,12 @@ export class EventCheckinTable extends Table<EventCheckin> {
             .first({event_id, volunteer_id});
     }
 
-    // Reload the event's check-in fragment, and the time view of every affected
-    // volunteer (their check-in shows in their reconciled time view) - htmx only
-    // re-renders selectors actually present on the page.
-    private reloadEditor(event_id: number, volunteerIds: number[] = []): Markup {
-        const targets = [`.-event_checkin-${event_id}-`,
-                         ...volunteerIds.map(v => `.-volunteer_time-${v}-`)];
-        return {action: 'reload', targets} as unknown as Markup;
+    // The check-in fragments register this table's event fk key, and the
+    // volunteer's reconciled Time view registers its volunteer fk key
+    // (volunteer_time.ts) - inserts/updates notify both via the automatic
+    // emission, and the raw-SQL deletes below hand-record the same keys.
+    private reloadEditor(_event_id: number, _volunteerIds: number[] = []): Markup {
+        return {action: 'reload'} as unknown as Markup;
     }
 
     // "Check me in": sign the CURRENT actor in.  Ungated (self-signup is always
@@ -1227,6 +1241,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
         db().execute<{event_id: number, volunteer_id: number}>(
             'DELETE FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id',
             {event_id, volunteer_id});
+        dirty.record([sel(this.tableKey()),
+                      sel(this.fkKey('event_id', event_id)),
+                      sel(this.fkKey('volunteer_id', volunteer_id))]);
         return this.reloadEditor(event_id, [volunteer_id]);
     }
 
@@ -1240,6 +1257,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
             .all({event_id}).map(r => r.volunteer_id);
         db().execute<{event_id: number}>(
             'DELETE FROM event_checkin WHERE event_id = :event_id', {event_id});
+        dirty.record([sel(this.tableKey()),
+                      sel(this.fkKey('event_id', event_id)),
+                      ...vids.map(v => sel(this.fkKey('volunteer_id', v)))]);
         return this.reloadEditor(event_id, vids);
     }
 
@@ -1348,7 +1368,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
         const actorId = ctx?.actorId;
         const canManage = this.canManageCheckins();
         const isCheckedIn = actorId !== undefined && checkins.some(c => c.volunteer_id === actorId);
-        const props = this.reloadableItemProps(event_id, `rabid.event_checkin.renderCheckinEditor(${event_id})`);
+        // The roster is WHERE event_id, so register this table's event fk key.
+        const props = reloadableProps([this.fkKey('event_id', event_id)],
+            `rabid.event_checkin.renderCheckinEditor(${event_id})`);
 
         const checkedInIds = new Set(checkins.map(c => c.volunteer_id));
         const items: action.ActionMenuItem[] = [];

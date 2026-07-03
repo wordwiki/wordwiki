@@ -23,7 +23,7 @@
 
 import {db} from "../liminal/db.ts";
 import {Markup, h} from "../liminal/markup.ts";
-import {reloadableItemProps, pencilIcon, ForeignKeyField} from "../liminal/table.ts";
+import {reloadableProps, pencilIcon, ForeignKeyField} from "../liminal/table.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated, hostOrAdmin, selfArg} from "../liminal/security.ts";
@@ -374,13 +374,11 @@ function viewerIsHostOrAdmin(): boolean {
     return ctx.roles.has('host') || ctx.roles.has('admin');
 }
 
-// Reload the volunteer's time fragment (and, when an event was touched, the
-// event page's check-in fragment too - htmx only re-renders selectors present).
-function reload(volunteer_id: number, event_id?: number): Markup {
-    const targets = [`.-volunteer_time-${volunteer_id}-`];
-    if(event_id) targets.push(`.-event_checkin-${event_id}-`);
-    return {action: 'reload', targets} as unknown as Markup;
-}
+// The mutations below write through the timesheet_entry / event_checkin
+// table funnels, whose automatic dirty-key emission (volunteer_id / event_id
+// fk keys) notifies the Time fragment and any event check-in fragment - no
+// hand target lists needed.
+const RELOAD: Markup = {action: 'reload'} as unknown as Markup;
 
 export class VolunteerTimeService {
 
@@ -446,7 +444,7 @@ export class VolunteerTimeService {
             km_driven_processed: 0,
             paid_time_processed: 0,
         } as Partial<TimesheetEntry>);
-        return reload(volunteer_id);
+        return RELOAD;
     }
 
     @route(ownTimeOrHostPositional)
@@ -475,7 +473,7 @@ export class VolunteerTimeService {
             'SELECT 1 AS n FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id')
             .first({event_id, volunteer_id});
         if(!exists) rabid.event_checkin.insert({event_id, volunteer_id, notes: ''});
-        return reload(volunteer_id, event_id);
+        return RELOAD;
     }
 }
 
@@ -493,7 +491,14 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
         `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${orphans},${all})`;
     // The reload URL carries both view flags, so a reload (after an add/edit)
     // keeps the current view; each toggle swaps the fragment in place.
-    const props = reloadableItemProps('volunteer_time', volunteer_id,
+    // The view is derived from the volunteer's timesheet entries and event
+    // check-ins, so it registers those tables' volunteer fk keys - which the
+    // page's own add/edit/confirm buttons notify automatically.  (Completed
+    // tasks also feed the view, but tasks aren't edited from this page, so
+    // per the editable-pages rule it does NOT register a task key.)
+    const props = reloadableProps(
+        [rabid.timesheet_entry.fkKey('volunteer_id', volunteer_id),
+         rabid.event_checkin.fkKey('volunteer_id', volunteer_id)],
         route(showOrphanTasks, showAllWeeks), {id: domId});
     const linkBtn = (label: string, hxGet: string): Markup =>
         [h.button, {type: 'button', class: 'btn btn-sm btn-link p-0',
