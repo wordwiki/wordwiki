@@ -3,7 +3,9 @@
  * The monthly activity report: one compact row per month - by default ALL
  * months back to the earliest recorded creation (the report is cheap even at
  * full depth; `months` limits it when set) - counting what HAPPENED that
- * month: changes made, new lexemes created, approvals and rejections
+ * month: changes made (and the DISTINCT lexemes they touched - one word's
+ * entry is many facts, so Changed lexemes is the human scale of the raw
+ * Changes count), new lexemes created, approvals and rejections
  * performed.  The COUNTS are the links to their evidence: a Changes count
  * opens the feed windowed to that month, a New lexemes count opens the
  * created-lexemes micro page (createdPage).  Counts are ACTIONS IN the month, not
@@ -83,15 +85,20 @@ export interface ActivityQuery extends Tuple {
  *  columns to classify the action taken at that moment (no chain-walking). */
 export interface ActivityRow {
     valid_from: number;
+    entry_id: number;    // id1 - the containing lexeme
     change_action: string|null;
     username: string;    // change_by_username, '' when unstamped
 }
 
 /** What happened in one month (or one month for one editor).  newLexemes is
  *  the creation-date axis (see the module comment), tallied separately from
- *  the change rows.  comments are tallied but not currently rendered. */
+ *  the change rows.  changedLexemes carries the actual entry-id set, not a
+ *  count, so folds (year totals, per-editor window totals) stay DISTINCT
+ *  rather than summing per-month distincts.  comments are tallied but not
+ *  currently rendered. */
 export interface ActivityStats {
     changes: number;      // content changes: creations + edits + deletions
+    changedLexemes: Set<number>;   // distinct lexemes those changes touched
     newLexemes: number;   // lexemes CREATED this month (by creation date)
     approved: number;     // review actions performed this month
     rejected: number;
@@ -99,24 +106,28 @@ export interface ActivityStats {
 }
 
 export function emptyStats(): ActivityStats {
-    return {changes: 0, newLexemes: 0, approved: 0, rejected: 0, comments: 0};
+    return {changes: 0, changedLexemes: new Set(), newLexemes: 0,
+            approved: 0, rejected: 0, comments: 0};
 }
 
 export function addStats(into: ActivityStats, s: ActivityStats): void {
     into.changes += s.changes; into.newLexemes += s.newLexemes;
     into.approved += s.approved; into.rejected += s.rejected;
     into.comments += s.comments;
+    for(const id of s.changedLexemes) into.changedLexemes.add(id);
 }
 
 /** Classify one row by the action it RECORDS and tally it.  Every CHANGE_ROW
  *  row lands in exactly one tally (approved / rejected / comment / change),
- *  so a month's tallies partition its feed events. */
+ *  so a month's tallies partition its feed events.  Only content changes
+ *  mark their lexeme changed (an approval settles a lexeme, it doesn't
+ *  change it). */
 export function tallyRow(s: ActivityStats, r: ActivityRow): void {
     switch(r.change_action) {
         case 'approved': s.approved++; break;
         case 'reverted': s.rejected++; break;
         case COMMENT:    s.comments++; break;
-        default:         s.changes++;
+        default:         s.changes++; s.changedLexemes.add(r.entry_id);
     }
 }
 
@@ -385,8 +396,8 @@ export class ActivityReport {
         // shaded (table-active) as the group's header line.
         return ['table', {class: 'table table-sm w-auto align-middle'},
             ['thead', {},
-             ['tr', {}, ['th', {}, 'Month'], th('Changes'), th('New lexemes'),
-                        th('Approved'), th('Rejected')]],
+             ['tr', {}, ['th', {}, 'Month'], th('Changes'), th('Changed lexemes'),
+                        th('New lexemes'), th('Approved'), th('Rejected')]],
             years.map((g, i) => {
                 const year = g[0].window.year;
                 const total = emptyStats();
@@ -394,11 +405,12 @@ export class ActivityReport {
                 return ['tbody', {},
                     i === 0 ? [] :
                         ['tr', {class: 'lm-activity-spacer'},
-                         ['td', {colspan: 5, class: 'border-0 p-0 pt-3'}]],
+                         ['td', {colspan: 6, class: 'border-0 p-0 pt-3'}]],
                     ['tr', {class: 'lm-activity-year table-active fw-bold'},
                      ['td', {}, String(year)],
                      ActivityReport.count(total.changes,
                          this.feedUrl(g[g.length - 1].window.from, g[0].window.to, user)),
+                     ActivityReport.count(total.changedLexemes.size),
                      ActivityReport.count(total.newLexemes,
                          this.createdUrl(year, 0, user)),
                      ActivityReport.count(total.approved),
@@ -408,6 +420,7 @@ export class ActivityReport {
                          monthOnlyFormat.format(new Date(year, b.window.month - 1, 1))],
                         ActivityReport.count(b.total.changes,
                             this.feedUrl(b.window.from, b.window.to, user)),
+                        ActivityReport.count(b.total.changedLexemes.size),
                         ActivityReport.count(b.total.newLexemes,
                             this.createdUrl(year, b.window.month, user)),
                         ActivityReport.count(b.total.approved),
@@ -463,6 +476,8 @@ export class ActivityReport {
              totals.map(([user, s]) => {
                  const parts: string[] = [];
                  if(s.changes) parts.push(n(s.changes, 'change'));
+                 if(s.changedLexemes.size)
+                     parts.push(`on ${n(s.changedLexemes.size, 'lexeme')}`);
                  if(s.newLexemes) parts.push(n(s.newLexemes, 'new lexeme'));
                  if(s.approved) parts.push(`${s.approved} approved`);
                  if(s.rejected) parts.push(`${s.rejected} rejected`);
@@ -503,9 +518,11 @@ export class ActivityReport {
      *  (see renderReport).  Same predicate as the feed - a count here IS a
      *  feed page's contents. */
     private fetchActivityRows(from: number, to: number): ActivityRow[] {
-        const rows = db().all<{valid_from: number, change_action: string|null,
+        const rows = db().all<{valid_from: number, entry_id: number,
+                               change_action: string|null,
                                username: string|null}, any>(
-            `SELECT valid_from, change_action, change_by_username AS username
+            `SELECT valid_from, id1 AS entry_id, change_action,
+                    change_by_username AS username
              FROM dict
              WHERE valid_from >= :from AND valid_from <= :to
                AND valid_from > ${timestamp.BEGINNING_OF_TIME}
@@ -550,7 +567,7 @@ export class ActivityReport {
  *  indexes with EXPLAIN QUERY PLAN (the same guard as feedQueryShapes - a
  *  schema change must not degrade the report to a table scan). */
 export const activityQueryShapes = (tableName: string) => [
-    `SELECT valid_from, change_action, change_by_username
+    `SELECT valid_from, id1, change_action, change_by_username
      FROM ${tableName}
      WHERE valid_from >= 1 AND valid_from <= 2
        AND id1 IS NOT NULL

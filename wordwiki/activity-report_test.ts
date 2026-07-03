@@ -13,7 +13,7 @@ import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/a
 import { withTestDb, as, mkEntry, mkChild, mkEdit, bornApprove, TestTimeline,
          type Fixture } from "./testing.ts";
 import { monthWindows, bucketActivity, bucketCreations, userTotals, emptyStats,
-         tallyRow, resolveCreationDate, spanMonths, activityQuery, activityQueryShapes,
+         tallyRow, addStats, resolveCreationDate, spanMonths, activityQuery, activityQueryShapes,
          type ActivityRow, type ActivityQuery, type EntryCreation } from "./activity-report.ts";
 import { createAssertionDml } from "./assertion.ts";
 import { db, Db, setDefaultDb } from "../liminal/db.ts";
@@ -30,7 +30,7 @@ function row(monthsAgo: number, over: Partial<ActivityRow> = {}): ActivityRow {
     const d = new Date(2026, 5 - monthsAgo, 10, 9, 0, 0);
     return {valid_from: timestamp.makeTimestamp(
                 Math.floor((+d - timestamp.LOCAL_EPOCH_START)/1000), 0),
-            change_action: null, username: 'sally',
+            entry_id: 42, change_action: null, username: 'sally',
             ...over};
 }
 
@@ -46,10 +46,25 @@ test("activity windows: contiguous closed ranges, newest first, labelled", () =>
 test("activity tally: each row lands in exactly one count", () => {
     const s = emptyStats();
     tallyRow(s, row(0));                                          // a content change
+    tallyRow(s, row(0, {entry_id: 43}));                          // another lexeme
+    tallyRow(s, row(0, {entry_id: 43}));                          // same lexeme again
     tallyRow(s, row(0, {change_action: 'approved'}));
-    tallyRow(s, row(0, {change_action: 'reverted'}));
+    tallyRow(s, row(0, {change_action: 'reverted', entry_id: 99}));
     tallyRow(s, row(0, {change_action: 'comment'}));
-    assertEquals(s, {changes: 1, newLexemes: 0, approved: 1, rejected: 1, comments: 1});
+    // Only content changes mark their lexeme changed - the approve/revert
+    // rows' lexemes don't join the set.
+    assertEquals(s, {changes: 3, changedLexemes: new Set([42, 43]), newLexemes: 0,
+                     approved: 1, rejected: 1, comments: 1});
+});
+
+test("addStats: changed-lexeme folds stay distinct, never summed", () => {
+    const a = emptyStats(), b = emptyStats();
+    tallyRow(a, row(0, {entry_id: 1}));
+    tallyRow(a, row(0, {entry_id: 2}));
+    tallyRow(b, row(1, {entry_id: 2}));
+    addStats(a, b);
+    assertEquals(a.changes, 3);
+    assertEquals(a.changedLexemes, new Set([1, 2]));   // 2 shared: not 3
 });
 
 test("creation date: shoebox-date wins (imported), else valid_from, else unknown", () => {
@@ -183,6 +198,12 @@ test("report: counts this month's actions; the born-published corpus is invisibl
             assertStringIncludes(html, cell(4));
             assertStringIncludes(html, cell(2));
             assertStringIncludes(html, "<tdclass='text-end'>1</td>");   // approved: plain
+            // The 4 changes touched 2 distinct lexemes (1000 and 3000):
+            // the Changed lexemes column, plain (the feed link rides Changes).
+            assertStringIncludes(html, "Changedlexemes");
+            assertStringIncludes(html, "<tdclass='text-end'>2</td>");
+            // djz's 2 changes both touch entry 3000: one lexeme.
+            assertStringIncludes(html, "2changes·on1lexeme·2newlexemes");
             assertStringIncludes(html, "wordwiki.changes({from_time:");
             assertStringIncludes(html, "wordwiki.report.createdPage(");
             // Grouped by year: a bold totals row leads the year, its new-
