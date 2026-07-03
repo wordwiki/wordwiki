@@ -127,6 +127,63 @@ with allocated tx timestamps (mk* t args only order groups) — fixture tests
 needing clump gaps advance the clock via allocTxTimestamps(seconds*RADIX)
 (jumpClock helper in change-feed_test.ts).
 
+MONTHLY ACTIVITY REPORT (built 2026-07-03, activity-report.ts): compact
+per-month table (last N months, default 12, cap 240) of Changes / New lexemes /
+Approved / Rejected — counts are ACTIONS IN the month (dz chose this over
+fate-of-the-month's-changes: single-pass, never shifts retroactively). Same
+FieldSet pure-function-of-URL pattern as the feed: wordwiki.activity({months,
+restrict_to_user}), auto-generated filter dialog; NO to_time anchor stamp
+(live dashboard, drifts with today — reproducibility lives in the month
+LINKS). ONE db trip: light-row index-range fetch over the whole window using
+the feed's imported CHANGE_ROW predicate (counts must be exactly the feed page
+they link to), bucketed by (month,user) in JS since month boundaries are
+computed in JS anyway for the links; plan pinned. Month name → feed windowed
+{from_time,to_time}; "By editor" lines (top-level only) → user-filtered feed +
+their per-user monthly view. New lexeme = pending creation of the ent fact
+(born-published backfill excluded by CHANGE_ROW, so all-dash until people
+create entries under the new model). The unstamped pre-2026 history (NULL
+change_by_username, ~14k rows) shows as unlinked 'unknown' line — the feed's
+`=` filter can't reach NULL, so no filter links for it. Comments tallied but
+not rendered (no column earned yet). Reached from Home + Admin menu. Tests:
+activity-report_test.ts (windows/tally/bucketing pure, plan pin, rendered).
+
+CREATION DATES (built 2026-07-03, creation-dates.ts): New lexemes column is
+the CREATION-DATE axis, not publication state — ent valid_from for
+wordwiki-created lexemes (ent tag never edited, so exact; counting only
+pending creations hid everything Phase-0 born-approved), shoebox-date
+attribute for the 7,514 batch-imported ones (whose ent rows ALL sit at
+exactly BEGINNING_OF_TIME). KEY CONSTRAINT dz should know: the HLC encoding
+starts at the 2020 local epoch, so pre-2020 shoebox dates are UNREPRESENTABLE
+as valid_from (and BOT is a load-bearing "imported baseline" sentinel) —
+creation date therefore stays DATA (the attribute), never a valid_from
+rewrite. `wordwiki.sh normalize-shoebox-dates` (migrateDevDb.sh step 8 +
+cutover recipe, per dz: reproducible-script steps only) rewrites current
+shoebox-date values dd/Mon/yyyy→ISO mute-in-place (backfill pattern;
+superseded versions keep original text as audit trail; idempotent,
+--expect-no-changes proof; ran on dev: 7,785 normalized, 0 unparseable — the
+one two-line value takes its first date). resolveCreationMonth: shoebox ISO
+(earliest per entry across subentries) else valid_from>BOT else unknown (3
+entries). months cap 400 so the whole 2000→ construction history renders;
+shoebox years 2000-2024, 1,905-lexeme spike in 2019. Pre-import months' feed
+links are empty by design (creation happened in Shoebox, not here).
+REVISED per dz (2026-07-03 pm): COUNTS are the links, month label plain text —
+Changes count → month-windowed feed, New lexemes count → createdPage(year,
+month[,user]) micro page (every lexeme created that month, oldest first, date
++ entry link + creator; (0,0) = the undated imports). months field now
+nullable DEFAULTING TO BLANK = NO LIMIT (dz: fast enough at full depth) —
+spanMonths reaches back to the earliest change or dated creation (~318
+months, ~0.2s); no-limit view appends "N lexemes with no creation date"
+linking createdPage(0,0) (currently 3). filterSummary shows "last N months"
+when a limit IS set. FEED RANGE RULE (dz 2026-07-03): a CLOSED feed range
+(from_time set, i.e. the report's month links) ignores max_rows entirely -
+the range is the clamp, whole window renders, no Show-older (SQL LIMIT
+dropped, cutFeedSlice target Infinity); max_rows/FEED_PAGE_ROWS (now 1000,
+was 50) paginate only the open-ended feed. Whole-month feeds ~0.15s warm
+(~2s first request = workspace warm-up). Table GROUPED BY YEAR (dz): bold
+year totals row (Changes → year-windowed feed, New lexemes →
+createdPage(year, 0) = whole-year mode of the micro page), month-only labels
+indented beneath; an edge year totals only its rendered months.
+
 DESIGN (designed 2026-06-12, revised 2026-06-13 with dz): a second
 interval `published_from`/`published_to` on `dict` assertions, peer to
 `valid_from`/`valid_to`. valid = editorial currency (workspace view,
