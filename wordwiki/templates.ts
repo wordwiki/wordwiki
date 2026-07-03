@@ -182,6 +182,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               'Admin'],
              ['ul', {class:'dropdown-menu'},
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.changes()'}, 'Recent Changes']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.activity()'}, 'Monthly Activity']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.publish.startPublish()'}, 'Publish']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.usersPage()'}, 'Users']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.categoriesPage()'}, 'Category Table']],

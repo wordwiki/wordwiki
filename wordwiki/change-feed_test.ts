@@ -270,7 +270,7 @@ test("feed: depth is the URL - 'Show older' is the same view with max_rows bumpe
                 feedQuery.normalize({to_time: anchor}) as FeedQuery)));
 
             // max_rows=1: just the newest clump, whole; Show older carries the
-            // SAME query with max_rows bumped by a page (51).
+            // SAME query with max_rows bumped by a page (1001).
             const page1 = feedHtml(fx, {to_time: anchor, max_rows: 1});
             assertEquals(count(page1, "lm-feed-clump"), 1);
             assertStringIncludes(page1, "PLUGH");
@@ -278,11 +278,21 @@ test("feed: depth is the URL - 'Show older' is the same view with max_rows bumpe
             // still shows - as the from-side of the kept edit's diff).
             assertEquals(count(page1, "lm-cl-row"), 1);
             assertStringIncludes(page1, "Show older");
-            assertStringIncludes(page1, `wordwiki.changes({to_time:${anchor},max_rows:51})`);
+            assertStringIncludes(page1, `wordwiki.changes({to_time:${anchor},max_rows:1001})`);
             // The deeper view has the rest; nothing below, so no more control.
-            const page2 = feedHtml(fx, {to_time: anchor, max_rows: 51});
+            const page2 = feedHtml(fx, {to_time: anchor, max_rows: 1001});
             assertStringIncludes(page2, "XYZZY");
             assertStringIncludes(page2, "Beginning of the record.");
+
+            // A CLOSED range is clamped by the range itself: max_rows is
+            // ignored (both sessions show despite max_rows=1), and there is
+            // no Show older - the range end is the end.
+            const ranged = feedHtml(fx, {from_time: 1, to_time: anchor, max_rows: 1});
+            assertEquals(count(ranged, "lm-feed-clump"), 2);
+            assertStringIncludes(ranged, "XYZZY");
+            assertStringIncludes(ranged, "PLUGH");
+            assertEquals(ranged.includes("Show older"), false);
+            assertStringIncludes(ranged, "Start of the selected range.");
         });
     });
 });

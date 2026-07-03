@@ -17,7 +17,10 @@
  * FieldSet): wordwiki.changes({from_time, to_time, max_rows,
  * restrict_to_user}) - so every view is bookmarkable, refreshable and
  * shareable, including scroll-back depth.  The filters (from/to/user) define
- * the query; max_rows is the depth knob: "Show older" is the SAME view with
+ * the query; max_rows is the depth knob of the OPEN-ENDED feed - a closed
+ * range (from_time set, e.g. a month link from the activity report) is
+ * already clamped by the range and shows everything in it, no paging.
+ * "Show older" is the SAME view with
  * max_rows bumped, swapped in place (htmx into #content) with the URL
  * updated via hx-replace-url - no full page re-render, no scroll jump
  * (valid_from is append-only, so the deeper page's shared prefix re-renders
@@ -56,8 +59,10 @@ const F = '/ww/wordwiki.feed';
 // standing corpus): it supersedes a prior version (edit / approve / revert /
 // comment), is a still-pending creation, or is a deletion tombstone.  A
 // published original creation that is none of these is bulk-import/backfill
-// content, which must not appear in a recent-changes feed.
-const CHANGE_ROW =
+// content, which must not appear in a recent-changes feed.  Shared with the
+// activity report (activity-report.ts) - its counts must mean exactly what
+// the feed shows, since every count links into the feed.
+export const CHANGE_ROW =
     `(replaces_assertion_id IS NOT NULL OR published_from IS NULL OR valid_to = valid_from)`;
 
 // ---------------------------------------------------------------------------
@@ -65,20 +70,23 @@ const CHANGE_ROW =
 // ---------------------------------------------------------------------------
 
 // How many events one "page" of depth aims to show (whole clumps, so a page
-// runs over) - both the max_rows default and the Show-older increment.
-export const FEED_PAGE_ROWS = 50;
+// runs over) - both the max_rows default and the Show-older increment.  Only
+// the OPEN-ENDED feed pages: a closed range (from_time set - e.g. the
+// activity report's month links) is already clamped by the range and shows
+// everything in it.
+export const FEED_PAGE_ROWS = 1000;
 
 // The user filter: offered as the known-editor dropdown, but the VALUE is a
 // free username - change_by_username is free text, and historic rows carry
 // identities outside today's editor map, which must stay filterable (by URL).
-class UserField extends EnumField {
+export class UserField extends EnumField {
     override fromLiteral(v: any): any {
         if(typeof v !== 'string')
             throw new Error(`${this.name}: expected a username string`);
         return v;
     }
 }
-const feedUsers: Record<string, string> = Object.fromEntries(
+export const feedUsers: Record<string, string> = Object.fromEntries(
     Object.entries(entrySchema.users)
         .filter(([u, _]) => !isAutomatedUsername(u) && u !== '___'));
 
@@ -187,7 +195,7 @@ export function cutFeedSlice(clumps: FeedClump[], targetEvents: number,
 }
 
 /** A user's display name (mirrors the lexeme editor's userLabel). */
-function userLabel(username: string): string {
+export function userLabel(username: string): string {
     return username ? (entrySchema.users[username] ?? username) : 'unknown';
 }
 
@@ -287,12 +295,17 @@ export class ChangeFeed {
      *  fragment), then the Show-older control - the SAME view with max_rows
      *  bumped, swapped into #content with the URL replaced, so depth is
      *  always in the URL (refresh keeps it) without a page re-render or a
-     *  scroll jump. */
+     *  scroll jump.  A CLOSED range (from_time set) is already clamped by
+     *  the range itself: max_rows is ignored and the whole window renders,
+     *  with no Show-older. */
     renderFeed(query: FeedQuery): Markup {
-        const limit = query.max_rows + FEED_FETCH_SLACK;
+        const ranged = query.from_time != null;
+        const limit = ranged ? null : query.max_rows + FEED_FETCH_SLACK;
         const rows = this.fetchFeedEvents(query, limit);
         const clumps = clumpFeedEvents(rows);
-        const {kept, nextBefore} = cutFeedSlice(clumps, query.max_rows, rows.length < limit);
+        const {kept, nextBefore} = cutFeedSlice(
+            clumps, ranged ? Infinity : query.max_rows,
+            limit === null || rows.length < limit);
         const anchor = query.to_time ?? 0;
         const moreUrl = nextBefore === undefined ? undefined
             : `/ww/wordwiki.changes(${feedQuery.literal(
@@ -431,10 +444,10 @@ export class ChangeFeed {
     // supersedes a prior version (edit / approve / revert / comment), is a
     // still-pending creation, or is a deletion tombstone.
 
-    /** The window fetch: the newest `limit` human changes matching the query
-     *  filters (at or below to_time; at or above from_time when set;
-     *  optionally one editor's). */
-    private fetchFeedEvents(query: FeedQuery, limit: number): FeedEvent[] {
+    /** The window fetch: the newest human changes matching the query filters
+     *  (at or below to_time; at or above from_time when set; optionally one
+     *  editor's).  `limit` null = the whole window (a closed range). */
+    private fetchFeedEvents(query: FeedQuery, limit: number|null): FeedEvent[] {
         const params: Record<string, any> = {to_time: query.to_time};
         if(query.from_time != null) params.from_time = query.from_time;
         if(query.restrict_to_user) params.restrict_to_user = query.restrict_to_user;
@@ -449,7 +462,7 @@ export class ChangeFeed {
                AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
                ${query.restrict_to_user ? 'AND change_by_username = :restrict_to_user' : ''}
              ORDER BY valid_from DESC
-             LIMIT ${limit}`,
+             ${limit !== null ? `LIMIT ${limit}` : ''}`,
             params);
         return rows.map(r => ({...r, username: r.username ?? ''}));
     }
@@ -484,6 +497,13 @@ export const feedQueryShapes = (tableName: string) => [
      ORDER BY valid_from DESC LIMIT 100`,
     `SELECT valid_from, id, id1, change_by_username FROM ${tableName}
      WHERE id1 = 1 AND valid_from >= 1 AND valid_from <= 2
+       AND ${CHANGE_ROW}
+       AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
+     ORDER BY valid_from DESC`,
+    // The closed-range window fetch (no LIMIT - the range is the clamp).
+    `SELECT valid_from, id, id1, change_by_username FROM ${tableName}
+     WHERE valid_from <= 2 AND valid_from > 1 AND valid_from >= 1
+       AND id1 IS NOT NULL
        AND ${CHANGE_ROW}
        AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
      ORDER BY valid_from DESC`,

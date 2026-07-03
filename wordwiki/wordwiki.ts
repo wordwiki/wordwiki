@@ -36,6 +36,7 @@ import {route, routeMutation, authenticated, hostOrAdmin, publicRoute} from '../
 import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {ChangeFeed} from './change-feed.ts';
+import {ActivityReport} from './activity-report.ts';
 import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
@@ -47,6 +48,7 @@ import * as migrationVerify from './migration-verify.ts';
 import { validateVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
+import { normalizeShoeboxDates } from './creation-dates.ts';
 
 /**
  *
@@ -128,6 +130,14 @@ export class WordWiki extends LiminalApp {
     #feed: ChangeFeed|undefined = undefined;
     @route(authenticated) @path get feed(): ChangeFeed {
         return this.#feed ??= new ChangeFeed(this);
+    }
+
+    // The monthly activity report, reachable as wordwiki.report.* (page
+    // alias: wordwiki.activity({months, restrict_to_user})).  See
+    // activity-report.ts.
+    #report: ActivityReport|undefined = undefined;
+    @route(authenticated) @path get report(): ActivityReport {
+        return this.#report ??= new ActivityReport(this);
     }
 
     // The scanned-document / page editor, reachable as wordwiki.pages.*
@@ -446,6 +456,13 @@ export class WordWiki extends LiminalApp {
         return this.feed.changesPage(q);
     }
 
+    // The monthly activity report (see activity-report.ts).  One {}-literal
+    // query argument (activityQuery) fully determines the page.
+    @route(authenticated)
+    activity(q?: Record<string, any>): templates.Page {
+        return this.report.activityPage(q);
+    }
+
     @route(authenticated)
     home(): any {
         const title = "Dictionary Editor";
@@ -462,7 +479,8 @@ export class WordWiki extends LiminalApp {
             ['br', {}],
             ['h3', {}, 'Review'],
             ['ul', {},
-             ['li', {}, ['a', {href:'/ww/wordwiki.changes()'}, 'Recent changes']]],
+             ['li', {}, ['a', {href:'/ww/wordwiki.changes()'}, 'Recent changes']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.activity()'}, 'Monthly activity']]],
 
             ['br', {}],
             ['h3', {}, 'Reports'],
@@ -1633,6 +1651,29 @@ if (import.meta.main) {
                 if(args.includes('--expect-no-changes')) {
                     if(stats.bornApproved > 0)
                         throw new Error(`--expect-no-changes: the backfill born-approved ${stats.bornApproved} facts`);
+                    console.info('idempotency confirmed: re-run made no changes');
+                }
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Normalize the legacy shoebox-date attribute values to ISO yyyy-mm-dd
+        // (creation-dates.ts): the imported lexemes' creation dates, made
+        // machine-readable in place (mute-in-place like the backfill - no new
+        // assertion rows; superseded versions keep their original text).
+        // Idempotent; refuses production without --allow-production.
+        // --expect-no-changes proves a re-run is a no-op.
+        case 'normalize-shoebox-dates': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                const stats = normalizeShoeboxDates({log: (m) => console.info(m)});
+                if(args.includes('--expect-no-changes')) {
+                    if(stats.normalized > 0)
+                        throw new Error(`--expect-no-changes: normalized ${stats.normalized} shoebox dates`);
                     console.info('idempotency confirmed: re-run made no changes');
                 }
             });

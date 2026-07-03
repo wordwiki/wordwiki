@@ -40,6 +40,11 @@ set -e
 #   ./wordwiki.sh backfill-publication # publication Phase 0: clear legacy
 #                                      # placeholder + born-approve Completed
 #                                      # data, mute-in-place (refuses prod)
+#   ./wordwiki.sh normalize-shoebox-dates # rewrite legacy shoebox-date
+#                                      # attribute values to ISO yyyy-mm-dd,
+#                                      # mute-in-place (idempotent; refuses
+#                                      # prod) - the imported lexemes'
+#                                      # creation dates, machine-readable
 #   ./wordwiki.sh verify-migration     # read-only post-migration sanity
 #                                      # checks (exit 1 on failure)
 #   ./wordwiki.sh verify-workspace     # read-only structural invariants of

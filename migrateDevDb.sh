@@ -24,9 +24,13 @@ set -e
 #      place (stamp published_* on the current facts of Completed entries;
 #      NO approval rows; AFTER imports so re-categorized tuples are stamped
 #      and tombstoned old ones are not); idempotent
-#   8. verify-migration: read-only invariant checks; exits nonzero on failure
-#   9. verify-workspace: read-only STRUCTURAL invariants of the whole store
-#  10. restart the server and smoke-test it over HTTP
+#   8. normalize shoebox dates: rewrite the imported lexemes' legacy
+#      shoebox-date attribute values to ISO yyyy-mm-dd, mute-in-place (the
+#      lexeme creation dates - see creation-dates.ts; validates the whole
+#      corpus loudly here rather than silently at query time); idempotent
+#   9. verify-migration: read-only invariant checks; exits nonzero on failure
+#  10. verify-workspace: read-only STRUCTURAL invariants of the whole store
+#  11. restart the server and smoke-test it over HTTP
 #
 # ---- The PRODUCTION cutover (when the day comes) is NOT this script ------
 # On the production host (no pull, no dev marking, no dev password):
@@ -38,46 +42,52 @@ set -e
 #   6. ./wordwiki.sh import-lexical-forms --allow-production --expect-no-changes
 #   7. ./wordwiki.sh backfill-publication --allow-production
 #   8. ./wordwiki.sh backfill-publication --allow-production --expect-no-changes
-#   9. ./wordwiki.sh verify-migration   (read-only; same checks as here;
+#   9. ./wordwiki.sh normalize-shoebox-dates --allow-production
+#  10. ./wordwiki.sh normalize-shoebox-dates --allow-production --expect-no-changes
+#  11. ./wordwiki.sh verify-migration   (read-only; same checks as here;
 #      expect a WARNING for entries created after the assignments dump)
-#  10. ./wordwiki.sh verify-workspace   (read-only structural invariants)
-#  11. start the server; ./wordwiki.sh publish; spot-check the site
+#  12. ./wordwiki.sh verify-workspace   (read-only structural invariants)
+#  13. start the server; ./wordwiki.sh publish; spot-check the site
 # --------------------------------------------------------------------------
 
 cd "$(dirname "$0")"
 
 step() { echo; echo "=== $* ==="; }
 
-step "[1/10] stopping the server"
+step "[1/11] stopping the server"
 ./wordwiki.sh stop
 
-step "[2/10] pulling production db + content from staging"
+step "[2/11] pulling production db + content from staging"
 ./pullDbFromPublic.sh
 
-step "[3/10] repairing pre-existing store corruption (idempotent)"
+step "[3/11] repairing pre-existing store corruption (idempotent)"
 ./wordwiki.sh repair-assertions
 
-step "[4/10] importing categories"
+step "[4/11] importing categories"
 ./wordwiki.sh import-categories
 
-step "[5/10] category import idempotency proof"
+step "[5/11] category import idempotency proof"
 ./wordwiki.sh import-categories --expect-no-changes
 
-step "[6/10] importing lexical forms (+ idempotency proof)"
+step "[6/11] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms
 ./wordwiki.sh import-lexical-forms --expect-no-changes
 
-step "[7/10] publication Phase 0: born-approve existing data (+ idempotency proof)"
+step "[7/11] publication Phase 0: born-approve existing data (+ idempotency proof)"
 ./wordwiki.sh backfill-publication
 ./wordwiki.sh backfill-publication --expect-no-changes
 
-step "[8/10] verifying the migration"
+step "[8/11] normalizing legacy shoebox creation dates (+ idempotency proof)"
+./wordwiki.sh normalize-shoebox-dates
+./wordwiki.sh normalize-shoebox-dates --expect-no-changes
+
+step "[9/11] verifying the migration"
 ./wordwiki.sh verify-migration
 
-step "[9/10] verifying the assertion store is structurally well-formed"
+step "[10/11] verifying the assertion store is structurally well-formed"
 ./wordwiki.sh verify-workspace
 
-step "[10/10] starting the server + smoke test"
+step "[11/11] starting the server + smoke test"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break
