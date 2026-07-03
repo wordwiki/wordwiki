@@ -78,6 +78,55 @@ KEPT and ANDed with the published dimension (not replaced). Property test
 (reference-model_test.ts) compares oracle vs production after every op incl.
 publication ops; `bornApprove(ww)` test helper in testing.ts.
 
+SITTING RECEIPTS (built 2026-07-03): a review action no longer VANISHES the
+acted-on group (dz: disappearance confused even him; receipts = confirmation +
+misclick recovery + layout stability). The review sitting is anchored at the
+db's top tx timestamp (`since`), stamped into the browser URL by an entryPage
+redirect (un-anchored visit → `/ww/wordwiki.entry(id,T)`, T =
+app.lastAllocatedTxTimestamp — the db-lamport anchor dz wanted, NOT wall
+clock). A fact settled by approve/revert NEWER than `since` renders as an
+in-place receipt ("approved ✓"/"rejected", chip names the actor) — pure query,
+no DOM/session state; refresh/back keep the sitting, fresh navigation
+re-stamps (clean queue). Other people's same-sitting approvals show too
+(deliberate: consistent state beats silent vanishing). `since` threads through
+ReviewOpts + every fragment hx-get; `since=0` (old links) = no receipts =
+legacy behavior. factReceipt() in lexeme-editor.ts; receipts don't count as
+pending. Tests in lexeme-review_test.ts (receipts section).
+
+GLOBAL CHANGE FEED (built 2026-07-03, change-feed.ts): the dictionary-wide
+worklist. A STABLE chrono record of all human changes (dz's pending-only idea
+resolved: pending-only + scroll-back positional memory conflict — status is a
+badge, position never moves). Events CLUMP: same editor + same lexeme,
+consecutive gap ≤ 30 min (GAP-based per dz's edit-session intent, not a fixed
+window), closed by any other editor touching that lexeme; gaps compare the
+HLC's wall-time component (extractTimeFromTimestamp — dz: "hybrid logical
+clock", the db's only clock; stalled-clock anomaly merges clumps, benign).
+PAGING REDESIGNED (2026-07-03, dz caught DOM-state flaw in htmx-append):
+the page is a PURE FUNCTION of ONE {}-literal route arg -
+wordwiki.changes({from_time,to_time,max_rows,restrict_to_user}) via the new
+liminal FieldSet (extracted base of Table; normalize/literal = codec for ONE
+{} value - dz: do NOT privilege a textual base-URL, URLs are composable route
+exprs, a page can carry several independent {} sections). Filters define the
+query; max_rows is the depth knob; "Show older" = SAME URL with max_rows+50,
+htmx-swapped into #content with hx-replace-url (replaceState for depth,
+real-navigation/pushState for filter changes - resolved dz's "divided").
+Filter dialog AUTO-GENERATED from the FieldSet's own fields
+(renderParamForm); applyFilter returns new {action:'navigate',url} tx action
+(rabid-scripts.js). TimestampField (liminal): HLC number <-> datetime-local.
+Pages anchored in the past are IMMUTABLE (valid_from append-only); cutFeedSlice
+picks the cut C by fixpoint so a page = exactly events ≥ C (interleaved
+clumps pulled in whole). Entry links
+carry the feed cursor as the review-sitting `since` anchor (one coherent
+sitting) and open target=_blank — pages are no-store (bfcache deliberately
+defeated), so the feed tab must never navigate; a focus-handler reloads just
+the clicked clumps (inline script). Queries: indexed valid_from range /
+(id1 + range), plans pinned in change-feed_test.ts; imports + '~' users
+filtered in SQL. FEED SHOWS CHANGES ONLY (fix 2026-07-03): filter CHANGE_ROW = (replaces_assertion_id IS NOT NULL OR published_from IS NULL OR valid_to=valid_from) excludes the born-published corpus (backfill/import: published original creation, no predecessor, not a tombstone) - it's standing content, not activity. A baseline kind is also dropped from clump events, and empty clumps drop. Symptom was 'words with no changes' in the feed. (Filter dialog Apply nop was a SEPARATE non-bug: stale in-memory rabid-scripts.js in an open tab lacking the new navigate tx action - reload fixes; resources revalidate via etag.) No approve-from-feed (deliberate: review mode has the
+context + gates). TEST GOTCHA discovered: applyTransaction REWRITES valid_from
+with allocated tx timestamps (mk* t args only order groups) — fixture tests
+needing clump gaps advance the clock via allocTxTimestamps(seconds*RADIX)
+(jumpClock helper in change-feed_test.ts).
+
 DESIGN (designed 2026-06-12, revised 2026-06-13 with dz): a second
 interval `published_from`/`published_to` on `dict` assertions, peer to
 `valid_from`/`valid_to`. valid = editorial currency (workspace view,
