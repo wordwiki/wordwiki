@@ -16,13 +16,14 @@
  * exactly that month, so the feed's CHANGE_ROW predicate and this report's
  * fetch must stay the same (they are - the predicate is imported).
  *
- * EXCEPT the New lexemes column, which is a different axis: lexemes by their
- * CREATION DATE (creation-dates.ts) - the ent fact's valid_from for lexemes
- * created in wordwiki (the ent tag is never edited, so this is exact,
- * regardless of publication state - counting only pending creations would
- * hide everything the Phase 0 backfill born-approved), and the shoebox-date
- * attribute for the batch-imported corpus (whose ent rows all sit at the one
- * BEGINNING_OF_TIME import instant).  A deep window (months up to 400) thus
+ * EXCEPT the New published column (leading, because it is the headline
+ * number), which is a different axis: PUBLISHED lexemes by their CREATION
+ * DATE (creation-dates.ts) - the ent fact's valid_from for lexemes created
+ * in wordwiki (the ent tag is never edited, so this is exact), and the
+ * shoebox-date attribute for the batch-imported corpus (whose ent rows all
+ * sit at the one BEGINNING_OF_TIME import instant).  Only the public pool
+ * counts (publishedEntries - the dictionary is full of slug/draft entries),
+ * so an old month's number grows as its drafts get finished.  A deep window (months up to 400) thus
  * shows the dictionary's whole construction history back to 2000.  Caveat
  * that follows from the axis change: a pre-import month's feed link shows no
  * events - the creation happened in the legacy system, not here.
@@ -362,7 +363,7 @@ export class ActivityReport {
             query.months == null && undated > 0
                 ? ['div', {class: 'text-muted small mb-2'},
                    ['a', {href: this.createdUrl(0, 0, query.restrict_to_user)},
-                    `${undated} lexeme${undated === 1 ? '' : 's'}`],
+                    `${undated} published lexeme${undated === 1 ? '' : 's'}`],
                    ' with no creation date']
                 : [],
             query.restrict_to_user ? [] : this.renderUserLines(buckets, query, windows)];
@@ -396,8 +397,8 @@ export class ActivityReport {
         // shaded (table-active) as the group's header line.
         return ['table', {class: 'table table-sm w-auto align-middle'},
             ['thead', {},
-             ['tr', {}, ['th', {}, 'Month'], th('Changes'), th('Changed lexemes'),
-                        th('New lexemes'), th('Approved'), th('Rejected')]],
+             ['tr', {}, ['th', {}, 'Month'], th('New published'), th('Changes'),
+                        th('Changed lexemes'), th('Approved'), th('Rejected')]],
             years.map((g, i) => {
                 const year = g[0].window.year;
                 const total = emptyStats();
@@ -408,21 +409,21 @@ export class ActivityReport {
                          ['td', {colspan: 6, class: 'border-0 p-0 pt-3'}]],
                     ['tr', {class: 'lm-activity-year table-active fw-bold'},
                      ['td', {}, String(year)],
+                     ActivityReport.count(total.newLexemes,
+                         this.createdUrl(year, 0, user)),
                      ActivityReport.count(total.changes,
                          this.feedUrl(g[g.length - 1].window.from, g[0].window.to, user)),
                      ActivityReport.count(total.changedLexemes.size),
-                     ActivityReport.count(total.newLexemes,
-                         this.createdUrl(year, 0, user)),
                      ActivityReport.count(total.approved),
                      ActivityReport.count(total.rejected)],
                     g.map(b => ['tr', {},
                         ['td', {class: 'ps-4'},
                          monthOnlyFormat.format(new Date(year, b.window.month - 1, 1))],
+                        ActivityReport.count(b.total.newLexemes,
+                            this.createdUrl(year, b.window.month, user)),
                         ActivityReport.count(b.total.changes,
                             this.feedUrl(b.window.from, b.window.to, user)),
                         ActivityReport.count(b.total.changedLexemes.size),
-                        ActivityReport.count(b.total.newLexemes,
-                            this.createdUrl(year, b.window.month, user)),
                         ActivityReport.count(b.total.approved),
                         ActivityReport.count(b.total.rejected)])];
             })];
@@ -438,9 +439,9 @@ export class ActivityReport {
             .filter(c => c.year === year && (month === 0 ? true : c.month === month));
         if(user) list = list.filter(c => c.username === user);
         list.sort((a, b) => a.month - b.month || a.day - b.day || a.entry_id - b.entry_id);
-        const title = year === 0 ? 'Lexemes with no creation date'
-            : month === 0 ? `Lexemes created in ${year}`
-            : `Lexemes created in ${monthLabelFormat.format(new Date(year, month - 1, 1))}`;
+        const title = year === 0 ? 'Published lexemes with no creation date'
+            : month === 0 ? `Published lexemes created in ${year}`
+            : `Published lexemes created in ${monthLabelFormat.format(new Date(year, month - 1, 1))}`;
         const dd = (n: number) => String(n).padStart(2, '0');
         const body = ['div', {class: 'container py-3'},
             ['div', {class: 'd-flex align-items-center gap-2 mb-3 flex-wrap'},
@@ -478,7 +479,7 @@ export class ActivityReport {
                  if(s.changes) parts.push(n(s.changes, 'change'));
                  if(s.changedLexemes.size)
                      parts.push(`on ${n(s.changedLexemes.size, 'lexeme')}`);
-                 if(s.newLexemes) parts.push(n(s.newLexemes, 'new lexeme'));
+                 if(s.newLexemes) parts.push(n(s.newLexemes, 'new published lexeme'));
                  if(s.approved) parts.push(`${s.approved} approved`);
                  if(s.rejected) parts.push(`${s.rejected} rejected`);
                  if(s.comments) parts.push(n(s.comments, 'comment'));
@@ -534,12 +535,17 @@ export class ActivityReport {
         return rows.map(r => ({...r, username: r.username ?? ''}));
     }
 
-    /** Every lexeme's creation, resolved to its month: the ent creation rows
-     *  (all ~9k - the whole record is the point of a deep window) joined in
-     *  JS against the current shoebox-date attributes (earliest per entry
-     *  when several subentries carry one).  Both queries ride their ty-path
-     *  indexes (plans pinned). */
+    /** Every PUBLISHED lexeme's creation, resolved to its month: the ent
+     *  creation rows joined in JS against the current shoebox-date
+     *  attributes (earliest per entry when several subentries carry one),
+     *  restricted to the public pool (publishedEntries: Completed status +
+     *  published facts) - the dictionary is full of slug/draft entries, and
+     *  "new lexemes" should mean finished words.  Consequence of gating a
+     *  creation-date axis by TODAY's publication state: an old month's
+     *  count grows as its drafts get finished.  Both queries ride their
+     *  ty-path indexes (plans pinned). */
     private fetchEntryCreations(): EntryCreation[] {
+        const publicIds = new Set(this.app.publishedEntries.map((e: any) => e.entry_id));
         const shoebox = new Map<number, string>();
         for(const r of db().all<{id1: number, attr2: string|null}, any>(
             `SELECT id1, attr2 FROM dict
@@ -555,6 +561,7 @@ export class ActivityReport {
             `SELECT valid_from, id1, change_by_username AS username FROM dict
              WHERE ty2 IS NULL AND ty1 = 'ent' AND ty = 'ent'
                AND replaces_assertion_id IS NULL`, {})) {
+            if(!publicIds.has(r.id1)) continue;
             const d = resolveCreationDate(r.valid_from, shoebox.get(r.id1))
                 ?? {year: 0, month: 0, day: 0};    // undated (see EntryCreation)
             out.push({...d, entry_id: r.id1, username: r.username ?? ''});

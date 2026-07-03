@@ -157,25 +157,28 @@ test("report: counts this month's actions; the born-published corpus is invisibl
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             const tl = new TestTimeline();
-            // A born-approved entry: its EDITS are standing content (no
-            // changes counted) - but it WAS created now, so the creation-date
-            // axis counts it as a new lexeme.
+            // A born-approved COMPLETED entry: its EDITS are standing content
+            // (no changes counted) - but it WAS created now and is public, so
+            // the creation-date axis counts it as a new published lexeme.
             const e = mkEntry(1000, tl.next(), {change_by_username: "djz"});
             fx.ww.applyTransaction([e], {quiet: true});
             const spl = mkChild(e, "spl", 1010, tl.next(),
                 {attr1: "samqwan", order_key: "0.5", change_by_username: "djz"});
             fx.ww.applyTransaction([spl], {quiet: true});
+            fx.ww.applyTransaction([mkChild(e, "sta", 1020, tl.next(),
+                {attr1: "Completed", change_by_username: "djz"})], {quiet: true});
             bornApprove(fx.ww);
             const seeded = flat(reportHtml(fx, {}));
             assertStringIncludes(seeded,
                 "<tdclass='text-end'><spanclass='text-muted'>–</span></td>");
-            assertStringIncludes(seeded, ">1</a></td>");  // 1 new lexeme (linked), 0 changes
+            assertStringIncludes(seeded, ">1</a></td>");  // 1 new published lexeme, 0 changes
 
             // sally edits the spelling: 1 change, 0 new lexemes.
             fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(),
                 {attr1: "XYZZY", change_by_username: "sally"})], {quiet: true});
             // djz starts a brand-new lexeme (entry + spelling, both pending):
-            // 2 more changes, 1 of them a new lexeme.
+            // 2 more changes - but a pending draft is a SLUG, not a new
+            // published lexeme, so the creation column must not count it.
             const e2 = mkEntry(3000, tl.next(), {change_by_username: "djz"});
             fx.ww.applyTransaction([e2], {quiet: true});
             fx.ww.applyTransaction([mkChild(e2, "spl", 3010, tl.next(),
@@ -189,21 +192,24 @@ test("report: counts this month's actions; the born-published corpus is invisibl
         as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1010));
         as(fx, "dmm", () => {
             const html = flat(reportHtml(fx, {months: 2}));
-            // The current-month row: 4 changes (incl. the unstamped one),
-            // 2 new lexemes (entries 1000 + 3000 - creation date, not
-            // publication state), 1 approval.  The COUNTS are the links:
-            // changes into the month-windowed feed, new lexemes into the
-            // created-lexemes page; the month label is plain text.
+            // The current-month row: 1 new published lexeme (entry 1000 -
+            // entry 3000 is a pending slug, excluded), 4 changes (incl. the
+            // unstamped one), 1 approval.  The COUNTS are the links: changes
+            // into the month-windowed feed, new published into the
+            // created-lexemes page; the month label is plain text.  New
+            // published LEADS - it is the headline number.
             const cell = (n: number) => `>${n}</a></td>`;   // a linked count cell
+            assertStringIncludes(html,
+                "<th>Month</th><thclass='text-end'>Newpublished</th>" +
+                "<thclass='text-end'>Changes</th>");
             assertStringIncludes(html, cell(4));
-            assertStringIncludes(html, cell(2));
+            assertStringIncludes(html, cell(1));   // new published: entry 1000 only
             assertStringIncludes(html, "<tdclass='text-end'>1</td>");   // approved: plain
             // The 4 changes touched 2 distinct lexemes (1000 and 3000):
             // the Changed lexemes column, plain (the feed link rides Changes).
-            assertStringIncludes(html, "Changedlexemes");
             assertStringIncludes(html, "<tdclass='text-end'>2</td>");
             // djz's 2 changes both touch entry 3000: one lexeme.
-            assertStringIncludes(html, "2changes·on1lexeme·2newlexemes");
+            assertStringIncludes(html, "2changes·on1lexeme·1newpublishedlexeme");
             assertStringIncludes(html, "wordwiki.changes({from_time:");
             assertStringIncludes(html, "wordwiki.report.createdPage(");
             // Grouped by year: a bold totals row leads the year, its new-
@@ -214,7 +220,6 @@ test("report: counts this month's actions; the born-published corpus is invisibl
             // to the per-user monthly breakdown.
             assertStringIncludes(html, "Byeditor");
             assertStringIncludes(html, "1change");
-            assertStringIncludes(html, "2newlexemes");   // djz's line
             assertStringIncludes(html, "1approved");
             assertStringIncludes(html, 'restrict_to_user:"sally"');
             assertStringIncludes(html, 'wordwiki.activity({months:2,restrict_to_user:"dmm"})');
@@ -239,12 +244,22 @@ test("created page + no-limit default: undated imports counted and listed", asyn
             const tl = new TestTimeline();
             const e = mkEntry(1000, tl.next(), {change_by_username: "djz"});
             fx.ww.applyTransaction([e], {quiet: true});
-            // An imported-style lexeme: ent at BEGINNING_OF_TIME with NO
-            // shoebox-date - a creation with no date at all.
+            fx.ww.applyTransaction([mkChild(e, "sta", 1020, tl.next(),
+                {attr1: "Completed"})], {quiet: true});
+            // An imported-style lexeme: ent (+ Completed status) at
+            // BEGINNING_OF_TIME with NO shoebox-date - a public creation
+            // with no date at all.  Raw rows, inserted BEFORE bornApprove so
+            // the backfill publishes them and the workspace reload sees them.
             db().execute(
                 `INSERT INTO dict (assertion_id, id, ty, ty0, ty1, id1, valid_from, valid_to)
                  VALUES (9999, 9999, 'ent', 'dct', 'ent', 9999,
                          ${timestamp.BEGINNING_OF_TIME}, ${timestamp.END_OF_TIME})`, {});
+            db().execute(
+                `INSERT INTO dict (assertion_id, id, ty, ty0, ty1, id1, ty2, id2,
+                                   attr1, valid_from, valid_to)
+                 VALUES (9998, 9998, 'sta', 'dct', 'ent', 9999, 'sta', 9998,
+                         'Completed', ${timestamp.BEGINNING_OF_TIME}, ${timestamp.END_OF_TIME})`, {});
+            bornApprove(fx.ww);
 
             // The no-limit default view carries the missing-dates line...
             const html = flat(reportHtml(fx, {}));
@@ -261,15 +276,15 @@ test("created page + no-limit default: undated imports counted and listed", asyn
             const pageHtml = (p: any) => markupToString(p.body);
             const created = pageHtml(fx.ww.report.createdPage(
                 now.getFullYear(), now.getMonth() + 1));
-            assertStringIncludes(created, "Lexemes created in");
+            assertStringIncludes(created, "Published lexemes created in");
             assertStringIncludes(created, "wordwiki.entry(1000)");
             assertEquals(created.includes("wordwiki.entry(9999)"), false);
             // month 0 = the whole year.
             const yearPage = pageHtml(fx.ww.report.createdPage(now.getFullYear(), 0));
-            assertStringIncludes(yearPage, `Lexemes created in ${now.getFullYear()}`);
+            assertStringIncludes(yearPage, `Published lexemes created in ${now.getFullYear()}`);
             assertStringIncludes(yearPage, "wordwiki.entry(1000)");
             const undated = pageHtml(fx.ww.report.createdPage(0, 0));
-            assertStringIncludes(undated, "Lexemes with no creation date");
+            assertStringIncludes(undated, "Published lexemes with no creation date");
             assertStringIncludes(undated, "wordwiki.entry(9999)");
             assertEquals(undated.includes("wordwiki.entry(1000)"), false);
         });
