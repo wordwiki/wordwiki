@@ -32,6 +32,11 @@ export type Tuple = Record<string, any>;
  * every other route argument is composed; a page can carry several
  * independently-parameterized sections, each with its own FieldSet and its
  * own {} argument.
+ *
+ * The full page-state pattern (this codec + the auto-generated filter
+ * dialog + navigation-vs-replacement + anchor stamping) is documented in
+ * liminal/page-state.md; worked examples in wordwiki/change-feed.ts and
+ * wordwiki/activity-report.ts.
  */
 export class FieldSet {
 
