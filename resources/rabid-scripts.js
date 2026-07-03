@@ -182,6 +182,18 @@ async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*
         break;
     }
 
+    // Navigate THIS page to a (server-supplied) URL - e.g. a page-query edit
+    // dialog applying its new parameters: the server builds the canonical
+    // page URL (FieldSet.literal) and the client goes there.  A real
+    // navigation (new history entry), so Back returns to the previous view.
+    case 'navigate': {
+        if(typeof response.url !== 'string')
+            throw new Error('Expected "navigate" url');
+        hideModalEditor();
+        window.location.assign(response.url);
+        break;
+    }
+
     // Open a (server-supplied) URL in a new window, optionally also reloading
     // fragments - e.g. wordwiki's "add document reference" creates the
     // reference then opens the page tagger on it.

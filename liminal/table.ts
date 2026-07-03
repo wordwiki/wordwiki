@@ -11,29 +11,141 @@ import * as action from "./action.ts";
 import * as security from "./security.ts";
 import {route, routeMutation, authenticated} from "./security.ts";
 import * as date from "./date.ts";
+import * as timestamp from "./timestamp.ts";
 
 export type Tuple = Record<string, any>;
 
 /**
+ * An ordered set of named Fields: the schema of one record-shaped value,
+ * independent of any database table.  Table layers persistence (DML, queries,
+ * field security) on top; FieldSet alone describes PAGE-QUERY objects - a
+ * page's filter/paging state carried as one {}-literal argument in its route
+ * expression (e.g. wordwiki.changes({to_time:..., restrict_to_user:'djz'})),
+ * so the page is a pure function of its URL: bookmarkable, refreshable,
+ * shareable.  The same Fields that describe the value also GENERATE its edit
+ * dialog (action.renderParamForm) - one schema mechanism for both.
  *
- * Note: there is not near 
+ * A FieldSet is deliberately a codec for exactly ONE {} value - it knows
+ * nothing about routes or URLs.  Callers compose the rendered literal into
+ * route expressions themselves (`${R}.page(${fs.literal(q)})`), the same way
+ * every other route argument is composed; a page can carry several
+ * independently-parameterized sections, each with its own FieldSet and its
+ * own {} argument.
  */
-export class Table<T extends Tuple> {
-    
-    pkField: PrimaryKeyField;
-    pkName: string;
+export class FieldSet {
+
     fieldsByName: Record<string, Field>;
     fieldNames: string[];
     allFields: string;
-    
-    constructor(public name: string, public fields: Field[], public extraDML: string[]=[]) {
+
+    constructor(public name: string, public fields: Field[]) {
+        this.fieldsByName = Object.fromEntries(this.fields.map(field=>[field.name, field]));
+        this.fieldNames = Object.keys(this.fieldsByName);
+        this.allFields = this.fieldNames.join(',');
+    }
+
+    /**
+     * Parse a form postback into the CHANGED field values: each field writes
+     * itself only when its submitted value differs from its 'before-<name>'
+     * snapshot (the lock-free edit-conflict protection - see Table.renderForm).
+     * The record-edit parse; a query dialog wants parseFormValues instead.
+     */
+    parseFormChanges(form: Record<string, string>): Tuple {
+        const changedFieldValues: Tuple = {};
+        this.fields.forEach(field=>field.parseInput(form, changedFieldValues));
+        const unexpectedFields = Array.from(
+            new Set(Object.keys(changedFieldValues)).difference(new Set(this.fields.map(f=>f.name))));
+        if(unexpectedFields.length > 0)
+            throw new Error(`On form postback, we got unexpected fields ${unexpectedFields.join()}`);
+        return changedFieldValues;
+    }
+
+    /**
+     * Parse a form postback as one COMPLETE value: every field's posted input,
+     * with absent/empty falling back to the field's default (or null).  The
+     * query-dialog parse - a record edit writes only what changed, but a query
+     * dialog's submitted state IS the new value.
+     */
+    parseFormValues(form: Record<string, any>): Tuple {
+        const out: Tuple = {};
+        for(const f of this.fields) {
+            const raw = form[f.name];
+            out[f.name] = (raw === undefined || raw === null || raw === '')
+                ? (f.options.default ?? null)
+                : f.parseSimpleInput(String(raw));
+        }
+        return out;
+    }
+
+    /**
+     * Normalize one {}-literal value as evaluated from a route expression:
+     * unknown keys are rejected, each present value is type-checked/coerced by
+     * its field (fromLiteral), and absent/null fields take the field's default
+     * (or null).  Route arguments are user-typeable, so this is the guard.
+     */
+    normalize(q: Record<string, any> | undefined | null): Tuple {
+        const src = q ?? {};
+        if(typeof src !== 'object' || Array.isArray(src))
+            throw new Error(`${this.name}: expected a {} argument`);
+        const unknown = Object.keys(src).filter(k => !(k in this.fieldsByName));
+        if(unknown.length > 0)
+            throw new Error(`${this.name}: unknown fields ${unknown.join(', ')}`);
+        const out: Tuple = {};
+        for(const f of this.fields) {
+            const v = src[f.name];
+            out[f.name] = (v === undefined || v === null)
+                ? (f.options.default ?? null)
+                : f.fromLiteral(v);
+        }
+        return out;
+    }
+
+    /**
+     * Render one value as a canonical {}-literal route-expression argument:
+     * declaration order, null and default-valued fields omitted (so the common
+     * views get the shortest - and equal views equal - URLs), strings quoted
+     * for the route grammar.  The inverse of normalize.
+     */
+    literal(q: Tuple): string {
+        const parts: string[] = [];
+        for(const f of this.fields) {
+            const v = q[f.name];
+            if(v === undefined || v === null) continue;
+            if(f.options.default !== undefined && v === f.options.default) continue;
+            parts.push(`${f.name}:${literalValue(v)}`);
+        }
+        return `{${parts.join(',')}}`;
+    }
+}
+
+/** One primitive as a route-expression literal.  JSON string quoting is a
+ *  subset of the route grammar (acorn), so strings just JSON-encode. */
+function literalValue(v: any): string {
+    switch(typeof v) {
+        case 'number':
+            if(!Number.isFinite(v)) throw new Error(`non-finite number in route literal`);
+            return String(v);
+        case 'boolean': return String(v);
+        case 'string': return JSON.stringify(v);
+        default: throw new Error(`cannot render a ${typeof v} as a route literal`);
+    }
+}
+
+/**
+ *
+ * Note: there is not near
+ */
+export class Table<T extends Tuple> extends FieldSet {
+
+    pkField: PrimaryKeyField;
+    pkName: string;
+
+    constructor(name: string, fields: Field[], public extraDML: string[]=[]) {
+        super(name, fields);
         this.pkField = unwrap(
             this.fields.filter(f=>f instanceof PrimaryKeyField)[0],
             'missing primary key field');
         this.pkName = this.pkField.name;
-        this.fieldsByName = Object.fromEntries(this.fields.map(field=>[field.name, field]));
-        this.fieldNames = Object.keys(this.fieldsByName);
-        this.allFields = this.fieldNames.join(',');
     }
 
     toString(): string {
@@ -372,12 +484,7 @@ export class Table<T extends Tuple> {
      * not normally be in the result set, but we do need it).
      */
     parseForm(form: Record<string, string>): ParsedForm {
-        const changedFieldValues: Tuple = {};
-        this.fields.forEach(field=>field.parseInput(form, changedFieldValues));
-        const unexpectedFields = Array.from(
-            new Set(Object.keys(changedFieldValues)).difference(new Set(this.fields.map(f=>f.name))));
-        if(unexpectedFields.length > 0)
-            throw new Error(`On form postback, we got unexpected fields ${unexpectedFields.join()}`);
+        const changedFieldValues = this.parseFormChanges(form);
 
         const primaryKeyValue = form[this.pkName];
         const primaryKey = primaryKeyValue ? utils.parseIntOrError(primaryKeyValue) : undefined;
@@ -624,6 +731,17 @@ export class Field {
     }
 
     /**
+     * Validate/coerce a value that arrived as a ROUTE-EXPRESSION literal (see
+     * FieldSet.normalize).  Route arguments are user-typeable text, so a field
+     * must not trust the literal's type.  The base accepts any primitive;
+     * typed fields override to enforce their type.
+     */
+    fromLiteral(v: any): any {
+        if(v === null || ['string','number','boolean'].includes(typeof v)) return v;
+        throw new Error(`${this.name}: expected a primitive, got ${typeof v}`);
+    }
+
+    /**
      * Whether the form input should be marked HTML5 `required`.
      *
      * A field is required only when a value genuinely must be supplied: it is
@@ -752,6 +870,12 @@ export class StringField extends Field {
     parseSimpleInput(value: string): any {
         return value;
     }
+
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'string')
+            throw new Error(`${this.name}: expected a string`);
+        return v;
+    }
 }
 
 /**
@@ -879,6 +1003,12 @@ export class EnumField extends Field {
         // nullable enum.
         return value === '' ? null : value;
     }
+
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'string' || !(v in this.choices))
+            throw new Error(`${this.name}: expected one of ${Object.keys(this.choices).join('|')}`);
+        return v;
+    }
 }
 
 /**
@@ -905,6 +1035,12 @@ export class IntegerField extends Field {
 
     parseSimpleInput(value: string): any {
         return value === '' ? null : utils.parseIntOrError(value);
+    }
+
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'number' || !Number.isSafeInteger(v))
+            throw new Error(`${this.name}: expected an integer`);
+        return v;
     }
 }
 
@@ -1036,6 +1172,71 @@ export class DateField extends Field {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
             throw new Error(`Invalid date format. Expected "YYYY-MM-DD", got "${value}"`);
         return value;
+    }
+}
+
+/**
+ * A point in db time: the field VALUE is a raw hybrid-logical-clock timestamp
+ * NUMBER (liminal/timestamp.ts - the versioned stores' pervasive clock), but
+ * nobody should ever see or type the encoded value, so it is edited as a
+ * datetime-local at minute precision and displayed as a local time.  Mainly
+ * for page-query time ranges over a versioned store (a from/to filter).
+ * The wall-time component is best-effort under HLC clock anomalies, like
+ * every display of these timestamps.
+ */
+export class TimestampField extends Field {
+    constructor(name: string, options: FieldOptions = {}) {
+        super(name, options);
+    }
+
+    dmlType(): string {
+        return 'INTEGER';
+    }
+
+    render(value: any): Markup {
+        return value == null ? '' : timestamp.formatTimestampAsLocalTime(Number(value));
+    }
+
+    // The datetime-local representation (local time, minute precision).  Both
+    // the input value and its before-<name> snapshot go through this, so an
+    // untouched field compares equal (and keeps its sub-minute precision:
+    // unchanged fields are not written).
+    toFormValue(value: any): any {
+        if(value == null || value === '') return '';
+        const d = new Date(timestamp.extractTimeFromTimestamp(Number(value))*1000
+                           + timestamp.LOCAL_EPOCH_START);
+        const p = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`
+             + `T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    renderInput(value: any): Markup {
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['input', Object.assign({type:'datetime-local', class:'form-control',
+                                      name:this.name, id:'input-'+this.name,
+                                      value: this.toFormValue(value)},
+                                     this.isInputRequired() ? {required: ''} : {})]
+            ]
+        ];
+    }
+
+    parseSimpleInput(value: string): any {
+        if(!value) return null;
+        // datetime-local values ('YYYY-MM-DDTHH:MM[:SS]') parse as LOCAL time,
+        // matching the local rendering above.
+        const ms = new Date(value).getTime();
+        if(Number.isNaN(ms))
+            throw new Error(`Invalid date format. Expected format like "2026-02-19T09:32", got "${value}"`);
+        return timestamp.makeTimestamp(
+            Math.floor((ms - timestamp.LOCAL_EPOCH_START)/1000), 0);
+    }
+
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'number' || !Number.isSafeInteger(v))
+            throw new Error(`${this.name}: expected a timestamp number`);
+        return v;
     }
 }
 

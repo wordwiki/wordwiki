@@ -171,6 +171,33 @@ export function formatTimestampCompact(t: number): string {
     return `${yy}-${mm}-${dd}`;
 }
 
+// A human relative time for feed-style headers: "just now", "25 minutes ago",
+// "1 hour ago", "yesterday", "3 days ago", "5 weeks ago", "4 months ago",
+// "2 years ago" - so recency reads without date arithmetic.  Uses the
+// timestamp's wall-time component (best-effort under HLC clock anomalies, like
+// every display of these timestamps).  `nowMs` is injectable for tests; note a
+// SERVER-rendered label is as fresh as its render - a page left open ages it
+// until the fragment next reloads.  Empty at the sentinels.
+export function formatTimestampRelative(t: number, nowMs: number = Date.now()): string {
+    if(t === BEGINNING_OF_TIME || t === END_OF_TIME) return '';
+    const thenMs = extractTimeFromTimestamp(t)*1000 + LOCAL_EPOCH_START;
+    const ago = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'} ago`;
+    const s = Math.max(0, Math.floor((nowMs - thenMs)/1000));
+    if(s < 90) return 'just now';
+    const m = Math.round(s/60);
+    if(m < 60) return ago(m, 'minute');
+    const h = Math.round(m/60);
+    if(h < 24) return ago(h, 'hour');
+    const d = Math.round(h/24);
+    if(d === 1) return 'yesterday';
+    if(d < 14) return ago(d, 'day');
+    const w = Math.round(d/7);
+    if(w < 9) return ago(w, 'week');
+    const mo = Math.round(d/30.44);
+    if(mo < 18) return ago(mo, 'month');
+    return ago(Math.round(d/365.25), 'year');
+}
+
 export function formatTimestampAsUTCTime(t: number): string {
     switch(t) {
         case BEGINNING_OF_TIME: return 'BEGINNING_OF_TIME';
