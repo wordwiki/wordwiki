@@ -150,29 +150,146 @@ function fallbackAlert(text) {
 }
 
 /**
+ * Dispatch a mutation route expression and act on the server's response
+ * directive.  `tx` is the plain tagged template (today's two-trip flow: the
+ * server names the dirtied fragments and we re-fetch each); `txd(deps)` is the
+ * SPECULATIVE variant - `deps` is the dirty set the caller expects the
+ * mutation to return (the same '.-table-id-' selector strings).  We resolve
+ * the deps against the live DOM before sending and ship the matched fragments'
+ * reload routes with the action ($speculate in the rpc body); when the
+ * speculation holds, the server returns the re-rendered sections in the SAME
+ * response ({action:'swap'}) and we swap them in - one round trip instead of
+ * two.  Any miss/error and the server answers with the plain 'reload'
+ * directive, so this degrades to exactly the unspeculated behaviour.
  *
+ *   onclick: "tx`rabid.task.moveUp(7)`"
+ *   onclick: "txd(['.-task-7-'])`rabid.task.toggleDone(7)`"
  */
-async function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
+function tx(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
+    return txCore(undefined, rpcExprSegments, args);
+}
+
+function txd(deps /*: string[]*/) {
+    return (rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) =>
+        txCore(deps, rpcExprSegments, args);
+}
+
+/**
+ * Resolve a speculated dirty set against the live DOM: the reloadable
+ * fragments (elements with an hx-get) matching any dep selector, pruned of
+ * nested roots - the same matching reload() will do for the server's actual
+ * dirty set, done BEFORE the request so the sections can ride along with it.
+ * Returns {payload, sectionsByUrl} where payload is the wire form
+ * ({deps, sections:[{url, keys}]}) and sectionsByUrl maps each section url to
+ * the live elements to swap when the response arrives.  Returns null (no
+ * speculation sent) on any resolution problem or past the section cap.
+ */
+function lmResolveSpeculation(deps) {
+    const matched = [];
+    for(const sel of deps) {
+        let els;
+        try { els = document.querySelectorAll(sel); } catch(_e) { return null; }
+        for(const el of els)
+            if(el.getAttribute('hx-get') && !matched.includes(el))
+                matched.push(el);
+    }
+    const sectionsByUrl = new Map();
+    for(const el of removeContainedRoots(matched)) {
+        const url = el.getAttribute('hx-get');
+        let entry = sectionsByUrl.get(url);
+        if(!entry) sectionsByUrl.set(url, entry = {elements: [], keys: []});
+        entry.elements.push(el);
+        for(const sel of deps)
+            if(el.matches(sel) && !entry.keys.includes(sel))
+                entry.keys.push(sel);
+    }
+    if(sectionsByUrl.size > 20) return null;   // mirror the server's sanity cap
+    return {payload: {deps,
+                      sections: Array.from(sectionsByUrl, ([url, e]) => ({url, keys: e.keys}))},
+            sectionsByUrl};
+}
+
+/**
+ * Apply a one-trip 'swap' response: replace each speculated section's live
+ * element(s) with the server-rendered html.  Manual swaps bypass htmx, so we
+ * htmx.process() every inserted element (re-binding its hx- attributes) and
+ * re-run initPickers (TomSelect enhancement normally rides on htmx:afterSwap).
+ * An element that left the DOM mid-flight falls back to a legacy reload of its
+ * dep keys.
+ */
+function lmApplySwap(response, speculation) {
+    hideModalEditor();
+    const staleKeys = [];
+    for(const section of (Array.isArray(response.sections) ? response.sections : [])) {
+        const entry = speculation.sectionsByUrl.get(section.url);
+        if(!entry) continue;
+        for(const el of entry.elements) {
+            if(!el.isConnected) {
+                for(const k of entry.keys)
+                    if(!staleKeys.includes(k)) staleKeys.push(k);
+                continue;
+            }
+            const tpl = document.createElement('template');
+            tpl.innerHTML = section.html;
+            const newNodes = Array.from(tpl.content.childNodes);
+            // changed-vs-identical is judged before the swap (debug mode only).
+            const changed = lmDebugSwapChanged(el, newNodes);
+            el.replaceWith(...newNodes);
+            for(const n of newNodes)
+                if(n.nodeType === Node.ELEMENT_NODE) {
+                    htmx.process(n);
+                    lmDebugMark(n, changed);
+                }
+        }
+    }
+    if(typeof initPickers === 'function')
+        initPickers(document);
+    if(staleKeys.length > 0)
+        reload(staleKeys);
+}
+
+async function txCore(deps, rpcExprSegments /*:ReadonlyArray<string>*/, args /*: any[]*/) /*: Promise<any>*/ {
+    const speculation = (Array.isArray(deps) && deps.length > 0 && window.htmx)
+        ? lmResolveSpeculation(deps) : null;
+
     let response;
     try {
-        response = await rpc(rpcExprSegments, ...args);
+        response = await rpcWithSpeculation(rpcExprSegments, args,
+                                            speculation ? speculation.payload : undefined);
         console.info('GOT RPC2 response', response);
     } catch(e) {
         showAlert(e instanceof Error ? e.message : String(e));
         return;
     }
-    
+
     if(typeof response.action !== 'string')
         throw new Error('Expected rpc response with an action');
     const action = response.action;
 
-    
+
     switch(action) {
     case 'reload': {
         if(!Array.isArray(response.targets))
             throw new Error('Expected "reload" targets to be an array');
+        lmDebugRoundStart({path: '2-trip', speculation: response.speculation});
         hideModalEditor(); // XXX TODO BETTER FACTORING.
         reload(response.targets);
+        break;
+    }
+
+    // One-trip speculative refresh: the re-rendered sections came back with
+    // the mutation response (see lmResolveSpeculation / the server's
+    // applySpeculation).  Only ever sent in answer to a $speculate request;
+    // if we somehow have no live section map, degrade to a plain reload.
+    case 'swap': {
+        if(!speculation) {
+            lmDebugRoundStart({path: '2-trip', speculation: 'lost'});
+            hideModalEditor();
+            reload(Array.isArray(response.targets) ? response.targets : []);
+            break;
+        }
+        lmDebugRoundStart({path: '1-trip'});
+        lmApplySwap(response, speculation);
         break;
     }
 
@@ -262,10 +379,23 @@ function lmRpcWatchdogCheck(rpcExpr) {
  * storm is BROKEN at the threshold instead of running on to a blown stack.
  */
 function rpc(rpcExprSegments /*:ReadonlyArray<string>*/, ...args /*: any[]*/) /*: Promise<any>*/ {
+    return rpcWithSpeculation(rpcExprSegments, args, undefined);
+}
+
+/**
+ * rpc plus an optional $speculate rider in the request body (see txd).
+ * $speculate is a reserved body key: the server's route scope only binds
+ * $arg<N> names from the body, so it can never shadow a route binding.
+ * Same deliberately-SYNC structure as rpc (see above).
+ */
+function rpcWithSpeculation(rpcExprSegments /*:ReadonlyArray<string>*/, args /*: any[]*/,
+                            speculate /*: object|undefined*/) /*: Promise<any>*/ {
 
     console.info('RPC', rpcExprSegments, args);
 
     const {rpcExpr, argsObj} = rpcUrl(rpcExprSegments, ...args);
+    if(speculate !== undefined)
+        argsObj.$speculate = speculate;
 
     lmRpcInFlight++;
     try {

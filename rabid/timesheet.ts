@@ -189,6 +189,16 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         return result;
     }
 
+    // Speculation counterpart to the target-append above: the edit form
+    // predicts the volunteer_time fragment too, so a timesheet edit saves in
+    // one round trip.
+    override speculatedSaveTargets(record: TimesheetEntry): string[] {
+        const targets = super.speculatedSaveTargets(record);
+        if(record.timesheet_entry_id && record.volunteer_id)
+            targets.push(`.-volunteer_time-${record.volunteer_id}-`);
+        return targets;
+    }
+
     // Host/admin confirms (or un-confirms) a volunteer's hours, stamping who
     // vouched for them.  Reloads the volunteer's reconciled Time fragment (where
     // the confirm affordance lives).  Self cannot confirm their own hours.

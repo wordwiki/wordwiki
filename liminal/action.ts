@@ -42,12 +42,19 @@ import type {Markup} from './markup.ts';
 export type ActionMode =
     // Run tx`expr` immediately on click.  expr is a client-evaluated JS
     // expression, typically a tx`...` target like 'rabid.foo.bar(7)'.
-    | {kind: 'immediate', expr: string}
+    // `deps`, when given, is the dirty set the action is EXPECTED to return
+    // (the same '.-table-id-' selectors) - the button then dispatches via
+    // txd(deps) and the mutation + fragment refresh happen in ONE round trip
+    // when the speculation holds (see txd in rabid-scripts.js; a miss just
+    // degrades to the usual two-trip reload).
+    | {kind: 'immediate', expr: string, deps?: string[]}
     // Same, but gated behind a confirm() dialog.
-    | {kind: 'confirm', expr: string, message: string}
+    | {kind: 'confirm', expr: string, message: string, deps?: string[]}
     // Ask the server (via dialogUrl, a normal route expression that may carry
     // fixed parameters) to generate a parameter dialog, and load it into the
-    // shared modal editor.  The dialog dispatches the action when submitted.
+    // shared modal editor.  The dialog dispatches the action when submitted
+    // (dialog-side speculation is declared by the dialog generator, e.g.
+    // Table.speculatedSaveTargets for record-edit forms).
     | {kind: 'modal', dialogUrl: string};
 
 /**
@@ -58,13 +65,17 @@ export type ActionMode =
 export function actionButton(label: Markup, mode: ActionMode,
                              btnClass: string = 'btn btn-primary',
                              extraProps: Record<string, string> = {}): Markup {
+    // With a speculated dirty set, dispatch via txd(deps) (one-round-trip
+    // refresh when the speculation holds); without, plain tx as ever.
+    const txTag = (deps?: string[]) =>
+        deps && deps.length > 0 ? `txd(${JSON.stringify(deps)})` : 'tx';
     switch(mode.kind) {
         case 'immediate':
             return [h.button, {type:'button', class:btnClass,
-                               onclick:`tx\`${mode.expr}\``, ...extraProps}, label];
+                               onclick:`${txTag(mode.deps)}\`${mode.expr}\``, ...extraProps}, label];
         case 'confirm':
             return [h.button, {type:'button', class:btnClass,
-                               onclick:`if(confirm(${JSON.stringify(mode.message)})) tx\`${mode.expr}\``,
+                               onclick:`if(confirm(${JSON.stringify(mode.message)})) ${txTag(mode.deps)}\`${mode.expr}\``,
                                ...extraProps}, label];
         case 'modal':
             // Same wiring as table.editButtonProps, minus the record-edit 'edit'

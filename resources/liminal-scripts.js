@@ -121,6 +121,122 @@ function lmNavigateFormRoute(event, routeFn) {
 }
 
 /* ---------------------------------------------------------------------------
+   Refresh debug mode.
+
+   For evaluating how much OVER-refreshing the reload/speculation machinery
+   does: when enabled, every fragment refreshed in the most recent tx round is
+   visually marked - green outline = refreshed and actually different,
+   yellow = refreshed but byte-identical (pure over-revalidation) - and a
+   fixed badge reports the round's path (1-trip speculative vs 2-trip
+   fallback, with the miss reason) and counts.  Marks persist until the next
+   round so the page can be inspected at leisure.
+
+   Toggle from the console: lmDebugRefresh(true|false) (or no arg to flip);
+   persisted in localStorage so it survives navigation while evaluating.
+   Everything here no-ops when disabled.
+--------------------------------------------------------------------------- */
+
+function lmDebugRefreshEnabled() {
+    try { return localStorage.getItem('lmDebugRefresh') === '1'; }
+    catch(_e) { return false; }
+}
+
+function lmDebugRefresh(on) {
+    if(on === undefined) on = !lmDebugRefreshEnabled();
+    try { localStorage.setItem('lmDebugRefresh', on ? '1' : '0'); }
+    catch(_e) { /* private mode etc. - just don't persist */ }
+    if(!on) {
+        lmDebugClearMarks();
+        const badge = document.getElementById('lm-debug-badge');
+        if(badge) badge.remove();
+        lmDebugRoundStats = null;
+    }
+    console.info('refresh debug mode', on ? 'ON' : 'OFF');
+    return on;
+}
+
+let lmDebugRoundStats = null;   // {path, speculation, changed, same} for the current round
+
+function lmDebugClearMarks() {
+    document.querySelectorAll('.lm-debug-refreshed-changed, .lm-debug-refreshed-same')
+        .forEach(el => el.classList.remove('lm-debug-refreshed-changed', 'lm-debug-refreshed-same'));
+}
+
+/* Start a round: clear the previous round's marks and reset the badge.
+   info: {path: '1-trip'|'2-trip', speculation?: 'miss'|'error'|'skipped'|'lost'} */
+function lmDebugRoundStart(info) {
+    if(!lmDebugRefreshEnabled()) return;
+    lmDebugClearMarks();
+    lmDebugRoundStats = {path: info.path, speculation: info.speculation, changed: 0, same: 0};
+    lmDebugUpdateBadge();
+}
+
+/* Mark one swapped-in element as changed / identical and bump the badge. */
+function lmDebugMark(el, changed) {
+    if(!lmDebugRefreshEnabled() || !lmDebugRoundStats) return;
+    el.classList.add(changed ? 'lm-debug-refreshed-changed' : 'lm-debug-refreshed-same');
+    lmDebugRoundStats[changed ? 'changed' : 'same']++;
+    lmDebugUpdateBadge();
+}
+
+function lmDebugUpdateBadge() {
+    let badge = document.getElementById('lm-debug-badge');
+    if(!badge) {
+        badge = document.createElement('div');
+        badge.id = 'lm-debug-badge';
+        document.body.appendChild(badge);
+    }
+    const s = lmDebugRoundStats;
+    const path = s.path === '1-trip'
+        ? '1-trip' : `2-trip fallback${s.speculation ? ` (${s.speculation})` : ''}`;
+    badge.textContent = `refresh: ${path} · ${s.changed} changed · ${s.same} unchanged`;
+}
+
+/* DOM-level equality for the changed/identical verdict.  String comparison of
+   outerHTML is unreliable (server serializer vs browser normalization, and
+   htmx's transient htmx-settling/htmx-added classes), so compare cloned nodes
+   with our marks and htmx's transient classes stripped. */
+const LM_DEBUG_TRANSIENT_CLASSES = ['lm-debug-refreshed-changed', 'lm-debug-refreshed-same',
+                                    'htmx-settling', 'htmx-added', 'htmx-swapping', 'htmx-request'];
+function lmDebugStrippedClone(el) {
+    const clone = el.cloneNode(true);
+    for(const n of [clone, ...clone.querySelectorAll('*')]) {
+        if(!n.classList) continue;
+        n.classList.remove(...LM_DEBUG_TRANSIENT_CLASSES);
+        if(n.getAttribute('class') === '')
+            n.removeAttribute('class');   // class="" vs no attribute: isEqualNode cares
+    }
+    return clone;
+}
+function lmDebugNodesEqual(oldEl, newEl) {
+    if(!(oldEl instanceof Element) || !(newEl instanceof Element)) return false;
+    return lmDebugStrippedClone(oldEl).isEqualNode(lmDebugStrippedClone(newEl));
+}
+
+/* changed-verdict for a manual (speculative-swap) replacement, judged BEFORE
+   the swap.  newNodes is the parsed replacement node list; a single-element
+   replacement compares node-for-node, anything else counts as changed. */
+function lmDebugSwapChanged(oldEl, newNodes) {
+    if(!lmDebugRefreshEnabled()) return true;
+    const newElems = newNodes.filter(n => n.nodeType === Node.ELEMENT_NODE);
+    if(newElems.length !== 1) return true;
+    return !lmDebugNodesEqual(oldEl, newElems[0]);
+}
+
+/* Fallback-path (htmx-driven) marking: reload() re-fetches each dirtied
+   fragment via its hx-trigger='reload' hx-get, and htmx fires afterSwap ON
+   the swapped-IN element (event.target = new node; detail.target = the old,
+   now-detached node).  Filter to reload-triggered swaps so boosted navs and
+   modal loads aren't marked. */
+document.addEventListener('htmx:afterSwap', (event) => {
+    if(!lmDebugRefreshEnabled() || !lmDebugRoundStats) return;
+    const trigger = event.detail?.requestConfig?.triggeringEvent;
+    if(!trigger || trigger.type !== 'reload') return;
+    if(!(event.target instanceof Element)) return;
+    lmDebugMark(event.target, !lmDebugNodesEqual(event.detail?.target, event.target));
+});
+
+/* ---------------------------------------------------------------------------
    Modal editor (the shared dialog that hosts edit forms / parameter dialogs;
    skeleton rendered by the app's page template, content loaded into
    #modalEditorBody by editButtonProps / actionButton hx-gets).

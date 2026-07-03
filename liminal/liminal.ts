@@ -342,6 +342,17 @@ export abstract class LiminalApp {
                                  ).run();
     }
 
+    /** Reduce a URL path (or an hx-get attribute value) to a bare route
+     *  expression: strip an optional leading '/' and an optional
+     *  '<routeSegment>/' prefix (rabid fragments carry no prefix at all;
+     *  wordwiki bakes '/ww/' in).  Shared by requestHandler and the
+     *  speculative-refresh section renderer. */
+    protected routeExprFromPath(path: string): string {
+        let expr = strings.stripOptionalPrefix(path, '/');
+        expr = strings.stripOptionalPrefix(expr, `${this.routeSegment}/`);
+        return expr;
+    }
+
     async requestHandler(request: server.Request): Promise<server.Response> {
         const requestUrl = new URL(request.url);
         const filepath = decodeURIComponent(requestUrl.pathname);
@@ -353,8 +364,7 @@ export abstract class LiminalApp {
             return Promise.resolve({status: 200, headers: {}, body: 'not found'});
 
         console.info('FILE PATH', filepath);
-        let jsExprSrc = strings.stripOptionalPrefix(filepath, '/');
-        jsExprSrc = strings.stripOptionalPrefix(jsExprSrc, `${this.routeSegment}/`);
+        let jsExprSrc = this.routeExprFromPath(filepath);
         if(jsExprSrc === '') jsExprSrc = this.homeRouteExpr;
 
         const bodyArgs = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
@@ -479,6 +489,15 @@ export abstract class LiminalApp {
             }
         }
 
+        // Speculative one-round-trip refresh: when the client speculated this
+        // mutation's dirty set (and shipped the affected fragments' reload
+        // routes), try to render the refreshed sections into THIS response
+        // instead of making the client re-fetch them.  Any mismatch or error
+        // falls back to the plain reload result (see applySpeculation).
+        if(result !== null && typeof result === 'object' && result.action === 'reload'
+           && bodyArgs['$speculate'] !== undefined)
+            result = await this.applySpeculation(result, bodyArgs['$speculate'], {session_token});
+
         // A "page" result is wrapped in the app's document template (or reduced to
         // body-only for htmx).  Fragment routes pass through untouched.
         result = this.coercePageResult(result, isHtmxRequest);
@@ -498,6 +517,104 @@ export abstract class LiminalApp {
             return server.htmlResponse(htmlText);
         } else {
             return server.jsonResponse(result);
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Speculative one-round-trip refresh ---------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // A mutation button/form may carry the dirty set it EXPECTS the mutation to
+    // return (the same '.-table-id-' selector strings the mutation's
+    // {action:'reload', targets} names).  At invoke time the client resolves
+    // that set against the live DOM and ships the matched fragments' reload
+    // routes in the request body under the reserved '$speculate' key:
+    //
+    //   $speculate: {deps: ['.-task-7-'],
+    //                sections: [{url: 'rabid.task.renderTaskDetail(7)',
+    //                            keys: ['.-task-7-']}]}
+    //
+    // ('deps' are the speculated selectors; each 'section' is one matched
+    // fragment's hx-get route, tagged with which deps matched it.)
+    //
+    // When the mutation's ACTUAL dirty set is a subset of the speculated one,
+    // we render the affected sections here and return them in the same
+    // response ({action:'swap', sections:[{url, html}], targets}), saving the
+    // client's follow-up round trip.  Anything else - under-speculation, a bad
+    // section route, a render error - falls back to the plain
+    // {action:'reload'} two-trip flow, annotated with a 'speculation' marker
+    // ('miss'|'error'|'skipped') for the client's refresh-debug badge.
+    //
+    // SECURITY: section urls are client-supplied strings.  They are dispatched
+    // through the normal route interpreter as GETs under the actor's own
+    // (already-entered) ambient security context, so they carry exactly the
+    // trust of a GET the client could already issue itself: undeclared/denied
+    // routes throw, and a mutation route throws RouteMethodError (GET).  Every
+    // throw is caught and becomes the two-trip fallback.
+
+    /** Sanity cap on the (client-supplied) section list; past it we skip
+     *  speculation and fall back to two-trip. */
+    static readonly MAX_SPECULATED_SECTIONS = 20;
+
+    /**
+     * Try to upgrade a mutation's {action:'reload', targets} result into a
+     * one-round-trip {action:'swap'} response using the client's speculation.
+     * Returns the swap response on success, else the original result annotated
+     * with speculation:'miss'|'error'|'skipped'.  Must run with the actor's
+     * security context ambiently active (rpcHandler's enterWith, or a test's
+     * security.run).
+     */
+    async applySpeculation(result: any, speculate: unknown,
+                           opts: {session_token?: string} = {}): Promise<any> {
+        if(!Array.isArray(result?.targets))
+            return result;
+
+        // Validate the client-supplied speculation shape defensively; anything
+        // malformed is treated as an error-shaped fallback (never a throw).
+        const spec = utils.isObjectLiteral(speculate) ? speculate as Record<string, any> : undefined;
+        const deps: unknown = spec?.deps;
+        const sections: unknown = spec?.sections;
+        if(!Array.isArray(deps) || !deps.every(d => typeof d === 'string')
+           || !Array.isArray(sections)
+           || !sections.every(s => utils.isObjectLiteral(s)
+                              && typeof (s as any).url === 'string'
+                              && Array.isArray((s as any).keys)
+                              && (s as any).keys.every((k: unknown) => typeof k === 'string')))
+            return {...result, speculation: 'error'};
+
+        if(sections.length > LiminalApp.MAX_SPECULATED_SECTIONS)
+            return {...result, speculation: 'skipped'};
+
+        // Under-speculation: the mutation dirtied something the client did not
+        // anticipate, so its pre-computed section list can't cover the page.
+        const targets: string[] = result.targets;
+        if(!targets.every(t => (deps as string[]).includes(t)))
+            return {...result, speculation: 'miss'};
+
+        // Render only the sections an ACTUALLY-dirty key matched (a section
+        // matched only by over-speculated keys is unchanged), deduped by url.
+        const hitUrls: string[] = [];
+        for(const s of sections as Array<{url: string, keys: string[]}>)
+            if(s.keys.some(k => targets.includes(k)) && !hitUrls.includes(s.url))
+                hitUrls.push(s.url);
+
+        try {
+            const rendered: Array<{url: string, html: string}> = [];
+            for(const url of hitUrls) {
+                const expr = this.routeExprFromPath(url);
+                if(expr === '')
+                    throw new Error('empty speculated section url');
+                const markupResult = await this.dispatch(expr, {
+                    session_token: opts.session_token, httpMethod: 'GET'});
+                // Bare fragment (wrapInHtmlDocument=false): the client swaps
+                // this into place with replaceWith, not an htmx unwrap.
+                const html = await markup.asyncRenderToStringViaLinkeDOM(markupResult, false);
+                rendered.push({url, html});
+            }
+            return {action: 'swap', sections: rendered, targets};
+        } catch(e) {
+            console.info('speculative section render failed - falling back to reload', e);
+            return {...result, speculation: 'error'};
         }
     }
 

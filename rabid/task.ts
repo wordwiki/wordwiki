@@ -902,7 +902,7 @@ export class TaskTable extends Table<Task> {
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
                         ...(canEdit
-                            ? {onclick: `tx\`rabid.task.toggleDone(${id})\``}
+                            ? {onclick: `txd(${JSON.stringify([`.-task-${id}-`])})\`rabid.task.toggleDone(${id})\``}
                             : {disabled: ''}),
                         'aria-label': `Mark ${t.title || 'task'} done`}],
              [h.div, {class: 'lm-item-primary' + (done ? ' text-muted' : '')},
@@ -933,9 +933,9 @@ export class TaskTable extends Table<Task> {
                        {label: 'Add completed item…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id},true)`}},
                        {label: 'Move up',
-                        mode: {kind: 'immediate', expr: `rabid.task.moveUp(${id})`}},
+                        mode: {kind: 'immediate', expr: `rabid.task.moveUp(${id})`, deps: ['.-task-']}},
                        {label: 'Move down',
-                        mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`}},
+                        mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`, deps: ['.-task-']}},
                    ], {ariaLabel: `More actions for ${t.title || 'task'}`})
                  : undefined],
             [h.div, {class: 'lm-task-block-checklist'},
@@ -1474,6 +1474,15 @@ export class SubtaskTable extends Table<Subtask> {
         return result;
     }
 
+    // Speculation counterpart to the saveForm retarget above: the edit form
+    // must predict the checklist (task-keyed) target for a rename to save in
+    // one round trip.
+    override speculatedSaveTargets(record: Subtask): string[] {
+        return (record.task_id !== undefined && record.task_id !== null)
+            ? [`.-subtask-${record.task_id}-`]
+            : super.speculatedSaveTargets(record);
+    }
+
     // Append at the end of the task's checklist; every insert stamps the task.
     override insert<P extends Partial<Subtask>>(tuple: P): number {
         const withManaged: any = {order_key: this.nextOrderKey(tuple.task_id), ...tuple};
@@ -1616,7 +1625,7 @@ export class SubtaskTable extends Table<Subtask> {
             [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                        ...(s.done ? {checked: ''} : {}),
                        ...(canEdit
-                           ? {onclick: `tx\`rabid.subtask.toggle(${s.subtask_id})\``}
+                           ? {onclick: `txd(${JSON.stringify([`.-subtask-${s.task_id}-`])})\`rabid.subtask.toggle(${s.subtask_id})\``}
                            : {disabled: ''})}],
             [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
              s.title],
@@ -1629,13 +1638,16 @@ export class SubtaskTable extends Table<Subtask> {
                        mode: {kind: 'modal',
                               dialogUrl: `/rabid.subtask.renderForm(rabid.subtask.getById(${s.subtask_id}))`}},
                       {label: 'Move up',
-                       mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`}},
+                       mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`,
+                              deps: [`.-subtask-${s.task_id}-`]}},
                       {label: 'Move down',
-                       mode: {kind: 'immediate', expr: `rabid.subtask.moveDown(${s.subtask_id})`}},
+                       mode: {kind: 'immediate', expr: `rabid.subtask.moveDown(${s.subtask_id})`,
+                              deps: [`.-subtask-${s.task_id}-`]}},
                       {label: 'Remove…',
                        mode: {kind: 'confirm',
                               expr: `rabid.subtask.remove(${s.subtask_id})`,
-                              message: `Remove "${s.title}"?`}},
+                              message: `Remove "${s.title}"?`,
+                              deps: [`.-subtask-${s.task_id}-`]}},
                   ], {ariaLabel: `More actions for ${s.title}`})
                 : undefined,
         ];
@@ -1655,7 +1667,7 @@ export class SubtaskTable extends Table<Subtask> {
                 submitLabel: 'Add',
                 hidden: completed ? {task_id, done: 1} : {task_id},
                 dispatch: {onsubmit:
-                    'event.preventDefault(); tx`rabid.subtask.addItem(${getFormJSON(event.target)})`'},
+                    `event.preventDefault(); txd(${JSON.stringify([`.-subtask-${task_id}-`])})\`rabid.subtask.addItem(\${getFormJSON(event.target)})\``},
             });
     }
 }

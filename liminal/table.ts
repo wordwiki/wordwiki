@@ -420,7 +420,12 @@ export class Table<T extends Tuple> extends FieldSet {
         if(!this.canEditRecord(record))
             throw new Error(`Not permitted to edit this ${this.name}`);
 
-        onsubmit ??= 'tx`'+this+'.saveForm(${getFormJSON(event.target)})`';
+        // Default dispatch: save via txd with the dirty set saveForm is
+        // expected to return (speculatedSaveTargets), so the save and the
+        // fragment refresh ride ONE round trip when the speculation holds; a
+        // custom saveForm that dirties more just falls back to two-trip.
+        onsubmit ??= 'txd('+JSON.stringify(this.speculatedSaveTargets(record))+')`'
+            +this+'.saveForm(${getFormJSON(event.target)})`';
 
         // Only fields the actor may edit become inputs.  Since edit ⊆ view, a
         // field that was redacted in the fetched record (one the actor can't see)
@@ -535,6 +540,18 @@ export class Table<T extends Tuple> extends FieldSet {
         if(!primaryKey)
             throw new Error('Missing required primary key');
         return {primaryKey, changedFieldValues};
+    }
+
+    // The dirty set saveForm is EXPECTED to return for this record - the edit
+    // form's speculation (see renderForm), which must mirror what saveForm
+    // actually returns for a one-round-trip save.  A table whose saveForm
+    // override dirties more (e.g. a related table's fragments) overrides this
+    // beside it; when the override can't know at render time, returning the
+    // default just means those saves fall back to the two-trip flow.
+    speculatedSaveTargets(record: T): string[] {
+        const pk = record[this.pkName];
+        return (pk !== undefined && pk !== null)
+            ? [`.-${this.name}-${pk}-`] : [`.-${this.name}-`];
     }
 
     // No primary key in the form means INSERT (the "new record" dialog is the

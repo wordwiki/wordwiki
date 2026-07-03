@@ -439,3 +439,32 @@
     border-radius: 50%;
     background: var(--bs-warning, #ffc107);
 }
+
+/* ---------------------------------------------------------------------------
+   Refresh debug mode (lmDebugRefresh in liminal-scripts.js): every fragment
+   refreshed in the last tx round is marked - green = refreshed and actually
+   different, yellow = refreshed but identical (pure over-revalidation).
+   Classes are only applied while debug mode is on.
+--------------------------------------------------------------------------- */
+.lm-debug-refreshed-changed {
+    outline: 2px solid rgba(25, 135, 84, 0.7);
+    background: rgba(25, 135, 84, 0.08);
+}
+.lm-debug-refreshed-same {
+    outline: 2px solid rgba(255, 193, 7, 0.85);
+    background: rgba(255, 193, 7, 0.12);
+}
+/* The round-summary badge (path taken + changed/unchanged counts). */
+#lm-debug-badge {
+    position: fixed;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    z-index: 2000;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.3rem;
+    background: rgba(33, 37, 41, 0.85);
+    color: #fff;
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.75rem;
+    pointer-events: none;
+}
