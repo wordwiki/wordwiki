@@ -489,6 +489,7 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
              ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],
              //['li', {}, ['a', {href:'/ww/wordwiki.entriesByEnglishGloss()'}, 'Entries by English Gloss']],
             ],
@@ -872,6 +873,9 @@ export class WordWiki extends LiminalApp {
         const title = "Entries by Twitter Post Status";
         const body = [
             ['h2', {}, title],
+            ['div', {class: 'mb-2'},
+             ['a', {href: '/ww/wordwiki.wordADayPicker()'},
+              'Looking for a word to post?  The word-a-day picker']],
 
             ['div', {},
              ['ul', {},
@@ -879,6 +883,103 @@ export class WordWiki extends LiminalApp {
                   .map(e=>['li', {}, renderEntryItem(e)]),
              ] // ul
             ] // div
+        ];
+
+        return templates.pageTemplate({title, body});
+    }
+
+    /** Is this entry already posted as a word-a-day (twitter/bluesky)?  The
+     *  poster stamps the twitter-post attribute with a date; for the picker
+     *  any non-empty value counts (same semantics as the twitter report:
+     *  any subentry's attribute marks the whole word). */
+    static isTwitterPosted(e: entry.Entry): boolean {
+        return e.subentry.some(s =>
+            s.attr.some(a => a.attr === 'twitter-post' && String(a.value ?? '').trim() !== ''));
+    }
+
+    /** The word-a-day picker: the whole category tree with every
+     *  not-yet-posted PUBLIC word inline, so the poster (~20 years of
+     *  word-a-day, ~3.8k words posted) can browse candidates by theme
+     *  instead of hunting.  Runs off the in-memory publishedEntries model -
+     *  the same pool and per-category sorted lists as the other category
+     *  reports, so a picked word is always a finished, publicly visible
+     *  one.  A word in several categories appears under EACH (a thematic
+     *  picker wants that); the header counts distinct words.  Words with no
+     *  category land in a final Uncategorized bucket so they stay pickable.
+     *  Stamping twitter-post in the editor drops the word on next load. */
+    @route(authenticated)
+    wordADayPicker(): any {
+        const title = 'Word-a-day picker';
+        const unpostedIds = new Set(this.publishedEntries
+            .filter(e => !WordWiki.isTwitterPosted(e)).map(e => e.entry_id));
+
+        const byCat = new Map<string, entry.Entry[]>();
+        for(const [cat, entries] of this.entriesByCategory.entries()) {
+            const un = entries.filter(e => unpostedIds.has(e.entry_id));
+            if(un.length > 0) byCat.set(cat, un);
+        }
+        const uncategorized = this.publishedEntries
+            .filter(e => unpostedIds.has(e.entry_id)
+                         && e.subentry.every(s => s.category.length === 0))
+            .toSorted((a, b) => this.sourceLangCollator.compare(
+                a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
+
+        // Theme grouping via the category table, like categoriesDirectory;
+        // values with no table row trail in their own group.
+        const tabled = this.categories.allByOrder.all({}).filter(c => byCat.has(c.slug));
+        const tabledSlugs = new Set(tabled.map(c => c.slug));
+        const untabled = Array.from(byCat.keys())
+            .filter(v => !tabledSlugs.has(v))
+            .toSorted((a, b) => this.sourceLangCollator.compare(a, b));
+        const groups = category.groupByTheme(tabled);
+
+        const anchor = (slug: string) => `cat-${slug}`;
+        const indexLink = (slug: string, name: string) =>
+            [['a', {class: 'text-nowrap', href: `#${encodeURIComponent(anchor(slug))}`},
+              `${name} (${byCat.get(slug)!.length})`], ' '];
+        const wordList = (entries: entry.Entry[]) =>
+            ['ul', {class: 'list-unstyled ms-3 mb-4'},
+             entries.map(e => ['li', {},
+                 ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`},
+                  entry.renderEntryCompactSummaryCore(e)]])];
+        const catSection = (slug: string, name: string) => [
+            ['h4', {id: anchor(slug), class: 'mt-3'}, name, ' ',
+             ['span', {class: 'text-muted fs-6'}, `(${byCat.get(slug)!.length})`]],
+            wordList(byCat.get(slug)!)];
+
+        const body = [
+            ['h1', {}, title],
+            ['div', {class: 'mb-3'},
+             `${unpostedIds.size} public words not yet posted.  `,
+             ['a', {href: '/ww/wordwiki.entriesByTwitterPostStatus()'},
+              'Words already posted']],
+
+            // The jump index: every category with its unposted count.
+            ['div', {class: 'mb-4'},
+             groups.map(g => ['div', {},
+                 ['b', {}, g.theme, ': '],
+                 g.cats.map(c => indexLink(c.slug, c.name))]),
+             untabled.length > 0
+                 ? ['div', {}, ['b', {}, 'Not in the category table: '],
+                    untabled.map(v => indexLink(v, v))]
+                 : undefined,
+             uncategorized.length > 0
+                 ? ['div', {}, ['a', {href: '#uncategorized-words'},
+                    `Uncategorized (${uncategorized.length})`]]
+                 : undefined],
+
+            groups.map(g => [
+                ['h3', {class: 'mt-4'}, g.theme],
+                g.cats.map(c => catSection(c.slug, c.name))]),
+            untabled.length > 0
+                ? [['h3', {class: 'mt-4'}, 'Not in the category table'],
+                   untabled.map(v => catSection(v, v))]
+                : undefined,
+            uncategorized.length > 0
+                ? [['h3', {id: 'uncategorized-words', class: 'mt-4'}, 'Uncategorized ',
+                    ['span', {class: 'text-muted fs-6'}, `(${uncategorized.length})`]],
+                   wordList(uncategorized)]
+                : undefined,
         ];
 
         return templates.pageTemplate({title, body});
