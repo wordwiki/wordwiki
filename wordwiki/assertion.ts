@@ -464,16 +464,23 @@ export function updateAssertion<T extends Partial<Assertion>>(tableName: string,
 /**
  * Returns the highest timestamp in a table.
  *
+ * The two aggregate queries, exported so assertion_test.ts can pin their
+ * EXPLAIN QUERY PLAN: both must be answered from their covering indexes
+ * (valid_from, and the partial valid_to != END_OF_TIME index - whose
+ * predicate the second query matches EXACTLY; rewriting it as
+ * `valid_to < END_OF_TIME` loses the index).  A schema change that broke
+ * this would silently degrade a query we may soon run per page view to a
+ * full scan of the assertion table.
  */
+export const highestTimestampQueries = (tableName: string) => [
+    `SELECT MAX(valid_from) AS ts FROM ${tableName}`,
+    `SELECT MAX(valid_to) AS ts FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`,
+];
+
 export function highestTimestamp(tableName: string): number {
-    console.info('AAA', db().prepare<Assertion, {}>(`SELECT MAX(valid_from) AS max_valid_from FROM ${tableName}`).required({}));
-    const maxValidFrom = db().prepare<{max_valid_from: number}, {}>(`SELECT MAX(valid_from) AS max_valid_from FROM ${tableName}`).required({}).max_valid_from;
-    // TODO we have an index that matches this, but not sure if sqlite will use it!
-    //      not causing problems at the moment, becase we are reading this once at
-    //      startup - but should investigate.
-//console.info('FFF', db().prepare<{max_valid_to: number}, {}>(`SELECT * FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`).all({}));
-    const maxValidTo = db().prepare<{max_valid_to: number}, {}>(`SELECT MAX(valid_to) AS max_valid_to FROM ${tableName} WHERE valid_to != ${timestamp.END_OF_TIME}`).required({}).max_valid_to;
-    console.info('maxValidTo', maxValidTo, 'maxValidFrom', maxValidFrom);
+    const [maxValidFromSql, maxValidToSql] = highestTimestampQueries(tableName);
+    const maxValidFrom = db().prepare<{ts: number|null}, {}>(maxValidFromSql).required({}).ts;
+    const maxValidTo = db().prepare<{ts: number|null}, {}>(maxValidToSql).required({}).ts;
     return Math.max(maxValidTo ?? timestamp.BEGINNING_OF_TIME,
                     maxValidFrom ?? timestamp.BEGINNING_OF_TIME);
 }
