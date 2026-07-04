@@ -23,7 +23,8 @@ import {ensureDir} from "std/fs/mod.ts";
 import * as table from '../liminal/table.ts';
 import {serialize, path} from "../liminal/serializable.ts";
 import {lazy} from '../liminal/lazy.ts';
-import {activityReport, dailyActivityReport} from './activity_report.ts';
+import {activityReport, dailyActivityReport, activityRangeQuery} from './activity_report.ts';
+import * as pageQueries from './page-queries.ts';
 import { Temporal } from 'temporal-polyfill';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
@@ -91,15 +92,18 @@ export class Rabid extends LiminalApp {
         return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
     }
 
+    // Pages that carry route-borne view state (page-state; liminal.md § On-page
+    // view state) take the `{}` argument the dispatch passes through from the
+    // route expression, e.g. /timesheets({from:"2025-01-01"}).
     home() { return templates.page('home', home.home()); }
     volunteers() { return templates.page('Volunteers', this.volunteer.renderVolunteersPage()); }
-    events() { return templates.page('Events', this.event.renderEventsPage()); }
-    sales() { return templates.page('Sales', this.sale.renderSalesPage()); }
-    servicePage() { return templates.page('Service', this.service.renderServicePage()); }
-    timesheets() { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage()); }
+    events(q?: Record<string, any>) { return templates.page('Events', this.event.renderEventsPage(q)); }
+    sales(q?: Record<string, any>) { return templates.page('Sales', this.sale.renderSalesPage(q)); }
+    servicePage(q?: Record<string, any>) { return templates.page('Service', this.service.renderServicePage(q)); }
+    timesheets(q?: Record<string, any>) { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage(q)); }
     committees() { return templates.page('Committees', this.committee.renderCommitteesPage()); }
-    projects() { return templates.page('Projects', this.project.renderProjectsPage()); }
-    tasksPage() { return templates.page('Tasks', this.task.renderTasksPage()); }
+    projects(q?: Record<string, any>) { return templates.page('Projects', this.project.renderProjectsPage(q)); }
+    tasksPage(q?: Record<string, any>) { return templates.page('Tasks', this.task.renderTasksPage(q)); }
 
     constructor() {
         super();
@@ -110,25 +114,22 @@ export class Rabid extends LiminalApp {
         this.pages = {
             home:()=>this.home(),
             volunteers:()=>this.volunteers(),
-            events:()=>this.events(),
-            sales:()=>this.sales(),
+            events:(q?: any)=>this.events(q),
+            sales:(q?: any)=>this.sales(q),
             // ('service' the page vs this.service the table: the page binding
             // name is what appears in the URL, the method avoids the collision.)
-            service:()=>this.servicePage(),
-            timesheets:()=>this.timesheets(),
+            service:(q?: any)=>this.servicePage(q),
+            timesheets:(q?: any)=>this.timesheets(q),
             committees:()=>this.committees(),
-            projects:()=>this.projects(),
+            projects:(q?: any)=>this.projects(q),
             // ('tasks' the page vs this.task the table - same naming move as
             // service/servicePage.)
-            tasks:()=>this.tasksPage(),
+            tasks:(q?: any)=>this.tasksPage(q),
             activityReport:()=>templates.page('Activity Report', activityReport()),
-            dailyActivityReport:()=>templates.page(
-                'Daily Activity Report',
-                dailyActivityReport(
-                    date.orgToday().subtract({ days: 30 }),
-                    date.orgToday()
-                )
-            ),
+            // The range now rides the route as a {} arg (default: last 120 days,
+            // drifting) instead of being frozen here - see activity_report.ts.
+            dailyActivityReport:(q?: any)=>templates.page(
+                'Daily Activity Report', dailyActivityReport(q)),
         };
 
         // Page routes are bare identifiers (auto-invoked by dispatch), so they are
@@ -245,6 +246,20 @@ export class Rabid extends LiminalApp {
         return security.runSystem(() =>
             // deno-lint-ignore no-eval
             eval(`(async () => { ${js}\n})()`));
+    }
+
+    // The daily activity report's date-range filter (page-state; the report is
+    // a bare page function, so its filter dialog / apply live here on the app,
+    // reached as rabid.dailyReportFilterDialog / rabid.applyDailyReportFilter).
+    @route(authenticated)
+    dailyReportFilterDialog(q?: Record<string, any>): any {
+        return pageQueries.renderFilterDialog(
+            activityRangeQuery, activityRangeQuery.normalize(q),
+            'rabid.applyDailyReportFilter', {title: 'Report date range'});
+    }
+    @route(authenticated)
+    applyDailyReportFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(activityRangeQuery, form, 'dailyActivityReport');
     }
 
     // ----- Login / logout (app-specific auth) --------------------------------

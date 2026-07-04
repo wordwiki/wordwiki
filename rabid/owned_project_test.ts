@@ -54,7 +54,7 @@ test("addOwnerTask: creates the project on first task; appears in global list wi
         const pid = asSystem(() => r.project.forOwner('event', eid, false));
         assert(pid !== undefined, 'first task should have materialized the project');
 
-        const all = asSystem(() => r.task.allOpenTasks.all({}));
+        const all = asSystem(() => r.task.allOpenTasks.all({include_done: 0}));
         const row = all.find(t => t.title === 'Book the truck');
         assert(row, 'the owned-project task should appear in the global list');
         assertEquals(projectRowLabel(row!), 'Saturday in the Park — tasks');

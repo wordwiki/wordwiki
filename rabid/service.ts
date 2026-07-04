@@ -17,6 +17,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
 import {route, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
+import * as pageQueries from './page-queries.ts';
 
 export const routes = ()=> ({
 });
@@ -125,6 +126,19 @@ export class ServiceTable extends Table<Service> {
 /**/          ORDER BY service_check_in_time DESC`);
     }
 
+    // Windowed variant for the Service page.  A NULL check-in time is a
+    // pending/not-yet-checked-in record - always surface those (they're the
+    // active work), plus checked-in services within [from, to].
+    @path
+    get servicesInWindow() {
+        return this.prepare<Service, {from: string, to: string}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM service
+/**/          WHERE service_check_in_time IS NULL
+/**/             OR DATE(service_check_in_time) BETWEEN :from AND :to
+/**/          ORDER BY service_check_in_time DESC`);
+    }
+
     // ------------------------------------------------------------------------
     // --- Standard editable-item list (the baseline; structured intake views
     // --- come later) ---------------------------------------------------------
@@ -173,13 +187,36 @@ export class ServiceTable extends Table<Service> {
         return this.renderServiceRow(this.getById(id));
     }
 
-    // The top-level Service page body (dispatched from the navbar's /service).
-    // For now the full standard list; structured intake/pickup views come later.
-    renderServicePage(): Markup {
+    // The Service page query: a from/to date window (page-state; liminal.md
+    // § On-page view state).  Defaults to the last 120 days (plus pending
+    // records, see servicesInWindow).
+    static readonly pageQuery = pageQueries.windowQuery('service_query');
+
+    // The top-level Service page body (dispatched from the navbar's /service),
+    // windowed by the route arg.
+    renderServicePage(q?: Record<string, any>): Markup {
+        const query = ServiceTable.pageQuery.normalize(q) as pageQueries.WindowQuery;
+        const w = pageQueries.resolveWindow(query);
+        const services = this.servicesInWindow.all(w);
         return [h.div, {class: 'container py-3'},
             [h.h2, {}, 'Service'],
-            this.renderServiceList(this.allServices.all()),
+            pageQueries.renderWindowBar({
+                fieldSet: ServiceTable.pageQuery, pageRoute: 'service',
+                filterDialogRoute: 'rabid.service.serviceFilterDialog',
+                q: query, count: services.length, noun: 'record'}),
+            this.renderServiceList(services),
         ];
+    }
+
+    @route(authenticated)
+    serviceFilterDialog(q?: Record<string, any>): Markup {
+        return pageQueries.renderFilterDialog(
+            ServiceTable.pageQuery, ServiceTable.pageQuery.normalize(q),
+            'rabid.service.applyServiceFilter', {title: 'Filter service records'});
+    }
+    @route(authenticated)
+    applyServiceFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(ServiceTable.pageQuery, form, 'service');
     }
 
     // ------------------------------------------------------------------------

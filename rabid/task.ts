@@ -36,7 +36,8 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps, reloadableProps, liveReloadableProps, sel } from "../liminal/table.ts";
+import { Table, FieldSet, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, CheckboxField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps, reloadableProps, liveReloadableProps, sel } from "../liminal/table.ts";
+import * as pageQueries from './page-queries.ts';
 import {block} from "../liminal/strings.ts";
 import {ownerLabel, ownerCanEdit} from "./owned.ts";
 import {path} from "../liminal/serializable.ts";
@@ -365,6 +366,27 @@ export class ProjectTable extends Table<Project> {
 /**/          ORDER BY name`);
     }
 
+    // Projects for the Projects page.  :include_done relaxes the
+    // active-only (deleted = "Done") filter for the page toggle; done projects
+    // sort after active ones.
+    @path
+    get projectsForList() {
+        return this.prepare<Project & {committee_name?: string, open_task_count: number},
+                            {include_done: number}>(block`
+/**/   SELECT ${this.allFields},
+/**/          (SELECT c.name FROM volunteer_group g
+/**/                  JOIN committee c ON g.owner_table = 'committee' AND c.committee_id = g.owner_id
+/**/                  WHERE g.group_id = project.group_id)
+/**/              AS committee_name,
+/**/          (SELECT COUNT(*) FROM task t
+/**/                  WHERE t.project_id = project.project_id
+/**/                    AND t.deleted = 0 AND t.status != 'done')
+/**/              AS open_task_count
+/**/          FROM project
+/**/          WHERE (:include_done = 1 OR deleted = 0)
+/**/          ORDER BY deleted, name`);
+    }
+
     // Projects ASSIGNED to a committee (project.group_id is the committee's
     // group) - distinct from the committee's own owned project (which carries
     // owner_table='committee' and has its own group; excluded here).
@@ -396,12 +418,13 @@ export class ProjectTable extends Table<Project> {
     // Self-fetching reloadable list wrapper: a "New project" insert reloads
     // `.-project-` (the pk-less reload target the base saveForm emits).
     @route(authenticated)
-    renderProjectList(): Markup {
-        const projects = this.activeProjects.all({});
-        const props = this.reloadableItemProps(undefined, `rabid.project.renderProjectList()`);
+    renderProjectList(include_done: boolean = false): Markup {
+        const projects = this.projectsForList.all({include_done: include_done ? 1 : 0});
+        const props = this.reloadableItemProps(undefined,
+            `rabid.project.renderProjectList(${include_done})`);
         return [h.div, props,
             projects.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No projects yet.']
+                ? [h.p, {class: 'text-muted'}, include_done ? 'No projects yet.' : 'No active projects.']
                 : [h.div, {class: 'list-group lm-list'},
                    projects.map(p => this.renderProjectRow(p))]];
     }
@@ -435,9 +458,16 @@ export class ProjectTable extends Table<Project> {
         return this.renderProjectRow(this.getById(id));
     }
 
+    // The Projects page query: an include_done toggle (page-state; liminal.md
+    // § On-page view state).  Done (deleted) projects are hidden by default;
+    // the toggle makes that hardcoded filter an explicit knob.
+    static readonly pageQuery = new FieldSet('projects_query',
+        [new CheckboxField('include_done', {prompt: 'Include done projects', default: false})]);
+
     // The top-level Projects page body (dispatched from the navbar's /projects).
     @route(authenticated)
-    renderProjectsPage(): Markup {
+    renderProjectsPage(q?: Record<string, any>): Markup {
+        const query = ProjectTable.pageQuery.normalize(q) as {include_done: boolean};
         const canCreate = this.canEditRecord({} as Project);
         return [h.div, {class: 'container py-3'},
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
@@ -446,8 +476,12 @@ export class ProjectTable extends Table<Project> {
                  ? action.actionButton('New project',
                      {kind: 'modal', dialogUrl: '/rabid.project.newDialog()'},
                      'btn btn-outline-primary btn-sm')
-                 : undefined],
-            this.renderProjectList(),
+                 : undefined,
+             pageQueries.renderToggleLink({
+                 pageRoute: 'projects', fieldSet: ProjectTable.pageQuery,
+                 next: {include_done: !query.include_done},
+                 label: query.include_done ? 'Hide done' : 'Show done'})],
+            this.renderProjectList(query.include_done),
         ];
     }
 
@@ -821,9 +855,11 @@ export class TaskTable extends Table<Task> {
     }
 
     // All open tasks, grouped by project (the render inserts the headings).
+    // :include_done relaxes the open-only filter for the Tasks page's toggle
+    // (done tasks sort AFTER open within each project via `status = 'done'`).
     @path
     get allOpenTasks() {
-        return this.prepare<TaskWithContext, {}>(block`
+        return this.prepare<TaskWithContext, {include_done: number}>(block`
 /**/   SELECT ${this.allFields},
 /**/          (SELECT p.name FROM project p WHERE p.project_id = task.project_id) AS project_name,
 /**/          (SELECT p.owner_table FROM project p WHERE p.project_id = task.project_id) AS project_owner_table,
@@ -835,8 +871,8 @@ export class TaskTable extends Table<Task> {
 /**/                  (SELECT p.group_id FROM project p WHERE p.project_id = task.project_id)))
 /**/              AS assignee_count
 /**/          FROM task
-/**/          WHERE deleted = 0 AND status != 'done'
-/**/          ORDER BY project_name, project_id, order_key`);
+/**/          WHERE deleted = 0 AND (:include_done = 1 OR status != 'done')
+/**/          ORDER BY project_name, project_id, (status = 'done'), order_key`);
     }
 
     // ------------------------------------------------------------------------
@@ -1197,12 +1233,20 @@ export class TaskTable extends Table<Task> {
     // actor, most urgent first), then all open tasks grouped by project.  New
     // tasks are created from a project page (a task needs its project); rows
     // here reload individually after an edit (`.-task-<id>-`).
+    // The Tasks page query: an include_done toggle (page-state; liminal.md
+    // § On-page view state).  Done tasks are hidden by default (the open list
+    // is the working view); the toggle makes that hardcoded filter an explicit
+    // knob.  ("My tasks" stays open-only regardless - it's the actionable list.)
+    static readonly pageQuery = new FieldSet('tasks_query',
+        [new CheckboxField('include_done', {prompt: 'Include done tasks', default: false})]);
+
     @route(authenticated)
-    renderTasksPage(): Markup {
+    renderTasksPage(q?: Record<string, any>): Markup {
+        const query = TaskTable.pageQuery.normalize(q) as {include_done: boolean};
         const actorId = security.current()?.actorId;
         const mine = actorId === undefined ? []
             : this.openTasksForVolunteer.all({volunteer_id: actorId});
-        const all = this.allOpenTasks.all({});
+        const all = this.allOpenTasks.all({include_done: query.include_done ? 1 : 0});
         return [h.div, {class: 'container py-3'},
             [h.h2, {}, 'Tasks'],
             mine.length > 0
@@ -1210,9 +1254,14 @@ export class TaskTable extends Table<Task> {
                    [h.div, {class: 'list-group lm-list', 'data-testid': 'my-tasks'},
                     mine.map(t => this.renderTaskRow(t))]]
                 : undefined,
-            [h.h4, {class: 'mt-3'}, 'All open tasks'],
+            [h.div, {class: 'd-flex align-items-center gap-3 mt-3'},
+             [h.h4, {class: 'mb-0'}, query.include_done ? 'All tasks' : 'All open tasks'],
+             pageQueries.renderToggleLink({
+                 pageRoute: 'tasks', fieldSet: TaskTable.pageQuery,
+                 next: {include_done: !query.include_done},
+                 label: query.include_done ? 'Hide done' : 'Show done'})],
             all.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No open tasks.']
+                ? [h.p, {class: 'text-muted'}, query.include_done ? 'No tasks.' : 'No open tasks.']
                 : this.renderTasksGroupedByProject(all),
         ];
     }

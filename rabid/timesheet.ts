@@ -9,6 +9,7 @@ import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
+import * as pageQueries from './page-queries.ts';
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -266,6 +267,20 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
 /**/          ORDER BY timesheet_entry.start_time DESC`);
     }
 
+    // The windowed variant for the Timesheets page: entries whose start_time
+    // falls in [from, to] (DATE() so the whole `to` day is included), most
+    // recent first.  The page defaults to the last DEFAULT_WINDOW_DAYS days.
+    @path
+    get entriesInWindow() {
+        return this.prepare<TimesheetEntry & MemberName, {from: string, to: string}>(block`
+/**/   SELECT timesheet_entry.*, volunteer.name AS volunteer_name,
+/**/          volunteer.short_name AS volunteer_short_name
+/**/          FROM timesheet_entry
+/**/          LEFT JOIN volunteer USING (volunteer_id)
+/**/          WHERE DATE(timesheet_entry.start_time) BETWEEN :from AND :to
+/**/          ORDER BY timesheet_entry.start_time DESC`);
+    }
+
     @path
     get entryWithNamesById() {
         return this.prepare<TimesheetEntry & MemberName,
@@ -317,13 +332,35 @@ export class TimesheetEntryTable extends Table<TimesheetEntry> {
         return this.renderTimesheetRow(e);
     }
 
-    // The top-level Timesheets page body.  For now the full standard list;
-    // structured per-period views come later.
-    renderTimesheetsPage(): Markup {
+    // The Timesheets page query: a from/to date window (page-state; see
+    // liminal.md § On-page view state).  The unbounded full list is replaced
+    // by a recent window (default last 120 days) the user can widen.
+    static readonly pageQuery = pageQueries.windowQuery('timesheets_query');
+
+    // The top-level Timesheets page body, windowed by the route arg.
+    renderTimesheetsPage(q?: Record<string, any>): Markup {
+        const query = TimesheetEntryTable.pageQuery.normalize(q) as pageQueries.WindowQuery;
+        const w = pageQueries.resolveWindow(query);
+        const entries = this.entriesInWindow.all(w);
         return [h.div, {class: 'container py-3'},
             [h.h2, {}, 'Timesheets'],
-            this.renderTimesheetList(this.allEntriesWithNames.all()),
+            pageQueries.renderWindowBar({
+                fieldSet: TimesheetEntryTable.pageQuery, pageRoute: 'timesheets',
+                filterDialogRoute: 'rabid.timesheet_entry.timesheetsFilterDialog',
+                q: query, count: entries.length, noun: 'entry', nounPlural: 'entries'}),
+            this.renderTimesheetList(entries),
         ];
+    }
+
+    @route(authenticated)
+    timesheetsFilterDialog(q?: Record<string, any>): Markup {
+        return pageQueries.renderFilterDialog(
+            TimesheetEntryTable.pageQuery, TimesheetEntryTable.pageQuery.normalize(q),
+            'rabid.timesheet_entry.applyTimesheetsFilter', {title: 'Filter timesheets'});
+    }
+    @route(authenticated)
+    applyTimesheetsFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(TimesheetEntryTable.pageQuery, form, 'timesheets');
     }
 
     // ------------------------------------------------------------------------

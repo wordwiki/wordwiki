@@ -22,6 +22,12 @@ import {
 import { Volunteer } from "./volunteer.ts";
 import { Temporal } from 'temporal-polyfill';
 import { h } from "../liminal/markup.ts";
+import * as pageQueries from './page-queries.ts';
+
+// The daily report's date range as a page-state {} arg (page-state; liminal.md
+// § On-page view state): a bookmarkable from/to window instead of the range
+// being frozen in the route binding.  Shared with the Rabid filter routes.
+export const activityRangeQuery = pageQueries.windowQuery('activity_range');
 
 
 /**
@@ -187,7 +193,11 @@ export function activeVolunteersByMonthReport(startDate: PlainDate, endDate: Pla
     return ['div', {}, 'Report not yet implemented'];
 }
 
-export function dailyActivityReport(startDate: PlainDate, endDate: PlainDate): Markup {
+export function dailyActivityReport(q?: Record<string, any>): Markup {
+    const query = activityRangeQuery.normalize(q) as pageQueries.WindowQuery;
+    const w = pageQueries.resolveWindow(query);   // absent → last 120 days, drifting
+    const startDate = sqliteDateToTemporal(w.from);
+    const endDate = sqliteDateToTemporal(w.to);
     const activeByDay = activeVolunteersByDay(startDate, endDate);
     
     // Build table rows for each day
@@ -286,7 +296,9 @@ export function dailyActivityReport(startDate: PlainDate, endDate: PlainDate): M
     
     return [h.div, {class: 'daily-activity-report'},
         [h.h2, {}, 'Daily Active Volunteers Report'],
-        [h.p, {}, `From ${dateToString(startDate)} to ${dateToString(endDate)}`],
+        pageQueries.renderWindowBar({
+            fieldSet: activityRangeQuery, pageRoute: 'dailyActivityReport', q: query,
+            filterDialogRoute: 'rabid.dailyReportFilterDialog'}),
         [h.table, {class: 'table table-striped table-hover'},
             [h.thead, {}, ...tableRows.slice(0, 1)],
             [h.tbody, {}, ...tableRows.slice(1)]

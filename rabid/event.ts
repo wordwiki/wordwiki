@@ -15,6 +15,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated, selfArg} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as templates from './templates.ts';
+import * as pageQueries from './page-queries.ts';
 import * as action from "../liminal/action.ts";
 import {rabid} from './rabid.ts';
 
@@ -153,19 +154,50 @@ export class EventTable extends Table<Event> {
     // same week-grouped, phase-aware schedule table the home page uses, over ALL
     // events - ordered UPCOMING FIRST (soonest first), THEN started events most-
     // recent first, so you land on what's coming and history is below.
-    renderEventsPage(): Markup {
+    // Upcoming (and undated) events always show — they're the bounded, forward-
+    // looking part.  PAST events are the unbounded, ever-growing part, so they
+    // get a date window (page-state; liminal.md § On-page view state): the last
+    // 120 days by default, with Show older / a Filter to widen.
+    static readonly pageQuery = pageQueries.windowQuery('events_query');
+
+    renderEventsPage(q?: Record<string, any>): Markup {
+        const query = EventTable.pageQuery.normalize(q) as pageQueries.WindowQuery;
+        const w = pageQueries.resolveWindow(query);
         const now = date.temporalToSqliteDateTime(date.orgNow());
         const all = this.allEvents.all();                                  // ascending by start_time
         const future = all.filter(e => e.start_time && e.start_time > now);          // soonest first
-        const started = all.filter(e => e.start_time && e.start_time <= now).reverse(); // most recent first
         const undated = all.filter(e => !e.start_time);
-        const ordered = [...future, ...started, ...undated];
+        const pastAll = all.filter(e => e.start_time && e.start_time <= now).reverse(); // most recent first
+        // Window the past by the date part of start_time (the datetime is
+        // >= the from-day midnight and its date <= the to-day, inclusive).
+        const past = pastAll.filter(e => {
+            const d = (e.start_time as string).slice(0, 10);
+            return d >= w.from && d <= w.to;
+        });
+        const upcoming = [...future, ...undated];
         return [h.div, {class: 'container py-3'},
             [h.h2, {}, 'Events'],
-            ordered.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No events yet.']
-                : this.renderEventScheduleTable(ordered),
+            upcoming.length > 0 ? this.renderEventScheduleTable(upcoming) : undefined,
+            [h.h4, {class: 'mt-4 mb-1'}, 'Past events'],
+            pageQueries.renderWindowBar({
+                fieldSet: EventTable.pageQuery, pageRoute: 'events',
+                filterDialogRoute: 'rabid.event.eventsFilterDialog',
+                q: query, count: past.length, noun: 'past event'}),
+            past.length > 0
+                ? this.renderEventScheduleTable(past)
+                : [h.p, {class: 'text-muted'}, 'No past events in this range.'],
         ];
+    }
+
+    @route(authenticated)
+    eventsFilterDialog(q?: Record<string, any>): Markup {
+        return pageQueries.renderFilterDialog(
+            EventTable.pageQuery, EventTable.pageQuery.normalize(q),
+            'rabid.event.applyEventsFilter', {title: 'Filter past events'});
+    }
+    @route(authenticated)
+    applyEventsFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(EventTable.pageQuery, form, 'events');
     }
 
     // "Sat, Jun 13, 2026, 7:00 PM - 9:30 PM" (year included: unlike the

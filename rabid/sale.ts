@@ -13,6 +13,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
 import {route, authenticated} from "../liminal/security.ts";
 import * as templates from './templates.ts';
+import * as pageQueries from './page-queries.ts';
 import {rabid} from './rabid.ts';
 
 // --------------------------------------------------------------------------------
@@ -88,6 +89,16 @@ export class SaleTable extends Table<Sale> {
 /**/          ORDER BY sale_time DESC`);
     }
 
+    // Windowed variant for the Sales page (DATE() includes the whole `to` day).
+    @path
+    get salesInWindow() {
+        return this.prepare<Sale, {from: string, to: string}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM sale
+/**/          WHERE DATE(sale_time) BETWEEN :from AND :to
+/**/          ORDER BY sale_time DESC`);
+    }
+
     // ------------------------------------------------------------------------
     // --- Standard editable-item list (the baseline; structured per-day/month
     // --- summaries come later) ----------------------------------------------
@@ -135,14 +146,35 @@ export class SaleTable extends Table<Sale> {
         return this.renderSaleRow(this.getById(id));
     }
 
-    // The top-level Sales page body (dispatched from the navbar's /sales).
-    // For now the full standard list; per-day summaries with monthly totals
-    // are the plan here.
-    renderSalesPage(): Markup {
+    // The Sales page query: a from/to date window (page-state; liminal.md
+    // § On-page view state).  Defaults to the last 120 days.
+    static readonly pageQuery = pageQueries.windowQuery('sales_query');
+
+    // The top-level Sales page body (dispatched from the navbar's /sales),
+    // windowed by the route arg.
+    renderSalesPage(q?: Record<string, any>): Markup {
+        const query = SaleTable.pageQuery.normalize(q) as pageQueries.WindowQuery;
+        const w = pageQueries.resolveWindow(query);
+        const sales = this.salesInWindow.all(w);
         return [h.div, {class: 'container py-3'},
             [h.h2, {}, 'Sales'],
-            this.renderSaleList(this.allSales.all()),
+            pageQueries.renderWindowBar({
+                fieldSet: SaleTable.pageQuery, pageRoute: 'sales',
+                filterDialogRoute: 'rabid.sale.salesFilterDialog',
+                q: query, count: sales.length, noun: 'sale'}),
+            this.renderSaleList(sales),
         ];
+    }
+
+    @route(authenticated)
+    salesFilterDialog(q?: Record<string, any>): Markup {
+        return pageQueries.renderFilterDialog(
+            SaleTable.pageQuery, SaleTable.pageQuery.normalize(q),
+            'rabid.sale.applySalesFilter', {title: 'Filter sales'});
+    }
+    @route(authenticated)
+    applySalesFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(SaleTable.pageQuery, form, 'sales');
     }
 
     // ------------------------------------------------------------------------

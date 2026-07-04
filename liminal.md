@@ -259,7 +259,13 @@ liminal/table.ts `FieldSet`, liminal/action.ts `renderParamForm`, the
 `navigate` tx action in resources/rabid-scripts.js.  Worked examples:
 wordwiki/change-feed.ts and wordwiki/activity-report.ts; rabid/volunteer.ts
 `volunteer.search` (the filter → navigation case) and rabid/volunteer_time.ts's
-Time view (a configurable SECTION with hx-replace-url depth toggles).)*
+Time view (a configurable SECTION with hx-replace-url depth toggles).  The
+recurring "recent date-window" list idiom (default last N days + Show-older +
+Filter) is factored in **rabid/page-queries.ts** (`windowQuery`,
+`resolveWindow`, `renderWindowBar`, `renderToggleLink`,
+`renderFilterDialog`/`applyFilterNavigate`) and applied across the
+timesheets/sales/service/events pages + the daily activity report; the
+tasks/projects pages use its `renderToggleLink` for an include-done toggle.)*
 
 ### The principle
 
