@@ -107,7 +107,7 @@ wordwiki.changes({from_time,to_time,max_rows,restrict_to_user}) via the new
 liminal FieldSet (extracted base of Table; normalize/literal = codec for ONE
 {} value - dz: do NOT privilege a textual base-URL, URLs are composable route
 exprs, a page can carry several independent {} sections; the whole pattern
-is documented for future Claudes in liminal/page-state.md). Filters define the
+is documented for future Claudes in liminal.md § On-page view state). Filters define the
 query; max_rows is the depth knob; "Show older" = SAME URL with max_rows+50,
 htmx-swapped into #content with hx-replace-url (replaceState for depth,
 real-navigation/pushState for filter changes - resolved dz's "divided").

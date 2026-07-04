@@ -116,7 +116,7 @@ export type VolunteerOpt = Partial<Volunteer>;
 // so existing `import {shortName} from "./volunteer.ts"` callers keep working.
 export {shortName, memberShortName, type NamedVolunteer, type MemberName} from "./volunteer-name.ts";
 
-// The volunteer-search page query (liminal/page-state.md): the view state that
+// The volunteer-search page query (liminal.md § On-page view state): the view state that
 // rides in the search page's route expression, as a `{}` argument.  One
 // FieldSet declaration is the URL codec (normalize/literal), the
 // auto-generated filter dialog (renderParamForm over its fields), and the
@@ -253,7 +253,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // The popup-action model where the action's result is a PAGE: the dialog
     // collects the volunteerQuery `{}` and applySearch navigates to
     //   /rabid.volunteer.search({text:"Dav"})
-    // (the FieldSet builds the canonical URL server-side - see page-state.md),
+    // (the FieldSet builds the canonical URL server-side - see liminal.md § On-page view state),
     // so a search has a real URL - sharable, back-button-able, refresh-stable
     // - and both the page's own Search button and the dialog pre-populate from
     // the current search, making refinement natural.
@@ -278,7 +278,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // The search results page.  Its view state (search text, archived toggle)
     // is a page-query `{}` argument carried in the route expression and
     // decoded by volunteerQuery - the ONE declaration that is the URL codec,
-    // the auto-generated dialog, and the typed query (see liminal/page-state.md).
+    // the auto-generated dialog, and the typed query (see liminal.md § On-page view state).
     // normalize() is the per-route guard: unknown keys rejected, each value
     // coerced by its field's type, absent/null → default (include_archived
     // defaults to false - the current roster is the common case).

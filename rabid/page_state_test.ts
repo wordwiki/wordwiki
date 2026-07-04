@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-// The page-state pattern in rabid (liminal/page-state.md): view state rides in
+// The page-state pattern in rabid (liminal.md § On-page view state): view state rides in
 // the route expression as a `{}` argument decoded by a FieldSet.  Covers the
 // volunteer.search filter (navigation) and the Time-view section
 // (hx-replace-url depth toggle), plus the strict date route-literal codecs.

@@ -484,7 +484,7 @@ export class VolunteerTimeService {
 // Default to the most recent N weeks (recent-first); "Show all" reveals the rest.
 export const WEEK_WINDOW = 8;
 
-// The Time view's own page-query section (liminal/page-state.md §"the unit of
+// The Time view's own page-query section (liminal.md § On-page view state ("the unit of
 // state is the SECTION"): two boolean view knobs, carried as a `{}` argument
 // in the route expression of the Time fragment AND the volunteer detail page.
 // Both default false, so the common view canonicalizes away
@@ -518,7 +518,7 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
         [rabid.timesheet_entry.fkKey('volunteer_id', volunteer_id),
          rabid.event_checkin.fkKey('volunteer_id', volunteer_id)],
         fragmentRoute(view), {id: domId});
-    // A view toggle is a DEPTH/refinement change (page-state.md taxonomy): it
+    // A view toggle is a DEPTH/refinement change (liminal.md view-state taxonomy): it
     // swaps the fragment in place AND updates the page URL via hx-replace-url
     // (replaceState - refresh keeps the view; Back leaves the page rather than
     // un-toggling).

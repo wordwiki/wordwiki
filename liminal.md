@@ -1,15 +1,21 @@
-# Liminal: the page-refresh and dependency model
+# Liminal: page-refresh, dependency, and page-state conventions
 
-How liminal pages stay in sync with the database after mutations: the
-dependency-key vocabulary, the registration and emission rules, the one-trip
-speculative refresh, and the debug tooling.  This documents the conventions as
-much as the code — the code enforces some of them, but several live only in
-discipline, and this file is their home.
+The load-bearing liminal page-authoring conventions — the ones that live in
+discipline, not (only) in code, and are hard to infer from a fresh read.  Two
+big topics:
 
-Written 2026-07-03, after the change series that built it landed
-(`speculative refresh: ...` and `dependency model: fk-scoped keys ...` on main;
-long-poll liveness followed on the same day).  Remaining future work
-(fine-grained insert/delete) is in `liminal-refresh-future-work.md`.
+1. **Refresh / dependency model** — how pages stay in sync with the db after a
+   mutation: the dependency-key vocabulary, registration/emission rules, the
+   one-trip speculative refresh, opt-in liveness, and the debug tooling.
+2. **On-page view state** (near the end) — how a page's filters / paging /
+   anchors live in its route expression as `{}` arguments decoded by a
+   `FieldSet`, so every view is bookmarkable, refreshable, and testable.
+
+Written 2026-07-03 (refresh model; `speculative refresh` + `dependency model:
+fk-scoped keys` + long-poll liveness landed that day); the on-page-state
+section merged in from the former `liminal/page-state.md` after the rabid
+conversion.  Remaining refresh future work (fine-grained insert/delete) is in
+`liminal-refresh-future-work.md`.
 
 ## The model in one paragraph
 
@@ -245,6 +251,224 @@ Conventions and behaviors to know:
 - Same honesty limits as the whole model: only declared dirties reaching
   rpcHandler are logged.
 
+## On-page view state (filters, paging, anchors)
+
+*(Formerly liminal/page-state.md.  Read this before building any page with
+filters, paging, time anchors, or other view state.  Machinery:
+liminal/table.ts `FieldSet`, liminal/action.ts `renderParamForm`, the
+`navigate` tx action in resources/rabid-scripts.js.  Worked examples:
+wordwiki/change-feed.ts and wordwiki/activity-report.ts; rabid/volunteer.ts
+`volunteer.search` (the filter → navigation case) and rabid/volunteer_time.ts's
+Time view (a configurable SECTION with hx-replace-url depth toggles).)*
+
+### The principle
+
+A page's view state (filters, depth, time anchors) lives in its route
+expression, as `{}`-literal arguments:
+
+    /ww/wordwiki.changes({to_time:215001495719999,restrict_to_user:"djz"})
+    /rabid.volunteer.search({text:"Dav",include_archived:true})
+
+The page render is a **pure function of its arguments**.  Everything follows:
+every view is bookmarkable, refreshable, and shareable (including scroll-back
+depth); tests render views by constructing the arguments — no browser or
+session; and there is no hidden DOM/session state to drift.
+
+Two load-bearing decisions (dz):
+
+- **Do not privilege a textual base-URL.**  URLs here are composable route
+  expressions.  A `{}` value is an ordinary argument, composed into the route
+  expression like any other (`${R}.page(${fs.literal(q)})`).
+- **One schema mechanism.**  The same `Field` objects that define a db table
+  (`Table extends FieldSet`) define page queries: the URL codec, the
+  auto-generated filter dialog, and the typed in-code value are ONE declaration.
+
+### The unit of state is the SECTION, not the page
+
+A `FieldSet` is a codec for exactly ONE `{}` value — and that one-ness is
+**per configurable section, not per page**.  A page with several
+independently-configurable parts (multiple filtered widgets, "more" buttons on
+separate lists, embedded sub-renderers) carries several `{}` arguments, one per
+section, each with its own FieldSet:
+
+    /ww/x.page({from_time:...,max_rows:200}, {status:"pending"})
+                ^ the change-list section     ^ the sidebar section
+
+Do NOT merge a page's state into one grand `{}` block.  Merging breaks the
+mechanism's own affordances: the auto-generated dialog edits a FieldSet's
+FIELDS, so a merged block would make every filter dialog show every section's
+knobs; a depth bump ("Show older") on one list would have to understand and
+re-emit every other section's state; and two sections couldn't evolve their
+schemas independently.  Each section instead (a) normalizes ITS argument and
+renders as a pure function of it, (b) generates ITS dialog from ITS fields
+(`renderParamForm(fs.fields, ...)`), and (c) emits new-state URLs by
+re-composing the FULL route expression — its own argument via `literal`, the
+OTHER sections' arguments passed through verbatim.  Single-section pages (the
+feed, the activity report, volunteer.search) take one `{}` arg — the common
+degenerate case, not the model.  (rabid's volunteer detail page IS multi-
+section: the volunteer record and the Time view are separate `{}`s.)
+
+### FieldSet: the codec (liminal/table.ts)
+
+`FieldSet` is the extracted base of `Table`: an ordered set of named `Field`s
+describing one record-shaped value, with no persistence.  A page query uses it
+directly:
+
+```ts
+export const volunteerQuery = new FieldSet('volunteer_query', [
+    new StringField('text', {prompt: 'Name or email starts with…', default: ''}),
+    new CheckboxField('include_archived', {prompt: 'Include archived', default: false}),
+]);
+export interface VolunteerQuery extends Tuple {   // the typed view of the same thing
+    text: string; include_archived: boolean;
+}
+```
+
+Three codec operations:
+
+- **`normalize(q)`** — route-literal → value, the per-route GUARD (route args
+  are user-typeable text): unknown keys rejected, each present value
+  type-checked/coerced by its field's `fromLiteral`, absent/null → the field's
+  `default` (or null).  Every route method begins
+  `const query = fs.normalize(q) as MyQuery;`.
+- **`literal(q)`** — value → canonical route literal.  Declaration order; null
+  AND default-valued fields OMITTED, so common views get the shortest — and
+  *equal views get equal* — URLs.  Strings JSON-quote (JSON ⊂ the route
+  grammar).  The inverse of normalize.  **Always emit URLs through `literal`,
+  never by string-building**, or canonicality drifts.
+- **`parseFormValues(form)`** — filter-dialog postback → COMPLETE value (empty
+  inputs fall to default/null).  Contrast `parseFormChanges` (the record-EDIT
+  parse, which extracts only fields changed against `before-<name>` snapshots):
+  a query dialog's submitted state IS the new value, so it uses the complete
+  parse.
+
+**Field types by app** — the same query, two clocks:
+
+- **wordwiki** (versioned/HLC store): `TimestampField` codecs the raw
+  hybrid-logical-clock NUMBER to `datetime-local` and local display (from/to
+  time ranges).
+- **rabid** (SQLite date strings): a date/time filter uses `DateField`
+  (`YYYY-MM-DD`) or `DateTimeField` (`YYYY-MM-DD HH:MM:SS`) — NOT
+  `TimestampField`.  Both validate STRUCTURALLY in `fromLiteral` (a hand-typed
+  URL can't smuggle junk into a date filter), matching their `parseSimpleInput`
+  bar: shape, not calendar validity (so a URL date and a form date agree).
+- **either**: a boolean knob rendered as a checkbox is `CheckboxField`, whose
+  whole codec is boolean, so `flag:true/false` round-trips canonically.
+  `EnumField` renders a select from a `Record<value,label>`.
+- **subclass `fromLiteral`** to loosen or tighten: change-feed's `UserField`
+  LOOSENS (the dropdown offers known editors, but any historic username stays
+  URL-typeable and filterable); the rabid date fields TIGHTEN.
+
+Nullable-with-default vs nullable-no-default matters: `max_rows` has
+`default:1000` so it always normalizes to a number; `months` has NO default so
+null survives normalize and means "no limit" (activity-report.ts).
+
+### The page pattern
+
+```ts
+const R = '/rabid.volunteer';                     // the routes' prefix
+
+@route(authenticated)
+search(q?: Record<string, any>): templates.Page { // (or | server.Response if it stamps)
+    const query = volunteerQuery.normalize(q) as VolunteerQuery;
+    return templates.page('Title', [
+        header,
+        filterSummary(query),                      // quiet "N matching X"
+        action.actionButton('Search…',
+            {kind: 'modal', dialogUrl: `${R}.searchDialog(${volunteerQuery.literal(query)})`}, ...),
+        this.renderBody(query)]);                  // pure function of query
+}
+
+@route(authenticated)
+searchDialog(q?: Record<string, any>): Markup {    // AUTO-GENERATED from the fields
+    const query = volunteerQuery.normalize(q);
+    return action.renderParamForm(volunteerQuery.fields, query, {
+        title: 'Search…', submitLabel: 'Search',
+        dispatch: {onsubmit: 'event.preventDefault(); tx`rabid.volunteer.applySearch(${getFormJSON(event.target)})`'}});
+}
+
+@route(authenticated)
+applySearch(form: Record<string, any>): any {      // form → canonical URL → navigate
+    const query = volunteerQuery.parseFormValues(form);
+    return {action: 'navigate', url: `${R}.search(${volunteerQuery.literal(query)})`};
+}
+```
+
+`renderParamForm` renders each field with its own widget (date pickers,
+selects…), pre-filled from the current value — the dialog IS the schema, so
+adding a field to the FieldSet adds it to the URL, the dialog, and the typed
+query at once.  Two dispatch details:
+
+- **The form navigates SERVER-side.**  The dialog dispatches an `applyFilter`
+  route that runs `parseFormValues → literal` and returns
+  `{action:'navigate', url}` (the `navigate` tx action does
+  `window.location.assign`, a real history entry).  The old client-side
+  route-builder `lmNavigateFormRoute` is RETIRED — it couldn't omit defaults,
+  reject unknown keys, or coerce types.  (A tab whose loaded JS predates the
+  `navigate` action makes Apply a silent no-op; a reload fixes it — resources
+  revalidate via etag, but an OPEN tab keeps its in-memory scripts.)
+- **Showing the modal**: wordwiki dialogs prepend an inline
+  `['script',{},'setTimeout(showModalEditor)']`; rabid dialogs are opened by an
+  `actionButton({kind:'modal'})` whose `after-request` already runs
+  `showModalEditor()`, so they don't need the inline script.
+
+### State-change taxonomy: navigation vs replacement
+
+Two kinds of state change, deliberately different in history behavior:
+
+- **Filter changes are REAL navigations** (`{action:'navigate', url}` →
+  pushState).  Distinct filters are distinct views; Back walks filter history.
+- **Depth/refinement changes replace in place.**  The feed's "Show older"
+  (bump `max_rows`) and volunteer_time's "Show all weeks" / orphan-tasks
+  toggles are the SAME view refined: the button `hx-get`s the fragment route
+  with the new literal, `hx-swap`s the fragment, AND carries
+  `hx-replace-url=<page URL with the new literal>` (replaceState — depth is
+  always in the URL so refresh keeps it, but Back leaves the page rather than
+  un-toggling).  htmx `hx-replace-url` is core, no client plumbing.
+
+### Temporal anchors: stamp or drift, choose per page
+
+- **Stamp** (the feed): a visit with no `to_time` redirects
+  (`server.forwardResponse`) to the canonical URL with it stamped at the db's
+  top tx timestamp — the anchor rides in the browser URL (survives
+  refresh/Back), past-anchored pages are immutable, and it doubles as the
+  review-sitting `since`.
+- **Drift** (the activity report, and rabid's "recent"/"upcoming" windows): a
+  live dashboard — "the last 12 months" should move with today.  Reproducibility
+  lives in the LINKS it emits (absolute closed ranges).
+
+Pages are served no-store (bfcache defeated); the page must be cheap to
+re-render, which the purity discipline gives you.
+
+### Counts must be their links
+
+When a report links into another view (activity counts → feed pages), the two
+must compute from the SAME predicate — import the predicate, don't re-derive
+it.  A number that opens a page showing a different number is worse than no link.
+
+### Testing & gotchas
+
+Purity makes tests cheap: `markupToString(x.renderBody(fs.normalize({...})))`
+over the in-memory fixture; assert canonical URLs EXACTLY
+(`rabid.volunteer.search({text:"Dav"})`); pin any redirect stamping
+(`isRedirectResponse` + Location); pin EXPLAIN QUERY PLAN per query shape
+(export the shapes so the test can't drift from the impl).  Examples:
+change-feed_test.ts, activity-report_test.ts, rabid/page_state_test.ts.
+
+- `literal` omits defaults: changing a field's `default` silently changes which
+  URLs are canonical (old URLs still normalize fine).
+- Braces in URLs: browsers percent-encode transparently; curl does NOT (its
+  `{}` globbing mangles them) — encode `%7B`/`%7D` when testing by hand.
+- `normalize` treats absent and null identically (both → default/null); only
+  round-tripping through `literal` preserves canonicality.
+- A FieldSet field name is also its form-input name and its URL key: renaming
+  breaks old bookmarks (old keys are REJECTED by normalize, by design).
+- The URL path is STRICT (normalize rejects/coerces); the form path is LENIENT
+  (parseFormValues stringifies, empty→default) — the right asymmetry, since a
+  real browser form is always strings.
+- Server-rendered relative times / "now"-dependent labels age in an open tab
+  until a fragment reload; anchor-stamped pages avoid the worst of it.
+
 ## Recipes
 
 **A new reloadable fragment**: give it a `@route(authenticated)` render method
@@ -263,8 +487,8 @@ FK fields — hand-mint their keys and hand-maintain their targets.
 
 **A page with filters / paging / view state** (a search box, a "show all"
 toggle, a date range): the view state rides in the route expression as a `{}`
-argument decoded by a `FieldSet` — see **liminal/page-state.md** (rabid
-worked example: `volunteer.search`).  Filter changes navigate
+argument decoded by a `FieldSet` — see the **On-page view state** section above
+(rabid worked example: `volunteer.search`).  Filter changes navigate
 (`{action:'navigate', url}`); depth/refinement toggles swap the fragment and
 `hx-replace-url` the page URL.
 
@@ -299,5 +523,6 @@ rabid/speculative_refresh_test.ts.
 | tx/txd, reload front door, swap mechanics, speculation resolution | resources/rabid-scripts.js |
 | lmRefreshable / lm-read-only gate, debug mode, liveness poller, modal editor | resources/liminal-scripts.js |
 | debug mark styles | resources/liminal.css |
-| on-page view state (filters/paging in the URL, FieldSet) | liminal/page-state.md |
+| on-page view state (filters/paging in the URL, FieldSet) | this file, § On-page view state |
+| FieldSet codec (normalize/literal/parseFormValues), field types | liminal/table.ts |
 | remaining future work (fine-grained insert/delete) | liminal-refresh-future-work.md |

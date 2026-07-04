@@ -98,7 +98,7 @@ function lmNavigableClick(event) {
 // rabid.volunteer.applySearch) that runs parseFormValues → literal and
 // returns {action:'navigate', url}.  That path gives canonical URLs - default
 // values omitted, unknown keys rejected, values type-coerced - which the JS
-// builder couldn't.  See liminal/page-state.md.)
+// builder couldn't.  See liminal.md § On-page view state.)
 
 /**
  * Refresh participation gate.

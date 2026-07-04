@@ -35,7 +35,7 @@ export type Tuple = Record<string, any>;
  *
  * The full page-state pattern (this codec + the auto-generated filter
  * dialog + navigation-vs-replacement + anchor stamping) is documented in
- * liminal/page-state.md; worked examples in wordwiki/change-feed.ts and
+ * liminal.md § On-page view state; worked examples in wordwiki/change-feed.ts and
  * wordwiki/activity-report.ts.
  */
 export class FieldSet {
