@@ -45,6 +45,9 @@ import * as entrySchema from './entry-schema.ts';
 import type { WordWiki } from './wordwiki.ts';
 
 const admin = security.hasRole('admin');
+// Vocabulary curation is its own grant: 'edit-categories' can be given to a
+// non-admin curator; 'admin' implies it (the approve-role convention).
+const editCategories = security.or(security.hasRole('edit-categories'), admin);
 
 // Slugs: kebab-case ascii, optionally marked internal with a leading '~'.
 export const SLUG_PATTERN = /^~?[a-z0-9][a-z0-9-]*$/;
@@ -115,7 +118,7 @@ class SlugField extends StringField {
     }
 }
 const onCreateOnly: security.Permission = a =>
-    admin(a) && !(a.record as Category|undefined)?.category_id;
+    editCategories(a) && !(a.record as Category|undefined)?.category_id;
 
 // --------------------------------------------------------------------------------
 // --- Category --------------------------------------------------------------------
@@ -178,12 +181,12 @@ export class CategoryTable extends Table<Category> {
         ]);
     }
 
-    // Open books: any logged-in user sees categories; only admins change the
-    // vocabulary - creating a category is a deliberate act, not a volunteer
-    // typing a new string into an entry.
+    // Open books: any logged-in user sees categories; only 'edit-categories'
+    // holders (admin implies) change the vocabulary - creating a category is
+    // a deliberate act, not a volunteer typing a new string into an entry.
     defaultFieldView: security.Permission = security.loggedIn;
-    defaultFieldEdit: security.Permission = admin;
-    override get recordEdit(): security.Permission { return admin; }
+    defaultFieldEdit: security.Permission = editCategories;
+    override get recordEdit(): security.Permission { return editCategories; }
 
     override formTitle(c: Category): string {
         return c.category_id ? `Edit ${c.name || c.slug || 'category'}` : 'New category';
@@ -399,7 +402,7 @@ export class CategoryTable extends Table<Category> {
 
     // The create dialog: the record form over an empty record (renderForm
     // gates on recordEdit server-side too).
-    @route(admin)
+    @route(editCategories)
     newDialog(): Markup {
         return this.renderForm({} as Category);
     }

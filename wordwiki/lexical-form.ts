@@ -42,6 +42,9 @@ import type { WordWiki } from './wordwiki.ts';
 const nameCollator = Intl.Collator('en');
 
 const admin = security.hasRole('admin');
+// Vocabulary curation is its own grant: 'edit-lexical-forms' can be given to
+// a non-admin curator; 'admin' implies it (the approve-role convention).
+const editLexicalForms = security.or(security.hasRole('edit-lexical-forms'), admin);
 
 // Slugs: the codes stored in assertions.  Uppercase allowed (PTCL); '~'
 // marks internal, as for categories.
@@ -65,7 +68,7 @@ class LexicalFormSlugField extends StringField {
     }
 }
 const onCreateOnly: security.Permission = a =>
-    admin(a) && !(a.record as LexicalForm|undefined)?.lexical_form_id;
+    editLexicalForms(a) && !(a.record as LexicalForm|undefined)?.lexical_form_id;
 
 // --------------------------------------------------------------------------------
 // --- LexicalForm -----------------------------------------------------------------
@@ -121,10 +124,11 @@ export class LexicalFormTable extends Table<LexicalForm> {
         ]);
     }
 
-    // Same policy as categories: open-books viewing, admin-only vocabulary.
+    // Same policy as categories: open-books viewing; only
+    // 'edit-lexical-forms' holders (admin implies) change the vocabulary.
     defaultFieldView: security.Permission = security.loggedIn;
-    defaultFieldEdit: security.Permission = admin;
-    override get recordEdit(): security.Permission { return admin; }
+    defaultFieldEdit: security.Permission = editLexicalForms;
+    override get recordEdit(): security.Permission { return editLexicalForms; }
 
     override formTitle(f: LexicalForm): string {
         return f.lexical_form_id ? `Edit ${f.name || f.slug || 'lexical form'}` : 'New lexical form';
@@ -319,7 +323,7 @@ export class LexicalFormTable extends Table<LexicalForm> {
         ];
     }
 
-    @route(admin)
+    @route(editLexicalForms)
     newDialog(): Markup {
         return this.renderForm({} as LexicalForm);
     }

@@ -10,9 +10,15 @@
  * for the soft schema's enum options.
  *
  * Roles (in the `permissions` field, comma separated):
- *   - admin:   manage users/roles, everything;
+ *   - admin:   manage users/roles, everything (implies all roles below);
  *   - publish: may publish the public site (replaces the canUserPublish hack);
- *   - testing: may act as a browser test client.
+ *   - testing: may act as a browser test client;
+ *   - approve: may approve/revert lexeme changes (lexeme-ops.ts);
+ *   - edit-users: may manage user records (create, edit others, disable) -
+ *     but NOT the permissions field itself, which stays admin-only so the
+ *     grant cannot escalate itself;
+ *   - edit-categories / edit-lexical-forms: may curate those vocabularies
+ *     (category.ts / lexical-form.ts).
  *
  * Password hashes live in their own table (not on user) so an error in a SQL
  * query involving the user table cannot accidentally leak a hash.  Sessions
@@ -33,7 +39,17 @@ import * as entrySchema from './entry-schema.ts';
 import * as templates from './templates.ts';
 
 const admin = security.hasRole('admin');
-const selfOrAdmin = security.or(security.isSelf, admin);
+// User management is its own grant: 'edit-users' can be given to a non-admin
+// manager; 'admin' implies it (the approve-role convention).  The permissions
+// FIELD stays admin-only (see the roles comment above).
+const editUsers = security.or(security.hasRole('edit-users'), admin);
+const selfOrEditUsers = security.or(security.isSelf, editUsers);
+// The username is the short code the ASSERTION DATA stores (speaker,
+// assigned_to, change_by_username - initials were a deliberate choice so the
+// dictionary reads standalone in 1000 years); renaming one would strand that
+// data.  Editable only at CREATE, like category/lexical-form slugs.
+const usernameOnCreateOnly: security.Permission = a =>
+    editUsers(a) && !(a.record as User|undefined)?.user_id;
 
 // --------------------------------------------------------------------------------
 // --- User -----------------------------------------------------------------------
@@ -67,12 +83,13 @@ export class UserTable extends Table<User> {
     constructor() {
         super('user', [
             new PrimaryKeyField('user_id', {}),
-            new StringField('username', {indexed: true, unique: true,
-                                         prompt: 'Username (short code)'}),
+            new StringField('username', {indexed: true, unique: true, edit: usernameOnCreateOnly,
+                                         prompt: 'Username (short code stored in dictionary data - cannot be changed later)'}),
             new StringField('name', {}),
             new EmailField('email', {nullable: true}),
             new StringField('permissions', {nullable: true, edit: admin,
-                                            prompt: 'Permissions (admin, publish, testing)'}),
+                                            prompt: 'Permissions (admin, publish, testing, approve, ' +
+                                                    'edit-users, edit-categories, edit-lexical-forms)'}),
             new BooleanField('disabled', {default: 0}),
         ]);
     }
@@ -81,9 +98,10 @@ export class UserTable extends Table<User> {
 
     // Small dictionary team, open books: any logged-in user sees users.
     defaultFieldView: security.Permission = security.loggedIn;
-    // Users edit their own record; admins edit anyone (roles admin-only above).
-    defaultFieldEdit: security.Permission = selfOrAdmin;
-    override get recordEdit(): security.Permission { return selfOrAdmin; }
+    // Users edit their own record; 'edit-users' holders (admin implies) edit
+    // anyone (the permissions field stays admin-only above).
+    defaultFieldEdit: security.Permission = selfOrEditUsers;
+    override get recordEdit(): security.Permission { return selfOrEditUsers; }
 
     override formTitle(u: User): string {
         return u.user_id ? `Edit ${u.name || u.username || 'user'}` : 'New user';
