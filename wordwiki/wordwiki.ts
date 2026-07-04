@@ -1745,6 +1745,17 @@ if (import.meta.main) {
                 const stats = twitterPostImport.importTwitterPosts(ww, legacyText, {
                     username, log: (msg) => console.info(msg),
                 });
+                // --report-skipped=<file>: (re)write the hand-off list of the
+                // homonyms/unmatched a human must place in production, with
+                // live links to the production editor.  Regenerated every
+                // migrate so the committed skipped-twitter-posts.md tracks the
+                // shrinking list.
+                const reportPath = args.find(a => a.startsWith('--report-skipped='))
+                    ?.slice('--report-skipped='.length);
+                if(reportPath) {
+                    Deno.writeTextFileSync(reportPath, twitterPostImport.renderSkippedReport(stats));
+                    console.info(`wrote skipped-post report (${stats.ambiguous + stats.unmatched} entries) to ${reportPath}`);
+                }
                 if(args.includes('--expect-no-changes')) {
                     if(stats.added > 0)
                         throw new Error(`--expect-no-changes: the import added ${stats.added} twitter-posts`);

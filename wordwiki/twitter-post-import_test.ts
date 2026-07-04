@@ -6,9 +6,9 @@
  * have one are untouched, and a re-run adds nothing.
  */
 import { test } from "../liminal/testing/test.ts";
-import { assertEquals } from "../liminal/testing/assert.ts";
+import { assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, as, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
-import { parseLegacyTwitterPosts, importTwitterPosts,
+import { parseLegacyTwitterPosts, importTwitterPosts, renderSkippedReport,
          TWITTER_POST_ATTR } from "./twitter-post-import.ts";
 import { db } from "../liminal/db.ts";
 import * as timestamp from "../liminal/timestamp.ts";
@@ -122,6 +122,36 @@ test("import: an entry that already has a twitter-post is left alone; re-run is 
             assertEquals(importTwitterPosts(fx.ww, dump2).added, 1);
             assertEquals(importTwitterPosts(fx.ww, dump2).added, 0);   // idempotent
             assertEquals(tpOf(4000), ["#F posted"]);
+        });
+    });
+});
+
+test("skipped report: homonyms link candidates into production; unmatched are listed", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const tl = new TestTimeline();
+            // Two entries share a spelling; give one a gloss so the report can
+            // label the candidates (gloss hangs off the subentry).
+            const subA = seedEntry(fx, tl, 2000, "twin");
+            fx.ww.applyTransaction([mkChild(subA, "gls", 2009, tl.next(),
+                {attr1: "the real one", order_key: "0.5"})], {quiet: true});
+            seedEntry(fx, tl, 3000, "twin");     // no gloss -> "(no gloss)"
+
+            const dump = [
+                "", "\\lx twin",   "\\tp #H posted",
+                "", "\\lx absent", "\\tp #U posted",
+            ].join("\n");
+            const stats = importTwitterPosts(fx.ww, dump);
+            const md = renderSkippedReport(stats, {baseUrl: "https://x.example/e"});
+
+            // The homonym row: both candidates as angle-bracket production links.
+            assertStringIncludes(md, "[2000](<https://x.example/e(2000)>) — the real one");
+            assertStringIncludes(md, "[3000](<https://x.example/e(3000)>) — (no gloss)");
+            assertStringIncludes(md, "| twin | #H posted |");
+            // The unmatched section lists 'absent' with no link.
+            assertStringIncludes(md, "| absent | #U posted |");
+            assertStringIncludes(md, "Homonyms (1)");
+            assertStringIncludes(md, "Not found (1)");
         });
     });
 });

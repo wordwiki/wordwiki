@@ -82,7 +82,9 @@ step "[6/12] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms --expect-no-changes
 
 step "[7/12] importing legacy twitter-posts (+ idempotency proof)"
-./wordwiki.sh import-twitter-posts
+# --report-skipped refreshes the committed hand-off list of the words a human
+# must place in production (homonyms/unmatched); it shrinks as they are fixed.
+./wordwiki.sh import-twitter-posts --report-skipped=skipped-twitter-posts.md
 ./wordwiki.sh import-twitter-posts --expect-no-changes
 
 step "[8/12] publication Phase 0: born-approve existing data (+ idempotency proof)"
