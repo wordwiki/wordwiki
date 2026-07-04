@@ -185,6 +185,36 @@ year totals row (Changes → year-windowed feed, New lexemes →
 createdPage(year, 0) = whole-year mode of the micro page), month-only labels
 indented beneath; an edge year totals only its rendered months.
 
+TREE-ORDERING (built 2026-07-04, tree-ordering_test.ts): both views (valid +
+published) are pruned top-down at render, so a child published/restored under
+an unpublished/deleted parent never LEAKS - but becomes a stored ORPHAN
+(invisible, traps flat stamp readers, silent no-op for the reviewer). dz's
+design (chosen over auto-cascade, which was rejected: a background repair
+tombstoning a child is indistinguishable from a user tombstone, so undelete
+can't recover intent): make orphans impossible via GATES, NO background
+mutation - every state change stays a foreground, individually-reversible
+decision. ONE PRINCIPLE, opposite directions: publish/approve + restore are
+TOP-DOWN (child joins a tree its parent is already in); delete +
+approve-a-deletion are BOTTOM-UP (empty subtree first). Gates in lexeme-ops/
+lexeme-editor (production wrappers, NOT the pure ops - keeps the oracle
+property test clean): (1) delete w/ live children refused [already existed];
+(2) approve child w/ unpublished parent refused; (3) approve parent's DELETION
+w/ still-published child refused; (4) restore child under deleted parent
+refused. Because (1) forbids deleting a parent w/ live children, no orphan
+forms via workflow -> NO cascade needed, and not-cascading makes undelete
+LOSSLESS (restore parent, children exactly as left). Validator adds
+published-child-of-unpublished-parent + live-child-of-deleted-parent; it's a
+WORKFLOW invariant (gates maintain it, not pure ops) so validateFacts takes
+{treeOrphans}, property test opts OUT (pure ops can revert a parent out from
+under a live child). Blocks workspace LOAD now. 2 pre-existing orphans (from
+old-system parent deletes that never cascaded + Phase-0 backfill publishing
+the dangling live children): repairOrphanedLiveChildren in repair-assertions -
+pure SQL, pre-load, before backfill, cascade-tombstones live-under-dead to a
+fixpoint + clears their published stamp; idempotent; only ever meets legacy
+danglers (gates prevent new ones). The user's usgit'tutm'gewei entry (a live
+NEW subentry w/ live unpublished children) is a legit pending subtree, NOT an
+orphan - untouched.
+
 DESIGN (designed 2026-06-12, revised 2026-06-13 with dz): a second
 interval `published_from`/`published_to` on `dict` assertions, peer to
 `valid_from`/`valid_to`. valid = editorial currency (workspace view,
