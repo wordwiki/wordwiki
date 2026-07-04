@@ -1224,9 +1224,22 @@ export class LexemeEditor {
         }
         fields.forEach(f => hidden['before-'+f.name] = '');
 
+        // A NEW recording's speaker defaults to the logged-in user (recording
+        // yourself is the common case) - only when they are in the speaker
+        // vocabulary (an identity outside it - a robot, an admin who never
+        // records - must not inject itself), and only here on INSERT: an edit
+        // dialog shows the stored value.  The before- snapshot stays '', so
+        // an untouched default still submits as a change and is saved.
+        const defaults: Record<string, any> = {change_note: ''};
+        const me = this.app.currentUsername();
+        if(me) for(const f of fields)
+            if(f.name === 'speaker' && f instanceof model.EnumField
+               && Object.hasOwn((f.style as any).$options ?? {}, me))
+                defaults[f.name] = me;
+
         // Self-lift, as in editDialog (composable wherever it is loaded from).
         return [['script', {}, 'setTimeout(showModalEditor)'],
-                action.renderParamForm([...widgets, changeNoteWidget()], {change_note: ''}, {
+                action.renderParamForm([...widgets, changeNoteWidget()], defaults, {
                     title: `New ${rel.prompt}`,
                     submitLabel: 'Save',
                     hidden,

@@ -33,19 +33,40 @@ async function lmAudioUploadChange(event, hiddenInputId) {
  * the base64 bytes to the existing uploadRecording endpoint, write the returned
  * content-store path into the field's hidden input, and report status.  `noun`
  * names the thing being uploaded (a filename, or 'recording').
+ *
+ * The in-flight op registers in lmAudioPending so the SAVE GUARD (below) can
+ * await it: submitting the dialog mid-upload must attach the recording, not
+ * silently save the stale/empty hidden value.
  */
-async function lmUploadRecordingBase64(hiddenInputId, recordingBytesAsBase64, noun) {
+function lmUploadRecordingBase64(hiddenInputId, recordingBytesAsBase64, noun) {
     const status = document.getElementById(hiddenInputId + '-status');
     if (status) status.textContent = 'Uploading ' + noun + '…';
-    try {
+    const op = (async () => {
         const {audioPath} = await rpc`wordwiki.audio.uploadRecording(${{recordingBytesAsBase64}})`;
         document.getElementById(hiddenInputId).value = audioPath;
         if (status) status.textContent = noun + ' uploaded — will be attached when you save.';
         return audioPath;
-    } catch (e) {
-        if (status) status.textContent = 'Upload failed: ' + (e && e.message ? e.message : e);
-        throw e;
-    }
+    })();
+    lmAudioPending[hiddenInputId] = {state: 'uploading', op};
+    op.then(
+        () => { delete lmAudioPending[hiddenInputId]; },
+        (e) => {
+            if (status) status.textContent = 'Upload failed: ' + (e && e.message ? e.message : e);
+            // A recorder still holding the take can re-upload on Save/Use;
+            // a failed file-picker upload has nothing client-side to retry.
+            const recId = lmAudioRecIdFor(hiddenInputId);
+            if (recId) lmAudioPending[hiddenInputId] = {state: 'recorded', recId};
+            else delete lmAudioPending[hiddenInputId];
+        });
+    return op;
+}
+
+// The recorder (if any) holding a re-uploadable take for a hidden input.
+function lmAudioRecIdFor(hiddenInputId) {
+    return Object.keys(lmRecorders).find(recId => {
+        const st = lmRecorders[recId];
+        return st && st.hiddenInputId === hiddenInputId && st.wavBlob;
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -57,6 +78,14 @@ async function lmUploadRecordingBase64(hiddenInputId, recordingBytesAsBase64, no
 // Per-widget state, keyed by the record-container id.
 // ---------------------------------------------------------------------------
 const lmRecorders = {};
+
+// Unfinished audio work per hidden-input id, for the save guard:
+//   {state:'recording', recId}   - the mic is live
+//   {state:'recorded',  recId}   - a take exists client-side, not yet uploaded
+//   {state:'uploading', op}      - an upload RPC is in flight
+// An entry is REMOVED once the hidden input holds the uploaded path (or there
+// is nothing usable to attach), so no-entry = the form is safe to submit.
+const lmAudioPending = {};
 
 async function lmAudioRecordToggle(hiddenInputId, recId) {
     const st = lmRecorders[recId];
@@ -72,6 +101,9 @@ async function lmAudioRecordToggle(hiddenInputId, recId) {
         const chunks = [];
         const mr = new MediaRecorder(stream);
         const s = lmRecorders[recId] = {stream, mr, chunks, recording: true, hiddenInputId, t0: Date.now(), timer: null, wavBlob: null};
+        // The save guard awaits this to know the take is decoded (or failed).
+        s.finalized = new Promise(res => { s.finalizedResolve = res; });
+        lmAudioPending[hiddenInputId] = {state: 'recording', recId};
         mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
         mr.onstop = () => lmAudioFinalizeRecording(recId);
         mr.start();
@@ -100,7 +132,7 @@ async function lmAudioFinalizeRecording(recId) {
     const st = lmRecorders[recId];
     if (!st) return;
     if (st.stream) st.stream.getTracks().forEach(t => t.stop());   // release the mic
-    if (st.aborted) return;   // dialog was closed mid-record: don't touch the gone DOM
+    if (st.aborted) { if (st.finalizedResolve) st.finalizedResolve(); return; }   // dialog closed mid-record
     const status = document.getElementById(st.hiddenInputId + '-status');
     try {
         const blob = new Blob(st.chunks, {type: st.mr.mimeType || 'audio/webm'});
@@ -110,13 +142,19 @@ async function lmAudioFinalizeRecording(recId) {
         if (ctx.close) ctx.close();
         const wavBlob = new Blob([lmEncodeWavFromAudioBuffer(audioBuffer)], {type: 'audio/wav'});
         st.wavBlob = wavBlob;
+        lmAudioPending[st.hiddenInputId] = {state: 'recorded', recId};
         const preview = document.getElementById(recId + '-preview');
         if (preview) { preview.src = URL.createObjectURL(wavBlob); preview.style.display = ''; }
         const useBtn = document.getElementById(recId + '-use');
         if (useBtn) { useBtn.style.display = ''; useBtn.disabled = false; }
-        if (status) status.textContent = 'Recorded — preview it, then “Use this recording”.';
+        if (status) status.textContent = 'Recorded — Save will attach it (preview or re-record first if you like).';
     } catch (e) {
+        // Nothing usable came out of the take: clear the guard so Save is not
+        // blocked forever - the status shows what happened, re-record to retry.
+        delete lmAudioPending[st.hiddenInputId];
         if (status) status.textContent = 'Could not process recording: ' + (e && e.message ? e.message : e);
+    } finally {
+        if (st.finalizedResolve) st.finalizedResolve();
     }
 }
 
@@ -136,6 +174,74 @@ async function lmAudioUseRecording(hiddenInputId, recId) {
 function lmFmtSecs(s) {
     s = Math.floor(s);
     return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+// ---------------------------------------------------------------------------
+// The SAVE GUARD: a dialog submit must never lose audio work.  Without this,
+// two windows silently dropped a recording: a take that was recorded but never
+// uploaded (the old "Use this recording" foot-gun), and an upload still in
+// flight when Save was clicked (seconds wide on a slow link - the hidden input
+// only receives the content path when the RPC returns).  A capture-phase
+// listener runs BEFORE the form's own inline onsubmit; when this form has
+// pending audio work it suppresses the submit, resolves the work (stop the
+// mic, upload the take, await the in-flight RPC - Save implies "use"), then
+// re-submits with a pass flag.  On failure the dialog stays open with the
+// status showing why; a second Save then proceeds without the failed take
+// (the failure handlers clear the pending entry).
+// ---------------------------------------------------------------------------
+document.addEventListener('submit', (ev) => {
+    const form = ev.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.__lmAudioGuardPassed) { delete form.__lmAudioGuardPassed; return; }
+    const pendingIds = Object.keys(lmAudioPending).filter(id => {
+        const el = document.getElementById(id);
+        return el && form.contains(el);
+    });
+    if (pendingIds.length === 0) return;
+    ev.preventDefault();
+    ev.stopPropagation();   // capture phase: the form's inline onsubmit never runs
+    lmAudioResolveThenSubmit(form, pendingIds);
+}, true);
+
+async function lmAudioResolveThenSubmit(form, pendingIds) {
+    const submitBtn = form.querySelector('button[type=submit]');
+    if (submitBtn) submitBtn.disabled = true;
+    try {
+        for (const id of pendingIds) await lmAudioResolvePending(id);
+        form.__lmAudioGuardPassed = true;
+        form.requestSubmit();
+    } catch (_e) {
+        /* status already set by the failing step; dialog stays open */
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+/** Bring one field's audio work to rest: no pending entry when we return
+ *  means the hidden input holds whatever should be saved. */
+async function lmAudioResolvePending(id) {
+    const p = lmAudioPending[id];
+    if (!p) return;
+    const status = document.getElementById(id + '-status');
+    if (status) status.textContent = 'Attaching recording…';
+    switch (p.state) {
+        case 'recording': {
+            const st = lmRecorders[p.recId];
+            lmAudioStopRecording(p.recId);
+            if (st && st.finalized) await st.finalized;   // decode/encode done (ok or not)
+            return lmAudioResolvePending(id);             // now 'recorded' or cleared
+        }
+        case 'recorded': {
+            const st = lmRecorders[p.recId];
+            if (!st || !st.wavBlob) { delete lmAudioPending[id]; return; }
+            const arrayBuffer = await st.wavBlob.arrayBuffer();
+            await lmUploadRecordingBase64(id, lmArrayBufferToBase64(arrayBuffer), 'recording');
+            return;
+        }
+        case 'uploading':
+            await p.op;
+            return;
+    }
 }
 
 /** Downmix an AudioBuffer to mono and serialize it as a 16-bit PCM WAV (RIFF). */
@@ -188,6 +294,7 @@ function lmAudioCleanupRecorder(recId) {
     if (!st) return;
     st.aborted = true;
     st.recording = false;
+    delete lmAudioPending[st.hiddenInputId];
     if (st.timer) { clearInterval(st.timer); st.timer = null; }
     try { if (st.mr && st.mr.state !== 'inactive') st.mr.stop(); } catch (_e) { /* already stopped */ }
     if (st.stream) { try { st.stream.getTracks().forEach(t => t.stop()); } catch (_e) {} }
@@ -200,6 +307,10 @@ function lmAudioCleanupRecorder(recId) {
 
 function lmAudioCleanupAllRecorders() {
     Object.keys(lmRecorders).forEach(lmAudioCleanupRecorder);
+    // Also forget pending entries with no recorder (a file-picker upload in
+    // flight when the dialog closed): input ids repeat across dialogs
+    // ('input-<field>'), so a stale entry would block the NEXT dialog's save.
+    Object.keys(lmAudioPending).forEach(id => { delete lmAudioPending[id]; });
 }
 
 // Release the mic (and recorder state) whenever the shared modal editor closes -
