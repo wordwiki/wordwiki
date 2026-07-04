@@ -1,5 +1,5 @@
 {
-  "template": "base",
+  "template": "wordwiki",
   "github_repo": "wordwiki/wordwiki",
   "caches": [
     "deno"
