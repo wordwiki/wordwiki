@@ -903,30 +903,38 @@ export class TaskTable extends Table<Task> {
     // shape key watches structure; the count fragment is the page's CONTENT
     // liveness antenna).
     @route(authenticated)
-    renderProjectTasks(project_id: number): Markup {
+    // showHeading=false: render just the shape-keyed task list, no "Tasks"
+    // heading/affordances.  The owner-embedded case (renderOwnerTasks, on
+    // event/volunteer detail pages) supplies its OWN heading + add button
+    // (gated by the owner's permission, not the host-only task permission),
+    // so it suppresses this one - otherwise the section showed the heading
+    // twice (two "Tasks" bars, read as two projects).  The reload URL carries
+    // the flag so a shape-key reload stays headless.
+    renderProjectTasks(project_id: number, showHeading: boolean = true): Markup {
         const tasks = this.tasksForProject.all({project_id});
         const canCreateTask = this.canEditRecord({} as any);
         const props = liveReloadableProps([this.shapeKey('project_id', project_id)],
-                                          `rabid.task.renderProjectTasks(${project_id})`);
+            `rabid.task.renderProjectTasks(${project_id}${showHeading ? '' : ', false'})`);
         // The Tasks heading: the open count at a glance (its own content-keyed
         // fragment - it changes on every toggle, the wrapper doesn't), then a
         // quiet + for the common verb (new task) and the ☰ naming it for
         // discoverability.
-        const heading: Markup =
-            [h.div, {class: 'd-flex align-items-center gap-2 mt-4'},
-             [h.h4, {class: 'mb-0'}, 'Tasks'],
-             this.renderProjectOpenCount(project_id),
-             canCreateTask
-                 ? action.actionButton(action.plusIcon(),
-                     {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
-                     'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
-                 : undefined,
-             canCreateTask
-                 ? action.actionMenu([
-                       {label: 'Add task…',
-                        mode: {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`}},
-                   ], {ariaLabel: 'Task list actions'})
-                 : undefined];
+        const heading: Markup = showHeading
+            ? [h.div, {class: 'd-flex align-items-center gap-2 mt-4'},
+               [h.h4, {class: 'mb-0'}, 'Tasks'],
+               this.renderProjectOpenCount(project_id),
+               canCreateTask
+                   ? action.actionButton(action.plusIcon(),
+                       {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
+                       'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
+                   : undefined,
+               canCreateTask
+                   ? action.actionMenu([
+                         {label: 'Add task…',
+                          mode: {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`}},
+                     ], {ariaLabel: 'Task list actions'})
+                   : undefined]
+            : undefined;
         if (tasks.length === 0)
             return [h.div, props, heading, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
         return [h.div, props, heading, tasks.map(t => this.renderTaskBlock(t))];
@@ -1168,16 +1176,24 @@ export class TaskTable extends Table<Task> {
         const project_id = rabid.project.forOwner(owner_table, owner_id, false);
         const props = reloadableItemProps(`owner_tasks_${owner_table}`, owner_id,
             `rabid.task.renderOwnerTasks('${owner_table}',${owner_id})`);
+        // This section owns the single "Tasks" heading + add button: the add is
+        // gated by the OWNER's permission (ownerCanEdit - e.g. a volunteer may
+        // add to their own page), not renderProjectTasks' host-only task
+        // permission, and it dispatches newOwnerTaskDialog so the owned project
+        // is created lazily on the first task.  The nested list is rendered
+        // headless (showHeading=false) so the heading isn't doubled.  The open
+        // count (also the liveness antenna) rides here when the project exists.
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
              [h.h4, {class: 'mb-0'}, 'Tasks'],
+             project_id !== undefined ? this.renderProjectOpenCount(project_id) : undefined,
              ownerCanEdit(owner_table, owner_id)
                  ? action.actionButton(action.plusIcon(),
                      {kind: 'modal', dialogUrl: `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id})`},
                      'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
                  : undefined],
             project_id !== undefined
-                ? this.renderProjectTasks(project_id)
+                ? this.renderProjectTasks(project_id, /*showHeading*/ false)
                 : [h.p, {class: 'text-muted small mb-0'}, 'No tasks yet.'],
         ];
     }
