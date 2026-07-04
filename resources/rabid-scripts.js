@@ -288,6 +288,9 @@ async function txCore(deps, rpcExprSegments /*:ReadonlyArray<string>*/, args /*:
         throw new Error('Expected rpc response with an action');
     const action = response.action;
 
+    // Echo suppression for the liveness poller: note this mutation's live-log
+    // position so its own poll entry is skipped (liminal-scripts.js).
+    lmLiveNoteOwnSeq(response.seq);
 
     switch(action) {
     case 'reload': {

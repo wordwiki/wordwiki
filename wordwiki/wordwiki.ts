@@ -1352,7 +1352,8 @@ export class WordWiki extends LiminalApp {
             return isHtmxRequest
                 ? [['title', {}, result.title], result.body]
                 : templates.htmxPageTemplate({title: result.title, body: result.body,
-                                              showTestClientLink: this.isTestDb});
+                                              showTestClientLink: this.isTestDb,
+                                              liveConfig: this.liveClientConfig()});
         return result;
     }
 

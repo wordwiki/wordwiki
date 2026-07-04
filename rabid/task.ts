@@ -36,7 +36,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps, reloadableProps, sel } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, DateTimeField, IntegerField, navChevron, reloadableItemProps, reloadableProps, liveReloadableProps, sel } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {ownerLabel, ownerCanEdit} from "./owned.ts";
 import {path} from "../liminal/serializable.ts";
@@ -854,11 +854,13 @@ export class TaskTable extends Table<Task> {
     // Self-fetching reloadable fragment.  Its query is WHERE project_id, so it
     // registers the fk key `-task-project_id-<pid>-` (finest-sufficient): task
     // churn in THIS project notifies it, other projects' churn does not.
+    // LIVE: a project's task list is a genuinely shared surface (several
+    // people work it at once), so it also tracks other actors' edits.
     @route(authenticated)
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
-        const props = reloadableProps([this.fkKey('project_id', project_id)],
-                                      `rabid.task.renderProjectTasks(${project_id})`);
+        const props = liveReloadableProps([this.fkKey('project_id', project_id)],
+                                          `rabid.task.renderProjectTasks(${project_id})`);
         if (tasks.length === 0)
             return [h.div, props, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
         // Tasks come open-first then done (tasksForProject ORDER BY status='done').
@@ -1592,13 +1594,14 @@ export class SubtaskTable extends Table<Subtask> {
     // live in the task line's ☰ menu / the detail page's buttons, both
     // OUTSIDE this fragment so reloads never eat them).  Its query is WHERE
     // task_id, so it registers the fk key `-subtask-task_id-<tid>-` - which
-    // every subtask write notifies automatically.
+    // every subtask write notifies automatically.  LIVE: checking items off a
+    // shared checklist is THE motivating liveness case.
     @route(authenticated)
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
-        const props = reloadableProps([this.fkKey('task_id', task_id)],
-                                      `rabid.subtask.renderChecklist(${task_id})`);
+        const props = liveReloadableProps([this.fkKey('task_id', task_id)],
+                                          `rabid.subtask.renderChecklist(${task_id})`);
         return [h.div, props,
             items.length === 0
                 ? undefined

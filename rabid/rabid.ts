@@ -216,7 +216,9 @@ export class Rabid extends LiminalApp {
         if(templates.isPage(result))
             return isHtmxRequest
                 ? [[h.title, {}, result.title], result.body]
-                : templates.pageTemplate({title: result.title, body: result.body, showTestClientLink: this.isTestDb});
+                : templates.pageTemplate({title: result.title, body: result.body,
+                                          showTestClientLink: this.isTestDb,
+                                          liveConfig: this.liveClientConfig()});
         return result;
     }
 

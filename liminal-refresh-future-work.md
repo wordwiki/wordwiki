@@ -1,12 +1,27 @@
 # Liminal refresh: future change sets
 
 Follow-on designs to the speculative one-round-trip refresh + debug mode work.
-Discussed and shaped 2026-07-03.  **Status: #3 (richer dependency model) is now
-BUILT** — see `liminal/dirty.ts`, `Table.dirtyKeysFor/fkKey/delete`,
-`reloadableProps`, the hybrid `applySpeculation`, and the `lm-read-only` gate;
-§3 below is kept as design rationale.  #1 and #2 remain unbuilt; #1's dirty log
-now has its concrete chokepoint: the collector drain in `rpcHandler`
-(`dirty.collectTargets`) is where the `(seq, key)` log append goes.
+Discussed and shaped 2026-07-03.  **Status: #3 (richer dependency model) and
+#1 (long-poll liveness) are now BUILT** — #3: `liminal/dirty.ts`,
+`Table.dirtyKeysFor/fkKey/delete`, `reloadableProps`, the hybrid
+`applySpeculation`, the `lm-read-only` gate; #1: `liminal/live.ts` (LiveLog),
+`recordLiveActivity`/`livePoll`/`liveClientConfig` in liminal.ts, the poller in
+resources/liminal-scripts.js, `liveReloadableProps` opt-in (rabid checklist,
+project task list, event check-in roster).  §1/§3 below are kept as design
+rationale; the conventions live in `liminal.md`.  Only #2 remains.
+
+Implementation notes that refined §1's design (validated + built):
+- Anonymous polls come back as the 200 HTML login page (loginRouteFor bounces
+  POSTs too) — the client permanently stops on any 2xx that isn't a JSON poll
+  answer, not just 401/403.
+- Echo suppression is per-ENTRY, not cursor-advancing: mutation responses carry
+  the log seq; the client queues poll entries and skips noted own seqs at drain
+  time, deferring the drain while its own rpc is in flight (the append happens
+  after applySpeculation, but the poll answer can still race the mutation
+  response).
+- Known ceiling: HTTP/1.1 dev serving means ~6 connections per origin across
+  tabs; many simultaneous tabs of one checkout can queue requests behind the
+  parked polls.  If it bites: SharedWorker/BroadcastChannel leader election.
 
 Two contract points settled while building #3 (also documented in code):
 - **Editable pages, not a live system**: fragments register only what the

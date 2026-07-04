@@ -153,8 +153,12 @@ function lmRefreshable(el) {
 --------------------------------------------------------------------------- */
 
 function lmDebugRefreshEnabled() {
-    try { return localStorage.getItem('lmDebugRefresh') === '1'; }
-    catch(_e) { return false; }
+    // DEFAULT ON for now (dz 2026-07-03: getting a feel for the refresh
+    // system's behaviour).  lmDebugRefresh(false) in the console turns it off
+    // per-browser; flip the '!== '0'' back to '=== '1'' to make off the
+    // default again.
+    try { return localStorage.getItem('lmDebugRefresh') !== '0'; }
+    catch(_e) { return true; }
 }
 
 function lmDebugRefresh(on) {
@@ -216,7 +220,8 @@ function lmDebugUpdateBadge() {
         document.body.appendChild(badge);
     }
     const s = lmDebugRoundStats;
-    const base = s.path === '1-trip' ? '1-trip' : '2-trip fallback';
+    const base = s.path === '1-trip' ? '1-trip'
+        : s.path === 'live' ? 'live' : '2-trip fallback';
     const spec = s.speculation ? ` (${s.speculation}${s.stragglers ? ` +${s.stragglers} reload` : ''})` : '';
     badge.textContent = `refresh: ${base}${spec} · ${s.changed} changed · ${s.same} unchanged`;
 }
@@ -264,6 +269,187 @@ document.addEventListener('htmx:afterSwap', (event) => {
     if(!(event.target instanceof Element)) return;
     lmDebugMark(event.target, !lmDebugNodesEqual(event.detail?.target, event.target));
 });
+
+/* ---------------------------------------------------------------------------
+   Long-poll liveness (opt-in; see liminal.md and liminal/live.ts).
+
+   Fragments that should track OTHER actors' edits carry class "lm-live"
+   (server-side: liveReloadableProps).  When such a fragment is on the page,
+   this poller long-polls the app's livePoll route with the union of the live
+   fragments' dependency keys; when the server reports intersecting changes,
+   the changed keys run through the ordinary reload() front door - so pruning,
+   lm-read-only gating, and debug marking behave exactly like the page's own
+   refresh rounds.
+
+   Design points (each earned - don't simplify away):
+   - PLAIN fetch, never rpc(): a parked 25s poll would count against the rpc
+     storm watchdog's in-flight threshold.
+   - The content-type header must be EXACTLY 'application/json' (the server
+     matches the literal string; a charset suffix silently drops the body).
+   - A 2xx response that isn't a poll answer means the session expired: denied
+     anonymous requests bounce to the LOGIN PAGE as 200 HTML, not 401.  Both
+     that and 401/403 PERMANENTLY stop the poller.
+   - Echo suppression: this tab's own mutations come back on the poll too.
+     Mutation responses carry the live-log `seq`; txCore feeds it to
+     lmLiveNoteOwnSeq, and the drain skips entries with noted seqs.  Because
+     the poll answer can RACE the mutation's own response, entries are queued
+     and the drain defers while any rpc is in flight (lmRpcInFlight).
+   - Disruption control: the drain also defers while the modal editor is open
+     or while focus / a live text selection sits inside an affected fragment.
+   - Lifecycle is event-driven: the loop runs only while the page is visible
+     AND a live fragment exists; htmx:afterSwap and visibilitychange restart
+     it.  Pages without lm-live fragments never contact the server.
+--------------------------------------------------------------------------- */
+
+let lmLiveState = null;             // {epoch, cursor, running, stopped}; null until booted
+const lmLiveOwnSeqs = [];           // this tab's own mutation seqs (bounded ring)
+const LM_LIVE_OWN_SEQS_MAX = 32;
+let lmLivePendingEntries = [];      // queued {seq, keys} awaiting a safe drain
+let lmLiveDrainTimer = null;
+
+const lmLiveSleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* Called by txCore with the `seq` a mutation response carried. */
+function lmLiveNoteOwnSeq(seq) {
+    if (typeof seq !== 'number') return;
+    lmLiveOwnSeqs.push(seq);
+    if (lmLiveOwnSeqs.length > LM_LIVE_OWN_SEQS_MAX) lmLiveOwnSeqs.shift();
+}
+
+/* The union of dep keys (dotted selector form) on live, refreshable fragments.
+   Dep keys are recognizable as the '-...-'-shaped class tokens (see the key
+   convention in liminal/table.ts). */
+function lmLiveWatchKeys() {
+    const keys = [];
+    for (const el of document.querySelectorAll('.lm-live')) {
+        if (!lmRefreshable(el)) continue;
+        for (const cls of el.classList)
+            if (/^-.+-$/.test(cls) && !keys.includes('.' + cls))
+                keys.push('.' + cls);
+    }
+    return keys;
+}
+
+/* One poll round trip.  Returns the answer, or {authFailed:true} when the
+   session is gone (401/403, or the 200 login page / any non-answer 2xx). */
+async function lmLivePost(body) {
+    const r = await fetch(window.__liminalLive.poll, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({$arg0: body}),
+    });
+    if (r.status === 401 || r.status === 403) return {authFailed: true};
+    if (!r.ok) throw new Error('live poll failed: ' + r.status);
+    let answer = null;
+    try { answer = await r.json(); } catch (_e) { /* HTML login page etc. */ }
+    if (!answer || typeof answer.epoch !== 'string' || typeof answer.seq !== 'number')
+        return {authFailed: true};
+    return answer;
+}
+
+async function lmLiveLoop() {
+    const st = lmLiveState;
+    while (!st.stopped) {
+        if (document.hidden || lmLiveWatchKeys().length === 0) {
+            st.running = false;      // restarted by visibilitychange / afterSwap
+            return;
+        }
+        let answer;
+        try {
+            answer = await lmLivePost({epoch: st.epoch, sinceSeq: st.cursor,
+                                       keys: lmLiveWatchKeys()});
+        } catch (_e) {
+            await lmLiveSleep(2000); // network hiccup / server restarting
+            continue;
+        }
+        if (answer.authFailed) {
+            st.stopped = true;
+            st.running = false;
+            console.info('liveness poller stopped: session no longer authenticated');
+            return;
+        }
+        st.epoch = answer.epoch;
+        st.cursor = answer.seq;
+        if (answer.resync) {
+            // The cursor couldn't be honoured (restart / overflow): reload
+            // everything we watch.  seq -1 is never a noted own seq.
+            lmLivePendingEntries.push({seq: -1, keys: lmLiveWatchKeys()});
+            lmLiveDrainSoon();
+        } else if (Array.isArray(answer.entries) && answer.entries.length > 0) {
+            lmLivePendingEntries.push(...answer.entries);
+            lmLiveDrainSoon();
+        }
+        // Loop straight back into the next poll (the park IS the wait).
+    }
+    st.running = false;
+}
+
+function lmLiveDrainSoon() {
+    if (lmLiveDrainTimer) return;
+    lmLiveDrainTimer = setTimeout(lmLiveDrain, 0);
+}
+
+/* Whether applying `keys` now would disrupt the user or race our own mutation. */
+function lmLiveDeferred(keys) {
+    if (typeof lmRpcInFlight !== 'undefined' && lmRpcInFlight > 0) return true;
+    if (document.querySelector('.modal.show')) return true;
+    const active = document.activeElement;
+    const sel = window.getSelection ? window.getSelection() : null;
+    for (const k of keys) {
+        let els;
+        try { els = document.querySelectorAll(k); } catch (_e) { continue; }
+        for (const el of els) {
+            if (active && active !== document.body && el.contains(active)) return true;
+            if (sel && sel.type === 'Range' && sel.anchorNode && el.contains(sel.anchorNode)) return true;
+        }
+    }
+    return false;
+}
+
+function lmLiveDrain() {
+    lmLiveDrainTimer = null;
+    if (lmLivePendingEntries.length === 0) return;
+    const fresh = lmLivePendingEntries.filter(e => !lmLiveOwnSeqs.includes(e.seq));
+    if (fresh.length === 0) { lmLivePendingEntries = []; return; }
+    const keys = [];
+    for (const e of fresh)
+        for (const k of e.keys)
+            if (!keys.includes(k)) keys.push(k);
+    if (lmLiveDeferred(keys)) {
+        lmLiveDrainTimer = setTimeout(lmLiveDrain, 1500);
+        return;
+    }
+    lmLivePendingEntries = [];
+    lmDebugRoundStart({path: 'live'});
+    reload(keys);   // rabid-scripts.js front door (loaded by drain time)
+}
+
+function lmLiveEnsureRunning() {
+    const st = lmLiveState;
+    if (!st || st.stopped || st.running) return;
+    if (document.hidden || !document.querySelector('.lm-live')) return;
+    st.running = true;
+    lmLiveLoop();
+}
+
+(() => {
+    const boot = () => {
+        if (!window.__liminalLive) return;
+        lmLiveState = {epoch: window.__liminalLive.epoch,
+                       cursor: window.__liminalLive.seq,
+                       running: false, stopped: false};
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) lmLiveEnsureRunning();
+        });
+        document.addEventListener('htmx:afterSwap', lmLiveEnsureRunning);
+        lmLiveEnsureRunning();
+    };
+    if (document.readyState === 'loading')
+        document.addEventListener('DOMContentLoaded', boot);
+    else
+        boot();
+})();
 
 /* ---------------------------------------------------------------------------
    Modal editor (the shared dialog that hosts edit forms / parameter dialogs;

@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableProps, sel } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableProps, liveReloadableProps, sel } from "../liminal/table.ts";
 import * as dirty from "../liminal/dirty.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
 import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
@@ -1369,7 +1369,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
         const canManage = this.canManageCheckins();
         const isCheckedIn = actorId !== undefined && checkins.some(c => c.volunteer_id === actorId);
         // The roster is WHERE event_id, so register this table's event fk key.
-        const props = reloadableProps([this.fkKey('event_id', event_id)],
+        // LIVE: on event day several hosts check people in at once - the
+        // roster tracks other actors' check-ins.
+        const props = liveReloadableProps([this.fkKey('event_id', event_id)],
             `rabid.event_checkin.renderCheckinEditor(${event_id})`);
 
         const checkedInIds = new Set(checkins.map(c => c.volunteer_id));

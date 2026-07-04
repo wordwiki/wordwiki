@@ -12,6 +12,10 @@ export interface PageContent {
     // Opt out of the centred reading column (a wide tool like the page-image
     // editor needs the full viewport width).
     fullBleed?: boolean;
+    // The liveness poller's bootstrap (LiminalApp.liveClientConfig), rendered
+    // as window.__liminalLive.  Set by the dispatcher; the poller only runs on
+    // pages that also contain an 'lm-live' fragment.
+    liveConfig?: {poll: string, epoch: string, seq: number};
 }
 
 // --- Page results -----------------------------------------------------------
@@ -96,6 +100,10 @@ export function htmxPageTemplate(content: PageContent): any {
            content.body],
           renderHtmxModalEditorSkeleton(),
           config.bootstrapScriptTag,
+          // Liveness poller bootstrap (persists across boosted navs).
+          content.liveConfig
+              ? ['script', {}, `window.__liminalLive = ${JSON.stringify(content.liveConfig)};`]
+              : undefined,
           ['script', {src: '/resources/liminal-scripts.js'}],
           ['script', {src: '/resources/rabid-scripts.js'}],
           ['script', {src: '/resources/lexeme-editor-scripts.js'}],

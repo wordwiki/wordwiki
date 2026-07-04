@@ -1700,6 +1700,20 @@ export function reloadableItemProps(type: string, id: number|undefined, reloadUR
     return reloadableProps(id ? [`-${type}-${id}-`] : [`-${type}-`], reloadURL, extraProps);
 }
 
+/**
+ * reloadableProps for a LIVE fragment: additionally opts into the long-poll
+ * liveness mechanism (class 'lm-live') - the page will watch this fragment's
+ * dependency keys and re-render it when OTHER actors' mutations touch them
+ * (see liminal.md and resources/liminal-scripts.js).  Keep this rare: it is
+ * for the few genuinely shared surfaces (a task checklist worked by several
+ * people, an event-day check-in roster), not a general live-update switch.
+ * ('lm-live' rides the class list beside the keys - never pass a class via
+ * extraProps here, it would overwrite both.)
+ */
+export function liveReloadableProps(keys: string[], reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
+    return reloadableProps([...keys, 'lm-live'], reloadURL, extraProps);
+}
+
 export function editButtonProps(editFormURL: string): Record<string, string> {
     return {
         'class': 'edit',

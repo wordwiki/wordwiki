@@ -12,6 +12,10 @@ export interface PageContent {
     // Show the (test-only) "Test client" nav link.  Set by the dispatcher from
     // rabid.isTestDb (memoized), so this never costs a per-render db query.
     showTestClientLink?: boolean;
+    // The liveness poller's bootstrap (LiminalApp.liveClientConfig), rendered
+    // as window.__liminalLive.  Set by the dispatcher; the poller only runs on
+    // pages that also contain an 'lm-live' fragment.
+    liveConfig?: {poll: string, epoch: string, seq: number};
 }
 
 // --- Page results -----------------------------------------------------------
@@ -118,6 +122,12 @@ export function pageTemplate(content: PageContent): any {
           renderModalEditorSkeleton(),
 
           config.bootstrapScriptTag,
+
+          // The liveness poller's bootstrap (persists across boosted navs -
+          // this script sits outside #content).
+          content.liveConfig
+              ? [h.script, {}, `window.__liminalLive = ${JSON.stringify(content.liveConfig)};`]
+              : undefined,
 
           // Framework scripts before app scripts (same ordering rule as the css).
           [h.script, {src: '/resources/liminal-scripts.js'}],

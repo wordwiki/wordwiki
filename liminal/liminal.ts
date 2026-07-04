@@ -31,6 +31,7 @@ import {evalRouteExprSrc, type RoutePolicy, RouteDeniedError, RouteUndeclaredErr
 import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
 import * as dirty from './dirty.ts';
+import * as live from './live.ts';
 import {route, authenticated} from './security.ts';
 import * as browserAgent from './browser-agent.ts';
 import * as date from './date.ts';
@@ -364,9 +365,10 @@ export abstract class LiminalApp {
         if(this.ignorePaths.has(filepath))
             return Promise.resolve({status: 200, headers: {}, body: 'not found'});
 
-        console.info('FILE PATH', filepath);
         let jsExprSrc = this.routeExprFromPath(filepath);
         if(jsExprSrc === '') jsExprSrc = this.homeRouteExpr;
+        if(!this.isLivePollExpr(jsExprSrc))
+            console.info('FILE PATH', filepath);
 
         const bodyArgs = utils.isObjectLiteral(request.body) ? request.body as Record<string, any> : {};
         const cookies = parseCookies(request.headers['cookie']);
@@ -443,7 +445,9 @@ export abstract class LiminalApp {
                      isHtmxRequest: boolean = false,
                      httpMethod: string = 'POST'): Promise<any> {
 
-        console.info('***', new Date().toLocaleString(), '::', jsExprSrc);
+        // (livePoll excepted: per-tab 25s long-polling would flood the log.)
+        if(!this.isLivePollExpr(jsExprSrc))
+            console.info('***', new Date().toLocaleString(), '::', jsExprSrc);
 
         // Resolve the actor's security context once per request and make it
         // ambiently active so the data layer can enforce field-level read perms.
@@ -512,6 +516,13 @@ export abstract class LiminalApp {
         if(result !== null && typeof result === 'object' && result.action === 'reload'
            && bodyArgs['$speculate'] !== undefined)
             result = await this.applySpeculation(result, bodyArgs['$speculate'], {session_token});
+
+        // Liveness: record the request's dirty activity in the live log and
+        // stamp the response with the log position (the mutating client's
+        // echo-suppression cursor).  Deliberately AFTER applySpeculation:
+        // appending earlier would wake this browser's own parked poll before
+        // the mutation response carrying the seq could reach it.
+        result = this.recordLiveActivity(result, collectedKeys);
 
         // A "page" result is wrapped in the app's document template (or reduced to
         // body-only for htmx).  Fragment routes pass through untouched.
@@ -641,6 +652,61 @@ export abstract class LiminalApp {
             console.info('speculative section render failed - falling back to reload', e);
             return {...result, speculation: 'error'};
         }
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Long-poll liveness ---------------------------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // Opt-in cross-user freshness for the few genuinely shared surfaces (see
+    // liminal.md and liminal/live.ts): a page whose fragments carry 'lm-live'
+    // long-polls livePoll with those fragments' dependency keys; every
+    // mutation's dirty set is appended to the live log (recordLiveActivity),
+    // and an intersecting append answers the parked poll, after which the
+    // client runs the ordinary reload() front door on the changed keys.
+    //
+    // PRODUCTION-ENABLED for any logged-in user - deliberately NOT gated by
+    // assertHarnessEnabled/assertTestingRole (contrast the test bridge below,
+    // which is a dev tool).
+
+    @lazy get liveLog(): live.LiveLog { return new live.LiveLog(); }
+
+    protected isLivePollExpr(jsExprSrc: string): boolean {
+        return jsExprSrc.startsWith(`${this.appName}.livePoll(`);
+    }
+
+    /**
+     * Append the request's dirty keys (auto-collected ∪ hand targets) to the
+     * live log, and stamp mutation-shaped responses (reload/open/swap) with
+     * {seq, epoch} so the mutating client can suppress its own echo.  Appends
+     * regardless of the response shape - an 'alert'-returning mutation still
+     * wrote; its keys just ride no response seq.
+     */
+    recordLiveActivity(result: any, collectedKeys: string[]): any {
+        const isMutationShaped = result !== null && typeof result === 'object'
+            && (result.action === 'reload' || result.action === 'open' || result.action === 'swap');
+        const keys = dirty.mergeTargets(isMutationShaped ? result.targets : undefined, collectedKeys);
+        if(keys.length === 0)
+            return result;
+        const seq = this.liveLog.append(keys);
+        return isMutationShaped ? {...result, seq, epoch: this.liveLog.epoch} : result;
+    }
+
+    /** The liveness long-poll: body = {epoch, sinceSeq, keys} (see LiveLog.poll
+     *  for the resync/timeout semantics).  Auth is the route permission; no
+     *  session token argument is needed. */
+    @route(authenticated)
+    livePoll(args: unknown): Promise<live.LivePollAnswer> {
+        return this.liveLog.poll(utils.isObjectLiteral(args) ? args as live.LivePollRequest : {});
+    }
+
+    /** The client poller's bootstrap, rendered into the page skeleton by the
+     *  app template as `window.__liminalLive = <this>`: the poll route plus a
+     *  render-time cursor watermark (raceless bootstrap - a stale watermark
+     *  only ever over-reloads). */
+    liveClientConfig(): {poll: string, epoch: string, seq: number} {
+        return {poll: `/${this.appName}.livePoll($arg0)`,
+                epoch: this.liveLog.epoch, seq: this.liveLog.seq};
     }
 
     // ------------------------------------------------------------------------
