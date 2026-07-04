@@ -26,6 +26,10 @@ export interface Style {
     $width?: number,
     $height?: number,
     $shape?: string,
+    // On a 'string' field: the value is markdown - display surfaces render it
+    // via liminal/markdown.ts markdownToMarkup (AST -> markup, no raw-HTML
+    // channel), and the editor offers a textarea.
+    $markdown?: boolean,
 }
 
 export function validateStyle(locus:string, style: any): Style {

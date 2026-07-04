@@ -53,6 +53,7 @@ import * as orderkey from '../liminal/orderkey.ts';
 import * as table from '../liminal/table.ts';
 import * as action from '../liminal/action.ts';
 import {Markup} from '../liminal/markup.ts';
+import {markdownToMarkup} from '../liminal/markdown.ts';
 import {panic} from '../liminal/utils.ts';
 import * as utils from '../liminal/utils.ts';
 import * as random from '../liminal/random.ts';
@@ -267,6 +268,11 @@ function widgetFor(f: model.ScalarField, rel: model.RelationField,
     if(f instanceof model.BooleanField)
         return new table.BooleanField(f.name, {nullable: true, prompt: f.prompt});
     if(f instanceof model.StringField) {
+        // $markdown fields use rabid's established markdown widget (textarea
+        // + the quiet syntax hint) - the same one the category/lexical-form
+        // description fields use.
+        if(f.style.$markdown)
+            return new table.MarkdownField(f.name, {nullable: true, prompt: f.prompt});
         if(f.style.$height)
             return new TextAreaField(f.name, f.style.$height, {nullable: true, prompt: f.prompt});
         return new table.StringField(f.name, {nullable: true, prompt: f.prompt});
@@ -347,8 +353,9 @@ function factReceipt(t: VersionedTuple, since: number): 'approved'|'reverted'|un
 // --- review diff, over a raw assertion rather than a TupleVersion) ----------
 // ---------------------------------------------------------------------------
 
-/** One scalar field's value as display markup (undefined = render nothing). */
-function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
+/** One scalar field's value as display markup (undefined = render nothing).
+ *  Exported for tests. */
+export function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
     if(v === null || v === undefined || v === '') return undefined;
     if(f instanceof model.AudioField)
         return audio.renderAudio(String(v), [audio.audioPlayIcon, ' Recording'], undefined, '/');
@@ -370,6 +377,11 @@ function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined {
                 ['object', {style: 'pointer-events: none;',
                             data: `/ww/wordwiki.pages.renderStandaloneGroupAsSvgResponse('/', ${v})`,
                             type: 'image/svg+xml'}]];
+    // $markdown string fields render their value as markdown (safe by
+    // construction - see liminal/markdown.ts).  After the EnumField case:
+    // enums are StringFields too, and their labels are never markdown.
+    if(f instanceof model.StringField && f.style.$markdown)
+        return markdownToMarkup(String(v));
     return ['span', {}, String(v)];
 }
 

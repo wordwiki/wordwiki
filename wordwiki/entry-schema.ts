@@ -6,6 +6,7 @@
 
 //import * as denoSqliteDb from "./denoSqliteDb.ts";
 import * as model from './model.ts';
+import { markdownToMarkup } from '../liminal/markdown.ts';
 //import * as persistence from './persistence.ts';
 import * as utils from "../liminal/utils.ts";
 import * as timestamp from '../liminal/timestamp.ts';
@@ -154,7 +155,7 @@ export const dictSchemaJson = {
             $type: 'relation',
             $tag: NoteTag,
             note_id: {$type: 'primary_key'},
-            note: {$type: 'string', $bind: 'attr1', $style: { $width: 80, $height: 5 }},
+            note: {$type: 'string', $bind: 'attr1', $style: { $width: 80, $height: 5, $markdown: true }},
             $style: { $shape: 'compactInlineListRelation' },
         },
 
@@ -415,7 +416,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefNoteTag,
                     note_id: {$type: 'primary_key'},
-                    note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
+                    note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5, $markdown: true }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
 
@@ -423,7 +424,7 @@ export const dictSchemaJson = {
                     $type: 'relation',
                     $tag: RefPublicNoteTag,
                     public_note_id: {$type: 'primary_key'},
-                    public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
+                    public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5, $markdown: true }},
                     $style: { $shape: 'compactInlineListRelation' },
                 },
                 
@@ -1079,8 +1080,10 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
           ref.normalized_source_as_entry.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Normalized source as entry:'], ['td', {}, t.normalized_source_as_entry]]),
           ref.foreign_reference.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Foreign reference:'], ['td', {}, t.foreign_reference]]),
           
-          ctx.renderInternalNotes ? ref.note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Note:'], ['td', {}, t.note]]) : [],
-          ref.public_note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Public Note:'], ['td', {}, t.public_note]]),
+          // The note fields are $markdown (dictSchemaJson): the reference
+          // tables render them through the shared markdown pipeline.
+          ctx.renderInternalNotes ? ref.note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Note:'], ['td', {}, markdownToMarkup(t.note)]]) : [],
+          ref.public_note.map(t=>['tr', {}, ['th', {style: 'vertical-align: top;'}, 'Public Note:'], ['td', {}, markdownToMarkup(t.public_note)]]),
           //ref.transcription.map(t=>['div', {}, ['b', {}, 'Transcription: '], t.text]),
           //ref.expanded_transcription.map(t=>['div', {}, ['b', {}, 'Expanded Transcription: '], t.text]),
           //ref.text.map(t=>['div', {}, ['b', {}, 'Text: '], t.text]),
