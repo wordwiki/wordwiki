@@ -220,23 +220,34 @@ function lmResolveSpeculation(deps) {
 function lmApplySwap(response, speculation) {
     hideModalEditor();
 
-    // Leftover (unanticipated) dirty keys from the hybrid response, resolved
-    // against the PRE-swap DOM: reload only the ones that match something.
-    // Unmatched keys are routine emission noise (a provenance fk's new value,
-    // a new row's pk on a page without that fragment - fresh section content
-    // that would match post-swap needs no reload either) and are pruned
-    // silently so they don't read as under-speculation.
-    const stragglers = [];         // [{key, elements}]
+    // The section elements this response will swap (pre-swap DOM references).
+    const sectionEls = [];
+    for(const section of (Array.isArray(response.sections) ? response.sections : [])) {
+        const entry = speculation.sectionsByUrl.get(section.url);
+        if(!entry) continue;
+        for(const el of entry.elements)
+            if(el.isConnected) sectionEls.push(el);
+    }
+    const inSection = (el) => sectionEls.some(s => s === el || s.contains(el));
+
+    // Leftover (unanticipated) dirty keys, resolved against the PRE-swap DOM.
+    // Three fates:
+    //  - matches nothing, or ONLY content inside a section being swapped ->
+    //    PRUNED (routine emission noise - a provenance fk's value, a new
+    //    row's pk - or content that arrives fresh in the section anyway);
+    //  - matches an element outside the sections -> genuine straggler,
+    //    reloaded after the swaps;
+    //  - a straggler element that CONTAINS a section element additionally
+    //    SUPPRESSES that section's swap (the ancestor's reload re-renders it
+    //    - swapping first would be the swap-then-reload double work).
+    const stragglers = [];         // [{key, elements}] - kept (outside-section) matches only
     for(const t of (Array.isArray(response.reloadTargets) ? response.reloadTargets : [])) {
         let els;
         try { els = Array.from(document.querySelectorAll(t)); } catch(_e) { els = []; }
-        els = els.filter(el => lmRefreshable(el));
+        els = els.filter(el => lmRefreshable(el) && !inSection(el));
         if(els.length > 0 && !stragglers.some(s => s.key === t))
             stragglers.push({key: t, elements: els});
     }
-    // A section whose element sits INSIDE a straggler-matched element is about
-    // to be re-rendered by that ancestor's reload anyway - swapping it first
-    // would be pure double work (the block-swap-then-whole-list-reload shape).
     const insideStraggler = (el) =>
         stragglers.some(s => s.elements.some(a => a === el || a.contains(el)));
 

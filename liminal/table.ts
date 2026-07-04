@@ -280,7 +280,7 @@ export class Table<T extends Tuple> extends FieldSet {
     insert<P extends Partial<T>>(tuple: P): number {
         const id = db().insert<P, string>(this.name, tuple, this.pkName);
         if(dirty.isCollecting())
-            dirty.record(this.dirtyKeysFor(id, undefined, tuple as Record<string, unknown>));
+            dirty.record(this.dirtyKeysFor('insert', id, undefined, tuple as Record<string, unknown>));
         return id;
     }
 
@@ -302,7 +302,7 @@ export class Table<T extends Tuple> extends FieldSet {
             if(before !== undefined) {
                 const changed: Record<string, unknown> = {};
                 for(const n of fieldNames) changed[String(n)] = (fields as Tuple)[String(n)];
-                dirty.record(this.dirtyKeysFor(id, before, changed));
+                dirty.record(this.dirtyKeysFor('update', id, before, changed));
             }
         }
         db().update<P>(this.name, this.pkName, fieldNames, id, fields);
@@ -318,7 +318,7 @@ export class Table<T extends Tuple> extends FieldSet {
         const before = dirty.isCollecting() ? this.rawRowById(id) : undefined;
         db().execute(`DELETE FROM ${this.name} WHERE ${this.pkName} = :id`, {id});
         if(before !== undefined)
-            dirty.record(this.dirtyKeysFor(id, before, undefined));
+            dirty.record(this.dirtyKeysFor('delete', id, before, undefined));
     }
 
     // The row as stored, WITHOUT the field-permission guard (Table.prepare's
@@ -341,19 +341,29 @@ export class Table<T extends Tuple> extends FieldSet {
     // the keys mutations NOTIFY on (class form; '.'+key - see sel() - is the
     // selector/target form):
     //
-    //   -table-               whole table - any subset that is not a pk or
-    //                         single-fk select (whole renders, aggregates)
-    //   -table-<pk>-          one row
-    //   -table-<fkname>-<v>-  the rows WHERE fkname = v (a nested list)
+    //   -table-                     whole table - any subset that is not a pk
+    //                               or single-fk select (whole renders,
+    //                               aggregates)
+    //   -table-<pk>-                one row
+    //   -table-<fkname>-<v>-        the rows WHERE fkname = v (a nested list)
+    //   -table-<fkname>-<v>-shape-  the SHAPE of that subset - membership and
+    //                               order only, not member content
+    //   -table-shape-               the whole table's shape
     //
     // Registration rule: a fragment registers the FINEST key(s) sufficient
     // for what it renders, and only on pages whose own buttons can change the
     // data (this machinery reflects a page's own edits back into the page -
-    // it is not a live-update system; see reloadableProps).  Emission rule:
-    // every write notifies ALL levels (dirtyKeysFor) - readers control their
-    // refresh cost by registering precisely, writers just tell the truth.
-    // Keys are opaque strings everywhere but here; hand-minted keys (e.g.
-    // polymorphic owners) remain legal.
+    // it is not a live-update system; see reloadableProps).  A DELEGATING
+    // list wrapper - one whose member rows are themselves nested
+    // self-refreshing fragments - registers the SHAPE key instead of the
+    // content key, so member-content edits refresh only the member's own
+    // fragment.  (A list ORDERED BY member content - e.g. name - has shape
+    // that depends on content: shape-keying it needs the order column
+    // declared in shapeFields, which wins little; leave those content-keyed.)
+    // Emission rule: every write notifies ALL levels (dirtyKeysFor) - readers
+    // control their refresh cost by registering precisely, writers just tell
+    // the truth.  Keys are opaque strings everywhere but here; hand-minted
+    // keys (e.g. polymorphic owners) remain legal.
 
     tableKey(): string { return `-${this.name}-`; }
 
@@ -369,33 +379,88 @@ export class Table<T extends Tuple> extends FieldSet {
         return `-${this.name}-${fkName}-${v}-`;
     }
 
+    /** Shape key for the subset WHERE fkName = v: notified only when the
+     *  subset's membership or order may have changed (insert, delete, the fk
+     *  value changing, or a shapeFields column changing) - NOT on member-
+     *  content edits.  Registered by delegating list wrappers. */
+    shapeKey(fkName: string, v: number): string {
+        return this.fkKey(fkName, v) + 'shape-';
+    }
+
+    /** The whole table's shape key (see shapeKey). */
+    tableShapeKey(): string { return `-${this.name}-shape-`; }
+
     /**
-     * The dirty keys (SELECTOR form) a write to row `pk` notifies: the whole-
-     * table key, the row key, and one fk key per declared foreign key - from
-     * the before-row's values always (the parents whose subsets contain this
-     * row), plus from `changedFields` (the parent a row joins when an fk
-     * changes).  Shared by the automatic DML emission (insert /
-     * updateNamedFields / delete) and by the edit form's speculation defaults
-     * (speculatedSaveTargets) - one source of truth for what a write says.
+     * The columns whose change means a subset's SHAPE (membership/order)
+     * changed, beyond the always-shape events (insert / delete / fk change):
+     * by convention the framework's ordering column and the soft-delete flag,
+     * where declared.  Override where a table's list queries order or filter
+     * membership by something else.
      */
-    dirtyKeysFor(pk: number|undefined,
+    get shapeFields(): string[] {
+        return ['order_key', 'deleted'].filter(c => c in this.fieldsByName);
+    }
+
+    /**
+     * The dirty keys (SELECTOR form) a write to row `pk` notifies.  Content
+     * keys: the whole-table key, the row key, and one fk key per declared
+     * foreign key - from the before-row's values always (the parents whose
+     * subsets contain this row), plus from `changedFields` (the parent a row
+     * joins when an fk changes).  Shape keys per the emission rules: inserts
+     * and deletes always change shape; an update changes shape when it moves
+     * the row between fk subsets (old AND new value's shape keys) or touches
+     * a shapeFields column (all before-fk shape keys + the table shape key).
+     * `kind` 'all' is the speculation superset (speculatedSaveTargets):
+     * every key the write COULD emit, derivable from the record at render
+     * time - over-speculation is free, the hybrid protocol only renders
+     * sections for keys actually emitted.
+     *
+     * Shared by the automatic DML emission (insert / updateNamedFields /
+     * delete) and the edit form's speculation defaults - one source of truth
+     * for what a write says.
+     */
+    dirtyKeysFor(kind: 'insert'|'update'|'delete'|'all',
+                 pk: number|undefined,
                  beforeRow: Record<string, unknown>|undefined,
                  changedFields: Record<string, unknown>|undefined): string[] {
         const keys = [sel(this.tableKey())];
+        const add = (key: string) => { if(!keys.includes(key)) keys.push(key); };
+        // fk values are integers; tolerate numeric strings (form-ish sources)
+        // and skip null/undefined/empty.
+        const fkVal = (src: Record<string, unknown>|undefined, name: string): number|string|undefined => {
+            const v = src?.[name];
+            return (typeof v === 'number' || (typeof v === 'string' && v !== '')) ? v : undefined;
+        };
+
         if(pk !== undefined && pk !== null)
             keys.push(sel(this.rowKey(pk)));
+
+        // --- Content fk keys (all subsets containing / receiving the row).
         for(const f of this.fields) {
             if(!(f instanceof ForeignKeyField)) continue;
             for(const src of [beforeRow, changedFields]) {
-                const v = src?.[f.name];
-                // fk values are integers; tolerate numeric strings (form-ish
-                // sources) and skip null/undefined/empty.
-                if(typeof v === 'number' || (typeof v === 'string' && v !== '')) {
-                    const key = sel(`-${this.name}-${f.name}-${v}-`);
-                    if(!keys.includes(key)) keys.push(key);
-                }
+                const v = fkVal(src, f.name);
+                if(v !== undefined) add(sel(`-${this.name}-${f.name}-${v}-`));
             }
         }
+
+        // --- Shape keys.
+        const shapeFieldChanged = changedFields !== undefined
+            && this.shapeFields.some(c => c in changedFields);
+        const alwaysShape = kind === 'insert' || kind === 'delete' || kind === 'all';
+        for(const f of this.fields) {
+            if(!(f instanceof ForeignKeyField)) continue;
+            const before = fkVal(beforeRow, f.name);
+            const after = fkVal(changedFields, f.name);
+            const fkMoved = kind === 'update' && after !== undefined && after !== before;
+            if(alwaysShape || shapeFieldChanged || fkMoved) {
+                for(const v of [before, after])
+                    if(v !== undefined) add(sel(`-${this.name}-${f.name}-${v}-shape-`));
+            }
+        }
+        if(alwaysShape || shapeFieldChanged)
+            add(sel(this.tableShapeKey()));
+
         return keys;
     }
 
@@ -658,15 +723,16 @@ export class Table<T extends Tuple> extends FieldSet {
 
     // The dirty set saveForm is EXPECTED to emit for this record - the edit
     // form's speculation (see renderForm).  Derived from the same
-    // dirtyKeysFor as the automatic DML emission, using the record's values
-    // known at render time (update: table + row + current fk keys; insert
-    // dialog: table + prefilled fk keys).  Keys emission adds that render
-    // time can't know (a changed fk's new value, provenance stamps, the new
-    // row's pk) come back as the swap response's reloadTargets and are pruned
-    // or reloaded client-side - so the default rarely needs overriding.
+    // dirtyKeysFor as the automatic DML emission ('all': the full superset
+    // derivable from the record at render time, shape keys included - a
+    // speculated-but-unemitted key never renders a section, so over-
+    // speculating is free).  Keys emission adds that render time can't know
+    // (a changed fk's new value, provenance stamps, the new row's pk) come
+    // back as the swap response's reloadTargets and are pruned or reloaded
+    // client-side - so the default rarely needs overriding.
     speculatedSaveTargets(record: T): string[] {
         const pk = record[this.pkName];
-        return this.dirtyKeysFor(typeof pk === 'number' ? pk : undefined,
+        return this.dirtyKeysFor('all', typeof pk === 'number' ? pk : undefined,
                                  record as Record<string, unknown>, undefined);
     }
 

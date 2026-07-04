@@ -34,15 +34,18 @@ Three granularities, all single-integer keys (no compound keys):
 | `-table-`             | the whole table: any subset that is not a pk or single-fk select (whole renders, aggregates, SUM()s) |
 | `-table-<pk>-`        | one row                                             |
 | `-table-<fkname>-<v>-`| the rows WHERE fkname = v (a nested list)           |
+| `-table-<fkname>-<v>-shape-` | that subset's SHAPE — membership and order only, not member content |
+| `-table-shape-`       | the whole table's shape                             |
 
 - **Class form vs selector form.**  Fragments carry the *bare* class form
   (`-task-project_id-88-`); mutation targets / speculation deps / reload calls
   use the *dotted selector* form (`.-task-project_id-88-`).  `sel(key)`
   (liminal/table.ts) converts.
 - **Mint through the helpers**: `Table.tableKey()`, `Table.rowKey(id)`,
-  `Table.fkKey(fkName, v)` — `fkKey` validates fkName against the declared
-  `ForeignKeyField`s and throws on a typo (so a misspelt key fails at render
-  time instead of silently never matching).
+  `Table.fkKey(fkName, v)`, `Table.shapeKey(fkName, v)`, `Table.tableShapeKey()`
+  — the fk mints validate fkName against the declared `ForeignKeyField`s and
+  throw on a typo (so a misspelt key fails at render time instead of silently
+  never matching).
 - **Keys are opaque strings everywhere except the mint.**  Nothing parses them
   (the one soft exception: keys are recognizable by the `-...-` class shape —
   see liveness watch-key extraction).  Hand-minted keys remain legal for cases
@@ -66,7 +69,17 @@ yourself if you must (or use a purpose-built wrapper like `liveReloadableProps`)
 A fragment registers the narrowest keys that cover what it renders:
 
 - single row by pk → `-t-<pk>-` only (rows do NOT co-register the table key);
-- `WHERE fk = v` query → `-t-<fkname>-<v>-` only;
+- `WHERE fk = v` query whose member content renders INLINE →
+  `-t-<fkname>-<v>-` only (the checklist, the check-in roster);
+- a **delegating wrapper** — a `WHERE fk = v` list whose member rows are
+  themselves nested self-refreshing fragments — registers the SHAPE key
+  `-t-<fkname>-<v>-shape-` only: inserts/deletes/moves re-render the list,
+  member-content edits refresh just the member's own fragment (the project
+  task list is the exemplar; pair it with a small content-keyed fragment for
+  anything content-derived in the wrapper, like the "N open" count).
+  CAVEAT: a list ORDERED BY member content (name-ordered lists) has shape
+  that depends on content — shape-keying it requires declaring the order
+  column in `shapeFields`, which wins little; leave those content-keyed;
 - whole-table render / aggregate / any other subset → `-t-`;
 - a fragment may register several keys (a join, a multi-table view: the
   volunteer Time view registers `-timesheet_entry-volunteer_id-<v>-` AND
@@ -94,12 +107,20 @@ the fragment (see the checklist comment in rabid/task.ts).
 **Rule — all levels, always, automatically.**  Every row write emits `-t-`,
 `-t-<pk>-`, and `-t-<fkname>-<v>-` for every declared FK: the *before-row's*
 values always (the parents whose subsets contain the row), plus the *new*
-values of any fk the write changes (the parent the row joins).  Writers tell
-the whole truth at every granularity; readers control their refresh cost by
+values of any fk the write changes (the parent the row joins).  SHAPE keys are
+emitted when the subset's membership or order may have changed: always on
+insert and delete; on update only when the write moves the row between fk
+subsets (both the old and new value's shape keys) or touches a
+**`Table.shapeFields`** column (default `['order_key','deleted'] ∩ declared` —
+the framework's ordering and soft-delete conventions; override where a table's
+list queries order/filter membership by something else).  Writers tell the
+whole truth at every granularity; readers control their refresh cost by
 registering precisely.
 
-- Derivation: `Table.dirtyKeysFor(pk, beforeRow, changedFields)` — one source
-  of truth, shared with the speculation defaults.
+- Derivation: `Table.dirtyKeysFor(kind, pk, beforeRow, changedFields)` — one
+  source of truth, shared with the speculation defaults (kind `'all'` is the
+  speculation superset: everything derivable from the record at render time;
+  over-speculating is free, sections only render for actually-emitted keys).
 - The funnels: `Table.insert` / `Table.update` (delegates to) /
   `Table.updateNamedFields` / `Table.delete` all record automatically.
   `Table.delete` is deliberately not `@route`d — declare deletion routes per
@@ -201,6 +222,11 @@ Conventions and behaviors to know:
 
 - **Keep `lm-live` rare** — it is not a general live-update switch, and coarse
   keys on live fragments wake the watcher on every same-table write.
+- **Shape-keyed live wrappers need a content antenna.**  A delegating wrapper
+  watches only its shape key, so foreign member-CONTENT edits wouldn't wake
+  the poll — give the page one small content-keyed `lm-live` fragment (the
+  project page's "N open" count): its watch key wakes the poll, and the
+  entry's row keys then reload the edited member fragments themselves.
 - Mutation responses carry `{seq, epoch}` (the log position); the client uses
   them for **echo suppression** (its own edits come back on the poll too) —
   entries are queued and drained only when no rpc is in flight, the modal

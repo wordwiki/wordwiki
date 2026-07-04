@@ -1371,9 +1371,7 @@ export class EventCheckinTable extends Table<EventCheckin> {
         // The roster is WHERE event_id, so register this table's event fk key.
         // LIVE: on event day several hosts check people in at once - the
         // roster tracks other actors' check-ins.
-        // (liveness TEMPORARILY disabled - liveReloadableProps - while the
-        // over-refresh dz observed is diagnosed; dz 2026-07-03)
-        const props = reloadableProps([this.fkKey('event_id', event_id)],
+        const props = liveReloadableProps([this.fkKey('event_id', event_id)],
             `rabid.event_checkin.renderCheckinEditor(${event_id})`);
 
         const checkedInIds = new Set(checkins.map(c => c.volunteer_id));

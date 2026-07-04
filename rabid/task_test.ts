@@ -370,6 +370,43 @@ test("completion provenance: done_time/done_by stamped on the done transition, c
     });
 });
 
+test("project page structure: no project-keyed fragment contains the task list (a record edit leaves tasks untouched)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const {project_id} = seedTask();
+        const detail = await asUser(alice, () =>
+            renderRoute(`rabid.project.renderProjectDetail(${project_id})`));
+        const hasKey = (n: any, key: string) => {
+            const cls = attr(n, 'class');
+            return typeof cls === 'string' && cls.split(/\s+/).includes(key);
+        };
+        const shapeKey = `-task-project_id-${project_id}-shape-`;
+        const contentKey = `-task-project_id-${project_id}-`;
+        // All three fragment kinds exist: project header/foot, the SHAPE-keyed
+        // task-list wrapper, and the content-keyed open-count fragment.
+        assert(!!find(detail, n => hasKey(n, `-project-${project_id}-`)));
+        assert(!!find(detail, n => hasKey(n, shapeKey)));
+        assert(!!find(detail, n => hasKey(n, contentKey)));
+        // ...but NO project-keyed fragment nests the task list: reloading the
+        // header/foot after a name/assignment edit must not re-render tasks.
+        const projectFragWithTasks = find(detail, n =>
+            hasKey(n, `-project-${project_id}-`)
+            && !!find(n, m => m !== n && hasKey(m, shapeKey)));
+        assertEquals(projectFragWithTasks ?? undefined, undefined);
+        // The DELEGATING wrapper registers the shape key ONLY (a member-content
+        // edit must not re-render the whole list)...
+        const wrapper = find(detail, n => hasKey(n, shapeKey));
+        assert(!hasKey(wrapper, contentKey));
+        assert(hasText(wrapper, 'Tasks'));
+        // ...and the open count is its own content-keyed fragment INSIDE the
+        // wrapper's heading, so every toggle refreshes the count (and only a
+        // shape change refreshes the wrapper).
+        const count = find(wrapper, n => n !== wrapper && hasKey(n, contentKey));
+        assert(!!count);
+        assert(hasText(count, '1 open'));
+        assert(!hasKey(count, shapeKey));
+    });
+});
+
 test("pages: one navigable row species, pencil follows recordEdit; task detail embeds the member editor and checklist", async () => {
     await withTestDb(async ({ alice, bob, carol }) => {
         const {project_id, task_id, group_id} = seedTask();

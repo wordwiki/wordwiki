@@ -83,6 +83,16 @@ watchers would thrash, and unsolicited swaps can steal focus.
 
 ## 2. Fine-grained insert/delete (stop re-rendering the whole list)
 
+**Partially superseded (2026-07-03): SHAPE KEYS are built** — see liminal.md.
+Delegating wrappers now register `-t-<fk>-<v>-shape-` and member-content edits
+no longer re-render lists at all; only genuine shape events (insert / delete /
+move / archive-flip) swap the wrapper.  What remains of this section is the
+finer-still directive for those shape events themselves: inserting/deleting
+ONE row without re-rendering the whole wrapper (the anchor/insert-directive
+mechanics below), plus the name-ordered-list adoption caveat (their order
+depends on member content, so shape-keying them needs the order column in
+shapeFields — adopt per list when worth it).
+
 **Goal.**  Insert/delete of a row currently dirties the whole-table key and
 re-renders every list wrapper.  Very common actions (add a service line for the
 day) do lots of unnecessary refresh.  Reordering is rare enough not to care.

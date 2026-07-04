@@ -10,6 +10,7 @@ import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts
 import { withTestDb, withDirtyTargets, invoke, asUser, asSystem } from "./testing.ts";
 import { rabid } from "./rabid.ts";
 import * as dirty from "../liminal/dirty.ts";
+import * as orderkey from "../liminal/orderkey.ts";
 
 function seedTask(): {project_id: number, task_id: number} {
     return asSystem(() => {
@@ -106,22 +107,80 @@ test("collector survives runSystem blocks; absent collector records nothing; emp
     });
 });
 
-test("fkKey validates the field is a declared foreign key", async () => {
+test("fkKey/shapeKey validate the field is a declared foreign key", async () => {
     await withTestDb(() => {
         assertEquals(rabid.subtask.fkKey('task_id', 7), '-subtask-task_id-7-');
+        assertEquals(rabid.subtask.shapeKey('task_id', 7), '-subtask-task_id-7-shape-');
+        assertEquals(rabid.subtask.tableShapeKey(), '-subtask-shape-');
         assertThrows(() => rabid.subtask.fkKey('title', 7), Error, 'not a declared foreign key');
         assertThrows(() => rabid.subtask.fkKey('tsk_id', 7), Error, 'not a declared foreign key');
+        assertThrows(() => rabid.subtask.shapeKey('title', 7), Error, 'not a declared foreign key');
     });
 });
 
-test("speculatedSaveTargets derives from dirtyKeysFor (table + row + record fk keys)", async () => {
+test("shapeFields default: the ordering column + soft-delete flag where declared", async () => {
+    await withTestDb(() => {
+        assertEquals(rabid.task.shapeFields, ['order_key', 'deleted']);
+        assertEquals(rabid.project.shapeFields, ['deleted']);
+        assertEquals(rabid.subtask.shapeFields, ['order_key']);
+        assertEquals(rabid.timesheet_entry.shapeFields, []);
+    });
+});
+
+test("shape emission: inserts/deletes always; updates only on fk moves or shape-field changes", async () => {
+    await withTestDb(async () => {
+        const { project_id, task_id } = seedTask();
+        const shape = `.-task-project_id-${project_id}-shape-`;
+        const p2 = asSystem(() => rabid.project.insert({name: 'Plant Sale', deleted: 0}));
+        const t2 = asSystem(() => rabid.task.insert({project_id, title: 'Mover', deleted: 0}));
+
+        // Content-only update (status toggle): NO shape keys.
+        const toggle = await withDirtyTargets(() =>
+            asSystem(() => rabid.task.update(task_id, {status: 'done'})));
+        has(toggle.targets, `.-task-project_id-${project_id}-`);
+        hasNot(toggle.targets, shape);
+        hasNot(toggle.targets, '.-task-shape-');
+
+        // order_key update: shape (a move changes the list's order).
+        const last = asSystem(() => rabid.task.getById(t2)).order_key;
+        const move = await withDirtyTargets(() =>
+            asSystem(() => rabid.task.update(task_id, {order_key: orderkey.between(last, undefined)})));
+        has(move.targets, shape);
+        has(move.targets, '.-task-shape-');
+
+        // deleted flip: shape (membership of the deleted=0 lists changes).
+        const archive = await withDirtyTargets(() =>
+            asSystem(() => rabid.task.update(task_id, {deleted: 1})));
+        has(archive.targets, shape);
+
+        // fk move: BOTH the old and the new subset's shape keys.
+        const moved = await withDirtyTargets(() =>
+            asSystem(() => rabid.task.update(t2, {project_id: p2})));
+        has(moved.targets, `.-task-project_id-${project_id}-shape-`);
+        has(moved.targets, `.-task-project_id-${p2}-shape-`);
+
+        // Insert and delete always emit shape.
+        const ins = await withDirtyTargets(() =>
+            asSystem(() => rabid.subtask.insert({task_id, title: 'step', done: 0})));
+        has(ins.targets, `.-subtask-task_id-${task_id}-shape-`);
+        has(ins.targets, '.-subtask-shape-');
+        const sid = ins.result as number;
+        const del = await withDirtyTargets(() => asSystem(() => rabid.subtask.delete(sid)));
+        has(del.targets, `.-subtask-task_id-${task_id}-shape-`);
+    });
+});
+
+test("speculatedSaveTargets derives from dirtyKeysFor 'all' (content + shape superset)", async () => {
     await withTestDb(() => {
         assertEquals(rabid.subtask.speculatedSaveTargets({subtask_id: 3, task_id: 9} as any),
-                     ['.-subtask-', '.-subtask-3-', '.-subtask-task_id-9-']);
-        // Insert dialog over a prefilled record: no pk, fk keys ride.
+                     ['.-subtask-', '.-subtask-3-', '.-subtask-task_id-9-',
+                      '.-subtask-task_id-9-shape-', '.-subtask-shape-']);
+        // Insert dialog over a prefilled record: no pk, fk + shape keys ride.
         assertEquals(rabid.task.speculatedSaveTargets({project_id: 88} as any),
-                     ['.-task-', '.-task-project_id-88-']);
-        assertEquals(rabid.project.speculatedSaveTargets({} as any), ['.-project-']);
+                     ['.-task-', '.-task-project_id-88-',
+                      '.-task-project_id-88-shape-', '.-task-shape-']);
+        assertEquals(rabid.project.speculatedSaveTargets({} as any),
+                     ['.-project-', '.-project-shape-']);
     });
 });
 

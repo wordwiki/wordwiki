@@ -466,20 +466,34 @@ export class ProjectTable extends Table<Project> {
         return templates.page(`${this.recordLabel(p)} — Project`, this.renderProjectDetail(project_id));
     }
 
-    // Reloadable fragment (an edit save re-renders it); the task list below is
-    // its own fragment, so a new/edited task reloads just that.
+    // Composition ONLY - deliberately NOT itself a reloadable fragment: the
+    // project-record header, the task list, and the provenance foot are each
+    // their own fragment registering their own keys, so a project-record edit
+    // (name, description, assignment) re-renders the header/foot WITHOUT
+    // touching the task list, and task churn touches neither (liminal.md:
+    // register the finest sufficient key).
     @route(authenticated)
     renderProjectDetail(project_id: number): Markup {
+        return [h.div, {class: 'container py-3'},
+            this.renderProjectHeader(project_id),
+            rabid.task.renderProjectTasks(project_id),
+            this.renderProjectProvenance(project_id),
+        ];
+    }
+
+    // The project-record header: the title (a heading) + a soft Done pill +
+    // edit + the project's ☰ (its terminal mark-done/reopen transition; the
+    // confirm carries the open-task count - finishing with work outstanding
+    // should be deliberate), then the project's own prose and its assignment
+    // line.  Registered under the project ROW key: a record edit re-renders
+    // exactly this.
+    @route(authenticated)
+    renderProjectHeader(project_id: number): Markup {
         const p = this.getById(project_id);
-        const canCreateTask = rabid.task.canEditRecord({} as any);
         const openCount = rabid.task.openCountForProject.required({project_id}).n;
-        const props = this.reloadableItemProps(project_id, `rabid.project.renderProjectDetail(${project_id})`);
-        props.class = 'container py-3 ' + props.class;
+        const props = reloadableProps([this.rowKey(project_id)],
+                                      `rabid.project.renderProjectHeader(${project_id})`);
         return [h.div, props,
-            // Header: the title (a heading) + a soft Done pill + edit + the
-            // project's ☰ (its terminal mark-done/reopen transition; the confirm
-            // carries the open-task count - finishing with work outstanding
-            // should be deliberate).
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
              [h.h2, {class: 'mb-0'}, this.recordLabel(p)],
              p.deleted
@@ -507,34 +521,19 @@ export class ProjectTable extends Table<Project> {
                 : undefined,
             // The project's assignment: THE assigned-to its tasks inherit.
             renderAssignmentLine('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
-            // The Tasks heading: the open count at a glance, then a quiet + for
-            // the common verb (new task) and the ☰ naming it for discoverability.
-            [h.div, {class: 'd-flex align-items-center gap-2 mt-4'},
-             [h.h4, {class: 'mb-0'}, 'Tasks'],
-             openCount > 0
-                 ? [h.span, {class: 'text-muted small'}, `${openCount} open`]
-                 : undefined,
-             canCreateTask
-                 ? action.actionButton(action.plusIcon(),
-                     {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
-                     'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
-                 : undefined,
-             canCreateTask
-                 ? action.actionMenu([
-                       {label: 'Add task…',
-                        mode: {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`}},
-                   ], {ariaLabel: 'Task list actions'})
-                 : undefined],
-            rabid.task.renderProjectTasks(project_id),
-            // Provenance: who to ask, quiet, at the FOOT of the page (it's
-            // reference, not the headline).
-            this.renderProjectProvenance(p),
         ];
     }
 
-    // The quiet provenance footer: when/by-whom the project was created (and
-    // marked done).  Nothing rendered when there's nothing to say.
-    private renderProjectProvenance(p: Project): Markup {
+    // The quiet provenance foot: when/by-whom the project was created (and
+    // marked done) - reference, not the headline, so it sits BELOW the tasks.
+    // Its own row-keyed fragment (the Done line changes on markDone/reopen);
+    // the wrapper always renders, even empty, so it can reload back into
+    // existence.
+    @route(authenticated)
+    renderProjectProvenance(project_id: number): Markup {
+        const p = this.getById(project_id);
+        const props = reloadableProps([this.rowKey(project_id)],
+                                      `rabid.project.renderProjectProvenance(${project_id})`);
         const who = (id: number|undefined) =>
             id != null
                 ? [' by ', templates.pageLink(`/rabid.volunteer.detailPage(${id})`,
@@ -545,8 +544,9 @@ export class ProjectTable extends Table<Project> {
             lines.push([h.div, {}, `Done ${date.sqliteDateTimeToDateString(p.archived_time)}`, who(p.archived_by)]);
         if (p.created_time)
             lines.push([h.div, {}, `Created ${date.sqliteDateTimeToDateString(p.created_time)}`, who(p.created_by)]);
-        if (lines.length === 0) return undefined as unknown as Markup;
-        return [h.div, {class: 'text-muted small mt-4 pt-2 border-top'}, ...lines];
+        return [h.div, {...props,
+                        class: 'text-muted small mt-4 pt-2 ' + (lines.length > 0 ? 'border-top ' : '') + props.class},
+                ...lines];
     }
 }
 
@@ -764,7 +764,7 @@ export class TaskTable extends Table<Task> {
 /**/              AS assignee_count
 /**/          FROM task
 /**/          WHERE project_id = :project_id AND deleted = 0
-/**/          ORDER BY (status = 'done'), order_key`);
+/**/          ORDER BY order_key`);
     }
 
     @path
@@ -847,34 +847,69 @@ export class TaskTable extends Table<Task> {
     // it - checkbox, title, badges, and its checklist inline - so the whole
     // project is workable from one page.  Task detail pages remain for the
     // longer-form stuff (details text, provenance, assignment override).
-    // Done tasks sort to the bottom (the ORDER BY) and render struck-through,
-    // NOT collapsed - the strikethrough wall shows stuff is HAPPENING, which
-    // is half the point in a volunteer-primarily org.
+    // Done tasks stay IN PLACE (plain order_key order) and render
+    // struck-through, NOT collapsed or moved to a done wall - the
+    // strikethrough shows stuff is HAPPENING (half the point in a
+    // volunteer-primarily org), toggling done doesn't make the list jump
+    // (jarring, and doubly confusing when liveness replays other people's
+    // toggles), and a toggle re-renders only the task's own block.
+    // (dz 2026-07-03: replaced the earlier sort-done-to-the-bottom wall.)
 
-    // Self-fetching reloadable fragment.  Its query is WHERE project_id, so it
-    // registers the fk key `-task-project_id-<pid>-` (finest-sufficient): task
-    // churn in THIS project notifies it, other projects' churn does not.
-    // LIVE: a project's task list is a genuinely shared surface (several
-    // people work it at once), so it also tracks other actors' edits.
+    // Self-fetching DELEGATING wrapper: the Tasks heading + the task blocks,
+    // where each block is its own self-refreshing fragment.  It therefore
+    // registers the SHAPE key `-task-project_id-<pid>-shape-` (liminal.md):
+    // inserts, deletes, moves and archive flips re-render the list; a
+    // member-content edit (checking a task off, a rename) refreshes only the
+    // member's own block plus the little open-count fragment below.  The
+    // fragment always renders (empty -> 'No tasks yet.'), so the in-fragment
+    // affordances survive reloads.  LIVE: a project's task list is a
+    // genuinely shared surface, so it also tracks other actors' edits (the
+    // shape key watches structure; the count fragment is the page's CONTENT
+    // liveness antenna).
     @route(authenticated)
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
-        // (liveness TEMPORARILY disabled - liveReloadableProps - while the
-        // over-refresh dz observed is diagnosed; dz 2026-07-03)
-        const props = reloadableProps([this.fkKey('project_id', project_id)],
-                                      `rabid.task.renderProjectTasks(${project_id})`);
+        const canCreateTask = this.canEditRecord({} as any);
+        const props = liveReloadableProps([this.shapeKey('project_id', project_id)],
+                                          `rabid.task.renderProjectTasks(${project_id})`);
+        // The Tasks heading: the open count at a glance (its own content-keyed
+        // fragment - it changes on every toggle, the wrapper doesn't), then a
+        // quiet + for the common verb (new task) and the ☰ naming it for
+        // discoverability.
+        const heading: Markup =
+            [h.div, {class: 'd-flex align-items-center gap-2 mt-4'},
+             [h.h4, {class: 'mb-0'}, 'Tasks'],
+             this.renderProjectOpenCount(project_id),
+             canCreateTask
+                 ? action.actionButton(action.plusIcon(),
+                     {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`},
+                     'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
+                 : undefined,
+             canCreateTask
+                 ? action.actionMenu([
+                       {label: 'Add task…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.task.newDialog(${project_id})`}},
+                   ], {ariaLabel: 'Task list actions'})
+                 : undefined];
         if (tasks.length === 0)
-            return [h.div, props, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
-        // Tasks come open-first then done (tasksForProject ORDER BY status='done').
-        // A quiet "Done" divider marks the wall, so what's LEFT reads at a glance.
-        const firstDone = tasks.findIndex(t => t.status === 'done');
-        const blocks: Markup[] = [];
-        tasks.forEach((t, i) => {
-            if (i === firstDone && firstDone > 0)
-                blocks.push([h.div, {class: 'lm-done-divider', 'data-testid': 'tasks-done-divider'}, 'Done']);
-            blocks.push(this.renderTaskBlock(t));
-        });
-        return [h.div, props, ...blocks];
+            return [h.div, props, heading, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
+        return [h.div, props, heading, tasks.map(t => this.renderTaskBlock(t))];
+    }
+
+    // The "N open" count beside the Tasks heading: a tiny CONTENT-keyed
+    // fragment (`-task-project_id-<pid>-`) - every task write in the project
+    // refreshes it, while the surrounding shape-keyed wrapper stays put.
+    // Being lm-live it doubles as the page's content liveness antenna:
+    // another actor's toggle wakes the poll via this fragment's watch key,
+    // and the entry's row key then reloads the toggled block itself.  Always
+    // renders its span (empty when nothing is open) so it can reload back.
+    @route(authenticated)
+    renderProjectOpenCount(project_id: number): Markup {
+        const n = rabid.task.openCountForProject.required({project_id}).n;
+        const props = liveReloadableProps([this.fkKey('project_id', project_id)],
+                                          `rabid.task.renderProjectOpenCount(${project_id})`);
+        return [h.span, {...props, class: 'text-muted small ' + props.class},
+                n > 0 ? `${n} open` : undefined];
     }
 
     // One task on the project page: a compact task line (checkbox toggles
@@ -912,14 +947,12 @@ export class TaskTable extends Table<Task> {
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
                         ...(canEdit
-                            // Speculate the project fk key TOO: on the project
-                            // page the toggle reorders the list (the done wall),
-                            // so the list wrapper is the section that swaps -
-                            // anticipated here, it arrives in the same round
-                            // trip (containment pruning drops this block's own
-                            // section); left out, it would straggler-reload the
-                            // whole list AFTER the block swap (the double
-                            // refresh dz saw).
+                            // A toggle is a member-CONTENT edit: the row key
+                            // matches this block, the content fk key matches
+                            // the little open-count fragment - both swap in
+                            // one trip.  The shape-keyed list wrapper is
+                            // deliberately not touched (tasks stay in place
+                            // when toggled).
                             ? {onclick: `txd(${JSON.stringify([sel(this.rowKey(id)), sel(this.fkKey('project_id', t.project_id))])})\`rabid.task.toggleDone(${id})\``}
                             : {disabled: ''}),
                         'aria-label': `Mark ${t.title || 'task'} done`}],
@@ -950,12 +983,15 @@ export class TaskTable extends Table<Task> {
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id})`}},
                        {label: 'Add completed item…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id},true)`}},
+                       // Moves change the list's SHAPE (order_key is a shape
+                       // field) - speculate the shape key so the wrapper is
+                       // the anticipated section.
                        {label: 'Move up',
                         mode: {kind: 'immediate', expr: `rabid.task.moveUp(${id})`,
-                               deps: [sel(this.fkKey('project_id', t.project_id))]}},
+                               deps: [sel(this.shapeKey('project_id', t.project_id))]}},
                        {label: 'Move down',
                         mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`,
-                               deps: [sel(this.fkKey('project_id', t.project_id))]}},
+                               deps: [sel(this.shapeKey('project_id', t.project_id))]}},
                    ], {ariaLabel: `More actions for ${t.title || 'task'}`})
                  : undefined],
             [h.div, {class: 'lm-task-block-checklist'},
@@ -982,10 +1018,10 @@ export class TaskTable extends Table<Task> {
         return {action:'reload'} as unknown as Markup;
     }
 
-    // Reorder within the project, as DISPLAYED: open tasks move among open
-    // tasks, the done wall keeps its own order (the two never interleave on
-    // screen, so a cross-partition move would be a visual no-op).  A move at
-    // the end is a plain no-op; either way the list fragment reloads.
+    // Reorder within the project, as DISPLAYED: tasks keep their place when
+    // toggled done (no done wall), so open and done interleave and a move
+    // ranges over ALL siblings.  A move at the end is a plain no-op; either
+    // way the list fragment reloads.
     @routeMutation(authenticated)
     moveUp(task_id: number): Markup { return this.moveBy(task_id, -1); }
     @routeMutation(authenticated)
@@ -994,8 +1030,7 @@ export class TaskTable extends Table<Task> {
         const t = this.getById(task_id);
         if(!this.canEditRecord(t))
             throw new Error('Not permitted to edit this task');
-        const sibs = security.runSystem(() => this.tasksForProject.all({project_id: t.project_id}))
-            .filter(s => (s.status === 'done') === (t.status === 'done'));
+        const sibs = security.runSystem(() => this.tasksForProject.all({project_id: t.project_id}));
         const i = sibs.findIndex(s => s.task_id === task_id);
         const j = i + dir;
         if(i >= 0 && j >= 0 && j < sibs.length) {
@@ -1610,9 +1645,8 @@ export class SubtaskTable extends Table<Subtask> {
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
-        // (liveness TEMPORARILY disabled - liveReloadableProps - see above)
-        const props = reloadableProps([this.fkKey('task_id', task_id)],
-                                      `rabid.subtask.renderChecklist(${task_id})`);
+        const props = liveReloadableProps([this.fkKey('task_id', task_id)],
+                                          `rabid.subtask.renderChecklist(${task_id})`);
         return [h.div, props,
             items.length === 0
                 ? undefined
