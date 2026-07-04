@@ -17,6 +17,62 @@ import * as timestamp from "../liminal/timestamp.ts";
 export interface RepairStats {
     danglingChainHeadsFixed: number;
     legacyPublishedPlaceholdersCleared: number;
+    orphanedChildrenTombstoned: number;
+}
+
+/**
+ * Cascade-complete missed deletions: a LIVE fact whose parent is not live is a
+ * dangling child of a deleted parent (pre-publication-model deletes in the old
+ * system did not cascade to children).  It is already invisible under the
+ * top-down prune in BOTH views, but violates the tree invariant "a live fact
+ * has a live parent" (versioned-db-validate.ts), and the born-approve backfill
+ * would publish it into a published-orphan.  So we finish the delete: tombstone
+ * the child in place (valid_to = valid_from) and clear any publication stamp.
+ *
+ * Pure SQL, pre-workspace-load (the invariant now blocks the load), and BEFORE
+ * the backfill so no published-orphan ever forms.  Runs to a fixpoint:
+ * tombstoning a child can orphan ITS children.  Idempotent - a re-run finds no
+ * live-under-dead facts (they are tombstones now).  Safe because the write-time
+ * gates (lexeme-ops tree-ordering) make new orphans impossible, so this only
+ * ever meets legacy danglers, never live editing intent.
+ */
+export function repairOrphanedLiveChildren(opts: { log?: (m: string) => void } = {}): number {
+    const log = opts.log ?? (() => undefined);
+    // Live-current rows (valid_to = END_OF_TIME): id, valid_from, and the full
+    // id-path so we can find each fact's parent id.
+    const rows = db().all<{ assertion_id: number; id: number; valid_from: number;
+                            id1: number|null; id2: number|null; id3: number|null;
+                            id4: number|null; id5: number|null; ty: string }, { eot: number }>(
+        `SELECT assertion_id, id, valid_from, id1, id2, id3, id4, id5, ty
+           FROM dict WHERE valid_to = :eot`, { eot: timestamp.END_OF_TIME });
+    const live = new Map<number, typeof rows[number]>();
+    for (const r of rows) live.set(r.id, r);   // one live version per fact (the tip)
+
+    const parentIdOf = (r: typeof rows[number]): number | undefined => {
+        const path = [r.id1, r.id2, r.id3, r.id4, r.id5].filter((x): x is number => x != null);
+        const i = path.lastIndexOf(r.id);
+        return i > 0 ? path[i - 1] : undefined;   // undefined = top-level (parent is the root)
+    };
+
+    let total = 0;
+    db().transaction(() => {
+        for (;;) {
+            const orphans = [...live.values()].filter(r => {
+                const pid = parentIdOf(r);
+                return pid !== undefined && !live.has(pid);   // parent deleted or absent
+            });
+            if (orphans.length === 0) break;
+            for (const o of orphans) {
+                db().execute(
+                    `UPDATE dict SET valid_to = valid_from, published_from = NULL, published_to = NULL
+                       WHERE assertion_id = :aid`, { aid: o.assertion_id });
+                live.delete(o.id);   // now a tombstone; may orphan its own children next pass
+                total++;
+                log(`  tombstoned orphaned live ${o.ty}:${o.id} (parent gone)`);
+            }
+        }
+    });
+    return total;
 }
 
 /**
@@ -101,5 +157,6 @@ export function repairAssertions(opts: { log?: (m: string) => void } = {}): Repa
     return {
         ...repairDanglingChainHeads(opts),
         legacyPublishedPlaceholdersCleared: clearLegacyPublishedPlaceholder(opts),
+        orphanedChildrenTombstoned: repairOrphanedLiveChildren(opts),
     };
 }

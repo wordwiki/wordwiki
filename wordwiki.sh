@@ -41,7 +41,9 @@ set -e
 #                                      # leaves a running server alone
 #   ./wordwiki.sh stop                 # stop the server, nothing else
 #   ./wordwiki.sh repair-assertions    # idempotent structural fixes of store
-#                                      # corruption (refuses production db)
+#                                      # corruption incl. cascade-tombstoning
+#                                      # orphaned children of deleted parents
+#                                      # (refuses production db)
 #   ./wordwiki.sh backfill-publication # publication Phase 0: clear legacy
 #                                      # placeholder + born-approve Completed
 #                                      # data, mute-in-place (refuses prod)

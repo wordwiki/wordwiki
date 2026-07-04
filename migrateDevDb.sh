@@ -15,8 +15,10 @@ set -e
 #      the 'test' robot - seeds passwords from the never-checked-in
 #      user-passwords.json, and marks the db 'dev')
 #   3. repair-assertions: idempotent structural fixes of pre-existing store
-#      corruption (dangling chain heads + clearing the legacy published_*
-#      placeholder, which must go before any workspace load); no-op once clean
+#      corruption (dangling chain heads; clearing the legacy published_*
+#      placeholder; cascade-tombstoning dangling live children of deleted
+#      parents so the publication tree stays a tree - all BEFORE any workspace
+#      load, which now enforces that invariant); no-op once clean
 #   4. import categories (stamped '~category-import')
 #   5. prove category-import idempotency (re-run must be a pure no-op)
 #   6. import lexical forms (stamped '~lexical-form-import') + same proof

@@ -1674,6 +1674,14 @@ export class LexemeEditor {
                              'its values are no longer in use, so it cannot be restored.'};
 
         const wasDeleted = !mostRecent.isCurrent;
+        // Tree-ordering (gate #4, symmetric to the approve gate): restoring a
+        // DELETED fact makes it live again, so its parent must be live - else
+        // we resurrect a child under a still-deleted parent (an orphan in the
+        // valid tree).  Restore the parent first.
+        if(wasDeleted && !this.app.lexemeOps.parentIsLiveOf(tuple))
+            return {action: 'alert',
+                    message: 'This item’s parent has been deleted — restore the parent ' +
+                             'first, then restore this item.'};
         const newAssertion: Assertion = {
             ...hist.assertion,
             assertion_id: newId(),

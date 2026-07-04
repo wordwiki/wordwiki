@@ -59,6 +59,13 @@ export interface FactView {
     /** The earliest valid_from of this fact's parent fact, or undefined for a
      *  top-level fact (whose parent is the versionless table root). */
     parentEarliestValidFrom?: number;
+    /** Does the parent fact have a currently-published version? undefined at
+     *  the top level (the root is always "present"). Drives the tree-orphan
+     *  invariant: a published fact must have a published parent. */
+    parentHasPublishedCurrent?: boolean;
+    /** Is the parent fact currently live (its newest version not a tombstone)?
+     *  undefined at the top level. Drives the live-tree analogue. */
+    parentIsLive?: boolean;
 }
 
 export interface ValidationProblem {
@@ -67,10 +74,20 @@ export interface ValidationProblem {
     detail: string;
 }
 
+/** `treeOrphans` (default true): also check the tree-orphan invariants (a
+ *  present fact must have a present parent, in each dimension).  These are
+ *  maintained by the WORKFLOW gates (lexeme-ops tree-ordering), not the pure
+ *  publication ops - so the oracle-conformance property test, which drives the
+ *  pure ops directly, opts OUT (it can legitimately reach an orphan a gate
+ *  would have refused; verify-workspace and the gated app keep the default). */
+export interface ValidateOptions { treeOrphans?: boolean; }
+
 /**
  * Validate a collection of facts. Returns every problem found (empty = valid).
  */
-export function validateFacts(facts: Iterable<FactView>): ValidationProblem[] {
+export function validateFacts(facts: Iterable<FactView>,
+                              opts: ValidateOptions = {}): ValidationProblem[] {
+    const checkTreeOrphans = opts.treeOrphans ?? true;
     const problems: ValidationProblem[] = [];
     const add = (path: string, invariant: string, detail: string) =>
         problems.push({ path, invariant, detail });
@@ -153,6 +170,22 @@ export function validateFacts(facts: Iterable<FactView>): ValidationProblem[] {
                 `oldest version begins at ${vs[0].valid_from}, before its parent's ` +
                 `earliest version at ${fact.parentEarliestValidFrom}`);
 
+        // --- The tree stays a tree in BOTH dimensions: a fact present in a
+        //     dimension must have a parent present in that dimension (else it
+        //     is an orphan - invisible under the top-down prune, but a trap for
+        //     any flat reader of the stamps).  The verbs enforce this at write
+        //     time (lexeme-ops tree-ordering gates); this is the check.
+        if (checkTreeOrphans) {
+            const factHasPublishedCurrent = vs.some((v) => v.published_to === END_OF_TIME);
+            if (factHasPublishedCurrent && fact.parentHasPublishedCurrent === false)
+                add(fact.path, "published-child-of-unpublished-parent",
+                    `has a published-current version but its parent has none`);
+            const factIsLive = last.valid_to === END_OF_TIME && last.valid_from !== last.valid_to;
+            if (factIsLive && fact.parentIsLive === false)
+                add(fact.path, "live-child-of-deleted-parent",
+                    `is live but its parent is deleted`);
+        }
+
         // --- The publication dimension (publication-model.md, I2/I3/I6/I7/I8).
         //     The two-person rule (I4/I5) needs author/role info and lives in a
         //     separate semantic check; these are the structural invariants.
@@ -203,15 +236,21 @@ export function validateFacts(facts: Iterable<FactView>): ValidationProblem[] {
 export function factViewsFromVersionedDb(vdb: VersionedDb): FactView[] {
     const out: FactView[] = [];
     for (const table of vdb.tables.values())
-        walk(table, table.schema.tag, undefined, out);
+        walk(table, table.schema.tag, undefined, undefined, undefined, out);
     return out;
 }
 
 function walk(tuple: VersionedTuple, path: string,
-              parentEarliestValidFrom: number|undefined, out: FactView[]): void {
-    // The table root (id 0) is a versionless placeholder, not a fact.
+              parentEarliestValidFrom: number|undefined,
+              parentHasPublishedCurrent: boolean|undefined,
+              parentIsLive: boolean|undefined, out: FactView[]): void {
+    // The table root (id 0) is a versionless placeholder, not a fact - and it
+    // is always "present" in both dimensions (children pass undefined up).
     const isRoot = tuple.id === 0;
     let earliest = parentEarliestValidFrom;
+    // What this tuple offers its children as their parent (undefined at root).
+    let hasPublishedCurrent: boolean|undefined;
+    let isLive: boolean|undefined;
 
     if (!isRoot) {
         const versions: VersionRecord[] = tuple.tupleVersions.map(tv => {
@@ -227,26 +266,32 @@ function walk(tuple: VersionedTuple, path: string,
             };
         });
         earliest = versions[0]?.valid_from ?? parentEarliestValidFrom;
-        out.push({ path, ty: tuple.schema.tag, id: tuple.id, versions, parentEarliestValidFrom });
+        const last = versions[versions.length - 1];
+        hasPublishedCurrent = versions.some(v => v.published_to === END_OF_TIME);
+        isLive = !!last && last.valid_to === END_OF_TIME && last.valid_from !== last.valid_to;
+        out.push({ path, ty: tuple.schema.tag, id: tuple.id, versions,
+                   parentEarliestValidFrom, parentHasPublishedCurrent, parentIsLive });
     }
 
     for (const rel of Object.values(tuple.childRelations))
         for (const child of rel.tuples.values())
-            walk(child, `${path}/${child.schema.tag}:${child.id}`, earliest, out);
+            walk(child, `${path}/${child.schema.tag}:${child.id}`,
+                 earliest, hasPublishedCurrent, isLive, out);
 }
 
 // --------------------------------------------------------------------------------
 // --- Throwing wrapper -----------------------------------------------------------
 // --------------------------------------------------------------------------------
 
-export function validateVersionedDb(vdb: VersionedDb): ValidationProblem[] {
-    return validateFacts(factViewsFromVersionedDb(vdb));
+export function validateVersionedDb(vdb: VersionedDb,
+                                    opts: ValidateOptions = {}): ValidationProblem[] {
+    return validateFacts(factViewsFromVersionedDb(vdb), opts);
 }
 
 /** Throw if the workspace violates any structural invariant. For load-time
  *  and tests — the "know right away" path. */
-export function assertVersionedDbValid(vdb: VersionedDb): void {
-    const problems = validateVersionedDb(vdb);
+export function assertVersionedDbValid(vdb: VersionedDb, opts: ValidateOptions = {}): void {
+    const problems = validateVersionedDb(vdb, opts);
     if (problems.length === 0) return;
     const shown = problems.slice(0, 20)
         .map(p => `  [${p.invariant}] ${p.path}: ${p.detail}`).join("\n");

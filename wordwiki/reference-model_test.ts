@@ -248,10 +248,14 @@ test("property: production VersionedDb matches the reference oracle", () => {
             const d = compare(oracle, prod);
             if (d) bail(i, d);
 
-            // Both must stay structurally well-formed.
-            try { assertVersionedDbValid(prod.vdb); }
+            // Both must stay structurally well-formed.  The tree-orphan
+            // invariants are maintained by the WORKFLOW gates (lexeme-ops),
+            // NOT the pure ops this harness drives directly - so a random
+            // sequence may legitimately revert a parent out from under a live
+            // child; skip those checks here (verify-workspace keeps them).
+            try { assertVersionedDbValid(prod.vdb, {treeOrphans: false}); }
             catch (e) { bail(i, `production became structurally invalid: ${(e as Error).message}`); }
-            const op2 = validateFacts(oracle.factViews());
+            const op2 = validateFacts(oracle.factViews(), {treeOrphans: false});
             if (op2.length) bail(i, `oracle became structurally invalid: ${op2[0].invariant} ${op2[0].path}`);
         }
     }

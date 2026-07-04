@@ -21,13 +21,14 @@
  * already-deleted fact is idempotent, never a double tombstone).
  */
 import {VersionedTuple} from './workspace.ts';
-import {Assertion, updateAssertion} from './assertion.ts';
+import {Assertion, updateAssertion, getAssertionPath} from './assertion.ts';
 import * as entrySchema from './entry-schema.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import {panic} from '../liminal/utils.ts';
 import {db} from '../liminal/db.ts';
 import * as security from '../liminal/security.ts';
 import * as publicationOps from './publication-ops.ts';
+import {latestContentVersion} from './versioned-model.ts';
 import type {WordWiki} from './wordwiki.ts';
 
 // New fact/assertion ids use the same scheme as the rest of the system (see
@@ -101,6 +102,54 @@ export class LexemeOps {
         const entryTuple = this.entryTuple(entry_id);
         if(fact_id === entry_id) return entryTuple;
         return entryTuple.findRequiredVersionedTupleById(fact_id);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Tree-ordering (the publication tree must stay a tree) ----------------
+    // ------------------------------------------------------------------------
+    //
+    // The valid tree and the published tree are each pruned top-down at render
+    // time (Current*/Published* queries), so a child can never join a tree its
+    // parent is not in without becoming invisible.  These helpers let the
+    // mutation verbs REFUSE the operations that would create such an orphan,
+    // with a clear message, so the invariant "published child => published
+    // parent" (and its live analogue) holds by construction (versioned-db-
+    // validate.ts checks it; publication-model.md).
+
+    /** The parent FACT tuple of `tuple`, or undefined when its parent is the
+     *  versionless table root (a top-level entry fact, always "present"). */
+    parentFactTuple(tuple: VersionedTuple): VersionedTuple | undefined {
+        const a = tuple.mostRecentTuple?.assertion;
+        if(!a) return undefined;
+        const parentRelation = this.app.workspace.getVersionedTupleParentRelation(
+            getAssertionPath(a));
+        return parentRelation.parent.id === 0 ? undefined : parentRelation.parent;
+    }
+
+    /** Does the parent have a currently-published version (the last-approved
+     *  value, which legitimately parents published children even when a newer
+     *  edit sits pending on top)?  True at the root (top-level facts). */
+    private parentIsPublished(tuple: VersionedTuple): boolean {
+        const parent = this.parentFactTuple(tuple);
+        return !parent || parent.tupleVersions.some(v => v.isPublished);
+    }
+
+    /** Is the fact's parent currently live (its most-recent version not a
+     *  tombstone)?  True at the root.  Public: the restore verb (gate #4,
+     *  in lexeme-editor.ts) refuses to un-delete a child under a dead parent. */
+    parentIsLiveOf(tuple: VersionedTuple): boolean {
+        const parent = this.parentFactTuple(tuple);
+        return !parent || parent.mostRecentTuple?.isCurrent === true;
+    }
+
+    /** Any descendant with a currently-published version (approving this
+     *  fact's DELETION while one exists would orphan it - see gate #3). */
+    private hasPublishedDescendant(tuple: VersionedTuple): boolean {
+        let found = false;
+        tuple.forEachVersionedTuple(t => {
+            if(t !== tuple && t.tupleVersions.some(v => v.isPublished)) found = true;
+        });
+        return found;
     }
 
     // ------------------------------------------------------------------------
@@ -253,6 +302,27 @@ export class LexemeOps {
     approveFact(fact_id: number): PublicationOutcome {
         const approver = this.requireUsername();
         this.requireApprovePermission('approving');
+
+        // Tree-ordering gates (the published tree must stay a tree - see the
+        // tree-ordering helpers).  Approving a CONTENT change publishes it, so
+        // its parent must already be published (top-down); approving a
+        // DELETION unpublishes, so it must have no still-published descendants
+        // (bottom-up - approve the contents' deletions first).
+        const tuple = this.app.workspace.getTableByTag(entrySchema.DictTag)
+            .getTupleById(fact_id) ?? panic('no fact', fact_id);
+        const content = latestContentVersion(tuple.tupleVersions.map(v => v.assertion));
+        const isDeletion = !!content && content.valid_from === content.valid_to;
+        if(isDeletion) {
+            if(this.hasPublishedDescendant(tuple))
+                throw new Error(
+                    'Approve the deletion of this item’s contents first — a published ' +
+                    'child cannot be left under a removed parent.');
+        } else if(!this.parentIsPublished(tuple)) {
+            throw new Error(
+                'This item’s parent has not been approved yet — approve the parent ' +
+                'first, so the published dictionary stays a complete tree.');
+        }
+
         this.runPublicationOp((now, aid) =>
             publicationOps.approve(this.app.workspace, fact_id, approver, now, aid,
                                    {allowSelfApprove: this.canSelfApprove()}));

@@ -1794,7 +1794,8 @@ if (import.meta.main) {
                                     'run with --allow-production if you really mean it');
                 const stats = repairAssertions({log: (m) => console.info(m)});
                 console.info(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed, ` +
-                             `${stats.legacyPublishedPlaceholdersCleared} legacy published placeholder row(s) cleared`);
+                             `${stats.legacyPublishedPlaceholdersCleared} legacy published placeholder row(s) cleared, ` +
+                             `${stats.orphanedChildrenTombstoned} orphaned live child(ren) tombstoned`);
             });
             Deno.exit(0);
             break;
