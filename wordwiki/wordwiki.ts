@@ -41,6 +41,7 @@ import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
 import * as categoryImport from './category-import.ts';
+import * as twitterPostImport from './twitter-post-import.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as instanceDir_ from './instance-dir.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
@@ -1710,6 +1711,43 @@ if (import.meta.main) {
                     if(changes > 0)
                         throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
                                         'the previous run did not reach the fixed point');
+                    console.info('idempotency confirmed: re-run made no changes');
+                }
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Backfill the twitter-post attribute from the retired legacy Shoebox
+        // dump (word-a-day kept being posted there for ~2 years post-retirement;
+        // see twitter-post-import.ts).  Matches each legacy lexeme to a current
+        // entry by Listuguj spelling and adds a twitter-post to unambiguous
+        // matches that lack one; homonyms/unmatched are skipped and logged.
+        // Idempotent (re-run adds nothing); refuses production without
+        // --allow-production.  Runs BEFORE backfill-publication so the new
+        // rows get born-approved.
+        //   ./wordwiki.sh import-twitter-posts [legacy-file]
+        //                  [--username=NAME] [--allow-production] [--expect-no-changes]
+        case 'import-twitter-posts': {
+            const file = args.find((a, i) => i >= 1 && !a.startsWith('--'))
+                ?? new URL('../legacy-mmo.txt', import.meta.url).pathname;
+            const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
+                ?? twitterPostImport.TWITTER_POST_IMPORT_USER;
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                user.seedUsersFromEntrySchema(ww.users);   // the ~ import identities ride along
+                if(!ww.users.byUsername.first({username}))
+                    throw new Error(`--username '${username}' is not in the user table`);
+                const legacyText = Deno.readTextFileSync(file);
+                const stats = twitterPostImport.importTwitterPosts(ww, legacyText, {
+                    username, log: (msg) => console.info(msg),
+                });
+                if(args.includes('--expect-no-changes')) {
+                    if(stats.added > 0)
+                        throw new Error(`--expect-no-changes: the import added ${stats.added} twitter-posts`);
                     console.info('idempotency confirmed: re-run made no changes');
                 }
             });

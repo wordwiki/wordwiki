@@ -243,6 +243,7 @@ export function isAutomatedUsername(username: string|null|undefined): boolean {
 export const SYSTEM_USERS: {username: string, name: string}[] = [
     {username: '~category-import',     name: 'Category import (automated)'},
     {username: '~lexical-form-import', name: 'Lexical form import (automated)'},
+    {username: '~twitter-post-import', name: 'Twitter-post import (automated)'},
 ];
 
 // The dedicated test identity: tests and smoke checks log in as THIS user,

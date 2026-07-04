@@ -31,6 +31,11 @@ set -e
 #                                      # normalize unambiguous legacy values
 #                                      # (idempotent; refuses production db;
 #                                      # stamps '~lexical-form-import')
+#   ./wordwiki.sh import-twitter-posts # backfill twitter-post from the retired
+#                                      # legacy dump (legacy-mmo.txt); matches
+#                                      # by Listuguj spelling, adds missing
+#                                      # ones (idempotent; refuses production;
+#                                      # stamps '~twitter-post-import')
 #   ./wordwiki.sh publish [target...]  # publish the public site (or just the
 #                                      # named pages, e.g. entries/samqwan);
 #                                      # leaves a running server alone

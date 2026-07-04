@@ -20,17 +20,23 @@ set -e
 #   4. import categories (stamped '~category-import')
 #   5. prove category-import idempotency (re-run must be a pure no-op)
 #   6. import lexical forms (stamped '~lexical-form-import') + same proof
-#   7. publication Phase 0: born-approve existing approved data by mute-in-
+#   7. import twitter-posts from the retired legacy Shoebox dump
+#      (legacy-mmo.txt): word-a-day was posted there for ~2 years after
+#      retirement; match each legacy lexeme to a current entry by Listuguj
+#      spelling and add the missing twitter-post (stamped
+#      '~twitter-post-import'); homonyms/unmatched skipped + logged.  BEFORE
+#      the backfill so the new rows get born-approved.  Idempotent + proof
+#   8. publication Phase 0: born-approve existing approved data by mute-in-
 #      place (stamp published_* on the current facts of Completed entries;
 #      NO approval rows; AFTER imports so re-categorized tuples are stamped
 #      and tombstoned old ones are not); idempotent
-#   8. normalize shoebox dates: rewrite the imported lexemes' legacy
+#   9. normalize shoebox dates: rewrite the imported lexemes' legacy
 #      shoebox-date attribute values to ISO yyyy-mm-dd, mute-in-place (the
 #      lexeme creation dates - see creation-dates.ts; validates the whole
 #      corpus loudly here rather than silently at query time); idempotent
-#   9. verify-migration: read-only invariant checks; exits nonzero on failure
-#  10. verify-workspace: read-only STRUCTURAL invariants of the whole store
-#  11. restart the server and smoke-test it over HTTP
+#  10. verify-migration: read-only invariant checks; exits nonzero on failure
+#  11. verify-workspace: read-only STRUCTURAL invariants of the whole store
+#  12. restart the server and smoke-test it over HTTP
 #
 # ---- The PRODUCTION cutover (when the day comes) is NOT this script ------
 # On the production host (no pull, no dev marking, no dev password):
@@ -40,54 +46,60 @@ set -e
 #   4. ./wordwiki.sh import-categories --allow-production --expect-no-changes
 #   5. ./wordwiki.sh import-lexical-forms --allow-production
 #   6. ./wordwiki.sh import-lexical-forms --allow-production --expect-no-changes
-#   7. ./wordwiki.sh backfill-publication --allow-production
-#   8. ./wordwiki.sh backfill-publication --allow-production --expect-no-changes
-#   9. ./wordwiki.sh normalize-shoebox-dates --allow-production
-#  10. ./wordwiki.sh normalize-shoebox-dates --allow-production --expect-no-changes
-#  11. ./wordwiki.sh verify-migration   (read-only; same checks as here;
+#   7. ./wordwiki.sh import-twitter-posts --allow-production
+#   8. ./wordwiki.sh import-twitter-posts --allow-production --expect-no-changes
+#   9. ./wordwiki.sh backfill-publication --allow-production
+#  10. ./wordwiki.sh backfill-publication --allow-production --expect-no-changes
+#  11. ./wordwiki.sh normalize-shoebox-dates --allow-production
+#  12. ./wordwiki.sh normalize-shoebox-dates --allow-production --expect-no-changes
+#  13. ./wordwiki.sh verify-migration   (read-only; same checks as here;
 #      expect a WARNING for entries created after the assignments dump)
-#  12. ./wordwiki.sh verify-workspace   (read-only structural invariants)
-#  13. start the server; ./wordwiki.sh publish; spot-check the site
+#  14. ./wordwiki.sh verify-workspace   (read-only structural invariants)
+#  15. start the server; ./wordwiki.sh publish; spot-check the site
 # --------------------------------------------------------------------------
 
 cd "$(dirname "$0")"
 
 step() { echo; echo "=== $* ==="; }
 
-step "[1/11] stopping the server"
+step "[1/12] stopping the server"
 ./wordwiki.sh stop
 
-step "[2/11] pulling production db + content from staging"
+step "[2/12] pulling production db + content from staging"
 ./pullDbFromPublic.sh
 
-step "[3/11] repairing pre-existing store corruption (idempotent)"
+step "[3/12] repairing pre-existing store corruption (idempotent)"
 ./wordwiki.sh repair-assertions
 
-step "[4/11] importing categories"
+step "[4/12] importing categories"
 ./wordwiki.sh import-categories
 
-step "[5/11] category import idempotency proof"
+step "[5/12] category import idempotency proof"
 ./wordwiki.sh import-categories --expect-no-changes
 
-step "[6/11] importing lexical forms (+ idempotency proof)"
+step "[6/12] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms
 ./wordwiki.sh import-lexical-forms --expect-no-changes
 
-step "[7/11] publication Phase 0: born-approve existing data (+ idempotency proof)"
+step "[7/12] importing legacy twitter-posts (+ idempotency proof)"
+./wordwiki.sh import-twitter-posts
+./wordwiki.sh import-twitter-posts --expect-no-changes
+
+step "[8/12] publication Phase 0: born-approve existing data (+ idempotency proof)"
 ./wordwiki.sh backfill-publication
 ./wordwiki.sh backfill-publication --expect-no-changes
 
-step "[8/11] normalizing legacy shoebox creation dates (+ idempotency proof)"
+step "[9/12] normalizing legacy shoebox creation dates (+ idempotency proof)"
 ./wordwiki.sh normalize-shoebox-dates
 ./wordwiki.sh normalize-shoebox-dates --expect-no-changes
 
-step "[9/11] verifying the migration"
+step "[10/12] verifying the migration"
 ./wordwiki.sh verify-migration
 
-step "[10/11] verifying the assertion store is structurally well-formed"
+step "[11/12] verifying the assertion store is structurally well-formed"
 ./wordwiki.sh verify-workspace
 
-step "[11/11] starting the server + smoke test"
+step "[12/12] starting the server + smoke test"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break
