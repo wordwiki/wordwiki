@@ -138,7 +138,11 @@ export interface TrimParams {
 }
 
 export const RECORDING_TRIM_PARAMS: TrimParams = {
-    threshold: '0.1%',
+    // 0.03% chosen by the language expert by ear on the threshold listening
+    // page (audio-trim-tuning.md).  Params ride in the derived-content hash,
+    // so changing this re-derives every trim/mp3 on demand; the old artifacts
+    // stay on disk under their own hashes.
+    threshold: '0.03%',
     minDuration: 0.1,
     fade: 0.01,
 };
