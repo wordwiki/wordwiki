@@ -859,8 +859,10 @@ export class TaskTable extends Table<Task> {
     @route(authenticated)
     renderProjectTasks(project_id: number): Markup {
         const tasks = this.tasksForProject.all({project_id});
-        const props = liveReloadableProps([this.fkKey('project_id', project_id)],
-                                          `rabid.task.renderProjectTasks(${project_id})`);
+        // (liveness TEMPORARILY disabled - liveReloadableProps - while the
+        // over-refresh dz observed is diagnosed; dz 2026-07-03)
+        const props = reloadableProps([this.fkKey('project_id', project_id)],
+                                      `rabid.task.renderProjectTasks(${project_id})`);
         if (tasks.length === 0)
             return [h.div, props, [h.p, {class: 'text-muted'}, 'No tasks yet.']];
         // Tasks come open-first then done (tasksForProject ORDER BY status='done').
@@ -910,7 +912,15 @@ export class TaskTable extends Table<Task> {
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
                         ...(canEdit
-                            ? {onclick: `txd(${JSON.stringify([sel(this.rowKey(id))])})\`rabid.task.toggleDone(${id})\``}
+                            // Speculate the project fk key TOO: on the project
+                            // page the toggle reorders the list (the done wall),
+                            // so the list wrapper is the section that swaps -
+                            // anticipated here, it arrives in the same round
+                            // trip (containment pruning drops this block's own
+                            // section); left out, it would straggler-reload the
+                            // whole list AFTER the block swap (the double
+                            // refresh dz saw).
+                            ? {onclick: `txd(${JSON.stringify([sel(this.rowKey(id)), sel(this.fkKey('project_id', t.project_id))])})\`rabid.task.toggleDone(${id})\``}
                             : {disabled: ''}),
                         'aria-label': `Mark ${t.title || 'task'} done`}],
              [h.div, {class: 'lm-item-primary' + (done ? ' text-muted' : '')},
@@ -1600,8 +1610,9 @@ export class SubtaskTable extends Table<Subtask> {
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
-        const props = liveReloadableProps([this.fkKey('task_id', task_id)],
-                                          `rabid.subtask.renderChecklist(${task_id})`);
+        // (liveness TEMPORARILY disabled - liveReloadableProps - see above)
+        const props = reloadableProps([this.fkKey('task_id', task_id)],
+                                      `rabid.subtask.renderChecklist(${task_id})`);
         return [h.div, props,
             items.length === 0
                 ? undefined

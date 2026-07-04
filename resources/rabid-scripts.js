@@ -219,8 +219,28 @@ function lmResolveSpeculation(deps) {
  */
 function lmApplySwap(response, speculation) {
     hideModalEditor();
+
+    // Leftover (unanticipated) dirty keys from the hybrid response, resolved
+    // against the PRE-swap DOM: reload only the ones that match something.
+    // Unmatched keys are routine emission noise (a provenance fk's new value,
+    // a new row's pk on a page without that fragment - fresh section content
+    // that would match post-swap needs no reload either) and are pruned
+    // silently so they don't read as under-speculation.
+    const stragglers = [];         // [{key, elements}]
+    for(const t of (Array.isArray(response.reloadTargets) ? response.reloadTargets : [])) {
+        let els;
+        try { els = Array.from(document.querySelectorAll(t)); } catch(_e) { els = []; }
+        els = els.filter(el => lmRefreshable(el));
+        if(els.length > 0 && !stragglers.some(s => s.key === t))
+            stragglers.push({key: t, elements: els});
+    }
+    // A section whose element sits INSIDE a straggler-matched element is about
+    // to be re-rendered by that ancestor's reload anyway - swapping it first
+    // would be pure double work (the block-swap-then-whole-list-reload shape).
+    const insideStraggler = (el) =>
+        stragglers.some(s => s.elements.some(a => a === el || a.contains(el)));
+
     const staleKeys = [];
-    const swappedRoots = [];
     for(const section of (Array.isArray(response.sections) ? response.sections : [])) {
         const entry = speculation.sectionsByUrl.get(section.url);
         if(!entry) continue;
@@ -230,6 +250,7 @@ function lmApplySwap(response, speculation) {
                     if(!staleKeys.includes(k)) staleKeys.push(k);
                 continue;
             }
+            if(insideStraggler(el)) continue;
             const tpl = document.createElement('template');
             tpl.innerHTML = section.html;
             const newNodes = Array.from(tpl.content.childNodes);
@@ -240,32 +261,16 @@ function lmApplySwap(response, speculation) {
                 if(n.nodeType === Node.ELEMENT_NODE) {
                     htmx.process(n);
                     lmDebugMark(n, changed);
-                    swappedRoots.push(n);
                 }
         }
     }
 
-    // Leftover (unanticipated) dirty keys from the hybrid response: reload
-    // only the ones that MATCH something on the page - and not content that
-    // just arrived in this round's sections (it is already post-mutation
-    // fresh; e.g. an insert's new-row key now matches the row the list swap
-    // brought in).  Unmatched keys are routine emission noise (a provenance
-    // fk's new value, a new row's pk on a page without that fragment) and
-    // are pruned silently so they don't read as under-speculation.
-    const isFresh = (el) => swappedRoots.some(r => r === el || r.contains(el));
-    const stragglers = [];
-    for(const t of (Array.isArray(response.reloadTargets) ? response.reloadTargets : [])) {
-        let els;
-        try { els = Array.from(document.querySelectorAll(t)); } catch(_e) { els = []; }
-        if(els.some(el => lmRefreshable(el) && !isFresh(el)) && !stragglers.includes(t))
-            stragglers.push(t);
-    }
     if(stragglers.length > 0)
         lmDebugNoteStragglers(stragglers.length);
 
     if(typeof initPickers === 'function')
         initPickers(document);
-    const toReload = [...staleKeys, ...stragglers.filter(t => !staleKeys.includes(t))];
+    const toReload = [...staleKeys, ...stragglers.map(s => s.key).filter(t => !staleKeys.includes(t))];
     if(toReload.length > 0)
         reload(toReload);
 }
