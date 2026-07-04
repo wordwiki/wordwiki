@@ -23,7 +23,7 @@
 
 import {db} from "../liminal/db.ts";
 import {Markup, h} from "../liminal/markup.ts";
-import {reloadableProps, pencilIcon, ForeignKeyField} from "../liminal/table.ts";
+import {reloadableProps, pencilIcon, ForeignKeyField, FieldSet, CheckboxField, type Tuple} from "../liminal/table.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
 import {route, routeMutation, authenticated, hostOrAdmin, selfArg} from "../liminal/security.ts";
@@ -404,9 +404,9 @@ export class VolunteerTimeService {
     }
 
     @route(authenticated)
-    renderForVolunteer(volunteer_id: number, showOrphanTasks = false, showAllWeeks = false): Markup {
-        return renderVolunteerTime(this.model(volunteer_id, showOrphanTasks), volunteer_id,
-                                   showOrphanTasks, showAllWeeks);
+    renderForVolunteer(volunteer_id: number, vt?: Record<string, any>): Markup {
+        const view = timeViewQuery.normalize(vt) as TimeView;
+        return renderVolunteerTime(this.model(volunteer_id, view.orphan_tasks), volunteer_id, view);
     }
 
     // --- Adding ------------------------------------------------------------
@@ -484,13 +484,31 @@ export class VolunteerTimeService {
 // Default to the most recent N weeks (recent-first); "Show all" reveals the rest.
 export const WEEK_WINDOW = 8;
 
+// The Time view's own page-query section (liminal/page-state.md §"the unit of
+// state is the SECTION"): two boolean view knobs, carried as a `{}` argument
+// in the route expression of the Time fragment AND the volunteer detail page.
+// Both default false, so the common view canonicalizes away
+// (/rabid.volunteer.detailPage(7) == the collapsed, own-shift-only view).
+export const timeViewQuery = new FieldSet('time_view', [
+    new CheckboxField('orphan_tasks', {prompt: 'Show other completed tasks', default: false}),
+    new CheckboxField('all_weeks', {prompt: 'Show all weeks', default: false}),
+]);
+export interface TimeView extends Tuple {
+    orphan_tasks: boolean;
+    all_weeks: boolean;
+}
+
 export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
-                                    showOrphanTasks = false, showAllWeeks = false): Markup {
+                                    view: TimeView = {orphan_tasks: false, all_weeks: false}): Markup {
+    const {orphan_tasks: showOrphanTasks, all_weeks: showAllWeeks} = view;
     const domId = `volunteer-time-${volunteer_id}`;
-    const route = (orphans: boolean, all: boolean) =>
-        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${orphans},${all})`;
-    // The reload URL carries both view flags, so a reload (after an add/edit)
-    // keeps the current view; each toggle swaps the fragment in place.
+    // The Time FRAGMENT re-renders itself under the current view (its reload
+    // URL carries it, so an add/edit reload keeps the view); the PAGE URL
+    // carries the same view so a bookmark/refresh reproduces it.
+    const fragmentRoute = (v: TimeView) =>
+        `rabid.volunteer_time.renderForVolunteer(${volunteer_id},${timeViewQuery.literal(v)})`;
+    const pageUrl = (v: TimeView) =>
+        `/rabid.volunteer.detailPage(${volunteer_id},${timeViewQuery.literal(v)})`;
     // The view is derived from the volunteer's timesheet entries and event
     // check-ins, so it registers those tables' volunteer fk keys - which the
     // page's own add/edit/confirm buttons notify automatically.  (Completed
@@ -499,19 +517,24 @@ export function renderVolunteerTime(model: VolunteerTime, volunteer_id: number,
     const props = reloadableProps(
         [rabid.timesheet_entry.fkKey('volunteer_id', volunteer_id),
          rabid.event_checkin.fkKey('volunteer_id', volunteer_id)],
-        route(showOrphanTasks, showAllWeeks), {id: domId});
-    const linkBtn = (label: string, hxGet: string): Markup =>
+        fragmentRoute(view), {id: domId});
+    // A view toggle is a DEPTH/refinement change (page-state.md taxonomy): it
+    // swaps the fragment in place AND updates the page URL via hx-replace-url
+    // (replaceState - refresh keeps the view; Back leaves the page rather than
+    // un-toggling).
+    const toggle = (label: string, next: TimeView): Markup =>
         [h.button, {type: 'button', class: 'btn btn-sm btn-link p-0',
-            'hx-get': hxGet, 'hx-target': `#${domId}`, 'hx-swap': 'outerHTML'}, label];
+            'hx-get': fragmentRoute(next), 'hx-target': `#${domId}`, 'hx-swap': 'outerHTML',
+            'hx-replace-url': pageUrl(next)}, label];
     const addMenu = canManage(volunteer_id) ? renderAddMenu(volunteer_id) : undefined;
     // The orphans toggle governs only the off-shift / un-attended-event tasks;
     // tasks done during a shift/event are shown inline regardless.
-    const orphanToggle = linkBtn(showOrphanTasks ? 'Hide other completed tasks' : 'Show other completed tasks',
-                                 route(!showOrphanTasks, showAllWeeks));
+    const orphanToggle = toggle(showOrphanTasks ? 'Hide other completed tasks' : 'Show other completed tasks',
+                                {...view, orphan_tasks: !showOrphanTasks});
     const windowed = !showAllWeeks && model.weeks.length > WEEK_WINDOW;
     const weeksToggle: Markup = model.weeks.length > WEEK_WINDOW
-        ? linkBtn(showAllWeeks ? `Show last ${WEEK_WINDOW} weeks` : `Show all ${model.weeks.length} weeks`,
-                  route(showOrphanTasks, !showAllWeeks))
+        ? toggle(showAllWeeks ? `Show last ${WEEK_WINDOW} weeks` : `Show all ${model.weeks.length} weeks`,
+                 {...view, all_weeks: !showAllWeeks})
         : undefined;
     const footer: Markup = [h.div, {class: 'd-flex align-items-center flex-wrap gap-3 mt-1'},
                             weeksToggle, orphanToggle, addMenu];

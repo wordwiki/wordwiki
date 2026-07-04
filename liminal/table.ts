@@ -1000,8 +1000,9 @@ export class BooleanField extends Field {
  * A boolean rendered as an actual checkbox - for PARAMETER DIALOGS (search
  * filters etc.), not record edits: an unchecked checkbox submits nothing,
  * which would defeat the record editor's before-value change detection (use
- * BooleanField's Yes/No select there).  Dialog dispatch that reads the form
- * client-side (e.g. lmNavigateFormRoute) sees checkboxes as true/false.
+ * BooleanField's Yes/No select there).  Its value is boolean throughout (the
+ * FieldSet page-query codec: parseSimpleInput / fromLiteral / literal all
+ * agree), so a search dialog's toggle round-trips include_archived:true/false.
  */
 export class CheckboxField extends Field {
     constructor(name: string, options: FieldOptions = {}) {
@@ -1030,9 +1031,21 @@ export class CheckboxField extends Field {
         ];
     }
 
-    // A checkbox posts 'on' when checked and is absent when unchecked.
+    // A checkbox posts 'on' when checked and is absent when unchecked.  A
+    // parameter dialog's value is BOOLEAN (this field is dialog-only, never a
+    // stored column - see the class doc), so the whole codec is boolean:
+    // parse, route-literal, and canonical form all agree, and a FieldSet query
+    // toggle round-trips include_archived:true/false without drifting to 1/0.
     parseSimpleInput(value: string): any {
-        return value ? 1 : 0;
+        return !!value;
+    }
+
+    // Route literal must be an actual boolean (a page-query knob); reject junk
+    // so a hand-typed URL can't smuggle a string/number in.
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'boolean')
+            throw new Error(`${this.name}: expected true or false`);
+        return v;
     }
 }
 
@@ -1327,6 +1340,19 @@ export class DateTimeField extends Field {
         const [, year, month, day, hour, minute, second] = match;
         return `${year}-${month}-${day} ${hour}:${minute}:${second ?? '00'}`;
     }
+
+    // A page-query route literal is user-typeable text (FieldSet.normalize):
+    // require a SQLite 'YYYY-MM-DD HH:MM[:SS]' string so a hand-typed URL
+    // can't smuggle junk into a datetime filter.  (The stored form uses a
+    // space; tolerate the 'T' the input uses and normalize it.)
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'string')
+            throw new Error(`${this.name}: expected a datetime string`);
+        const m = v.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?$/);
+        if(!m)
+            throw new Error(`${this.name}: expected "YYYY-MM-DD HH:MM[:SS]", got "${v}"`);
+        return `${m[1]} ${m[2]}:${m[3] ?? '00'}`;
+    }
 }
 
 /**
@@ -1369,6 +1395,13 @@ export class DateField extends Field {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
             throw new Error(`Invalid date format. Expected "YYYY-MM-DD", got "${value}"`);
         return value;
+    }
+
+    // Page-query route literal: require 'YYYY-MM-DD' (see DateTimeField).
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v))
+            throw new Error(`${this.name}: expected a "YYYY-MM-DD" date, got ${JSON.stringify(v)}`);
+        return v;
     }
 }
 

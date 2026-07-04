@@ -261,6 +261,13 @@ button `deps` (usually one `sel(fkKey(...))` or `sel(rowKey(id))`).
 validation depend on it); polymorphic (owner_table, owner_id) pairs can't be
 FK fields — hand-mint their keys and hand-maintain their targets.
 
+**A page with filters / paging / view state** (a search box, a "show all"
+toggle, a date range): the view state rides in the route expression as a `{}`
+argument decoded by a `FieldSet` — see **liminal/page-state.md** (rabid
+worked example: `volunteer.search`).  Filter changes navigate
+(`{action:'navigate', url}`); depth/refinement toggles swap the fragment and
+`hx-replace-url` the page URL.
+
 **Tests**: direct table calls have no collector — assert on merged targets via
 `invoke()` (both testing.ts harnesses install the collector, mirroring
 rpcHandler) or `withDirtyTargets(fn)`.  Emission specifics live in
@@ -292,4 +299,5 @@ rabid/speculative_refresh_test.ts.
 | tx/txd, reload front door, swap mechanics, speculation resolution | resources/rabid-scripts.js |
 | lmRefreshable / lm-read-only gate, debug mode, liveness poller, modal editor | resources/liminal-scripts.js |
 | debug mark styles | resources/liminal.css |
+| on-page view state (filters/paging in the URL, FieldSet) | liminal/page-state.md |
 | remaining future work (fine-grained insert/delete) | liminal-refresh-future-work.md |

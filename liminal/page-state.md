@@ -1,8 +1,10 @@
 # On-page state: pages as pure functions of their route expression
 
 *(liminal/table.ts `FieldSet`, liminal/action.ts `renderParamForm`; worked
-examples in wordwiki/change-feed.ts and wordwiki/activity-report.ts.  Written
-to inform future Claudes - read this before building any page with filters,
+examples: wordwiki/change-feed.ts and wordwiki/activity-report.ts; in rabid,
+`volunteer.search` (the filter → navigation case) and volunteer_time.ts's Time
+view (a configurable SECTION with hx-replace-url depth toggles).  Written to
+inform future Claudes - read this before building any page with filters,
 paging, anchors, or other view state.)*
 
 ## The principle
@@ -103,6 +105,16 @@ editors, but any username string stays URL-typeable and filterable).
 Nullable-with-default vs nullable-no-default matters: `max_rows` has
 `default: 1000` so it always normalizes to a number; `months` has NO default
 so null survives normalize and means "no limit" (activity-report.ts).
+
+**Dates (rabid) vs HLC timestamps (wordwiki).**  wordwiki's versioned store
+uses `TimestampField` (a raw HLC number).  rabid stores SQLite date strings,
+so a rabid date/time filter uses `DateField` (`YYYY-MM-DD`) or `DateTimeField`
+(`YYYY-MM-DD HH:MM:SS`) - NOT `TimestampField`.  Both now validate STRUCTURALLY
+in `fromLiteral` (a hand-typed URL can't smuggle junk into a date filter),
+matching their `parseSimpleInput` bar - shape, not calendar validity.  A
+boolean query knob (rendered as a checkbox) uses `CheckboxField`, whose whole
+codec is boolean so `flag:true/false` round-trips canonically
+(rabid/volunteer.ts `volunteerQuery`).
 
 ## The page pattern
 

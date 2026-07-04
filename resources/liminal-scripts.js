@@ -92,33 +92,13 @@ function lmNavigableClick(event) {
         link.click();
 }
 
-/**
- * Dialog dispatch for "the action is a NAVIGATION": build a route expression
- * from the form's values and navigate to it, so the resulting page has a
- * real URL (sharable, back-button-able, refresh-stable).  E.g. a search
- * dialog with text="Dav" and an only_active checkbox navigates to
- *   /rabid.volunteer.search({text:"Dav",only_active:true})
- *
- * Wire it as the form's dispatch:
- *   onsubmit="lmNavigateFormRoute(event, 'rabid.volunteer.search')"
- *
- * Text-ish fields contribute JSON-escaped string args (safe: the route
- * interpreter parses them as literals - there is no eval); empty ones are
- * omitted.  Checkboxes contribute true/false.
- */
-function lmNavigateFormRoute(event, routeFn) {
-    event.preventDefault();
-    const parts = [];
-    for (const el of event.target.elements) {
-        if (!el.name || el.type === 'submit' || el.type === 'button') continue;
-        if (el.type === 'checkbox')
-            parts.push(`${el.name}:${el.checked}`);
-        else if (el.value !== '')
-            parts.push(`${el.name}:${JSON.stringify(el.value)}`);
-    }
-    hideModalEditor();
-    window.location.assign(`/${routeFn}({${parts.join(',')}})`);
-}
+// (Removed: lmNavigateFormRoute - the client-side "build a route expression
+// from a form and navigate" helper.  Filter dialogs now do this SERVER-side
+// via a FieldSet: the dialog dispatches a route (e.g.
+// rabid.volunteer.applySearch) that runs parseFormValues → literal and
+// returns {action:'navigate', url}.  That path gives canonical URLs - default
+// values omitted, unknown keys rejected, values type-coerced - which the JS
+// builder couldn't.  See liminal/page-state.md.)
 
 /**
  * Refresh participation gate.

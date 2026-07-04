@@ -480,7 +480,7 @@ test("renderForVolunteer windows to the last WEEK_WINDOW weeks by default; 'show
             assert(hasText(def, `Show all ${total} weeks`));
             assert(hasText(def, `Last ${WEEK_WINDOW} weeks`));     // total reflects the window
 
-            const all = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob},false,true)`);
+            const all = await renderRoute(`rabid.volunteer_time.renderForVolunteer(${bob},{all_weeks:true})`);
             assertEquals(weekCount(all), total);
             assert(hasText(all, `Show last ${WEEK_WINDOW} weeks`));
         });

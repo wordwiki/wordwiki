@@ -3,7 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navChevron, PublicViewable } from "../liminal/table.ts";
+import { Table, FieldSet, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navChevron, PublicViewable, type Tuple } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
 import {block} from "../liminal/strings.ts";
@@ -11,6 +11,7 @@ import {Markup, h} from "../liminal/markup.ts";
 import {lazy} from '../liminal/lazy.ts';
 import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
+import * as volunteer_time from './volunteer_time.ts';
 import {rabid} from './rabid.ts';
 import * as security from "../liminal/security.ts";
 import {route, authenticated} from "../liminal/security.ts";
@@ -114,6 +115,22 @@ export type VolunteerOpt = Partial<Volunteer>;
 // the import-cycle-sensitive volunteer-activity.ts can share it; re-exported here
 // so existing `import {shortName} from "./volunteer.ts"` callers keep working.
 export {shortName, memberShortName, type NamedVolunteer, type MemberName} from "./volunteer-name.ts";
+
+// The volunteer-search page query (liminal/page-state.md): the view state that
+// rides in the search page's route expression, as a `{}` argument.  One
+// FieldSet declaration is the URL codec (normalize/literal), the
+// auto-generated filter dialog (renderParamForm over its fields), and the
+// typed query below.  `text` defaults to '' and `include_archived` to false,
+// so the common view (current roster, no term) canonicalizes to the shortest
+// URL `/rabid.volunteer.search({})`.
+export const volunteerQuery = new FieldSet('volunteer_query', [
+    new StringField('text', {prompt: 'Name or email starts with…', default: ''}),
+    new CheckboxField('include_archived', {prompt: 'Include archived volunteers', default: false}),
+]);
+export interface VolunteerQuery extends Tuple {
+    text: string;
+    include_archived: boolean;
+}
 
 export class VolunteerTable extends Table<Volunteer> {
     
@@ -234,12 +251,12 @@ export class VolunteerTable extends Table<Volunteer> {
     // ------------------------------------------------------------------------
     //
     // The popup-action model where the action's result is a PAGE: the dialog
-    // collects {text, include_archived} and navigates to
-    //   /rabid.volunteer.search({text:"Dav",include_archived:false})
-    // (lmNavigateFormRoute builds the route expression from the form), so a
-    // search has a real URL - sharable, back-button-able, refresh-stable - and
-    // both the page's own Search button and the dialog pre-populate from the
-    // current search, making refinement natural.
+    // collects the volunteerQuery `{}` and applySearch navigates to
+    //   /rabid.volunteer.search({text:"Dav"})
+    // (the FieldSet builds the canonical URL server-side - see page-state.md),
+    // so a search has a real URL - sharable, back-button-able, refresh-stable
+    // - and both the page's own Search button and the dialog pre-populate from
+    // the current search, making refinement natural.
 
     // Matches volunteers whose email starts with the term, or whose name has a
     // word starting with the term (the leading-space trick makes the term match
@@ -258,17 +275,18 @@ export class VolunteerTable extends Table<Volunteer> {
 /**/          ORDER BY name`);
     }
 
-    // The search results page.  Args arrive from the URL's object literal,
-    // which our own dialog produced with these exact types (text fields as
-    // strings, checkboxes as booleans - see lmNavigateFormRoute); routes
-    // trust their forms, no per-route normalizers.  Absent include_archived
-    // defaults to false (the current roster is the common case; archived
-    // volunteers are hidden unless explicitly asked for).
+    // The search results page.  Its view state (search text, archived toggle)
+    // is a page-query `{}` argument carried in the route expression and
+    // decoded by volunteerQuery - the ONE declaration that is the URL codec,
+    // the auto-generated dialog, and the typed query (see liminal/page-state.md).
+    // normalize() is the per-route guard: unknown keys rejected, each value
+    // coerced by its field's type, absent/null → default (include_archived
+    // defaults to false - the current roster is the common case).
     @route(authenticated)
-    search(args: {text?: string, include_archived?: boolean} = {}): templates.Page {
-        const text = args.text ?? '';
-        const include_archived = args.include_archived ?? false;
-        return templates.page('Volunteers — Search', this.renderSearch(text, include_archived));
+    search(q?: Record<string, any>): templates.Page {
+        const query = volunteerQuery.normalize(q) as VolunteerQuery;
+        return templates.page('Volunteers — Search',
+                              this.renderSearch(query.text, query.include_archived));
     }
 
     renderSearch(text: string, include_archived: boolean): Markup {
@@ -284,15 +302,19 @@ export class VolunteerTable extends Table<Volunteer> {
     // "Search by name…" opens the full parameter dialog, pre-populated with the
     // CURRENT search so it refines rather than restarts.
     searchMenu(text: string, include_archived: boolean): Markup {
-        const dialogUrl =
-            `/rabid.volunteer.searchDialog({text:${JSON.stringify(text)},include_archived:${include_archived}})`;
+        // All URLs go through volunteerQuery.literal (never string-built), so
+        // they are canonical - defaults omitted, equal views equal URLs.
+        const searchUrl = (q: VolunteerQuery) =>
+            `/rabid.volunteer.search(${volunteerQuery.literal(q)})`;
         return action.actionMenu([
             {label: 'Current volunteers',
-             link: templates.pageLinkProps('/rabid.volunteer.search({include_archived:false})')},
+             link: templates.pageLinkProps(searchUrl(volunteerQuery.normalize({include_archived: false}) as VolunteerQuery))},
             {label: 'All volunteers',
-             link: templates.pageLinkProps('/rabid.volunteer.search({include_archived:true})')},
+             link: templates.pageLinkProps(searchUrl(volunteerQuery.normalize({include_archived: true}) as VolunteerQuery))},
             'divider',
-            {label: 'Search by name…', mode: {kind: 'modal', dialogUrl}},
+            {label: 'Search by name…',
+             mode: {kind: 'modal',
+                    dialogUrl: `/rabid.volunteer.searchDialog(${volunteerQuery.literal({text, include_archived})})`}},
         ], {ariaLabel: 'Search volunteers'});
     }
 
@@ -379,22 +401,31 @@ export class VolunteerTable extends Table<Volunteer> {
     }
 
     // The search-parameter dialog, pre-populated with the current search so it
-    // refines rather than restarts.  Submitting navigates (lmNavigateFormRoute
-    // builds the route expression from the form: text fields as JSON-escaped
-    // strings, checkboxes as booleans) - the result is the search PAGE.
+    // refines rather than restarts.  The dialog IS the schema: its inputs are
+    // volunteerQuery.fields, so adding a filter to the FieldSet adds it to the
+    // URL, the dialog, and the typed query at once.  Submitting dispatches
+    // applySearch (server-side form → canonical URL → navigate).
     @route(authenticated)
-    searchDialog(args: {text?: string, include_archived?: boolean} = {}): Markup {
-        const text = args.text ?? '';
-        const include_archived = args.include_archived ?? false;
+    searchDialog(q?: Record<string, any>): Markup {
+        const query = volunteerQuery.normalize(q) as VolunteerQuery;
         return action.renderParamForm(
-            [new StringField('text', {prompt: 'Name or email starts with…', nullable: true}),
-             new CheckboxField('include_archived', {prompt: 'Include archived volunteers'})],
-            {text, include_archived},
+            volunteerQuery.fields, query,
             {
                 title: 'Search volunteers',
                 submitLabel: 'Search',
-                dispatch: {onsubmit: "lmNavigateFormRoute(event, 'rabid.volunteer.search')"},
+                dispatch: {onsubmit: 'event.preventDefault(); tx`rabid.volunteer.applySearch(${getFormJSON(event.target)})`'},
             });
+    }
+
+    // Filter-dialog postback → canonical search URL → real navigation (a
+    // distinct filter is a distinct view; Back walks filter history).
+    // parseFormValues reads the dialog's COMPLETE state (empty inputs fall to
+    // defaults), then literal renders the shortest canonical URL.
+    @route(authenticated)
+    applySearch(form: Record<string, any>): any {
+        const query = volunteerQuery.parseFormValues(form) as VolunteerQuery;
+        return {action: 'navigate',
+                url: `/rabid.volunteer.search(${volunteerQuery.literal(query)})`};
     }
 
     // ------------------------------------------------------------------------
@@ -404,18 +435,27 @@ export class VolunteerTable extends Table<Volunteer> {
     // Full page for one volunteer (navigated to by clicking the name in the list):
     // contact info at the top.  Timesheet entries, committed tasks, etc. will be
     // added below later.
+    // `vt` is the Time-view section's page-query state (see
+    // volunteer_time.timeViewQuery); threaded through so a bookmark/refresh of
+    // an expanded Time view reproduces it.  Normalized where it's consumed
+    // (renderForVolunteer), so the page just passes the literal along.
     @route(authenticated)
-    detailPage(volunteer_id: number): templates.Page {
+    detailPage(volunteer_id: number, vt?: Record<string, any>): templates.Page {
         const v = this.getById(volunteer_id);
-        return templates.page(`${v.name} — Volunteer`, this.renderDetail(volunteer_id));
+        return templates.page(`${v.name} — Volunteer`, this.renderDetail(volunteer_id, vt));
     }
 
     // The detail body, as a reloadable fragment (so an edit save re-renders it).
+    // The fragment's reload URL carries `vt` so a detail reload (a record edit)
+    // preserves the embedded Time view's current expansion.
     @route(authenticated)
-    renderDetail(volunteer_id: number): Markup {
+    renderDetail(volunteer_id: number, vt?: Record<string, any>): Markup {
         const v = this.getById(volunteer_id);
         const f = this.fieldsByName;
-        const props = this.reloadableItemProps(volunteer_id, `rabid.volunteer.renderDetail(${volunteer_id})`);
+        const vtLiteral = volunteer_time.timeViewQuery.literal(
+            volunteer_time.timeViewQuery.normalize(vt));
+        const props = this.reloadableItemProps(volunteer_id,
+            `rabid.volunteer.renderDetail(${volunteer_id},${vtLiteral})`);
         props.class = 'container py-3 ' + props.class;
 
         // Empty fields are ELIDED (no "Label: —" rows) - even on your own
@@ -468,7 +508,7 @@ export class VolunteerTable extends Table<Volunteer> {
             ],
 
             [h.h4, {class: 'mt-4'}, 'Time'],
-            rabid.volunteer_time.renderForVolunteer(volunteer_id),
+            rabid.volunteer_time.renderForVolunteer(volunteer_id, vt),
 
             // The volunteer's own 1-1 project: personal tasks, created lazily on
             // the first add (self-or-host editable, via the owner delegation).
