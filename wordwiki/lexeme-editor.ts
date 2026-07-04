@@ -515,7 +515,7 @@ export class LexemeEditor {
         return (
             ['div', {class: `-entry-${entry_id}- container py-3`,
                      'hx-get': hxGet,
-                     'hx-trigger': 'reload', 'hx-swap': 'outerHTML'},
+                     'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
              this.renderModeToggle(entry_id, entryTuple, mode, opts),
              ['h2', {}, heading || 'No spellings'],
              mode === 'review'
@@ -652,7 +652,7 @@ export class LexemeEditor {
         const fragmentProps = {
             class: `lex-relation mt-2 -rel-${parent_fact_id}-${rf.tag}-`,
             'hx-get': `${R}.renderRelationFragment(${entry_id}, ${parent_fact_id}, '${rf.tag}')`,
-            'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
+            'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
         };
         const header =
             ['div', {class:'d-flex align-items-center gap-2 lex-relation-header'},
@@ -707,7 +707,7 @@ export class LexemeEditor {
             ['div', {class: `-fact-${fact_id}- lm-editable d-flex align-items-start `
                             + `${pending ? 'lm-pending-fact ' : ''}${extraClasses}`,
                      'hx-get': `${R}.renderTupleFragment(${entry_id}, ${fact_id})`,
-                     'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
+                     'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
                      onclick: 'lmEditableClick(event)'},
              pending ? ['span', {class:'lm-pending-dot', title:'unapproved change'}, ''] : [],
              ['div', {class:'flex-grow-1'}, this.renderTupleValues(rf, current)],
@@ -1005,7 +1005,7 @@ export class LexemeEditor {
                 class: `-review-group-${t.id}- lm-cl-group`,
                 'hx-get': `${R}.renderReviewGroupFragment(${entry_id}, ${t.id}, `
                         + `'${opts.participant}', '${opts.full ? 'full' : ''}', ${opts.since})`,
-                'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
+                'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
             },
             header: this.changeGroupHeader(entry_id, t.id, t.schema, review, pending,
                                            pending ? undefined : receipt),
@@ -1046,7 +1046,7 @@ export class LexemeEditor {
         const n = this.entryPendingCount(this.entryTuple(entry_id), p);
         return ['span', {class: `-review-pending-${entry_id}- text-muted small`,
                          'hx-get': `${R}.renderReviewPending(${entry_id}, '${p}')`,
-                         'hx-trigger': 'reload', 'hx-swap': 'outerHTML'},
+                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`];
     }
 

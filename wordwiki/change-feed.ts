@@ -348,7 +348,7 @@ export class ChangeFeed {
             attrs: {
                 class: `-feed-clump-${c.entry_id}-${c.to}- lm-cl-group lm-feed-clump`,
                 'hx-get': `${F}.renderFeedClump(${c.entry_id}, ${c.from}, ${c.to}, ${anchor})`,
-                'hx-trigger': 'reload', 'hx-swap': 'outerHTML',
+                'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
             },
             header: this.clumpHeader(c, anchor),
             events,

@@ -1753,7 +1753,13 @@ export function sel(key: string): string { return '.' + key; }
 export function reloadableProps(keys: string[], reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
     return Object.assign({
         'hx-get': reloadURL,
-        'hx-trigger':'reload', 'hx-swap': 'outerHTML',
+        // 'consume': htmx.trigger dispatches BUBBLING events, so without it a
+        // nested fragment's reload would bubble up and ALSO fire every
+        // ancestor fragment's reload listener - re-rendering whole wrappers
+        // on member refreshes (visible on the long-poll path, which reloads
+        // via events; the one-trip swap path doesn't).  consume stops the
+        // handled event's propagation (htmx trigger modifier).
+        'hx-trigger':'reload consume', 'hx-swap': 'outerHTML',
         'class': keys.join(' '),
     },
                          extraProps);

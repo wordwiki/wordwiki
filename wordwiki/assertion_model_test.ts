@@ -531,14 +531,14 @@ test("editor: self and parent fragment routes render with their reload wiring", 
         const tupleFrag = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.renderTupleFragment(1000, 1003)'));
         const tupleRoot = find(tupleFrag, n => String(attr(n, 'class') ?? '').includes('-fact-1003-'))!;
         assertExists(tupleRoot, 'tuple fragment carries its reload tag');
-        assertEquals(attr(tupleRoot, 'hx-trigger'), 'reload');
+        assertEquals(attr(tupleRoot, 'hx-trigger'), 'reload consume');
         assertStringIncludes(attr(tupleRoot, 'hx-get'), 'renderTupleFragment(1000, 1003)');
         assert(hasText(tupleFrag, 'a cat'));
 
         const relFrag = await as(fx, 'djz', () => renderRoute(fx.ww, `wordwiki.lexeme.renderRelationFragment(1000, 1000, 'spl')`));
         const relRoot = find(relFrag, n => String(attr(n, 'class') ?? '').includes('-rel-1000-spl-'))!;
         assertExists(relRoot, 'relation fragment carries its reload tag');
-        assertEquals(attr(relRoot, 'hx-trigger'), 'reload');
+        assertEquals(attr(relRoot, 'hx-trigger'), 'reload consume');
         assert(hasText(relFrag, 'cat'));
     });
 });

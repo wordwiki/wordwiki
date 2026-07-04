@@ -337,7 +337,7 @@ window.addEventListener('message', (e) => {
     document.querySelectorAll('object[type="image/svg+xml"]').forEach(o => {
         const data = o.getAttribute('data') || '';
         if (data.includes(', ' + m.boundingGroupId + ')')) {
-            const fragment = o.closest('[hx-trigger="reload"]');
+            const fragment = o.closest('[hx-trigger^="reload"]');
             if (fragment && window.htmx) htmx.trigger(fragment, 'reload');
         }
     });

@@ -59,8 +59,12 @@ Three granularities, all single-integer keys (no compound keys):
 ## Registration (the DOM side)
 
 A *reloadable fragment* is an element carrying dep-key classes plus its own
-re-render route: `hx-get=<route expr>`, `hx-trigger="reload"`,
-`hx-swap="outerHTML"`.  Mint with `reloadableProps(keys, reloadURL, extraProps)`
+re-render route: `hx-get=<route expr>`, `hx-trigger="reload consume"`,
+`hx-swap="outerHTML"`.  The `consume` modifier matters: htmx.trigger events
+BUBBLE, so without it a nested fragment's reload would also fire every
+ancestor fragment's listener (whole wrappers re-rendering on member
+refreshes — visible on the long-poll path, which reloads via events).
+Mint with `reloadableProps(keys, reloadURL, extraProps)`
 (liminal/table.ts); `Table.reloadableItemProps(id, url)` is the row/table
 shorthand.  NOTE: `extraProps.class` *overwrites* the keys class — merge classes
 yourself if you must (or use a purpose-built wrapper like `liveReloadableProps`).
