@@ -531,4 +531,5 @@ rabid/speculative_refresh_test.ts.
 | debug mark styles | resources/liminal.css |
 | on-page view state (filters/paging in the URL, FieldSet) | this file, § On-page view state |
 | FieldSet codec (normalize/literal/parseFormValues), field types | liminal/table.ts |
+| content-addressed JS/CSS (cache-bust via a content store) | liminal/assets.ts + prod-caddy-asset-caching.md |
 | remaining future work (fine-grained insert/delete) | liminal-refresh-future-work.md |

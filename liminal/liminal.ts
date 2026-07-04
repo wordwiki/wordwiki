@@ -32,6 +32,7 @@ import {exists as fileExists} from 'std/fs/mod.ts';
 import * as security from './security.ts';
 import * as dirty from './dirty.ts';
 import * as live from './live.ts';
+import * as assets from './assets.ts';
 import {route, authenticated} from './security.ts';
 import * as browserAgent from './browser-agent.ts';
 import * as date from './date.ts';
@@ -206,6 +207,21 @@ export abstract class LiminalApp {
 
     // ----- Overridable hooks (sensible defaults) ----------------------------
 
+    /** Config for content-addressing the app's own JS/CSS at startup (see
+     *  liminal/assets.ts).  Default: derive from resourceContentDirs when it
+     *  exposes both a '/resources/' source mount and a '/content/' store mount
+     *  (rabid).  Apps that mount their dirs differently (wordwiki serves '/'
+     *  from the run dir) override this.  Return undefined to disable ingestion
+     *  (assets then serve from the plain '/resources/' path as before). */
+    protected async assetIngestConfig(): Promise<assets.AssetIngestConfig | undefined> {
+        const dirs = await this.resourceContentDirs();
+        const resourceDir = dirs['/resources/'];
+        const contentRootDir = dirs['/content/'];
+        if(!resourceDir || !contentRootDir) return undefined;
+        return {resourceDir, resourceUrlPrefix: '/resources/',
+                contentRootDir, contentRootUrl: '/content/'};
+    }
+
     /** The declarative tables whose schema is checked against the db at every
      *  startup (schema-upgrade.ts; mismatch refuses to serve).  Defaults to the
      *  app's `tables` property - both rabid and wordwiki declare one.  Note
@@ -336,10 +352,25 @@ export abstract class LiminalApp {
         } catch { /* marker may be absent on an older db; ignore */ }
 
         const contentdirs = await this.resourceContentDirs();
+
+        // Content-address the app's own JS/CSS so a changed asset is never
+        // silently stale (see liminal/assets.ts).  The store lives under the
+        // already-served '/content/' mount, so no new static dir is needed.
+        try {
+            const ingest = await this.assetIngestConfig();
+            if(ingest) await assets.internAssets(ingest);
+        } catch(e) {
+            console.warn(`asset ingest skipped (${e}); serving /resources as before`);
+        }
+
         await new DenoHttpServer({port: config.port,
                                   hostname: config.hostname,
                                   baseUrl,
                                   contentdirs, contentfiles: {},
+                                  // /content/ and /derived/ are content-addressed
+                                  // stores (photos, audio, and the JS/CSS asset
+                                  // store) - cache them immutably.
+                                  immutableContentPrefixes: ['/content/', '/derived/'],
                                   requestHandlerPaths: this.requestHandlerPaths()}
                                  ).run();
     }

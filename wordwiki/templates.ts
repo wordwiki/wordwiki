@@ -3,6 +3,7 @@
 import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
 import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
+import {assetUrl} from "../liminal/assets.ts";
 
 export interface PageContent {
     title?: any;
@@ -76,9 +77,9 @@ export function htmxPageTemplate(content: PageContent): any {
           config.bootstrapCssLink,
           // Shared MMO theme (accent + link treatment + type), same file the
           // public site loads; then framework + app styles.
-          ['link', {href: '/resources/site-theme.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/liminal.css', rel:'stylesheet', type:'text/css'}],
+          ['link', {href: assetUrl('/resources/site-theme.css'), rel:'stylesheet', type:'text/css'}],
+          ['link', {href: assetUrl('/resources/instance.css'), rel:'stylesheet', type:'text/css'}],
+          ['link', {href: assetUrl('/resources/liminal.css'), rel:'stylesheet', type:'text/css'}],
           htmxScriptTag(),
           ['script', {}, block`
 /**/       function playAudio(src) {
@@ -104,9 +105,9 @@ export function htmxPageTemplate(content: PageContent): any {
           content.liveConfig
               ? ['script', {}, `window.__liminalLive = ${JSON.stringify(content.liveConfig)};`]
               : undefined,
-          ['script', {src: '/resources/liminal-scripts.js'}],
-          ['script', {src: '/resources/rabid-scripts.js'}],
-          ['script', {src: '/resources/lexeme-editor-scripts.js'}],
+          ['script', {src: assetUrl('/resources/liminal-scripts.js')}],
+          ['script', {src: assetUrl('/resources/rabid-scripts.js')}],
+          ['script', {src: assetUrl('/resources/lexeme-editor-scripts.js')}],
          ]]);
 }
 
@@ -245,9 +246,9 @@ export function pageTemplate(content: PageContent): any {
           config.bootstrapCssLink,
           // Shared MMO theme (accent + link treatment + type), same file the
           // public site and the htmx editor load.
-          ['link', {href: '/resources/site-theme.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          ['link', {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
+          ['link', {href: assetUrl('/resources/site-theme.css'), rel:'stylesheet', type:'text/css'}],
+          ['link', {href: assetUrl('/resources/instance.css'), rel:'stylesheet', type:'text/css'}],
+          ['link', {href: assetUrl('/resources/page-editor.css'), rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
 /**/           function playAudio(src) {
 /**/             const audioPlayer = document.getElementById("audioPlayer");

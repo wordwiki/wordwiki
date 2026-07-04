@@ -4,6 +4,7 @@ import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
 import {h} from '../liminal/markup.ts';
 import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
+import {assetUrl} from "../liminal/assets.ts";
 
 export interface PageContent {
     title?: any;
@@ -67,18 +68,22 @@ export function pageTemplate(content: PageContent): any {
           htmxConfigMeta(),
           content.title !== undefined ? [h.title, {}, content.title] : undefined,
           config.bootstrapCssLink,
-          [h.link, {href: '/resources/instance.css', rel:'stylesheet', type:'text/css'}],
-          [h.link, {href: '/resources/page-editor.css', rel:'stylesheet', type:'text/css'}],
-          [h.link, {href: '/resources/context-menu.css', rel:'stylesheet', type:'text/css'}],
+          // Self-hosted css/js go through assetUrl(): content-addressed URLs
+          // once interned at startup (liminal/assets.ts), the plain
+          // /resources/ path otherwise (tests, un-interned).  CDN links
+          // (bootstrap/tom-select) are external and left as-is.
+          [h.link, {href: assetUrl('/resources/instance.css'), rel:'stylesheet', type:'text/css'}],
+          [h.link, {href: assetUrl('/resources/page-editor.css'), rel:'stylesheet', type:'text/css'}],
+          [h.link, {href: assetUrl('/resources/context-menu.css'), rel:'stylesheet', type:'text/css'}],
           // Framework styles before app styles, so rabid.css can override.
-          [h.link, {href: '/resources/liminal.css', rel:'stylesheet', type:'text/css'}],
-          [h.link, {href: '/resources/rabid.css', rel:'stylesheet', type:'text/css'}],
+          [h.link, {href: assetUrl('/resources/liminal.css'), rel:'stylesheet', type:'text/css'}],
+          [h.link, {href: assetUrl('/resources/rabid.css'), rel:'stylesheet', type:'text/css'}],
           // Tom Select: a vanilla-JS filterable <select> picker with a Bootstrap 5
           // theme.  Initialised on .ts-picker selects by rabid-scripts.js (after
           // htmx swaps, so it works on modal-loaded forms).
           [h.link, {href: 'https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css', rel:'stylesheet'}],
           [h.script, {src: 'https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js'}],
-          [h.script, {src: '/resources/context-menu.js'}],
+          [h.script, {src: assetUrl('/resources/context-menu.js')}],
           htmxScriptTag(),
           [h.script, {}, block`
 /**/           let imports = {};
@@ -130,8 +135,8 @@ export function pageTemplate(content: PageContent): any {
               : undefined,
 
           // Framework scripts before app scripts (same ordering rule as the css).
-          [h.script, {src: '/resources/liminal-scripts.js'}],
-          [h.script, {src: '/resources/rabid-scripts.js'}],
+          [h.script, {src: assetUrl('/resources/liminal-scripts.js')}],
+          [h.script, {src: assetUrl('/resources/rabid-scripts.js')}],
           
          ] // body
         ] // html

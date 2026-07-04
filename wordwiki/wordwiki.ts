@@ -1290,6 +1290,18 @@ export class WordWiki extends LiminalApp {
     async resourceContentDirs(): Promise<Record<string, string>> {
         return {'/': './'};
     }
+
+    // wordwiki serves the whole run dir at '/' (Caddy serves the static dirs
+    // directly in prod), so the default '/resources/'+'/content/' derivation
+    // doesn't apply - point the asset ingestion at the run-dir subdirs
+    // explicitly.  transpile.sh has already rsynced resources/ by the time the
+    // server starts (wordwiki.sh), so ingestion reads the final bytes; the
+    // hashed store lands in content/assets, served at /content/assets/.  This
+    // fixes the "wordwiki serves stale transpiled JS" problem.
+    protected override async assetIngestConfig() {
+        return {resourceDir: 'resources', resourceUrlPrefix: '/resources/',
+                contentRootDir: 'content', contentRootUrl: '/content/'};
+    }
     override requestHandlerPaths(): Record<string, (request: server.Request) => Promise<server.Response>> {
         const handler = (request: server.Request) => this.requestHandler(request);
         return {'/ww/': handler, '/page/': handler};

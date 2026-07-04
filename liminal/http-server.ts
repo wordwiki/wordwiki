@@ -131,6 +131,11 @@ interface HttpServerConfig {
     contentdirs?: Record<string,string>;
     contentfiles?: Record<string,string>;
     requestHandlerPaths?: Record<string, (request: Request) => Promise<Response>>;
+    /** URL path prefixes whose files are CONTENT-ADDRESSED (the hash is in the
+     *  path, so the bytes never change under a given URL) - served with
+     *  `Cache-Control: immutable` so the browser never revalidates them.  e.g.
+     *  ['/content/', '/derived/'].  Only set for genuinely immutable stores. */
+    immutableContentPrefixes?: string[];
 }
 
 /**

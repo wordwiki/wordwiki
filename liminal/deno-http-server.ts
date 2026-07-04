@@ -213,7 +213,19 @@ export class DenoHttpServer extends HttpServer {
 
     async serveFileRequest(request: Request, filepath: string) {
         //console.info('serving file request', filepath);
-        return serveFile(request, filepath);
+        const response = await serveFile(request, filepath);
+        // Content-addressed stores (the hash is in the URL) never change under a
+        // given URL, so tell the browser to cache them forever and never
+        // revalidate - removes the per-load conditional round-trip (the win on
+        // high-latency/mobile links).  Production Caddy does the same for the
+        // dirs it serves directly (see prod-caddy-asset-caching.md); this covers
+        // the dev + reverse-proxied-through-deno path.
+        const urlPath = decodeURIComponent(new URL(request.url).pathname);
+        const immutable = (this.config.immutableContentPrefixes ?? [])
+            .some(prefix => urlPath.startsWith(prefix));
+        if(immutable && response.status === 200)
+            response.headers.set('cache-control', 'public, max-age=31536000, immutable');
+        return response;
     }
 }
 
