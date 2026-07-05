@@ -23,3 +23,13 @@ If a new liminal page template breaks JS on Back, it's almost certainly not
 routing its `<head>` through `htmxConfigMeta()`. wordwiki's legacy
 `pageTemplate` doesn't load htmx at all (boost is inert there); the htmx path is
 `htmxPageTemplate` (via coercePageResult). See [[server-restart-protocol]].
+
+**Client-side widget init after a boosted nav.** A page's own inline `<script>`
+using `DOMContentLoaded` does NOT fire on a boosted (htmx) navigation — the
+document is already loaded — so any JS-instantiated Bootstrap widget
+(popovers/tooltips) or picker set up that way goes dead after the first hop.
+Init globally in `resources/rabid-scripts.js` on load AND `htmx:afterSwap`
+instead: `initPickers` (TomSelect) and `initPopovers` (`[data-bs-toggle=popover]`,
+guarded by `bootstrap.Popover.getInstance`) both follow this. Symptom that got
+fixed this way: the activity-report "all active volunteers" popover was dead
+after navigating to the page (verified fixed in-browser 2026-07-05).
