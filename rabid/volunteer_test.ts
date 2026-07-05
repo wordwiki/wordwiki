@@ -101,12 +101,13 @@ test("the list carries no edit affordance - not even for a host/admin (edit from
 
 test("'Add new volunteer' is host/admin-only: in the ☰ for them, and the dialog is server-gated", async () => {
     await withTestDb(async ({ bob, dave }) => {
-        // The ☰ (in the list header) offers the create item to an admin, who can
+        // The ☰ (on the page title) offers the create item to an admin, who can
         // open the dialog.
-        assert(hasText(await asUser(dave, listFor), 'Add new volunteer'));
+        const pageFor = () => renderRoute(`rabid.volunteer.search({})`);
+        assert(hasText(await asUser(dave, pageFor), 'Add new volunteer'));
         await asUser(dave, () => renderRoute('rabid.volunteer.newDialog()'));   // no throw
         // A regular volunteer gets neither the item nor the dialog.
-        assert(!hasText(await asUser(bob, listFor), 'Add new volunteer'));
+        assert(!hasText(await asUser(bob, pageFor), 'Add new volunteer'));
         await asUser(bob, () => assertRejects(() => renderRoute('rabid.volunteer.newDialog()'), Error));
     });
 });

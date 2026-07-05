@@ -291,8 +291,12 @@ export class VolunteerTable extends Table<Volunteer> {
     }
 
     renderSearch(text: string, include_archived: boolean): Markup {
+        // The ☰ (page-level actions: Add volunteer + the search quick-picks/dialog)
+        // sits on the title, like the events page.
         return [h.div, {class: 'container py-3'},
-            [h.h2, {}, 'Volunteers'],
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.h2, {class: 'mb-0'}, 'Volunteers'],
+             this.searchMenu(text, include_archived)],
             this.renderVolunteerList(text, include_archived),
         ];
     }
@@ -340,10 +344,7 @@ export class VolunteerTable extends Table<Volunteer> {
     // /volunteers).  Mirrors renderEventsPage: a container with an h2 title
     // wrapping the standard searchable list.
     renderVolunteersPage(): Markup {
-        return [h.div, {class: 'container py-3'},
-            [h.h2, {}, 'Volunteers'],
-            this.renderSearchableVolunteers(),
-        ];
+        return this.renderSearch('', false);
     }
 
     // The Volunteers section of the home/volunteers pages (a standin - these
@@ -390,11 +391,12 @@ export class VolunteerTable extends Table<Volunteer> {
                others.length ? [sectionHeading('Other volunteers'), others.map(v => this.renderVolunteerRow(v))] : undefined];
 
         const countLabel = `${rows.length} ${scopeLabel}${plural(rows.length, 'volunteer')}`;
+        // The ☰ (search + Add) sits on the page title (renderSearch), not here -
+        // it's page-level actions, and consistent with the events page.  This
+        // fragment shows just the results summary.
         return [
-            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
-             [h.p, {class: 'text-muted small mb-0'},
-              text ? `${countLabel} matching “${text}”` : countLabel],
-             this.searchMenu(text, include_archived)],
+            [h.p, {class: 'text-muted small mb-2'},
+             text ? `${countLabel} matching “${text}”` : countLabel],
             rows.length === 0
                 ? [h.p, {class: 'text-muted'}, 'No volunteers.']
                 : [h.table, {class: 'lm-data-table'},
