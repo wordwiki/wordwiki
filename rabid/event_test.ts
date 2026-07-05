@@ -4,7 +4,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
-import { find, findAll, byClass, hasClass, tagOf, attr, hasText, text } from "../liminal/testing/markup-assert.ts";
+import { find, findAll, byClass, hasClass, tagOf, attr, hasText, text, findByTestId } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 import * as date from "../liminal/date.ts";
 
@@ -49,6 +49,51 @@ test("event rows: one navigable species; the pencil only for hosts", async () =>
 
         const aliceRow = await row(alice);                   // host
         assert(!!find(aliceRow, byClass("lm-edit-pencil")));
+    });
+});
+
+test("event form has the three photo upload controls (shop before/after + event)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const form = await asUser(alice, () =>
+            renderRoute(`rabid.event.renderForm(rabid.event.getById(${id}))`));
+        for(const name of ['shop_before_photo', 'shop_after_photo', 'event_photo']) {
+            const hidden = findAll(form, (m: any) =>
+                Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === name);
+            assertEquals((hidden[0] as any[])?.[1]?.type, 'hidden', `${name}: hidden path input`);
+            const file = findAll(form, (m: any) =>
+                Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.type === 'file'
+                && String((m[1] as any)?.onchange).includes(`"${name}"`));
+            assertEquals(file.length, 1, `${name}: one file picker wired to lmPhotoFieldChange`);
+            assertStringIncludes((file[0] as any[])[1].onchange, 'rabid.photo');
+        }
+    });
+});
+
+test("event detail shows present photos with headlines, and nothing when absent", async () => {
+    await withTestDb(async ({ bob }) => {
+        const id = insertEvent();
+
+        // No photos set -> no photo section at all.
+        const bare = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assertEquals(findByTestId(bare, 'event-photos'), undefined);
+
+        // Set two of the three; the unset one is skipped.
+        const before = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
+        const evt = `content/photos/3ac/3ac${'0'.repeat(61)}.jpg`;
+        asSystem(() => rabid.event.update(id, {shop_before_photo: before, event_photo: evt}));
+
+        const detail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
+        const section = findByTestId(detail, 'event-photos');
+        assert(section, 'photo section present');
+        assert(hasText(section, 'Shop before'));
+        assert(hasText(section, 'Event photo'));
+        assert(!hasText(section, 'Shop after'), 'unset photo has no headline');
+        const imgs = findAll(section, (m: any) => Array.isArray(m) && m[0] === 'img');
+        assertEquals(imgs.length, 2);
+        assertStringIncludes((imgs[0] as any[])[1].src, 'rabid.photo.serve');
+        assertStringIncludes((imgs[0] as any[])[1].src, before);
+        assertStringIncludes((imgs[1] as any[])[1].src, evt);
     });
 });
 

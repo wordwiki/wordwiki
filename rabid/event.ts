@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, FieldSet, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, CheckboxField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableProps, liveReloadableProps, sel, type Tuple } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, FieldSet, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, CheckboxField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron, reloadableProps, liveReloadableProps, sel, type Tuple } from "../liminal/table.ts";
 import * as dirty from "../liminal/dirty.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
 import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
@@ -98,6 +98,13 @@ export interface Event {
     total_cash_collected: number;
 
     notes: string;
+
+    // Optional event photos (content-store paths - see liminal/photo.ts).  The
+    // shop before/after pair is an accountability record that the shop was left
+    // no worse than it was found; event_photo is a general photo of the event.
+    shop_before_photo?: string;
+    shop_after_photo?: string;
+    event_photo?: string;
 }
 
 export type EventOpt = Partial<Event>;
@@ -121,7 +128,17 @@ export class EventTable extends Table<Event> {
             new DateTimeField('start_time', {nullable: true}),
             new DateTimeField('end_time', {nullable: true}),
             new FloatingPointField('total_cash_collected', {default: 0}),
-            new MarkdownField('notes', {default: ''})
+            new MarkdownField('notes', {default: ''}),
+            // Optional event photos (see liminal/photo.ts).  For now these are
+            // plain editable fields on the event record (the auto-generated edit
+            // form renders each as a photo upload/camera control); a nicer
+            // on-page way to add them is planned.
+            new ImageField('shop_before_photo', 'rabid.photo',
+                           {nullable: true, prompt: 'Shop before photo (how the shop looked before the event)'}),
+            new ImageField('shop_after_photo', 'rabid.photo',
+                           {nullable: true, prompt: 'Shop after photo (how the shop was left after the event)'}),
+            new ImageField('event_photo', 'rabid.photo',
+                           {nullable: true, prompt: 'Event photo (optional)'})
         ],[
             'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);'
         ])
@@ -395,6 +412,8 @@ export class EventTable extends Table<Event> {
             // Notes are primary event content: their own clean prose block below
             // the summary, above the tasks.
             this.renderEventNotes(e),
+            // Event photos (if any), each under its own headline.
+            this.renderEventPhotos(e),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
             // heading like the checklists below.
@@ -412,6 +431,24 @@ export class EventTable extends Table<Event> {
         if (!e.notes || !e.notes.trim()) return undefined as unknown as Markup;
         return [h.div, {class: 'lm-markdown lm-doc-lead mb-4'},
             this.fieldsByName.notes.render(e.notes)];
+    }
+
+    // The event's photos (if any), each under its own headline.  The shop
+    // before/after pair is an accountability record (the shop was left no worse
+    // than it was found); event_photo is a general photo of the event.  Absent
+    // photos are simply skipped; nothing renders if there are none.
+    renderEventPhotos(e: Event): Markup {
+        const shots: [string, string | undefined][] = [
+            ['Shop before', e.shop_before_photo],
+            ['Shop after', e.shop_after_photo],
+            ['Event photo', e.event_photo],
+        ];
+        const present = shots.filter(([, p]) => typeof p === 'string' && p !== '');
+        if (present.length === 0) return undefined as unknown as Markup;
+        return [h.div, {class: 'mb-4', 'data-testid': 'event-photos'},
+            present.map(([label, p]) => [h.div, {class: 'mb-3'},
+                [h.h4, {class: 'mt-4'}, label],
+                rabid.photo.img(p!, 512, {class: 'lm-photo-detail'})])];
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
