@@ -18,6 +18,8 @@ Key decisions from dz:
 
 **Why:** editor longevity — the htmx model is simple enough to keep runnable long-term; the client workspace had made the editor a scary distributed system.
 
+**Update 2026-07-05:** a metadata-driven renderer+EDITOR experiment is underway on top of v2 (`wordwiki/render-entry-meta.ts` + `wordwiki.lexeme.metaEditPage`; $view-driven, elder-focused UX tuning in progress). Its refresh is whole-entry-coarse via EditMode 'meta'; the agreed fine-grained design (liminal shape keys over the -fact-/-rel- family) is written down at `<repo>/meta-editor-refresh-design.md` — read that before building it, don't re-derive. Agreed sequencing: visual tuning first, then the refresh work.
+
 **How to apply:** implement in wordwiki/lexeme-editor.ts + a new page template; follow the phases in the design doc. Related: [[wordwiki-assertion-model]], [[testing-approach]].
 
 **Status 2026-06-10 (final): ALL PHASES COMPLETE — the v2 editor IS the editor.** `wordwiki.entry()` serves it (every existing link follows); "Add New Entry" = navbar POST → `wordwiki.newLexemeAction()` → redirect. datawiki/view.ts DELETED; workspace.ts client-sync scaffolding (RemoteDb/rpc/persistProposedAssertions//workspace-rpc-and-sync) removed; legacy pageTemplate no longer loads module scripts (kept only as the document shell for not-yet-migrated pages like home/search/reports). transpile.sh builds ONLY scannedpage/page-editor.ts + page-viewer.ts (both standalone, zero imports — tagger + public site); all sed hackery gone; ~/mmo/scripts cleaned to just those two. Remaining polish: image upload, in-browser recorder, insert-above/below, "(moved)" history annotation, migrating home/search/report pages to templates.page().
