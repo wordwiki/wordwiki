@@ -501,7 +501,7 @@ export class WordWiki extends LiminalApp {
         const metaRendered: any = e
             ? entryMeta.renderEntryMeta(
                   {rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
-                   renderBoundingGroup},
+                   renderBoundingGroup, titleAffordance: pencil},
                   this.dictSchema.relationsByTag[entry.EntryTag], e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
         const column = (label: string, content: any) =>

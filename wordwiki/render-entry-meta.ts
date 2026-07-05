@@ -49,6 +49,9 @@ export interface EntryRenderConfig {
     // it out of this module lets the renderer run on the public export too.
     // Given the bounding_group_id, return the full reference presentation.
     renderBoundingGroup?: (bounding_group_id: number) => Markup;
+    // Optional affordance appended INSIDE the headword <h1> (the standard edit
+    // pencil).  Context-specific, so injected - the public export passes none.
+    titleAffordance?: Markup;
 }
 
 // --- Data-access seam --------------------------------------------------------
@@ -116,6 +119,19 @@ function humanise(key: string): string {
     return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
+/** A markdown value is a `['div.lm-markdown', [blocks]]`.  When it's a SINGLE
+ *  paragraph (the common plain-text case) return its inline children, so it
+ *  reads on the label's line ("Note: text") instead of being bumped to the next
+ *  line by the <p> block.  Genuine multi-block markdown returns undefined (the
+ *  caller renders it as indented containment). */
+function markdownInline(md: Markup): Markup | undefined {
+    if (!Array.isArray(md) || md[0] !== "div") return undefined;
+    const blocks = (md as any)[2];
+    if (!Array.isArray(blocks) || blocks.length !== 1) return undefined;
+    const p = blocks[0];
+    return (Array.isArray(p) && p[0] === "p") ? p[2] : undefined;
+}
+
 const LINE = "lm-me-line";
 
 // --- Renderer ----------------------------------------------------------------
@@ -126,6 +142,7 @@ export class EntryRenderer {
     readonly mode: "read";
     readonly publicKeys: Set<string>;
     readonly renderBoundingGroup?: (id: number) => Markup;
+    readonly titleAffordance?: Markup;
 
     constructor(cfg: EntryRenderConfig) {
         this.rootPath = cfg.rootPath;
@@ -133,6 +150,7 @@ export class EntryRenderer {
         this.mode = cfg.mode ?? "read";
         this.publicKeys = new Set(cfg.publicKeys ?? []);
         this.renderBoundingGroup = cfg.renderBoundingGroup;
+        this.titleAffordance = cfg.titleAffordance;
     }
 
     /** Render one entry as a document, entirely from the schema + $view.
@@ -142,7 +160,8 @@ export class EntryRenderer {
         const glosses = this.collectTitleValues(entryRelation, node, "gloss");
         const title = ["h1", { class: "entry-scope" },
             headwords.join(" / "),
-            glosses.length ? ["span", { class: "entry-gloss-title" }, " : " + glosses.join(" / ")] : ""];
+            glosses.length ? ["span", { class: "entry-gloss-title" }, " : " + glosses.join(" / ")] : "",
+            this.titleAffordance ?? ""];
 
         // Every child relation in $view order, minus the headword (title-only)
         // and the hidden (editorial) relations.
@@ -178,10 +197,17 @@ export class EntryRenderer {
         if (f.style.$shape === "boundingGroup")   // the reference scan (+ link)
             return this.renderBoundingGroup ? this.renderBoundingGroup(Number(value)) : "";
         const opts = options(f);
-        const base: Markup = opts
-            ? (opts[String(value)] ?? String(value))   // code -> display name
-            : f.style.$markdown ? markdownToMarkup(String(value)) : String(value);
-        return this.decorate(f, base);
+        if (opts) return this.decorate(f, opts[String(value)] ?? String(value));  // code -> name
+        if (f.style.$markdown) {
+            const md = markdownToMarkup(String(value));
+            const inline = markdownInline(md);
+            // Plain text (a single paragraph): render on the label's line.
+            // Genuine multi-block markdown: indented containment below the label.
+            return inline !== undefined
+                ? this.decorate(f, inline)
+                : ["div", { class: "lm-me-mdblock" }, md];
+        }
+        return this.decorate(f, String(value));
     }
 
     /** A scalar as a label/value line (its own $view.label policy).  The line
@@ -276,7 +302,8 @@ export class EntryRenderer {
             // heavier than one line for the common single value.
             if (v.label === "inline")
                 return items.map(it => ["div", { class: LINE }, ["b", {}, rf.prompt + ": "], it]);
-            return this.section(rf, items.map(it => ["div", { class: "lm-me-item" }, it]));
+            // A simple list (recordings): tight rows, not the airy container gap.
+            return this.section(rf, items.map(it => ["div", { class: "lm-me-listitem" }, it]));
         }
 
         // CONTAINER relation (has child relations): each tuple is a block.

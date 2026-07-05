@@ -135,6 +135,13 @@ body {
 /* Container items (senses, document references) are set off from each other by
    a gap - enough to read as separate items without a bullet or number. */
 .lm-me-item + .lm-me-item { margin-top: .6rem; }
+/* A simple list (recordings) reads tight, like a run of label/value lines -
+   not the airy container gap. */
+.lm-me-listitem + .lm-me-listitem { margin-top: .12rem; }
+/* Multi-block markdown (a note that is genuinely more than a line) is indented
+   containment below its label; plain-text notes stay inline (see markdownInline). */
+.lm-me-mdblock { margin-left: 1rem; }
+.lm-me-mdblock .lm-markdown > :first-child { margin-top: 0; }
 /* A numbered sense: the "1." hangs to the left of the block, aligned with its
    first line, instead of sitting on a line of its own. */
 .lm-me-numbered { display: flex; gap: .4rem; }
