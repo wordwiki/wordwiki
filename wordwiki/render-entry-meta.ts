@@ -78,6 +78,13 @@ export interface EditingHooks {
     // carrying an insert-first menu.  Keyed on the PARENT id + the child tag (no
     // fact exists yet), so it can add the first item.
     emptyRelation: (rf: model.RelationField, parentId: TupleIdentity) => Markup;
+    // Optional extra affordance on a NON-EMPTY relation's section heading line
+    // (only relations with $view label:'heading' have one).  For relations
+    // whose add is NOT the generic insert dialog - the document reference's
+    // per-book buttons, which launch the scanned-page tagger flow - this is
+    // the only place an add can live: the rows themselves carry no + (a new
+    // reference needs a book choice first).
+    relationHead?: (rf: model.RelationField, parentId: TupleIdentity) => Markup;
 }
 
 // --- Data-access seam --------------------------------------------------------
@@ -354,7 +361,7 @@ export class EntryRenderer {
             // Non-empty needs no add line: the row ☰ carries Insert before/after.
             // Inline-labelled lists (gloss) stand alone; unlabelled (recordings)
             // get a heading section.
-            return v.label === "inline" ? lines : this.section(rf, lines);
+            return v.label === "inline" ? lines : this.section(rf, lines, parent);
         }
 
         // A FIELDS-LESS container (example): the tuple is pure structure -
@@ -383,7 +390,7 @@ export class EntryRenderer {
                    ["div", { class: "lm-me-num-body" }, block]]
                 : ["div", { class: "lm-me-item" }, block];
         });
-        return this.section(rf, items);
+        return this.section(rf, items, parent);
     }
 
     /** A keyed-bag relation (attr): filter by audience, label each row by its
@@ -406,11 +413,16 @@ export class EntryRenderer {
         return rows;
     }
 
-    /** A section: an optional bold heading, then the body indented. */
-    protected section(rf: model.RelationField, body: Markup): Markup {
+    /** A section: an optional bold heading, then the body indented.  In edit
+     *  mode the heading line carries the relationHead affordance (the
+     *  document-reference per-book add buttons). */
+    protected section(rf: model.RelationField, body: Markup, parent?: EntryNode): Markup {
+        const id = this.editing?.relationHead && parent?.identity?.();
+        const head: Markup = id ? this.editing!.relationHead!(rf, id) : "";
         return view(rf).label === "heading"
             ? ["div", { class: "lm-me-section" },
-               ["div", { class: "fw-bold lm-me-heading" }, rf.prompt + ":"], ["div", { class: "ms-3" }, body]]
+               ["div", { class: "fw-bold lm-me-heading" }, rf.prompt + ":", head],
+               ["div", { class: "ms-3" }, body]]
             : ["div", { class: "lm-me-section" }, body];
     }
 

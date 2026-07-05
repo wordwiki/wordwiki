@@ -716,12 +716,15 @@ export class LexemeEditor {
                 'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'};
     }
 
-    /** The reference scan + composed reference-book link (see wordView). */
+    /** The reference scan + composed reference-book link (see wordView).
+     *  data-bounding-group lets the tagger's done-editing postMessage find and
+     *  reload this reference's fragment (the meta page renders the scan as
+     *  inline svg, so the legacy <object data=...> sniffing can't see it). */
     private metaBoundingGroup(id: number): Markup {
         const scan = renderStandaloneGroup('/', id);
         let url = ''; try { url = singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
         let desc = ''; try { desc = imageRefDescription(id); } catch { /**/ }
-        return ['div', {},
+        return ['div', {'data-bounding-group': String(id)},
             ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
             desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
     }
@@ -768,7 +771,7 @@ export class LexemeEditor {
                     // Per-book add buttons ride inline (no single dialog for a
                     // body-click to delegate to).
                     return ['div', rowAttrs,
-                            label([' ', this.addButtons(parentId.entryId, parentId.factId, rf)])];
+                            label([' ', this.addButtons(parentId.entryId, parentId.factId, rf, 'meta')])];
                 if(rf.scalarFields.some(isDialogReadOnly))
                     return ['div', rowAttrs, label()];
                 // A fields-less relation (example) has an EMPTY insert dialog -
@@ -796,6 +799,14 @@ export class LexemeEditor {
                                 onclick: 'lmEditableClick(event)'},
                         label(), plus, spacer];
             },
+            relationHead: (rf, parentId) =>
+                // A NON-empty document-reference section: adding goes through
+                // the per-book tagger flow (pick a book -> create group + ref
+                // -> tag the scan), so the buttons live on the heading line -
+                // the same place the legacy editor's relation header put them.
+                rf.scalarFields.some(isBoundingGroupField)
+                    ? [' ', this.addButtons(parentId.entryId, parentId.factId, rf, 'meta')]
+                    : '',
         };
     }
 
@@ -983,11 +994,14 @@ export class LexemeEditor {
      * reference book (create group + ref, then open the tagger); an image
      * relation has no add flow yet.
      */
-    private addButtons(entry_id: number, parent_fact_id: number, rf: model.RelationField): Markup {
+    private addButtons(entry_id: number, parent_fact_id: number, rf: model.RelationField,
+                       mode: EditMode = 'edit'): Markup {
+        // As in editMenuItems: the mode rides only when not 'edit'.
+        const m = mode === 'edit' ? '' : `, '${mode}'`;
         if(rf.scalarFields.some(isBoundingGroupField))
             return REFERENCE_BOOKS.map(book => action.actionButton('+ ' + book,
                 {kind: 'immediate',
-                 expr: `wordwiki.lexeme.addDocumentReference(${entry_id}, ${parent_fact_id}, '${rf.tag}', '${book}')`},
+                 expr: `wordwiki.lexeme.addDocumentReference(${entry_id}, ${parent_fact_id}, '${rf.tag}', '${book}'${m})`},
                 'btn btn-sm btn-outline-primary lex-add-btn py-0 px-1'));
         if(rf.scalarFields.some(isDialogReadOnly))
             return [];
@@ -1941,7 +1955,7 @@ export class LexemeEditor {
      */
     @route(authenticated)
     addDocumentReference(entry_id: number, parent_fact_id: number, child_tag: string,
-                         friendly_document_id: string): any {
+                         friendly_document_id: string, mode: EditMode = 'edit'): any {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
         const relation = parent.childRelations[child_tag]
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
@@ -1991,7 +2005,7 @@ export class LexemeEditor {
         };
         return {action: 'open',
                 url: `/ww/wordwiki.pages.renderPageEditorByPageId(${page_id}, ${JSON.stringify(pageEditorConfig)})`,
-                targets: this.mutationTargets(entry_id, newAssertion, 'parent')};
+                targets: this.mutationTargets(entry_id, newAssertion, 'parent', mode)};
     }
 
     // ------------------------------------------------------------------------

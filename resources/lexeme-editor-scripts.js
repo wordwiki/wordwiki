@@ -334,11 +334,16 @@ window.addEventListener('message', (e) => {
     if (e.origin !== window.origin) return;
     const m = e.data;
     if (!m || m.action !== 'reloadBoundingGroup') return;
+    const reloadEnclosing = (el) => {
+        const fragment = el.closest('[hx-trigger^="reload"]');
+        if (fragment && window.htmx) htmx.trigger(fragment, 'reload');
+    };
     document.querySelectorAll('object[type="image/svg+xml"]').forEach(o => {
         const data = o.getAttribute('data') || '';
-        if (data.includes(', ' + m.boundingGroupId + ')')) {
-            const fragment = o.closest('[hx-trigger^="reload"]');
-            if (fragment && window.htmx) htmx.trigger(fragment, 'reload');
-        }
+        if (data.includes(', ' + m.boundingGroupId + ')')) reloadEnclosing(o);
     });
+    // The metadata editor renders the scan as inline svg (no <object> to
+    // sniff) - its wrapper declares the group id instead.
+    document.querySelectorAll('[data-bounding-group="' + m.boundingGroupId + '"]')
+        .forEach(reloadEnclosing);
 });
