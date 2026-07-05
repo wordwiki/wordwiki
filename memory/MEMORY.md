@@ -1,6 +1,8 @@
 - [UI mutation model](ui-mutation-model.md) — read-only pages; every mutation is a button → immediate / confirm / modal-of-action-arguments; rows navigate, pencil-only edit (rollout complete 2026-06-11; lexeme-editor facts still tap-to-edit)
 - [Design language](design-language.md) — pages = beautiful DOCUMENTS not editors (reading-first, volunteer audience); list-page recipe, soft tappable blocks, ☰ over buttons, pencil on detail pages; doc is liminal/design-language.md
 - [Liminal refresh model](liminal-refresh-model.md) — dep keys + registration/emission conventions + txd speculation + debug mode; THE doc is repo-root liminal.md (built & landed 2026-07-03)
+- [Liminal mail feature](liminal-mail-feature.md) — shared outbound email (liminal/mail.ts); transport-agnostic Mailer, SMTP+Google app-password, LogMailer default; wired into rabid reset links; provision via <app>-mail-credential.json
+- [Route undeclared bug pattern](route-undeclared-bug-pattern.md) — method reached via url/rpc/hx-post but missing @route → strict routeterp 404s "not found"; direct-call tests miss it; verify via dispatch (bitten: photo, resetLinkView)
 - [Puppeteer session reuse](puppeteer-session-reuse.md) — only pass launchOptions on the FIRST navigate; reuse the running browser to stay logged in
 - [Server restart protocol](server-restart-protocol.md) — just re-run ./rabid.sh (or wordwiki.sh); it cleanly shuts down the running server itself — never pkill
 - [Audio trim tuning](audio-trim-tuning.md) — silence/click trim pipeline (derived stores) + throwaway staff page to pick the threshold by ear; rebuild recipe in wordwiki/audio-trim-tuning.md
