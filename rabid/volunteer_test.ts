@@ -62,21 +62,23 @@ test("emergency contact is host/self only", async () => {
     });
 });
 
-test("admin sees everything; the list redacts per-row for a regular viewer", async () => {
+test("admin sees everything; the detail page redacts email per-viewer", async () => {
     await withTestDb(async ({ bob, carol, dave }) => {
-        const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`));
-        assertStringIncludes(text(getByTestId(adminList, `volunteer-${carol}-email`)), "carol@test.example");
-
-        const regularList = await asUser(bob, () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`));
-        assertEquals(text(getByTestId(regularList, `volunteer-${carol}-email`)).trim(), "***"); // opted out
-        assertStringIncludes(text(getByTestId(regularList, `volunteer-${bob}-email`)), "bob@test.example"); // default-shared
+        // Email is a detail-page field now (the list shows skills & interests).
+        assertStringIncludes(text(getByTestId(await asUser(dave, () => detail(carol)), "detail-email")),
+                             "carol@test.example");
+        assertEquals(text(getByTestId(await asUser(bob, () => detail(carol)), "detail-email")).trim(),
+                     "***");   // carol opted out; a regular viewer sees it redacted
+        assertStringIncludes(text(getByTestId(await asUser(bob, () => detail(bob)), "detail-email")),
+                             "bob@test.example");   // own record
     });
 });
 
-test("the list view never shows phone numbers, even to an admin (detail-page-only)", async () => {
-    await withTestDb(async ({ dave }) => {
+test("the list view shows no email or phone (both detail-page-only)", async () => {
+    await withTestDb(async ({ bob, dave }) => {
         const adminList = await asUser(dave, () => renderRoute(`rabid.volunteer.renderVolunteerList("", false)`));
-        assert(!text(adminList).includes("(555)")); // fixture phones are all (555) ...
+        assert(!text(adminList).includes("(555)"));                   // fixture phones are all (555) ...
+        assert(!text(adminList).includes("bob@test.example"));        // emails are not in the list either
     });
 });
 
@@ -106,7 +108,7 @@ test("every row is the same navigable species: tap drills in, regardless of edit
         const list = await asUser(bob, listFor);
         for (const id of [bob, carol]) {        // own (editable) and someone else's (not)
             const row = rowIn(list, id);
-            assertEquals(tagOf(row), "div");
+            assertEquals(tagOf(row), "tr");   // the list is a compact table
             assertEquals(attr(row, "onclick"), "lmNavigableClick(event)"); // whole surface navigates
             const link = find(row, byClass("lm-nav-link"));               // the delegation target
             assert(link);
@@ -133,13 +135,13 @@ test("saveForm is row-gated before the per-field check (host may, regular may no
     await withTestDb(async ({ alice, bob, carol }) => {
         await asUser(bob, () => assertRejects(
             () => invoke("rabid.volunteer.saveForm($arg0)", {
-                volunteer_id: String(carol), skills: "crafted", "before-skills": "",
+                volunteer_id: String(carol), skills_and_interests: "crafted", "before-skills_and_interests": "",
             }),
             Error, "Not permitted to edit this volunteer"));
 
         // alice is a host: same edit goes through.
         const res = await asUser(alice, () => invoke("rabid.volunteer.saveForm($arg0)", {
-            volunteer_id: String(carol), skills: "host-assigned", "before-skills": "",
+            volunteer_id: String(carol), skills_and_interests: "host-assigned", "before-skills_and_interests": "",
         }));
         assertEquals(res.action, "reload");
     });
@@ -212,14 +214,17 @@ test("a crafted edit of a field you may not edit is rejected at save", async () 
 test("a volunteer can edit their own field (render → act → render)", async () => {
     await withTestDb(async ({ carol }) => {
         const before = await asUser(carol, () => detail(carol));
-        assertEquals(text(getByTestId(before, "detail-skills")).trim(), "—"); // empty initially
+        // Empty fields are ELIDED on the detail card (no "Label: —" row), so the
+        // field is simply absent until it has a value.
+        assert(!find(before, n => attr(n, "data-testid") === "detail-skills_and_interests"),
+               "an empty field is elided, not shown as —");
 
         const res = await asUser(carol, () => invoke("rabid.volunteer.saveForm($arg0)", {
-            volunteer_id: String(carol), skills: "welding", "before-skills": "",
+            volunteer_id: String(carol), skills_and_interests: "welding", "before-skills_and_interests": "",
         }));
         assertEquals(res.action, "reload");
 
         const after = await asUser(carol, () => detail(carol));
-        assert(hasText(getByTestId(after, "detail-skills"), "welding"));
+        assert(hasText(getByTestId(after, "detail-skills_and_interests"), "welding"));
     });
 });

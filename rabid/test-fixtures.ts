@@ -28,7 +28,7 @@ function vol(over: Record<string, any>): any {
         email_visible_to_all_volunteers: 1,
         phone: "(555) 000-0000",
         phone_number_visible_to_all_volunteers: 0,
-        skills: "",
+        skills_and_interests: "",
         emergency_contact_name: "",
         emergency_contact_phone: "",
         permissions: "",

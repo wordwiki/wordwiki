@@ -190,7 +190,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
     const s = makeStreams(opts.baseSeed ?? 1);
     const idS = s('volunteer.identity');      // name + email (kept correlated)
     const contactS = s('volunteer.contact');  // phone + visibility + emergency contact
-    const skillS = s('volunteer.skills');
+    const skillS = s('volunteer.skills_and_interests');
     const statusS = s('volunteer.status');     // join / archived / exit
     const roleS = s('volunteer.role');         // permissions
     const acctS = s('volunteer.account');      // whether a password is set
@@ -208,7 +208,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         email_visible_to_all_volunteers: 1,  // Rocky shares their email
         phone: '(555) 010-0010',
         phone_number_visible_to_all_volunteers: 1,  // Rocky shares their phone
-        skills: 'event planning, fundraising, social media',
+        skills_and_interests: 'Event planning and fundraising; keen to mentor new mechanics',
         emergency_contact_name: 'The Beatles',
         emergency_contact_phone: '(555) 010-0011',
         is_staff: 1,
@@ -269,20 +269,20 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
             email_visible_to_all_volunteers: contactS.datatype.boolean({ probability: 0.85 }) ? 1 : 0, // opt-out
             phone: contactS.phone.number({ style: 'national' }),
             phone_number_visible_to_all_volunteers: contactS.datatype.boolean({ probability: 0.3 }) ? 1 : 0, // opt-in
-            skills: skillS.helpers.arrayElement([
-                'bike repair',
-                'electronics repair',
-                'sewing',
-                'carpentry',
-                'event planning',
-                'fundraising',
-                'social media',
-                'teaching',
-                'welding',
-                'small appliance repair',
-                'bike repair, electronics',
-                'event planning, social media',
-                'carpentry, welding',
+            skills_and_interests: skillS.helpers.arrayElement([
+                'Confident with drivetrains; would love to learn wheel-building',
+                'Electronics repair; interested in running a fix-it night',
+                'Sewing and upholstery — happy to patch panniers and saddles',
+                'Carpentry; keen to help build more repair stands',
+                'Event planning and logistics; enjoys wrangling volunteers',
+                'Fundraising and grant-writing background',
+                'Social media and photography; can shoot donation days',
+                'Patient teacher — interested in Learn-to-Ride sessions',
+                'Welding and metal fab; can take on frame repairs',
+                'Small appliance repair; curious about e-bike batteries',
+                'New to bikes but eager to learn; strong with people',
+                'Bookkeeping; would like to help the treasurer',
+                'Loves kids’ programming and would run a youth build',
                 ''
             ]),
             // Staff is now an attribute of the activity profile (the rest are
@@ -379,7 +379,7 @@ function seedFixedLogin(rabid: Rabid, first: string, last: string, email: string
         email_visible_to_all_volunteers: 1,
         phone: undefined,
         phone_number_visible_to_all_volunteers: 0,
-        skills: '',
+        skills_and_interests: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
         is_staff: profile?.isStaff ?? 0,
@@ -1016,20 +1016,28 @@ export function seedCommittees(rabid: Rabid): void {
         .filter(v => !v.archived && !v.deleted);
     const byEmail = (email: string) => volunteers.find(v => v.email === email);
 
-    const committees: Array<{name: string, description: string, members: number[]}> = [
+    const committees: Array<{name: string, description: string, notes?: string, members: number[]}> = [
         {name: 'Logistics Committee',
-         description: 'Event logistics: supplies, transport, setup crews.',
+         description: 'Owns the **physical logistics** of every event:\n\n'
+             + '- supplies and the tool inventory\n'
+             + '- transport and the pickup truck\n'
+             + '- setup and teardown crews\n\n'
+             + 'Check with the chair before booking any large vehicle.',
+         notes: 'Truck rental account is under Hazel; ask her for the code.',
          members: [byEmail('hazel@redraccoon.org')?.volunteer_id,
                    ...volunteers.filter((_, i) => i % 11 === 3).slice(0, 4).map(v => v.volunteer_id)]
              .filter((id): id is number => id !== undefined)},
         {name: 'Outreach Committee',
-         description: 'Community partnerships, social media, and event promotion.',
+         description: 'Grows the shop’s reach in the neighbourhood:\n\n'
+             + '- community and school **partnerships**\n'
+             + '- social media and the monthly newsletter\n'
+             + '- promotion for donation days and repair events',
          members: volunteers.filter((_, i) => i % 13 === 5).slice(0, 3).map(v => v.volunteer_id)},
     ];
 
     for(const c of committees) {
         const committee_id = rabid.committee.insert({
-            name: c.name, description: c.description, notes: '', deleted: 0});
+            name: c.name, description: c.description, notes: c.notes ?? '', deleted: 0});
         const {group_id} = rabid.committee.getById(committee_id);
         for(const volunteer_id of new Set(c.members))
             rabid.group_member.insert({group_id, volunteer_id});
@@ -1184,12 +1192,37 @@ export const SCENARIOS: Record<ScenarioName, Scenario> = {
     activityReport: { volunteers: 99, events: true, commitments: true, checkins: true,  timesheets: true,  timesheetWeeks: 12, completedTasks: true,  baseSeed: 1 },
 };
 
+// A light touch of RECENT activity so the volunteer list's active/inactive
+// split ("Active — last 30 days" vs "Other volunteers") is visible in `dev`.
+// The full attendance datasets (seedTimesheets/seedEventCheckins) only run in
+// `full`/`activityReport`; this gives ~14 volunteers a single timesheet entry in
+// the last few weeks so `activeVolunteerIdsWithin(30)` picks them up.
+export function seedRecentActivity(rabid: Rabid): void {
+    const volunteers = rabid.volunteer.allVolunteersByName.all().filter(v => !v.deleted && !v.archived);
+    const rng = makeStreams(7)('recent.activity');
+    const pick = rng.helpers.arrayElements(volunteers, Math.min(14, volunteers.length));
+    for(const [i, v] of pick.entries()) {
+        const d = new Date();
+        d.setDate(d.getDate() - (2 + i));   // 2..15 days ago -> within the 30-day window
+        const day = d.toISOString().slice(0, 10);
+        rabid.timesheet_entry.insert({
+            volunteer_id: v.volunteer_id,
+            start_time: `${day} 10:00:00`, end_time: `${day} 13:00:00`,
+            notes: 'Shop shift', km_driven_for_reimbursement: 0, km_driven_processed: 0,
+            is_paid_time: 0, paid_time_processed: 0});
+    }
+    console.info(`recent activity seeded for ${pick.length} volunteers`);
+}
+
 // Run the builders for a scenario (order matters: later builders read earlier data).
 export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     seedVolunteers(rabid, { count: scenario.volunteers, baseSeed: scenario.baseSeed });
     seedShortNames(rabid);
     seedCommittees(rabid);
     seedProjects(rabid);
+    // Light recent activity so the volunteer-list split shows in scenarios
+    // without the full timesheet dataset (dev/minimal).
+    if(!scenario.timesheets) seedRecentActivity(rabid);
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.events)      seedEventChecklists(rabid);
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });

@@ -208,6 +208,7 @@
 /* Whole-row hover/press tint for navigable TABLE rows.  The generic
    .lm-navigable rule sets the background on the element, but Bootstrap paints
    per-cell backgrounds on a .table, so for a <tr> we have to tint the cells. */
+tr.lm-navigable { cursor: pointer; }
 @media (hover: hover) {
     tr.lm-navigable:hover > * { background-color: var(--bs-tertiary-bg); }
 }

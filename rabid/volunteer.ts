@@ -63,8 +63,9 @@ export interface Volunteer {
     phone: string;
     phone_number_visible_to_all_volunteers: boolnum;
 
-    // Skills or Experience You'd Like to Share e.g., bike repair, event planning, fundraising, social media, etc
-    skills: string;
+    // Skills & interests to share: what they can do AND what they'd like to get
+    // involved in (bike repair, event planning, fundraising, social media, ...).
+    skills_and_interests: string;
 
     // Whether this person is currently employed as staff (as opposed to a
     // volunteer).  Distinct from pay: staff can volunteer and volunteers can be
@@ -150,7 +151,7 @@ export class VolunteerTable extends Table<Volunteer> {
             new PhoneField('phone', {nullable: true, view: phoneViewable, redact: true}),
             // Volunteers may opt their phone in to being shown to others (private by default).
             new BooleanField('phone_number_visible_to_all_volunteers', {default: 0}),
-            new StringField('skills', {default: ''}),
+            new StringField('skills_and_interests', {prompt: 'Skills & interests', default: ''}),
             // Employment status (host/admin managed) - snapshotted into event
             // check-ins for grant reporting.  See the interface field comment.
             new BooleanField('is_staff', {default: 0, prompt: 'Staff member', edit: host}),
@@ -349,13 +350,25 @@ export class VolunteerTable extends Table<Volunteer> {
         // Split into two lists: recently-active (a timesheet entry or event
         // check-in in the last 30 days) and everyone else - the long tail of
         // not-recently-seen volunteers shouldn't bury the people currently around.
-        const active = activeVolunteerIdsWithin(30);
+        // A more forgiving window than the quick-pickers' 30 days: this list
+        // isn't trying to keep a picker short, so demoting someone to "other"
+        // after only a month is hasty.
+        const ACTIVE_WINDOW_DAYS = 60;
+        const active = activeVolunteerIdsWithin(ACTIVE_WINDOW_DAYS);
         const recent = rows.filter(v => active.has(v.volunteer_id));
         const others = rows.filter(v => !active.has(v.volunteer_id));
-        const section = (title: string, list: Volunteer[]): Markup => list.length ? [
-            [h.h3, {class: 'h6 text-muted mt-3 mb-1'}, title],
-            [h.div, {class: 'list-group lm-list'}, list.map(v => this.renderVolunteerRow(v))],
-        ] : undefined;
+        // One compact table; each section is a colspan heading row followed by
+        // its volunteer rows (denser than the old stacked list-group cards).
+        const sectionHeading = (title: string): Markup =>
+            [h.tr, {}, [h.td, {colspan: '3', class: 'small text-muted fw-semibold pt-3 border-0'}, title]];
+        // The active/inactive split only earns its headings when there IS a
+        // recently-active group to set apart - otherwise (a quiet stretch, or a
+        // dataset without activity) everyone is "other", and a lone "Other
+        // volunteers" heading is just noise.  Then: plain, unlabelled list.
+        const body = recent.length === 0
+            ? rows.map(v => this.renderVolunteerRow(v))
+            : [sectionHeading(`Active — last ${ACTIVE_WINDOW_DAYS} days`), recent.map(v => this.renderVolunteerRow(v)),
+               others.length ? [sectionHeading('Other volunteers'), others.map(v => this.renderVolunteerRow(v))] : undefined];
 
         return [
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
@@ -363,34 +376,48 @@ export class VolunteerTable extends Table<Volunteer> {
               text ? `${rows.length} ${scopeLabel}volunteer(s) matching “${text}”`
                    : `${rows.length} ${scopeLabel}volunteer(s)`],
              this.searchMenu(text, include_archived)],
-            section('Active — last 30 days', recent),
-            section('Other volunteers', others),
+            rows.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No volunteers.']
+                : [h.table, {class: 'table align-middle lm-list'},
+                   [h.thead, {},
+                    [h.tr, {},
+                     [h.th, {class: 'small text-muted fw-normal'}, 'Name'],
+                     [h.th, {class: 'small text-muted fw-normal'}, 'Skills & interests'],
+                     [h.th, {}]]],
+                   [h.tbody, {}, body]],
         ];
     }
 
-    // One list item: a single row species for every viewer (detailItemProps -
-    // tap anywhere drills in to the detail page via the lm-nav-link name
-    // link; chevron marks the navigation).  Permissions change what the row
-    // OFFERS, never what tapping it does: viewers with row-level edit
-    // permission (recordEdit) additionally get the pencil - the only edit
-    // affordance.  Reloadable tagging re-renders just this item after a save.
+    // One table row: a single navigable species for every viewer (the whole row
+    // drills in to the detail page via the lm-nav-link name; chevron marks the
+    // navigation).  Permissions change what the row OFFERS, never what tapping
+    // it does: viewers with row-level edit permission (recordEdit) additionally
+    // get the pencil - the only edit affordance.  Reloadable tagging (outerHTML
+    // swap of the <tr>) re-renders just this row after a save.
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
         const archivedBadge = v.archived
             ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Archived'] : undefined;
 
-        const item = this.detailItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
-        return [h.div, {...item, 'data-testid': `volunteer-row-${id}`},
-            [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
-              [h.a, {...templates.pageLinkProps(`/rabid.volunteer.detailPage(${id})`),
-                     class: 'lm-nav-link'}, v.name],
-              archivedBadge],
-             [h.div, {class: 'lm-item-secondary', 'data-testid': `volunteer-${id}-email`},
-              renderFieldValue(f.email, v.email)]],
-            this.canEditRecord(v) ? this.editPencil(id) : undefined,
-            navChevron(),
+        // A navigable <tr>: the base reload props (row key + outerHTML swap) plus
+        // the lm-navigable click surface (detailItemProps hardcodes list-group
+        // classes, so it can't be reused for a table row).
+        const item = this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
+        item.class = 'lm-navigable ' + item.class;
+        item.onclick = 'lmNavigableClick(event)';
+        return [h.tr, {...item, 'data-testid': `volunteer-row-${id}`},
+            [h.td, {},
+             [h.a, {...templates.pageLinkProps(`/rabid.volunteer.detailPage(${id})`),
+                    class: 'lm-nav-link'}, v.name],
+             archivedBadge],
+            // Skills & interests give the list some texture; email is on the
+            // detail page (a click away - fine).
+            [h.td, {class: 'text-muted small', 'data-testid': `volunteer-${id}-skills`},
+             renderFieldValue(f.skills_and_interests, v.skills_and_interests)],
+            [h.td, {class: 'text-end text-nowrap'},
+             this.canEditRecord(v) ? this.editPencil(id) : undefined,
+             navChevron()],
         ];
     }
 
@@ -502,7 +529,7 @@ export class VolunteerTable extends Table<Volunteer> {
             [h.dl, {class: 'row mb-0'},
              fieldRow('Email', f.email, v.email, 'detail-email'),
              fieldRow('Phone', f.phone, v.phone, 'detail-phone'),
-             fieldRow('Skills', f.skills, v.skills, 'detail-skills'),
+             fieldRow('Skills & interests', f.skills_and_interests, v.skills_and_interests, 'detail-skills_and_interests'),
              emergencyRow,
              fieldRow('Joined', f.join_date, v.join_date),
             ],

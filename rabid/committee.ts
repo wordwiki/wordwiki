@@ -56,7 +56,7 @@ export class CommitteeTable extends Table<Committee> {
         super ('committee', [
             new PrimaryKeyField('committee_id', {}),
             new StringField('name', {}),
-            new StringField('description', {default: ''}),
+            new MarkdownField('description', {prompt: 'Description', default: ''}),
             new OwnedGroupField('group_id'),
             new MarkdownField('notes', {default: ''}),
             new BooleanField('deleted', {default: 0, prompt: 'Dissolved'}),
@@ -115,8 +115,6 @@ export class CommitteeTable extends Table<Committee> {
     renderCommitteeRow(c: Committee & {member_count?: number}): Markup {
         const id = c.committee_id;
         const count = c.member_count ?? rabid.volunteer_group.members.all({group_id: c.group_id}).length;
-        const secondary = [`${count} member${count === 1 ? '' : 's'}`, c.description]
-            .filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
         // tap anywhere drills in via the lm-nav-link name); the pencil - shown
@@ -127,7 +125,13 @@ export class CommitteeTable extends Table<Committee> {
              [h.div, {class: 'lm-item-primary'},
               [h.a, {...templates.pageLinkProps(`/rabid.committee.detailPage(${id})`),
                      class: 'lm-nav-link'}, c.name || 'Unnamed committee']],
-             [h.div, {class: 'lm-item-secondary'}, secondary]],
+             [h.div, {class: 'lm-item-secondary'}, `${count} member${count === 1 ? '' : 's'}`],
+             // The committee's markdown description, rendered as prose in the
+             // list (notes stay internal - only in the edit form).
+             c.description
+                 ? [h.div, {class: 'lm-markdown mt-1', 'data-testid': `committee-${id}-description`},
+                    this.fieldsByName.description.render(c.description)]
+                 : undefined],
             this.canEditRecord(c) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
@@ -186,8 +190,12 @@ export class CommitteeTable extends Table<Committee> {
              [h.h2, {class: 'mb-0'}, c.name || 'Unnamed committee'],
              c.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Dissolved'] : undefined,
              this.canEditRecord(c) ? this.editPencil(committee_id) : undefined],
-            c.description ? [h.p, {}, c.description] : undefined,
-            c.notes ? this.fieldsByName.notes.render(c.notes) : undefined,
+            // The public-facing markdown description (prominent prose).  Notes
+            // are internal - deliberately NOT shown here; they're visible only
+            // in the edit form.
+            c.description
+                ? [h.div, {class: 'lm-prose mb-3'}, this.fieldsByName.description.render(c.description)]
+                : undefined,
             [h.h4, {class: 'mt-3'}, 'Members'],
             rabid.volunteer_group.renderMemberEditor(c.group_id),
 
