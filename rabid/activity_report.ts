@@ -12,8 +12,6 @@ import {
     dateTimeToString,
     temporalToSqliteDate,
     extractDateFromDateTime,
-    dateToString,
-    orgToday,
     type PlainDate,
     type PlainDateTime,
     type SQLiteDateString
@@ -303,25 +301,20 @@ export function dailyActivityReport(q?: Record<string, any>): Markup {
             [h.thead, {}, ...tableRows.slice(0, 1)],
             [h.tbody, {}, ...tableRows.slice(1)]
         ],
-        [h.script, {}, `
-            // Initialize Bootstrap popovers after page loads
-            document.addEventListener('DOMContentLoaded', function() {
-                if (typeof bootstrap !== 'undefined') {
-                    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-                    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-                        return new bootstrap.Popover(popoverTriggerEl)
-                    })
-                }
-            });
-        `]
+        // (Popovers are initialised globally in rabid-scripts.js - on load AND
+        // after every htmx swap - so no per-page init script.)
     ];
 }
 
-export function activityReport(): Markup {
-    // Get today's date and calculate 2 years back, snapped to month beginning
-    const endDate = orgToday();
-    const twoYearsAgo = endDate.subtract({ years: 2 });
-    const startDate = twoYearsAgo.with({ day: 1 }); // Snap to beginning of month
+// The monthly report's default range (~2 years - a monthly overview wants more
+// than the 120-day list default); overridable via the window filter.
+const ACTIVITY_REPORT_DEFAULT_DAYS = 730;
+
+export function activityReport(q?: Record<string, any>): Markup {
+    const query = activityRangeQuery.normalize(q) as pageQueries.WindowQuery;
+    const w = pageQueries.resolveWindow(query, ACTIVITY_REPORT_DEFAULT_DAYS);
+    const startDate = sqliteDateToTemporal(w.from);
+    const endDate = sqliteDateToTemporal(w.to);
 
     const activeVolunteersByDayMap = activeVolunteersByDay(startDate, endDate);
     const activeVolunteersByMonthMap = activeVolunteersByMonth(activeVolunteersByDayMap);
@@ -383,22 +376,21 @@ export function activityReport(): Markup {
     
     return [h.div, {class: 'activity-report'},
         [h.h2, {}, 'Volunteer Activity Report'],
-        [h.p, {}, `From ${dateToString(startDate)} to ${dateToString(endDate)}`],
+        // How the two columns are defined (matches the code above).
+        [h.p, {class: 'text-muted small', style: 'max-width: 46rem'},
+         '“Active” = a volunteer who has volunteered — a timesheet entry or an event ',
+         'check-in — within the last 31 days.  “Average active volunteers” is the mean of the ',
+         'daily active count over the days of the month; “all active volunteers” (hover for the ',
+         'names) is the number of distinct volunteers active on any day that month.'],
+        pageQueries.renderWindowBar({
+            fieldSet: activityRangeQuery, pageRoute: 'activityReport', q: query,
+            defaultDays: ACTIVITY_REPORT_DEFAULT_DAYS,
+            filterDialogRoute: 'rabid.activityReportFilterDialog',
+            count: activeVolunteersByMonthMap.size, noun: 'month'}),
         [h.table, {class: 'table table-striped'},
             [h.thead, {}, ...tableRows.slice(0, 1)],
             [h.tbody, {}, ...tableRows.slice(1)]
         ],
-        [h.script, {}, `
-            // Initialize Bootstrap popovers after page loads
-            document.addEventListener('DOMContentLoaded', function() {
-                if (typeof bootstrap !== 'undefined') {
-                    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-                    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-                        return new bootstrap.Popover(popoverTriggerEl)
-                    })
-                }
-            });
-        `]
     ];
 }
 

@@ -127,7 +127,7 @@ export class Rabid extends LiminalApp {
             // service/servicePage.)
             tasks:(q?: any)=>this.tasksPage(q),
             templates:()=>this.templatesPage(),
-            activityReport:()=>templates.page('Activity Report', activityReport()),
+            activityReport:(q?: any)=>templates.page('Activity Report', activityReport(q)),
             // The range now rides the route as a {} arg (default: last 120 days,
             // drifting) instead of being frozen here - see activity_report.ts.
             dailyActivityReport:(q?: any)=>templates.page(
@@ -262,6 +262,18 @@ export class Rabid extends LiminalApp {
     @route(authenticated)
     applyDailyReportFilter(form: Record<string, any>): any {
         return pageQueries.applyFilterNavigate(activityRangeQuery, form, 'dailyActivityReport');
+    }
+
+    // Same date-range filter for the monthly activity report.
+    @route(authenticated)
+    activityReportFilterDialog(q?: Record<string, any>): any {
+        return pageQueries.renderFilterDialog(
+            activityRangeQuery, activityRangeQuery.normalize(q),
+            'rabid.applyActivityReportFilter', {title: 'Report date range'});
+    }
+    @route(authenticated)
+    applyActivityReportFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(activityRangeQuery, form, 'activityReport');
     }
 
     // ----- Login / logout (app-specific auth) --------------------------------

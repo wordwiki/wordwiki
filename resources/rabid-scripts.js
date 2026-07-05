@@ -621,3 +621,17 @@ document.addEventListener('DOMContentLoaded', () => initPickers(document));
 // modal); re-scan so freshly-inserted pickers get enhanced.
 document.body.addEventListener('htmx:afterSwap', () => initPickers(document));
 
+// Bootstrap popovers ([data-bs-toggle="popover"]) need to be instantiated in JS.
+// A page's own inline <script> using DOMContentLoaded does NOT fire on a boosted
+// (htmx) navigation - the document is already loaded - so popovers went dead
+// after the first hop.  Init here on load AND after every swap (getInstance
+// guards against double-init).
+function initPopovers(root) {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Popover) return;
+    root.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+        if (!bootstrap.Popover.getInstance(el)) new bootstrap.Popover(el);
+    });
+}
+document.addEventListener('DOMContentLoaded', () => initPopovers(document));
+document.body.addEventListener('htmx:afterSwap', () => initPopovers(document));
+

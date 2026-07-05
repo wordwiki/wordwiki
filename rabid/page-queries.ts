@@ -36,10 +36,10 @@ export interface WindowQuery extends Tuple {
 // Resolve a normalized window query to concrete sqlite date bounds: absent
 // `from` → today − DEFAULT_WINDOW_DAYS (drifting default), absent `to` → today.
 export interface ResolvedWindow { from: string; to: string; }
-export function resolveWindow(q: WindowQuery): ResolvedWindow {
+export function resolveWindow(q: WindowQuery, defaultDays = DEFAULT_WINDOW_DAYS): ResolvedWindow {
     const today = date.orgToday();
     return {
-        from: q.from ?? date.temporalToSqliteDate(today.subtract({days: DEFAULT_WINDOW_DAYS})),
+        from: q.from ?? date.temporalToSqliteDate(today.subtract({days: defaultDays})),
         to: q.to ?? date.temporalToSqliteDate(today),
     };
 }
@@ -61,12 +61,15 @@ export function renderWindowBar(opts: {
                                  // threads through the depth links + Filter dialog
     conditionText?: string,      // extra filter condition to summarise (e.g.
                                  // 'public only'), appended to the count · range
+    defaultDays?: number,        // window when `from` is absent (default 120);
+                                 // also the Show-older step
 }): Markup {
-    const w = resolveWindow(opts.q);
+    const dd = opts.defaultDays ?? DEFAULT_WINDOW_DAYS;
+    const w = resolveWindow(opts.q, dd);
     const pre = opts.otherArgs ? opts.otherArgs + ', ' : '';
     const pageUrl = (query: Tuple) => `/${opts.pageRoute}(${pre}${opts.fieldSet.literal(query)})`;
     const olderFrom = date.temporalToSqliteDate(
-        date.sqliteDateToTemporal(w.from).subtract({days: DEFAULT_WINDOW_DAYS}));
+        date.sqliteDateToTemporal(w.from).subtract({days: dd}));
     const showingAll = w.from <= WINDOW_EPOCH;
     const countLabel = opts.count === undefined ? undefined
         : `${opts.count} ${opts.count === 1 ? opts.noun : (opts.nounPlural ?? (opts.noun ?? '') + 's')} · `;
