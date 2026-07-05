@@ -740,21 +740,36 @@ export class LexemeEditor {
                         menu];
             },
             emptyRelation: (rf, parentId) => {
-                // Bounding-group relations add via their per-book flow; other
-                // insertable relations get an "Insert <prompt>" menu; read-only
-                // ones (images) get no add.
-                let affordance: Markup = '';
+                // An empty slot reads and behaves like a FILLED row: same flex
+                // structure ("Prompt:" + a muted value, ☰ in the same right
+                // gutter), and the same tap-anywhere-to-edit - except "editing"
+                // an empty slot IS the insert-first dialog.  So a user just
+                // edits away from "empty" without learning a separate insert
+                // concept.  (Keyed on parent id + child tag; no fact exists.)
+                const rowAttrs = {
+                    class: `-rel-${parentId.factId}-${rf.tag}- lm-me-empty d-flex align-items-start gap-1`,
+                    ...this.metaReloadAttrs(parentId.entryId),
+                };
+                const label = (trailing: Markup = ''): Markup =>
+                    ['div', {class: 'flex-grow-1'},
+                     ['b', {}, rf.prompt + ': '],
+                     ['span', {class: 'text-muted fst-italic'}, 'empty'],
+                     trailing];
                 if(rf.scalarFields.some(isBoundingGroupField))
-                    affordance = this.addButtons(parentId.entryId, parentId.factId, rf);
-                else if(!rf.scalarFields.some(isDialogReadOnly))
-                    affordance = action.actionMenu(
-                        [{label: `Insert ${rf.prompt}`, mode: {kind: 'modal',
-                          dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}}],
-                        {ariaLabel: `Add ${rf.prompt}`});
-                return ['div', {class: `-rel-${parentId.factId}-${rf.tag}- lm-me-empty d-flex align-items-center gap-2`,
-                                ...this.metaReloadAttrs(parentId.entryId)},
-                        ['span', {class: 'text-muted fst-italic'}, `${rf.prompt} — empty`],
-                        affordance];
+                    // Per-book add buttons ride inline (no single dialog for a
+                    // body-click to delegate to).
+                    return ['div', rowAttrs,
+                            label([' ', this.addButtons(parentId.entryId, parentId.factId, rf)])];
+                if(rf.scalarFields.some(isDialogReadOnly))
+                    return ['div', rowAttrs, label()];
+                const menu = action.actionMenu(
+                    [{label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
+                      dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}}],
+                    {ariaLabel: `Add ${rf.prompt}`});
+                return ['div', {...rowAttrs,
+                                class: rowAttrs.class + ' lm-editable lm-me-editable',
+                                onclick: 'lmEditableClick(event)'},
+                        label(), menu];
             },
         };
     }
