@@ -175,3 +175,15 @@ fact's tuple fragment renders '', the shape reload usually swallows it);
 demoted-empty relations render an invisible (d-none) wrapper so their first
 insert can find its fragment; and the byte-identity of fragment re-renders vs
 the full render is pinned by test (meta-refresh_test.ts).
+
+**Speculation (the follow-on) is ALSO BUILT (same day):** every immediate /
+confirm action (move, delete, the fields-less inserts, history restore,
+Approve all) and both dialog saves declare `txd` deps.  The deps come from
+`changeKeys(...)` - the SAME function mutationTargets emits through, so deps
+and emission cannot drift (restore speculates the self+parent UNION;
+over-speculation is free).  Verified live with the debug badge: a move is
+`refresh: 1-trip · 1 changed · 1 unchanged` (the "unchanged" is the activity
+fragment re-rendering identically - honest over-emission).  One test gotcha:
+deps JSON puts double quotes in onclick, flipping markupToString's DEBUG attr
+quoting to backslash-escaped singles - the SERVED HTML escapes properly via
+linkeDOM (&quot;), only test needles care.

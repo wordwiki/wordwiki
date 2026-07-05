@@ -35,8 +35,12 @@ test("tuple surface: the ☰ carries every action; edit dialog is just the form"
                 `editDialog(1000, 1110)`,
                 `insertDialog(1000, 1100, 'cat', 1110, 'before')`,
                 `insertDialog(1000, 1100, 'cat', 1110, 'after')`,
-                `move(1000, 1110, 'up')`,
-                `move(1000, 1110, 'down')`,
+                // (the moves carry txd speculation deps, whose JSON double
+                // quotes flip markupToString's DEBUG attr quoting to
+                // backslash-escaped singles - the served HTML escapes properly
+                // via linkeDOM)
+                String.raw`move(1000, 1110, \'up\')`,
+                String.raw`move(1000, 1110, \'down\')`,
                 `historyDialog(1000, 1110)`,
                 `deleteTuple(1000, 1110)`,
             ]) assertStringIncludes(html, needle);

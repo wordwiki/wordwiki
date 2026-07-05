@@ -884,6 +884,7 @@ export class LexemeEditor {
                 const fieldless = dialogFields(rf).length === 0;
                 const addMode: action.ActionMode = fieldless
                     ? {kind: 'immediate',
+                       deps: this.changeKeys(parentId.entryId, 0, parentId.factId, rf.tag, 'parent'),
                        expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}
                     : {kind: 'modal',
                        dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`};
@@ -949,6 +950,7 @@ export class LexemeEditor {
             return [];
         const mode: action.ActionMode = dialogFields(rf).length === 0
             ? {kind: 'immediate',
+               deps: this.changeKeys(id.entryId, 0, id.parentFactId, rf.tag, 'parent'),
                expr: `wordwiki.lexeme.insertEmptyTuple(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`}
             : {kind: 'modal',
                dialogUrl: `${R}.insertDialog(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`};
@@ -1071,7 +1073,8 @@ export class LexemeEditor {
             ? action.actionButton('Approve all',
                 {kind: 'confirm',
                  expr: `wordwiki.lexeme.approveAllChanges(${entry_id})`,
-                 message: `Approve all ${count.replace(' unapproved', '')} to this word?`},
+                 message: `Approve all ${count.replace(' unapproved', '')} to this word?`,
+                 deps: [this.rootTarget(entry_id)]},
                 'btn btn-sm btn-success')
             : '';
         return ['div', {class: 'lm-me-changes-bar'},
@@ -1206,14 +1209,18 @@ export class LexemeEditor {
         // dialog would be empty), and its inserts create immediately for the
         // same reason.
         const fieldless = dialogFields(rf).length === 0;
+        // Speculation deps (txd one-trip swaps): the same keys the mutation
+        // will emit (changeKeys is the shared source).  Insert/move/delete
+        // are shape events.
+        const shapeDeps = this.changeKeys(entry_id, fact_id, parent_fact_id, rf.tag, 'parent', mode);
         return [
             ...(fieldless ? [] : [
                 {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}}]),
             ...(insertable ? (fieldless ? [
-                {label: `Insert ${rf.prompt} before`, mode: {kind: 'immediate' as const,
+                {label: `Insert ${rf.prompt} before`, mode: {kind: 'immediate' as const, deps: shapeDeps,
                     expr: `wordwiki.lexeme.insertEmptyTuple(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
-                {label: `Insert ${rf.prompt} after`, mode: {kind: 'immediate' as const,
+                {label: `Insert ${rf.prompt} after`, mode: {kind: 'immediate' as const, deps: shapeDeps,
                     expr: `wordwiki.lexeme.insertEmptyTuple(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ] : [
                 {label: `Insert ${rf.prompt} before`, mode: {kind: 'modal' as const,
@@ -1221,13 +1228,13 @@ export class LexemeEditor {
                 {label: `Insert ${rf.prompt} after`, mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ]) : []),
-            {label: 'Move up', mode: {kind: 'immediate',
+            {label: 'Move up', mode: {kind: 'immediate', deps: shapeDeps,
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up'${m})`}},
-            {label: 'Move down', mode: {kind: 'immediate',
+            {label: 'Move down', mode: {kind: 'immediate', deps: shapeDeps,
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down'${m})`}},
             {label: 'History', mode: {kind: 'modal',
                 dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id}${m})`}},
-            {label: 'Delete', mode: {kind: 'confirm',
+            {label: 'Delete', mode: {kind: 'confirm', deps: shapeDeps,
                 expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id}${m})`,
                 message: `Delete this ${rf.prompt}?`}},
         ];
@@ -1655,6 +1662,12 @@ export class LexemeEditor {
         const defaults = current.domainFields;
         const noteWidget = changeNoteWidget();
 
+        // Speculation deps for the save (txd one-trip swap): a content edit -
+        // the same keys saveEdit will emit (changeKeys, the shared source).
+        const parentPath = getAssertionPath(current.assertion);
+        const deps = this.changeKeys(entry_id, fact_id,
+                                     parentPath[parentPath.length-2][1], rel.tag, 'self', mode);
+
         const hidden: Record<string, any> = {
             entry_id, fact_id, mode,
             replaces_assertion_id: current.assertion.assertion_id,
@@ -1672,7 +1685,7 @@ export class LexemeEditor {
             submitLabel: 'Save',
             hidden,
             dispatch: {id: 'edit-form',
-                       onsubmit: 'event.preventDefault(); tx`wordwiki.lexeme.saveTuple(${getFormJSON(event.target)})`'},
+                       onsubmit: `event.preventDefault(); txd(${JSON.stringify(deps)})\`wordwiki.lexeme.saveTuple(\${getFormJSON(event.target)})\``},
         });
 
         // Self-lift (deferred - the script runs during insertion, before its
@@ -1704,6 +1717,10 @@ export class LexemeEditor {
         const fields = dialogFields(rel);
         const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
 
+        // Speculation deps for the save (txd one-trip swap): an insert is a
+        // shape event - the same keys saveInsert will emit (changeKeys).
+        const deps = this.changeKeys(entry_id, 0, parent_fact_id, child_tag, 'parent', mode);
+
         const hidden: Record<string, any> = {entry_id, parent_fact_id, child_tag, mode};
         if(anchor_fact_id !== undefined && (where === 'before' || where === 'after')) {
             hidden.anchor_fact_id = anchor_fact_id;
@@ -1731,7 +1748,7 @@ export class LexemeEditor {
                     submitLabel: 'Save',
                     hidden,
                     dispatch: {id: 'edit-form',
-                               onsubmit: 'event.preventDefault(); tx`wordwiki.lexeme.saveTuple(${getFormJSON(event.target)})`'},
+                               onsubmit: `event.preventDefault(); txd(${JSON.stringify(deps)})\`wordwiki.lexeme.saveTuple(\${getFormJSON(event.target)})\``},
                 })];
     }
 
@@ -1750,6 +1767,14 @@ export class LexemeEditor {
         // As in editMenuItems: the mode rides along only when not 'edit'
         // (edit keeps its byte-identical wire).
         const m = mode === 'edit' ? '' : `, '${mode}'`;
+        // Restore speculation deps: a restore is 'self' scope when the fact
+        // is live but 'parent' (shape) after a delete - speculate the UNION
+        // (over-speculating is free; unmatched deps are ignored).
+        const histPath = getAssertionPath(versions[0].assertion);
+        const hist_parent = histPath[histPath.length-2][1];
+        const restoreDeps = [...new Set([
+            ...this.changeKeys(entry_id, fact_id, hist_parent, rel.tag, 'self', mode),
+            ...this.changeKeys(entry_id, fact_id, hist_parent, rel.tag, 'parent', mode)])];
 
         return [
             // This dialog is opened from a button INSIDE the modal body, which
@@ -1789,7 +1814,7 @@ export class LexemeEditor {
                             ? ['span', {class:'small text-muted'},
                                'not restorable (predates a vocabulary migration)']
                             : action.actionButton('Restore',
-                                {kind: 'confirm',
+                                {kind: 'confirm', deps: restoreDeps,
                                  expr: `wordwiki.lexeme.restoreVersion(${entry_id}, ${fact_id}, ${a.assertion_id}${m})`,
                                  message: `Restore this version of ${rel.prompt}?`},
                                 'btn btn-sm btn-outline-secondary')];
@@ -2309,37 +2334,46 @@ export class LexemeEditor {
     // makes it clean; deleting makes it a pending-removal; editing a clean
     // fact makes it edited), and those changes ripple through the diff display
     // - so a fine-grained self/parent reload would leave sibling classes stale.
-    private mutationTargets(entry_id: number, a: Assertion, scope: 'self'|'parent',
-                            mode: EditMode = 'edit'): string[] {
+    /** The dirty keys for a change to a fact of relation `tag` under
+     *  `parent_fact_id` - the ONE source of truth for both EMISSION
+     *  (mutationTargets) and button/dialog SPECULATION deps (txd one-trip
+     *  swaps), so the two can never drift.  EMISSION, liminal-style
+     *  (meta-editor-refresh-design.md): tell the whole truth at every
+     *  granularity; each page controls its refresh cost by what it
+     *  REGISTERS.  A content edit ('self') dirties the fact and the
+     *  relation's content; a shape event ('parent' - insert / delete /
+     *  move) dirties the relation's content AND shape, plus the parent
+     *  tuple's surface (its ☰ carries emptiness-dependent items). */
+    private changeKeys(entry_id: number, fact_id: number, parent_fact_id: number,
+                       tag: string, scope: 'self'|'parent',
+                       mode: EditMode = 'edit'): string[] {
         // Review refreshes coarsely: its page reclassifies the whole change
         // list, so every action reloads the entry root.
         if(mode === 'review')
             return [this.rootTarget(entry_id)];
-        // EMISSION, liminal-style (meta-editor-refresh-design.md): tell the
-        // whole truth at every granularity; each page controls its refresh
-        // cost by what it REGISTERS.  A content edit ('self') dirties the
-        // fact and the relation's content; a shape event ('parent' - insert /
-        // delete / move) dirties the relation's content AND shape, plus the
-        // parent tuple's surface (its ☰ carries emptiness-dependent items).
-        const path = getAssertionPath(a);
-        const parent_fact_id = path[path.length-2][1];
         const keys = scope === 'self'
-            ? [`.-fact-${a.id}-`,
-               `.-rel-${parent_fact_id}-${a.ty}-`]
+            ? [`.-fact-${fact_id}-`,
+               `.-rel-${parent_fact_id}-${tag}-`]
             : [`.-fact-${parent_fact_id}-`,
-               `.-rel-${parent_fact_id}-${a.ty}-`,
-               `.-rel-${parent_fact_id}-${a.ty}-shape-`];
+               `.-rel-${parent_fact_id}-${tag}-`,
+               `.-rel-${parent_fact_id}-${tag}-shape-`];
         // A titleRole relation feeds the <h1>: the meta page's title fragment
         // re-renders; a HEADWORD additionally widens to the whole entry (the
         // legacy page's heading is not a fragment - this generalizes the old
         // SpellingTag special case; glosses feed only the meta title).
-        const titleRole = this.app.dictSchema.relationsByTag[a.ty]?.style.$view?.titleRole;
+        const titleRole = this.app.dictSchema.relationsByTag[tag]?.style.$view?.titleRole;
         if(titleRole) keys.push(`.-entry-${entry_id}-title-`);
         if(titleRole === 'headword') keys.push(this.rootTarget(entry_id));
         // The pending count (the meta page's changes bar/hint) moves on every
         // mutation.
         keys.push(`.-entry-${entry_id}-activity-`);
         return keys;
+    }
+
+    private mutationTargets(entry_id: number, a: Assertion, scope: 'self'|'parent',
+                            mode: EditMode = 'edit'): string[] {
+        const path = getAssertionPath(a);
+        return this.changeKeys(entry_id, a.id, path[path.length-2][1], a.ty, scope, mode);
     }
 
     // ------------------------------------------------------------------------

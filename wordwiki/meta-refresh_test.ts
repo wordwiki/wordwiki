@@ -88,6 +88,30 @@ test("meta refresh: a deleted fact's tuple fragment renders NOTHING (removes its
     });
 });
 
+test("meta refresh: buttons and dialogs declare txd speculation deps = the emission keys", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            seed(fx);
+            const html = markupToString(fx.ww.lexeme.renderMetaEntry(1000));
+            // The gloss row's Move/Delete speculate the SHAPE keys the
+            // mutation will emit (changeKeys is the shared source).
+            assertStringIncludes(html,
+                'txd([".-fact-1100-",".-rel-1100-gls-",".-rel-1100-gls-shape-",'
+                + '".-entry-1000-title-",".-entry-1000-activity-"])');
+            // The edit dialog's save speculates the content keys.
+            const dialog = markupToString(fx.ww.lexeme.editDialog(1000, 1200));
+            assertStringIncludes(dialog,
+                'txd([".-fact-1200-",".-rel-1100-gls-",'
+                + '".-entry-1000-title-",".-entry-1000-activity-"])');
+            // The insert dialog's save speculates the shape keys.
+            const ins = markupToString(fx.ww.lexeme.insertDialog(1000, 1100, "gls"));
+            assertStringIncludes(ins,
+                'txd([".-fact-1100-",".-rel-1100-gls-",".-rel-1100-gls-shape-",'
+                + '".-entry-1000-title-",".-entry-1000-activity-"])');
+        });
+    });
+});
+
 test("meta refresh: the changes flag rides every fragment's own re-render URL", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
