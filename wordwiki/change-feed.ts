@@ -29,11 +29,15 @@
  * and applyFilter's navigate action - a REAL navigation, so Back walks
  * filter history.  A visit with no to_time redirects to the canonical URL
  * with it stamped at the db's top tx timestamp - to_time doubles as the
- * review-sitting anchor carried into the entry links, so every lexeme opened
- * from the feed shows receipts for everything settled this sitting.
+ * review-sitting anchor carried into the entry links, so a lexeme opened from
+ * the feed and toggled to review shows receipts for everything settled this
+ * sitting.
  *
- * Approving happens IN the lexeme (review mode has the diff context and the
- * two-person gate); the feed is for finding work.  Entry links open a new
+ * A clump's headword links to the WORD itself (the normal editor view), so
+ * the reader sees the change in the context of the whole lexeme; the editor's
+ * mode toggle switches to the review change-list, where approving happens (it
+ * has the diff context and the two-person gate).  The feed is for finding
+ * work.  Entry links open a new
  * tab - pages are served no-store (Back re-requests, losing appended slices
  * and scroll), so the feed tab must never navigate away.  Returning to it
  * fires an htmx reload of just the clumps that were clicked into.
@@ -405,8 +409,11 @@ export class ChangeFeed {
         };
     }
 
-    // The clump header: the lexeme (headword + glosses) linking into its
-    // review mode - in a NEW TAB, anchored at the feed's sitting - then WHEN
+    // The clump header: the lexeme (headword + glosses) linking to the WORD
+    // itself (its normal editor view, so you see the change in the context of
+    // the whole lexeme - the mode toggle there switches to the review list) -
+    // in a NEW TAB, still carrying the feed's sitting anchor so a toggle to
+    // review keeps the receipts - then WHEN
     // (this is a chrono feed, so the time reads prominently: relative, in the
     // default color, right after the title; the exact time is its tooltip),
     // the editor (quiet), and the facts' CURRENT status badges.
@@ -416,7 +423,7 @@ export class ChangeFeed {
                                 : `Entry ${c.entry_id}`;
         return ['div', {class: 'd-flex align-items-center gap-2 flex-wrap'},
                 ['a', {class: 'lm-feed-entry-link lm-cl-field',
-                       href: `/ww/wordwiki.lexeme.entryPage(${c.entry_id},'review',${anchor})`,
+                       href: `/ww/wordwiki.lexeme.entryPage(${c.entry_id},'edit',${anchor})`,
                        target: '_blank'},
                  title],
                 ['span', {class: 'lm-feed-when small',
