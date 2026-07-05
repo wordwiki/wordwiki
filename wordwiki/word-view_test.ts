@@ -62,12 +62,14 @@ test("lexemeLink + word view: pencil for editors, suppressed in bulk, edit bar o
             const view = markupToString(page.body);
             assertStringIncludes(view, "samqwan");            // the spelling (h1 headword)
             assertStringIncludes(view, "water");              // the gloss
-            // The standard pencil sits in the headword row (not a separate bar).
-            assertStringIncludes(view, "lm-edit-pencil");
+            assertStringIncludes(view, "lm-edit-pencil");     // the standard pencil
             assertStringIncludes(view, "wordwiki.wordEditor(1000)");
-            // The pencil follows the h1 title in the same flex row.
-            assert(/<h1[^>]*>.*<\/h1>\s*<a[^>]*lm-edit-pencil/s.test(view.replace(/\n/g,'')),
-                   "pencil should follow the headword h1");
+            // The content is wrapped in .page-content (so public.css styles the
+            // headword/glosses), and the pencil lives INSIDE the headword h1
+            // (part of the title line, never its own row).
+            assertStringIncludes(view, "page-content");
+            assert(/<h1[^>]*>(?:(?!<\/h1>).)*lm-edit-pencil/s.test(view.replace(/\n/g,'')),
+                   "pencil should sit inside the headword h1");
         });
     });
 });

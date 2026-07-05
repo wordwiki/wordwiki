@@ -467,25 +467,22 @@ export class WordWiki extends LiminalApp {
     wordView(entry_id: number): templates.Page {
         const e = this.entriesById.get(entry_id);
         const title = e ? entry.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
-        // renderEntry leads with its own <h1> headword; the edit pencil sits
-        // right after it (the standard title+pencil pattern - like the category
-        // detail page), not on a line of its own.
+        // The public renderer (.page-content-scoped public.css gives the
+        // headword + gloss treatment); renderEntry leads with its own <h1>.
         const rendered: any = e
             ? entry.renderEntry({rootPath: '/', renderInternalNotes: true, glossInTitle: true}, e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
+        // The edit pencil sits INSIDE the headword <h1> (trailing the glosses),
+        // so it reads as part of the title line and never drops to its own row -
+        // the standard title+pencil pattern, but robust to a long headword.
         const pencil = e && templates.mayEditLexemes()
-            ? templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`) : undefined;
-        // Splice the pencil into the headword's flex row (renderEntry's first
-        // node is the h1); if the shape ever changes, fall back to a lead row.
+            ? ['span', {class: 'ms-2'}, templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`)]
+            : undefined;
         const head = Array.isArray(rendered) ? rendered[0] : undefined;
-        const rest = Array.isArray(rendered) ? rendered.slice(1) : [rendered];
-        const titleRow = (Array.isArray(head) && head[0] === 'h1')
-            ? ['div', {class: 'd-flex align-items-center gap-2 flex-wrap'}, head, pencil]
-            : ['div', {class: 'd-flex align-items-center gap-2'},
-               ['h1', {class: 'mb-0'}, title], pencil];
-        const body = ['div', {class: 'container py-3 lm-prose'},
-            titleRow,
-            Array.isArray(head) && head[0] === 'h1' ? rest : rendered];
+        if(pencil && Array.isArray(head) && head[0] === 'h1')
+            head.push(pencil);   // append into the h1's children
+        const body = ['div', {class: 'container py-3'},
+            ['div', {class: 'page-content'}, rendered]];
         return templates.page(title, body);
     }
 
