@@ -11,6 +11,7 @@ import * as workspace from './workspace.ts';
 import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
+import * as entryMeta from './render-entry-meta.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as templates from './templates.ts';
 import * as orderkey from '../liminal/orderkey.ts';
@@ -481,8 +482,22 @@ export class WordWiki extends LiminalApp {
         const head = Array.isArray(rendered) ? rendered[0] : undefined;
         if(pencil && Array.isArray(head) && head[0] === 'h1')
             head.push(pencil);   // append into the h1's children
-        const body = ['div', {class: 'container py-3'},
-            ['div', {class: 'page-content'}, rendered]];
+
+        // EXPERIMENT (slice 1): the metadata-driven renderer, side-by-side with
+        // the hand renderer, so we can evolve $view until it matches or beats
+        // it.  Read-only; not wired to the editor.  See render-entry-meta.ts.
+        const metaRendered: any = e
+            ? entryMeta.renderEntryMeta({rootPath: '/', renderInternalNotes: true},
+                  this.dictSchema.relationsByTag[entry.EntryTag], e)
+            : ['p', {class: 'text-muted'}, 'Word not found.'];
+        const column = (label: string, content: any) =>
+            ['div', {class: 'col-lg-6'},
+             ['div', {class: 'text-uppercase small text-muted fw-bold mb-2 pb-1 border-bottom'}, label],
+             ['div', {class: 'page-content'}, content]];
+        const body = ['div', {class: 'container-fluid py-3'},
+            ['div', {class: 'row g-4'},
+             column('Hand renderer', rendered),
+             column('Metadata renderer (experiment)', metaRendered)]];
         return templates.page(title, body);
     }
 

@@ -106,6 +106,27 @@ export const variants: Record<string, string> = {
     'mm': "All Mig'maq-Mi'kmaq",
 };
 
+// Part-of-speech code -> display name.  Attached to the part_of_speech field as
+// $options so the metadata renderer can show the friendly name from DATA rather
+// than a hand-coded lookup (the field stays a 'string', so the editor - which
+// only consults $options for enum fields - is unchanged).
+export const partsOfSpeech: Record<string, string> = {
+    "na": "noun animate",
+    "ni": "noun inanimate",
+    "vii": "verb inanimate intransitive",
+    "vai": "verb animate intransitive",
+    "vit": "verb inanimate transitive",
+    "vat": "verb animate transitive",
+    "PTCL": "particle",
+    "PCTL": "particle",
+    "adv": "adverb",
+    "n": "noun",
+    "pn": "pronoun",
+    "pna": "pronoun animate",
+    "pni": "pronoun inanimate",
+    "unclassified": "unclassified part of speech",
+};
+
 export const dictSchemaJson = {
     $type: 'schema',
     $name: 'dict',
@@ -124,7 +145,10 @@ export const dictSchemaJson = {
             spelling_id: {$type: 'primary_key'},
             text: {$type: 'string', $bind: 'attr1'},
             variant: {$type: 'variant'},
-            $style: { $shape: 'compactInlineListRelation' },
+            // The headword: pulled into the document title, joined ' / ', not
+            // repeated in the body.
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { order: 1, titleRole: 'headword', join: ' / ' } },
         },
 
         status: {
@@ -135,7 +159,8 @@ export const dictSchemaJson = {
             status: {$type: 'enum', $bind: 'attr1', $style: { $options: states} },
             details: {$type: 'string', $bind: 'attr2' },
             variant: {$type: 'variant'},
-            $style: { $shape: 'compactInlineListRelation' },
+            // Editorial: not in the read view.
+            $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
         },
 
         todo: {
@@ -148,7 +173,7 @@ export const dictSchemaJson = {
             assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
             done: {$type: 'boolean', $bind: 'attr4'},
             variant: {$type: 'variant'},
-            $style: { $shape: 'compactInlineListRelation' },
+            $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
         },
 
         note: {
@@ -156,15 +181,23 @@ export const dictSchemaJson = {
             $tag: NoteTag,
             note_id: {$type: 'primary_key'},
             note: {$type: 'string', $bind: 'attr1', $style: { $width: 80, $height: 5, $markdown: true }},
-            $style: { $shape: 'compactInlineListRelation' },
+            $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
         },
 
         subentry: {
             $type: 'relation',
             $tag: SubentryTag,
             subentry_id: {$type: 'primary_key'},
-            part_of_speech: {$type: 'string', $bind: 'attr1'},
-            $style: { $shape: 'containerRelation' },
+            // A string (editor stays a text box); $options gives the metadata
+            // renderer the code -> display name, so the friendly text comes
+            // from DATA, not a hand-coded lookup.
+            part_of_speech: {$type: 'string', $bind: 'attr1',
+                             $style: { $options: partsOfSpeech,
+                                       $view: { order: 2, label: 'inline' } }},
+            // Only a small % of words have >1 sense: for one, drop the "1." level
+            // entirely (read); the editor keeps it.  Elide when empty.
+            $style: { $shape: 'containerRelation',
+                      $view: { order: 3, singleton: 'collapse', empty: 'elide' } },
             // probably should have variant here TODO
             // translation TODO
 
@@ -174,7 +207,8 @@ export const dictSchemaJson = {
                 translation_id: {$type: 'primary_key'},
                 translation: {$type: 'string', $bind: 'attr1', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'compactInlineListRelation' },
+                $style: { $shape: 'compactInlineListRelation',
+                          $view: { order: 1, label: 'inline', join: ' / ' } },
             },
 
             /*definition: {
@@ -210,14 +244,19 @@ export const dictSchemaJson = {
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
-                $style: { $shape: 'inlineListRelation' },
+                // Mirrored into the title (glossInTitle) and shown in the body,
+                // slash-joined.
+                $style: { $shape: 'inlineListRelation',
+                          $view: { order: 3, titleRole: 'gloss', label: 'inline', join: ' / ' } },
             },
 
             example: {
                 $type: 'relation',
                 $tag: ExampleTag,
                 example_id: {$type: 'primary_key'},
-                $style: { $shape: 'containerRelation' },
+                // Always a list, even for one (unlike subentry); elide if none.
+                $style: { $shape: 'containerRelation',
+                          $view: { order: 4, label: 'heading', singleton: 'list', empty: 'elide' } },
 
                 //translation: {$type: 'string', $bind: 'attr1'},
                 // Probably move translation into a sub relation (so can have variants)
@@ -284,7 +323,8 @@ export const dictSchemaJson = {
                 pronunciation_guide_id: {$type: 'primary_key'},
                 pronunciation_guide: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'compactInlineListRelation' },
+                $style: { $shape: 'compactInlineListRelation',
+                          $view: { order: 5, label: 'inline', join: ', ', empty: 'elide' } },
             },
 
             category: {
@@ -293,7 +333,8 @@ export const dictSchemaJson = {
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
                 category: {$type: 'string', $bind: 'attr1'},
-                $style: { $shape: 'compactInlineListRelation' },
+                // Navigation/editorial metadata, not part of the word display.
+                $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
             },
 
             related_entry: {
@@ -301,7 +342,8 @@ export const dictSchemaJson = {
                 $tag: RelatedEntryTag,
                 related_entry_id: {$type: 'primary_key'},
                 unresolved_text: {$type: 'string', $bind: 'attr1'},
-                $style: { $shape: 'inlineListRelation' },
+                $style: { $shape: 'inlineListRelation',
+                          $view: { order: 6, label: 'inline', join: ', ', empty: 'elide' } },
             },
 
             // Probably same variant treatment here as we are doing for examples
@@ -311,7 +353,8 @@ export const dictSchemaJson = {
                 alternate_grammatical_form_id: {$type: 'primary_key'},
                 grammatical_form: {$type: 'string', $bind: 'attr1'},
                 gloss: {$type: 'string', $bind: 'attr2'},
-                $style: { $shape: 'containerRelation' },
+                $style: { $shape: 'containerRelation',
+                          $view: { order: 7, label: 'heading', empty: 'elide' } },
 
                 alternate_form_text: {
                     $type: 'relation',
@@ -358,7 +401,8 @@ export const dictSchemaJson = {
                 document_reference_id: {$type: 'primary_key'},
                 bounding_group_id: {$type: 'integer', $bind: 'attr1',
                                     $style: { $shape: 'boundingGroup'}},
-                $style: { $shape: 'containerRelation' },
+                $style: { $shape: 'containerRelation',
+                          $view: { order: 9, label: 'heading', empty: 'elide' } },
 
                 transcription: {
                     $type: 'relation',
@@ -443,18 +487,21 @@ export const dictSchemaJson = {
                 source_id: {$type: 'primary_key'},
                 source: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'inlineListRelation' },
+                $style: { $shape: 'inlineListRelation', $view: { hidden: true } },
             },
         },
 
         recording: {
             $type: 'relation',
             $tag: RecordingTag,
+            $prompt: 'Recordings',
             recording_id: {$type: 'primary_key'},
             recording: {$type: 'audio', $bind: 'attr1'},
             speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
             variant: {$type: 'variant'},
-            $style: { $shape: 'inlineListRelation' },
+            // Entry-level, rendered before the senses (like the hand renderer).
+            $style: { $shape: 'inlineListRelation',
+                      $view: { order: 2, label: 'heading', empty: 'elide' } },
         },
     },
 };
@@ -885,24 +932,6 @@ export function renderSubentry(ctx: RenderCtx, e: Entry, s: Subentry): any {
         !ctx.docRefsFirst ? renderDocumentReferences(ctx, e, s, s.document_reference) : undefined,
     ];
 }
-
-export const partsOfSpeech: Record<string, string> = {
-    "na": "noun animate",
-    "ni": "noun inanimate",
-    "vii": "verb inanimate intransitive",
-    "vai": "verb animate intransitive",
-    "vit": "verb inanimate transitive",
-    "vat": "verb animate transitive",
-    "PTCL": "particle",
-    "PCTL": "particle",
-    "adv": "adverb",
-    "n": "noun",
-    "pn": "pronoun",
-    "pna": "pronoun animate",
-    "pni": "pronoun inanimate",
-    "unclassified": "unclassified part of speech",
-};
-
 
 export function renderPartOfSpeech(ctx: RenderCtx, e: Entry, s: Subentry, part_of_speech: string): any {
     return ['div', {},  ['b', {}, 'Part of Speech: '], partsOfSpeech[part_of_speech] ?? part_of_speech];

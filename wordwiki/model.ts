@@ -30,6 +30,37 @@ export interface Style {
     // via liminal/markdown.ts markdownToMarkup (AST -> markup, no raw-HTML
     // channel), and the editor offers a textarea.
     $markdown?: boolean,
+    // Presentation metadata for the metadata-driven document renderer
+    // (render-entry-meta.ts).  Kept SEPARATE from $shape (which drives the
+    // editor) so evolving the read-only rendering never perturbs the editor.
+    // Everything here is DECLARED INTENT; the render mode (read vs edit)
+    // decides how far to honour it - e.g. read collapses singletons and elides
+    // empties, the editor keeps them so you can see structure and add.
+    $view?: ViewStyle,
+}
+
+export interface ViewStyle {
+    // Presentation order among siblings (lower first); ties fall back to schema
+    // order.  Lets the document order differ from the storage/editor order.
+    order?: number,
+    // How this relation's prompt is shown: a bold heading above the values, an
+    // inline "Prompt: value" prefix, or nothing (the value stands alone).
+    label?: 'heading' | 'inline' | 'none',
+    // Join a list of single-value tuples onto one line (e.g. glosses ' / ').
+    join?: string,
+    // Pull this field's value(s) into the document title instead of (headword)
+    // or in addition to (gloss) the body.
+    titleRole?: 'headword' | 'gloss',
+    // Zero members: drop the whole section (read) vs keep it (editor, so the
+    // add affordance shows).  Default 'elide' in read mode.
+    empty?: 'elide' | 'keep',
+    // Exactly one member: collapse the grouping level and render the lone
+    // member in place (subentry), vs always use the list presentation
+    // (examples).  Default 'list'.
+    singleton?: 'collapse' | 'list',
+    // Never render in the read view (editorial-only relations: status, todo,
+    // note, ...).  A coarse first cut at an audience axis.
+    hidden?: boolean,
 }
 
 export function validateStyle(locus:string, style: any): Style {

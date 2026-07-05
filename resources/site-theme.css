@@ -112,3 +112,12 @@ body {
 .page-content li { margin: .2rem 0; }
 .page-content a.audio-icon       { margin-left: .4em; }
 .page-content a.audio-icon:hover { text-decoration: none; }
+
+/* The metadata-driven word renderer (render-entry-meta.ts, experiment): keep a
+   reference scan inside its column.  The svg defaults to display:inline, so its
+   height doesn't push following content down (the transcription overlaps it) -
+   make it a block so its height is reserved.  We do NOT set height:auto (with
+   an unconstrained width that collapses the reserved height to ~0 while the svg
+   still paints full-size); an over-wide scan scrolls in the wrapper instead. */
+.lm-me-scan { max-width: 100%; overflow-x: auto; margin: .25rem 0; }
+.lm-me-scan > svg { display: block; }
