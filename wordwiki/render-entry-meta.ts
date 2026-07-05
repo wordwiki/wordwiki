@@ -52,6 +52,30 @@ export interface EntryRenderConfig {
     // Optional affordance appended INSIDE the headword <h1> (the standard edit
     // pencil).  Context-specific, so injected - the public export passes none.
     titleAffordance?: Markup;
+    // EDIT MODE.  When present, the renderer stops honouring the read-only
+    // conveniences (singleton collapse, empty elide, value joining) - see the
+    // "declared intent, mode decides" principle - and hangs affordances off
+    // each tuple / relation.  The affordance markup is BUILT BY THE EDITOR (it
+    // owns the action + workspace machinery); the renderer only places it.
+    editing?: EditingHooks;
+}
+
+/** Identity of a tuple in the versioned workspace - enough for the editor to
+ *  build its affordances (edit dialog, insert, move, delete).  A JsonNode has
+ *  none (read/export); a WorkspaceNode supplies it. */
+export interface TupleIdentity {
+    entryId: number;
+    factId: number;
+    parentFactId: number;
+}
+
+export interface EditingHooks {
+    // Wrap a tuple's rendered value `body` as an editable surface: the standard
+    // lm-editable click-to-edit + the row's ☰ menu.
+    tupleSurface: (rf: model.RelationField, id: TupleIdentity, body: Markup) => Markup;
+    // The add affordance for a relation under `parentId` (shown even when the
+    // relation is empty, so there is always a way to add the first item).
+    relationAdd: (rf: model.RelationField, parentId: TupleIdentity) => Markup;
 }
 
 // --- Data-access seam --------------------------------------------------------
@@ -63,6 +87,8 @@ export interface EntryRenderConfig {
 export interface EntryNode {
     children(rf: model.RelationField): EntryNode[];
     value(f: model.Field): any;
+    // Versioned identity (editor only); undefined for plain JSON.
+    identity?(): TupleIdentity | undefined;
 }
 
 /** Backend over the projected Entry JSON (relations are arrays keyed by field
@@ -143,6 +169,7 @@ export class EntryRenderer {
     readonly publicKeys: Set<string>;
     readonly renderBoundingGroup?: (id: number) => Markup;
     readonly titleAffordance?: Markup;
+    readonly editing?: EditingHooks;
 
     constructor(cfg: EntryRenderConfig) {
         this.rootPath = cfg.rootPath;
@@ -151,6 +178,20 @@ export class EntryRenderer {
         this.publicKeys = new Set(cfg.publicKeys ?? []);
         this.renderBoundingGroup = cfg.renderBoundingGroup;
         this.titleAffordance = cfg.titleAffordance;
+        this.editing = cfg.editing;
+    }
+
+    /** Wrap a tuple's rendered value as an editable surface (edit mode), or
+     *  return it plain (read).  `tuple` must carry identity in edit mode. */
+    protected surface(rf: model.RelationField, tuple: EntryNode, body: Markup): Markup {
+        const id = this.editing && tuple.identity?.();
+        return id ? this.editing!.tupleSurface(rf, id, body) : body;
+    }
+
+    /** The add affordance for a relation under `parent` (edit mode only). */
+    protected relationAdd(rf: model.RelationField, parent: EntryNode): Markup {
+        const id = this.editing && parent.identity?.();
+        return id ? this.editing!.relationAdd(rf, id) : "";
     }
 
     /** Render one entry as a document, entirely from the schema + $view.
@@ -250,91 +291,98 @@ export class EntryRenderer {
         return parts.length <= 1 ? (parts[0] ?? "") : intersperse(parts, " ");
     }
 
-    /** One tuple as a block: its content scalars (each with its label policy),
-     *  then its child relations, recursively, then any affordances (edit). */
+    /** One tuple as a block: its content scalars (each with its label policy)
+     *  form the editable SURFACE (edit: click-to-edit + the ☰), then its child
+     *  relations, recursively (separately editable). */
     protected renderTupleBlock(rf: model.RelationField, tuple: EntryNode): Markup {
         const scalars = contentScalars(rf).map(f => this.renderScalarField(f, tuple));
         const children = orderedChildRelations(rf).map(cr => this.renderRelation(cr, tuple));
-        return [scalars, children, this.tupleAffordances(rf, tuple)];
-    }
-
-    /** Override point for the editor: per-tuple affordances (edit/add/remove).
-     *  Read mode has none. */
-    protected tupleAffordances(_rf: model.RelationField, _tuple: EntryNode): Markup {
-        return "";
+        return [this.surface(rf, tuple, scalars), children];
     }
 
     // --- relations -----------------------------------------------------------
 
     /** A relation (a section): honours $view label / join / empty / singleton /
-     *  compose / keyField.  `parent` is the node whose child tuples these are. */
+     *  compose / keyField.  `parent` is the node whose child tuples these are.
+     *  In EDIT mode it stops collapsing / eliding / joining, wraps each tuple as
+     *  an editable surface, and appends the add affordance. */
     renderRelation(rf: model.RelationField, parent: EntryNode): Markup {
         const v = view(rf);
+        const editing = !!this.editing;
         const tuples = parent.children(rf);
 
-        // A keyed bag (attr): each tuple is "Key: value", labelled from the key;
-        // a non-internal audience shows only the configured public keys.
-        if (v.keyField) return this.renderKeyedBag(rf, tuples);
+        // A keyed bag (attr): each tuple is "Key: value", labelled from the key.
+        if (v.keyField) return this.renderKeyedBag(rf, tuples, parent);
 
-        if (tuples.length === 0)
-            return v.empty === "keep" ? ["div", { class: "lm-me-empty text-muted small" }, rf.prompt] : "";
+        // Empty: read elides (or a keep-stub); edit shows the add affordance so
+        // there is always a way to add the first item.
+        if (tuples.length === 0) {
+            if (!editing) return v.empty === "keep" ? ["div", { class: "lm-me-empty text-muted small" }, rf.prompt] : "";
+            const add = this.relationAdd(rf, parent);
+            return v.label === "heading" ? this.section(rf, add) : add;
+        }
 
-        // Singleton collapse: render the lone member's content with no
-        // wrapper/label (the subentry "1." level disappears for a single sense).
-        if (v.singleton === "collapse" && tuples.length === 1)
+        // Singleton collapse: READ only (edit keeps the level so a 2nd can be added).
+        if (v.singleton === "collapse" && tuples.length === 1 && !editing)
             return this.renderTupleBlock(rf, tuples[0]);
 
-        // FLAT (no child relations) or COMPOSED relation: a list of inline
-        // VALUES - never numbered.  A compose consumes its child relations into
-        // the phrase, so it lists here rather than as a numbered container.
+        // FLAT (no child relations) or COMPOSED relation: a list of inline VALUES.
         if (v.compose || orderedChildRelations(rf).length === 0) {
-            const items = tuples.map(t => this.tupleInlineValue(rf, t)).filter(m => !isEmptyMarkup(m));
-            if (items.length === 0) return "";
-            if (v.join !== undefined) {
+            // Joined onto one line - READ only (edit needs each tuple editable).
+            if (v.join !== undefined && !editing) {
+                const items = tuples.map(t => this.tupleInlineValue(rf, t)).filter(m => !isEmptyMarkup(m));
+                if (items.length === 0) return "";
                 const joined = intersperse(items, v.join);
                 return (v.label === "inline")
                     ? ["div", { class: LINE }, ["b", {}, rf.prompt + ": "], joined]
                     : ["div", { class: LINE }, joined];
             }
-            // One value per line.  With an inline label, REPEAT it per line:
-            // multiple long values (several glosses) are unreadable as a
-            // slash-run and hide how many there are; a repeated "Gloss:" is no
-            // heavier than one line for the common single value.
-            if (v.label === "inline")
-                return items.map(it => ["div", { class: LINE }, ["b", {}, rf.prompt + ": "], it]);
-            // A simple list (recordings): tight rows, not the airy container gap.
-            return this.section(rf, items.map(it => ["div", { class: "lm-me-listitem" }, it]));
+            // One line per tuple (each editable in edit).  With an inline label,
+            // repeat it per line (several long glosses are unreadable joined).
+            const lines = tuples.map(t => {
+                const value = this.tupleInlineValue(rf, t);
+                if (isEmptyMarkup(value)) return "";
+                const body: Markup = (v.label === "inline")
+                    ? ["div", { class: LINE }, ["b", {}, rf.prompt + ": "], value]
+                    : ["div", { class: editing ? LINE : "lm-me-listitem" }, value];
+                return this.surface(rf, t, body);
+            }).filter(m => !isEmptyMarkup(m));
+            const withAdd = editing ? [lines, this.relationAdd(rf, parent)] : lines;
+            // Inline-labelled lists (gloss) stand alone; unlabelled lists
+            // (recordings) get a heading section.
+            return v.label === "inline" ? withAdd : this.section(rf, withAdd);
         }
 
         // CONTAINER relation (has child relations): each tuple is a block.
-        // Number only when $view.numbered (senses), as a hanging marker; other
-        // containers (document references, examples) read better separated by
-        // space alone (the CSS puts a gap between .lm-me-item siblings).
-        const numbered = view(rf).numbered && tuples.length > 1;
-        return this.section(rf, tuples.map((t, i) =>
-            numbered
+        // Number only when $view.numbered (senses), as a hanging marker.
+        const numbered = v.numbered && tuples.length > 1;
+        const items = tuples.map((t, i) => {
+            const block = this.renderTupleBlock(rf, t);
+            return numbered
                 ? ["div", { class: "lm-me-item lm-me-numbered" },
                    ["span", { class: "lm-me-num fw-bold" }, `${i + 1}.`],
-                   ["div", { class: "lm-me-num-body" }, this.renderTupleBlock(rf, t)]]
-                : ["div", { class: "lm-me-item" }, this.renderTupleBlock(rf, t)]));
+                   ["div", { class: "lm-me-num-body" }, block]]
+                : ["div", { class: "lm-me-item" }, block];
+        });
+        return this.section(rf, editing ? [items, this.relationAdd(rf, parent)] : items);
     }
 
     /** A keyed-bag relation (attr): filter by audience, label each row by its
-     *  humanised key. */
-    protected renderKeyedBag(rf: model.RelationField, tuples: EntryNode[]): Markup {
+     *  humanised key.  Each row is an editable surface in edit mode. */
+    protected renderKeyedBag(rf: model.RelationField, tuples: EntryNode[], parent: EntryNode): Markup {
         const keyF = rf.modelFields.find(f => f.name === view(rf).keyField);
         const valF = contentScalars(rf).find(f => f.name !== view(rf).keyField);
         if (!keyF || !valF) return "";
         const rows = tuples.filter(t => {
             if (this.audience === "internal") return true;
             return this.publicKeys.has(String(t.value(keyF)));
-        });
-        return rows.map(t => {
+        }).map(t => {
             const key = String(t.value(keyF) ?? "");
             const val = this.renderScalarValue(valF, t.value(valF));
             if (isEmptyMarkup(val) && !key) return "";
-            return ["div", { class: LINE }, ["b", {}, humanise(key) + ": "], val];
+            return this.surface(rf, t, ["div", { class: LINE }, ["b", {}, humanise(key) + ": "], val]);
         }).filter(m => !isEmptyMarkup(m));
+        return this.editing ? [rows, this.relationAdd(rf, parent)] : rows;
     }
 
     /** A section: an optional bold heading, then the body indented. */

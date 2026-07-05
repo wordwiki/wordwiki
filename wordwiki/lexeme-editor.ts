@@ -72,6 +72,8 @@ import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
+import {renderStandaloneGroup, singlePublicBoundingGroupEditorURL, imageRefDescription} from './render-page-editor.ts';
+import * as entryMeta from './render-entry-meta.ts';
 import type {WordWiki} from './wordwiki.ts';
 
 // All editor routes live under /ww/ (wordwiki's route mount); tx`...` calls use
@@ -82,6 +84,36 @@ const R = '/ww/wordwiki.lexeme';
 // The reference books offered by the per-book "add document reference"
 // buttons (the same set the navbar and home page link to).
 const REFERENCE_BOOKS = ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'];
+
+/**
+ * The versioned-workspace backend for the metadata renderer's EntryNode seam
+ * (render-entry-meta.ts): it walks CurrentTupleQuery instead of projected JSON,
+ * so the same layout code renders over live data AND carries fact identity for
+ * the edit affordances.  (The read/export path uses JsonNode; this is the
+ * editor path.)
+ */
+export class WorkspaceNode implements entryMeta.EntryNode {
+    constructor(private tq: CurrentTupleQuery,
+                private entryId: number,
+                private parentFactId: number) {}
+
+    children(rf: model.RelationField): entryMeta.EntryNode[] {
+        const rel: any = this.tq.childRelations[rf.tag];
+        if(!rel) return [];
+        return (rel.tuples as CurrentTupleQuery[])
+            .filter(t => t.mostRecentTupleVersion)   // skip pending deletions
+            .map(t => new WorkspaceNode(t, this.entryId, this.tq.src.id));
+    }
+
+    value(f: model.Field): any {
+        const a: any = this.tq.mostRecentTupleVersion?.assertion;
+        return a ? a[(f as any).bind] : undefined;   // content scalars carry a bind column
+    }
+
+    identity(): entryMeta.TupleIdentity {
+        return {entryId: this.entryId, factId: this.tq.src.id, parentFactId: this.parentFactId};
+    }
+}
 
 // ---------------------------------------------------------------------------
 // --- Soft-schema field -> liminal widget adapter ----------------------------
@@ -631,6 +663,87 @@ export class LexemeEditor {
         const tq = new CurrentTupleQuery(tuple);
         return this.renderTupleSurface(entry_id, tuple.schema, tq,
                                        this.surfaceClasses(tuple.schema));
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Metadata-driven EDITOR (experiment) ---------------------------------
+    // ------------------------------------------------------------------------
+    //
+    // The read-only metadata renderer (render-entry-meta.ts) run in EDIT mode
+    // over the versioned workspace (WorkspaceNode).  "The editor is the read
+    // view + a few overrides": the affordances (the row ☰, click-to-edit, the
+    // add lines) are built HERE - reusing this editor's existing action
+    // machinery - and injected as EditingHooks; the renderer only places them.
+    //
+    // Refresh (first cut): every affordance element carries its fine-grained
+    // reload class (-fact- / -rel-) but redirects the reload to re-render the
+    // WHOLE metadata entry - coarse but correct.  (Fine-grained metadata
+    // fragments are a later optimisation.)
+
+    /** The reload page (a normal navigation target). */
+    @route(authenticated)
+    metaEditPage(entry_id: number): templates.Page {
+        const e = this.app.entriesById.get(entry_id);
+        const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        return templates.page(title, this.renderMetaEntry(entry_id));
+    }
+
+    /** The whole metadata entry as an outerHTML-swappable reload fragment. */
+    @route(authenticated)
+    renderMetaEntry(entry_id: number): Markup {
+        const q = new CurrentTupleQuery(this.entryTuple(entry_id));
+        const root = new WorkspaceNode(q, entry_id, q.src.id);
+        const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
+        const renderer = new entryMeta.EntryRenderer({
+            rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
+            renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
+            editing: this.metaEditingHooks(entry_id),
+        });
+        return ['div', {class: `-entry-${entry_id}- container py-3`,
+                        'hx-get': `${R}.renderMetaEntry(${entry_id})`,
+                        'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
+                ['div', {class: 'page-content'}, renderer.render(entryRel, root)]];
+    }
+
+    /** Re-render the whole metadata entry into its wrapper - the redirect target
+     *  for every affordance's reload, so any mutation refreshes the view. */
+    private metaReloadAttrs(entry_id: number): any {
+        return {'hx-trigger': 'reload consume',
+                'hx-get': `${R}.renderMetaEntry(${entry_id})`,
+                'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'};
+    }
+
+    /** The reference scan + composed reference-book link (see wordView). */
+    private metaBoundingGroup(id: number): Markup {
+        const scan = renderStandaloneGroup('/', id);
+        let url = ''; try { url = singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
+        let desc = ''; try { desc = imageRefDescription(id); } catch { /**/ }
+        return ['div', {},
+            ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
+            desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
+    }
+
+    /** The edit affordances, built from this editor's action machinery. */
+    private metaEditingHooks(entry_id: number): entryMeta.EditingHooks {
+        return {
+            tupleSurface: (rf, id, body) => {
+                const current = new CurrentTupleQuery(
+                    this.findTupleInEntry(id.entryId, id.factId)).mostRecentTupleVersion;
+                if(!current) return body;
+                const menu = action.actionMenu(
+                    this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit'),
+                    {ariaLabel: `Actions for this ${rf.prompt}`});
+                return ['div', {class: `-fact-${id.factId}- lm-editable lm-me-editable d-flex align-items-start gap-1`,
+                                ...this.metaReloadAttrs(id.entryId),
+                                onclick: 'lmEditableClick(event)'},
+                        ['div', {class: 'flex-grow-1'}, body],
+                        menu];
+            },
+            relationAdd: (rf, parentId) =>
+                ['div', {class: `-rel-${parentId.factId}-${rf.tag}- lm-me-add`,
+                         ...this.metaReloadAttrs(parentId.entryId)},
+                 this.addButtons(parentId.entryId, parentId.factId, rf)],
+        };
     }
 
     // ------------------------------------------------------------------------
