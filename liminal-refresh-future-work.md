@@ -222,6 +222,8 @@ buildable because the funnel exists — `Table.insert` / `update` /
   same mint/emission function — one source of truth.
 - wordwiki's `dict` table is not a liminal Table (raw assertion-model DML) —
   lexeme-editor mutations keep hand-emitting or get their own mint helpers.
+  The metadata editor's adoption of this model (shape keys over the
+  `-fact-`/`-rel-` family) is designed in `meta-editor-refresh-design.md`.
 
 **Migration property**: automation always emits fine keys AND coarse parents,
 so fragments retag from `-task-` to `-task-project_id-88-` one at a time, any
