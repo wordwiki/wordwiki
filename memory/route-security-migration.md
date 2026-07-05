@@ -124,3 +124,5 @@ Design decisions (dz approved):
   POST-only) — closes a CSRF class orthogonal to authz. (planned)
 - Shared `liminal/` `@route` annotations must be inert under jsterp so wordwiki
   keeps working mid-migration. [[server-restart-protocol]]
+
+**Update 2026-07-05:** the last jsterp-router relics are gone (dz: jsterp must never route again): liminal/rpc.ts + wordwiki/server.ts deleted; jsterp.ts header now carries an explicit NOT-A-ROUTER charter (file kept, unimported, for future template evaluation). Only routeterp dial remains: LIMINAL_ROUTE_POLICY strict|permissive.
