@@ -265,3 +265,5 @@ object, action-log table, comments-as-separate-facts, point-event comments.
 Builds on [[wordwiki-assertion-model]]. Deferred: moderation unpublish
 (rationale rides a comment row), post-hoc edit sessions (a query, not a
 write-time object), trust tiers.
+
+**Update 2026-07-05: SIMPLE APPROVAL built** — the metadata editor ([[lexeme-editor-v2]]) grew an opt-in "view changes" mode (`metaEditPage(id, true)`): pending rows annotate baseline→current inline (one line, decorative never structural — nesting-as-history was the old doom), deletions + rowless facts (headword/hidden) listed in the bar with values, and an Approve-all that routes through per-fact approveFact (tree order, two-person rule; skipped facts stay visibly pending). Full review mode stays the power tool. Design: repo meta-editor-changes-mode.md.
