@@ -1,65 +1,17 @@
 /* ============================================================
    Public site (mikmaqonline) - layout/typography specific to the
    public pages.  The shared visual identity (accent colour, link
-   underline behaviour, base type) lives in site-theme.css, shared
-   with the editor.  Imported here too so already-published pages
-   (which only <link> public.css) still pick it up without a
-   re-publish.  Everything below is scoped to `.page-content` so the
-   navbar is untouched.
+   underline behaviour, base type) AND the .page-content entry
+   rendering now live in site-theme.css, shared with the editor
+   (the internal read-only word view uses .page-content too, and
+   loads site-theme directly - it must NOT load public.css, whose
+   @import would reorder the cascade and clobber editor styles).
+   Imported here so already-published pages (which only <link>
+   public.css) still pick everything up without a re-publish.
    ============================================================ */
 @import url("site-theme.css");
 
-/* A centred, comfortably-wide reading column (was edge-to-edge). */
-.page-content {
-  max-width: 62rem;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 3rem;
-  line-height: 1.6;
-}
-
-/* Headings: a little air; here h1 is the page title and h2 the section
-   heads (the public pages have a single h1), so size them accordingly. */
-.page-content h1 { font-size: 2rem;    font-weight: 600; margin: .25rem 0 1rem; }
-.page-content h2 { font-size: 1.4rem;  font-weight: 600; margin: 1.75rem 0 .6rem;
-                   padding-bottom: .25rem; border-bottom: 1px solid var(--mmo-rule); }
-.page-content h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 .4rem;
-                   color: var(--mmo-muted); }
-
-/* Entry pages: the meanings, slash-joined, ride on the title line after the
-   headword (`headword : meanings`) - the audience is largely non-fluent, so
-   the English must be right up front.  Smaller and muted so the headword
-   still owns the line, echoing the word-list `headword : gloss` rows. */
-.page-content h1 .entry-gloss-title {
-  font-size: 1.2rem;
-  font-weight: 400;
-  color: var(--mmo-muted);
-}
-
-/* Calmer link colour on hover/focus (the base colour + no-underline come
-   from site-theme.css). */
-.page-content a:hover         { color: var(--mmo-link-hover); }
-.page-content a:focus-visible { outline: 2px solid var(--mmo-link); outline-offset: 2px; }
-
-/* Word-list entries render as `<a><strong>headword</strong> : gloss</a>`.
-   Make the headword the coloured, clickable-looking part and let the gloss
-   read as plain dark text - far calmer than a whole blue underlined line.
-   (:has() is widely supported; where it isn't, the link just stays a plain
-   coloured link - a graceful fallback, not a breakage.) */
-.page-content a:has(strong)              { color: var(--mmo-ink); }
-.page-content a:has(strong) strong       { color: var(--mmo-link); font-weight: 600; }
-.page-content a:has(strong):hover        { text-decoration: none; }
-.page-content a:has(strong):hover strong { color: var(--mmo-link-hover);
-                                           text-decoration: underline; }
-
-/* Roomier, easier-to-scan lists (the bulk of the site). */
-.page-content ul { padding-left: 1.25rem; }
-.page-content li { margin: .2rem 0; }
-
-/* The list "play" speaker link: room from the gloss, no underline on hover
-   (the icon itself is sized/coloured by .audio-icon-svg in site-theme.css). */
-.page-content a.audio-icon       { margin-left: .4em; }
-.page-content a.audio-icon:hover { text-decoration: none; }
-
+/* Public-page-only chrome (the editor never loads this file). */
 div.public-search-box {
   margin: 1em 0;   /* vertical only - no left indent, so it aligns with headings */
 }

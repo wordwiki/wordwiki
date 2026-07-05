@@ -72,3 +72,43 @@ body {
   vertical-align: -.125em;
   fill: var(--mmo-link);
 }
+
+/* ---------------------------------------------------------------------------
+   .page-content: the read-only entry/word rendering, shared by the public
+   site and the internal read-only word view (wordwiki.wordView).  Kept HERE
+   (not in public.css) so the editor loads it directly - public.css re-imports
+   site-theme, so published pages still get it, and the editor never has to
+   load public.css (whose @import would reorder the cascade and clobber other
+   editor styles).  All .page-content-scoped, so the rest of the chrome is
+   untouched.
+--------------------------------------------------------------------------- */
+.page-content {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+  line-height: 1.6;
+}
+.page-content h1 { font-size: 2rem;    font-weight: 600; margin: .25rem 0 1rem; }
+.page-content h2 { font-size: 1.4rem;  font-weight: 600; margin: 1.75rem 0 .6rem;
+                   padding-bottom: .25rem; border-bottom: 1px solid var(--mmo-rule); }
+.page-content h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 .4rem;
+                   color: var(--mmo-muted); }
+/* `headword : meanings` - the English rides the title line, smaller & muted. */
+.page-content h1 .entry-gloss-title {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--mmo-muted);
+}
+.page-content a:hover         { color: var(--mmo-link-hover); }
+.page-content a:focus-visible { outline: 2px solid var(--mmo-link); outline-offset: 2px; }
+/* Word-list `<a><strong>headword</strong> : gloss</a>`: headword coloured,
+   gloss plain dark. */
+.page-content a:has(strong)              { color: var(--mmo-ink); }
+.page-content a:has(strong) strong       { color: var(--mmo-link); font-weight: 600; }
+.page-content a:has(strong):hover        { text-decoration: none; }
+.page-content a:has(strong):hover strong { color: var(--mmo-link-hover);
+                                           text-decoration: underline; }
+.page-content ul { padding-left: 1.25rem; }
+.page-content li { margin: .2rem 0; }
+.page-content a.audio-icon       { margin-left: .4em; }
+.page-content a.audio-icon:hover { text-decoration: none; }

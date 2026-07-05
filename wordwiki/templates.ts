@@ -137,10 +137,6 @@ export function htmxPageTemplate(content: PageContent): any {
           ['link', {href: assetUrl('/resources/site-theme.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/instance.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/liminal.css'), rel:'stylesheet', type:'text/css'}],
-          // The public entry styling (headword + gloss treatment) - all scoped
-          // under .page-content, so it only affects the read-only word view
-          // (which wraps its content in it), never the rest of the chrome.
-          ['link', {href: assetUrl('/resources/public.css'), rel:'stylesheet', type:'text/css'}],
           htmxScriptTag(),
           ['script', {}, block`
 /**/       function playAudio(src) {
@@ -310,6 +306,10 @@ export function pageTemplate(content: PageContent): any {
           // public site and the htmx editor load.
           ['link', {href: assetUrl('/resources/site-theme.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/instance.css'), rel:'stylesheet', type:'text/css'}],
+          // liminal.css too: these legacy-template pages (search, reports, ...)
+          // now carry lexeme links whose edit pencil is sized by
+          // `.lm-edit-pencil svg` here - without it the pencil collapses to 0.
+          ['link', {href: assetUrl('/resources/liminal.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/page-editor.css'), rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
 /**/           function playAudio(src) {
