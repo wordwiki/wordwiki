@@ -115,6 +115,15 @@ mode's collapsed form: the mental model is "the dot, opened up".
   `hasApprovePermission` / `mayApprove`.
 - New CSS (site-theme.css): the "was:" annotation styling + the bar/hint.
 
+## The reviewer loop (built 2026-07-05, later the same day)
+
+The list this mode was designed to pair with exists: **Recently changed
+words** (`recent-words.ts`, Reports menu) - one row per word, newest human
+change first, week-clumped, with the changes view's own pending count as a
+badge; each row opens the word's view-changes page.  A reviewer walks the
+list, taps, reads in context, Approves all - never touching the
+per-assertion feed unless a situation is tricky.
+
 ## Descoped / future
 
 - Deleted rows rendered in-place (struck) in the tree - needs the renderer to

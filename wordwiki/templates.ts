@@ -242,6 +242,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               'Reports'],
              ['ul', {class:'dropdown-menu'},
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.myActivity()'}, 'My Activity']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.recentlyChangedWords()'}, 'Recently Changed Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.changes()'}, 'Recent Changes']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.activity()'}, 'Monthly Activity']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],

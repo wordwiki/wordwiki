@@ -368,7 +368,11 @@ test("edit dialog: carries an optional change-note field", async () => {
             seedClean(fx);
             const dialog = markupToString(fx.ww.lexeme.editDialog(1000, 1010));
             assertStringIncludes(dialog, "change_note");
-            assertStringIncludes(dialog, "Note (optional)");
+            // A DISCLOSURE, not an open field (dz: an open "Note" box reads
+            // as a data field and its per-assertion note "disappears").
+            assertStringIncludes(dialog, "lm-change-note");
+            assertStringIncludes(dialog, "Add a change note (optional)");
+            assertStringIncludes(dialog, "travels with this one edit");
         });
     });
 });
@@ -479,7 +483,9 @@ test("entry page: an un-anchored visit redirects to the canonical URL with the a
             const r: any = fx.ww.lexeme.entryPage(1000);
             assert(isRedirectResponse(r));
             // No space in the canonical URL (it would show as %20 in the bar).
-            assertEquals(r.headers.Location, `/ww/wordwiki.entry(1000,${t})`);
+            // Self-canonical: wordwiki.entry serves the METADATA editor now,
+            // so the classic page redirects to itself.
+            assertEquals(r.headers.Location, `/ww/wordwiki.lexeme.entryPage(1000,'edit',${t})`);
             // The review-mode form keeps the mode across the redirect.
             const r2: any = fx.ww.lexeme.entryPage(1000, "review");
             assertEquals(r2.headers.Location,

@@ -38,6 +38,7 @@ import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {ChangeFeed} from './change-feed.ts';
 import {ActivityReport} from './activity-report.ts';
+import {RecentWords} from './recent-words.ts';
 import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
@@ -141,6 +142,13 @@ export class WordWiki extends LiminalApp {
     #report: ActivityReport|undefined = undefined;
     @route(authenticated) @path get report(): ActivityReport {
         return this.#report ??= new ActivityReport(this);
+    }
+
+    // Recently changed WORDS - the reviewer's word-at-a-time approval loop
+    // (page alias: wordwiki.recentlyChangedWords()).  See recent-words.ts.
+    #recentWords: RecentWords|undefined = undefined;
+    @route(authenticated) @path get recentWords(): RecentWords {
+        return this.#recentWords ??= new RecentWords(this);
     }
 
     // The scanned-document / page editor, reachable as wordwiki.pages.*
@@ -442,19 +450,18 @@ export class WordWiki extends LiminalApp {
         return server.forwardResponse(`/ww/wordwiki.entry(${entry_id})`);
     }
 
-    // The word EDITOR (the server-side htmx lexeme editor - the old
-    // client-side editor is retired).  `since` is the sitting anchor (see
-    // LexemeEditor.entryPage): an un-anchored visit redirects here with it
-    // stamped, so it rides in the browser URL.  `entry` is the legacy alias
-    // (kept so old in-flight links resolve); new links use wordEditor via the
-    // shared templates.lexemeLink helper.
+    // The word EDITOR - the METADATA-DRIVEN editor is the default now (dz,
+    // 2026-07-05; the classic per-relation-card look stays reachable at
+    // wordwiki.lexeme.entryPage, and review mode lives there too).  `since`
+    // was the classic editor's sitting anchor - accepted and ignored so old
+    // in-flight links keep resolving.  `entry` is the older legacy alias.
     @route(authenticated)
-    wordEditor(entry_id: number, since: number = 0): templates.Page | server.Response {
-        return this.lexeme.entryPage(entry_id, 'edit', since);
+    wordEditor(entry_id: number, _since: number = 0): templates.Page | server.Response {
+        return this.lexeme.metaEditPage(entry_id);
     }
     @route(authenticated)
-    entry(entry_id: number, since: number = 0): templates.Page | server.Response {
-        return this.lexeme.entryPage(entry_id, 'edit', since);
+    entry(entry_id: number, _since: number = 0): templates.Page | server.Response {
+        return this.lexeme.metaEditPage(entry_id);
     }
 
     // The word VIEW: a read-only rendering of the lexeme (for now the same
@@ -468,40 +475,59 @@ export class WordWiki extends LiminalApp {
     wordView(entry_id: number): templates.Page {
         const e = this.entriesById.get(entry_id);
         const title = e ? entry.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const rendered: any = e
+            ? entryMeta.renderEntryMeta(
+                  {rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
+                   renderBoundingGroup: this.wordViewBoundingGroup,
+                   titleAffordance: this.wordViewPencil(entry_id, e)},
+                  this.dictSchema.relationsByTag[entry.EntryTag], e)
+            : ['p', {class: 'text-muted'}, 'Word not found.'];
+        return templates.page(title,
+            ['div', {class: 'container py-3'},
+             ['div', {class: 'page-content'}, rendered]]);
+    }
+
+    /** The edit pencil INSIDE the headword <h1> (trailing the glosses), so it
+     *  reads as part of the title line and never drops to its own row. */
+    private wordViewPencil(entry_id: number, e: entry.Entry): any {
+        return e && templates.mayEditLexemes()
+            ? ['span', {class: 'ms-2'}, templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`)]
+            : undefined;
+    }
+
+    // The reference scan is a rich primitive: its scan + composed
+    // reference-book link/description need a server-side lookup, so the
+    // renderer takes it as an injected callback (keeps that module free of
+    // the server-only deps, and lets the public export inject its own).
+    private wordViewBoundingGroup(id: number): any {
+        const scan = renderPageEditor.renderStandaloneGroup('/', id);
+        let url = ''; try { url = renderPageEditor.singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
+        let desc = ''; try { desc = renderPageEditor.imageRefDescription(id); } catch { /**/ }
+        return ['div', {},
+            ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
+            desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
+    }
+
+    /** The old side-by-side comparison page (hand renderer vs the metadata
+     *  renderer), kept reachable for render tuning - the metadata renderer
+     *  is the word view now. */
+    @route(authenticated)
+    wordViewCompare(entry_id: number): templates.Page {
+        const e = this.entriesById.get(entry_id);
+        const title = e ? entry.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const pencil = e ? this.wordViewPencil(entry_id, e) : undefined;
         // The public renderer (.page-content-scoped public.css gives the
         // headword + gloss treatment); renderEntry leads with its own <h1>.
         const rendered: any = e
             ? entry.renderEntry({rootPath: '/', renderInternalNotes: true, glossInTitle: true}, e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
-        // The edit pencil sits INSIDE the headword <h1> (trailing the glosses),
-        // so it reads as part of the title line and never drops to its own row -
-        // the standard title+pencil pattern, but robust to a long headword.
-        const pencil = e && templates.mayEditLexemes()
-            ? ['span', {class: 'ms-2'}, templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`)]
-            : undefined;
         const head = Array.isArray(rendered) ? rendered[0] : undefined;
         if(pencil && Array.isArray(head) && head[0] === 'h1')
             head.push(pencil);   // append into the h1's children
-
-        // EXPERIMENT (slice 1): the metadata-driven renderer, side-by-side with
-        // the hand renderer, so we can evolve $view until it matches or beats
-        // it.  Read-only; not wired to the editor.  See render-entry-meta.ts.
-        // The reference scan is a rich primitive: its scan + composed
-        // reference-book link/description need a server-side lookup, so the
-        // renderer takes it as an injected callback (keeps that module free of
-        // the server-only deps, and lets the public export inject its own).
-        const renderBoundingGroup = (id: number): any => {
-            const scan = renderPageEditor.renderStandaloneGroup('/', id);
-            let url = ''; try { url = renderPageEditor.singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
-            let desc = ''; try { desc = renderPageEditor.imageRefDescription(id); } catch { /**/ }
-            return ['div', {},
-                ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
-                desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
-        };
         const metaRendered: any = e
             ? entryMeta.renderEntryMeta(
                   {rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
-                   renderBoundingGroup, titleAffordance: pencil},
+                   renderBoundingGroup: this.wordViewBoundingGroup, titleAffordance: pencil},
                   this.dictSchema.relationsByTag[entry.EntryTag], e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
         const column = (label: string, content: any) =>
@@ -511,7 +537,7 @@ export class WordWiki extends LiminalApp {
         const body = ['div', {class: 'container-fluid py-3'},
             ['div', {class: 'row g-4'},
              column('Hand renderer', rendered),
-             column('Metadata renderer (experiment)', metaRendered)]];
+             column('Metadata renderer', metaRendered)]];
         return templates.page(title, body);
     }
 
@@ -538,6 +564,13 @@ export class WordWiki extends LiminalApp {
     @route(authenticated)
     activity(q?: Record<string, any>): templates.Page {
         return this.report.activityPage(q);
+    }
+
+    // Recently changed words (see recent-words.ts): one row per word, newest
+    // change first, week-clumped; rows open the word's view-changes page.
+    @route(authenticated)
+    recentlyChangedWords(q?: Record<string, any>): templates.Page | server.Response {
+        return this.recentWords.page(q);
     }
 
     @route(authenticated)

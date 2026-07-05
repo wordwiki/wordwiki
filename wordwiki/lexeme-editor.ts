@@ -441,12 +441,36 @@ function isImportedEvent(a: Assertion): boolean {
         || isAutomatedUsername(a.change_by_username);
 }
 
+/**
+ * The change-note input, as a DISCLOSURE rather than an open field.  dz: an
+ * always-open "Note" box reads as a normal data field, and users are
+ * surprised when their note "disappears" (it rides ONE assertion - the next
+ * edit is a new note, as it should be).  So the box hides behind an explicit
+ * "Add a change note" opener (<details>, no JS); once opened - the rare,
+ * deliberate path - there is room to say exactly what a change note is.
+ */
+class ChangeNoteField extends TextAreaField {
+    override renderInput(value: any): Markup {
+        return [
+            ['div', {class: 'col-12'},
+             ['details', {class: 'lm-change-note'},
+              ['summary', {class: 'text-muted small'}, 'Add a change note (optional)…'],
+              ['div', {class: 'form-text mt-1'},
+               'A change note travels with this one edit and is shown to '
+               + 'reviewers in the word’s history. It is not saved on the '
+               + 'word itself — to record something about the word, use its '
+               + 'Note field.'],
+              ['textarea', {class: 'form-control', name: this.name, id: 'input-'+this.name,
+                            rows: this.rows},
+               String(value ?? '')]]]];
+    }
+}
+
 /** The optional change-note widget appended to the edit/insert dialogs.  Read
  *  raw on save into the version's change_note (it is NOT a relation field), so
  *  an edit can carry a rationale that shows in the review timeline. */
 function changeNoteWidget(): table.Field {
-    return new TextAreaField('change_note', 2,
-        {nullable: true, prompt: 'Note (optional) — a short why, shown to reviewers'});
+    return new ChangeNoteField('change_note', 2, {nullable: true, prompt: 'Change note'});
 }
 
 /** The change note from a dialog postback, trimmed (undefined when blank). */
@@ -538,9 +562,9 @@ export class LexemeEditor {
             const t = this.app.lastAllocatedTxTimestamp;
             // No space after the comma: it would percent-encode to %20 in the
             // address bar (this URL is the one users see and share).
-            return server.forwardResponse(mode === 'edit'
-                ? `/ww/wordwiki.entry(${entry_id},${t})`
-                : `${R}.entryPage(${entry_id},'${mode}',${t})`);
+            // Self-canonical: wordwiki.entry now serves the METADATA
+            // editor, so the classic look must not bounce through it.
+            return server.forwardResponse(`${R}.entryPage(${entry_id},'${mode}',${t})`);
         }
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
@@ -1004,6 +1028,15 @@ export class LexemeEditor {
      *  content whose relation renders NO body row (hidden editorial
      *  relations) - those changes must be listed in the BAR, like deletions,
      *  or Approve all would cover changes the page never showed. */
+    /** The VISIBLE pending-change count for one word - exactly what the
+     *  changes bar shows (the recently-changed-words report's badge reads
+     *  this, so list and page can never disagree). */
+    pendingChangeCount(entry_id: number): number {
+        const pending = this.metaPendingChanges(entry_id);
+        return pending.content.filter(p => p.visible).length
+            + pending.deletions.filter(p => p.visible).length;
+    }
+
     private metaPendingChanges(entry_id: number) {
         const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
         const hasContent = (rf: model.RelationField, a: Assertion) => rf.scalarFields.some(f =>

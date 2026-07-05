@@ -191,6 +191,11 @@ body {
 }
 .lm-me-chg-del { flex-basis: 100%; }
 
+/* The change-note disclosure in the edit/insert dialogs (lexeme-editor.ts
+   ChangeNoteField): closed by default so it doesn't read as a data field. */
+.lm-change-note summary { cursor: pointer; }
+.lm-change-note[open] summary { margin-bottom: .25rem; }
+
 /* The reference scan (render-entry-meta.ts).  display:block + line-height:0 so
    the scan reserves its own height (an inline svg lets the transcription flow
    into it).  The scan renders at natural width - it fits the single-column word
