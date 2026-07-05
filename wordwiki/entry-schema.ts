@@ -445,7 +445,11 @@ export const dictSchemaJson = {
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'inlineListRelation' },
+                // A key/value bag (shoebox-date, twitter-post, borrowed-word, ...):
+                // mostly editorial.  Hidden from the read view for now - the hand
+                // renderer surfaces only 'borrowed-word'; a filtered view is a
+                // later refinement.
+                $style: { $shape: 'inlineListRelation', $view: { hidden: true } },
             },
 
             document_reference: {

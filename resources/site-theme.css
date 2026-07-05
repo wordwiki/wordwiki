@@ -119,6 +119,19 @@ body {
    make it a block so its height is reserved.  We do NOT set height:auto (with
    an unconstrained width that collapses the reserved height to ~0 while the svg
    still paints full-size); an over-wide scan scrolls in the wrapper instead. */
+/* Vertical rhythm for the metadata renderer (render-entry-meta.ts).  A "block"
+   is a titled section (.lm-me-section) or a label/value line (.lm-me-line).
+   Every block gets ONE consistent gap above it; a run of consecutive lines
+   (Part of speech / Translation / Gloss) stays tight so it reads as one block.
+   Applied by class, so it holds at every nesting depth (e.g. inside Example).
+   The first block under any container has no top gap. */
+.lm-me-section, .lm-me-line { margin-top: .55rem; }
+.lm-me-line + .lm-me-line { margin-top: .12rem; }
+.lm-meta-entry > :first-child,
+.lm-me-section .ms-3 > :first-child,
+.lm-me-item > :first-child { margin-top: 0; }
+.lm-me-heading { margin: 0; }
+
 /* The reference scan (render-entry-meta.ts).  KNOWN ISSUE: the inline scan svg
    paints past its box and can overlap the following transcription in the narrow
    side-by-side column - the hand renderer's wrapping happens to clip it and we

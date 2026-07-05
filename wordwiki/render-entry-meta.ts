@@ -101,10 +101,12 @@ function renderScalarValue(ctx: MetaCtx, f: model.ScalarField, value: any): Mark
 function renderScalarField(ctx: MetaCtx, f: model.ScalarField, value: any): Markup {
     const rendered = renderScalarValue(ctx, f, value);
     if (isEmptyMarkup(rendered)) return "";
+    // A label/value line is a "block" for the vertical rhythm (see the CSS): a
+    // run of them reads tight; other blocks get a gap above.
     switch (view(f).label ?? "none") {
-        case "inline":  return ["div", {}, ["b", {}, f.prompt + ": "], rendered];
-        case "heading": return ["div", {}, ["div", { class: "fw-bold" }, f.prompt + ":"], rendered];
-        default:        return ["div", {}, rendered];
+        case "inline":  return ["div", { class: "lm-me-line" }, ["b", {}, f.prompt + ": "], rendered];
+        case "heading": return ["div", { class: "lm-me-line" }, ["div", { class: "fw-bold" }, f.prompt + ":"], rendered];
+        default:        return ["div", { class: "lm-me-line" }, rendered];
     }
 }
 
@@ -163,7 +165,7 @@ export function renderRelation(ctx: MetaCtx, rf: model.RelationField, tuples: an
     const heading = (body: Markup): Markup =>
         v.label === "heading"
             ? ["div", { class: "lm-me-section" },
-               ["div", { class: "fw-bold mt-2" }, rf.prompt + ":"], ["div", { class: "ms-3" }, body]]
+               ["div", { class: "fw-bold lm-me-heading" }, rf.prompt + ":"], ["div", { class: "ms-3" }, body]]
             : ["div", { class: "lm-me-section" }, body];
 
     // FLAT (no child relations) or COMPOSED relation: a list of inline VALUES -
