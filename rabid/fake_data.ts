@@ -135,7 +135,7 @@ interface ActivityProfile {
 // attendance: staff ~35h/wk (paid), heavy ~20h, regular ~10h (~2 events/wk),
 // occasional 2-10h.
 const ACTIVITY_PROFILES: ActivityProfile[] = [
-    {key: 'staff',      initial: 'S', count: 3,  isStaff: 1, attendRate: 1.0,  weeklyHours: 27, paid: 1},
+    {key: 'staff',      initial: 'S', count: 3,  isStaff: 1, attendRate: 1.0,  weeklyHours: 40, paid: 1},
     {key: 'heavy',      initial: 'H', count: 1,  isStaff: 0, attendRate: 0.95, weeklyHours: 12, paid: 0},
     {key: 'regular',    initial: 'R', count: 5,  isStaff: 0, attendRate: 0.85, weeklyHours: 2,  paid: 0},
     {key: 'occasional', initial: 'O', count: 10, isStaff: 0, attendRate: 0.35, weeklyHours: 0,  paid: 0},
@@ -443,10 +443,11 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
             rabid.event.insert({
                 event_kind: 'public',
                 description: "Saturday in Victoria Park",
-                // Off-site (the park) -> remote, so it carries a location.
-                location_description: 'Victoria Park - Near the Lake',
-                location_url: 'https://maps.google.com/?q=Victoria+Park+Kitchener',
-                is_remote_event: 1,
+                // Our shop IS in Victoria Park - this is the regular in-shop
+                // Saturday session, NOT a remote/away event (so: no location).
+                location_description: '',
+                location_url: '',
+                is_remote_event: 0,
                 volunteer_only: 0,
                 shop_load_time: undefined,
                 setup_time: setupTime,
@@ -479,45 +480,48 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
             while (currentDate <= endDate) {
                 const dateStr = localDateStr(currentDate);
 
-                // Main event details similar to createFakeWednesdayEvent
-                const startHour = faker.helpers.arrayElement([17, 18, 19]);
-                const duration = faker.helpers.arrayElement([2, 3, 4]);
+                // Midweek away events run a standard Wed 6pm–8pm (occasionally
+                // running an hour long).
+                const startHour = 18;
+                const duration = faker.helpers.weightedArrayElement([
+                    { value: 2, weight: 8 }, { value: 3, weight: 2 }]);
                 const startTime = `${dateStr} ${startHour.toString().padStart(2, '0')}:00:00`;
                 const endTime = `${dateStr} ${(startHour + duration).toString().padStart(2, '0')}:00:00`;
                 const setupTime = `${dateStr} ${(startHour - 1).toString().padStart(2, '0')}:30:00`;
 
-                // Vary the event details slightly.  An at-shop event carries no
-                // location (it's the default home); off-site events are remote
-                // and carry a location (which is what the UI surfaces).
-                const locations = [
-                    { desc: "", url: "", remote: false },   // our shop (no location needed)
-                    { desc: "Victoria Park - Main Pavilion", url: "https://maps.google.com/?q=Victoria+Park+Kitchener", remote: true },
-                    { desc: "Victoria Park - Near the Lake", url: "", remote: true },
-                    { desc: "Downtown Kitchener - City Hall", url: "https://maps.google.com/?q=Kitchener+City+Hall", remote: true }
-                ];
-
-                const location = faker.helpers.arrayElement(locations);
+                // Almost every Wednesday night is the regular PUBLIC, off-site
+                // (away) community repair event; a minority (~15%) are something
+                // else - an in-shop night, a training, or a volunteers-only
+                // session.  The shop is IN Victoria Park, so an off-site event
+                // carries a (non-park) location the UI surfaces; in-shop none.
+                const regularAway = faker.datatype.boolean({ probability: 0.85 });
+                const remote = regularAway || faker.datatype.boolean({ probability: 0.3 });
+                const offsite = faker.helpers.arrayElement([
+                    { desc: "Downtown Kitchener - City Hall", url: "https://maps.google.com/?q=Kitchener+City+Hall" },
+                    { desc: "Bridgeport Community Centre", url: "" },
+                    { desc: "Stanley Park Mall", url: "" },
+                ]);
                 
                 // Check if event is in the past to determine cash collected
                 const eventDate = new Date(startTime);
                 const isPastEvent = eventDate < today;
 
                 rabid.event.insert({
-                    event_kind: faker.helpers.weightedArrayElement([
-                        { value: 'public', weight: 8 },
-                        { value: 'training', weight: 1 },
-                        { value: 'shopTime', weight: 1 }
+                    event_kind: regularAway ? 'public' : faker.helpers.weightedArrayElement([
+                        { value: 'public', weight: 3 },
+                        { value: 'training', weight: 2 },
+                        { value: 'shopTime', weight: 2 }
                     ]),
-                    description: faker.helpers.arrayElement([
-                        "Wednesday in Victoria Park",
-                        "Community Repair Cafe",
-                        "Fix-It Fair",
-                        "Repair Workshop"
-                    ]),
-                    location_description: location.desc,
-                    location_url: location.url,
-                    is_remote_event: location.remote ? 1 : 0,
-                    volunteer_only: faker.datatype.boolean({ probability: 0.1 }) ? 1 : 0,
+                    description: remote
+                        ? faker.helpers.arrayElement([
+                            "Community Repair Cafe", "Fix-It Fair",
+                            "Repair Workshop", "Pop-up Repair Clinic"])
+                        : faker.helpers.arrayElement([
+                            "Wednesday in Victoria Park", "Community Repair Cafe", "Repair Workshop"]),
+                    location_description: remote ? offsite.desc : '',
+                    location_url: remote ? offsite.url : '',
+                    is_remote_event: remote ? 1 : 0,
+                    volunteer_only: regularAway ? 0 : (faker.datatype.boolean({ probability: 0.35 }) ? 1 : 0),
                     shop_load_time: faker.helpers.maybe(() => {
                         return `${dateStr} ${(startHour - 1).toString().padStart(2, '0')}:00:00`;
                     }, { probability: 0.3 }),
@@ -943,7 +947,7 @@ export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {
         'Book the pickup truck', 'Refill consumables', 'Test the donated bikes',
     ];
     // How many completions per activity tier (staff do the most; tail none).
-    const countByTier: Record<string, number> = {staff: 10, heavy: 7, regular: 4, occasional: 1};
+    const countByTier: Record<string, number> = {staff: 22, heavy: 7, regular: 4, occasional: 1};
 
     const completeTask = (project_id: number, title: string, doneMs: number, done_by: number) =>
         rabid.task.insert({project_id, title, status: 'done',
