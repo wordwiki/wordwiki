@@ -27,6 +27,11 @@ import * as pageQueries from './page-queries.ts';
 // being frozen in the route binding.  Shared with the Rabid filter routes.
 export const activityRangeQuery = pageQueries.windowQuery('activity_range');
 
+// The earliest data worth scanning to - RRBR has no volunteer activity before
+// 2025, so "Show all" pins here rather than the generic 2000-01-01 (which would
+// scan ~25 empty years day by day).
+export const ACTIVITY_EPOCH = '2025-01-01';
+
 
 /**
  * Track which volunteers are "active" on each day within a date range, where a volunteer 
@@ -296,7 +301,7 @@ export function dailyActivityReport(q?: Record<string, any>): Markup {
         [h.h2, {}, 'Daily Active Volunteers Report'],
         pageQueries.renderWindowBar({
             fieldSet: activityRangeQuery, pageRoute: 'dailyActivityReport', q: query,
-            filterDialogRoute: 'rabid.dailyReportFilterDialog'}),
+            filterDialogRoute: 'rabid.dailyReportFilterDialog', epoch: ACTIVITY_EPOCH}),
         [h.table, {class: 'table table-striped table-hover'},
             [h.thead, {}, ...tableRows.slice(0, 1)],
             [h.tbody, {}, ...tableRows.slice(1)]
@@ -306,9 +311,11 @@ export function dailyActivityReport(q?: Record<string, any>): Markup {
     ];
 }
 
-// The monthly report's default range (~2 years - a monthly overview wants more
-// than the 120-day list default); overridable via the window filter.
-const ACTIVITY_REPORT_DEFAULT_DAYS = 730;
+// The monthly report's default range (~1 year - a monthly overview wants more
+// than the 120-day list default, but staying after the 2025 data epoch so the
+// default doesn't show empty pre-data months); Show older / Show all widen it
+// back to ACTIVITY_EPOCH.
+const ACTIVITY_REPORT_DEFAULT_DAYS = 365;
 
 export function activityReport(q?: Record<string, any>): Markup {
     const query = activityRangeQuery.normalize(q) as pageQueries.WindowQuery;
@@ -386,7 +393,7 @@ export function activityReport(q?: Record<string, any>): Markup {
             fieldSet: activityRangeQuery, pageRoute: 'activityReport', q: query,
             defaultDays: ACTIVITY_REPORT_DEFAULT_DAYS,
             filterDialogRoute: 'rabid.activityReportFilterDialog',
-            count: activeVolunteersByMonthMap.size, noun: 'month'}),
+            count: activeVolunteersByMonthMap.size, noun: 'month', epoch: ACTIVITY_EPOCH}),
         [h.table, {class: 'table table-striped'},
             [h.thead, {}, ...tableRows.slice(0, 1)],
             [h.tbody, {}, ...tableRows.slice(1)]

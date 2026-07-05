@@ -63,14 +63,18 @@ export function renderWindowBar(opts: {
                                  // 'public only'), appended to the count · range
     defaultDays?: number,        // window when `from` is absent (default 120);
                                  // also the Show-older step
+    epoch?: string,              // "beginning of time" that Show all pins to
+                                 // (default 2000-01-01); a page with a known data
+                                 // start can set it (e.g. the activity report)
 }): Markup {
     const dd = opts.defaultDays ?? DEFAULT_WINDOW_DAYS;
+    const epoch = opts.epoch ?? WINDOW_EPOCH;
     const w = resolveWindow(opts.q, dd);
     const pre = opts.otherArgs ? opts.otherArgs + ', ' : '';
     const pageUrl = (query: Tuple) => `/${opts.pageRoute}(${pre}${opts.fieldSet.literal(query)})`;
     const olderFrom = date.temporalToSqliteDate(
         date.sqliteDateToTemporal(w.from).subtract({days: dd}));
-    const showingAll = w.from <= WINDOW_EPOCH;
+    const showingAll = w.from <= epoch;
     const countLabel = opts.count === undefined ? undefined
         : `${opts.count} ${opts.count === 1 ? opts.noun : (opts.nounPlural ?? (opts.noun ?? '') + 's')} · `;
     const summary = `${countLabel ?? ''}`
@@ -84,7 +88,7 @@ export function renderWindowBar(opts: {
     const items: action.ActionMenuItem[] = [];
     if(!showingAll) {
         items.push(depthItem('Show older', {...opts.q, from: olderFrom}));
-        items.push(depthItem('Show all', {...opts.q, from: WINDOW_EPOCH}));
+        items.push(depthItem('Show all', {...opts.q, from: epoch}));
     }
     if(opts.filterDialogRoute)
         items.push({label: 'Filter…',
