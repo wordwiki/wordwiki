@@ -163,7 +163,16 @@ body {
    rides INLINE on the edited row's own line (never an indented history level);
    the diff del/elide colors come from liminal.css.  The bar holds the count,
    Approve all, and each pending deletion with its value. */
-.lm-me-chg-was { color: var(--bs-secondary-color, #6c757d); font-size: .85em; }
+/* The annotation carries the pending-yellow family (the dot, the edited chip)
+   as a soft background wash, so "what changed" scans out of a page of black
+   text instead of hiding as slightly-smaller prose. */
+.lm-me-chg-was {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: .85em;
+    background: rgba(255, 193, 7, .18);
+    border-radius: .25rem;
+    padding: .05em .35em;
+}
 .lm-me-changes-hint { margin-bottom: .25rem; }
 .lm-me-changes-bar {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
