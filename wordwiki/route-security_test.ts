@@ -5,7 +5,8 @@
  * tagged @route are URL-reachable; everything else 404s.  This pins WHICH
  * editor members are routes (all need a logged-in user - finer edit/approve
  * checks live inside the methods) and, just as importantly, that the internal
- * builders are NOT exposed.  Inert under the jsterp pin wordwiki currently runs.
+ * builders are NOT exposed.  (routeterp is the ONLY router - jsterp was
+ * unwired from dispatch and must stay unwired; see liminal/jsterp.ts.)
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts";
@@ -52,8 +53,7 @@ test("the lexeme namespace getter is a declared route", () => {
     assertEquals(routePermissionOf(WordWiki.prototype, "lexemeOps"), undefined);
 });
 
-// End-to-end through the STRICT route interpreter (wordwiki runs jsterp today,
-// but this proves the annotations gate correctly when it flips).
+// End-to-end through the STRICT route interpreter (the policy wordwiki runs).
 test("routeterp strict: editor route resolves for an authed user", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {

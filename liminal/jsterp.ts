@@ -9,7 +9,11 @@
  * Includes safety features so that, for example, only explicitly
  * 'blessed' functions/methods can be invoked.
  *
- * We use this as a router.
+ * NOT A ROUTER.  Route expressions are evaluated ONLY by routeterp.ts (the
+ * restricted default-deny fork); nothing may wire this interpreter into
+ * request dispatch again - its scope/global reach makes it dangerous there
+ * (dz).  It is deliberately kept (currently unimported) for future TEMPLATE
+ * evaluation.
  */
 import * as acorn from "npm:acorn@8.11.3";
 import acorn_jsx from "npm:acorn-jsx@5.3.2";
