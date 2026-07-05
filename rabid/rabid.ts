@@ -101,7 +101,7 @@ export class Rabid extends LiminalApp {
     sales(q?: Record<string, any>) { return templates.page('Sales', this.sale.renderSalesPage(q)); }
     servicePage(q?: Record<string, any>) { return templates.page('Service', this.service.renderServicePage(q)); }
     timesheets(q?: Record<string, any>) { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage(q)); }
-    committees() { return templates.page('Committees', this.committee.renderCommitteesPage()); }
+    committees(q?: Record<string, any>) { return templates.page('Committees', this.committee.renderCommitteesPage(q)); }
     projects(q?: Record<string, any>) { return templates.page('Projects', this.project.renderProjectsPage(q)); }
     tasksPage(q?: Record<string, any>) { return templates.page('Tasks', this.task.renderTasksPage(q)); }
     templatesPage() { return templates.page('Checklist templates', this.project.renderTemplatesPage()); }
@@ -121,7 +121,7 @@ export class Rabid extends LiminalApp {
             // name is what appears in the URL, the method avoids the collision.)
             service:(q?: any)=>this.servicePage(q),
             timesheets:(q?: any)=>this.timesheets(q),
-            committees:()=>this.committees(),
+            committees:(q?: any)=>this.committees(q),
             projects:(q?: any)=>this.projects(q),
             // ('tasks' the page vs this.task the table - same naming move as
             // service/servicePage.)

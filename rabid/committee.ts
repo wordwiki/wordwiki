@@ -10,7 +10,7 @@
  */
 
 import { db, Db, PreparedQuery, boolnum } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, BooleanField, StringField, MarkdownField, navChevron } from "../liminal/table.ts";
+import { Table, FieldSet, Field, PrimaryKeyField, BooleanField, StringField, MarkdownField, CheckboxField, navChevron } from "../liminal/table.ts";
 import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
@@ -19,6 +19,7 @@ import * as security from "../liminal/security.ts";
 import {route, authenticated} from "../liminal/security.ts";   // hostOrAdmin is defined locally below
 import * as templates from './templates.ts';
 import {OwnedGroupField, createOwnedGroup} from './group.ts';
+import {memberShortName} from './volunteer.ts';
 import {rabid} from './rabid.ts';
 
 export const routes = ()=> ({
@@ -94,6 +95,16 @@ export class CommitteeTable extends Table<Committee> {
 /**/          ORDER BY name`);
     }
 
+    // The Committees page list, optionally including DISSOLVED committees (so
+    // they can be found and un-dissolved).  Dissolved sort after active.
+    @path
+    get committeesForList() {
+        return this.prepare<Committee, {include_dissolved: number}>(block`
+/**/   SELECT ${this.allFields} FROM committee
+/**/          WHERE (:include_dissolved = 1 OR deleted = 0)
+/**/          ORDER BY deleted, name`);
+    }
+
     // ------------------------------------------------------------------------
     // --- Standard editable-item list -----------------------------------------
     // ------------------------------------------------------------------------
@@ -102,38 +113,49 @@ export class CommitteeTable extends Table<Committee> {
     // insert reloads `.-committee-` (the classless-pk reload target the base
     // saveForm emits), which is this wrapper.
     @route(authenticated)
-    renderCommitteeList(): Markup {
-        const committees = this.activeCommittees.all({});
-        const props = this.reloadableItemProps(undefined, `rabid.committee.renderCommitteeList()`);
+    renderCommitteeList(include_dissolved: boolean = false): Markup {
+        const committees = this.committeesForList.all({include_dissolved: include_dissolved ? 1 : 0});
+        const props = this.reloadableItemProps(undefined,
+            `rabid.committee.renderCommitteeList(${include_dissolved})`);
+        // No list-group box: the committees read as document SECTIONS separated
+        // by whitespace, not framed cards.
         return [h.div, props,
             committees.length === 0
-                ? [h.p, {class: 'text-muted'}, 'No committees yet.']
-                : [h.div, {class: 'list-group lm-list'},
-                   committees.map(c => this.renderCommitteeRow(c))]];
+                ? [h.p, {class: 'text-muted'}, include_dissolved ? 'No committees yet.' : 'No active committees.']
+                : committees.map(c => this.renderCommitteeRow(c))];
     }
 
-    renderCommitteeRow(c: Committee & {member_count?: number}): Markup {
+    renderCommitteeRow(c: Committee): Markup {
         const id = c.committee_id;
-        const count = c.member_count ?? rabid.volunteer_group.members.all({group_id: c.group_id}).length;
+        const members = rabid.volunteer_group.members.all({group_id: c.group_id});
 
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
-        const item = this.detailItemProps(id, `rabid.committee.renderCommitteeRowById(${id})`);
-        return [h.div, {...item, 'data-testid': `committee-row-${id}`},
-            [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
-              [h.a, {...templates.pageLinkProps(`/rabid.committee.detailPage(${id})`),
-                     class: 'lm-nav-link'}, c.name || 'Unnamed committee']],
-             [h.div, {class: 'lm-item-secondary'}, `${count} member${count === 1 ? '' : 's'}`],
-             // The committee's markdown description, rendered as prose in the
-             // list (notes stay internal - only in the edit form).
-             c.description
-                 ? [h.div, {class: 'lm-markdown mt-1', 'data-testid': `committee-${id}-description`},
-                    this.fieldsByName.description.render(c.description)]
-                 : undefined],
-            this.canEditRecord(c) ? this.editPencil(id) : undefined,
-            navChevron(),
+        // A navigable document SECTION - no card box, no per-row pencil (editing
+        // committee parameters is rare; do it from the detail page).  The title
+        // is a heading-weight link to the detail page and the whole section is
+        // tappable; a quiet chevron marks that it navigates (the one persistent,
+        // touch-friendly affordance).
+        const item = this.reloadableItemProps(id, `rabid.committee.renderCommitteeRowById(${id})`);
+        item.class = 'lm-doc-section lm-navigable ' + item.class;
+        item.onclick = 'lmNavigableClick(event)';
+        return [h.section, {...item, 'data-testid': `committee-row-${id}`},
+            [h.h3, {class: 'lm-doc-title'},
+             [h.a, {...templates.pageLinkProps(`/rabid.committee.detailPage(${id})`),
+                    class: 'lm-nav-link'}, c.name || 'Unnamed committee'],
+             c.deleted
+                 ? [h.span, {class: 'badge text-bg-secondary ms-2 fw-normal align-middle'}, 'Dissolved']
+                 : undefined,
+             navChevron()],
+            // Members inline (the names people actually care about), not a bare
+            // "N members" count.
+            members.length
+                ? [h.div, {class: 'lm-doc-meta', 'data-testid': `committee-${id}-members`},
+                   members.map(m => memberShortName(m)).join(', ')]
+                : [h.div, {class: 'lm-doc-meta fst-italic'}, 'No members yet'],
+            // The committee's markdown description as prose (notes stay internal).
+            c.description
+                ? [h.div, {class: 'lm-markdown mt-1', 'data-testid': `committee-${id}-description`},
+                   this.fieldsByName.description.render(c.description)]
+                : undefined,
         ];
     }
 
@@ -147,17 +169,31 @@ export class CommitteeTable extends Table<Committee> {
     // /committees).  Hosts also get the "New committee" button - the first
     // record-INSERT affordance in the standard UI (modal of the same record
     // form, with no primary key, so saveForm inserts).
-    renderCommitteesPage(): Markup {
+    // The Committees page query (page-state; liminal.md § On-page view state):
+    // an include_dissolved toggle carried in the route, so dissolved committees
+    // can be found (and un-dissolved from their detail page).
+    static readonly pageQuery = new FieldSet('committees_query',
+        [new CheckboxField('include_dissolved', {prompt: 'Include dissolved', default: false})]);
+
+    renderCommitteesPage(q?: Record<string, any>): Markup {
+        const query = CommitteeTable.pageQuery.normalize(q) as {include_dissolved: boolean};
         const canCreate = this.canEditRecord({} as Committee);
+        // Rare admin acts live in a quiet ☰ (room for more later), not prominent
+        // buttons that would make the page read like an editor rather than a
+        // document: New committee (hosts), and the dissolved-view toggle.
+        const menuItems: action.ActionMenuItem[] = [];
+        if(canCreate)
+            menuItems.push({label: 'New committee…',
+                            mode: {kind: 'modal', dialogUrl: '/rabid.committee.newDialog()'}});
+        menuItems.push(query.include_dissolved
+            ? {label: 'Hide dissolved', link: templates.pageLinkProps('/committees')}
+            : {label: 'Show dissolved',
+               link: templates.pageLinkProps(`/committees(${CommitteeTable.pageQuery.literal({include_dissolved: true})})`)});
         return [h.div, {class: 'container py-3'},
-            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, 'Committees'],
-             canCreate
-                 ? action.actionButton('New committee',
-                     {kind: 'modal', dialogUrl: '/rabid.committee.newDialog()'},
-                     'btn btn-outline-primary btn-sm')
-                 : undefined],
-            this.renderCommitteeList(),
+             action.actionMenu(menuItems, {ariaLabel: 'Committee actions'})],
+            this.renderCommitteeList(query.include_dissolved),
         ];
     }
 

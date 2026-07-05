@@ -335,3 +335,50 @@ body .ts-dropdown {
 .lm-check-label {
     cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+   Document-section list (committees, and the pattern for other list pages as
+   they move to a document look): each item is a titled section separated by
+   whitespace - NOT a framed card.  Clean at rest; the whole section navigates
+   to its detail page.
+--------------------------------------------------------------------------- */
+/* Each item is a SOFT tappable block: a faint fill + rounding (no hard border)
+   that reads as "one interactive unit you can open" - obvious on touch, where
+   hover-reveal gives nothing, yet still typographic rather than editor-chrome.
+   (To go more explicitly link-driven instead: drop `background`, and switch the
+   title to a coloured/underlined link below.) */
+.lm-doc-section {
+    padding: 0.55rem 0.85rem;
+    margin-bottom: 0.6rem;
+    border-radius: 8px;
+    background-color: var(--bs-tertiary-bg);
+    cursor: pointer;
+    max-width: 46rem;
+}
+@media (hover: hover) {
+    .lm-doc-section:hover { background-color: var(--bs-secondary-bg); }
+}
+/* The section title: a document heading (dark, semibold) - the soft block, not
+   web-blue link text, carries the "tappable" signal.  A quiet chevron marks
+   that tapping NAVIGATES (vs expands). */
+.lm-doc-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+}
+.lm-doc-title .lm-nav-link {
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+.lm-doc-title .lm-nav-chevron {
+    color: var(--bs-secondary-color);
+    font-weight: 400;
+    margin-left: 0.15rem;
+}
+/* Secondary line under the title (members, etc.) - quiet, readable. */
+.lm-doc-meta {
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+    margin-top: 0.1rem;
+}

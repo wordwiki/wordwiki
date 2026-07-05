@@ -4,7 +4,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
-import { find, byClass, tagOf, hasText } from "../liminal/testing/markup-assert.ts";
+import { find, byClass, tagOf, hasText, attr } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 
 function insertCommittee(name = 'Logistics Committee'): {committee_id: number, group_id: number} {
@@ -110,21 +110,24 @@ test("crafted group_member.saveForm writes are rejected (the actions are the wri
     });
 });
 
-test("committee rows: one navigable species, pencil for hosts only; New-committee for hosts only", async () => {
+test("committee rows: navigable document sections (no per-row pencil); New-committee behind the ☰ for hosts only", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const {committee_id} = insertCommittee();
 
-        const aliceRow = await asUser(alice, () => renderRoute(`rabid.committee.renderCommitteeRowById(${committee_id})`));
-        assert(!!find(aliceRow, byClass("lm-edit-pencil")));
+        // A document section - no per-row pencil for anyone (editing committee
+        // parameters is done from the detail page); the whole section navigates.
         const bobRow = await asUser(bob, () => renderRoute(`rabid.committee.renderCommitteeRowById(${committee_id})`));
-        assertEquals(tagOf(bobRow as any), "div");                 // navigable species
-        assert(!find(bobRow, byClass("lm-edit-pencil")));
+        assertEquals(tagOf(bobRow as any), "section");
+        assert(attr(bobRow as any, "onclick") === "lmNavigableClick(event)");
+        assert(!!find(bobRow, byClass("lm-nav-link")));
         assert(!!find(bobRow, byClass("lm-nav-chevron")));
-        assert(hasText(bobRow, "0 members"));
+        assert(hasText(bobRow, "No members yet"));   // members are shown inline, not "N members"
+        const aliceRow = await asUser(alice, () => renderRoute(`rabid.committee.renderCommitteeRowById(${committee_id})`));
+        assert(!find(aliceRow, byClass("lm-edit-pencil")));   // even a host edits from the detail page
 
         const hostPage = await asUser(alice, () => renderRoute(`committees`));
         assert(hasText(hostPage, "Logistics Committee"));
-        assert(hasText(hostPage, "New committee"));
+        assert(hasText(hostPage, "New committee"));   // in the ☰ menu
         const regularPage = await asUser(bob, () => renderRoute(`committees`));
         assert(hasText(regularPage, "Logistics Committee"));
         assert(!hasText(regularPage, "New committee"));
@@ -133,6 +136,28 @@ test("committee rows: one navigable species, pencil for hosts only; New-committe
         await asUser(bob, () => assertRejects(
             () => renderRoute(`rabid.committee.newDialog()`),
             Error, "not permitted"));   // route layer (@route hostOrAdmin) denies first
+    });
+});
+
+test("dissolved committees are hidden by default; the ☰ 'Show dissolved' reveals them (page-state)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const {committee_id} = insertCommittee('Old Guard Committee');
+        asSystem(() => rabid.committee.update(committee_id, {deleted: 1}));   // dissolve it
+
+        // Default view omits it; the page offers "Show dissolved".
+        const active = await asUser(alice, () => renderRoute(`committees`));
+        assert(!hasText(active, 'Old Guard Committee'));
+        assert(hasText(active, 'Show dissolved'));
+
+        // include_dissolved:true surfaces it, flagged "Dissolved" (navigate to
+        // its detail page to un-dissolve), and now the menu offers "Hide".
+        const all = await asUser(alice, () => renderRoute(`committees({include_dissolved:true})`));
+        assert(hasText(all, 'Old Guard Committee'));
+        assert(hasText(all, 'Dissolved'));
+        assert(hasText(all, 'Hide dissolved'));
+        // The dissolved-aware list query reload URL carries the flag.
+        const list = await asUser(alice, () => renderRoute(`rabid.committee.renderCommitteeList(true)`));
+        assert(hasText(list, 'Old Guard Committee'));
     });
 });
 
