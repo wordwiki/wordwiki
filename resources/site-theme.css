@@ -129,12 +129,25 @@ body {
 .lm-me-line + .lm-me-line { margin-top: .12rem; }
 .lm-meta-entry > :first-child,
 .lm-me-section .ms-3 > :first-child,
-.lm-me-item > :first-child { margin-top: 0; }
+.lm-me-item > :first-child,
+.lm-me-num-body > :first-child { margin-top: 0; }
 .lm-me-heading { margin: 0; }
+/* Container items (senses, document references) are set off from each other by
+   a gap - enough to read as separate items without a bullet or number. */
+.lm-me-item + .lm-me-item { margin-top: .6rem; }
+/* A numbered sense: the "1." hangs to the left of the block, aligned with its
+   first line, instead of sitting on a line of its own. */
+.lm-me-numbered { display: flex; gap: .4rem; }
+.lm-me-num { flex: 0 0 auto; }
+.lm-me-num-body { flex: 1 1 auto; min-width: 0; }
 
-/* The reference scan (render-entry-meta.ts).  KNOWN ISSUE: the inline scan svg
-   paints past its box and can overlap the following transcription in the narrow
-   side-by-side column - the hand renderer's wrapping happens to clip it and we
-   have not yet matched that.  Tracked as a follow-up; the block + margin keep
-   it from being worse. */
-.lm-me-scan { margin: .5rem 0; display: block; }
+/* The reference scan (render-entry-meta.ts).  display:block + line-height:0 so
+   the scan reserves its own height (an inline svg lets the transcription flow
+   into it).  The scan renders at natural width - it fits the single-column word
+   view; in the narrow side-by-side experiment column it can spill to the right,
+   which is a harness artifact, not a destination concern.  (We do NOT scale it:
+   the scan is a nested svg whose inner page-svg has a fixed size CSS scaling of
+   the outer svg doesn't reach.) */
+.lm-me-scan { margin: .5rem 0; line-height: 0; }
+.lm-me-scan a { display: block; }
+.lm-me-scan svg { display: block; }

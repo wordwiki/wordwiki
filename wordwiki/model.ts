@@ -58,6 +58,10 @@ export interface ViewStyle {
     // member in place (subentry), vs always use the list presentation
     // (examples).  Default 'list'.
     singleton?: 'collapse' | 'list',
+    // Number the members of a container relation (senses), rendered as a
+    // hanging "1." marker.  Off by default - most containers (document
+    // references, examples) read better separated by space than numbered.
+    numbered?: boolean,
     // Never render in the read view (editorial-only relations: status, todo,
     // note, ...).  A coarse first cut at an audience axis.
     hidden?: boolean,
@@ -73,6 +77,12 @@ export interface ViewStyle {
     // (including inside a compose).
     emphasis?: 'italic' | 'bold',
     wrap?: [string, string],  // surround the value, e.g. ['(', ')']
+    // This relation is a KEYED BAG: `keyField` names the field holding the key
+    // (the other content scalar is the value).  Each tuple renders as
+    // "Key: value", labelled from the (humanised) key.  The renderer's audience
+    // gates which keys show - 'internal' shows all; otherwise only the
+    // configured public keys.  e.g. attr = {attr:'borrowed-word', value:'...'}.
+    keyField?: string,
 }
 
 export function validateStyle(locus:string, style: any): Style {

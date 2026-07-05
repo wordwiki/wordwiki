@@ -236,9 +236,10 @@ export const dictSchemaJson = {
                              $style: { $options: partsOfSpeech,
                                        $view: { order: 2, label: 'inline' } }},
             // Only a small % of words have >1 sense: for one, drop the "1." level
-            // entirely (read); the editor keeps it.  Elide when empty.
+            // entirely (read); the editor keeps it.  Numbered when there are
+            // several (the senses).  Elide when empty.
             $style: { $shape: 'containerRelation',
-                      $view: { order: 3, singleton: 'collapse', empty: 'elide' } },
+                      $view: { order: 3, singleton: 'collapse', numbered: true, empty: 'elide' } },
             // probably should have variant here TODO
             // translation TODO
 
@@ -448,11 +449,12 @@ export const dictSchemaJson = {
                 attr: {$type: 'string', $bind: 'attr1'},
                 value: {$type: 'string', $bind: 'attr2', $style: { $width: 50 }},
                 variant: {$type: 'variant'},
-                // A key/value bag (shoebox-date, twitter-post, borrowed-word, ...):
-                // mostly editorial.  Hidden from the read view for now - the hand
-                // renderer surfaces only 'borrowed-word'; a filtered view is a
-                // later refinement.
-                $style: { $shape: 'inlineListRelation', $view: { hidden: true } },
+                // A key/value bag (shoebox-date, twitter-post, borrowed-word, ...).
+                // Keyed: each row is "Key: value"; an internal audience sees all
+                // keys, the public site only the configured publicKeys
+                // (borrowed-word).
+                $style: { $shape: 'inlineListRelation',
+                          $view: { order: 8, keyField: 'attr' } },
             },
 
             document_reference: {
@@ -469,15 +471,18 @@ export const dictSchemaJson = {
                     $tag: RefTranscriptionTag,
                     transcription_id: {$type: 'primary_key'},
                     transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 1, label: 'inline', empty: 'elide' } },
                 },
 
                 expanded_transcription: {
                     $type: 'relation',
                     $tag: RefExpandedTranscriptionTag,
+                    $prompt: 'Expanded',
                     expanded_transcription_id: {$type: 'primary_key'},
                     expanded_transcription: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 2, label: 'inline', empty: 'elide' } },
                 },
 
                 transliteration: {
@@ -486,7 +491,8 @@ export const dictSchemaJson = {
                     transliteration_id: {$type: 'primary_key'},
                     transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 3, label: 'inline', empty: 'elide' } },
                 },
 
                 source_as_entry: {
@@ -495,7 +501,8 @@ export const dictSchemaJson = {
                     source_as_entry_id: {$type: 'primary_key'},
                     source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 4, label: 'inline', empty: 'elide' } },
                 },
 
                 normalized_source_as_entry: {
@@ -504,7 +511,8 @@ export const dictSchemaJson = {
                     normalized_source_as_entry_id: {$type: 'primary_key'},
                     normalized_source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 5, label: 'inline', empty: 'elide' } },
                 },
 
                 foreign_reference: {
@@ -513,7 +521,8 @@ export const dictSchemaJson = {
                     foreign_reference_id: {$type: 'primary_key'},
                     foreign_reference: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 6, label: 'inline', empty: 'elide' } },
                 },
 
                 note: {
@@ -521,15 +530,18 @@ export const dictSchemaJson = {
                     $tag: RefNoteTag,
                     note_id: {$type: 'primary_key'},
                     note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5, $markdown: true }},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 7, label: 'inline', empty: 'elide' } },
                 },
 
                 public_note: {
                     $type: 'relation',
                     $tag: RefPublicNoteTag,
+                    $prompt: 'Public note',
                     public_note_id: {$type: 'primary_key'},
                     public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5, $markdown: true }},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 8, label: 'inline', empty: 'elide' } },
                 },
                 
                 // note: {

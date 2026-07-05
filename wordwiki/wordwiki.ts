@@ -486,8 +486,22 @@ export class WordWiki extends LiminalApp {
         // EXPERIMENT (slice 1): the metadata-driven renderer, side-by-side with
         // the hand renderer, so we can evolve $view until it matches or beats
         // it.  Read-only; not wired to the editor.  See render-entry-meta.ts.
+        // The reference scan is a rich primitive: its scan + composed
+        // reference-book link/description need a server-side lookup, so the
+        // renderer takes it as an injected callback (keeps that module free of
+        // the server-only deps, and lets the public export inject its own).
+        const renderBoundingGroup = (id: number): any => {
+            const scan = renderPageEditor.renderStandaloneGroup('/', id);
+            let url = ''; try { url = renderPageEditor.singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
+            let desc = ''; try { desc = renderPageEditor.imageRefDescription(id); } catch { /**/ }
+            return ['div', {},
+                ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
+                desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
+        };
         const metaRendered: any = e
-            ? entryMeta.renderEntryMeta({rootPath: '/', renderInternalNotes: true},
+            ? entryMeta.renderEntryMeta(
+                  {rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
+                   renderBoundingGroup},
                   this.dictSchema.relationsByTag[entry.EntryTag], e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
         const column = (label: string, content: any) =>
