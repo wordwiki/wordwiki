@@ -740,13 +740,23 @@ export class LexemeEditor {
                 // still carries insert/move/delete (editMenuItems drops Edit),
                 // but the surface is not tap-to-edit.
                 const editable = dialogFields(rf).length > 0;
+                // The classic editor's at-a-glance pending mark, carried over:
+                // a quiet warning dot when the fact's current value is an
+                // unapproved addition/edit (publication-model.md).
+                const pending = (() => {
+                    const s = classifyFact(q.src.tupleVersions.map(v => v.assertion),
+                                           timestamp.END_OF_TIME).state;
+                    return s === 'added' || s === 'edited';
+                })();
                 const menu = action.actionMenu(
                     [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'meta'),
                      ...this.demotedAddItems(id.entryId, id.factId, rf, q)],
                     {ariaLabel: `Actions for this ${rf.prompt}`});
-                return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}lm-me-editable d-flex align-items-start gap-1`,
+                return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}`
+                                + `${pending ? 'lm-pending-fact ' : ''}lm-me-editable d-flex align-items-start gap-1`,
                                 ...this.metaReloadAttrs(id.entryId),
                                 ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
+                        pending ? ['span', {class: 'lm-pending-dot', title: 'unapproved change'}, ''] : [],
                         ['div', {class: 'flex-grow-1'}, body],
                         this.insertAfterPlus(rf, id),
                         menu];
