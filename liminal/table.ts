@@ -77,7 +77,7 @@ export class FieldSet {
         for(const f of this.fields) {
             const raw = form[f.name];
             out[f.name] = (raw === undefined || raw === null || raw === '')
-                ? (f.options.default ?? null)
+                ? f.absentFormValue()
                 : f.parseSimpleInput(String(raw));
         }
         return out;
@@ -909,6 +909,15 @@ export class Field {
         throw new Error(`renderInput not implemented on ${this.constructor.name}`);
     }
 
+    // The value an ABSENT field takes when parsing a submitted query form (see
+    // FieldSet.parseFormValues).  A form omits an empty input OR an UNCHECKED
+    // checkbox; by default absent means "use the field's default", but a checkbox
+    // overrides this to false (absent = unchecked) - so a default-CHECKED box can
+    // be turned off through the form.
+    absentFormValue(): any {
+        return this.options.default ?? null;
+    }
+
     parseInput(form: Record<string, string>, fieldsOut: Tuple) {
         if(form[this.name] !== undefined && form['before-'+this.name] !== undefined
             && form[this.name] !== form['before-'+this.name]) {
@@ -1038,6 +1047,13 @@ export class CheckboxField extends Field {
     // toggle round-trips include_archived:true/false without drifting to 1/0.
     parseSimpleInput(value: string): any {
         return !!value;
+    }
+
+    // An unchecked checkbox posts NOTHING, so in a submitted form "absent" means
+    // false (unchecked) - NOT the field's default.  This is what lets a
+    // default-CHECKED box be turned off through the dialog.
+    override absentFormValue(): any {
+        return false;
     }
 
     // Route literal must be an actual boolean (a page-query knob); reject junk

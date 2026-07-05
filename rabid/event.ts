@@ -52,19 +52,20 @@ export function eventFilterQuery(name: string): FieldSet {
     return new FieldSet(name, [
         new DateField('from', {prompt: 'From', nullable: true}),
         new DateField('to', {prompt: 'To', nullable: true}),
-        // Default-OFF (so it round-trips): the default view is AWAY events only -
-        // volunteers commit to away events, not in-shop ones - and public only.
-        new CheckboxField('include_in_shop',
-            {prompt: 'Include in-shop events', default: false}),
-        new CheckboxField('include_volunteer_only',
-            {prompt: 'Include volunteers-only events', default: false}),
+        // Default CHECKED - the intuitive framing where checking a filter NARROWS
+        // the result set.  (A default-checked box can now be turned off through
+        // the form: an unchecked box posts nothing, and CheckboxField reads that
+        // absence as false rather than the default - see table.ts.)  The default
+        // view is away events (volunteers commit to those, not in-shop), public.
+        new CheckboxField('away_only', {prompt: 'Away events only', default: true}),
+        new CheckboxField('public_only', {prompt: 'Public events only', default: true}),
     ]);
 }
 export interface EventFilter extends Tuple {
     from: string | null;
     to: string | null;
-    include_in_shop: boolean;
-    include_volunteer_only: boolean;
+    away_only: boolean;
+    public_only: boolean;
 }
 // The upcoming window: now → +1 month by default (a forward window, vs the
 // past filter's backward resolveWindow).
@@ -212,11 +213,11 @@ export class EventTable extends Table<Event> {
             const d = (e.start_time as string).slice(0, 10);
             return d >= from && d <= to;
         };
-        // Away events only (is_remote_event) + public only, unless the filter
-        // opts them back in.  Volunteers commit to away events, not in-shop ones.
+        // Away events only (is_remote_event) + public only by default; unchecking
+        // either widens.  Volunteers commit to away events, not in-shop ones.
         const matches = (e: Event, q: EventFilter) =>
-            (q.include_volunteer_only || !e.volunteer_only)
-            && (q.include_in_shop || !!e.is_remote_event);
+            (!q.public_only || !e.volunteer_only)
+            && (!q.away_only || !!e.is_remote_event);
         const future = all.filter(e => e.start_time && e.start_time > now
                                        && inRange(e, upW.from, upW.to) && matches(e, upQ));
         const undated = all.filter(e => !e.start_time && matches(e, upQ));   // TBD: window N/A
@@ -225,29 +226,30 @@ export class EventTable extends Table<Event> {
             .reverse();                                                       // most recent first
         const upcoming = [...future, ...undated];
 
-        // Page ☰: create + filter (both quiet menu items, not buttons).
-        const menuItems: action.ActionMenuItem[] = [];
+        // The PAGE ☰ (on the title) is reserved for adding events; each section's
+        // filter editor is a ☰ on its own summary line (renderSummaryMenu).
+        const pageMenu: action.ActionMenuItem[] = [];
         if(this.canEditRecord({} as Event))
-            menuItems.push({label: 'Add event…',
-                            mode: {kind: 'modal', dialogUrl: '/rabid.event.newDialog()'}});
-        menuItems.push({label: 'Filter…',
-                        mode: {kind: 'modal',
-                               dialogUrl: `/rabid.event.upcomingFilterDialog(${EventTable.eventFilter.literal(upQ)}, ${EventTable.eventFilter.literal(pastQ)})`}});
+            pageMenu.push({label: 'Add event…',
+                           mode: {kind: 'modal', dialogUrl: '/rabid.event.newDialog()'}});
         // Summarise the active restrictions, like the volunteer list / the past
         // window bar: the default view is "away only · public only".
         const condition = (q: EventFilter) => [
-            q.include_in_shop ? undefined : 'away only',
-            q.include_volunteer_only ? undefined : 'public only',
+            q.away_only ? 'away only' : undefined,
+            q.public_only ? 'public only' : undefined,
         ].filter(Boolean).join(' · ') || 'all events';
+        const upSummary = `${upcoming.length} upcoming ${plural(upcoming.length, 'event')} · `
+            + `${date.sqliteDateToString(upW.from)} – ${date.sqliteDateToString(upW.to)}`
+            + ` · ${condition(upQ)}`;
+        const upMenu: action.ActionMenuItem[] = [{label: 'Filter…',
+            mode: {kind: 'modal',
+                   dialogUrl: `/rabid.event.upcomingFilterDialog(${EventTable.eventFilter.literal(upQ)}, ${EventTable.eventFilter.literal(pastQ)})`}}];
         return [h.div, {class: 'container py-3'},
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
              [h.h2, {class: 'mb-0'}, 'Events'],
-             action.actionMenu(menuItems, {ariaLabel: 'Event actions'})],
-            [h.h4, {class: 'mb-1'}, 'Upcoming events'],
-            [h.p, {class: 'text-muted small mb-2'},
-             `${upcoming.length} upcoming ${plural(upcoming.length, 'event')} · `
-             + `${date.sqliteDateToString(upW.from)} – ${date.sqliteDateToString(upW.to)}`
-             + ` · ${condition(upQ)}`],
+             pageMenu.length ? action.actionMenu(pageMenu, {ariaLabel: 'Event actions'}) : undefined],
+            [h.h4, {class: 'mt-4 mb-1'}, 'Upcoming events'],
+            pageQueries.renderSummaryMenu(upSummary, upMenu, 'upcoming-bar'),
             upcoming.length > 0
                 ? this.renderEventScheduleTable(upcoming)
                 : [h.p, {class: 'text-muted'}, 'No upcoming events in this range.'],

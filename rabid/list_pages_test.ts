@@ -117,11 +117,12 @@ test("events: upcoming defaults to away + public + next month; past windowed sep
         assert(hasText(page, 'Past events'), 'past section heading');
         assert(!hasText(page, 'Ancient Fair'), '200-day-old past event hidden by the default past window');
 
-        // Each restriction can be opted back in (default-off checkboxes round-trip).
-        assert(hasText(await asUser(alice, () => renderRoute(`events({include_in_shop:true})`)),
-                       'Shop Cleanup'), 'include in-shop surfaces the shop event');
-        assert(hasText(await asUser(alice, () => renderRoute(`events({include_volunteer_only:true})`)),
-                       'Members Workshop'), 'include volunteers-only surfaces that event');
+        // Unchecking either default-checked filter widens (a default-ON checkbox
+        // can now be turned off).
+        assert(hasText(await asUser(alice, () => renderRoute(`events({away_only:false})`)),
+                       'Shop Cleanup'), 'unchecking away-only surfaces the in-shop event');
+        assert(hasText(await asUser(alice, () => renderRoute(`events({public_only:false})`)),
+                       'Members Workshop'), 'unchecking public-only surfaces the volunteers-only event');
 
         // Widening the PAST uses the SECOND arg - independent of the upcoming filter.
         const wide = await asUser(alice, () => renderRoute(`events({}, {from:"2000-01-01"})`));
@@ -131,18 +132,19 @@ test("events: upcoming defaults to away + public + next month; past windowed sep
 
 test("events filter applies preserve the sibling arg (two independent parameters)", async () => {
     await withTestDb(async ({ alice }) => {
+        const checked = {away_only: 'on', public_only: 'on'};   // both default -> omitted from URL
         // Applying the UPCOMING filter keeps the current past arg after it.
         const up = await asUser(alice, () => invoke(
             `rabid.event.applyUpcomingFilter($arg0, $arg1)`,
-            {include_volunteer_only: true}, {from: '2020-01-01'}));
+            {...checked, from: '2025-06-01'}, {from: '2020-01-01'}));
         assertEquals(up, {action: 'navigate',
-                          url: '/events({include_volunteer_only:true}, {from:"2020-01-01"})'});
+                          url: '/events({from:"2025-06-01"}, {from:"2020-01-01"})'});
         // Applying the PAST filter keeps the current upcoming arg before it.
         const past = await asUser(alice, () => invoke(
             `rabid.event.applyPastFilter($arg0, $arg1)`,
-            {include_volunteer_only: true}, {from: '2020-01-01'}));
+            {from: '2020-01-01'}, {...checked, from: '2025-06-01'}));
         assertEquals(past, {action: 'navigate',
-                            url: '/events({include_volunteer_only:true}, {from:"2020-01-01"})'});
+                            url: '/events({from:"2020-01-01"}, {from:"2025-06-01"})'});
     });
 });
 

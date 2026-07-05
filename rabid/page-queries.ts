@@ -70,23 +70,34 @@ export function renderWindowBar(opts: {
     const showingAll = w.from <= WINDOW_EPOCH;
     const countLabel = opts.count === undefined ? undefined
         : `${opts.count} ${opts.count === 1 ? opts.noun : (opts.nounPlural ?? (opts.noun ?? '') + 's')} · `;
-    // A depth link: boosted swap of #content + hx-replace-url (replaceState).
-    const depthLink = (label: string, query: Tuple): Markup =>
-        [h.a, {...templates.pageLinkProps(pageUrl(query)),
-               'hx-replace-url': pageUrl(query), class: 'link-secondary'}, label];
-    return [h.div, {class: 'd-flex align-items-center flex-wrap gap-3 mb-3 text-muted small',
-                    'data-testid': 'window-bar'},
-        [h.span, {}, `${countLabel ?? ''}`
-                     + `${date.sqliteDateToString(w.from)} – ${date.sqliteDateToString(w.to)}`
-                     + (opts.conditionText ? ` · ${opts.conditionText}` : '')],
-        showingAll ? undefined : depthLink('Show older', {...opts.q, from: olderFrom}),
-        showingAll ? undefined : depthLink('Show all', {...opts.q, from: WINDOW_EPOCH}),
-        opts.filterDialogRoute
-            ? action.actionButton('Filter…',
-                {kind: 'modal', dialogUrl: `/${opts.filterDialogRoute}(${pre}${opts.fieldSet.literal(opts.q)})`},
-                'btn btn-sm btn-link p-0')
-            : undefined,
-    ];
+    const summary = `${countLabel ?? ''}`
+        + `${date.sqliteDateToString(w.from)} – ${date.sqliteDateToString(w.to)}`
+        + (opts.conditionText ? ` · ${opts.conditionText}` : '');
+    // The knobs live in a ☰ beside the summary (an editor on the summary), not as
+    // inline links: a boosted depth swap (#content + hx-replace-url) and the
+    // Filter dialog.
+    const depthItem = (label: string, query: Tuple): action.ActionMenuItem =>
+        ({label, link: {...templates.pageLinkProps(pageUrl(query)), 'hx-replace-url': pageUrl(query)}});
+    const items: action.ActionMenuItem[] = [];
+    if(!showingAll) {
+        items.push(depthItem('Show older', {...opts.q, from: olderFrom}));
+        items.push(depthItem('Show all', {...opts.q, from: WINDOW_EPOCH}));
+    }
+    if(opts.filterDialogRoute)
+        items.push({label: 'Filter…',
+                    mode: {kind: 'modal',
+                           dialogUrl: `/${opts.filterDialogRoute}(${pre}${opts.fieldSet.literal(opts.q)})`}});
+    return renderSummaryMenu(summary, items, 'window-bar');
+}
+
+// A results summary with a ☰ of view knobs beside it (used by both the past
+// window bar and the upcoming filter): quiet muted text + an actionMenu.
+export function renderSummaryMenu(summary: string | Markup, items: action.ActionMenuItem[],
+                                  testid?: string): Markup {
+    return [h.div, {class: 'd-flex align-items-center gap-2 mb-3 text-muted small',
+                    ...(testid ? {'data-testid': testid} : {})},
+        [h.span, {}, summary],
+        items.length ? action.actionMenu(items, {ariaLabel: 'Filter'}) : undefined];
 }
 
 // A single "flip this view knob" link (e.g. Show done / Hide done): a boosted
