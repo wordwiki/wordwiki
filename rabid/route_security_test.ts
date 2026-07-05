@@ -43,6 +43,7 @@ test("sensitive routes are declared but NOT public", () => {
         assertEquals(publicRouteReason(perm), undefined, `${name} must NOT be public`);
     };
     notPublic(rabid, "resetLinkDialog");               // host-only (mints reset links)
+    notPublic(rabid, "resetLinkView");                 // host-only (mints + emails the link)
     notPublic(rabid.event_checkin, "checkIn");         // host-only (check others in)
     notPublic(rabid.volunteer, "detailPage");          // authenticated
     notPublic(rabid.event, "saveForm");                // authenticated (base Table)
@@ -69,6 +70,7 @@ test("mutations are POST-only; reads are not (CSRF axis)", () => {
     assert(routeIsMutation(r.volunteer_time, "addTimesheet"));
     assert(routeIsMutation(r.event, "saveForm"));          // base Table.saveForm
     assert(routeIsMutation(r.photo, "upload"));            // photo upload writes to content store
+    assert(routeIsMutation(r, "resetLinkView"));           // minting a reset token is a write
     // Reads / dialogs are NOT mutations (GET is fine).
     assert(!routeIsMutation(r.event, "detailPage"));
     assert(!routeIsMutation(r.event_checkin, "checkInDialog"));

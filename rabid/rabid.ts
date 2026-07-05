@@ -467,18 +467,49 @@ export class Rabid extends LiminalApp {
         });
     }
 
-    // Step 2 (action): mint the token and show the link - the ONE time it is
-    // visible (only its hash is stored).  The inline script (htmx runs scripts
-    // in swapped content) prepends the browser's origin to the path.
+    // Step 2 (action): mint the token, EMAIL it to the volunteer if we can, and
+    // show the link so a host can also deliver it by hand (the ONE time it is
+    // visible - only its hash is stored).  The inline script (htmx runs scripts
+    // in swapped content) prepends the browser's origin to the path.  Minting a
+    // token is a mutation, so this is POST-only (matches the dialog's hx-post).
+    @routeMutation(hostOrAdmin)
     async resetLinkView(args: {volunteer_id?: string}): Promise<Markup> {
         this.assertHostOrSystem();
         const volunteer_id = Number(args?.volunteer_id);
         const v = rabid.volunteer.getById(volunteer_id);
         const path = await this.makeResetLinkPath(volunteer_id);
+
+        // Try to email the link.  We always ATTEMPT a send when there's an
+        // address (the default LogMailer just logs it - handy in dev), but only
+        // claim "emailed" in the UI when the transport really delivers.  A
+        // missing address or a send failure must NOT block the host: the copy
+        // box below is always the fallback delivery channel.  Read the email
+        // under a system context (it may be a field the host can't view).
+        const email = security.runSystem(() => rabid.volunteer.getById(volunteer_id).email);
+        let emailedTo: string | undefined;
+        if(typeof email === 'string' && email.includes('@')) {
+            const link = this.absoluteUrl(path);
+            try {
+                await this.mailer.send({
+                    to: email,
+                    subject: 'Set your password',
+                    text: `Hi ${v.name},\n\n` +
+                        `Use this single-use link to set your password (it expires in 7 days):\n\n` +
+                        `${link}\n\n` +
+                        `If you weren't expecting this, you can ignore this email.\n`,
+                });
+                if(this.mailer.deliversRealMail) emailedTo = email;
+            } catch(e) {
+                console.error(`failed to email reset link to ${email}: ${e}`);
+            }
+        }
         return [
             [h.h2, {class: 'h5'}, `Password-reset link for ${v.name}`],
-            [h.p, {class: 'text-muted small'},
-             'Single use, expires in 7 days.  Copy it now - it is not stored and cannot be shown again.'],
+            emailedTo
+                ? [h.p, {class: 'text-success small', 'data-testid': 'reset-emailed'},
+                   `Emailed to ${emailedTo}.  You can also copy the link below to deliver it another way.`]
+                : [h.p, {class: 'text-muted small'},
+                   'Single use, expires in 7 days.  Copy it now - it is not stored and cannot be shown again.'],
             [h.div, {class: 'input-group'},
              [h.input, {type: 'text', readonly: '', class: 'form-control', id: 'reset-link-out',
                         'data-path': path, 'data-testid': 'reset-link'}],

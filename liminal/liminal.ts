@@ -39,6 +39,7 @@ import * as date from './date.ts';
 import {Temporal} from 'temporal-polyfill';
 import {lazy} from './lazy.ts';
 import {checkDbMatchesSchema} from './schema-upgrade.ts';
+import * as mail from './mail.ts';
 import type {Table} from './table.ts';
 
 export interface LiminalServerConfig {
@@ -287,6 +288,31 @@ export abstract class LiminalApp {
     shutdownPassword: string | undefined = undefined;
     pidFilePath: string | undefined = undefined;
     baseUrlFilePath: string | undefined = undefined;
+    /** The advertised base URL (set at startup), e.g. http://host:port/.  Used
+     *  as the fallback base for absoluteUrl (emailed links prefer the
+     *  LIMINAL_PUBLIC_BASE_URL env var - see absoluteUrl). */
+    baseUrl: string | undefined = undefined;
+
+    // ----- Outbound email (liminal/mail.ts) ---------------------------------
+    // Loaded lazily from `<appName>-mail-credential.json`; a LogMailer when no
+    // credential is present (dev / not-yet-provisioned).  Settable so tests can
+    // inject a RecordingMailer.
+    private _mailer: mail.Mailer | undefined = undefined;
+    get mailer(): mail.Mailer { return this._mailer ??= mail.loadMailer(this.appName); }
+    set mailer(m: mail.Mailer) { this._mailer = m; }
+
+    /** Turn a server-relative path ('/rabid.resetPassword(...)') into an
+     *  absolute URL for use in emails.  Prefers the LIMINAL_PUBLIC_BASE_URL env
+     *  var (production: the real public https URL, ahead of the reverse proxy),
+     *  then the startup-computed baseUrl; falls back to the bare path when
+     *  neither is known (e.g. unit tests that don't boot the server). */
+    absoluteUrl(path: string): string {
+        let envBase: string | undefined;
+        try { envBase = Deno.env.get('LIMINAL_PUBLIC_BASE_URL') || undefined; }
+        catch { envBase = undefined; }   // --allow-env may be absent in some contexts
+        const base = (envBase || this.baseUrl || '').replace(/\/+$/, '');
+        return base + path;
+    }
     // Authorises the dev-only /eval endpoint; generated ONLY on a non-production
     // db (endpoint hard-off otherwise).  Separate secret from shutdownPassword.
     evalPassword: string | undefined = undefined;
@@ -331,6 +357,7 @@ export abstract class LiminalApp {
         // without re-deriving the (launcher-resolved) port + host itself.
         const publicHost = Deno.env.get('LIMINAL_PUBLIC_HOST') || config.hostname;
         const baseUrl = `http://${publicHost}:${config.port}/`;
+        this.baseUrl = baseUrl;
         this.baseUrlFilePath = this.baseUrlFileName;
         Deno.writeTextFileSync(this.baseUrlFilePath, baseUrl + '\n');
         console.info(`Wrote ${this.baseUrlFilePath} (${baseUrl})`);

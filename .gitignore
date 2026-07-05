@@ -23,6 +23,10 @@
 /rabid-eval-password.txt
 /rabid-base-url.txt
 
+# Mail credential (SMTP app password etc.) for liminal/mail.ts - NEVER commit.
+/rabid-mail-credential.json
+/wordwiki-mail-credential.json
+
 # The rabid dev database (rebuilt by rabid_create_fake_data.sh at the repo
 # root); throwaway fake data, never tracked.
 /database/
