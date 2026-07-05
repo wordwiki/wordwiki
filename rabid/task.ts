@@ -1274,6 +1274,14 @@ export class TaskTable extends Table<Task> {
         const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
         const props = this.reloadableItemProps(id, `rabid.task.renderTaskBlockById(${id})`);
 
+        // Check-off provenance beside a done task ("Angus · Jun 10"), exactly like
+        // the checklist items - short name + compact date.
+        const doneByName = done ? volunteerName(t.done_by) : undefined;
+        const prov = done
+            ? [doneByName ? shortName({name: doneByName}) : undefined,
+               t.done_time ? compactDate(t.done_time) : undefined].filter(Boolean).join(' · ')
+            : '';
+
         // The override marker: the committee's name, or the override members as
         // short names (the project header already says who everything else
         // belongs to; this is just the exception).
@@ -1315,6 +1323,10 @@ export class TaskTable extends Table<Task> {
              t.due && !done
                  ? [h.span, {class: 'small flex-shrink-0 ' + (overdue ? 'text-danger' : 'text-muted')},
                     compactDate(t.due), overdue ? ' · overdue' : '']
+                 : undefined,
+             done && prov
+                 ? [h.span, {class: 'text-muted small flex-shrink-0',
+                             'data-testid': `task-${id}-done-by`}, prov]
                  : undefined,
              overrideLabel
                  ? [h.span, {class: 'text-muted small flex-shrink-0',
@@ -1415,10 +1427,15 @@ export class TaskTable extends Table<Task> {
             ?? (effectiveGroup == null ? 0
                 : rabid.volunteer_group.members.all({group_id: effectiveGroup}).length);
         const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
+        // Check-off provenance, matching the checklist items ("Done Jun 10 · Hazel").
+        const doneByName = done ? volunteerName(t.done_by) : undefined;
         const parts: Markup[] = [
-            // A done row leads with when it was done; an open row with its due date.
+            // A done row leads with when (and who) it was done; an open row with its due date.
             done
-                ? (t.done_time ? `Done ${date.sqliteDateTimeToDateString(t.done_time)}` : undefined)
+                ? (t.done_time
+                    ? `Done ${compactDate(t.done_time)}`
+                      + (doneByName ? ` · ${shortName({name: doneByName})}` : '')
+                    : undefined)
                 : t.due
                     ? (overdue
                        ? [h.span, {class: 'text-danger'}, `Due ${date.sqliteDateToString(t.due)}`]

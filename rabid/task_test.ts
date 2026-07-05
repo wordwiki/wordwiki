@@ -743,10 +743,12 @@ test("merged project page: toggleDone completes/reopens from the block checkbox 
         const t = asSystem(() => rabid.task.getById(task_id));
         assertEquals(t.status, 'done');
         assertEquals(t.done_by, bob);
-        // The block renders struck-through with the box checked.
+        // The block renders struck-through with the box checked, and shows the
+        // check-off provenance (who) - like the checklist items.
         const block = await asUser(bob, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
         assert(!!find(block, n => tagOf(n) === 'input' && attr(n, 'checked') !== undefined));
         assert(!!find(block, n => String(attr(n, 'class') ?? '').includes('text-decoration-line-through')));
+        assert(hasText(getByTestId(block, `task-${task_id}-done-by`), 'Bob'));   // done_by short name
 
         // Uncheck: reopens (to 'open'), provenance cleared.
         asUser(bob, () => rabid.task.toggleDone(task_id));
