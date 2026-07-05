@@ -93,32 +93,39 @@ test("the window bar's Show-older link widens `from` and carries hx-replace-url"
 
 // --- events: two independent filters (upcoming vs past), shared type ----------
 
-test("events: upcoming filtered (public + next month); past windowed separately", async () => {
+test("events: upcoming defaults to away + public + next month; past windowed separately", async () => {
     await withTestDb(async ({ alice }) => {
-        const mk = (description: string, opts: {days: number, volunteer_only?: 0|1, kind?: string}) =>
+        const mk = (description: string,
+                    opts: {days: number, volunteer_only?: 0|1, kind?: string, in_shop?: boolean}) =>
             asSystem(() => rabid.event.insert({
                 event_kind: opts.kind ?? 'public', description,
-                location_description: '', location_url: '', is_remote_event: 0,
+                location_description: '', location_url: '',
+                is_remote_event: opts.in_shop ? 0 : 1,               // default: AWAY
                 volunteer_only: opts.volunteer_only ?? 0,
                 start_time: daysAgo(-opts.days), end_time: null, total_cash_collected: 0, notes: ''} as any));
-        mk('Upcoming Fair', {days: 7});                                  // public, next week
+        mk('Away Fair', {days: 7});                                  // away, public, next week
+        mk('Shop Cleanup', {days: 7, in_shop: true});                // in-shop
         mk('Members Workshop', {days: 7, volunteer_only: 1, kind: 'training'});  // volunteers-only
-        mk('Ancient Fair', {days: -200});                               // 200 days in the PAST
+        mk('Ancient Fair', {days: -200});                            // 200 days in the PAST
 
         const page = await asUser(alice, () => renderRoute(`events({})`));
-        assert(hasText(page, 'Upcoming Fair'), 'public future event shows');
+        assert(hasText(page, 'Upcoming events'), 'upcoming subhead');
+        assert(hasText(page, 'away only'), 'summary communicates the away-only default');
+        assert(hasText(page, 'Away Fair'), 'away public future event shows');
+        assert(!hasText(page, 'Shop Cleanup'), 'in-shop hidden by the away-only default');
         assert(!hasText(page, 'Members Workshop'), 'volunteers-only hidden by the public-only default');
         assert(hasText(page, 'Past events'), 'past section heading');
         assert(!hasText(page, 'Ancient Fair'), '200-day-old past event hidden by the default past window');
 
-        // Including volunteers-only events surfaces the hidden one (a default-off
-        // checkbox, so it round-trips through the URL).
-        const all = await asUser(alice, () => renderRoute(`events({include_volunteer_only:true})`));
-        assert(hasText(all, 'Members Workshop'), 'including volunteers-only surfaces the hidden event');
+        // Each restriction can be opted back in (default-off checkboxes round-trip).
+        assert(hasText(await asUser(alice, () => renderRoute(`events({include_in_shop:true})`)),
+                       'Shop Cleanup'), 'include in-shop surfaces the shop event');
+        assert(hasText(await asUser(alice, () => renderRoute(`events({include_volunteer_only:true})`)),
+                       'Members Workshop'), 'include volunteers-only surfaces that event');
 
         // Widening the PAST uses the SECOND arg - independent of the upcoming filter.
         const wide = await asUser(alice, () => renderRoute(`events({}, {from:"2000-01-01"})`));
-        assert(hasText(wide, 'Ancient Fair'), 'widened past window surfaces the old event');
+        assert(hasText(wide, 'Ancient Fair'), 'widened past window surfaces the old away event');
     });
 });
 

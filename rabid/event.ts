@@ -52,6 +52,10 @@ export function eventFilterQuery(name: string): FieldSet {
     return new FieldSet(name, [
         new DateField('from', {prompt: 'From', nullable: true}),
         new DateField('to', {prompt: 'To', nullable: true}),
+        // Default-OFF (so it round-trips): the default view is AWAY events only -
+        // volunteers commit to away events, not in-shop ones - and public only.
+        new CheckboxField('include_in_shop',
+            {prompt: 'Include in-shop events', default: false}),
         new CheckboxField('include_volunteer_only',
             {prompt: 'Include volunteers-only events', default: false}),
     ]);
@@ -59,6 +63,7 @@ export function eventFilterQuery(name: string): FieldSet {
 export interface EventFilter extends Tuple {
     from: string | null;
     to: string | null;
+    include_in_shop: boolean;
     include_volunteer_only: boolean;
 }
 // The upcoming window: now → +1 month by default (a forward window, vs the
@@ -207,12 +212,16 @@ export class EventTable extends Table<Event> {
             const d = (e.start_time as string).slice(0, 10);
             return d >= from && d <= to;
         };
-        const publicOk = (e: Event, q: EventFilter) => q.include_volunteer_only || !e.volunteer_only;
+        // Away events only (is_remote_event) + public only, unless the filter
+        // opts them back in.  Volunteers commit to away events, not in-shop ones.
+        const matches = (e: Event, q: EventFilter) =>
+            (q.include_volunteer_only || !e.volunteer_only)
+            && (q.include_in_shop || !!e.is_remote_event);
         const future = all.filter(e => e.start_time && e.start_time > now
-                                       && inRange(e, upW.from, upW.to) && publicOk(e, upQ));
-        const undated = all.filter(e => !e.start_time && publicOk(e, upQ));   // TBD: window N/A
+                                       && inRange(e, upW.from, upW.to) && matches(e, upQ));
+        const undated = all.filter(e => !e.start_time && matches(e, upQ));   // TBD: window N/A
         const pastEvents = all.filter(e => e.start_time && e.start_time <= now
-                                     && inRange(e, pastW.from, pastW.to) && publicOk(e, pastQ))
+                                     && inRange(e, pastW.from, pastW.to) && matches(e, pastQ))
             .reverse();                                                       // most recent first
         const upcoming = [...future, ...undated];
 
@@ -224,13 +233,17 @@ export class EventTable extends Table<Event> {
         menuItems.push({label: 'Filter…',
                         mode: {kind: 'modal',
                                dialogUrl: `/rabid.event.upcomingFilterDialog(${EventTable.eventFilter.literal(upQ)}, ${EventTable.eventFilter.literal(pastQ)})`}});
-        // Summarise the current filter conditions, like the volunteer list / the
-        // past window bar: count · window · public-vs-all.
-        const condition = (q: EventFilter) => q.include_volunteer_only ? 'incl. volunteers-only' : 'public only';
+        // Summarise the active restrictions, like the volunteer list / the past
+        // window bar: the default view is "away only · public only".
+        const condition = (q: EventFilter) => [
+            q.include_in_shop ? undefined : 'away only',
+            q.include_volunteer_only ? undefined : 'public only',
+        ].filter(Boolean).join(' · ') || 'all events';
         return [h.div, {class: 'container py-3'},
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
              [h.h2, {class: 'mb-0'}, 'Events'],
              action.actionMenu(menuItems, {ariaLabel: 'Event actions'})],
+            [h.h4, {class: 'mb-1'}, 'Upcoming events'],
             [h.p, {class: 'text-muted small mb-2'},
              `${upcoming.length} upcoming ${plural(upcoming.length, 'event')} · `
              + `${date.sqliteDateToString(upW.from)} – ${date.sqliteDateToString(upW.to)}`
