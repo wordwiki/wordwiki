@@ -642,11 +642,47 @@ export class ProjectTable extends Table<Project> {
 
     // The committee's assigned-projects list, for embedding on the committee page.
     @route(authenticated)
+    @route(authenticated)
     renderForCommittee(committee_id: number): Markup {
         const projects = this.projectsForCommittee.all({committee_id});
-        if(projects.length === 0)
-            return [h.p, {class: 'text-muted small mb-0'}, 'No projects assigned.'];
-        return [h.div, {class: 'list-group lm-list'}, projects.map(p => this.renderProjectRow(p))];
+        // Reloadable on the project table key, so creating a committee project
+        // (createCommitteeProject) refreshes just this section.
+        const props = this.reloadableItemProps(undefined, `rabid.project.renderForCommittee(${committee_id})`);
+        return [h.div, props,
+            projects.length === 0
+                ? [h.p, {class: 'text-muted small mb-0'}, 'No projects assigned.']
+                : [h.div, {class: 'list-group lm-list'}, projects.map(p => this.renderProjectRow(p))]];
+    }
+
+    // A "+" beside a committee's Projects heading: create a new project directly
+    // in the committee's named group (so it appears here and shares the
+    // committee's membership - no adhoc group, no separate assign step).
+    @route(hostOrAdmin)
+    newCommitteeProjectDialog(committee_id: number): Markup {
+        const committee = security.runSystem(() => rabid.committee.getById(committee_id));
+        return action.renderParamForm(
+            [new StringField('name', {prompt: 'Project name'}),
+             new MarkdownField('description', {prompt: 'Description', default: ''})],
+            {},
+            {
+                title: `New project for ${committee.name}`,
+                submitLabel: 'Create project',
+                hidden: {committee_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.project.createCommitteeProject(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(hostOrAdmin)
+    createCommitteeProject(args: {committee_id?: string|number, name?: string, description?: string}): Markup {
+        const committee_id = Number(args?.committee_id);
+        if(!Number.isInteger(committee_id) || !committee_id) throw new Error('Missing committee');
+        const name = String(args?.name ?? '').trim();
+        if(!name) throw new Error('Please name the project');
+        const committee = security.runSystem(() => rabid.committee.getById(committee_id));
+        this.insert({name, description: String(args?.description ?? ''),
+                     group_id: committee.group_id, deleted: 0});
+        return {action: 'reload', targets: ['.-project-']} as unknown as Markup;
     }
 
     // ------------------------------------------------------------------------
@@ -1443,12 +1479,17 @@ export class TaskTable extends Table<Task> {
     // The dep key and reload URL carry the role, so one owner's several lists
     // are independent fragments.
     @route(authenticated)
-    renderOwnerTasks(owner_table: string, owner_id: number, owner_role: string|null = null): Markup {
+    renderOwnerTasks(owner_table: string, owner_id: number, owner_role: string|null = null,
+                     docHeading = false): Markup {
         const project_id = rabid.project.forOwner(owner_table, owner_id, owner_role);
         const roleTag = owner_role ?? '';
         const props = reloadableItemProps(`owner_tasks_${owner_table}_${roleTag}`, owner_id,
-            `rabid.task.renderOwnerTasks('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'})`);
+            `rabid.task.renderOwnerTasks('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'},${docHeading})`);
         const heading = owner_role ? (project_role_enum[owner_role] ?? owner_role) : 'Tasks';
+        // docHeading: render as a peer document-section heading (quiet label -
+        // used on the committee page, where Members/Projects/Tasks sit level).
+        const headWrapClass = docHeading ? 'lm-doc-section-head' : 'd-flex align-items-center gap-2 mt-3';
+        const headClass = docHeading ? 'lm-doc-section-label' : 'mb-0';
         // This section owns the single heading + add button: the add is gated by
         // the OWNER's permission (ownerCanEdit), not renderProjectTasks' host-only
         // task permission, and dispatches newOwnerTaskDialog so the list is
@@ -1456,8 +1497,8 @@ export class TaskTable extends Table<Task> {
         // (showHeading=false) so the heading isn't doubled.  The open count (also
         // the liveness antenna) rides here when the project exists.
         return [h.div, props,
-            [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
-             [h.h4, {class: 'mb-0'}, heading],
+            [h.div, {class: headWrapClass},
+             [h.h4, {class: headClass}, heading],
              project_id !== undefined ? this.renderProjectOpenCount(project_id) : undefined,
              ownerCanEdit(owner_table, owner_id)
                  ? action.actionButton(action.plusIcon(),

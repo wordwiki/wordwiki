@@ -234,18 +234,27 @@ export class CommitteeTable extends Table<Committee> {
                    this.fieldsByName.description.render(c.description)]
                 : undefined,
             // Quiet section labels (document sections, not bold form headings).
-            [h.h4, {class: 'lm-doc-section-label'}, 'Members'],
+            // Members / Projects / Tasks all sit level as peer sections.
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Members']],
             rabid.volunteer_group.renderMemberEditor(c.group_id),
 
             // Projects the committee is responsible for (assigned via its group),
-            // each drilling in to its own page.
-            [h.h4, {class: 'lm-doc-section-label'}, 'Projects'],
+            // each drilling in to its own page.  The "+" creates one directly in
+            // the committee's group (peer to the Tasks "+").
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Projects'],
+             this.canEditRecord(c)
+                 ? action.actionButton(action.plusIcon(),
+                     {kind: 'modal', dialogUrl: `/rabid.project.newCommitteeProjectDialog(${committee_id})`},
+                     'lm-menu-button', {'aria-label': 'New project', title: 'New project'})
+                 : undefined],
             rabid.project.renderForCommittee(committee_id),
 
             // The committee's own task list - a 1-1 owned project, created lazily
-            // on the first task (renderOwnerTasks emits its own "Tasks" heading).
-            [h.div, {class: 'mt-4'},
-             rabid.task.renderOwnerTasks('committee', committee_id)],
+            // on the first task.  docHeading=true so its "Tasks" heading matches
+            // the Members/Projects section labels above.
+            rabid.task.renderOwnerTasks('committee', committee_id, null, true),
         ];
     }
 }

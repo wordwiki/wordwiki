@@ -161,6 +161,29 @@ test("dissolved committees are hidden by default; the ☰ 'Show dissolved' revea
     });
 });
 
+test("committee projects: a host creates one in the committee's group; it lists under Projects, host-gated", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const {committee_id, group_id} = insertCommittee();
+        const res = await asUser(alice, () => invoke("rabid.project.createCommitteeProject($arg0)",
+            {committee_id: String(committee_id), name: 'Fall Fix-a-thon', description: ''}));
+        assertEquals(res.action, 'reload');
+        // Created directly in the committee's named group (not an adhoc set), so
+        // projectsForCommittee finds it.
+        const p = asSystem(() => rabid.project.projectsForCommittee.all({committee_id}))
+            .find(p => p.name === 'Fall Fix-a-thon');
+        assert(p, 'the project is created and assigned to the committee');
+        assertEquals(asSystem(() => rabid.project.getById(p!.project_id)).group_id, group_id);
+        const section = await asUser(alice, () => renderRoute(`rabid.project.renderForCommittee(${committee_id})`));
+        assert(hasText(section, 'Fall Fix-a-thon'));
+        // Host-only: a regular volunteer can neither open the dialog nor create.
+        await asUser(bob, () => assertRejects(
+            () => renderRoute(`rabid.project.newCommitteeProjectDialog(${committee_id})`), Error));
+        await asUser(bob, () => assertRejects(
+            () => invoke("rabid.project.createCommitteeProject($arg0)",
+                {committee_id: String(committee_id), name: 'Nope'}), Error));
+    });
+});
+
 test("committee detail embeds the member editor; insert via saveForm creates the group", async () => {
     await withTestDb(async ({ alice, bob }) => {
         // Create through the generic record form (no primary key -> insert),
