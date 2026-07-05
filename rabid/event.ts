@@ -291,6 +291,9 @@ export class EventTable extends Table<Event> {
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add (see task.renderOwnerTasks).
             rabid.task.renderOwnerTasks('event', event_id),
+            // Checklists instantiated from templates (setup/cleanup): the
+            // instantiated list + a Resync button, or a "Create …" button.
+            rabid.task.renderOwnerChecklists('event', event_id),
         ];
     }
 

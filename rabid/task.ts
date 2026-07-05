@@ -58,6 +58,13 @@ export const routes = ()=> ({
 
 const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
 
+// Render-time host/admin check (templates are org-wide definitions, managed by
+// hosts/admins).  Routes are additionally gated by @route(hostOrAdmin).
+function templateManager(): boolean {
+    const ctx = security.current();
+    return !!ctx && (ctx.system === true || ctx.roles.has('host') || ctx.roles.has('admin'));
+}
+
 // Is the current actor a member of this volunteer_group?  (The "assignees may
 // edit their task" check.)  A plain indexed lookup - membership is live data,
 // never cached.
@@ -142,6 +149,25 @@ export interface Project {
     owner_table?: string;
     owner_id?: number;
 
+    // Which named list this is for its owner (project_role_enum): NULL = the
+    // general owned task list; 'cleanup'/'setup'/... = a checklist.  Part of the
+    // owner key, so one owner can hold several (each 1-1).  Also set on a
+    // TEMPLATE (below) to declare the role it instantiates into.
+    owner_role?: string;
+
+    // A template is a reusable checklist DEFINITION (is_template=1), owned by
+    // nobody (owner_table/owner_id NULL).  It declares the owner TYPE it
+    // instantiates for (applies_to_table, e.g. 'event') and, via owner_role, the
+    // slot it fills.  Instantiating deep-copies its tasks/subtasks into an owned
+    // project that records from_template_id and can later be resynced.  Templates
+    // are excluded from the normal project/task lists and carry no assignees or
+    // due dates (structure only).
+    is_template: boolnum;
+    applies_to_table?: string;
+    // Lineage on an INSTANCE: the template it was created from (null for a
+    // template or a hand-made project).  Drives resync.
+    from_template_id?: number;
+
     // Archived projects are soft-deleted: their tasks/history keep working.
     deleted: boolnum;
 
@@ -170,15 +196,23 @@ export class ProjectTable extends Table<Project> {
             new OwnedGroupField('group_id'),
             new StringField('owner_table', {nullable: true}),
             new IntegerField('owner_id', {nullable: true}),
+            new EnumField('owner_role', project_role_enum, {nullable: true}),
+            new BooleanField('is_template', {default: 0}),
+            new StringField('applies_to_table', {nullable: true}),
+            new ForeignKeyField('from_template_id', 'project', 'project_id', {nullable: true}, 'name'),
             new BooleanField('deleted', {default: 0, prompt: 'Done'}),
             new ManagedDateTimeField('archived_time', {nullable: true}),
             new ManagedForeignKeyField('archived_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
             new ManagedDateTimeField('created_time', {nullable: true}),
             new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
         ], [
-            // 1-1: at most one project per owner.  (NULLs are distinct in SQLite,
-            // so standalone projects - owner_table/owner_id NULL - are unconstrained.)
-            'CREATE UNIQUE INDEX IF NOT EXISTS project_by_owner ON project(owner_table, owner_id);',
+            // 1-1 per (owner, role): at most one project per owner per named
+            // list, so an event can hold its general list AND a cleanup checklist
+            // AND a setup checklist.  (NULLs are distinct in SQLite, so standalone
+            // and template projects - owner_table/owner_id NULL - stay
+            // unconstrained.)  Enforcing this also closes the forOwner
+            // check-then-insert race.
+            'CREATE UNIQUE INDEX IF NOT EXISTS project_by_owner ON project(owner_table, owner_id, owner_role);',
         ])
     };
 
@@ -213,6 +247,7 @@ export class ProjectTable extends Table<Project> {
         const p = this.getById(project_id);
         if(!this.canEditRecord(p))
             throw new Error('Not permitted to edit this project');
+        if(p.is_template) throw new Error('A template is not assigned to people.');
         return [
             [h.p, {class: 'text-muted small'},
              'The current assignee list is replaced; membership then follows the committee.'],
@@ -240,6 +275,7 @@ export class ProjectTable extends Table<Project> {
         const p = this.getById(project_id);
         if(!this.canEditRecord(p))
             throw new Error('Not permitted to edit this project');
+        if(p.is_template) throw new Error('A template is not assigned to people.');
         const committee = security.runSystem(() => rabid.committee.getById(committee_id));
         if(committee.group_id !== p.group_id) {
             const old = security.runSystem(() => rabid.volunteer_group.getById(p.group_id));
@@ -256,6 +292,7 @@ export class ProjectTable extends Table<Project> {
         const p = this.getById(project_id);
         if(!this.canEditRecord(p))
             throw new Error('Not permitted to edit this project');
+        if(p.is_template) throw new Error('A template is not assigned to people.');
         const g = security.runSystem(() => rabid.volunteer_group.getById(p.group_id));
         if(g.group_kind === 'named') {
             const group_id = security.runSystem(() =>
@@ -283,26 +320,226 @@ export class ProjectTable extends Table<Project> {
     // An owned project renders through its owner (suffixed so it reads as a
     // task list in mixed lists); a standalone project goes by its own name.
     override recordLabel(p: Project): string {
-        if(p.owner_table != null && p.owner_id != null)
-            return `${ownerLabel(p.owner_table, p.owner_id)} — tasks`;
+        // A template shows its own name ("Event Cleanup").
+        if(p.is_template) return p.name || 'Unnamed template';
+        // An owned checklist: "<owner> — <Role>"; the general owned list keeps
+        // the "<owner> — tasks" form; a standalone project shows its name.
+        if(p.owner_table != null && p.owner_id != null) {
+            const suffix = p.owner_role ? (project_role_enum[p.owner_role] ?? p.owner_role) : 'tasks';
+            return `${ownerLabel(p.owner_table, p.owner_id)} — ${suffix}`;
+        }
         return p.name || 'Unnamed project';
+    }
+
+    // Templates that instantiate into a given owner type (for the owner page's
+    // "Create <checklist>" offers and the templates admin page grouping).
+    @path
+    get templatesForOwnerTable() {
+        return this.prepare<Project, {owner_table: string}>(block`
+/**/   SELECT ${this.allFields} FROM project
+/**/          WHERE is_template = 1 AND applies_to_table = :owner_table
+/**/          ORDER BY owner_role, name`);
+    }
+    // All templates, for the admin list.
+    @path
+    get allTemplates() {
+        return this.prepare<Project, {}>(block`
+/**/   SELECT ${this.allFields} FROM project
+/**/          WHERE is_template = 1
+/**/          ORDER BY applies_to_table, owner_role, name`);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Templates: admin page (host/admin) ----------------------------------
+    // ------------------------------------------------------------------------
+
+    // The Checklist Templates admin page: every template, grouped by the owner
+    // type it applies to; each links to its project detail page (where its
+    // tasks/subtasks are edited like any project - host/admin only, since a
+    // template has an empty assignment group).
+    @route(authenticated)
+    renderTemplatesPage(): Markup {
+        const templates = security.runSystem(() => this.allTemplates.all({}));
+        const canManage = templateManager();
+        const byOwner = new Map<string, Project[]>();
+        for(const t of templates) {
+            const key = t.applies_to_table ?? '';
+            if(!byOwner.has(key)) byOwner.set(key, []);
+            byOwner.get(key)!.push(t);
+        }
+        return [h.div, {class: 'container py-3'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.h2, {class: 'mb-0'}, 'Checklist templates'],
+             canManage
+                 ? action.actionButton('New template',
+                     {kind: 'modal', dialogUrl: '/rabid.project.newTemplateDialog()'},
+                     'btn btn-outline-primary btn-sm')
+                 : undefined],
+            [h.p, {class: 'text-muted small'},
+             'Reusable checklists. Instantiate one on an event (etc); editing a template ' +
+             'changes what future instances - and resyncs - receive.'],
+            templates.length === 0
+                ? [h.p, {class: 'text-muted'}, 'No templates yet.']
+                : Array.from(byOwner.entries()).map(([ownerType, list]) => [
+                    [h.h3, {class: 'h6 text-muted mt-3 mb-1'},
+                     template_owner_table_enum[ownerType] ?? ownerType ?? 'Unassigned'],
+                    [h.div, {class: 'list-group lm-list'}, list.map(t => this.templateRow(t))]]),
+        ];
+    }
+
+    templateRow(t: Project): Markup {
+        const roleLabel = t.owner_role ? (project_role_enum[t.owner_role] ?? t.owner_role) : '—';
+        const item = this.detailItemProps(t.project_id, `rabid.project.renderTemplateRow(${t.project_id})`);
+        return [h.div, {...item, 'data-testid': `template-row-${t.project_id}`},
+            [h.div, {class: 'lm-item-body'},
+             [h.div, {class: 'lm-item-primary'},
+              [h.a, {...templates.pageLinkProps(`/rabid.project.detailPage(${t.project_id})`),
+                     class: 'lm-nav-link'}, t.name || 'Unnamed template']],
+             [h.div, {class: 'lm-item-secondary'}, `Role: ${roleLabel}`]],
+            navChevron(),
+        ];
+    }
+    @route(authenticated)
+    renderTemplateRow(project_id: number): Markup {
+        return this.templateRow(this.getById(project_id));
+    }
+
+    @route(hostOrAdmin)
+    newTemplateDialog(): Markup {
+        return action.renderParamForm(
+            [new StringField('name', {prompt: 'Template name'}),
+             new EnumField('applies_to_table', template_owner_table_enum, {prompt: 'For'}),
+             new EnumField('owner_role', project_role_enum, {prompt: 'Role'})],
+            {} as any,
+            {
+                title: 'New checklist template',
+                submitLabel: 'Create',
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.project.createTemplate(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(hostOrAdmin)
+    createTemplate(args: {name?: string, applies_to_table?: string, owner_role?: string}): any {
+        const name = (args?.name ?? '').trim();
+        if(!name) throw new Error('Name is required');
+        const project_id = this.insert({
+            is_template: 1, name, deleted: 0,
+            applies_to_table: (args.applies_to_table || null) as any,
+            owner_role: (args.owner_role || null) as any} as Partial<Project>);
+        // Straight to the template's project page to add its tasks.
+        return {action: 'navigate', url: `/rabid.project.detailPage(${project_id})`};
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Templates: instantiate + resync -------------------------------------
+    // ------------------------------------------------------------------------
+
+    // Create (or return the existing) checklist for an owner from a template,
+    // DEEP-COPYING the template's tasks + subtasks.  Idempotent per (owner,
+    // role): re-instantiating returns the existing checklist (use resync to top
+    // it up).  Copied items carry no due date and no assignees (structure only)
+    // and record their template lineage (from_template_*_id) for resync.
+    // Returns the instance project_id; the route wrapper is createOwnerChecklist.
+    instantiateTemplate(template_id: number, owner_table: string, owner_id: number): number {
+        if(!ownerCanEdit(owner_table, owner_id))
+            throw new Error('Not permitted to add a checklist here');
+        const template = security.runSystem(() => this.getById(template_id));
+        if(!template.is_template) throw new Error('Not a template');
+        const role = template.owner_role ?? null;
+        const existing = this.forOwner(owner_table, owner_id, role);
+        if(existing !== undefined) return existing;
+        const project_id = this.insert({
+            owner_table, owner_id, owner_role: role, from_template_id: template_id,
+            is_template: 0, name: '', deleted: 0} as Partial<Project>);
+        for(const tt of security.runSystem(() => rabid.task.tasksForProject.all({project_id: template_id}))) {
+            const task_id = rabid.task.insert({
+                project_id, title: tt.title, details: tt.details, priority: tt.priority,
+                status: 'open', deleted: 0, from_template_task_id: tt.task_id} as Partial<Task>);
+            for(const ts of security.runSystem(() => rabid.subtask.forTask.all({task_id: tt.task_id})))
+                rabid.subtask.insert({task_id, title: ts.title, done: 0,
+                    from_template_subtask_id: ts.subtask_id} as Partial<Subtask>);
+        }
+        return project_id;
+    }
+
+    // Route wrapper: create the checklist then reload the owner's detail page
+    // (the new section appears there).
+    @routeMutation(authenticated)
+    createOwnerChecklist(template_id: number, owner_table: string, owner_id: number): Markup {
+        this.instantiateTemplate(template_id, owner_table, owner_id);
+        return {action: 'reload', targets: [`.-${owner_table}-${owner_id}-`]} as unknown as Markup;
+    }
+
+    // Additive resync: copy any template items the instance is missing (keyed by
+    // lineage).  Never updates text, never deletes; locally-added items
+    // (from_template_*_id NULL) and completed/edited items are untouched, and a
+    // user-DELETED copied task is not resurrected (the lineage map includes
+    // soft-deleted rows).  Idempotent.
+    @routeMutation(authenticated)
+    resyncFromTemplate(project_id: number): Markup {
+        const instance = security.runSystem(() => this.getById(project_id));
+        if(instance.from_template_id == null) throw new Error('Not created from a template');
+        if(!(instance.owner_table && instance.owner_id != null))
+            throw new Error('Not an owned checklist');
+        if(!ownerCanEdit(instance.owner_table, instance.owner_id))
+            throw new Error('Not permitted');
+        const template_id = instance.from_template_id;
+
+        // Instance tasks by template lineage - INCLUDING soft-deleted, so a
+        // deleted copy blocks re-adding.
+        const instTaskByTemplate = new Map<number, number>();
+        for(const r of db().all<{task_id: number, from_template_task_id: number|null}>(
+                'SELECT task_id, from_template_task_id FROM task WHERE project_id = :project_id',
+                {project_id}))
+            if(r.from_template_task_id != null) instTaskByTemplate.set(r.from_template_task_id, r.task_id);
+
+        for(const tt of security.runSystem(() => rabid.task.tasksForProject.all({project_id: template_id}))) {
+            let instTaskId = instTaskByTemplate.get(tt.task_id);
+            if(instTaskId === undefined) {
+                instTaskId = rabid.task.insert({
+                    project_id, title: tt.title, details: tt.details, priority: tt.priority,
+                    status: 'open', deleted: 0, from_template_task_id: tt.task_id} as Partial<Task>);
+                for(const ts of security.runSystem(() => rabid.subtask.forTask.all({task_id: tt.task_id})))
+                    rabid.subtask.insert({task_id: instTaskId, title: ts.title, done: 0,
+                        from_template_subtask_id: ts.subtask_id} as Partial<Subtask>);
+            } else {
+                const have = new Set(db().all<{from_template_subtask_id: number|null}>(
+                    'SELECT from_template_subtask_id FROM subtask WHERE task_id = :task_id', {task_id: instTaskId})
+                    .map(s => s.from_template_subtask_id).filter((x): x is number => x != null));
+                for(const ts of security.runSystem(() => rabid.subtask.forTask.all({task_id: tt.task_id})))
+                    if(!have.has(ts.subtask_id))
+                        rabid.subtask.insert({task_id: instTaskId, title: ts.title, done: 0,
+                            from_template_subtask_id: ts.subtask_id} as Partial<Subtask>);
+            }
+        }
+        return {action: 'reload',
+                targets: [`.-owner_tasks_${instance.owner_table}_${instance.owner_role ?? ''}-${instance.owner_id}-`]} as unknown as Markup;
     }
 
     // The owner's 1-1 project, found by backlink (any state - the unique index
     // means there's at most one ever).  `create` materializes it lazily, which
     // is how an owned project comes into being: on the owner's first task.
+    // The owner's project for a given ROLE (NULL role = the general owned list),
+    // found by backlink.  `owner_role IS :owner_role` matches NULL against NULL.
+    // The (owner_table, owner_id, owner_role) unique index means at most one.
     @path
     get ownedProjectByOwner() {
-        return this.prepare<Project, {owner_table: string, owner_id: number}>(block`
+        return this.prepare<Project, {owner_table: string, owner_id: number, owner_role: string|null}>(block`
 /**/   SELECT ${this.allFields} FROM project
 /**/          WHERE owner_table = :owner_table AND owner_id = :owner_id
+/**/            AND owner_role IS :owner_role
 /**/          LIMIT 1`);
     }
-    forOwner(owner_table: string, owner_id: number, create = false): number | undefined {
-        const existing = security.runSystem(() => this.ownedProjectByOwner.first({owner_table, owner_id}));
+    forOwner(owner_table: string, owner_id: number, owner_role: string|null = null,
+             create = false): number | undefined {
+        const existing = security.runSystem(() =>
+            this.ownedProjectByOwner.first({owner_table, owner_id, owner_role}));
         if(existing) return existing.project_id;
         if(!create) return undefined;
-        return this.insert({owner_table, owner_id, name: ''} as Partial<Project>);
+        // Bare create (the general list); checklists are created by
+        // instantiateTemplate, which deep-copies structure.
+        return this.insert({owner_table, owner_id, owner_role, name: ''} as Partial<Project>);
     }
 
     // A `deleted` change across the archive boundary sets/clears the archive
@@ -384,6 +621,7 @@ export class ProjectTable extends Table<Project> {
 /**/              AS open_task_count
 /**/          FROM project
 /**/          WHERE (:include_done = 1 OR deleted = 0)
+/**/            AND owner_table IS NULL AND is_template = 0
 /**/          ORDER BY deleted, name`);
     }
 
@@ -534,7 +772,9 @@ export class ProjectTable extends Table<Project> {
                  ? [h.span, {class: 'badge rounded-pill bg-secondary-subtle text-secondary-emphasis'}, 'Done']
                  : undefined,
              this.canEditRecord(p) ? this.editPencil(project_id) : undefined,
-             this.canEditRecord(p)
+             // A template is a definition, not a workable project, so it has no
+             // Done/Reopen transition.
+             (this.canEditRecord(p) && !p.is_template)
                  ? action.actionMenu([
                        p.deleted
                            ? {label: 'Reopen project…',
@@ -553,8 +793,12 @@ export class ProjectTable extends Table<Project> {
             p.description
                 ? [h.div, {class: 'lm-prose mb-3'}, this.fieldsByName.description.render(p.description)]
                 : undefined,
-            // The project's assignment: THE assigned-to its tasks inherit.
-            renderAssignmentLine('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
+            // The project's assignment: THE assigned-to its tasks inherit.  A
+            // TEMPLATE has no assignment (structure only - assignment comes from
+            // each instance's owner), so the line is omitted entirely.
+            p.is_template
+                ? undefined
+                : renderAssignmentLine('rabid.project', project_id, p.group_id, this.canEditRecord(p)),
         ];
     }
 
@@ -600,6 +844,24 @@ export const task_priority_enum: Record<string, string> = {
     'high': 'High',
 };
 
+// The role a checklist project fills for its owner (project.owner_role) - the
+// discriminator that lets one owner hold several named lists (an event's setup
+// AND cleanup checklists), each 1-1.  A controlled vocabulary so cross-owner
+// queries ("the cleanup checklist for every event") stay reliable.  NULL role =
+// the owner's general/ad-hoc task list (the pre-existing 1-1 owned project).
+export const project_role_enum: Record<string, string> = {
+    'setup': 'Setup',
+    'cleanup': 'Cleanup',
+    'safety': 'Safety',
+};
+
+// The owner types a template can instantiate for (project.applies_to_table) -
+// the owner_table values that carry owned checklists.
+export const template_owner_table_enum: Record<string, string> = {
+    'event': 'Event',
+    'volunteer': 'Volunteer',
+};
+
 export interface Task {
     task_id: number;
     project_id: number;        // visible in the edit form: moving a task IS editing this
@@ -621,6 +883,11 @@ export interface Task {
     order_key: string;         // sibling order within the project (orderkey.ts)
     last_change_time: string;  // stamped on every insert/update + subtask change
     deleted: boolnum;
+
+    // Lineage: on a task copied from a template, the template task it came from
+    // (NULL = added locally, or a template's own task).  Resync uses it to tell
+    // which items already exist and must never be duplicated or overwritten.
+    from_template_task_id?: number;
 
     // Completion provenance: who moved it to 'done' and when.  Describes the
     // CURRENT done state - reopening clears both (not an audit log).  Null
@@ -679,6 +946,7 @@ export class TaskTable extends Table<Task> {
             new ManagedForeignKeyField('done_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
             new ManagedDateTimeField('created_time', {nullable: true}),
             new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
+            new ManagedForeignKeyField('from_template_task_id', 'task', 'task_id', {nullable: true}, 'title'),
         ], [
             'CREATE INDEX IF NOT EXISTS task_by_project ON task(project_id);',
             'CREATE INDEX IF NOT EXISTS task_by_group ON task(group_id);',
@@ -825,6 +1093,7 @@ export class TaskTable extends Table<Task> {
 /**/               JOIN project p ON p.project_id = t.project_id
 /**/               LEFT JOIN event e ON p.owner_table = 'event' AND e.event_id = p.owner_id
 /**/          WHERE t.done_by = :volunteer_id AND t.status = 'done' AND t.done_time IS NOT NULL
+/**/            AND p.is_template = 0
 /**/          ORDER BY t.done_time`);
     }
 
@@ -850,7 +1119,7 @@ export class TaskTable extends Table<Task> {
 /**/          FROM task JOIN project p ON p.project_id = task.project_id
 /**/               JOIN group_member gm ON gm.group_id = COALESCE(task.group_id, p.group_id)
 /**/          WHERE gm.volunteer_id = :volunteer_id
-/**/            AND task.deleted = 0 AND task.status != 'done'
+/**/            AND task.deleted = 0 AND task.status != 'done' AND p.is_template = 0
 /**/          ORDER BY task.due IS NULL, task.due, project_name, task.order_key`);
     }
 
@@ -872,6 +1141,7 @@ export class TaskTable extends Table<Task> {
 /**/              AS assignee_count
 /**/          FROM task
 /**/          WHERE deleted = 0 AND (:include_done = 1 OR status != 'done')
+/**/            AND (SELECT is_template FROM project WHERE project_id = task.project_id) = 0
 /**/          ORDER BY project_name, project_id, (status = 'done'), order_key`);
     }
 
@@ -1171,25 +1441,31 @@ export class TaskTable extends Table<Task> {
     // owned project is created LAZILY (on the first task, via addOwnerTask) - so
     // owners with no tasks stay project-free and don't clutter global lists.
 
+    // An owner's task list for a ROLE (owner_role NULL = the general list;
+    // 'cleanup'/'setup'/... = a checklist, usually created from a template).
+    // The dep key and reload URL carry the role, so one owner's several lists
+    // are independent fragments.
     @route(authenticated)
-    renderOwnerTasks(owner_table: string, owner_id: number): Markup {
-        const project_id = rabid.project.forOwner(owner_table, owner_id, false);
-        const props = reloadableItemProps(`owner_tasks_${owner_table}`, owner_id,
-            `rabid.task.renderOwnerTasks('${owner_table}',${owner_id})`);
-        // This section owns the single "Tasks" heading + add button: the add is
-        // gated by the OWNER's permission (ownerCanEdit - e.g. a volunteer may
-        // add to their own page), not renderProjectTasks' host-only task
-        // permission, and it dispatches newOwnerTaskDialog so the owned project
-        // is created lazily on the first task.  The nested list is rendered
-        // headless (showHeading=false) so the heading isn't doubled.  The open
-        // count (also the liveness antenna) rides here when the project exists.
+    renderOwnerTasks(owner_table: string, owner_id: number, owner_role: string|null = null): Markup {
+        const project_id = rabid.project.forOwner(owner_table, owner_id, owner_role);
+        const roleTag = owner_role ?? '';
+        const props = reloadableItemProps(`owner_tasks_${owner_table}_${roleTag}`, owner_id,
+            `rabid.task.renderOwnerTasks('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'})`);
+        const heading = owner_role ? (project_role_enum[owner_role] ?? owner_role) : 'Tasks';
+        // This section owns the single heading + add button: the add is gated by
+        // the OWNER's permission (ownerCanEdit), not renderProjectTasks' host-only
+        // task permission, and dispatches newOwnerTaskDialog so the list is
+        // created lazily on the first task.  The nested list is headless
+        // (showHeading=false) so the heading isn't doubled.  The open count (also
+        // the liveness antenna) rides here when the project exists.
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
-             [h.h4, {class: 'mb-0'}, 'Tasks'],
+             [h.h4, {class: 'mb-0'}, heading],
              project_id !== undefined ? this.renderProjectOpenCount(project_id) : undefined,
              ownerCanEdit(owner_table, owner_id)
                  ? action.actionButton(action.plusIcon(),
-                     {kind: 'modal', dialogUrl: `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id})`},
+                     {kind: 'modal', dialogUrl:
+                         `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'})`},
                      'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
                  : undefined],
             project_id !== undefined
@@ -1198,11 +1474,43 @@ export class TaskTable extends Table<Task> {
         ];
     }
 
-    // New-task dialog for an owner (no project picker - the project is the
+    // The owner's CHECKLISTS section: for each template that applies to this
+    // owner type, render its instantiated checklist (with a Resync button) or a
+    // "Create <name>" button.  Rendered inline in the owner's detail page
+    // (event/volunteer); createOwnerChecklist reloads that page so a new section
+    // appears.  Returns undefined when no templates apply (no section shown).
+    renderOwnerChecklists(owner_table: string, owner_id: number): Markup {
+        const templates = security.runSystem(() =>
+            rabid.project.templatesForOwnerTable.all({owner_table}));
+        if(templates.length === 0) return undefined as any;
+        const canEdit = ownerCanEdit(owner_table, owner_id);
+        return templates.map(t => {
+            const role = t.owner_role ?? null;
+            const existing = rabid.project.forOwner(owner_table, owner_id, role);
+            if(existing !== undefined)
+                return [h.div, {class: 'mt-2'},
+                    this.renderOwnerTasks(owner_table, owner_id, role),
+                    canEdit
+                        ? action.actionButton('Resync from template',
+                            {kind: 'confirm', expr: `rabid.project.resyncFromTemplate(${existing})`,
+                             message: `Add any new "${t.name}" items to this checklist?`},
+                            'btn btn-sm btn-link p-0 text-muted')
+                        : undefined];
+            return canEdit
+                ? [h.div, {class: 'mt-3'},
+                   action.actionButton(`Create ${t.name}`,
+                       {kind: 'immediate',
+                        expr: `rabid.project.createOwnerChecklist(${t.project_id}, '${owner_table}', ${owner_id})`},
+                       'btn btn-outline-secondary btn-sm')]
+                : undefined;
+        });
+    }
+
+    // New-task dialog for an owner+role (no project picker - the project is the
     // owner's own).  Submit funnels through addOwnerTask, which creates the
     // owned project if this is the first task.
     @route(authenticated)
-    newOwnerTaskDialog(owner_table: string, owner_id: number): Markup {
+    newOwnerTaskDialog(owner_table: string, owner_id: number, owner_role: string|null = null): Markup {
         if(!ownerCanEdit(owner_table, owner_id))
             throw new Error('Not permitted to add tasks here');
         const f = this.fieldsByName;
@@ -1212,24 +1520,26 @@ export class TaskTable extends Table<Task> {
             {
                 title: 'New task',
                 submitLabel: 'Add',
-                hidden: {owner_table, owner_id},
+                hidden: {owner_table, owner_id, owner_role: owner_role ?? ''},
                 dispatch: {onsubmit:
                     'event.preventDefault(); tx`rabid.task.addOwnerTask(${getFormJSON(event.target)})`'},
             });
     }
 
     @routeMutation(authenticated)
-    addOwnerTask(args: {owner_table?: string, owner_id?: string|number,
+    addOwnerTask(args: {owner_table?: string, owner_id?: string|number, owner_role?: string,
                         title?: string, details?: string, priority?: string, due?: string}): Markup {
         const owner_table = String(args?.owner_table ?? '');
         const owner_id = Number(args?.owner_id);
+        const owner_role = (args?.owner_role ?? '') || null;   // '' from the hidden field -> null
         if(!owner_table || !Number.isInteger(owner_id) || !owner_id)
             throw new Error('Missing owner');
         if(!ownerCanEdit(owner_table, owner_id))
             throw new Error('Not permitted to add tasks here');
         const title = (args.title ?? '').trim();
         if(!title) throw new Error('Title is required');
-        const project_id = rabid.project.forOwner(owner_table, owner_id, /*create*/ true)!;
+        // Locally-added task (from_template_task_id NULL) -> resync leaves it be.
+        const project_id = rabid.project.forOwner(owner_table, owner_id, owner_role, /*create*/ true)!;
         this.insert({
             project_id, title,
             details: args.details ?? '',
@@ -1238,7 +1548,7 @@ export class TaskTable extends Table<Task> {
             status: 'open', deleted: 0,
         } as Partial<Task>);
         return {action: 'reload',
-                targets: [`.-owner_tasks_${owner_table}-${owner_id}-`]} as unknown as Markup;
+                targets: [`.-owner_tasks_${owner_table}_${owner_role ?? ''}-${owner_id}-`]} as unknown as Markup;
     }
 
     // ------------------------------------------------------------------------
@@ -1548,6 +1858,10 @@ export interface Subtask {
     // state only; unchecking clears).
     done_time?: string;
     done_by?: number;
+
+    // Lineage: the template subtask this was copied from (NULL = local / a
+    // template's own).  Resync keys on it (see Task.from_template_task_id).
+    from_template_subtask_id?: number;
 }
 
 export type SubtaskOpt = Partial<Subtask>;
@@ -1566,6 +1880,7 @@ export class SubtaskTable extends Table<Subtask> {
             new ManagedStringField('order_key', {default: ''}),
             new ManagedDateTimeField('done_time', {nullable: true}),
             new ManagedForeignKeyField('done_by', 'volunteer', 'volunteer_id', {nullable: true}, 'name'),
+            new ManagedForeignKeyField('from_template_subtask_id', 'subtask', 'subtask_id', {nullable: true}, 'title'),
         ], [
             'CREATE INDEX IF NOT EXISTS subtask_by_task ON subtask(task_id);',
         ])

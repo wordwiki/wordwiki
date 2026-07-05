@@ -104,6 +104,7 @@ export class Rabid extends LiminalApp {
     committees() { return templates.page('Committees', this.committee.renderCommitteesPage()); }
     projects(q?: Record<string, any>) { return templates.page('Projects', this.project.renderProjectsPage(q)); }
     tasksPage(q?: Record<string, any>) { return templates.page('Tasks', this.task.renderTasksPage(q)); }
+    templatesPage() { return templates.page('Checklist templates', this.project.renderTemplatesPage()); }
 
     constructor() {
         super();
@@ -125,6 +126,7 @@ export class Rabid extends LiminalApp {
             // ('tasks' the page vs this.task the table - same naming move as
             // service/servicePage.)
             tasks:(q?: any)=>this.tasksPage(q),
+            templates:()=>this.templatesPage(),
             activityReport:()=>templates.page('Activity Report', activityReport()),
             // The range now rides the route as a {} arg (default: last 120 days,
             // drifting) instead of being frozen here - see activity_report.ts.

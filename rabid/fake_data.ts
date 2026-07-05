@@ -977,13 +977,13 @@ export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {
                 const c = checkins[Math.floor(rand() * checkins.length)];
                 const end = c.event_end_time ?? c.event_start_time ?? c.start_time!;
                 const doneMs = Math.min(nowMs, ms(end) + Math.floor(rand() * 60) * 60_000);
-                completeTask(rabid.project.forOwner('event', c.event_id, true)!, title, doneMs, vid);
+                completeTask(rabid.project.forOwner('event', c.event_id, null, true)!, title, doneMs, vid);
                 made++; inline++;
             } else if(roll < 0.85 && shifts.length) {
                 // shift-nested: a personal task done INSIDE a timesheet window.
                 const s = shifts[Math.floor(rand() * shifts.length)];
                 const a = ms(s.start_time), b = ms(s.end_time!);
-                completeTask(rabid.project.forOwner('volunteer', vid, true)!, title,
+                completeTask(rabid.project.forOwner('volunteer', vid, null, true)!, title,
                              a + Math.floor(rand() * (b - a)), vid);
                 made++; inline++;
             } else {
@@ -991,7 +991,7 @@ export function seedCompletedTasks(rabid: Rabid, opts: { baseSeed?: number } = {
                 // recent day, before the daytime shifts, so it stays its own row.
                 const dayMid = Math.floor((nowMs - (1 + Math.floor(rand() * 80)) * 24 * 3600_000)
                                           / 86400_000) * 86400_000;
-                completeTask(rabid.project.forOwner('volunteer', vid, true)!, title,
+                completeTask(rabid.project.forOwner('volunteer', vid, null, true)!, title,
                              dayMid + 5 * 3600_000, vid);
                 made++;
             }
@@ -1102,7 +1102,48 @@ export function seedProjects(rabid: Rabid): void {
         priority: 'low', deleted: 0});
     assign(stand, volunteers.filter((_, i) => i % 19 === 7).slice(0, 1).map(v => v.volunteer_id));
 
-    console.info('2 projects created');
+    // Two checklist TEMPLATES (host/admin-managed definitions): instantiated on
+    // events to produce their setup/cleanup checklists.  No assignees, no due -
+    // structure only (assignment comes from the instance's owner).
+    const cleanup = rabid.project.insert({
+        name: 'Event Cleanup', is_template: 1, applies_to_table: 'event', owner_role: 'cleanup',
+        description: 'Post-event tidy so the shop is ready for the next crew.', deleted: 0});
+    const sweep = rabid.task.insert({project_id: cleanup, title: 'Sweep the floors', deleted: 0});
+    rabid.subtask.insert({task_id: sweep, title: 'Main floor', done: 0});
+    rabid.subtask.insert({task_id: sweep, title: 'Repair bays', done: 0});
+    rabid.task.insert({project_id: cleanup, title: 'Empty the bins', deleted: 0});
+    rabid.task.insert({project_id: cleanup, title: 'Return tools to the board', deleted: 0});
+    rabid.task.insert({project_id: cleanup, title: 'Wipe down the benches', deleted: 0});
+    rabid.task.insert({project_id: cleanup, title: 'Lock up', deleted: 0});
+
+    const setup = rabid.project.insert({
+        name: 'Event Setup', is_template: 1, applies_to_table: 'event', owner_role: 'setup',
+        description: 'Open the shop and get ready before an event.', deleted: 0});
+    rabid.task.insert({project_id: setup, title: 'Unlock and lights on', deleted: 0});
+    rabid.task.insert({project_id: setup, title: 'Set out loaner tools', deleted: 0});
+    rabid.task.insert({project_id: setup, title: 'Check the sign-in sheet', deleted: 0});
+
+    console.info('2 projects + 2 checklist templates created');
+}
+
+// Instantiate the Event Cleanup checklist on a couple of recent events (some
+// items ticked off, to show mixed state).  Runs after seedEvents.
+export function seedEventChecklists(rabid: Rabid): void {
+    const cleanupTemplate = rabid.project.templatesForOwnerTable.all({owner_table: 'event'})
+        .find(t => t.owner_role === 'cleanup');
+    if(!cleanupTemplate) return;
+    // The two most-recent events (start_time strings sort lexicographically).
+    const recent = rabid.event.allEvents.all()
+        .filter(e => !!e.start_time)
+        .sort((a, b) => (a.start_time! < b.start_time! ? 1 : -1))
+        .slice(0, 2);
+    for(const [i, e] of recent.entries()) {
+        const project_id = rabid.project.instantiateTemplate(cleanupTemplate.project_id, 'event', e.event_id);
+        if(i === 0)   // tick off the first couple on the most recent event
+            for(const t of rabid.task.tasksForProject.all({project_id}).slice(0, 2))
+                rabid.task.update(t.task_id, {status: 'done'});
+    }
+    console.info(`event cleanup checklists created on ${recent.length} events`);
 }
 
 // --------------------------------------------------------------------------------
@@ -1150,6 +1191,7 @@ export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     seedCommittees(rabid);
     seedProjects(rabid);
     if(scenario.events)      seedEvents(rabid, { baseSeed: scenario.baseSeed });
+    if(scenario.events)      seedEventChecklists(rabid);
     if(scenario.commitments) seedEventCommitments(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.checkins)    seedEventCheckins(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed, weeks: scenario.timesheetWeeks });

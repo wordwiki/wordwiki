@@ -23,18 +23,18 @@ test("project.forOwner: lazy create, then 1-1 reuse", () =>
     withTestDb(() => asSystem(() => {
         const r = getRabid();
         const eid = newEvent();
-        assertEquals(r.project.forOwner('event', eid, false), undefined);   // not yet
-        const pid = r.project.forOwner('event', eid, true);                 // create
+        assertEquals(r.project.forOwner('event', eid, null, false), undefined);   // not yet
+        const pid = r.project.forOwner('event', eid, null, true);                 // create
         assert(pid !== undefined);
-        assertEquals(r.project.forOwner('event', eid, true), pid);          // same one
-        assertEquals(r.project.forOwner('event', eid, false), pid);
+        assertEquals(r.project.forOwner('event', eid, null, true), pid);          // same one
+        assertEquals(r.project.forOwner('event', eid, null, false), pid);
     })));
 
 test("owned project's name derives from its owner (suffixed), and chains to its group", () =>
     withTestDb(() => asSystem(() => {
         const r = getRabid();
         const eid = newEvent();
-        const pid = r.project.forOwner('event', eid, true)!;
+        const pid = r.project.forOwner('event', eid, null, true)!;
         const p = r.project.getById(pid);
         assertEquals(p.name, '');                                  // stored name stays empty
         assertEquals(r.project.recordLabel(p), 'Saturday in the Park — tasks');
@@ -51,7 +51,7 @@ test("addOwnerTask: creates the project on first task; appears in global list wi
         await asUser(dave, () => invoke(`rabid.task.addOwnerTask($arg0)`,
             { owner_table: 'event', owner_id: eid, title: 'Book the truck' }));
 
-        const pid = asSystem(() => r.project.forOwner('event', eid, false));
+        const pid = asSystem(() => r.project.forOwner('event', eid, null, false));
         assert(pid !== undefined, 'first task should have materialized the project');
 
         const all = asSystem(() => r.task.allOpenTasks.all({include_done: 0}));
@@ -69,7 +69,7 @@ test("addOwnerTask: denied for someone who can't edit the owner", () =>
         try { asUser(bob, () => r.task.addOwnerTask({owner_table: 'event', owner_id: eid, title: 'x'})); }
         catch { threw = true; }
         assert(threw, 'a non-owner-editor must not add owner tasks');
-        assertEquals(asSystem(() => r.project.forOwner('event', eid, false)), undefined);
+        assertEquals(asSystem(() => r.project.forOwner('event', eid, null, false)), undefined);
     }));
 
 // --- Volunteer-owned projects: the owner-edit delegation is self-OR-host, so a
@@ -79,7 +79,7 @@ test("volunteer-owned: a volunteer may add their OWN tasks; its name derives fro
     withTestDb(({ bob }) => {
         const r = getRabid();
         asUser(bob, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'Renew first-aid cert'}));
-        const pid = asSystem(() => r.project.forOwner('volunteer', bob, false));
+        const pid = asSystem(() => r.project.forOwner('volunteer', bob, null, false));
         assert(pid !== undefined, 'a volunteer adding their own task materializes their project');
         assertEquals(asSystem(() => r.project.recordLabel(r.project.getById(pid!))), 'Bob Shares — tasks');
     }));
@@ -92,7 +92,7 @@ test("volunteer-owned: another regular volunteer may NOT add to someone else's",
         try { asUser(carol, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'x'})); }
         catch { threw = true; }
         assert(threw, "a peer must not add another volunteer's tasks");
-        assertEquals(asSystem(() => r.project.forOwner('volunteer', bob, false)), undefined);
+        assertEquals(asSystem(() => r.project.forOwner('volunteer', bob, null, false)), undefined);
     }));
 
 test("volunteer-owned: a host may add tasks for any volunteer", () =>
@@ -100,7 +100,7 @@ test("volunteer-owned: a host may add tasks for any volunteer", () =>
         const r = getRabid();
         // alice is a host -> may edit bob -> may add bob's tasks.
         asUser(alice, () => r.task.addOwnerTask({owner_table: 'volunteer', owner_id: bob, title: 'Onboarding chat'}));
-        assert(asSystem(() => r.project.forOwner('volunteer', bob, false)) !== undefined);
+        assert(asSystem(() => r.project.forOwner('volunteer', bob, null, false)) !== undefined);
     }));
 
 // --- Committee-owned projects + the committee's assigned-projects list ---------
@@ -111,7 +111,7 @@ test("committee-owned: a host may add committee tasks; the name derives from the
         const cid = asSystem(() => r.committee.insert(
             {name: 'Logistics', description: '', notes: '', deleted: 0} as any));
         asUser(alice, () => r.task.addOwnerTask({owner_table: 'committee', owner_id: cid, title: 'Order parts'}));
-        const pid = asSystem(() => r.project.forOwner('committee', cid, false));
+        const pid = asSystem(() => r.project.forOwner('committee', cid, null, false));
         assert(pid !== undefined, 'first committee task materializes its project');
         assertEquals(asSystem(() => r.project.recordLabel(r.project.getById(pid!))), 'Logistics — tasks');
     }));
@@ -127,7 +127,7 @@ test("committee page lists ASSIGNED projects, not the committee's own task-list 
             {name: 'Spring Bike Drive', group_id: g, deleted: 0} as any));
         // The committee's OWN owned project (direct task list).
         asUser(alice, () => r.task.addOwnerTask({owner_table: 'committee', owner_id: cid, title: 'Order parts'}));
-        const owned = asSystem(() => r.project.forOwner('committee', cid, false))!;
+        const owned = asSystem(() => r.project.forOwner('committee', cid, null, false))!;
 
         const listed = asSystem(() =>
             r.project.projectsForCommittee.all({committee_id: cid}).map(p => p.project_id));

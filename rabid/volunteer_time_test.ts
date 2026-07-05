@@ -536,14 +536,14 @@ test("model: a completed event task bob attended shows INLINE always; an off-shi
         const eid = insertEvent();
         // An event-owned task completed BY bob, who checked in -> a hosted entry.
         const evTask = asSystem(() => {
-            const pid = rabid.project.forOwner('event', eid, /*create*/ true)!;
+            const pid = rabid.project.forOwner('event', eid, /*create*/ null, true)!;
             return rabid.task.insert({project_id: pid, title: 'Set up tables', status: 'open', deleted: 0} as any);
         });
         asUser(bob, () => rabid.task.update(evTask, {status: 'done'}));       // stamps done_by = bob
         asSystem(() => rabid.event_checkin.insert({event_id: eid, volunteer_id: bob, notes: ''}));
         // A personal task done off any shift/event -> orphan.
         const orphan = asSystem(() => {
-            const pid = rabid.project.forOwner('volunteer', bob, true)!;
+            const pid = rabid.project.forOwner('volunteer', bob, null, true)!;
             return rabid.task.insert({project_id: pid, title: 'Read manuals', status: 'open', deleted: 0} as any);
         });
         asUser(bob, () => rabid.task.update(orphan, {status: 'done'}));
