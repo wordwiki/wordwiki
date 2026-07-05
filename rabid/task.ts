@@ -676,8 +676,10 @@ export class ProjectTable extends Table<Project> {
             .filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
+        // tap anywhere drills in via the lm-nav-link name).  NO per-row pencil:
+        // editing a project's top-level parameters is done from the project's
+        // own page (design-language.md - the pencil lives on the final detail
+        // page, not on every list row).
         const item = this.detailItemProps(id, `rabid.project.renderProjectRowById(${id})`);
         return [h.div, {...item, 'data-testid': `project-row-${id}`},
             [h.div, {class: 'lm-item-body'},
@@ -685,7 +687,6 @@ export class ProjectTable extends Table<Project> {
               [h.a, {...templates.pageLinkProps(`/rabid.project.detailPage(${id})`),
                      class: 'lm-nav-link'}, this.recordLabel(p)]],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
-            this.canEditRecord(p) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }

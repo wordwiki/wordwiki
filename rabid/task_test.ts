@@ -407,7 +407,7 @@ test("project page structure: no project-keyed fragment contains the task list (
     });
 });
 
-test("pages: one navigable row species, pencil follows recordEdit; task detail embeds the member editor and checklist", async () => {
+test("pages: one navigable row species; project rows navigate (edit on the detail page), task blocks toggle inline", async () => {
     await withTestDb(async ({ alice, bob, carol }) => {
         const {project_id, task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
@@ -428,23 +428,27 @@ test("pages: one navigable row species, pencil follows recordEdit; task detail e
             assert(!!find(row, byClass('lm-nav-link')));
             assert(!!find(row, byClass('lm-nav-chevron')));
         }
-        assert(!!find(hostRow, byClass('lm-edit-pencil')));  // host: edits anyone's project
-        assert(!find(volRow, byClass('lm-edit-pencil')));    // regular volunteer: no pencil
+        // NO per-row pencil for anyone now - a project's top-level parameters are
+        // edited from its own detail page (design-language.md).
+        assert(!find(hostRow, byClass('lm-edit-pencil')));
+        assert(!find(volRow, byClass('lm-edit-pencil')));
 
-        // The merged project view: each task is a BLOCK (checkbox + title +
-        // inline checklist).  The pencil/checkbox follow recordEdit (assignee
-        // yes, others read-only); the subtask is right there on the page; the
-        // task's exclusive override shows as the → marker.
+        // The merged project view: each task is a BLOCK.  There's no pencil - the
+        // checkbox toggles inline (that follows recordEdit: the assignee can act,
+        // others get a disabled box) and Edit lives in the block's ☰.  The
+        // subtask is right there on the page; the exclusive override shows as →.
         const bobTasks = await asUser(bob, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
         const bobBlock = getByTestId(bobTasks, `task-block-${task_id}`);
-        assert(!!find(bobBlock, byClass('lm-edit-pencil')));
+        assert(!find(bobBlock, byClass('lm-edit-pencil')));       // no pencil on a task block
         assert(!!find(bobBlock, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox'
-                                     && attr(n, 'disabled') === undefined));
+                                     && attr(n, 'disabled') === undefined));   // assignee can toggle
         assert(hasText(bobBlock, 'Get quotes'));                  // checklist inline
         assert(hasText(getByTestId(bobTasks, `task-${task_id}-override`), 'Bob'));
         const carolTasks = await asUser(carol, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
         const carolBlock = getByTestId(carolTasks, `task-block-${task_id}`);
-        assert(!find(carolBlock, byClass('lm-edit-pencil')));
+        assert(!find(carolBlock, byClass('lm-edit-pencil')));     // non-assignee: no pencil either
+        assert(!!find(carolBlock, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox'
+                                       && attr(n, 'disabled') !== undefined));  // ...and a disabled box
 
         // Task detail: assignee list + checklist render; the assignee gets the
         // add/remove affordances, the non-assignee gets read-only fragments.

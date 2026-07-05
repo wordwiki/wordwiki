@@ -38,37 +38,44 @@ title**, not a grid of controls.  The pattern:
 - **Each item is a navigable unit showing what people CARE about**, not
   metadata.  Show the members' names inline, the markdown description, the real
   content — not "5 members".  Two rendering shapes, chosen by content:
-  - **Soft document sections** (`.lm-doc-section` / `.lm-doc-title` /
-    `.lm-doc-meta`, rabid.css) — a faint-filled, rounded, borderless block with
-    a dark heading-weight title.  Good when an item has prose/rich content
-    (committees).  The soft fill IS the affordance (see next section).
+  - **Flat document sections** (`.lm-doc-section` / `.lm-doc-title` /
+    `.lm-doc-meta`, rabid.css) — hairline-separated titled sections, no box.
+    Good when an item has prose/rich content (committees).
   - **A compact table** of navigable `<tr>` rows — good for scannable, uniform
     records (the volunteer list: name · skills & interests).  Use `tr.lm-navigable`.
+  In both, the title is an `.lm-nav-link` in the reserved accent colour — that's
+  the navigation signal (see next section).
 - **No per-row pencils.**  A list item does not carry an edit control; editing
   happens on the item's detail page.  (Exceptions below.)
 - **Whole item navigates** to the detail page (`lmNavigableClick`; the title is
   the `lm-nav-link` delegate).  Controls inside (the ☰, a checkbox) decline the
   navigation, so tapping them never drills in.
 
-## Navigating to the detail page — make it obvious, on touch too
+## Navigating to the detail page — use the web's link, don't reinvent it
 
-The tension: a flat document gives no "this is clickable" cue, and **hover
-affordances give nothing on a phone** — which is where the volunteers are.  The
-resolution we landed on:
+These are **linked documents on the web**, and the link is a native, learned
+affordance — so we signal navigation with a real link, styled one consistent
+way, rather than inventing a bespoke "tappable" look.  (We tried a soft
+tappable box and rejected it: it reinvents the link the browser already ships,
+and reads as a private affordance the user has to learn.)  The rule is **one
+reserved signal, used everywhere and nowhere else**:
 
-- **The soft block itself is the affordance.**  A faint fill + rounding reads as
-  "one thing you can tap/open" on every device, with no hover and no web-blue
-  link text.  This is the deliberate, partial walk-back of "no boxes": a soft
-  fill is not a bordered card, and it's unmistakably interactive — the
-  Keep/Linear resting state, not editor chrome.
-- **The title stays a dark heading**, not a coloured link (which would read as
-  "webby").  A quiet `navChevron()` (`›`) marks that tapping NAVIGATES (vs
-  expands).
-- For a **table** list, the row's hover tint + the name-as-link + a chevron do
-  the same job.
+- **Navigable titles → a reserved accent colour.**  Every list row/section
+  title is an `.lm-nav-link`, styled in the reserved colour (`--lm-nav`, a deep
+  teal — *not* 1995 link-blue, which is what made "title as link" feel ugly).
+  That single hue means "tap to go here" app-wide; it's used for nothing else,
+  so it's learned once.  Persistent colour works on touch (no hover needed);
+  hover adds an underline as confirmation.
+- **Links inside prose → a monochrome underline.**  A committee named in a
+  description, a link in notes: the *other* native link signal, so body copy
+  stays document (not a field of coloured words).
+- The item is **flat** — a hairline-separated section (`.lm-doc-section`) or a
+  navigable table row, no fill/box.  The whole surface still navigates
+  (`lmNavigableClick`) as a larger tap target, but the accent title is the
+  visible signal.  A quiet `navChevron()` (`›`) may reinforce it.
 
-(If a given list ever needs a more explicit cue, the fallback is a
-coloured/underlined title link — but prefer the soft block first.)
+This is also the fix for a consistency debt: "what does a navigable thing look
+like" now has ONE answer across volunteers, committees, projects, events.
 
 ## Filters & view state — quiet, and in the URL
 

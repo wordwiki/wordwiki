@@ -226,18 +226,20 @@ export class CommitteeTable extends Table<Committee> {
              [h.h2, {class: 'mb-0'}, c.name || 'Unnamed committee'],
              c.deleted ? [h.span, {class: 'badge text-bg-secondary'}, 'Dissolved'] : undefined,
              this.canEditRecord(c) ? this.editPencil(committee_id) : undefined],
-            // The public-facing markdown description (prominent prose).  Notes
-            // are internal - deliberately NOT shown here; they're visible only
-            // in the edit form.
+            // The committee's markdown description as clean prose (same
+            // treatment as the list - no accent bar; that orange rule reads as a
+            // callout, not document body).  Notes are internal - NOT shown here.
             c.description
-                ? [h.div, {class: 'lm-prose mb-3'}, this.fieldsByName.description.render(c.description)]
+                ? [h.div, {class: 'lm-markdown lm-doc-lead mb-4'},
+                   this.fieldsByName.description.render(c.description)]
                 : undefined,
-            [h.h4, {class: 'mt-3'}, 'Members'],
+            // Quiet section labels (document sections, not bold form headings).
+            [h.h4, {class: 'lm-doc-section-label'}, 'Members'],
             rabid.volunteer_group.renderMemberEditor(c.group_id),
 
             // Projects the committee is responsible for (assigned via its group),
             // each drilling in to its own page.
-            [h.h4, {class: 'mt-4'}, 'Projects'],
+            [h.h4, {class: 'lm-doc-section-label'}, 'Projects'],
             rabid.project.renderForCommittee(committee_id),
 
             // The committee's own task list - a 1-1 owned project, created lazily
