@@ -119,5 +119,9 @@ body {
    make it a block so its height is reserved.  We do NOT set height:auto (with
    an unconstrained width that collapses the reserved height to ~0 while the svg
    still paints full-size); an over-wide scan scrolls in the wrapper instead. */
-.lm-me-scan { max-width: 100%; overflow-x: auto; margin: .25rem 0; }
-.lm-me-scan > svg { display: block; }
+/* The reference scan (render-entry-meta.ts).  KNOWN ISSUE: the inline scan svg
+   paints past its box and can overlap the following transcription in the narrow
+   side-by-side column - the hand renderer's wrapping happens to clip it and we
+   have not yet matched that.  Tracked as a follow-up; the block + margin keep
+   it from being worse. */
+.lm-me-scan { margin: .5rem 0; display: block; }

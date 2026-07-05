@@ -67,6 +67,18 @@ function intersperse(items: Markup[], sep: string): Markup[] {
 
 // --- Scalars -----------------------------------------------------------------
 
+/** Apply a field's $view decoration (emphasis, parenthesise/wrap) to already-
+ *  rendered text - wherever the value appears, including inside a compose. */
+function decorate(f: model.Field, m: Markup): Markup {
+    if (isEmptyMarkup(m)) return m;
+    const v = view(f);
+    let out: Markup = m;
+    if (v.emphasis === "italic") out = ["i", {}, out];
+    else if (v.emphasis === "bold") out = ["b", {}, out];
+    if (v.wrap) out = [v.wrap[0], out, v.wrap[1]];
+    return out;
+}
+
 /** A scalar VALUE (no label): dispatched by field type.  This is where "no
  *  code" pays off - a new field of an existing type just works. */
 function renderScalarValue(ctx: MetaCtx, f: model.ScalarField, value: any): Markup {
@@ -78,9 +90,10 @@ function renderScalarValue(ctx: MetaCtx, f: model.ScalarField, value: any): Mark
     if (f.style.$shape === "boundingGroup")   // the reference scan (kept in-column)
         return ["div", { class: "lm-me-scan" }, renderStandaloneGroup(ctx.rootPath, value)];
     const opts = options(f);
-    if (opts) return opts[String(value)] ?? String(value);   // code -> display name
-    if (f.style.$markdown) return markdownToMarkup(String(value));
-    return String(value);
+    const base: Markup = opts
+        ? (opts[String(value)] ?? String(value))   // code -> display name
+        : f.style.$markdown ? markdownToMarkup(String(value)) : String(value);
+    return decorate(f, base);
 }
 
 /** A scalar with its own label policy (used for scalars that sit directly on a
@@ -97,9 +110,26 @@ function renderScalarField(ctx: MetaCtx, f: model.ScalarField, value: any): Mark
 
 // --- Tuples & relations ------------------------------------------------------
 
-/** The inline VALUE of one tuple (its content scalars), for a joined list -
- *  e.g. a gloss -> "water", an alternate form -> "usgit'tutm'gewe'l". */
+/** The inline VALUE of one tuple.  With $view.compose, lay out the named parts
+ *  (scalars and/or child relations) in order, joined by $view.sep - the way an
+ *  alternate form reads "form — gloss — (plural)".  Otherwise just the content
+ *  scalars. */
 function tupleInlineValue(ctx: MetaCtx, rf: model.RelationField, tuple: any): Markup {
+    const v = view(rf);
+    if (v.compose) {
+        const parts = v.compose.map(name => {
+            const f = rf.modelFields.find(mf => mf.name === name);
+            if (!f) return "";
+            if (f instanceof model.RelationField) {
+                const items = (tuple[name] ?? [])
+                    .map((t: any) => tupleInlineValue(ctx, f, t))
+                    .filter((m: Markup) => !isEmptyMarkup(m));
+                return items.length ? intersperse(items, view(f).join ?? " / ") : "";
+            }
+            return renderScalarValue(ctx, f as model.ScalarField, tuple[name]);
+        }).filter(m => !isEmptyMarkup(m));
+        return intersperse(parts, v.sep ?? " ");
+    }
     const parts = contentScalars(rf)
         .map(f => renderScalarValue(ctx, f, tuple[f.name]))
         .filter(m => !isEmptyMarkup(m));
@@ -136,10 +166,12 @@ export function renderRelation(ctx: MetaCtx, rf: model.RelationField, tuples: an
                ["div", { class: "fw-bold mt-2" }, rf.prompt + ":"], ["div", { class: "ms-3" }, body]]
             : ["div", { class: "lm-me-section" }, body];
 
-    // FLAT relation (no child relations): a list of inline VALUES - never
-    // numbered.  Joined onto one line when $view.join is set (glosses,
-    // pronunciation), else one value per line (recordings).
-    if (orderedChildRelations(rf).length === 0) {
+    // FLAT (no child relations) or COMPOSED relation: a list of inline VALUES -
+    // never numbered.  Joined onto one line when $view.join is set (glosses,
+    // pronunciation), else one value per line (recordings, alternate forms).
+    // A compose consumes its child relations into the phrase, so it lists here
+    // rather than falling through to the numbered-container path.
+    if (v.compose || orderedChildRelations(rf).length === 0) {
         const items = tuples.map(t => tupleInlineValue(ctx, rf, t)).filter(m => !isEmptyMarkup(m));
         if (items.length === 0) return "";
         if (v.join !== undefined) {

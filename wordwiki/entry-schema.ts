@@ -127,6 +127,47 @@ export const partsOfSpeech: Record<string, string> = {
     "unclassified": "unclassified part of speech",
 };
 
+// Grammatical-form code -> display name.  Attached to the grammatical_form
+// field as $options so the metadata renderer composes the friendly name from
+// DATA (moved up from below so the schema literal can reference it).
+export const GrammaticalFormDescriptions: Record<string,string> = {
+    "d": "dual",
+    "p": "plural",
+    "4n": "fourth person",
+    "loc": "locative",
+    "tem": "temporal",
+    "1": "first person singular animate",
+    "1d": "first person dual exclusive animate",
+    "1p": "first person plural exclusive animate",
+    "3id": "third person dual inanimate",
+    "3ip": "third person plural inanimate",
+    "1-3i": "first person singular animate subject, third person singular inanimate object",
+    "1d-3i": "first person dual exclusive animate subject, third person singular inanimate object",
+    "1p-3i": "first person plural exclusive animate subject, third person singular inanimate object",
+    "3-3ip": "third person singular animate subject, third person plural inanimate object",
+    "1-3": "first person singular animate subject, third person singular animate object",
+    "1-3p": "first person singular animate subject, third person plural animate object",
+    "1-2": "first person singular animate subject, second person singular animate object",
+    "3-1": "third person singular animate subject, first person singular animate object",
+    "1s-1s": "first person singular reflexive",
+    "1d-1d": "first person dual reflexive",
+    "1p-1p": "first person plural reflexive",
+    "1dr-1d": "first person exclusive dual reciprocal",
+    "1pr-1p": "first person exclusive plural reciprocal",
+    "3pr-3p": "third person plural reciprocal",
+
+    "3d": "third person dual animate",
+    "3p": "third person plural animate",
+    "imp": "imperative",
+    "ani": "animate",
+    "inan": "inanimate",
+
+    "1-3ip": "first person singular animate subject, third person plural inanimate object",
+    "s": "singular",
+    "n": "noun",
+    "pn": "pronoun"
+};
+
 export const dictSchemaJson = {
     $type: 'schema',
     $name: 'dict',
@@ -278,20 +319,24 @@ export const dictSchemaJson = {
                 example_text: {
                     $type: 'relation',
                     $tag: ExampleTextTag,
-                    $prompt: `Example Mig'maq-Mi'kmaq Text`,
+                    $prompt: `Text`,
                     example_text_id: {$type: 'primary_key'},
                     example_text: {$type: 'string', $bind: 'attr1', $style: { $width: 70, $height: 5 }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 1, label: 'inline', join: ' / ', empty: 'elide' } },
                 },
 
                 example_translation: {
                     $type: 'relation',
                     $tag: ExampleTranslationTag,
+                    $prompt: `Translation`,
                     example_translation_id: {$type: 'primary_key'},
-                    example_translation: {$type: 'string', $bind: 'attr1', $style: { $width: 70, $height: 5 }},
+                    example_translation: {$type: 'string', $bind: 'attr1',
+                                          $style: { $width: 70, $height: 5, $view: { emphasis: 'italic' } }},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 2, label: 'inline', join: ' / ', empty: 'elide' } },
                 },
 
                 // Recordings of example sentence need to be pulled out of the
@@ -303,11 +348,13 @@ export const dictSchemaJson = {
                 example_recording: {
                     $type: 'relation',
                     $tag: ExampleRecordingTag,
+                    $prompt: `Recording`,
                     example_recording_id: {$type: 'primary_key'},
                     recording: {$type: 'audio', $bind: 'attr1'},
                     speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'compactInlineListRelation' },
+                    $style: { $shape: 'compactInlineListRelation',
+                              $view: { order: 3, label: 'inline', empty: 'elide' } },
                 },
             },
 
@@ -351,10 +398,16 @@ export const dictSchemaJson = {
                 $type: 'relation',
                 $tag: 'alt',
                 alternate_grammatical_form_id: {$type: 'primary_key'},
-                grammatical_form: {$type: 'string', $bind: 'attr1'},
-                gloss: {$type: 'string', $bind: 'attr2'},
+                // grammatical_form -> friendly name (from data), in parens.
+                grammatical_form: {$type: 'string', $bind: 'attr1',
+                                   $style: { $options: GrammaticalFormDescriptions,
+                                             $view: { wrap: ['(', ')'] } }},
+                gloss: {$type: 'string', $bind: 'attr2', $style: { $view: { emphasis: 'italic' } }},
+                // Each form reads as one phrase: "form — gloss — (plural)".
                 $style: { $shape: 'containerRelation',
-                          $view: { order: 7, label: 'heading', empty: 'elide' } },
+                          $view: { order: 7, label: 'heading', empty: 'elide',
+                                   compose: ['alternate_form_text', 'gloss', 'grammatical_form'],
+                                   sep: ' — ' } },
 
                 alternate_form_text: {
                     $type: 'relation',
@@ -362,7 +415,7 @@ export const dictSchemaJson = {
                     alternate_form_text_id: {$type: 'primary_key'},
                     alternate_form_text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'inlineListRelation' },
+                    $style: { $shape: 'inlineListRelation', $view: { join: ' / ' } },
                 },
             },
 
@@ -628,46 +681,6 @@ export interface AlternateFormText {
     alternate_form_text: string,
     variant: string,
 }
-
-const GrammaticalFormDescriptions: Record<string,string> = {
-    "d": "dual",
-    "p": "plural",
-    "4n": "fourth person",
-    "loc": "locative",
-    "tem": "temporal",
-    "1": "first person singular animate",
-    "1d": "first person dual exclusive animate",
-    "1p": "first person plural exclusive animate",
-    "3id": "third person dual inanimate",
-    "3ip": "third person plural inanimate",
-    "1-3i": "first person singular animate subject, third person singular inanimate object",
-    "1d-3i": "first person dual exclusive animate subject, third person singular inanimate object",
-    "1p-3i": "first person plural exclusive animate subject, third person singular inanimate object",
-    "3-3ip": "third person singular animate subject, third person plural inanimate object",
-    "1-3": "first person singular animate subject, third person singular animate object",
-    "1-3p": "first person singular animate subject, third person plural animate object",
-    "1-2": "first person singular animate subject, second person singular animate object",
-    "3-1": "third person singular animate subject, first person singular animate object",
-    "1s-1s": "first person singular reflexive",
-    "1d-1d": "first person dual reflexive",
-    "1p-1p": "first person plural reflexive",
-    "1dr-1d": "first person exclusive dual reciprocal",
-    "1pr-1p": "first person exclusive plural reciprocal",
-    "3pr-3p": "third person plural reciprocal",
-
-    "3d": "third person dual animate",
-    "3p": "third person plural animate",
-    "imp": "imperative",
-    "ani": "animate",
-    "inan": "inanimate",
-
-    "1-3ip": "first person singular animate subject, third person plural inanimate object",
-    "s": "singular",
-    "n": "noun",
-    "pn": "pronoun"
-};
-
-
 
 export interface OtherRegionalForm {
     other_regional_form_id: number,

@@ -61,6 +61,18 @@ export interface ViewStyle {
     // Never render in the read view (editorial-only relations: status, todo,
     // note, ...).  A coarse first cut at an audience axis.
     hidden?: boolean,
+    // COMPOSE a tuple's several parts into one phrase (on a relation): the
+    // ordered field names (scalars and/or child relations of this relation) to
+    // lay out, joined by `sep`.  e.g. an alternate form composes
+    // [alternate_form_text, gloss, grammatical_form] -> "form — gloss —
+    // (plural)".  Parts absent from `compose` are skipped; a child relation not
+    // listed still renders as its own section.
+    compose?: string[],
+    sep?: string,             // separator between composed parts (default ' ')
+    // Per-FIELD decoration, applied wherever the field's value is rendered
+    // (including inside a compose).
+    emphasis?: 'italic' | 'bold',
+    wrap?: [string, string],  // surround the value, e.g. ['(', ')']
 }
 
 export function validateStyle(locus:string, style: any): Style {
