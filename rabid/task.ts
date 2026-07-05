@@ -1525,26 +1525,40 @@ export class TaskTable extends Table<Task> {
             rabid.project.templatesForOwnerTable.all({owner_table}));
         if(templates.length === 0) return undefined as any;
         const canEdit = ownerCanEdit(owner_table, owner_id);
+        // Only INSTANTIATED checklists render here, each as a document section
+        // (like Tasks).  Creating a not-yet-made one is a quiet ☰ action
+        // (ownerChecklistAddItems) on the owner's page, NOT a button in the flow.
         return templates.map(t => {
             const role = t.owner_role ?? null;
             const existing = rabid.project.forOwner(owner_table, owner_id, role);
-            if(existing !== undefined)
-                return [h.div, {class: 'mt-2'},
-                    this.renderOwnerTasks(owner_table, owner_id, role),
-                    canEdit
-                        ? action.actionButton('Resync from template',
-                            {kind: 'confirm', expr: `rabid.project.resyncFromTemplate(${existing})`,
-                             message: `Add any new "${t.name}" items to this checklist?`},
-                            'btn btn-sm btn-link p-0 text-muted')
-                        : undefined];
-            return canEdit
-                ? [h.div, {class: 'mt-3'},
-                   action.actionButton(`Create ${t.name}`,
-                       {kind: 'immediate',
-                        expr: `rabid.project.createOwnerChecklist(${t.project_id}, '${owner_table}', ${owner_id})`},
-                       'btn btn-outline-secondary btn-sm')]
-                : undefined;
+            if(existing === undefined) return undefined;
+            return [h.div, {},
+                this.renderOwnerTasks(owner_table, owner_id, role, /*docHeading*/ true),
+                canEdit
+                    ? [h.div, {class: 'lm-subsection'},
+                       action.actionButton('Resync from template',
+                           {kind: 'confirm', expr: `rabid.project.resyncFromTemplate(${existing})`,
+                            message: `Add any new "${t.name}" items to this checklist?`},
+                           'btn btn-sm btn-link p-0 text-muted')]
+                    : undefined];
         });
+    }
+
+    // The ☰ items for adding a not-yet-created checklist for this owner (used by
+    // the owner's detail-page menu — the document-friendly alternative to a
+    // "Create X" button in the flow).  Empty if the viewer can't edit or every
+    // applicable template is already instantiated.
+    ownerChecklistAddItems(owner_table: string, owner_id: number): action.ActionMenuItem[] {
+        if(!ownerCanEdit(owner_table, owner_id)) return [];
+        const templates = security.runSystem(() =>
+            rabid.project.templatesForOwnerTable.all({owner_table}));
+        return templates
+            .filter(t => rabid.project.forOwner(owner_table, owner_id, t.owner_role ?? null) === undefined)
+            .map(t => ({
+                label: `Add ${project_role_enum[t.owner_role ?? ''] ?? t.name} checklist`,
+                mode: {kind: 'immediate' as const,
+                       expr: `rabid.project.createOwnerChecklist(${t.project_id}, '${owner_table}', ${owner_id})`},
+            }));
     }
 
     // New-task dialog for an owner+role (no project picker - the project is the

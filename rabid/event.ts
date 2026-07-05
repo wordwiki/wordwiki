@@ -279,30 +279,36 @@ export class EventTable extends Table<Event> {
         const e = this.getById(event_id);
         const props = this.reloadableItemProps(event_id, `rabid.event.renderEventDetail(${event_id})`);
         props.class = 'container py-3 ' + props.class;
+        // Adding a not-yet-created checklist is a quiet ☰ action next to the
+        // title (document-friendly), not a "Create …" button in the flow.
+        const checklistAdds = rabid.task.ownerChecklistAddItems('event', event_id);
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
-             this.canEditRecord(e) ? this.editPencil(event_id) : undefined],
+             this.canEditRecord(e) ? this.editPencil(event_id) : undefined,
+             checklistAdds.length
+                 ? action.actionMenu(checklistAdds, {ariaLabel: 'Add a checklist'})
+                 : undefined],
             this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true, hideNotes: true}),
-            // Notes are primary event content: give them their own prominent
-            // block below the summary card (not buried as a card field), above
-            // the tasks.
+            // Notes are primary event content: their own clean prose block below
+            // the summary, above the tasks.
             this.renderEventNotes(e),
             // The event's own 1-1 project: tasks to do for this event, created
-            // lazily on the first add (see task.renderOwnerTasks).
-            rabid.task.renderOwnerTasks('event', event_id),
-            // Checklists instantiated from templates (setup/cleanup): the
-            // instantiated list + a Resync button, or a "Create …" button.
+            // lazily on the first add.  docHeading -> a peer document-section
+            // heading like the checklists below.
+            rabid.task.renderOwnerTasks('event', event_id, null, /*docHeading*/ true),
+            // Checklists instantiated from templates (setup/cleanup), each a
+            // document section; adding a new one is the ☰ above.
             rabid.task.renderOwnerChecklists('event', event_id),
         ];
     }
 
     // The detail page's notes: the event's own prose, not a labelled field - so
-    // no heading.  A left accent rule + slightly larger type give it weight so it
-    // reads as primary content instead of dying between the card and the tasks.
+    // no heading.  Clean document body (lm-doc-lead), consistent with committee
+    // descriptions - no orange accent bar (that reads as a callout).
     renderEventNotes(e: Event): Markup {
         if (!e.notes || !e.notes.trim()) return undefined as unknown as Markup;
-        return [h.div, {class: 'event-notes'},
+        return [h.div, {class: 'lm-markdown lm-doc-lead mb-4'},
             this.fieldsByName.notes.render(e.notes)];
     }
 
