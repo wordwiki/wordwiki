@@ -4,11 +4,11 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableProps, liveReloadableProps, sel } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, FieldSet, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, CheckboxField, IntegerField, FloatingPointField, DateTimeField, navChevron, reloadableProps, liveReloadableProps, sel, type Tuple } from "../liminal/table.ts";
 import * as dirty from "../liminal/dirty.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
 import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
-import {block} from "../liminal/strings.ts";
+import {block, plural} from "../liminal/strings.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 import { faker } from "@faker-js/faker";
 import {Markup, h} from "../liminal/markup.ts";
@@ -37,8 +37,39 @@ const checkinSelfOrHost = security.or(security.isSelf, hostOrAdmin);
 export const event_kind_enum: Record<string, string> = {
     'public': 'Public Event',
     'training': 'Volunteer Training',
+    'trainingCourse': 'Training Course',
     'shopTime': 'Shop Time',
 };
+
+// The shared events-filter TYPE - used for BOTH the upcoming and past filters
+// (same fields, dialog, and apply code): a date window (from/to, nullable ->
+// resolved per context) + "include volunteers-only events" (default off, so both
+// sections default to the public-facing view).  A DEFAULT-OFF checkbox on
+// purpose: an unchecked box submits nothing, so a default-ON "public only" could
+// never be turned off through the form.  The only per-context difference is the
+// window direction (see resolveUpcomingWindow vs page-queries.resolveWindow).
+export function eventFilterQuery(name: string): FieldSet {
+    return new FieldSet(name, [
+        new DateField('from', {prompt: 'From', nullable: true}),
+        new DateField('to', {prompt: 'To', nullable: true}),
+        new CheckboxField('include_volunteer_only',
+            {prompt: 'Include volunteers-only events', default: false}),
+    ]);
+}
+export interface EventFilter extends Tuple {
+    from: string | null;
+    to: string | null;
+    include_volunteer_only: boolean;
+}
+// The upcoming window: now → +1 month by default (a forward window, vs the
+// past filter's backward resolveWindow).
+export function resolveUpcomingWindow(q: EventFilter): pageQueries.ResolvedWindow {
+    const today = date.orgToday();
+    return {
+        from: q.from ?? date.temporalToSqliteDate(today),
+        to: q.to ?? date.temporalToSqliteDate(today.add({months: 1})),
+    };
+}
 
 export interface Event {
     event_id: number;
@@ -158,46 +189,102 @@ export class EventTable extends Table<Event> {
     // looking part.  PAST events are the unbounded, ever-growing part, so they
     // get a date window (page-state; liminal.md § On-page view state): the last
     // 120 days by default, with Show older / a Filter to widen.
-    static readonly pageQuery = pageQueries.windowQuery('events_query');
+    // One shared filter type, two independent parameters: the events route is
+    // events(upcoming, past), each decoded by the SAME eventFilter, so editing
+    // one never disturbs the other while they share fields/dialog/apply code.
+    // Both default to public-only (include_volunteer_only off); only the window
+    // DIRECTION differs (upcoming: next month; past: last 120 days).
+    static readonly eventFilter = eventFilterQuery('events_filter');
 
-    renderEventsPage(q?: Record<string, any>): Markup {
-        const query = EventTable.pageQuery.normalize(q) as pageQueries.WindowQuery;
-        const w = pageQueries.resolveWindow(query);
+    renderEventsPage(up?: Record<string, any>, past?: Record<string, any>): Markup {
+        const upQ = EventTable.eventFilter.normalize(up) as EventFilter;
+        const pastQ = EventTable.eventFilter.normalize(past) as EventFilter;
+        const upW = resolveUpcomingWindow(upQ);
+        const pastW = pageQueries.resolveWindow(pastQ);
         const now = date.temporalToSqliteDateTime(date.orgNow());
         const all = this.allEvents.all();                                  // ascending by start_time
-        const future = all.filter(e => e.start_time && e.start_time > now);          // soonest first
-        const undated = all.filter(e => !e.start_time);
-        const pastAll = all.filter(e => e.start_time && e.start_time <= now).reverse(); // most recent first
-        // Window the past by the date part of start_time (the datetime is
-        // >= the from-day midnight and its date <= the to-day, inclusive).
-        const past = pastAll.filter(e => {
+        const inRange = (e: Event, from: string, to: string) => {
             const d = (e.start_time as string).slice(0, 10);
-            return d >= w.from && d <= w.to;
-        });
+            return d >= from && d <= to;
+        };
+        const publicOk = (e: Event, q: EventFilter) => q.include_volunteer_only || !e.volunteer_only;
+        const future = all.filter(e => e.start_time && e.start_time > now
+                                       && inRange(e, upW.from, upW.to) && publicOk(e, upQ));
+        const undated = all.filter(e => !e.start_time && publicOk(e, upQ));   // TBD: window N/A
+        const pastEvents = all.filter(e => e.start_time && e.start_time <= now
+                                     && inRange(e, pastW.from, pastW.to) && publicOk(e, pastQ))
+            .reverse();                                                       // most recent first
         const upcoming = [...future, ...undated];
+
+        // Page ☰: create + filter (both quiet menu items, not buttons).
+        const menuItems: action.ActionMenuItem[] = [];
+        if(this.canEditRecord({} as Event))
+            menuItems.push({label: 'Add event…',
+                            mode: {kind: 'modal', dialogUrl: '/rabid.event.newDialog()'}});
+        menuItems.push({label: 'Filter…',
+                        mode: {kind: 'modal',
+                               dialogUrl: `/rabid.event.upcomingFilterDialog(${EventTable.eventFilter.literal(upQ)}, ${EventTable.eventFilter.literal(pastQ)})`}});
+        // Summarise the current filter conditions, like the volunteer list / the
+        // past window bar: count · window · public-vs-all.
+        const condition = (q: EventFilter) => q.include_volunteer_only ? 'incl. volunteers-only' : 'public only';
         return [h.div, {class: 'container py-3'},
-            [h.h2, {}, 'Events'],
-            upcoming.length > 0 ? this.renderEventScheduleTable(upcoming) : undefined,
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.h2, {class: 'mb-0'}, 'Events'],
+             action.actionMenu(menuItems, {ariaLabel: 'Event actions'})],
+            [h.p, {class: 'text-muted small mb-2'},
+             `${upcoming.length} upcoming ${plural(upcoming.length, 'event')} · `
+             + `${date.sqliteDateToString(upW.from)} – ${date.sqliteDateToString(upW.to)}`
+             + ` · ${condition(upQ)}`],
+            upcoming.length > 0
+                ? this.renderEventScheduleTable(upcoming)
+                : [h.p, {class: 'text-muted'}, 'No upcoming events in this range.'],
             [h.h4, {class: 'mt-4 mb-1'}, 'Past events'],
             pageQueries.renderWindowBar({
-                fieldSet: EventTable.pageQuery, pageRoute: 'events',
-                filterDialogRoute: 'rabid.event.eventsFilterDialog',
-                q: query, count: past.length, noun: 'past event'}),
-            past.length > 0
-                ? this.renderEventScheduleTable(past)
+                fieldSet: EventTable.eventFilter, pageRoute: 'events',
+                filterDialogRoute: 'rabid.event.pastFilterDialog',
+                otherArgs: EventTable.eventFilter.literal(upQ),
+                conditionText: condition(pastQ),
+                q: pastQ, count: pastEvents.length, noun: 'past event'}),
+            pastEvents.length > 0
+                ? this.renderEventScheduleTable(pastEvents)
                 : [h.p, {class: 'text-muted'}, 'No past events in this range.'],
         ];
     }
 
+    // The create dialog: the record form over an empty event (renderForm/@route
+    // both gate on recordEdit = hostOrAdmin).
+    @route(hostOrAdmin)
+    newDialog(): Markup {
+        return this.renderForm({} as Event);
+    }
+
+    // The two filter dialogs + applies share renderFilterDialog / applyFilterNavigate;
+    // each carries the sibling filter's literal so it's preserved.
     @route(authenticated)
-    eventsFilterDialog(q?: Record<string, any>): Markup {
+    upcomingFilterDialog(up?: Record<string, any>, past?: Record<string, any>): Markup {
         return pageQueries.renderFilterDialog(
-            EventTable.pageQuery, EventTable.pageQuery.normalize(q),
-            'rabid.event.applyEventsFilter', {title: 'Filter past events'});
+            EventTable.eventFilter, EventTable.eventFilter.normalize(up),
+            'rabid.event.applyUpcomingFilter',
+            {title: 'Filter upcoming events',
+             applyArgsAfter: EventTable.eventFilter.literal(EventTable.eventFilter.normalize(past))});
     }
     @route(authenticated)
-    applyEventsFilter(form: Record<string, any>): any {
-        return pageQueries.applyFilterNavigate(EventTable.pageQuery, form, 'events');
+    applyUpcomingFilter(form: Record<string, any>, past?: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(EventTable.eventFilter, form, 'events',
+            {after: EventTable.eventFilter.literal(EventTable.eventFilter.normalize(past))});
+    }
+    @route(authenticated)
+    pastFilterDialog(up?: Record<string, any>, past?: Record<string, any>): Markup {
+        return pageQueries.renderFilterDialog(
+            EventTable.eventFilter, EventTable.eventFilter.normalize(past),
+            'rabid.event.applyPastFilter',
+            {title: 'Filter past events',
+             applyArgsBefore: EventTable.eventFilter.literal(EventTable.eventFilter.normalize(up))});
+    }
+    @route(authenticated)
+    applyPastFilter(up: Record<string, any>, form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(EventTable.eventFilter, form, 'events',
+            {before: EventTable.eventFilter.literal(EventTable.eventFilter.normalize(up))});
     }
 
     // "Sat, Jun 13, 2026, 7:00 PM - 9:30 PM" (year included: unlike the

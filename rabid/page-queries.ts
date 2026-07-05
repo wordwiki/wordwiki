@@ -56,9 +56,15 @@ export function renderWindowBar(opts: {
     noun?: string,               // singular, e.g. 'entry' (with count)
     nounPlural?: string,         // default noun + 's'; give 'entries' etc.
     filterDialogRoute?: string,  // omit to drop the Filter… button
+    otherArgs?: string,          // a sibling filter's literal placed BEFORE this
+                                 // one in the route (a page with two filters);
+                                 // threads through the depth links + Filter dialog
+    conditionText?: string,      // extra filter condition to summarise (e.g.
+                                 // 'public only'), appended to the count · range
 }): Markup {
     const w = resolveWindow(opts.q);
-    const pageUrl = (query: Tuple) => `/${opts.pageRoute}(${opts.fieldSet.literal(query)})`;
+    const pre = opts.otherArgs ? opts.otherArgs + ', ' : '';
+    const pageUrl = (query: Tuple) => `/${opts.pageRoute}(${pre}${opts.fieldSet.literal(query)})`;
     const olderFrom = date.temporalToSqliteDate(
         date.sqliteDateToTemporal(w.from).subtract({days: DEFAULT_WINDOW_DAYS}));
     const showingAll = w.from <= WINDOW_EPOCH;
@@ -71,12 +77,13 @@ export function renderWindowBar(opts: {
     return [h.div, {class: 'd-flex align-items-center flex-wrap gap-3 mb-3 text-muted small',
                     'data-testid': 'window-bar'},
         [h.span, {}, `${countLabel ?? ''}`
-                     + `${date.sqliteDateToString(w.from)} – ${date.sqliteDateToString(w.to)}`],
+                     + `${date.sqliteDateToString(w.from)} – ${date.sqliteDateToString(w.to)}`
+                     + (opts.conditionText ? ` · ${opts.conditionText}` : '')],
         showingAll ? undefined : depthLink('Show older', {...opts.q, from: olderFrom}),
         showingAll ? undefined : depthLink('Show all', {...opts.q, from: WINDOW_EPOCH}),
         opts.filterDialogRoute
             ? action.actionButton('Filter…',
-                {kind: 'modal', dialogUrl: `/${opts.filterDialogRoute}(${opts.fieldSet.literal(opts.q)})`},
+                {kind: 'modal', dialogUrl: `/${opts.filterDialogRoute}(${pre}${opts.fieldSet.literal(opts.q)})`},
                 'btn btn-sm btn-link p-0')
             : undefined,
     ];
@@ -98,17 +105,26 @@ export function renderToggleLink(opts: {
 // applyFilter route (server-side form → canonical URL → navigate).  The
 // opening actionButton already runs showModalEditor, so no inline script.
 export function renderFilterDialog(fieldSet: FieldSet, q: Tuple, applyRoute: string,
-                                   opts: {title?: string} = {}): Markup {
+                                   opts: {title?: string, applyArgsBefore?: string,
+                                          applyArgsAfter?: string} = {}): Markup {
+    // applyArgsBefore/After thread a sibling filter's literal through the apply
+    // call so it's preserved on a two-filter page.
+    const before = opts.applyArgsBefore ? opts.applyArgsBefore + ', ' : '';
+    const after = opts.applyArgsAfter ? ', ' + opts.applyArgsAfter : '';
     return action.renderParamForm(fieldSet.fields, q, {
         title: opts.title ?? 'Filter',
         submitLabel: 'Apply',
-        dispatch: {onsubmit: `event.preventDefault(); tx\`${applyRoute}(\${getFormJSON(event.target)})\``},
+        dispatch: {onsubmit: `event.preventDefault(); tx\`${applyRoute}(${before}\${getFormJSON(event.target)}${after})\``},
     });
 }
 
-// Filter-dialog postback → canonical page URL → real navigation.
+// Filter-dialog postback → canonical page URL → real navigation.  before/after
+// place a sibling filter's literal around this one (a two-filter page).
 export function applyFilterNavigate(fieldSet: FieldSet, form: Record<string, any>,
-                                    pageRoute: string): any {
+                                    pageRoute: string,
+                                    opts: {before?: string, after?: string} = {}): any {
     const q = fieldSet.parseFormValues(form);
-    return {action: 'navigate', url: `/${pageRoute}(${fieldSet.literal(q)})`};
+    const before = opts.before ? opts.before + ', ' : '';
+    const after = opts.after ? ', ' + opts.after : '';
+    return {action: 'navigate', url: `/${pageRoute}(${before}${fieldSet.literal(q)}${after})`};
 }

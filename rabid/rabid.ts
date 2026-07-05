@@ -97,7 +97,7 @@ export class Rabid extends LiminalApp {
     // route expression, e.g. /timesheets({from:"2025-01-01"}).
     home() { return templates.page('home', home.home()); }
     volunteers() { return templates.page('Volunteers', this.volunteer.renderVolunteersPage()); }
-    events(q?: Record<string, any>) { return templates.page('Events', this.event.renderEventsPage(q)); }
+    events(up?: Record<string, any>, past?: Record<string, any>) { return templates.page('Events', this.event.renderEventsPage(up, past)); }
     sales(q?: Record<string, any>) { return templates.page('Sales', this.sale.renderSalesPage(q)); }
     servicePage(q?: Record<string, any>) { return templates.page('Service', this.service.renderServicePage(q)); }
     timesheets(q?: Record<string, any>) { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage(q)); }
@@ -115,7 +115,7 @@ export class Rabid extends LiminalApp {
         this.pages = {
             home:()=>this.home(),
             volunteers:()=>this.volunteers(),
-            events:(q?: any)=>this.events(q),
+            events:(up?: any, past?: any)=>this.events(up, past),
             sales:(q?: any)=>this.sales(q),
             // ('service' the page vs this.service the table: the page binding
             // name is what appears in the URL, the method avoids the collision.)

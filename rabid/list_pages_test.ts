@@ -5,7 +5,7 @@
 // dated RELATIVE to orgToday so the "last 120 days" default is testable without
 // pinning the run date.
 import { test } from "../liminal/testing/test.ts";
-import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
+import { assert, assertEquals, assertStringIncludes, assertRejects } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, asUser, asSystem, invoke } from "./testing.ts";
 import { rabid } from "./rabid.ts";
 import { find, attr, tagOf, hasText, getByTestId } from "../liminal/testing/markup-assert.ts";
@@ -91,24 +91,60 @@ test("the window bar's Show-older link widens `from` and carries hx-replace-url"
     });
 });
 
-// --- events: past window, upcoming always shown -------------------------------
+// --- events: two independent filters (upcoming vs past), shared type ----------
 
-test("events: upcoming always shown; the Past section is windowed", async () => {
+test("events: upcoming filtered (public + next month); past windowed separately", async () => {
     await withTestDb(async ({ alice }) => {
-        asSystem(() => rabid.event.insert({
-            event_kind: 'public', description: 'Upcoming Fair',
-            location_description: '', location_url: '', is_remote_event: 0, volunteer_only: 0,
-            start_time: daysAgo(-7), end_time: null, total_cash_collected: 0, notes: ''} as any));
-        asSystem(() => rabid.event.insert({
-            event_kind: 'public', description: 'Ancient Fair',
-            location_description: '', location_url: '', is_remote_event: 0, volunteer_only: 0,
-            start_time: daysAgo(200), end_time: null, total_cash_collected: 0, notes: ''} as any));
+        const mk = (description: string, opts: {days: number, volunteer_only?: 0|1, kind?: string}) =>
+            asSystem(() => rabid.event.insert({
+                event_kind: opts.kind ?? 'public', description,
+                location_description: '', location_url: '', is_remote_event: 0,
+                volunteer_only: opts.volunteer_only ?? 0,
+                start_time: daysAgo(-opts.days), end_time: null, total_cash_collected: 0, notes: ''} as any));
+        mk('Upcoming Fair', {days: 7});                                  // public, next week
+        mk('Members Workshop', {days: 7, volunteer_only: 1, kind: 'training'});  // volunteers-only
+        mk('Ancient Fair', {days: -200});                               // 200 days in the PAST
+
         const page = await asUser(alice, () => renderRoute(`events({})`));
-        assert(hasText(page, 'Upcoming Fair'), 'future event shows');
+        assert(hasText(page, 'Upcoming Fair'), 'public future event shows');
+        assert(!hasText(page, 'Members Workshop'), 'volunteers-only hidden by the public-only default');
         assert(hasText(page, 'Past events'), 'past section heading');
-        assert(!hasText(page, 'Ancient Fair'), '200-day-old past event hidden by default');
-        const wide = await asUser(alice, () => renderRoute(`events({from:"2000-01-01"})`));
-        assert(hasText(wide, 'Ancient Fair'), 'widened window surfaces the old past event');
+        assert(!hasText(page, 'Ancient Fair'), '200-day-old past event hidden by the default past window');
+
+        // Including volunteers-only events surfaces the hidden one (a default-off
+        // checkbox, so it round-trips through the URL).
+        const all = await asUser(alice, () => renderRoute(`events({include_volunteer_only:true})`));
+        assert(hasText(all, 'Members Workshop'), 'including volunteers-only surfaces the hidden event');
+
+        // Widening the PAST uses the SECOND arg - independent of the upcoming filter.
+        const wide = await asUser(alice, () => renderRoute(`events({}, {from:"2000-01-01"})`));
+        assert(hasText(wide, 'Ancient Fair'), 'widened past window surfaces the old event');
+    });
+});
+
+test("events filter applies preserve the sibling arg (two independent parameters)", async () => {
+    await withTestDb(async ({ alice }) => {
+        // Applying the UPCOMING filter keeps the current past arg after it.
+        const up = await asUser(alice, () => invoke(
+            `rabid.event.applyUpcomingFilter($arg0, $arg1)`,
+            {include_volunteer_only: true}, {from: '2020-01-01'}));
+        assertEquals(up, {action: 'navigate',
+                          url: '/events({include_volunteer_only:true}, {from:"2020-01-01"})'});
+        // Applying the PAST filter keeps the current upcoming arg before it.
+        const past = await asUser(alice, () => invoke(
+            `rabid.event.applyPastFilter($arg0, $arg1)`,
+            {include_volunteer_only: true}, {from: '2020-01-01'}));
+        assertEquals(past, {action: 'navigate',
+                            url: '/events({include_volunteer_only:true}, {from:"2020-01-01"})'});
+    });
+});
+
+test("events page ☰: 'Add event' + dialog are host/admin-only", async () => {
+    await withTestDb(async ({ bob, dave }) => {
+        assert(hasText(await asUser(dave, () => renderRoute(`events({})`)), 'Add event'));
+        await asUser(dave, () => renderRoute('rabid.event.newDialog()'));   // no throw
+        assert(!hasText(await asUser(bob, () => renderRoute(`events({})`)), 'Add event'));
+        await asUser(bob, () => assertRejects(() => renderRoute('rabid.event.newDialog()'), Error));
     });
 });
 
