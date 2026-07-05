@@ -20,6 +20,7 @@ import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as schema from './scanned-document.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import * as renderPageEditor from './render-page-editor.ts';
+import * as entryMeta from './render-entry-meta.ts';
 
 export const REFERENCE_BOOK_IDS =
     ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'];
@@ -1100,7 +1101,15 @@ including remixing, transforming, and building upon the material, for any non-co
         await Deno.mkdir(this.fsPath(entryDir), {recursive: true});
         const spellingsSummary = entryschema.renderEntrySpellingsSummary(entry);
         const title = entryschema.renderEntryTitle(entry);
-        const entryMarkup:any[] = entryschema.renderEntry({rootPath, glossInTitle: true}, entry);
+        // The metadata-driven renderer is the PUBLIC renderer too (dz,
+        // 2026-07-05 - a step toward real multi-orthography, and it reads
+        // better): audience 'public' drops the editorial relations
+        // ($view.hidden), the internal-only fields (audience:'internal' -
+        // the reference's editorial note), and the non-public attr keys.
+        const entryMarkup: any = entryMeta.renderEntryMeta(
+            {rootPath, audience: 'public', publicKeys: ['borrowed-word'],
+             renderBoundingGroup: (gid: number) => this.publicBoundingGroup(rootPath, gid)},
+            this.wordWiki.dictSchema.relationsByTag[entryschema.EntryTag], entry);
         // renderCategoriesForEntry here.
 
         const entryCategories = this.publicEntryCategories(entry);
@@ -1124,6 +1133,18 @@ including remixing, transforming, and building upon the material, for any non-co
         ];
                                 
         await this.writePage(entryPath, this.publicPageTemplate(rootPath, {title, body}));
+    }
+
+    /** The public reference presentation for the metadata renderer: the scan
+     *  and its book/page description, both linked to the public bounding-group
+     *  page (the same shape the hand renderer's public reference block had). */
+    private publicBoundingGroup(rootPath: string, id: number): any {
+        const scan = renderPageEditor.renderStandaloneGroup(rootPath, id);
+        let url = ''; try { url = renderPageEditor.singlePublicBoundingGroupEditorURL(rootPath, id, ''); } catch { /**/ }
+        let desc = ''; try { desc = renderPageEditor.imageRefDescription(id); } catch { /**/ }
+        return ['div', {},
+            ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
+            desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
     }
 
     // <meta http-equiv="refresh" content="3;url=https://www.mozilla.org" />

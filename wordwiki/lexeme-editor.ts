@@ -1027,10 +1027,9 @@ export class LexemeEditor {
      *  children; approve-all REVERSES `deletions` (descendants first) - see
      *  approveFact's tree-ordering gates.  `visible` = has scalar content:
      *  structural facts (an entry, a subentry, an example) must be APPROVED
-     *  but are not COUNTED - they have no annotated row.  `rowless` = visible
-     *  content whose relation renders NO body row (hidden editorial
-     *  relations) - those changes must be listed in the BAR, like deletions,
-     *  or Approve all would cover changes the page never showed. */
+     *  but are not COUNTED - they have no annotated row.  (Every relation
+     *  renders in the editor - dz - so unlike deletions, no live change can
+     *  hide from this page.) */
     /** The VISIBLE pending-change count for one word - exactly what the
      *  changes bar shows (the recently-changed-words report's badge reads
      *  this, so list and page can never disagree). */
@@ -1044,13 +1043,8 @@ export class LexemeEditor {
         const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
         const hasContent = (rf: model.RelationField, a: Assertion) => rf.scalarFields.some(f =>
             !(f instanceof model.PrimaryKeyField) && norm((a as any)[f.bind]) !== null);
-        // Hidden editorial relations render nowhere in this editor; their
-        // pending changes list in the BAR.  (The headword WAS rowless too,
-        // until the edit body regained its spelling section.)
-        const rowless = (rf: model.RelationField) =>
-            !!(rf.style.$view ?? {}).hidden;
         type Pending = {fact_id: number, rf: model.RelationField,
-                        review: FactReview<Assertion>, visible: boolean, rowless: boolean};
+                        review: FactReview<Assertion>, visible: boolean};
         const content: Pending[] = [], deletions: Pending[] = [];
         this.entryTuple(entry_id).forEachVersionedTuple(t => {
             if(t.tupleVersions.length === 0) return;
@@ -1058,12 +1052,10 @@ export class LexemeEditor {
                                         timestamp.END_OF_TIME);
             if(review.state === 'added' || review.state === 'edited')
                 content.push({fact_id: t.id, rf: t.schema, review,
-                              visible: hasContent(t.schema, review.content),
-                              rowless: rowless(t.schema)});
+                              visible: hasContent(t.schema, review.content)});
             else if(review.state === 'removed')
                 deletions.push({fact_id: t.id, rf: t.schema, review,
-                                visible: !!review.baseline && hasContent(t.schema, review.baseline),
-                                rowless: rowless(t.schema)});
+                                visible: !!review.baseline && hasContent(t.schema, review.baseline)});
         });
         return {content, deletions};
     }
@@ -1088,10 +1080,11 @@ export class LexemeEditor {
         if(!changes)
             return ['div', {class: 'lm-me-changes-hint text-muted small'},
                     this.metaModeButton(entry_id, true, `${count} — view`)];
-        // Changes the TREE can't show (deleted rows; rowless hidden
-        // editorial relations) are listed here instead, each with its value,
-        // so Approve all's contract stays honest: it approves exactly what
-        // this page shows.
+        // Changes the TREE can't show (deleted rows - the walk stays over
+        // current tuples) are listed here instead, each with its value, so
+        // Approve all's contract stays honest: it approves exactly what this
+        // page shows.  (Live changes always have a row: every relation
+        // renders in the editor.)
         const barLine = (chip: string, rf: model.RelationField, value: Markup): Markup =>
             ['div', {class: 'lm-me-chg-del'},
              ['span', {class: `lm-cl-chip lm-cl-chip-${chip}`}, chip], ' ',
@@ -1099,12 +1092,6 @@ export class LexemeEditor {
         const deletions = pending.deletions.filter(p => p.visible).map(d =>
             barLine('deleted', d.rf,
                     d.review.baseline ? renderAssertionValues(d.rf, d.review.baseline) : ''));
-        const rowless = pending.content.filter(p => p.visible && p.rowless).map(p =>
-            p.review.state === 'added'
-                ? barLine('added', p.rf, renderAssertionValues(p.rf, p.review.content))
-                : barLine('edited', p.rf,
-                          [renderAssertionValues(p.rf, p.review.content),
-                           this.wasAnnotation(p.rf, p.review)]));
         const approve = this.app.lexemeOps.hasApprovePermission()
             ? action.actionButton('Approve all',
                 {kind: 'confirm',
@@ -1119,7 +1106,6 @@ export class LexemeEditor {
                 this.metaModeButton(entry_id, false, 'Hide changes'),
                 ['a', {href: `${R}.entryPage(${entry_id}, 'review')`,
                        class: 'btn btn-sm btn-outline-secondary'}, 'Full review…'],
-                rowless,
                 deletions];
     }
 

@@ -119,18 +119,23 @@ test("changes mode: a HEADWORD edit annotates its row (the edit body shows spell
     });
 });
 
-test("changes mode: ROWLESS changes (hidden editorial) are listed in the bar", async () => {
+test("changes mode: hidden editorial relations render in the EDITOR - edits annotate the row", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
             const {tl, cat} = seedClean(fx);
-            // The category renders nowhere in this editor.  Approve all
-            // covers it, so the bar must show it.
+            // Category is $view.hidden (no READ view) but the editor shows
+            // everything (dz), so its pending edit annotates its own row -
+            // nothing hides from the page Approve all acts on.
             fx.ww.applyTransaction([mkEdit(cat, 2020, tl.next(), {attr1: "weather"})],
                                    {quiet: true});
             const changes = metaHtml(fx, true);
             assertStringIncludes(changes, "1 unapproved change");
-            assertStringIncludes(changes, "lm-cl-chip-edited");
-            assertStringIncludes(changes, "weather");                     // hidden category's new value
+            assertStringIncludes(changes, "Category: ");                  // the editorial row
+            assertStringIncludes(changes, "weather");                     // its new value
+            assertStringIncludes(changes, "lm-me-chg-was");               // annotated in place
+            // ...and the read views still hide it.
+            assertEquals(metaHtml(fx).includes("Category: ") &&
+                         markupToString(fx.ww.wordView(1000).body).includes("Category: "), false);
 
             fx.ww.lexeme.approveAllChanges(1000);
             assertStringIncludes(metaHtml(fx, true), "No unapproved changes.");

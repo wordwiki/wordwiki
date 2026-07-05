@@ -202,8 +202,9 @@ export const dictSchemaJson = {
             status: {$type: 'enum', $bind: 'attr1', $style: { $options: states} },
             details: {$type: 'string', $bind: 'attr2' },
             variant: {$type: 'variant'},
-            // Editorial: not in the read view.
-            $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
+            // Editorial: not in the read view; the EDITOR shows it.
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { hidden: true, label: 'inline' } },
         },
 
         todo: {
@@ -216,7 +217,8 @@ export const dictSchemaJson = {
             assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
             done: {$type: 'boolean', $bind: 'attr4'},
             variant: {$type: 'variant'},
-            $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { hidden: true, label: 'inline' } },
         },
 
         note: {
@@ -224,7 +226,8 @@ export const dictSchemaJson = {
             $tag: NoteTag,
             note_id: {$type: 'primary_key'},
             note: {$type: 'string', $bind: 'attr1', $style: { $width: 80, $height: 5, $markdown: true }},
-            $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { hidden: true, label: 'inline' } },
         },
 
         subentry: {
@@ -385,7 +388,8 @@ export const dictSchemaJson = {
                 // TODO later convert to ref.
                 category: {$type: 'string', $bind: 'attr1'},
                 // Navigation/editorial metadata, not part of the word display.
-                $style: { $shape: 'compactInlineListRelation', $view: { hidden: true } },
+                $style: { $shape: 'compactInlineListRelation',
+                          $view: { hidden: true, label: 'inline' } },
             },
 
             related_entry: {
@@ -433,8 +437,10 @@ export const dictSchemaJson = {
                 other_regional_form_text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
                 // Hidden from the read view for now (the hand renderer doesn't
-                // surface it either); label + show is a later refinement.
-                $style: { $shape: 'inlineListRelation', $view: { hidden: true } },
+                // surface it either); public display is a later refinement.
+                // Rare: no empty slot - add via the subentry menu.
+                $style: { $shape: 'inlineListRelation',
+                          $view: { hidden: true, label: 'inline', emptyEdit: 'menu' } },
             },
 
             picture: {
@@ -535,8 +541,11 @@ export const dictSchemaJson = {
                     $tag: RefNoteTag,
                     note_id: {$type: 'primary_key'},
                     note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5, $markdown: true }},
+                    // The EDITORIAL note - never published (public_note is
+                    // the public one); generalizes renderInternalNotes.
                     $style: { $shape: 'compactInlineListRelation',
-                              $view: { order: 7, label: 'inline', empty: 'elide' } },
+                              $view: { order: 7, label: 'inline', empty: 'elide',
+                                       audience: 'internal' } },
                 },
 
                 public_note: {
@@ -564,7 +573,9 @@ export const dictSchemaJson = {
                 source_id: {$type: 'primary_key'},
                 source: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'inlineListRelation', $view: { hidden: true } },
+                // Rare: no empty slot - add via the subentry menu.
+                $style: { $shape: 'inlineListRelation',
+                          $view: { hidden: true, label: 'inline', emptyEdit: 'menu' } },
             },
         },
 

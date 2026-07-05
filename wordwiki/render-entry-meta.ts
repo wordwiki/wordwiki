@@ -137,11 +137,11 @@ function contentScalars(rf: model.RelationField): model.ScalarField[] {
 }
 
 /** Child relations in presentation order (by $view.order, ties -> schema
- *  order), minus the ones hidden from the read view. */
+ *  order).  Pure ordering - audience/mode visibility is the renderer's
+ *  childRelations(). */
 function orderedChildRelations(rf: model.RelationField): model.RelationField[] {
     return rf.relationFields
         .map((r, i) => [r, i] as const)
-        .filter(([r]) => !view(r).hidden)
         .sort((a, b) => ((view(a[0]).order ?? 100) - (view(b[0]).order ?? 100)) || (a[1] - b[1]))
         .map(([r]) => r);
 }
@@ -199,6 +199,21 @@ export class EntryRenderer {
         this.editing = cfg.editing;
     }
 
+    /** Child relations in presentation order, minus what this MODE and
+     *  AUDIENCE may not see.  The EDITOR shows EVERYTHING (dz: all fields
+     *  must be editable).  Read views drop $view.hidden (editorial: status /
+     *  todo / notes / categories); the public read additionally drops
+     *  audience:'internal' (the reference's editorial note - public_note is
+     *  the public one). */
+    protected childRelations(rf: model.RelationField): model.RelationField[] {
+        return orderedChildRelations(rf).filter(cr => {
+            if (this.editing) return true;
+            const v = view(cr);
+            if (v.hidden) return false;
+            return this.audience === "internal" || v.audience !== "internal";
+        });
+    }
+
     /** Wrap a tuple's rendered value as an editable surface (edit mode), or
      *  return it plain (read).  `tuple` must carry identity in edit mode. */
     protected surface(rf: model.RelationField, tuple: EntryNode, body: Markup): Markup {
@@ -239,7 +254,7 @@ export class EntryRenderer {
      *  a read convenience; the editor must still offer the spelling section
      *  (it stays in the title too). */
     protected renderBody(entryRelation: model.RelationField, node: EntryNode): Markup {
-        return orderedChildRelations(entryRelation)
+        return this.childRelations(entryRelation)
             .filter(cr => !!this.editing || view(cr).titleRole !== "headword")
             .map(cr => this.renderRelation(cr, node));
     }
@@ -326,7 +341,7 @@ export class EntryRenderer {
      *  form the editable SURFACE (edit: click-to-edit + the ☰), then its child
      *  relations, recursively (separately editable). */
     protected renderTupleBlock(rf: model.RelationField, tuple: EntryNode): Markup {
-        const children = orderedChildRelations(rf).map(cr => this.renderRelation(cr, tuple));
+        const children = this.childRelations(rf).map(cr => this.renderRelation(cr, tuple));
         return [this.containerScalarSurface(rf, tuple), children];
     }
 
@@ -455,7 +470,7 @@ export class EntryRenderer {
                 ["div", { class: "lm-me-section" },
                  this.fieldslessHeading(rf, t),
                  ["div", { class: "ms-3" },
-                  orderedChildRelations(rf).map(cr => this.renderRelation(cr, t))]]);
+                  this.childRelations(rf).map(cr => this.renderRelation(cr, t))]]);
         }
 
         // CONTAINER relation (has child relations): each tuple is a block.

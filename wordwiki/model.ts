@@ -72,6 +72,11 @@ export interface ViewStyle {
     // Never render in the read view (editorial-only relations: status, todo,
     // note, ...).  A coarse first cut at an audience axis.
     hidden?: boolean,
+    // Render only for the INTERNAL audience (the editor / internal word
+    // view); the public renderer skips it.  The document reference's
+    // editorial `note` (vs its `public_note`) is the exemplar - this
+    // generalizes the hand renderer's renderInternalNotes flag.
+    audience?: 'internal',
     // COMPOSE a tuple's several parts into one phrase (on a relation): the
     // ordered field names (scalars and/or child relations of this relation) to
     // lay out, joined by `sep`.  e.g. an alternate form composes
