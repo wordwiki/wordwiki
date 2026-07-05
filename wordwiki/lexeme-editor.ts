@@ -745,6 +745,7 @@ export class LexemeEditor {
                                 ...this.metaReloadAttrs(id.entryId),
                                 ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
                         ['div', {class: 'flex-grow-1'}, body],
+                        this.insertAfterPlus(rf, id),
                         menu];
             },
             emptyRelation: (rf, parentId) => {
@@ -774,19 +775,47 @@ export class LexemeEditor {
                 // there, adding IS the whole action, so create immediately and
                 // let the refresh show the new tuple's child slots.
                 const fieldless = dialogFields(rf).length === 0;
-                const menu = action.actionMenu(
-                    [fieldless
-                        ? {label: 'Add', btnClass: 'edit', mode: {kind: 'immediate',
-                           expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`}}
-                        : {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
-                           dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`}}],
-                    {ariaLabel: `Add ${rf.prompt}`});
+                const addMode: action.ActionMode = fieldless
+                    ? {kind: 'immediate',
+                       expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`}
+                    : {kind: 'modal',
+                       dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`};
+                // A bare + rather than a ☰-of-one-item: "+ adds one of these"
+                // is the single rule the row teaches (the filled rows' + means
+                // the same thing), and the whole row is tappable anyway.  The
+                // 'edit' class keeps it the body-tap's delegation target.
+                const plus = action.actionButton(action.plusIcon(), addMode, 'lm-menu-button edit',
+                    {'aria-label': `Add ${rf.prompt}`, title: `Add ${rf.prompt}`});
+                // An invisible ☰-sized spacer keeps this + in the same COLUMN
+                // as the filled rows' + (there is no menu here to fill the
+                // outer slot).
+                const spacer = ['span', {class: 'lm-menu-button', style: 'visibility: hidden',
+                                         'aria-hidden': 'true'}, action.plusIcon()];
                 return ['div', {...rowAttrs,
                                 class: rowAttrs.class + ' lm-editable lm-me-editable',
                                 onclick: 'lmEditableClick(event)'},
-                        label(), menu];
+                        label(), plus, spacer];
             },
         };
+    }
+
+    /** The row's quiet "+" (beside the ☰): a visible one-tap "insert another
+     *  <type> after this row" - the ☰'s Insert-after by another name, so NO
+     *  new power.  It exists for the mental model: "the + makes another one
+     *  of these" is a convention the (largely elderly) audience already has,
+     *  where insert-inside-the-☰ must be discovered by exploring menus.  It
+     *  also marks, at a glance, which rows are list-like.  Fields-less types
+     *  (example) create immediately; fielded ones open the insert dialog. */
+    private insertAfterPlus(rf: model.RelationField, id: entryMeta.TupleIdentity): Markup {
+        if(rf.scalarFields.some(isBoundingGroupField) || rf.scalarFields.some(isDialogReadOnly))
+            return [];
+        const mode: action.ActionMode = dialogFields(rf).length === 0
+            ? {kind: 'immediate',
+               expr: `wordwiki.lexeme.insertEmptyTuple(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after', 'meta')`}
+            : {kind: 'modal',
+               dialogUrl: `${R}.insertDialog(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after', 'meta')`};
+        return action.actionButton(action.plusIcon(), mode, 'lm-menu-button',
+            {'aria-label': `Insert ${rf.prompt} after`, title: `Insert ${rf.prompt} after`});
     }
 
     /** "Add X…" items for DEMOTED empty child relations ($view emptyEdit:
