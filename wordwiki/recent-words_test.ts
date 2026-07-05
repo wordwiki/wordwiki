@@ -31,13 +31,13 @@ function seed(fx: Fixture) {
     return {tl, cat, dog};
 }
 
-function pageHtml(fx: Fixture): string {
+function pageHtml(fx: Fixture, mode?: string): string {
     // The un-anchored visit redirects with to_time stamped (the feed model);
     // follow it by re-invoking with the stamped time.
     const r1: any = fx.ww.recentlyChangedWords();
     assert(isRedirectResponse(r1));
     const page: any = fx.ww.recentlyChangedWords(
-        {to_time: fx.ww.lastAllocatedTxTimestamp});
+        {to_time: fx.ww.lastAllocatedTxTimestamp, ...(mode ? {mode} : {})});
     return markupToString(page.body);
 }
 
@@ -77,11 +77,17 @@ test("recent words: an untouched word does not list; approval clears the badge",
             assertStringIncludes(html, "1 pending");
 
             fx.ww.lexeme.approveAllChanges(1000);
+            // The review queue (mode 'pending', the default) DROPS the word -
+            // nothing left to review, and the approval event doesn't count.
             html = pageHtml(fx);
-            // The word still lists (the approval is its newest change), but
-            // nothing is pending.
+            assertEquals(html.includes("metaEditPage(1000,true)"), false);
+            assertStringIncludes(html, "Nothing needs review.");
+            // The ALL view still lists it (the approval is its newest
+            // activity), with no pending badge.
+            html = pageHtml(fx, "all");
             assertStringIncludes(html, "metaEditPage(1000,true)");
             assertEquals(html.includes("pending</span>"), false);
+            assertStringIncludes(html, "Recently changed words");
         });
     });
 });
