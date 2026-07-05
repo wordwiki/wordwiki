@@ -245,6 +245,58 @@
     font-weight: 500;
 }
 
+/* The OTHER document list format (design-language.md): a DATA TABLE, for many
+   uniform records you SCAN and COMPARE (a roster, a schedule) - where aligned
+   columns + regular rows read better than flat sections.  A TYPOGRAPHIC table,
+   not a spreadsheet grid: a single quiet header rule, comfortable row rhythm, no
+   cell borders/striping; the accent-link name is the navigation signal and the
+   whole row drills in. */
+.lm-data-table {
+    width: 100%;
+    max-width: 50rem;
+    border-collapse: collapse;
+}
+.lm-data-table > thead th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: var(--bs-secondary-color);
+    text-align: left;
+    padding: 0.2rem 1.25rem 0.4rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.lm-data-table td {
+    padding: 0.2rem 1.25rem 0.2rem 0;   /* tight row rhythm: reads as one dense table, not separated items */
+    line-height: 1.35;
+    vertical-align: baseline;
+}
+.lm-data-table th:last-child,
+.lm-data-table td:last-child { padding-right: 0; }
+/* A section heading row inside the table (colspan), e.g. Active / Other.  Given
+   the standard table-subhead language - a quiet uppercase, letter-spaced label
+   with a rule - so it reads as a group header, not stray text in the grid. */
+.lm-data-table .lm-data-section > td {
+    padding: 1.35rem 0 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bs-secondary-color);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+/* ...but the FIRST group heading sits right under the column header - no need to
+   push it down as far as a mid-table group break. */
+.lm-data-table > tbody > tr.lm-data-section:first-child > td {
+    padding-top: 0.6rem;
+}
+
+/* A navigable table ROW: the whole surface drills in to a detail page.  Bootstrap
+   (and our reset) paint per-cell, so tint the cells rather than the <tr>. */
+tr.lm-navigable { cursor: pointer; }
+@media (hover: hover) {
+    tr.lm-navigable:hover > * { background-color: var(--bs-tertiary-bg); }
+}
+tr.lm-navigable:active > * { background-color: var(--bs-secondary-bg); }
+
 /* ----------------------------------------------------------------------------
    Inline name list (group members as TEXT, not pills)
 

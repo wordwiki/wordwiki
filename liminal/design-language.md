@@ -37,19 +37,53 @@ title**, not a grid of controls.  The pattern:
   `renderCommitteesPage`.)
 - **Each item is a navigable unit showing what people CARE about**, not
   metadata.  Show the members' names inline, the markdown description, the real
-  content — not "5 members".  Two rendering shapes, chosen by content:
-  - **Flat document sections** (`.lm-doc-section` / `.lm-doc-title` /
-    `.lm-doc-meta`, rabid.css) — hairline-separated titled sections, no box.
-    Good when an item has prose/rich content (committees).
-  - **A compact table** of navigable `<tr>` rows — good for scannable, uniform
-    records (the volunteer list: name · skills & interests).  Use `tr.lm-navigable`.
-  In both, the title is an `.lm-nav-link` in the reserved accent colour — that's
-  the navigation signal (see next section).
+  content — not "5 members".  Two formats, chosen by reading task — see **Two
+  list formats** below.  In both, the item title is an `.lm-nav-link` in the
+  reserved accent colour; that's the navigation signal.
 - **No per-row pencils.**  A list item does not carry an edit control; editing
   happens on the item's detail page.  (Exceptions below.)
 - **Whole item navigates** to the detail page (`lmNavigableClick`; the title is
   the `lm-nav-link` delegate).  Controls inside (the ☰, a checkbox) decline the
   navigation, so tapping them never drills in.
+
+## Two list formats — document list vs data table
+
+Both are *document* (a well-set table is typography, not a spreadsheet); pick by
+the **reading task**, not by a blanket rule:
+
+- **Document list** — flat sections (`.lm-doc-section` / `.lm-doc-title` /
+  `.lm-doc-meta`).  For items you read **one at a time**, with rich or variable
+  content: a committee *is* a little document (description, members, its own
+  projects), and there are few of them.  Variable row height is fine — you're
+  not scanning a column.
+- **Data table** — `.lm-data-table` (a single quiet header rule, comfortable
+  rows, no cell borders/striping; the whole `tr.lm-navigable` row drills in).
+  For **many uniform records you scan and compare** (a roster, a schedule): the
+  volunteer list is 90+ people × {name, skills}.  Aligned columns + regular rows
+  let the eye run down a column — which flat sections destroy (names scattered to
+  variable heights, ~3× the height).
+
+The dial is **richness × count**: rich/variable/few → document list; a couple of
+uniform fields × many → data table.  If a table grows toward per-item prose or a
+bio, that's the signal to switch to the document list.  And a data table must
+stay *typographic* — the moment it sprouts heavy borders or a per-row pencil it's
+become the spreadsheet/editor look we're avoiding.
+
+## Composed pages — weight tracks depth
+
+A detail page nests lists under section headings (the committee page: Members /
+Projects / Tasks, each a list under a quiet `.lm-doc-section-label`).  Visual
+weight must track **semantic depth** — a section heading has to read heavier than
+the items nested under it.  The failure mode is a child that outweighs its parent
+(a prominent item title sitting under a quiet section label).
+
+The fix is **container-declared, not per-item**: wrap an embedded list in
+`.lm-subsection`, which indents it and demotes its item titles one notch below
+the section label.  A container (not a render parameter) *on purpose* — a row
+that reloads itself (`renderXRowById`) gets swapped back *inside* the subsection,
+so the demotion survives; a level passed at first render would be lost on reload.
+`renderOwnerTasks` opts in via `docHeading`, and a `.lm-doc-section-head` can
+carry a trailing `+` (the committee-projects create affordance).
 
 ## Navigating to the detail page — use the web's link, don't reinvent it
 
@@ -69,10 +103,14 @@ reserved signal, used everywhere and nowhere else**:
 - **Links inside prose → a monochrome underline.**  A committee named in a
   description, a link in notes: the *other* native link signal, so body copy
   stays document (not a field of coloured words).
-- The item is **flat** — a hairline-separated section (`.lm-doc-section`) or a
-  navigable table row, no fill/box.  The whole surface still navigates
-  (`lmNavigableClick`) as a larger tap target, but the accent title is the
-  visible signal.  A quiet `navChevron()` (`›`) may reinforce it.
+- The item is **flat** — a whitespace-separated section (`.lm-doc-section`) or a
+  navigable data-table row, no fill/box/hairlines.  The whole surface still
+  navigates (`lmNavigableClick`) as a larger tap target, but the accent title is
+  the visible signal.
+- **Chevrons are retired.**  The trailing `›` was a *second*, redundant
+  "this navigates" cue; once the accent link carries it, the chevron is chrome.
+  (`navChevron()` calls remain but are hidden in CSS, so an app that hasn't
+  adopted the accent link — e.g. wordwiki — still shows them.)
 
 This is also the fix for a consistency debt: "what does a navigable thing look
 like" now has ONE answer across volunteers, committees, projects, events.
@@ -126,12 +164,34 @@ Everything an edit does is still a **button** (immediate / confirm /
 modal-of-arguments) returning a mutation the refresh model resolves — the
 mutation model is unchanged; this doc is only about how quiet it looks.
 
+## Where the mechanism lives (liminal vs the app)
+
+The design language is a **liminal** thing, so every app on it (rabid, wordwiki)
+shares one visual grammar and evolves together.  The structural primitives
+(`.lm-doc-*`, `.lm-subsection`, `.lm-data-table`, `tr.lm-navigable`) and the
+accent-link rule live in **liminal.css**.  The accent colour is a variable with a
+fallback — `.lm-nav-link { color: var(--lm-nav, var(--bs-body-color)) }` — so an
+app **adopts the accent link by setting `--lm-nav`** (rabid: a teal), and one
+that hasn't set it is visually unchanged.  App-specific values and treatments
+live in the app's own sheet (rabid.css sets `--lm-nav`, the hover underline, the
+chevron-hide, and the prose underline; wordwiki isn't even served rabid.css).
+
+## Small things that read as "document, not machine"
+
+- **No "(s)".**  Counts use `plural(n, 'volunteer')` (liminal/strings.ts) —
+  "1 volunteer", "3 volunteers", "0 volunteers" — never "volunteer(s)".
+- **Management surfaces off the main bar.**  A regular volunteer shouldn't be
+  faced with admin lists; things reached via their owning object (Projects,
+  Tasks, Templates, Timesheets) live in an Admin menu, not the top nav.
+
 ## Pointers
 
 | what | where |
 |------|-------|
-| soft-section / table list styling | resources/rabid.css (`.lm-doc-*`, `tr.lm-navigable`) |
+| document-list + data-table + navigable-row styling | resources/liminal.css (`.lm-doc-*`, `.lm-subsection`, `.lm-data-table`, `tr.lm-navigable`) |
+| the accent link + app values | liminal.css (`.lm-nav-link` mechanism) + resources/rabid.css (`--lm-nav`, chevron-hide, prose underline) |
 | the ☰ menu, action buttons, param dialogs | liminal/action.ts (`actionMenu`, `actionButton`, `renderParamForm`) |
-| navigable item / pencil / chevron | liminal/table.ts (`detailItemProps`, `editPencil`, `navChevron`), `lmNavigableClick` in resources/liminal-scripts.js |
+| navigable item / pencil / chevron helpers | liminal/table.ts (`detailItemProps`, `editPencil`, `navChevron`), `lmNavigableClick` in resources/liminal-scripts.js |
+| count phrasing (no "(s)") | liminal/strings.ts (`plural`) |
 | view state in the URL (FieldSet) | liminal.md § On-page view state |
-| worked examples | rabid/committee.ts (soft sections + ☰ + show-dissolved), rabid/volunteer.ts (table list + search dialog), rabid/task.ts (inline checklist affordances) |
+| worked examples | rabid/committee.ts (document-list sections + ☰ + show-dissolved + subsection depth), rabid/volunteer.ts (data table + search dialog), rabid/task.ts (inline checklist affordances) |

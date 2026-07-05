@@ -6,7 +6,7 @@ import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sq
 import { Table, FieldSet, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navChevron, PublicViewable, type Tuple } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
-import {block} from "../liminal/strings.ts";
+import {block, plural} from "../liminal/strings.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import {lazy} from '../liminal/lazy.ts';
 import * as action from "../liminal/action.ts";
@@ -307,7 +307,16 @@ export class VolunteerTable extends Table<Volunteer> {
         // they are canonical - defaults omitted, equal views equal URLs.
         const searchUrl = (q: VolunteerQuery) =>
             `/rabid.volunteer.search(${volunteerQuery.literal(q)})`;
-        return action.actionMenu([
+        // Creating a volunteer is host/admin-only (recordEdit on an empty record
+        // resolves to `host`); shown as a quiet ☰ item, not a prominent button.
+        const canCreate = this.canEditRecord({} as Volunteer);
+        const items: action.ActionMenuItem[] = [];
+        if(canCreate) {
+            items.push({label: 'Add new volunteer…',
+                        mode: {kind: 'modal', dialogUrl: '/rabid.volunteer.newDialog()'}});
+            items.push('divider');
+        }
+        items.push(
             {label: 'Current volunteers',
              link: templates.pageLinkProps(searchUrl(volunteerQuery.normalize({include_archived: false}) as VolunteerQuery))},
             {label: 'All volunteers',
@@ -315,8 +324,16 @@ export class VolunteerTable extends Table<Volunteer> {
             'divider',
             {label: 'Search by name…',
              mode: {kind: 'modal',
-                    dialogUrl: `/rabid.volunteer.searchDialog(${volunteerQuery.literal({text, include_archived})})`}},
-        ], {ariaLabel: 'Search volunteers'});
+                    dialogUrl: `/rabid.volunteer.searchDialog(${volunteerQuery.literal({text, include_archived})})`}});
+        return action.actionMenu(items, {ariaLabel: 'Volunteer actions'});
+    }
+
+    // The create dialog: the record edit form over an empty record.  renderForm
+    // gates on recordEdit (host for an empty record), so a non-host is refused
+    // server-side too; the @route gate refuses first.
+    @route(host)
+    newDialog(): Markup {
+        return this.renderForm({} as Volunteer);
     }
 
     // The top-level Volunteers page body (dispatched from the navbar's
@@ -357,10 +374,12 @@ export class VolunteerTable extends Table<Volunteer> {
         const active = activeVolunteerIdsWithin(ACTIVE_WINDOW_DAYS);
         const recent = rows.filter(v => active.has(v.volunteer_id));
         const others = rows.filter(v => !active.has(v.volunteer_id));
-        // One compact table; each section is a colspan heading row followed by
-        // its volunteer rows (denser than the old stacked list-group cards).
+        // A DATA TABLE, not flat sections (design-language.md): volunteers are
+        // many uniform records (name + skills) you scan and compare, where
+        // aligned columns read better.  Split into recently-active vs the long
+        // tail via colspan section rows.
         const sectionHeading = (title: string): Markup =>
-            [h.tr, {}, [h.td, {colspan: '3', class: 'small text-muted fw-semibold pt-3 border-0'}, title]];
+            [h.tr, {class: 'lm-data-section'}, [h.td, {colspan: '2'}, title]];
         // The active/inactive split only earns its headings when there IS a
         // recently-active group to set apart - otherwise (a quiet stretch, or a
         // dataset without activity) everyone is "other", and a lone "Other
@@ -370,39 +389,33 @@ export class VolunteerTable extends Table<Volunteer> {
             : [sectionHeading(`Active — last ${ACTIVE_WINDOW_DAYS} days`), recent.map(v => this.renderVolunteerRow(v)),
                others.length ? [sectionHeading('Other volunteers'), others.map(v => this.renderVolunteerRow(v))] : undefined];
 
+        const countLabel = `${rows.length} ${scopeLabel}${plural(rows.length, 'volunteer')}`;
         return [
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
              [h.p, {class: 'text-muted small mb-0'},
-              text ? `${rows.length} ${scopeLabel}volunteer(s) matching “${text}”`
-                   : `${rows.length} ${scopeLabel}volunteer(s)`],
+              text ? `${countLabel} matching “${text}”` : countLabel],
              this.searchMenu(text, include_archived)],
             rows.length === 0
                 ? [h.p, {class: 'text-muted'}, 'No volunteers.']
-                : [h.table, {class: 'table align-middle lm-list'},
+                : [h.table, {class: 'lm-data-table'},
                    [h.thead, {},
                     [h.tr, {},
-                     [h.th, {class: 'small text-muted fw-normal'}, 'Name'],
-                     [h.th, {class: 'small text-muted fw-normal'}, 'Skills & interests'],
-                     [h.th, {}]]],
+                     [h.th, {}, 'Name'],
+                     [h.th, {}, 'Skills & interests']]],
                    [h.tbody, {}, body]],
         ];
     }
 
-    // One table row: a single navigable species for every viewer (the whole row
-    // drills in to the detail page via the lm-nav-link name; chevron marks the
-    // navigation).  Permissions change what the row OFFERS, never what tapping
-    // it does: viewers with row-level edit permission (recordEdit) additionally
-    // get the pencil - the only edit affordance.  Reloadable tagging (outerHTML
-    // swap of the <tr>) re-renders just this row after a save.
+    // A navigable data-table row: the whole row drills in to the detail page via
+    // the accent-coloured name; no per-row pencil (edit whole-record fields from
+    // the detail page).  Reloadable tagging (outerHTML swap of the <tr>)
+    // re-renders just this row after a save.
     renderVolunteerRow(v: Volunteer): Markup {
         const id = v.volunteer_id;
         const f = this.fieldsByName;
         const archivedBadge = v.archived
             ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Archived'] : undefined;
 
-        // A navigable <tr>: the base reload props (row key + outerHTML swap) plus
-        // the lm-navigable click surface (detailItemProps hardcodes list-group
-        // classes, so it can't be reused for a table row).
         const item = this.reloadableItemProps(id, `rabid.volunteer.renderVolunteerRowById(${id})`);
         item.class = 'lm-navigable ' + item.class;
         item.onclick = 'lmNavigableClick(event)';
@@ -413,11 +426,8 @@ export class VolunteerTable extends Table<Volunteer> {
              archivedBadge],
             // Skills & interests give the list some texture; email is on the
             // detail page (a click away - fine).
-            [h.td, {class: 'text-muted small', 'data-testid': `volunteer-${id}-skills`},
+            [h.td, {class: 'text-muted', 'data-testid': `volunteer-${id}-skills`},
              renderFieldValue(f.skills_and_interests, v.skills_and_interests)],
-            [h.td, {class: 'text-end text-nowrap'},
-             this.canEditRecord(v) ? this.editPencil(id) : undefined,
-             navChevron()],
         ];
     }
 

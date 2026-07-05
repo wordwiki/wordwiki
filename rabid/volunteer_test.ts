@@ -89,17 +89,25 @@ const listFor = () => renderRoute(`rabid.volunteer.renderVolunteerList("", false
 const rowIn = (list: any, id: number) => getByTestId(list, `volunteer-row-${id}`);
 const hasPencil = (list: any, id: number) => !!find(rowIn(list, id), byClass("lm-edit-pencil"));
 
-test("the pencil (the only edit affordance) renders only on rows the viewer may edit", async () => {
-    await withTestDb(async ({ alice, bob, carol, dave }) => {
-        const bobList = await asUser(bob, listFor);
-        assert(hasPencil(bobList, bob));     // own row: editable surface
-        assert(!hasPencil(bobList, carol));  // someone else's: not for a regular volunteer
+test("the list carries no edit affordance - not even for a host/admin (edit from the detail page)", async () => {
+    await withTestDb(async ({ alice, bob, dave }) => {
+        // No per-row pencil for anyone; whole-record fields are edited from the
+        // volunteer's own detail page (design-language.md).
+        assert(!hasPencil(await asUser(bob, listFor), bob));     // not even one's own row
+        assert(!hasPencil(await asUser(alice, listFor), bob));   // host
+        assert(!hasPencil(await asUser(dave, listFor), bob));    // admin
+    });
+});
 
-        const aliceList = await asUser(alice, listFor);
-        assert(hasPencil(aliceList, carol)); // host: edits anyone
-
-        const daveList = await asUser(dave, listFor);
-        assert(hasPencil(daveList, carol));  // admin: edits anyone
+test("'Add new volunteer' is host/admin-only: in the ☰ for them, and the dialog is server-gated", async () => {
+    await withTestDb(async ({ bob, dave }) => {
+        // The ☰ (in the list header) offers the create item to an admin, who can
+        // open the dialog.
+        assert(hasText(await asUser(dave, listFor), 'Add new volunteer'));
+        await asUser(dave, () => renderRoute('rabid.volunteer.newDialog()'));   // no throw
+        // A regular volunteer gets neither the item nor the dialog.
+        assert(!hasText(await asUser(bob, listFor), 'Add new volunteer'));
+        await asUser(bob, () => assertRejects(() => renderRoute('rabid.volunteer.newDialog()'), Error));
     });
 });
 
@@ -108,12 +116,11 @@ test("every row is the same navigable species: tap drills in, regardless of edit
         const list = await asUser(bob, listFor);
         for (const id of [bob, carol]) {        // own (editable) and someone else's (not)
             const row = rowIn(list, id);
-            assertEquals(tagOf(row), "tr");   // the list is a compact table
+            assertEquals(tagOf(row), "tr");   // a data-table row (uniform records scan better)
             assertEquals(attr(row, "onclick"), "lmNavigableClick(event)"); // whole surface navigates
             const link = find(row, byClass("lm-nav-link"));               // the delegation target
             assert(link);
             assertStringIncludes(String(attr(link, "href")), `detailPage(${id})`);
-            assert(!!find(row, byClass("lm-nav-chevron")));
         }
         // tapping a row never opens the edit dialog - the old tap-to-edit
         // species (lm-editable) is gone from this list
@@ -164,12 +171,12 @@ test("search matches name-word/email prefixes case-insensitively, and filters by
         // include_archived:true includes the archived carol...
         const all = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private", include_archived:true})`));
         assert(hasText(all, "Carol Private"));
-        assert(hasText(all, "1 volunteer(s) matching"));
+        assert(hasText(all, "1 volunteer matching"));   // proper singular, no machine "(s)"
 
         // ...and the default (include_archived absent -> false) excludes her.
         const current = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"private"})`));
         assert(!hasText(current, "Carol Private"));
-        assert(hasText(current, "0 current volunteer(s) matching"));
+        assert(hasText(current, "0 current volunteers matching"));   // 0 is plural in English
 
         // Email prefix works too.
         const byEmail = await asUser(dave, () => renderRoute(`rabid.volunteer.search({text:"BOB@"})`));

@@ -72,6 +72,14 @@ export function uncapitalize (s: string) {
   return s.substring (0, 1).toLowerCase ()+s.substring (1);
 }
 
+// English count phrasing without the machine-looking "(s)".  plural(1,'volunteer')
+// -> 'volunteer'; plural(3,'volunteer') -> 'volunteers'; plural(0,...) is plural
+// ("0 volunteers", as English does).  Pass an explicit plural for irregulars:
+// plural(2, 'person', 'people').
+export function plural(n: number, singular: string, pluralForm = singular + 's'): string {
+  return n === 1 ? singular : pluralForm;
+}
+
 /**
  * Compares two strings in a way that is compatible with the compareFunction
  * argument to Array.sort
