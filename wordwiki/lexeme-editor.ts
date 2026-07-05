@@ -466,6 +466,24 @@ function isFreeTextField(f: model.ScalarField): boolean {
         && !(f instanceof model.ImageField);
 }
 
+/** Append an inline annotation into the last non-empty ELEMENT of a rendered
+ *  body, so it reads ON the value's own line - the view-changes mode's
+ *  no-hierarchy rule (meta-editor-changes-mode.md): an old value must never
+ *  get an indented line of its own. */
+function appendToLastLine(body: Markup, extra: Markup): Markup {
+    if(!Array.isArray(body)) return [body, ' ', extra];
+    if(typeof body[0] === 'string') return [...body, ' ', extra];   // an element: append as its last child
+    for(let i = body.length - 1; i >= 0; i--) {                     // a child list: recurse into the last real child
+        const child = body[i] as Markup;
+        if(child === '' || child === null || child === undefined
+           || (Array.isArray(child) && child.length === 0)) continue;
+        const copy = [...body];
+        copy[i] = appendToLastLine(child, extra);
+        return copy;
+    }
+    return [...body, ' ', extra];
+}
+
 /** A fact's free-text content, for diffing one version against another (empty
  *  when the fact carries no text - e.g. a recording or a reference). */
 function factText(rf: model.RelationField, a: Assertion | undefined): string {
@@ -683,36 +701,44 @@ export class LexemeEditor {
     // WHOLE metadata entry - coarse but correct.  (Fine-grained metadata
     // fragments are a later optimisation.)
 
-    /** The reload page (a normal navigation target). */
+    /** The reload page (a normal navigation target).  `changes` opts into the
+     *  VIEW-CHANGES look (meta-editor-changes-mode.md): pending rows annotate
+     *  what changed vs the published baseline, and the changes bar offers
+     *  Approve all - the simple approval flow for the common case. */
     @route(authenticated)
-    metaEditPage(entry_id: number): templates.Page {
+    metaEditPage(entry_id: number, changes: boolean = false): templates.Page {
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
-        return templates.page(title, this.renderMetaEntry(entry_id));
+        return templates.page(title, this.renderMetaEntry(entry_id, changes));
     }
 
-    /** The whole metadata entry as an outerHTML-swappable reload fragment. */
+    /** The whole metadata entry as an outerHTML-swappable reload fragment.
+     *  The `changes` flag rides THIS fragment's own hx-get (the on-page-state
+     *  model), so every mutation's whole-entry reload re-renders in the same
+     *  mode with no per-action threading. */
     @route(authenticated)
-    renderMetaEntry(entry_id: number): Markup {
+    renderMetaEntry(entry_id: number, changes: boolean = false): Markup {
         const q = new CurrentTupleQuery(this.entryTuple(entry_id));
         const root = new WorkspaceNode(q, entry_id, q.src.id);
         const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
         const renderer = new entryMeta.EntryRenderer({
             rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
             renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
-            editing: this.metaEditingHooks(entry_id),
+            editing: this.metaEditingHooks(entry_id, changes),
         });
         return ['div', {class: `-entry-${entry_id}- container py-3`,
-                        'hx-get': `${R}.renderMetaEntry(${entry_id})`,
+                        'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
-                ['div', {class: 'page-content'}, renderer.render(entryRel, root)]];
+                ['div', {class: 'page-content'},
+                 this.metaChangesBar(entry_id, changes),
+                 renderer.render(entryRel, root)]];
     }
 
     /** Re-render the whole metadata entry into its wrapper - the redirect target
      *  for every affordance's reload, so any mutation refreshes the view. */
-    private metaReloadAttrs(entry_id: number): any {
+    private metaReloadAttrs(entry_id: number, changes: boolean = false): any {
         return {'hx-trigger': 'reload consume',
-                'hx-get': `${R}.renderMetaEntry(${entry_id})`,
+                'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                 'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'};
     }
 
@@ -729,8 +755,10 @@ export class LexemeEditor {
             desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
     }
 
-    /** The edit affordances, built from this editor's action machinery. */
-    private metaEditingHooks(entry_id: number): entryMeta.EditingHooks {
+    /** The edit affordances, built from this editor's action machinery.
+     *  `changes` = the view-changes look (meta-editor-changes-mode.md):
+     *  pending rows annotate what changed, on the same line. */
+    private metaEditingHooks(entry_id: number, changes: boolean = false): entryMeta.EditingHooks {
         return {
             tupleSurface: (rf, id, body) => {
                 const q = new CurrentTupleQuery(this.findTupleInEntry(id.entryId, id.factId));
@@ -743,21 +771,27 @@ export class LexemeEditor {
                 // The classic editor's at-a-glance pending mark, carried over:
                 // a quiet warning dot when the fact's current value is an
                 // unapproved addition/edit (publication-model.md).
-                const pending = (() => {
-                    const s = classifyFact(q.src.tupleVersions.map(v => v.assertion),
-                                           timestamp.END_OF_TIME).state;
-                    return s === 'added' || s === 'edited';
-                })();
+                const review = classifyFact(q.src.tupleVersions.map(v => v.assertion),
+                                            timestamp.END_OF_TIME);
+                const pending = review.state === 'added' || review.state === 'edited';
+                // View-changes mode: the dot, opened up - an added row gets
+                // the changelog's chip, an edited row its old value inline on
+                // the SAME line ("was: ..."), never an indented history level.
+                const annotation: Markup = (!changes || !pending) ? ''
+                    : review.state === 'added'
+                    ? ['span', {class: 'lm-cl-chip lm-cl-chip-added'}, 'added']
+                    : this.wasAnnotation(rf, review);
                 const menu = action.actionMenu(
                     [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'meta'),
                      ...this.demotedAddItems(id.entryId, id.factId, rf, q)],
                     {ariaLabel: `Actions for this ${rf.prompt}`});
                 return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}`
                                 + `${pending ? 'lm-pending-fact ' : ''}lm-me-editable d-flex align-items-start gap-1`,
-                                ...this.metaReloadAttrs(id.entryId),
+                                ...this.metaReloadAttrs(id.entryId, changes),
                                 ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
                         pending ? ['span', {class: 'lm-pending-dot', title: 'unapproved change'}, ''] : [],
-                        ['div', {class: 'flex-grow-1'}, body],
+                        ['div', {class: 'flex-grow-1'},
+                         annotation === '' ? body : appendToLastLine(body, annotation)],
                         this.insertAfterPlus(rf, id),
                         menu];
             },
@@ -770,7 +804,7 @@ export class LexemeEditor {
                 // concept.  (Keyed on parent id + child tag; no fact exists.)
                 const rowAttrs = {
                     class: `-rel-${parentId.factId}-${rf.tag}- lm-me-empty d-flex align-items-start gap-1`,
-                    ...this.metaReloadAttrs(parentId.entryId),
+                    ...this.metaReloadAttrs(parentId.entryId, changes),
                 };
                 const label = (trailing: Markup = ''): Markup =>
                     ['div', {class: 'flex-grow-1'},
@@ -850,6 +884,119 @@ export class LexemeEditor {
                     .some(t => t.mostRecentTupleVersion))
             .map(cr => ({label: `Add ${cr.prompt}…`, mode: {kind: 'modal' as const,
                 dialogUrl: `${R}.insertDialog(${entry_id}, ${fact_id}, '${cr.tag}', null, null, 'meta')`}}));
+    }
+
+    // --- View-changes mode (meta-editor-changes-mode.md) ---------------------
+
+    /** The inline "was: <old>" for an edited row: the changelog's diff family
+     *  (deletions struck, long unchanged runs elided, nicest strategy), or the
+     *  baseline's plain rendered values when the change isn't textual. */
+    private wasAnnotation(rf: model.RelationField, review: FactReview<Assertion>): Markup {
+        const baseline = review.baseline;
+        if(!baseline) return '';
+        const fromText = factText(rf, baseline), toText = factText(rf, review.content);
+        const old = fromText !== toText
+            ? diffValues(fromText, toText).from
+            : renderAssertionValues(rf, baseline);
+        return ['span', {class: 'lm-me-chg-was'}, ' was: ', old];
+    }
+
+    /** Every pending fact of the entry, for the changes bar and approve-all.
+     *  `content` (added/edited) is in tree PRE-order - approve parents before
+     *  children; approve-all REVERSES `deletions` (descendants first) - see
+     *  approveFact's tree-ordering gates.  `visible` = has scalar content:
+     *  structural facts (an entry, a subentry, an example) must be APPROVED
+     *  but are not COUNTED - they have no annotated row.  `rowless` = visible
+     *  content whose relation renders NO body row (the headword, which lives
+     *  only in the title; hidden editorial relations) - those changes must be
+     *  listed in the BAR, like deletions, or Approve all would cover changes
+     *  the page never showed. */
+    private metaPendingChanges(entry_id: number) {
+        const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
+        const hasContent = (rf: model.RelationField, a: Assertion) => rf.scalarFields.some(f =>
+            !(f instanceof model.PrimaryKeyField) && norm((a as any)[f.bind]) !== null);
+        const rowless = (rf: model.RelationField) => {
+            const v = rf.style.$view ?? {};
+            return !!v.hidden || v.titleRole === 'headword';
+        };
+        type Pending = {fact_id: number, rf: model.RelationField,
+                        review: FactReview<Assertion>, visible: boolean, rowless: boolean};
+        const content: Pending[] = [], deletions: Pending[] = [];
+        this.entryTuple(entry_id).forEachVersionedTuple(t => {
+            if(t.tupleVersions.length === 0) return;
+            const review = classifyFact(t.tupleVersions.map(v => v.assertion),
+                                        timestamp.END_OF_TIME);
+            if(review.state === 'added' || review.state === 'edited')
+                content.push({fact_id: t.id, rf: t.schema, review,
+                              visible: hasContent(t.schema, review.content),
+                              rowless: rowless(t.schema)});
+            else if(review.state === 'removed')
+                deletions.push({fact_id: t.id, rf: t.schema, review,
+                                visible: !!review.baseline && hasContent(t.schema, review.baseline),
+                                rowless: rowless(t.schema)});
+        });
+        return {content, deletions};
+    }
+
+    /** Above the entry: a quiet way INTO the changes view (normal mode, only
+     *  when something is pending), or the changes BAR (changes mode): the
+     *  count, Approve all, each pending DELETION with its value (deleted rows
+     *  don't render in the tree - showing them here is what makes Approve
+     *  all's contract honest: it approves exactly what this page shows), the
+     *  way back, and the full review escape hatch. */
+    private metaChangesBar(entry_id: number, changes: boolean): Markup {
+        const pending = this.metaPendingChanges(entry_id);
+        const n = pending.content.filter(p => p.visible).length
+            + pending.deletions.filter(p => p.visible).length;
+        if(n === 0)
+            return changes
+                ? ['div', {class: 'lm-me-changes-bar'},
+                   ['span', {class: 'text-muted'}, 'No unapproved changes.'],
+                   this.metaModeButton(entry_id, false, 'Hide changes')]
+                : '';
+        const count = `${n} unapproved change${n === 1 ? '' : 's'}`;
+        if(!changes)
+            return ['div', {class: 'lm-me-changes-hint text-muted small'},
+                    this.metaModeButton(entry_id, true, `${count} — view`)];
+        // Changes the TREE can't show (deleted rows; rowless relations - the
+        // headword, hidden editorial fields) are listed here instead, each
+        // with its value, so Approve all's contract stays honest: it approves
+        // exactly what this page shows.
+        const barLine = (chip: string, rf: model.RelationField, value: Markup): Markup =>
+            ['div', {class: 'lm-me-chg-del'},
+             ['span', {class: `lm-cl-chip lm-cl-chip-${chip}`}, chip], ' ',
+             ['b', {}, rf.prompt + ': '], value];
+        const deletions = pending.deletions.filter(p => p.visible).map(d =>
+            barLine('deleted', d.rf,
+                    d.review.baseline ? renderAssertionValues(d.rf, d.review.baseline) : ''));
+        const rowless = pending.content.filter(p => p.visible && p.rowless).map(p =>
+            p.review.state === 'added'
+                ? barLine('added', p.rf, renderAssertionValues(p.rf, p.review.content))
+                : barLine('edited', p.rf,
+                          [renderAssertionValues(p.rf, p.review.content),
+                           this.wasAnnotation(p.rf, p.review)]));
+        const approve = this.app.lexemeOps.hasApprovePermission()
+            ? action.actionButton('Approve all',
+                {kind: 'confirm',
+                 expr: `wordwiki.lexeme.approveAllChanges(${entry_id})`,
+                 message: `Approve all ${count.replace(' unapproved', '')} to this word?`},
+                'btn btn-sm btn-success')
+            : '';
+        return ['div', {class: 'lm-me-changes-bar'},
+                ['span', {}, count],
+                approve,
+                this.metaModeButton(entry_id, false, 'Hide changes'),
+                ['a', {href: `${R}.entryPage(${entry_id}, 'review')`,
+                       class: 'btn btn-sm btn-outline-secondary'}, 'Full review…'],
+                rowless,
+                deletions];
+    }
+
+    /** Swap the entry fragment in place between the normal and changes looks. */
+    private metaModeButton(entry_id: number, changes: boolean, label: string): Markup {
+        return ['button', {type: 'button', class: 'btn btn-sm btn-outline-secondary',
+                           'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
+                           'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'}, label];
     }
 
     // ------------------------------------------------------------------------
@@ -1691,6 +1838,27 @@ export class LexemeEditor {
     reviewApprove(entry_id: number, fact_id: number): any {
         this.app.lexemeOps.approveFact(fact_id);
         return this.reload(this.reviewActionTargets(entry_id, fact_id));
+    }
+
+    /**
+     * Approve EVERYTHING the view-changes page shows as pending - the simple
+     * approval flow (meta-editor-changes-mode.md).  Routes through the
+     * per-fact approveFact verb, so receipts, the change feed, and every
+     * server-side gate behave identically to fancy review.  Content
+     * approvals run top-down and deletions bottom-up (the tree-ordering
+     * gates); facts the actor may not approve (the two-person rule) are
+     * SKIPPED, not errors - the re-rendered page shows whatever remains.
+     */
+    @route(authenticated)
+    approveAllChanges(entry_id: number): any {
+        const ops = this.app.lexemeOps;
+        const pending = this.metaPendingChanges(entry_id);
+        for(const p of [...pending.content, ...pending.deletions.toReversed()]) {
+            if(!ops.mayApprove(p.review.content.change_by_username ?? null)) continue;
+            try { ops.approveFact(p.fact_id); }
+            catch { /* a tree gate (e.g. an unapprovable pending parent) - stays pending */ }
+        }
+        return this.reload([this.rootTarget(entry_id)]);
     }
 
     /** The revert/rollback note dialog (a reject reason or a rollback rationale). */

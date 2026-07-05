@@ -547,6 +547,9 @@ tr.lm-navigable:active > * { background-color: var(--bs-secondary-bg); }
 .lm-cl-chip-deleted,
 .lm-cl-chip-reverted { background: #f8d7da; color: #842029; }
 .lm-cl-chip-commented { background: #e2e3e5; color: #41464b; }
+/* A pending edit (the meta editor's changes bar) - the warning family, like
+   the pending dot. */
+.lm-cl-chip-edited { background: #fff3cd; color: #664d03; }
 
 /* Compact (default) view: a quiet dot on a fact whose current value is not yet
    approved, so editors can spot unaccepted changes without entering review. */

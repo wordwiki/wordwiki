@@ -159,6 +159,20 @@ body {
 .lm-me-num { flex: 0 0 auto; }
 .lm-me-num-body { flex: 1 1 auto; min-width: 0; }
 
+/* View-changes mode (meta-editor-changes-mode.md).  The "was: old" annotation
+   rides INLINE on the edited row's own line (never an indented history level);
+   the diff del/elide colors come from liminal.css.  The bar holds the count,
+   Approve all, and each pending deletion with its value. */
+.lm-me-chg-was { color: var(--bs-secondary-color, #6c757d); font-size: .85em; }
+.lm-me-changes-hint { margin-bottom: .25rem; }
+.lm-me-changes-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    margin-bottom: .75rem; padding: .5rem .75rem;
+    border: 1px solid var(--bs-border-color, #dee2e6); border-radius: .375rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+.lm-me-chg-del { flex-basis: 100%; }
+
 /* The reference scan (render-entry-meta.ts).  display:block + line-height:0 so
    the scan reserves its own height (an inline svg lets the transcription flow
    into it).  The scan renders at natural width - it fits the single-column word
