@@ -613,9 +613,10 @@ export class LexemeEditor {
                     this.renderReviewPending(entry_id, opts.participant),
                     this.participantControl(entry_id, entryTuple, opts),
                     this.fullHistoryToggle(entry_id, opts),
-                    // Edit navigates to THE editor (the metadata one) - the
-                    // classic in-place edit swap is not the editor anymore.
-                    ['a', {...templates.pageLinkProps(`/ww/wordwiki.wordEditor(${entry_id})`),
+                    // Edit navigates to THE editor (the metadata one), in
+                    // its VIEW-CHANGES look - coming from the change list,
+                    // the reader keeps seeing the changes, now in context.
+                    ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexeme.metaEditPage(${entry_id},true)`),
                            class: 'btn btn-sm btn-outline-secondary ms-auto'}, 'Edit entry']];
         }
         const n = this.entryPendingCount(entryTuple, 'everyone');
