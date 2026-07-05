@@ -182,6 +182,12 @@ export function renderRelation(ctx: MetaCtx, rf: model.RelationField, tuples: an
                 ? ["div", { class: "lm-me-line" }, ["b", {}, rf.prompt + ": "], joined]
                 : ["div", { class: "lm-me-line" }, joined];
         }
+        // One value per line.  With an inline label, REPEAT it per line: for
+        // multiple long values (several glosses, esp. with parentheticals) a
+        // slash-run is unreadable and hides how many there are; a repeated
+        // "Gloss:" is no heavier than one line for the common single value.
+        if (v.label === "inline")
+            return items.map(it => ["div", { class: "lm-me-line" }, ["b", {}, rf.prompt + ": "], it]);
         return heading(items.map(it => ["div", { class: "lm-me-item" }, it]));
     }
 

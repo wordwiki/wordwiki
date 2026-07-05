@@ -285,10 +285,11 @@ export const dictSchemaJson = {
                 //variant: {$type: 'string'} - COMPLICATED
                 // the gloss is (for example) in english, but may want to have
                 // a different gloss for SF than LI?  How to model?
-                // Mirrored into the title (glossInTitle) and shown in the body,
-                // slash-joined.
+                // Mirrored into the title (glossInTitle), slash-joined there.
+                // In the BODY each gloss is its own "Gloss:" line (no join) -
+                // multiple long glosses read as a slash-run otherwise.
                 $style: { $shape: 'inlineListRelation',
-                          $view: { order: 3, titleRole: 'gloss', label: 'inline', join: ' / ' } },
+                          $view: { order: 3, titleRole: 'gloss', label: 'inline' } },
             },
 
             example: {
@@ -425,7 +426,9 @@ export const dictSchemaJson = {
                 other_regional_form_id: {$type: 'primary_key'},
                 other_regional_form_text: {$type: 'string', $bind: 'attr1'},
                 variant: {$type: 'variant'},
-                $style: { $shape: 'inlineListRelation' },
+                // Hidden from the read view for now (the hand renderer doesn't
+                // surface it either); label + show is a later refinement.
+                $style: { $shape: 'inlineListRelation', $view: { hidden: true } },
             },
 
             picture: {
