@@ -46,6 +46,8 @@ test("sensitive routes are declared but NOT public", () => {
     notPublic(rabid.event_checkin, "checkIn");         // host-only (check others in)
     notPublic(rabid.volunteer, "detailPage");          // authenticated
     notPublic(rabid.event, "saveForm");                // authenticated (base Table)
+    notPublic(rabid.photo, "upload");                  // authenticated (photo upload rpc)
+    notPublic(rabid.photo, "serve");                   // authenticated (sized <img> route)
 });
 
 test("internal + query members are unexposed (unreachable under strict)", () => {
@@ -55,6 +57,8 @@ test("internal + query members are unexposed (unreachable under strict)", () => 
     undeclared(rabid, "passwordHash");                 // internal auth table getter
     undeclared(rabid, "volunteerLoginSession");        // internal session table
     undeclared(rabid.event, "allEvents");              // a @path query getter (data via .all)
+    undeclared(rabid.photo, "sizedPhotoPath");         // internal resize helper (not a route)
+    undeclared(rabid.photo, "resizePhotoCmd");         // internal ImageMagick shell-out
 });
 
 test("mutations are POST-only; reads are not (CSRF axis)", () => {
@@ -64,10 +68,12 @@ test("mutations are POST-only; reads are not (CSRF axis)", () => {
     assert(routeIsMutation(r.event_checkin, "checkOut"));
     assert(routeIsMutation(r.volunteer_time, "addTimesheet"));
     assert(routeIsMutation(r.event, "saveForm"));          // base Table.saveForm
+    assert(routeIsMutation(r.photo, "upload"));            // photo upload writes to content store
     // Reads / dialogs are NOT mutations (GET is fine).
     assert(!routeIsMutation(r.event, "detailPage"));
     assert(!routeIsMutation(r.event_checkin, "checkInDialog"));
     assert(!routeIsMutation(r.event, "renderEventRowById"));
+    assert(!routeIsMutation(r.photo, "serve"));            // sized <img> src is a GET
 });
 
 test("a mutation route reached via GET is rejected; POST works", () => {

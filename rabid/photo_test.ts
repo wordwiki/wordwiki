@@ -4,7 +4,7 @@
 // resize; the field tests are the usual render-to-markup checks.
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { withTestDb, renderRoute, asUser, asSystem } from "./testing.ts";
+import { withTestDb, renderRoute, invoke, asUser, asAnon, asSystem } from "./testing.ts";
 import { findAll, hasText } from "../liminal/testing/markup-assert.ts";
 import { PhotoService, ALLOWED_WIDTHS } from "../liminal/photo.ts";
 import { rabid } from "./rabid.ts";
@@ -106,6 +106,33 @@ test("ImageField: photo control in the volunteer form; photo renders on detail p
         assertEquals(imgs.length, 1);
         assertStringIncludes((imgs[0] as any[])[1].src, 'rabid.photo.serve');
         assertStringIncludes((imgs[0] as any[])[1].src, fakePath);
+    });
+});
+
+// The above tests call svc.upload()/serve() directly; the actual browser bug
+// was that those methods lacked @route decorators, so the STRICT route
+// interpreter treated them as undeclared members and returned 404 "not found"
+// (surfaced as "Photo upload failed: not found").  This test dispatches through
+// the real interpreter - the exact path production uses - so the decorators
+// can never silently go missing again.
+test("route dispatch: upload (POST) + serve (GET) go through the strict interpreter", async () => {
+    await withTestDb(async ({ bob }) => {
+        // Upload as an authenticated POST rpc, exactly as lmPhotoFieldChange does.
+        const {photoPath} = await asUser(bob, () =>
+            invoke('rabid.photo.upload($arg0)', {imageBytesAsBase64: TINY_JPEG_B64}));
+        assert(typeof photoPath === 'string' && photoPath.startsWith('content/photos/'),
+               `expected a content path, got ${photoPath}`);
+
+        // The <img> serve route, dispatched as a GET, 302s to the derived file.
+        const resp = await asUser(bob, () =>
+            renderRoute(`rabid.photo.serve(${JSON.stringify(photoPath)},96)`)) as
+                {status: number, headers: Record<string,string>};
+        assertEquals(resp.status, 302);
+        assertStringIncludes(resp.headers['Location'], '/derived/sized-photos/');
+
+        // The authenticated gate holds: an anonymous caller cannot upload.
+        await assertRejects(() => asAnon(() =>
+            invoke('rabid.photo.upload($arg0)', {imageBytesAsBase64: TINY_JPEG_B64})), Error);
     });
 });
 

@@ -33,6 +33,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as content from "./content-store.ts";
 import * as server from "./http-server.ts";
 import type {Markup} from "./markup.ts";
+import { route, authenticated } from "./security.ts";
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 // The only presentation widths serve() will produce: an open set would let
@@ -66,6 +67,7 @@ export class PhotoService {
     // JSON, like wordwiki's uploadRecording.  Only JPEG/PNG are accepted -
     // the normal path produces JPEG (canvas re-encode); the magic check stops
     // arbitrary files from being parked in a publicly-served dir.
+    @route(authenticated, {mutates: true})
     async upload(args: {imageBytesAsBase64?: string}): Promise<{photoPath: string}> {
         const b64 = args?.imageBytesAsBase64;
         if(typeof b64 !== 'string' || b64.length === 0)
@@ -93,6 +95,7 @@ export class PhotoService {
      * photos: <img> tags point here (authenticated dispatch), the redirect
      * target is the capability-URL file.
      */
+    @route(authenticated)
     async serve(photoPath: string, width: number): Promise<server.Response> {
         return server.forwardResponse('/' + await this.sizedPhotoPath(photoPath, width));
     }
