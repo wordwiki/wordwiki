@@ -137,6 +137,12 @@ export function htmxPageTemplate(content: PageContent): any {
           ['link', {href: assetUrl('/resources/site-theme.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/instance.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/liminal.css'), rel:'stylesheet', type:'text/css'}],
+          // The document-reference boxes on the word view are INLINE svg
+          // (svg.box > rect.frame); page-editor.css makes those frames
+          // transparent (fill-opacity 0) - without it a bare rect defaults to
+          // solid black and hides the scan.  Fully svg.group/svg.box-scoped, so
+          // it's inert on pages with no reference image.
+          ['link', {href: assetUrl('/resources/page-editor.css'), rel:'stylesheet', type:'text/css'}],
           htmxScriptTag(),
           ['script', {}, block`
 /**/       function playAudio(src) {
