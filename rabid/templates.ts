@@ -183,10 +183,6 @@ export function navBar(showTestClientLink: boolean = false): any {
              [h.a, {class:"nav-link", href:"/committees"}, 'Committees'],
             ], //li
 
-            [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/tasks"}, 'Tasks'],
-            ], //li
-
             // Reports
             [h.li, {class:"nav-item dropdown"},
              [h.a, {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false", 'hx-boost':"false"},
@@ -208,6 +204,7 @@ export function navBar(showTestClientLink: boolean = false): any {
               // reached via their owning object (an event/committee/etc.); the
               // Projects and Templates list pages and Timesheets live here.
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/projects'}, 'Projects']],
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/tasks'}, 'Tasks']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/templates'}, 'Templates']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/timesheets'}, 'Timesheets']],
               // Test client: only on a non-production db.  A <button>, not an
