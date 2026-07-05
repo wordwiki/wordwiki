@@ -40,15 +40,15 @@ test("lexemeLink + word view: pencil for editors, suppressed in bulk, edit bar o
         as(fx, "djz", () => {
             seedWord(fx);
             assert(mayEditLexemes());
-            // A normal link: view + pencil to the editor.
+            // A normal link: view + the STANDARD pencil (lm-edit-pencil) to the editor.
             const link = markupToString(lexemeLink(1000, "samqwan"));
             assertStringIncludes(link, "wordwiki.wordView(1000)");
             assertStringIncludes(link, "wordwiki.wordEditor(1000)");
-            assertStringIncludes(link, "lm-lexeme-pencil");
+            assertStringIncludes(link, "lm-edit-pencil");
             // A bulk-list link: view only, no inline pencil.
             const bulk = markupToString(lexemeLink(1000, "samqwan", {pencil: false}));
             assertStringIncludes(bulk, "wordwiki.wordView(1000)");
-            assertEquals(bulk.includes("lm-lexeme-pencil"), false);
+            assertEquals(bulk.includes("lm-edit-pencil"), false);
             // The feed variant: new tab + the edit anchor + the reload class.
             const feed = markupToString(lexemeLink(1000, "x",
                 {newTab: true, editAnchor: 777, linkClass: "lm-feed-entry-link"}));
@@ -60,10 +60,14 @@ test("lexemeLink + word view: pencil for editors, suppressed in bulk, edit bar o
             // plus the top Edit bar.
             const page: any = fx.ww.wordView(1000);
             const view = markupToString(page.body);
-            assertStringIncludes(view, "samqwan");            // the spelling
+            assertStringIncludes(view, "samqwan");            // the spelling (h1 headword)
             assertStringIncludes(view, "water");              // the gloss
-            assertStringIncludes(view, "lm-word-edit");       // the top Edit bar
+            // The standard pencil sits in the headword row (not a separate bar).
+            assertStringIncludes(view, "lm-edit-pencil");
             assertStringIncludes(view, "wordwiki.wordEditor(1000)");
+            // The pencil follows the h1 title in the same flex row.
+            assert(/<h1[^>]*>.*<\/h1>\s*<a[^>]*lm-edit-pencil/s.test(view.replace(/\n/g,'')),
+                   "pencil should follow the headword h1");
         });
     });
 });

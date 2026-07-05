@@ -467,10 +467,25 @@ export class WordWiki extends LiminalApp {
     wordView(entry_id: number): templates.Page {
         const e = this.entriesById.get(entry_id);
         const title = e ? entry.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        // renderEntry leads with its own <h1> headword; the edit pencil sits
+        // right after it (the standard title+pencil pattern - like the category
+        // detail page), not on a line of its own.
+        const rendered: any = e
+            ? entry.renderEntry({rootPath: '/', renderInternalNotes: true, glossInTitle: true}, e)
+            : ['p', {class: 'text-muted'}, 'Word not found.'];
+        const pencil = e && templates.mayEditLexemes()
+            ? templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`) : undefined;
+        // Splice the pencil into the headword's flex row (renderEntry's first
+        // node is the h1); if the shape ever changes, fall back to a lead row.
+        const head = Array.isArray(rendered) ? rendered[0] : undefined;
+        const rest = Array.isArray(rendered) ? rendered.slice(1) : [rendered];
+        const titleRow = (Array.isArray(head) && head[0] === 'h1')
+            ? ['div', {class: 'd-flex align-items-center gap-2 flex-wrap'}, head, pencil]
+            : ['div', {class: 'd-flex align-items-center gap-2'},
+               ['h1', {class: 'mb-0'}, title], pencil];
         const body = ['div', {class: 'container py-3 lm-prose'},
-            templates.wordViewEditBar(entry_id),
-            e ? entry.renderEntry({rootPath: '/', renderInternalNotes: true, glossInTitle: true}, e)
-              : ['p', {class: 'text-muted'}, 'Word not found.']];
+            titleRow,
+            Array.isArray(head) && head[0] === 'h1' ? rest : rendered];
         return templates.page(title, body);
     }
 

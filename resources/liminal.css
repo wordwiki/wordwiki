@@ -56,6 +56,7 @@
     margin: -0.375rem -0.375rem -0.375rem 0;  /* big tap target without inflating the row */
     border-radius: 0.375rem;
     line-height: 0;
+    text-decoration: none;   /* the pencil is also used as an <a> (lexeme links) */
 }
 .lm-edit-pencil:hover,
 .lm-edit-pencil:focus-visible,
@@ -68,25 +69,6 @@
 .lm-menu-button svg {
     width: 1.1rem;
     height: 1.1rem;
-}
-
-/* The inline pencil beside a lexeme link (templates.lexemeLink): a small,
-   quiet, non-underlined glyph that steps out of the way of the word and
-   brightens on hover.  The word view is the default; this is the quick edit. */
-.lm-lexeme-pencil {
-    color: var(--bs-secondary-color);
-    text-decoration: none;
-    line-height: 0;
-    vertical-align: baseline;
-}
-.lm-lexeme-pencil:hover,
-.lm-lexeme-pencil:focus-visible {
-    color: var(--bs-body-color);
-}
-.lm-lexeme-pencil svg {
-    width: 0.85rem;
-    height: 0.85rem;
-    vertical-align: -0.1em;
 }
 /* The menu wrapper participates in the line's flex row without adding size.
    (NO line-height:0 here - that would cascade into the dropdown list and
