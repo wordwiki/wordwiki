@@ -277,16 +277,16 @@ test("created page + no-limit default: undated imports counted and listed", asyn
             const created = pageHtml(fx.ww.report.createdPage(
                 now.getFullYear(), now.getMonth() + 1));
             assertStringIncludes(created, "Published lexemes created in");
-            assertStringIncludes(created, "wordwiki.entry(1000)");
-            assertEquals(created.includes("wordwiki.entry(9999)"), false);
+            assertStringIncludes(created, "wordwiki.wordView(1000)");
+            assertEquals(created.includes("wordwiki.wordView(9999)"), false);
             // month 0 = the whole year.
             const yearPage = pageHtml(fx.ww.report.createdPage(now.getFullYear(), 0));
             assertStringIncludes(yearPage, `Published lexemes created in ${now.getFullYear()}`);
-            assertStringIncludes(yearPage, "wordwiki.entry(1000)");
+            assertStringIncludes(yearPage, "wordwiki.wordView(1000)");
             const undated = pageHtml(fx.ww.report.createdPage(0, 0));
             assertStringIncludes(undated, "Published lexemes with no creation date");
-            assertStringIncludes(undated, "wordwiki.entry(9999)");
-            assertEquals(undated.includes("wordwiki.entry(1000)"), false);
+            assertStringIncludes(undated, "wordwiki.wordView(9999)");
+            assertEquals(undated.includes("wordwiki.wordView(1000)"), false);
         });
     });
 });

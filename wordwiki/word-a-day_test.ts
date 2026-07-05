@@ -57,7 +57,7 @@ test("word-a-day picker: unposted public words by category", async () => {
             assertStringIncludes(html, "Not in the category table");
             assertStringIncludes(html, "Uncategorized");
             // The word links into its entry.
-            assertStringIncludes(html, "wordwiki.entry(1000)");
+            assertStringIncludes(html, "wordwiki.wordView(1000)");
         });
     });
 });

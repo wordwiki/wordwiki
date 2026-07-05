@@ -441,13 +441,37 @@ export class WordWiki extends LiminalApp {
         return server.forwardResponse(`/ww/wordwiki.entry(${entry_id})`);
     }
 
-    // The entry editor (the server-side htmx lexeme editor - the old
+    // The word EDITOR (the server-side htmx lexeme editor - the old
     // client-side editor is retired).  `since` is the sitting anchor (see
     // LexemeEditor.entryPage): an un-anchored visit redirects here with it
-    // stamped, so it rides in the browser URL.
+    // stamped, so it rides in the browser URL.  `entry` is the legacy alias
+    // (kept so old in-flight links resolve); new links use wordEditor via the
+    // shared templates.lexemeLink helper.
+    @route(authenticated)
+    wordEditor(entry_id: number, since: number = 0): templates.Page | server.Response {
+        return this.lexeme.entryPage(entry_id, 'edit', since);
+    }
     @route(authenticated)
     entry(entry_id: number, since: number = 0): templates.Page | server.Response {
         return this.lexeme.entryPage(entry_id, 'edit', since);
+    }
+
+    // The word VIEW: a read-only rendering of the lexeme (for now the same
+    // renderer the public site uses - entrySchema.renderEntry - but over the
+    // CURRENT internal data, so it shows the latest values incl. pending
+    // edits, and internal notes).  This is the DEFAULT target of a lexeme
+    // link (researchers are usually just looking); a top Edit bar and the
+    // per-link pencils reach the editor.  Grows later (a simplified history,
+    // etc.) away from the public renderer.
+    @route(authenticated)
+    wordView(entry_id: number): templates.Page {
+        const e = this.entriesById.get(entry_id);
+        const title = e ? entry.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const body = ['div', {class: 'container py-3 lm-prose'},
+            templates.wordViewEditBar(entry_id),
+            e ? entry.renderEntry({rootPath: '/', renderInternalNotes: true, glossInTitle: true}, e)
+              : ['p', {class: 'text-muted'}, 'Word not found.']];
+        return templates.page(title, body);
     }
 
     // The global change feed (see change-feed.ts).  One {}-literal query
@@ -607,7 +631,7 @@ export class WordWiki extends LiminalApp {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e))
             ];
         }
 
@@ -778,7 +802,7 @@ export class WordWiki extends LiminalApp {
             ['ul', {},
              entriesForTODO.map(e=>
                  ['li', {},
-                  ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]])]];
+                  templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e))])]];
 
         return templates.pageTemplate({title, body});
     }
@@ -834,7 +858,7 @@ export class WordWiki extends LiminalApp {
         
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e), {pencil: false})
             ];
         }
 
@@ -865,7 +889,7 @@ export class WordWiki extends LiminalApp {
             return [
                 (getTwitterPostStatusForEntry(e) ?? 'Not posted on twitter'),
                 ' -- ', 
-                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummaryCore(e)]
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummaryCore(e), {pencil: false})
             ];
         }
 
@@ -953,8 +977,7 @@ export class WordWiki extends LiminalApp {
         const wordList = (entries: entry.Entry[]) =>
             ['ul', {class: 'list-unstyled ms-3 mb-4'},
              entries.map(e => ['li', {},
-                 ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`},
-                  entry.renderEntryCompactSummaryCore(e)]])];
+                 templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummaryCore(e), {pencil: false})])];
         const catSection = (slug: string, name: string) => [
             ['h4', {id: anchor(slug), class: 'mt-3'}, name, ' ',
              ['span', {class: 'text-muted fs-6'}, `(${byCat.get(slug)!.length})`]],
@@ -1075,7 +1098,7 @@ export class WordWiki extends LiminalApp {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e), {pencil: false})
             ];
         }
 
@@ -1111,7 +1134,7 @@ export class WordWiki extends LiminalApp {
 
         function renderEntryItem(e: entry.Entry): any {
             return [
-                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)]
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e))
             ];
         }
 
@@ -1259,7 +1282,7 @@ export class WordWiki extends LiminalApp {
                 ?? panic('unable to find reference', ref.bounding_group_id);
             return [
                 renderStandaloneGroup('/', ref.bounding_group_id),
-                ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummary(e)],
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e)),
                 ['table', {},
                  ['tbody', {},
                   r.transcription.map(t=>['tr', {}, ['th', {}, 'Transcription:'], ['td', {}, t.transcription]]),

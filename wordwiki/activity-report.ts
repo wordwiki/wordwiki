@@ -454,8 +454,9 @@ export class ActivityReport {
                  return ['li', {class: 'mb-1'},
                      ['span', {class: 'text-muted small me-2 font-monospace'},
                       c.year === 0 ? '—' : `${c.year}-${dd(c.month)}-${dd(c.day)}`],
-                     ['a', {href: `/ww/wordwiki.entry(${c.entry_id})`},
-                      e ? entrySchema.renderEntryCompactSummaryCore(e) : `Entry ${c.entry_id}`],
+                     templates.lexemeLink(c.entry_id,
+                         e ? entrySchema.renderEntryCompactSummaryCore(e) : `Entry ${c.entry_id}`,
+                         {pencil: false}),
                      c.username ? ['span', {class: 'text-muted small ms-2'},
                                    userLabel(c.username)] : []];
              }),

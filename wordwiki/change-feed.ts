@@ -422,10 +422,12 @@ export class ChangeFeed {
         const title: Markup = e ? entrySchema.renderEntryCompactSummaryCore(e)
                                 : `Entry ${c.entry_id}`;
         return ['div', {class: 'd-flex align-items-center gap-2 flex-wrap'},
-                ['a', {class: 'lm-feed-entry-link lm-cl-field',
-                       href: `/ww/wordwiki.lexeme.entryPage(${c.entry_id},'edit',${anchor})`,
-                       target: '_blank'},
-                 title],
+                // The word view (read-only, in context), with an edit pencil
+                // beside it - both open a new tab (the feed page is no-store
+                // and must not navigate) and carry the sitting anchor / the
+                // feed-reload class (a return from either refreshes the clump).
+                templates.lexemeLink(c.entry_id, title,
+                    {newTab: true, editAnchor: anchor, linkClass: 'lm-feed-entry-link lm-cl-field'}),
                 ['span', {class: 'lm-feed-when small',
                           title: timestamp.formatTimestampAsLocalTime(c.to)},
                  timestamp.formatTimestampRelative(c.to)],

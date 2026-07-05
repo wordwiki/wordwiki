@@ -183,10 +183,11 @@ test("feed: clumps by editor with headers, statuses, and anchored entry links", 
             assertStringIncludes(html, "samqwan");           // the edit's "from"
             assertStringIncludes(html, "XYZZY");             // the change itself
             assertStringIncludes(html, "1 pending");         // sally's fact needs approval
-            // The entry link opens the WORD (edit mode - the change in context),
-            // carrying the feed's sitting anchor, in a new tab (the feed page
-            // must never navigate away).
-            assertStringIncludes(html, `entryPage(1000,'edit',`);
+            // The word link opens the read-only word VIEW (the change in
+            // context), with an edit pencil to the editor carrying the feed's
+            // sitting anchor, both in a new tab (the feed must never navigate).
+            assertStringIncludes(html, `wordwiki.wordView(1000)`);
+            assertStringIncludes(html, `wordwiki.wordEditor(1000,`);
             assertStringIncludes(html, `_blank`);
             assertStringIncludes(html, "Beginning of the record.");
         });

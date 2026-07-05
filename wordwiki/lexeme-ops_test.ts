@@ -90,7 +90,7 @@ test("category detail page: entries listed with remove buttons; removeEntry relo
             const detail = markupToString(fx.ww.categories.renderDetail(catId));
             assertStringIncludes(detail, 'Entries (1)');
             assertStringIncludes(detail, 'samqwan');
-            assertStringIncludes(detail, `wordwiki.lexeme.entryPage(1000)`);
+            assertStringIncludes(detail, `wordwiki.wordView(1000)`);
             assertStringIncludes(detail, `wordwiki.categories.removeEntry(${catId}, 1000)`);
 
             const r = fx.ww.categories.removeEntry(catId, 1000);
@@ -157,7 +157,7 @@ test("lexical form detail page: subentries listed, navigating, NO remove button"
             const detail = markupToString(fx.ww.lexicalForms.renderDetail(formId));
             assertStringIncludes(detail, 'Subentries (1)');
             assertStringIncludes(detail, 'samqwan');
-            assertStringIncludes(detail, 'wordwiki.lexeme.entryPage(1000)');
+            assertStringIncludes(detail, 'wordwiki.wordView(1000)');
             // Deliberately no remove affordance: a wrong POS gets FIXED in
             // the editor, not cleared from here.
             assertEquals(detail.includes('Remove'), false);

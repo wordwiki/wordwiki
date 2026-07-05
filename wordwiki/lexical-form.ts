@@ -317,7 +317,7 @@ export class LexicalFormTable extends Table<LexicalForm> {
         return ['div', {class: 'list-group-item lm-item d-flex align-items-center'},
             ['div', {class: 'lm-item-body'},
              ['div', {class: 'lm-item-primary'},
-              ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexeme.entryPage(${e.entry_id})`),
+              ['a', {...templates.pageLinkProps(`/ww/wordwiki.wordView(${e.entry_id})`),
                      class: 'lm-nav-link'}, spelling]],
              ['div', {class: 'lm-item-secondary'}, glosses]],
         ];

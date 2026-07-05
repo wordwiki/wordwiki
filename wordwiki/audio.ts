@@ -500,7 +500,7 @@ async function renderTrimTuningPage(): Promise<templates.Page> {
             });
             rows.push(['tr', {},
                 ['td', { style: 'white-space: nowrap;' },
-                    ['a', { href: `/ww/wordwiki.lexeme.entryPage(${c.entryId})`, target: '_blank' }, ['b', {}, c.word]]],
+                    ['a', { href: `/ww/wordwiki.wordView(${c.entryId})`, target: '_blank' }, ['b', {}, c.word]]],
                 ['td', { class: 'text-center', title: 'untrimmed original' },
                     player('/' + c.src), caption(`${durSrc.toFixed(2)} s`)],
                 ...trimmed]);

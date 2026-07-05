@@ -4,6 +4,8 @@ import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
 import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
 import {assetUrl} from "../liminal/assets.ts";
+import {pencilIcon} from "../liminal/table.ts";
+import * as security from "../liminal/security.ts";
 
 export interface PageContent {
     title?: any;
@@ -56,6 +58,59 @@ export function pageLink(href: string, ...content: any[]): any {
 
 export function pageLinkProps(href: string): Record<string, string> {
     return {href, 'hx-boost': 'true', 'hx-target': '#content', 'hx-swap': 'innerHTML show:window:top'};
+}
+
+// --- Lexeme links -----------------------------------------------------------
+//
+// A lexeme link DEFAULTS to the read-only word VIEW (wordwiki.wordView -
+// researchers are usually just looking; the editor is a clunky viewer), with
+// a small pencil beside it straight to the word EDITOR (wordwiki.wordEditor)
+// so a contributor still reaches edit in one tap.  This is the ONE place both
+// URLs and the pencil are decided, so every link stays consistent and the
+// pencil can later gate on a real edit permission.  The word view itself also
+// carries a top Edit bar (wordViewEditBar).
+
+/** Whether the current actor may edit lexemes - the pencil's gate.  Every
+ *  logged-in user can edit today; this is the seam for a future read-only /
+ *  researcher role (then researchers get clean, pencil-free links). */
+export function mayEditLexemes(): boolean {
+    return security.current()?.actorId !== undefined;
+}
+
+/** A lexeme link: the read-only word view, plus (unless suppressed, and only
+ *  for editors) a pencil to the editor.  `pencil:false` for the bulk browse
+ *  lists (the word-a-day picker, category/lexical-form word lists) where a
+ *  pencil per row would be noise - the view's own Edit bar is a click away.
+ *  `newTab` for the change feed (its page is no-store and must not navigate). */
+export function lexemeLink(entry_id: number, content: any,
+                           opts: {pencil?: boolean, newTab?: boolean,
+                                  editAnchor?: number, linkClass?: string} = {}): any {
+    const viewUrl = `/ww/wordwiki.wordView(${entry_id})`;
+    // The editor keeps the caller's review-sitting anchor when given (the feed),
+    // so a pencil -> edit -> review still shows this sitting's receipts.
+    const editUrl = opts.editAnchor
+        ? `/ww/wordwiki.wordEditor(${entry_id},${opts.editAnchor})`
+        : `/ww/wordwiki.wordEditor(${entry_id})`;
+    const nav = (url: string) => opts.newTab
+        ? {href: url, target: '_blank'} : pageLinkProps(url);
+    const cls = (base: string) => opts.linkClass ? `${base} ${opts.linkClass}` : base;
+    const pencil = (opts.pencil ?? true) && mayEditLexemes();
+    return ['span', {class: 'lm-lexeme-link'},
+        ['a', {...nav(viewUrl), class: cls('lm-lexeme-view')}, content],
+        pencil
+            ? ['a', {...nav(editUrl), class: cls('lm-lexeme-pencil ms-1'),
+                     'aria-label': 'Edit', title: 'Edit'}, pencilIcon()]
+            : undefined];
+}
+
+/** The word view's top Edit bar - a prominent pencil to the editor (editors
+ *  only).  The read-only view is default; this is how you leave it for edit. */
+export function wordViewEditBar(entry_id: number): any {
+    if(!mayEditLexemes()) return undefined;
+    return ['div', {class: 'd-flex justify-content-end mb-2'},
+        ['a', {...pageLinkProps(`/ww/wordwiki.wordEditor(${entry_id})`),
+               class: 'btn btn-sm btn-outline-secondary lm-word-edit'},
+         pencilIcon(), ' Edit']];
 }
 
 /**
