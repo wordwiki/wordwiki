@@ -125,7 +125,7 @@ body {
    (Part of speech / Translation / Gloss) stays tight so it reads as one block.
    Applied by class, so it holds at every nesting depth (e.g. inside Example).
    The first block under any container has no top gap. */
-.lm-me-section, .lm-me-line { margin-top: .55rem; }
+.lm-me-section, .lm-me-line, .lm-me-empty { margin-top: .55rem; }
 .lm-me-line + .lm-me-line { margin-top: .12rem; }
 .lm-meta-entry > :first-child,
 .lm-me-section .ms-3 > :first-child,

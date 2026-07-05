@@ -71,11 +71,13 @@ export interface TupleIdentity {
 
 export interface EditingHooks {
     // Wrap a tuple's rendered value `body` as an editable surface: the standard
-    // lm-editable click-to-edit + the row's ☰ menu.
+    // lm-editable click-to-edit + the row's ☰ menu (which carries Insert
+    // before/after, so a non-empty relation needs no separate add affordance).
     tupleSurface: (rf: model.RelationField, id: TupleIdentity, body: Markup) => Markup;
-    // The add affordance for a relation under `parentId` (shown even when the
-    // relation is empty, so there is always a way to add the first item).
-    relationAdd: (rf: model.RelationField, parentId: TupleIdentity) => Markup;
+    // The placeholder for an EMPTY relation: a quiet "<prompt> — empty" line
+    // carrying an insert-first menu.  Keyed on the PARENT id + the child tag (no
+    // fact exists yet), so it can add the first item.
+    emptyRelation: (rf: model.RelationField, parentId: TupleIdentity) => Markup;
 }
 
 // --- Data-access seam --------------------------------------------------------
@@ -188,10 +190,12 @@ export class EntryRenderer {
         return id ? this.editing!.tupleSurface(rf, id, body) : body;
     }
 
-    /** The add affordance for a relation under `parent` (edit mode only). */
-    protected relationAdd(rf: model.RelationField, parent: EntryNode): Markup {
+    /** The empty-relation placeholder (edit mode only): a quiet line + an
+     *  insert-first menu, so an empty relation still shows its slot and a way
+     *  to fill it - no per-relation "+" clutter. */
+    protected emptyRelation(rf: model.RelationField, parent: EntryNode): Markup {
         const id = this.editing && parent.identity?.();
-        return id ? this.editing!.relationAdd(rf, id) : "";
+        return id ? this.editing!.emptyRelation(rf, id) : "";
     }
 
     /** Render one entry as a document, entirely from the schema + $view.
@@ -314,12 +318,11 @@ export class EntryRenderer {
         // A keyed bag (attr): each tuple is "Key: value", labelled from the key.
         if (v.keyField) return this.renderKeyedBag(rf, tuples, parent);
 
-        // Empty: read elides (or a keep-stub); edit shows the add affordance so
-        // there is always a way to add the first item.
+        // Empty: read elides (or a keep-stub); edit shows a quiet placeholder
+        // (the slot + an insert-first menu).
         if (tuples.length === 0) {
             if (!editing) return v.empty === "keep" ? ["div", { class: "lm-me-empty text-muted small" }, rf.prompt] : "";
-            const add = this.relationAdd(rf, parent);
-            return v.label === "heading" ? this.section(rf, add) : add;
+            return this.emptyRelation(rf, parent);
         }
 
         // Singleton collapse: READ only (edit keeps the level so a 2nd can be added).
@@ -347,10 +350,10 @@ export class EntryRenderer {
                     : ["div", { class: editing ? LINE : "lm-me-listitem" }, value];
                 return this.surface(rf, t, body);
             }).filter(m => !isEmptyMarkup(m));
-            const withAdd = editing ? [lines, this.relationAdd(rf, parent)] : lines;
-            // Inline-labelled lists (gloss) stand alone; unlabelled lists
-            // (recordings) get a heading section.
-            return v.label === "inline" ? withAdd : this.section(rf, withAdd);
+            // Non-empty needs no add line: the row ☰ carries Insert before/after.
+            // Inline-labelled lists (gloss) stand alone; unlabelled (recordings)
+            // get a heading section.
+            return v.label === "inline" ? lines : this.section(rf, lines);
         }
 
         // CONTAINER relation (has child relations): each tuple is a block.
@@ -364,7 +367,7 @@ export class EntryRenderer {
                    ["div", { class: "lm-me-num-body" }, block]]
                 : ["div", { class: "lm-me-item" }, block];
         });
-        return this.section(rf, editing ? [items, this.relationAdd(rf, parent)] : items);
+        return this.section(rf, items);
     }
 
     /** A keyed-bag relation (attr): filter by audience, label each row by its
@@ -382,7 +385,9 @@ export class EntryRenderer {
             if (isEmptyMarkup(val) && !key) return "";
             return this.surface(rf, t, ["div", { class: LINE }, ["b", {}, humanise(key) + ": "], val]);
         }).filter(m => !isEmptyMarkup(m));
-        return this.editing ? [rows, this.relationAdd(rf, parent)] : rows;
+        // Empty (edit): the insert-first placeholder; non-empty needs no add line.
+        if (rows.length === 0) return this.editing ? this.emptyRelation(rf, parent) : "";
+        return rows;
     }
 
     /** A section: an optional bold heading, then the body indented. */

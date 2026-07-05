@@ -739,10 +739,23 @@ export class LexemeEditor {
                         ['div', {class: 'flex-grow-1'}, body],
                         menu];
             },
-            relationAdd: (rf, parentId) =>
-                ['div', {class: `-rel-${parentId.factId}-${rf.tag}- lm-me-add`,
-                         ...this.metaReloadAttrs(parentId.entryId)},
-                 this.addButtons(parentId.entryId, parentId.factId, rf)],
+            emptyRelation: (rf, parentId) => {
+                // Bounding-group relations add via their per-book flow; other
+                // insertable relations get an "Insert <prompt>" menu; read-only
+                // ones (images) get no add.
+                let affordance: Markup = '';
+                if(rf.scalarFields.some(isBoundingGroupField))
+                    affordance = this.addButtons(parentId.entryId, parentId.factId, rf);
+                else if(!rf.scalarFields.some(isDialogReadOnly))
+                    affordance = action.actionMenu(
+                        [{label: `Insert ${rf.prompt}`, mode: {kind: 'modal',
+                          dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}}],
+                        {ariaLabel: `Add ${rf.prompt}`});
+                return ['div', {class: `-rel-${parentId.factId}-${rf.tag}- lm-me-empty d-flex align-items-center gap-2`,
+                                ...this.metaReloadAttrs(parentId.entryId)},
+                        ['span', {class: 'text-muted fst-italic'}, `${rf.prompt} — empty`],
+                        affordance];
+            },
         };
     }
 
@@ -858,9 +871,9 @@ export class LexemeEditor {
             {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
                 dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}},
             ...(insertable ? [
-                {label: 'Insert before', mode: {kind: 'modal' as const,
+                {label: `Insert ${rf.prompt} before`, mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
-                {label: 'Insert after', mode: {kind: 'modal' as const,
+                {label: `Insert ${rf.prompt} after`, mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ] : []),
             {label: 'Move up', mode: {kind: 'immediate',
