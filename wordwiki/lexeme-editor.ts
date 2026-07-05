@@ -890,10 +890,19 @@ export class LexemeEditor {
 
     /** The inline "was: <old>" for an edited row: the changelog's diff family
      *  (deletions struck, long unchanged runs elided, nicest strategy), or the
-     *  baseline's plain rendered values when the change isn't textual. */
+     *  baseline's plain rendered values when the change isn't textual.  A
+     *  pending version whose VALUES equal the baseline is a MOVE (only the
+     *  order key differs) - "was: <the same thing>" would read as a bug, so
+     *  the change is named instead. */
     private wasAnnotation(rf: model.RelationField, review: FactReview<Assertion>): Markup {
         const baseline = review.baseline;
         if(!baseline) return '';
+        const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
+        const sameValues = rf.scalarFields.every(f => f instanceof model.PrimaryKeyField
+            || norm((baseline as any)[f.bind]) === norm((review.content as any)[f.bind]));
+        if(sameValues)
+            return ['span', {class: 'lm-cl-chip lm-cl-chip-edited'},
+                    baseline.order_key !== review.content.order_key ? 'moved' : 'updated'];
         const fromText = factText(rf, baseline), toText = factText(rf, review.content);
         const old = fromText !== toText
             ? diffValues(fromText, toText).from

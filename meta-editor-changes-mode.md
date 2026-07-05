@@ -48,6 +48,12 @@ mode's collapsed form: the mental model is "the dot, opened up".
   the moment an old value gets its own indented line, the doom is back.
 - **Added rows**: no diff - a small "added" chip (the changelog's chip class,
   same vocabulary).
+- **Moves** (dz): a move re-asserts IDENTICAL values with a new order key, so
+  the was-fallback would render "was: <the same thing>" - a bug to the eye.
+  When the pending version's values equal the baseline's, the annotation is a
+  "moved" chip instead ("updated" in the values-equal, order-equal corner).
+  The changelog doesn't summarize moves either - upgrading it to the same
+  detection is a possible follow-up.
 - **Deleted facts**: rows for these do NOT render in the tree (the renderer
   walks current tuples and must stay that way).  Instead the changes BAR lists
   each one WITH ITS VALUE ("Deleted: Gloss - xyz", from the published

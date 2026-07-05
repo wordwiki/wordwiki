@@ -86,6 +86,24 @@ test("changes mode: a pending ADD gets the changelog's added chip", async () => 
     });
 });
 
+test("changes mode: a MOVE (identical values, new order key) says 'moved', not 'was: <same>'", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, gls} = seedClean(fx);
+            fx.ww.applyTransaction([mkEdit(gls, 2010, tl.next(),
+                                           {attr1: "water bucket", order_key: "0.7"})],
+                                   {quiet: true});
+            const changes = metaHtml(fx, true);
+            assertStringIncludes(changes, ">moved</span>");
+            assertEquals(changes.includes("lm-me-chg-was"), false);   // no "was: <the same thing>"
+            assertStringIncludes(changes, "1 unapproved change");     // still pending, still counted
+
+            fx.ww.lexeme.approveAllChanges(1000);                     // ...and approvable
+            assertStringIncludes(metaHtml(fx, true), "No unapproved changes.");
+        });
+    });
+});
+
 test("changes mode: ROWLESS changes (headword, hidden editorial) are listed in the bar", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
