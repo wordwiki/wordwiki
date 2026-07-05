@@ -36,6 +36,7 @@ export interface ChangeEvent {
     when: number;              // valid_from of the version
     whoInitials: string;       // the actor as an initialism (the column stays narrow)
     whoName: string;           // the full name, for the hover title
+    authorUsername?: string;   // the raw change_by_username (the feed's approval filter keys on it)
     automated?: boolean;       // a batch import/migration identity
     // What the event is ABOUT, shown as a scannable column (when showSubject):
     // the field, and - in a multi-lexeme (global) list - the lexeme headword.

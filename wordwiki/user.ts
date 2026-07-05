@@ -172,12 +172,20 @@ export class UserTable extends Table<User> {
         // tap anywhere drills in via the lm-nav-link name); the pencil - shown
         // only to viewers with recordEdit - is the only edit affordance.
         const item = this.detailItemProps(id, `/ww/wordwiki.users.renderUserRowById(${id})`);
+        // Their activity feed: threads (their changes + what landed on top).
+        // Built inline (a stable 2-field feed URL) to avoid a change-feed <-> user
+        // import cycle.  stopPropagation so it doesn't also drill into the row.
+        const activityUrl =
+            `/ww/wordwiki.changes({restrict_to_user:${JSON.stringify(u.username)},user_mode:"participating"})`;
         return ['div', {...item, 'data-testid': `user-row-${id}`},
             ['div', {class: 'lm-item-body'},
              ['div', {class: 'lm-item-primary'},
               ['a', {...templates.pageLinkProps(`/ww/wordwiki.users.detailPage(${id})`),
                      class: 'lm-nav-link'}, u.name || u.username]],
              ['div', {class: 'lm-item-secondary'}, secondary]],
+            ['a', {href: activityUrl, class: 'btn btn-sm btn-outline-secondary me-2',
+                   onclick: 'event.stopPropagation()', title: `${u.name || u.username}’s activity`},
+             'Activity'],
             this.canEditRecord(u) ? this.editPencil(id) : undefined,
             navChevron(),
         ];

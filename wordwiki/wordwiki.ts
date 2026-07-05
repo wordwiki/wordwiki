@@ -458,6 +458,16 @@ export class WordWiki extends LiminalApp {
         return this.feed.changesPage(q);
     }
 
+    // "My activity": the change feed as the logged-in user's THREADS - their
+    // changes plus every comment/revert/approval that landed on top of them
+    // (see change-feed.ts participating mode).  A one-click preset of the feed.
+    @route(authenticated)
+    myActivity(): templates.Page | server.Response {
+        const me = this.currentUsername();
+        return this.feed.changesPage(
+            me ? {restrict_to_user: me, user_mode: 'participating'} : {});
+    }
+
     // The monthly activity report (see activity-report.ts).  One {}-literal
     // query argument (activityQuery) fully determines the page.
     @route(authenticated)
@@ -481,6 +491,7 @@ export class WordWiki extends LiminalApp {
             ['br', {}],
             ['h3', {}, 'Review'],
             ['ul', {},
+             ['li', {}, ['a', {href:'/ww/wordwiki.myActivity()'}, 'My activity (my changes + what landed on top)']],
              ['li', {}, ['a', {href:'/ww/wordwiki.changes()'}, 'Recent changes']],
              ['li', {}, ['a', {href:'/ww/wordwiki.activity()'}, 'Monthly activity']]],
 

@@ -874,6 +874,7 @@ export class LexemeEditor {
                 when: a.valid_from,
                 whoInitials: initials(u, u ? entrySchema.users[u] : undefined),
                 whoName: userLabel(u),
+                authorUsername: u ?? undefined,
                 automated: isAutomatedUsername(u),
                 field: rf.prompt,
                 kind,

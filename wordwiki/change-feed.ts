@@ -44,7 +44,7 @@ import * as server from '../liminal/http-server.ts';
 import {db} from '../liminal/db.ts';
 import {route, authenticated} from '../liminal/security.ts';
 import * as action from '../liminal/action.ts';
-import {FieldSet, IntegerField, EnumField, TimestampField, type Tuple} from '../liminal/table.ts';
+import {FieldSet, IntegerField, EnumField, TimestampField, CheckboxField, type Tuple} from '../liminal/table.ts';
 import * as templates from './templates.ts';
 import * as entrySchema from './entry-schema.ts';
 import {isAutomatedUsername} from './user.ts';
@@ -90,6 +90,20 @@ export const feedUsers: Record<string, string> = Object.fromEntries(
     Object.entries(entrySchema.users)
         .filter(([u, _]) => !isAutomatedUsername(u) && u !== '___'));
 
+// The user-filter mode (only meaningful with restrict_to_user set):
+//   'by'          - changes that user MADE (the original filter);
+//   'participating' - that user's THREADS: every change (by anyone) to a fact
+//                   the user has touched, so they see the comments, reverts and
+//                   approvals that landed ON TOP of their work.  "Touched a
+//                   fact" = authored a real change to it (CHANGE_ROW), matching
+//                   the review UI's participant notion (lexeme-editor.ts).
+export const USER_MODE_BY = 'by';
+export const USER_MODE_PARTICIPATING = 'participating';
+const userModes: Record<string, string> = {
+    [USER_MODE_BY]: 'Changes they made',
+    [USER_MODE_PARTICIPATING]: 'Their threads (+ what landed on top)',
+};
+
 /** The feed's page-query schema: the page is a pure function of this one
  *  {}-literal route argument, and the filter dialog is generated from these
  *  same fields (one schema mechanism - see FieldSet). */
@@ -97,6 +111,10 @@ export const feedQuery = new FieldSet('feed_query', [
     new TimestampField('from_time', {nullable: true, prompt: 'From'}),
     new TimestampField('to_time', {nullable: true, prompt: 'To'}),
     new UserField('restrict_to_user', feedUsers, {nullable: true, prompt: 'Only changes by'}),
+    new EnumField('user_mode', userModes, {nullable: true, default: USER_MODE_BY,
+                                           prompt: 'That user\'s'}),
+    new CheckboxField('hide_user_approvals', {nullable: true, default: false,
+                                              prompt: 'Hide that user\'s own approvals'}),
     new IntegerField('max_rows', {nullable: true, default: FEED_PAGE_ROWS, prompt: 'Max rows'}),
 ]);
 
@@ -104,7 +122,26 @@ export interface FeedQuery extends Tuple {
     from_time: number|null;
     to_time: number|null;
     restrict_to_user: string|null;
+    user_mode: string;
+    hide_user_approvals: boolean;
     max_rows: number;
+}
+
+/** The username whose OWN approvals the display should drop (empty = none):
+ *  only when a user is filtered AND the hide toggle is on.  Both the SQL clump
+ *  selection and the tree-walk display filter on this (they must agree). */
+function approvalsToHide(query: FeedQuery): string {
+    return query.restrict_to_user && query.hide_user_approvals ? query.restrict_to_user : '';
+}
+
+/** The feed URL for one user's activity - their threads (participating) by
+ *  default, i.e. their changes AND everything that landed on top.  The
+ *  one-click "activity for X" entry point (Home, the user table, ...); an
+ *  un-stamped visit redirects to the canonical to_time-stamped URL. */
+export function feedForUserUrl(username: string,
+                               mode: string = USER_MODE_PARTICIPATING): string {
+    return `/ww/wordwiki.changes(${feedQuery.literal(feedQuery.normalize(
+        {restrict_to_user: username, user_mode: mode}))})`;
 }
 
 // ---------------------------------------------------------------------------
@@ -259,7 +296,12 @@ export class ChangeFeed {
     // the editor; this is the reminder that a filter is on).
     private filterSummary(query: FeedQuery): Markup {
         const parts: string[] = [];
-        if(query.restrict_to_user) parts.push(`by ${userLabel(query.restrict_to_user)}`);
+        if(query.restrict_to_user) {
+            const who = userLabel(query.restrict_to_user);
+            parts.push(query.user_mode === USER_MODE_PARTICIPATING
+                ? `${who}’s threads` : `by ${who}`);
+            if(query.hide_user_approvals) parts.push('their approvals hidden');
+        }
         if(query.from_time) parts.push(`after ${timestamp.formatTimestampAsLocalTime(query.from_time)}`);
         return parts.length > 0
             ? ['span', {class: 'text-muted small'}, parts.join(' · ')] : [];
@@ -310,7 +352,9 @@ export class ChangeFeed {
         const moreUrl = nextBefore === undefined ? undefined
             : `/ww/wordwiki.changes(${feedQuery.literal(
                   {...query, max_rows: query.max_rows + FEED_PAGE_ROWS})})`;
-        const groups = kept.map(c => this.clumpGroup(c, anchor)).filter(g => g !== null);
+        const hideApprovalsBy = approvalsToHide(query);
+        const groups = kept.map(c => this.clumpGroup(c, anchor, hideApprovalsBy))
+            .filter(g => g !== null);
         return ['div', {class: 'lm-feed'},
             groups.map(g => renderChangeGroup(g!)),
             ['div', {class: 'lm-feed-more mt-2'},
@@ -330,10 +374,11 @@ export class ChangeFeed {
      *  changes is their STATUS (approvals landed while the reviewer was in
      *  the lexeme), refreshed without touching the rest of the feed. */
     @route(authenticated)
-    renderFeedClump(entry_id: number, from: number, to: number, anchor: number = 0): Markup {
+    renderFeedClump(entry_id: number, from: number, to: number, anchor: number = 0,
+                    hideApprovalsBy: string = ''): Markup {
         const rows = this.fetchEntryEvents(entry_id, from, to);
         return clumpFeedEvents(rows)
-            .map(c => this.clumpGroup(c, anchor))
+            .map(c => this.clumpGroup(c, anchor, hideApprovalsBy))
             .filter(g => g !== null)
             .map(g => renderChangeGroup(g!));
     }
@@ -341,13 +386,17 @@ export class ChangeFeed {
     // A clump's ChangeGroup, or null when it carries no actual change events
     // (every in-range row rendered as a baseline - the standing value, no
     // event).  Events are built once here and reused for the badge counts.
-    private clumpGroup(c: FeedClump, anchor: number): ChangeGroup | null {
-        const events = this.clumpEvents(c);
+    // `hideApprovalsBy` (a username, or '') drops that user's own approval
+    // lines - the display half of the hide-user-approvals filter; it rides the
+    // reload hx-get so a refreshed clump keeps the same filtered event set.
+    private clumpGroup(c: FeedClump, anchor: number, hideApprovalsBy: string): ChangeGroup | null {
+        const events = this.clumpEvents(c, hideApprovalsBy);
         if(events.length === 0) return null;
+        const hideArg = hideApprovalsBy ? `, ${JSON.stringify(hideApprovalsBy)}` : '';
         return {
             attrs: {
                 class: `-feed-clump-${c.entry_id}-${c.to}- lm-cl-group lm-feed-clump`,
-                'hx-get': `${F}.renderFeedClump(${c.entry_id}, ${c.from}, ${c.to}, ${anchor})`,
+                'hx-get': `${F}.renderFeedClump(${c.entry_id}, ${c.from}, ${c.to}, ${anchor}${hideArg})`,
                 'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
             },
             header: this.clumpHeader(c, anchor),
@@ -406,7 +455,7 @@ export class ChangeFeed {
     // per-fact chains, imported base set hidden), restricted to the clump's
     // time range.  All in-range events on this entry are the clump's - any
     // other editor's event would have closed it.
-    private clumpEvents(c: FeedClump): ChangeEvent[] {
+    private clumpEvents(c: FeedClump, hideApprovalsBy: string = ''): ChangeEvent[] {
         const events: ChangeEvent[] = [];
         let entryTuple;
         try {
@@ -418,12 +467,17 @@ export class ChangeFeed {
             if(t.tupleVersions.length === 0) return;
             if(!t.tupleVersions.some((v: any) =>
                 v.assertion.valid_from >= c.from && v.assertion.valid_from <= c.to)) return;
-            for(const ev of this.app.lexeme.factChangeEvents(t.schema, t, true, true))
+            for(const ev of this.app.lexeme.factChangeEvents(t.schema, t, true, true)) {
                 // In range, and an actual CHANGE: a baseline is the standing
                 // accepted value (a state, not an event), so it never belongs
                 // in a "recent changes" feed.
-                if(ev.when >= c.from && ev.when <= c.to && ev.kind !== 'baseline')
-                    events.push(ev);
+                if(ev.when < c.from || ev.when > c.to || ev.kind === 'baseline') continue;
+                // hide-user-approvals: drop that user's OWN routine approvals
+                // (others' approvals of their work still show).
+                if(hideApprovalsBy && ev.kind === 'approved'
+                   && ev.authorUsername === hideApprovalsBy) continue;
+                events.push(ev);
+            }
         });
         events.sort((a, b) => a.when - b.when);
         return events;
@@ -460,11 +514,30 @@ export class ChangeFeed {
                AND id1 IS NOT NULL
                AND ${CHANGE_ROW}
                AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
-               ${query.restrict_to_user ? 'AND change_by_username = :restrict_to_user' : ''}
+               ${this.userFilterSql(query)}
              ORDER BY valid_from DESC
              ${limit !== null ? `LIMIT ${limit}` : ''}`,
             params);
         return rows.map(r => ({...r, username: r.username ?? ''}));
+    }
+
+    // The user-scope clause for the clump-selection query (empty when no user
+    // is filtered).  'by' = rows that user authored; 'participating' = rows on
+    // any FACT that user authored a real change to (the subquery is the set of
+    // their touched fact ids).  hide_user_approvals additionally drops that
+    // user's own approval rows here so an all-my-approvals session is not even
+    // selected as a clump (the display filter drops the lines - they must
+    // agree).
+    private userFilterSql(query: FeedQuery): string {
+        if(!query.restrict_to_user) return '';
+        const scope = query.user_mode === USER_MODE_PARTICIPATING
+            ? `AND id IN (SELECT DISTINCT id FROM dict
+                          WHERE change_by_username = :restrict_to_user AND ${CHANGE_ROW})`
+            : `AND change_by_username = :restrict_to_user`;
+        const hideApprovals = query.hide_user_approvals
+            ? `AND NOT (change_by_username = :restrict_to_user AND change_action = 'approved')`
+            : '';
+        return `${scope} ${hideApprovals}`;
     }
 
     /** One entry's human changes in a closed range (the clump-reload fetch). */

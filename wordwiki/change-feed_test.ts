@@ -227,6 +227,61 @@ test("feed: the participant filter keeps only that editor's clumps", async () =>
     });
 });
 
+test("feed: participating mode shows what landed ON TOP of the user's facts", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedFeed(fx);
+            // djz edits the spelling (djz's change to fact 1010).
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(),
+                {attr1: "XYZZY", change_by_username: "djz"})], {quiet: true});
+        });
+        // dmm comments on the SAME fact - landing on top of djz's work.
+        as(fx, "dmm", () => fx.ww.lexemeOps.commentFact(1010, "are you sure?"));
+        as(fx, "djz", () => {
+            const anchor = fx.ww.lastAllocatedTxTimestamp;
+            // 'by' djz: only djz's own change - one clump, no comment.
+            const byMe = feedHtml(fx, {to_time: anchor, restrict_to_user: "djz"});
+            assertEquals(count(byMe, "lm-feed-clump"), 1);
+            assertEquals(byMe.includes("are you sure?"), false);
+            // 'participating' djz: djz's change AND dmm's comment on it - two
+            // clumps, the comment now visible.
+            const threads = feedHtml(fx,
+                {to_time: anchor, restrict_to_user: "djz", user_mode: "participating"});
+            assertEquals(count(threads, "lm-feed-clump"), 2);
+            assertStringIncludes(threads, "are you sure?");
+        });
+    });
+});
+
+test("feed: hide-user-approvals drops the user's OWN approvals, keeps the work under them", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, spl} = seedFeed(fx);
+            // djz edits the spelling (someone's real work)...
+            fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(),
+                {attr1: "XYZZY", change_by_username: "djz"})], {quiet: true});
+        });
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(1010));   // dmm approves djz's edit
+        as(fx, "dmm", () => {
+            const anchor = fx.ww.lastAllocatedTxTimestamp;
+            // dmm participates in fact 1010 (by approving it): threads show
+            // djz's edit + dmm's approval = two clumps.
+            const shown = feedHtml(fx,
+                {to_time: anchor, restrict_to_user: "dmm", user_mode: "participating"});
+            assertEquals(count(shown, "lm-feed-clump"), 2);
+            assertStringIncludes(shown, "lm-cl-chip-approved");   // dmm's approval EVENT
+            // Hiding dmm's OWN approvals drops the approval event/clump but
+            // keeps djz's underlying edit (the status badge still reflects the
+            // fact's current approved state - only the routine ACTION is hidden).
+            const hidden = feedHtml(fx, {to_time: anchor, restrict_to_user: "dmm",
+                                         user_mode: "participating", hide_user_approvals: true});
+            assertEquals(count(hidden, "lm-feed-clump"), 1);
+            assertStringIncludes(hidden, "XYZZY");                     // djz's work stays
+            assertEquals(hidden.includes("lm-cl-chip-approved"), false); // dmm's approval event gone
+        });
+    });
+});
+
 test("feed: a clump fragment re-renders in place with its current statuses", async () => {
     await withTestDb((fx) => {
         let editT = 0, anchor = 0;
