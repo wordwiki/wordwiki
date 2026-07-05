@@ -1250,29 +1250,25 @@ export class TaskTable extends Table<Task> {
                     .map(m => memberShortName(m)).join(', ') || 'nobody yet';
         }
 
+        // Checking is a member-CONTENT edit: the row key matches this block,
+        // the content fk key matches the little open-count fragment - both swap
+        // in one trip.  The shape-keyed list wrapper is deliberately not touched
+        // (tasks stay in place when toggled).
+        const toggle = `txd(${JSON.stringify([sel(this.rowKey(id)), sel(this.fkKey('project_id', t.project_id))])})\`rabid.task.toggleDone(${id})\``;
         return [h.div, {...props, class: 'lm-task-block ' + props.class,
                         'data-testid': `task-block-${id}`},
-            // The task line: whole row navigates to the task detail (lm-navigable);
-            // the checkbox toggles done and the ☰ holds the rest - both real
-            // controls the navigable-click guard declines, so tapping them never
-            // navigates.  No separate pencil: Edit lives in the ☰.
-            [h.div, {class: 'd-flex align-items-center gap-2 lm-navigable',
-                     onclick: 'lmNavigableClick(event)'},
+            // The task line: the checkbox AND the title text toggle done (the
+            // common verb); everything else - Edit, checklist, reorder - lives
+            // in the ☰.  (Rarely-used editing is one tap away, not the default.)
+            [h.div, {class: 'd-flex align-items-center gap-2'},
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
-                        ...(canEdit
-                            // A toggle is a member-CONTENT edit: the row key
-                            // matches this block, the content fk key matches
-                            // the little open-count fragment - both swap in
-                            // one trip.  The shape-keyed list wrapper is
-                            // deliberately not touched (tasks stay in place
-                            // when toggled).
-                            ? {onclick: `txd(${JSON.stringify([sel(this.rowKey(id)), sel(this.fkKey('project_id', t.project_id))])})\`rabid.task.toggleDone(${id})\``}
-                            : {disabled: ''}),
+                        ...(canEdit ? {onclick: toggle} : {disabled: ''}),
                         'aria-label': `Mark ${t.title || 'task'} done`}],
              [h.div, {class: 'lm-item-primary' + (done ? ' text-muted' : '')},
-              [h.a, {...templates.pageLinkProps(`/rabid.task.detailPage(${id})`),
-                     class: 'lm-nav-link' + (done ? ' text-decoration-line-through' : '')},
+              [h.span, {class: (canEdit ? 'lm-check-label' : '')
+                              + (done ? ' text-decoration-line-through' : ''),
+                        ...(canEdit ? {onclick: toggle} : {})},
                t.title || 'Untitled task'],
               t.status === 'in-progress'
                   ? [h.span, {class: 'badge rounded-pill bg-info-subtle text-info-emphasis fw-normal ms-2'},
@@ -2025,7 +2021,11 @@ export class SubtaskTable extends Table<Subtask> {
     renderChecklist(task_id: number): Markup {
         const items = this.forTask.all({task_id});
         const canEdit = canEditTask(task_id);
-        const props = liveReloadableProps([this.fkKey('task_id', task_id)],
+        // SHAPE-keyed live wrapper: reloads only when the checklist's shape
+        // changes (item added / removed / reordered), NOT when an item is
+        // checked - so a check re-renders just that one row (each item is its
+        // own live fragment below).  Mirrors the task-list shape upgrade.
+        const props = liveReloadableProps([this.shapeKey('task_id', task_id)],
                                           `rabid.subtask.renderChecklist(${task_id})`);
         return [h.div, props,
             items.length === 0
@@ -2033,6 +2033,13 @@ export class SubtaskTable extends Table<Subtask> {
                 : [h.div, {class: 'list-group lm-list'},
                    items.map(s => this.renderChecklistRow(s, canEdit))],
         ];
+    }
+
+    // Reload target for a single checklist item (a check re-renders only this).
+    @route(authenticated)
+    renderChecklistRowById(subtask_id: number): Markup {
+        const s = this.getById(subtask_id);
+        return this.renderChecklistRow(s, canEditTask(s.task_id));
     }
 
     renderChecklistRow(s: Subtask, canEdit: boolean): Markup {
@@ -2044,18 +2051,29 @@ export class SubtaskTable extends Table<Subtask> {
                s.done_time ? compactDate(s.done_time) : undefined]
                   .filter(Boolean).join(' · ')
             : '';
-        return [h.div, {class: 'list-group-item lm-item d-flex align-items-center gap-2',
+        // Each item is its OWN live fragment (its row key): a check emits the
+        // row key and nothing else the wrapper watches, so only this row swaps
+        // (own actor via speculation; another window via the live poll).
+        const rowProps = liveReloadableProps([this.rowKey(s.subtask_id)],
+                                             `rabid.subtask.renderChecklistRowById(${s.subtask_id})`);
+        // Checking is a content edit: speculate this row's key so it swaps in
+        // one trip; the shape wrapper is deliberately untouched.
+        const toggle = `txd(${JSON.stringify([sel(this.rowKey(s.subtask_id))])})\`rabid.subtask.toggle(${s.subtask_id})\``;
+        const bodyClass = 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')
+                          + (canEdit ? ' lm-check-label' : '');
+        return [h.div, {...rowProps,
+                        class: 'list-group-item lm-item d-flex align-items-center gap-2 ' + rowProps.class,
                         'data-testid': `subtask-row-${s.subtask_id}`},
             [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                        ...(s.done ? {checked: ''} : {}),
-                       ...(canEdit
-                           ? {onclick: `txd(${JSON.stringify([sel(this.fkKey('task_id', s.task_id))])})\`rabid.subtask.toggle(${s.subtask_id})\``}
-                           : {disabled: ''})}],
-            [h.div, {class: 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')},
-             s.title],
+                       ...(canEdit ? {onclick: toggle} : {disabled: ''})}],
+            // Clicking the item's text also checks/unchecks it (the editor lives
+            // in the ☰ menu - editing is rare, checking is the common verb).
+            [h.div, {class: bodyClass, ...(canEdit ? {onclick: toggle} : {})}, s.title],
             prov ? [h.span, {class: 'text-muted small flex-shrink-0'}, prov] : undefined,
             // One ☰ for everything beyond the checkbox (no separate pencil):
-            // edit, reorder, remove.  Lighter than the parent task line.
+            // edit, reorder, remove.  Reorder/remove change the SHAPE, so they
+            // speculate the shape key (the wrapper is the anticipated section).
             canEdit
                 ? action.actionMenu([
                       {label: 'Edit…',
@@ -2063,15 +2081,15 @@ export class SubtaskTable extends Table<Subtask> {
                               dialogUrl: `/rabid.subtask.renderForm(rabid.subtask.getById(${s.subtask_id}))`}},
                       {label: 'Move up',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`,
-                              deps: [sel(this.fkKey('task_id', s.task_id))]}},
+                              deps: [sel(this.shapeKey('task_id', s.task_id))]}},
                       {label: 'Move down',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveDown(${s.subtask_id})`,
-                              deps: [sel(this.fkKey('task_id', s.task_id))]}},
+                              deps: [sel(this.shapeKey('task_id', s.task_id))]}},
                       {label: 'Remove…',
                        mode: {kind: 'confirm',
                               expr: `rabid.subtask.remove(${s.subtask_id})`,
                               message: `Remove "${s.title}"?`,
-                              deps: [sel(this.fkKey('task_id', s.task_id))]}},
+                              deps: [sel(this.shapeKey('task_id', s.task_id))]}},
                   ], {ariaLabel: `More actions for ${s.title}`})
                 : undefined,
         ];
@@ -2091,7 +2109,7 @@ export class SubtaskTable extends Table<Subtask> {
                 submitLabel: 'Add',
                 hidden: completed ? {task_id, done: 1} : {task_id},
                 dispatch: {onsubmit:
-                    `event.preventDefault(); txd(${JSON.stringify([sel(this.fkKey('task_id', task_id))])})\`rabid.subtask.addItem(\${getFormJSON(event.target)})\``},
+                    `event.preventDefault(); txd(${JSON.stringify([sel(this.shapeKey('task_id', task_id))])})\`rabid.subtask.addItem(\${getFormJSON(event.target)})\``},
             });
     }
 }

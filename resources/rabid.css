@@ -320,3 +320,17 @@ body .ts-dropdown {
     padding: 0.125rem 0;
     background: transparent;
 }
+
+/* Checkboxes on a task line / checklist item: the Bootstrap default unchecked
+   box is a faint hairline that disappears against a white background.  A touch
+   more border weight makes it noticeable without shouting. */
+.lm-task-block .form-check-input,
+.lm-item .form-check-input {
+    border: 1.5px solid #9aa0a6;
+}
+
+/* Text beside a checkbox that checks/unchecks it on click (the common verb;
+   editing is in the ☰ menu). */
+.lm-check-label {
+    cursor: pointer;
+}

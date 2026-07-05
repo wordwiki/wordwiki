@@ -648,13 +648,10 @@ export abstract class LiminalApp {
 
         // Partition the actual dirty set against the speculation.  Leftover
         // (unanticipated) keys don't sink the round: they're returned for the
-        // client to resolve the old way.  Only a round with NO anticipated
-        // keys is a miss (nothing useful can be rendered here).
+        // client to resolve the old way.
         const targets: string[] = result.targets;
         const anticipated = targets.filter(t => (deps as string[]).includes(t));
         const leftover = targets.filter(t => !(deps as string[]).includes(t));
-        if(anticipated.length === 0)
-            return {...result, speculation: 'miss'};
 
         // Render only the sections an ANTICIPATED dirty key matched (a
         // section matched only by over-speculated keys is unchanged),
@@ -663,6 +660,18 @@ export abstract class LiminalApp {
         for(const s of sections as Array<{url: string, keys: string[]}>)
             if(s.keys.some(k => anticipated.includes(k)) && !hitUrls.includes(s.url))
                 hitUrls.push(s.url);
+
+        // A round where NO section actually renders is a miss - even if some
+        // dirty key was in `deps`.  This happens when a contained fragment's
+        // section was pruned (removeContainedRoots) as "covered" by an
+        // ancestor whose OWN trigger keys didn't fire: e.g. editing a checklist
+        // item's title dirties the item's row key, but the only section sent is
+        // the shape-keyed list wrapper, which renders on membership changes, not
+        // a title edit.  Falling back to the plain reload lets the client's
+        // reload() front door resolve the actual targets (the row reloads by its
+        // own key) - correctness over the one-trip optimization.
+        if(hitUrls.length === 0)
+            return {...result, speculation: 'miss'};
 
         try {
             const rendered: Array<{url: string, html: string}> = [];

@@ -600,6 +600,46 @@ test("checklist items edit via the pencil: title-only dialog, reload targets the
     });
 });
 
+test("checking a checklist item re-renders only that item (shape system); text+checkbox toggle", async () => {
+    await withTestDb(async ({ bob }) => {
+        const {task_id, group_id} = seedTask();
+        addToGroup(group_id, bob);
+        asUser(bob, () => rabid.subtask.addItem({task_id, title: 'Get quotes'}));
+        const item = asSystem(() => rabid.subtask.forTask.all({task_id}))[0];
+        const sid = item.subtask_id;
+
+        const list = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
+        // The wrapper registers the SHAPE key (reloads only on add/remove/move),
+        // not the whole-checklist content key.
+        assert(String(attr(list, 'class')).includes(`-subtask-task_id-${task_id}-shape-`), 'wrapper is shape-keyed');
+        assert(!String(attr(list, 'class')).includes(`-subtask-task_id-${task_id}- `), 'wrapper not content-keyed');
+        // Each item is its own live fragment: row key + a self reload URL.
+        const row = getByTestId(list, `subtask-row-${sid}`);
+        assert(String(attr(row, 'class')).includes(`-subtask-${sid}-`), 'row registers its row key');
+        assert(String(attr(row, 'hx-get')).includes(`renderChecklistRowById(${sid})`), 'row reloads itself');
+        // Both the checkbox AND the text toggle; editing is only in the ☰.
+        const checkbox = find(row, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox');
+        const label = find(row, byClass('lm-check-label'));
+        assert(String(attr(checkbox!, 'onclick')).includes(`subtask.toggle(${sid})`), 'checkbox toggles');
+        assert(!!label && String(attr(label, 'onclick')).includes(`subtask.toggle(${sid})`), 'text toggles');
+
+        // Toggling targets the ROW (only that item swaps), not the wrapper.
+        const res = await withDirtyTargets(() => asUser(bob, () => rabid.subtask.toggle(sid)));
+        assert(res.targets.includes(`.-subtask-${sid}-`), 'toggle targets the row key');
+    });
+});
+
+test("a task's title toggles done on click; the editor lives in the ☰ (no detail nav-link)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const {task_id} = seedTask();
+        const block = await asUser(alice, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
+        assert(!find(block, byClass('lm-nav-link')), 'task title is not a detail nav-link');
+        const label = find(block, byClass('lm-check-label'));
+        assert(!!label && String(attr(label!, 'onclick')).includes(`toggleDone(${task_id})`), 'title click toggles done');
+        assert(hasText(block, 'Edit'), 'Edit still available in the menu');
+    });
+});
+
 test("assignment inheritance: project assignees work all non-overridden tasks; overrides are EXCLUSIVE", async () => {
     await withTestDb(async ({ alice, bob, carol }) => {
         // A project assigned to bob+carol with two tasks: one inherited, one

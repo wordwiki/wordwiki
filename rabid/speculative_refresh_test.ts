@@ -80,6 +80,31 @@ test("full-coverage speculation has no reloadTargets; leading '/' section urls t
     });
 });
 
+test("a dirty key in deps but covered by NO rendered section -> reload (not a swap that drops it)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const { task_id } = seedTask();
+        await as(alice, async () => {
+            // The shape of a checklist-item title edit: the ITEM's row key is
+            // dirtied (and over-speculated into deps), but the client sent only
+            // the SHAPE-keyed list wrapper (removeContainedRoots pruned the row
+            // as "contained"), and the shape key is NOT emitted by a title edit.
+            // No section renders -> must fall back to reload and RETURN the row
+            // key (it was silently dropped: {action:swap,sections:[],targets}
+            // whose targets the client's swap handler ignores).
+            const result = {action: 'reload',
+                targets: ['.-subtask-', '.-subtask-5-', `.-subtask-task_id-${task_id}-`]};
+            const out = await getRabid().applySpeculation(result, {
+                deps: ['.-subtask-5-', `.-subtask-task_id-${task_id}-shape-`],   // over-speculated superset
+                sections: [{url: `rabid.subtask.renderChecklist(${task_id})`,
+                            keys: [`.-subtask-task_id-${task_id}-shape-`]}],   // shape key not emitted
+            });
+            assertEquals(out.action, 'reload');
+            assertEquals(out.speculation, 'miss');
+            assert(out.targets.includes('.-subtask-5-'), 'the item row key survives for the client to reload');
+        });
+    });
+});
+
 test("nothing anticipated -> plain reload with speculation:'miss'", async () => {
     await withTestDb(async ({ alice }) => {
         const { task_id } = seedTask();
