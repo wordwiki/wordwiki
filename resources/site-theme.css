@@ -127,6 +127,15 @@ body {
    The first block under any container has no top gap. */
 .lm-me-section, .lm-me-line, .lm-me-empty { margin-top: .55rem; }
 .lm-me-line + .lm-me-line { margin-top: .12rem; }
+/* EDIT mode wraps each RELATION in a shape-keyed fragment (.lm-me-rel,
+   meta-editor-refresh-design.md); the wrapper takes the relation's place in
+   the rhythm and the first element inside it drops its own top margin.
+   Line-form relations (Part of speech / Translation / Gloss) run tight so
+   they still read as one block; sections keep the block gap. */
+.lm-me-rel { margin-top: .55rem; }
+.lm-me-rel-line + .lm-me-rel-line,
+.lm-me-editable + .lm-me-rel-line { margin-top: .12rem; }  /* a container's scalar line (Part of speech) runs tight into the wrappers below */
+.lm-me-rel > :first-child { margin-top: 0; }
 /* EDIT mode wraps each line in an editable-surface flex row (.lm-me-editable);
    the wrapper takes over the line's place in the rhythm, and the line inside
    it must NOT keep its own top margin (it would push the text below the ☰

@@ -351,15 +351,14 @@ function setAssertionFields(assertion: Assertion, rel: model.RelationField,
 // newId/placeholderTxTime/isTombstone moved to lexeme-ops.ts (shared with
 // the table pages' assertion verbs); imported above.
 
-// The editor's looks: 'edit' shows each fact's bare current value with
+// The editor's two looks: 'edit' shows each fact's bare current value with
 // editing affordances; 'review' shows each fact diffed against its published
 // baseline, adds approve/revert/comment, and surfaces pending deletions (see
 // publication-model.md).  The mode rides in each fragment's hx-get, so an
-// in-place reload re-renders in the same mode.  'meta' is the metadata-driven
-// editor (metaEditPage): same dialogs/verbs as 'edit', but its page has no
-// per-relation fragments - every mutation reloads the whole-entry root
-// (mutationTargets), which the meta page re-renders coarsely.
-export type EditMode = 'edit' | 'review' | 'meta';
+// in-place reload re-renders in the same mode.  (A third 'meta' mode existed
+// briefly to coarsen the metadata editor's reloads; fine-grained fragments +
+// uniform emission dissolved it - meta-editor-refresh-design.md.)
+export type EditMode = 'edit' | 'review';
 
 // Review-mode view state, carried in the entry fragment's hx-get so a reload
 // preserves it.  `participant` is a username whose threads to show, or
@@ -422,7 +421,7 @@ export function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined
 
 /** The edit mode carried in a dialog postback (defaults to plain editing). */
 function formMode(form: Record<string, any>): EditMode {
-    return form.mode === 'review' ? 'review' : form.mode === 'meta' ? 'meta' : 'edit';
+    return form.mode === 'review' ? 'review' : 'edit';
 }
 
 /** A user's display name for the history grid (the friendly name when known,
@@ -696,10 +695,16 @@ export class LexemeEditor {
     // add lines) are built HERE - reusing this editor's existing action
     // machinery - and injected as EditingHooks; the renderer only places them.
     //
-    // Refresh (first cut): every affordance element carries its fine-grained
-    // reload class (-fact- / -rel-) but redirects the reload to re-render the
-    // WHOLE metadata entry - coarse but correct.  (Fine-grained metadata
-    // fragments are a later optimisation.)
+    // Refresh: FINE-GRAINED, the liminal shape model over the assertion
+    // world's hand-minted keys (meta-editor-refresh-design.md).  Tuple
+    // surfaces are self-refreshing -fact- fragments; every relation rendering
+    // is wrapped as a -rel-<parent>-<tag>-shape- fragment (shape = membership
+    // and order: insert/delete/move re-render the list, content edits only
+    // the row); the <h1> is a -entry-<id>-title- fragment (headword/gloss
+    // edits feed it); the changes bar/hint is a -entry-<id>-activity-
+    // fragment (every mutation moves its count).  mutationTargets emits the
+    // matching keys; the whole-entry root reloads only for approve-all and
+    // review-mode actions.
 
     /** The reload page (a normal navigation target).  `changes` opts into the
      *  VIEW-CHANGES look (meta-editor-changes-mode.md): pending rows annotate
@@ -713,33 +718,82 @@ export class LexemeEditor {
     }
 
     /** The whole metadata entry as an outerHTML-swappable reload fragment.
-     *  The `changes` flag rides THIS fragment's own hx-get (the on-page-state
-     *  model), so every mutation's whole-entry reload re-renders in the same
-     *  mode with no per-action threading. */
+     *  The `changes` flag rides every fragment's own hx-get (the on-page-state
+     *  model), so any reload re-renders in the same mode with no per-action
+     *  threading. */
     @route(authenticated)
     renderMetaEntry(entry_id: number, changes: boolean = false): Markup {
         const q = new CurrentTupleQuery(this.entryTuple(entry_id));
         const root = new WorkspaceNode(q, entry_id, q.src.id);
         const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
-        const renderer = new entryMeta.EntryRenderer({
-            rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
-            renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
-            editing: this.metaEditingHooks(entry_id, changes),
-        });
         return ['div', {class: `-entry-${entry_id}- container py-3`,
                         'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 ['div', {class: 'page-content'},
-                 this.metaChangesBar(entry_id, changes),
-                 renderer.render(entryRel, root)]];
+                 this.metaChangesBarFragment(entry_id, changes),
+                 this.metaRenderer(entry_id, changes).render(entryRel, root)]];
     }
 
-    /** Re-render the whole metadata entry into its wrapper - the redirect target
-     *  for every affordance's reload, so any mutation refreshes the view. */
-    private metaReloadAttrs(entry_id: number, changes: boolean = false): any {
-        return {'hx-trigger': 'reload consume',
-                'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
-                'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'};
+    /** The configured metadata renderer - one construction shared by the
+     *  whole-entry render and every fragment route, so a fragment re-render
+     *  is byte-identical to the same element in a full render. */
+    private metaRenderer(entry_id: number, changes: boolean): entryMeta.EntryRenderer {
+        return new entryMeta.EntryRenderer({
+            rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
+            renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
+            editing: this.metaEditingHooks(entry_id, changes),
+        });
+    }
+
+    // --- Fine-grained fragment routes (meta-editor-refresh-design.md) --------
+
+    /** ONE tuple's surface.  A deleted fact renders NOTHING - the fragment
+     *  removes itself (delete-as-empty-render); the relation wrapper's shape
+     *  reload usually swallows this anyway (removeContainedRoots). */
+    @route(authenticated)
+    renderMetaTupleFragment(entry_id: number, fact_id: number, changes: boolean = false): Markup {
+        const tuple = this.findTupleInEntry(entry_id, fact_id);
+        const q = new CurrentTupleQuery(tuple);
+        const current = q.mostRecentTupleVersion;
+        if(!current) return '';
+        const path = getAssertionPath(current.assertion);
+        const parent_fact_id = path[path.length-2][1];
+        const node = new WorkspaceNode(q, entry_id, parent_fact_id);
+        return this.metaRenderer(entry_id, changes).renderTupleSurfaceFor(tuple.schema, node);
+    }
+
+    /** ONE relation's whole rendering (rows / empty slot / headed sections),
+     *  re-wrapped by the relationWrapper hook - the shape events' target. */
+    @route(authenticated)
+    renderMetaRelationFragment(entry_id: number, parent_fact_id: number, tag: string,
+                               changes: boolean = false): Markup {
+        const parent = this.findTupleInEntry(entry_id, parent_fact_id);
+        const q = new CurrentTupleQuery(parent);
+        const rf = q.schema.relationFields.find(r => r.tag === tag)
+            ?? panic('no child relation', `${tag} on ${q.schema.tag}`);
+        const node = new WorkspaceNode(q, entry_id, parent_fact_id);
+        return this.metaRenderer(entry_id, changes).renderRelation(rf, node);
+    }
+
+    /** The <h1> (headwords + glosses collected from the whole tree). */
+    @route(authenticated)
+    renderMetaTitle(entry_id: number, changes: boolean = false): Markup {
+        const q = new CurrentTupleQuery(this.entryTuple(entry_id));
+        const root = new WorkspaceNode(q, entry_id, q.src.id);
+        const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
+        return this.metaRenderer(entry_id, changes).renderTitle(entryRel, root);
+    }
+
+    /** The changes bar/hint as the -entry-<id>-activity- fragment: its
+     *  pending COUNT depends on every fact, so every mutation emits the
+     *  activity key.  Always present (possibly empty), so the FIRST pending
+     *  change can still summon the hint. */
+    @route(authenticated)
+    metaChangesBarFragment(entry_id: number, changes: boolean = false): Markup {
+        return ['div', {class: `-entry-${entry_id}-activity-`,
+                        'hx-get': `${R}.metaChangesBarFragment(${entry_id}${changes ? ', true' : ''})`,
+                        'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
+                this.metaChangesBar(entry_id, changes)];
     }
 
     /** The reference scan + composed reference-book link (see wordView).
@@ -759,6 +813,9 @@ export class LexemeEditor {
      *  `changes` = the view-changes look (meta-editor-changes-mode.md):
      *  pending rows annotate what changed, on the same line. */
     private metaEditingHooks(entry_id: number, changes: boolean = false): entryMeta.EditingHooks {
+        // The view-changes flag rides every fragment's own re-render URL
+        // (the on-page-state model), so any reload keeps the mode.
+        const chg = changes ? ', true' : '';
         return {
             tupleSurface: (rf, id, body) => {
                 const q = new CurrentTupleQuery(this.findTupleInEntry(id.entryId, id.factId));
@@ -782,12 +839,15 @@ export class LexemeEditor {
                     ? ['span', {class: 'lm-cl-chip lm-cl-chip-added'}, 'added']
                     : this.wasAnnotation(rf, review);
                 const menu = action.actionMenu(
-                    [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'meta'),
+                    [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit'),
                      ...this.demotedAddItems(id.entryId, id.factId, rf, q)],
                     {ariaLabel: `Actions for this ${rf.prompt}`});
+                // A self-refreshing fragment: a content edit reloads just this
+                // row (a deleted fact re-renders to nothing and vanishes).
                 return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}`
                                 + `${pending ? 'lm-pending-fact ' : ''}lm-me-editable d-flex align-items-start gap-1`,
-                                ...this.metaReloadAttrs(id.entryId, changes),
+                                'hx-get': `${R}.renderMetaTupleFragment(${id.entryId}, ${id.factId}${chg})`,
+                                'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
                                 ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
                         pending ? ['span', {class: 'lm-pending-dot', title: 'unapproved change'}, ''] : [],
                         ['div', {class: 'flex-grow-1'},
@@ -801,10 +861,10 @@ export class LexemeEditor {
                 // gutter), and the same tap-anywhere-to-edit - except "editing"
                 // an empty slot IS the insert-first dialog.  So a user just
                 // edits away from "empty" without learning a separate insert
-                // concept.  (Keyed on parent id + child tag; no fact exists.)
+                // concept.  (No reload attrs of its own: the relationWrapper
+                // around it is the relation's fragment.)
                 const rowAttrs = {
-                    class: `-rel-${parentId.factId}-${rf.tag}- lm-me-empty d-flex align-items-start gap-1`,
-                    ...this.metaReloadAttrs(parentId.entryId, changes),
+                    class: `lm-me-empty d-flex align-items-start gap-1`,
                 };
                 const label = (trailing: Markup = ''): Markup =>
                     ['div', {class: 'flex-grow-1'},
@@ -815,7 +875,7 @@ export class LexemeEditor {
                     // Per-book add buttons ride inline (no single dialog for a
                     // body-click to delegate to).
                     return ['div', rowAttrs,
-                            label([' ', this.addButtons(parentId.entryId, parentId.factId, rf, 'meta')])];
+                            label([' ', this.addButtons(parentId.entryId, parentId.factId, rf)])];
                 if(rf.scalarFields.some(isDialogReadOnly))
                     return ['div', rowAttrs, label()];
                 // A fields-less relation (example) has an EMPTY insert dialog -
@@ -824,9 +884,9 @@ export class LexemeEditor {
                 const fieldless = dialogFields(rf).length === 0;
                 const addMode: action.ActionMode = fieldless
                     ? {kind: 'immediate',
-                       expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`}
+                       expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}
                     : {kind: 'modal',
-                       dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`};
+                       dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`};
                 // A bare + rather than a ☰-of-one-item: "+ adds one of these"
                 // is the single rule the row teaches (the filled rows' + means
                 // the same thing), and the whole row is tappable anyway.  The
@@ -849,8 +909,31 @@ export class LexemeEditor {
                 // -> tag the scan), so the buttons live on the heading line -
                 // the same place the legacy editor's relation header put them.
                 rf.scalarFields.some(isBoundingGroupField)
-                    ? [' ', this.addButtons(parentId.entryId, parentId.factId, rf, 'meta')]
+                    ? [' ', this.addButtons(parentId.entryId, parentId.factId, rf)]
                     : '',
+            relationWrapper: (rf, parentId, body) => {
+                // The relation's SHAPE-keyed fragment (delegating wrapper,
+                // liminal.md Rule 1): insert/delete/move re-render this list;
+                // member-content edits hit only the member's own fragment.
+                // Rendered even for a demoted-empty relation (body '') so an
+                // insert can still find its wrapper; the section-vs-line class
+                // keeps the vertical rhythm the un-wrapped page had.
+                const sectionish = rf.style.$view?.label === 'heading';
+                const empty = body === '' || (Array.isArray(body) && body.length === 0);
+                return ['div', {class: `-rel-${parentId.factId}-${rf.tag}-shape- lm-me-rel `
+                                + (sectionish ? 'lm-me-rel-section' : 'lm-me-rel-line')
+                                + (empty ? ' d-none' : ''),
+                                'hx-get': `${R}.renderMetaRelationFragment(${parentId.entryId}, ${parentId.factId}, '${rf.tag}'${chg})`,
+                                'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
+                        body];
+            },
+            titleWrapper: (body) =>
+                // The <h1> collects headword/gloss values from the whole tree;
+                // titleRole edits emit this key (mutationTargets).
+                ['div', {class: `-entry-${entry_id}-title-`,
+                         'hx-get': `${R}.renderMetaTitle(${entry_id}${chg})`,
+                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
+                 body],
         };
     }
 
@@ -866,9 +949,9 @@ export class LexemeEditor {
             return [];
         const mode: action.ActionMode = dialogFields(rf).length === 0
             ? {kind: 'immediate',
-               expr: `wordwiki.lexeme.insertEmptyTuple(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after', 'meta')`}
+               expr: `wordwiki.lexeme.insertEmptyTuple(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`}
             : {kind: 'modal',
-               dialogUrl: `${R}.insertDialog(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after', 'meta')`};
+               dialogUrl: `${R}.insertDialog(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`};
         return action.actionButton(action.plusIcon(), mode, 'lm-menu-button',
             {'aria-label': `Insert ${rf.prompt} after`, title: `Insert ${rf.prompt} after`});
     }
@@ -883,7 +966,7 @@ export class LexemeEditor {
             .filter(cr => !((q.childRelations[cr.tag]?.tuples as CurrentTupleQuery[]) ?? [])
                     .some(t => t.mostRecentTupleVersion))
             .map(cr => ({label: `Add ${cr.prompt}…`, mode: {kind: 'modal' as const,
-                dialogUrl: `${R}.insertDialog(${entry_id}, ${fact_id}, '${cr.tag}', null, null, 'meta')`}}));
+                dialogUrl: `${R}.insertDialog(${entry_id}, ${fact_id}, '${cr.tag}')`}}));
     }
 
     // --- View-changes mode (meta-editor-changes-mode.md) ---------------------
@@ -1025,7 +1108,10 @@ export class LexemeEditor {
     private renderRelation(entry_id: number, parent_fact_id: number,
                            rf: model.RelationField, rq: workspace.CurrentRelationQuery): Markup {
         const fragmentProps = {
-            class: `lex-relation mt-2 -rel-${parent_fact_id}-${rf.tag}-`,
+            // A delegating wrapper (liminal.md Rule 1): the tuple rows inside
+            // are self-refreshing fragments, so this registers the SHAPE key
+            // only - member-content edits no longer re-render the list.
+            class: `lex-relation mt-2 -rel-${parent_fact_id}-${rf.tag}-shape-`,
             'hx-get': `${R}.renderRelationFragment(${entry_id}, ${parent_fact_id}, '${rf.tag}')`,
             'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
         };
@@ -2225,15 +2311,35 @@ export class LexemeEditor {
     // - so a fine-grained self/parent reload would leave sibling classes stale.
     private mutationTargets(entry_id: number, a: Assertion, scope: 'self'|'parent',
                             mode: EditMode = 'edit'): string[] {
-        // Review and the metadata editor both refresh coarsely: their pages
-        // have no per-relation fragments, only the whole-entry root.
-        if(mode === 'review' || mode === 'meta' || a.ty === entrySchema.SpellingTag)
+        // Review refreshes coarsely: its page reclassifies the whole change
+        // list, so every action reloads the entry root.
+        if(mode === 'review')
             return [this.rootTarget(entry_id)];
-        if(scope === 'self')
-            return [`.-fact-${a.id}-`];
+        // EMISSION, liminal-style (meta-editor-refresh-design.md): tell the
+        // whole truth at every granularity; each page controls its refresh
+        // cost by what it REGISTERS.  A content edit ('self') dirties the
+        // fact and the relation's content; a shape event ('parent' - insert /
+        // delete / move) dirties the relation's content AND shape, plus the
+        // parent tuple's surface (its ☰ carries emptiness-dependent items).
         const path = getAssertionPath(a);
         const parent_fact_id = path[path.length-2][1];
-        return [`.-rel-${parent_fact_id}-${a.ty}-`];
+        const keys = scope === 'self'
+            ? [`.-fact-${a.id}-`,
+               `.-rel-${parent_fact_id}-${a.ty}-`]
+            : [`.-fact-${parent_fact_id}-`,
+               `.-rel-${parent_fact_id}-${a.ty}-`,
+               `.-rel-${parent_fact_id}-${a.ty}-shape-`];
+        // A titleRole relation feeds the <h1>: the meta page's title fragment
+        // re-renders; a HEADWORD additionally widens to the whole entry (the
+        // legacy page's heading is not a fragment - this generalizes the old
+        // SpellingTag special case; glosses feed only the meta title).
+        const titleRole = this.app.dictSchema.relationsByTag[a.ty]?.style.$view?.titleRole;
+        if(titleRole) keys.push(`.-entry-${entry_id}-title-`);
+        if(titleRole === 'headword') keys.push(this.rootTarget(entry_id));
+        // The pending count (the meta page's changes bar/hint) moves on every
+        // mutation.
+        keys.push(`.-entry-${entry_id}-activity-`);
+        return keys;
     }
 
     // ------------------------------------------------------------------------

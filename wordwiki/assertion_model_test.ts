@@ -247,21 +247,28 @@ test("editor: edit dialog carries current values + the conflict guard", async ()
 test("editor: saveTuple edits, stamps the author, and scopes the reload", async () => {
     await withTestDb(async (fx) => {
         seedEntry(fx.ww);
-        // A spelling edit widens to the whole-entry (root) reload.
+        // A spelling edit dirties its fact + relation content, and (a
+        // headword feeds the title) the title fragment + the whole entry
+        // (the legacy heading is not a fragment), + the activity count.
         const r1 = await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
             entry_id: '1000', fact_id: '1001', replaces_assertion_id: '1001',
             'before-text': 'cat', text: 'caat', 'before-variant': 'mm-li', variant: 'mm-li',
         }));
-        assertEquals(r1, {action: 'reload', targets: ['.-entry-1000-']});
+        assertEquals(r1, {action: 'reload', targets: [
+            '.-fact-1001-', '.-rel-1000-spl-',
+            '.-entry-1000-title-', '.-entry-1000-', '.-entry-1000-activity-']});
         assertEquals(currentOf(fx.ww, 1001).attr1, 'caat');
         assertEquals(currentOf(fx.ww, 1001).change_by_username, 'djz');
 
-        // A gloss edit scopes to the tuple itself.
+        // A gloss edit scopes to the tuple (+ relation content, the meta
+        // title it feeds, and the activity count).
         const r2 = await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
             entry_id: '1000', fact_id: '1003', replaces_assertion_id: '1003',
             'before-gloss': 'a cat', gloss: 'the cat', 'before-variant': '', variant: '',
         }));
-        assertEquals(r2, {action: 'reload', targets: ['.-fact-1003-']});
+        assertEquals(r2, {action: 'reload', targets: [
+            '.-fact-1003-', '.-rel-1002-gls-',
+            '.-entry-1000-title-', '.-entry-1000-activity-']});
 
         const markup = await as(fx, 'djz', () => renderRoute(fx.ww, 'wordwiki.lexeme.renderEntry(1000)'));
         assert(hasText(markup, 'caat') && hasText(markup, 'the cat'));
@@ -294,7 +301,9 @@ test("editor: insert at end, move up, delete, list deleted, restore", async () =
             entry_id: '1000', parent_fact_id: '1000', child_tag: 'spl',
             'before-text': '', text: 'kat', 'before-variant': '', variant: 'mm-sf',
         }));
-        assertEquals(rIns, {action: 'reload', targets: ['.-entry-1000-']});
+        assertEquals(rIns, {action: 'reload', targets: [
+            '.-fact-1000-', '.-rel-1000-spl-', '.-rel-1000-spl-shape-',
+            '.-entry-1000-title-', '.-entry-1000-', '.-entry-1000-activity-']});
         let e = JSON.parse(JSON.stringify(fx.ww.entries))[0];
         assertEquals(e.spelling.map((s: any) => s.text), ['cat', 'kat']);
         const katId = e.spelling[1].spelling_id;
@@ -468,24 +477,30 @@ test("editor deep: full insert/edit/move/delete/restore cycle at path depth 5", 
             'before-example_text': '', example_text: 'Example two',
             'before-variant': '', variant: '',
         }));
-        // Structural change scopes to the containing relation fragment.
-        assertEquals(rIns, {action: 'reload', targets: ['.-rel-2002-etx-']});
+        // A shape event dirties the parent surface, the relation's content
+        // AND shape keys, and the activity count.
+        assertEquals(rIns, {action: 'reload', targets: [
+            '.-fact-2002-', '.-rel-2002-etx-', '.-rel-2002-etx-shape-',
+            '.-entry-2000-activity-']});
         assertEquals(deepExampleTexts(fx.ww), ['Example one', 'Example two']);
         const twoId = JSON.parse(JSON.stringify(fx.ww.entries))
             .find((e: any) => e.entry_id === 2000)
             .subentry[0].example[0].example_text[1].example_text_id;
 
-        // Field edit scopes to the tuple itself.
+        // A field edit scopes to the tuple (+ relation content + activity).
         const rEdit = await djz(() => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
             entry_id: '2000', fact_id: '2003', replaces_assertion_id: '2003',
             'before-example_text': 'Example one', example_text: 'Example ONE',
             'before-variant': 'mm-li', variant: 'mm-li',
         }));
-        assertEquals(rEdit, {action: 'reload', targets: ['.-fact-2003-']});
+        assertEquals(rEdit, {action: 'reload', targets: [
+            '.-fact-2003-', '.-rel-2002-etx-', '.-entry-2000-activity-']});
 
         // Move the new one up.
         const rMove = await djz(() => invoke(fx.ww, `wordwiki.lexeme.move(2000, ${twoId}, 'up')`));
-        assertEquals(rMove.targets, ['.-rel-2002-etx-']);
+        assertEquals(rMove.targets, [
+            '.-fact-2002-', '.-rel-2002-etx-', '.-rel-2002-etx-shape-',
+            '.-entry-2000-activity-']);
         assertEquals(deepExampleTexts(fx.ww), ['Example two', 'Example ONE']);
 
         // Delete it, see it in the deleted dialog, restore it.
@@ -495,7 +510,9 @@ test("editor deep: full insert/edit/move/delete/restore cycle at path depth 5", 
         assert(hasText(deletedDialog, 'Example two'));
         const lastReal = dbVersions(twoId).filter(v => v.valid_from !== v.valid_to).at(-1)!;
         const rRestore = await djz(() => invoke(fx.ww, `wordwiki.lexeme.restoreVersion(2000, ${twoId}, ${lastReal.assertion_id})`));
-        assertEquals(rRestore.targets, ['.-rel-2002-etx-']);
+        assertEquals(rRestore.targets, [
+            '.-fact-2002-', '.-rel-2002-etx-', '.-rel-2002-etx-shape-',
+            '.-entry-2000-activity-']);
         assertEquals(deepExampleTexts(fx.ww).toSorted(), ['Example ONE', 'Example two']);
 
         // The whole story reloads from the db identically.

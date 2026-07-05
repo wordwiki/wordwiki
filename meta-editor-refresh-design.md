@@ -2,9 +2,9 @@
 
 Design for recovering accurate (scoped) redraws in the metadata-driven lexeme
 editor, replacing today's whole-entry coarse reload.  Discussed and settled
-2026-07-05 (dz + claude); written down so implementation doesn't have to
-re-derive it.  **Status: DESIGN ONLY — not built.**  Prereq reading:
-`liminal.md` (dep keys, Rule 1 registration, shape keys, speculation) and
+2026-07-05 (dz + claude).  **Status: BUILT (2026-07-05, same day)** — with
+four deviations recorded at the bottom.  Prereq reading: `liminal.md` (dep
+keys, Rule 1 registration, shape keys, speculation) and
 `liminal-refresh-future-work.md` §2 (morph lever, insert directive).
 
 ## Where this starts from (current state, 2026-07-05)
@@ -150,3 +150,28 @@ debug-mode walk to tune — a day-ish of careful work.
 - The whole-entry root stops registering anything (pure shell for
   navigation) once the title antenna exists — do not leave it registered on a
   root key or every titleRole edit re-renders everything again.
+
+## As built (2026-07-05) — deviations from the design above
+
+1. **Activity fragment.**  The view-changes mode (built between design and
+   implementation - meta-editor-changes-mode.md) has a bar/hint whose pending
+   COUNT depends on every fact.  New key `-entry-<id>-activity-`, emitted by
+   EVERY mutation; the bar is its fragment (`metaChangesBarFragment`).
+2. **titleRole widening is split.**  Gloss edits emit the title key only (the
+   meta <h1> re-renders); HEADWORD edits additionally emit the entry root -
+   the legacy page's heading is not a fragment, so this generalizes (and
+   replaces) the old SpellingTag→root special case.  A title-only legacy
+   fragment wasn't worth the plumbing for spelling-edit frequency.
+3. **Parent-scope emission also includes the parent FACT key** - the parent's
+   ☰ carries emptiness-dependent items (the demoted "Add X…" entries), so an
+   insert/delete refreshes the parent surface too.
+4. **The changes flag rides fragment URLs, not actions** - every fragment's
+   own hx-get carries `changes`, so mutations never need to know the mode.
+   This let the 'meta' EditMode be REMOVED entirely (as predicted), not just
+   bypassed; EditMode is back to 'edit' | 'review'.
+
+Also confirmed in the build: delete-as-empty-render came free (a deleted
+fact's tuple fragment renders '', the shape reload usually swallows it);
+demoted-empty relations render an invisible (d-none) wrapper so their first
+insert can find its fragment; and the byte-identity of fragment re-renders vs
+the full render is pinned by test (meta-refresh_test.ts).

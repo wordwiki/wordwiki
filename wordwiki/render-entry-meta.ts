@@ -85,6 +85,15 @@ export interface EditingHooks {
     // the only place an add can live: the rows themselves carry no + (a new
     // reference needs a book choice first).
     relationHead?: (rf: model.RelationField, parentId: TupleIdentity) => Markup;
+    // Fine-grained refresh (meta-editor-refresh-design.md).  When present,
+    // EVERY relation rendering is wrapped (the editor supplies a fragment
+    // element registering the relation's SHAPE key with its own re-render
+    // route) - including EMPTY and demoted-empty renderings, so an insert
+    // into a currently-empty relation still finds its wrapper in the DOM.
+    relationWrapper?: (rf: model.RelationField, parentId: TupleIdentity, body: Markup) => Markup;
+    // Wraps the <h1> as its own fragment (the title collects headword/gloss
+    // values from the whole tree - a titleRole edit dirties it).
+    titleWrapper?: (body: Markup) => Markup;
 }
 
 // --- Data-access seam --------------------------------------------------------
@@ -208,20 +217,29 @@ export class EntryRenderer {
     /** Render one entry as a document, entirely from the schema + $view.
      *  `entryRelation` is the 'entry' RelationField; `node` wraps its data. */
     render(entryRelation: model.RelationField, node: EntryNode): Markup {
+        return ["div", { class: "lm-meta-entry" },
+                this.renderTitle(entryRelation, node),
+                this.renderBody(entryRelation, node)];
+    }
+
+    /** The <h1> (headwords + glosses collected from the whole tree) - its own
+     *  entry point so the editor's title FRAGMENT can re-render just it. */
+    renderTitle(entryRelation: model.RelationField, node: EntryNode): Markup {
         const headwords = this.collectTitleValues(entryRelation, node, "headword");
         const glosses = this.collectTitleValues(entryRelation, node, "gloss");
-        const title = ["h1", { class: "entry-scope" },
+        const title: Markup = ["h1", { class: "entry-scope" },
             headwords.join(" / "),
             glosses.length ? ["span", { class: "entry-gloss-title" }, " : " + glosses.join(" / ")] : "",
             this.titleAffordance ?? ""];
+        return this.editing?.titleWrapper ? this.editing.titleWrapper(title) : title;
+    }
 
-        // Every child relation in $view order, minus the headword (title-only)
-        // and the hidden (editorial) relations.
-        const body = orderedChildRelations(entryRelation)
+    /** Every child relation in $view order, minus the headword (title-only)
+     *  and the hidden (editorial) relations. */
+    protected renderBody(entryRelation: model.RelationField, node: EntryNode): Markup {
+        return orderedChildRelations(entryRelation)
             .filter(cr => view(cr).titleRole !== "headword")
             .map(cr => this.renderRelation(cr, node));
-
-        return ["div", { class: "lm-meta-entry" }, title, body];
     }
 
     // --- scalars -------------------------------------------------------------
@@ -306,9 +324,58 @@ export class EntryRenderer {
      *  form the editable SURFACE (edit: click-to-edit + the ☰), then its child
      *  relations, recursively (separately editable). */
     protected renderTupleBlock(rf: model.RelationField, tuple: EntryNode): Markup {
-        const scalars = contentScalars(rf).map(f => this.renderScalarField(f, tuple));
         const children = orderedChildRelations(rf).map(cr => this.renderRelation(cr, tuple));
-        return [this.surface(rf, tuple, scalars), children];
+        return [this.containerScalarSurface(rf, tuple), children];
+    }
+
+    /** A container tuple's editable surface: its content scalars only (child
+     *  relations are separate fragments OUTSIDE it). */
+    protected containerScalarSurface(rf: model.RelationField, tuple: EntryNode): Markup {
+        return this.surface(rf, tuple,
+            contentScalars(rf).map(f => this.renderScalarField(f, tuple)));
+    }
+
+    /** A fields-less container tuple's surface: the heading line carries the ☰
+     *  (there is no content line - see the fields-less branch below). */
+    protected fieldslessHeading(rf: model.RelationField, tuple: EntryNode): Markup {
+        return this.surface(rf, tuple,
+            ["div", { class: "fw-bold lm-me-heading" }, rf.prompt + ":"]);
+    }
+
+    /** One tuple as a flat-list row (its own line, label policy honoured). */
+    protected flatRow(rf: model.RelationField, tuple: EntryNode): Markup {
+        const v = view(rf);
+        const value = this.tupleInlineValue(rf, tuple);
+        if (isEmptyMarkup(value)) return "";
+        const body: Markup = (v.label === "inline")
+            ? ["div", { class: LINE }, ["b", {}, rf.prompt + ": "], value]
+            : ["div", { class: this.editing ? LINE : "lm-me-listitem" }, value];
+        return this.surface(rf, tuple, body);
+    }
+
+    /** One keyed-bag row ("Key: value", labelled from the humanised key). */
+    protected keyedBagRow(rf: model.RelationField, tuple: EntryNode): Markup {
+        const keyF = rf.modelFields.find(f => f.name === view(rf).keyField);
+        const valF = contentScalars(rf).find(f => f.name !== view(rf).keyField);
+        if (!keyF || !valF) return "";
+        const key = String(tuple.value(keyF) ?? "");
+        const val = this.renderScalarValue(valF, tuple.value(valF));
+        if (isEmptyMarkup(val) && !key) return "";
+        return this.surface(rf, tuple, ["div", { class: LINE }, ["b", {}, humanise(key) + ": "], val]);
+    }
+
+    /** ONE tuple's editable surface, exactly as the walk builds it - the
+     *  tuple FRAGMENT route's entry point.  Context-free by construction
+     *  (meta-editor-refresh-design.md): everything comes from rf + the tuple;
+     *  the sibling-dependent bits (the "1." markers) live OUTSIDE the
+     *  surface, and anything that changes them is a shape event that
+     *  re-renders the relation wrapper instead. */
+    renderTupleSurfaceFor(rf: model.RelationField, tuple: EntryNode): Markup {
+        const v = view(rf);
+        if (v.keyField) return this.keyedBagRow(rf, tuple);
+        if (v.compose || orderedChildRelations(rf).length === 0) return this.flatRow(rf, tuple);
+        if (this.editing && contentScalars(rf).length === 0) return this.fieldslessHeading(rf, tuple);
+        return this.containerScalarSurface(rf, tuple);
     }
 
     // --- relations -----------------------------------------------------------
@@ -316,8 +383,17 @@ export class EntryRenderer {
     /** A relation (a section): honours $view label / join / empty / singleton /
      *  compose / keyField.  `parent` is the node whose child tuples these are.
      *  In EDIT mode it stops collapsing / eliding / joining, wraps each tuple as
-     *  an editable surface, and appends the add affordance. */
+     *  an editable surface, and appends the add affordance.  With the
+     *  relationWrapper hook, the WHOLE rendering (empty or not) is wrapped as
+     *  the relation's shape-keyed fragment - this is also the relation
+     *  FRAGMENT route's entry point. */
     renderRelation(rf: model.RelationField, parent: EntryNode): Markup {
+        const inner = this.renderRelationInner(rf, parent);
+        const id = this.editing?.relationWrapper && parent.identity?.();
+        return id ? this.editing!.relationWrapper!(rf, id, inner) : inner;
+    }
+
+    protected renderRelationInner(rf: model.RelationField, parent: EntryNode): Markup {
         const v = view(rf);
         const editing = !!this.editing;
         const tuples = parent.children(rf);
@@ -350,14 +426,8 @@ export class EntryRenderer {
             }
             // One line per tuple (each editable in edit).  With an inline label,
             // repeat it per line (several long glosses are unreadable joined).
-            const lines = tuples.map(t => {
-                const value = this.tupleInlineValue(rf, t);
-                if (isEmptyMarkup(value)) return "";
-                const body: Markup = (v.label === "inline")
-                    ? ["div", { class: LINE }, ["b", {}, rf.prompt + ": "], value]
-                    : ["div", { class: editing ? LINE : "lm-me-listitem" }, value];
-                return this.surface(rf, t, body);
-            }).filter(m => !isEmptyMarkup(m));
+            const lines = tuples.map(t => this.flatRow(rf, t))
+                .filter(m => !isEmptyMarkup(m));
             // Non-empty needs no add line: the row ☰ carries Insert before/after.
             // Inline-labelled lists (gloss) stand alone; unlabelled (recordings)
             // get a heading section.
@@ -374,7 +444,7 @@ export class EntryRenderer {
         if (editing && contentScalars(rf).length === 0) {
             return tuples.map(t =>
                 ["div", { class: "lm-me-section" },
-                 this.surface(rf, t, ["div", { class: "fw-bold lm-me-heading" }, rf.prompt + ":"]),
+                 this.fieldslessHeading(rf, t),
                  ["div", { class: "ms-3" },
                   orderedChildRelations(rf).map(cr => this.renderRelation(cr, t))]]);
         }
@@ -402,12 +472,7 @@ export class EntryRenderer {
         const rows = tuples.filter(t => {
             if (this.audience === "internal") return true;
             return this.publicKeys.has(String(t.value(keyF)));
-        }).map(t => {
-            const key = String(t.value(keyF) ?? "");
-            const val = this.renderScalarValue(valF, t.value(valF));
-            if (isEmptyMarkup(val) && !key) return "";
-            return this.surface(rf, t, ["div", { class: LINE }, ["b", {}, humanise(key) + ": "], val]);
-        }).filter(m => !isEmptyMarkup(m));
+        }).map(t => this.keyedBagRow(rf, t)).filter(m => !isEmptyMarkup(m));
         // Empty (edit): the insert-first placeholder; non-empty needs no add line.
         if (rows.length === 0) return this.editing ? this.emptyRelation(rf, parent) : "";
         return rows;
