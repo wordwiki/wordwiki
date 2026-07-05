@@ -138,20 +138,21 @@
     text-decoration: underline;
 }
 
-/* A navigable row's name is its TITLE, not a link: the whole row is the link
-   (cursor + hover tint + chevron say so), so the name should read as the most
-   important thing on the line - body colour, semibold, never underlined - not
-   as generic link-blue chrome.  Used by every navigable list + the events
-   table; overrides the .lm-item-primary a link styling above. */
+/* A navigable row's TITLE, and the primary navigation signal (design-language.md):
+   the reserved accent colour --lm-nav means "this is a link - tap to go there",
+   learned once and used app-wide.  The colour is a VARIABLE so each app sets its
+   own (rabid: a teal); with none set it falls back to body colour - the
+   pre-accent look - so a liminal app that hasn't adopted the accent link is
+   unchanged.  Used by every navigable list + the events table. */
 .lm-nav-link {
-    color: var(--bs-body-color);
+    color: var(--lm-nav, var(--bs-body-color));
     font-weight: 600;
     text-decoration: none;
 }
 .lm-nav-link:hover,
 .lm-nav-link:focus,
 .lm-item-primary a.lm-nav-link:hover {
-    color: var(--bs-body-color);
+    color: var(--lm-nav-hover, var(--bs-body-color));
     text-decoration: none;
 }
 
@@ -177,6 +178,71 @@
 }
 .lm-item-secondary a:hover {
     text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------------------
+   Document-language primitives (liminal design-language.md): the SHARED
+   mechanism for list/detail pages that read as documents.  An app adopts the
+   look by setting --lm-nav (the accent link); these structural classes are the
+   same for every liminal app.
+   ---------------------------------------------------------------------------- */
+
+/* A flat, navigable document section - not a framed or filled box.  Items
+   separate by whitespace; the accent title (.lm-nav-link) is the navigation
+   signal, and the whole section stays clickable as a larger tap target. */
+.lm-doc-section {
+    padding: 0.4rem 0;
+    cursor: pointer;
+    max-width: 46rem;
+}
+.lm-doc-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+}
+.lm-doc-title .lm-nav-chevron {
+    color: var(--bs-secondary-color);
+    font-weight: 400;
+    margin-left: 0.15rem;
+}
+/* Secondary line under the title (members, meta) - quiet, readable. */
+.lm-doc-meta {
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+    margin-top: 0.1rem;
+}
+/* A record's own description on a detail page: clean document body, no callout. */
+.lm-doc-lead {
+    font-size: 1.08rem;
+    line-height: 1.6;
+    max-width: 46rem;
+}
+/* A detail-page section heading (Members, Projects, ...): a quiet document
+   section label in a flex head, so it can carry a trailing "+" or count. */
+.lm-doc-section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1.75rem 0 0.5rem;
+}
+.lm-doc-section-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+    margin: 0;
+}
+/* An embedded subsection: a list nested under a section heading (a composed
+   page's Members / Projects / Tasks).  Weight tracks DEPTH - nested item titles
+   demote one notch below the section label and indent under it.  Container-
+   driven so it survives fragment reloads: a row swapped back inside keeps the
+   demotion, which a render-time parameter could not. */
+.lm-subsection {
+    margin-left: 0.9rem;
+}
+.lm-subsection .lm-doc-title {
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 /* ----------------------------------------------------------------------------

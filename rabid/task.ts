@@ -651,7 +651,7 @@ export class ProjectTable extends Table<Project> {
         return [h.div, props,
             projects.length === 0
                 ? [h.p, {class: 'text-muted small mb-0'}, 'No projects assigned.']
-                : [h.div, {class: 'list-group lm-list'}, projects.map(p => this.renderProjectRow(p))]];
+                : projects.map(p => this.renderProjectRow(p))];
     }
 
     // A "+" beside a committee's Projects heading: create a new project directly
@@ -699,8 +699,7 @@ export class ProjectTable extends Table<Project> {
         return [h.div, props,
             projects.length === 0
                 ? [h.p, {class: 'text-muted'}, include_done ? 'No projects yet.' : 'No active projects.']
-                : [h.div, {class: 'list-group lm-list'},
-                   projects.map(p => this.renderProjectRow(p))]];
+                : projects.map(p => this.renderProjectRow(p))];
     }
 
     renderProjectRow(p: Project & {committee_name?: string, open_task_count?: number}): Markup {
@@ -711,19 +710,19 @@ export class ProjectTable extends Table<Project> {
                            p.committee_name, p.description]
             .filter(Boolean).join(' · ');
 
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name).  NO per-row pencil:
-        // editing a project's top-level parameters is done from the project's
-        // own page (design-language.md - the pencil lives on the final detail
-        // page, not on every list row).
-        const item = this.detailItemProps(id, `rabid.project.renderProjectRowById(${id})`);
+        // A flat, navigable document section (like committees) - no box, no
+        // per-row pencil.  The accent-coloured title (lm-nav-link) is the
+        // navigation signal; the whole section is a larger tap target.  Editing
+        // a project's parameters is done from its own page (design-language.md).
+        const item = this.reloadableItemProps(id, `rabid.project.renderProjectRowById(${id})`);
+        item.class = 'lm-doc-section lm-navigable ' + item.class;
+        item.onclick = 'lmNavigableClick(event)';
         return [h.div, {...item, 'data-testid': `project-row-${id}`},
-            [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
-              [h.a, {...templates.pageLinkProps(`/rabid.project.detailPage(${id})`),
-                     class: 'lm-nav-link'}, this.recordLabel(p)]],
-             [h.div, {class: 'lm-item-secondary'}, secondary]],
-            navChevron(),
+            [h.h3, {class: 'lm-doc-title'},
+             [h.a, {...templates.pageLinkProps(`/rabid.project.detailPage(${id})`),
+                    class: 'lm-nav-link'}, this.recordLabel(p)],
+             navChevron()],
+            [h.div, {class: 'lm-doc-meta'}, secondary],
         ];
     }
 
@@ -1506,9 +1505,13 @@ export class TaskTable extends Table<Task> {
                          `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'})`},
                      'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
                  : undefined],
-            project_id !== undefined
-                ? this.renderProjectTasks(project_id, /*showHeading*/ false)
-                : [h.p, {class: 'text-muted small mb-0'}, 'No tasks yet.'],
+            // When rendered as a document section (committee page), the task
+            // list is an indented, demoted subsection under its heading - so
+            // weight tracks depth, matching the sibling Members/Projects.
+            [h.div, docHeading ? {class: 'lm-subsection'} : {},
+             project_id !== undefined
+                 ? this.renderProjectTasks(project_id, /*showHeading*/ false)
+                 : [h.p, {class: 'text-muted small mb-0'}, 'No tasks yet.']],
         ];
     }
 

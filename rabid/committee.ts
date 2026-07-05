@@ -234,10 +234,12 @@ export class CommitteeTable extends Table<Committee> {
                    this.fieldsByName.description.render(c.description)]
                 : undefined,
             // Quiet section labels (document sections, not bold form headings).
-            // Members / Projects / Tasks all sit level as peer sections.
+            // Members / Projects / Tasks sit level as peer sections; each body is
+            // an indented, demoted .lm-subsection so weight tracks depth (the
+            // section label reads heavier than the items nested under it).
             [h.div, {class: 'lm-doc-section-head'},
              [h.h4, {class: 'lm-doc-section-label'}, 'Members']],
-            rabid.volunteer_group.renderMemberEditor(c.group_id),
+            [h.div, {class: 'lm-subsection'}, rabid.volunteer_group.renderMemberEditor(c.group_id)],
 
             // Projects the committee is responsible for (assigned via its group),
             // each drilling in to its own page.  The "+" creates one directly in
@@ -249,11 +251,12 @@ export class CommitteeTable extends Table<Committee> {
                      {kind: 'modal', dialogUrl: `/rabid.project.newCommitteeProjectDialog(${committee_id})`},
                      'lm-menu-button', {'aria-label': 'New project', title: 'New project'})
                  : undefined],
-            rabid.project.renderForCommittee(committee_id),
+            [h.div, {class: 'lm-subsection'}, rabid.project.renderForCommittee(committee_id)],
 
             // The committee's own task list - a 1-1 owned project, created lazily
             // on the first task.  docHeading=true so its "Tasks" heading matches
-            // the Members/Projects section labels above.
+            // the Members/Projects section labels above (and it indents its own
+            // task list into a .lm-subsection).
             rabid.task.renderOwnerTasks('committee', committee_id, null, true),
         ];
     }
