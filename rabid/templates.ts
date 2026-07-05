@@ -147,7 +147,7 @@ export function navBar(showTestClientLink: boolean = false): any {
     return [
         [h.nav, {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
          [h.div, {class:"container-fluid"},
-          [h.a, {class:"navbar-brand", href:"/rr/"}, 'RRBR'],
+          [h.a, {class:"navbar-brand", href:"/"}, 'RRBR'],
           [h.button, {class:"navbar-toggler", type:"button", 'data-bs-toggle':"collapse", 'data-bs-target':"#navbarSupportedContent", 'aria-controls':"navbarSupportedContent", 'aria-expanded':"false", 'aria-label':"Toggle navigation"},
            [h.span, {class:"navbar-toggler-icon"}],
           ], //button
@@ -180,42 +180,12 @@ export function navBar(showTestClientLink: boolean = false): any {
             ], //li
 
             [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/timesheets"}, 'Timesheets'],
-            ], //li
-
-            [h.li, {class:"nav-item"},
              [h.a, {class:"nav-link", href:"/committees"}, 'Committees'],
-            ], //li
-
-            [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/projects"}, 'Projects'],
             ], //li
 
             [h.li, {class:"nav-item"},
              [h.a, {class:"nav-link", href:"/tasks"}, 'Tasks'],
             ], //li
-
-            [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/templates"}, 'Templates'],
-            ], //li
-
-            // Test client: only on a non-production db (the browser-test harness
-            // lives there).  It is a <button> doing a full navigation, NOT a GET
-            // <a href>: link prefetch - and especially Chrome prerender, which
-            // *runs scripts* - could otherwise load testClientPage() and silently
-            // opt this tab in (the opt-in lives in test-agent.js).  A button is
-            // never prefetched/prerendered, so the opt-in only happens on a real
-            // click.  Full load (not htmx swap) so the page's script runs cleanly.
-            showTestClientLink
-                ? [h.li, {class:"nav-item"},
-                   [h.button, {type:"button", class:"nav-link btn btn-link text-warning",
-                               onclick:"window.location.href='/rabid.testClientPage()'",
-                               title:'Test-mode only: act as the browser test client'},
-                    'Test client ',
-                    [h.span, {class:'badge text-bg-warning'}, 'test']],
-                  ] //li
-                : undefined,
-
 
             // Reports
             [h.li, {class:"nav-item dropdown"},
@@ -223,12 +193,7 @@ export function navBar(showTestClientLink: boolean = false): any {
               'Reports'
              ], //a
              [h.ul, {class:"dropdown-menu"},
-              [h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
-              [h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
-              [h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
-              [h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
-              [h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],              
-              //[h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/wordwiki.entriesByEnglishGloss()'}, 'Entries by English Gloss']],              
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/activityReport'}, 'Volunteer Activity Report']],
              ], //ul
             ], //li
 
@@ -238,7 +203,23 @@ export function navBar(showTestClientLink: boolean = false): any {
               'Admin'
              ], //a
              [h.ul, {class:"dropdown-menu"},
-              [h.li, {}, [h.a, {class:"dropdown-item", href:'/ww/startPublish()'}, 'Publish']],
+              // Management/administrative surfaces - kept out of the main bar so
+              // it isn't in a regular volunteer's face.  Projects are usually
+              // reached via their owning object (an event/committee/etc.); the
+              // Projects and Templates list pages and Timesheets live here.
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/projects'}, 'Projects']],
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/templates'}, 'Templates']],
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/timesheets'}, 'Timesheets']],
+              // Test client: only on a non-production db.  A <button>, not an
+              // <a href>: prefetch/prerender of a link can *run scripts* and
+              // silently opt this tab in (the opt-in lives in test-agent.js); a
+              // button only fires on a real click.  Full load so the script runs.
+              showTestClientLink
+                  ? [h.li, {}, [h.button, {type:"button", class:"dropdown-item text-warning",
+                                onclick:"window.location.href='/rabid.testClientPage()'",
+                                title:'Test-mode only: act as the browser test client'},
+                     'Test client ', [h.span, {class:'badge text-bg-warning'}, 'test']]]
+                  : undefined,
              ], //ul
             ], //li
             
@@ -248,12 +229,6 @@ export function navBar(showTestClientLink: boolean = false): any {
 
             
            ], //ul
-
-           // Search form
-           [h.form, {class:"d-flex me-3", role:"search", method:'get', action:'/ww/wordwiki.searchPage(query)'},
-            [h.input, {id:'searchText', name:'searchText', class:"form-control me-2", type:"search", placeholder:"Search", 'aria-label':"Search"}],
-            [h.button, {class:"btn btn-outline-success", type:"submit"}, 'Search'],
-           ], //form
 
            // Logout (session_token is bound in the route scope by rabid.rpcHandler).
            // Uses hx-post so the state change is a POST (not a prefetchable GET);

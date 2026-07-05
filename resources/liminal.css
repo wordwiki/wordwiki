@@ -191,7 +191,7 @@
    separate by whitespace; the accent title (.lm-nav-link) is the navigation
    signal, and the whole section stays clickable as a larger tap target. */
 .lm-doc-section {
-    padding: 0.4rem 0;
+    padding: 0.65rem 0;
     cursor: pointer;
     max-width: 46rem;
 }
