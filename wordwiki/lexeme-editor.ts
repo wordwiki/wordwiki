@@ -351,12 +351,15 @@ function setAssertionFields(assertion: Assertion, rel: model.RelationField,
 // newId/placeholderTxTime/isTombstone moved to lexeme-ops.ts (shared with
 // the table pages' assertion verbs); imported above.
 
-// The editor's two looks: 'edit' shows each fact's bare current value with
+// The editor's looks: 'edit' shows each fact's bare current value with
 // editing affordances; 'review' shows each fact diffed against its published
 // baseline, adds approve/revert/comment, and surfaces pending deletions (see
 // publication-model.md).  The mode rides in each fragment's hx-get, so an
-// in-place reload re-renders in the same mode.
-export type EditMode = 'edit' | 'review';
+// in-place reload re-renders in the same mode.  'meta' is the metadata-driven
+// editor (metaEditPage): same dialogs/verbs as 'edit', but its page has no
+// per-relation fragments - every mutation reloads the whole-entry root
+// (mutationTargets), which the meta page re-renders coarsely.
+export type EditMode = 'edit' | 'review' | 'meta';
 
 // Review-mode view state, carried in the entry fragment's hx-get so a reload
 // preserves it.  `participant` is a username whose threads to show, or
@@ -419,7 +422,7 @@ export function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined
 
 /** The edit mode carried in a dialog postback (defaults to plain editing). */
 function formMode(form: Record<string, any>): EditMode {
-    return form.mode === 'review' ? 'review' : 'edit';
+    return form.mode === 'review' ? 'review' : form.mode === 'meta' ? 'meta' : 'edit';
 }
 
 /** A user's display name for the history grid (the friendly name when known,
@@ -727,15 +730,20 @@ export class LexemeEditor {
     private metaEditingHooks(entry_id: number): entryMeta.EditingHooks {
         return {
             tupleSurface: (rf, id, body) => {
-                const current = new CurrentTupleQuery(
-                    this.findTupleInEntry(id.entryId, id.factId)).mostRecentTupleVersion;
+                const q = new CurrentTupleQuery(this.findTupleInEntry(id.entryId, id.factId));
+                const current = q.mostRecentTupleVersion;
                 if(!current) return body;
+                // A fields-less tuple (example) has nothing to edit: its ☰
+                // still carries insert/move/delete (editMenuItems drops Edit),
+                // but the surface is not tap-to-edit.
+                const editable = dialogFields(rf).length > 0;
                 const menu = action.actionMenu(
-                    this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit'),
+                    [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'meta'),
+                     ...this.demotedAddItems(id.entryId, id.factId, rf, q)],
                     {ariaLabel: `Actions for this ${rf.prompt}`});
-                return ['div', {class: `-fact-${id.factId}- lm-editable lm-me-editable d-flex align-items-start gap-1`,
+                return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}lm-me-editable d-flex align-items-start gap-1`,
                                 ...this.metaReloadAttrs(id.entryId),
-                                onclick: 'lmEditableClick(event)'},
+                                ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
                         ['div', {class: 'flex-grow-1'}, body],
                         menu];
             },
@@ -762,9 +770,16 @@ export class LexemeEditor {
                             label([' ', this.addButtons(parentId.entryId, parentId.factId, rf)])];
                 if(rf.scalarFields.some(isDialogReadOnly))
                     return ['div', rowAttrs, label()];
+                // A fields-less relation (example) has an EMPTY insert dialog -
+                // there, adding IS the whole action, so create immediately and
+                // let the refresh show the new tuple's child slots.
+                const fieldless = dialogFields(rf).length === 0;
                 const menu = action.actionMenu(
-                    [{label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
-                      dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}}],
+                    [fieldless
+                        ? {label: 'Add', btnClass: 'edit', mode: {kind: 'immediate',
+                           expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`}}
+                        : {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
+                           dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}', null, null, 'meta')`}}],
                     {ariaLabel: `Add ${rf.prompt}`});
                 return ['div', {...rowAttrs,
                                 class: rowAttrs.class + ' lm-editable lm-me-editable',
@@ -772,6 +787,19 @@ export class LexemeEditor {
                         label(), menu];
             },
         };
+    }
+
+    /** "Add X…" items for DEMOTED empty child relations ($view emptyEdit:
+     *  'menu'): a rarely-used field renders no "empty" slot line - its add
+     *  lives here, on the parent tuple's ☰, instead (see render-entry-meta). */
+    private demotedAddItems(entry_id: number, fact_id: number, rf: model.RelationField,
+                            q: CurrentTupleQuery): action.ActionMenuItem[] {
+        return rf.relationFields
+            .filter(cr => cr.style.$view?.emptyEdit === 'menu')
+            .filter(cr => !((q.childRelations[cr.tag]?.tuples as CurrentTupleQuery[]) ?? [])
+                    .some(t => t.mostRecentTupleVersion))
+            .map(cr => ({label: `Add ${cr.prompt}…`, mode: {kind: 'modal' as const,
+                dialogUrl: `${R}.insertDialog(${entry_id}, ${fact_id}, '${cr.tag}', null, null, 'meta')`}}));
     }
 
     // ------------------------------------------------------------------------
@@ -879,18 +907,28 @@ export class LexemeEditor {
         // (per-book buttons / not yet) - no generic positioned inserts.
         const insertable = !rf.scalarFields.some(isBoundingGroupField)
             && !rf.scalarFields.some(isDialogReadOnly);
-        // The mode rides as a trailing arg ONLY in review mode (it defaults to
-        // 'edit' server-side), so plain editing keeps its byte-identical wire.
-        const m = mode === 'review' ? `, 'review'` : '';
+        // The mode rides as a trailing arg only when NOT 'edit' (the server
+        // default), so plain editing keeps its byte-identical wire.
+        const m = mode === 'edit' ? '' : `, '${mode}'`;
+        // A fields-less tuple (example: pure structure) has no Edit (the
+        // dialog would be empty), and its inserts create immediately for the
+        // same reason.
+        const fieldless = dialogFields(rf).length === 0;
         return [
-            {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal',
-                dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}},
-            ...(insertable ? [
+            ...(fieldless ? [] : [
+                {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal' as const,
+                    dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}}]),
+            ...(insertable ? (fieldless ? [
+                {label: `Insert ${rf.prompt} before`, mode: {kind: 'immediate' as const,
+                    expr: `wordwiki.lexeme.insertEmptyTuple(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
+                {label: `Insert ${rf.prompt} after`, mode: {kind: 'immediate' as const,
+                    expr: `wordwiki.lexeme.insertEmptyTuple(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
+            ] : [
                 {label: `Insert ${rf.prompt} before`, mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
                 {label: `Insert ${rf.prompt} after`, mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
-            ] : []),
+            ]) : []),
             {label: 'Move up', mode: {kind: 'immediate',
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up'${m})`}},
             {label: 'Move down', mode: {kind: 'immediate',
@@ -1414,9 +1452,9 @@ export class LexemeEditor {
         const rel = tuple.schema;
         const versions = tuple.tupleVersions.toReversed();
         const mostRecent = tuple.mostRecentTuple;
-        // As in editMenuItems: the mode rides along only in review (edit keeps
-        // its byte-identical wire).
-        const m = mode === 'review' ? `, 'review'` : '';
+        // As in editMenuItems: the mode rides along only when not 'edit'
+        // (edit keeps its byte-identical wire).
+        const m = mode === 'edit' ? '' : `, '${mode}'`;
 
         return [
             // This dialog is opened from a button INSIDE the modal body, which
@@ -1561,6 +1599,31 @@ export class LexemeEditor {
             return this.saveEdit(form);
         else
             return this.saveInsert(form);
+    }
+
+    /**
+     * Insert a FIELDS-LESS child tuple (an example: pure structure, no dialog
+     * inputs) - there, insert IS the whole action, so no empty dialog; the
+     * refresh shows the new tuple's child slots.  Same insert path as
+     * saveTuple (order key from the optional anchor).
+     */
+    @route(authenticated)
+    insertEmptyTuple(entry_id: number, parent_fact_id: number, child_tag: string,
+                     anchor_fact_id?: number|null, where?: 'before'|'after'|null,
+                     mode: EditMode = 'edit'): any {
+        const parent = this.findTupleInEntry(entry_id, parent_fact_id);
+        const rel = parent.childRelations[child_tag]?.schema
+            ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
+        // A fielded relation goes through its dialog - creating it blank here
+        // would be a content-free row a user never asked for.
+        if(dialogFields(rel).length > 0)
+            panic('insertEmptyTuple on a relation with dialog fields', rel.tag);
+        const form: Record<string, any> = {entry_id, parent_fact_id, child_tag, mode};
+        if(anchor_fact_id != null && (where === 'before' || where === 'after')) {
+            form.anchor_fact_id = anchor_fact_id;
+            form.where = where;
+        }
+        return this.saveInsert(form);
     }
 
     // --- Review actions (publication-model.md) ------------------------------
@@ -1932,7 +1995,9 @@ export class LexemeEditor {
     // - so a fine-grained self/parent reload would leave sibling classes stale.
     private mutationTargets(entry_id: number, a: Assertion, scope: 'self'|'parent',
                             mode: EditMode = 'edit'): string[] {
-        if(mode === 'review' || a.ty === entrySchema.SpellingTag)
+        // Review and the metadata editor both refresh coarsely: their pages
+        // have no per-relation fragments, only the whole-entry root.
+        if(mode === 'review' || mode === 'meta' || a.ty === entrySchema.SpellingTag)
             return [this.rootTarget(entry_id)];
         if(scope === 'self')
             return [`.-fact-${a.id}-`];

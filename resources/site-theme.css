@@ -127,6 +127,17 @@ body {
    The first block under any container has no top gap. */
 .lm-me-section, .lm-me-line, .lm-me-empty { margin-top: .55rem; }
 .lm-me-line + .lm-me-line { margin-top: .12rem; }
+/* EDIT mode wraps each line in an editable-surface flex row (.lm-me-editable);
+   the wrapper takes over the line's place in the rhythm, and the line inside
+   it must NOT keep its own top margin (it would push the text below the ☰
+   sitting in the same flex row). */
+.lm-me-editable { margin-top: .55rem; }
+.lm-me-editable + .lm-me-editable,
+.lm-me-editable + .lm-me-empty,
+.lm-me-empty + .lm-me-editable,
+.lm-me-empty + .lm-me-empty { margin-top: .12rem; }
+.lm-me-editable .lm-me-line { margin-top: 0; }
+.lm-me-editable .lm-me-line + .lm-me-line { margin-top: .12rem; }
 .lm-meta-entry > :first-child,
 .lm-me-section .ms-3 > :first-child,
 .lm-me-item > :first-child,

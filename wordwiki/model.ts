@@ -54,6 +54,13 @@ export interface ViewStyle {
     // Zero members: drop the whole section (read) vs keep it (editor, so the
     // add affordance shows).  Default 'elide' in read mode.
     empty?: 'elide' | 'keep',
+    // EDIT-mode policy for an EMPTY relation.  'slot' (default): the quiet
+    // "Prompt: empty" tap-to-add line.  'menu': render nothing - the add is
+    // DEMOTED to an "Add Prompt…" item on the parent tuple's ☰.  For
+    // rarely-used editorial fields (foreign reference, public note) whose
+    // ever-present empty slots would drown the content; fields that are
+    // SUPPOSED to be filled keep the slot - there, "empty" is a signal.
+    emptyEdit?: 'slot' | 'menu',
     // Exactly one member: collapse the grouping level and render the lone
     // member in place (subentry), vs always use the list presentation
     // (examples).  Default 'list'.

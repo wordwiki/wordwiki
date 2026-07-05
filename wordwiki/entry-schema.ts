@@ -502,7 +502,7 @@ export const dictSchemaJson = {
                     source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation',
-                              $view: { order: 4, label: 'inline', empty: 'elide' } },
+                              $view: { order: 4, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },
 
                 normalized_source_as_entry: {
@@ -512,7 +512,7 @@ export const dictSchemaJson = {
                     normalized_source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation',
-                              $view: { order: 5, label: 'inline', empty: 'elide' } },
+                              $view: { order: 5, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },
 
                 foreign_reference: {
@@ -522,7 +522,7 @@ export const dictSchemaJson = {
                     foreign_reference: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
                     variant: {$type: 'variant'},
                     $style: { $shape: 'compactInlineListRelation',
-                              $view: { order: 6, label: 'inline', empty: 'elide' } },
+                              $view: { order: 6, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },
 
                 note: {
@@ -541,7 +541,7 @@ export const dictSchemaJson = {
                     public_note_id: {$type: 'primary_key'},
                     public_note: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5, $markdown: true }},
                     $style: { $shape: 'compactInlineListRelation',
-                              $view: { order: 8, label: 'inline', empty: 'elide' } },
+                              $view: { order: 8, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },
                 
                 // note: {

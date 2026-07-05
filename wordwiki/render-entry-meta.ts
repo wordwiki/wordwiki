@@ -319,10 +319,11 @@ export class EntryRenderer {
         if (v.keyField) return this.renderKeyedBag(rf, tuples, parent);
 
         // Empty: read elides (or a keep-stub); edit shows a quiet placeholder
-        // (the slot + an insert-first menu).
+        // (the slot + an insert-first menu) - unless the slot is DEMOTED to
+        // the parent tuple's ☰ ($view emptyEdit:'menu'; rarely-used fields).
         if (tuples.length === 0) {
             if (!editing) return v.empty === "keep" ? ["div", { class: "lm-me-empty text-muted small" }, rf.prompt] : "";
-            return this.emptyRelation(rf, parent);
+            return v.emptyEdit === "menu" ? "" : this.emptyRelation(rf, parent);
         }
 
         // Singleton collapse: READ only (edit keeps the level so a 2nd can be added).
@@ -354,6 +355,21 @@ export class EntryRenderer {
             // Inline-labelled lists (gloss) stand alone; unlabelled (recordings)
             // get a heading section.
             return v.label === "inline" ? lines : this.section(rf, lines);
+        }
+
+        // A FIELDS-LESS container (example): the tuple is pure structure -
+        // no content scalars, so no content line.  In edit mode each tuple is
+        // its own headed section with the tuple's ☰ ON the heading line (the
+        // editor drops Edit/tap-to-edit: there is nothing to edit).  Without
+        // this, the tuple renders a blank line whose only occupant is a
+        // ragged ☰.  (Read mode needs no per-tuple anchor - the normal
+        // section rendering below covers it.)
+        if (editing && contentScalars(rf).length === 0) {
+            return tuples.map(t =>
+                ["div", { class: "lm-me-section" },
+                 this.surface(rf, t, ["div", { class: "fw-bold lm-me-heading" }, rf.prompt + ":"]),
+                 ["div", { class: "ms-3" },
+                  orderedChildRelations(rf).map(cr => this.renderRelation(cr, t))]]);
         }
 
         // CONTAINER relation (has child relations): each tuple is a block.
