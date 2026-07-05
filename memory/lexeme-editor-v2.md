@@ -11,7 +11,7 @@ Approved 2026-06-10: build a NEW PARALLEL lexeme editor for wordwiki on the rabi
 
 Key decisions from dz:
 - ~~change_by_username keeps the hacky user-selector for now~~ DONE 2026-06-10: rabid-style sessions landed ([[wordwiki-toplevel-upgrade]]); every editor assertion is stamped with the logged-in username via changeStamp().
-- The PUBLIC renderer stays separate and hand-tuned (entry-schema.ts renderEntry / publish.ts) — do NOT unify it with the metadata-driven editor render; tightness beats genericity there.
+- ~~The PUBLIC renderer stays separate and hand-tuned~~ REVERSED 2026-07-05: the metadata renderer IS the public renderer now (publish.ts publishEntry, audience 'public'; a step toward multi-orthography + it reads better). Hand renderer remains only for the reference info-box embed + wordViewCompare. $view audience:'internal' gates editorial fields; $view.hidden = hidden-from-READ (the editor shows every field).
 - v1 secondary actions (move/delete/history) live in the edit dialog; read surface stays clean; context menus dropped.
 - Conflict detection via replaces_assertion_id hidden param (not rabid before-values).
 - Audio/images: eager upload on file selection to uploadRecording, form carries content-store path.
