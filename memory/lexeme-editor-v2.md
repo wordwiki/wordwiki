@@ -18,7 +18,7 @@ Key decisions from dz:
 
 **Why:** editor longevity — the htmx model is simple enough to keep runnable long-term; the client workspace had made the editor a scary distributed system.
 
-**Update 2026-07-05:** a metadata-driven renderer+EDITOR experiment is underway on top of v2 (`wordwiki/render-entry-meta.ts` + `wordwiki.lexeme.metaEditPage`; $view-driven, elder-focused UX tuning in progress). Its refresh is whole-entry-coarse via EditMode 'meta'; the agreed fine-grained design (liminal shape keys over the -fact-/-rel- family) is written down at `<repo>/meta-editor-refresh-design.md` — read that before building it, don't re-derive. Agreed sequencing: visual tuning first, then the refresh work.
+**Update 2026-07-05 (later):** the metadata-driven renderer+EDITOR (`wordwiki/render-entry-meta.ts` + `wordwiki.lexeme.metaEditPage`) now has FINE-GRAINED refresh BUILT per `<repo>/meta-editor-refresh-design.md` (see its "As built" deviations): shape-keyed relation wrappers + self-refreshing -fact- rows + title/activity fragments, uniform emission in mutationTargets; the interim EditMode 'meta' was removed (back to edit|review). The simple-approval "view changes" mode is also built ([[publication-approval-model]], `<repo>/meta-editor-changes-mode.md`). Visual tuning (+ per row, empty-slot model, demoted rare fields) largely settled with dz.
 
 **How to apply:** implement in wordwiki/lexeme-editor.ts + a new page template; follow the phases in the design doc. Related: [[wordwiki-assertion-model]], [[testing-approach]].
 
