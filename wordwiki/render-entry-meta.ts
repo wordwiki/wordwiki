@@ -234,11 +234,13 @@ export class EntryRenderer {
         return this.editing?.titleWrapper ? this.editing.titleWrapper(title) : title;
     }
 
-    /** Every child relation in $view order, minus the headword (title-only)
-     *  and the hidden (editorial) relations. */
+    /** Every child relation in $view order, minus the hidden (editorial)
+     *  relations - and, in READ mode only, minus the headword: title-only is
+     *  a read convenience; the editor must still offer the spelling section
+     *  (it stays in the title too). */
     protected renderBody(entryRelation: model.RelationField, node: EntryNode): Markup {
         return orderedChildRelations(entryRelation)
-            .filter(cr => view(cr).titleRole !== "headword")
+            .filter(cr => !!this.editing || view(cr).titleRole !== "headword")
             .map(cr => this.renderRelation(cr, node));
     }
 
@@ -373,7 +375,10 @@ export class EntryRenderer {
     renderTupleSurfaceFor(rf: model.RelationField, tuple: EntryNode): Markup {
         const v = view(rf);
         if (v.keyField) return this.keyedBagRow(rf, tuple);
-        if (v.compose || orderedChildRelations(rf).length === 0) return this.flatRow(rf, tuple);
+        // Mirrors renderRelationInner's dispatch: compose is read-only, so an
+        // edit-mode composed container is a container here too.
+        if ((v.compose && !this.editing) || orderedChildRelations(rf).length === 0)
+            return this.flatRow(rf, tuple);
         if (this.editing && contentScalars(rf).length === 0) return this.fieldslessHeading(rf, tuple);
         return this.containerScalarSurface(rf, tuple);
     }
@@ -413,8 +418,12 @@ export class EntryRenderer {
         if (v.singleton === "collapse" && tuples.length === 1 && !editing)
             return this.renderTupleBlock(rf, tuples[0]);
 
-        // FLAT (no child relations) or COMPOSED relation: a list of inline VALUES.
-        if (v.compose || orderedChildRelations(rf).length === 0) {
+        // FLAT (no child relations) or COMPOSED relation: a list of inline
+        // VALUES.  COMPOSE is a READ-mode convenience (like join/collapse):
+        // in edit mode a composed relation WITH child relations falls through
+        // to the container branch, so the composed-in children (an alternate
+        // form's per-orthography texts) stay separately editable.
+        if ((v.compose && !editing) || orderedChildRelations(rf).length === 0) {
             // Joined onto one line - READ only (edit needs each tuple editable).
             if (v.join !== undefined && !editing) {
                 const items = tuples.map(t => this.tupleInlineValue(rf, t)).filter(m => !isEmptyMarkup(m));

@@ -104,22 +104,32 @@ test("changes mode: a MOVE (identical values, new order key) says 'moved', not '
     });
 });
 
-test("changes mode: ROWLESS changes (headword, hidden editorial) are listed in the bar", async () => {
+test("changes mode: a HEADWORD edit annotates its row (the edit body shows spelling)", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
-            const {tl, spl, cat} = seedClean(fx);
-            // The spelling renders only in the TITLE; the category renders
-            // nowhere in this editor.  Approve all covers them, so the bar
-            // must show them.
+            const {tl, spl} = seedClean(fx);
             fx.ww.applyTransaction([mkEdit(spl, 2010, tl.next(), {attr1: "samqwen"})],
                                    {quiet: true});
+            const changes = metaHtml(fx, true);
+            assertStringIncludes(changes, "Spelling: ");                  // the editable section
+            assertStringIncludes(changes, "samqwen");                     // new value on the row
+            assertStringIncludes(changes, "lm-me-chg-was");               // "was:" inline
+            assertStringIncludes(changes, "lm-diff-del'>a</span>");       // the struck old letter
+        });
+    });
+});
+
+test("changes mode: ROWLESS changes (hidden editorial) are listed in the bar", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, cat} = seedClean(fx);
+            // The category renders nowhere in this editor.  Approve all
+            // covers it, so the bar must show it.
             fx.ww.applyTransaction([mkEdit(cat, 2020, tl.next(), {attr1: "weather"})],
                                    {quiet: true});
             const changes = metaHtml(fx, true);
-            assertStringIncludes(changes, "2 unapproved changes");
+            assertStringIncludes(changes, "1 unapproved change");
             assertStringIncludes(changes, "lm-cl-chip-edited");
-            assertStringIncludes(changes, "samqwen");                     // headword: new value...
-            assertStringIncludes(changes, "lm-diff-del'>a</span>");       // ...and the struck old letter
             assertStringIncludes(changes, "weather");                     // hidden category's new value
 
             fx.ww.lexeme.approveAllChanges(1000);

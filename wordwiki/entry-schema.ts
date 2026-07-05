@@ -188,8 +188,10 @@ export const dictSchemaJson = {
             variant: {$type: 'variant'},
             // The headword: pulled into the document title, joined ' / ', not
             // repeated in the body.
+            // label: the EDIT body shows the spelling section (read keeps
+            // it title-only), so its rows need their name.
             $style: { $shape: 'compactInlineListRelation',
-                      $view: { order: 1, titleRole: 'headword', join: ' / ' } },
+                      $view: { order: 1, titleRole: 'headword', join: ' / ', label: 'inline' } },
         },
 
         status: {
@@ -401,10 +403,12 @@ export const dictSchemaJson = {
                 $tag: 'alt',
                 alternate_grammatical_form_id: {$type: 'primary_key'},
                 // grammatical_form -> friendly name (from data), in parens.
+                // The scalar labels only show in EDIT mode (read renders
+                // the compose, where labels don't apply).
                 grammatical_form: {$type: 'string', $bind: 'attr1',
                                    $style: { $options: GrammaticalFormDescriptions,
-                                             $view: { wrap: ['(', ')'] } }},
-                gloss: {$type: 'string', $bind: 'attr2', $style: { $view: { emphasis: 'italic' } }},
+                                             $view: { wrap: ['(', ')'], label: 'inline' } }},
+                gloss: {$type: 'string', $bind: 'attr2', $style: { $view: { emphasis: 'italic', label: 'inline' } }},
                 // Each form reads as one phrase: "form — gloss — (plural)".
                 $style: { $shape: 'containerRelation',
                           $view: { order: 7, label: 'heading', empty: 'elide',
@@ -417,7 +421,8 @@ export const dictSchemaJson = {
                     alternate_form_text_id: {$type: 'primary_key'},
                     alternate_form_text: {$type: 'string', $bind: 'attr1'},
                     variant: {$type: 'variant'},
-                    $style: { $shape: 'inlineListRelation', $view: { join: ' / ' } },
+                    $style: { $shape: 'inlineListRelation',
+                              $view: { join: ' / ', label: 'inline' } },
                 },
             },
 

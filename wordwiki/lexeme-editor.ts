@@ -1001,18 +1001,18 @@ export class LexemeEditor {
      *  approveFact's tree-ordering gates.  `visible` = has scalar content:
      *  structural facts (an entry, a subentry, an example) must be APPROVED
      *  but are not COUNTED - they have no annotated row.  `rowless` = visible
-     *  content whose relation renders NO body row (the headword, which lives
-     *  only in the title; hidden editorial relations) - those changes must be
-     *  listed in the BAR, like deletions, or Approve all would cover changes
-     *  the page never showed. */
+     *  content whose relation renders NO body row (hidden editorial
+     *  relations) - those changes must be listed in the BAR, like deletions,
+     *  or Approve all would cover changes the page never showed. */
     private metaPendingChanges(entry_id: number) {
         const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
         const hasContent = (rf: model.RelationField, a: Assertion) => rf.scalarFields.some(f =>
             !(f instanceof model.PrimaryKeyField) && norm((a as any)[f.bind]) !== null);
-        const rowless = (rf: model.RelationField) => {
-            const v = rf.style.$view ?? {};
-            return !!v.hidden || v.titleRole === 'headword';
-        };
+        // Hidden editorial relations render nowhere in this editor; their
+        // pending changes list in the BAR.  (The headword WAS rowless too,
+        // until the edit body regained its spelling section.)
+        const rowless = (rf: model.RelationField) =>
+            !!(rf.style.$view ?? {}).hidden;
         type Pending = {fact_id: number, rf: model.RelationField,
                         review: FactReview<Assertion>, visible: boolean, rowless: boolean};
         const content: Pending[] = [], deletions: Pending[] = [];
@@ -1052,10 +1052,10 @@ export class LexemeEditor {
         if(!changes)
             return ['div', {class: 'lm-me-changes-hint text-muted small'},
                     this.metaModeButton(entry_id, true, `${count} — view`)];
-        // Changes the TREE can't show (deleted rows; rowless relations - the
-        // headword, hidden editorial fields) are listed here instead, each
-        // with its value, so Approve all's contract stays honest: it approves
-        // exactly what this page shows.
+        // Changes the TREE can't show (deleted rows; rowless hidden
+        // editorial relations) are listed here instead, each with its value,
+        // so Approve all's contract stays honest: it approves exactly what
+        // this page shows.
         const barLine = (chip: string, rf: model.RelationField, value: Markup): Markup =>
             ['div', {class: 'lm-me-chg-del'},
              ['span', {class: `lm-cl-chip lm-cl-chip-${chip}`}, chip], ' ',

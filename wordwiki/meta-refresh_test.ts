@@ -22,8 +22,15 @@ function seed(fx: Fixture) {
     fx.ww.applyTransaction([sub], {quiet: true});
     const gls = mkChild(sub, "gls", 1200, tl.next(), {attr1: "water bucket", order_key: "0.5"});
     fx.ww.applyTransaction([gls], {quiet: true});
+    // An alternate grammatical form with a composed-in text child (the
+    // compose-is-read-only cases).
+    const alt = mkChild(sub, "alt", 1300, tl.next(),
+                        {attr1: "vii-3p", attr2: "buckets of water", order_key: "0.5"});
+    fx.ww.applyTransaction([alt], {quiet: true});
+    const aft = mkChild(alt, "alx", 1310, tl.next(), {attr1: "samqwanl", order_key: "0.5"});
+    fx.ww.applyTransaction([aft], {quiet: true});
     bornApprove(fx.ww);
-    return {tl, e, spl, sub, gls};
+    return {tl, e, spl, sub, gls, alt, aft};
 }
 
 test("meta refresh: the full render is built of shape/tuple/title/activity fragments", async () => {
@@ -108,6 +115,43 @@ test("meta refresh: buttons and dialogs declare txd speculation deps = the emiss
             assertStringIncludes(ins,
                 'txd([".-fact-1100-",".-rel-1100-gls-",".-rel-1100-gls-shape-",'
                 + '".-entry-1000-title-",".-entry-1000-activity-"])');
+        });
+    });
+});
+
+test("edit mode: compose is read-only - the composed-in text child stays editable", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            seed(fx);
+            // (READ mode still composes the form into one phrase - covered by
+            // the word-view tests.)  EDIT mode keeps the structure: the form's
+            // own scalars are one editable surface, and the TEXT child (the
+            // per-orthography transcriptions) is its own editable relation
+            // with its own rows - dz: the compose optimization is simply
+            // disabled in edit mode; making it editable composed would be far
+            // more complicated than it is worth.
+            const edit = markupToString(fx.ww.lexeme.renderMetaEntry(1000));
+            assertStringIncludes(edit, "-fact-1300-");                       // the form itself
+            assertStringIncludes(edit, "Gloss: ");                           // its labelled scalars
+            assertStringIncludes(edit, "-rel-1300-alx-shape-");              // the text child's wrapper
+            assertStringIncludes(edit, "-fact-1310-");                       // ...with its editable row
+            assertStringIncludes(edit, "editDialog(1000, 1310)");            // ...and its own Edit
+            assertStringIncludes(edit, "samqwanl");
+        });
+    });
+});
+
+test("edit mode: the spelling section renders (title-only is a read convenience)", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            seed(fx);
+            const edit = markupToString(fx.ww.lexeme.renderMetaEntry(1000));
+            assertStringIncludes(edit, "Spelling: ");                        // the labelled row
+            assertStringIncludes(edit, "-fact-1010-");                       // editable
+            assertStringIncludes(edit, "editDialog(1000, 1010)");
+            assertStringIncludes(edit, "-rel-1000-spl-shape-");              // its own wrapper
+            // ...and the headword still renders in the title too.
+            assertStringIncludes(edit, "-entry-1000-title-");
         });
     });
 });
