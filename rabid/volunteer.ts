@@ -530,6 +530,15 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.h2, {class: 'mb-0'}, v.name],
              v.archived ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
              this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined,
+             // A focused photo-only edit form, so adding a picture doesn't mean
+             // wading through the whole volunteer edit flow.  Uses the generic
+             // field-subset edit form (Table.renderEditForm).
+             this.canEditRecord(v)
+                 ? action.actionButton(v.photo ? 'Edit photo' : 'Add photo',
+                     {kind: 'modal',
+                      dialogUrl: `/rabid.volunteer.renderEditForm(rabid.volunteer.getById(${volunteer_id}),["photo"])`},
+                     'btn btn-outline-secondary btn-sm')
+                 : undefined,
              viewerIsHost
                  ? action.actionButton('Reset password',
                      {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${volunteer_id})`},

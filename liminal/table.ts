@@ -577,7 +577,9 @@ export class Table<T extends Tuple> extends FieldSet {
     // ----------------------------------------------------------------------------
     
     /**
-     * Default rendering of an edit form.
+     * The primary edit-form entry point.  Renders an edit form over `record`,
+     * optionally restricted (and re-ordered) to the fields named in
+     * `fieldNames`; omitted/null => every field (the default full-record form).
      *
      * Record editing is just an action whose parameters are the row's columns,
      * so it is expressed through the generic renderParamForm (the same machinery
@@ -591,13 +593,39 @@ export class Table<T extends Tuple> extends FieldSet {
      *    different fields of the same row do not clobber each other.  Carrying
      *    these as hidden params (rather than emitting them from renderInput) keeps
      *    them out of the non-record param case.
+     *
+     * Field selection lets a caller present a focused sub-form, e.g. a
+     * photo-only editor:
+     *   rabid.volunteer.renderEditForm(rabid.volunteer.getById(1), ['photo'])
+     * Security is layered and does not trust the caller's list:
+     *  - each name is resolved against THIS table's own fieldsByName, so a name
+     *    can only ever pick a field of this table (an unknown name throws - a
+     *    caller bug), giving the same-table guarantee for free;
+     *  - the resolved fields are then filtered to the ones the actor may see and
+     *    edit, so a requested-but-forbidden field is silently dropped (exactly as
+     *    the default form omits fields the actor can't edit);
+     *  - saveForm independently re-checks edit permission on every changed field
+     *    and writes ONLY changed fields, so a sub-form can neither edit a
+     *    forbidden field nor clobber a field it didn't render.
      */
     @route(authenticated)
-    renderForm(record: T, onsubmit?: string): Markup {
+    renderEditForm(record: T, fieldNames?: string[] | null, onsubmit?: string): Markup {
         // Row-level gate (the save side has its own in parseForm): don't even
         // generate an edit form for a record the actor may not edit.
         if(!this.canEditRecord(record))
             throw new Error(`Not permitted to edit this ${this.name}`);
+
+        // Resolve the requested fields (default: all), preserving caller order.
+        // Resolving through this table's own fieldsByName IS the same-table
+        // check - the field list can only ever contain fields of this table.
+        const requested: Field[] = (fieldNames == null)
+            ? this.fields
+            : fieldNames.map(name => {
+                const f = this.fieldsByName[name];
+                if(!f)
+                    throw new Error(`Unknown field '${name}' on table '${this.name}'`);
+                return f;
+            });
 
         // Default dispatch: save via txd with the dirty set saveForm is
         // expected to return (speculatedSaveTargets), so the save and the
@@ -610,7 +638,7 @@ export class Table<T extends Tuple> extends FieldSet {
         // field that was redacted in the fetched record (one the actor can't see)
         // is also not editable, so its (sentinel) value never reaches an input or
         // a before-value - it simply isn't in the form, and can't be clobbered.
-        const editableFields = this.fields.filter(f => f.isVisible() && this.canEdit(f, record));
+        const editableFields = requested.filter(f => f.isVisible() && this.canEdit(f, record));
 
         const hidden: Record<string, any> = {};
         const pk = record[this.pkName];
@@ -618,7 +646,7 @@ export class Table<T extends Tuple> extends FieldSet {
             hidden[this.pkName] = pk;
         // For a NEW record (no pk) the before-snapshots are empty - on an insert
         // EVERY supplied value is a change.  This is what lets a "new" dialog be
-        // rendered over a partial record (e.g. renderForm({project_id} as Task)
+        // rendered over a partial record (e.g. renderEditForm({project_id} as Task)
         // to preset the project): the prefilled input differs from its empty
         // snapshot, so parseInput includes it.  (Snapshotting the prefill would
         // silently DROP any value the user accepts unchanged.)
@@ -639,6 +667,13 @@ export class Table<T extends Tuple> extends FieldSet {
             fieldContext: { ownerPath },
             dispatch: {id: 'edit-form', onsubmit: 'event.preventDefault(); '+onsubmit},
         });
+    }
+
+    /** Backwards-compatible entry point: the full-record edit form.  Thin
+     *  forwarder to renderEditForm (the primary entry point) with all fields. */
+    @route(authenticated)
+    renderForm(record: T, onsubmit?: string): Markup {
+        return this.renderEditForm(record, undefined, onsubmit);
     }
 
     // Type-ahead option source for a foreign-key field on this table, reachable as
