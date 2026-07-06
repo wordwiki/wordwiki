@@ -241,13 +241,17 @@ export class CategoryTable extends Table<Category> {
     @route(authenticated)
     renderCategoriesPage(): Markup {
         const canCreate = this.canEditRecord({} as Category);
+        // Rare admin acts live in a quiet ☰, not prominent buttons (the
+        // committee.ts list-header pattern).
+        const menuItems: action.ActionMenuItem[] = [];
+        if(canCreate)
+            menuItems.push({label: 'New category…',
+                            mode: {kind: 'modal', dialogUrl: '/ww/wordwiki.categories.newDialog()'}});
         return ['div', {class: 'container py-3'},
             ['div', {class: 'd-flex align-items-center gap-2 mb-2'},
              ['h2', {class: 'mb-0'}, 'Category Table'],
-             canCreate
-                 ? action.actionButton('New category',
-                     {kind: 'modal', dialogUrl: '/ww/wordwiki.categories.newDialog()'},
-                     'btn btn-outline-primary btn-sm')
+             menuItems.length > 0
+                 ? action.actionMenu(menuItems, {ariaLabel: 'Category actions'})
                  : undefined],
             ['p', {class: 'text-muted'},
              'The controlled vocabulary for lexeme categories. Slugs are stable ',
@@ -259,6 +263,7 @@ export class CategoryTable extends Table<Category> {
 
     // The list as a reloadable fragment (a "New category" insert reloads the
     // pk-less `.-category-` target, which is this wrapper), grouped by theme.
+    @route(authenticated)
     renderCategoryList(): Markup {
         const cats = this.allByOrder.all({});
         const props = this.reloadableItemProps(undefined, `/ww/wordwiki.categories.renderCategoryList()`);
@@ -289,12 +294,13 @@ export class CategoryTable extends Table<Category> {
                   ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
              ['div', {class: 'lm-item-secondary'}, secondary]];
 
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
+        // One QUIET navigable row species for every viewer
+        // (Table.detailItemProps: tap anywhere drills in via the lm-nav-link
+        // name).  No row pencil: editing lives on the detail page (dz:
+        // category edits are a big-deal operation - the extra step is fine).
         const item = this.detailItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
         return ['div', {...item, 'data-testid': `category-row-${id}`},
-            body, this.canEditRecord(c) ? this.editPencil(id) : undefined, navChevron()];
+            body, navChevron()];
     }
 
     @route(authenticated)

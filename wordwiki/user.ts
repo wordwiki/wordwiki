@@ -37,6 +37,8 @@ import * as passwordUtils from "../liminal/password.ts";
 import * as date from "../liminal/date.ts";
 import * as entrySchema from './entry-schema.ts';
 import * as templates from './templates.ts';
+import {route, authenticated} from "../liminal/security.ts";
+import type {WordWiki} from './wordwiki.ts';
 
 const admin = security.hasRole('admin');
 // User management is its own grant: 'edit-users' can be given to a non-admin
@@ -80,7 +82,10 @@ export type UserOpt = Partial<User>;
 
 export class UserTable extends Table<User> {
 
-    constructor() {
+    // The app back-reference (same pattern as CategoryTable): the detail
+    // page's Activity section renders via app.feed.  Optional so the table
+    // stays usable in migrations/tests without a WordWiki.
+    constructor(private app?: WordWiki) {
         super('user', [
             new PrimaryKeyField('user_id', {}),
             new StringField('username', {indexed: true, unique: true, edit: usernameOnCreateOnly,
@@ -136,15 +141,25 @@ export class UserTable extends Table<User> {
     // --- Standard editable-item list (the rabid UI standard) -----------------
     // ------------------------------------------------------------------------
 
+    // NOTE (the route-undeclared pattern): every method reached by URL -
+    // hx-get fragments, page links, dialog urls - MUST carry @route, or
+    // strict routeterp 404s it.  These were all missing (the users list's
+    // old inline Activity button masked the dead row navigation).
+    @route(authenticated)
     renderUsersPage(): Markup {
         const canCreate = this.canEditRecord({} as User);
+        // Rare admin acts live in a quiet ☰, not prominent buttons that would
+        // make the page read like an editor rather than a document (the
+        // committee.ts list-header pattern).
+        const menuItems: action.ActionMenuItem[] = [];
+        if(canCreate)
+            menuItems.push({label: 'New user…',
+                            mode: {kind: 'modal', dialogUrl: '/ww/wordwiki.users.newDialog()'}});
         return ['div', {class: 'container py-3'},
             ['div', {class: 'd-flex align-items-center gap-2 mb-2'},
              ['h2', {class: 'mb-0'}, 'Users'],
-             canCreate
-                 ? action.actionButton('New user',
-                     {kind: 'modal', dialogUrl: '/ww/wordwiki.users.newDialog()'},
-                     'btn btn-outline-primary btn-sm')
+             menuItems.length > 0
+                 ? action.actionMenu(menuItems, {ariaLabel: 'User actions'})
                  : undefined],
             this.renderUserList(),
         ];
@@ -152,6 +167,7 @@ export class UserTable extends Table<User> {
 
     // The list as a reloadable fragment: a "New user" insert reloads `.-user-`
     // (the pk-less reload target the base saveForm emits), which is this wrapper.
+    @route(authenticated)
     renderUserList(): Markup {
         const users = this.allUsersByName.all({});
         const props = this.reloadableItemProps(undefined, `/ww/wordwiki.users.renderUserList()`);
@@ -168,29 +184,23 @@ export class UserTable extends Table<User> {
                            u.disabled ? 'disabled' : '']
             .filter(Boolean).join(' · ');
 
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
+        // One QUIET navigable row species for every viewer
+        // (Table.detailItemProps: tap anywhere drills in via the lm-nav-link
+        // name).  No row pencil and no inline Activity button (the
+        // design-language cleanup): editing and the activity feed both live
+        // on the detail page the row navigates to.
         const item = this.detailItemProps(id, `/ww/wordwiki.users.renderUserRowById(${id})`);
-        // Their activity feed: threads (their changes + what landed on top).
-        // Built inline (a stable 2-field feed URL) to avoid a change-feed <-> user
-        // import cycle.  stopPropagation so it doesn't also drill into the row.
-        const activityUrl =
-            `/ww/wordwiki.changes({restrict_to_user:${JSON.stringify(u.username)},user_mode:"participating"})`;
         return ['div', {...item, 'data-testid': `user-row-${id}`},
             ['div', {class: 'lm-item-body'},
              ['div', {class: 'lm-item-primary'},
               ['a', {...templates.pageLinkProps(`/ww/wordwiki.users.detailPage(${id})`),
                      class: 'lm-nav-link'}, u.name || u.username]],
              ['div', {class: 'lm-item-secondary'}, secondary]],
-            ['a', {href: activityUrl, class: 'btn btn-sm btn-outline-secondary me-2',
-                   onclick: 'event.stopPropagation()', title: `${u.name || u.username}’s activity`},
-             'Activity'],
-            this.canEditRecord(u) ? this.editPencil(id) : undefined,
             navChevron(),
         ];
     }
 
+    @route(authenticated)
     renderUserRowById(id: number): Markup {
         return this.renderUserRow(this.getById(id));
     }
@@ -202,12 +212,14 @@ export class UserTable extends Table<User> {
     // Full page for one user (navigated to by tapping the list row).  For now
     // the same info as the row, plus the pencil; domain-specific detail
     // (assertions authored, assignments, ...) comes later.
+    @route(authenticated)
     detailPage(user_id: number): templates.Page {
         const u = this.getById(user_id);
         return templates.page(`${u.name || u.username} — User`, this.renderDetail(user_id));
     }
 
     // The detail body, as a reloadable fragment (an edit save re-renders it).
+    @route(authenticated)
     renderDetail(user_id: number): Markup {
         const u = this.getById(user_id);
         const props = this.reloadableItemProps(user_id, `/ww/wordwiki.users.renderDetail(${user_id})`);
@@ -224,11 +236,19 @@ export class UserTable extends Table<User> {
              row('Email', u.email || '—'),
              row('Permissions', u.permissions || '—'),
             ],
+            // Their activity, embedded: the participating-mode feed (their
+            // changes + every comment/revert/approval that landed on top) -
+            // what the list row's inline Activity button used to link to.
+            this.app
+                ? [['h5', {class: 'mt-4 mb-2'}, 'Activity'],
+                   this.app.feed.renderUserActivity(u.username)]
+                : undefined,
         ];
     }
 
     // The create dialog: the record form over an empty record (renderForm
     // gates on recordEdit server-side too).
+    @route(editUsers)
     newDialog(): Markup {
         return this.renderForm({} as User);
     }

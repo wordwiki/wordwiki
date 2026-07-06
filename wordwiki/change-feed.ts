@@ -344,7 +344,7 @@ export class ChangeFeed {
      *  scroll jump.  A CLOSED range (from_time set) is already clamped by
      *  the range itself: max_rows is ignored and the whole window renders,
      *  with no Show-older. */
-    renderFeed(query: FeedQuery): Markup {
+    renderFeed(query: FeedQuery, opts: {moreAsPageLink?: boolean} = {}): Markup {
         const ranged = query.from_time != null;
         const limit = ranged ? null : query.max_rows + FEED_FETCH_SLACK;
         const rows = this.fetchFeedEvents(query, limit);
@@ -367,10 +367,29 @@ export class ChangeFeed {
                    groups.length === 0 ? 'No changes.'
                    : query.from_time ? 'Start of the selected range.'
                    : 'Beginning of the record.']
+                // An EMBEDDED slice (moreAsPageLink; e.g. the user detail
+                // page's Activity section) pages by NAVIGATING to the full
+                // feed - the in-place #content swap below belongs to the feed
+                // page itself, and would replace the host page's body.
+                : opts.moreAsPageLink
+                ? ['a', {...templates.pageLinkProps(moreUrl),
+                         class: 'btn btn-sm btn-outline-secondary'},
+                   'Show older']
                 : ['button', {type: 'button', class: 'btn btn-sm btn-outline-secondary',
                               'hx-get': moreUrl, 'hx-target': '#content',
                               'hx-swap': 'innerHTML', 'hx-replace-url': moreUrl},
                    'Show older']]];
+    }
+
+    /** An embeddable slice of one user's PARTICIPATING feed (their changes
+     *  plus every comment/revert/approval that landed on top) - the user
+     *  detail page's Activity section. */
+    renderUserActivity(username: string): Markup {
+        const query = feedQuery.normalize({
+            restrict_to_user: username, user_mode: USER_MODE_PARTICIPATING,
+            max_rows: 10, to_time: this.app.lastAllocatedTxTimestamp}) as FeedQuery;
+        return ['div', {class: 'lm-changelist lm-changelist-grouped'},
+                this.renderFeed(query, {moreAsPageLink: true})];
     }
 
     /** One clump as its OWN reloadable fragment (the review-group pattern):

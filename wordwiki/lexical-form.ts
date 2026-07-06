@@ -180,13 +180,17 @@ export class LexicalFormTable extends Table<LexicalForm> {
     @route(authenticated)
     renderLexicalFormsPage(): Markup {
         const canCreate = this.canEditRecord({} as LexicalForm);
+        // Rare admin acts live in a quiet ☰, not prominent buttons (the
+        // committee.ts list-header pattern).
+        const menuItems: action.ActionMenuItem[] = [];
+        if(canCreate)
+            menuItems.push({label: 'New lexical form…',
+                            mode: {kind: 'modal', dialogUrl: '/ww/wordwiki.lexicalForms.newDialog()'}});
         return ['div', {class: 'container py-3'},
             ['div', {class: 'd-flex align-items-center gap-2 mb-2'},
              ['h2', {class: 'mb-0'}, 'Lexical Form Table'],
-             canCreate
-                 ? action.actionButton('New lexical form',
-                     {kind: 'modal', dialogUrl: '/ww/wordwiki.lexicalForms.newDialog()'},
-                     'btn btn-outline-primary btn-sm')
+             menuItems.length > 0
+                 ? action.actionMenu(menuItems, {ariaLabel: 'Lexical form actions'})
                  : undefined],
             ['p', {class: 'text-muted'},
              'The controlled vocabulary for parts of speech / grammatical forms. ',
@@ -196,6 +200,7 @@ export class LexicalFormTable extends Table<LexicalForm> {
         ];
     }
 
+    @route(authenticated)
     renderLexicalFormList(): Markup {
         const forms = this.allByOrder.all({});
         const props = this.reloadableItemProps(undefined, `/ww/wordwiki.lexicalForms.renderLexicalFormList()`);
@@ -225,12 +230,13 @@ export class LexicalFormTable extends Table<LexicalForm> {
                   ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
              ['div', {class: 'lm-item-secondary'}, secondary]];
 
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
+        // One QUIET navigable row species for every viewer
+        // (Table.detailItemProps: tap anywhere drills in via the lm-nav-link
+        // name).  No row pencil: editing lives on the detail page (dz:
+        // vocabulary edits are a big-deal operation - the extra step is fine).
         const item = this.detailItemProps(id, `/ww/wordwiki.lexicalForms.renderLexicalFormRowById(${id})`);
         return ['div', {...item, 'data-testid': `lexical-form-row-${id}`},
-            body, this.canEditRecord(f) ? this.editPencil(id) : undefined, navChevron()];
+            body, navChevron()];
     }
 
     @route(authenticated)

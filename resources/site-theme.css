@@ -25,6 +25,22 @@
   --bs-link-color-rgb:       21, 90, 156;
   --bs-link-hover-color:     var(--mmo-link-hover);
   --bs-link-hover-color-rgb: 14, 63, 112;
+
+  /* Adopt liminal's accent-link language (design-language.md): --lm-nav is
+     the reserved "tap to go here" colour on navigable names (.lm-nav-link).
+     Wordwiki reuses its one calm blue rather than introducing a second hue -
+     blue already means "tappable" app-wide, so one colour keeps one meaning
+     (rabid uses a teal; the MECHANISM in liminal.css is shared). */
+  --lm-nav:       var(--mmo-link);
+  --lm-nav-hover: var(--mmo-link-hover);
+}
+
+/* A navigable title underlines on hover - confirmation atop the colour
+   (mirrors rabid.css; the hover colour itself comes from liminal.css). */
+.lm-nav-link:hover, .lm-nav-link:focus,
+.lm-item-primary a.lm-nav-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 body {

@@ -102,7 +102,7 @@ export class WordWiki extends LiminalApp {
     // reaching any table requires a login.  The internal auth tables
     // (passwordHash/userSession) are deliberately NOT exposed as routes.
     @route(authenticated) @path get config() { return new config.ConfigTable(); }
-    @route(authenticated) @path get users() { return new user.UserTable(); }
+    @route(authenticated) @path get users() { return new user.UserTable(this); }
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
     @route(authenticated) @path get categories() { return new category.CategoryTable(this); }
