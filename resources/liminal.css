@@ -42,6 +42,22 @@
     }
 }
 
+/* A keyboard stop (keyboard-driven-editing.md): a focusable editable surface.
+   :focus-visible only, so the ring appears for KEYBOARD focus - a mouse user
+   never sees any of this.  scroll-margin keeps a focused row clear of a
+   sticky navbar when Tab-traversal scrolls it into view. */
+.lm-kbd-stop {
+    scroll-margin: 4.5rem 0;
+}
+.lm-kbd-stop:focus {
+    outline: none;
+}
+.lm-kbd-stop:focus-visible {
+    outline: 2px solid rgba(var(--bs-primary-rgb), .55);
+    outline-offset: 2px;
+    border-radius: .25rem;
+}
+
 /* The standard edit-affordance marker (and its sibling, the ☰ less-common-
    actions menu button - action.ts actionMenu): icon-only <button>s (quieter
    than text buttons, but still the accessible/backstop path).  Padded out to

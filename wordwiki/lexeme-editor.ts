@@ -871,8 +871,12 @@ export class LexemeEditor {
                     {ariaLabel: `Actions for this ${rf.prompt}`});
                 // A self-refreshing fragment: a content edit reloads just this
                 // row (a deleted fact re-renders to nothing and vanishes).
+                // Also a keyboard stop (keyboard-driven-editing.md): tabindex
+                // -1 joins the roving-focus order, data-kbd is the identity
+                // focus restoration finds after this fragment is swapped.
                 return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}`
-                                + `${pending ? 'lm-pending-fact ' : ''}lm-me-editable d-flex align-items-start gap-1`,
+                                + `${pending ? 'lm-pending-fact ' : ''}lm-kbd-stop lm-me-editable d-flex align-items-start gap-1`,
+                                tabindex: '-1', 'data-kbd': `fact-${id.factId}`,
                                 'hx-get': `${R}.renderMetaTupleFragment(${id.entryId}, ${id.factId}${chg})`,
                                 'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
                                 ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
@@ -893,6 +897,15 @@ export class LexemeEditor {
                 const rowAttrs = {
                     class: `lm-me-empty d-flex align-items-start gap-1`,
                 };
+                // Action-bearing empty slots are keyboard stops too
+                // (keyboard-driven-editing.md) - Tab reaches them, Enter
+                // "edits" (= inserts the first item).  The key names the
+                // still-fact-less slot; a read-only empty (no action at all)
+                // stays out of the traversal.
+                const stopAttrs = {
+                    class: rowAttrs.class + ' lm-kbd-stop', tabindex: '-1',
+                    'data-kbd': `rel-${parentId.factId}-${rf.tag}-empty`,
+                };
                 const label = (trailing: Markup = ''): Markup =>
                     ['div', {class: 'flex-grow-1'},
                      ['b', {}, rf.prompt + ': '],
@@ -901,7 +914,7 @@ export class LexemeEditor {
                 if(rf.scalarFields.some(isBoundingGroupField))
                     // Per-book add buttons ride inline (no single dialog for a
                     // body-click to delegate to).
-                    return ['div', rowAttrs,
+                    return ['div', stopAttrs,
                             label([' ', this.addButtons(parentId.entryId, parentId.factId, rf)])];
                 if(rf.scalarFields.some(isDialogReadOnly))
                     return ['div', rowAttrs, label()];
@@ -926,8 +939,8 @@ export class LexemeEditor {
                 // outer slot).
                 const spacer = ['span', {class: 'lm-menu-button', style: 'visibility: hidden',
                                          'aria-hidden': 'true'}, action.plusIcon()];
-                return ['div', {...rowAttrs,
-                                class: rowAttrs.class + ' lm-editable lm-me-editable',
+                return ['div', {...stopAttrs,
+                                class: stopAttrs.class + ' lm-editable lm-me-editable',
                                 onclick: 'lmEditableClick(event)'},
                         label(), plus, spacer];
             },
@@ -1235,28 +1248,36 @@ export class LexemeEditor {
         // will emit (changeKeys is the shared source).  Insert/move/delete
         // are shape events.
         const shapeDeps = this.changeKeys(entry_id, fact_id, parent_fact_id, rf.tag, 'parent', mode);
+        // The lm-act-* classes are the keyboard dispatch targets
+        // (keyboard-driven-editing.md): a keybind on the focused row finds
+        // the verb's own button by class and clicks it, so deps / confirm
+        // gating / dialog URLs stay single source of truth.
         return [
             ...(fieldless ? [] : [
                 {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}}]),
             ...(insertable ? (fieldless ? [
-                {label: `Insert ${rf.prompt} before`, mode: {kind: 'immediate' as const, deps: shapeDeps,
+                {label: `Insert ${rf.prompt} before`, btnClass: 'lm-act-insert-before',
+                 mode: {kind: 'immediate' as const, deps: shapeDeps,
                     expr: `wordwiki.lexeme.insertEmptyTuple(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
-                {label: `Insert ${rf.prompt} after`, mode: {kind: 'immediate' as const, deps: shapeDeps,
+                {label: `Insert ${rf.prompt} after`, btnClass: 'lm-act-insert-after',
+                 mode: {kind: 'immediate' as const, deps: shapeDeps,
                     expr: `wordwiki.lexeme.insertEmptyTuple(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ] : [
-                {label: `Insert ${rf.prompt} before`, mode: {kind: 'modal' as const,
+                {label: `Insert ${rf.prompt} before`, btnClass: 'lm-act-insert-before',
+                 mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
-                {label: `Insert ${rf.prompt} after`, mode: {kind: 'modal' as const,
+                {label: `Insert ${rf.prompt} after`, btnClass: 'lm-act-insert-after',
+                 mode: {kind: 'modal' as const,
                     dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ]) : []),
-            {label: 'Move up', mode: {kind: 'immediate', deps: shapeDeps,
+            {label: 'Move up', btnClass: 'lm-act-move-up', mode: {kind: 'immediate', deps: shapeDeps,
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up'${m})`}},
-            {label: 'Move down', mode: {kind: 'immediate', deps: shapeDeps,
+            {label: 'Move down', btnClass: 'lm-act-move-down', mode: {kind: 'immediate', deps: shapeDeps,
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down'${m})`}},
-            {label: 'History', mode: {kind: 'modal',
+            {label: 'History', btnClass: 'lm-act-history', mode: {kind: 'modal',
                 dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id}${m})`}},
-            {label: 'Delete', mode: {kind: 'confirm', deps: shapeDeps,
+            {label: 'Delete', btnClass: 'lm-act-delete', mode: {kind: 'confirm', deps: shapeDeps,
                 expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id}${m})`,
                 message: `Delete this ${rf.prompt}?`}},
         ];

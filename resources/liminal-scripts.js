@@ -609,6 +609,212 @@ function popupModalEditor(modalTitleText, modalBodyHtmlText) {
     showModalEditor();
 }
 
+/* ---------------------------------------------------------------------------
+   Keyboard-driven editing (keyboard-driven-editing.md).
+
+   The "focused assertion" is literally DOM focus: an app stamps class
+   lm-kbd-stop (+ tabindex="-1" + a stable data-kbd identity) on each editable
+   surface, and this controller supplies roving tabindex (one stop holds
+   tabindex="0", so the whole widget is a single Tab stop from outside),
+   key dispatch, and focus restoration across the refresh machinery's swaps.
+
+   Keys act ONLY when the event target IS a stop - focus in a dialog field,
+   the search box, or a dropdown item never reaches this handler, so the
+   single-letter binds are safe.  Verbs dispatch by clicking the stop's OWN
+   rendered buttons (found by stable class - the same delegation trick as
+   lmEditableClick), so txd deps / lmConfirm gating / dialog URLs stay single
+   source of truth.
+--------------------------------------------------------------------------- */
+
+let lmKbdCurrent = null;   // {key, index} of the last-focused stop
+
+function lmKbdStops() {
+    return [...document.querySelectorAll('.lm-kbd-stop')].filter(lmRefreshable);
+}
+
+/* Make `stop` the roving tabindex="0" holder. */
+function lmKbdSetRoving(stop) {
+    for (const el of document.querySelectorAll('.lm-kbd-stop[tabindex="0"]'))
+        if (el !== stop) el.setAttribute('tabindex', '-1');
+    stop.setAttribute('tabindex', '0');
+}
+
+/* Some stop must hold tabindex="0" or Tab can't enter the widget at all
+   (server renders every stop -1; swapped-in fragments arrive -1 too). */
+function lmKbdEnsureRoving() {
+    const stops = lmKbdStops();
+    if (stops.length === 0 || stops.some(s => s.getAttribute('tabindex') === '0'))
+        return;
+    const preferred = lmKbdCurrent?.key
+        && stops.find(s => s.dataset.kbd === lmKbdCurrent.key);
+    (preferred || stops[0]).setAttribute('tabindex', '0');
+}
+
+/* Track the last-focused stop - by key (survives swaps) and by index (the
+   fallback when the key is gone: a deleted row's index names the row that
+   slid into its place). */
+document.addEventListener('focusin', (e) => {
+    if (!(e.target instanceof Element) || !e.target.classList.contains('lm-kbd-stop'))
+        return;
+    lmKbdSetRoving(e.target);
+    lmKbdCurrent = {key: e.target.dataset.kbd ?? null,
+                    index: lmKbdStops().indexOf(e.target)};
+});
+
+function lmKbdMove(from, delta) {
+    const stops = lmKbdStops();
+    const target = stops[stops.indexOf(from) + delta];
+    if (!target) return false;   // at the edge - let a Tab fall through natively
+    target.focus();
+    return true;
+}
+
+/* A button INSIDE this stop (not inside a nested stop). */
+function lmKbdButton(stop, selector) {
+    return [...stop.querySelectorAll(selector)]
+        .find(b => b.closest('.lm-kbd-stop') === stop) ?? null;
+}
+
+function lmKbdClick(stop, selector) {
+    const b = lmKbdButton(stop, selector);
+    if (b) b.click();
+}
+
+/* Enter: the row's primary action.  button.edit (the tap-to-edit target;
+   an empty slot's + carries it too), else the ☰ (a fields-less example row
+   has no Edit - offer its menu), else the first button (the document-
+   reference empty slot's per-book add). */
+function lmKbdPrimary(stop) {
+    const edit = lmKbdButton(stop, 'button.edit');
+    if (edit) return edit.click();
+    if (lmKbdButton(stop, '.lm-menu-button[data-bs-toggle="dropdown"]'))
+        return lmKbdOpenMenu(stop);
+    lmKbdClick(stop, 'button');
+}
+
+/* Open the stop's ☰ and focus its first item, so Bootstrap's own dropdown
+   keyboard handling (arrows/Esc) takes over from there. */
+function lmKbdOpenMenu(stop) {
+    const toggle = lmKbdButton(stop, '.lm-menu-button[data-bs-toggle="dropdown"]');
+    if (!toggle) return;
+    const dd = toggle.closest('.dropdown') ?? stop;
+    const focusFirst = () => dd.querySelector('.dropdown-menu .dropdown-item')?.focus();
+    if (dd.querySelector('.dropdown-menu.show')) focusFirst();
+    else dd.addEventListener('shown.bs.dropdown', focusFirst, {once: true});
+    toggle.click();
+}
+
+/* When a stop's dropdown closes with focus still inside the stop (Esc, or a
+   menu item just ran), hand focus back to the stop so the keyboard flow
+   continues.  A close caused by clicking elsewhere moved focus already -
+   contains() declines, no stealing. */
+document.addEventListener('hidden.bs.dropdown', (e) => {
+    const stop = e.target instanceof Element && e.target.closest('.lm-kbd-stop');
+    if (stop && stop.contains(document.activeElement))
+        stop.focus();
+});
+
+document.addEventListener('keydown', (e) => {
+    const stop = e.target instanceof Element && e.target.classList.contains('lm-kbd-stop')
+        ? e.target : null;
+    if (!stop || e.ctrlKey || e.metaKey) return;
+    switch (e.key) {
+        case 'Tab':
+            if (e.altKey) return;
+            if (lmKbdMove(stop, e.shiftKey ? -1 : 1)) e.preventDefault();
+            return;
+        case 'ArrowDown':
+        case 'ArrowUp': {
+            const down = e.key === 'ArrowDown';
+            if (e.altKey) lmKbdClick(stop, down ? '.lm-act-move-down' : '.lm-act-move-up');
+            else lmKbdMove(stop, down ? 1 : -1);
+            e.preventDefault();
+            return;
+        }
+        case 'Enter': lmKbdPrimary(stop); e.preventDefault(); return;
+        case '+': case 'o': lmKbdClick(stop, '.lm-act-insert-after'); e.preventDefault(); return;
+        case 'O': lmKbdClick(stop, '.lm-act-insert-before'); e.preventDefault(); return;
+        case 'Delete': case '#': lmKbdClick(stop, '.lm-act-delete'); e.preventDefault(); return;
+        case 'h': lmKbdClick(stop, '.lm-act-history'); e.preventDefault(); return;
+        case 'm': lmKbdOpenMenu(stop); e.preventDefault(); return;
+        case '?': lmKbdHelp(); e.preventDefault(); return;
+    }
+});
+
+/**
+ * Focus restoration across the refresh machinery (the real work of the
+ * feature - every mutation swaps the focused row out of the DOM, dropping
+ * focus to <body>, which would kill the flow after every single edit).
+ * Called after any churn: htmx afterSettle, the end of a speculative
+ * lmApplySwap (rabid-scripts.js calls in), and the modal editor's
+ * hidden.bs.modal (Bootstrap's fade drops focus to body AFTER our swaps -
+ * the modal path must restore then).  Restores only when focus was actually
+ * lost (on body / disconnected) and no dialog is open.
+ */
+function lmKbdAfterChurn() {
+    lmKbdEnsureRoving();
+    if (!lmKbdCurrent) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    if (document.querySelector('.modal.show')) return;
+    const stops = lmKbdStops();
+    if (stops.length === 0) return;
+    const target = (lmKbdCurrent.key
+        && stops.find(s => s.dataset.kbd === lmKbdCurrent.key))
+        || stops[Math.max(0, Math.min(lmKbdCurrent.index ?? 0, stops.length - 1))];
+    target.focus();
+}
+
+document.addEventListener('htmx:afterSettle', () => lmKbdAfterChurn());
+/* A boosted whole-page navigation invalidates the memory - a stale index
+   must not yank focus (and scroll) to an arbitrary stop on the new page. */
+document.addEventListener('htmx:beforeSwap', (e) => {
+    if (e.detail?.target === document.body) lmKbdCurrent = null;
+});
+
+/* ANY modal closing can strand focus on <body> - the editor's fade ends
+   after our swaps, a cancelled lmConfirm, the help sheet.  Bootstrap modal
+   events bubble, so one document-level hook covers them all; the churn
+   guards make it a no-op when focus is legitimately elsewhere.  Deferred a
+   tick: at hidden.bs.modal time the browser can still report the dialog's
+   (now-hidden) field as activeElement - focus settles onto <body> just
+   after, and the churn must judge THAT state. */
+document.addEventListener('hidden.bs.modal', () => setTimeout(lmKbdAfterChurn, 0));
+
+(() => {
+    const boot = () => lmKbdEnsureRoving();
+    if (document.readyState === 'loading')
+        document.addEventListener('DOMContentLoaded', boot);
+    else
+        boot();
+})();
+
+/* The '?' keybind sheet - a singleton Bootstrap modal like lmConfirm's. */
+let lmKbdHelpEl = null;
+function lmKbdHelp() {
+    if (typeof bootstrap === 'undefined') return;
+    if (!lmKbdHelpEl) {
+        const row = (k, v) => `<tr><td class="pe-3 text-nowrap font-monospace">${k}</td><td>${v}</td></tr>`;
+        lmKbdHelpEl = document.createElement('div');
+        lmKbdHelpEl.className = 'modal fade';
+        lmKbdHelpEl.id = 'lmKbdHelpModal';
+        lmKbdHelpEl.setAttribute('tabindex', '-1');
+        lmKbdHelpEl.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered">'
+            + '<div class="modal-content"><div class="modal-header">'
+            + '<h5 class="modal-title">Keyboard editing</h5>'
+            + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
+            + '</div><div class="modal-body"><table class="table table-sm mb-0"><tbody>'
+            + row('Tab / ↓', 'next row') + row('Shift-Tab / ↑', 'previous row')
+            + row('Enter', 'edit') + row('+ or o', 'insert after') + row('O', 'insert before')
+            + row('Alt+↓ / Alt+↑', 'move down / up') + row('Delete or #', 'delete')
+            + row('h', 'history') + row('m', 'menu') + row('?', 'this help')
+            + '</tbody></table></div></div></div>';
+        document.body.appendChild(lmKbdHelpEl);
+    }
+    bootstrap.Modal.getOrCreateInstance(lmKbdHelpEl).show();
+}
+
 /* ----------------------------------------------------------------------------
    Photo field (liminal/table.ts ImageField).
 

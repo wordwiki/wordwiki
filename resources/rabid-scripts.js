@@ -281,6 +281,10 @@ function lmApplySwap(response, speculation) {
 
     if(typeof initPickers === 'function')
         initPickers(document);
+    // Manual swaps bypass htmx's events, so the keyboard-focus restore
+    // (liminal-scripts.js, keyboard-driven-editing.md) is called in directly.
+    if(typeof lmKbdAfterChurn === 'function')
+        lmKbdAfterChurn();
     const toReload = [...staleKeys, ...stragglers.map(s => s.key).filter(t => !staleKeys.includes(t))];
     if(toReload.length > 0)
         reload(toReload);
