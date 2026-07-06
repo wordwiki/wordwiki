@@ -53,8 +53,8 @@ export const ALLOWED_WIDTHS = [96, 256, 512, 1024, 1600];
 //  - CROP_FOCUS_LEVELS bounds the focus positions (serveCropped quantizes any
 //    requested focus onto this set).
 
-// The vertical focus positions the crop picker offers (0 = flush top, 1 = flush
-// bottom).  Five levels: top / upper / centre / lower / bottom.
+// The focus positions the crop picker offers, along the TRIMMED axis (0 = flush
+// top/left, 1 = flush bottom/right).  Five levels.
 export const CROP_FOCUS_LEVELS = [0, 0.25, 0.5, 0.75, 1];
 
 // Snap an arbitrary focus to the nearest allowed level (bounds the cache, and
@@ -93,47 +93,50 @@ function isAllowedCropSize(w: number, h: number): boolean {
 // (needs only the service's mount path, not an instance) so ImageField, which
 // holds just the path string, can build crop URLs too.
 export function photoCroppedSrc(mountPath: string, value: string, width: number, height: number): string {
-    const {path, fy} = parsePhotoValue(value);
-    return `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${quantizeFocus(fy)})`;
+    const {path, focus} = parsePhotoValue(value);
+    return `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${quantizeFocus(focus)})`;
 }
 
 // The crop-picker's options for a value at (width,height): the same photo framed
 // at each focus level, the current one flagged, and the field value to store on
 // pick.  Free function for the same reason as photoCroppedSrc.
 export function photoCropCandidates(mountPath: string, value: string, width: number, height: number):
-        Array<{fy: number, selected: boolean, src: string, value: string}> {
-    const {path, fy} = parsePhotoValue(value);
-    const current = quantizeFocus(fy);
+        Array<{focus: number, selected: boolean, src: string, value: string}> {
+    const {path, focus} = parsePhotoValue(value);
+    const current = quantizeFocus(focus);
     return CROP_FOCUS_LEVELS.map(level => ({
-        fy: level,
+        focus: level,
         selected: level === current,
         src: `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${level})`,
-        value: formatPhotoValue(path, 0.5, level),   // fx centred in v1
+        value: formatPhotoValue(path, level),
     }));
 }
 
 // A photo field value is EITHER a bare content path (a centred crop - the
-// default, and every legacy value) OR, once a non-centre crop is chosen, a JSON
-// object {p,fx,fy} carrying the content path plus the normalized focus point.
-export interface PhotoValue { path: string; fx: number; fy: number; }
+// default, and every legacy value) OR, once an off-centre crop is chosen, a JSON
+// object {p,f} carrying the content path plus a single normalized focus.
+//
+// `focus` (0..1) positions the crop window along WHICHEVER axis the cover-crop
+// trims - the overflow axis (vertical for a photo taller than the slot,
+// horizontal for a wider one).  A cover-crop only ever trims one axis, so one
+// scalar frames every case; the picker offers five positions along it.
+export interface PhotoValue { path: string; focus: number; }
 
 export function parsePhotoValue(value: string): PhotoValue {
     if(typeof value === 'string' && value.startsWith('{')) {
         try {
             const o = JSON.parse(value);
             if(o && typeof o.p === 'string')
-                return {path: o.p,
-                        fx: typeof o.fx === 'number' ? o.fx : 0.5,
-                        fy: typeof o.fy === 'number' ? o.fy : 0.5};
+                return {path: o.p, focus: typeof o.f === 'number' ? o.f : 0.5};
         } catch { /* fall through to bare-path */ }
     }
-    return {path: value, fx: 0.5, fy: 0.5};
+    return {path: value, focus: 0.5};
 }
 
-export function formatPhotoValue(path: string, fx: number, fy: number): string {
+export function formatPhotoValue(path: string, focus: number): string {
     // Centred photos stay a bare path (minimal + back-compatible); only carry
     // JSON once an off-centre crop is chosen.
-    return (fx === 0.5 && fy === 0.5) ? path : JSON.stringify({p: path, fx, fy});
+    return focus === 0.5 ? path : JSON.stringify({p: path, f: focus});
 }
 
 // Decoded upload cap.  The client downscales to ≤1600px JPEG (well under
@@ -224,39 +227,41 @@ export class PhotoService {
      * cache by allowlisting the size and quantizing the focus.
      */
     @route(authenticated)
-    async serveCropped(photoPath: string, width: number, height: number, focusY: number): Promise<server.Response> {
-        return server.forwardResponse('/' + await this.croppedPhotoPath(photoPath, width, height, focusY));
+    async serveCropped(photoPath: string, width: number, height: number, focus: number): Promise<server.Response> {
+        return server.forwardResponse('/' + await this.croppedPhotoPath(photoPath, width, height, focus));
     }
 
-    async croppedPhotoPath(photoPath: string, width: number, height: number, focusY: number): Promise<string> {
+    async croppedPhotoPath(photoPath: string, width: number, height: number, focus: number): Promise<string> {
         const contentRef = this.verifiedContentRef(photoPath);
         if(!isAllowedCropSize(width, height))
             throw new Error(`unsupported crop size ${width}x${height} ` +
                 `(allowed: ${ALLOWED_CROP_SIZES.map(([w, h]) => `${w}x${h}`).join(', ')})`);
-        const fy = quantizeFocus(focusY);   // collapse onto the bounded level set
+        const f = quantizeFocus(focus);   // collapse onto the bounded level set
         const sourceFsPath = `${this.config.contentDir}/${contentRef}`;
         const derivedRef = await content.getDerived(
             `${this.config.derivedDir}/cropped-photos`,
-            {coverCrop: (target: string, _ref: string, w: number, h: number, f: number) =>
-                this.coverCropCmd(target, sourceFsPath, w, h, f)},
-            ['coverCrop', contentRef, width, height, fy],
+            {coverCrop: (target: string, _ref: string, w: number, h: number, ff: number) =>
+                this.coverCropCmd(target, sourceFsPath, w, h, ff)},
+            ['coverCrop', contentRef, width, height, f],
             'jpg');
         return 'derived/' + derivedRef;
     }
 
-    // Fill the source to cover w×h, then crop the overflow: fx is centred (v1),
-    // fy positions the crop window vertically (0 = keep the top).  Needs the
-    // source's post-orient dimensions to place the crop; that identify runs once
-    // per derivative (getDerived memoizes the result), never per request.
-    private async coverCropCmd(targetPath: string, sourceFsPath: string, w: number, h: number, fy: number) {
+    // Fill the source to cover w×h, then crop the overflow.  A cover-crop only
+    // ever trims ONE axis (the other is exact), and `focus` (0..1) positions the
+    // window along that trimmed axis - applying it to both offsets is correct
+    // because the non-trimmed axis has zero overflow, so its offset stays 0.
+    // Needs the source's post-orient dimensions; that identify runs once per
+    // derivative (getDerived memoizes the result), never per request.
+    private async coverCropCmd(targetPath: string, sourceFsPath: string, w: number, h: number, focus: number) {
         if(!await fs.exists(sourceFsPath))
             throw new Error(`expected source photo '${sourceFsPath}' to exist`);
         const [W, H] = await this.imageDims(sourceFsPath);
         const s = Math.max(w / W, h / H);
         const scaledW = Math.max(w, Math.round(W * s));
         const scaledH = Math.max(h, Math.round(H * s));
-        const offX = Math.min(scaledW - w, Math.max(0, Math.round((scaledW - w) * 0.5)));
-        const offY = Math.min(scaledH - h, Math.max(0, Math.round((scaledH - h) * fy)));
+        const offX = Math.min(scaledW - w, Math.max(0, Math.round((scaledW - w) * focus)));
+        const offY = Math.min(scaledH - h, Math.max(0, Math.round((scaledH - h) * focus)));
         const { code, stderr } = await new Deno.Command(this.magick, {
             args: [sourceFsPath, '-auto-orient', '-strip',
                    '-resize', `${scaledW}x${scaledH}!`,       // exact cover dims
@@ -264,7 +269,7 @@ export class PhotoService {
                    '-quality', '82', targetPath],
         }).output();
         if(code !== 0)
-            throw new Error(`failed to crop ${sourceFsPath} to ${w}x${h}@fy=${fy}: ${new TextDecoder().decode(stderr)}`);
+            throw new Error(`failed to crop ${sourceFsPath} to ${w}x${h}@focus=${focus}: ${new TextDecoder().decode(stderr)}`);
     }
 
     // Post-auto-orient pixel dimensions, so the crop math matches what
@@ -343,7 +348,7 @@ export class PhotoService {
 
     // The crop-picker's options (see photoCropCandidates).
     cropCandidates(value: string, width: number, height: number):
-            Array<{fy: number, selected: boolean, src: string, value: string}> {
+            Array<{focus: number, selected: boolean, src: string, value: string}> {
         return photoCropCandidates(this.mountPath, value, width, height);
     }
 }

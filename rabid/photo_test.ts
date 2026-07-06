@@ -8,6 +8,7 @@ import { withTestDb, renderRoute, invoke, asUser, asAnon, asSystem } from "./tes
 import { findAll, hasText } from "../liminal/testing/markup-assert.ts";
 import { PhotoService, ALLOWED_WIDTHS, CROP_FOCUS_LEVELS,
          parsePhotoValue, formatPhotoValue, quantizeFocus } from "../liminal/photo.ts";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { rabid } from "./rabid.ts";
 
 // The pixel dimensions of a produced file (via ImageMagick identify).
@@ -16,6 +17,27 @@ async function dimsOf(path: string): Promise<[number, number]> {
         {args: ['identify', '-format', '%w %h', path]}).output();
     const [w, h] = new TextDecoder().decode(stdout).trim().split(/\s+/).map(Number);
     return [w, h];
+}
+
+// Mean luminance (0..1) of an image - a cheap way to tell two crops of a
+// gradient apart by CONTENT (not just by derived-path identity).
+async function meanOf(path: string): Promise<number> {
+    const {stdout} = await new Deno.Command('magick',
+        {args: [path, '-colorspace', 'Gray', '-format', '%[fx:mean]', 'info:']}).output();
+    return Number(new TextDecoder().decode(stdout).trim());
+}
+
+// Content-address a freshly-generated w×h image whose brightness ramps
+// left→right (a horizontal gradient, so a horizontal crop shift changes the
+// mean) into the service's photo store, and return its stored path.  gradient:
+// is vertical, so we build h×w then rotate 90°.
+async function uploadWideGradient(svc: PhotoService, w: number, h: number): Promise<string> {
+    const tmp = await Deno.makeTempFile({suffix: '.png'});
+    await new Deno.Command('magick',
+        {args: ['-size', `${h}x${w}`, 'gradient:black-white', '-rotate', '90', tmp]}).output();
+    const bytes = await Deno.readFile(tmp);
+    await Deno.remove(tmp);
+    return (await svc.upload({imageBytesAsBase64: encodeBase64(bytes)})).photoPath;
 }
 
 // An 8x8 red JPEG and an 8x8 blue PNG (generated with ImageMagick, embedded
@@ -93,14 +115,14 @@ test("sizing: derived-store resize on demand, then cached; width allowlist; path
 test("photo value: parse/format round-trip; legacy bare paths; focus quantization", () => {
     const bare = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
     // A legacy bare path parses as centred.
-    assertEquals(parsePhotoValue(bare), {path: bare, fx: 0.5, fy: 0.5});
+    assertEquals(parsePhotoValue(bare), {path: bare, focus: 0.5});
     // Centred stays a bare path (minimal, back-compatible); off-centre -> JSON.
-    assertEquals(formatPhotoValue(bare, 0.5, 0.5), bare);
-    const json = formatPhotoValue(bare, 0.5, 0.25);
+    assertEquals(formatPhotoValue(bare, 0.5), bare);
+    const json = formatPhotoValue(bare, 0.25);
     assert(json.startsWith('{'));
-    assertEquals(parsePhotoValue(json), {path: bare, fx: 0.5, fy: 0.25});
+    assertEquals(parsePhotoValue(json), {path: bare, focus: 0.25});
     // Garbage / missing fields fall back to centred.
-    assertEquals(parsePhotoValue('{not json'), {path: '{not json', fx: 0.5, fy: 0.5});
+    assertEquals(parsePhotoValue('{not json'), {path: '{not json', focus: 0.5});
     // Focus snaps to the nearest of the five levels.
     assertEquals(quantizeFocus(0.1), 0);
     assertEquals(quantizeFocus(0.6), 0.5);
@@ -108,7 +130,7 @@ test("photo value: parse/format round-trip; legacy bare paths; focus quantizatio
     assertEquals(quantizeFocus(NaN), 0.5);
 });
 
-test("cover-crop: EXACT target dimensions, focus levels, size allowlist, dedup", async () => {
+test("cover-crop: EXACT target dimensions, size allowlist, path discipline", async () => {
     await withTempPhotoService(async (svc, root) => {
         const {photoPath} = await svc.upload({imageBytesAsBase64: TINY_JPEG_B64});
 
@@ -120,10 +142,9 @@ test("cover-crop: EXACT target dimensions, focus levels, size allowlist, dedup",
         const land = await svc.croppedPhotoPath(photoPath, 512, 384, 0.5);
         assertEquals(await dimsOf(`${root}/${land}`), [512, 384]);
 
-        // Different focus level -> different derived artifact; same -> same file.
-        assert(await svc.croppedPhotoPath(photoPath, 256, 256, 0) !== sq);
+        // Same (size,focus) -> same file (closure-addressed); off-list focus
+        // quantizes onto the level set (0.1 -> 0).
         assertEquals(await svc.croppedPhotoPath(photoPath, 256, 256, 0.5), sq);
-        // An off-list focus quantizes onto the level set (0.1 -> 0).
         assertEquals(await svc.croppedPhotoPath(photoPath, 256, 256, 0.1),
                      await svc.croppedPhotoPath(photoPath, 256, 256, 0));
 
@@ -134,20 +155,41 @@ test("cover-crop: EXACT target dimensions, focus levels, size allowlist, dedup",
     });
 });
 
+test("cover-crop: focus positions along the TRIMMED axis (differing PIXELS, not just paths)", async () => {
+    await withTempPhotoService(async (svc, root) => {
+        // A WIDE source (400x100) cropped to a square/portrait slot overflows
+        // HORIZONTALLY, so focus must pan left↔right.  The gradient ramps
+        // left→right, so the two extremes must differ in mean brightness.
+        const wide = await uploadWideGradient(svc, 400, 100);
+        const left  = await svc.croppedPhotoPath(wide, 256, 256, 0);
+        const mid   = await svc.croppedPhotoPath(wide, 256, 256, 0.5);
+        const right = await svc.croppedPhotoPath(wide, 256, 256, 1);
+        const [mL, mM, mR] = [await meanOf(`${root}/${left}`),
+                              await meanOf(`${root}/${mid}`),
+                              await meanOf(`${root}/${right}`)];
+        // Monotonic along the pan (either direction, depending on gradient
+        // orientation) - and, crucially, the ends are far apart (the old
+        // vertical-only offset left these IDENTICAL for a wide photo).
+        assert((mL < mM && mM < mR) || (mL > mM && mM > mR),
+               `expected a monotonic pan, got ${mL}, ${mM}, ${mR}`);
+        assert(Math.abs(mR - mL) > 0.2, `crop ends should differ a lot, got ${Math.abs(mR - mL)}`);
+    });
+});
+
 test("cropCandidates: one per focus level, current flagged, srcs cover-crop", async () => {
     await withTempPhotoService(async (svc) => {
         const {photoPath} = await svc.upload({imageBytesAsBase64: TINY_JPEG_B64});
-        const value = formatPhotoValue(photoPath, 0.5, 0.25);
+        const value = formatPhotoValue(photoPath, 0.25);
         const cands = svc.cropCandidates(value, 256, 256);
         assertEquals(cands.length, CROP_FOCUS_LEVELS.length);
         // Exactly the current level is flagged; each candidate carries the value
         // to store on pick, and a serveCropped src at the requested size.
-        assertEquals(cands.filter(c => c.selected).map(c => c.fy), [0.25]);
+        assertEquals(cands.filter(c => c.selected).map(c => c.focus), [0.25]);
         for(const c of cands) {
             assertStringIncludes(c.src, 'rabid.photo.serveCropped');
             assertStringIncludes(c.src, '256,256');
         }
-        assertEquals(parsePhotoValue(cands[0].value), {path: photoPath, fx: 0.5, fy: 0});
+        assertEquals(parsePhotoValue(cands[0].value), {path: photoPath, focus: 0});
     });
 });
 
@@ -223,13 +265,13 @@ test("photo crop form: 5 framing tiles (current flagged); a pick reframes only t
         // Picking the 'bottom' framing is a saveForm of the photo field to that
         // cropped value (what the tile's immediate action dispatches).  Only the
         // framing changes: same content path, other fields untouched.
-        const bottomValue = formatPhotoValue(path, 0.5, 1);
+        const bottomValue = formatPhotoValue(path, 1);
         const before = asSystem(() => rabid.volunteer.getById(carol));
         await asUser(alice, () => invoke('rabid.volunteer.saveForm($arg0)', {
             volunteer_id: String(carol), photo: bottomValue, 'before-photo': path,
         }));
         const after = asSystem(() => rabid.volunteer.getById(carol));
-        assertEquals(parsePhotoValue(after.photo!), {path, fx: 0.5, fy: 1});   // reframed
+        assertEquals(parsePhotoValue(after.photo!), {path, focus: 1});   // reframed
         assertEquals(after.name, before.name);                                 // untouched
     });
 });
