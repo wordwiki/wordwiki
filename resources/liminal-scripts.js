@@ -501,7 +501,13 @@ function lmModalFocusFirstField() {
     const focus = () => {
         const field = [...getModalBodyElem().querySelectorAll('input, textarea, select')]
             .find(f => f.type !== 'hidden' && !f.disabled && f.offsetParent !== null);
-        if (field) field.focus();
+        if (!field) return;
+        field.focus();
+        // Caret at the END of the existing value - "open and keep typing"
+        // appends, it doesn't prepend.  (Throws on non-text input types;
+        // those just keep their default.)
+        try { field.setSelectionRange(field.value.length, field.value.length); }
+        catch (_e) { /* selects, numbers, ... */ }
     };
     const modalEl = document.getElementById('modalEditor');
     if (!modalEl) return;
@@ -584,10 +590,31 @@ function lmConfirm(message) {
             return;
         if (lmModalFormState() !== lmModalInitialState) {
             event.preventDefault();
-            lmConfirm('Discard changes?').then((ok) => { if (ok) hideModalEditor(); });
+            const returnFocus = document.activeElement;
+            lmConfirm('Discard changes?').then((ok) => {
+                if (ok) { hideModalEditor(); return; }
+                // Keep editing: put focus back where it was (the confirm
+                // took it; the user expects to just keep typing - and the
+                // next Esc must reach the dialog, not fall on <body>).
+                if (returnFocus instanceof HTMLElement && returnFocus.isConnected)
+                    returnFocus.focus();
+                else
+                    lmModalFocusFirstField();
+            });
         }
     });
 })();
+
+/* Ctrl/Cmd+Enter submits the dialog from ANY field - the standard binding
+   for the places plain Enter is taken (a textarea's Enter inserts a
+   newline; single-line inputs and selects already submit implicitly).
+   requestSubmit runs validation and the form's own onsubmit dispatch, so
+   it is exactly the Save button. */
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
+    const form = e.target instanceof Element && e.target.closest('#modalEditorBody form');
+    if (form) { e.preventDefault(); form.requestSubmit(); }
+});
 
 function getModalTitleElem() {
     const modalTitleElem = document.querySelector(`#modalEditorLabel`);
@@ -754,8 +781,14 @@ document.addEventListener('keydown', (e) => {
 function lmKbdAfterChurn() {
     lmKbdEnsureRoving();
     if (!lmKbdCurrent) return;
+    // Focus counts as LOST when it sits on body, on a detached element, or
+    // on an element that is no longer visible (offsetParent null - e.g. a
+    // field inside the now-display:none dialog after an Esc close, which
+    // stays CONNECTED because only hideModalEditor clears the modal body).
     const active = document.activeElement;
-    if (active && active !== document.body && active.isConnected) return;
+    if (active && active !== document.body && active.isConnected
+        && !(active instanceof HTMLElement && active.offsetParent === null))
+        return;
     if (document.querySelector('.modal.show')) return;
     const stops = lmKbdStops();
     if (stops.length === 0) return;
@@ -824,6 +857,9 @@ function lmKbdHelp() {
             + row('Enter', 'edit') + row('+ or o', 'insert after') + row('O', 'insert before')
             + row('Alt+↓ / Alt+↑', 'move down / up') + row('Delete or #', 'delete')
             + row('h', 'history') + row('m', 'menu') + row('?', 'this help')
+            + '<tr><td colspan="2" class="text-muted small pt-2">In an edit dialog:</td></tr>'
+            + row('Enter / Ctrl+Enter', 'save (Ctrl also works from a note)')
+            + row('Esc', 'close (asks before discarding changes)')
             + '</tbody></table></div></div></div>';
         document.body.appendChild(lmKbdHelpEl);
     }

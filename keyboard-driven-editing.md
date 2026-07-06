@@ -58,6 +58,16 @@ The flow this buys: **Tab, Tab, Enter, type, Enter** - dialog-first-field
 focus and Enter-submits already exist, so editing a gloss is four keystrokes
 plus the text.
 
+Inside the dialog itself (dz 2026-07-06): **Ctrl/Cmd+Enter** submits from
+ANY field - the standard binding for where plain Enter is taken (a
+textarea's Enter inserts a newline; single-line inputs and selects submit
+implicitly already).  **Esc** closes the dialog - enabled by flipping the
+modal skeleton's `data-bs-keyboard` (it predated a trustworthy discard
+guard); the guard intercepts the hide, so a dirty form asks "Discard
+changes?" (where Enter = discard, Esc = keep editing) and a clean one
+closes silently.  The static backdrop stays - a stray click outside must
+not close a half-filled form.
+
 **Actions dispatch by clicking the row's own buttons.**  Every verb already
 exists as a rendered element in the stop - the ☰ items carry the txd deps,
 the lmConfirm gating, the dialog URLs.  The keyboard controller finds the

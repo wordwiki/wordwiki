@@ -179,7 +179,11 @@ export function htmxPageTemplate(content: PageContent): any {
 export function renderHtmxModalEditorSkeleton(): any {
     return (
         ['div', {class: 'modal', id:'modalEditor',
-                 'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
+                 // static backdrop: a stray click outside must not close a
+                 // half-filled form.  Esc IS allowed (keyboard editing's
+                 // natural exit) - the discard guard (liminal-scripts.js)
+                 // intercepts the hide and asks when the form is dirty.
+                 'data-bs-backdrop':'static', 'data-bs-keyboard':'true',
                  tabindex:'-1', 'aria-labelledby':'modalEditorLabel', 'aria-hidden':'true'},
          ['div', {class:'modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down modal-lg'},
           ['div', {class:'modal-content'},

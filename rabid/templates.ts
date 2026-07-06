@@ -249,7 +249,11 @@ export function renderModalEditorSkeleton() {
     return [
         // Add 'fade' to class list for modal fade effect
         [h.div, {class: 'modal',  id:'modalEditor',
-                 'data-bs-backdrop':'static', 'data-bs-keyboard':'false',
+                 // static backdrop: a stray click outside must not close a
+                 // half-filled form.  Esc IS allowed (keyboard editing's
+                 // natural exit) - the discard guard (liminal-scripts.js)
+                 // intercepts the hide and asks when the form is dirty.
+                 'data-bs-backdrop':'static', 'data-bs-keyboard':'true',
                  tabindex:'-1', 'aria-labelledby':'modalEditorLabel',
                  'aria-hidden':'true'},
           // fullscreen-sm-down: on a phone the editor is a full-screen sheet
