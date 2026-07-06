@@ -765,7 +765,23 @@ function lmKbdAfterChurn() {
     target.focus();
 }
 
-document.addEventListener('htmx:afterSettle', () => lmKbdAfterChurn());
+/* Land keyboard focus on the first stop when an editing page ARRIVES (fresh
+   load or a boosted page swap): without this, entering the keyboard flow
+   needs a mouse click or a Tab march through the navbar (dz).  preventScroll
+   - the page just arrived at its natural/restored scroll position; the focus
+   ring marks the spot without yanking. */
+function lmKbdFocusInitial() {
+    lmKbdEnsureRoving();
+    const s = document.querySelector('.lm-kbd-stop[tabindex="0"]');
+    if (s) s.focus({preventScroll: true});
+}
+
+document.addEventListener('htmx:afterSettle', (e) => {
+    if (e.detail?.target === document.body || e.target === document.body)
+        lmKbdFocusInitial();       // a boosted page swap = a page arrival
+    else
+        lmKbdAfterChurn();
+});
 /* A boosted whole-page navigation invalidates the memory - a stale index
    must not yank focus (and scroll) to an arbitrary stop on the new page. */
 document.addEventListener('htmx:beforeSwap', (e) => {
@@ -782,11 +798,10 @@ document.addEventListener('htmx:beforeSwap', (e) => {
 document.addEventListener('hidden.bs.modal', () => setTimeout(lmKbdAfterChurn, 0));
 
 (() => {
-    const boot = () => lmKbdEnsureRoving();
     if (document.readyState === 'loading')
-        document.addEventListener('DOMContentLoaded', boot);
+        document.addEventListener('DOMContentLoaded', lmKbdFocusInitial);
     else
-        boot();
+        lmKbdFocusInitial();
 })();
 
 /* The '?' keybind sheet - a singleton Bootstrap modal like lmConfirm's. */

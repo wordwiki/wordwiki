@@ -22,7 +22,11 @@ genuinely focusable element, and the whole feature is:
   keyboard editing.
 - **Roving tabindex** - exactly one stop holds `tabindex="0"` (the client
   promotes the first on load; focusing any stop - by click OR keyboard -
-  makes it the holder).  So from outside, the whole entry is ONE tab stop:
+  makes it the holder).  On page ARRIVAL (fresh load or a boosted page
+  swap) the first stop is actually FOCUSED (`preventScroll`), so the
+  keyboard flow starts immediately - without this, entering it needs a
+  mouse click or a Tab march through the navbar (dz).  So from outside,
+  the whole entry is ONE tab stop:
   a keyboard user tabbing to the navbar is not trapped behind 50 rows, and
   interior links never interleave into the page's tab order.
 - **Invisible to casual users for free** - the focus ring uses
