@@ -3,6 +3,7 @@
 import * as config from './config.ts';
 import {block} from "../liminal/strings.ts";
 import {h} from '../liminal/markup.ts';
+import * as action from "../liminal/action.ts";
 import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
 import {assetUrl} from "../liminal/assets.ts";
 
@@ -13,6 +14,9 @@ export interface PageContent {
     // Show the (test-only) "Test client" nav link.  Set by the dispatcher from
     // rabid.isTestDb (memoized), so this never costs a per-render db query.
     showTestClientLink?: boolean;
+    // Show admin-only Admin-menu items (e.g. rebuild photo cache).  Set by the
+    // dispatcher from the viewer's roles.
+    isAdmin?: boolean;
     // The liveness poller's bootstrap (LiminalApp.liveClientConfig), rendered
     // as window.__liminalLive.  Set by the dispatcher; the poller only runs on
     // pages that also contain an 'lm-live' fragment.
@@ -112,7 +116,7 @@ export function pageTemplate(content: PageContent): any {
 
          [h.body, {},
 
-          navBar(content.showTestClientLink),
+          navBar(content.showTestClientLink, content.isAdmin),
 
           // TODO probably move this somewhere else
           [h.audio, {id:'audioPlayer', preload:'none'},
@@ -143,7 +147,7 @@ export function pageTemplate(content: PageContent): any {
     );
 }
 
-export function navBar(showTestClientLink: boolean = false): any {
+export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = false): any {
     return [
         [h.nav, {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
          [h.div, {class:"container-fluid"},
@@ -207,6 +211,14 @@ export function navBar(showTestClientLink: boolean = false): any {
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/tasks'}, 'Tasks']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/templates'}, 'Templates']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/timesheets'}, 'Timesheets']],
+              // Admin-only maintenance: rebuild the derived photo cache (after a
+              // change to the crop/resize logic).  Confirm, then POST.
+              isAdmin
+                  ? [h.li, {}, action.actionButton('Rebuild photo sizes',
+                      {kind: 'confirm', expr: 'rabid.rebuildPhotoDerivatives()',
+                       message: 'Rebuild all photo sizes? Cached images are deleted and regenerated as they are next viewed.'},
+                      'dropdown-item')]
+                  : undefined,
               // Test client: only on a non-production db.  A <button>, not an
               // <a href>: prefetch/prerender of a link can *run scripts* and
               // silently opt this tab in (the opt-in lives in test-agent.js); a

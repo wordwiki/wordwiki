@@ -78,11 +78,3 @@ test("renderForm still works (forwards to renderEditForm with all fields)", asyn
     });
 });
 
-test("the volunteer detail page offers a photo-only edit affordance", async () => {
-    await withTestDb(async ({ alice, carol }) => {
-        const detail = await asUser(alice, () => renderRoute(`rabid.volunteer.detailPage(${carol})`));
-        assert(hasText(detail, 'Add photo'), 'carol has no photo yet -> "Add photo"');
-        assert(JSON.stringify(detail).includes('renderEditForm'),
-               'the affordance targets renderEditForm');
-    });
-});

@@ -5,11 +5,12 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asAnon, asSystem } from "./testing.ts";
-import { findAll, hasText } from "../liminal/testing/markup-assert.ts";
+import { findAll, hasText, findByTestId } from "../liminal/testing/markup-assert.ts";
 import { PhotoService, ALLOWED_WIDTHS, CROP_FOCUS_LEVELS,
          parsePhotoValue, formatPhotoValue, quantizeFocus } from "../liminal/photo.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-import { rabid } from "./rabid.ts";
+import { rabid, getRabid } from "./rabid.ts";
+import { navBar } from "./templates.ts";
 
 // The pixel dimensions of a produced file (via ImageMagick identify).
 async function dimsOf(path: string): Promise<[number, number]> {
@@ -35,6 +36,16 @@ async function uploadWideGradient(svc: PhotoService, w: number, h: number): Prom
     const tmp = await Deno.makeTempFile({suffix: '.png'});
     await new Deno.Command('magick',
         {args: ['-size', `${h}x${w}`, 'gradient:black-white', '-rotate', '90', tmp]}).output();
+    const bytes = await Deno.readFile(tmp);
+    await Deno.remove(tmp);
+    return (await svc.upload({imageBytesAsBase64: encodeBase64(bytes)})).photoPath;
+}
+
+// Content-address a plain w×h image (solid gray) - a source of a known aspect
+// ratio for the framing-picker decision.
+async function uploadSolid(svc: PhotoService, w: number, h: number): Promise<string> {
+    const tmp = await Deno.makeTempFile({suffix: '.png'});
+    await new Deno.Command('magick', {args: ['-size', `${w}x${h}`, 'xc:gray', tmp]}).output();
     const bytes = await Deno.readFile(tmp);
     await Deno.remove(tmp);
     return (await svc.upload({imageBytesAsBase64: encodeBase64(bytes)})).photoPath;
@@ -248,53 +259,120 @@ test("route dispatch: upload (POST) + serve (GET) go through the strict interpre
     });
 });
 
-test("photo crop form: 5 framing tiles (current flagged); a pick reframes only that field", async () => {
+test("photo editor: add mode is a plain uploader; edit mode is crop+remove (no upload)", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        const fileInputs = (m: any) => findAll(m, (n: any) =>
+            Array.isArray(n) && n[0] === 'input' && n[1]?.type === 'file');
+
+        // ADD mode (no photo): the upload form (a file picker), no crop tiles.
+        const add = await asUser(alice, () =>
+            renderRoute(`rabid.volunteer.renderPhotoEditForm(${carol},"photo")`));
+        assertEquals(fileInputs(add).length, 1);
+        assertEquals(findByTestId(add, 'crop-candidates'), undefined);
+
+        // EDIT mode (a real square photo in the portrait slot -> aspect differs):
+        // crop tiles + Remove, and NO upload control.
+        const {photoPath} = await asUser(alice, () =>
+            invoke('rabid.photo.upload($arg0)', {imageBytesAsBase64: TINY_JPEG_B64}));
+        asSystem(() => rabid.volunteer.update(carol, {photo: photoPath}));
+        const edit = await asUser(alice, () =>
+            renderRoute(`rabid.volunteer.renderPhotoEditForm(${carol},"photo")`));
+        assertEquals(fileInputs(edit).length, 0, 'edit mode has no upload control');
+        assert(hasText(edit, 'Remove photo'));
+        const tiles = findAll(edit, (m: any) =>
+            Array.isArray(m) && m[0] === 'img' && String(m[1]?.class).includes('lm-crop-choice'));
+        assertEquals(tiles.length, CROP_FOCUS_LEVELS.length);
+        for(const t of tiles) assertStringIncludes((t as any[])[1].src, 'rabid.photo.serveCropped');
+        // Tiles dispatch setPhotoFocus with PRIMITIVE args (no embedded JSON,
+        // which broke the route parser) - guard against a regression.
+        assert(JSON.stringify(edit).includes('setPhotoFocus'));
+    });
+});
+
+test("photo editor: Remove clears the field (primitive-args route)", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        asSystem(() => rabid.volunteer.update(carol, {photo: `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`}));
+        await asUser(alice, () => getRabid().dispatch(
+            `rabid.volunteer.removePhoto(${carol},"photo")`, {httpMethod: 'POST'}));
+        assertEquals(asSystem(() => rabid.volunteer.getById(carol)).photo, '');
+    });
+});
+
+test("photo editor: picking a framing tile reframes only that field", async () => {
     await withTestDb(async ({ alice, carol }) => {
         const path = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
         asSystem(() => rabid.volunteer.update(carol, {photo: path}));
-
-        // The picker renders one cover-crop tile per focus level (through the
-        // interpreter, as a host).
-        const form = await asUser(alice, () =>
-            renderRoute(`rabid.volunteer.renderPhotoCropForm(${carol},"photo")`));
-        const tiles = findAll(form, (m: any) =>
-            Array.isArray(m) && m[0] === 'img' && String((m[1] as any)?.class).includes('lm-crop-choice'));
-        assertEquals(tiles.length, CROP_FOCUS_LEVELS.length);
-        for(const t of tiles) assertStringIncludes((t as any[])[1].src, 'rabid.photo.serveCropped');
-
-        // Picking the 'bottom' framing is a saveForm of the photo field to that
-        // cropped value (what the tile's immediate action dispatches).  Only the
-        // framing changes: same content path, other fields untouched.
-        const bottomValue = formatPhotoValue(path, 1);
         const before = asSystem(() => rabid.volunteer.getById(carol));
-        await asUser(alice, () => invoke('rabid.volunteer.saveForm($arg0)', {
-            volunteer_id: String(carol), photo: bottomValue, 'before-photo': path,
-        }));
+        // Dispatch the EXACT expression a crop tile builds (primitive args) as a
+        // POST through the interpreter - the path that broke in the browser when
+        // the value was embedded as JSON.
+        await asUser(alice, () => getRabid().dispatch(
+            `rabid.volunteer.setPhotoFocus(${carol},"photo",1)`, {httpMethod: 'POST'}));
         const after = asSystem(() => rabid.volunteer.getById(carol));
         assertEquals(parsePhotoValue(after.photo!), {path, focus: 1});   // reframed
-        assertEquals(after.name, before.name);                                 // untouched
+        assertEquals(after.name, before.name);                           // untouched
     });
 });
 
-test("photo crop form rejects when there's no photo / the field isn't a photo", async () => {
+test("photo editor rejects a non-photo field", async () => {
     await withTestDb(async ({ alice, carol }) => {
-        await asUser(alice, () => assertRejects(() =>            // carol has no photo yet
-            renderRoute(`rabid.volunteer.renderPhotoCropForm(${carol},"photo")`), Error, "No photo"));
-        asSystem(() => rabid.volunteer.update(carol, {photo: `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`}));
-        await asUser(alice, () => assertRejects(() =>            // 'name' isn't an ImageField
-            renderRoute(`rabid.volunteer.renderPhotoCropForm(${carol},"name")`), Error, "not a photo field"));
+        await asUser(alice, () => assertRejects(() =>
+            renderRoute(`rabid.volunteer.renderPhotoEditForm(${carol},"name")`), Error, "not a photo field"));
     });
 });
 
-test("the volunteer detail page shows a Crop affordance only when a photo is set", async () => {
+test("photoButton: 'Add Photo' with no photo, 'Edit Photo' once set", async () => {
     await withTestDb(async ({ alice, carol }) => {
         const bare = await asUser(alice, () => renderRoute(`rabid.volunteer.detailPage(${carol})`));
-        assert(!JSON.stringify(bare).includes('renderPhotoCropForm'), 'no photo -> no Crop affordance');
+        assert(hasText(bare, 'Add Photo'));
+        assert(JSON.stringify(bare).includes('renderPhotoEditForm'), 'opens the unified editor');
         asSystem(() => rabid.volunteer.update(carol, {photo: `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`}));
         const withPhoto = await asUser(alice, () => renderRoute(`rabid.volunteer.detailPage(${carol})`));
-        assert(JSON.stringify(withPhoto).includes('renderPhotoCropForm'), 'photo -> Crop affordance');
-        assert(hasText(withPhoto, 'Crop'));
+        assert(hasText(withPhoto, 'Edit Photo'));
     });
+});
+
+test("needsFramingPicker: hidden when the aspect ~matches, shown when it differs", async () => {
+    await withTempPhotoService(async (svc) => {
+        // A 3:4 portrait source into the 3:4 portrait slot -> no meaningful trim.
+        const p34 = await uploadSolid(svc, 600, 800);
+        assertEquals(await svc.needsFramingPicker(p34, 960, 1280), false);
+        // The same source into a 3:2 slot -> big trim -> show the picker.
+        assertEquals(await svc.needsFramingPicker(p34, 960, 640), true);
+        // Within tolerance: 5:4 source into a 4:3 slot trims ~6% (<10%) -> hidden.
+        const p54 = await uploadSolid(svc, 1000, 800);
+        assertEquals(await svc.needsFramingPicker(p54, 960, 720), false);
+        // A wide source into the portrait slot -> shown.
+        const wide = await uploadWideGradient(svc, 400, 100);
+        assertEquals(await svc.needsFramingPicker(wide, 960, 1280), true);
+        // An unreadable source -> conservative "show".
+        assertEquals(await svc.needsFramingPicker(
+            `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`, 960, 1280), true);
+    });
+});
+
+test("clearDerivedStore drops the derived sizes; original untouched; regenerable", async () => {
+    await withTempPhotoService(async (svc, root) => {
+        const {photoPath} = await svc.upload({imageBytesAsBase64: TINY_JPEG_B64});
+        const sized = await svc.sizedPhotoPath(photoPath, 96);
+        const cropped = await svc.croppedPhotoPath(photoPath, 256, 256, 0.5);
+        assert(await Deno.stat(`${root}/${sized}`));
+        assert(await Deno.stat(`${root}/${cropped}`));
+
+        const {cleared} = await svc.clearDerivedStore();
+        assertEquals(cleared.sort(), ['cropped-photos', 'sized-photos']);
+        await assertRejects(() => Deno.stat(`${root}/${sized}`));      // derived gone
+        await assertRejects(() => Deno.stat(`${root}/${cropped}`));
+        assert(await Deno.stat(`${root}/${photoPath}`));               // original untouched
+
+        // Regenerates on demand.
+        assert(await Deno.stat(`${root}/${await svc.sizedPhotoPath(photoPath, 96)}`));
+    });
+});
+
+test("the photo-cache rebuild menu item shows only to admins", () => {
+    assert(hasText(navBar(false, /*isAdmin*/ true), 'Rebuild photo sizes'));
+    assert(!hasText(navBar(false, /*isAdmin*/ false), 'Rebuild photo sizes'));
 });
 
 test("sale rows and detail lead with the bike photo when present", async () => {

@@ -205,7 +205,7 @@ export class SaleTable extends Table<Sale> {
              this.canEditRecord(s) ? this.editPencil(sale_id) : undefined],
             s.photo ? [h.div, {class: 'mb-3'},
                        rabid.photo.aspectImg(s.photo, 'landscape', 'detail', {class: 'lm-photo-detail'}),
-                       [h.div, {class: 'mt-1'}, this.photoCropButton(sale_id, 'photo')]] : undefined,
+                       [h.div, {class: 'mt-1'}, this.photoButton(sale_id, 'photo')]] : undefined,
             [h.dl, {class: 'row mb-0'},
              row('Kind', sale_kind_enum[s.sale_kind] ?? s.sale_kind),
              row('Time', date.sqliteDateTimeToString(s.sale_time, '—')),

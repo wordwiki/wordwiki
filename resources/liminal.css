@@ -418,6 +418,15 @@ tr.lm-navigable:active > * { background-color: var(--bs-secondary-bg); }
     margin-bottom: 1rem;
 }
 
+/* A framing option in the crop picker: small + bounded so several fit in a row
+   and can be compared (they are already the exact aspect - no object-fit). */
+.lm-crop-choice {
+    display: block;
+    max-height: 6rem;
+    max-width: 8rem;
+    border-radius: 0.25rem;
+}
+
 /* --- The change list (change-list.ts) --------------------------------------
    ONE flat event log, reused in every context (single fact / lexeme / global /
    per-user).  Each line reads left-to-right as a log: WHEN, WHO lead (rigid,

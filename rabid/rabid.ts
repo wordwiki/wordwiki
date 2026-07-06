@@ -87,6 +87,19 @@ export class Rabid extends LiminalApp {
         });
     }
 
+    // Admin maintenance: drop every derived photo size so they regenerate with
+    // the current derivation (run after changing the crop/resize logic - the
+    // derived store is closure-keyed, so a changed derivation is stale until
+    // cleared).  A mutation (deletes cached files); originals are untouched and
+    // the cache rebuilds lazily on next view.
+    @routeMutation(security.hasRole('admin'))
+    async rebuildPhotoDerivatives() {
+        const {cleared} = await this.photo.clearDerivedStore();
+        return {action: 'alert',
+                message: `Cleared photo cache (${cleared.join(', ') || 'nothing to clear'}). ` +
+                         `Images regenerate as they are viewed.`};
+    }
+
     @lazy
     get tables() {
         return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
@@ -221,6 +234,7 @@ export class Rabid extends LiminalApp {
                 ? [[h.title, {}, result.title], result.body]
                 : templates.pageTemplate({title: result.title, body: result.body,
                                           showTestClientLink: this.isTestDb,
+                                          isAdmin: security.current()?.roles.has('admin') ?? false,
                                           liveConfig: this.liveClientConfig()});
         return result;
     }

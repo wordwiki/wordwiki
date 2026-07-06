@@ -155,9 +155,27 @@ export interface PhotoServiceConfig {
     magickPath?: string;   // ImageMagick CLI (default 'magick')
 }
 
+// The trim fraction below which the crop picker is pointless: if a cover-crop
+// would trim ≤10% of the photo (its aspect ratio is close enough to the slot's),
+// all five framings look nearly identical, so we centre-crop and hide the
+// picker.  See needsFramingPicker.
+export const CROP_PICKER_TRIM_TOLERANCE = 0.10;
+
+// PhotoService instances register by mount path so the generic photo helpers on
+// Table (which hold only a service PATH, not an instance) can reach the
+// app-configured service - e.g. to identify a source's dimensions.  Keyed by
+// mountPath ('rabid.photo'); the app's getter re-creating the instance just
+// re-registers the same config, so last-writer-wins is fine.
+const photoServiceRegistry = new Map<string, PhotoService>();
+export function photoServiceFor(mountPath: string): PhotoService | undefined {
+    return photoServiceRegistry.get(mountPath);
+}
+
 export class PhotoService {
 
-    constructor(public config: PhotoServiceConfig) {}
+    constructor(public config: PhotoServiceConfig) {
+        photoServiceRegistry.set(config.mountPath, this);
+    }
 
     get mountPath(): string { return this.config.mountPath; }
     private get magick(): string { return this.config.magickPath ?? 'magick'; }
@@ -250,6 +268,44 @@ export class PhotoService {
             ['coverCrop', contentRef, width, height, f],
             'jpg');
         return 'derived/' + derivedRef;
+    }
+
+    // Drop every DERIVED size (sized-photos + cropped-photos), so they
+    // regenerate on next view with the current derivation.  For maintenance
+    // after the resize/crop logic changes (the derived store is closure-keyed,
+    // so a changed derivation yields new bytes under an unchanged key - stale
+    // until cleared).  Originals are untouched; the caller gates permission.
+    async clearDerivedStore(): Promise<{cleared: string[]}> {
+        const cleared: string[] = [];
+        for(const sub of ['sized-photos', 'cropped-photos']) {
+            const dir = `${this.config.derivedDir}/${sub}`;
+            try {
+                await Deno.remove(dir, {recursive: true});
+                cleared.push(sub);
+            } catch(e) {
+                if(!(e instanceof Deno.errors.NotFound)) throw e;   // absent = nothing to clear
+            }
+            await fs.ensureDir(dir);   // recreate empty so static serving has a dir
+        }
+        return {cleared};
+    }
+
+    // Whether the crop picker is worth showing for this photo at (width,height):
+    // true iff a cover-crop would trim MORE than CROP_PICKER_TRIM_TOLERANCE of
+    // the photo (its aspect ratio differs enough from the slot that framing
+    // matters).  A near-matching photo centre-crops with negligible loss, so the
+    // picker is hidden.  Identifies the source once (cheap; only on a modal open).
+    async needsFramingPicker(value: string, width: number, height: number): Promise<boolean> {
+        let W: number, H: number;
+        try {
+            const contentRef = this.verifiedContentRef(parsePhotoValue(value).path);
+            [W, H] = await this.imageDims(`${this.config.contentDir}/${contentRef}`);
+        } catch {
+            return true;   // unknown/unreadable source -> let the user frame (conservative)
+        }
+        const sourceAR = W / H, targetAR = width / height;
+        const trim = 1 - Math.min(sourceAR, targetAR) / Math.max(sourceAR, targetAR);
+        return trim > CROP_PICKER_TRIM_TOLERANCE;
     }
 
     // Fill the source to cover w×h, then crop the overflow.  A cover-crop only

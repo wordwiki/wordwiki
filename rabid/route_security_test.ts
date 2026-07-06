@@ -47,11 +47,14 @@ test("sensitive routes are declared but NOT public", () => {
     notPublic(rabid.event_checkin, "checkIn");         // host-only (check others in)
     notPublic(rabid.volunteer, "detailPage");          // authenticated
     notPublic(rabid.volunteer, "renderEditForm");      // authenticated (field-subset edit form)
-    notPublic(rabid.volunteer, "renderPhotoCropForm"); // authenticated (crop picker)
+    notPublic(rabid.volunteer, "renderPhotoEditForm"); // authenticated (unified photo editor)
+    notPublic(rabid.volunteer, "setPhotoFocus");       // authenticated (crop-tile reframe)
+    notPublic(rabid.volunteer, "removePhoto");         // authenticated (editor Remove)
     notPublic(rabid.event, "saveForm");                // authenticated (base Table)
     notPublic(rabid.photo, "upload");                  // authenticated (photo upload rpc)
     notPublic(rabid.photo, "serve");                   // authenticated (sized <img> route)
     notPublic(rabid.photo, "serveCropped");            // authenticated (cover-crop <img> route)
+    notPublic(rabid, "rebuildPhotoDerivatives");       // admin-only (drop derived photo cache)
 });
 
 test("internal + query members are unexposed (unreachable under strict)", () => {
@@ -82,7 +85,20 @@ test("mutations are POST-only; reads are not (CSRF axis)", () => {
     assert(!routeIsMutation(r.event, "renderEventRowById"));
     assert(!routeIsMutation(r.photo, "serve"));            // sized <img> src is a GET
     assert(!routeIsMutation(r.volunteer, "renderEditForm")); // rendering a form is a GET
-    assert(!routeIsMutation(r.volunteer, "renderPhotoCropForm")); // rendering the picker is a GET
+    assert(!routeIsMutation(r.volunteer, "renderPhotoEditForm")); // rendering the picker is a GET
+    assert(routeIsMutation(r, "rebuildPhotoDerivatives")); // deletes cached files
+    assert(routeIsMutation(r.volunteer, "setPhotoFocus"));  // writes the reframed value
+    assert(routeIsMutation(r.volunteer, "removePhoto"));    // clears the field
+});
+
+test("rebuildPhotoDerivatives is admin-only (host and regular volunteers refused)", () => {
+    return withTestDb(async ({ alice, bob }) => {
+        // alice = host, bob = regular; neither is admin -> the maintenance route
+        // is refused before it can touch the cache.
+        for(const nonAdmin of [alice, bob])
+            await asUser(nonAdmin, () => assertRejects(
+                () => invoke('rabid.rebuildPhotoDerivatives()'), Error));
+    });
 });
 
 test("a mutation route reached via GET is rejected; POST works", () => {

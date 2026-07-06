@@ -537,24 +537,16 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.h2, {class: 'mb-0'}, v.name],
              v.archived ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
              this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined,
-             // A focused photo-only edit form, so adding a picture doesn't mean
-             // wading through the whole volunteer edit flow.  Uses the generic
-             // field-subset edit form (Table.renderEditForm).
-             this.canEditRecord(v)
-                 ? action.actionButton(v.photo ? 'Edit photo' : 'Add photo',
-                     {kind: 'modal',
-                      dialogUrl: `/rabid.volunteer.renderEditForm(rabid.volunteer.getById(${volunteer_id}),["photo"])`},
-                     'btn btn-outline-secondary btn-sm')
-                 : undefined,
+             // One unified photo affordance: "Add Photo" / "Edit Photo" (upload,
+             // remove, crop), the generic Table.photoButton.
+             this.photoButton(volunteer_id, 'photo'),
              viewerIsHost
                  ? action.actionButton('Reset password',
                      {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${volunteer_id})`},
                      'btn btn-outline-secondary btn-sm ms-auto')
                  : undefined],
 
-            v.photo ? [h.div, {class: 'mb-3'},
-                       rabid.photo.aspectImg(v.photo, 'portrait', 'detail', {class: 'lm-photo-detail'}),
-                       [h.div, {class: 'mt-1'}, this.photoCropButton(volunteer_id, 'photo')]] : undefined,
+            v.photo ? rabid.photo.aspectImg(v.photo, 'portrait', 'detail', {class: 'lm-photo-detail'}) : undefined,
 
             [h.dl, {class: 'row mb-0'},
              fieldRow('Email', f.email, v.email, 'detail-email'),

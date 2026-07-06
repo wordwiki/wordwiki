@@ -13,7 +13,7 @@ import * as security from "./security.ts";
 import {route, routeMutation, authenticated} from "./security.ts";
 import * as date from "./date.ts";
 import * as timestamp from "./timestamp.ts";
-import { photoCroppedSrc, photoCropCandidates, PHOTO_ASPECT_SIZES, type PhotoAspect } from "./photo.ts";
+import { photoCroppedSrc, photoCropCandidates, photoServiceFor, parsePhotoValue, formatPhotoValue, quantizeFocus, PHOTO_ASPECT_SIZES, type PhotoAspect } from "./photo.ts";
 
 export type Tuple = Record<string, any>;
 
@@ -677,18 +677,110 @@ export class Table<T extends Tuple> extends FieldSet {
         return this.renderEditForm(record, undefined, onsubmit);
     }
 
-    // ----- Photo cropping (generic, for any ImageField on this table) --------
+    // ----- Photos (generic, for any ImageField on this table) ---------------
 
     /**
-     * The crop picker for one photo field on one record: the same photo framed
-     * at each focus level (see liminal/photo.ts), rendered as tappable tiles.
-     * Picking a tile immediately saves the field to that framing (via the
-     * normal saveForm - subset-safe and permission-checked), and the reload
-     * re-renders the photo cropped the new way.  One generic form for every
-     * photo field, reached as a modal from photoCropButton.
+     * The photo editor for one photo field on one record, shown as a modal from
+     * photoButton.  Two clean modes, each with ONE interaction model (no
+     * confusing Save-vs-immediate mix):
+     *
+     *  - NO photo -> the uploader: the ordinary single-field edit form (a file
+     *    picker + Save; Remove is naturally absent with nothing to remove).
+     *  - HAS photo -> the editor: NO upload.  Just the crop-framing tiles (only
+     *    when the aspect differs enough to matter - see needsFramingPicker; a
+     *    small preview stands in otherwise) and a Remove button.  Both are
+     *    immediate actions.  To change a photo, remove then re-add.
      */
     @route(authenticated)
-    renderPhotoCropForm(id: number, fieldName: string): Markup {
+    async renderPhotoEditForm(id: number, fieldName: string): Promise<Markup> {
+        const record = this.getById(id);
+        if(!record) throw new Error(`No ${this.name} #${id}`);
+        if(!this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+        const field = this.fieldsByName[fieldName];
+        if(!(field instanceof ImageField))
+            throw new Error(`'${fieldName}' is not a photo field on '${this.name}'`);
+        if(!this.canEdit(field, record))
+            throw new Error(`Not permitted to edit ${field.prompt}`);
+
+        const value = (record as any)[fieldName];
+        const hasPhoto = typeof value === 'string' && value !== '';
+
+        // Add mode: the plain upload form.
+        if(!hasPhoto)
+            return ['div', {'data-testid': 'photo-edit-form'}, this.renderEditForm(record, [fieldName])];
+
+        // Edit mode: crop framing (when it matters) or a preview, plus Remove.
+        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].detail;
+        const svc = photoServiceFor(field.photoServicePath);
+        // Show the framing picker when the aspect differs enough to matter - or
+        // when we can't tell (no registered service / unreadable source), erring
+        // toward offering the choice.
+        const showCrop = !svc || await svc.needsFramingPicker(value, w, h);
+        const body: Markup = showCrop
+            ? this.renderPhotoCropTiles(record, field, value)
+            // No framing choice needed: a small preview so the modal has context.
+            : ['img', {src: photoCroppedSrc(field.photoServicePath, value, w, h),
+                       class: 'lm-photo-preview', alt: ''}];
+        const removeButton = action.actionButton('Remove photo',
+            {kind: 'confirm', message: 'Remove this photo?',
+             expr: `${this}.removePhoto(${id},${JSON.stringify(fieldName)})`,
+             deps: this.speculatedSaveTargets(record)},
+            'btn btn-outline-danger btn-sm');
+        return ['div', {'data-testid': 'photo-edit-form'},
+            body,
+            ['div', {class: 'mt-3'}, removeButton]];
+    }
+
+    /**
+     * Remove a photo (the editor's Remove action): clear the field.  A mutation
+     * with primitive args (no nested value in the route expression).  The
+     * content stays in the store; only this record's reference is dropped.
+     */
+    @routeMutation(authenticated)
+    removePhoto(id: number, fieldName: string): {action: string} {
+        const record = this.getById(id);
+        if(!record) throw new Error(`No ${this.name} #${id}`);
+        if(!this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+        const field = this.fieldsByName[fieldName];
+        if(!(field instanceof ImageField))
+            throw new Error(`'${fieldName}' is not a photo field on '${this.name}'`);
+        if(!this.canEdit(field, record))
+            throw new Error(`Not permitted to edit ${field.prompt}`);
+        this.updateNamedFields(id, [fieldName], {[fieldName]: ''} as unknown as Partial<T>);
+        return {action: 'reload'};
+    }
+
+    // The crop-framing tiles: the same photo framed at each focus level (see
+    // photoCropCandidates), rendered small (the THUMB size, bounded by
+    // .lm-crop-choice) so several fit in a row and are comparable.  Tapping a
+    // tile dispatches setPhotoFocus with PRIMITIVE args (id, field, focus) - the
+    // new value is computed server-side, so no quoted JSON is embedded in the
+    // route expression (that broke the parser).
+    private renderPhotoCropTiles(record: T, field: ImageField, value: string): Markup {
+        const deps = this.speculatedSaveTargets(record);
+        const id = (record as any)[this.pkName];
+        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].thumb;
+        const tiles = photoCropCandidates(field.photoServicePath, value, w, h).map(c => {
+            const expr = `${this}.setPhotoFocus(${id},${JSON.stringify(field.name)},${c.focus})`;
+            return action.actionButton(
+                ['img', {src: c.src, class: 'lm-crop-choice', alt: ''}],
+                {kind: 'immediate', expr, deps},
+                'btn p-1 border ' + (c.selected ? 'border-primary border-3' : 'border-2 border-light'));
+        });
+        return ['div', {'data-testid': 'photo-crop-form', class: 'mt-3'},
+            ['p', {class: 'text-muted small mb-1'}, 'Choose how to frame the photo.'],
+            ['div', {class: 'd-flex flex-wrap gap-2', 'data-testid': 'crop-candidates'}, tiles]];
+    }
+
+    /**
+     * Reframe a photo field to a focus level (the crop tiles' immediate action).
+     * Keeps the same content path, changing only the stored focus - a mutation.
+     * Primitive args only, so the route expression carries no nested JSON.
+     */
+    @routeMutation(authenticated)
+    setPhotoFocus(id: number, fieldName: string, focus: number): {action: string} {
         const record = this.getById(id);
         if(!record) throw new Error(`No ${this.name} #${id}`);
         if(!this.canEditRecord(record))
@@ -700,44 +792,26 @@ export class Table<T extends Tuple> extends FieldSet {
             throw new Error(`Not permitted to edit ${field.prompt}`);
         const value = (record as any)[fieldName];
         if(typeof value !== 'string' || value === '')
-            throw new Error(`No photo to crop`);
-
-        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].detail;
-        const deps = this.speculatedSaveTargets(record);
-        const pk = (record as any)[this.pkName];
-        const tiles = photoCropCandidates(field.photoServicePath, value, w, h).map(c => {
-            // Clicking a tile saves ONLY this photo field (its content path is
-            // unchanged - just the framing), with the before-snapshot so the
-            // change is detected and the other fields are left untouched.
-            const saveArgs: Record<string, string> = {
-                [this.pkName]: String(pk),
-                [fieldName]: c.value,
-                ['before-'+fieldName]: value,
-            };
-            const expr = `${this}.saveForm(${JSON.stringify(saveArgs)})`;
-            return action.actionButton(
-                ['img', {src: c.src, class: 'lm-crop-choice', alt: ''}],
-                {kind: 'immediate', expr, deps},
-                'btn p-1 border ' + (c.selected ? 'border-primary border-3' : 'border-2 border-light'));
-        });
-        return ['div', {'data-testid': 'photo-crop-form'},
-            ['p', {class: 'text-muted small'}, 'Choose how to frame the photo.'],
-            ['div', {class: 'd-flex flex-wrap gap-2', 'data-testid': 'crop-candidates'}, tiles]];
+            throw new Error(`No photo to reframe`);
+        const newValue = formatPhotoValue(parsePhotoValue(value).path, quantizeFocus(focus));
+        this.updateNamedFields(id, [fieldName], {[fieldName]: newValue} as unknown as Partial<T>);
+        return {action: 'reload'};
     }
 
-    /** A "Crop" affordance (opens renderPhotoCropForm as a modal) for a photo
-     *  field on a record - or nothing when there's no photo or the actor can't
-     *  edit it.  Display sites drop this next to the photo. */
-    photoCropButton(id: number, fieldName: string, label: Markup = 'Crop'): Markup {
+    /** The unified photo affordance for a photo field on a record: "Add Photo"
+     *  when empty, "Edit Photo" when set, opening renderPhotoEditForm (upload /
+     *  remove / crop) as a modal.  Nothing when the actor can't edit the field.
+     *  Display sites drop this wherever the photo affordance belongs. */
+    photoButton(id: number, fieldName: string): Markup {
         const record = this.getById(id);
         const field = record && this.fieldsByName[fieldName];
-        const value = record && (record as any)[fieldName];
         if(!record || !(field instanceof ImageField) ||
-           typeof value !== 'string' || value === '' ||
            !this.canEditRecord(record) || !this.canEdit(field, record))
             return undefined as unknown as Markup;
-        return action.actionButton(label,
-            {kind: 'modal', dialogUrl: `/${this}.renderPhotoCropForm(${id},${JSON.stringify(fieldName)})`},
+        const value = (record as any)[fieldName];
+        const hasPhoto = typeof value === 'string' && value !== '';
+        return action.actionButton(hasPhoto ? 'Edit Photo' : 'Add Photo',
+            {kind: 'modal', dialogUrl: `/${this}.renderPhotoEditForm(${id},${JSON.stringify(fieldName)})`},
             'btn btn-outline-secondary btn-sm');
     }
 

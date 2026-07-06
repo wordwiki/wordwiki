@@ -449,7 +449,7 @@ export class EventTable extends Table<Event> {
             present.map(([label, fieldName, p]) => [h.div, {class: 'mb-3'},
                 [h.h4, {class: 'mt-4'}, label],
                 rabid.photo.aspectImg(p!, 'landscape', 'detail', {class: 'lm-photo-detail'}),
-                [h.div, {class: 'mt-1'}, this.photoCropButton(e.event_id, fieldName)]])];
+                [h.div, {class: 'mt-1'}, this.photoButton(e.event_id, fieldName)]])];
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
