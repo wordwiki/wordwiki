@@ -475,6 +475,47 @@ change-feed_test.ts, activity-report_test.ts, rabid/page_state_test.ts.
 - Server-rendered relative times / "now"-dependent labels age in an open tab
   until a fragment reload; anchor-stamped pages avoid the worst of it.
 
+## Keyboard-driven editing (opt-in per page)
+
+THE doc is repo-root **keyboard-driven-editing.md** (design + rationale);
+this is the adoption summary.  The mechanism is entirely liminal
+(liminal-scripts.js) and app-agnostic: any page that stamps stops gets
+keyboard editing — wordwiki's lexeme editor is the first adopter; rabid's
+list/detail pages can adopt the same way.
+
+**The idea**: the "focused row" is literally DOM focus.  An app marks each
+editable surface as a *stop*; liminal supplies roving tabindex (the whole
+collection is ONE Tab stop from outside), key dispatch (Tab/arrows traverse,
+Enter edits, +/o/O insert, Alt+arrows move, Delete/# delete, h history, m
+menu, ? help sheet), initial focus on page arrival, and — the real work —
+focus restoration across the refresh machinery's swaps (by identity, else by
+index, so delete lands on the successor).  Dialogs: Ctrl/Cmd+Enter submits
+from any field; Esc closes through the discard guard.
+
+**What an app stamps** (server-side, in whatever builds its rows):
+
+- `lm-kbd-stop` + `tabindex="-1"` + `data-kbd="<stable identity>"` on each
+  editable surface (and on action-bearing empty slots).  The identity must
+  survive a fragment swap — wordwiki uses `fact-<id>` / `rel-<parent>-<tag>-empty`;
+  rabid rows would use their pk (e.g. `volunteer-<id>`).  Do NOT reuse the
+  dep-key classes: refresh vocabulary, not identity.  Always render `-1`;
+  the client owns the roving `0` (keeps fragment re-renders byte-identical).
+- `lm-act-insert-before/-after`, `lm-act-move-up/-down`, `lm-act-history`,
+  `lm-act-delete` as `btnClass` on the row's ☰ actionMenu items.  Keys
+  dispatch by CLICKING these buttons, so deps/confirm/dialog URLs stay
+  single source of truth; a row missing a verb simply no-ops that key.
+- Enter's resolution order: `button.edit` (the pencil / tap-to-edit target),
+  else the ☰ toggle, else the stop's first button.  rabid's *navigable* rows
+  have `a.lm-nav-link` instead of `button.edit` — adopting them would mean
+  teaching `lmKbdPrimary` that case (small, deliberate extension).
+- Optionally a `.lm-kbd-hint` footer line linking `lmKbdHelp()`.
+
+**What liminal already handles**: `:focus-visible`-only ring (mouse users
+see nothing) + scroll-margin (liminal.css); `lm-read-only` contexts excluded
+(matches refresh participation); boosted navigations clear the focus memory;
+`lmKbdAfterChurn` is hooked on htmx afterSettle, lmApplySwap, and modal
+hides — a new app only stamps markup, no JS.
+
 ## Recipes
 
 **A new reloadable fragment**: give it a `@route(authenticated)` render method
@@ -528,6 +569,7 @@ rabid/speculative_refresh_test.ts.
 | action buttons + deps, param dialogs | liminal/action.ts |
 | tx/txd, reload front door, swap mechanics, speculation resolution | resources/rabid-scripts.js |
 | lmRefreshable / lm-read-only gate, debug mode, liveness poller, modal editor | resources/liminal-scripts.js |
+| keyboard-driven editing (stops, roving focus, key dispatch, focus restore) | resources/liminal-scripts.js + keyboard-driven-editing.md |
 | debug mark styles | resources/liminal.css |
 | on-page view state (filters/paging in the URL, FieldSet) | this file, § On-page view state |
 | FieldSet codec (normalize/literal/parseFormValues), field types | liminal/table.ts |
