@@ -781,7 +781,31 @@ export class LexemeEditor {
             rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
             renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
             editing: this.metaEditingHooks(entry_id, changes),
+            valueLabel: this.vocabValueLabel(),
         });
+    }
+
+    /** The render-side twin of widgetFor's vocab selects: category slugs and
+     *  part-of-speech codes DISPLAY their vocab-table names (dz: the editor
+     *  was showing raw slugs).  Keyed by the same field names widgetFor keys
+     *  on; unknown/legacy values return undefined and render raw (with the
+     *  static $options fallback for part_of_speech).  The maps build lazily
+     *  once per renderer - i.e. per render - so admin-table renames show on
+     *  the next paint without a per-row query. */
+    private vocabValueLabel(): (f: model.ScalarField, value: unknown) => string|undefined {
+        let cats: Map<string, string>|undefined;
+        let forms: Map<string, string>|undefined;
+        return (f, value) => {
+            if(f.name === 'category') {
+                cats ??= new Map(this.vocabs.categories().map(c => [c.slug, c.name]));
+                return cats.get(String(value));
+            }
+            if(f.name === 'part_of_speech') {
+                forms ??= new Map(this.vocabs.lexicalForms().map(x => [x.slug, x.name]));
+                return forms.get(String(value));
+            }
+            return undefined;
+        };
     }
 
     // --- Fine-grained fragment routes (meta-editor-refresh-design.md) --------

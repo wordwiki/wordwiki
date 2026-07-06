@@ -52,6 +52,12 @@ export interface EntryRenderConfig {
     // Optional affordance appended INSIDE the headword <h1> (the standard edit
     // pencil).  Context-specific, so injected - the public export passes none.
     titleAffordance?: Markup;
+    // Display names for controlled-VOCABULARY values (category slugs,
+    // part-of-speech codes): the vocab tables are dynamic, so static
+    // $options can't know them - the app injects the lookup.  Return
+    // undefined to fall through to the default rendering (incl. static
+    // $options), so unknown/legacy values still show raw.
+    valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
     // EDIT MODE.  When present, the renderer stops honouring the read-only
     // conveniences (singleton collapse, empty elide, value joining) - see the
     // "declared intent, mode decides" principle - and hangs affordances off
@@ -188,6 +194,7 @@ export class EntryRenderer {
     readonly renderBoundingGroup?: (id: number) => Markup;
     readonly titleAffordance?: Markup;
     readonly editing?: EditingHooks;
+    readonly valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
 
     constructor(cfg: EntryRenderConfig) {
         this.rootPath = cfg.rootPath;
@@ -197,6 +204,7 @@ export class EntryRenderer {
         this.renderBoundingGroup = cfg.renderBoundingGroup;
         this.titleAffordance = cfg.titleAffordance;
         this.editing = cfg.editing;
+        this.valueLabel = cfg.valueLabel;
     }
 
     /** Child relations in presentation order, minus what this MODE and
@@ -283,6 +291,11 @@ export class EntryRenderer {
             return ["img", { src: this.rootPath + value, style: "max-width: 12rem; height: auto;" }];
         if (f.style.$shape === "boundingGroup")   // the reference scan (+ link)
             return this.renderBoundingGroup ? this.renderBoundingGroup(Number(value)) : "";
+        // Injected controlled-vocabulary display names (category slugs,
+        // part-of-speech codes) beat static $options - the vocab tables are
+        // the live authority; undefined falls through.
+        const injected = this.valueLabel?.(f, value);
+        if (injected !== undefined) return this.decorate(f, injected);
         const opts = options(f);
         if (opts) return this.decorate(f, opts[String(value)] ?? String(value));  // code -> name
         if (f.style.$markdown) {

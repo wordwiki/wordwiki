@@ -122,6 +122,32 @@ test("category insert dialog uses the select; insert saves an active slug", asyn
     });
 });
 
+test("category display: the editor renders the vocab-table NAME, not the slug", async () => {
+    await withTestDb((fx) => {
+        as(fx, 'djz', () => {
+            const tl = new TestTimeline();
+            const e = mkEntry(1000, tl.next());
+            fx.ww.applyTransaction([e], {quiet: true});
+            const s = mkChild(e, 'sub', 1100, tl.next(), {order_key: '0.5'});
+            fx.ww.applyTransaction([s], {quiet: true});
+            fx.ww.applyTransaction([mkChild(s, 'cat', 1001, tl.next(),
+                {attr1: '~old-kinship', order_key: '0.5'})], {quiet: true});
+            seedCategories(fx);
+            const page = markupToString(fx.ww.lexeme.renderMetaEntry(1000));
+            // The tuple stores the slug '~old-kinship'; the page shows the
+            // display name (valueLabel; the assertion data is untouched).
+            assertStringIncludes(page, 'kinship (old)');
+            assertFalse(page.includes('~old-kinship'),
+                        'the raw slug must not leak into the rendering');
+            // ...and an UNKNOWN/legacy value still renders raw (fall-through).
+            fx.ww.applyTransaction([mkChild(s, 'cat', 1002, tl.next(),
+                {attr1: 'never-tabled', order_key: '0.6'})], {quiet: true});
+            const page2 = markupToString(fx.ww.lexeme.renderMetaEntry(1000));
+            assertStringIncludes(page2, 'never-tabled');
+        });
+    });
+});
+
 test("pre-import fallback: empty category table keeps the free-text input", async () => {
     await withTestDb((fx) => {
         as(fx, 'djz', () => {
