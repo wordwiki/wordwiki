@@ -157,12 +157,13 @@ test("the category detail page shows the record; rows navigate, the pencil only 
                                      theme: 'Land, Water & Sky',
                                      description: 'Rain, snow, wind, storms.'}));
 
-        // The list row is the navigable species: name links to the detail page.
+        // The list is a dense data table of navigable rows: the accent name
+        // links to the detail page (chevrons are retired chrome).
         const page = markupToString(await as(fx, nonAdmin, () =>
             renderRoute(fx.ww, 'wordwiki.categoriesPage()')));
+        assertStringIncludes(page, 'lm-data-table');
         assertStringIncludes(page, 'lm-nav-link');
         assertStringIncludes(page, `detailPage(${id})`);
-        assertStringIncludes(page, 'lm-nav-chevron');
 
         // Detail page: the row's info plus the rest of the record; the pencil
         // follows recordEdit (admin-only vocabulary).

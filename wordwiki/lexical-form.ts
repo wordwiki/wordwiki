@@ -26,9 +26,9 @@
  * yet.  No orthography columns, as with categories (later i18n project).
  */
 import { db, boolnum } from "../liminal/db.ts";
-import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField, navChevron } from "../liminal/table.ts";
+import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
-import { block } from "../liminal/strings.ts";
+import { block, plural } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
@@ -200,6 +200,9 @@ export class LexicalFormTable extends Table<LexicalForm> {
         ];
     }
 
+    // A DATA TABLE, not flat blocks (design-language.md; modelled on rabid's
+    // volunteers page): many uniform records you scan and compare, the theme
+    // groups as colspan section rows within ONE aligned table.
     @route(authenticated)
     renderLexicalFormList(): Markup {
         const forms = this.allByOrder.all({});
@@ -208,35 +211,43 @@ export class LexicalFormTable extends Table<LexicalForm> {
             return ['div', props,
                 ['p', {class: 'text-muted'},
                  'No lexical forms yet (run ./wordwiki.sh seed-lexical-forms).']];
+        const sectionHeading = (title: string): Markup =>
+            ['tr', {class: 'lm-data-section'}, ['td', {colspan: '3'}, title]];
         return ['div', props,
-            groupByTheme(forms).map(group => [
-                ['h5', {class: 'mt-3 mb-1'}, group.theme],
-                ['div', {class: 'list-group lm-list'},
-                 group.cats.map(f => this.renderLexicalFormRow(f))]])];
+            ['p', {class: 'text-muted small mb-2'},
+             `${forms.length} ${plural(forms.length, 'lexical form')}`],
+            ['table', {class: 'lm-data-table'},
+             ['thead', {},
+              ['tr', {},
+               ['th', {}, 'Name'],
+               ['th', {}, 'Slug'],
+               ['th', {}, 'Description']]],
+             ['tbody', {},
+              groupByTheme(forms).map(group => [
+                  sectionHeading(group.theme),
+                  group.cats.map(f => this.renderLexicalFormRow(f))])]]];
     }
 
+    // A navigable data-table row: the whole row drills in to the detail page
+    // via the accent-coloured name; no row pencil - editing lives on the
+    // detail page (dz: vocabulary edits are a big-deal operation - the extra
+    // step is fine).  Reloadable tagging (outerHTML swap of the <tr>)
+    // re-renders just this row after a save.
     renderLexicalFormRow(f: LexicalForm): Markup {
         const id = f.lexical_form_id;
-        const secondary = [f.slug,
-                           f.retired ? 'retired' : '',
-                           f.description ?? '']
-            .filter(Boolean).join(' · ');
-        const body =
-            ['div', {class: 'lm-item-body'},
-             ['div', {class: 'lm-item-primary'},
-              ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexicalForms.detailPage(${id})`),
-                     class: 'lm-nav-link'}, f.name || f.slug],
-              isInternalCategorySlug(f.slug)
-                  ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
-             ['div', {class: 'lm-item-secondary'}, secondary]];
-
-        // One QUIET navigable row species for every viewer
-        // (Table.detailItemProps: tap anywhere drills in via the lm-nav-link
-        // name).  No row pencil: editing lives on the detail page (dz:
-        // vocabulary edits are a big-deal operation - the extra step is fine).
-        const item = this.detailItemProps(id, `/ww/wordwiki.lexicalForms.renderLexicalFormRowById(${id})`);
-        return ['div', {...item, 'data-testid': `lexical-form-row-${id}`},
-            body, navChevron()];
+        const item = this.reloadableItemProps(id, `/ww/wordwiki.lexicalForms.renderLexicalFormRowById(${id})`);
+        item.class = 'lm-navigable ' + item.class;
+        item.onclick = 'lmNavigableClick(event)';
+        return ['tr', {...item, 'data-testid': `lexical-form-row-${id}`},
+            ['td', {},
+             ['a', {...templates.pageLinkProps(`/ww/wordwiki.lexicalForms.detailPage(${id})`),
+                    class: 'lm-nav-link'}, f.name || f.slug],
+             isInternalCategorySlug(f.slug)
+                 ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined,
+             f.retired ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'Retired'] : undefined],
+            ['td', {class: 'text-muted'}, f.slug],
+            ['td', {class: 'text-muted'}, f.description ?? ''],
+        ];
     }
 
     @route(authenticated)

@@ -31,9 +31,9 @@
  * the same longevity goal as the assertions, so they ride along in exports.
  */
 import { db, boolnum } from "../liminal/db.ts";
-import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField, navChevron } from "../liminal/table.ts";
+import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
-import { block } from "../liminal/strings.ts";
+import { block, plural } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
 import { panic } from "../liminal/utils.ts";
 import * as action from "../liminal/action.ts";
@@ -272,35 +272,47 @@ export class CategoryTable extends Table<Category> {
                 ['p', {class: 'text-muted'},
                  'No categories yet (the import seeds these - see categorization/).']];
 
+        // A DATA TABLE, not flat blocks (design-language.md; modelled on
+        // rabid's volunteers page): many uniform records you scan and
+        // compare, the theme groups as colspan section rows within ONE
+        // aligned table.
+        const sectionHeading = (title: string): Markup =>
+            ['tr', {class: 'lm-data-section'}, ['td', {colspan: '3'}, title]];
         return ['div', props,
-            groupByTheme(cats).map(group => [
-                ['h5', {class: 'mt-3 mb-1'}, group.theme],
-                ['div', {class: 'list-group lm-list'},
-                 group.cats.map(c => this.renderCategoryRow(c))]])];
+            ['p', {class: 'text-muted small mb-2'},
+             `${cats.length} ${plural(cats.length, 'category')}`],
+            ['table', {class: 'lm-data-table'},
+             ['thead', {},
+              ['tr', {},
+               ['th', {}, 'Name'],
+               ['th', {}, 'Slug'],
+               ['th', {}, 'Description']]],
+             ['tbody', {},
+              groupByTheme(cats).map(group => [
+                  sectionHeading(group.theme),
+                  group.cats.map(c => this.renderCategoryRow(c))])]]];
     }
 
+    // A navigable data-table row: the whole row drills in to the detail page
+    // via the accent-coloured name; no row pencil - editing lives on the
+    // detail page (dz: category edits are a big-deal operation - the extra
+    // step is fine).  Reloadable tagging (outerHTML swap of the <tr>)
+    // re-renders just this row after a save.
     renderCategoryRow(c: Category): Markup {
         const id = c.category_id;
-        const secondary = [c.slug,
-                           c.retired ? 'retired' : '',
-                           c.description ?? '']
-            .filter(Boolean).join(' · ');
-        const body =
-            ['div', {class: 'lm-item-body'},
-             ['div', {class: 'lm-item-primary'},
-              ['a', {...templates.pageLinkProps(`/ww/wordwiki.categories.detailPage(${id})`),
-                     class: 'lm-nav-link'}, c.name || c.slug],
-              isInternalCategorySlug(c.slug)
-                  ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined],
-             ['div', {class: 'lm-item-secondary'}, secondary]];
-
-        // One QUIET navigable row species for every viewer
-        // (Table.detailItemProps: tap anywhere drills in via the lm-nav-link
-        // name).  No row pencil: editing lives on the detail page (dz:
-        // category edits are a big-deal operation - the extra step is fine).
-        const item = this.detailItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
-        return ['div', {...item, 'data-testid': `category-row-${id}`},
-            body, navChevron()];
+        const item = this.reloadableItemProps(id, `/ww/wordwiki.categories.renderCategoryRowById(${id})`);
+        item.class = 'lm-navigable ' + item.class;
+        item.onclick = 'lmNavigableClick(event)';
+        return ['tr', {...item, 'data-testid': `category-row-${id}`},
+            ['td', {},
+             ['a', {...templates.pageLinkProps(`/ww/wordwiki.categories.detailPage(${id})`),
+                    class: 'lm-nav-link'}, c.name || c.slug],
+             isInternalCategorySlug(c.slug)
+                 ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'internal'] : undefined,
+             c.retired ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'Retired'] : undefined],
+            ['td', {class: 'text-muted'}, c.slug],
+            ['td', {class: 'text-muted'}, c.description ?? ''],
+        ];
     }
 
     @route(authenticated)

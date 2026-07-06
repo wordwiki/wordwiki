@@ -27,9 +27,9 @@
  */
 import { db, boolnum } from "../liminal/db.ts";
 import { Table, PrimaryKeyField, ForeignKeyField, BooleanField, StringField,
-         EmailField, SecretField, DateTimeField, navChevron } from "../liminal/table.ts";
+         EmailField, SecretField, DateTimeField } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
-import { block } from "../liminal/strings.ts";
+import { block, plural } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
 import * as action from "../liminal/action.ts";
 import * as security from "../liminal/security.ts";
@@ -167,36 +167,46 @@ export class UserTable extends Table<User> {
 
     // The list as a reloadable fragment: a "New user" insert reloads `.-user-`
     // (the pk-less reload target the base saveForm emits), which is this wrapper.
+    // A DATA TABLE, not flat blocks (design-language.md; modelled on rabid's
+    // volunteers page): users are many uniform records you scan and compare,
+    // where aligned columns read better.
     @route(authenticated)
     renderUserList(): Markup {
         const users = this.allUsersByName.all({});
         const props = this.reloadableItemProps(undefined, `/ww/wordwiki.users.renderUserList()`);
         return ['div', props,
+            ['p', {class: 'text-muted small mb-2'},
+             `${users.length} ${plural(users.length, 'user')}`],
             users.length === 0
                 ? ['p', {class: 'text-muted'}, 'No users yet.']
-                : ['div', {class: 'list-group lm-list'},
-                   users.map(u => this.renderUserRow(u))]];
+                : ['table', {class: 'lm-data-table'},
+                   ['thead', {},
+                    ['tr', {},
+                     ['th', {}, 'Name'],
+                     ['th', {}, 'Username'],
+                     ['th', {}, 'Email'],
+                     ['th', {}, 'Permissions']]],
+                   ['tbody', {}, users.map(u => this.renderUserRow(u))]]];
     }
 
+    // A navigable data-table row: the whole row drills in to the detail page
+    // via the accent-coloured name; no per-row pencil and no inline Activity
+    // button - editing and the activity feed both live on the detail page.
+    // Reloadable tagging (outerHTML swap of the <tr>) re-renders just this
+    // row after a save.
     renderUserRow(u: User): Markup {
         const id = u.user_id;
-        const secondary = [u.username, u.email, u.permissions,
-                           u.disabled ? 'disabled' : '']
-            .filter(Boolean).join(' · ');
-
-        // One QUIET navigable row species for every viewer
-        // (Table.detailItemProps: tap anywhere drills in via the lm-nav-link
-        // name).  No row pencil and no inline Activity button (the
-        // design-language cleanup): editing and the activity feed both live
-        // on the detail page the row navigates to.
-        const item = this.detailItemProps(id, `/ww/wordwiki.users.renderUserRowById(${id})`);
-        return ['div', {...item, 'data-testid': `user-row-${id}`},
-            ['div', {class: 'lm-item-body'},
-             ['div', {class: 'lm-item-primary'},
-              ['a', {...templates.pageLinkProps(`/ww/wordwiki.users.detailPage(${id})`),
-                     class: 'lm-nav-link'}, u.name || u.username]],
-             ['div', {class: 'lm-item-secondary'}, secondary]],
-            navChevron(),
+        const item = this.reloadableItemProps(id, `/ww/wordwiki.users.renderUserRowById(${id})`);
+        item.class = 'lm-navigable ' + item.class;
+        item.onclick = 'lmNavigableClick(event)';
+        return ['tr', {...item, 'data-testid': `user-row-${id}`},
+            ['td', {},
+             ['a', {...templates.pageLinkProps(`/ww/wordwiki.users.detailPage(${id})`),
+                    class: 'lm-nav-link'}, u.name || u.username],
+             u.disabled ? ['span', {class: 'badge text-bg-secondary ms-2'}, 'Disabled'] : undefined],
+            ['td', {class: 'text-muted'}, u.username],
+            ['td', {class: 'text-muted'}, u.email || ''],
+            ['td', {class: 'text-muted'}, u.permissions || ''],
         ];
     }
 
