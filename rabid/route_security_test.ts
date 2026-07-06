@@ -50,6 +50,7 @@ test("sensitive routes are declared but NOT public", () => {
     notPublic(rabid.event, "saveForm");                // authenticated (base Table)
     notPublic(rabid.photo, "upload");                  // authenticated (photo upload rpc)
     notPublic(rabid.photo, "serve");                   // authenticated (sized <img> route)
+    notPublic(rabid.photo, "serveCropped");            // authenticated (cover-crop <img> route)
 });
 
 test("internal + query members are unexposed (unreachable under strict)", () => {
@@ -61,6 +62,8 @@ test("internal + query members are unexposed (unreachable under strict)", () => 
     undeclared(rabid.event, "allEvents");              // a @path query getter (data via .all)
     undeclared(rabid.photo, "sizedPhotoPath");         // internal resize helper (not a route)
     undeclared(rabid.photo, "resizePhotoCmd");         // internal ImageMagick shell-out
+    undeclared(rabid.photo, "croppedPhotoPath");       // internal crop helper (not a route)
+    undeclared(rabid.photo, "coverCropCmd");           // internal ImageMagick shell-out
 });
 
 test("mutations are POST-only; reads are not (CSRF axis)", () => {
