@@ -153,8 +153,12 @@ test("subtask checklist: add/toggle/remove gated by the task; every mutation sta
         assertEquals(asSystem(() => rabid.subtask.getById(items[0].subtask_id)).done, 1);
         assert(asSystem(() => rabid.task.getById(task_id)).last_change_time > OLD);
 
-        // Non-assignee can't toggle either.
-        assertThrows(() => asUser(carol, () => rabid.subtask.toggle(items[1].subtask_id)),
+        // Completing is open to ALL logged-in volunteers: a non-assignee CAN
+        // check an item off (structural edits stay assignee/host-gated - see
+        // the remove denial below).
+        asUser(carol, () => rabid.subtask.toggle(items[1].subtask_id));
+        assertEquals(asSystem(() => rabid.subtask.getById(items[1].subtask_id)).done, 1);
+        assertThrows(() => asUser(carol, () => rabid.subtask.remove(items[1].subtask_id)),
                      Error, 'Not permitted');
 
         // Remove deletes the row (subtasks are thin: no soft-delete; the task
@@ -434,9 +438,9 @@ test("pages: one navigable row species; project rows navigate (edit on the detai
         assert(!find(volRow, byClass('lm-edit-pencil')));
 
         // The merged project view: each task is a BLOCK.  There's no pencil - the
-        // checkbox toggles inline (that follows recordEdit: the assignee can act,
-        // others get a disabled box) and Edit lives in the block's ☰.  The
-        // subtask is right there on the page; the exclusive override shows as →.
+        // checkbox toggles inline and completing is open to ALL logged-in
+        // volunteers (assignee and non-assignee alike get a live box); Edit lives
+        // in the block's ☰.  The subtask is right there; the override shows as →.
         const bobTasks = await asUser(bob, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
         const bobBlock = getByTestId(bobTasks, `task-block-${task_id}`);
         assert(!find(bobBlock, byClass('lm-edit-pencil')));       // no pencil on a task block
@@ -448,7 +452,7 @@ test("pages: one navigable row species; project rows navigate (edit on the detai
         const carolBlock = getByTestId(carolTasks, `task-block-${task_id}`);
         assert(!find(carolBlock, byClass('lm-edit-pencil')));     // non-assignee: no pencil either
         assert(!!find(carolBlock, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox'
-                                       && attr(n, 'disabled') !== undefined));  // ...and a disabled box
+                                       && attr(n, 'disabled') === undefined));  // ...but CAN still toggle (open to all)
 
         // Task detail: assignee list + checklist render; the assignee gets the
         // add/remove affordances, the non-assignee gets read-only fragments.
@@ -460,9 +464,10 @@ test("pages: one navigable row species; project rows navigate (edit on the detai
         const carolDetail = await asUser(carol, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(!hasText(carolDetail, 'Add member'));
         assert(!hasText(carolDetail, 'Add subtask'));
-        // The checklist checkbox is disabled for the non-editor.
+        // The checklist checkbox is live even for the non-editor (completing is
+        // open to all); only the ☰ editor actions are withheld.
         const box = find(carolDetail, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox');
-        assert(attr(box!, 'disabled') !== undefined);
+        assert(attr(box!, 'disabled') === undefined);
     });
 });
 
@@ -534,6 +539,26 @@ test("Already-done subtask: the add dialog's checkbox posts a born-done entry wi
         assert(hasText(block, 'Add subtask…'));
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(detail, 'Add subtask'));
+    });
+});
+
+test("completing is open to all: a non-assignee can toggle a task done (stamped to them), but not edit it", async () => {
+    await withTestDb(async ({ carol }) => {
+        const {task_id} = seedTask();   // carol is a regular volunteer, NOT in the task's group
+
+        // Carol can check the task off - completing is the shared work verb.
+        const res = asUser(carol, () => rabid.task.toggleDone(task_id)) as any;
+        assertEquals(res.action, 'reload');
+        const t = asSystem(() => rabid.task.getById(task_id));
+        assertEquals(t.status, 'done');
+        assertEquals(t.done_by, carol);   // stamped to whoever ticked it
+
+        // ...but structural edits stay gated (she is not an editor).
+        assertThrows(() => asUser(carol, () => rabid.task.remove(task_id)),
+                     Error, 'Not permitted');
+        await asUser(carol, () => assertRejects(
+            () => renderRoute(`rabid.task.renderForm(rabid.task.getById(${task_id}))`),
+            Error, 'Not permitted'));
     });
 });
 
@@ -782,13 +807,13 @@ test("project assignCommittee: live committee assignment, inherited by tasks; cu
 });
 
 test("merged project page: toggleDone completes/reopens from the block checkbox (provenance stamped)", async () => {
-    await withTestDb(async ({ bob, carol }) => {
+    await withTestDb(async ({ bob }) => {
         const {task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
 
-        // Gated like every task edit.
-        assertThrows(() => asUser(carol, () => rabid.task.toggleDone(task_id)),
-                     Error, 'Not permitted');
+        // (Completing is open to ALL logged-in volunteers - see the dedicated
+        // "completing is open to all" test; here we exercise the assignee's
+        // toggle and the provenance stamping.)
 
         // Check: done, provenance stamped, block reloads (row key emitted).
         const res = await withDirtyTargets(() => asUser(bob, () => rabid.task.toggleDone(task_id)));

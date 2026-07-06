@@ -23,6 +23,7 @@ import {activeVolunteerIdsWithin} from "./volunteer-activity.ts";
 // don't want elevated access framed as staff primacy.  'admin' (system control,
 // e.g. managing roles) carries this visibility too.
 const host = security.or(security.hasRole('host'), security.hasRole('admin'));
+const admin = security.hasRole('admin');
 const selfOrHost = security.or(security.isSelf, host);
 // Private contact fields are visible to self, hosts, or - per the volunteer's own
 // opt-in/opt-out flag - to everyone.  Phone defaults private (opt-in); email shared.
@@ -174,12 +175,17 @@ export class VolunteerTable extends Table<Volunteer> {
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
             new StringField('emergency_contact_phone', {default: '', view: selfOrHost, redact: true}),
             new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
-            new BooleanField('archived', {default: 0}),
-            new DateField('archived_date', {nullable: true}),
-            new BooleanField('exit_feedback_requested', {default: 0}),
-            new EnumField('exit_reason', exit_reason_enum, {nullable: true}),
-            new StringField('exit_feedback', {nullable: true}),
-            new BooleanField('deleted', {default: 0}),
+            // The archive / exit-feedback cluster is admin-only to edit: it
+            // clutters the everyday volunteer edit form, and archiving + exit
+            // notes are a deliberate administrative act, not a self/host edit.
+            new BooleanField('archived', {default: 0, edit: admin}),
+            new DateField('archived_date', {nullable: true, edit: admin}),
+            new BooleanField('exit_feedback_requested', {default: 0, edit: admin}),
+            new EnumField('exit_reason', exit_reason_enum, {nullable: true, edit: admin}),
+            new StringField('exit_feedback', {nullable: true, edit: admin}),
+            // Set by the delete action, not hand-edited; the only reason to touch
+            // it in a form is to UNDELETE, which is an admin call.
+            new BooleanField('deleted', {default: 0, edit: admin}),
         ], [
         ])
     };

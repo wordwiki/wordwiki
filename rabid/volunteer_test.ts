@@ -219,6 +219,32 @@ test("a crafted edit of a field you may not edit is rejected at save", async () 
     });
 });
 
+test("archive / exit-feedback / deleted cluster is admin-only: absent from a host's edit form, present for an admin, save-gated", async () => {
+    await withTestDb(async ({ alice, dave, bob }) => {
+        const archiveFields = ['archived', 'archived_date', 'exit_feedback_requested', 'exit_reason', 'exit_feedback', 'deleted'];
+        const inForm = (form: any, name: string) =>
+            !!find(form, n => (tagOf(n) === 'input' || tagOf(n) === 'select' || tagOf(n) === 'textarea')
+                              && attr(n, 'name') === name);
+
+        // A host's edit form omits the whole cluster (it clutters the everyday
+        // form); an admin's includes it.
+        const hostForm = await asUser(alice, () => renderRoute(`rabid.volunteer.renderForm(rabid.volunteer.getById(${bob}))`));
+        for(const f of archiveFields) assert(!inForm(hostForm, f), `host form should omit ${f}`);
+        const adminForm = await asUser(dave, () => renderRoute(`rabid.volunteer.renderForm(rabid.volunteer.getById(${bob}))`));
+        for(const f of archiveFields) assert(inForm(adminForm, f), `admin form should include ${f}`);
+
+        // The FIELD gate holds at save: a host cannot flip archived; an admin can.
+        await asUser(alice, () => assertRejects(
+            () => invoke("rabid.volunteer.saveForm($arg0)", {
+                volunteer_id: String(bob), archived: "1", "before-archived": "0"}),
+            Error, "Not permitted to edit"));
+        const res = await asUser(dave, () => invoke("rabid.volunteer.saveForm($arg0)", {
+            volunteer_id: String(bob), archived: "1", "before-archived": "0"}));
+        assertEquals(res.action, "reload");
+        assertEquals(asSystem(() => rabid.volunteer.getById(bob)).archived, 1);
+    });
+});
+
 test("a volunteer can edit their own field (render → act → render)", async () => {
     await withTestDb(async ({ carol }) => {
         const before = await asUser(carol, () => detail(carol));

@@ -1270,7 +1270,11 @@ export class TaskTable extends Table<Task> {
     renderTaskBlock(t: Task): Markup {
         const id = t.task_id;
         const done = t.status === 'done';
-        const canEdit = this.canEditRecord(t);
+        const canEdit = this.canEditRecord(t);      // structural edits: the ☰
+        // Checking a task off is open to ALL logged-in volunteers (the shared
+        // work verb - anyone helping can mark a task done), separate from the
+        // editor permission that gates the ☰.
+        const canComplete = security.current()?.actorId != null;
         const overdue = !done && t.due != null && t.due < date.currentSqliteDate();
         const props = this.reloadableItemProps(id, `rabid.task.renderTaskBlockById(${id})`);
 
@@ -1307,12 +1311,12 @@ export class TaskTable extends Table<Task> {
             [h.div, {class: 'd-flex align-items-center gap-2'},
              [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                         ...(done ? {checked: ''} : {}),
-                        ...(canEdit ? {onclick: toggle} : {disabled: ''}),
+                        ...(canComplete ? {onclick: toggle} : {disabled: ''}),
                         'aria-label': `Mark ${t.title || 'task'} done`}],
              [h.div, {class: 'lm-item-primary' + (done ? ' text-muted' : '')},
-              [h.span, {class: (canEdit ? 'lm-check-label' : '')
+              [h.span, {class: (canComplete ? 'lm-check-label' : '')
                               + (done ? ' text-decoration-line-through' : ''),
-                        ...(canEdit ? {onclick: toggle} : {})},
+                        ...(canComplete ? {onclick: toggle} : {})},
                t.title || 'Untitled task'],
               t.status === 'in-progress'
                   ? [h.span, {class: 'badge rounded-pill bg-info-subtle text-info-emphasis fw-normal ms-2'},
@@ -1377,11 +1381,12 @@ export class TaskTable extends Table<Task> {
     // The merged-page checkbox: open <-> done.  (in-progress counts as
     // not-done: checking completes it; unchecking a done task reopens to
     // 'open'.)  updateNamedFields stamps/clears the completion provenance.
+    // Completing is open to ALL logged-in volunteers (the shared work verb -
+    // NOT gated by the editor permission); the @routeMutation(authenticated)
+    // gate ensures a real actor, so done_by is stamped to whoever ticked it.
     @routeMutation(authenticated)
     toggleDone(task_id: number): Markup {
         const t = this.getById(task_id);
-        if(!this.canEditRecord(t))
-            throw new Error('Not permitted to edit this task');
         this.update(task_id, {status: t.status === 'done' ? 'open' : 'done'});
         // Dirty keys are emitted automatically by the update funnel.
         return {action:'reload'} as unknown as Markup;
@@ -2106,11 +2111,12 @@ export class SubtaskTable extends Table<Subtask> {
     }
 
     // Checking stamps who/when; unchecking clears (current-state provenance).
+    // Open to ALL logged-in volunteers (the shared work verb, like task
+    // toggleDone - NOT the editor permission); the route gate ensures a real
+    // actor so done_by is stamped to whoever ticked it.
     @routeMutation(authenticated)
     toggle(subtask_id: number): Markup {
         const s = this.getById(subtask_id);
-        if(!canEditTask(s.task_id))
-            throw new Error('Not permitted to edit this task');
         this.update(subtask_id, (s.done
             ? {done: 0, done_time: null, done_by: null}
             : {done: 1, done_time: date.currentSqliteDateTime(),
@@ -2190,6 +2196,9 @@ export class SubtaskTable extends Table<Subtask> {
     }
 
     renderChecklistRow(s: Subtask, canEdit: boolean): Markup {
+        // Checking off is open to ALL logged-in volunteers (the shared work
+        // verb); canEdit still gates the ☰ (edit / reorder / add / delete).
+        const canComplete = security.current()?.actorId != null;
         // Check-off provenance, shown quietly beside a done item ("Hazel · Jun 10")
         // - short name + compact date, matching the rest of the page.
         const doneByName = s.done ? volunteerName(s.done_by) : undefined;
@@ -2207,16 +2216,16 @@ export class SubtaskTable extends Table<Subtask> {
         // one trip; the shape wrapper is deliberately untouched.
         const toggle = `txd(${JSON.stringify([sel(this.rowKey(s.subtask_id))])})\`rabid.subtask.toggle(${s.subtask_id})\``;
         const bodyClass = 'lm-item-body' + (s.done ? ' text-decoration-line-through text-muted' : '')
-                          + (canEdit ? ' lm-check-label' : '');
+                          + (canComplete ? ' lm-check-label' : '');
         return [h.div, {...rowProps,
                         class: 'list-group-item lm-item d-flex align-items-center gap-2 ' + rowProps.class,
                         'data-testid': `subtask-row-${s.subtask_id}`},
             [h.input, {type: 'checkbox', class: 'form-check-input m-0 flex-shrink-0',
                        ...(s.done ? {checked: ''} : {}),
-                       ...(canEdit ? {onclick: toggle} : {disabled: ''})}],
+                       ...(canComplete ? {onclick: toggle} : {disabled: ''})}],
             // Clicking the item's text also checks/unchecks it (the editor lives
             // in the ☰ menu - editing is rare, checking is the common verb).
-            [h.div, {class: bodyClass, ...(canEdit ? {onclick: toggle} : {})}, s.title],
+            [h.div, {class: bodyClass, ...(canComplete ? {onclick: toggle} : {})}, s.title],
             prov ? [h.span, {class: 'text-muted small flex-shrink-0'}, prov] : undefined,
             // One ☰ for everything beyond the checkbox (no separate pencil):
             // edit, reorder, remove.  Reorder/remove change the SHAPE, so they
