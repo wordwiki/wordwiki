@@ -11,10 +11,23 @@ import * as config from "./config.ts";
 import * as templates from './templates.ts';
 import * as server from '../liminal/http-server.ts';
 import {route, authenticated} from '../liminal/security.ts';
+import {Semaphore} from '../liminal/semaphore.ts';
 import {
     encodeBase64,
     decodeBase64,
 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
+/**
+ * Global gate on concurrent audio encoder subprocesses (sox + lame share it -
+ * they are both CPU-bound, so one budget covers the whole pipeline).  The
+ * derived audio is generated on demand from inside page renders, so a
+ * from-cold publish (or a trim-param change, which re-derives EVERYTHING)
+ * requests every recording at once; without this gate that meant thousands
+ * of concurrent encoder processes.  Callers still fan out freely - excess
+ * requests just wait as pending promises.
+ */
+const audioJobs = new Semaphore(
+    Math.max(2, Math.min(16, navigator.hardwareConcurrency ?? 8)));
 
 export async function uploadRecording(args: {recordingBytesAsBase64: string}): Promise<{audioPath: string}> {
     const recordingBytesAsBase64 = args.recordingBytesAsBase64;
@@ -176,6 +189,12 @@ async function trimAudioCmd(targetAudioPath: string, sourceAudioPath: string, pa
     if(!await fileExists(sourceAudioPath))
         throw new Error(`expected source audio '${sourceAudioPath}' to exist`);
 
+    // One permit covers both sox passes, so the intermediate .pre-fade.wav
+    // stays short-lived.
+    await audioJobs.use(() => trimAudio(targetAudioPath, sourceAudioPath, params));
+}
+
+async function trimAudio(targetAudioPath: string, sourceAudioPath: string, params: TrimParams) {
     const fade = !!(params.fade && params.fade > 0);
     const trimTarget = fade ? targetAudioPath + '.pre-fade.wav' : targetAudioPath;
 
@@ -220,12 +239,12 @@ async function compressAudioCmd(targetAudioPath: string, sourceAudioPath: string
     if(!await fileExists(sourceAudioPath))
         throw new Error(`expected source audio '${sourceAudioPath}' to exist`);
 
-    const { code, stdout, stderr } = await new Deno.Command(
+    const { code, stdout, stderr } = await audioJobs.use(() => new Deno.Command(
         config.lameEncPath, {
             args: [
                 '-V', '7', '-S', sourceAudioPath, targetAudioPath
             ],
-        }).output();
+        }).output());
 
     if(code !== 0)
         throw new Error(`failed to convert ${sourceAudioPath} to mp3: ${new TextDecoder().decode(stderr)}`);
