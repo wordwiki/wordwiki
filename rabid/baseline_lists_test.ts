@@ -55,7 +55,7 @@ test("sale rows: pencil for hosts only; saveForm host-gated", async () => {
         await asUser(bob, () => assertRejects(
             () => invoke("rabid.sale.saveForm($arg0)", {
                 sale_id: String(id), amount: "1", "before-amount": "80"}),
-            Error, "Not permitted to edit this bike_sale"));
+            Error, "Not permitted to edit this sale"));
         const res = await asUser(alice, () => invoke("rabid.sale.saveForm($arg0)", {
             sale_id: String(id), amount: "90", "before-amount": "80"}));
         assertEquals(res.action, "reload");

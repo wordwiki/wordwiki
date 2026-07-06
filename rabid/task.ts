@@ -1335,12 +1335,18 @@ export class TaskTable extends Table<Task> {
              // One ☰ for everything beyond the checkbox: edit, checklist, reorder.
              canEdit
                  ? action.actionMenu([
-                       {label: 'Edit…',
+                       {label: 'Edit task…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.task.renderForm(rabid.task.getById(${id}))`}},
-                       {label: 'Add checklist item…',
+                       'divider',
+                       // Slot a sibling in directly where you want it (no more
+                       // add-at-top-then-move-up-repeatedly dance).
+                       {label: 'Add task before…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.task.newTaskAtDialog(${id},'before')`}},
+                       {label: 'Add task after…',
+                        mode: {kind: 'modal', dialogUrl: `/rabid.task.newTaskAtDialog(${id},'after')`}},
+                       {label: 'Add subtask…',
                         mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id})`}},
-                       {label: 'Add completed item…',
-                        mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${id},true)`}},
+                       'divider',
                        // Moves change the list's SHAPE (order_key is a shape
                        // field) - speculate the shape key so the wrapper is
                        // the anticipated section.
@@ -1349,6 +1355,11 @@ export class TaskTable extends Table<Task> {
                                deps: [sel(this.shapeKey('project_id', t.project_id))]}},
                        {label: 'Move down',
                         mode: {kind: 'immediate', expr: `rabid.task.moveDown(${id})`,
+                               deps: [sel(this.shapeKey('project_id', t.project_id))]}},
+                       'divider',
+                       {label: 'Delete…',
+                        mode: {kind: 'confirm', expr: `rabid.task.remove(${id})`,
+                               message: `Delete "${t.title || 'this task'}"?`,
                                deps: [sel(this.shapeKey('project_id', t.project_id))]}},
                    ], {ariaLabel: `More actions for ${t.title || 'task'}`})
                  : undefined],
@@ -1400,6 +1411,59 @@ export class TaskTable extends Table<Task> {
         }
         // The order_key update's automatic emission (incl. the project fk
         // key) notifies the project's task list; a no-op move emits nothing.
+        return {action:'reload'} as unknown as Markup;
+    }
+
+    // Add a task directly before/after an anchor task.  A quick title-only
+    // insert (set priority/due/assignees afterwards via Edit) - the point is to
+    // slot a task into the middle without the old add-at-top-then-move dance.
+    @route(authenticated)
+    newTaskAtDialog(anchor_task_id: number, position: 'before'|'after'): Markup {
+        const anchor = this.getById(anchor_task_id);
+        if(!this.canEditRecord(anchor))
+            throw new Error('Not permitted to edit this project');
+        return action.renderParamForm(
+            [new StringField('title', {prompt: 'Task'})],
+            {},
+            {
+                title: position === 'before' ? 'Add task before' : 'Add task after',
+                submitLabel: 'Add',
+                hidden: {anchor_task_id, position},
+                dispatch: {onsubmit:
+                    `event.preventDefault(); txd(${JSON.stringify([sel(this.shapeKey('project_id', anchor.project_id))])})\`rabid.task.addTaskRelative(\${getFormJSON(event.target)})\``},
+            });
+    }
+
+    // Insert the new task with an order_key BETWEEN the anchor and its neighbour
+    // (computed fresh here, not at dialog time), so it lands exactly where asked.
+    @routeMutation(authenticated)
+    addTaskRelative(args: {anchor_task_id?: string|number, position?: string, title?: string}): Markup {
+        const anchor_task_id = Number(args?.anchor_task_id);
+        const position = String(args?.position ?? 'after');
+        const title = String(args?.title ?? '').trim();
+        if(!Number.isInteger(anchor_task_id) || !anchor_task_id) throw new Error('Missing task');
+        const anchor = this.getById(anchor_task_id);
+        if(!this.canEditRecord(anchor))
+            throw new Error('Not permitted to edit this project');
+        if(!title) throw new Error('Please enter a task');
+        const sibs = security.runSystem(() => this.tasksForProject.all({project_id: anchor.project_id}));
+        const i = sibs.findIndex(s => s.task_id === anchor_task_id);
+        const order_key = position === 'before'
+            ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
+            : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
+        this.insert({project_id: anchor.project_id, title, status: 'open', order_key} as Partial<Task>);
+        return {action:'reload'} as unknown as Markup;
+    }
+
+    // Soft-delete (the `deleted` flag, like archiving a project): the task
+    // leaves the list but its history/provenance survive.  The shape key drops
+    // it from the list fragment.
+    @routeMutation(authenticated)
+    remove(task_id: number): Markup {
+        const t = this.getById(task_id);
+        if(!this.canEditRecord(t))
+            throw new Error('Not permitted to edit this task');
+        this.update(task_id, {deleted: 1} as any);
         return {action:'reload'} as unknown as Markup;
     }
 
@@ -1740,22 +1804,14 @@ export class TaskTable extends Table<Task> {
              t.details ? row('Details', this.fieldsByName.details.render(t.details)) : undefined,
             ],
             this.renderAssignedTo(t),
-            // Checklist heading in the standard grammar: a quiet + for the
-            // common verb, the ☰ naming it plus the work-log variant.
+            // Subtasks heading: a quiet + for the common verb (the add dialog
+            // itself offers the "already done" work-log variant, so no ☰ here).
             [h.div, {class: 'd-flex align-items-center gap-2 mt-3'},
-             [h.h4, {class: 'mb-0'}, 'Checklist'],
+             [h.h4, {class: 'mb-0'}, 'Subtasks'],
              this.canEditRecord(t)
                  ? action.actionButton(action.plusIcon(),
                      {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`},
-                     'lm-menu-button', {'aria-label': 'Add item', title: 'Add item'})
-                 : undefined,
-             this.canEditRecord(t)
-                 ? action.actionMenu([
-                       {label: 'Add item…',
-                        mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id})`}},
-                       {label: 'Add completed item…',
-                        mode: {kind: 'modal', dialogUrl: `/rabid.subtask.addItemDialog(${task_id},true)`}},
-                   ], {ariaLabel: 'Checklist actions'})
+                     'lm-menu-button', {'aria-label': 'Add subtask', title: 'Add subtask'})
                  : undefined],
             rabid.subtask.renderChecklist(task_id),
         ];
@@ -2020,15 +2076,30 @@ export class SubtaskTable extends Table<Subtask> {
     // tell others what got done - insert() stamps the born-done provenance
     // (who/when) so the item reads "Hazel, Jun 12" immediately.
     @routeMutation(authenticated)
-    addItem(args: {task_id?: string|number, title?: string, done?: string|number}): Markup {
+    addItem(args: {task_id?: string|number, title?: string, done?: string|number,
+                   anchor_subtask_id?: string|number, position?: string}): Markup {
         const task_id = Number(args?.task_id);
         const title = String(args?.title ?? '').trim();
-        const done = Number(args?.done ?? 0) ? 1 : 0;
+        // The "Already done" checkbox posts 'on' (absent when unchecked).
+        const d = args?.done;
+        const done = (d === '1' || d === 1 || d === 'on' || d === 'true') ? 1 : 0;
         if(!Number.isInteger(task_id) || !task_id) throw new Error('Missing task');
-        if(!title) throw new Error('Please enter a checklist item');
+        if(!title) throw new Error('Please enter a subtask');
         if(!canEditTask(task_id))
             throw new Error('Not permitted to edit this task');
-        this.insert({task_id, title, done});
+        // A positional add (from a subtask's Add-before/after) lands with an
+        // order_key BETWEEN the anchor and its neighbour; a plain add appends.
+        const anchor_id = Number(args?.anchor_subtask_id ?? 0);
+        if(anchor_id) {
+            const sibs = this.forTask.all({task_id});
+            const i = sibs.findIndex(x => x.subtask_id === anchor_id);
+            const order_key = String(args?.position) === 'before'
+                ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
+                : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
+            this.insert({task_id, title, done, order_key});
+        } else {
+            this.insert({task_id, title, done});
+        }
         // Dirty keys (incl. the checklist's `-subtask-task_id-<tid>-`) are
         // emitted automatically by the insert funnel.
         return {action:'reload'} as unknown as Markup;
@@ -2155,16 +2226,25 @@ export class SubtaskTable extends Table<Subtask> {
                       {label: 'Edit…',
                        mode: {kind: 'modal',
                               dialogUrl: `/rabid.subtask.renderForm(rabid.subtask.getById(${s.subtask_id}))`}},
+                      'divider',
+                      {label: 'Add subtask before…',
+                       mode: {kind: 'modal',
+                              dialogUrl: `/rabid.subtask.addItemDialog(${s.task_id},${s.subtask_id},'before')`}},
+                      {label: 'Add subtask after…',
+                       mode: {kind: 'modal',
+                              dialogUrl: `/rabid.subtask.addItemDialog(${s.task_id},${s.subtask_id},'after')`}},
+                      'divider',
                       {label: 'Move up',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveUp(${s.subtask_id})`,
                               deps: [sel(this.shapeKey('task_id', s.task_id))]}},
                       {label: 'Move down',
                        mode: {kind: 'immediate', expr: `rabid.subtask.moveDown(${s.subtask_id})`,
                               deps: [sel(this.shapeKey('task_id', s.task_id))]}},
-                      {label: 'Remove…',
+                      'divider',
+                      {label: 'Delete…',
                        mode: {kind: 'confirm',
                               expr: `rabid.subtask.remove(${s.subtask_id})`,
-                              message: `Remove "${s.title}"?`,
+                              message: `Delete "${s.title}"?`,
                               deps: [sel(this.shapeKey('task_id', s.task_id))]}},
                   ], {ariaLabel: `More actions for ${s.title}`})
                 : undefined,
@@ -2173,17 +2253,25 @@ export class SubtaskTable extends Table<Subtask> {
 
     // The add-item parameter dialog: one title input + the task id (and, for
     // the Add-completed-item variant, done=1) riding hidden.
+    // The add-subtask parameter dialog: a title, plus an "Already done" checkbox
+    // (the shared-checklist work-log variant - record something someone already
+    // did).  A positional add carries the anchor + before/after so it lands next
+    // to the item you opened it from; a plain add appends.
     @route(authenticated)
-    addItemDialog(task_id: number, completed: boolean = false): Markup {
+    addItemDialog(task_id: number, anchor_subtask_id: number = 0, position: string = ''): Markup {
         if(!canEditTask(task_id))
             throw new Error('Not permitted to edit this task');
+        const title = anchor_subtask_id
+            ? (position === 'before' ? 'Add subtask before' : 'Add subtask after')
+            : 'Add subtask';
         return action.renderParamForm(
-            [new StringField('title', {prompt: completed ? 'Item (already done)' : 'Item'})],
+            [new StringField('title', {prompt: 'Subtask'}),
+             new CheckboxField('done', {default: 0, prompt: 'Already done'})],
             {},
             {
-                title: completed ? 'Add completed item' : 'Add checklist item',
+                title,
                 submitLabel: 'Add',
-                hidden: completed ? {task_id, done: 1} : {task_id},
+                hidden: anchor_subtask_id ? {task_id, anchor_subtask_id, position} : {task_id},
                 dispatch: {onsubmit:
                     `event.preventDefault(); txd(${JSON.stringify([sel(this.shapeKey('task_id', task_id))])})\`rabid.subtask.addItem(\${getFormJSON(event.target)})\``},
             });

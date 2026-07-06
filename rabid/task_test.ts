@@ -322,9 +322,9 @@ test("completion provenance: done_time/done_by stamped on the done transition, c
         let s = asSystem(() => rabid.subtask.getById(sid));
         assertEquals(s.done_by, bob);
         assert(s.done_time! > '2020');
-        // The checklist row shows the provenance quietly.
+        // The checklist row shows the provenance quietly ("Bob · <date>").
         const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
-        assert(hasText(checklist, 'Bob,'));
+        assert(hasText(checklist, 'Bob ·'));
         asUser(bob, () => rabid.subtask.toggle(sid));
         s = asSystem(() => rabid.subtask.getById(sid));
         assertEquals(s.done_time ?? null, null);
@@ -454,12 +454,12 @@ test("pages: one navigable row species; project rows navigate (edit on the detai
         // add/remove affordances, the non-assignee gets read-only fragments.
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(detail, 'Assigned to'));
-        assert(hasText(detail, 'Checklist'));
+        assert(hasText(detail, 'Subtasks'));
         assert(hasText(detail, 'Add member'));
-        assert(hasText(detail, 'Add item'));
+        assert(hasText(detail, 'Add subtask'));
         const carolDetail = await asUser(carol, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(!hasText(carolDetail, 'Add member'));
-        assert(!hasText(carolDetail, 'Add item'));
+        assert(!hasText(carolDetail, 'Add subtask'));
         // The checklist checkbox is disabled for the non-editor.
         const box = find(carolDetail, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox');
         assert(attr(box!, 'disabled') !== undefined);
@@ -499,17 +499,20 @@ test("Mark project done / Reopen: confirmed buttons over the terminal flag, host
     });
 });
 
-test("Add completed item: born-done checklist entry with provenance (work-log workflow)", async () => {
+test("Already-done subtask: the add dialog's checkbox posts a born-done entry with provenance", async () => {
     await withTestDb(async ({ bob }) => {
         const {task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
 
-        // The dialog variant exists (done=1 rides hidden); the action inserts
-        // a checked item stamped to the actor.
-        const dialog = await asUser(bob, () => renderRoute(`rabid.subtask.addItemDialog(${task_id},true)`));
-        assert(hasText(dialog, 'Add completed item'));
+        // The single add-subtask dialog offers the "Already done" work-log
+        // variant as a checkbox (no separate menu item).
+        const dialog = await asUser(bob, () => renderRoute(`rabid.subtask.addItemDialog(${task_id})`));
+        assert(hasText(dialog, 'Add subtask'));
+        assert(hasText(dialog, 'Already done'));
+        // A checked box posts done='on' (FormData); the action inserts a checked
+        // item stamped to the actor.
         const res = asUser(bob, () => rabid.subtask.addItem({
-            task_id: String(task_id), title: 'Sorted the parts bin', done: '1'})) as any;
+            task_id: String(task_id), title: 'Sorted the parts bin', done: 'on'})) as any;
         assertEquals(res.action, 'reload');
         const item = asSystem(() => rabid.subtask.forTask.all({task_id}))
             .find(s => s.title === 'Sorted the parts bin')!;
@@ -518,19 +521,68 @@ test("Add completed item: born-done checklist entry with provenance (work-log wo
         assert(item.done_time);
 
         // Renders checked, with the who/when provenance; the row's rare verbs
-        // (move/remove) live in its ☰ - no inline × - and the add actions
-        // live in the task block's ☰ (and the detail page's buttons).
+        // (move / add-before/after / delete) live in its ☰ - no inline × - and
+        // the add actions live in the task block's ☰ (and the detail buttons).
         const checklist = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
         assert(hasText(checklist, 'Sorted the parts bin'));
-        assert(!hasText(checklist, 'Add completed item'));
         assert(!find(checklist, byClass('lm-remove-x')));
         assert(!!find(checklist, byClass('lm-action-menu')));
-        assert(hasText(checklist, 'Remove…'));
+        assert(hasText(checklist, 'Delete…'));
+        assert(hasText(checklist, 'Add subtask before…'));
         const block = await asUser(bob, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
         assert(!!find(block, byClass('lm-action-menu')));
-        assert(hasText(block, 'Add completed item…'));
+        assert(hasText(block, 'Add subtask…'));
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(hasText(detail, 'Add completed item'));
+        assert(hasText(detail, 'Add subtask'));
+    });
+});
+
+test("task editing: Add task before/after slots a sibling into place (no move dance); Delete soft-removes", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        const {project_id, task_id} = seedTask();   // alice is a host - edits any task
+        const anchorTitle = asSystem(() => rabid.task.getById(task_id)).title;
+        const titles = () => asSystem(() => rabid.task.tasksForProject.all({project_id})).map(t => t.title);
+
+        // Add one AFTER the anchor, then one BEFORE it - each lands adjacent,
+        // no add-at-end-then-move dance.
+        asUser(alice, () => rabid.task.addTaskRelative(
+            {anchor_task_id: String(task_id), position: 'after', title: 'After task'}));
+        asUser(alice, () => rabid.task.addTaskRelative(
+            {anchor_task_id: String(task_id), position: 'before', title: 'Before task'}));
+        assertEquals(titles(), ['Before task', anchorTitle, 'After task']);
+
+        // A non-editor cannot slot tasks in.
+        assertThrows(() => asUser(carol, () => rabid.task.addTaskRelative(
+            {anchor_task_id: String(task_id), position: 'after', title: 'Nope'})),
+            Error, 'Not permitted');
+
+        // Delete (soft) 'After task': the flag is set and it leaves the list.
+        const afterId = asSystem(() => rabid.task.tasksForProject.all({project_id}))
+            .find(t => t.title === 'After task')!.task_id;
+        const res = asUser(alice, () => rabid.task.remove(afterId)) as any;
+        assertEquals(res.action, 'reload');
+        assertEquals(asSystem(() => rabid.task.getById(afterId)).deleted, 1);
+        assert(!titles().includes('After task'));
+
+        // The task ☰ offers the new verbs.
+        const block = await asUser(alice, () => renderRoute(`rabid.task.renderTaskBlockById(${task_id})`));
+        for(const label of ['Add task before…', 'Add task after…', 'Add subtask…', 'Delete…'])
+            assert(hasText(block, label), `block menu missing "${label}"`);
+    });
+});
+
+test("subtask editing: Add subtask before/after positions a sibling in the checklist", async () => {
+    await withTestDb(async ({ bob }) => {
+        const {task_id, group_id} = seedTask();
+        addToGroup(group_id, bob);
+        asUser(bob, () => rabid.subtask.addItem({task_id: String(task_id), title: 'S1'}));
+        const s1 = asSystem(() => rabid.subtask.forTask.all({task_id})).find(s => s.title === 'S1')!;
+        asUser(bob, () => rabid.subtask.addItem({task_id: String(task_id), title: 'S0',
+            anchor_subtask_id: String(s1.subtask_id), position: 'before'}));
+        asUser(bob, () => rabid.subtask.addItem({task_id: String(task_id), title: 'S2',
+            anchor_subtask_id: String(s1.subtask_id), position: 'after'}));
+        assertEquals(asSystem(() => rabid.subtask.forTask.all({task_id})).map(s => s.title),
+                     ['S0', 'S1', 'S2']);
     });
 });
 
@@ -567,18 +619,19 @@ test("projects and tasks record creation provenance (who to ask about it)", asyn
     });
 });
 
-test("checklist items edit via the pencil: title-only dialog, reload targets the task's checklist", async () => {
+test("subtask edit via the ☰ Edit…: title-only dialog, reload targets the task's checklist", async () => {
     await withTestDb(async ({ bob, carol }) => {
         const {task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
         asUser(bob, () => rabid.subtask.addItem({task_id, title: 'Get qotes'}));
         const item = asSystem(() => rabid.subtask.forTask.all({task_id}))[0];
 
-        // The row carries the pencil for the assignee, not for others.
+        // The row carries the ☰ (with Edit…) for the assignee, not for others.
         const bobList = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
-        assert(!!find(getByTestId(bobList, `subtask-row-${item.subtask_id}`), byClass('lm-edit-pencil')));
+        assert(!!find(getByTestId(bobList, `subtask-row-${item.subtask_id}`), byClass('lm-action-menu')));
+        assert(hasText(bobList, 'Edit…'));
         const carolList = await asUser(carol, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
-        assert(!find(carolList, byClass('lm-edit-pencil')));
+        assert(!find(carolList, byClass('lm-action-menu')));
 
         // The dialog is title-only: no done checkbox, no task picker (done-ness
         // is the toggle path, which stamps provenance).
