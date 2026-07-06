@@ -72,27 +72,25 @@ test("projects own the assignment group; a new task INHERITS (NULL group); overr
     });
 });
 
-test("assignees may edit the task (and its assignee list); other volunteers may not", async () => {
+test("editing a (non-template) task is open to all logged-in volunteers, assignee or not", async () => {
     await withTestDb(({ bob, carol }) => {
         const {task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
 
-        // A non-assignee volunteer can neither edit the record nor its members.
-        assertThrows(() => asUser(carol, () => rabid.task.saveForm({
-            task_id: String(task_id), status: 'done', 'before-status': 'open'})),
-            Error, 'Not permitted');
-        assertThrows(() => asUser(carol, () => rabid.volunteer_group.addMember(
-            {group_id, volunteer_id: carol})), Error, 'Not permitted');
+        // A non-assignee (carol) can edit the task now - editing is open to all.
+        const r1 = asUser(carol, () => rabid.task.saveForm({
+            task_id: String(task_id), status: 'done', 'before-status': 'open'})) as any;
+        assertEquals(r1, {action: 'reload'});
+        assertEquals(asSystem(() => rabid.task.getById(task_id)).status, 'done');
 
-        // The assignee can update the task (saveForm = the pencil-edit path).
-        const result = asUser(bob, () => rabid.task.saveForm({
-            task_id: String(task_id), status: 'in-progress', 'before-status': 'open'})) as any;
-        assertEquals(result, {action: 'reload'});
+        // The assignee can too (saveForm = the pencil-edit path).
+        asUser(bob, () => rabid.task.saveForm({
+            task_id: String(task_id), status: 'in-progress', 'before-status': 'done'}));
         assertEquals(asSystem(() => rabid.task.getById(task_id)).status, 'in-progress');
 
-        // ...and being an assignee delegates membership editing through the
-        // owner backlink: bob can add carol to the task.
-        asUser(bob, () => rabid.volunteer_group.addMember({group_id, volunteer_id: carol}));
+        // Editing a task delegates to its assignee list, so anyone can add a
+        // member (via the owner backlink) now too.
+        asUser(carol, () => rabid.volunteer_group.addMember({group_id, volunteer_id: carol}));
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id})).length, 2);
     });
 });
@@ -121,27 +119,24 @@ test("new-task dialog: project preset survives an untouched picker (empty before
         // New tasks append at the end of the project's order.
         assertEquals(tasks.filter(t => t.status !== 'done').at(-1)!.title, 'Posters');
 
-        // Task creation is host/admin (an assignee can work tasks, not mint them).
-        await assertRejects(() => asUser(bob, () =>
-            renderRoute(`rabid.task.newDialog(${project_id})`)) as Promise<any>,
-            Error, 'not permitted');   // route layer (@route hostOrAdmin) denies first
+        // Task creation is open to all now (was host/admin): bob can render the
+        // new-task dialog for a normal project.
+        await asUser(bob, () => renderRoute(`rabid.task.newDialog(${project_id})`));
     });
 });
 
-test("subtask checklist: add/toggle/remove gated by the task; every mutation stamps the task", async () => {
+test("subtask checklist: add/toggle/remove open to all (non-template); every mutation stamps the task", async () => {
     await withTestDb(({ bob, carol }) => {
         const {task_id, group_id} = seedTask();
         addToGroup(group_id, bob);
 
-        // Non-assignee: every checklist mutation is refused.
-        assertThrows(() => asUser(carol, () => rabid.subtask.addItem({task_id, title: 'nope'})),
-                     Error, 'Not permitted');
-
-        // Assignee adds two items; they land in order.
+        // Editing the checklist is open to all logged-in volunteers now - a
+        // non-assignee (carol) can add just like the assignee.  Items land in order.
         asUser(bob, () => rabid.subtask.addItem({task_id, title: 'Get quotes'}));
         asUser(bob, () => rabid.subtask.addItem({task_id, title: 'Confirm driver'}));
+        asUser(carol, () => rabid.subtask.addItem({task_id, title: 'From carol'}));
         const items = asSystem(() => rabid.subtask.forTask.all({task_id}));
-        assertEquals(items.map(s => s.title), ['Get quotes', 'Confirm driver']);
+        assertEquals(items.map(s => s.title), ['Get quotes', 'Confirm driver', 'From carol']);
 
         // Backdate the task stamp (direct SQL: rabid.task.update would re-stamp),
         // toggle, and observe the touch.
@@ -153,21 +148,14 @@ test("subtask checklist: add/toggle/remove gated by the task; every mutation sta
         assertEquals(asSystem(() => rabid.subtask.getById(items[0].subtask_id)).done, 1);
         assert(asSystem(() => rabid.task.getById(task_id)).last_change_time > OLD);
 
-        // Completing is open to ALL logged-in volunteers: a non-assignee CAN
-        // check an item off (structural edits stay assignee/host-gated - see
-        // the remove denial below).
+        // A non-assignee can toggle AND remove now (both open to all).
         asUser(carol, () => rabid.subtask.toggle(items[1].subtask_id));
         assertEquals(asSystem(() => rabid.subtask.getById(items[1].subtask_id)).done, 1);
-        assertThrows(() => asUser(carol, () => rabid.subtask.remove(items[1].subtask_id)),
-                     Error, 'Not permitted');
+        asUser(carol, () => rabid.subtask.remove(items[2].subtask_id));
+        assertEquals(asSystem(() => rabid.subtask.forTask.all({task_id})).length, 2);
 
-        // Remove deletes the row (subtasks are thin: no soft-delete; the task
-        // stamp records the change).
-        asUser(bob, () => rabid.subtask.remove(items[0].subtask_id));
-        assertEquals(asSystem(() => rabid.subtask.forTask.all({task_id})).length, 1);
-
-        // The crafted-POST backstop: generic saveForm insert on subtask has no
-        // record to delegate through, so it is refused.
+        // The crafted-POST backstop still holds: a generic saveForm INSERT on
+        // subtask has no existing record to delegate through, so it is refused.
         assertThrows(() => asUser(carol, () => rabid.subtask.saveForm({
             task_id: String(task_id), 'before-task_id': '',
             title: 'crafted', 'before-title': ''})), Error, 'Not permitted');
@@ -191,11 +179,8 @@ test("assign committee: task aliases the named group (live); orphaned adhoc grou
         const c1 = seedCommittee('Logistics Committee', [bob]);
         const c2 = seedCommittee('Outreach Committee', []);
 
-        // Only task editors may assign; carol (not host, not assignee) can't.
-        assertThrows(() => asUser(carol, () => rabid.task.assignCommittee(
-            {task_id, committee_id: c1.committee_id})), Error, 'Not permitted');
-
-        // Host assigns: the task now points at the committee's NAMED group...
+        // Assigning is open to all now (editing a task, incl. its assignment,
+        // is no longer gated); we exercise it as a host for the rest.
         const result = asUser(alice, () => rabid.task.assignCommittee(
             {task_id, committee_id: c1.committee_id})) as any;
         assertEquals(result.targets, [`.-task-${task_id}-`]);
@@ -454,16 +439,17 @@ test("pages: one navigable row species; project rows navigate (edit on the detai
         assert(!!find(carolBlock, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox'
                                        && attr(n, 'disabled') === undefined));  // ...but CAN still toggle (open to all)
 
-        // Task detail: assignee list + checklist render; the assignee gets the
-        // add/remove affordances, the non-assignee gets read-only fragments.
+        // Task detail: assignee list + checklist render.  Editing is open to all
+        // now, so BOTH the assignee and a non-assignee get the editor affordances
+        // (assign members, add subtasks).
         const detail = await asUser(bob, () => renderRoute(`rabid.task.detailPage(${task_id})`));
         assert(hasText(detail, 'Assigned to'));
         assert(hasText(detail, 'Subtasks'));
         assert(hasText(detail, 'Add member'));
         assert(hasText(detail, 'Add subtask'));
         const carolDetail = await asUser(carol, () => renderRoute(`rabid.task.detailPage(${task_id})`));
-        assert(!hasText(carolDetail, 'Add member'));
-        assert(!hasText(carolDetail, 'Add subtask'));
+        assert(hasText(carolDetail, 'Add member'));
+        assert(hasText(carolDetail, 'Add subtask'));
         // The checklist checkbox is live even for the non-editor (completing is
         // open to all); only the ☰ editor actions are withheld.
         const box = find(carolDetail, n => tagOf(n) === 'input' && attr(n, 'type') === 'checkbox');
@@ -542,7 +528,31 @@ test("Already-done subtask: the add dialog's checkbox posts a born-done entry wi
     });
 });
 
-test("completing is open to all: a non-assignee can toggle a task done (stamped to them), but not edit it", async () => {
+test("project 'Add task' affordance (empty projects included) is open to all; templates stay host/admin", async () => {
+    await withTestDb(async ({ carol }) => {
+        // A normal, EMPTY project: carol (a plain volunteer) still gets the
+        // project-level add affordance - the ONLY way to seed an empty project
+        // (there's no anchor task for Add-before/after).
+        const project_id = asSystem(() => rabid.project.insert({name: 'Empty', deleted: 0}));
+        const view = await asUser(carol, () => renderRoute(`rabid.task.renderProjectTasks(${project_id})`));
+        assert(hasText(view, 'No tasks yet.'));
+        assert(hasText(view, 'Add task'), 'carol sees Add task on an empty project');
+        // ...and can actually create the first task.
+        await asUser(carol, () => renderRoute(`rabid.task.newDialog(${project_id})`));
+        asUser(carol, () => rabid.task.saveForm({
+            title: 'First task', 'before-title': '',
+            project_id: String(project_id), 'before-project_id': ''}));
+        assertEquals(asSystem(() => rabid.task.tasksForProject.all({project_id})).length, 1);
+
+        // A TEMPLATE project's list stays host/admin: no add affordance for carol.
+        const template_id = asSystem(() => rabid.project.insert(
+            {name: 'Cleanup', is_template: 1, deleted: 0} as any));
+        const tView = await asUser(carol, () => renderRoute(`rabid.task.renderProjectTasks(${template_id})`));
+        assert(!hasText(tView, 'Add task'), 'no add affordance on a template for a non-admin');
+    });
+});
+
+test("completing is open to all: a non-assignee can toggle a task done, stamped to them", async () => {
     await withTestDb(async ({ carol }) => {
         const {task_id} = seedTask();   // carol is a regular volunteer, NOT in the task's group
 
@@ -552,34 +562,23 @@ test("completing is open to all: a non-assignee can toggle a task done (stamped 
         const t = asSystem(() => rabid.task.getById(task_id));
         assertEquals(t.status, 'done');
         assertEquals(t.done_by, carol);   // stamped to whoever ticked it
-
-        // ...but structural edits stay gated (she is not an editor).
-        assertThrows(() => asUser(carol, () => rabid.task.remove(task_id)),
-                     Error, 'Not permitted');
-        await asUser(carol, () => assertRejects(
-            () => renderRoute(`rabid.task.renderForm(rabid.task.getById(${task_id}))`),
-            Error, 'Not permitted'));
     });
 });
 
 test("task editing: Add task before/after slots a sibling into place (no move dance); Delete soft-removes", async () => {
-    await withTestDb(async ({ alice, carol }) => {
+    await withTestDb(async ({ alice }) => {
         const {project_id, task_id} = seedTask();   // alice is a host - edits any task
         const anchorTitle = asSystem(() => rabid.task.getById(task_id)).title;
         const titles = () => asSystem(() => rabid.task.tasksForProject.all({project_id})).map(t => t.title);
 
         // Add one AFTER the anchor, then one BEFORE it - each lands adjacent,
-        // no add-at-end-then-move dance.
+        // no add-at-end-then-move dance.  (Slotting tasks in is open to all now -
+        // see the open-editing tests; here we focus on the positional mechanics.)
         asUser(alice, () => rabid.task.addTaskRelative(
             {anchor_task_id: String(task_id), position: 'after', title: 'After task'}));
         asUser(alice, () => rabid.task.addTaskRelative(
             {anchor_task_id: String(task_id), position: 'before', title: 'Before task'}));
         assertEquals(titles(), ['Before task', anchorTitle, 'After task']);
-
-        // A non-editor cannot slot tasks in.
-        assertThrows(() => asUser(carol, () => rabid.task.addTaskRelative(
-            {anchor_task_id: String(task_id), position: 'after', title: 'Nope'})),
-            Error, 'Not permitted');
 
         // Delete (soft) 'After task': the flag is set and it leaves the list.
         const afterId = asSystem(() => rabid.task.tasksForProject.all({project_id}))
@@ -651,12 +650,12 @@ test("subtask edit via the ☰ Edit…: title-only dialog, reload targets the ta
         asUser(bob, () => rabid.subtask.addItem({task_id, title: 'Get qotes'}));
         const item = asSystem(() => rabid.subtask.forTask.all({task_id}))[0];
 
-        // The row carries the ☰ (with Edit…) for the assignee, not for others.
+        // The row carries the ☰ (with Edit…) for everyone now - editing is open.
         const bobList = await asUser(bob, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
         assert(!!find(getByTestId(bobList, `subtask-row-${item.subtask_id}`), byClass('lm-action-menu')));
         assert(hasText(bobList, 'Edit…'));
         const carolList = await asUser(carol, () => renderRoute(`rabid.subtask.renderChecklist(${task_id})`));
-        assert(!find(carolList, byClass('lm-action-menu')));
+        assert(!!find(getByTestId(carolList, `subtask-row-${item.subtask_id}`), byClass('lm-action-menu')));
 
         // The dialog is title-only: no done checkbox, no task picker (done-ness
         // is the toggle path, which stamps provenance).
@@ -675,10 +674,8 @@ test("subtask edit via the ☰ Edit…: title-only dialog, reload targets the ta
         assert(res.targets.includes(`.-subtask-task_id-${task_id}-`));
         assertEquals(asSystem(() => rabid.subtask.getById(item.subtask_id)).title, 'Get quotes');
 
-        // Gated: a non-assignee cannot even render the form.
-        await asUser(carol, () => assertRejects(
-            () => renderRoute(`rabid.subtask.renderForm(rabid.subtask.getById(${item.subtask_id}))`),
-            Error, 'Not permitted'));
+        // Editing is open to all now, so a non-assignee can render the form too.
+        await asUser(carol, () => renderRoute(`rabid.subtask.renderForm(rabid.subtask.getById(${item.subtask_id}))`));
     });
 });
 
@@ -746,13 +743,11 @@ test("assignment inheritance: project assignees work all non-overridden tasks; o
             task_id: String(inherited), status: 'in-progress', 'before-status': 'open'}));
 
         // EXCLUSIVE override: the task is on bob's list and LEAVES carol's -
-        // carol can clear her list without doing bob's task - and carol may
-        // not edit it.
+        // carol can clear her list without it appearing.  (Assignment governs the
+        // LIST, not the edit gate: editing is open to all now, so this is purely
+        // about who the task shows up FOR.)
         assertEquals(mine(bob), ['Borrow tables', 'Price stickers']);
         assertEquals(mine(carol), ['Price stickers']);
-        assertThrows(() => asUser(carol, () => rabid.task.saveForm({
-            task_id: String(overridden), status: 'done', 'before-status': 'open'})),
-            Error, 'Not permitted');
         asUser(bob, () => rabid.task.saveForm({
             task_id: String(overridden), status: 'in-progress', 'before-status': 'open'}));
 
@@ -844,15 +839,13 @@ test("move up/down: reorder tasks within the project and items within the checkl
         const titles = () => asSystem(() => rabid.task.tasksForProject.all({project_id})).map(t => t.title);
         assertEquals(titles(), ['Book truck', 'Posters']);
 
-        // Host reorders; a move past the end is a no-op; gated like any edit
-        // (bob is not on t2's effective assignment - empty project group).
+        // Host reorders; a move past the end is a no-op.
         asUser(alice, () => rabid.task.moveUp(t2));
         assertEquals(titles(), ['Posters', 'Book truck']);
         asUser(alice, () => rabid.task.moveUp(t2));
         assertEquals(titles(), ['Posters', 'Book truck']);
-        assertThrows(() => asUser(bob, () => rabid.task.moveDown(t2)), Error, 'Not permitted');
-        // The assignee can move THEIR task.
-        asUser(bob, () => rabid.task.moveUp(task_id));
+        // Reordering is open to all now - bob (not on t2's group) can move it too.
+        asUser(bob, () => rabid.task.moveDown(t2));
         assertEquals(titles(), ['Book truck', 'Posters']);
 
         // Checklist items reorder within their task.
@@ -867,7 +860,7 @@ test("move up/down: reorder tasks within the project and items within the checkl
     });
 });
 
-test("membership ☰: Add me is always allowed (self-signup); named removes; Remove all gated", async () => {
+test("membership ☰: Add me is always allowed (self-signup); named removes; Remove all open via the task", async () => {
     await withTestDb(async ({ alice, bob, carol }) => {
         const {task_id, group_id} = seedTask();
 
@@ -893,13 +886,10 @@ test("membership ☰: Add me is always allowed (self-signup); named removes; Rem
         assert(hasText(aliceView, 'Add me'));
         assert(hasText(aliceView, 'Remove Carol'));
 
-        // Remove all: bulk, confirm-gated in the UI, and canEditMembers-gated
-        // on the server - bob, an outsider (not assignee, not host), is
-        // refused; the host clears the whole roster.
-        assertThrows(() => asUser(bob, () => rabid.volunteer_group.removeAllMembers(group_id)),
-                     Error, 'Not permitted');
-        addToGroup(group_id, bob);
-        asUser(alice, () => rabid.volunteer_group.removeAllMembers(group_id));
+        // Remove all: bulk, confirm-gated in the UI.  Editing a task - including
+        // its assignee list, via the owner delegation - is open to all now, so
+        // even bob (an outsider) can clear the whole roster.
+        asUser(bob, () => rabid.volunteer_group.removeAllMembers(group_id));
         assertEquals(asSystem(() => rabid.volunteer_group.members.all({group_id})).length, 0);
     });
 });

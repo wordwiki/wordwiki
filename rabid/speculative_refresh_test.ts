@@ -140,13 +140,15 @@ test("a section url naming a mutation is rejected (GET) and falls back with spec
 
 test("denied and undeclared section urls fall back with speculation:'error'", async () => {
     await withTestDb(async ({ alice, bob }) => {
-        const { project_id, task_id } = seedTask();
-        // bob (a plain volunteer) may not reach the hostOrAdmin newDialog route.
+        const { task_id } = seedTask();
+        // bob (a plain volunteer) may not reach the hostOrAdmin project-create
+        // route, so speculating its section falls back to 'error'.  (Task editing
+        // is open to all now - project creation is still host/admin.)
         await as(bob, async () => {
             const result = {action: 'reload', targets: [`.-task-${task_id}-`]};
             const denied = await getRabid().applySpeculation(result, {
                 deps: [`.-task-${task_id}-`],
-                sections: [{url: `rabid.task.newDialog(${project_id})`, keys: [`.-task-${task_id}-`]}],
+                sections: [{url: `rabid.project.newDialog()`, keys: [`.-task-${task_id}-`]}],
             });
             assertEquals(denied.speculation, 'error');
         });

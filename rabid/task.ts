@@ -84,6 +84,16 @@ export function canEditTask(task_id: number): boolean {
     return rabid.task.canEditRecord(t);
 }
 
+// Who may add a task to an OWNER's list (event / volunteer / committee / bike).
+// Task editing is open to all now, so shared-work owners (events, committees,
+// bikes) are open to every logged-in volunteer - EXCEPT a person's own task
+// list (owner_table 'volunteer'), which stays self-or-host so a peer can't add
+// tasks to someone's personal list.  This is the single place to tighten later.
+export function canAddOwnerTask(owner_table: string, owner_id: number): boolean {
+    if(owner_table === 'volunteer') return ownerCanEdit(owner_table, owner_id);
+    return security.current()?.actorId != null;
+}
+
 // A column managed entirely by the table code (order keys, change stamps,
 // completion provenance): hidden from the generic record form, which also
 // exempts it from required-input validation - insert()/update() overrides
@@ -995,16 +1005,27 @@ export class TaskTable extends Table<Task> {
         ])
     };
 
-    // Hosts/admins, OR the task's EFFECTIVE assignees: being assigned a task
-    // means being able to work it (status, checklist, and - via the group
-    // owner backlink - the override assignee list).  Effective = the override
-    // group when set (EXCLUSIVE - see Task.group_id), else the project's
-    // assignment.  Creation (no record yet) is host/admin only.
+    // Editing a task - the ☰'s add / move / delete / edit, the task form and its
+    // field edits, the assignment, and (via canEditTask) everything on subtasks
+    // - ALL dispatch through this one check.  For now it is OPEN to every
+    // logged-in volunteer, EXCEPT on TEMPLATE tasks, which stay host/admin (a
+    // template is shared structure, not an everyday task).  This is the SINGLE
+    // place to tighten later (the mirror of canComplete on toggleDone, which
+    // likewise stays open by design).  The eventual rule for non-templates is
+    // probably host/admin OR the task's effective assignee:
+    //     if(hostOrAdmin(a)) return true;
+    //     const t = a.record as Task|undefined;
+    //     return t != null && actorInGroup(this.effectiveGroupId(t));
     private canWorkTask: security.Permission = a => {
-        if(hostOrAdmin(a)) return true;
-        const t = a.record as Task|undefined;
-        return t != null && actorInGroup(this.effectiveGroupId(t));
+        if(a.ctx.actorId === undefined) return false;               // logged in
+        const t = a.record as Task | undefined;
+        if(t?.project_id != null && this.projectIsTemplate(t.project_id))
+            return hostOrAdmin(a);                                  // templates: host/admin
+        return true;                                               // everything else: open
     };
+    private projectIsTemplate(project_id: number): boolean {
+        return !!security.runSystem(() => rabid.project.getById(project_id)).is_template;
+    }
     defaultFieldEdit: security.Permission = a => this.canWorkTask(a);
     override get recordEdit(): security.Permission { return this.canWorkTask; }
 
@@ -1218,7 +1239,9 @@ export class TaskTable extends Table<Task> {
     // the flag so a shape-key reload stays headless.
     renderProjectTasks(project_id: number, showHeading: boolean = true): Markup {
         const tasks = this.tasksForProject.all({project_id});
-        const canCreateTask = this.canEditRecord({} as any);
+        // Pass project_id so the template carve-out in canWorkTask can see it
+        // (a template's list stays host/admin; a normal list is open to all).
+        const canCreateTask = this.canEditRecord({project_id} as any);
         const props = liveReloadableProps([this.shapeKey('project_id', project_id)],
             `rabid.task.renderProjectTasks(${project_id}${showHeading ? '' : ', false'})`);
         // The Tasks heading: the open count at a glance (its own content-keyed
@@ -1545,8 +1568,10 @@ export class TaskTable extends Table<Task> {
 
     // The "new task in this project" dialog: the record form over a partial
     // record carrying the project (renderForm's empty before-snapshots on
-    // inserts are what make the preset survive an untouched picker).
-    @route(hostOrAdmin)
+    // inserts are what make the preset survive an untouched picker).  Open to
+    // all (like the rest of task editing); renderForm's canEditRecord gate keeps
+    // TEMPLATE projects host/admin (the template carve-out in canWorkTask).
+    @route(authenticated)
     newDialog(project_id: number): Markup {
         return this.renderForm({project_id} as Task);
     }
@@ -1575,17 +1600,19 @@ export class TaskTable extends Table<Task> {
         // used on the committee page, where Members/Projects/Tasks sit level).
         const headWrapClass = docHeading ? 'lm-doc-section-head' : 'd-flex align-items-center gap-2 mt-3';
         const headClass = docHeading ? 'lm-doc-section-label' : 'mb-0';
-        // This section owns the single heading + add button: the add is gated by
-        // the OWNER's permission (ownerCanEdit), not renderProjectTasks' host-only
-        // task permission, and dispatches newOwnerTaskDialog so the list is
-        // created lazily on the first task.  The nested list is headless
-        // (showHeading=false) so the heading isn't doubled.  The open count (also
-        // the liveness antenna) rides here when the project exists.
+        // This section owns the single heading + add button.  Adding a task is
+        // open to all logged-in volunteers for shared-work owners (events etc.),
+        // no longer gated on editing the owner - a volunteer's OWN list stays
+        // self-or-host (see canAddOwnerTask).  It dispatches newOwnerTaskDialog so
+        // the owned list is created lazily on the first task.  The nested list is
+        // headless (showHeading=false) so the heading isn't doubled.  The open
+        // count (also the liveness antenna) rides here when the project exists.
+        const canAdd = canAddOwnerTask(owner_table, owner_id);
         return [h.div, props,
             [h.div, {class: headWrapClass},
              [h.h4, {class: headClass}, heading],
              project_id !== undefined ? this.renderProjectOpenCount(project_id) : undefined,
-             ownerCanEdit(owner_table, owner_id)
+             canAdd
                  ? action.actionButton(action.plusIcon(),
                      {kind: 'modal', dialogUrl:
                          `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'})`},
@@ -1652,7 +1679,7 @@ export class TaskTable extends Table<Task> {
     // owned project if this is the first task.
     @route(authenticated)
     newOwnerTaskDialog(owner_table: string, owner_id: number, owner_role: string|null = null): Markup {
-        if(!ownerCanEdit(owner_table, owner_id))
+        if(!canAddOwnerTask(owner_table, owner_id))
             throw new Error('Not permitted to add tasks here');
         const f = this.fieldsByName;
         return action.renderParamForm(
@@ -1675,7 +1702,7 @@ export class TaskTable extends Table<Task> {
         const owner_role = (args?.owner_role ?? '') || null;   // '' from the hidden field -> null
         if(!owner_table || !Number.isInteger(owner_id) || !owner_id)
             throw new Error('Missing owner');
-        if(!ownerCanEdit(owner_table, owner_id))
+        if(!canAddOwnerTask(owner_table, owner_id))
             throw new Error('Not permitted to add tasks here');
         const title = (args.title ?? '').trim();
         if(!title) throw new Error('Title is required');

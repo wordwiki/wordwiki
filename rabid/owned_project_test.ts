@@ -60,16 +60,18 @@ test("addOwnerTask: creates the project on first task; appears in global list wi
         assertEquals(projectRowLabel(row!), 'Saturday in the Park — tasks');
     }));
 
-test("addOwnerTask: denied for someone who can't edit the owner", () =>
+test("addOwnerTask: adding to a shared-work owner (event) is open to all logged-in volunteers", () =>
     withTestDb(({ bob }) => {
         const r = getRabid();
         const eid = asSystem(() => newEvent());
-        // bob is a regular volunteer (not host/admin) -> cannot edit the event.
-        let threw = false;
-        try { asUser(bob, () => r.task.addOwnerTask({owner_table: 'event', owner_id: eid, title: 'x'})); }
-        catch { threw = true; }
-        assert(threw, 'a non-owner-editor must not add owner tasks');
-        assertEquals(asSystem(() => r.project.forOwner('event', eid, null, false)), undefined);
+        // bob is a regular volunteer (not host/admin) but CAN add event tasks now
+        // - task editing is open, and an event is shared work (not a person's
+        // private list).  The first task materializes the event's owned project.
+        asUser(bob, () => r.task.addOwnerTask({owner_table: 'event', owner_id: eid, title: 'Set up tables'}));
+        const pid = asSystem(() => r.project.forOwner('event', eid, null, false));
+        assert(pid !== undefined, "bob's event task materializes the event's project");
+        assertEquals(asSystem(() => r.task.tasksForProject.all({project_id: pid!})).map(t => t.title),
+                     ['Set up tables']);
     }));
 
 // --- Volunteer-owned projects: the owner-edit delegation is self-OR-host, so a
