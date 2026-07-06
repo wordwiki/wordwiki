@@ -486,6 +486,27 @@ function showModalEditor() {
     }
     lmModalInitialState = lmModalFormState();
     getModalEditor().show();
+    lmModalFocusFirstField();
+}
+
+/**
+ * Focus the dialog's FIRST visible field, so "tap +, type the gloss, press
+ * Enter" works without an extra click on the field.  Skips invisible fields
+ * (a closed <details> like the change-note disclosure; hidden inputs).
+ * Bootstrap moves focus to the modal on show, so on a FRESH open we must
+ * focus after its shown.bs.modal event; when the modal is already open
+ * (dialog-within-dialog swaps re-run showModalEditor), focus directly.
+ */
+function lmModalFocusFirstField() {
+    const focus = () => {
+        const field = [...getModalBodyElem().querySelectorAll('input, textarea, select')]
+            .find(f => f.type !== 'hidden' && !f.disabled && f.offsetParent !== null);
+        if (field) field.focus();
+    };
+    const modalEl = document.getElementById('modalEditor');
+    if (!modalEl) return;
+    if (modalEl.classList.contains('show')) focus();
+    else modalEl.addEventListener('shown.bs.modal', focus, {once: true});
 }
 
 function hideModalEditor() {
