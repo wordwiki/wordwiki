@@ -713,7 +713,10 @@ export abstract class LiminalApp {
                 const html = await markup.asyncRenderToStringViaLinkeDOM(markupResult, false);
                 rendered.push({url, html});
             }
-            return {action: 'swap', sections: rendered, targets,
+            // Spread the mutation's own result UNDER the swap fields: app-level
+            // annotations (e.g. the keyboard focus hint `focus`) must survive
+            // the reload->swap upgrade.
+            return {...result, action: 'swap', sections: rendered, targets,
                     ...(leftover.length > 0 ? {reloadTargets: leftover} : {})};
         } catch(e) {
             console.info('speculative section render failed - falling back to reload', e);

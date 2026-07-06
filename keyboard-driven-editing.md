@@ -102,10 +102,15 @@ edit.  The restore convention:
   now on `<body>`/disconnected and no modal is open, re-focus the stop with
   the recorded key, else the stop at the recorded INDEX (clamped).
 - The index fallback is exactly right for **delete**: the dead row's index
-  now names the row that slid into its place.  For **insert from an empty
-  slot** the slot's key is gone and the index lands on the new row.  For
-  **insert-after** v1 restores the anchor row (one ↓ reaches the new row);
-  focusing the new row from the response's new-fact id is a deferred nicety.
+  now names the row that slid into its place.
+- **Insert focuses the NEW row** (dz: "plus should focus the newly created
+  item"): the mutation response carries `focus: '<data-kbd key>'` (saveInsert
+  names `fact-<new id>`), txCore notes it, and the hint outranks the
+  was-focus-lost restore at the next churn - kept until the fragment lands
+  (the 2-trip path's churns can run before it), expired after 3s so a row
+  that never materializes can't yank focus later.  applySpeculation spreads
+  the mutation's result under the swap fields so the hint survives the
+  reload->swap upgrade.
 - Boosted whole-page navigations clear the memory (a stale index must not
   yank focus/scroll on some other page's stops).  `.lm-read-only` contexts
   are excluded from the stop list, matching refresh participation.
@@ -124,7 +129,6 @@ document order.
 - **Dialog prefetch on focus** (warm Enter): real but small win; adds a
   request per traversal step.  The hx-get URL is on the edit button when we
   want it.
-- **Focus-the-new-row after insert** via a response focus hint.
 - **Review-mode verbs and rabid list pages** adopting stops (the mechanism
   is generic; the stamps are one hook each).
 - Home/End (first/last stop) if traversal length ever warrants it.

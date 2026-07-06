@@ -2178,7 +2178,11 @@ export class LexemeEditor {
         setAssertionFields(newAssertion, rel, changed);
 
         this.app.applyTransaction([newAssertion]);
-        return this.reload(this.mutationTargets(entry_id, newAssertion, 'parent', formMode(form)));
+        // focus: the keyboard flow lands on the NEW row once the refresh
+        // paints it (keyboard-driven-editing.md; data-kbd stamped by
+        // tupleSurface).
+        return {...this.reload(this.mutationTargets(entry_id, newAssertion, 'parent', formMode(form))),
+                focus: `fact-${id}`};
     }
 
     /** Delete = a tombstone assertion (see LexemeOps.tombstoneFact - the

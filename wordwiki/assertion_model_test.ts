@@ -301,12 +301,14 @@ test("editor: insert at end, move up, delete, list deleted, restore", async () =
             entry_id: '1000', parent_fact_id: '1000', child_tag: 'spl',
             'before-text': '', text: 'kat', 'before-variant': '', variant: 'mm-sf',
         }));
-        assertEquals(rIns, {action: 'reload', targets: [
-            '.-fact-1000-', '.-rel-1000-spl-', '.-rel-1000-spl-shape-',
-            '.-entry-1000-title-', '.-entry-1000-', '.-entry-1000-activity-']});
         let e = JSON.parse(JSON.stringify(fx.ww.entries))[0];
         assertEquals(e.spelling.map((s: any) => s.text), ['cat', 'kat']);
         const katId = e.spelling[1].spelling_id;
+        // ...and the response names the NEW row as the keyboard focus hint
+        // (keyboard-driven-editing.md: + lands in the created item).
+        assertEquals(rIns, {action: 'reload', focus: `fact-${katId}`, targets: [
+            '.-fact-1000-', '.-rel-1000-spl-', '.-rel-1000-spl-shape-',
+            '.-entry-1000-title-', '.-entry-1000-', '.-entry-1000-activity-']});
 
         // Move it up.
         await djz(() => invoke(fx.ww, `wordwiki.lexeme.move(1000, ${katId}, 'up')`));
@@ -477,15 +479,16 @@ test("editor deep: full insert/edit/move/delete/restore cycle at path depth 5", 
             'before-example_text': '', example_text: 'Example two',
             'before-variant': '', variant: '',
         }));
-        // A shape event dirties the parent surface, the relation's content
-        // AND shape keys, and the activity count.
-        assertEquals(rIns, {action: 'reload', targets: [
-            '.-fact-2002-', '.-rel-2002-etx-', '.-rel-2002-etx-shape-',
-            '.-entry-2000-activity-']});
         assertEquals(deepExampleTexts(fx.ww), ['Example one', 'Example two']);
         const twoId = JSON.parse(JSON.stringify(fx.ww.entries))
             .find((e: any) => e.entry_id === 2000)
             .subentry[0].example[0].example_text[1].example_text_id;
+        // A shape event dirties the parent surface, the relation's content
+        // AND shape keys, and the activity count - and names the new row as
+        // the keyboard focus hint.
+        assertEquals(rIns, {action: 'reload', focus: `fact-${twoId}`, targets: [
+            '.-fact-2002-', '.-rel-2002-etx-', '.-rel-2002-etx-shape-',
+            '.-entry-2000-activity-']});
 
         // A field edit scopes to the tuple (+ relation content + activity).
         const rEdit = await djz(() => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {

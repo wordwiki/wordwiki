@@ -504,6 +504,9 @@ from any field; Esc closes through the discard guard.
   `lm-act-delete` as `btnClass` on the row's ☰ actionMenu items.  Keys
   dispatch by CLICKING these buttons, so deps/confirm/dialog URLs stay
   single source of truth; a row missing a verb simply no-ops that key.
+- Optionally, a mutation response may carry `focus: '<data-kbd key>'` naming
+  the stop the flow continues on - inserts name their NEW row, so + lands in
+  the created item.  Survives the reload→swap speculation upgrade.
 - Enter's resolution order: `button.edit` (the pencil / tap-to-edit target),
   else the ☰ toggle, else the stop's first button.  rabid's *navigable* rows
   have `a.lm-nav-link` instead of `button.edit` — adopting them would mean

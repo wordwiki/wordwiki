@@ -312,6 +312,12 @@ async function txCore(deps, rpcExprSegments /*:ReadonlyArray<string>*/, args /*:
     // position so its own poll entry is skipped (liminal-scripts.js).
     lmLiveNoteOwnSeq(response.seq);
 
+    // A mutation may name the stop keyboard focus should land on once the
+    // refresh has brought it to the page - e.g. an insert naming its NEW row
+    // (keyboard-driven-editing.md; consumed by lmKbdAfterChurn).
+    if(typeof response.focus === 'string' && typeof lmKbdNoteFocusHint === 'function')
+        lmKbdNoteFocusHint(response.focus);
+
     switch(action) {
     case 'reload': {
         if(!Array.isArray(response.targets))

@@ -778,8 +778,31 @@ document.addEventListener('keydown', (e) => {
  * the modal path must restore then).  Restores only when focus was actually
  * lost (on body / disconnected) and no dialog is open.
  */
+/* A mutation response's focus hint (txCore notes it): the data-kbd key of
+   the stop focus should land on once the refresh brings it to the page -
+   an insert names its NEW row, so + flows straight into the new item.
+   Short-lived: if the row never materializes (insert into a collapsed
+   view, say), the hint must not fire on some later unrelated churn. */
+let lmKbdFocusNext = null;    // {key, at}
+function lmKbdNoteFocusHint(key) {
+    lmKbdFocusNext = {key: String(key), at: Date.now()};
+}
+
 function lmKbdAfterChurn() {
     lmKbdEnsureRoving();
+    // The focus hint outranks the was-focus-lost restore: it is an explicit
+    // "the flow continues HERE" from the mutation.  Not yet findable (the
+    // 2-trip path's churns can run before the fragment lands) -> keep it for
+    // the next churn; a dialog on screen also defers it.
+    if (lmKbdFocusNext && Date.now() - lmKbdFocusNext.at < 3000) {
+        const t = lmKbdStops().find(s => s.dataset.kbd === lmKbdFocusNext.key);
+        if (t && !document.querySelector('.modal.show')) {
+            lmKbdFocusNext = null;
+            t.focus();
+            return;
+        }
+    } else
+        lmKbdFocusNext = null;
     if (!lmKbdCurrent) return;
     // Focus counts as LOST when it sits on body, on a detached element, or
     // on an element that is no longer visible (offsetParent null - e.g. a
