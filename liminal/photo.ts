@@ -45,9 +45,9 @@ export const ALLOWED_WIDTHS = [96, 256, 512, 1024, 1600];
 //
 // serveCropped() produces a photo filled to an EXACT (width,height) - the crop
 // gives every card/thumb consistent pixels + aspect ratio.  The overflow is
-// trimmed; a per-photo vertical FOCUS positions the crop window (fx is centred
-// in v1).  Like ALLOWED_WIDTHS, both axes of the cache are bounded so a client
-// can't mint unlimited derivatives:
+// trimmed; a per-photo FOCUS positions the crop window along the trimmed axis.
+// Like ALLOWED_WIDTHS, both axes of the cache are bounded so a client can't mint
+// unlimited derivatives:
 //
 //  - ALLOWED_CROP_SIZES bounds the (width,height) set;
 //  - CROP_FOCUS_LEVELS bounds the focus positions (serveCropped quantizes any
@@ -70,12 +70,17 @@ export function quantizeFocus(v: number): number {
 // the detail-page image pick thumb/detail from here, and the crop picker frames
 // candidates at the detail size.
 export type PhotoAspect = 'square' | 'portrait' | 'landscape' | 'wide';
+// The detail size is 960px on its display axis - ~3x the ~320px (.lm-photo-detail
+// is 20rem) presentation slot, so the image stays crisp on 2x/3x (retina/phone)
+// screens rather than being upscaled to fuzz.  Thumbs stay small (their slots
+// are ≤160px).  The stored original is capped at ~1600px (LM_PHOTO_MAX_DIM), so
+// these downscale from it for an aspect-matching photo.
 export const PHOTO_ASPECT_SIZES:
         Record<PhotoAspect, {thumb: readonly [number, number], detail: readonly [number, number]}> = {
-    square:    {thumb: [256, 256], detail: [512, 512]},   // 1:1
-    portrait:  {thumb: [192, 256], detail: [384, 512]},   // 3:4
-    landscape: {thumb: [256, 192], detail: [512, 384]},   // 4:3
-    wide:      {thumb: [384, 256], detail: [768, 512]},   // 3:2
+    square:    {thumb: [256, 256], detail: [960, 960]},    // 1:1
+    portrait:  {thumb: [192, 256], detail: [960, 1280]},   // 3:4
+    landscape: {thumb: [256, 192], detail: [960, 720]},    // 4:3
+    wide:      {thumb: [384, 256], detail: [960, 640]},    // 3:2
 };
 
 // The bounded set of (width,height) a cropped derivative may be produced at -
@@ -266,7 +271,7 @@ export class PhotoService {
             args: [sourceFsPath, '-auto-orient', '-strip',
                    '-resize', `${scaledW}x${scaledH}!`,       // exact cover dims
                    '-crop', `${w}x${h}+${offX}+${offY}`, '+repage',
-                   '-quality', '82', targetPath],
+                   '-quality', '88', targetPath],
         }).output();
         if(code !== 0)
             throw new Error(`failed to crop ${sourceFsPath} to ${w}x${h}@focus=${focus}: ${new TextDecoder().decode(stderr)}`);
@@ -306,7 +311,7 @@ export class PhotoService {
             args: [sourceFsPath,
                    '-auto-orient', '-strip',              // bake rotation, drop EXIF/GPS
                    '-resize', `${width}x${width}>`,       // bound longest side, never enlarge
-                   '-quality', '82',
+                   '-quality', '88',
                    targetPath],
         }).output();
         if(code !== 0)

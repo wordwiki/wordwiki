@@ -139,8 +139,8 @@ test("cover-crop: EXACT target dimensions, size allowlist, path discipline", asy
         assert(sq.startsWith('derived/cropped-photos/'));
         assertEquals(await dimsOf(`${root}/${sq}`), [256, 256]);
         // A non-square (landscape) size crops to exactly that too.
-        const land = await svc.croppedPhotoPath(photoPath, 512, 384, 0.5);
-        assertEquals(await dimsOf(`${root}/${land}`), [512, 384]);
+        const land = await svc.croppedPhotoPath(photoPath, 960, 720, 0.5);
+        assertEquals(await dimsOf(`${root}/${land}`), [960, 720]);
 
         // Same (size,focus) -> same file (closure-addressed); off-list focus
         // quantizes onto the level set (0.1 -> 0).
