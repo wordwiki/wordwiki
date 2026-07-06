@@ -97,6 +97,23 @@ test("event detail shows present photos with headlines, and nothing when absent"
     });
 });
 
+test("event detail offers hosts an Add Photo affordance for missing shop before/after", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();   // no photos yet
+        // A host (can edit the event) gets an "Add Photo" affordance per slot -
+        // including the shop before/after that aren't set - opening the editor.
+        const host = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
+        const section = findByTestId(host, 'event-photos');
+        assert(section, 'host sees photo slots to fill');
+        assert(hasText(section, 'Shop before') && hasText(section, 'Shop after'));
+        assert(hasText(section, 'Add Photo'));
+        assert(JSON.stringify(section).includes('renderPhotoEditForm'), 'opens the photo editor');
+        // A regular volunteer sees no empty slots / Add affordance.
+        const regular = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assertEquals(findByTestId(regular, 'event-photos'), undefined);
+    });
+});
+
 test("event editing is host-gated at render and save", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const id = insertEvent();

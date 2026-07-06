@@ -433,23 +433,30 @@ export class EventTable extends Table<Event> {
             this.fieldsByName.notes.render(e.notes)];
     }
 
-    // The event's photos (if any), each under its own headline.  The shop
-    // before/after pair is an accountability record (the shop was left no worse
-    // than it was found); event_photo is a general photo of the event.  Absent
-    // photos are simply skipped; nothing renders if there are none.
+    // The event's photos, each under its own headline.  The shop before/after
+    // pair is an accountability record (the shop was left no worse than it was
+    // found); event_photo is a general photo of the event.  Each slot shows the
+    // photo (+ "Edit Photo") when present; when absent it shows an "Add Photo"
+    // affordance TO EDITORS (photoButton is empty for others), so a missing
+    // before/after can be added right here.  A slot that is absent AND
+    // un-addable renders nothing; nothing renders if every slot is empty.
     renderEventPhotos(e: Event): Markup {
         const shots: [string, string, string | undefined][] = [
             ['Shop before', 'shop_before_photo', e.shop_before_photo],
             ['Shop after', 'shop_after_photo', e.shop_after_photo],
             ['Event photo', 'event_photo', e.event_photo],
         ];
-        const present = shots.filter(([, , p]) => typeof p === 'string' && p !== '');
-        if (present.length === 0) return undefined as unknown as Markup;
-        return [h.div, {class: 'mb-4', 'data-testid': 'event-photos'},
-            present.map(([label, fieldName, p]) => [h.div, {class: 'mb-3'},
+        const sections = shots.map(([label, fieldName, p]) => {
+            const has = typeof p === 'string' && p !== '';
+            const button = this.photoButton(e.event_id, fieldName);   // empty for non-editors
+            if(!has && !button) return undefined;                     // absent + can't add -> skip
+            return [h.div, {class: 'mb-3'},
                 [h.h4, {class: 'mt-4'}, label],
-                rabid.photo.aspectImg(p!, 'landscape', 'detail', {class: 'lm-photo-detail'}),
-                [h.div, {class: 'mt-1'}, this.photoButton(e.event_id, fieldName)]])];
+                has ? rabid.photo.aspectImg(p!, 'landscape', 'detail', {class: 'lm-photo-detail'}) : undefined,
+                button ? [h.div, {class: 'mt-1'}, button] : undefined];
+        }).filter(s => s !== undefined);
+        if (sections.length === 0) return undefined as unknown as Markup;
+        return [h.div, {class: 'mb-4', 'data-testid': 'event-photos'}, sections];
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
