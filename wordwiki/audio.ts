@@ -286,7 +286,9 @@ export class AudioRoutes {
 // ===========================================================================
 // The candidate thresholds to A/B, plus the fixed rest of the trim params.
 // To compare a DIFFERENT axis (e.g. minDuration), change these / the cell loop.
-const TRIM_TUNING_THRESHOLDS = ['0.03%', '0.05%', '0.1%', '0.2%', '0.3%'];
+// dz 2026-07-06: the first round bracketed too high - resample the bottom
+// of the range (Original + these five).
+const TRIM_TUNING_THRESHOLDS = ['0.01%', '0.02%', '0.03%', '0.04%', '0.05%'];
 const TRIM_TUNING_MIN_DURATION = 0.1;
 const TRIM_TUNING_FADE = 0.01;
 
