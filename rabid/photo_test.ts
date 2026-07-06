@@ -206,6 +206,55 @@ test("route dispatch: upload (POST) + serve (GET) go through the strict interpre
     });
 });
 
+test("photo crop form: 5 framing tiles (current flagged); a pick reframes only that field", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        const path = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
+        asSystem(() => rabid.volunteer.update(carol, {photo: path}));
+
+        // The picker renders one cover-crop tile per focus level (through the
+        // interpreter, as a host).
+        const form = await asUser(alice, () =>
+            renderRoute(`rabid.volunteer.renderPhotoCropForm(${carol},"photo")`));
+        const tiles = findAll(form, (m: any) =>
+            Array.isArray(m) && m[0] === 'img' && String((m[1] as any)?.class).includes('lm-crop-choice'));
+        assertEquals(tiles.length, CROP_FOCUS_LEVELS.length);
+        for(const t of tiles) assertStringIncludes((t as any[])[1].src, 'rabid.photo.serveCropped');
+
+        // Picking the 'bottom' framing is a saveForm of the photo field to that
+        // cropped value (what the tile's immediate action dispatches).  Only the
+        // framing changes: same content path, other fields untouched.
+        const bottomValue = formatPhotoValue(path, 0.5, 1);
+        const before = asSystem(() => rabid.volunteer.getById(carol));
+        await asUser(alice, () => invoke('rabid.volunteer.saveForm($arg0)', {
+            volunteer_id: String(carol), photo: bottomValue, 'before-photo': path,
+        }));
+        const after = asSystem(() => rabid.volunteer.getById(carol));
+        assertEquals(parsePhotoValue(after.photo!), {path, fx: 0.5, fy: 1});   // reframed
+        assertEquals(after.name, before.name);                                 // untouched
+    });
+});
+
+test("photo crop form rejects when there's no photo / the field isn't a photo", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        await asUser(alice, () => assertRejects(() =>            // carol has no photo yet
+            renderRoute(`rabid.volunteer.renderPhotoCropForm(${carol},"photo")`), Error, "No photo"));
+        asSystem(() => rabid.volunteer.update(carol, {photo: `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`}));
+        await asUser(alice, () => assertRejects(() =>            // 'name' isn't an ImageField
+            renderRoute(`rabid.volunteer.renderPhotoCropForm(${carol},"name")`), Error, "not a photo field"));
+    });
+});
+
+test("the volunteer detail page shows a Crop affordance only when a photo is set", async () => {
+    await withTestDb(async ({ alice, carol }) => {
+        const bare = await asUser(alice, () => renderRoute(`rabid.volunteer.detailPage(${carol})`));
+        assert(!JSON.stringify(bare).includes('renderPhotoCropForm'), 'no photo -> no Crop affordance');
+        asSystem(() => rabid.volunteer.update(carol, {photo: `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`}));
+        const withPhoto = await asUser(alice, () => renderRoute(`rabid.volunteer.detailPage(${carol})`));
+        assert(JSON.stringify(withPhoto).includes('renderPhotoCropForm'), 'photo -> Crop affordance');
+        assert(hasText(withPhoto, 'Crop'));
+    });
+});
+
 test("sale rows and detail lead with the bike photo when present", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const fakePath = `content/photos/3ab/3ab${'1'.repeat(61)}.jpg`;

@@ -13,6 +13,7 @@ import * as security from "./security.ts";
 import {route, routeMutation, authenticated} from "./security.ts";
 import * as date from "./date.ts";
 import * as timestamp from "./timestamp.ts";
+import { photoCroppedSrc, photoCropCandidates, PHOTO_ASPECT_SIZES, type PhotoAspect } from "./photo.ts";
 
 export type Tuple = Record<string, any>;
 
@@ -674,6 +675,70 @@ export class Table<T extends Tuple> extends FieldSet {
     @route(authenticated)
     renderForm(record: T, onsubmit?: string): Markup {
         return this.renderEditForm(record, undefined, onsubmit);
+    }
+
+    // ----- Photo cropping (generic, for any ImageField on this table) --------
+
+    /**
+     * The crop picker for one photo field on one record: the same photo framed
+     * at each focus level (see liminal/photo.ts), rendered as tappable tiles.
+     * Picking a tile immediately saves the field to that framing (via the
+     * normal saveForm - subset-safe and permission-checked), and the reload
+     * re-renders the photo cropped the new way.  One generic form for every
+     * photo field, reached as a modal from photoCropButton.
+     */
+    @route(authenticated)
+    renderPhotoCropForm(id: number, fieldName: string): Markup {
+        const record = this.getById(id);
+        if(!record) throw new Error(`No ${this.name} #${id}`);
+        if(!this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+        const field = this.fieldsByName[fieldName];
+        if(!(field instanceof ImageField))
+            throw new Error(`'${fieldName}' is not a photo field on '${this.name}'`);
+        if(!this.canEdit(field, record))
+            throw new Error(`Not permitted to edit ${field.prompt}`);
+        const value = (record as any)[fieldName];
+        if(typeof value !== 'string' || value === '')
+            throw new Error(`No photo to crop`);
+
+        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].detail;
+        const deps = this.speculatedSaveTargets(record);
+        const pk = (record as any)[this.pkName];
+        const tiles = photoCropCandidates(field.photoServicePath, value, w, h).map(c => {
+            // Clicking a tile saves ONLY this photo field (its content path is
+            // unchanged - just the framing), with the before-snapshot so the
+            // change is detected and the other fields are left untouched.
+            const saveArgs: Record<string, string> = {
+                [this.pkName]: String(pk),
+                [fieldName]: c.value,
+                ['before-'+fieldName]: value,
+            };
+            const expr = `${this}.saveForm(${JSON.stringify(saveArgs)})`;
+            return action.actionButton(
+                ['img', {src: c.src, class: 'lm-crop-choice', alt: ''}],
+                {kind: 'immediate', expr, deps},
+                'btn p-1 border ' + (c.selected ? 'border-primary border-3' : 'border-2 border-light'));
+        });
+        return ['div', {'data-testid': 'photo-crop-form'},
+            ['p', {class: 'text-muted small'}, 'Choose how to frame the photo.'],
+            ['div', {class: 'd-flex flex-wrap gap-2', 'data-testid': 'crop-candidates'}, tiles]];
+    }
+
+    /** A "Crop" affordance (opens renderPhotoCropForm as a modal) for a photo
+     *  field on a record - or nothing when there's no photo or the actor can't
+     *  edit it.  Display sites drop this next to the photo. */
+    photoCropButton(id: number, fieldName: string, label: Markup = 'Crop'): Markup {
+        const record = this.getById(id);
+        const field = record && this.fieldsByName[fieldName];
+        const value = record && (record as any)[fieldName];
+        if(!record || !(field instanceof ImageField) ||
+           typeof value !== 'string' || value === '' ||
+           !this.canEditRecord(record) || !this.canEdit(field, record))
+            return undefined as unknown as Markup;
+        return action.actionButton(label,
+            {kind: 'modal', dialogUrl: `/${this}.renderPhotoCropForm(${id},${JSON.stringify(fieldName)})`},
+            'btn btn-outline-secondary btn-sm');
     }
 
     // Type-ahead option source for a foreign-key field on this table, reachable as
@@ -1539,17 +1604,26 @@ export class TimestampField extends Field {
  * target table.
  */
 export class ImageField extends StringField {
-    constructor(name: string, public photoServicePath: string, options: FieldOptions = {}) {
+    // The display aspect ratio this photo is cropped to (its thumbnail, its
+    // detail image, and the crop picker all frame to this).  Default square.
+    readonly aspect: PhotoAspect;
+
+    constructor(name: string, public photoServicePath: string,
+                options: FieldOptions & {aspect?: PhotoAspect} = {}) {
         super(name, options);
+        this.aspect = options.aspect ?? 'square';
     }
 
-    private serveSrc(value: string, width: number): string {
-        return `/${this.photoServicePath}.serve(${JSON.stringify(value)},${width})`;
+    // Cover-cropped src at this field's aspect: consistent pixels + aspect ratio
+    // for every value, framed by the value's own focus (see liminal/photo.ts).
+    private serveSrc(value: string, kind: 'thumb' | 'detail'): string {
+        const [w, h] = PHOTO_ASPECT_SIZES[this.aspect][kind];
+        return photoCroppedSrc(this.photoServicePath, value, w, h);
     }
 
     render(value: any): Markup {
         if(typeof value !== 'string' || value === '') return '';
-        return ['img', {src: this.serveSrc(value, 256), class: 'lm-photo-thumb',
+        return ['img', {src: this.serveSrc(value, 'thumb'), class: 'lm-photo-thumb',
                         loading: 'lazy', alt: ''}];
     }
 
@@ -1563,7 +1637,7 @@ export class ImageField extends StringField {
              ['input', {type: 'hidden', name: this.name, id: 'input-'+this.name, value: current}],
              ['img', {id: `photo-preview-${this.name}`,
                       class: 'lm-photo-preview' + (has ? '' : ' d-none'),
-                      src: has ? this.serveSrc(current, 256) : '', alt: ''}],
+                      src: has ? this.serveSrc(current, 'thumb') : '', alt: ''}],
              ['input', {type: 'file', accept: 'image/*', class: 'form-control',
                         id: `photo-file-${this.name}`,
                         onchange: `lmPhotoFieldChange(event, ${JSON.stringify(this.photoServicePath)}, ${JSON.stringify(this.name)})`}],

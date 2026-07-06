@@ -67,7 +67,7 @@ export class SaleTable extends Table<Sale> {
             new VolunteerForeignKeyField('sale_recorded_by', {indexed: true}),
             new EnumField('sale_kind', sale_kind_enum, {}),
             new StringField('description', {default: ''}),
-            new ImageField('photo', 'rabid.photo', {nullable: true, prompt: 'Photo'}),
+            new ImageField('photo', 'rabid.photo', {aspect: 'landscape', nullable: true, prompt: 'Photo'}),
             new FloatingPointField('amount', {}),
             new EnumField('payment_method', payment_method_enum, {default: 'cash'}),
             new MarkdownField('notes', {nullable: true})
@@ -122,7 +122,7 @@ export class SaleTable extends Table<Sale> {
             .filter(Boolean).join(' · ');
 
         // A bike sale with a photo leads with a small thumbnail.
-        const thumb = s.photo ? rabid.photo.img(s.photo, 96, {class: 'lm-row-thumb'}) : undefined;
+        const thumb = s.photo ? rabid.photo.aspectImg(s.photo, 'landscape', 'thumb', {class: 'lm-row-thumb'}) : undefined;
 
         // One navigable row species for every viewer (Table.detailItemProps:
         // tap anywhere drills in via the lm-nav-link title); the pencil - shown
@@ -203,7 +203,9 @@ export class SaleTable extends Table<Sale> {
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, s.description || sale_kind_enum[s.sale_kind] || 'Sale'],
              this.canEditRecord(s) ? this.editPencil(sale_id) : undefined],
-            s.photo ? rabid.photo.img(s.photo, 512, {class: 'lm-photo-detail'}) : undefined,
+            s.photo ? [h.div, {class: 'mb-3'},
+                       rabid.photo.aspectImg(s.photo, 'landscape', 'detail', {class: 'lm-photo-detail'}),
+                       [h.div, {class: 'mt-1'}, this.photoCropButton(sale_id, 'photo')]] : undefined,
             [h.dl, {class: 'row mb-0'},
              row('Kind', sale_kind_enum[s.sale_kind] ?? s.sale_kind),
              row('Time', date.sqliteDateTimeToString(s.sale_time, '—')),

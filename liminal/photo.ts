@@ -65,17 +65,51 @@ export function quantizeFocus(v: number): number {
         Math.abs(lvl - v) < Math.abs(best - v) ? lvl : best, CROP_FOCUS_LEVELS[0]);
 }
 
+// Named display aspect ratios, and the allowlisted (thumb, detail) pixel sizes
+// each renders at.  A photo field declares its aspect; the field's thumbnail and
+// the detail-page image pick thumb/detail from here, and the crop picker frames
+// candidates at the detail size.
+export type PhotoAspect = 'square' | 'portrait' | 'landscape' | 'wide';
+export const PHOTO_ASPECT_SIZES:
+        Record<PhotoAspect, {thumb: readonly [number, number], detail: readonly [number, number]}> = {
+    square:    {thumb: [256, 256], detail: [512, 512]},   // 1:1
+    portrait:  {thumb: [192, 256], detail: [384, 512]},   // 3:4
+    landscape: {thumb: [256, 192], detail: [512, 384]},   // 4:3
+    wide:      {thumb: [384, 256], detail: [768, 512]},   // 3:2
+};
+
 // The bounded set of (width,height) a cropped derivative may be produced at -
-// the crop analogue of ALLOWED_WIDTHS.  Grow deliberately as display slots need
-// new sizes.
+// the crop analogue of ALLOWED_WIDTHS (derived from PHOTO_ASPECT_SIZES, plus a
+// tiny square).  Grow deliberately as display slots need new sizes.
 export const ALLOWED_CROP_SIZES: ReadonlyArray<readonly [number, number]> = [
-    [96, 96], [256, 256], [512, 512],       // square (avatars / thumbs)
-    [384, 512], [768, 1024],                // 3:4 portrait
-    [512, 384], [1024, 768],                // 4:3 landscape
-    [768, 512], [1536, 1024],               // 3:2 landscape (event photos)
+    [96, 96],
+    ...Object.values(PHOTO_ASPECT_SIZES).flatMap(s => [s.thumb, s.detail]),
 ];
 function isAllowedCropSize(w: number, h: number): boolean {
     return ALLOWED_CROP_SIZES.some(([aw, ah]) => aw === w && ah === h);
+}
+
+// The serveCropped() URL for a photo VALUE at (width,height) - a free function
+// (needs only the service's mount path, not an instance) so ImageField, which
+// holds just the path string, can build crop URLs too.
+export function photoCroppedSrc(mountPath: string, value: string, width: number, height: number): string {
+    const {path, fy} = parsePhotoValue(value);
+    return `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${quantizeFocus(fy)})`;
+}
+
+// The crop-picker's options for a value at (width,height): the same photo framed
+// at each focus level, the current one flagged, and the field value to store on
+// pick.  Free function for the same reason as photoCroppedSrc.
+export function photoCropCandidates(mountPath: string, value: string, width: number, height: number):
+        Array<{fy: number, selected: boolean, src: string, value: string}> {
+    const {path, fy} = parsePhotoValue(value);
+    const current = quantizeFocus(fy);
+    return CROP_FOCUS_LEVELS.map(level => ({
+        fy: level,
+        selected: level === current,
+        src: `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${level})`,
+        value: formatPhotoValue(path, 0.5, level),   // fx centred in v1
+    }));
 }
 
 // A photo field value is EITHER a bare content path (a centred crop - the
@@ -296,24 +330,21 @@ export class PhotoService {
     }
 
     croppedImgSrc(value: string, width: number, height: number): string {
-        const {path, fy} = parsePhotoValue(value);
-        return `/${this.mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${quantizeFocus(fy)})`;
+        return photoCroppedSrc(this.mountPath, value, width, height);
     }
 
-    // The crop-picker's options: the same photo framed at each focus level, the
-    // one the value currently selects flagged, and the field value to store on
-    // pick.  Each src is a (memoized) derived thumbnail, so the whole strip is
-    // cheap to render after first view.
+    // Cover-cropped <img> at a named aspect's thumb/detail size - the convenient
+    // form for display sites (they name the aspect, not raw pixels).
+    aspectImg(value: string, aspect: PhotoAspect, kind: 'thumb'|'detail',
+              attrs: Record<string, any> = {}): Markup {
+        const [w, h] = PHOTO_ASPECT_SIZES[aspect][kind];
+        return this.croppedImg(value, w, h, attrs);
+    }
+
+    // The crop-picker's options (see photoCropCandidates).
     cropCandidates(value: string, width: number, height: number):
             Array<{fy: number, selected: boolean, src: string, value: string}> {
-        const {path, fy} = parsePhotoValue(value);
-        const current = quantizeFocus(fy);
-        return CROP_FOCUS_LEVELS.map(level => ({
-            fy: level,
-            selected: level === current,
-            src: `/${this.mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${level})`,
-            value: formatPhotoValue(path, 0.5, level),   // fx centred in v1
-        }));
+        return photoCropCandidates(this.mountPath, value, width, height);
     }
 }
 

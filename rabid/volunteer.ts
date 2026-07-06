@@ -169,7 +169,8 @@ export class VolunteerTable extends Table<Volunteer> {
             // Uploading one is the volunteer's own choice: the point is to help
             // other volunteers on a shift learn each other's names.
             new ImageField('photo', 'rabid.photo',
-                           {nullable: true, prompt: 'Photo (optional — helps other volunteers learn your name)'}),
+                           {aspect: 'portrait', nullable: true,
+                            prompt: 'Photo (optional — helps other volunteers learn your name)'}),
             // Day-granularity facts are DateFields (date picker, no time noise).
             new DateField('join_date', {nullable: true}),
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
@@ -551,7 +552,9 @@ export class VolunteerTable extends Table<Volunteer> {
                      'btn btn-outline-secondary btn-sm ms-auto')
                  : undefined],
 
-            v.photo ? rabid.photo.img(v.photo, 512, {class: 'lm-photo-detail'}) : undefined,
+            v.photo ? [h.div, {class: 'mb-3'},
+                       rabid.photo.aspectImg(v.photo, 'portrait', 'detail', {class: 'lm-photo-detail'}),
+                       [h.div, {class: 'mt-1'}, this.photoCropButton(volunteer_id, 'photo')]] : undefined,
 
             [h.dl, {class: 'row mb-0'},
              fieldRow('Email', f.email, v.email, 'detail-email'),

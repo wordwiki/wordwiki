@@ -134,11 +134,11 @@ export class EventTable extends Table<Event> {
             // form renders each as a photo upload/camera control); a nicer
             // on-page way to add them is planned.
             new ImageField('shop_before_photo', 'rabid.photo',
-                           {nullable: true, prompt: 'Shop before photo (how the shop looked before the event)'}),
+                           {aspect: 'landscape', nullable: true, prompt: 'Shop before photo (how the shop looked before the event)'}),
             new ImageField('shop_after_photo', 'rabid.photo',
-                           {nullable: true, prompt: 'Shop after photo (how the shop was left after the event)'}),
+                           {aspect: 'landscape', nullable: true, prompt: 'Shop after photo (how the shop was left after the event)'}),
             new ImageField('event_photo', 'rabid.photo',
-                           {nullable: true, prompt: 'Event photo (optional)'})
+                           {aspect: 'landscape', nullable: true, prompt: 'Event photo (optional)'})
         ],[
             'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);'
         ])
@@ -438,17 +438,18 @@ export class EventTable extends Table<Event> {
     // than it was found); event_photo is a general photo of the event.  Absent
     // photos are simply skipped; nothing renders if there are none.
     renderEventPhotos(e: Event): Markup {
-        const shots: [string, string | undefined][] = [
-            ['Shop before', e.shop_before_photo],
-            ['Shop after', e.shop_after_photo],
-            ['Event photo', e.event_photo],
+        const shots: [string, string, string | undefined][] = [
+            ['Shop before', 'shop_before_photo', e.shop_before_photo],
+            ['Shop after', 'shop_after_photo', e.shop_after_photo],
+            ['Event photo', 'event_photo', e.event_photo],
         ];
-        const present = shots.filter(([, p]) => typeof p === 'string' && p !== '');
+        const present = shots.filter(([, , p]) => typeof p === 'string' && p !== '');
         if (present.length === 0) return undefined as unknown as Markup;
         return [h.div, {class: 'mb-4', 'data-testid': 'event-photos'},
-            present.map(([label, p]) => [h.div, {class: 'mb-3'},
+            present.map(([label, fieldName, p]) => [h.div, {class: 'mb-3'},
                 [h.h4, {class: 'mt-4'}, label],
-                rabid.photo.img(p!, 512, {class: 'lm-photo-detail'})])];
+                rabid.photo.aspectImg(p!, 'landscape', 'detail', {class: 'lm-photo-detail'}),
+                [h.div, {class: 'mt-1'}, this.photoCropButton(e.event_id, fieldName)]])];
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
