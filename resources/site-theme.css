@@ -62,6 +62,13 @@ body {
   padding: 0;
 }
 
+/* Chevrons are retired chrome (liminal/design-language.md): the trailing ›
+   on navigable rows (the users table, category lists) was a second,
+   redundant "this navigates" cue.  rabid.css already hides them; this is
+   wordwiki's counterpart (navChevron() markup still renders - the hide is
+   presentation, so shared list markup stays byte-identical across apps). */
+.lm-nav-chevron { display: none; }
+
 /* The shared "play recording" speaker icon (audio.audioPlayIcon): size it to
    the surrounding text, sit it on the baseline like a text icon, and colour it
    with the accent so it reads as the clickable "play" affordance everywhere -

@@ -109,8 +109,9 @@ reserved signal, used everywhere and nowhere else**:
   the visible signal.
 - **Chevrons are retired.**  The trailing `›` was a *second*, redundant
   "this navigates" cue; once the accent link carries it, the chevron is chrome.
-  (`navChevron()` calls remain but are hidden in CSS, so an app that hasn't
-  adopted the accent link — e.g. wordwiki — still shows them.)
+  (`navChevron()` calls remain but are hidden in CSS — rabid.css and
+  wordwiki's site-theme.css both carry the hide, so no served app shows
+  them.)
 
 This is also the fix for a consistency debt: "what does a navigable thing look
 like" now has ONE answer across volunteers, committees, projects, events.
