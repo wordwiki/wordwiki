@@ -741,7 +741,19 @@ export class LexemeEditor {
     metaEditPage(entry_id: number, changes: boolean = false): templates.Page {
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
-        return templates.page(title, this.renderMetaEntry(entry_id, changes));
+        return templates.page(title, [this.renderMetaEntry(entry_id, changes),
+                                      this.keyboardHint()]);
+    }
+
+    /** A discreet pointer to the keyboard editing model (keyboard-driven-
+     *  editing.md) at the page's foot - casual users read past it; power
+     *  users learn the flow exists.  Page chrome, OUTSIDE the entry's reload
+     *  fragment, so refreshes never touch it. */
+    private keyboardHint(): Markup {
+        return ['div', {class: 'lm-kbd-hint text-muted'},
+                'Keyboard: Tab or ↑ ↓ moves, Enter edits — ',
+                ['button', {type: 'button', class: 'btn btn-link btn-sm p-0 align-baseline',
+                            onclick: 'lmKbdHelp()'}, 'all shortcuts']];
     }
 
     /** The whole metadata entry as an outerHTML-swappable reload fragment.

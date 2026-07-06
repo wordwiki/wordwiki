@@ -57,6 +57,15 @@
     outline-offset: 2px;
     border-radius: .25rem;
 }
+/* The page-foot keyboard hint (one quiet line; its link opens lmKbdHelp). */
+.lm-kbd-hint {
+    text-align: center;
+    font-size: .85rem;
+    margin: 2rem 0 1rem;
+}
+.lm-kbd-hint .btn-link {
+    font-size: inherit;
+}
 
 /* The standard edit-affordance marker (and its sibling, the ☰ less-common-
    actions menu button - action.ts actionMenu): icon-only <button>s (quieter
