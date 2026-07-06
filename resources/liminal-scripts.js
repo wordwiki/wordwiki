@@ -519,16 +519,73 @@ function hideModalEditor() {
     getModalBodyElem().innerHTML = '';
 }
 
+/**
+ * Bootstrap replacement for window.confirm (the confirm action mode and the
+ * modal discard guard).  Native confirm blocks the event loop - stalling
+ * automation, exactly like native alert (see showAlert) - and looks nothing
+ * like the app.  Returns a Promise<boolean>.  The OK button is focused, so
+ * Enter confirms (native confirm's Enter=OK); Esc / backdrop / Cancel
+ * decline.  Stacks above an open #modalEditor (appended later in the DOM, so
+ * it paints above at Bootstrap's shared modal z-index); on close, body's
+ * modal-open is restored if another modal is still up (Bootstrap drops it
+ * when ANY modal hides).  Falls back to native confirm if Bootstrap is
+ * unavailable or anything throws - a question must never be silently lost.
+ */
+let lmConfirmEl = null;
+function lmConfirm(message) {
+    try {
+        if (typeof bootstrap === 'undefined') return Promise.resolve(confirm(message));
+        if (!lmConfirmEl) {
+            lmConfirmEl = document.createElement('div');
+            lmConfirmEl.className = 'modal fade';
+            lmConfirmEl.id = 'lmConfirmModal';
+            lmConfirmEl.setAttribute('tabindex', '-1');
+            lmConfirmEl.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered modal-sm">'
+                + '<div class="modal-content">'
+                + '<div class="modal-body lm-confirm-message"></div>'
+                + '<div class="modal-footer border-0 pt-0">'
+                + '<button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>'
+                + '<button type="button" class="btn btn-sm btn-primary lm-confirm-ok">OK</button>'
+                + '</div></div></div>';
+            document.body.appendChild(lmConfirmEl);
+        }
+        lmConfirmEl.querySelector('.lm-confirm-message').textContent = message;
+        const okBtn = lmConfirmEl.querySelector('.lm-confirm-ok');
+        const modal = bootstrap.Modal.getOrCreateInstance(lmConfirmEl);
+        return new Promise((resolve) => {
+            let ok = false;
+            const onOk = () => { ok = true; modal.hide(); };
+            okBtn.addEventListener('click', onOk, {once: true});
+            lmConfirmEl.addEventListener('shown.bs.modal', () => okBtn.focus(), {once: true});
+            lmConfirmEl.addEventListener('hidden.bs.modal', () => {
+                okBtn.removeEventListener('click', onOk);
+                if (document.querySelector('.modal.show'))
+                    document.body.classList.add('modal-open');
+                resolve(ok);
+            }, {once: true});
+            modal.show();
+        });
+    } catch (e) {
+        console.error('lmConfirm failed - falling back to native confirm', e);
+        return Promise.resolve(confirm(message));
+    }
+}
+
 // Wire the discard guard.  hide.bs.modal is cancelable: preventDefault keeps
-// the dialog open.  (This script loads at the end of <body>, after the modal
-// skeleton; pages without a modal editor skip silently.)
+// the dialog open; the (async, Bootstrap) confirm then either re-hides via
+// hideModalEditor (which sets the discard flag) or leaves the dialog up.
+// (This script loads at the end of <body>, after the modal skeleton; pages
+// without a modal editor skip silently.)
 (() => {
     const modal = document.getElementById('modalEditor');
     if (modal) modal.addEventListener('hide.bs.modal', (event) => {
         if (lmModalDiscardOk || lmModalInitialState === null)
             return;
-        if (lmModalFormState() !== lmModalInitialState && !confirm('Discard changes?'))
+        if (lmModalFormState() !== lmModalInitialState) {
             event.preventDefault();
+            lmConfirm('Discard changes?').then((ok) => { if (ok) hideModalEditor(); });
+        }
     });
 })();
 

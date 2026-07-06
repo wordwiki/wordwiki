@@ -74,8 +74,10 @@ export function actionButton(label: Markup, mode: ActionMode,
             return [h.button, {type:'button', class:btnClass,
                                onclick:`${txTag(mode.deps)}\`${mode.expr}\``, ...extraProps}, label];
         case 'confirm':
+            // lmConfirm (liminal-scripts.js): the Bootstrap confirm - native
+            // confirm blocks the event loop and stalls automation.
             return [h.button, {type:'button', class:btnClass,
-                               onclick:`if(confirm(${JSON.stringify(mode.message)})) ${txTag(mode.deps)}\`${mode.expr}\``,
+                               onclick:`lmConfirm(${JSON.stringify(mode.message)}).then((ok)=>{ if(ok) ${txTag(mode.deps)}\`${mode.expr}\`; })`,
                                ...extraProps}, label];
         case 'modal':
             // Same wiring as table.editButtonProps, minus the record-edit 'edit'
