@@ -141,6 +141,21 @@ test("edit mode: compose is read-only - the composed-in text child stays editabl
     });
 });
 
+test("edit mode: an empty container scalar renders as a labelled empty line", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            seed(fx);
+            // The seed's subentry (1100) has NO part_of_speech - the
+            // new-lexeme skeleton case (dz): the line must still say WHAT
+            // it is, in the empty-relation slot look, not render as a bare
+            // unlabelled line.
+            const edit = markupToString(fx.ww.lexeme.renderMetaEntry(1000));
+            const norm = edit.replace(/\s+/g, " ");
+            assertStringIncludes(norm, "Part of speech: </b> <span class='text-muted fst-italic'>empty");
+        });
+    });
+});
+
 test("edit mode: the spelling section renders (title-only is a read convenience)", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {

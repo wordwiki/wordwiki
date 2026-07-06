@@ -301,7 +301,17 @@ export class EntryRenderer {
      *  is a "block" for the vertical rhythm (see the CSS). */
     protected renderScalarField(f: model.ScalarField, node: EntryNode): Markup {
         const rendered = this.renderScalarValue(f, node.value(f));
-        if (isEmptyMarkup(rendered)) return "";
+        if (isEmptyMarkup(rendered)) {
+            // EDIT mode: a value-less scalar still shows as "Prompt: empty"
+            // (the empty-relation slot look).  dz: the new-lexeme skeleton's
+            // subentry has no part of speech yet, and a surface whose only
+            // scalar elides renders as a bare UNLABELLED line - confusing.
+            // Read mode keeps eliding empties (documents); the reference
+            // scan is structural, never "empty".
+            if (!this.editing || f.style.$shape === "boundingGroup") return "";
+            return ["div", { class: LINE }, ["b", {}, f.prompt + ": "],
+                    ["span", { class: "text-muted fst-italic" }, "empty"]];
+        }
         switch (view(f).label ?? "none") {
             case "inline":  return ["div", { class: LINE }, ["b", {}, f.prompt + ": "], rendered];
             case "heading": return ["div", { class: LINE }, ["div", { class: "fw-bold" }, f.prompt + ":"], rendered];
