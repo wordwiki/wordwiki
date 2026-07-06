@@ -38,6 +38,7 @@ import {lazy} from '../liminal/lazy.ts';
 import {LexemeEditor} from './lexeme-editor.ts';
 import {ChangeFeed} from './change-feed.ts';
 import {ActivityReport} from './activity-report.ts';
+import {SpellingReports} from './spelling-duplicates.ts';
 import {RecentWords} from './recent-words.ts';
 import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
@@ -134,6 +135,13 @@ export class WordWiki extends LiminalApp {
     #feed: ChangeFeed|undefined = undefined;
     @route(authenticated) @path get feed(): ChangeFeed {
         return this.#feed ??= new ChangeFeed(this);
+    }
+
+    // The duplicate-spelling report, reachable as wordwiki.spellings.*
+    // (wordwiki.spellings.duplicatesReport()).  See spelling-duplicates.ts.
+    #spellings: SpellingReports|undefined = undefined;
+    @route(authenticated) @path get spellings(): SpellingReports {
+        return this.#spellings ??= new SpellingReports();
     }
 
     // The monthly activity report, reachable as wordwiki.report.* (page
@@ -598,6 +606,7 @@ export class WordWiki extends LiminalApp {
             ['ul', {},
              ['li', {}, ['a', {href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
              ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],
@@ -1666,7 +1675,11 @@ if (import.meta.main) {
             }
             instanceDir_.acquireDbLock(instanceDir);
 
-            security.runSystem(() => ww.ensureNewStyleTables());
+            // Both are idempotent (all IF NOT EXISTS): createAllTables also
+            // APPLIES NEW INDEX LINES to an existing db - without it a new
+            // index in createAssertionDml never reaches long-lived instances
+            // (this bit the fixed valid_to partial indexes once already).
+            security.runSystem(() => { ww.ensureNewStyleTables(); createAllTables(); });
 
             // Announce exactly which instance/db/port we are on (so a glance at
             // the log catches "I thought this was the dev/prod instance").

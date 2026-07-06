@@ -88,7 +88,28 @@ export const states: Record<string, string> = {
     'Archived': 'Archived',
     'ArchivedIncomplete': 'Archived - Incomplete',
     'ArchivedNotAWord': 'Archived - Not A Word',
+    'ArchivedDuplicate': 'Archived - Duplicate',
 };
+
+/**
+ * Archival is our DELETE (e.g. a duplicate word is resolved by archiving one
+ * side), so features treat archived entries specially: they are excluded
+ * from duplicate-spelling detection (spelling-duplicates.ts) and marked
+ * ARCHIVED in the internal presentation text (see
+ * renderEntryCompactSummaryCore / renderEntryTitle).  The NAMING CONVENTION
+ * IS LOAD-BEARING: every archived status slug starts with 'Archived', so a
+ * new archived variant joins the special-casing automatically - name it
+ * accordingly (and don't name a non-archival status 'Archived*').
+ */
+export function isArchivedStatus(statusSlug: string): boolean {
+    return statusSlug.startsWith('Archived');
+}
+
+/** Whether the entry carries ANY current archived status (an entry oddly
+ *  holding both an archived and a live status row counts as archived). */
+export function isArchivedEntry(e: Entry): boolean {
+    return e.status.some(s => isArchivedStatus(s.status));
+}
 
 export const todos: Record<string, string> = {
     'Todo': 'Todo',
@@ -833,7 +854,12 @@ export function renderEntryCompactSummaryCore(e: Entry): any {
     // TODO handle dialects here.
     const spellings = getSpellings(e).map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
-    return [['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')];
+    return [['strong', {}, spellings.join(', ')],
+            // Archival is our delete, but archived words still appear in
+            // internal searches/lists - so their presentation line says so.
+            isArchivedEntry(e)
+                ? ['span', {class: 'badge text-bg-secondary ms-1 me-1'}, 'ARCHIVED'] : undefined,
+            ' : ', glosses.join(' / ')];
 }
 
 /**
@@ -843,8 +869,9 @@ export function renderEntryTitle(e: Entry): string {
     // TODO handle dialects here.
     const spellings = getSpellings(e).map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+    const archived = isArchivedEntry(e) ? ' [ARCHIVED]' : '';
     // TODO mikmaq online text here should come from config XXXX
-    return `${spellings.join(', ')} :: ${glosses.join(' / ')} -- Mi'gmaq/Mi'kmaq Online`;
+    return `${spellings.join(', ')}${archived} :: ${glosses.join(' / ')} -- Mi'gmaq/Mi'kmaq Online`;
 }
 
 export function renderEntrySpellingsSummary(e: Entry): string {

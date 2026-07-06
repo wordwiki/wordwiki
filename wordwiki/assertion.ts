@@ -395,6 +395,11 @@ export const createAssertionDml = (tableName:string)=>block`
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_valid_from ON ${tableName}(valid_from);
 /**/   CREATE INDEX IF NOT EXISTS ${tableName}_valid_to ON ${tableName}(valid_to) WHERE valid_to != ${timestamp.END_OF_TIME};
 /**/
+/**/   -- attr1 is the workhorse attribute (spellings among much else); indexing
+/**/   -- it makes by-value probes cheap - the duplicate-spelling warning
+/**/   -- (spelling-duplicates.ts) does one per spelling on every editor render.
+/**/   CREATE INDEX IF NOT EXISTS ${tableName}_attr1 ON ${tableName}(attr1);
+/**/
 /**/   -- One CURRENT (END_OF_TIME) version per fact: the db-level backstop for
 /**/   -- the workspace's version-chain invariant.  (These partial indexes used
 /**/   -- to say 'valid_to = NULL', which never matches in SQLite - on a db that

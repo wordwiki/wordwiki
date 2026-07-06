@@ -309,10 +309,13 @@ test("review refresh is scoped: actions touch the group + count fragment, not th
             assertStringIncludes(html, "renderReviewGroupFragment(1000, 1010");
             assertStringIncludes(html, "-review-pending-1000-");
 
-            // The approve action reloads ONLY those two - never the entry root.
+            // The approve action reloads the group + count, plus the editor
+            // look's fact fragment and changes-bar count (approve-in-place
+            // reaches this verb from the ☰ too) - never the entry root.
             const r = fx.ww.lexeme.reviewApprove(1000, 1010);
             assertEquals(r, {action: "reload",
-                             targets: [".-review-group-1010-", ".-review-pending-1000-"]});
+                             targets: [".-review-group-1010-", ".-review-pending-1000-",
+                                       ".-fact-1010-", ".-entry-1000-activity-"]});
 
             // After approval the group fragment re-renders to nothing (it removes
             // itself), while full history still shows the now-settled fact.

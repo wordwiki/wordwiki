@@ -67,6 +67,7 @@ import {renderGroupedChangeList, renderChangeGroup, initials,
         type ChangeEvent, type ChangeKind, type ChangeGroup} from './change-list.ts';
 import {diffValues} from './diff.ts';
 import {isAutomatedUsername} from './user.ts';
+import {renderDuplicateSpellingWarning, type Spelling} from './spelling-duplicates.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
@@ -592,6 +593,11 @@ export class LexemeEditor {
             ['div', {class: `-entry-${entry_id}- container py-3`,
                      'hx-get': hxGet,
                      'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
+             // The classic look's twin of renderMetaEntry's duplicate warning
+             // (same free refresh: spelling changeKeys include the entry
+             // root).  Shown in review mode too - "is this a duplicate?" is
+             // review-relevant for a newly added word.
+             renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q)),
              this.renderModeToggle(entry_id, entryTuple, mode, opts),
              ['h2', {}, heading || 'No spellings'],
              mode === 'review'
@@ -769,8 +775,23 @@ export class LexemeEditor {
                         'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 ['div', {class: 'page-content'},
+                 // Inside the root fragment on purpose: every spelling
+                 // mutation's changeKeys include the entry root (headword
+                 // titleRole), so the duplicate check re-runs on exactly the
+                 // edits that can change its answer - no editor plumbing.
+                 renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q)),
                  this.metaChangesBarFragment(entry_id, changes),
                  this.metaRenderer(entry_id, changes).render(entryRel, root)]];
+    }
+
+    /** The entry's current spellings, straight from the workspace tuple the
+     *  render is already holding (in-flight/pending values included - the
+     *  duplicate warning must fire DURING data entry). */
+    private currentSpellings(q: CurrentTupleQuery): Spelling[] {
+        return (q.childRelations[entrySchema.SpellingTag]?.tuples ?? [])
+            .map(tq => tq.mostRecentTupleVersion?.assertion)
+            .filter((a): a is Assertion => a != null && typeof a.attr1 === 'string' && a.attr1 !== '')
+            .map(a => ({text: a.attr1 as string, variant: a.variant ?? null}));
     }
 
     /** The configured metadata renderer - one construction shared by the
@@ -902,7 +923,7 @@ export class LexemeEditor {
                     ? ['span', {class: 'lm-cl-chip lm-cl-chip-added'}, 'added']
                     : this.wasAnnotation(rf, review);
                 const menu = action.actionMenu(
-                    [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit'),
+                    [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit', review),
                      ...this.demotedAddItems(id.entryId, id.factId, rf, q)],
                     {ariaLabel: `Actions for this ${rf.prompt}`});
                 // A self-refreshing fragment: a content edit reloads just this
@@ -1233,11 +1254,9 @@ export class LexemeEditor {
         // not yet approved (an unpublished edit/addition sitting on top of - or
         // in place of - the published version), so an editor can see at a glance
         // what still carries an unaccepted change.  (publication-model.md)
-        const pending = (() => {
-            const s = classifyFact(tq.src.tupleVersions.map(v => v.assertion),
-                                   timestamp.END_OF_TIME).state;
-            return s === 'added' || s === 'edited';
-        })();
+        const review = classifyFact(tq.src.tupleVersions.map(v => v.assertion),
+                                    timestamp.END_OF_TIME);
+        const pending = review.state === 'added' || review.state === 'edited';
         return (
             ['div', {class: `-fact-${fact_id}- lm-editable d-flex align-items-start `
                             + `${pending ? 'lm-pending-fact ' : ''}${extraClasses}`,
@@ -1246,7 +1265,7 @@ export class LexemeEditor {
                      onclick: 'lmEditableClick(event)'},
              pending ? ['span', {class:'lm-pending-dot', title:'unapproved change'}, ''] : [],
              ['div', {class:'flex-grow-1'}, this.renderTupleValues(rf, current)],
-             this.tupleActionMenu(entry_id, fact_id, rf, current),
+             this.tupleActionMenu(entry_id, fact_id, rf, current, review),
             ]);
     }
 
@@ -1254,9 +1273,10 @@ export class LexemeEditor {
      *  (lmEditableClick declines clicks on buttons, so opening the menu
      *  doesn't also open the edit dialog.) */
     private tupleActionMenu(entry_id: number, fact_id: number,
-                            rf: model.RelationField, current: TupleVersion): Markup {
+                            rf: model.RelationField, current: TupleVersion,
+                            review?: FactReview<Assertion>): Markup {
         return action.actionMenu(
-            this.editMenuItems(entry_id, fact_id, rf, current.assertion, 'edit'),
+            this.editMenuItems(entry_id, fact_id, rf, current.assertion, 'edit', review),
             {ariaLabel: `Actions for this ${rf.prompt}`});
     }
 
@@ -1266,7 +1286,8 @@ export class LexemeEditor {
      *  `mode` rides into every action so its reload re-renders in the same
      *  look (review mode reloads coarsely - see mutationTargets). */
     private editMenuItems(entry_id: number, fact_id: number, rf: model.RelationField,
-                          current: Assertion, mode: EditMode): action.ActionMenuItem[] {
+                          current: Assertion, mode: EditMode,
+                          review?: FactReview<Assertion>): action.ActionMenuItem[] {
         const parentPath = getAssertionPath(current);
         const parent_fact_id = parentPath[parentPath.length-2][1];
         // Bounding-group/image relations create tuples via their own flows
@@ -1316,6 +1337,23 @@ export class LexemeEditor {
             {label: 'Delete', btnClass: 'lm-act-delete', mode: {kind: 'confirm', deps: shapeDeps,
                 expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id}${m})`,
                 message: `Delete this ${rf.prompt}?`}},
+            // Approve-in-place: when the caller passes the fact's review
+            // classification and its current value is a pending addition/edit
+            // the actor may approve (approve permission + the two-person
+            // rule), offer the per-fact Approve right here - an approver
+            // sitting in the editor shouldn't have to flip to review mode to
+            // settle a change they just witnessed.  Review mode stays the
+            // canonical diff-first review pass (and the only place pending
+            // DELETIONS - invisible here - can be approved).  Same verb as
+            // review mode, so every server-side gate behaves identically.
+            ...(mode === 'edit' && review
+                && (review.state === 'added' || review.state === 'edited')
+                && this.app.lexemeOps.mayApprove(review.content.change_by_username ?? null)
+                ? [{label: 'Approve', btnClass: 'lm-act-approve',
+                    mode: {kind: 'immediate' as const,
+                           deps: this.approveTargets(entry_id, fact_id),
+                           expr: `wordwiki.lexeme.reviewApprove(${entry_id}, ${fact_id})`}}]
+                : []),
         ];
     }
 
@@ -2032,11 +2070,27 @@ export class LexemeEditor {
     // re-renders the fact reclassified, or removes itself if it has left the
     // queue) plus the bar's pending COUNT - never the whole entry.
 
-    /** Approve a fact's pending content (publishes it). */
+    /** Approve a fact's pending content (publishes it).  Reachable from the
+     *  review page AND the editor's per-fact ☰ (approve-in-place), so the
+     *  emission is the union of both looks' keys; targets absent from the
+     *  requesting page are client no-ops. */
     @route(authenticated)
     reviewApprove(entry_id: number, fact_id: number): any {
         this.app.lexemeOps.approveFact(fact_id);
-        return this.reload(this.reviewActionTargets(entry_id, fact_id));
+        return this.reload(this.approveTargets(entry_id, fact_id));
+    }
+
+    /** The dirty keys an approve emits - the ONE source of truth for both
+     *  reviewApprove's emission and the ☰ Approve item's speculation deps.
+     *  Approve changes publication state, not current values, so the edit
+     *  look needs only the fact's own fragment (the pending dot / was-diff
+     *  clears) and the changes bar/hint count - NOT changeKeys' content
+     *  scope (a spelling's would widen to the entry root, defeating review
+     *  mode's scoped refresh). */
+    private approveTargets(entry_id: number, fact_id: number): string[] {
+        return [...this.reviewActionTargets(entry_id, fact_id),
+                `.-fact-${fact_id}-`,
+                `.-entry-${entry_id}-activity-`];
     }
 
     /**
