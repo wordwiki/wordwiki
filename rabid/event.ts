@@ -172,6 +172,10 @@ export class EventTable extends Table<Event> {
     // Events label by description (no 'name'/'title' column) - so an owned
     // project's derived name resolves to the event's description.
     override recordLabel(e: Event): string {
+        // A catch-all carries no description; it labels by its day so it reads
+        // sensibly as a service/sale's parent link and on its own page.
+        if(e.is_catch_all && e.catch_all_date)
+            return `Ad-hoc — ${date.sqliteDateToString(e.catch_all_date, '', {month: 'short', day: 'numeric'})}`;
         return e.description || `event ${e.event_id}`;
     }
 
@@ -445,7 +449,7 @@ export class EventTable extends Table<Event> {
         const checklistAdds = rabid.task.ownerChecklistAddItems('event', event_id);
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
-             [h.h2, {class: 'mb-0'}, e.description || 'Untitled Event'],
+             [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
              this.canEditRecord(e) ? this.editPencil(event_id) : undefined,
              checklistAdds.length
                  ? action.actionMenu(checklistAdds, {ariaLabel: 'Add a checklist'})
@@ -456,6 +460,9 @@ export class EventTable extends Table<Event> {
             this.renderEventNotes(e),
             // Event photos (if any), each under its own headline.
             this.renderEventPhotos(e),
+            // The log: services + sales recorded at this event (the heart of the
+            // event-centric model; on a catch-all it is essentially the whole page).
+            this.renderEventActivity(event_id),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
             // heading like the checklists below.
@@ -463,6 +470,48 @@ export class EventTable extends Table<Event> {
             // Checklists instantiated from templates (setup/cleanup), each a
             // document section; adding a new one is the ☰ above.
             rabid.task.renderOwnerChecklists('event', event_id),
+        ];
+    }
+
+    // The event's activity log: services + sales recorded at this event, as a
+    // peer document section.  Reloads when a service OR sale on this event is
+    // added/edited (registers both fk keys - the mutation's automatic emission
+    // re-renders us).  Adding is host/admin (services/sales are host-edited), via
+    // a quiet ☰ (Add service / Add sale), each dispatching a pre-bound dialog.
+    @route(authenticated)
+    renderEventActivity(event_id: number): Markup {
+        const services = security.runSystem(() => rabid.service.servicesForEvent.all({event_id}));
+        const sales = security.runSystem(() => rabid.sale.salesForEvent.all({event_id}));
+        const props = reloadableProps(
+            [rabid.service.fkKey('event_id', event_id), rabid.sale.fkKey('event_id', event_id)],
+            `rabid.event.renderEventActivity(${event_id})`);
+        const canAdd = rabid.service.canEditRecord({event_id} as any);
+        const addMenu: action.ActionMenuItem[] = canAdd ? [
+            {label: 'Add service…',
+             mode: {kind: 'modal', dialogUrl: `/rabid.service.newServiceForEventDialog(${event_id})`}},
+            {label: 'Add sale…',
+             mode: {kind: 'modal', dialogUrl: `/rabid.sale.newSaleForEventDialog(${event_id})`}},
+        ] : [];
+        const empty = services.length === 0 && sales.length === 0;
+        return [h.div, props,
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Activity'],
+             addMenu.length
+                 ? action.actionMenu(addMenu, {ariaLabel: 'Add activity'})
+                 : undefined],
+            [h.div, {class: 'lm-subsection'},
+             empty
+                 ? [h.p, {class: 'text-muted small mb-0'}, 'No activity logged yet.']
+                 : [services.length
+                        ? [h.div, {class: 'mb-3'},
+                           [h.h5, {class: 'lm-doc-section-label'}, 'Services'],
+                           rabid.service.renderServiceList(services)]
+                        : undefined,
+                    sales.length
+                        ? [h.div, {},
+                           [h.h5, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
+                           rabid.sale.renderSaleList(sales)]
+                        : undefined]],
         ];
     }
 
@@ -849,7 +898,7 @@ export class EventTable extends Table<Event> {
         const headerElements: Markup[] = [];
         
         // Event name, linking to the detail page (unless we ARE the detail page).
-        const title = [h.strong, {}, event.description || 'Untitled Event'];
+        const title = [h.strong, {}, this.recordLabel(event)];
         headerElements.push(
             titleLink
                 ? [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${event_id})`),
@@ -859,7 +908,7 @@ export class EventTable extends Table<Event> {
         
         // Event kind badge - only for the exceptional kinds (public is the
         // unmarked default; Remote rides the location row, not a badge).
-        if (event.event_kind && event.event_kind !== 'public') {
+        if (event.event_kind && event.event_kind !== 'public' && !event.is_catch_all) {
             headerElements.push(' ');
             headerElements.push(
                 [h.span, {class: `card-badge event-${event.event_kind}`},
@@ -930,6 +979,11 @@ export class EventTable extends Table<Event> {
             );
         }
         
+        // Attendance (sign-ups + check-ins) is meaningless on a catch-all: it is
+        // not an event volunteers "attend" (they log drop-in time via timesheets),
+        // and full-event check-in there would corrupt attendance reporting.  So a
+        // catch-all shows no sign-up / check-in rows at all.
+        if (!event.is_catch_all) {
         // Signed-up row (commitments).  On the detail page (editableCheckins) the
         // value IS the sign-up editor (always shown, so the ☰ is reachable even
         // with nobody signed up yet); elsewhere (cards) it's a read-only names list.
@@ -982,6 +1036,7 @@ export class EventTable extends Table<Event> {
                 ]
             );
         }
+        }   // end !is_catch_all attendance block
         
         // Cash collected row (only show if > 0)
         if (event.total_cash_collected && event.total_cash_collected > 0) {

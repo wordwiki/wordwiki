@@ -11,7 +11,8 @@ import {block} from "../liminal/strings.ts";
 import {path} from "../liminal/serializable.ts";
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
-import {route, authenticated} from "../liminal/security.ts";
+import {route, routeMutation, authenticated} from "../liminal/security.ts";
+import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import * as pageQueries from './page-queries.ts';
 import {rabid} from './rabid.ts';
@@ -94,6 +95,52 @@ export class SaleTable extends Table<Sale> {
 /**/   SELECT ${this.allFields}
 /**/          FROM sale
 /**/          ORDER BY sale_time DESC`);
+    }
+
+    // The sales (incl. free bikes/giveaways) logged at one event - its Activity
+    // section, newest first.
+    @path
+    get salesForEvent() {
+        return this.prepare<Sale, {event_id: number}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM sale
+/**/          WHERE event_id = :event_id
+/**/          ORDER BY sale_time DESC`);
+    }
+
+    // Add a sale/giveaway bound to an event (the event page's "Add sale…").
+    // event_id rides hidden; sale_time (now) and sale_recorded_by (the actor) are
+    // stamped by the mutation, not entered.  host/admin only.
+    @route(hostOrAdmin)
+    newSaleForEventDialog(event_id: number): Markup {
+        const f = this.fieldsByName;
+        return action.renderParamForm(
+            [f.sale_kind, f.description, f.amount, f.payment_method],
+            {sale_kind: 'bike', amount: 0, payment_method: 'cash'} as Partial<Sale>,
+            {
+                title: 'Add sale',
+                submitLabel: 'Add',
+                hidden: {event_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.sale.addSaleForEvent(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(hostOrAdmin)
+    addSaleForEvent(args: {event_id?: string|number, sale_kind?: string,
+                           description?: string, amount?: string|number,
+                           payment_method?: string}): number {
+        const event_id = Number(args?.event_id);
+        if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
+        const sale_kind = args.sale_kind || 'bike';
+        return this.insert({
+            event_id, sale_kind,
+            sale_time: date.temporalToSqliteDateTime(date.orgNow()),
+            sale_recorded_by: security.current()!.actorId!,
+            description: (args.description ?? '').trim(),
+            amount: Number(args.amount) || 0,
+            payment_method: args.payment_method || 'cash',
+        } as Partial<Sale>);
     }
 
     // Windowed variant for the Sales page (DATE() includes the whole `to` day).

@@ -15,7 +15,8 @@ import * as timestamp from '../liminal/timestamp.ts';
 import * as date from '../liminal/date.ts';
 import {Markup, h} from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
-import {route, authenticated} from "../liminal/security.ts";
+import {route, routeMutation, authenticated} from "../liminal/security.ts";
+import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import * as pageQueries from './page-queries.ts';
 
@@ -127,6 +128,56 @@ export class ServiceTable extends Table<Service> {
 /**/   SELECT ${this.allFields}
 /**/          FROM service
 /**/          ORDER BY service_check_in_time DESC`);
+    }
+
+    // The services logged at one event (its Activity section).  Ordered by
+    // check-in time (NULLs - not-yet-checked-in - sort last).
+    @path
+    get servicesForEvent() {
+        return this.prepare<Service, {event_id: number}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM service
+/**/          WHERE event_id = :event_id
+/**/          ORDER BY service_check_in_time IS NULL, service_check_in_time`);
+    }
+
+    // Add a service bound to an event (the event page's "Add service…").  A
+    // curated intake subset (the rest is filled in later via the detail edit
+    // form); event_id rides as a hidden field so the record lands on this event.
+    // host/admin only, like all service editing.
+    @route(hostOrAdmin)
+    newServiceForEventDialog(event_id: number): Markup {
+        const f = this.fieldsByName;
+        return action.renderParamForm(
+            [f.client_name, f.client_postal, f.client_phone, f.service_kind,
+             f.service_description, f.client_number_of_people_served],
+            {service_kind: 'diy', client_number_of_people_served: 1} as Partial<Service>,
+            {
+                title: 'Add service',
+                submitLabel: 'Add',
+                hidden: {event_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.service.addServiceForEvent(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(hostOrAdmin)
+    addServiceForEvent(args: {event_id?: string|number, client_name?: string,
+                              client_postal?: string, client_phone?: string,
+                              service_kind?: string, service_description?: string,
+                              client_number_of_people_served?: string|number}): number {
+        const event_id = Number(args?.event_id);
+        if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
+        const client_name = (args.client_name ?? '').trim();
+        if(!client_name) throw new Error('Client name is required');
+        return this.insert({
+            event_id, client_name,
+            client_postal: (args.client_postal ?? '') || undefined,
+            client_phone: (args.client_phone ?? '') || undefined,
+            service_kind: args.service_kind || 'diy',
+            service_description: (args.service_description ?? '').trim(),
+            client_number_of_people_served: Number(args.client_number_of_people_served) || 1,
+        } as Partial<Service>);
     }
 
     // Windowed variant for the Service page.  A NULL check-in time is a
