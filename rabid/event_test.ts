@@ -83,38 +83,66 @@ test("addEventPhoto drops a card of the chosen kind; delete removes it; add is h
         assertEquals(rows[0].photo_kind, 'shop-before');
         assertEquals(rows[0].event_id, id);
 
-        // The card renders its kind label + an "Add Photo" affordance (empty photo).
+        // The card renders its kind label + a single pencil (-> Edit Photo).
         const detail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
         assert(hasText(detail, 'Shop Before'));
-        assert(hasText(detail, 'Add Photo'));
+        assert(JSON.stringify(detail).includes('renderPhotoEditForm'), 'card has the Edit Photo pencil');
 
         await asUser(alice, () => invoke(`rabid.event_photo.remove($arg0)`, rows[0].event_photo_id));
         assertEquals(asSystem(() => rabid.event_photo.forEvent.all({event_id: id}).length), 0);
     });
 });
 
-test("a set event photo renders its image + caption; the details form omits event_id", async () => {
+test("event photo card: image + caption + photographer (kind elided); Edit Photo has caption/photographer, not event_id", async () => {
     await withTestDb(async ({ alice }) => {
         const id = insertEvent();
         const photoPath = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
         const pid = asSystem(() => rabid.event_photo.insert(
-            {event_id: id, photo_kind: 'event', caption: 'Big turnout', photo: photoPath} as any));
+            {event_id: id, photo_kind: 'event', caption: 'Big turnout',
+             photographer: 'Ada Lens', photo: photoPath} as any));
 
         const card = await asUser(alice, () => renderRoute(`rabid.event_photo.renderPhotoCardById(${pid})`));
-        assert(hasText(card, 'Event Photo'));
         assert(hasText(card, 'Big turnout'));
+        assert(hasText(card, 'Ada Lens'));
+        assert(!hasText(card, 'Event Photo'), "the 'Event Photo' kind is elided when captioned");
         const imgs = findAll(card, (m: any) => Array.isArray(m) && m[0] === 'img');
         assert(imgs.length >= 1, 'the image renders');
         assertStringIncludes((imgs[0] as any[])[1].src, 'rabid.photo');
 
-        // The details form edits kind + caption, NOT the bound event_id.
-        const form = await asUser(alice, () => renderRoute(`rabid.event_photo.renderDetailsForm(${pid})`));
-        const eventField = findAll(form, (m: any) =>
-            Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === 'event_id');
-        assertEquals(eventField.length, 0, 'no event_id field');
-        const captionField = findAll(form, (m: any) =>
-            Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === 'caption');
-        assert(captionField.length >= 1, 'has a caption field');
+        // The Edit Photo modal (rendered over a no-photo card to avoid the crop
+        // path) carries caption + photographer, NOT the bound event_id.
+        const empty = asSystem(() => rabid.event_photo.insert(
+            {event_id: id, photo_kind: 'shop-before', caption: '', photographer: ''} as any));
+        const form = await asUser(alice, () =>
+            renderRoute(`rabid.event_photo.renderPhotoEditForm(${empty},"photo")`));
+        const input = (name: string) => findAll(form, (m: any) =>
+            Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === name);
+        assertEquals(input('event_id').length, 0, 'no event_id field');
+        assert(input('caption').length >= 1, 'has a caption field');
+        assert(input('photographer').length >= 1, 'has a photographer field');
+    });
+});
+
+test("event photos: insert-after and move-up reorder the cards", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const order = () => asSystem(() =>
+            rabid.event_photo.forEvent.all({event_id: id}).map(p => p.event_photo_id));
+        const add = (kind: string) =>
+            asUser(alice, () => invoke(`rabid.event_photo.addEventPhoto($arg0, $arg1)`, id, kind));
+        await add('event'); await add('shop-before');
+        const [A, B] = order();
+
+        // Insert after A -> [A, C, B].
+        await asUser(alice, () => invoke(`rabid.event_photo.insertRelative($arg0, $arg1)`, A, 'after'));
+        let ids = order();
+        assertEquals(ids.length, 3);
+        assertEquals(ids[0], A);
+        assertEquals(ids[2], B);
+
+        // Move B up -> [A, B, C].
+        await asUser(alice, () => invoke(`rabid.event_photo.moveUp($arg0)`, B));
+        assertEquals(order()[1], B);
     });
 });
 

@@ -17,6 +17,8 @@ import {route, routeMutation, authenticated, selfArg} from "../liminal/security.
 import * as templates from './templates.ts';
 import * as pageQueries from './page-queries.ts';
 import * as action from "../liminal/action.ts";
+import * as orderkey from "../liminal/orderkey.ts";
+import { parsePhotoValue } from "../liminal/photo.ts";
 import {rabid} from './rabid.ts';
 
 export const routes = ()=> ({
@@ -450,8 +452,6 @@ export class EventTable extends Table<Event> {
             // Notes are primary event content: their own clean prose block below
             // the summary, above the tasks.
             this.renderEventNotes(e),
-            // Event photos (if any): a subordinate list, each with a kind + caption.
-            this.renderEventPhotos(event_id),
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
@@ -462,6 +462,12 @@ export class EventTable extends Table<Event> {
             // Checklists instantiated from templates (setup/cleanup), each a
             // document section; adding a new one is the ☰ above.
             rabid.task.renderOwnerChecklists('event', event_id),
+            // Photos (a subordinate list: kind + caption + photographer), after the
+            // task cluster.
+            this.renderEventPhotos(event_id),
+            // Retrospectives: volunteer feedback on how the event went (markdown,
+            // optionally anonymous) - the last section, below everything.
+            this.renderEventRetrospectives(event_id),
         ];
     }
 
@@ -543,7 +549,10 @@ export class EventTable extends Table<Event> {
         const photos = security.runSystem(() => rabid.event_photo.forEvent.all({event_id}));
         const canAdd = rabid.event_photo.canEditRecord({event_id} as any);
         if(!canAdd && photos.length === 0) return undefined as unknown as Markup;
-        const props = reloadableProps([rabid.event_photo.fkKey('event_id', event_id)],
+        // The SHAPE key (not the plain fk key): the section reloads only when a
+        // card is added/deleted, not when a photo's caption/crop changes (those
+        // reload just the card - see renderPhotoCard).
+        const props = reloadableProps([rabid.event_photo.shapeKey('event_id', event_id)],
             `rabid.event.renderEventPhotos(${event_id})`);
         return [h.div, {...props, 'data-testid': 'event-photos'},
             [h.div, {class: 'lm-doc-section-head'},
@@ -556,6 +565,11 @@ export class EventTable extends Table<Event> {
              photos.length
                  ? photos.map(p => rabid.event_photo.renderPhotoCard(p))
                  : [h.p, {class: 'text-muted small mb-0'}, 'No photos yet.']]];
+    }
+
+    // Retrospectives section (built next commit).
+    renderEventRetrospectives(_event_id: number): Markup {
+        return undefined as unknown as Markup;
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
@@ -1106,9 +1120,17 @@ export interface EventPhoto {
     event_id: number;
     photo_kind: string;
     caption: string;
+    photographer: string;
+    order_key: string;
     photo?: string;
 }
 export type EventPhotoOpt = Partial<EventPhoto>;
+
+// A framework-managed string column (order_key): hidden from the generic form,
+// set by the insert override.  (Mirrors task.ts's ManagedStringField.)
+class ManagedStringField extends StringField {
+    override isVisible(): boolean { return false; }
+}
 
 export class EventPhotoTable extends Table<EventPhoto> {
     constructor() {
@@ -1117,9 +1139,25 @@ export class EventPhotoTable extends Table<EventPhoto> {
             // Bound to its event (not user-editable - the edit form omits it).
             new ForeignKeyField('event_id', 'event', 'event_id', {indexed: true, edit: security.never}),
             new EnumField('photo_kind', event_photo_kind_enum, {default: 'event'}),
-            new StringField('caption', {default: ''}),
+            new StringField('caption', {default: '', prompt: 'Caption'}),
+            new StringField('photographer', {default: '', prompt: 'Photographer'}),
+            // Sibling order within an event (orderkey.ts); a shape column, so moves
+            // reload the section.  Managed - set by insert()/moves, not the form.
+            new ManagedStringField('order_key', {default: ''}),
             new ImageField('photo', 'rabid.photo', {aspect: 'landscape', nullable: true, prompt: 'Photo'}),
         ]);
+    }
+
+    // Append at the end of the event's order (a fresh key after the current max);
+    // an explicit order_key in the tuple (insert-before/after) wins.
+    override insert<P extends EventPhotoOpt>(tuple: P): number {
+        const withManaged: any = {order_key: this.nextOrderKey(Number(tuple.event_id)), ...tuple};
+        return super.insert(withManaged);
+    }
+    private nextOrderKey(event_id: number): string {
+        const last = security.runSystem(() => db().prepare<{k: string}, {event_id: number}>(
+            'SELECT MAX(order_key) AS k FROM event_photo WHERE event_id = :event_id').first({event_id}));
+        return orderkey.between(last?.k, undefined);
     }
 
     defaultFieldEdit: security.Permission = hostOrAdmin;
@@ -1134,7 +1172,7 @@ export class EventPhotoTable extends Table<EventPhoto> {
 /**/   SELECT ${this.allFields}
 /**/          FROM event_photo
 /**/          WHERE event_id = :event_id
-/**/          ORDER BY photo_kind, event_photo_id`);
+/**/          ORDER BY order_key, event_photo_id`);
     }
 
     // The ☰ items for adding a photo of each kind: an immediate action that drops
@@ -1151,28 +1189,93 @@ export class EventPhotoTable extends Table<EventPhoto> {
     @routeMutation(hostOrAdmin)
     addEventPhoto(event_id: number, photo_kind: string): Markup {
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
-        this.insert({event_id, photo_kind: photo_kind || 'event', caption: ''} as EventPhotoOpt);
-        return {action: 'reload', targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
+        this.insert({event_id, photo_kind: photo_kind || 'event',
+                     caption: '', photographer: ''} as EventPhotoOpt);
+        // Membership changed -> reload the section (registered on the shape key).
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
+    }
+
+    // Insert a new (empty) card of the anchor's kind directly before/after it, in
+    // place; upload/caption it via its own Edit Photo.
+    @routeMutation(hostOrAdmin)
+    insertRelative(anchor_id: number, position: string): Markup {
+        const anchor = this.getById(anchor_id);
+        const sibs = security.runSystem(() => this.forEvent.all({event_id: anchor.event_id}));
+        const i = sibs.findIndex(s => s.event_photo_id === anchor_id);
+        const order_key = position === 'before'
+            ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
+            : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
+        this.insert({event_id: anchor.event_id, photo_kind: anchor.photo_kind,
+                     caption: '', photographer: '', order_key} as EventPhotoOpt);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', anchor.event_id)]} as unknown as Markup;
     }
 
     @routeMutation(hostOrAdmin)
-    remove(event_photo_id: number): Markup {
-        const event_id = this.getById(event_photo_id).event_id;
-        this.delete(event_photo_id);
-        return {action: 'reload', targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
+    moveUp(id: number): Markup { return this.moveBy(id, -1); }
+    @routeMutation(hostOrAdmin)
+    moveDown(id: number): Markup { return this.moveBy(id, +1); }
+    private moveBy(id: number, dir: -1|1): Markup {
+        const p = this.getById(id);
+        const sibs = security.runSystem(() => this.forEvent.all({event_id: p.event_id}));
+        const i = sibs.findIndex(s => s.event_photo_id === id);
+        const j = i + dir;
+        if(i >= 0 && j >= 0 && j < sibs.length) {
+            const order_key = dir < 0
+                ? orderkey.between(sibs[j-1]?.order_key, sibs[j].order_key)
+                : orderkey.between(sibs[j].order_key, sibs[j+1]?.order_key);
+            this.update(id, {order_key} as any);
+        }
+        // An order_key change is a shape event -> the section reloads.
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', p.event_id)]} as unknown as Markup;
     }
 
-    // The details (kind + caption) edit form, opened as a modal from a card; the
-    // image itself is edited separately via photoButton.
-    @route(hostOrAdmin)
-    renderDetailsForm(event_photo_id: number): Markup {
-        return this.renderEditForm(this.getById(event_photo_id), ['photo_kind', 'caption']);
+    // Delete a card (the ☰ Delete; "Remove" in Edit Photo does the same).
+    @routeMutation(hostOrAdmin)
+    remove(id: number): Markup {
+        const event_id = this.getById(id).event_id;
+        this.delete(id);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
-    // One photo card: its own reloadable fragment (row key), so a photo crop/remove
-    // or a details edit refreshes just this card.  Shows the kind, the image (or an
-    // "Add Photo" affordance), the caption, and - for editors - the photo editor
-    // button, Edit details, and Delete.
+    // The Edit Photo modal for an event photo: the generic photo editor (upload /
+    // crop / remove) PLUS a details form (caption + photographer + kind) and, once
+    // a photo is set, a link to the full-quality original in the content store.
+    // Overriding the generic modal is how caption/photographer editing rides inside
+    // "Edit Photo"; the image itself stays on the generic machinery.
+    @route(authenticated)
+    override async renderPhotoEditForm(id: number, fieldName: string): Promise<Markup> {
+        const record = this.getById(id);
+        if(!record || !this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+        const details = this.renderEditForm(record, ['caption', 'photographer', 'photo_kind']);
+        const body = await super.renderPhotoEditForm(id, fieldName);
+        const value = (record as any)[fieldName];
+        const original = (typeof value === 'string' && value !== '')
+            ? [h.div, {class: 'mt-2'},
+               [h.a, {href: '/' + parsePhotoValue(value).path, target: '_blank', rel: 'noopener',
+                      class: 'small'}, 'Original photo (full quality)']]
+            : undefined;
+        return [h.div, {}, details, [h.hr, {class: 'my-3'}], body, original];
+    }
+
+    // In an event photo, "Remove" IS the delete: dropping the image drops the whole
+    // card (an imageless photo row has no purpose).  Reloads the section via the
+    // shape key (a membership change), NOT the now-gone row.
+    @routeMutation(hostOrAdmin)
+    override removePhoto(id: number, _fieldName: string): {action: string, targets: string[]} {
+        const record = this.getById(id);
+        if(!record || !this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+        const event_id = record.event_id;
+        this.delete(id);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]};
+    }
+
+    // One photo card: its own reloadable fragment (ROW key), so a caption/crop edit
+    // refreshes only this card - the section is on the SHAPE key, so it stays put
+    // (it reloads only when a card is added or deleted).  Layout: the image, then
+    // "<Kind> · <caption>" (kind elided for a captioned Event Photo), then the
+    // photographer credit, with a single pencil (-> Edit Photo) for editors.
     @route(authenticated)
     renderPhotoCardById(event_photo_id: number): Markup {
         return this.renderPhotoCard(this.getById(event_photo_id));
@@ -1182,21 +1285,38 @@ export class EventPhotoTable extends Table<EventPhoto> {
         const has = typeof p.photo === 'string' && p.photo !== '';
         const canEdit = this.canEditRecord(p);
         const props = reloadableProps([this.rowKey(id)], `rabid.event_photo.renderPhotoCardById(${id})`);
+        const kindLabel = event_photo_kind_enum[p.photo_kind] ?? p.photo_kind;
+        const showKind = !(p.photo_kind === 'event' && p.caption);
+        const line: Markup[] = [];
+        if(showKind) line.push([h.span, {class: 'fw-semibold'}, kindLabel]);
+        if(showKind && p.caption) line.push(' · ');
+        if(p.caption) line.push(p.caption);
+
+        const editUrl = `/rabid.event_photo.renderPhotoEditForm(${id},"photo")`;
+        const img = has
+            ? rabid.photo.aspectImg(p.photo!, 'landscape', 'detail', {class: 'lm-photo-detail'})
+            : undefined;
+        // Clicking the image opens Edit Photo too (a convenience alongside the ☰).
+        const image = (img && canEdit)
+            ? action.actionButton(img, {kind: 'modal', dialogUrl: editUrl},
+                'btn p-0 border-0 bg-transparent', {'aria-label': 'Edit photo'})
+            : img;
+        // The ☰: Edit + positional insert + reorder + delete (delete also lives in
+        // Edit Photo's Remove).
+        const menu = canEdit ? action.actionMenu([
+            {label: 'Edit…', mode: {kind: 'modal', dialogUrl: editUrl}},
+            {label: 'Insert photo before', mode: {kind: 'immediate', expr: `rabid.event_photo.insertRelative(${id}, 'before')`}},
+            {label: 'Insert photo after', mode: {kind: 'immediate', expr: `rabid.event_photo.insertRelative(${id}, 'after')`}},
+            {label: 'Move up', mode: {kind: 'immediate', expr: `rabid.event_photo.moveUp(${id})`}},
+            {label: 'Move down', mode: {kind: 'immediate', expr: `rabid.event_photo.moveDown(${id})`}},
+            {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this photo?', expr: `rabid.event_photo.remove(${id})`}},
+        ], {ariaLabel: 'Photo actions'}) : undefined;
+
         return [h.div, {...props, class: props.class + ' mb-4', 'data-testid': `event-photo-${id}`},
-            [h.h5, {class: 'lm-doc-section-label'}, event_photo_kind_enum[p.photo_kind] ?? p.photo_kind],
-            has ? rabid.photo.aspectImg(p.photo!, 'landscape', 'detail', {class: 'lm-photo-detail'}) : undefined,
-            p.caption ? [h.div, {class: 'text-muted small mt-1'}, p.caption] : undefined,
-            canEdit
-                ? [h.div, {class: 'mt-1 d-flex align-items-center gap-2'},
-                   this.photoButton(id, 'photo'),
-                   action.actionButton('Edit details',
-                       {kind: 'modal', dialogUrl: `/rabid.event_photo.renderDetailsForm(${id})`},
-                       'btn btn-sm btn-link p-0'),
-                   action.actionButton('Delete',
-                       {kind: 'confirm', message: 'Delete this photo?',
-                        expr: `rabid.event_photo.remove(${id})`},
-                       'btn btn-sm btn-link text-danger p-0')]
-                : undefined];
+            image,
+            [h.div, {class: 'mt-1 d-flex align-items-center gap-2'},
+             [h.span, {}, ...line], menu],
+            p.photographer ? [h.div, {class: 'text-muted small'}, `Photo: ${p.photographer}`] : undefined];
     }
 }
 
