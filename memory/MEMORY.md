@@ -29,3 +29,4 @@
 - [Liminal htmx config](liminal-htmx-config.md) — shared htmx meta/script in liminal/htmx.ts; historyCacheSize:0 fix keeps navbar menus/JS alive after Back (the snapshot-restore breakage)
 - [Wordwiki shared store layout](wordwiki-shared-store-layout.md) — nested mmo-shared-content/{content,derived,imports}; mmo/* symlink in; derived content-addressed so shareable; migrate/use/setup scripts
 - [Claude memory sharing](claude-memory-sharing.md) — memory committed in repo memory/, symlinked via ~/bin/claude-memlink; run claude-memlink (or setup-worktree.sh) per new worktree
+- [Relation names in UI](relation-names-in-ui.md) — user-viewable content shows full relation names (RefPublicNote) never db tags (rnp); entrySchema.relationDisplayName(tag)
