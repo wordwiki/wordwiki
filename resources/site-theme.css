@@ -254,3 +254,16 @@ body {
 }
 .lm-public-chip-on { background: rgba(25, 135, 84, .12); }
 .lm-public-chip-off { color: var(--bs-secondary-color, #6c757d); }
+
+/* The orthography badge (render-entry-meta.ts annotate): the QUIET marker
+   beside a text in the editor's side-by-side-orthographies rows.  Sized and
+   raised to read as a diacritic, not a label - dz's clutter fear is the
+   design constraint. */
+.lm-me-orth {
+    font-size: .62em;
+    color: var(--bs-secondary-color, #6c757d);
+    vertical-align: super;
+    margin-left: .18em;
+    letter-spacing: .02em;
+    user-select: none;
+}

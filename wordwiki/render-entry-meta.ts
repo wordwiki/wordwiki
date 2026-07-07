@@ -58,6 +58,13 @@ export interface EntryRenderConfig {
     // undefined to fall through to the default rendering (incl. static
     // $options), so unknown/legacy values still show raw.
     valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
+    // The QUIET orthography marker beside a variant-bearing tuple's text
+    // (dz: side-by-side orthographies must be tellable apart, without
+    // clutter).  Given the variant slug, return the tiny label ('Li') or
+    // undefined for none.  INJECTED: the editor supplies the orthography
+    // table's abbreviations; the public export supplies nothing (it renders
+    // one orthography).  'mm'/blank are never marked (renders everywhere).
+    orthographyBadge?: (variantSlug: string) => string | undefined;
     // EDIT MODE.  When present, the renderer stops honouring the read-only
     // conveniences (singleton collapse, empty elide, value joining) - see the
     // "declared intent, mode decides" principle - and hangs affordances off
@@ -205,6 +212,7 @@ export class EntryRenderer {
     readonly titleAffordance?: Markup;
     readonly editing?: EditingHooks;
     readonly valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
+    readonly orthographyBadge?: (variantSlug: string) => string | undefined;
 
     constructor(cfg: EntryRenderConfig) {
         this.rootPath = cfg.rootPath;
@@ -215,6 +223,7 @@ export class EntryRenderer {
         this.titleAffordance = cfg.titleAffordance;
         this.editing = cfg.editing;
         this.valueLabel = cfg.valueLabel;
+        this.orthographyBadge = cfg.orthographyBadge;
     }
 
     /** Child relations in presentation order, minus what this MODE and
@@ -235,7 +244,7 @@ export class EntryRenderer {
     /** Wrap a tuple's rendered value as an editable surface (edit mode), or
      *  return it plain (read).  `tuple` must carry identity in edit mode. */
     protected surface(rf: model.RelationField, tuple: EntryNode, body: Markup): Markup {
-        const decorated = this.annotate(tuple, body);
+        const decorated = this.annotate(rf, tuple, body);
         const id = this.editing && tuple.identity?.();
         return id ? this.editing!.tupleSurface(rf, id, decorated) : decorated;
     }
@@ -244,11 +253,22 @@ export class EntryRenderer {
      *  aside for every audience, the internal note only for the internal one
      *  (the editor).  They ride INSIDE the surface, so an annotation edit
      *  refreshes with the fact fragment like any value change. */
-    protected annotate(tuple: EntryNode, body: Markup): Markup {
+    protected annotate(rf: model.RelationField, tuple: EntryNode, body: Markup): Markup {
         const aside = tuple.annotation?.('aside');
         const note = this.audience === 'internal' ? tuple.annotation?.('note') : undefined;
-        if (!aside && !note) return body;
+        // The orthography badge: which writing system this row's text is in
+        // - shown wherever orthographies sit side by side (the hook decides;
+        // 'mm' and blank render everywhere, so they are never marked).
+        let badge: string | undefined;
+        if (this.orthographyBadge) {
+            const vf = rf.scalarFields.find(f => f instanceof model.VariantField);
+            const slug = vf ? tuple.value(vf) : undefined;
+            if (typeof slug === 'string' && slug !== '' && slug !== 'mm')
+                badge = this.orthographyBadge(slug);
+        }
+        if (!aside && !note && !badge) return body;
         const extra: Markup[] = [];
+        if (badge) extra.push(['span', { class: 'lm-me-orth' }, badge]);
         if (aside) extra.push(['span', { class: 'lm-me-aside' }, ' ', aside]);
         if (note) extra.push(['span', { class: 'lm-me-internal-note text-muted small' },
                               ' \u{1F512} ', note]);

@@ -52,6 +52,9 @@ export interface Orthography {
     /** The stable code stored in the assertion data's variant columns. */
     slug: string;
     name: string;
+    /** The QUIET marker shown beside a text in multi-orthography contexts
+     *  (the editor's side-by-side rows) - two letters, e.g. 'Li'. */
+    abbreviation?: string;
     /** May a word be made public in this orthography?  (The Public row and
      *  makePublic consult this - archaic source orthographies say no.) */
     publishable: number;
@@ -70,6 +73,8 @@ export class OrthographyTable extends Table<Orthography> {
                                      edit: a => editOrthographies(a) && !(a.record as Orthography|undefined)?.orthography_id,
                                      prompt: 'Slug (stable code stored in dictionary data - cannot be changed later)'}),
             new StringField('name', {prompt: 'Display name'}),
+            new StringField('abbreviation', {nullable: true,
+                                             prompt: 'Abbreviation (the tiny marker beside texts, e.g. Li)'}),
             new BooleanField('publishable', {default: 0,
                                              prompt: 'Publishable (words can be made public in this orthography)'}),
             new BooleanField('retired', {default: 0,
@@ -223,19 +228,28 @@ export class OrthographyTable extends Table<Orthography> {
 /** The seed rows (from the old hard-coded map; dz-confirmed publishable
  *  flags): the two living orthographies are publish targets; the two archaic
  *  Pacifique source orthographies are not. */
-export const SEED_ORTHOGRAPHIES: Array<{slug: string, name: string, publishable: number}> = [
-    { slug: 'mm-li', name: 'Listuguj',             publishable: 1 },
-    { slug: 'mm-sf', name: 'Smith-Francis',        publishable: 1 },
-    { slug: 'mm-mp', name: 'Modified Pacifique',   publishable: 0 },
-    { slug: 'mm-pm', name: 'Pacifique Manuscript', publishable: 0 },
+export const SEED_ORTHOGRAPHIES: Array<{slug: string, name: string, abbreviation: string,
+                                        publishable: number}> = [
+    { slug: 'mm-li', name: 'Listuguj',             abbreviation: 'Li', publishable: 1 },
+    { slug: 'mm-sf', name: 'Smith-Francis',        abbreviation: 'SF', publishable: 1 },
+    { slug: 'mm-mp', name: 'Modified Pacifique',   abbreviation: 'MP', publishable: 0 },
+    { slug: 'mm-pm', name: 'Pacifique Manuscript', abbreviation: 'PM', publishable: 0 },
 ];
 
-/** Idempotent seed (insert-if-missing; never updates an edited row).  Called
- *  at every ensure (reads first, so a seeded db sees no writes). */
+/** Idempotent seed (insert-if-missing; never overwrites an edited row - but
+ *  a NULL abbreviation on an existing row is backfilled, so rows created by
+ *  an earlier seed version gain the column's seed value).  Called at every
+ *  ensure (reads first, so a fully seeded db sees no writes). */
 export function seedOrthographies(table: OrthographyTable): {inserted: number} {
     let inserted = 0;
     for(const seed of SEED_ORTHOGRAPHIES) {
-        if(table.bySlug.first({slug: seed.slug})) continue;
+        const existing = table.bySlug.first({slug: seed.slug});
+        if(existing) {
+            if(existing.abbreviation == null)
+                table.updateNamedFields(existing.orthography_id,
+                    ['abbreviation'], {abbreviation: seed.abbreviation} as any);
+            continue;
+        }
         table.insert({...seed, retired: 0});
         inserted++;
     }

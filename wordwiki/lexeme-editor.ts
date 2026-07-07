@@ -891,7 +891,22 @@ export class LexemeEditor {
             renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
             editing: this.metaEditingHooks(entry_id, changes),
             valueLabel: this.vocabValueLabel(),
+            orthographyBadge: this.orthographyBadge(),
         });
+    }
+
+    /** The tiny orthography marker beside variant-bearing rows (dz: the
+     *  editor shows orthographies side by side, so a non-'mm' row must say
+     *  which it is - as quietly as possible).  Abbreviations come from the
+     *  orthography TABLE (lazy map per render, like vocabValueLabel); an
+     *  unknown slug falls back to itself, so legacy dirt stays visible. */
+    private orthographyBadge(): (slug: string) => string | undefined {
+        let abbr: Map<string, string> | undefined;
+        return (slug) => {
+            abbr ??= new Map(this.app.orthographies.allByOrder.all({})
+                .map(o => [o.slug, o.abbreviation || o.name]));
+            return abbr.get(slug) ?? slug;
+        };
     }
 
     /** The render-side twin of widgetFor's vocab selects: category slugs and

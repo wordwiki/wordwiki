@@ -106,3 +106,25 @@ test("the Orthography Table admin page renders via dispatch", async () => {
         assert(html.includes('New orthography'), 'admin can create');
     });
 });
+
+test("editor rows carry the quiet orthography badge; 'mm' stays unmarked", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1001, tl.next(),
+                                        {attr1: 'samqwan', variant: 'mm-li'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1002, tl.next(),
+                                        {attr1: 'samkwan', variant: 'mm-sf'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'tdo', 1003, tl.next(),
+                                        {attr1: 'Todo', variant: 'mm'})], {quiet: true});
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        assert(html.includes("class=lm-me-orth>Li<") || /lm-me-orth[^>]*>Li</.test(html),
+               'the Listuguj row is marked Li');
+        assert(/lm-me-orth[^>]*>SF</.test(html), 'the Smith-Francis row is marked SF');
+        // The 'mm' todo row is NOT marked (renders everywhere).
+        const mmBadges = (html.match(/lm-me-orth/g) ?? []).length;
+        assertEquals(mmBadges, 2, "exactly the two orthography rows carry badges");
+    });
+});
