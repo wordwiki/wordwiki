@@ -472,21 +472,28 @@ export class EventTable extends Table<Event> {
             // Retrospectives: volunteer feedback on how the event went (markdown,
             // optionally anonymous) - the last section, below everything.
             this.renderEventRetrospectives(event_id),
+            // A modest tail spacer so the lower jump-links can scroll their section
+            // near the top even when little content follows.  Half a viewport - a
+            // mild, common technique; tune/remove freely.
+            [h.div, {'aria-hidden': 'true', style: 'min-height: 50vh'}],
         ];
     }
 
     // The jump-link bar under the title: scrolls to each section by fragment id.
     // The targets (#services / #sales / #tasks / #photos / #retrospectives) are set
     // on the section wrappers.  A link whose section isn't shown for this viewer
-    // simply doesn't scroll - harmless.
+    // simply doesn't scroll - harmless.  Styled to match the document: small, muted,
+    // slash-separated secondary links (not default browser blue), a quiet strip.
     private renderSectionNav(): Markup {
         const links: [string, string][] = [
             ['services', 'Services'], ['sales', 'Sales & giveaways'],
             ['tasks', 'Tasks'], ['photos', 'Photos'], ['retrospectives', 'Retrospectives'],
         ];
-        return [h.nav, {class: 'lm-section-nav small text-muted d-flex flex-wrap gap-3 mb-3',
-                        'aria-label': 'Sections'},
-            links.map(([id, label]) => [h.a, {href: `#${id}`}, label])];
+        return [h.nav, {class: 'lm-section-nav small mb-4 pb-2 border-bottom', 'aria-label': 'Sections'},
+            links.map(([id, label], i) => [
+                i > 0 ? [h.span, {class: 'text-muted mx-2'}, '/'] : undefined,
+                [h.a, {href: `#${id}`, class: 'link-secondary text-decoration-none'}, label],
+            ])];
     }
 
     // The event's activity log: two INDEPENDENT peer document sections, Services
@@ -1472,10 +1479,12 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
         const feedback = (args.feedback ?? '').trim();
         if(!feedback) throw new Error('Please enter some feedback');
         const anon = this.parseAnon(args.is_anonymous);
-        // Becoming anonymous clears any recorded author (it "was recorded in a prev
-        // edit"); un-anonymising can't restore one - it was never kept.
+        // created_by follows the box, both ways: anonymous -> cleared; non-anonymous
+        // -> keep the original author if still recorded, else (un-anonymising, where
+        // the original was cleared) attribute to the editor doing it.
+        const created_by = anon ? null : (r.created_by ?? (security.current()?.actorId ?? null));
         this.updateNamedFields(id, ['feedback', 'is_anonymous', 'created_by'], {
-            feedback, is_anonymous: anon ? 1 : 0, created_by: anon ? null : r.created_by,
+            feedback, is_anonymous: anon ? 1 : 0, created_by,
         } as Partial<EventRetrospective>);
         return {action: 'reload', targets: ['.' + this.rowKey(id)]} as unknown as Markup;
     }

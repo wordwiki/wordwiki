@@ -68,11 +68,32 @@ test("edit is author-or-host; a peer cannot; going anonymous clears the author",
         assertEquals(r.is_anonymous, 1);
         assertEquals(r.created_by ?? null, null);
 
-        // Now anonymous, bob is no longer the author; only a host can remove it.
+        // Now anonymous, bob is no longer the author; only a host can touch it.
         await asUser(bob, () => assertRejects(() =>
             invoke(`rabid.event_retrospective.remove($arg0)`, rid)));
+
+        // The reverse transition works too: a host un-checks anonymous -> it's
+        // re-attributed (to the host doing so, since the original author was cleared).
+        await asUser(alice, () => invoke(`rabid.event_retrospective.saveRetrospective($arg0)`,
+            {event_retrospective_id: rid, feedback: 'On reflection, understaffed', is_anonymous: undefined}));
+        const r2 = asSystem(() => rabid.event_retrospective.getById(rid));
+        assertEquals(r2.is_anonymous, 0);
+        assertEquals(r2.created_by, alice);
+
         await asUser(alice, () => invoke(`rabid.event_retrospective.remove($arg0)`, rid));
         assertEquals(rowsFor(id).length, 0);
+    });
+});
+
+test("a non-anonymous edit by a host preserves the original author (no reattribution)", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();
+        await add(bob, id, 'Bob wrote this', false);
+        const rid = rowsFor(id)[0].event_retrospective_id;
+        // A host edits the text but leaves it attributed - author stays bob.
+        await asUser(alice, () => invoke(`rabid.event_retrospective.saveRetrospective($arg0)`,
+            {event_retrospective_id: rid, feedback: 'Bob wrote this (typo fixed)', is_anonymous: undefined}));
+        assertEquals(asSystem(() => rabid.event_retrospective.getById(rid)).created_by, bob);
     });
 });
 
