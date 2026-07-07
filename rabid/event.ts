@@ -438,39 +438,17 @@ export class EventTable extends Table<Event> {
         return templates.page(`${e.description || 'Event'} — Event`, this.renderEventDetail(event_id));
     }
 
-    // Reloadable fragment (an edit save re-renders it).
+    // The event page.  The OUTER is a plain container that never reloads as a whole;
+    // each part below is its own fragment keyed on the data it shows, so an event
+    // edit reloads only the header (title + summary), a service change only the
+    // Services section, etc. - not the whole page.
     @route(authenticated)
     renderEventDetail(event_id: number): Markup {
         const e = this.getById(event_id);
-        const props = this.reloadableItemProps(event_id, `rabid.event.renderEventDetail(${event_id})`);
-        props.class = 'container py-3 ' + props.class;
-        // Adding a not-yet-created checklist is a quiet ☰ action next to the
-        // title (document-friendly), not a "Create …" button in the flow.
-        // Editing the event lives on the TITLE row - a pencil AND a ☰ (both, for
-        // obviousness; the ☰ leaves room for Archive/etc. later).  With the summary
-        // de-carded (bare) below, the details flow right under this, so editing here
-        // reads as editing exactly them.
-        const editUrl = `/rabid.event.renderForm(rabid.event.getById(${event_id}))`;
-        const canEdit = this.canEditRecord(e);
-        return [h.div, props,
-            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
-             [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
-             canEdit
-                 ? action.actionButton(pencilIcon(), {kind: 'modal', dialogUrl: editUrl},
-                     'btn btn-link p-0 lm-edit-pencil', {'aria-label': 'Edit event', title: 'Edit event'})
-                 : undefined,
-             canEdit
-                 ? action.actionMenu([{label: 'Edit event…', mode: {kind: 'modal', dialogUrl: editUrl}}],
-                     {ariaLabel: 'Event actions'})
-                 : undefined],
-            // Jump-links across the top: scroll to each section (fragment ids set on
-            // the section wrappers below).
-            this.renderSectionNav(),
-            // The summary, de-carded (bare): flows directly under the title.  No
-            // repeated title (the h2 above IS it); notes live inside it now.
-            this.renderEventSummary(event_id, {titleLink: false, hideTitle: true,
-                                               editableCheckins: true, hideNotes: false,
-                                               bare: true, hideCheckins: true}),
+        return [h.div, {class: 'container py-3'},
+            // Title + jump-nav + summary, keyed on the event row - an event edit
+            // reloads just this.
+            this.renderEventHeader(event_id),
             // "Volunteers": the checked-in face grid (match faces to names on a busy
             // shift) - first, before the activity log.  The summary's Checked-in row
             // is elided above (hideCheckins) in favour of this.  Not on a catch-all.
@@ -496,6 +474,39 @@ export class EventTable extends Table<Event> {
             // near the top even when little content follows.  Half a viewport - a
             // mild, common technique; tune/remove freely.
             [h.div, {'aria-hidden': 'true', style: 'min-height: 50vh'}],
+        ];
+    }
+
+    // The event's header: title (with the Edit pencil + ☰), the jump-nav, and the
+    // summary.  Its OWN fragment keyed on the event row, so an event edit reloads
+    // just this - the title (e.g. a changed description) and the summary fields -
+    // and not the whole page.
+    @route(authenticated)
+    renderEventHeader(event_id: number): Markup {
+        const e = this.getById(event_id);
+        const props = this.reloadableItemProps(event_id, `rabid.event.renderEventHeader(${event_id})`);
+        const editUrl = `/rabid.event.renderForm(rabid.event.getById(${event_id}))`;
+        const canEdit = this.canEditRecord(e);
+        return [h.div, props,
+            // Editing the event lives on the TITLE row - a pencil AND a ☰ (both, for
+            // obviousness; the ☰ leaves room for Archive/etc. later).  With the
+            // summary de-carded (bare) below, the details flow right under this.
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
+             canEdit
+                 ? action.actionButton(pencilIcon(), {kind: 'modal', dialogUrl: editUrl},
+                     'btn btn-link p-0 lm-edit-pencil', {'aria-label': 'Edit event', title: 'Edit event'})
+                 : undefined,
+             canEdit
+                 ? action.actionMenu([{label: 'Edit event…', mode: {kind: 'modal', dialogUrl: editUrl}}],
+                     {ariaLabel: 'Event actions'})
+                 : undefined],
+            this.renderSectionNav(),
+            // De-carded (bare): flows directly under the title.  No repeated title
+            // (the h2 above IS it); notes live inside it now.
+            this.renderEventSummary(event_id, {titleLink: false, hideTitle: true,
+                                               editableCheckins: true, hideNotes: false,
+                                               bare: true, hideCheckins: true}),
         ];
     }
 

@@ -4,7 +4,7 @@
 // projects, with additive resync and list exclusions.  See task.ts.
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts";
-import { withTestDb, asUser, asSystem, renderRoute } from "./testing.ts";
+import { withTestDb, asUser, asSystem, renderRoute, invoke } from "./testing.ts";
 import { getRabid } from "./rabid.ts";
 import { hasText } from "../liminal/testing/markup-assert.ts";
 
@@ -152,7 +152,12 @@ test("event page: the checklist section always shows (a '+ set up' before, the t
         assert(hasText(before, 'Cleanup Tasks'), 'the section heading always shows');
         assert(hasText(before, 'Not set up yet'), 'shown as a + to set up');
         assert(!hasText(before, 'Sweep'), 'no copied tasks before setup');
-        asUser(alice, () => r.project.instantiateTemplate(template_id, 'event', eid));
+        // The checklists are their OWN reload fragment; instantiating reloads just
+        // that (not the whole detail page).
+        assert(JSON.stringify(before).includes(`-event-checklists-${eid}-`), 'checklists fragment key present');
+        const res = await asUser(alice, () =>
+            invoke(`rabid.project.createOwnerChecklist($arg0, $arg1, $arg2)`, template_id, 'event', eid));
+        assert(res.targets.includes(`.-event-checklists-${eid}-`), 'reloads only the checklists fragment');
         const after = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${eid})`));
         assert(hasText(after, 'Cleanup Tasks'), 'role heading');
         assert(hasText(after, 'Sweep'), 'copied task shown');

@@ -473,12 +473,12 @@ export class ProjectTable extends Table<Project> {
         return project_id;
     }
 
-    // Route wrapper: create the checklist then reload the owner's detail page
-    // (the new section appears there).
+    // Route wrapper: create the checklist then reload just the owner's CHECKLISTS
+    // fragment (the new section appears there) - not the whole detail page.
     @routeMutation(authenticated)
     createOwnerChecklist(template_id: number, owner_table: string, owner_id: number): Markup {
         this.instantiateTemplate(template_id, owner_table, owner_id);
-        return {action: 'reload', targets: [`.-${owner_table}-${owner_id}-`]} as unknown as Markup;
+        return {action: 'reload', targets: [`.-${owner_table}-checklists-${owner_id}-`]} as unknown as Markup;
     }
 
     // Additive resync: copy any template items the instance is missing (keyed by
@@ -1645,23 +1645,28 @@ export class TaskTable extends Table<Task> {
     }
 
     // The owner's CHECKLISTS: for each template that applies to this owner type, a
-    // document section (Setup Tasks / Cleanup Tasks / ...) rendered inline after the
-    // general Tasks section.  The section ALWAYS shows for an editor - even before
-    // it's set up, where it's just a + that instantiates from the template on click
-    // (createOwnerChecklist reloads the page).  Once set up it's the checklist + a
-    // Resync.  A non-editor sees only the instantiated ones.  Nothing when no
-    // templates apply.
+    // document section (Setup Tasks / Cleanup Tasks / ...) rendered after the general
+    // Tasks section.  The section ALWAYS shows for an editor - even before it's set
+    // up, where it's just a + that instantiates from the template on click.  Once set
+    // up it's the checklist + a Resync.  A non-editor sees only the instantiated
+    // ones.  Nothing when no templates apply.
+    //
+    // Its OWN reloadable fragment (hand-minted key), so instantiating a checklist
+    // (createOwnerChecklist) reloads just this - not the whole owner detail page.
+    @route(authenticated)
     renderOwnerChecklists(owner_table: string, owner_id: number): Markup {
         const templates = security.runSystem(() =>
             rabid.project.templatesForOwnerTable.all({owner_table}));
         if(templates.length === 0) return undefined as any;
         const canEdit = ownerCanEdit(owner_table, owner_id);
+        const props = reloadableProps([`-${owner_table}-checklists-${owner_id}-`],
+            `rabid.task.renderOwnerChecklists('${owner_table}',${owner_id})`);
         // Render in the enum's key order (setup -> cleanup -> safety), not the
         // query's alphabetical owner_role order.
         const roleOrder = Object.keys(project_role_enum);
         const ordered = [...templates].sort((a, b) =>
             roleOrder.indexOf(a.owner_role ?? '') - roleOrder.indexOf(b.owner_role ?? ''));
-        return ordered.map(t => {
+        return [h.div, props, ordered.map(t => {
             const role = t.owner_role ?? null;
             const roleLabel = project_role_enum[role ?? ''] ?? t.name;
             const existing = rabid.project.forOwner(owner_table, owner_id, role);
@@ -1681,7 +1686,7 @@ export class TaskTable extends Table<Task> {
                      'lm-menu-button', {'aria-label': `Set up ${roleLabel}`, title: `Set up ${roleLabel}`})],
                 [h.div, {class: 'lm-subsection'},
                  [h.p, {class: 'text-muted small mb-0'}, 'Not set up yet.']]];
-        });
+        })];
     }
 
     // New-task dialog for an owner+role (no project picker - the project is the

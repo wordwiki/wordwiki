@@ -190,6 +190,22 @@ test("the event detail page shows the summary; the Edit ☰ only for hosts", asy
     });
 });
 
+test("event page fragments: an edit reloads only the header (keyed on the event row), not the whole page", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        // The header (title + summary) is a fragment on the event row - so an event
+        // edit reloads it.
+        const header = await asUser(alice, () => renderRoute(`rabid.event.renderEventHeader(${id})`));
+        assert(String((header as any)[1]?.class ?? '').includes(`-event-${id}-`),
+               'the header reloads on an event edit');
+        // ...but the outer page container is NOT a reload fragment, so an event edit
+        // does not reload the whole page.
+        const detail = await asUser(alice, () => renderRoute(`rabid.event.renderEventDetail(${id})`));
+        assertEquals(String((detail as any)[1]?.class ?? ''), 'container py-3',
+                     'the outer container carries no reload key');
+    });
+});
+
 test("an event's host shows in the summary and is a field on the event form", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const id = insertEvent();
