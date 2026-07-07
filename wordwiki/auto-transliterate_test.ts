@@ -28,6 +28,12 @@ test("rules: g→k and the sonorant-cluster apostrophe (corpus-verified)", () =>
     assertEquals(transliterateLiToSf('anawtig'), 'anawtik');     // w+t: NO insertion
     assertEquals(transliterateLiToSf('Gesig'), 'Kesik');         // case preserved
     assertEquals(transliterateLiToSf("gnt"), "kn't");            // n before t gains the apostrophe
+    // rules-v2 (oracle-mined): the ult exception, word-start sonorants, and
+    // whole-word lexical exceptions.
+    assertEquals(transliterateLiToSf('apjelmultimgewei'), 'apjelmultimkewei');
+    assertEquals(transliterateLiToSf('Lpa'), 'Lpa');
+    assertEquals(transliterateLiToSf('ugjit nemitg'), 'wjit nemitk');
+    assertEquals(transliterateLiToSf('alp'), "al'p");            // u+l+p still inserts
 });
 
 test("rules: the v1 scope is schema-driven pure variant text relations", async () => {

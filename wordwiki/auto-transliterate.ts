@@ -48,6 +48,21 @@ import { variantPolicyByTag } from './variant-policy.ts';
 import type { WordWiki } from './wordwiki.ts';
 
 export const AUTO_TRANSLITERATE_USERNAME = '~auto-transliterate';
+
+/** The clean-pair filter for the TRANSLITERATION ORACLE (the harness): a
+ *  pair with editorial junk in either side (parentheticals, '?', TBA/TBD,
+ *  'or'-lists in single-word tags) teaches the rules nothing but noise.
+ *  Kept conservative and REPORTED - the export names what it excluded. */
+export function pairJunkReason(li: string, sf: string, tag: string): string | undefined {
+    for(const [side, text] of [['li', li], ['sf', sf]] as const) {
+        if(text.trim() === '') return `${side} empty`;
+        if(/[()\[\]{};]|\?/.test(text)) return `${side} has editorial punctuation`;
+        if(/TBA|TBD/i.test(text)) return `${side} has a TBA/TBD placeholder`;
+        if(text.includes('\n')) return `${side} is multi-line`;
+        if(tag !== 'etx' && /,| or /.test(text)) return `${side} looks like a list (single-word tag)`;
+    }
+    return undefined;
+}
 export const SOURCE_ORTHOGRAPHY = 'mm-li';
 export const TARGET_ORTHOGRAPHY = 'mm-sf';
 
@@ -262,9 +277,9 @@ export class TransliterationReports {
         }));
     }
 
-    private corpusPairs(): {pairs: Array<{li: string, sf: string}>} {
+    corpusPairs(): {pairs: Array<{li: string, sf: string, tag: string}>} {
         const pure = pureTextRelations(this.app.dictSchema);
-        const out: Array<{li: string, sf: string}> = [];
+        const out: Array<{li: string, sf: string, tag: string}> = [];
         for(const [tag, spec] of pure) {
             const rows = db().all<any, any>(block`
 /**/           SELECT ty1,id1,ty2,id2,ty3,id3,ty4,id4,ty5,id5, variant, ${spec.contentField.bind} AS text
@@ -281,7 +296,7 @@ export class TransliterationReports {
             }
             for(const g of groups.values())
                 if(g.li.length === 1 && g.sf.length === 1)
-                    out.push({li: g.li[0], sf: g.sf[0]});
+                    out.push({li: g.li[0], sf: g.sf[0], tag});
         }
         return {pairs: out};
     }

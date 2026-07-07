@@ -57,7 +57,7 @@ import { FindingsReport } from './findings.ts';
 import { scanVariants, VariantReports } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
-import { TransliterationReports } from './auto-transliterate.ts';
+import { TransliterationReports, pairJunkReason } from './auto-transliterate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -2140,6 +2140,33 @@ if (import.meta.main) {
                 }
                 console.info(`migrate-variants: ${stats.changed} row(s) ${dryRun ? 'WOULD change (dry run)' : 'changed'} ` +
                              `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Export the transliteration ORACLE: every clean human-written
+        // Listuguj/Smith-Francis sibling pair, as JSON for the standalone
+        // rules-iteration harness (wordwiki/transliterate-harness.ts).
+        // Junky pairs are EXCLUDED AND NAMED (never silently).
+        //   ./wordwiki.sh export-transliteration-pairs [path.json]
+        case 'export-transliteration-pairs': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const path = args[1] && !args[1].startsWith('--') ? args[1]
+                    : 'transliteration-pairs.json';
+                const {pairs} = ww.transliteration.corpusPairs();
+                const clean: typeof pairs = [];
+                const excluded = new Map<string, number>();
+                for(const p of pairs) {
+                    const reason = pairJunkReason(p.li, p.sf, p.tag);
+                    if(reason) excluded.set(reason, (excluded.get(reason) ?? 0) + 1);
+                    else clean.push(p);
+                }
+                Deno.writeTextFileSync(path, JSON.stringify(clean, null, 1));
+                console.info(`wrote ${clean.length} clean pairs to ${path}`);
+                for(const [reason, n] of excluded)
+                    console.info(`  excluded ×${n}: ${reason}`);
             });
             Deno.exit(0);
             break;

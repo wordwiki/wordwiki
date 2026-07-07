@@ -65,6 +65,10 @@ set -e
 #                                      # iff the $notVariant drop gate passes;
 #                                      # --report <path.md> writes the
 #                                      # findings report
+#   ./wordwiki.sh export-transliteration-pairs [path.json]
+#                                      # export the clean li/sf pair ORACLE
+#                                      # for the standalone rules harness
+#                                      # (wordwiki/transliterate-harness.ts)
 #   ./wordwiki.sh migrate-status       # the STATUS REMODEL migration:
 #                                      # publish gates from Completed, the
 #                                      # Complete renames, sta variant blank,
