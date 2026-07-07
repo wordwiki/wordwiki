@@ -58,6 +58,10 @@ export interface EntryRenderConfig {
     // undefined to fall through to the default rendering (incl. static
     // $options), so unknown/legacy values still show raw.
     valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
+    // Relations excluded from the generic tree walk in EVERY mode - for
+    // relations with a fully custom surface (the editor's Public row renders
+    // the `pub` gate facts; their verbs, not the tuple dialogs, manage them).
+    omitRelations?: string[];
     // EDIT MODE.  When present, the renderer stops honouring the read-only
     // conveniences (singleton collapse, empty elide, value joining) - see the
     // "declared intent, mode decides" principle - and hangs affordances off
@@ -205,6 +209,7 @@ export class EntryRenderer {
     readonly titleAffordance?: Markup;
     readonly editing?: EditingHooks;
     readonly valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
+    readonly omitRelations: Set<string>;
 
     constructor(cfg: EntryRenderConfig) {
         this.rootPath = cfg.rootPath;
@@ -215,6 +220,7 @@ export class EntryRenderer {
         this.titleAffordance = cfg.titleAffordance;
         this.editing = cfg.editing;
         this.valueLabel = cfg.valueLabel;
+        this.omitRelations = new Set(cfg.omitRelations ?? []);
     }
 
     /** Child relations in presentation order, minus what this MODE and
@@ -225,6 +231,7 @@ export class EntryRenderer {
      *  the public one). */
     protected childRelations(rf: model.RelationField): model.RelationField[] {
         return orderedChildRelations(rf).filter(cr => {
+            if (this.omitRelations.has(cr.tag)) return false;   // custom surface owns it
             if (this.editing) return true;
             const v = view(cr);
             if (v.hidden) return false;

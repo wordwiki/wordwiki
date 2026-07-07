@@ -60,7 +60,7 @@ import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
-import {route, authenticated} from '../liminal/security.ts';
+import {route, routeMutation, authenticated} from '../liminal/security.ts';
 import {classifyFact, isComment, latestContentVersion, type FactReview} from './versioned-model.ts';
 import * as server from '../liminal/http-server.ts';
 import {renderGroupedChangeList, renderChangeGroup, initials,
@@ -837,6 +837,7 @@ export class LexemeEditor {
                  // edits that can change its answer - no editor plumbing.
                  renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q)),
                  this.metaChangesBarFragment(entry_id, changes),
+                 this.metaPublicRowFragment(entry_id),
                  this.metaRenderer(entry_id, changes).render(entryRel, root)]];
     }
 
@@ -859,6 +860,9 @@ export class LexemeEditor {
             renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
             editing: this.metaEditingHooks(entry_id, changes),
             valueLabel: this.vocabValueLabel(),
+            // The pub gate facts render as the custom Public row (chips +
+            // makePublic/withdraw verbs), never as generic editable tuples.
+            omitRelations: [entrySchema.PublicTag],
         });
     }
 
@@ -934,6 +938,80 @@ export class LexemeEditor {
                         'hx-get': `${R}.metaChangesBarFragment(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 this.metaChangesBar(entry_id, changes)];
+    }
+
+    /** The Public row as its own reloadable fragment: the makePublic/withdraw
+     *  verbs emit exactly this key. */
+    @route(authenticated)
+    metaPublicRowFragment(entry_id: number): Markup {
+        return ['div', {class: `-entry-${entry_id}-public-`,
+                        'hx-get': `${R}.metaPublicRowFragment(${entry_id})`,
+                        'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
+                this.metaPublicRow(entry_id)];
+    }
+
+    /** The PUBLIC row (fix-orthographies.md "Status"): per-orthography chips
+     *  showing the publish gate - `Listuguj ✓ since <date> (<who>)` when set,
+     *  `Smith-Francis —` when not - with the makePublic/withdraw verbs behind
+     *  a quiet ☰ for approvers.  The gate composes with the lifecycle
+     *  (entryIsPublicIn): an Archived word keeps its gates (un-archiving
+     *  restores publicness) but is not public, and the row says so. */
+    private metaPublicRow(entry_id: number): Markup {
+        const gates = new Map(this.app.lexemeOps.currentPublicGates(entry_id)
+            .map(a => [a.variant as string, a]));
+        const entryJson = this.app.entriesById.get(entry_id);
+        const archived = entryJson ? entrySchema.isArchivedEntry(entryJson) : false;
+        const orthographies = Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm');
+
+        const chips: Markup[] = orthographies.map(([slug, name]) => {
+            const g = gates.get(slug);
+            return ['span', {class: 'lm-public-chip ' + (g ? 'lm-public-chip-on' : 'lm-public-chip-off')},
+                    name, ' ',
+                    g ? ['span', {},
+                         '\u2713 since ', timestamp.formatTimestampAsLocalTime(g.valid_from).split(' ')[0],
+                         g.change_by_username ? ` (${g.change_by_username})` : '']
+                      : '\u2014'];
+        });
+
+        const menuItems: action.ActionMenuItem[] = this.app.lexemeOps.hasApprovePermission()
+            ? orthographies.map(([slug, name]) => {
+                const deps = [`.-entry-${entry_id}-public-`];
+                return gates.has(slug)
+                    ? {label: `Withdraw from ${name}\u2026`,
+                       mode: {kind: 'confirm' as const, deps,
+                              message: `Withdraw this word from the ${name} public dictionary?`,
+                              expr: `wordwiki.lexeme.withdraw(${entry_id}, '${slug}')`}}
+                    : {label: `Make public in ${name}\u2026`,
+                       mode: {kind: 'confirm' as const, deps,
+                              message: `Make this word public in the ${name} dictionary? ` +
+                                       'It appears on the public site at the next publish.',
+                              expr: `wordwiki.lexeme.makePublic(${entry_id}, '${slug}')`}};
+              })
+            : [];
+
+        return ['div', {class: 'lm-public-row d-flex align-items-center gap-2 flex-wrap mb-2'},
+                ['b', {class: 'small'}, 'Public: '],
+                chips,
+                archived ? ['span', {class: 'text-muted small'},
+                            '(archived \u2014 not public while archived)'] : undefined,
+                menuItems.length > 0
+                    ? action.actionMenu(menuItems, {ariaLabel: 'Public actions'})
+                    : undefined];
+    }
+
+    /** Set the per-orthography publish gate (lexeme-ops.makePublic does the
+     *  work + permission checks); reloads the Public row. */
+    @routeMutation(authenticated)
+    makePublic(entry_id: number, orthography: string): any {
+        this.app.lexemeOps.makePublic(entry_id, orthography);
+        return this.reload([`.-entry-${entry_id}-public-`]);
+    }
+
+    /** Withdraw the per-orthography publish gate; reloads the Public row. */
+    @routeMutation(authenticated)
+    withdraw(entry_id: number, orthography: string): any {
+        this.app.lexemeOps.withdraw(entry_id, orthography);
+        return this.reload([`.-entry-${entry_id}-public-`]);
     }
 
     /** The reference scan + composed reference-book link (see wordView).

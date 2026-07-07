@@ -55,6 +55,7 @@ import { variantPolicyByTag } from './variant-policy.ts';
 import { FindingsReport } from './findings.ts';
 import { scanVariants, VariantReports } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
+import { migrateStatus } from './status-migrate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -300,16 +301,18 @@ export class WordWiki extends LiminalApp {
     }
 
     /**
-     * The entries the public site renders. TWO gates (dz): the entry's status
-     * is Completed (the lexeme is "ready" - isPublished, unchanged) AND its
-     * facts are published. So the base projection is the PUBLISHED one (per-fact
-     * approval), filtered by status. Approval is used while building too, so an
-     * in-progress entry may carry published facts, but stays off the public site
-     * until its status reaches Completed.
+     * The entries the public site renders - the COMPOSITION RULE
+     * (fix-orthographies.md "Status"): the base projection is the PUBLISHED
+     * one (per-fact approval), and an entry is on the site iff it is public
+     * in the site's orthography - lifecycle not Archived* AND the
+     * per-orthography pub gate is set (entryIsPublicIn).  Approval is used
+     * while building too, so an in-progress entry may carry published facts,
+     * but stays off the public site until someone makes it public.
      */
     get publishedEntries(): entry.Entry[] {
         return this.#publishedEntries ??=
-            Array.from(this.publishedProjection.filter(e=>entry.isPublished(e)));
+            Array.from(this.publishedProjection.filter(
+                e => entry.entryIsPublicIn(e, entry.PUBLIC_SITE_ORTHOGRAPHY)));
     }
 
     get entriesByReferenceGroupId(): Map<number, entry.Entry> {
@@ -2104,6 +2107,44 @@ if (import.meta.main) {
                                         : 'idempotency confirmed: re-run made no changes');
                 }
                 console.info(`migrate-variants: ${stats.changed} row(s) ${dryRun ? 'WOULD change (dry run)' : 'changed'} ` +
+                             `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // The STATUS REMODEL data migration (fix-orthographies.md "Status",
+        // status-migrate.ts): publish gates from Completed statuses, the
+        // lifecycle renames, sta variant blanking, and lifecycle synthesis
+        // for no-status entries.  ONCE PER DB (config marker), dry-runnable.
+        // Runs BEFORE migrate-variants in the pipeline (it reads sta variants
+        // for the gate orthography, then blanks them).
+        //   ./wordwiki.sh migrate-status [--dry-run] [--report path.md] [--expect-no-changes]
+        case 'migrate-status': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const dryRun = args.includes('--dry-run');
+                if(!dryRun && ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                const reportIx = args.indexOf('--report');
+                const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
+                const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
+                const report = new FindingsReport(
+                    `Status remodel migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
+                const stats = migrateStatus(report, {dryRun, config: ww.config});
+                if(reportPath) {
+                    Deno.writeTextFileSync(reportPath, report.toMarkdown());
+                    console.info(`wrote ${reportPath}`);
+                }
+                if(args.includes('--expect-no-changes')) {
+                    if(stats.changed > 0)
+                        throw new Error(`--expect-no-changes: ${dryRun ? 'would change' : 'changed'} ` +
+                                        `${stats.changed} row(s)`);
+                    console.info(dryRun ? 'read-only probe: the status remodel is done on this db'
+                                        : 'idempotency confirmed: re-run made no changes');
+                }
+                console.info(`migrate-status: ${stats.changed} change(s) ` +
                              `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
             });
             Deno.exit(0);

@@ -16,6 +16,7 @@ import ContextMenu from '../liminal/context-menu.js';
 import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from './render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as random from '../liminal/random.ts';
+import { variantMatches } from './variant-policy.ts';
 
 export const DictTag = 'dct';          // dict
 export const EntryTag = 'ent';         // entr
@@ -50,6 +51,7 @@ export const RefNoteTag = 'rnt';
 export const RefPublicNoteTag = 'rnp';
 export const SourceTag = 'src';
 export const RecordingTag = 'rec';
+export const PublicTag = 'pub';
 
 // Full relation names for USER-VIEWABLE content (reports, warnings): never
 // show the three-letter tags there (dz: "rnp => RefPublicNote").  Keyed by
@@ -89,6 +91,7 @@ export const relationDisplayNameByTag: Record<string, string> = {
     [RefPublicNoteTag]: 'RefPublicNote',
     [SourceTag]: 'Source',
     [RecordingTag]: 'Recording',
+    [PublicTag]: 'Public',
 };
 
 /** The user-viewable name of a relation tag (falls back to the raw tag for
@@ -124,10 +127,17 @@ export function canUserPublish(userId: string): boolean {
     return userId === 'djz' || userId === 'dmm';
 }
 
+// The lexeme LIFECYCLE (fix-orthographies.md "Status" - the status remodel):
+// whole-lexeme, exactly one current fact, and deliberately says NOTHING about
+// publicness - the per-orthography `pub` gate carries that (entryIsPublicIn).
+// 'Completed' renamed to 'Complete' to break the old "complete = public"
+// reading (migrate-status renames the data; a not-yet-migrated value renders
+// raw).  'Unknown' also absorbs the synthesized lifecycle of entries that had
+// no status fact at all.
 export const states: Record<string, string> = {
     'Unknown': 'Unknown Status',
-    'Completed': 'Completed',
-    'CompletedAsPDMOnly': 'Completed As PDM Only',
+    'Complete': 'Complete',
+    'CompleteAsPDMOnly': 'Complete As PDM Only',
     'InProcess': 'In Process',
     'InProcessPDMOnly': 'In Process - For PDM Only',
     'OnHold': 'On Hold - To Be Processed',
@@ -268,8 +278,26 @@ export const dictSchemaJson = {
             status_id: {$type: 'primary_key'},
             status: {$type: 'enum', $bind: 'attr1', $style: { $options: states} },
             details: {$type: 'string', $bind: 'attr2' },
-            variant: {$type: 'variant', $metaVariant: true},
+            // NO variant: the lifecycle is whole-lexeme (status remodel -
+            // nobody archives per orthography); publicness forks per
+            // orthography in the `pub` relation below instead.
             // Editorial: not in the read view; the EDITOR shows it.
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { hidden: true, label: 'inline' } },
+        },
+
+        // The per-orthography PUBLISH GATE (fix-orthographies.md "Status"):
+        // one fact per orthography; the fact's PRESENCE is the gate - who/
+        // when/why come free from the assertion columns.  Managed by the
+        // makePublic/withdraw verbs (born-published, approve-gated), rendered
+        // as the editor's custom Public row - NOT the generic tuple editor
+        // (the renderer omits it; see LexemeEditor).
+        public: {
+            $type: 'relation',
+            $tag: PublicTag,
+            $prompt: 'Public',
+            public_id: {$type: 'primary_key'},
+            variant: {$type: 'variant', $metaVariant: true},
             $style: { $shape: 'compactInlineListRelation',
                       $view: { hidden: true, label: 'inline' } },
         },
@@ -670,6 +698,7 @@ export interface Entry {
     entry_id: number,
     spelling: Spelling[],
     status: Status[],
+    public: Public[],
     todo: Todo[],
     subentry: Subentry[],
     recording: Recording[],
@@ -679,6 +708,10 @@ export interface Status {
     status_id: number,
     status: string,
     details: string,
+}
+
+export interface Public {
+    public_id: number,
     variant: string,
 }
 
@@ -863,8 +896,22 @@ export interface Recording {
     variant: string,
 }
 
-export function isPublished(e: Entry): boolean {
-    return e.status.some(s=>s.status === 'Completed' || s.status === 'CompletedAsPDMOnly');
+// The orthography today's public site renders (and therefore the pub gate it
+// composes on).  Publishing more orthographies = more calls with other values.
+export const PUBLIC_SITE_ORTHOGRAPHY = 'mm-li';
+
+/**
+ * THE COMPOSITION RULE (fix-orthographies.md "Status"): a word is public in
+ * orthography O iff its lifecycle is not Archived* AND its per-orthography
+ * publish gate pub(O) is current.  (The third leg - facts rendered are the
+ * published dimension filtered by variantMatches(O) - is the projection the
+ * caller feeds in, e.g. WordWiki.publishedEntries builds on
+ * publishedProjection.)  Replaces the old isPublished status==='Completed'
+ * check: lifecycle no longer implies publicness.
+ */
+export function entryIsPublicIn(e: Entry, orthography: string): boolean {
+    return !isArchivedEntry(e)
+        && (e.public ?? []).some(p => variantMatches(p.variant, orthography));
 }
 
 /**

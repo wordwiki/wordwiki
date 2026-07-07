@@ -244,3 +244,13 @@ body {
 .lm-me-scan { margin: .5rem 0; line-height: 0; }
 .lm-me-scan a { display: block; }
 .lm-me-scan svg { display: block; }
+
+/* The Public row (lexeme-editor.ts metaPublicRow): per-orthography
+   publish-gate chips.  Set = a quiet green wash; unset = muted.  The verbs
+   live behind the row's ☰, approvers only. */
+.lm-public-chip {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: .375rem; padding: .05em .5em; font-size: .85em;
+}
+.lm-public-chip-on { background: rgba(25, 135, 84, .12); }
+.lm-public-chip-off { color: var(--bs-secondary-color, #6c757d); }

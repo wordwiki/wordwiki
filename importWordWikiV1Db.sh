@@ -50,17 +50,23 @@ set -e
 #      shoebox-date attribute values to ISO yyyy-mm-dd, mute-in-place (the
 #      lexeme creation dates - see creation-dates.ts; validates the whole
 #      corpus loudly here rather than silently at query time); idempotent
-#  10. migrate-variants: THE orthography data migration (fix-orthographies.md):
+#  10. migrate-status: the STATUS REMODEL (fix-orthographies.md "Status"):
+#      publish gates born from Completed statuses (CompleteAsPDMOnly
+#      deliberately gets none), Completed->Complete renames, sta variant
+#      blanked (lifecycle is whole-lexeme), 'Unknown' synthesized for
+#      no-status entries.  ONCE PER DB (config marker); BEFORE
+#      migrate-variants so the gate orthography can read the sta variant
+#  11. migrate-variants: THE orthography data migration (fix-orthographies.md):
 #      blank normalize + $notVariant column drop + explicit value fixes +
 #      per-tag blank backfill, mute-in-place; preconditions re-checked
 #      (flagged schema, scan drop gate, mapping coverage); hand-triage rows
 #      left for the live Variant Cleanup report; refreshes the committed
 #      variant-migration-report.md; idempotent + proof
-#  11. verify-migration: read-only invariant checks; exits nonzero on failure
-#  12. verify-workspace: read-only STRUCTURAL invariants of the whole store
+#  12. verify-migration: read-only invariant checks; exits nonzero on failure
+#  13. verify-workspace: read-only STRUCTURAL invariants of the whole store
 #      (variant invariants reported as warnings - only the hand-triage
 #      remainder should show post-migration)
-#  13. restart the server and smoke-test it over HTTP
+#  14. restart the server and smoke-test it over HTTP
 #
 # ---- The PRODUCTION cutover (when the day comes) IS this script ----------
 # On the production host: stop the server, BACK UP the db file, then
@@ -87,56 +93,62 @@ done
 
 step() { echo; echo "=== $* ==="; }
 
-step "[1/13] stopping the server"
+step "[1/14] stopping the server"
 ./wordwiki.sh stop
 
 if [ "$NO_PULL" = 1 ]; then
-    step "[2/13] pull SKIPPED (--no-pull): migrating the db already in place"
+    step "[2/14] pull SKIPPED (--no-pull): migrating the db already in place"
 else
-    step "[2/13] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
+    step "[2/14] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
     ./pullWordWikiV1Db.sh
 fi
 
-step "[3/13] repairing pre-existing store corruption (idempotent)"
+step "[3/14] repairing pre-existing store corruption (idempotent)"
 ./wordwiki.sh repair-assertions $ALLOW_PROD
 
-step "[4/13] importing categories"
+step "[4/14] importing categories"
 ./wordwiki.sh import-categories $ALLOW_PROD
 
-step "[5/13] category import idempotency proof"
+step "[5/14] category import idempotency proof"
 ./wordwiki.sh import-categories $ALLOW_PROD --expect-no-changes
 
-step "[6/13] importing lexical forms (+ idempotency proof)"
+step "[6/14] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms $ALLOW_PROD
 ./wordwiki.sh import-lexical-forms $ALLOW_PROD --expect-no-changes
 
-step "[7/13] importing legacy twitter-posts (+ idempotency proof)"
+step "[7/14] importing legacy twitter-posts (+ idempotency proof)"
 # --report-skipped refreshes the committed hand-off list of the words a human
 # must place in production (homonyms/unmatched); it shrinks as they are fixed.
 ./wordwiki.sh import-twitter-posts $ALLOW_PROD --report-skipped=skipped-twitter-posts.md
 ./wordwiki.sh import-twitter-posts $ALLOW_PROD --expect-no-changes
 
-step "[8/13] publication Phase 0: born-approve existing data (+ idempotency proof)"
+step "[8/14] publication Phase 0: born-approve existing data (+ idempotency proof)"
 ./wordwiki.sh backfill-publication $ALLOW_PROD
 ./wordwiki.sh backfill-publication $ALLOW_PROD --expect-no-changes
 
-step "[9/13] normalizing legacy shoebox creation dates (+ idempotency proof)"
+step "[9/14] normalizing legacy shoebox creation dates (+ idempotency proof)"
 ./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD
 ./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD --expect-no-changes
 
-step "[10/13] the orthography variant migration (+ idempotency proof)"
+step "[10/14] the status remodel migration (+ idempotency proof)"
+# Gates + renames + lifecycle synthesis; the committed report names the
+# CompleteAsPDMOnly words that leave the public site.
+./wordwiki.sh migrate-status $ALLOW_PROD --report status-migration-report.md
+./wordwiki.sh migrate-status $ALLOW_PROD --expect-no-changes
+
+step "[11/14] the orthography variant migration (+ idempotency proof)"
 # The committed report is the point-in-time record (hand-triage remainder,
 # per-action counts); the LIVE Variant Cleanup page is the draining queue.
 ./wordwiki.sh migrate-variants $ALLOW_PROD --report variant-migration-report.md
 ./wordwiki.sh migrate-variants $ALLOW_PROD --expect-no-changes
 
-step "[11/13] verifying the migration"
+step "[12/14] verifying the migration"
 ./wordwiki.sh verify-migration
 
-step "[12/13] verifying the assertion store is structurally well-formed"
+step "[13/14] verifying the assertion store is structurally well-formed"
 ./wordwiki.sh verify-workspace
 
-step "[13/13] starting the server + smoke test"
+step "[14/14] starting the server + smoke test"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break

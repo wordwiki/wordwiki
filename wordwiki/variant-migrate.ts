@@ -64,7 +64,9 @@ import { variantPolicyByTag, allowedVariantValues,
  */
 export const blankBackfillByTag: Record<string, string> = {
     spl: 'mm-li',
-    sta: 'mm-li',
+    // (sta is NOT here: the status remodel made it variant-less - the status
+    // migration (status-migrate.ts, which runs FIRST) reads each sta variant
+    // for its gate orthography and then blanks it.)
     tdo: 'mm',
     etx: 'mm-li',
     alx: 'mm-li',

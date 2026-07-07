@@ -231,7 +231,24 @@ Shape suggestion to evaluate there:
 - designing status in *parallel* to the publication dimension would risk two
   overlapping publicness mechanisms — co-design them.
 
-### Concrete draft (claude 2026-07-07, for dz review)
+### Concrete draft (claude 2026-07-07; CONFIRMED by dz; BUILT + dev-migrated 2026-07-07)
+
+**BUILT (2026-07-07):** the schema (lifecycle-only `sta` — no variant,
+`Complete` renames; the `pub` relation, custom-rendered), the
+`entryIsPublicIn` composition rule (publishedEntries = published projection ∘
+gate), the `makePublic`/`withdraw` verbs (approve-gated, born-published /
+tombstone+interval-close, tree-ordering gate), the editor's Public row
+(per-orthography chips + verbs behind ☰), and the `migrate-status` command
+(once-per-db config marker like the publication backfill; dry-runnable;
+decisions as changeable constants; step 10 of importWordWikiV1Db.sh, BEFORE
+migrate-variants so gates can read the sta variant).  Dev migration: 6,973
+gates, 6,974 renames, 7,917 sta variants blanked, 983 'Unknown' lifecycles
+synthesized; committed record status-migration-report.md.  The ONE
+CompleteAsPDMOnly word left the public site (named in the report) — note the
+old isPublished had INCLUDED PDM-only words, contradicting this doc's
+premise; with exactly one word affected, the confirmed no-gate mapping
+stands.
+
 
 Two relations replace today's overloaded status:
 

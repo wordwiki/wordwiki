@@ -27,6 +27,8 @@ import type { Markup } from '../liminal/markup.ts';
 import { db } from '../liminal/db.ts';
 import { openTestDb, clearAllData } from '../liminal/testing/db-harness.ts';
 import { backfillPublication } from './publication-backfill.ts';
+import { migrateStatus } from './status-migrate.ts';
+import { FindingsReport } from './findings.ts';
 import { setRoutePolicy } from "../liminal/liminal.ts";
 
 // Pin the suite to strict so it exercises full @route enforcement regardless of
@@ -89,12 +91,16 @@ export function as<T>(fx: Fixture, spec: ActorSpec | string, fn: () => T): T {
     return security.run({actorId: spec.actorId, roles: new Set(spec.roles)}, fn);
 }
 
-// Born-approve the test's Completed-status data (the Phase 0 mute) and rebuild
-// the in-RAM workspace from the updated db, so `publishedEntries` (now the
-// published projection AND status) sees it. For tests that seed Completed
-// entries and then exercise the public renderer.
+// Bless the test's seeded old-shape data exactly like the V1 cutover does:
+// Phase-0 born-approve (the publication backfill) AND the status remodel
+// (Completed -> Complete + a born-published pub gate, lifecycle synthesis),
+// then rebuild the in-RAM workspace, so `publishedEntries` (published
+// projection ∘ entryIsPublicIn) sees it.  For tests that seed
+// Completed/Complete entries and then exercise the public renderer.
 export function bornApprove(ww: WordWiki): void {
     backfillPublication();
+    migrateStatus(new FindingsReport('test bless', {quiet: true}),
+                  {now: ww.allocTxTimestamps(1, {quiet: true})});
     ww.requestWorkspaceReload();
 }
 

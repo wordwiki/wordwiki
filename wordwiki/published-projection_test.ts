@@ -1,15 +1,15 @@
 // deno-lint-ignore-file no-explicit-any
 /**
  * The Phase 1 public-renderer switch: WordWiki.publishedEntries is now the
- * PUBLISHED projection (published_to=EOT facts) filtered by status (dz: status
- * AND published). So a pending edit on a Completed entry does not leak to the
- * public — the public sees the last approved value — and an in-progress entry
- * stays off the public site even though approval runs while it is built.
+ * PUBLISHED projection (published_to=EOT facts) composed with the publish
+ * gate (entryIsPublicIn - the status remodel).  So a pending edit on a public
+ * entry does not leak — the public sees the last approved value — and an
+ * in-progress entry stays off the public site even though approval runs
+ * while it is built.
  */
 import { test } from "../liminal/testing/test.ts";
 import { assertEquals } from "../liminal/testing/assert.ts";
-import { withTestDb, as, TestTimeline, mkEntry, mkChild, mkEdit, type Fixture } from "./testing.ts";
-import { backfillPublication } from "./publication-backfill.ts";
+import { withTestDb, as, bornApprove, TestTimeline, mkEntry, mkChild, mkEdit, type Fixture } from "./testing.ts";
 
 const applyOne = (ww: any, a: any) => ww.applyTransaction([a], { quiet: true });
 const spellingOf = (entries: any[], id: number) =>
@@ -35,13 +35,13 @@ test("publishedEntries = published projection AND status; a pending edit does no
             applyOne(ww, mkChild(ip, "spl", 2002, tl.next(), { attr1: "draft" }));
         });
 
-        // Phase 0 born-approve (stamps Completed entries only), then rebuild the
-        // in-RAM workspace - the backfill wrote the db directly.
-        backfillPublication();
-        ww.requestWorkspaceReload();
+        // Bless like the cutover: Phase-0 born-approve + the status remodel
+        // (Completed -> Complete + a publish gate), then rebuild the in-RAM
+        // workspace - both wrote the db directly.
+        bornApprove(ww);
 
-        // The Completed entry is public with its published spelling; the
-        // in-progress one is off the public site (no published facts + status).
+        // The gated entry is public with its published spelling; the
+        // in-progress one is off the public site (no gate).
         assertEquals(ww.publishedEntries.length, 1);
         assertEquals(spellingOf(ww.publishedEntries, 1000), "samqwan");
         assertEquals(ww.publishedEntries.some((e: any) => e.entry_id === 2000), false);

@@ -65,6 +65,12 @@ set -e
 #                                      # iff the $notVariant drop gate passes;
 #                                      # --report <path.md> writes the
 #                                      # findings report
+#   ./wordwiki.sh migrate-status       # the STATUS REMODEL migration:
+#                                      # publish gates from Completed, the
+#                                      # Complete renames, sta variant blank,
+#                                      # 'Unknown' synthesis (once per db via
+#                                      # config marker; --dry-run / --report /
+#                                      # --expect-no-changes as migrate-variants)
 #   ./wordwiki.sh migrate-variants     # THE orthography data migration:
 #                                      # blank normalize + $notVariant drop +
 #                                      # value fixes + per-tag blank backfill,
