@@ -66,7 +66,10 @@ set -e
 #  13. verify-workspace: read-only STRUCTURAL invariants of the whole store
 #      (variant invariants reported as warnings - only the hand-triage
 #      remainder should show post-migration)
-#  14. restart the server and smoke-test it over HTTP
+#  14. start the server, smoke-test it over HTTP, then STOP it - the import
+#      must end with the db AT REST: updateStaging.sh rsyncs the db file,
+#      and pushing one with a live writer risks a torn copy.  Restart by
+#      hand (./wordwiki.sh) when you want to poke around
 #
 # ---- The PRODUCTION cutover (when the day comes) IS this script ----------
 # On the production host: stop the server, BACK UP the db file, then
@@ -148,7 +151,7 @@ step "[12/14] verifying the migration"
 step "[13/14] verifying the assertion store is structurally well-formed"
 ./wordwiki.sh verify-workspace
 
-step "[14/14] starting the server + smoke test"
+step "[14/14] starting the server + smoke test (stopped again after)"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break
@@ -173,5 +176,9 @@ NFORMS=$(curl -s -b "$COOKIES" 'http://localhost:9000/ww/wordwiki.lexicalFormsPa
 [ "$NFORMS" -ge 15 ] || { echo "SMOKE FAIL: lexical forms page shows only $NFORMS rows"; exit 1; }
 echo "smoke ok: server 200, $NCATS categories, $NFORMS lexical forms"
 
+# End STOPPED (dz): updateStaging.sh rsyncs the db file, and a running
+# server means pushing a live db.  Start it by hand when needed.
+./wordwiki.sh stop
+
 echo
-echo "V1 db import complete."
+echo "V1 db import complete (server stopped - run ./wordwiki.sh to start it)."
