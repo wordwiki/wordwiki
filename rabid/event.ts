@@ -536,9 +536,10 @@ export class EventTable extends Table<Event> {
         const services = security.runSystem(() => rabid.service.servicesForEvent.all({event_id}));
         const canAdd = rabid.service.canEditRecord({event_id} as any);
         if(!canAdd && services.length === 0) return undefined as unknown as Markup;
-        // SHAPE key: adding/removing a service reloads the section; EDITING one
-        // reloads just its row (renderServiceRow is row-keyed) - not the whole list.
-        const props = reloadableProps([rabid.service.shapeKey('event_id', event_id)],
+        // LIVE on the SHAPE key: another host adding/removing a service on this
+        // event re-renders the section for everyone (long-poll); EDITING one reloads
+        // just its row (renderServiceRow is row-keyed) - not the whole list.
+        const props = liveReloadableProps([rabid.service.shapeKey('event_id', event_id)],
             `rabid.event.renderEventServices(${event_id})`);
         return [h.div, {...props, id: 'services'},
             [h.div, {class: 'lm-doc-section-head'},
@@ -562,8 +563,8 @@ export class EventTable extends Table<Event> {
         const sales = security.runSystem(() => rabid.sale.salesForEvent.all({event_id}));
         const canAdd = rabid.sale.canEditRecord({event_id} as any);
         if(!canAdd && sales.length === 0) return undefined as unknown as Markup;
-        // SHAPE key (see renderEventServices): edit reloads only the row.
-        const props = reloadableProps([rabid.sale.shapeKey('event_id', event_id)],
+        // LIVE on the SHAPE key (see renderEventServices): edit reloads only the row.
+        const props = liveReloadableProps([rabid.sale.shapeKey('event_id', event_id)],
             `rabid.event.renderEventSales(${event_id})`);
         return [h.div, {...props, id: 'sales'},
             [h.div, {class: 'lm-doc-section-head'},
@@ -597,10 +598,10 @@ export class EventTable extends Table<Event> {
         const photos = security.runSystem(() => rabid.event_photo.forEvent.all({event_id}));
         const canAdd = rabid.event_photo.canEditRecord({event_id} as any);
         if(!canAdd && photos.length === 0) return undefined as unknown as Markup;
-        // The SHAPE key (not the plain fk key): the section reloads only when a
-        // card is added/deleted, not when a photo's caption/crop changes (those
-        // reload just the card - see renderPhotoCard).
-        const props = reloadableProps([rabid.event_photo.shapeKey('event_id', event_id)],
+        // LIVE on the SHAPE key (not the plain fk key): the section reloads for
+        // everyone when a card is added/deleted, not when a photo's caption/crop
+        // changes (those reload just the card - see renderPhotoCard).
+        const props = liveReloadableProps([rabid.event_photo.shapeKey('event_id', event_id)],
             `rabid.event.renderEventPhotos(${event_id})`);
         return [h.div, {...props, id: 'photos', 'data-testid': 'event-photos'},
             [h.div, {class: 'lm-doc-section-head'},
@@ -626,7 +627,9 @@ export class EventTable extends Table<Event> {
         const retros = security.runSystem(() => rabid.event_retrospective.forEvent.all({event_id}))
             .filter(r => isHost || !r.host_only);
         const canAdd = security.current()?.actorId != null;
-        const props = reloadableProps([rabid.event_retrospective.shapeKey('event_id', event_id)],
+        // LIVE on the shape key: a retrospective posted by someone else appears for
+        // everyone (long-poll).
+        const props = liveReloadableProps([rabid.event_retrospective.shapeKey('event_id', event_id)],
             `rabid.event.renderEventRetrospectives(${event_id})`);
         return [h.div, {...props, id: 'retrospectives', 'data-testid': 'event-retrospectives'},
             [h.div, {class: 'lm-doc-section-head'},
