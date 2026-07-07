@@ -12,6 +12,7 @@ import { withTestDb, as, bornApprove, renderRoute, invoke,
          TestTimeline, mkEntry, mkChild, type Fixture } from './testing.ts';
 import { db } from '../liminal/db.ts';
 import * as timestamp from '../liminal/timestamp.ts';
+import * as security from '../liminal/security.ts';
 import { seedOrthographies, orthographyVocabulary } from './orthography.ts';
 
 const EOT = timestamp.END_OF_TIME;
@@ -46,8 +47,12 @@ test("publishable flag: archaic orthographies are hidden and refused as publish 
         const html = markupToString(await as(fx, 'djz', () =>
             renderRoute(fx.ww, 'wordwiki.lexeme.metaPublicRowFragment(1000)')));
         assert(html.includes('Listuguj') && html.includes('Smith-Francis'));
-        assert(!html.includes('Modified Pacifique') && !html.includes('Pacifique Manuscript'),
-               'archaic source orthographies hidden entirely');
+        // No CHIPS and no VERBS for the archaic source orthographies (they
+        // DO appear as lens options - that is a view, not a publish target).
+        assert(!/Modified Pacifique (\u2713|\u2014|\u2022)/.test(html)
+               && !html.includes('Make public in Modified Pacifique')
+               && !html.includes('Make public in Pacifique Manuscript'),
+               'archaic source orthographies have no chips or verbs');
         // ...and the verb refuses them server-side.
         await assertRejects(() => as(fx, 'djz', () =>
             invoke(fx.ww, `wordwiki.lexeme.makePublic($arg0, $arg1)`, 1000, 'mm-pm')),
@@ -126,5 +131,66 @@ test("editor rows carry the quiet orthography badge; 'mm' stays unmarked", async
         // The 'mm' todo row is NOT marked (renders everywhere).
         const mmBadges = (html.match(/lm-me-orth/g) ?? []).length;
         assertEquals(mmBadges, 2, "exactly the two orthography rows carry badges");
+    });
+});
+
+test("other-lane dimming: approved other-orthography rows dim; pending stays bright", async () => {
+    await withTestDb(async (fx) => {
+        // djz works in Listuguj.
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        const add = (id: number, text: string, variant: string) =>
+            fx.ww.applyTransaction([mkChild(e, 'spl', id, tl.next(),
+                                            {attr1: text, variant})], {quiet: true});
+        add(1001, 'samqwan', 'mm-li');    // my lane
+        add(1002, 'samkwan', 'mm-sf');    // other living lane -> dims once approved
+        add(1003, 'samgwan', 'mm-pm');    // SOURCE orthography: never dims
+        bornApprove(fx.ww);               // approve everything seeded so far
+        add(1004, 'samkwan2', 'mm-sf');   // PENDING sf: stays bright
+
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        const rowClass = (id: number) =>
+            (html.match(new RegExp(`class='-fact-${id}- [^']*'`)) ?? [''])[0];
+        assert(!rowClass(1001).includes('lm-orth-other'), 'my lane bright');
+        assert(rowClass(1002).includes('lm-orth-other'), 'other living lane dims');
+        assert(!rowClass(1003).includes('lm-orth-other'), 'source orthography never dims');
+        assert(!rowClass(1004).includes('lm-orth-other'), 'pending stays bright');
+        assert(rowClass(1004).includes('lm-pending-fact'), '(and is pending)');
+
+        // No working orthography -> a neutral view: nothing dims.
+        const t = markupToString(await as(fx, 'test', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        assert(!t.includes('lm-orth-other'), 'no working orthography, no dimming');
+    });
+});
+
+test("the orthography lens: rows are filter-tagged, the control + rules render", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1001, tl.next(),
+                                        {attr1: 'samqwan', variant: 'mm-li'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'tdo', 1002, tl.next(),
+                                        {attr1: 'Todo', variant: 'mm'})], {quiet: true});
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        // The root carries the lens state; the select offers All + the table.
+        assert(html.includes('data-lens'), 'root lens state');
+        assert(html.includes('All orthographies'), 'the All option');
+        assert(html.includes('lm-orth-lens'), 'the control');
+        // The specific-orthography row is filter-tagged; the mm row is NOT
+        // (it renders in every lens).
+        assert(/data-orth=.?mm-li/.test(html), 'li row tagged');
+        assert(!/data-orth=.?mm(?![-])/.test(html.replace(/data-lens=[^ >]*/g, '')),
+               "the 'mm' row carries no filter tag");
+        // The generated hide rules come from the TABLE.
+        assert(html.includes('[data-lens="mm-sf"] [data-orth]:not([data-orth="mm-sf"])'),
+               'per-orthography hide rule generated');
     });
 });

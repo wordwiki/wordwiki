@@ -267,3 +267,10 @@ body {
     letter-spacing: .02em;
     user-select: none;
 }
+
+/* Other-lane de-emphasis (lexeme-editor.ts metaEditingHooks): a row whose
+   text is in a LIVING orthography other than the editor's working one reads
+   quietly - my-lane/other-lane sorts at a glance.  Muted foreground on the
+   content only (never opacity on the row: the pending dot and menus must
+   stay crisp), and PENDING rows are exempt at the class level, not here. */
+.lm-orth-other > .flex-grow-1 { color: var(--bs-secondary-color, #6c757d); }

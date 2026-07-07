@@ -1508,6 +1508,14 @@ export class WordWiki extends LiminalApp {
         }
     }
 
+    // THE working-orthography resolution (fix-orthographies.md): today the
+    // user record's primary_orthography; when the session-level switcher
+    // lands it resolves session ?? primary here, and every consumer (variant
+    // defaults, the editor's other-lane dimming) follows for free.
+    currentWorkingOrthography(): string | undefined {
+        return this.currentUserPrimaryOrthography();
+    }
+
     // Always read the db_purpose marker as a trusted op.
     getDbPurpose(): string | undefined {
         try { return security.runSystem(() => this.config.getDbPurpose()); }

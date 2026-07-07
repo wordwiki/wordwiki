@@ -859,6 +859,7 @@ export class LexemeEditor {
         const root = new WorkspaceNode(q, entry_id, q.src.id);
         const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
         return ['div', {class: `-entry-${entry_id}- container py-3`,
+                        'data-lens': '',
                         'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 ['div', {class: 'page-content'},
@@ -1086,7 +1087,28 @@ export class LexemeEditor {
                       'The proposals go through the normal review process.',
              deps: [this.rootTarget(entry_id)]},
             'btn btn-sm btn-outline-secondary');
-        return ['div', {class: 'lm-public-row d-flex align-items-center gap-2 flex-wrap mb-2'},
+        // The orthography LENS (dz): before approving a word for an
+        // orthography, see what it actually looks like there.  A pure view
+        // control: choosing a lens hides the rows whose orthography is a
+        // DIFFERENT specific one (variantMatches semantics - 'mm', blanks
+        // and variant-less rows always pass); All restores everything.  The
+        // state lives on the entry root's data-lens and the rules are
+        // generated from the orthography TABLE, so fragments re-rendering
+        // inside keep filtering correctly.
+        const lensOrths = this.app.orthographies.allByOrder.all({})
+            .filter(o => !o.retired);
+        const lensStyle = lensOrths.map(o =>
+            `[data-lens="${o.slug}"] [data-orth]:not([data-orth="${o.slug}"]) { display: none !important; }`)
+            .join('\n');
+        const lens: Markup =
+            ['span', {class: 'ms-auto d-flex align-items-center gap-1 small text-muted'},
+             'View:',
+             ['select', {class: 'form-select form-select-sm w-auto lm-orth-lens',
+                         onchange: `this.closest('[data-lens]').setAttribute('data-lens', this.value)`},
+              ['option', {value: ''}, 'All orthographies'],
+              lensOrths.map(o => ['option', {value: o.slug}, o.name])]];
+        return [['style', {}, lensStyle],
+                ['div', {class: 'lm-public-row d-flex align-items-center gap-2 flex-wrap mb-2'},
                 ['b', {class: 'small'}, 'Public: '],
                 chips,
                 archived ? ['span', {class: 'text-muted small'},
@@ -1094,7 +1116,8 @@ export class LexemeEditor {
                 transliterate,
                 menuItems.length > 0
                     ? action.actionMenu(menuItems, {ariaLabel: 'Public actions'})
-                    : undefined];
+                    : undefined,
+                lens]];
     }
 
     /** Approver sugar: set the gate through the normal ops (lexeme-ops
@@ -1168,6 +1191,20 @@ export class LexemeEditor {
         // The view-changes flag rides every fragment's own re-render URL
         // (the on-page-state model), so any reload keeps the mode.
         const chg = changes ? ', true' : '';
+        // OTHER-LANE DE-EMPHASIS (dz): with a working orthography set, rows
+        // in a DIFFERENT living (publishable) orthography read quietly - the
+        // page sorts into my-lane/other-lane at a glance.  Source
+        // orthographies (mp/pm: non-publishable, everyone's evidence), 'mm',
+        // blanks and unknown slugs never dim; and PENDING facts STAY BRIGHT
+        // (a Listuguj approver reviewing Smith-Francis proposals must not
+        // find the work faded - needs-eyes beats not-my-lane).
+        const working = this.app.currentWorkingOrthography();
+        const livingOrths = working
+            ? new Set(this.app.orthographies.publishableByOrder.all({}).map(o => o.slug))
+            : undefined;
+        const otherLane = (a: Assertion, pending: boolean): boolean =>
+            !!working && !pending && typeof a.variant === 'string'
+            && a.variant !== working && livingOrths!.has(a.variant);
         return {
             tupleSurface: (rf, id, body) => {
                 const q = new CurrentTupleQuery(this.findTupleInEntry(id.entryId, id.factId));
@@ -1209,8 +1246,14 @@ export class LexemeEditor {
                 // Also a keyboard stop (keyboard-driven-editing.md): tabindex
                 // -1 joins the roving-focus order, data-kbd is the identity
                 // focus restoration finds after this fragment is swapped.
+                const rowOrth = typeof current.assertion.variant === 'string'
+                    && current.assertion.variant !== '' && current.assertion.variant !== 'mm'
+                    ? current.assertion.variant : undefined;
                 return ['div', {class: `-fact-${id.factId}- ${editable ? 'lm-editable ' : ''}`
-                                + `${pending ? 'lm-pending-fact ' : ''}lm-kbd-stop lm-me-editable d-flex align-items-start gap-1`,
+                                + `${pending ? 'lm-pending-fact ' : ''}`
+                                + `${otherLane(current.assertion, pending) ? 'lm-orth-other ' : ''}`
+                                + `lm-kbd-stop lm-me-editable d-flex align-items-start gap-1`,
+                                ...(rowOrth ? {'data-orth': rowOrth} : {}),
                                 tabindex: '-1', 'data-kbd': `fact-${id.factId}`,
                                 'hx-get': `${R}.renderMetaTupleFragment(${id.entryId}, ${id.factId}${chg})`,
                                 'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
