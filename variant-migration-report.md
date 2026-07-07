@@ -1,6 +1,6 @@
 # Variant (orthography) migration — DRY RUN
 
-> **⚠ Point-in-time report — generated 2026-07-07T16:41:59.949Z from `/tmp/claude-1000/-home-dziegler-projects-wordwiki/61972dfd-5245-4f6c-8442-1149dcc1ee7b/scratchpad/review-instance/database/db.db [db_purpose: dev]`.**
+> **⚠ Point-in-time report — generated 2026-07-07T17:05:08.120Z from `/tmp/claude-1000/-home-dziegler-projects-wordwiki/61972dfd-5245-4f6c-8442-1149dcc1ee7b/scratchpad/review-instance/database/db.db [db_purpose: dev]`.**
 > This is a record of that moment, not a live view; re-run the generator for current data.
 
 **5 finding(s)** across 5 section(s):
@@ -20,77 +20,77 @@
 ## Decision evidence — the blank-backfill mapping
 
 
-| tag | relation | blanks to fill | current stamped values | blank becomes |
+| relation | tag | blanks to fill | current stamped values | blank becomes |
 |---|---|---|---|---|
-| spl | spelling | 192 | mm-li ×8383, mm-sf ×358, mm-pm ×3, us's'g ×1, ugs's'mual ×1, panipja'sit ×1, mp'gigwe'l ×1, mm ×1, gaqigiwto’qwamgitg ×1 | mm-li |
-| sta | status | 433 | mm-li ×7484 | mm-li |
-| tdo | todo | 585 | mm-li ×99 | mm ($defaultAll) |
-| etx | example_text | 31 | mm-li ×7623, mm-sf ×557 | mm-li |
-| alx | alternate_form_text | 154 | mm-li ×14551, mm-sf ×712 | mm-li |
-| orf | other_regional_form | 1724 | mm-li ×40, mm ×2 | mm-li |
-| att | attr | 12739 | — | mm ($defaultAll) |
-| rtl | transliteration | 353 | mm-li ×1150 | mm-li |
-| rse | source_as_entry | 44 | mm-li ×903, mm ×15, mm-pm ×11 | mm-li |
-| rne | normalized_source_as_entry | 46 | mm-li ×899 | mm-li |
-| rfr | foreign_reference | 1 | — | mm-li |
-| rnp | public_note | 368 | — | mm ($defaultAll) |
-| src | source | 783 | — | mm ($defaultAll) |
+| Spelling | spl | 192 | mm-li ×8383, mm-sf ×358, mm-pm ×3, us's'g ×1, ugs's'mual ×1, panipja'sit ×1, mp'gigwe'l ×1, mm ×1, gaqigiwto’qwamgitg ×1 | mm-li |
+| Status | sta | 433 | mm-li ×7484 | mm-li |
+| Todo | tdo | 585 | mm-li ×99 | mm ($defaultAll) |
+| ExampleText | etx | 31 | mm-li ×7623, mm-sf ×557 | mm-li |
+| AlternateFormText | alx | 154 | mm-li ×14551, mm-sf ×712 | mm-li |
+| OtherRegionalForm | orf | 1724 | mm-li ×40, mm ×2 | mm-li |
+| Attr | att | 12739 | — | mm ($defaultAll) |
+| RefTransliteration | rtl | 353 | mm-li ×1150 | mm-li |
+| RefSourceAsEntry | rse | 44 | mm-li ×903, mm ×15, mm-pm ×11 | mm-li |
+| RefNormalizedSourceAsEntry | rne | 46 | mm-li ×899 | mm-li |
+| RefForeignReference | rfr | 1 | — | mm-li |
+| RefPublicNote | rnp | 368 | — | mm ($defaultAll) |
+| Source | src | 783 | — | mm ($defaultAll) |
 
 - Rule: $defaultAll tags (usually orthography-neutral content) → the 'mm' wildcard; all others → 'mm-li' (the corpus is Listuguj-dominant, and each tag's own stamped values above bear that out).
 
 ## Actions (DRY RUN — reported, NOT applied)
 
 
-| action | tag | new value | rows |
+| action | relation | new value | rows |
 |---|---|---|---|
-| normalize-blank | spl | NULL | 191 |
-| normalize-blank | sta | NULL | 432 |
-| normalize-blank | tdo | NULL | 585 |
-| normalize-blank | tra | NULL | 651 |
-| null-literal | tra | NULL | 1 |
-| normalize-blank | gls | NULL | 1031 |
-| null-literal | gls | NULL | 2 |
-| normalize-blank | etx | NULL | 31 |
-| normalize-blank | etr | NULL | 547 |
-| normalize-blank | erc | NULL | 12 |
-| normalize-blank | prn | NULL | 13 |
-| normalize-blank | alx | NULL | 154 |
-| normalize-blank | orf | NULL | 15 |
-| normalize-blank | att | NULL | 18 |
-| normalize-blank | rtl | NULL | 353 |
-| normalize-blank | rse | NULL | 44 |
-| normalize-blank | rne | NULL | 46 |
-| normalize-blank | rfr | NULL | 1 |
-| normalize-blank | src | NULL | 5 |
-| normalize-blank | rec | NULL | 29 |
-| drop-notVariant | tra | NULL | 35 |
-| drop-notVariant | gls | NULL | 24 |
-| drop-notVariant | etr | NULL | 12 |
-| drop-notVariant | erc | NULL | 531 |
-| drop-notVariant | prn | NULL | 8321 |
-| drop-notVariant | rec | NULL | 1629 |
-| value-fix | rse | mm-pm | 15 |
-| value-fix | orf | mm-li | 2 |
-| value-fix | spl | mm-li | 1 |
-| backfill-blank | spl | mm-li | 192 |
-| backfill-blank | sta | mm-li | 433 |
-| backfill-blank | tdo | mm | 585 |
-| backfill-blank | etx | mm-li | 31 |
-| backfill-blank | alx | mm-li | 154 |
-| backfill-blank | orf | mm-li | 1724 |
-| backfill-blank | att | mm | 12739 |
-| backfill-blank | rtl | mm-li | 353 |
-| backfill-blank | rse | mm-li | 44 |
-| backfill-blank | rne | mm-li | 46 |
-| backfill-blank | rfr | mm-li | 1 |
-| backfill-blank | rnp | mm | 368 |
-| backfill-blank | src | mm | 783 |
+| normalize-blank | Spelling | NULL | 191 |
+| normalize-blank | Status | NULL | 432 |
+| normalize-blank | Todo | NULL | 585 |
+| normalize-blank | Translation | NULL | 651 |
+| null-literal | Translation | NULL | 1 |
+| normalize-blank | Gloss | NULL | 1031 |
+| null-literal | Gloss | NULL | 2 |
+| normalize-blank | ExampleText | NULL | 31 |
+| normalize-blank | ExampleTranslation | NULL | 547 |
+| normalize-blank | ExampleRecording | NULL | 12 |
+| normalize-blank | PronunciationGuide | NULL | 13 |
+| normalize-blank | AlternateFormText | NULL | 154 |
+| normalize-blank | OtherRegionalForm | NULL | 15 |
+| normalize-blank | Attr | NULL | 18 |
+| normalize-blank | RefTransliteration | NULL | 353 |
+| normalize-blank | RefSourceAsEntry | NULL | 44 |
+| normalize-blank | RefNormalizedSourceAsEntry | NULL | 46 |
+| normalize-blank | RefForeignReference | NULL | 1 |
+| normalize-blank | Source | NULL | 5 |
+| normalize-blank | Recording | NULL | 29 |
+| drop-notVariant | Translation | NULL | 35 |
+| drop-notVariant | Gloss | NULL | 24 |
+| drop-notVariant | ExampleTranslation | NULL | 12 |
+| drop-notVariant | ExampleRecording | NULL | 531 |
+| drop-notVariant | PronunciationGuide | NULL | 8321 |
+| drop-notVariant | Recording | NULL | 1629 |
+| value-fix | RefSourceAsEntry | mm-pm | 15 |
+| value-fix | OtherRegionalForm | mm-li | 2 |
+| value-fix | Spelling | mm-li | 1 |
+| backfill-blank | Spelling | mm-li | 192 |
+| backfill-blank | Status | mm-li | 433 |
+| backfill-blank | Todo | mm | 585 |
+| backfill-blank | ExampleText | mm-li | 31 |
+| backfill-blank | AlternateFormText | mm-li | 154 |
+| backfill-blank | OtherRegionalForm | mm-li | 1724 |
+| backfill-blank | Attr | mm | 12739 |
+| backfill-blank | RefTransliteration | mm-li | 353 |
+| backfill-blank | RefSourceAsEntry | mm-li | 44 |
+| backfill-blank | RefNormalizedSourceAsEntry | mm-li | 46 |
+| backfill-blank | RefForeignReference | mm-li | 1 |
+| backfill-blank | RefPublicNote | mm | 368 |
+| backfill-blank | Source | mm | 783 |
 
 - 32184 row(s) WOULD change (dry run - nothing was written)
 
 ## The cases (decision-table review detail)
 
-- value-fix `rse`: every case (15 row(s) → mm-pm)
+- value-fix RefSourceAsEntry: every case (15 row(s) → mm-pm)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -110,20 +110,20 @@
 | [sasqeia'latl](/ww/wordwiki.entry(2496189463150901)) | (sasgeiato) sasgeialeg, to lay down (flooring) | mm | mm-pm |
 | [saps'g](/ww/wordwiki.entry(1795559667270423)) | sapsem, I cut through | mm | mm-pm |
 
-- value-fix `orf`: every case (2 row(s) → mm-li)
+- value-fix OtherRegionalForm: every case (2 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
 | [nipialsutmat](/ww/wordwiki.entry(2310240804424137)) | nipialasutmat | mm | mm-li |
 | [nipisugwit](/ww/wordwiki.entry(2436025421793067)) | nipisigwit | mm | mm-li |
 
-- value-fix `spl`: every case (1 row(s) → mm-li)
+- value-fix Spelling: every case (1 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
 | [nipisugwit](/ww/wordwiki.entry(2436025421793067)) | nipisigwit | mm | mm-li |
 
-- backfill-blank `spl`: sample (192 row(s) → mm-li)
+- backfill-blank Spelling: sample (192 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -139,7 +139,7 @@
 | [AEI](/ww/wordwiki.entry(3847709554837483)) | AEI | NULL | mm-li |
 
 - … and 182 more like these
-- backfill-blank `sta`: sample (433 row(s) → mm-li)
+- backfill-blank Status: sample (433 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -155,7 +155,7 @@
 | [pepgwijeta'q](/ww/wordwiki.entry(1180100874486135)) | Completed | NULL | mm-li |
 
 - … and 423 more like these
-- backfill-blank `tdo`: sample (585 row(s) → mm)
+- backfill-blank Todo: sample (585 row(s) → mm)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -171,7 +171,7 @@
 | [aniapsuaqan](/ww/wordwiki.entry(8858692499700025)) | NeedsRecording | NULL | mm |
 
 - … and 575 more like these
-- backfill-blank `etx`: sample (31 row(s) → mm-li)
+- backfill-blank ExampleText: sample (31 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -187,7 +187,7 @@
 | [pewgweteget](/ww/wordwiki.entry(3420556289157327)) | dmm | NULL | mm-li |
 
 - … and 21 more like these
-- backfill-blank `alx`: sample (154 row(s) → mm-li)
+- backfill-blank AlternateFormText: sample (154 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -203,7 +203,7 @@
 | [mi'walsit](/ww/wordwiki.entry(1152152631076565)) | mi'walsultieg | NULL | mm-li |
 
 - … and 144 more like these
-- backfill-blank `orf`: sample (1724 row(s) → mm-li)
+- backfill-blank OtherRegionalForm: sample (1724 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -219,7 +219,7 @@
 | [ala](/ww/wordwiki.entry(1203)) | ala' (Nova Scotia) | NULL | mm-li |
 
 - … and 1714 more like these
-- backfill-blank `att`: sample (12739 row(s) → mm)
+- backfill-blank Attr: sample (12739 row(s) → mm)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -235,7 +235,7 @@
 | [agnimuet](/ww/wordwiki.entry(251)) | twitter-post | NULL | mm |
 
 - … and 12729 more like these
-- backfill-blank `rtl`: sample (353 row(s) → mm-li)
+- backfill-blank RefTransliteration: sample (353 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -251,7 +251,7 @@
 | [maqi'gan](/ww/wordwiki.entry(8938092476632095)) | big, maqigan (gh), maqo'guom, maqigano'guo'm,maqigaqiguo'… | NULL | mm-li |
 
 - … and 343 more like these
-- backfill-blank `rse`: sample (44 row(s) → mm-li)
+- backfill-blank RefSourceAsEntry: sample (44 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -267,7 +267,7 @@
 | [na'ntemigjematl](/ww/wordwiki.entry(6040514465645495)) | na'ntemigjemg: I check him/her for fleas | NULL | mm-li |
 
 - … and 34 more like these
-- backfill-blank `rne`: sample (46 row(s) → mm-li)
+- backfill-blank RefNormalizedSourceAsEntry: sample (46 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -283,13 +283,13 @@
 | [nipetesmuatl](/ww/wordwiki.entry(3620982608182423)) | nipetesmuatl, he/she cooks (rice, etc.) overnight for him… | NULL | mm-li |
 
 - … and 36 more like these
-- backfill-blank `rfr`: sample (1 row(s) → mm-li)
+- backfill-blank RefForeignReference: sample (1 row(s) → mm-li)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
 | [mestagsepgu / mestags'pgw tba](/ww/wordwiki.entry(226240702597482)) |  | NULL | mm-li |
 
-- backfill-blank `rnp`: sample (368 row(s) → mm)
+- backfill-blank RefPublicNote: sample (368 row(s) → mm)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -305,7 +305,7 @@
 | [ewle'juinu'sgw](/ww/wordwiki.entry(3869961271270178)) | According to the Speaker's group, this term does not refe… | NULL | mm |
 
 - … and 358 more like these
-- backfill-blank `src`: sample (783 row(s) → mm)
+- backfill-blank Source: sample (783 row(s) → mm)
 
 | word | field text | variant was | becomes |
 |---|---|---|---|
@@ -324,8 +324,8 @@
 
 ## Hand-triage remainder (deliberately untouched)
 
-- **`spl` [gaqigiwto’qwamgwitg](/ww/wordwiki.entry(6600191186939385)): variant 'gaqigiwto’qwamgitg' needs a human decision**
-- **`spl` [panilja'sit](/ww/wordwiki.entry(8827091097655615)): variant 'panipja'sit' needs a human decision**
-- **`spl` [mpugugwe'l](/ww/wordwiki.entry(6025112336228945)): variant 'mp'gigwe'l' needs a human decision**
-- **`spl` [us'seg](/ww/wordwiki.entry(3692627557683377)): variant 'us's'g' needs a human decision**
-- **`spl` [ugs'semual](/ww/wordwiki.entry(5586271656062367)): variant 'ugs's'mual' needs a human decision**
+- **Spelling [gaqigiwto’qwamgwitg](/ww/wordwiki.entry(6600191186939385)): variant 'gaqigiwto’qwamgitg' needs a human decision**
+- **Spelling [panilja'sit](/ww/wordwiki.entry(8827091097655615)): variant 'panipja'sit' needs a human decision**
+- **Spelling [mpugugwe'l](/ww/wordwiki.entry(6025112336228945)): variant 'mp'gigwe'l' needs a human decision**
+- **Spelling [us'seg](/ww/wordwiki.entry(3692627557683377)): variant 'us's'g' needs a human decision**
+- **Spelling [ugs'semual](/ww/wordwiki.entry(5586271656062367)): variant 'ugs's'mual' needs a human decision**

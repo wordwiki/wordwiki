@@ -172,12 +172,12 @@ test("migrate-variants --dry-run: reports every case, writes nothing", async () 
         assert(md.includes('blank becomes'), 'evidence table header');
         // The cases: value fixes enumerated with headword links, backfills sampled.
         assert(md.includes('The cases'), 'cases section');
-        assert(md.includes('value-fix `spl`: every case'), 'value-fix enumerated');
+        assert(md.includes('value-fix Spelling: every case'), 'value-fix enumerated');
         // The case row links by the entry's HEADWORD (its first spelling);
         // the affected row's own text rides the field-text column.
         assert(md.includes('[samqwan](/ww/wordwiki.entry(1000))'), 'headword-linked case row');
         assert(md.includes('| waisis | mm | mm-li |'), 'value-fix case columns');
-        assert(md.includes('backfill-blank `spl`: sample'), 'backfill sampled');
+        assert(md.includes('backfill-blank Spelling: sample'), 'backfill sampled');
         // The dry-run remainder excludes what the run WOULD fix: the 'mm'
         // value-fix candidate must not be listed as hand-triage.
         assert(!md.includes("'mm' needs a human decision"), 'value-fix not in remainder');

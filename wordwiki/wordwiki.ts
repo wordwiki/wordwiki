@@ -2024,7 +2024,7 @@ if (import.meta.main) {
             const groups = new Map<string, {n: number, samples: string[]}>();
             for(const w of variantWarnings) {
                 const tag = w.path.split('/').pop()?.split(':')[0] ?? '?';
-                const key = `${w.invariant} on '${tag}'`;
+                const key = `${w.invariant} on ${entry.relationDisplayName(tag)}`;
                 const g = groups.get(key) ?? {n: 0, samples: []};
                 g.n++;
                 if(g.samples.length < 3) g.samples.push(w.path);

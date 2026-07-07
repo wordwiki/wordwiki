@@ -116,7 +116,7 @@ test("scan: clean-ish db passes the gate; blanks are findings, not failures", as
         const md = report.toMarkdown();
         assertStringIncludes(md, 'Drop gate: PASS');
         // The blank spl is a backfill finding.
-        assertStringIncludes(md, '`spl`');
+        assertStringIncludes(md, "Spelling:");
         assertStringIncludes(md, '1 blank variant(s) of 2 current rows');
     });
 });

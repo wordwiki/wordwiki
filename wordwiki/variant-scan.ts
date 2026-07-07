@@ -65,6 +65,9 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
         byTag.get(row.ty)!.push(row);
     }
     const totalOf = (rows: VariantCountRow[]) => rows.reduce((n, r) => n + r.n, 0);
+    // User-viewable content names relations in FULL (entry-schema
+    // relationDisplayName), never by the three-letter db tag.
+    const nameOf = (tag: string) => entrySchema.relationDisplayName(tag);
     const samplesFor = (ty: string, variant: string): string =>
         selectSamples().all({ty, variant})
             .map(s => report.lexemeLink(s.id1, s.attr1 ? `${s.attr1}` : `entry ${s.id1}`))
@@ -82,18 +85,18 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
             const blank = totalOf(rows.filter(r => isBlankVariant(r.variant)));
             const droppable = rows.filter(r => !isBlankVariant(r.variant) && DROPPABLE.has(r.variant!));
             const offGate = rows.filter(r => !isBlankVariant(r.variant) && !DROPPABLE.has(r.variant!));
-            tableRows.push([p.tag, p.relationName, blank,
+            tableRows.push([nameOf(p.tag), p.tag, blank,
                             droppable.map(r => `${r.variant} ×${r.n}`).join(', ') || '—',
                             offGate.map(r => `${r.variant} ×${r.n}`).join(', ') || '—']);
             for(const r of droppable.filter(r => r.variant === 'null'))
-                s.info(`\`${p.tag}\`: ${r.n} literal "null" string(s) — old serialization bug, droppable`);
+                s.info(`${nameOf(p.tag)}: ${r.n} literal "null" string(s) — old serialization bug, droppable`);
             for(const r of offGate) {
                 gatePassed = false;
-                s.finding(`GATE: \`${p.tag}\` (${p.relationName}) is $notVariant but holds ` +
+                s.finding(`GATE: ${nameOf(p.tag)} is $notVariant but holds ` +
                           `'${r.variant}' ×${r.n} — e.g. ${samplesFor(p.tag, r.variant!)}`);
             }
         }
-        s.table(['tag', 'relation', 'blank', 'droppable values', 'OFF-GATE values'], tableRows);
+        s.table(['relation', 'tag', 'blank', 'droppable values', 'OFF-GATE values'], tableRows);
         s.info(gatePassed ? 'Drop gate: PASS — every $notVariant field is safely droppable.'
                           : 'Drop gate: FAIL — see the GATE findings above.');
     }
@@ -108,13 +111,13 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
             const rows = byTag.get(p.tag) ?? [];
             const blank = totalOf(rows.filter(r => isBlankVariant(r.variant)));
             if(blank > 0) {
-                tableRows.push([p.tag, p.relationName, blank, totalOf(rows)]);
-                s.finding(`\`${p.tag}\` (${p.relationName}): ${blank} blank variant(s) of ` +
+                tableRows.push([nameOf(p.tag), p.tag, blank, totalOf(rows)]);
+                s.finding(`${nameOf(p.tag)}: ${blank} blank variant(s) of ` +
                           `${totalOf(rows)} current rows — needs a per-tag backfill decision`);
             }
         }
         if(tableRows.length > 0)
-            s.table(['tag', 'relation', 'blank', 'total current'], tableRows);
+            s.table(['relation', 'tag', 'blank', 'total current'], tableRows);
         else
             s.info('No blank variants on orthographic fields.');
     }
@@ -130,7 +133,7 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
             for(const r of byTag.get(p.tag) ?? []) {
                 if(isBlankVariant(r.variant) || allowed.has(r.variant!)) continue;
                 found++;
-                s.finding(`\`${p.tag}\` (${p.relationName}): variant '${r.variant}' ×${r.n} ` +
+                s.finding(`${nameOf(p.tag)}: variant '${r.variant}' ×${r.n} ` +
                           `is not an allowed orthography — e.g. ${samplesFor(p.tag, r.variant!)}`);
             }
         }
@@ -146,7 +149,7 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
             for(const r of byTag.get(p.tag) ?? []) {
                 if(isBlankVariant(r.variant)) continue;
                 found++;
-                s.finding(`\`${p.tag}\` (${p.relationName}) has no variant field but holds ` +
+                s.finding(`${nameOf(p.tag)} has no variant field but holds ` +
                           `'${r.variant}' ×${r.n} — e.g. ${samplesFor(p.tag, r.variant!)}`);
             }
         }

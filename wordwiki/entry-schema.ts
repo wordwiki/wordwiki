@@ -51,6 +51,52 @@ export const RefPublicNoteTag = 'rnp';
 export const SourceTag = 'src';
 export const RecordingTag = 'rec';
 
+// Full relation names for USER-VIEWABLE content (reports, warnings): never
+// show the three-letter tags there (dz: "rnp => RefPublicNote").  Keyed by
+// tag because tags are the unique relation identity - relation FIELD names
+// are not (entry.note and document_reference.note are both named 'note').
+export const relationDisplayNameByTag: Record<string, string> = {
+    [DictTag]: 'Dict',
+    [EntryTag]: 'Entry',
+    [StatusTag]: 'Status',
+    [SpellingTag]: 'Spelling',
+    [SubentryTag]: 'Subentry',
+    [TodoTag]: 'Todo',
+    [NoteTag]: 'Note',
+    [TranslationTag]: 'Translation',
+    [DefinitionTag]: 'Definition',
+    [GlossTag]: 'Gloss',
+    [ExampleTag]: 'Example',
+    [ExampleTextTag]: 'ExampleText',
+    [ExampleTranslationTag]: 'ExampleTranslation',
+    [ExampleRecordingTag]: 'ExampleRecording',
+    [PronunciationGuideTag]: 'PronunciationGuide',
+    [CategoryTag]: 'Category',
+    [RelatedEntryTag]: 'RelatedEntry',
+    [AlternateGrammaticalFormTag]: 'AlternateGrammaticalForm',
+    [AlternateFormTextTag]: 'AlternateFormText',
+    [OtherRegionalFormTag]: 'OtherRegionalForm',
+    [PictureTag]: 'Picture',
+    [AttrTag]: 'Attr',
+    [DocumentReferenceTag]: 'DocumentReference',
+    [RefTranscriptionTag]: 'RefTranscription',
+    [RefExpandedTranscriptionTag]: 'RefExpandedTranscription',
+    [RefTransliterationTag]: 'RefTransliteration',
+    [RefSourceAsEntryTag]: 'RefSourceAsEntry',
+    [RefNormalizedSourceAsEntryTag]: 'RefNormalizedSourceAsEntry',
+    [RefForeignReferenceTag]: 'RefForeignReference',
+    [RefNoteTag]: 'RefNote',
+    [RefPublicNoteTag]: 'RefPublicNote',
+    [SourceTag]: 'Source',
+    [RecordingTag]: 'Recording',
+};
+
+/** The user-viewable name of a relation tag (falls back to the raw tag for
+ *  anything unknown, e.g. a db tag missing from the schema). */
+export function relationDisplayName(tag: string): string {
+    return relationDisplayNameByTag[tag] ?? tag;
+}
+
 // XXX HACK HACK
 export const users: Record<string, string> = {
     '___': 'No User Selected',

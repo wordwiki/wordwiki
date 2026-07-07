@@ -32,7 +32,7 @@ import * as timestamp from '../liminal/timestamp.ts';
 import * as model from './model.ts';
 import { FindingsReport, FindingsSection } from './findings.ts';
 import { scanVariants } from './variant-scan.ts';
-import { SpellingTag } from './entry-schema.ts';
+import { SpellingTag, relationDisplayName } from './entry-schema.ts';
 import { variantPolicyByTag, allowedVariantValues,
          type TagVariantPolicy } from './variant-policy.ts';
 
@@ -171,10 +171,10 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
                                .reduce((a, r) => a + r.n, 0);
             const stamped = dist.filter(r => r.variant != null && r.variant !== '')
                                 .map(r => `${r.variant} ×${r.n}`).join(', ') || '—';
-            evRows.push([tag, p.relationName, blanks,
+            evRows.push([relationDisplayName(tag), tag, blanks,
                          stamped, `${chosen}${p.flags.defaultAll ? ' ($defaultAll)' : ''}`]);
         }
-        ev.table(['tag', 'relation', 'blanks to fill', 'current stamped values', 'blank becomes'],
+        ev.table(['relation', 'tag', 'blanks to fill', 'current stamped values', 'blank becomes'],
                  evRows);
         ev.info('Rule: $defaultAll tags (usually orthography-neutral content) → the ' +
                 "'mm' wildcard; all others → 'mm-li' (the corpus is Listuguj-dominant, " +
@@ -220,11 +220,11 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
             {newValue: setValue, eot: EOT, ty: tag, ...params});
         stats.changed += n;
         stats.byAction[action] = (stats.byAction[action] ?? 0) + n;
-        tableRows.push([action, tag, setValue ?? 'NULL', n]);
+        tableRows.push([action, relationDisplayName(tag), setValue ?? 'NULL', n]);
         if(detail) {
             const shown = detail === 'enumerate' ? rows.slice(0, 30) : rows.slice(0, 10);
             caseTables.push({
-                title: `${action} \`${tag}\`: ${detail === 'enumerate' ? 'every case' : 'sample'} ` +
+                title: `${action} ${relationDisplayName(tag)}: ${detail === 'enumerate' ? 'every case' : 'sample'} ` +
                        `(${n} row(s) → ${setValue ?? 'NULL'})`,
                 rows: shown.map(r => [
                     report.lexemeLink(r.id1, headwordOf(r.id1)),
@@ -268,7 +268,7 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
     }
 
     if(tableRows.length > 0)
-        act.table(['action', 'tag', 'new value', 'rows'], tableRows);
+        act.table(['action', 'relation', 'new value', 'rows'], tableRows);
     act.info(`${stats.changed} row(s) ${dryRun ? 'WOULD change (dry run - nothing was written)' : 'changed'}` +
              (stats.changed === 0 ? ' - already migrated' : ''));
 
@@ -299,7 +299,7 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
                 && valueFixesByTag[p.tag]?.[r.variant] === undefined);
         for(const r of rows) {
             remaining++;
-            rem.finding(`\`${p.tag}\` ${report.lexemeLink(r.id1, r.attr1 ?? `entry ${r.id1}`)}: ` +
+            rem.finding(`${relationDisplayName(p.tag)} ${report.lexemeLink(r.id1, r.attr1 ?? `entry ${r.id1}`)}: ` +
                         `variant '${r.variant}' needs a human decision`);
         }
     }
