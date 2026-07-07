@@ -43,3 +43,104 @@ export function transliterateLiToSf(text: string): string {
     do { prev = s; s = s.replace(CLUSTER, "$1'$2"); } while(s !== prev);
     return s;
 }
+
+// --------------------------------------------------------------------------
+// --- The previous-generation transliterators (Transliterate.java, ported) --
+// --------------------------------------------------------------------------
+//
+// dz dropped in Transliterate.java: the transliteration rules from the
+// previous system, written with a language expert and tuned over feedback
+// rounds.  It holds TWO transliterators:
+//   A. the RULES PIPELINE (rules 90-170) - the expert-tuned set, staged to
+//      "run as replacement transliterator" (its own TODO);
+//   B. the older CHARACTER SCANNER (listugujToSmithFrancisOld) - what the
+//      previous system actually served.  Its commented-out sonorant-cluster
+//      block is exactly the corpus-derived rule in rules-v1 above -
+//      independent confirmation from both directions.
+// Both are ported FAITHFULLY (each Java rule's inline test is reproduced in
+// auto-transliterate_test.ts) and scored against the human li/sf pair corpus
+// like every other candidate.
+
+// Java's \C = [a-zA-Z&&[^aeiouAEIOU]]: LETTER consonants (never apostrophe).
+const C = "[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]";
+const V = "[aeiouAEIOU]";
+
+/**
+ * Port of the expert rules pipeline (Transliterate.java rules 90-170),
+ * applied in id order like the Java driver.  `isNoun` gates rule 100
+ * (ey$ -> ei on nouns; no corpus text ends in 'ey', so it is inert on the
+ * evaluation set).  `barredI` is rule 170's insertion character - the Java
+ * literal is CAPITAL Î (\u00ce); the corpus writes lowercase î, so the
+ * scorer tries both.
+ */
+export function transliterateJavaRules(text: string,
+                                       opts: {isNoun?: boolean, barredI?: string} = {}): string {
+    const barredI = opts.barredI ?? '\u00ce';
+    let s = text;
+    s = s.replaceAll('g', 'k');                                        // 90
+    s = s.replaceAll('G', 'K');                                        // 91
+    if(opts.isNoun) s = s.replace(/([eE])y$/, '$1i');                  // 100 (nouns)
+    s = s.replaceAll('_', ' ');                                        // 110
+    s = s.replace(/([ptskPSTK])'/g, '$1');                             // 120
+    s = s.replace(new RegExp(`(${C}[lmnLMN])'`, 'g'), '$1');           // 130
+    s = s.replace(/^([lL])(?!')/, "$1'");                              // 140
+    s = s.replace(new RegExp(`(${V}${C})'(${C})$`), '$1e$2');          // 150
+    s = s.replace(new RegExp(`(${C})'`, 'g'), '$1');                   // 160
+    s = s.replace(new RegExp(`(${C}${C})(${C})`, 'g'), `$1${barredI}$2`); // 170
+    return s;
+}
+
+/**
+ * Port of the older character scanner (listugujToSmithFrancisOld) - the
+ * transliterator the previous system actually served: ei$ -> ey, g -> k,
+ * and [gmnpst]' -> letter + barred-i.  `withSonorantCluster` additionally
+ * enables the Java source's commented-out [lmn][lmnt] apostrophe insertion
+ * (the same rule rules-v1 derived from the corpus).
+ */
+export function transliterateJavaScanner(src: string,
+                                         opts: {barredI?: string,
+                                                withSonorantCluster?: boolean} = {}): string {
+    const barredI = opts.barredI ?? '\u00ee';
+    let out = '';
+    for(let i = 0; i < src.length; i++) {
+        const c = src[i];
+        const clow = c.toLowerCase();
+        const peek = i + 1 < src.length ? src[i + 1] : '';
+        const peekLow = peek.toLowerCase();
+        if(c === 'e' && i + 2 === src.length && peek === 'i') {
+            out += 'ey'; i++;
+        } else if(c === 'g') {
+            if(peek === "'") { out += 'k' + barredI; i++; } else out += 'k';
+        } else if(c === 'G') {
+            if(peek === "'") { out += 'K' + barredI; i++; } else out += 'K';
+        } else if('mnpstMNPST'.includes(c) && peek === "'") {
+            out += c + barredI; i++;
+        } else if(opts.withSonorantCluster && peek !== ''
+                  && 'lmn'.includes(clow) && 'lmnt'.includes(peekLow)) {
+            out += c + "'";
+        } else {
+            out += c;
+        }
+    }
+    return out;
+}
+
+/**
+ * Every transliterator candidate, for the Transliteration Report's
+ * comparison table (measured against the human li/sf pair corpus on every
+ * render).  SCORES AT PORT TIME (2026-07-07, 1,631 pairs):
+ *   rules-v1 69.5%  ·  java scanner 47.4% (+sonorant 48.9%)  ·  java
+ *   pipeline 35.9%.
+ * The gap is a CONVENTION finding, not a quality one: the expert pipeline
+ * writes the older barred-i Smith-Francis style (t' -> tî, schwa removal),
+ * while the corpus - the team's own current SF writing - keeps the
+ * apostrophes.  Whether the corpus convention or the barred-i convention is
+ * the intended SF target is a language-team decision; the numbers say only
+ * "which matches what the team writes TODAY".
+ */
+export const CANDIDATE_TRANSLITERATORS: Array<{name: string, fn: (li: string) => string}> = [
+    { name: `${TRANSLITERATOR_VERSION} (current)`, fn: transliterateLiToSf },
+    { name: 'java pipeline (rules 90-170, î)', fn: (li) => transliterateJavaRules(li, {barredI: '\u00ee'}) },
+    { name: 'java scanner', fn: (li) => transliterateJavaScanner(li) },
+    { name: 'java scanner + sonorant rule', fn: (li) => transliterateJavaScanner(li, {withSonorantCluster: true}) },
+];

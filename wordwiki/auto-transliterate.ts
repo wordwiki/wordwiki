@@ -42,7 +42,8 @@ import * as entrySchema from './entry-schema.ts';
 import { Assertion, assertionPathToFields, getAssertionPath } from './assertion.ts';
 import { VersionedTuple, VersionedRelation, generateAtEndOrderKey } from './workspace.ts';
 import { newId, placeholderTxTime } from './lexeme-ops.ts';
-import { transliterateLiToSf, TRANSLITERATOR_VERSION } from './transliterate.ts';
+import { transliterateLiToSf, TRANSLITERATOR_VERSION,
+         CANDIDATE_TRANSLITERATORS } from './transliterate.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
 import type { WordWiki } from './wordwiki.ts';
 
@@ -244,8 +245,26 @@ export class TransliterationReports {
      *  dictionary — the seed corpus (1,627 pairs at build time) plus every
      *  approved transliteration since. */
     rulesAccuracy(): {pairs: number, exact: number} {
+        const {pairs} = this.corpusPairs();
+        const exact = pairs.filter(p => transliterateLiToSf(p.li) === p.sf).length;
+        return {pairs: pairs.length, exact};
+    }
+
+    /** Every candidate scored against the same corpus - the comparison
+     *  dashboard for rules development (incl. the ported previous-generation
+     *  transliterators). */
+    candidateScores(): Array<{name: string, exact: number, pairs: number}> {
+        const {pairs} = this.corpusPairs();
+        return CANDIDATE_TRANSLITERATORS.map(c => ({
+            name: c.name,
+            exact: pairs.filter(p => c.fn(p.li) === p.sf).length,
+            pairs: pairs.length,
+        }));
+    }
+
+    private corpusPairs(): {pairs: Array<{li: string, sf: string}>} {
         const pure = pureTextRelations(this.app.dictSchema);
-        let pairs = 0, exact = 0;
+        const out: Array<{li: string, sf: string}> = [];
         for(const [tag, spec] of pure) {
             const rows = db().all<any, any>(block`
 /**/           SELECT ty1,id1,ty2,id2,ty3,id3,ty4,id4,ty5,id5, variant, ${spec.contentField.bind} AS text
@@ -261,12 +280,10 @@ export class TransliterationReports {
                 groups.get(key)![r.variant === SOURCE_ORTHOGRAPHY ? 'li' : 'sf'].push(r.text);
             }
             for(const g of groups.values())
-                if(g.li.length === 1 && g.sf.length === 1) {
-                    pairs++;
-                    if(transliterateLiToSf(g.li[0]) === g.sf[0]) exact++;
-                }
+                if(g.li.length === 1 && g.sf.length === 1)
+                    out.push({li: g.li[0], sf: g.sf[0]});
         }
-        return {pairs, exact};
+        return {pairs: out};
     }
 
     /** The report page: rules accuracy, per-version outcome stats, and the
@@ -297,6 +314,14 @@ export class TransliterationReports {
              `Current rules (${TRANSLITERATOR_VERSION}): ${acc.exact} of ${acc.pairs} ` +
              'human-written Listuguj/Smith-Francis pairs transliterate exactly — every human ' +
              'correction below is a regression case for the next rules version.'],
+            ['h2', {class: 'h5 mt-4'}, 'Candidate transliterators vs the corpus'],
+            ['table', {class: 'lm-data-table'},
+             ['thead', {}, ['tr', {}, ['th', {}, 'Candidate'], ['th', {}, 'Exact'],
+              ['th', {}, 'Accuracy']]],
+             ['tbody', {}, this.candidateScores().map(c =>
+              ['tr', {}, ['td', {}, c.name],
+               ['td', {}, `${c.exact}/${c.pairs}`],
+               ['td', {}, `${c.pairs > 0 ? Math.round(c.exact * 1000 / c.pairs) / 10 : 0}%`]])]],
             ['h2', {class: 'h5 mt-4'}, 'Proposals by transliterator version'],
             ['table', {class: 'lm-data-table'},
              ['thead', {}, ['tr', {},

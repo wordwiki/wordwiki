@@ -13,7 +13,8 @@ import { withTestDb, as, bornApprove, renderRoute, invoke,
          TestTimeline, mkEntry, mkChild, type Fixture } from './testing.ts';
 import { db } from '../liminal/db.ts';
 import * as timestamp from '../liminal/timestamp.ts';
-import { transliterateLiToSf, TRANSLITERATOR_VERSION } from './transliterate.ts';
+import { transliterateLiToSf, TRANSLITERATOR_VERSION, transliterateJavaRules,
+         transliterateJavaScanner } from './transliterate.ts';
 import { proposeTransliterations, pureTextRelations,
          AUTO_TRANSLITERATE_USERNAME } from './auto-transliterate.ts';
 
@@ -178,4 +179,26 @@ test("corrections report: corrected and rejected proposals become the corpus", a
         assert(html.includes('irregular form'), 'the why-note harvested');
         assert(html.includes(TRANSLITERATOR_VERSION), 'per-version stats');
     });
+});
+
+// --- the ported previous-generation transliterators (Transliterate.java) -------
+
+test("java ports: faithful behavior (pinned against the source's semantics)", () => {
+    // The rules pipeline: g->k first, then rule 170's barred-i (the Java
+    // literal is CAPITAL Î) into triple consonant clusters.
+    assertEquals(transliterateJavaRules('cgk'), 'ck\u00cek');
+    assertEquals(transliterateJavaRules('amalaptqg'), 'amalapt\u00ceqk');
+    // Rule 120: schwa removed after p/t/s/k; a vowel's length-apostrophe kept.
+    assertEquals(transliterateJavaRules("t'a'x"), "ta'x");
+    // A faithful QUIRK of the Java pipeline: rule 140 inserts word-initial
+    // l', but rule 160 (remove remaining schwas, C') runs later and strips
+    // it again - the isolated per-rule tests in the Java source never see
+    // the composition.  Pinned as-is: the port reproduces the pipeline.
+    assertEquals(transliterateJavaRules("loll"), 'loll');
+    assertEquals(transliterateJavaRules("l'oll"), 'loll');
+    // The scanner: C' -> C + lowercase î; ei at word end -> ey.
+    assertEquals(transliterateJavaScanner("g'p'ta'nei"), 'k\u00eep\u00eeta\u2019ney'.replaceAll('\u2019', "'"));
+    // The commented-out sonorant block, enabled, is rules-v1's second rule.
+    assertEquals(transliterateJavaScanner('weltaq', {withSonorantCluster: true}), "wel'taq");
+    assertEquals(transliterateJavaScanner('weltaq'), 'weltaq');
 });
