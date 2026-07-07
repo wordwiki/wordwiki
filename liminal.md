@@ -213,7 +213,13 @@ resources/liminal-scripts.js).  Each tx round:
 
 Use it to tune: yellow marks = over-registration or over-emission worth
 narrowing; chronic `partial`/`miss` = a button's deps need enriching.  Live
-rounds show as `live · ...`.
+rounds show as `live · ...`.  (The mark is applied on `htmx:afterSettle`, not
+`afterSwap` — htmx's settle step rewrites the element's class attribute a tick
+after the swap and would otherwise clobber it.)
+
+To watch these rounds in a real browser from server-side code (drive the page,
+inspect the DOM live), see the dev eval endpoint & browser test client in
+`browser-test-bridge.md`.
 
 ## Long-poll liveness (opt-in)
 
@@ -578,4 +584,5 @@ rabid/speculative_refresh_test.ts.
 | FieldSet codec (normalize/literal/parseFormValues), field types | liminal/table.ts |
 | content-addressed JS/CSS (cache-bust via a content store) | liminal/assets.ts + prod-caddy-asset-caching.md |
 | the LOOK/FEEL (documents not editors; list-page recipe; where the pencil goes) | liminal/design-language.md |
+| dev /eval endpoint + drive-a-real-browser test client (live DOM diagnosis) | browser-test-bridge.md |
 | remaining future work (fine-grained insert/delete) | liminal-refresh-future-work.md |
