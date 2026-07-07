@@ -1,4 +1,5 @@
 - [UI mutation model](ui-mutation-model.md) — read-only pages; every mutation is a button → immediate / confirm / modal-of-action-arguments; rows navigate, pencil-only edit (rollout complete 2026-06-11; lexeme-editor facts still tap-to-edit)
+- [Event-centric activity model](event-centric-activity-model.md) — rabid services/sales logged THROUGH events (mandatory event_id); per-day Ad-hoc catch-all events for drop-ins; event page Activity log; Today's log; /service+/sales moved under Reports (landed 2026-07-07)
 - [Design language](design-language.md) — pages = beautiful DOCUMENTS not editors (reading-first, volunteer audience); list-page recipe, soft tappable blocks, ☰ over buttons, pencil on detail pages; doc is liminal/design-language.md
 - [Liminal refresh model](liminal-refresh-model.md) — dep keys + registration/emission conventions + txd speculation + debug mode; THE doc is repo-root liminal.md (built & landed 2026-07-03)
 - [Liminal mail feature](liminal-mail-feature.md) — shared outbound email (liminal/mail.ts); transport-agnostic Mailer, SMTP+Google app-password, LogMailer default; wired into rabid reset links; provision via <app>-mail-credential.json
