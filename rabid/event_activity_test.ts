@@ -110,6 +110,19 @@ test("a catch-all (Ad-hoc) day: Activity log, titled by date, NO attendance", as
     });
 });
 
+test("a catch-all is never listed on the Events page (even the undated section)", async () => {
+    await withTestDb(async ({ alice }) => {
+        insertEvent();   // a normal, dated event
+        asSystem(() => rabid.event.catchAllForDate('2026-07-06', true));
+        // Widest view: in-shop shown (away_only off), volunteers-only shown
+        // (public_only off), past back to 2000.  A catch-all (NULL times, in-shop)
+        // would otherwise surface in the "No date set" section - it must not.
+        const page = await asUser(alice, () =>
+            renderRoute(`events({away_only:false, public_only:false}, {from:"2000-01-01"})`));
+        assert(!hasText(page, 'Ad-hoc'), 'the catch-all is not listed as a scheduled event');
+    });
+});
+
 test("renderEventActivity registers both service and sale event fk keys", async () => {
     await withTestDb(async ({ bob }) => {
         const eid = insertEvent();
