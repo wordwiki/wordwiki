@@ -166,7 +166,7 @@ test("event editing is host-gated at render and save", async () => {
     });
 });
 
-test("the event detail page shows the summary; the pencil only for hosts", async () => {
+test("the event detail page shows the summary; the Edit ☰ only for hosts", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const id = insertEvent();
         const bobDetail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
@@ -174,10 +174,10 @@ test("the event detail page shows the summary; the pencil only for hosts", async
         // (A non-remote event shows no location line - it's at our shop; the
         // summary's always-present sign-up row stands in as the summary check.)
         assert(hasText(bobDetail, "Signed up"));
-        assert(!find(bobDetail, byClass("lm-edit-pencil")));
+        assert(!hasText(bobDetail, "Edit event"), "a regular gets no Edit menu");
 
         const aliceDetail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
-        assert(!!find(aliceDetail, byClass("lm-edit-pencil")));
+        assert(hasText(aliceDetail, "Edit event"), "a host gets the Edit ☰");
     });
 });
 

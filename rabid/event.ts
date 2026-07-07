@@ -441,20 +441,26 @@ export class EventTable extends Table<Event> {
         // Adding a not-yet-created checklist is a quiet ☰ action next to the
         // title (document-friendly), not a "Create …" button in the flow.
         const checklistAdds = rabid.task.ownerChecklistAddItems('event', event_id);
+        // A single ☰ next to the title: Edit event… (was a bare pencil - a menu so
+        // archive/etc. can join later) + the checklist-add items.
+        const eventActions: action.ActionMenuItem[] = [];
+        if(this.canEditRecord(e))
+            eventActions.push({label: 'Edit event…',
+                mode: {kind: 'modal', dialogUrl: `/rabid.event.renderForm(rabid.event.getById(${event_id}))`}});
+        eventActions.push(...checklistAdds);
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
-             this.canEditRecord(e) ? this.editPencil(event_id) : undefined,
-             checklistAdds.length
-                 ? action.actionMenu(checklistAdds, {ariaLabel: 'Add a checklist'})
+             eventActions.length
+                 ? action.actionMenu(eventActions, {ariaLabel: 'Event actions'})
                  : undefined],
             // Jump-links across the top: scroll to each section (fragment ids set on
             // the section wrappers below).
             this.renderSectionNav(),
-            this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true, hideNotes: true}),
-            // Notes are primary event content: their own clean prose block below
-            // the summary, above the tasks.
-            this.renderEventNotes(e),
+            // The summary "top box": no repeated title (the h2 above IS it), and the
+            // notes live inside it now (not a separate block).
+            this.renderEventSummary(event_id, {titleLink: false, hideTitle: true,
+                                               editableCheckins: true, hideNotes: false}),
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
@@ -930,7 +936,7 @@ export class EventTable extends Table<Event> {
     // (the home upcoming-events cards) - the detail page itself passes false,
     // since there it would be a pointless self-link.
     @route(authenticated)
-    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean} = {}): Markup {
+    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean, hideTitle?: boolean} = {}): Markup {
         const titleLink = opts.titleLink ?? true;
 
         // Get the event
@@ -974,13 +980,17 @@ export class EventTable extends Table<Event> {
         const headerElements: Markup[] = [];
         
         // Event name, linking to the detail page (unless we ARE the detail page).
-        const title = [h.strong, {}, this.recordLabel(event)];
-        headerElements.push(
-            titleLink
-                ? [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${event_id})`),
-                         class: 'card-title'}, title]
-                : [h.span, {class: 'card-title'}, title]
-        );
+        // The detail page passes hideTitle - the h2 above already shows it and links
+        // to the same page - so the summary card doesn't repeat it.
+        if(!opts.hideTitle) {
+            const title = [h.strong, {}, this.recordLabel(event)];
+            headerElements.push(
+                titleLink
+                    ? [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${event_id})`),
+                             class: 'card-title'}, title]
+                    : [h.span, {class: 'card-title'}, title]
+            );
+        }
         
         // Event kind badge - only for the exceptional kinds (public is the
         // unmarked default; Remote rides the location row, not a badge).
