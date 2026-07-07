@@ -43,6 +43,10 @@ export const payment_method_enum: Record<string, string> = {
 
 export interface Sale {
     sale_id: number;
+    // Every sale (incl. free bikes/helmets, balance-bike loans) belongs to an
+    // event - a scheduled event or the day's Ad-hoc catch-all (event.ts
+    // catchAllForDate).  The event is the aggregate root for activity.
+    event_id: number;
     sale_time: string;
     sale_recorded_by: number;
     sale_kind: string;
@@ -61,6 +65,9 @@ export class SaleTable extends Table<Sale> {
     constructor() {
         super ('sale', [
             new PrimaryKeyField('sale_id', {}),
+            // Every sale belongs to an event (scheduled or the day's Ad-hoc
+            // catch-all).  Mandatory - the event is the aggregate root.
+            new ForeignKeyField('event_id', "event", "event_id", {indexed: true}),
             new DateTimeField('sale_time', {}),
             // (was unique:true - a copy-paste bug that would have limited each
             // volunteer to recording ONE sale ever)

@@ -42,8 +42,10 @@ export const service_kind_enum: Record<string, string> = {
 export interface Service {
     service_id: number;
 
-    // Nullable because we can do service outside of an event.
-    event_id?: number;
+    // Every service belongs to an event (a scheduled event, or the day's Ad-hoc
+    // catch-all - see event.ts catchAllForDate).  The event is the aggregate root
+    // for activity; there are no standalone services.
+    event_id: number;
 
     client_name: string;
     client_postal?: string;
@@ -77,8 +79,9 @@ export class ServiceTable extends Table<Service> {
         super ('service', [
             new PrimaryKeyField('service_id', {}),
 
-            // If the service occurred during an event (note: each regular opening hour is also an event)
-            new ForeignKeyField('event_id', "event", "event_id", {indexed: true, nullable: true}),
+            // Every service belongs to an event (a scheduled event or the day's
+            // Ad-hoc catch-all).  Mandatory - the event is the aggregate root.
+            new ForeignKeyField('event_id', "event", "event_id", {indexed: true}),
 
             // Note: we don't track customers - thus no separate customer table.
             new StringField('client_name', {}),

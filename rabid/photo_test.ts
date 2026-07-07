@@ -378,11 +378,19 @@ test("the photo-cache rebuild menu item shows only to admins", () => {
 test("sale rows and detail lead with the bike photo when present", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const fakePath = `content/photos/3ab/3ab${'1'.repeat(61)}.jpg`;
-        const id = asSystem(() => rabid.sale.insert({
-            sale_time: '2026-06-13 14:00:00', sale_recorded_by: alice,
-            sale_kind: 'bike', description: 'Blue commuter', photo: fakePath,
-            amount: 80, payment_method: 'cash', notes: undefined,
-        }));
+        const id = asSystem(() => {
+            const event_id = rabid.event.insert({
+                event_kind: 'shopTime', description: 'Shop day', location_description: '',
+                location_url: '', is_remote_event: 0, volunteer_only: 0,
+                start_time: '2026-06-13 10:00:00', end_time: '2026-06-13 20:00:00',
+                total_cash_collected: 0, notes: '',
+            });
+            return rabid.sale.insert({
+                event_id, sale_time: '2026-06-13 14:00:00', sale_recorded_by: alice,
+                sale_kind: 'bike', description: 'Blue commuter', photo: fakePath,
+                amount: 80, payment_method: 'cash', notes: undefined,
+            });
+        });
         const row = await asUser(bob, () => renderRoute(`rabid.sale.renderSaleRowById(${id})`));
         const rowImgs = findAll(row, (m: any) => Array.isArray(m) && m[0] === 'img');
         assertEquals(rowImgs.length, 1);

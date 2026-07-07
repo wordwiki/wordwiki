@@ -8,17 +8,30 @@ import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts"
 import { find, byClass, tagOf, attr, hasText } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
 
+// A minimal event to hang sales/services off - every activity record is now
+// event-bound (the day's Ad-hoc catch-all would do too; a plain event is fine here).
+function newEvent(): number {
+    return asSystem(() => rabid.event.insert({
+        event_kind: 'shopTime', description: 'Shop day', location_description: '',
+        location_url: '', is_remote_event: 0, volunteer_only: 0,
+        start_time: '2026-06-13 10:00:00', end_time: '2026-06-13 20:00:00',
+        total_cash_collected: 0, notes: '',
+    }));
+}
+
 function insertSale(by: number): number {
+    const event_id = newEvent();
     return asSystem(() => rabid.sale.insert({
-        sale_time: '2026-06-13 14:00:00', sale_recorded_by: by,
+        event_id, sale_time: '2026-06-13 14:00:00', sale_recorded_by: by,
         sale_kind: 'bike', description: 'Blue commuter', amount: 80,
         payment_method: 'cash', notes: undefined,
     }));
 }
 
 function insertService(): number {
+    const event_id = newEvent();
     return asSystem(() => rabid.service.insert({
-        event_id: undefined, client_name: 'Jo Client', client_postal: undefined,
+        event_id, client_name: 'Jo Client', client_postal: undefined,
         client_phone: '(555) 999-0000', client_number_of_people_served: 1,
         service_kind: 'diy', service_description: 'Flat tire',
         service_check_in_time: '2026-06-13 13:00:00', service_done: 0,

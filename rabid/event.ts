@@ -89,6 +89,13 @@ export interface Event {
 
     volunteer_only: boolnum;
 
+    // A per-day "Ad-hoc" catch-all event: the bucket for activity (services,
+    // sales) that wasn't part of any scheduled event.  is_catch_all flags it;
+    // catch_all_date is its SOLE day encoding (a catch-all has NULL start/end
+    // times - it's not clock-bounded) and is 1-1 per calendar day.
+    is_catch_all: boolnum;
+    catch_all_date?: string;
+
     shop_load_time?: string;
     setup_time?: string;
 
@@ -123,6 +130,8 @@ export class EventTable extends Table<Event> {
             new StringField('location_url', {default: ''}),
             new BooleanField('is_remote_event', {default: 0}),
             new BooleanField('volunteer_only', {default: 0}),
+            new BooleanField('is_catch_all', {default: 0}),
+            new DateField('catch_all_date', {nullable: true}),
             new DateTimeField('shop_load_time', {nullable: true}),
             new DateTimeField('setup_time', {nullable: true}),
             new DateTimeField('start_time', {nullable: true}),
@@ -140,7 +149,11 @@ export class EventTable extends Table<Event> {
             new ImageField('event_photo', 'rabid.photo',
                            {aspect: 'landscape', nullable: true, prompt: 'Event photo (optional)'})
         ],[
-            'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);'
+            'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);',
+            // At most one catch-all ("Ad-hoc") event per calendar day.  NULLs are
+            // distinct in SQLite, so normal events (catch_all_date IS NULL) are
+            // unconstrained; this closes the catchAllForDate check-then-create race.
+            'CREATE UNIQUE INDEX IF NOT EXISTS event_catch_all_by_date ON event(catch_all_date) WHERE catch_all_date IS NOT NULL;',
         ])
     };
 
@@ -179,7 +192,36 @@ export class EventTable extends Table<Event> {
 /**/          WHERE event.start_time >= start_time
 /**/          ORDER BY start_time`);
     }
-    
+
+    // The per-day catch-all ("Ad-hoc") event, found by its day.  At most one per
+    // day (partial unique index); `create` materializes it lazily - the only way
+    // a catch-all comes into being (mirrors project.forOwner).  `IS :day` matches
+    // the day; normal events (catch_all_date NULL) never match.
+    @path
+    get catchAllByDate() {
+        return this.prepare<Event, {day: string}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM event
+/**/          WHERE catch_all_date IS :day
+/**/          LIMIT 1`);
+    }
+    catchAllForDate(day: string, create = false): number | undefined {
+        const existing = security.runSystem(() => this.catchAllByDate.first({day}));
+        if(existing) return existing.event_id;
+        if(!create) return undefined;
+        // NULL start/end times on purpose: a catch-all is not clock-bounded, so it
+        // can never be "concurrent with" a timesheet range and never lands in a
+        // dated schedule row.  The day is carried solely by catch_all_date.
+        return this.insert({
+            is_catch_all: 1, catch_all_date: day,
+            event_kind: 'shopTime', description: ''} as Partial<Event>);
+    }
+    // "Today" always resolves in org wall-clock time (a UTC clock would shift the
+    // day boundary by the server's zone).
+    catchAllForToday(create = false): number | undefined {
+        return this.catchAllForDate(date.temporalToSqliteDate(date.orgToday()), create);
+    }
+
     @path
     get tableRenderer(): TableRenderer<Event> {
         return new TableRenderer(this, this.fields);
