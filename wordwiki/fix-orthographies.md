@@ -151,6 +151,56 @@ address:
   hand-triage items into a self-draining queue instead of a one-shot editing
   session.
 
+## Findings publish path (migration reports)
+
+Settled 2026-07-07 (dz + claude, all points agreed).  The batch migrators
+and validators keep discovering things and logging them to the console,
+where they get missed — and even when caught, they have to be hand-reported
+to the language person.  Deciding the publish path NOW, before the
+orthography migration wave, is critical.  The design:
+
+- **Findings are structured data reported through an API, not teed stdout.**
+  Each migrator/validator gets a report handle — `report.section(title)`,
+  `report.finding(...)`, `report.table(rows)`,
+  `report.lexemeLink(entry_id, text)` — that BOTH prints to console (nothing
+  lost there) and accumulates for the report.  The report contains only
+  curated findings; tee-ing the raw log would just re-bury findings in the
+  same noise, in HTML.
+- **Fragment per step, assembled unconditionally.**  migrateDevDb.sh is ~10
+  separate deno invocations; each subcommand writes
+  `import-report/<NN>-<step>.md` (a re-run of one step replaces just its
+  fragment).  A final assemble step — run via shell `trap`, so it happens
+  even when a step crashes — concatenates into `import-report.md` with a
+  generated EXECUTIVE SUMMARY at top: finding counts per section, and
+  "step N CRASHED" when it did.  A crash mid-migration is exactly when the
+  report matters most.
+- **Markdown as the authored format** (readable in terminal and git diffs,
+  trivially authorable from tools, and liminal/markdown.ts already renders
+  it).  The assembled .md is COMMITTED — staging gets code via git pull, so
+  committing is how it travels, and it gives point-in-time history of every
+  migration's findings for free.
+- **Served on staging via a small authenticated route** that renders the
+  committed .md with markdownToMarkup under the normal page template.  (A
+  static .html in resources/ would also work — resources are served
+  unauthenticated, but that is NOT a concern here: the complete db contents
+  are CC-share-alike by founding decision — the dictionary is owned by the
+  whole community and must have public and open licensing, unlike the
+  many language projects whose secrecy means all the work is lost when
+  they shut down.  The authenticated route is kept anyway as the tidier
+  mechanism: no pre-render step, styled for free.)
+- **Every report is stamped with its generation time, prominently** — a
+  header banner with generated-at timestamp and source-db identification, so
+  a reader understands this is a POINT-IN-TIME record, not a live view.
+- **One findings vocabulary, two renderers** — unify with the cleanup
+  reports above: the scan/validator functions produce findings-as-data; the
+  migration report serializes them to markdown at migration time, and the
+  live report routes render the same queries against the current db
+  (self-draining as fixes land).  One link helper with the two configured
+  bases (staging app + legacy live server); migrators never hand-build URLs.
+- Clients: the scan subcommand (its first), verify-migration,
+  verify-workspace, the variant invariants, and every migrator in
+  migrateDevDb.sh.
+
 ## Status: the per-orthography go-public decision
 
 Publication (`published_from/to`) is per-fact, but that is not sufficient:
@@ -408,8 +458,10 @@ renders next to the value without pretending we have a locale model.
 
 The *data migration* is one event, but the code lands in test-green stages:
 
-1. Parser support for the new `$` flags; the scan subcommand; validator
-   invariants (warn mode).  Read-only, no risk, useful immediately.
+1. Parser support for the new `$` flags (+ the variant-leaves parse rule);
+   the findings-report machinery (the scan subcommand is its first client);
+   validator invariants (warn mode).  Read-only, no risk, useful
+   immediately.
 2. Editor/render behavior tolerant of both old and new data
    (`variantMatches`, working-orthography, annotation fields + UI).
 3. The migration command (per-tag mapping, `--expect-no-changes`), run it,

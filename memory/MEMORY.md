@@ -16,6 +16,7 @@
 - [Keyboard-driven editing](keyboard-driven-editing.md) — landed 2026-07-06; DOM-focus stops, liminal-generic; rabid adoption intended (lmKbdPrimary needs the nav-link case)
 - [Spelling duplicates](spelling-duplicates.md) — advisory dup warning/report; Archived* prefix = deleted (excluded both directions, ARCHIVED badge); serve startup now applies new dict index DDL
 - [Fix orthographies](fix-orthographies.md) — MAJOR planned change: variant → orthography only; doc of record is wordwiki/fix-orthographies.md; dz's $notVariant WIP breaks server boot until parser lands
+- [Wordwiki data licensing](wordwiki-data-licensing.md) — complete db is CC-share-alike by founding decision; data exposure is NOT a security concern (auth protects edit integrity, not secrecy)
 - [Wordwiki top-level upgrade](wordwiki-toplevel-upgrade.md) — rabid-standard sessions/login/user+config tables/wordwiki.sh; change_by_username stamped
 - [User passwords seed file](user-passwords-seed-file.md) — gitignored user-passwords.json is the ONLY copy of ALL passwords (djz + 'test' robot incl., no djz-dev anymore); tests log in as 'test', never a human; copy by hand to new checkouts
 - [Wordwiki categorization](wordwiki-categorization.md) — v2 prepped from elder feedback (faith/legends split, no traditions bucket, smaller ordered cats); v2-instructions.md is the tagging brief; v1 frozen
