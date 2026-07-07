@@ -478,28 +478,21 @@ export class EventTable extends Table<Event> {
         ];
     }
 
-    // The event's activity log: an "Activity" umbrella over two INDEPENDENT
-    // sub-sections, Services and Sales & giveaways.  Each is its own reloadable
-    // fragment keyed on its own table's event fk (so adding a service re-renders
-    // only the Services list, not Sales, and vice versa) and owns its own ☰ menu -
-    // the natural home for per-type actions as they're added, next to their own
-    // heading rather than merged into one far-away menu.
+    // The event's activity log: two INDEPENDENT peer document sections, Services
+    // and Sales & giveaways (no "Activity" umbrella - the whole page IS activity).
+    // Each is its own reloadable fragment keyed on its own table's event fk (so
+    // adding a service re-renders only the Services list, not Sales) with its own
+    // add affordance next to its own heading.
     @route(authenticated)
     renderEventActivity(event_id: number): Markup {
-        const services = this.renderEventServices(event_id);
-        const sales = this.renderEventSales(event_id);
         return [h.div, {},
-            [h.div, {class: 'lm-doc-section-head'},
-             [h.h4, {class: 'lm-doc-section-label'}, 'Activity']],
-            (services || sales)
-                ? [h.div, {}, services, sales]
-                : [h.div, {class: 'lm-subsection'},
-                   [h.p, {class: 'text-muted small mb-0'}, 'No activity logged yet.']]];
+            this.renderEventServices(event_id),
+            this.renderEventSales(event_id)];
     }
 
-    // The Services sub-section: its own reloadable fragment (reloads only on a
-    // service change for this event) with its own Add ☰.  For a non-editor with no
-    // services there's nothing to show or add, so it renders nothing.
+    // The Services section: its own reloadable fragment (reloads only on a service
+    // change for this event) with a quick + (one kind of add).  For a non-editor
+    // with no services there's nothing to show or add, so it renders nothing.
     @route(authenticated)
     renderEventServices(event_id: number): Markup {
         const services = security.runSystem(() => rabid.service.servicesForEvent.all({event_id}));
@@ -509,11 +502,11 @@ export class EventTable extends Table<Event> {
             `rabid.event.renderEventServices(${event_id})`);
         return [h.div, props,
             [h.div, {class: 'lm-doc-section-head'},
-             [h.h5, {class: 'lm-doc-section-label'}, 'Services'],
+             [h.h4, {class: 'lm-doc-section-label'}, 'Services'],
              canAdd
-                 ? action.actionMenu([{label: 'Add service…',
-                     mode: {kind: 'modal', dialogUrl: `/rabid.service.newServiceForEventDialog(${event_id})`}}],
-                     {ariaLabel: 'Service actions'})
+                 ? action.actionButton(action.plusIcon(),
+                     {kind: 'modal', dialogUrl: `/rabid.service.newServiceForEventDialog(${event_id})`},
+                     'lm-menu-button', {'aria-label': 'Add service', title: 'Add service'})
                  : undefined],
             [h.div, {class: 'lm-subsection'},
              services.length
@@ -521,8 +514,9 @@ export class EventTable extends Table<Event> {
                  : [h.p, {class: 'text-muted small mb-0'}, 'No services yet.']]];
     }
 
-    // The Sales & giveaways sub-section: mirrors renderEventServices, keyed on the
-    // sale event fk with its own Add ☰.
+    // The Sales & giveaways section: mirrors renderEventServices, keyed on the sale
+    // event fk, with a per-kind Add ☰ (a sale can't use a single quick + - the kind
+    // must be picked, and it shapes the dialog).
     @route(authenticated)
     renderEventSales(event_id: number): Markup {
         const sales = security.runSystem(() => rabid.sale.salesForEvent.all({event_id}));
@@ -532,7 +526,7 @@ export class EventTable extends Table<Event> {
             `rabid.event.renderEventSales(${event_id})`);
         return [h.div, props,
             [h.div, {class: 'lm-doc-section-head'},
-             [h.h5, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
+             [h.h4, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
              canAdd
                  ? action.actionMenu(rabid.sale.saleAddMenuItems(event_id),
                      {ariaLabel: 'Add a sale'})

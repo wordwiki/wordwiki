@@ -80,8 +80,9 @@ export class SaleTable extends Table<Sale> {
         super ('sale', [
             new PrimaryKeyField('sale_id', {}),
             // Every sale belongs to an event (scheduled or the day's Ad-hoc
-            // catch-all).  Mandatory - the event is the aggregate root.
-            new ForeignKeyField('event_id', "event", "event_id", {indexed: true}),
+            // catch-all).  Mandatory - the event is the aggregate root.  Not
+            // user-editable: a sale is bound to its event, so the edit form omits it.
+            new ForeignKeyField('event_id', "event", "event_id", {indexed: true, edit: security.never}),
             new DateTimeField('sale_time', {}),
             // (was unique:true - a copy-paste bug that would have limited each
             // volunteer to recording ONE sale ever)
@@ -199,11 +200,14 @@ export class SaleTable extends Table<Sale> {
     renderSaleRow(s: Sale): Markup {
         const id = s.sale_id;
         const primaryText = s.description || sale_kind_enum[s.sale_kind] || 'Sale';
+        // A giveaway/loan (amount 0) carries no money: drop the payment badge and
+        // the $ figure - just the kind + time.
+        const paid = (s.amount ?? 0) !== 0;
         const badges = [
             [h.span, {class: 'badge text-bg-light border ms-2'}, sale_kind_enum[s.sale_kind] ?? s.sale_kind],
-            [h.span, {class: 'badge text-bg-light border ms-1'}, payment_method_enum[s.payment_method] ?? s.payment_method],
+            paid ? [h.span, {class: 'badge text-bg-light border ms-1'}, payment_method_enum[s.payment_method] ?? s.payment_method] : undefined,
         ];
-        const secondary = [date.sqliteDateTimeToString(s.sale_time), `$${(s.amount ?? 0).toFixed(2)}`]
+        const secondary = [date.sqliteDateTimeToString(s.sale_time), paid ? `$${(s.amount ?? 0).toFixed(2)}` : undefined]
             .filter(Boolean).join(' · ');
 
         // A bike sale with a photo leads with a small thumbnail.
@@ -284,6 +288,12 @@ export class SaleTable extends Table<Sale> {
         props.class = 'container py-3 ' + props.class;
         const row = (label: string, value: Markup) =>
             [[h.dt, {class: 'col-sm-3'}, label], [h.dd, {class: 'col-sm-9'}, value]];
+        // A giveaway/loan (amount 0) shows no amount/payment; kind and who recorded
+        // it share one line; notes only when present.
+        const paid = (s.amount ?? 0) !== 0;
+        const recordedByMk = recordedBy
+            ? templates.pageLink(`/rabid.volunteer.detailPage(${s.sale_recorded_by})`, shortName(recordedBy))
+            : undefined;
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, s.description || sale_kind_enum[s.sale_kind] || 'Sale'],
@@ -292,14 +302,12 @@ export class SaleTable extends Table<Sale> {
                        rabid.photo.aspectImg(s.photo, 'landscape', 'detail', {class: 'lm-photo-detail'}),
                        [h.div, {class: 'mt-1'}, this.photoButton(sale_id, 'photo')]] : undefined,
             [h.dl, {class: 'row mb-0'},
-             row('Kind', sale_kind_enum[s.sale_kind] ?? s.sale_kind),
+             row('Kind', [sale_kind_enum[s.sale_kind] ?? s.sale_kind,
+                          recordedByMk ? [' · recorded by ', recordedByMk] : undefined]),
              row('Time', date.sqliteDateTimeToString(s.sale_time, '—')),
-             row('Amount', `$${(s.amount ?? 0).toFixed(2)}`),
-             row('Payment', payment_method_enum[s.payment_method] ?? s.payment_method),
-             row('Recorded by', recordedBy
-                 ? templates.pageLink(`/rabid.volunteer.detailPage(${s.sale_recorded_by})`, shortName(recordedBy))
-                 : '—'),
-             row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
+             paid ? row('Amount', `$${(s.amount ?? 0).toFixed(2)}`) : undefined,
+             paid ? row('Payment', payment_method_enum[s.payment_method] ?? s.payment_method) : undefined,
+             s.notes ? row('Notes', this.fieldsByName.notes.render(s.notes)) : undefined,
             ],
         ];
     }

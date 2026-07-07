@@ -3,8 +3,12 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
-import { hasText } from "../liminal/testing/markup-assert.ts";
+import { hasText, find, attr } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
+
+// The services quick-add is a + button (icon, no text): find it by its title.
+const hasAddService = (m: any): boolean =>
+    !!find(m, (n: any) => Array.isArray(n) && String(attr(n as any, 'title') ?? '') === 'Add service');
 
 function insertEvent(): number {
     return asSystem(() => rabid.event.insert({
@@ -36,7 +40,6 @@ test("addServiceForEvent binds the service to the event; it renders in Activity"
         assertEquals(rows[0].client_name, 'Fred Client');
 
         const page = await detail(bob, eid);
-        assert(hasText(page, 'Activity'));
         assert(hasText(page, 'Services'));
         assert(hasText(page, 'Fred Client'));
     });
@@ -75,18 +78,16 @@ test("adding activity is host/admin only", async () => {
     });
 });
 
-test("the Add ☰ shows for a host, not a regular volunteer", async () => {
+test("add affordances show for a host, not a regular volunteer", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const eid = insertEvent();
         const host = await detail(alice, eid);
-        assert(hasText(host, 'Add service'));
-        assert(hasText(host, 'Add Bike Sale'));
+        assert(hasAddService(host), 'services + button for host');
+        assert(hasText(host, 'Add Bike Sale'), 'sales menu for host');
 
         const regular = await detail(bob, eid);
-        assert(!hasText(regular, 'Add service'));
-        assert(!hasText(regular, 'Add Bike Sale'));
-        // ...but a regular still sees the Activity log itself.
-        assert(hasText(regular, 'Activity'));
+        assert(!hasAddService(regular), 'no services + for a regular');
+        assert(!hasText(regular, 'Add Bike Sale'), 'no sales menu for a regular');
     });
 });
 
@@ -102,7 +103,7 @@ test("a catch-all (Ad-hoc) day: Activity log, titled by date, NO attendance", as
         assert(hasText(page, 'Ad-hoc'));
         assert(!hasText(page, 'Untitled Event'));
         // The log is there...
-        assert(hasText(page, 'Activity'));
+        assert(hasText(page, 'Services'));
         assert(hasText(page, 'Walk-in Wanda'));
         // ...but NO sign-up / check-in rows (attendance would corrupt reporting).
         assert(!hasText(page, 'Signed up'));
@@ -131,7 +132,7 @@ test("Services and Sales are independent reloadable fragments (own fk key each)"
         const svcCls = String((svc as any)[1]?.class ?? '');
         assert(svcCls.includes(rabid.service.fkKey('event_id', eid)), 'Services keyed on service fk');
         assert(!svcCls.includes(rabid.sale.fkKey('event_id', eid)), 'Services NOT keyed on sale fk');
-        assert(hasText(svc, 'Add service'));
+        assert(hasAddService(svc), 'services + present');
 
         const sale = await asUser(alice, () => renderRoute(`rabid.event.renderEventSales(${eid})`));
         const saleCls = String((sale as any)[1]?.class ?? '');
@@ -160,5 +161,29 @@ test("the Sales menu has one Add item per sale kind; a giveaway dialog omits amo
             renderRoute(`rabid.sale.newSaleForEventDialog(${eid}, 'free-helmet')`));
         assert(hasText(helmetForm, 'Add Free Helmet'));
         assert(!hasText(helmetForm, 'Cash'), 'giveaway dialog has no payment-method field');
+    });
+});
+
+test("a giveaway (amount 0) hides amount/payment; kind+recorder share a line; edit form omits event_id", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        await asUser(alice, () => invoke(`rabid.sale.addSaleForEvent($arg0)`,
+            {event_id: eid, sale_kind: 'free-helmet', description: 'Kids helmet'}));
+        const id = asSystem(() => rabid.sale.salesForEvent.all({event_id: eid})[0].sale_id);
+
+        const view = await asUser(alice, () => renderRoute(`rabid.sale.renderSaleDetail(${id})`));
+        assert(hasText(view, 'recorded by'), 'kind line names the recorder');
+        assert(!hasText(view, 'Amount'), 'no amount row for a giveaway');
+        assert(!hasText(view, 'Payment'), 'no payment row for a giveaway');
+        assert(!hasText(view, 'Notes'), 'no notes row when empty');
+
+        const rowMk = await asUser(alice, () => renderRoute(`rabid.sale.renderSaleRowById(${id})`));
+        assert(!hasText(rowMk, '$'), 'no $ figure on a giveaway row');
+
+        // A sale is bound to its event: the edit form has no event_id field.
+        const form = await asUser(alice, () => rabid.sale.renderForm(asSystem(() => rabid.sale.getById(id))));
+        const hasEventField = !!find(form, (n: any) =>
+            Array.isArray(n) && String(attr(n as any, 'name') ?? '') === 'event_id');
+        assert(!hasEventField, 'edit form omits event_id');
     });
 });

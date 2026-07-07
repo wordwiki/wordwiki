@@ -15,7 +15,7 @@ test("todaysLog materialises today's catch-all and renders it (host)", async () 
 
         const page = await asUser(alice, () => renderRoute(`todaysLog`));
         assert(hasText(page, 'Ad-hoc'));       // titled by its day
-        assert(hasText(page, 'Activity'));      // the log section
+        assert(hasText(page, 'Services'));      // the (empty) activity log section
 
         // The catch-all now exists, for today's org day.
         const today = date.temporalToSqliteDate(date.orgToday());

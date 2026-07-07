@@ -81,8 +81,9 @@ export class ServiceTable extends Table<Service> {
             new PrimaryKeyField('service_id', {}),
 
             // Every service belongs to an event (a scheduled event or the day's
-            // Ad-hoc catch-all).  Mandatory - the event is the aggregate root.
-            new ForeignKeyField('event_id', "event", "event_id", {indexed: true}),
+            // Ad-hoc catch-all).  Mandatory - the event is the aggregate root.  Not
+            // user-editable: a service is bound to its event, so the edit form omits it.
+            new ForeignKeyField('event_id', "event", "event_id", {indexed: true, edit: security.never}),
 
             // Note: we don't track customers - thus no separate customer table.
             new StringField('client_name', {}),
