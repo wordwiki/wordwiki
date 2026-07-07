@@ -106,12 +106,8 @@ export interface Event {
 
     notes: string;
 
-    // Optional event photos (content-store paths - see liminal/photo.ts).  The
-    // shop before/after pair is an accountability record that the shop was left
-    // no worse than it was found; event_photo is a general photo of the event.
-    shop_before_photo?: string;
-    shop_after_photo?: string;
-    event_photo?: string;
+    // Photos live in the subordinate event_photo table (a list, each with a kind
+    // and caption) - see EventPhotoTable below.
 }
 
 export type EventOpt = Partial<Event>;
@@ -138,16 +134,7 @@ export class EventTable extends Table<Event> {
             new DateTimeField('end_time', {nullable: true}),
             new FloatingPointField('total_cash_collected', {default: 0}),
             new MarkdownField('notes', {default: ''}),
-            // Optional event photos (see liminal/photo.ts).  For now these are
-            // plain editable fields on the event record (the auto-generated edit
-            // form renders each as a photo upload/camera control); a nicer
-            // on-page way to add them is planned.
-            new ImageField('shop_before_photo', 'rabid.photo',
-                           {aspect: 'landscape', nullable: true, prompt: 'Shop before photo (how the shop looked before the event)'}),
-            new ImageField('shop_after_photo', 'rabid.photo',
-                           {aspect: 'landscape', nullable: true, prompt: 'Shop after photo (how the shop was left after the event)'}),
-            new ImageField('event_photo', 'rabid.photo',
-                           {aspect: 'landscape', nullable: true, prompt: 'Event photo (optional)'})
+            // Photos are a subordinate list now (EventPhotoTable), not fields here.
         ],[
             'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);',
             // At most one catch-all ("Ad-hoc") event per calendar day.  NULLs are
@@ -463,8 +450,8 @@ export class EventTable extends Table<Event> {
             // Notes are primary event content: their own clean prose block below
             // the summary, above the tasks.
             this.renderEventNotes(e),
-            // Event photos (if any), each under its own headline.
-            this.renderEventPhotos(e),
+            // Event photos (if any): a subordinate list, each with a kind + caption.
+            this.renderEventPhotos(event_id),
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
@@ -546,30 +533,29 @@ export class EventTable extends Table<Event> {
             this.fieldsByName.notes.render(e.notes)];
     }
 
-    // The event's photos, each under its own headline.  The shop before/after
-    // pair is an accountability record (the shop was left no worse than it was
-    // found); event_photo is a general photo of the event.  Each slot shows the
-    // photo (+ "Edit Photo") when present; when absent it shows an "Add Photo"
-    // affordance TO EDITORS (photoButton is empty for others), so a missing
-    // before/after can be added right here.  A slot that is absent AND
-    // un-addable renders nothing; nothing renders if every slot is empty.
-    renderEventPhotos(e: Event): Markup {
-        const shots: [string, string, string | undefined][] = [
-            ['Shop before', 'shop_before_photo', e.shop_before_photo],
-            ['Shop after', 'shop_after_photo', e.shop_after_photo],
-            ['Event photo', 'event_photo', e.event_photo],
-        ];
-        const sections = shots.map(([label, fieldName, p]) => {
-            const has = typeof p === 'string' && p !== '';
-            const button = this.photoButton(e.event_id, fieldName);   // empty for non-editors
-            if(!has && !button) return undefined;                     // absent + can't add -> skip
-            return [h.div, {class: 'mb-3'},
-                [h.h4, {class: 'mt-4'}, label],
-                has ? rabid.photo.aspectImg(p!, 'landscape', 'detail', {class: 'lm-photo-detail'}) : undefined,
-                button ? [h.div, {class: 'mt-1'}, button] : undefined];
-        }).filter(s => s !== undefined);
-        if (sections.length === 0) return undefined as unknown as Markup;
-        return [h.div, {class: 'mb-4', 'data-testid': 'event-photos'}, sections];
+    // The event's photos: a subordinate list (each a kind + caption + image), each
+    // with the full generic photo editor (upload / crop / remove).  A reloadable
+    // fragment keyed on the event_photo fk (so add/delete refresh it); hosts add
+    // via the ☰ (one item per kind - it drops an empty card to upload into).
+    // Renders nothing for a non-editor with no photos.
+    @route(authenticated)
+    renderEventPhotos(event_id: number): Markup {
+        const photos = security.runSystem(() => rabid.event_photo.forEvent.all({event_id}));
+        const canAdd = rabid.event_photo.canEditRecord({event_id} as any);
+        if(!canAdd && photos.length === 0) return undefined as unknown as Markup;
+        const props = reloadableProps([rabid.event_photo.fkKey('event_id', event_id)],
+            `rabid.event.renderEventPhotos(${event_id})`);
+        return [h.div, {...props, 'data-testid': 'event-photos'},
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Photos'],
+             canAdd
+                 ? action.actionMenu(rabid.event_photo.photoAddMenuItems(event_id),
+                     {ariaLabel: 'Add a photo'})
+                 : undefined],
+            [h.div, {class: 'lm-subsection'},
+             photos.length
+                 ? photos.map(p => rabid.event_photo.renderPhotoCard(p))
+                 : [h.p, {class: 'text-muted small mb-0'}, 'No photos yet.']]];
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
@@ -1097,6 +1083,121 @@ class ManagedDateTimeField extends DateTimeField {
 // A volunteer-id set programmatically (here: confirmed_by), never shown in the form.
 class HiddenVolunteerRefField extends IntegerField {
     override isVisible(): boolean { return false; }
+}
+
+// --------------------------------------------------------------------------------
+// --- EventPhoto -----------------------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// Photos associated with an event - a LIST (not fixed slots), each with a KIND
+// (event photo / shop before / shop after / ...) and a caption.  The image is an
+// ordinary ImageField, so each photo gets the full generic editor - upload, crop
+// framing, remove - via Table.photoButton.
+
+export const event_photo_kind_enum: Record<string, string> = {
+    'event': 'Event Photo',
+    'shop-before': 'Shop Before',
+    'shop-after': 'Shop After',
+    'other': 'Other',
+};
+
+export interface EventPhoto {
+    event_photo_id: number;
+    event_id: number;
+    photo_kind: string;
+    caption: string;
+    photo?: string;
+}
+export type EventPhotoOpt = Partial<EventPhoto>;
+
+export class EventPhotoTable extends Table<EventPhoto> {
+    constructor() {
+        super('event_photo', [
+            new PrimaryKeyField('event_photo_id', {}),
+            // Bound to its event (not user-editable - the edit form omits it).
+            new ForeignKeyField('event_id', 'event', 'event_id', {indexed: true, edit: security.never}),
+            new EnumField('photo_kind', event_photo_kind_enum, {default: 'event'}),
+            new StringField('caption', {default: ''}),
+            new ImageField('photo', 'rabid.photo', {aspect: 'landscape', nullable: true, prompt: 'Photo'}),
+        ]);
+    }
+
+    defaultFieldEdit: security.Permission = hostOrAdmin;
+    override get recordEdit(): security.Permission { return hostOrAdmin; }
+    override formTitle(p: EventPhoto): string {
+        return `Edit ${event_photo_kind_enum[p.photo_kind] ?? 'photo'}`;
+    }
+
+    @path
+    get forEvent() {
+        return this.prepare<EventPhoto, {event_id: number}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM event_photo
+/**/          WHERE event_id = :event_id
+/**/          ORDER BY photo_kind, event_photo_id`);
+    }
+
+    // The ☰ items for adding a photo of each kind: an immediate action that drops
+    // an empty card of that kind to upload into (the generic photoButton on the
+    // new card does the actual upload/crop).
+    photoAddMenuItems(event_id: number): action.ActionMenuItem[] {
+        return Object.keys(event_photo_kind_enum).map(kind => ({
+            label: `Add ${event_photo_kind_enum[kind]}`,
+            mode: {kind: 'immediate' as const,
+                   expr: `rabid.event_photo.addEventPhoto(${event_id}, '${kind}')`},
+        }));
+    }
+
+    @routeMutation(hostOrAdmin)
+    addEventPhoto(event_id: number, photo_kind: string): Markup {
+        if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
+        this.insert({event_id, photo_kind: photo_kind || 'event', caption: ''} as EventPhotoOpt);
+        return {action: 'reload', targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
+    }
+
+    @routeMutation(hostOrAdmin)
+    remove(event_photo_id: number): Markup {
+        const event_id = this.getById(event_photo_id).event_id;
+        this.delete(event_photo_id);
+        return {action: 'reload', targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
+    }
+
+    // The details (kind + caption) edit form, opened as a modal from a card; the
+    // image itself is edited separately via photoButton.
+    @route(hostOrAdmin)
+    renderDetailsForm(event_photo_id: number): Markup {
+        return this.renderEditForm(this.getById(event_photo_id), ['photo_kind', 'caption']);
+    }
+
+    // One photo card: its own reloadable fragment (row key), so a photo crop/remove
+    // or a details edit refreshes just this card.  Shows the kind, the image (or an
+    // "Add Photo" affordance), the caption, and - for editors - the photo editor
+    // button, Edit details, and Delete.
+    @route(authenticated)
+    renderPhotoCardById(event_photo_id: number): Markup {
+        return this.renderPhotoCard(this.getById(event_photo_id));
+    }
+    renderPhotoCard(p: EventPhoto): Markup {
+        const id = p.event_photo_id;
+        const has = typeof p.photo === 'string' && p.photo !== '';
+        const canEdit = this.canEditRecord(p);
+        const props = reloadableProps([this.rowKey(id)], `rabid.event_photo.renderPhotoCardById(${id})`);
+        return [h.div, {...props, class: props.class + ' mb-4', 'data-testid': `event-photo-${id}`},
+            [h.h5, {class: 'lm-doc-section-label'}, event_photo_kind_enum[p.photo_kind] ?? p.photo_kind],
+            has ? rabid.photo.aspectImg(p.photo!, 'landscape', 'detail', {class: 'lm-photo-detail'}) : undefined,
+            p.caption ? [h.div, {class: 'text-muted small mt-1'}, p.caption] : undefined,
+            canEdit
+                ? [h.div, {class: 'mt-1 d-flex align-items-center gap-2'},
+                   this.photoButton(id, 'photo'),
+                   action.actionButton('Edit details',
+                       {kind: 'modal', dialogUrl: `/rabid.event_photo.renderDetailsForm(${id})`},
+                       'btn btn-sm btn-link p-0'),
+                   action.actionButton('Delete',
+                       {kind: 'confirm', message: 'Delete this photo?',
+                        expr: `rabid.event_photo.remove(${id})`},
+                       'btn btn-sm btn-link text-danger p-0')]
+                : undefined];
+    }
 }
 
 // --------------------------------------------------------------------------------

@@ -66,6 +66,7 @@ export class Rabid extends LiminalApp {
     @route(authenticated) @path get event() { return new event.EventTable(); }
     @route(authenticated) @path get event_commitment() { return new event.EventCommitmentTable(); }
     @route(authenticated) @path get event_checkin() { return new event.EventCheckinTable(); }
+    @route(authenticated) @path get event_photo() { return new event.EventPhotoTable(); }
     // A view-service (not a table): the reconciled per-volunteer time view.
     @route(authenticated) @path get volunteer_time() { return new volunteer_time.VolunteerTimeService(); }
     @route(authenticated) @path get sale() { return new sale.SaleTable(); }
@@ -102,7 +103,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.event_photo, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask];
     }
 
     // Pages that carry route-borne view state (page-state; liminal.md § On-page

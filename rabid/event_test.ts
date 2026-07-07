@@ -52,65 +52,69 @@ test("event rows: one navigable species; the pencil only for hosts", async () =>
     });
 });
 
-test("event form has the three photo upload controls (shop before/after + event)", async () => {
-    await withTestDb(async ({ alice }) => {
+test("event photos: a host sees the section + per-kind Add menu; a regular sees none when empty", async () => {
+    await withTestDb(async ({ alice, bob }) => {
         const id = insertEvent();
-        const form = await asUser(alice, () =>
-            renderRoute(`rabid.event.renderForm(rabid.event.getById(${id}))`));
-        for(const name of ['shop_before_photo', 'shop_after_photo', 'event_photo']) {
-            const hidden = findAll(form, (m: any) =>
-                Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === name);
-            assertEquals((hidden[0] as any[])?.[1]?.type, 'hidden', `${name}: hidden path input`);
-            const file = findAll(form, (m: any) =>
-                Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.type === 'file'
-                && String((m[1] as any)?.onchange).includes(`"${name}"`));
-            assertEquals(file.length, 1, `${name}: one file picker wired to lmPhotoFieldChange`);
-            assertStringIncludes((file[0] as any[])[1].onchange, 'rabid.photo');
-        }
-    });
-});
-
-test("event detail shows present photos with headlines, and nothing when absent", async () => {
-    await withTestDb(async ({ bob }) => {
-        const id = insertEvent();
-
-        // No photos set -> no photo section at all.
+        // Empty + non-editor -> no photo section at all.
         const bare = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
         assertEquals(findByTestId(bare, 'event-photos'), undefined);
 
-        // Set two of the three; the unset one is skipped.
-        const before = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
-        const evt = `content/photos/3ac/3ac${'0'.repeat(61)}.jpg`;
-        asSystem(() => rabid.event.update(id, {shop_before_photo: before, event_photo: evt}));
-
-        const detail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
-        const section = findByTestId(detail, 'event-photos');
-        assert(section, 'photo section present');
-        assert(hasText(section, 'Shop before'));
-        assert(hasText(section, 'Event photo'));
-        assert(!hasText(section, 'Shop after'), 'unset photo has no headline');
-        const imgs = findAll(section, (m: any) => Array.isArray(m) && m[0] === 'img');
-        assertEquals(imgs.length, 2);
-        assertStringIncludes((imgs[0] as any[])[1].src, 'rabid.photo.serve');
-        assertStringIncludes((imgs[0] as any[])[1].src, before);
-        assertStringIncludes((imgs[1] as any[])[1].src, evt);
+        // Host sees the section (with a per-kind Add menu) even when empty.
+        const host = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
+        const section = findByTestId(host, 'event-photos');
+        assert(section, 'host sees the photos section');
+        for(const label of ['Add Event Photo', 'Add Shop Before', 'Add Shop After', 'Add Other'])
+            assert(hasText(section, label), `menu has "${label}"`);
     });
 });
 
-test("event detail offers hosts an Add Photo affordance for missing shop before/after", async () => {
+test("addEventPhoto drops a card of the chosen kind; delete removes it; add is host-only", async () => {
     await withTestDb(async ({ alice, bob }) => {
-        const id = insertEvent();   // no photos yet
-        // A host (can edit the event) gets an "Add Photo" affordance per slot -
-        // including the shop before/after that aren't set - opening the editor.
-        const host = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
-        const section = findByTestId(host, 'event-photos');
-        assert(section, 'host sees photo slots to fill');
-        assert(hasText(section, 'Shop before') && hasText(section, 'Shop after'));
-        assert(hasText(section, 'Add Photo'));
-        assert(JSON.stringify(section).includes('renderPhotoEditForm'), 'opens the photo editor');
-        // A regular volunteer sees no empty slots / Add affordance.
-        const regular = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
-        assertEquals(findByTestId(regular, 'event-photos'), undefined);
+        const id = insertEvent();
+        // A regular volunteer may not add.
+        await asUser(bob, () => assertRejects(() =>
+            invoke(`rabid.event_photo.addEventPhoto($arg0, $arg1)`, id, 'shop-before')));
+
+        const res = await asUser(alice, () =>
+            invoke(`rabid.event_photo.addEventPhoto($arg0, $arg1)`, id, 'shop-before'));
+        assertEquals(res.action, 'reload');
+        const rows = asSystem(() => rabid.event_photo.forEvent.all({event_id: id}));
+        assertEquals(rows.length, 1);
+        assertEquals(rows[0].photo_kind, 'shop-before');
+        assertEquals(rows[0].event_id, id);
+
+        // The card renders its kind label + an "Add Photo" affordance (empty photo).
+        const detail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assert(hasText(detail, 'Shop Before'));
+        assert(hasText(detail, 'Add Photo'));
+
+        await asUser(alice, () => invoke(`rabid.event_photo.remove($arg0)`, rows[0].event_photo_id));
+        assertEquals(asSystem(() => rabid.event_photo.forEvent.all({event_id: id}).length), 0);
+    });
+});
+
+test("a set event photo renders its image + caption; the details form omits event_id", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const photoPath = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
+        const pid = asSystem(() => rabid.event_photo.insert(
+            {event_id: id, photo_kind: 'event', caption: 'Big turnout', photo: photoPath} as any));
+
+        const card = await asUser(alice, () => renderRoute(`rabid.event_photo.renderPhotoCardById(${pid})`));
+        assert(hasText(card, 'Event Photo'));
+        assert(hasText(card, 'Big turnout'));
+        const imgs = findAll(card, (m: any) => Array.isArray(m) && m[0] === 'img');
+        assert(imgs.length >= 1, 'the image renders');
+        assertStringIncludes((imgs[0] as any[])[1].src, 'rabid.photo');
+
+        // The details form edits kind + caption, NOT the bound event_id.
+        const form = await asUser(alice, () => renderRoute(`rabid.event_photo.renderDetailsForm(${pid})`));
+        const eventField = findAll(form, (m: any) =>
+            Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === 'event_id');
+        assertEquals(eventField.length, 0, 'no event_id field');
+        const captionField = findAll(form, (m: any) =>
+            Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === 'caption');
+        assert(captionField.length >= 1, 'has a caption field');
     });
 });
 
