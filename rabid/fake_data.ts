@@ -1158,6 +1158,77 @@ export function seedEventChecklists(rabid: Rabid): void {
     console.info(`event cleanup checklists created on ${recent.length} events`);
 }
 
+// Service + sale activity, logged THROUGH events (the event-centric model): a few
+// service records and the odd sale/giveaway on each past event, plus a couple of
+// "Ad-hoc" catch-all days carrying drop-in activity (no scheduled event around
+// them).  MUST run after the commitment/check-in builders so the catch-all days
+// this creates never receive attendance (a catch-all carries none by design).
+export function seedActivity(rabid: Rabid, opts: { baseSeed?: number } = {}): void {
+    faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('activity')) >>> 0);
+    rand = mulberry32(((opts.baseSeed ?? 1) ^ hashSeed('activity.rand')) >>> 0);
+
+    const recorderIds = rabid.volunteer.allVolunteersByName.all().map(v => v.volunteer_id);
+    const now = new Date();
+    const pastEvents = rabid.event.allEvents.all()
+        .filter(e => e.start_time && new Date(e.start_time) <= now);
+
+    const fsa = () => 'N2' + faker.helpers.arrayElement(['M', 'G', 'H', 'J', 'K', 'L']);
+    const repair = () => faker.helpers.arrayElement([
+        'Flat tire', 'Brake adjustment', 'New chain', 'Full tune-up', 'Wheel true',
+        'Bottom bracket', 'Derailleur adjustment', 'New tubes + tires']);
+    const serviceKind = () => faker.helpers.weightedArrayElement([
+        {weight: 5, value: 'full'}, {weight: 4, value: 'diy'},
+        {weight: 2, value: 'adult-learn'}, {weight: 2, value: 'kid-learn'},
+        {weight: 1, value: 'vocational'}]);
+    const saleKind = () => faker.helpers.weightedArrayElement([
+        {weight: 4, value: 'bike'}, {weight: 3, value: 'free-bike'},
+        {weight: 2, value: 'free-kids-bike'}, {weight: 2, value: 'free-helmet'},
+        {weight: 1, value: 'balance-bike-loan'}]);
+
+    let services = 0, sales = 0;
+    const addService = (event_id: number, when: string, done: boolnum) => {
+        rabid.service.insert({
+            event_id, client_name: faker.person.fullName(), client_postal: fsa(),
+            client_number_of_people_served: 1, service_kind: serviceKind(),
+            service_description: repair(), service_check_in_time: when, service_done: done,
+        } as service.ServiceOpt);
+        services++;
+    };
+    const addSale = (event_id: number, when: string) => {
+        const kind = saleKind();
+        const free = kind !== 'bike';
+        rabid.sale.insert({
+            event_id, sale_time: when,
+            sale_recorded_by: faker.helpers.arrayElement(recorderIds),
+            sale_kind: kind,
+            description: faker.helpers.arrayElement(['Blue commuter', 'Kids 20"', 'Road bike',
+                'Hybrid', 'Mountain bike', 'Helmet']),
+            amount: free ? 0 : faker.helpers.rangeToNumber({min: 40, max: 220}),
+            payment_method: 'cash',
+        } as sale.SaleOpt);
+        sales++;
+    };
+
+    for(const e of pastEvents) {
+        const n = faker.helpers.rangeToNumber({min: 0, max: 5});
+        for(let i = 0; i < n; i++)
+            addService(e.event_id, e.start_time!, rand() < 0.7 ? 1 : 0);
+        const m = faker.helpers.rangeToNumber({min: 0, max: 2});
+        for(let i = 0; i < m; i++) addSale(e.event_id, e.start_time!);
+    }
+
+    // A couple of Ad-hoc catch-all days: drop-in activity with no scheduled event.
+    const adHocDays = ['2026-06-24', '2026-07-01'];
+    for(const day of adHocDays) {
+        const eid = rabid.event.catchAllForDate(day, /*create*/ true)!;
+        for(let i = 0; i < faker.helpers.rangeToNumber({min: 1, max: 3}); i++)
+            addService(eid, `${day} 14:00:00`, 1);
+        addSale(eid, `${day} 15:00:00`);
+    }
+    console.info(`Activity: ${services} services, ${sales} sales/giveaways `
+        + `(incl. ${adHocDays.length} Ad-hoc days)`);
+}
+
 // --------------------------------------------------------------------------------
 // --- Scenarios + composition ----------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -1233,6 +1304,9 @@ export function seedScenario(rabid: Rabid, scenario: Scenario): void {
     if(scenario.checkins)    seedEventCheckins(rabid, { baseSeed: scenario.baseSeed });
     if(scenario.timesheets)  seedTimesheets(rabid, { baseSeed: scenario.baseSeed, weeks: scenario.timesheetWeeks });
     if(scenario.completedTasks) seedCompletedTasks(rabid, { baseSeed: scenario.baseSeed });
+    // Activity (services/sales + Ad-hoc days) LAST: it creates catch-all events,
+    // which must come after the commitment/check-in builders so they get none.
+    if(scenario.events)      seedActivity(rabid, { baseSeed: scenario.baseSeed });
 }
 
 // Create the schema from the table metadata (the on-disk db's schema-of-record).
