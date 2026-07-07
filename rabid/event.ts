@@ -506,7 +506,7 @@ export class EventTable extends Table<Event> {
     // slash-separated secondary links (not default browser blue), a quiet strip.
     private renderSectionNav(): Markup {
         const links: [string, string][] = [
-            ['volunteers', 'Volunteers'], ['services', 'Services'], ['sales', 'Sales & giveaways'],
+            ['volunteers', 'Volunteers here'], ['services', 'Services'], ['sales', 'Sales & giveaways'],
             ['tasks', 'Tasks'], ['photos', 'Photos'], ['retrospectives', 'Retrospectives'],
         ];
         return [h.nav, {class: 'lm-section-nav small mb-4 pb-2 border-bottom', 'aria-label': 'Sections'},
@@ -2262,7 +2262,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
         const items = this.checkinMenuItems(event_id, checkins);
         return [h.div, {...props, id: 'volunteers'},
             [h.div, {class: 'lm-doc-section-head'},
-             [h.h4, {class: 'lm-doc-section-label'}, 'Volunteers'],
+             // "Volunteers here" (not just "Volunteers") to distinguish who's
+             // actually present/checked in from "Signed up" (who committed).
+             [h.h4, {class: 'lm-doc-section-label'}, 'Volunteers here'],
              items.length ? action.actionMenu(items, {ariaLabel: 'Check-in actions'}) : undefined],
             [h.div, {class: 'lm-subsection'},
              checkins.length === 0
