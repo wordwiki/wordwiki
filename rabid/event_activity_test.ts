@@ -151,6 +151,19 @@ test("a catch-all is never listed on the Events page (even the undated section)"
     });
 });
 
+test("a service row is a LIVE fragment on its row key (an edit propagates cross-browser)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        await asUser(alice, () => invoke(`rabid.service.addServiceForEvent($arg0)`,
+            {event_id: eid, client_name: 'Fred', service_description: 'x'}));
+        const sid = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid})[0].service_id);
+        const row = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${sid})`));
+        const cls = String((row as any)[1]?.class ?? '');
+        assert(cls.includes('lm-live'), 'the row joins the long-poll');
+        assert(cls.includes(`-service-${sid}-`), 'keyed on its own row key (edit reloads just it)');
+    });
+});
+
 test("Services and Sales are independent reloadable fragments (own fk key each)", async () => {
     await withTestDb(async ({ alice }) => {
         const eid = insertEvent();

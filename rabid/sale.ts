@@ -217,7 +217,7 @@ export class SaleTable extends Table<Sale> {
         // One navigable row species for every viewer (Table.detailItemProps:
         // tap anywhere drills in via the lm-nav-link title); the pencil - shown
         // only to viewers with recordEdit - is the only edit affordance.
-        const item = this.detailItemProps(id, `rabid.sale.renderSaleRowById(${id})`);
+        const item = this.detailItemProps(id, `rabid.sale.renderSaleRowById(${id})`, {}, /*live*/ true);
         return [h.div, {...item, 'data-testid': `sale-row-${id}`},
             thumb,
             [h.div, {class: 'lm-item-body'},

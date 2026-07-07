@@ -292,7 +292,7 @@ export class ServiceTable extends Table<Service> {
         // tap anywhere drills in via the lm-nav-link name).  Editors get a ☰ menu
         // (Edit + reorder + insert before/after + delete - the last few for fixing
         // up scanned intake) in place of the old pencil.
-        const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`);
+        const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`, {}, /*live*/ true);
         const menu = this.canEditRecord(s) ? action.actionMenu([
             {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.service.renderForm(rabid.service.getById(${id}))`}},
             {label: 'Add before', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'before')`}},

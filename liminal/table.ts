@@ -528,8 +528,14 @@ export class Table<T extends Tuple> extends FieldSet {
     // after an edit save.  (A table without a detail page would render an
     // inert row instead - reloadableItemProps + 'list-group-item lm-item' +
     // a conditional pencil - but every table currently has one.)
-    detailItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={}): Record<string, string> {
-        const props = this.reloadableItemProps(id, reloadURL, extraProps);
+    detailItemProps(id: number|undefined, reloadURL: string, extraProps: Record<string, string>={},
+                    live: boolean=false): Record<string, string> {
+        // live: the row joins the long-poll on its own row key, so ANOTHER actor's
+        // edit to just this row propagates here (without reloading the whole list -
+        // the list wrapper watches the SHAPE key, for add/remove).
+        const props = (live && id !== undefined)
+            ? liveReloadableProps([this.rowKey(id)], reloadURL, extraProps)
+            : this.reloadableItemProps(id, reloadURL, extraProps);
         props.class = 'list-group-item list-group-item-action lm-item lm-navigable ' + props.class;
         props.onclick = 'lmNavigableClick(event)';
         return props;

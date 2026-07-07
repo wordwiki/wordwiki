@@ -1407,7 +1407,9 @@ export class EventPhotoTable extends Table<EventPhoto> {
         const id = p.event_photo_id;
         const has = typeof p.photo === 'string' && p.photo !== '';
         const canEdit = this.canEditRecord(p);
-        const props = reloadableProps([this.rowKey(id)], `rabid.event_photo.renderPhotoCardById(${id})`);
+        // LIVE on the row key: another actor's caption/crop edit to this card
+        // propagates here (the section watches the shape key, for add/remove).
+        const props = liveReloadableProps([this.rowKey(id)], `rabid.event_photo.renderPhotoCardById(${id})`);
         const kindLabel = event_photo_kind_enum[p.photo_kind] ?? p.photo_kind;
         const showKind = !(p.photo_kind === 'event' && p.caption);
         // The kind is a quiet, subordinate label (a small muted tag) - NOT another
@@ -1601,7 +1603,9 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
     }
     renderRow(r: EventRetrospective): Markup {
         const id = r.event_retrospective_id;
-        const props = reloadableProps([this.rowKey(id)], `rabid.event_retrospective.renderRowById(${id})`);
+        // LIVE on the row key: another actor's edit to this entry propagates here
+        // (the section watches the shape key, for add/remove).
+        const props = liveReloadableProps([this.rowKey(id)], `rabid.event_retrospective.renderRowById(${id})`);
         const canEdit = this.canEditRecord(r);
         const anon = !!r.is_anonymous || r.created_by == null;
         const author: Markup = anon
