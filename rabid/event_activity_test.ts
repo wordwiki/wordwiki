@@ -22,9 +22,13 @@ const detail = (viewer: number, event_id: number) =>
 test("addServiceForEvent binds the service to the event; it renders in Activity", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const eid = insertEvent();
-        await asUser(alice, () => invoke(`rabid.service.addServiceForEvent($arg0)`,
+        // The mutation returns a reload directive (NOT a bare id) so the client's
+        // tx handler refreshes the Activity section in place.
+        const res = await asUser(alice, () => invoke(`rabid.service.addServiceForEvent($arg0)`,
             {event_id: eid, client_name: 'Fred Client', service_kind: 'full',
              service_description: 'Trued rear wheel'}));
+        assertEquals(res.action, 'reload');
+        assert(res.targets.includes(`.-service-event_id-${eid}-`));
 
         const rows = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid}));
         assertEquals(rows.length, 1);
@@ -41,8 +45,10 @@ test("addServiceForEvent binds the service to the event; it renders in Activity"
 test("addSaleForEvent binds the sale + stamps time/recorder; renders under Sales", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const eid = insertEvent();
-        await asUser(alice, () => invoke(`rabid.sale.addSaleForEvent($arg0)`,
+        const res = await asUser(alice, () => invoke(`rabid.sale.addSaleForEvent($arg0)`,
             {event_id: eid, sale_kind: 'free-bike', description: 'Blue kids bike', amount: 0}));
+        assertEquals(res.action, 'reload');
+        assert(res.targets.includes(`.-sale-event_id-${eid}-`));
 
         const rows = asSystem(() => rabid.sale.salesForEvent.all({event_id: eid}));
         assertEquals(rows.length, 1);

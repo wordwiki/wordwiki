@@ -129,11 +129,11 @@ export class SaleTable extends Table<Sale> {
     @routeMutation(hostOrAdmin)
     addSaleForEvent(args: {event_id?: string|number, sale_kind?: string,
                            description?: string, amount?: string|number,
-                           payment_method?: string}): number {
+                           payment_method?: string}): Markup {
         const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
         const sale_kind = args.sale_kind || 'bike';
-        return this.insert({
+        this.insert({
             event_id, sale_kind,
             sale_time: date.temporalToSqliteDateTime(date.orgNow()),
             sale_recorded_by: security.current()!.actorId!,
@@ -141,6 +141,9 @@ export class SaleTable extends Table<Sale> {
             amount: Number(args.amount) || 0,
             payment_method: args.payment_method || 'cash',
         } as Partial<Sale>);
+        // Reload the event's Activity section (registered under this fk key).
+        return {action: 'reload',
+                targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
     }
 
     // Windowed variant for the Sales page (DATE() includes the whole `to` day).

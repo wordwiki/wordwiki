@@ -165,12 +165,12 @@ export class ServiceTable extends Table<Service> {
     addServiceForEvent(args: {event_id?: string|number, client_name?: string,
                               client_postal?: string, client_phone?: string,
                               service_kind?: string, service_description?: string,
-                              client_number_of_people_served?: string|number}): number {
+                              client_number_of_people_served?: string|number}): Markup {
         const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
         const client_name = (args.client_name ?? '').trim();
         if(!client_name) throw new Error('Client name is required');
-        return this.insert({
+        this.insert({
             event_id, client_name,
             client_postal: (args.client_postal ?? '') || undefined,
             client_phone: (args.client_phone ?? '') || undefined,
@@ -178,6 +178,9 @@ export class ServiceTable extends Table<Service> {
             service_description: (args.service_description ?? '').trim(),
             client_number_of_people_served: Number(args.client_number_of_people_served) || 1,
         } as Partial<Service>);
+        // Reload the event's Activity section (registered under this fk key).
+        return {action: 'reload',
+                targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
     }
 
     // Windowed variant for the Service page.  A NULL check-in time is a
