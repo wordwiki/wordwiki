@@ -123,14 +123,20 @@ test("a catch-all is never listed on the Events page (even the undated section)"
     });
 });
 
-test("renderEventActivity registers both service and sale event fk keys", async () => {
-    await withTestDb(async ({ bob }) => {
+test("Services and Sales are independent reloadable fragments (own fk key each)", async () => {
+    await withTestDb(async ({ alice }) => {
         const eid = insertEvent();
-        const section = await asUser(bob, () => renderRoute(`rabid.event.renderEventActivity(${eid})`));
-        // The reload wrapper carries both fk keys so an add to EITHER refreshes it.
-        assert(hasText(section, 'Activity'));
-        const cls = String((section as any)[1]?.class ?? '');
-        assert(cls.includes(rabid.service.fkKey('event_id', eid)), 'service fk key present');
-        assert(cls.includes(rabid.sale.fkKey('event_id', eid)), 'sale fk key present');
+        // A host sees both sub-sections even when empty (they carry the Add menu).
+        const svc = await asUser(alice, () => renderRoute(`rabid.event.renderEventServices(${eid})`));
+        const svcCls = String((svc as any)[1]?.class ?? '');
+        assert(svcCls.includes(rabid.service.fkKey('event_id', eid)), 'Services keyed on service fk');
+        assert(!svcCls.includes(rabid.sale.fkKey('event_id', eid)), 'Services NOT keyed on sale fk');
+        assert(hasText(svc, 'Add service'));
+
+        const sale = await asUser(alice, () => renderRoute(`rabid.event.renderEventSales(${eid})`));
+        const saleCls = String((sale as any)[1]?.class ?? '');
+        assert(saleCls.includes(rabid.sale.fkKey('event_id', eid)), 'Sales keyed on sale fk');
+        assert(!saleCls.includes(rabid.service.fkKey('event_id', eid)), 'Sales NOT keyed on service fk');
+        assert(hasText(sale, 'Add sale'));
     });
 });

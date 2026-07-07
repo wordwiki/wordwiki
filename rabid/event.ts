@@ -478,46 +478,70 @@ export class EventTable extends Table<Event> {
         ];
     }
 
-    // The event's activity log: services + sales recorded at this event, as a
-    // peer document section.  Reloads when a service OR sale on this event is
-    // added/edited (registers both fk keys - the mutation's automatic emission
-    // re-renders us).  Adding is host/admin (services/sales are host-edited), via
-    // a quiet ☰ (Add service / Add sale), each dispatching a pre-bound dialog.
+    // The event's activity log: an "Activity" umbrella over two INDEPENDENT
+    // sub-sections, Services and Sales & giveaways.  Each is its own reloadable
+    // fragment keyed on its own table's event fk (so adding a service re-renders
+    // only the Services list, not Sales, and vice versa) and owns its own ☰ menu -
+    // the natural home for per-type actions as they're added, next to their own
+    // heading rather than merged into one far-away menu.
     @route(authenticated)
     renderEventActivity(event_id: number): Markup {
+        const services = this.renderEventServices(event_id);
+        const sales = this.renderEventSales(event_id);
+        return [h.div, {},
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Activity']],
+            (services || sales)
+                ? [h.div, {}, services, sales]
+                : [h.div, {class: 'lm-subsection'},
+                   [h.p, {class: 'text-muted small mb-0'}, 'No activity logged yet.']]];
+    }
+
+    // The Services sub-section: its own reloadable fragment (reloads only on a
+    // service change for this event) with its own Add ☰.  For a non-editor with no
+    // services there's nothing to show or add, so it renders nothing.
+    @route(authenticated)
+    renderEventServices(event_id: number): Markup {
         const services = security.runSystem(() => rabid.service.servicesForEvent.all({event_id}));
-        const sales = security.runSystem(() => rabid.sale.salesForEvent.all({event_id}));
-        const props = reloadableProps(
-            [rabid.service.fkKey('event_id', event_id), rabid.sale.fkKey('event_id', event_id)],
-            `rabid.event.renderEventActivity(${event_id})`);
         const canAdd = rabid.service.canEditRecord({event_id} as any);
-        const addMenu: action.ActionMenuItem[] = canAdd ? [
-            {label: 'Add service…',
-             mode: {kind: 'modal', dialogUrl: `/rabid.service.newServiceForEventDialog(${event_id})`}},
-            {label: 'Add sale…',
-             mode: {kind: 'modal', dialogUrl: `/rabid.sale.newSaleForEventDialog(${event_id})`}},
-        ] : [];
-        const empty = services.length === 0 && sales.length === 0;
+        if(!canAdd && services.length === 0) return undefined as unknown as Markup;
+        const props = reloadableProps([rabid.service.fkKey('event_id', event_id)],
+            `rabid.event.renderEventServices(${event_id})`);
         return [h.div, props,
             [h.div, {class: 'lm-doc-section-head'},
-             [h.h4, {class: 'lm-doc-section-label'}, 'Activity'],
-             addMenu.length
-                 ? action.actionMenu(addMenu, {ariaLabel: 'Add activity'})
+             [h.h5, {class: 'lm-doc-section-label'}, 'Services'],
+             canAdd
+                 ? action.actionMenu([{label: 'Add service…',
+                     mode: {kind: 'modal', dialogUrl: `/rabid.service.newServiceForEventDialog(${event_id})`}}],
+                     {ariaLabel: 'Service actions'})
                  : undefined],
             [h.div, {class: 'lm-subsection'},
-             empty
-                 ? [h.p, {class: 'text-muted small mb-0'}, 'No activity logged yet.']
-                 : [services.length
-                        ? [h.div, {class: 'mb-3'},
-                           [h.h5, {class: 'lm-doc-section-label'}, 'Services'],
-                           rabid.service.renderServiceList(services)]
-                        : undefined,
-                    sales.length
-                        ? [h.div, {},
-                           [h.h5, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
-                           rabid.sale.renderSaleList(sales)]
-                        : undefined]],
-        ];
+             services.length
+                 ? rabid.service.renderServiceList(services)
+                 : [h.p, {class: 'text-muted small mb-0'}, 'No services yet.']]];
+    }
+
+    // The Sales & giveaways sub-section: mirrors renderEventServices, keyed on the
+    // sale event fk with its own Add ☰.
+    @route(authenticated)
+    renderEventSales(event_id: number): Markup {
+        const sales = security.runSystem(() => rabid.sale.salesForEvent.all({event_id}));
+        const canAdd = rabid.sale.canEditRecord({event_id} as any);
+        if(!canAdd && sales.length === 0) return undefined as unknown as Markup;
+        const props = reloadableProps([rabid.sale.fkKey('event_id', event_id)],
+            `rabid.event.renderEventSales(${event_id})`);
+        return [h.div, props,
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h5, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
+             canAdd
+                 ? action.actionMenu([{label: 'Add sale…',
+                     mode: {kind: 'modal', dialogUrl: `/rabid.sale.newSaleForEventDialog(${event_id})`}}],
+                     {ariaLabel: 'Sale actions'})
+                 : undefined],
+            [h.div, {class: 'lm-subsection'},
+             sales.length
+                 ? rabid.sale.renderSaleList(sales)
+                 : [h.p, {class: 'text-muted small mb-0'}, 'No sales yet.']]];
     }
 
     // The detail page's notes: the event's own prose, not a labelled field - so
