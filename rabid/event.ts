@@ -1255,22 +1255,44 @@ export class EventPhotoTable extends Table<EventPhoto> {
 /**/          ORDER BY order_key, event_photo_id`);
     }
 
-    // The ☰ items for adding a photo of each kind: an immediate action that drops
-    // an empty card of that kind to upload into (the generic photoButton on the
-    // new card does the actual upload/crop).
+    // The ☰ items for adding a photo of each kind: each opens a dialog that goes
+    // STRAIGHT to picking a photo (file picker + caption + photographer), creating
+    // the card on submit - no create-empty-then-edit dance.
     photoAddMenuItems(event_id: number): action.ActionMenuItem[] {
         return Object.keys(event_photo_kind_enum).map(kind => ({
             label: `Add ${event_photo_kind_enum[kind]}`,
-            mode: {kind: 'immediate' as const,
-                   expr: `rabid.event_photo.addEventPhoto(${event_id}, '${kind}')`},
+            mode: {kind: 'modal' as const,
+                   dialogUrl: `/rabid.event_photo.newEventPhotoDialog(${event_id}, '${kind}')`},
         }));
     }
 
+    // The add dialog: pick a photo (the ImageField's file picker uploads to the
+    // content store on select) + caption + photographer; submit creates the card.
+    @route(hostOrAdmin)
+    newEventPhotoDialog(event_id: number, photo_kind: string): Markup {
+        const f = this.fieldsByName;
+        return action.renderParamForm(
+            [f.photo, f.caption, f.photographer], {} as Partial<EventPhoto>,
+            {
+                title: `Add ${event_photo_kind_enum[photo_kind] ?? 'photo'}`,
+                submitLabel: 'Add',
+                hidden: {event_id, photo_kind},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.event_photo.addEventPhoto(${getFormJSON(event.target)})`'},
+            });
+    }
+
     @routeMutation(hostOrAdmin)
-    addEventPhoto(event_id: number, photo_kind: string): Markup {
+    addEventPhoto(args: {event_id?: string|number, photo_kind?: string, photo?: string,
+                        caption?: string, photographer?: string}): Markup {
+        const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
-        this.insert({event_id, photo_kind: photo_kind || 'event',
-                     caption: '', photographer: ''} as EventPhotoOpt);
+        this.insert({
+            event_id, photo_kind: args.photo_kind || 'event',
+            photo: (args.photo ?? '') || undefined,
+            caption: (args.caption ?? '').trim(),
+            photographer: (args.photographer ?? '').trim(),
+        } as EventPhotoOpt);
         // Membership changed -> reload the section (registered on the shape key).
         return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }

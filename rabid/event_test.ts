@@ -73,20 +73,17 @@ test("addEventPhoto drops a card of the chosen kind; delete removes it; add is h
         const id = insertEvent();
         // A regular volunteer may not add.
         await asUser(bob, () => assertRejects(() =>
-            invoke(`rabid.event_photo.addEventPhoto($arg0, $arg1)`, id, 'shop-before')));
+            invoke(`rabid.event_photo.addEventPhoto($arg0)`, {event_id: id, photo_kind: 'shop-before'})));
 
         const res = await asUser(alice, () =>
-            invoke(`rabid.event_photo.addEventPhoto($arg0, $arg1)`, id, 'shop-before'));
+            invoke(`rabid.event_photo.addEventPhoto($arg0)`,
+                {event_id: id, photo_kind: 'shop-before', caption: 'Before we started'}));
         assertEquals(res.action, 'reload');
         const rows = asSystem(() => rabid.event_photo.forEvent.all({event_id: id}));
         assertEquals(rows.length, 1);
         assertEquals(rows[0].photo_kind, 'shop-before');
+        assertEquals(rows[0].caption, 'Before we started');
         assertEquals(rows[0].event_id, id);
-
-        // The card renders its kind label + a single pencil (-> Edit Photo).
-        const detail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
-        assert(hasText(detail, 'Shop Before'));
-        assert(JSON.stringify(detail).includes('renderPhotoEditForm'), 'card has the Edit Photo pencil');
 
         await asUser(alice, () => invoke(`rabid.event_photo.remove($arg0)`, rows[0].event_photo_id));
         assertEquals(asSystem(() => rabid.event_photo.forEvent.all({event_id: id}).length), 0);
@@ -123,13 +120,25 @@ test("event photo card: image + caption + photographer (kind elided); Edit Photo
     });
 });
 
+test("the Add photo dialog goes straight to a file picker (+ caption/photographer)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const dialog = await asUser(alice, () =>
+            renderRoute(`rabid.event_photo.newEventPhotoDialog(${id}, 'shop-before')`));
+        const s = JSON.stringify(dialog);
+        assert(s.includes('lmPhotoFieldChange') && s.includes('rabid.photo'), 'has a photo file picker');
+        assert(s.includes('caption') && s.includes('photographer'), 'has caption + photographer');
+        assert(s.includes('addEventPhoto'), 'submits to addEventPhoto');
+    });
+});
+
 test("event photos: insert-after and move-up reorder the cards", async () => {
     await withTestDb(async ({ alice }) => {
         const id = insertEvent();
         const order = () => asSystem(() =>
             rabid.event_photo.forEvent.all({event_id: id}).map(p => p.event_photo_id));
         const add = (kind: string) =>
-            asUser(alice, () => invoke(`rabid.event_photo.addEventPhoto($arg0, $arg1)`, id, kind));
+            asUser(alice, () => invoke(`rabid.event_photo.addEventPhoto($arg0)`, {event_id: id, photo_kind: kind}));
         await add('event'); await add('shop-before');
         const [A, B] = order();
 
