@@ -91,6 +91,11 @@ export interface Event {
 
     volunteer_only: boolnum;
 
+    // The volunteer running this event (usually one).  A single FK, not a
+    // sign-up-style list - much less machinery; edited via the event form's
+    // volunteer picker.
+    host_id?: number;
+
     // A per-day "Ad-hoc" catch-all event: the bucket for activity (services,
     // sales) that wasn't part of any scheduled event.  is_catch_all flags it;
     // catch_all_date is its SOLE day encoding (a catch-all has NULL start/end
@@ -128,6 +133,7 @@ export class EventTable extends Table<Event> {
             new StringField('location_url', {default: ''}),
             new BooleanField('is_remote_event', {default: 0}),
             new BooleanField('volunteer_only', {default: 0}),
+            new VolunteerForeignKeyField('host_id', {nullable: true, indexed: true, prompt: 'Host'}),
             new BooleanField('is_catch_all', {default: 0}),
             new DateField('catch_all_date', {nullable: true}),
             new DateTimeField('shop_load_time', {nullable: true}),
@@ -1013,6 +1019,16 @@ export class EventTable extends Table<Event> {
 
         // Build grid rows for details
         const gridRows: Markup[] = [];
+
+        // Host row (the volunteer running the event) - not on a catch-all.
+        if (!event.is_catch_all && event.host_id) {
+            const host = security.runSystem(() => db().prepare<{name: string, short_name: string}, {id: number}>(
+                'SELECT name, short_name FROM volunteer WHERE volunteer_id = :id').first({id: event.host_id!}));
+            if (host)
+                gridRows.push([h.div, {class: 'card-detail-row'},
+                    [h.div, {}, 'Host:'],
+                    [h.div, {}, templates.pageLink(`/rabid.volunteer.detailPage(${event.host_id})`, shortName(host))]]);
+        }
 
         // Schedule row: the headline event time, with the prep times (shop load,
         // setup) stacked BENEATH it - same row, same label - so a volunteer

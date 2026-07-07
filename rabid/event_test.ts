@@ -181,6 +181,19 @@ test("the event detail page shows the summary; the Edit ☰ only for hosts", asy
     });
 });
 
+test("an event's host shows in the summary and is a field on the event form", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();
+        asSystem(() => rabid.event.update(id, { host_id: bob }));
+        const detail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assert(hasText(detail, 'Host'));
+        assert(JSON.stringify(detail).includes(`volunteer.detailPage(${bob})`), 'host links to the volunteer');
+        // The event edit form carries a host picker (a single FK, no bespoke editor).
+        const form = await asUser(alice, () => renderRoute(`rabid.event.renderForm(rabid.event.getById(${id}))`));
+        assert(JSON.stringify(form).includes('host_id'), 'edit form has a host field');
+    });
+});
+
 test("the summary-card title links to the detail page - except ON the detail page (no self-link)", async () => {
     await withTestDb(async ({ bob }) => {
         const id = insertEvent();
