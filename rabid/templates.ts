@@ -17,8 +17,8 @@ export interface PageContent {
     // Show admin-only Admin-menu items (e.g. rebuild photo cache).  Set by the
     // dispatcher from the viewer's roles.
     isAdmin?: boolean;
-    // Show host/admin-only nav (e.g. "Today's log", which materialises the day's
-    // catch-all event).  Set by the dispatcher from the viewer's roles.
+    // Show host/admin-only nav (e.g. "Today's Ad-hoc", which materialises the
+    // day's catch-all event).  Set by the dispatcher from the viewer's roles.
     isHostOrAdmin?: boolean;
     // The liveness poller's bootstrap (LiminalApp.liveClientConfig), rendered
     // as window.__liminalLive.  Set by the dispatcher; the poller only runs on
@@ -179,11 +179,12 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
              [h.a, {class:"nav-link", href:"/events"}, 'Events'],
             ], //li
 
-            // Today's log: the day's Ad-hoc catch-all event, materialised on
-            // demand.  Host/admin only - it's where they record drop-in activity.
+            // Today's Ad-hoc: the day's Ad-hoc catch-all event, materialised on
+            // demand.  Host/admin only - it's where they record drop-in activity
+            // (NOT a log of all of today; just the not-in-an-event bucket).
             isHostOrAdmin
                 ? [h.li, {class:"nav-item"},
-                   [h.a, {class:"nav-link", href:"/todaysLog"}, "Today's log"],
+                   [h.a, {class:"nav-link", href:"/todaysLog"}, "Today's Ad-hoc"],
                   ] //li
                 : undefined,
 

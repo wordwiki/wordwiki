@@ -119,7 +119,7 @@ attendance, no sign-up.
 ## Entry points — where a user starts a log entry
 
 - **From a scheduled event's page**: the Service log section's Add. Direct.
-- **Ad-hoc / today**: a "Today's log" entry point (home page and/or navbar) that
+- **Ad-hoc / today**: a "Today's Ad-hoc" entry point (home page and/or navbar) that
   resolves to `catchAllForToday(create=true)`'s event page — the first add
   materializes the day's catch-all; subsequent adds reuse it. The user never
   thinks "standalone service," only "add to today's log."
@@ -182,7 +182,7 @@ attendance, no sign-up.
    sense — is time-neutral, and collides with no real bike-shop event type. Label
    derives from `catch_all_date`: `Ad-hoc — <Mon D>`.
 3. **Events-list visibility** — catch-alls are **reachable but not listed** among
-   scheduled events (via "Today's log" and a service/sale's parent link),
+   scheduled events (via "Today's Ad-hoc" and a service/sale's parent link),
    consistent with the reporting exclusion and reinforced by decisions 4-5.
 4. **No attendance on catch-alls** — full-event check-in/sign-up is disallowed on
    a catch-all (would corrupt attendance reporting); the summary's check-in UI is
@@ -202,7 +202,7 @@ attendance, no sign-up.
 2. **Event Activity section**: `renderEventActivity` + `servicesForEvent` /
    `salesForEvent` + `newServiceForEventDialog` / `newSaleForEventDialog` + reload
    wiring. Suppress `renderEventSummary` check-in UI on catch-alls.
-3. **"Today's log" entry point** → `catchAllForToday(create=true)` → its page.
+3. **"Today's Ad-hoc" entry point** → `catchAllForToday(create=true)` → its page.
 4. **Retire** the `/service` and `/sale` nav pages; move cross-event reporting
    under Reports + a home entry point.
 5. **Reporting filters**: `is_catch_all = 0` on event counts + the

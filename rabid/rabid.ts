@@ -118,16 +118,17 @@ export class Rabid extends LiminalApp {
     projects(q?: Record<string, any>) { return templates.page('Projects', this.project.renderProjectsPage(q)); }
     tasksPage(q?: Record<string, any>) { return templates.page('Tasks', this.task.renderTasksPage(q)); }
     templatesPage() { return templates.page('Checklist templates', this.project.renderTemplatesPage()); }
-    // "Today's log": the day's Ad-hoc catch-all event, materialised on demand
+    // "Today's Ad-hoc": the day's Ad-hoc catch-all event, materialised on demand
     // (1-1 per day, race-safe).  Host/admin only - it's where drop-in activity
     // (services/sales not tied to a scheduled event) gets recorded.  A stable URL
-    // that re-resolves "today" each day.
+    // that re-resolves "today" each day.  (Named for the catch-all it lands on -
+    // NOT "today's log", which would imply a log of ALL of today's activity.)
     todaysLog() {
         const ctx = security.current();
         if(!(ctx?.system || ctx?.roles.has('host') || ctx?.roles.has('admin')))
             throw new RouteDeniedError('page');
         const id = this.event.catchAllForToday(/*create*/ true)!;
-        return templates.page("Today's log", this.event.renderEventDetail(id));
+        return templates.page("Today's Ad-hoc", this.event.renderEventDetail(id));
     }
 
     constructor() {

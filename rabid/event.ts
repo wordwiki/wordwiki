@@ -279,7 +279,7 @@ export class EventTable extends Table<Event> {
         // Away events only (is_remote_event) + public only by default; unchecking
         // either widens.  Volunteers commit to away events, not in-shop ones.
         // Catch-alls ("Ad-hoc" day buckets) are never listed here: they aren't
-        // scheduled events, only activity buckets reached via Today's log / a
+        // scheduled events, only activity buckets reached via Today's Ad-hoc / a
         // service's parent link.  (Their NULL start_time already keeps them out of
         // future/past; this also keeps them out of the undated section.)
         const matches = (e: Event, q: EventFilter) =>

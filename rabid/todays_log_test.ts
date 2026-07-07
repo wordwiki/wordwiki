@@ -1,4 +1,4 @@
-// "Today's log" entry point: materialises the day's Ad-hoc catch-all on demand
+// "Today's Ad-hoc" entry point: materialises the day's Ad-hoc catch-all on demand
 // (host/admin only) and renders it; the nav link is host/admin-gated.
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertRejects } from "../liminal/testing/assert.ts";
@@ -35,7 +35,7 @@ test("todaysLog reuses the same catch-all on repeat visits (1-1 per day)", async
     });
 });
 
-test("a regular volunteer may not open Today's log (and none is created)", async () => {
+test("a regular volunteer may not open Today's Ad-hoc (and none is created)", async () => {
     await withTestDb(async ({ bob }) => {
         await asUser(bob, () => assertRejects(() => renderRoute(`todaysLog`)));
         assertEquals(asSystem(() => rabid.event.catchAllForToday(false)), undefined);
@@ -43,6 +43,6 @@ test("a regular volunteer may not open Today's log (and none is created)", async
 });
 
 test("the nav link shows for host/admin, not for a regular volunteer", () => {
-    assert(hasText(navBar(false, false, /*isHostOrAdmin*/ true), "Today's log"));
-    assert(!hasText(navBar(false, false, /*isHostOrAdmin*/ false), "Today's log"));
+    assert(hasText(navBar(false, false, /*isHostOrAdmin*/ true), "Today's Ad-hoc"));
+    assert(!hasText(navBar(false, false, /*isHostOrAdmin*/ false), "Today's Ad-hoc"));
 });
