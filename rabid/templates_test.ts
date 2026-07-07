@@ -148,12 +148,12 @@ test("event page: a quiet ☰ 'Add …' item; after instantiate, the checklist u
         const eid = asSystem(newEvent);
         const {template_id} = asSystem(newCleanupTemplate);
         const before = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${eid})`));
-        assert(hasText(before, 'Add Cleanup checklist'), 'offers to add the checklist via the ☰');
+        assert(hasText(before, 'Add Cleanup Tasks checklist'), 'offers to add the checklist via the ☰');
         asUser(alice, () => r.project.instantiateTemplate(template_id, 'event', eid));
         const after = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${eid})`));
         assert(hasText(after, 'Cleanup'), 'role heading');
         assert(hasText(after, 'Sweep'), 'copied task shown');
         assert(hasText(after, 'Resync from template'), 'resync affordance');
         // ...and the create affordance is now gone from the ☰ (nothing left to add).
-        assert(!hasText(after, 'Add Cleanup checklist'), 'add item drops once instantiated');
+        assert(!hasText(after, 'Add Cleanup Tasks checklist'), 'add item drops once instantiated');
     }));

@@ -895,9 +895,11 @@ export const task_priority_enum: Record<string, string> = {
 // AND cleanup checklists), each 1-1.  A controlled vocabulary so cross-owner
 // queries ("the cleanup checklist for every event") stay reliable.  NULL role =
 // the owner's general/ad-hoc task list (the pre-existing 1-1 owned project).
+// Ordered setup -> cleanup -> safety (the natural before/during/after sequence);
+// renderOwnerChecklists renders them in this key order, not alphabetically.
 export const project_role_enum: Record<string, string> = {
-    'setup': 'Setup',
-    'cleanup': 'Cleanup',
+    'setup': 'Setup Tasks',
+    'cleanup': 'Cleanup Tasks',
     'safety': 'Safety',
 };
 
@@ -1638,10 +1640,15 @@ export class TaskTable extends Table<Task> {
             rabid.project.templatesForOwnerTable.all({owner_table}));
         if(templates.length === 0) return undefined as any;
         const canEdit = ownerCanEdit(owner_table, owner_id);
+        // Render in the enum's key order (setup -> cleanup -> safety), not the
+        // query's alphabetical owner_role order.
+        const roleOrder = Object.keys(project_role_enum);
+        const ordered = [...templates].sort((a, b) =>
+            roleOrder.indexOf(a.owner_role ?? '') - roleOrder.indexOf(b.owner_role ?? ''));
         // Only INSTANTIATED checklists render here, each as a document section
         // (like Tasks).  Creating a not-yet-made one is a quiet ☰ action
         // (ownerChecklistAddItems) on the owner's page, NOT a button in the flow.
-        return templates.map(t => {
+        return ordered.map(t => {
             const role = t.owner_role ?? null;
             const existing = rabid.project.forOwner(owner_table, owner_id, role);
             if(existing === undefined) return undefined;
