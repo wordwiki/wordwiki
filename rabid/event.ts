@@ -448,6 +448,9 @@ export class EventTable extends Table<Event> {
              checklistAdds.length
                  ? action.actionMenu(checklistAdds, {ariaLabel: 'Add a checklist'})
                  : undefined],
+            // Jump-links across the top: scroll to each section (fragment ids set on
+            // the section wrappers below).
+            this.renderSectionNav(),
             this.renderEventSummary(event_id, {titleLink: false, editableCheckins: true, hideNotes: true}),
             // Notes are primary event content: their own clean prose block below
             // the summary, above the tasks.
@@ -457,11 +460,12 @@ export class EventTable extends Table<Event> {
             this.renderEventActivity(event_id),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
-            // heading like the checklists below.
-            rabid.task.renderOwnerTasks('event', event_id, null, /*docHeading*/ true),
-            // Checklists instantiated from templates (setup/cleanup), each a
-            // document section; adding a new one is the ☰ above.
-            rabid.task.renderOwnerChecklists('event', event_id),
+            // heading like the checklists below.  Wrapped in a stable #tasks anchor.
+            [h.div, {id: 'tasks'},
+             rabid.task.renderOwnerTasks('event', event_id, null, /*docHeading*/ true),
+             // Checklists instantiated from templates (setup/cleanup), each a
+             // document section; adding a new one is the ☰ above.
+             rabid.task.renderOwnerChecklists('event', event_id)],
             // Photos (a subordinate list: kind + caption + photographer), after the
             // task cluster.
             this.renderEventPhotos(event_id),
@@ -469,6 +473,20 @@ export class EventTable extends Table<Event> {
             // optionally anonymous) - the last section, below everything.
             this.renderEventRetrospectives(event_id),
         ];
+    }
+
+    // The jump-link bar under the title: scrolls to each section by fragment id.
+    // The targets (#services / #sales / #tasks / #photos / #retrospectives) are set
+    // on the section wrappers.  A link whose section isn't shown for this viewer
+    // simply doesn't scroll - harmless.
+    private renderSectionNav(): Markup {
+        const links: [string, string][] = [
+            ['services', 'Services'], ['sales', 'Sales & giveaways'],
+            ['tasks', 'Tasks'], ['photos', 'Photos'], ['retrospectives', 'Retrospectives'],
+        ];
+        return [h.nav, {class: 'lm-section-nav small text-muted d-flex flex-wrap gap-3 mb-3',
+                        'aria-label': 'Sections'},
+            links.map(([id, label]) => [h.a, {href: `#${id}`}, label])];
     }
 
     // The event's activity log: two INDEPENDENT peer document sections, Services
@@ -493,7 +511,7 @@ export class EventTable extends Table<Event> {
         if(!canAdd && services.length === 0) return undefined as unknown as Markup;
         const props = reloadableProps([rabid.service.fkKey('event_id', event_id)],
             `rabid.event.renderEventServices(${event_id})`);
-        return [h.div, props,
+        return [h.div, {...props, id: 'services'},
             [h.div, {class: 'lm-doc-section-head'},
              [h.h4, {class: 'lm-doc-section-label'}, 'Services'],
              canAdd
@@ -517,7 +535,7 @@ export class EventTable extends Table<Event> {
         if(!canAdd && sales.length === 0) return undefined as unknown as Markup;
         const props = reloadableProps([rabid.sale.fkKey('event_id', event_id)],
             `rabid.event.renderEventSales(${event_id})`);
-        return [h.div, props,
+        return [h.div, {...props, id: 'sales'},
             [h.div, {class: 'lm-doc-section-head'},
              [h.h4, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
              canAdd
@@ -554,7 +572,7 @@ export class EventTable extends Table<Event> {
         // reload just the card - see renderPhotoCard).
         const props = reloadableProps([rabid.event_photo.shapeKey('event_id', event_id)],
             `rabid.event.renderEventPhotos(${event_id})`);
-        return [h.div, {...props, 'data-testid': 'event-photos'},
+        return [h.div, {...props, id: 'photos', 'data-testid': 'event-photos'},
             [h.div, {class: 'lm-doc-section-head'},
              [h.h4, {class: 'lm-doc-section-label'}, 'Photos'],
              canAdd
@@ -567,9 +585,32 @@ export class EventTable extends Table<Event> {
                  : [h.p, {class: 'text-muted small mb-0'}, 'No photos yet.']]];
     }
 
-    // Retrospectives section (built next commit).
-    renderEventRetrospectives(_event_id: number): Markup {
-        return undefined as unknown as Markup;
+    // Retrospectives: volunteer feedback on how the event went (markdown, optionally
+    // anonymous).  Always shown (to any logged-in volunteer) - we want feedback, so
+    // it's never hidden; the "+" is open to all.  A shape-keyed section (add/delete
+    // reload it; an edit reloads just the row).  A small note below explains it.
+    @route(authenticated)
+    renderEventRetrospectives(event_id: number): Markup {
+        const retros = security.runSystem(() => rabid.event_retrospective.forEvent.all({event_id}));
+        const canAdd = security.current()?.actorId != null;
+        const props = reloadableProps([rabid.event_retrospective.shapeKey('event_id', event_id)],
+            `rabid.event.renderEventRetrospectives(${event_id})`);
+        return [h.div, {...props, id: 'retrospectives', 'data-testid': 'event-retrospectives'},
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Retrospectives'],
+             canAdd
+                 ? action.actionButton(action.plusIcon(),
+                     {kind: 'modal', dialogUrl: `/rabid.event_retrospective.newRetrospectiveDialog(${event_id})`},
+                     'lm-menu-button', {'aria-label': 'Add retrospective', title: 'Add retrospective'})
+                 : undefined],
+            [h.div, {class: 'lm-subsection'},
+             retros.length
+                 ? retros.map(r => rabid.event_retrospective.renderRow(r))
+                 : [h.p, {class: 'text-muted small mb-0'}, 'No retrospectives yet.']],
+            [h.p, {class: 'text-muted small fst-italic mt-2 mb-0'},
+             'Retrospectives are your feedback on how the event went — what worked, what could '
+             + 'be better. All feedback is welcome, including criticism; tick “Post anonymously” '
+             + 'to leave it unattributed.']];
     }
 
     // The home page's upcoming events, as a week-grouped compact table (the same
@@ -1317,6 +1358,163 @@ export class EventPhotoTable extends Table<EventPhoto> {
             [h.div, {class: 'mt-1 d-flex align-items-center gap-2'},
              [h.span, {}, ...line], menu],
             p.photographer ? [h.div, {class: 'text-muted small'}, `Photo: ${p.photographer}`] : undefined];
+    }
+}
+
+// --------------------------------------------------------------------------------
+// --- EventRetrospective ---------------------------------------------------------
+// --------------------------------------------------------------------------------
+//
+// Volunteer feedback on how an event went - "what worked, what didn't".  Primarily
+// a markdown note, optionally ANONYMOUS (then the author is not recorded, and is
+// cleared if it had been): we want candid feedback, including criticism.  ANY
+// logged-in volunteer can add one; the author (when recorded) or a host edits/deletes.
+
+// Edit permission: a host/admin, or the recorded author of a non-anonymous entry.
+const retroEdit: security.Permission = security.or(
+    hostOrAdmin,
+    (a: any) => {
+        const r = a.record as EventRetrospective | undefined;
+        return r?.created_by != null && a.ctx.actorId === r.created_by;
+    });
+
+export interface EventRetrospective {
+    event_retrospective_id: number;
+    event_id: number;
+    feedback: string;
+    is_anonymous: boolnum;
+    created_by?: number;
+    created_time?: string;
+}
+export type EventRetrospectiveOpt = Partial<EventRetrospective>;
+
+export class EventRetrospectiveTable extends Table<EventRetrospective> {
+    constructor() {
+        super('event_retrospective', [
+            new PrimaryKeyField('event_retrospective_id', {}),
+            new ForeignKeyField('event_id', 'event', 'event_id', {indexed: true, edit: security.never}),
+            new MarkdownField('feedback', {default: '', prompt: "How did it go? What worked, what didn't?"}),
+            new CheckboxField('is_anonymous', {default: 0, prompt: 'Post anonymously'}),
+            // Managed: set from the actor on add (unless anonymous), cleared when an
+            // entry becomes anonymous.  Never a form field.
+            new VolunteerForeignKeyField('created_by', {nullable: true, edit: security.never}),
+            new DateTimeField('created_time', {nullable: true, edit: security.never}),
+        ]);
+    }
+
+    defaultFieldEdit: security.Permission = retroEdit;
+    override get recordEdit(): security.Permission { return retroEdit; }
+    override formTitle(_r: EventRetrospective): string { return 'Retrospective'; }
+
+    @path
+    get forEvent() {
+        return this.prepare<EventRetrospective, {event_id: number}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM event_retrospective
+/**/          WHERE event_id = :event_id
+/**/          ORDER BY created_time, event_retrospective_id`);
+    }
+
+    private parseAnon(v: unknown): boolean {
+        return v === 'on' || v === true || v === 1 || v === '1' || v === 'true';
+    }
+
+    // Add: ANY logged-in volunteer.  Anonymous -> no author recorded.
+    @route(authenticated)
+    newRetrospectiveDialog(event_id: number): Markup {
+        const f = this.fieldsByName;
+        return action.renderParamForm(
+            [f.feedback, f.is_anonymous], {} as Partial<EventRetrospective>,
+            {
+                title: 'Add retrospective', submitLabel: 'Post',
+                hidden: {event_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.event_retrospective.addRetrospective(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(authenticated)
+    addRetrospective(args: {event_id?: string|number, feedback?: string, is_anonymous?: unknown}): Markup {
+        const event_id = Number(args?.event_id);
+        if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
+        const feedback = (args.feedback ?? '').trim();
+        if(!feedback) throw new Error('Please enter some feedback');
+        const anon = this.parseAnon(args.is_anonymous);
+        this.insert({
+            event_id, feedback, is_anonymous: anon ? 1 : 0,
+            created_by: anon ? null : (security.current()?.actorId ?? null),
+            created_time: date.temporalToSqliteDateTime(date.orgNow()),
+        } as EventRetrospectiveOpt);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
+    }
+
+    @route(authenticated)
+    editRetrospectiveDialog(event_retrospective_id: number): Markup {
+        const r = this.getById(event_retrospective_id);
+        if(!this.canEditRecord(r)) throw new Error('Not permitted to edit this retrospective');
+        const f = this.fieldsByName;
+        return action.renderParamForm(
+            [f.feedback, f.is_anonymous],
+            {feedback: r.feedback, is_anonymous: r.is_anonymous} as Partial<EventRetrospective>,
+            {
+                title: 'Edit retrospective', submitLabel: 'Save',
+                hidden: {event_retrospective_id},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.event_retrospective.saveRetrospective(${getFormJSON(event.target)})`'},
+            });
+    }
+
+    @routeMutation(authenticated)
+    saveRetrospective(args: {event_retrospective_id?: string|number, feedback?: string, is_anonymous?: unknown}): Markup {
+        const id = Number(args?.event_retrospective_id);
+        const r = this.getById(id);
+        if(!this.canEditRecord(r)) throw new Error('Not permitted to edit this retrospective');
+        const feedback = (args.feedback ?? '').trim();
+        if(!feedback) throw new Error('Please enter some feedback');
+        const anon = this.parseAnon(args.is_anonymous);
+        // Becoming anonymous clears any recorded author (it "was recorded in a prev
+        // edit"); un-anonymising can't restore one - it was never kept.
+        this.updateNamedFields(id, ['feedback', 'is_anonymous', 'created_by'], {
+            feedback, is_anonymous: anon ? 1 : 0, created_by: anon ? null : r.created_by,
+        } as Partial<EventRetrospective>);
+        return {action: 'reload', targets: ['.' + this.rowKey(id)]} as unknown as Markup;
+    }
+
+    @routeMutation(authenticated)
+    remove(id: number): Markup {
+        const r = this.getById(id);
+        if(!this.canEditRecord(r)) throw new Error('Not permitted to delete this retrospective');
+        const event_id = r.event_id;
+        this.delete(id);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
+    }
+
+    @route(authenticated)
+    renderRowById(id: number): Markup { return this.renderRow(this.getById(id)); }
+    renderRow(r: EventRetrospective): Markup {
+        const id = r.event_retrospective_id;
+        const props = reloadableProps([this.rowKey(id)], `rabid.event_retrospective.renderRowById(${id})`);
+        const canEdit = this.canEditRecord(r);
+        const anon = !!r.is_anonymous || r.created_by == null;
+        const author: Markup = anon
+            ? [h.span, {class: 'fst-italic'}, 'Anonymous']
+            : this.authorLink(r.created_by!);
+        const when = r.created_time ? date.sqliteDateTimeToString(r.created_time) : '';
+        return [h.div, {...props, class: props.class + ' mb-3', 'data-testid': `retro-${id}`},
+            [h.div, {class: 'lm-markdown'}, this.fieldsByName.feedback.render(r.feedback)],
+            [h.div, {class: 'text-muted small d-flex align-items-center gap-2'},
+             [h.span, {}, '— ', author, when ? ` · ${when}` : ''],
+             canEdit
+                 ? action.actionMenu([
+                     {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.event_retrospective.editRetrospectiveDialog(${id})`}},
+                     {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this retrospective?', expr: `rabid.event_retrospective.remove(${id})`}},
+                   ], {ariaLabel: 'Retrospective actions'})
+                 : undefined]];
+    }
+    private authorLink(volunteer_id: number): Markup {
+        const v = security.runSystem(() => db().prepare<{name: string, short_name: string}, {id: number}>(
+            'SELECT name, short_name FROM volunteer WHERE volunteer_id = :id').first({id: volunteer_id}));
+        return v ? templates.pageLink(`/rabid.volunteer.detailPage(${volunteer_id})`, shortName(v)) : 'Someone';
     }
 }
 
