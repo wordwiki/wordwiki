@@ -217,6 +217,28 @@ test("the summary-card title links to the detail page - except ON the detail pag
     });
 });
 
+test("checked-in volunteers render as a face grid (photo or outline); summary row elided", async () => {
+    await withTestDb(async ({ alice, bob, carol }) => {
+        const id = insertEvent();
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        asSystem(() => rabid.volunteer.update(bob, { photo: `content/photos/3ab/3ab${'0'.repeat(61)}.jpg` }));
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0, $arg1)`, id, carol));
+
+        const grid = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinGrid(${id})`));
+        assert(hasText(grid, 'Checked in'));
+        assert(findByTestId(grid, `face-${bob}`) && findByTestId(grid, `face-${carol}`),
+               'a tile per checked-in volunteer');
+        const imgs = findAll(grid, (m: any) => Array.isArray(m) && m[0] === 'img');
+        assertEquals(imgs.length, 1, 'bob (photo) renders an image; carol (none) does not');
+        const svgs = findAll(grid, (m: any) => Array.isArray(m) && m[0] === 'svg');
+        assert(svgs.length >= 1, 'carol (no photo) gets the generic face outline');
+
+        // On the detail page the summary Checked-in row is elided (the grid replaces it).
+        const detail = await asUser(bob, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assert(!hasText(detail, 'Checked in:'), 'no labelled Checked-in row in the summary');
+    });
+});
+
 // --- Event check-in editor -----------------------------------------------------
 
 test("check-in: self-signup is always allowed and idempotent", async () => {

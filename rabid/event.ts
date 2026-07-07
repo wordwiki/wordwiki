@@ -469,10 +469,15 @@ export class EventTable extends Table<Event> {
             // The summary, de-carded (bare): flows directly under the title.  No
             // repeated title (the h2 above IS it); notes live inside it now.
             this.renderEventSummary(event_id, {titleLink: false, hideTitle: true,
-                                               editableCheckins: true, hideNotes: false, bare: true}),
+                                               editableCheckins: true, hideNotes: false,
+                                               bare: true, hideCheckins: true}),
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
+            // "Checked in" as a face grid (match faces to names on a busy shift) -
+            // the summary's Checked-in row is elided above (hideCheckins) in favour
+            // of this.  Not on a catch-all (no attendance there).
+            e.is_catch_all ? undefined : rabid.event_checkin.renderCheckinGrid(event_id),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
             // heading like the checklists below.  Wrapped in a stable #tasks anchor.
@@ -501,7 +506,7 @@ export class EventTable extends Table<Event> {
     // slash-separated secondary links (not default browser blue), a quiet strip.
     private renderSectionNav(): Markup {
         const links: [string, string][] = [
-            ['services', 'Services'], ['sales', 'Sales & giveaways'],
+            ['services', 'Services'], ['sales', 'Sales & giveaways'], ['checked-in', 'Checked in'],
             ['tasks', 'Tasks'], ['photos', 'Photos'], ['retrospectives', 'Retrospectives'],
         ];
         return [h.nav, {class: 'lm-section-nav small mb-4 pb-2 border-bottom', 'aria-label': 'Sections'},
@@ -945,7 +950,7 @@ export class EventTable extends Table<Event> {
     // (the home upcoming-events cards) - the detail page itself passes false,
     // since there it would be a pointless self-link.
     @route(authenticated)
-    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean, hideTitle?: boolean, bare?: boolean} = {}): Markup {
+    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean, hideTitle?: boolean, bare?: boolean, hideCheckins?: boolean} = {}): Markup {
         const titleLink = opts.titleLink ?? true;
 
         // Get the event
@@ -1119,11 +1124,14 @@ export class EventTable extends Table<Event> {
             );
         }
 
-        // Checked-in row (actual attendance).  On the detail page (editableCheckins)
-        // the value IS the check-in editor (always shown, so the ☰ is reachable
-        // even with nobody checked in yet); elsewhere (cards) it's a read-only
-        // names list, shown only once someone has checked in.  Staff are marked.
-        if (opts.editableCheckins) {
+        // Checked-in row (actual attendance).  Elided (hideCheckins) when the page
+        // renders the face grid instead.  On the detail page (editableCheckins) the
+        // value IS the check-in editor (always shown, so the ☰ is reachable even
+        // with nobody checked in yet); elsewhere (cards) it's a read-only names
+        // list, shown only once someone has checked in.  Staff are marked.
+        if (opts.hideCheckins) {
+            // nothing - the face grid section carries check-ins
+        } else if (opts.editableCheckins) {
             gridRows.push(
                 [h.div, {class: 'card-detail-row'},
                     [h.div, {}, 'Checked in:'],
@@ -1897,6 +1905,14 @@ export interface EventCheckin {
 
 export type EventCheckinOpt = Partial<EventCheckin>;
 
+// A generic face/person outline for a checked-in volunteer with no photo, so every
+// tile in the face grid is the same shape (Bootstrap Icons person-fill, MIT).
+function faceOutlineSvg(): Markup {
+    return ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', width: '55%', height: '55%',
+                    'aria-hidden': 'true'},
+        ['path', {d: 'M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6'}]];
+}
+
 export class EventCheckinTable extends Table<EventCheckin> {
 
     constructor() {
@@ -2174,19 +2190,13 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // The reloadable attendance fragment: the attendee names + the one ☰.  Lives
     // inside the fragment so a check-in reload regenerates it (the per-person
     // check-out items must track the roster).
-    @route(authenticated)
-    renderCheckinEditor(event_id: number): Markup {
-        const checkins = this.checkinsForEvent.all({event_id});
-        const ctx = security.current();
-        const actorId = ctx?.actorId;
+    // The check-in ☰ verbs (self check-in, host quick-adds + picker, per-person
+    // check-out / edit, check-everyone-out).  Shared by the inline editor and the
+    // face grid so both drive check-ins from the same menu.  (A helper, not a route.)
+    checkinMenuItems(event_id: number, checkins: (EventCheckin & MemberName)[]): action.ActionMenuItem[] {
+        const actorId = security.current()?.actorId;
         const canManage = this.canManageCheckins();
         const isCheckedIn = actorId !== undefined && checkins.some(c => c.volunteer_id === actorId);
-        // The roster is WHERE event_id, so register this table's event fk key.
-        // LIVE: on event day several hosts check people in at once - the
-        // roster tracks other actors' check-ins.
-        const props = liveReloadableProps([this.fkKey('event_id', event_id)],
-            `rabid.event_checkin.renderCheckinEditor(${event_id})`);
-
         const checkedInIds = new Set(checkins.map(c => c.volunteer_id));
         const items: action.ActionMenuItem[] = [];
         // Add verbs: self check-in, then the recent-volunteer quick-adds, then the
@@ -2225,6 +2235,68 @@ export class EventCheckinTable extends Table<EventCheckin> {
                         mode: {kind: 'confirm',
                                expr: `rabid.event_checkin.checkOutAll(${event_id})`,
                                message: `Check out all ${checkins.length} volunteers?`}});
+        return items;
+    }
+
+    // An event's check-ins with each volunteer's photo + short name, for the face
+    // grid.  (A superset of checkinsForEvent - adds volunteer.photo.)
+    @path
+    get checkedInWithPhotos() {
+        return db().prepare<EventCheckin & MemberName & {volunteer_photo: string|null}, {event_id: number}>(block`
+/**/   SELECT event_checkin.*, volunteer.name AS volunteer_name,
+/**/          volunteer.short_name AS volunteer_short_name, volunteer.photo AS volunteer_photo
+/**/          FROM event_checkin LEFT JOIN volunteer USING (volunteer_id)
+/**/          WHERE event_checkin.event_id = :event_id
+/**/          ORDER BY volunteer.name`);
+    }
+
+    // "Who's here" as a face grid: each checked-in volunteer's photo (or a generic
+    // face outline when they have none) with their short name beneath, so people
+    // can match faces to names on a busy shift.  A responsive grid (tiles reflow to
+    // the device width).  LIVE + shares the check-in ☰.
+    @route(authenticated)
+    renderCheckinGrid(event_id: number): Markup {
+        const checkins = security.runSystem(() => this.checkedInWithPhotos.all({event_id}));
+        const props = liveReloadableProps([this.fkKey('event_id', event_id)],
+            `rabid.event_checkin.renderCheckinGrid(${event_id})`);
+        const items = this.checkinMenuItems(event_id, checkins);
+        return [h.div, {...props, id: 'checked-in'},
+            [h.div, {class: 'lm-doc-section-head'},
+             [h.h4, {class: 'lm-doc-section-label'}, 'Checked in'],
+             items.length ? action.actionMenu(items, {ariaLabel: 'Check-in actions'}) : undefined],
+            [h.div, {class: 'lm-subsection'},
+             checkins.length === 0
+                 ? [h.p, {class: 'text-muted small mb-0'}, 'No one checked in yet.']
+                 : [h.div, {style: 'display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:0.75rem;'},
+                    checkins.map(c => this.renderFaceTile(c))]],
+        ];
+    }
+    private renderFaceTile(c: EventCheckin & MemberName & {volunteer_photo: string|null}): Markup {
+        const has = typeof c.volunteer_photo === 'string' && c.volunteer_photo !== '';
+        const face = has
+            ? rabid.photo.aspectImg(c.volunteer_photo!, 'square', 'thumb',
+                {style: 'width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; display:block;'})
+            : [h.div, {'aria-hidden': 'true',
+                       style: 'width:100%; aspect-ratio:1; border-radius:8px; background:var(--bs-secondary-bg); '
+                            + 'color:var(--bs-secondary-color); display:flex; align-items:center; justify-content:center;'},
+               faceOutlineSvg()];
+        return [h.a, {...templates.pageLinkProps(`/rabid.volunteer.detailPage(${c.volunteer_id})`),
+                      class: 'text-decoration-none text-body text-center d-block',
+                      'data-testid': `face-${c.volunteer_id}`},
+            face,
+            [h.div, {class: 'small text-truncate mt-1'}, memberShortName(c)],
+            c.was_staff ? [h.div, {class: 'badge text-bg-light border', style: 'font-size:0.65rem;'}, 'staff'] : undefined];
+    }
+
+    @route(authenticated)
+    renderCheckinEditor(event_id: number): Markup {
+        const checkins = this.checkinsForEvent.all({event_id});
+        // The roster is WHERE event_id, so register this table's event fk key.
+        // LIVE: on event day several hosts check people in at once - the
+        // roster tracks other actors' check-ins.
+        const props = liveReloadableProps([this.fkKey('event_id', event_id)],
+            `rabid.event_checkin.renderCheckinEditor(${event_id})`);
+        const items = this.checkinMenuItems(event_id, checkins);
 
         return [h.span, {...props, class: 'lm-name-list ' + props.class},
             checkins.length === 0

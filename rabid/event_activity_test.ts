@@ -105,9 +105,12 @@ test("a catch-all (Ad-hoc) day: Activity log, titled by date, NO attendance", as
         // The log is there...
         assert(hasText(page, 'Services'));
         assert(hasText(page, 'Walk-in Wanda'));
-        // ...but NO sign-up / check-in rows (attendance would corrupt reporting).
+        // ...but NO attendance UI: no sign-up row, no check-in face grid (a bare
+        // "Checked in" still appears once - in the section jump-nav - so check the
+        // grid section itself is absent, not the word).
         assert(!hasText(page, 'Signed up'));
-        assert(!hasText(page, 'Checked in'));
+        assert(!JSON.stringify(page).includes('renderCheckinGrid'), 'no check-in grid on a catch-all');
+        assert(!hasText(page, 'No one checked in'), 'no check-in section content');
     });
 });
 
