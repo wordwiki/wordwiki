@@ -91,6 +91,9 @@ test("ensureAssertionColumns adds 'aside' to a pre-aside table, idempotently", (
         assert(cols().includes('aside'));
         ensureAssertionColumns('dict');   // second run: no-op, no throw
         assert(cols().includes('aside'));
+        // A db where the table does not exist AT ALL (a brand-new instance
+        // before createAllTables): a quiet no-op, never an ALTER on nothing.
+        ensureAssertionColumns('no_such_table');
     } finally {
         setDefaultDb(undefined);
         scratch.close();

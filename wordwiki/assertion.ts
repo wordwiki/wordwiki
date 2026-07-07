@@ -357,6 +357,10 @@ const lateAssertionColumns: [name: string, type: string][] = [
 export function ensureAssertionColumns(tableName: string) {
     const have = new Set(db().prepare<{name: string}, {tbl: string}>(
         `SELECT name FROM pragma_table_info(:tbl)`).all({tbl: tableName}).map(r => r.name));
+    // No columns at all = the table itself does not exist yet (a brand-new
+    // db before createAllTables) - nothing to alter; the CREATE TABLE DDL
+    // carries the columns inline.
+    if(have.size === 0) return;
     for(const [name, type] of lateAssertionColumns)
         if(!have.has(name))
             db().executeStatements(`ALTER TABLE ${tableName} ADD COLUMN ${name} ${type};`);

@@ -128,10 +128,16 @@ export class WordWiki extends LiminalApp {
 
     // Create the new-style tables if missing (idempotent CREATE IF NOT EXISTS).
     // Also seeds the (tiny, fixed) orthography vocabulary - reads first, so a
-    // seeded db sees no writes.
+    // seeded db sees no writes - and applies the LATE dict columns (aside):
+    // serve startup did this via createAllTables, but a FRESHLY PULLED V1 db
+    // meets its first workspace load inside the import pipeline's
+    // subcommands, which reach the db through THIS hook (bitten 2026-07-07:
+    // 'no such column: aside' at import-categories on a fresh pull - the
+    // long-lived dev db had the column and masked the gap).
     ensureNewStyleTables() {
         for(const t of this.tables)
             db().executeStatements(t.createDMLString());
+        ensureAssertionColumns('dict');
         orthography.seedOrthographies(this.orthographies);
     }
 
