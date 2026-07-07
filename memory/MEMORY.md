@@ -2,6 +2,7 @@
 - [Event-centric activity model](event-centric-activity-model.md) — rabid services/sales logged THROUGH events (mandatory event_id); per-day Ad-hoc catch-all events for drop-ins; event page Activity log; Today's log; /service+/sales moved under Reports (landed 2026-07-07)
 - [Design language](design-language.md) — pages = beautiful DOCUMENTS not editors (reading-first, volunteer audience); list-page recipe, soft tappable blocks, ☰ over buttons, pencil on detail pages; doc is liminal/design-language.md
 - [Liminal refresh model](liminal-refresh-model.md) — dep keys + registration/emission conventions + txd speculation + debug mode; THE doc is repo-root liminal.md (built & landed 2026-07-03)
+- [Browser test-client driving](browser-test-client-driving.md) — drive the real browser live via /eval (target browser/server) + the any-page test client; how the htmx-settle green-box bug was root-caused
 - [Liminal mail feature](liminal-mail-feature.md) — shared outbound email (liminal/mail.ts); transport-agnostic Mailer, SMTP+Google app-password, LogMailer default; wired into rabid reset links; provision via <app>-mail-credential.json
 - [Route undeclared bug pattern](route-undeclared-bug-pattern.md) — method reached via url/rpc/hx-post but missing @route → strict routeterp 404s "not found"; direct-call tests miss it; verify via dispatch (bitten: photo, resetLinkView)
 - [Puppeteer session reuse](puppeteer-session-reuse.md) — only pass launchOptions on the FIRST navigate; reuse the running browser to stay logged in
