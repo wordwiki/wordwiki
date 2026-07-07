@@ -238,11 +238,18 @@ function lmDebugSwapChanged(oldEl, newNodes) {
 }
 
 /* Fallback-path (htmx-driven) marking: reload() re-fetches each dirtied
-   fragment via its hx-trigger='reload' hx-get, and htmx fires afterSwap ON
+   fragment via its hx-trigger='reload' hx-get, and htmx fires the swap events ON
    the swapped-IN element (event.target = new node; detail.target = the old,
    now-detached node).  Filter to reload-triggered swaps so boosted navs and
-   modal loads aren't marked. */
-document.addEventListener('htmx:afterSwap', (event) => {
+   modal loads aren't marked.
+
+   Mark on afterSETTLE, not afterSwap: htmx's settle step (a tick after the swap)
+   REWRITES the element's class attribute to drop its own transient classes
+   (htmx-added/htmx-settling), which also clobbers a mark added during afterSwap.
+   afterSettle runs after that, so the mark sticks.  (Without this, an lm-live
+   section's reload was counted "1 changed" in the badge but showed no green box -
+   the mark was applied then immediately overwritten by htmx.) */
+document.addEventListener('htmx:afterSettle', (event) => {
     if(!lmDebugRefreshEnabled() || !lmDebugRoundStats) return;
     const trigger = event.detail?.requestConfig?.triggeringEvent;
     if(!trigger || trigger.type !== 'reload') return;
