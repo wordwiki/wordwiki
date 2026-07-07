@@ -903,10 +903,12 @@ export const PUBLIC_SITE_ORTHOGRAPHY = 'mm-li';
 /**
  * THE COMPOSITION RULE (fix-orthographies.md "Status"): a word is public in
  * orthography O iff its lifecycle is not Archived* AND its per-orthography
- * publish gate pub(O) is current.  (The third leg - facts rendered are the
- * published dimension filtered by variantMatches(O) - is the projection the
- * caller feeds in, e.g. WordWiki.publishedEntries builds on
- * publishedProjection.)  Replaces the old isPublished status==='Completed'
+ * publish gate pub(O) is set.  THE GATE IS THE PUBLISHED DIMENSION - a
+ * PENDING pub proposal gates nothing - so feed this the PUBLISHED projection
+ * (WordWiki.publishedEntries does; its e.public then contains only
+ * published-current gate facts).  Over the current/editor projection the
+ * answer includes pending proposals - use lexemeOps.currentPublicGates for
+ * gate truth there.  Replaces the old isPublished status==='Completed'
  * check: lifecycle no longer implies publicness.
  */
 export function entryIsPublicIn(e: Entry, orthography: string): boolean {

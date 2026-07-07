@@ -233,12 +233,22 @@ Shape suggestion to evaluate there:
 
 ### Concrete draft (claude 2026-07-07; CONFIRMED by dz; BUILT + dev-migrated 2026-07-07)
 
-**BUILT (2026-07-07):** the schema (lifecycle-only `sta` — no variant,
-`Complete` renames; the `pub` relation, custom-rendered), the
-`entryIsPublicIn` composition rule (publishedEntries = published projection ∘
-gate), the `makePublic`/`withdraw` verbs (approve-gated, born-published /
-tombstone+interval-close, tree-ordering gate), the editor's Public row
-(per-orthography chips + verbs behind ☰), and the `migrate-status` command
+**BUILT (2026-07-07), then CONVERTED TO THE NORMAL MODEL (dz: "I was
+imagining these fields just being normal data fields"):** `pub` facts are
+ordinary data — they render as generic editable tuples (dialogs, history,
+changes mode, review participation, all standard), any editor can PROPOSE
+one, and THE GATE IS THE PUBLISHED DIMENSION: a word is public in O iff a
+pub fact for O is published-current (a pending proposal gates nothing).
+The original born-published verb design is retired; `makePublic`/`withdraw`
+survive as approver SUGAR composed from the normal ops (insert the proposal
+if needed + approve it / tombstone + approve the deletion — self-approval
+allowed because the verb itself is approve-gated and a presence-only gate
+has no content for the two-person rule to protect).  The editor's Public
+row is a READ-ONLY per-orthography summary (public ✓ since/by, proposed
+pending, withdrawal pending, —) with the sugar verbs behind its ☰.  Also
+built: the schema (lifecycle-only `sta` — no variant, `Complete` renames),
+the `entryIsPublicIn` composition rule (publishedEntries = published
+projection ∘ gate), and the `migrate-status` command
 (once-per-db config marker like the publication backfill; dry-runnable;
 decisions as changeable constants; step 10 of importWordWikiV1Db.sh, BEFORE
 migrate-variants so gates can read the sta variant).  Dev migration: 6,973

@@ -860,9 +860,6 @@ export class LexemeEditor {
             renderBoundingGroup: (gid) => this.metaBoundingGroup(gid),
             editing: this.metaEditingHooks(entry_id, changes),
             valueLabel: this.vocabValueLabel(),
-            // The pub gate facts render as the custom Public row (chips +
-            // makePublic/withdraw verbs), never as generic editable tuples.
-            omitRelations: [entrySchema.PublicTag],
         });
     }
 
@@ -950,42 +947,73 @@ export class LexemeEditor {
                 this.metaPublicRow(entry_id)];
     }
 
-    /** The PUBLIC row (fix-orthographies.md "Status"): per-orthography chips
-     *  showing the publish gate - `Listuguj ✓ since <date> (<who>)` when set,
-     *  `Smith-Francis —` when not - with the makePublic/withdraw verbs behind
-     *  a quiet ☰ for approvers.  The gate composes with the lifecycle
-     *  (entryIsPublicIn): an Archived word keeps its gates (un-archiving
-     *  restores publicness) but is not public, and the row says so. */
+    /** The PUBLIC row (fix-orthographies.md "Status"): a READ-ONLY summary of
+     *  the per-orthography publish gates - `pub` facts are NORMAL DATA (they
+     *  also render as generic editable tuples below, with dialogs, history,
+     *  changes and review participation), and THE GATE IS THE PUBLISHED
+     *  DIMENSION: a word is public in O iff a pub fact for O is
+     *  published-current.  Chips show the four states (public / proposed /
+     *  withdrawal pending / not public); the ☰ carries the approver SUGAR
+     *  verbs (insert+approve / tombstone+approve through the normal ops). */
     private metaPublicRow(entry_id: number): Markup {
-        const gates = new Map(this.app.lexemeOps.currentPublicGates(entry_id)
-            .map(a => [a.variant as string, a]));
+        interface GateState { published?: Assertion; pendingProposal?: Assertion;
+                              pendingWithdrawal: boolean; }
+        const states = new Map<string, GateState>();
+        for(const t of this.app.lexemeOps.publicGateTuples(entry_id)) {
+            const slug = t.mostRecentTuple?.assertion.variant;
+            if(!slug) continue;
+            const published = t.tupleVersions.find(v => v.isPublished)?.assertion;
+            const live = t.mostRecentTuple?.isCurrent === true;
+            states.set(slug, {
+                published,
+                pendingProposal: !published && live ? t.mostRecentTuple!.assertion : undefined,
+                pendingWithdrawal: !!published && !live,
+            });
+        }
         const entryJson = this.app.entriesById.get(entry_id);
         const archived = entryJson ? entrySchema.isArchivedEntry(entryJson) : false;
         const orthographies = Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm');
+        const dateOf = (a: Assertion) =>
+            timestamp.formatTimestampAsLocalTime(a.valid_from).split(' ')[0];
 
         const chips: Markup[] = orthographies.map(([slug, name]) => {
-            const g = gates.get(slug);
-            return ['span', {class: 'lm-public-chip ' + (g ? 'lm-public-chip-on' : 'lm-public-chip-off')},
-                    name, ' ',
-                    g ? ['span', {},
-                         '\u2713 since ', timestamp.formatTimestampAsLocalTime(g.valid_from).split(' ')[0],
-                         g.change_by_username ? ` (${g.change_by_username})` : '']
-                      : '\u2014'];
+            const st = states.get(slug);
+            if(st?.published) {
+                const g = st.published;
+                return ['span', {class: 'lm-public-chip lm-public-chip-on'},
+                        name, ' \u2713 since ', dateOf(g),
+                        g.change_by_username ? ` (${g.change_by_username})` : '',
+                        st.pendingWithdrawal ? ' \u2014 withdrawal pending' : ''];
+            }
+            if(st?.pendingProposal) {
+                const g = st.pendingProposal;
+                return ['span', {class: 'lm-public-chip lm-public-chip-off'},
+                        name, ' \u2022 proposed',
+                        g.change_by_username ? ` (${g.change_by_username})` : '',
+                        ', pending approval'];
+            }
+            return ['span', {class: 'lm-public-chip lm-public-chip-off'}, name, ' \u2014'];
         });
 
         const menuItems: action.ActionMenuItem[] = this.app.lexemeOps.hasApprovePermission()
             ? orthographies.map(([slug, name]) => {
-                const deps = [`.-entry-${entry_id}-public-`];
-                return gates.has(slug)
-                    ? {label: `Withdraw from ${name}\u2026`,
-                       mode: {kind: 'confirm' as const, deps,
-                              message: `Withdraw this word from the ${name} public dictionary?`,
-                              expr: `wordwiki.lexeme.withdraw(${entry_id}, '${slug}')`}}
-                    : {label: `Make public in ${name}\u2026`,
-                       mode: {kind: 'confirm' as const, deps,
-                              message: `Make this word public in the ${name} dictionary? ` +
-                                       'It appears on the public site at the next publish.',
-                              expr: `wordwiki.lexeme.makePublic(${entry_id}, '${slug}')`}};
+                const st = states.get(slug);
+                const deps = [`.-entry-${entry_id}-public-`, `.-rel-${entry_id}-pub-`,
+                              `.-entry-${entry_id}-activity-`];
+                if(st?.published)
+                    return {label: st.pendingWithdrawal
+                                ? `Approve withdrawal from ${name}\u2026`
+                                : `Withdraw from ${name}\u2026`,
+                            mode: {kind: 'confirm' as const, deps,
+                                   message: `Withdraw this word from the ${name} public dictionary?`,
+                                   expr: `wordwiki.lexeme.withdraw(${entry_id}, '${slug}')`}};
+                return {label: st?.pendingProposal
+                            ? `Approve public in ${name}\u2026`
+                            : `Make public in ${name}\u2026`,
+                        mode: {kind: 'confirm' as const, deps,
+                               message: `Make this word public in the ${name} dictionary? ` +
+                                        'It appears on the public site at the next publish.',
+                               expr: `wordwiki.lexeme.makePublic(${entry_id}, '${slug}')`}};
               })
             : [];
 
@@ -999,19 +1027,23 @@ export class LexemeEditor {
                     : undefined];
     }
 
-    /** Set the per-orthography publish gate (lexeme-ops.makePublic does the
-     *  work + permission checks); reloads the Public row. */
+    /** Approver sugar: set the gate through the normal ops (lexeme-ops
+     *  makePublic - insert the proposal if needed + approve it).  Reloads
+     *  the summary row, the generic pub relation, and the changes bar. */
     @routeMutation(authenticated)
     makePublic(entry_id: number, orthography: string): any {
         this.app.lexemeOps.makePublic(entry_id, orthography);
-        return this.reload([`.-entry-${entry_id}-public-`]);
+        return this.reload([`.-entry-${entry_id}-public-`, `.-rel-${entry_id}-pub-`,
+                            `.-entry-${entry_id}-activity-`]);
     }
 
-    /** Withdraw the per-orthography publish gate; reloads the Public row. */
+    /** Approver sugar: withdraw the gate (tombstone + approve the deletion
+     *  through the normal ops). */
     @routeMutation(authenticated)
     withdraw(entry_id: number, orthography: string): any {
         this.app.lexemeOps.withdraw(entry_id, orthography);
-        return this.reload([`.-entry-${entry_id}-public-`]);
+        return this.reload([`.-entry-${entry_id}-public-`, `.-rel-${entry_id}-pub-`,
+                            `.-entry-${entry_id}-activity-`]);
     }
 
     /** The reference scan + composed reference-book link (see wordView).

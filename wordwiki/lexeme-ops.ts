@@ -357,80 +357,112 @@ export class LexemeOps {
     // ------------------------------------------------------------------------
     // --- The per-orthography publish gate (fix-orthographies.md "Status") -----
     // ------------------------------------------------------------------------
+    //
+    // `pub` facts are NORMAL DATA: proposed, approved, deleted and reviewed
+    // through the standard assertion + publication machinery (any editor can
+    // propose one via the generic editor; it queues for review like any
+    // fact).  THE GATE IS THE PUBLISHED DIMENSION: a word is public in O iff
+    // a pub fact for O is published-current - a pending proposal gates
+    // nothing.  makePublic/withdraw below are one-click SUGAR for approvers:
+    // they compose the normal ops (insert + approve / tombstone + approve),
+    // with self-approval allowed because the verb itself is approve-gated
+    // and a presence-only gate has no content for the two-person rule to
+    // protect.  Everything shows up in history/changes/review for free.
 
-    /** The entry's CURRENT publish-gate facts (`pub` tuples), one per
-     *  orthography the word is public in. */
-    currentPublicGates(entry_id: number): Assertion[] {
+    /** The entry's pub-gate fact tuples (every state: published, pending
+     *  proposal, pending withdrawal, withdrawn). */
+    publicGateTuples(entry_id: number): VersionedTuple[] {
         const rel = this.entryTuple(entry_id).childRelations[entrySchema.PublicTag];
-        if(!rel) return [];
-        return [...rel.tuples.values()]
-            .map(t => t.mostRecentTuple)
-            .filter(tv => tv?.isCurrent)
-            .map(tv => tv!.assertion);
+        return rel ? [...rel.tuples.values()] : [];
     }
 
-    /** Make the entry public in `orthography` - set its per-orthography
-     *  publish gate.  An EXPLICIT HUMAN DECISION (fix-orthographies.md
-     *  "Status"): approve-permission-gated, and the gate fact is
-     *  BORN-PUBLISHED - the verb itself carries the approval, it never sits
-     *  in the review queue.  Who/when come free from the assertion columns. */
+    /** The gate tuple for one orthography (matching on the most recent
+     *  version's variant), or undefined. */
+    private gateTupleFor(entry_id: number, orthography: string): VersionedTuple | undefined {
+        return this.publicGateTuples(entry_id).find(t =>
+            t.mostRecentTuple?.assertion.variant === orthography);
+    }
+
+    /** The entry's CURRENT publish-gate facts - one per orthography the word
+     *  is public in (published-current pub facts: THE gate). */
+    currentPublicGates(entry_id: number): Assertion[] {
+        return this.publicGateTuples(entry_id)
+            .map(t => t.tupleVersions.find(v => v.isPublished)?.assertion)
+            .filter((a): a is Assertion => a !== undefined);
+    }
+
+    /** Make the entry public in `orthography` - approver sugar over the
+     *  normal ops: approve the pending proposal if one exists, else insert a
+     *  proposal and approve it.  One attributed act per step, all of it in
+     *  the review/history machinery. */
     makePublic(entry_id: number, orthography: string): MakePublicOutcome {
         this.requireUsername();
         this.requireApprovePermission('making a word public');
         if(!(orthography in entrySchema.variants) || orthography === 'mm')
             throw new Error(`'${orthography}' is not an orthography a word can be public in`);
-        if(this.currentPublicGates(entry_id).some(a => a.variant === orthography))
+        const tuple = this.gateTupleFor(entry_id, orthography);
+        if(tuple && tuple.tupleVersions.some(v => v.isPublished))
             return {outcome: 'already-public'};
-        // Tree-ordering gate (same rule as approveFact): the gate fact is
-        // born-published, so its parent - the entry fact - must already be
-        // published, or the published tree gains an orphan.
+        // Tree-ordering gate, checked BEFORE inserting anything (approve
+        // would refuse anyway - this fails fast with the clear message).
         if(!this.entryTuple(entry_id).tupleVersions.some(v => v.isPublished))
             throw new Error('This word itself has not been approved yet - approve its ' +
                             'pending content before making it public.');
 
-        const id = newId();
-        const a: Assertion = {
-            ...assertionPathToFields([[entrySchema.DictTag, 0],
-                                      [entrySchema.EntryTag, entry_id],
-                                      [entrySchema.PublicTag, id]]),
-            assertion_id: id, id, ty: entrySchema.PublicTag,
-            valid_from: placeholderTxTime(), valid_to: timestamp.END_OF_TIME,
-            order_key: '0.5',
-            variant: orthography,
-            ...this.changeStamp(),
-            change_action: 'make-public',
-        } as Assertion;
-        // applyTransaction rewrites valid_from to the allocated server
-        // timestamp IN PLACE; the born-published interval must start exactly
-        // there, so it is stamped (object + db) after the apply.
-        this.app.applyTransaction([a], {quiet: true});
-        a.published_from = a.valid_from;
-        a.published_to = timestamp.END_OF_TIME;
-        updateAssertion('dict', a.assertion_id, ['published_from', 'published_to'],
-                        {published_from: a.published_from, published_to: a.published_to});
-        this.app.requestEntriesJSONReload();
+        let fact_id: number;
+        if(tuple && tuple.mostRecentTuple?.isCurrent) {
+            fact_id = tuple.id;   // a pending proposal exists: approve it
+        } else {
+            // Insert a NORMAL pending proposal (no publication stamps).
+            const id = newId();
+            const a: Assertion = {
+                ...assertionPathToFields([[entrySchema.DictTag, 0],
+                                          [entrySchema.EntryTag, entry_id],
+                                          [entrySchema.PublicTag, id]]),
+                assertion_id: id, id, ty: entrySchema.PublicTag,
+                valid_from: placeholderTxTime(), valid_to: timestamp.END_OF_TIME,
+                order_key: '0.5',
+                variant: orthography,
+                ...this.changeStamp(),
+            } as Assertion;
+            this.app.applyTransaction([a], {quiet: true});
+            fact_id = id;
+        }
+        const approver = this.requireUsername();
+        this.runPublicationOp((now, aid) =>
+            publicationOps.approve(this.app.workspace, fact_id, approver, now, aid,
+                                   {allowSelfApprove: true}));
         return {outcome: 'made-public'};
     }
 
-    /** Withdraw the entry's publish gate for `orthography` - the word leaves
-     *  that orthography's public site.  Approve-gated like makePublic; the
-     *  gate fact is tombstoned AND its published interval closed in the same
-     *  act (the verb IS the approval - gates never queue for review).
-     *  History preserves both decisions, so un-archiving or re-publishing
-     *  later reads honestly. */
+    /** Withdraw the entry's publish gate for `orthography` - approver sugar:
+     *  tombstone the gate fact (a normal pending deletion) and approve that
+     *  deletion, which closes the published interval through the standard
+     *  op.  A pending PROPOSAL (never published) is simply tombstoned - a
+     *  never-published deletion is already settled. */
     withdraw(entry_id: number, orthography: string): WithdrawOutcome {
         this.requireUsername();
         this.requireApprovePermission('withdrawing a word');
-        const gate = this.currentPublicGates(entry_id).find(a => a.variant === orthography);
-        if(!gate) return {outcome: 'not-public'};
-        const r = this.tombstoneFact(entry_id, gate.id);
-        if(r.outcome !== 'removed') return {outcome: 'not-public'};   // raced: already gone
-        // Close the published interval at the withdrawal time - the published
-        // dimension must not keep showing a gate whose fact is deleted.
-        updateAssertion('dict', r.replaced.assertion_id, ['published_to'],
-                        {published_to: r.tombstone.valid_from});
-        r.replaced.published_to = r.tombstone.valid_from;
-        this.app.requestEntriesJSONReload();
+        const tuple = this.gateTupleFor(entry_id, orthography);
+        if(!tuple) return {outcome: 'not-public'};
+        const published = tuple.tupleVersions.some(v => v.isPublished);
+        const live = tuple.mostRecentTuple?.isCurrent === true;
+
+        if(!published) {
+            if(!live) return {outcome: 'not-public'};
+            this.tombstoneFact(entry_id, tuple.id);   // decline own proposal: settled
+            return {outcome: 'withdrawn'};
+        }
+        if(live) {
+            const r = this.tombstoneFact(entry_id, tuple.id);
+            if(r.outcome === 'has-children') panic('pub facts have no children');
+        }
+        // Approve the (new or already-pending) deletion: the standard op
+        // closes the published interval (I7).
+        const approver = this.requireUsername();
+        this.runPublicationOp((now, aid) =>
+            publicationOps.approve(this.app.workspace, tuple.id, approver, now, aid,
+                                   {allowSelfApprove: true}));
         return {outcome: 'withdrawn'};
     }
 
