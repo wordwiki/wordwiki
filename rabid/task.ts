@@ -1610,6 +1610,17 @@ export class TaskTable extends Table<Task> {
         // headless (showHeading=false) so the heading isn't doubled.  The open
         // count (also the liveness antenna) rides here when the project exists.
         const canAdd = canAddOwnerTask(owner_table, owner_id);
+        // A ☰ beside the + for section-level actions (a home for more later).  For a
+        // checklist instantiated from a template, "Resync from template" lives HERE
+        // now - not a loose text button below that broke the document look.  Gated
+        // on ownerCanEdit (host), like the rest of checklist management.
+        const project = project_id !== undefined
+            ? security.runSystem(() => rabid.project.getById(project_id)) : undefined;
+        const menuItems: action.ActionMenuItem[] = [];
+        if(project?.from_template_id != null && ownerCanEdit(owner_table, owner_id))
+            menuItems.push({label: 'Resync from template',
+                mode: {kind: 'confirm', expr: `rabid.project.resyncFromTemplate(${project_id})`,
+                       message: 'Add any new items from the template to this checklist?'}});
         return [h.div, props,
             [h.div, {class: headWrapClass},
              [h.h4, {class: headClass}, heading],
@@ -1619,6 +1630,9 @@ export class TaskTable extends Table<Task> {
                      {kind: 'modal', dialogUrl:
                          `/rabid.task.newOwnerTaskDialog('${owner_table}',${owner_id},${owner_role ? `'${owner_role}'` : 'null'})`},
                      'lm-menu-button', {'aria-label': 'New task', title: 'New task'})
+                 : undefined,
+             menuItems.length
+                 ? action.actionMenu(menuItems, {ariaLabel: `${heading} actions`})
                  : undefined],
             // When rendered as a document section (committee page), the task
             // list is an indented, demoted subsection under its heading - so
@@ -1652,15 +1666,9 @@ export class TaskTable extends Table<Task> {
             const roleLabel = project_role_enum[role ?? ''] ?? t.name;
             const existing = rabid.project.forOwner(owner_table, owner_id, role);
             if(existing !== undefined)
-                return [h.div, {},
-                    this.renderOwnerTasks(owner_table, owner_id, role, /*docHeading*/ true),
-                    canEdit
-                        ? [h.div, {class: 'lm-subsection'},
-                           action.actionButton('Resync from template',
-                               {kind: 'confirm', expr: `rabid.project.resyncFromTemplate(${existing})`,
-                                message: `Add any new "${t.name}" items to this checklist?`},
-                               'btn btn-sm btn-link p-0 text-muted')]
-                        : undefined];
+                // The checklist section; Resync now rides the section's ☰ (added by
+                // renderOwnerTasks for a template-instance project), not a loose button.
+                return [h.div, {}, this.renderOwnerTasks(owner_table, owner_id, role, /*docHeading*/ true)];
             // Not set up yet: the section still stands (for an editor), as just a +
             // that instantiates the checklist from its template.
             if(!canEdit) return undefined;
