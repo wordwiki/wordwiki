@@ -640,8 +640,12 @@ export function forwardToSingleBoundingGroupEditorURL(bounding_group_id: number,
  */
 export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
+    // The action passes the whole `query` binding (the searchPage(query)
+    // convention): strict routeterp treats EVERY member access as a route
+    // capability, so a `query.searchText` expression throws
+    // RouteUndeclaredError ("not found") - destructure server-side instead.
     return [
-        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/ww/wordwiki.pages.renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+        ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:`/ww/wordwiki.pages.renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query)`},
 
          ['div', {class:'col-12'},
           ['label', {class:'visually-hidden', for:'searchText'}, 'Search'],
@@ -660,7 +664,8 @@ export function renderTextSearchForm(layer_id: number, cfg: PageEditorConfig,
 export function renderTextSearchForm2(layer_id: number, cfg: PageEditorConfig,
                                      searchText: string=''): any {
     return [
-        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/ww/wordwiki.pages.renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query.searchText)`},
+        // As in renderTextSearchForm: pass `query` whole, never `query.member`.
+        ['form', {class:'form-inline', name: 'search', method: 'get', action:`/ww/wordwiki.pages.renderTextSearchResults(${layer_id}, ${JSON.stringify(cfg)}, query)`},
          ['label', {class:'sr-only', for:'searchText'}, 'Search'],
          ['input', {type:'text', class:'form-control mb-2 mr-sm-2',
                     id:'searchText', name:'searchText', placeholder:'Search',
@@ -673,8 +678,11 @@ export function renderTextSearchForm2(layer_id: number, cfg: PageEditorConfig,
 /**
  *
  */
-export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig, searchText?: string) {
-    searchText = searchText ?? '';
+// Third arg is the whole query-args object (see renderTextSearchForm's action
+// comment); a legacy plain-string third arg still works.
+export function renderTextSearchResults(layer_id: number, cfg: PageEditorConfig,
+                                        query?: {searchText?: string} | string) {
+    const searchText = (typeof query === 'string' ? query : query?.searchText) ?? '';
 
     //console.info('CFG', JSON.stringify(cfg, undefined, 2));
 
