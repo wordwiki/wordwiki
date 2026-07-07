@@ -1388,9 +1388,11 @@ export class EventPhotoTable extends Table<EventPhoto> {
         const props = reloadableProps([this.rowKey(id)], `rabid.event_photo.renderPhotoCardById(${id})`);
         const kindLabel = event_photo_kind_enum[p.photo_kind] ?? p.photo_kind;
         const showKind = !(p.photo_kind === 'event' && p.caption);
+        // The kind is a quiet, subordinate label (a small muted tag) - NOT another
+        // section-weight heading competing with "Photos".  The caption is the
+        // primary text on the line.
         const line: Markup[] = [];
-        if(showKind) line.push([h.span, {class: 'fw-semibold'}, kindLabel]);
-        if(showKind && p.caption) line.push(' · ');
+        if(showKind) line.push([h.span, {class: 'text-muted small text-uppercase me-1'}, kindLabel]);
         if(p.caption) line.push(p.caption);
 
         const editPhotoUrl = `/rabid.event_photo.renderPhotoEditForm(${id},"photo")`;
