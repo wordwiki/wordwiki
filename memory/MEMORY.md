@@ -30,3 +30,4 @@
 - [Wordwiki shared store layout](wordwiki-shared-store-layout.md) — nested mmo-shared-content/{content,derived,imports}; mmo/* symlink in; derived content-addressed so shareable; migrate/use/setup scripts
 - [Claude memory sharing](claude-memory-sharing.md) — memory committed in repo memory/, symlinked via ~/bin/claude-memlink; run claude-memlink (or setup-worktree.sh) per new worktree
 - [Relation names in UI](relation-names-in-ui.md) — user-viewable content shows full relation names (RefPublicNote) never db tags (rnp); entrySchema.relationDisplayName(tag)
+- [Staging workflow](staging-workflow.md) — staging is the language staff's server, NOT a test rung; dz tests locally and pushes there only after his own review — never suggest it as a next step
