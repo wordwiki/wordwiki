@@ -32,7 +32,7 @@ test("addServiceForEvent binds the service to the event; it renders in Activity"
             {event_id: eid, client_name: 'Fred Client', service_kind: 'full',
              service_description: 'Trued rear wheel'}));
         assertEquals(res.action, 'reload');
-        assert(res.targets.includes(`.-service-event_id-${eid}-`));
+        assert(res.targets.includes(`.-service-event_id-${eid}-shape-`));
 
         const rows = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid}));
         assertEquals(rows.length, 1);
@@ -51,7 +51,7 @@ test("addSaleForEvent binds the sale + stamps time/recorder; renders under Sales
         const res = await asUser(alice, () => invoke(`rabid.sale.addSaleForEvent($arg0)`,
             {event_id: eid, sale_kind: 'free-bike', description: 'Blue kids bike', amount: 0}));
         assertEquals(res.action, 'reload');
-        assert(res.targets.includes(`.-sale-event_id-${eid}-`));
+        assert(res.targets.includes(`.-sale-event_id-${eid}-shape-`));
 
         const rows = asSystem(() => rabid.sale.salesForEvent.all({event_id: eid}));
         assertEquals(rows.length, 1);

@@ -109,12 +109,12 @@ test("event photo card: image + caption + photographer (kind elided); Edit Photo
         assert(imgs.length >= 1, 'the image renders');
         assertStringIncludes((imgs[0] as any[])[1].src, 'rabid.photo');
 
-        // The Edit Photo modal (rendered over a no-photo card to avoid the crop
-        // path) carries caption + photographer, NOT the bound event_id.
+        // The caption/kind/photographer form carries those fields, NOT the bound
+        // event_id (which is edit:never).
         const empty = asSystem(() => rabid.event_photo.insert(
             {event_id: id, photo_kind: 'shop-before', caption: '', photographer: ''} as any));
         const form = await asUser(alice, () =>
-            renderRoute(`rabid.event_photo.renderPhotoEditForm(${empty},"photo")`));
+            renderRoute(`rabid.event_photo.renderDetailsForm(${empty})`));
         const input = (name: string) => findAll(form, (m: any) =>
             Array.isArray(m) && m[0] === 'input' && (m[1] as any)?.name === name);
         assertEquals(input('event_id').length, 0, 'no event_id field');

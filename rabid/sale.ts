@@ -170,9 +170,10 @@ export class SaleTable extends Table<Sale> {
             amount: Number(args.amount) || 0,
             payment_method: args.payment_method || 'cash',
         } as Partial<Sale>);
-        // Reload the event's Activity section (registered under this fk key).
+        // A new row changes the section's shape -> reload the section (it's
+        // registered on the shape key; an edit reloads only its own row).
         return {action: 'reload',
-                targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
+                targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
     // Windowed variant for the Sales page (DATE() includes the whole `to` day).

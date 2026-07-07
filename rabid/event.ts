@@ -516,7 +516,9 @@ export class EventTable extends Table<Event> {
         const services = security.runSystem(() => rabid.service.servicesForEvent.all({event_id}));
         const canAdd = rabid.service.canEditRecord({event_id} as any);
         if(!canAdd && services.length === 0) return undefined as unknown as Markup;
-        const props = reloadableProps([rabid.service.fkKey('event_id', event_id)],
+        // SHAPE key: adding/removing a service reloads the section; EDITING one
+        // reloads just its row (renderServiceRow is row-keyed) - not the whole list.
+        const props = reloadableProps([rabid.service.shapeKey('event_id', event_id)],
             `rabid.event.renderEventServices(${event_id})`);
         return [h.div, {...props, id: 'services'},
             [h.div, {class: 'lm-doc-section-head'},
@@ -540,7 +542,8 @@ export class EventTable extends Table<Event> {
         const sales = security.runSystem(() => rabid.sale.salesForEvent.all({event_id}));
         const canAdd = rabid.sale.canEditRecord({event_id} as any);
         if(!canAdd && sales.length === 0) return undefined as unknown as Markup;
-        const props = reloadableProps([rabid.sale.fkKey('event_id', event_id)],
+        // SHAPE key (see renderEventServices): edit reloads only the row.
+        const props = reloadableProps([rabid.sale.shapeKey('event_id', event_id)],
             `rabid.event.renderEventSales(${event_id})`);
         return [h.div, {...props, id: 'sales'},
             [h.div, {class: 'lm-doc-section-head'},
@@ -1285,17 +1288,15 @@ export class EventPhotoTable extends Table<EventPhoto> {
         return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
-    // The Edit Photo modal for an event photo: the generic photo editor (upload /
-    // crop / remove) PLUS a details form (caption + photographer + kind) and, once
-    // a photo is set, a link to the full-quality original in the content store.
-    // Overriding the generic modal is how caption/photographer editing rides inside
-    // "Edit Photo"; the image itself stays on the generic machinery.
+    // The Edit Photo modal: the generic photo editor (upload / crop / remove) plus,
+    // when a photo is set, a link to the full-quality original in the content store.
+    // (Caption/kind/photographer are edited in their OWN modal - renderDetailsForm -
+    // so we never stack two forms in one modal, which broke editing.)
     @route(authenticated)
     override async renderPhotoEditForm(id: number, fieldName: string): Promise<Markup> {
         const record = this.getById(id);
         if(!record || !this.canEditRecord(record))
             throw new Error(`Not permitted to edit this ${this.name}`);
-        const details = this.renderEditForm(record, ['caption', 'photographer', 'photo_kind']);
         const body = await super.renderPhotoEditForm(id, fieldName);
         const value = (record as any)[fieldName];
         const original = (typeof value === 'string' && value !== '')
@@ -1303,21 +1304,19 @@ export class EventPhotoTable extends Table<EventPhoto> {
                [h.a, {href: '/' + parsePhotoValue(value).path, target: '_blank', rel: 'noopener',
                       class: 'small'}, 'Original photo (full quality)']]
             : undefined;
-        return [h.div, {}, details, [h.hr, {class: 'my-3'}], body, original];
+        return [h.div, {}, body, original];
     }
 
-    // In an event photo, "Remove" IS the delete: dropping the image drops the whole
-    // card (an imageless photo row has no purpose).  Reloads the section via the
-    // shape key (a membership change), NOT the now-gone row.
-    @routeMutation(hostOrAdmin)
-    override removePhoto(id: number, _fieldName: string): {action: string, targets: string[]} {
-        const record = this.getById(id);
-        if(!record || !this.canEditRecord(record))
-            throw new Error(`Not permitted to edit this ${this.name}`);
-        const event_id = record.event_id;
-        this.delete(id);
-        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]};
+    // The caption + photographer + kind editor (a single clean form), opened from a
+    // card's ☰ "Edit caption…".  event_id/order_key/photo are omitted (edit:never /
+    // managed / edited via Edit photo).
+    @route(hostOrAdmin)
+    renderDetailsForm(event_photo_id: number): Markup {
+        return this.renderEditForm(this.getById(event_photo_id), ['photo_kind', 'caption', 'photographer']);
     }
+
+    // (The generic removePhoto just clears the image - keeping the card + its
+    // caption so you can re-upload.  Deleting the whole card is the ☰ Delete.)
 
     // One photo card: its own reloadable fragment (ROW key), so a caption/crop edit
     // refreshes only this card - the section is on the SHAPE key, so it stays put
@@ -1340,21 +1339,23 @@ export class EventPhotoTable extends Table<EventPhoto> {
         if(showKind && p.caption) line.push(' · ');
         if(p.caption) line.push(p.caption);
 
-        const editUrl = `/rabid.event_photo.renderPhotoEditForm(${id},"photo")`;
+        const editPhotoUrl = `/rabid.event_photo.renderPhotoEditForm(${id},"photo")`;
+        const editDetailsUrl = `/rabid.event_photo.renderDetailsForm(${id})`;
         const img = has
             ? rabid.photo.aspectImg(p.photo!, 'landscape', 'detail', {class: 'lm-photo-detail'})
             : undefined;
-        // Clicking the image opens Edit Photo too (a convenience alongside the ☰).
+        // Clicking the image opens Edit photo (a convenience alongside the ☰).
         const image = (img && canEdit)
-            ? action.actionButton(img, {kind: 'modal', dialogUrl: editUrl},
+            ? action.actionButton(img, {kind: 'modal', dialogUrl: editPhotoUrl},
                 'btn p-0 border-0 bg-transparent', {'aria-label': 'Edit photo'})
             : img;
-        // The ☰: Edit + positional insert + reorder + delete (delete also lives in
-        // Edit Photo's Remove).
+        // The ☰: photo edit (upload/crop/remove) + caption/kind edit, kept as
+        // SEPARATE modals; positional insert + reorder + delete (for scan fix-ups).
         const menu = canEdit ? action.actionMenu([
-            {label: 'Edit…', mode: {kind: 'modal', dialogUrl: editUrl}},
-            {label: 'Insert photo before', mode: {kind: 'immediate', expr: `rabid.event_photo.insertRelative(${id}, 'before')`}},
-            {label: 'Insert photo after', mode: {kind: 'immediate', expr: `rabid.event_photo.insertRelative(${id}, 'after')`}},
+            {label: has ? 'Edit photo…' : 'Add photo…', mode: {kind: 'modal', dialogUrl: editPhotoUrl}},
+            {label: 'Edit caption…', mode: {kind: 'modal', dialogUrl: editDetailsUrl}},
+            {label: 'Insert before', mode: {kind: 'immediate', expr: `rabid.event_photo.insertRelative(${id}, 'before')`}},
+            {label: 'Insert after', mode: {kind: 'immediate', expr: `rabid.event_photo.insertRelative(${id}, 'after')`}},
             {label: 'Move up', mode: {kind: 'immediate', expr: `rabid.event_photo.moveUp(${id})`}},
             {label: 'Move down', mode: {kind: 'immediate', expr: `rabid.event_photo.moveDown(${id})`}},
             {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this photo?', expr: `rabid.event_photo.remove(${id})`}},

@@ -179,9 +179,10 @@ export class ServiceTable extends Table<Service> {
             service_description: (args.service_description ?? '').trim(),
             client_number_of_people_served: Number(args.client_number_of_people_served) || 1,
         } as Partial<Service>);
-        // Reload the event's Activity section (registered under this fk key).
+        // A new row changes the section's shape -> reload the section (it's
+        // registered on the shape key; an edit reloads only its own row).
         return {action: 'reload',
-                targets: ['.' + this.fkKey('event_id', event_id)]} as unknown as Markup;
+                targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
     // Windowed variant for the Service page.  A NULL check-in time is a
