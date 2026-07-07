@@ -17,7 +17,7 @@
  * attribute is the source of truth for imported lexemes, valid_from for the
  * rest, resolved by parseShoeboxDate + the consumer (activity-report.ts).
  *
- * normalizeShoeboxDates is the migrateDevDb.sh / cutover step
+ * normalizeShoeboxDates is the importWordWikiV1Db.sh / cutover step
  * (`wordwiki.sh normalize-shoebox-dates`): it rewrites every CURRENT
  * shoebox-date value to ISO yyyy-mm-dd, mute-in-place (the same pattern as
  * publication-backfill: a data-format migration of imported values, no new

@@ -9,7 +9,7 @@ set -e
 #   2. Point this checkout's instance dir at the shared content store, so it
 #      doesn't need its own 7.6G copy of the recordings.
 #
-# After this: pullDbFromPublic.sh (or pullSharedContent.sh) for data, then
+# After this: pullWordWikiV1Db.sh (or pullSharedContent.sh) for data, then
 # wordwiki.sh to run.
 
 WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"

@@ -1796,7 +1796,7 @@ if (import.meta.main) {
         // Stop the server and nothing else.  (wordwiki.sh stops any running
         // server before dispatching ANY command, so by the time we get here
         // the work is done - this command just gives the stop a name for
-        // scripts like migrateDevDb.sh.)
+        // scripts like importWordWikiV1Db.sh.)
         case 'stop':
             console.info('server stopped (if one was running)');
             Deno.exit(0);
@@ -1937,7 +1937,7 @@ if (import.meta.main) {
         // Idempotent structural repairs of the assertion store (repair-
         // assertions.ts): fixes corruption surfaced by verify-workspace -
         // currently dangling chain heads. A no-op on a clean db, so it rides
-        // in the repeatable migration flow (migrateDevDb.sh). Refuses a
+        // in the repeatable migration flow (importWordWikiV1Db.sh). Refuses a
         // production db without --allow-production, like the imports.
         case 'repair-assertions': {
             security.runSystem(() => {
@@ -1966,7 +1966,8 @@ if (import.meta.main) {
                 if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
-                const stats = backfillPublication({log: (m) => console.info(m)});
+                const stats = backfillPublication({log: (m) => console.info(m),
+                                                   config: ww.config});
                 if(args.includes('--expect-no-changes')) {
                     if(stats.bornApproved > 0)
                         throw new Error(`--expect-no-changes: the backfill born-approved ${stats.bornApproved} facts`);

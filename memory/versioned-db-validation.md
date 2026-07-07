@@ -25,7 +25,7 @@ immediately, before user data piles on top. STEP 1 DONE (2026-06-13/14):
   static). One O(n) sweep per full load, not per edit.
 - `./wordwiki.sh verify-workspace` (read-only, exit 1) + `repair-assertions`
   (idempotent, guarded, data-driven, refuses non-head dangling refs).
-- migrateDevDb.sh now 9 steps (added repair-assertions + verify-workspace);
+- importWordWikiV1Db.sh now 9 steps (added repair-assertions + verify-workspace);
   production recipe at top mirrors it.
 
 FINDINGS from running on real prod-pull data: (1) 5 dangling chain heads

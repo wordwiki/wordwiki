@@ -3,7 +3,7 @@
  * Structural repairs of the persisted assertion store — fixes for corruption
  * surfaced by versioned-db-validate.ts, applied as idempotent, re-runnable
  * migration steps so the eventual production cutover runs exactly the flow we
- * rehearse against every dev pull (migrateDevDb.sh).
+ * rehearse against every dev pull (importWordWikiV1Db.sh).
  *
  * These are STRUCTURAL repairs (chain-linkage metadata), not content edits:
  * they touch `replaces_assertion_id` directly rather than appending versions —

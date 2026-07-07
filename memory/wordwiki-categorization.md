@@ -154,7 +154,7 @@ The batch re-categorization of all wordwiki lexemes is complete (v1,
   adopted untouched, ~old-* row description = durable rename record.
   Churn: 9,502 assertions vs 29,716 under v1 delete+create; 16
   tombstones (dup collapses) vs 10,124.
-- MIGRATION RECIPE = ./migrateDevDb.sh (one program: stop → pull →
+- MIGRATION RECIPE = ./importWordWikiV1Db.sh (one program: stop → pull →
   import-categories → --expect-no-changes proof → import-lexical-forms
   (+proof) → verify-migration → serve+smoke). verify-migration
   (migration-verify.ts, read-only, exit 1 on failure): system users,
@@ -162,7 +162,7 @@ The batch re-categorization of all wordwiki lexemes is complete (v1,
   no orphans, tiers 10/90/900, POS fixed point; WARNINGS = human
   worklists (uncategorized entries = created-after-dump detector for
   production day; un-tabled POS). PRODUCTION-DAY recipe documented at
-  top of migrateDevDb.sh (no pull, --allow-production, backup first,
+  top of importWordWikiV1Db.sh (no pull, --allow-production, backup first,
   publish after). Rehearsed clean 2026-06-12: 0 failures, smoke ok.
 - No orthography columns by design (later generic i18n project).
 

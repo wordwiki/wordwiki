@@ -88,3 +88,42 @@ test("clearLegacyPublishedPlaceholder: never clobbers a born-approved BOT fact",
         assertEquals(pub(1), { pf: BOT, pt: EOT }); // untouched
     });
 });
+
+test("backfill: a fact already under publication management is never re-stamped", () => {
+    return withTestDb((_fx: Fixture) => {
+        // A fact whose OLD version is still published-current (a pending edit
+        // awaiting review): stamping the new version would double-publish AND
+        // silently approve the edit.
+        ins({ assertion_id: 20, id: 400, ty: "spl", ty1: "ent", id1: 400,
+              valid_to: T + 10, published_from: T, published_to: EOT, attr1: "old" });
+        ins({ assertion_id: 21, id: 400, ty: "spl", ty1: "ent", id1: 400,
+              replaces_assertion_id: 20, valid_from: T + 10, attr1: "edited-pending" });
+        // A genuinely unblessed fact (no published version anywhere): stamped.
+        ins({ assertion_id: 22, id: 401, ty: "spl", ty1: "ent", id1: 401, attr1: "fresh" });
+
+        const stats = backfillPublication();
+        assertEquals(stats.bornApproved, 1);
+        assertEquals(pub(21), { pf: null, pt: null });        // pending edit untouched
+        assertEquals(pub(20), { pf: T, pt: EOT });            // old truth still current
+        assertEquals(pub(22), { pf: T, pt: EOT });            // fresh fact blessed
+    });
+});
+
+test("backfill: the config marker makes a second run a hard no-op", () => {
+    return withTestDb((_fx: Fixture) => {
+        const store = new Map<string, string>();
+        const config = { get: (k: string) => store.get(k), set: (k: string, v: string) => { store.set(k, v); } };
+
+        ins({ assertion_id: 30, id: 500, ty: "spl", ty1: "ent", id1: 500, attr1: "one" });
+        const first = backfillPublication({ config });
+        assertEquals(first.bornApproved, 1);
+        assertEquals(typeof store.get('publication-backfill-done'), 'string');
+
+        // New (pending) work appears after Phase 0; a re-run must NOT bless it.
+        ins({ assertion_id: 31, id: 501, ty: "spl", ty1: "ent", id1: 501, attr1: "pending-new" });
+        const second = backfillPublication({ config });
+        assertEquals(second.bornApproved, 0);
+        assertEquals(second.skippedByMarker, true);
+        assertEquals(pub(31), { pf: null, pt: null });
+    });
+});

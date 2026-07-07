@@ -3,7 +3,7 @@ set -e
 
 # Sync the SHARED content store (recordings) from staging.  This is the one copy
 # that every dev instance symlinks to (see mmo-use-shared-content.sh); the db
-# pull (pullDbFromPublic.sh) deliberately does NOT touch it, so the big content
+# pull (pullWordWikiV1Db.sh) deliberately does NOT touch it, so the big content
 # store is fetched once here and reused across all checkouts.
 #
 #   Shared store: $WORDWIKI_SHARED_CONTENT

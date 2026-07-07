@@ -1,11 +1,13 @@
 #!/bin/bash
 set -e
 
-# Pull the production db from staging into THIS instance, then make it runnable
-# as a dev db.  Pulling the db is the CORE rebuild loop (we re-pull constantly to
-# rerun the migration as it changes), so it ALWAYS happens.  The content store is
-# only synced when it's a real local dir; a shared store (symlink) or an instance
-# with no content is synced separately by hand - we never pull through a symlink
+# Pull the wordwiki V1 PRODUCTION database into THIS instance, then make it
+# runnable as a dev db.  This is the PULL HALF of ./importWordWikiV1Db.sh
+# (which is this pull + the migration steps + the proofs); it is packaged
+# separately because re-pulling alone is a useful loop (we re-pull constantly
+# to rerun the migration as it changes).  The content store is only synced
+# when it's a real local dir; a shared store (symlink) or an instance with no
+# content is synced separately by hand - we never pull through a symlink
 # (that would rewrite the shared content under every other instance).
 #
 #   Instance dir: $WORDWIKI_DIR  (default: <repo>/mmo)

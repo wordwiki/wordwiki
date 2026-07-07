@@ -4,7 +4,7 @@
  * lexical-form imports (and rerunnable any time; everything here is
  * READ-ONLY).  The point is the production cutover: once real user edits
  * land on top of the migrated data, a missed step stops being a re-pull
- * and becomes a major repair - so the recipe (migrateDevDb.sh) ends by
+ * and becomes a major repair - so the recipe (importWordWikiV1Db.sh) ends by
  * machine-checking everything we know must hold.
  *
  * FAILURES are violated invariants (exit nonzero); WARNINGS are findings a

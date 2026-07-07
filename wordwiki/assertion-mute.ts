@@ -22,7 +22,7 @@
  *   - workspace caches are invalidated after commit.
  *
  * A mute is genuinely irreversible: callers run under a backup discipline
- * (see migrateDevDb.sh) and log the mapping somewhere durable (the
+ * (see importWordWikiV1Db.sh) and log the mapping somewhere durable (the
  * category import records each rename in the target category row).
  */
 import { db } from '../liminal/db.ts';

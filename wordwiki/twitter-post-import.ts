@@ -26,7 +26,7 @@
  *
  * Idempotent: a matched entry that already has a twitter-post is never touched,
  * so a re-run adds nothing (the migration recipe's --expect-no-changes proof).
- * Runs BEFORE backfill-publication in migrateDevDb.sh, so the new attribute
+ * Runs BEFORE backfill-publication in importWordWikiV1Db.sh, so the new attribute
  * rows get born-approved into the published dimension (the word-a-day picker
  * reads publishedEntries) - exactly like the category/lexical-form imports.
  */

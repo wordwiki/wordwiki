@@ -166,7 +166,7 @@ orthography migration wave, is critical.  The design:
   lost there) and accumulates for the report.  The report contains only
   curated findings; tee-ing the raw log would just re-bury findings in the
   same noise, in HTML.
-- **Fragment per step, assembled unconditionally.**  migrateDevDb.sh is ~10
+- **Fragment per step, assembled unconditionally.**  importWordWikiV1Db.sh is ~10
   separate deno invocations; each subcommand writes
   `import-report/<NN>-<step>.md` (a re-run of one step replaces just its
   fragment).  A final assemble step — run via shell `trap`, so it happens
@@ -199,7 +199,7 @@ orthography migration wave, is critical.  The design:
   bases (staging app + legacy live server); migrators never hand-build URLs.
 - Clients: the scan subcommand (its first), verify-migration,
   verify-workspace, the variant invariants, and every migrator in
-  migrateDevDb.sh.
+  importWordWikiV1Db.sh.
 
 ## Status: the per-orthography go-public decision
 
@@ -496,7 +496,7 @@ The *data migration* is one event, but the code lands in test-green stages:
    Cleanup") is the staff triage queue — same findings vocabulary, second
    renderer, drains as fixes land.  The flagged entry-schema is LANDED
    (2026-07-07, dz's annotations) and `migrate-variants` is step 10 of
-   migrateDevDb.sh (+ steps 13/14 of the production-cutover recipe;
+   importWordWikiV1Db.sh (+ steps 13/14 of the production-cutover recipe;
    committed record: variant-migration-report.md).  STILL TO DO at the real
    event: run per instance (staging, then production), THEN flip the
    variant invariants from verify-workspace warnings to throw-on-load

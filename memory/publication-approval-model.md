@@ -13,7 +13,13 @@ property-test harness; data migrated. BUILT: the columns; operations
 approveFact/revertFact/commentFact with permission+persistence); publishedView/
 pending queries; structural invariants in versioned-db-validate.ts; Phase 0
 born-approve backfill (publication-backfill.ts; repair-assertions clears the
-legacy placeholder first; in migrateDevDb.sh, rehearsed); Phase 1 public
+legacy placeholder first; in importWordWikiV1Db.sh, rehearsed).  BACKFILL RUNS
+ONCE PER DB (2026-07-07 incident: an importWordWikiV1Db --no-pull re-run over
+the live dev db re-stamped 6 of djz's PENDING facts — double-published 4 with
+still-published predecessors, throw-on-load caught it): now guarded by a
+`publication-backfill-done` config marker (travels with the db; absent from a
+fresh V1 pull, which SHOULD backfill) + structurally never touches a fact
+whose chain already has any published interval; Phase 1 public
 renderer (workspace.ts PublishedTupleQuery; WordWiki.publishedEntries =
 published projection AND status). REVIEW UI BUILT (2026-06-14): it is a MODE of
 the lexeme editor (dz: reviewing+proposing interleave — don't make it a separate
@@ -157,7 +163,7 @@ exactly BEGINNING_OF_TIME). KEY CONSTRAINT dz should know: the HLC encoding
 starts at the 2020 local epoch, so pre-2020 shoebox dates are UNREPRESENTABLE
 as valid_from (and BOT is a load-bearing "imported baseline" sentinel) —
 creation date therefore stays DATA (the attribute), never a valid_from
-rewrite. `wordwiki.sh normalize-shoebox-dates` (migrateDevDb.sh step 8 +
+rewrite. `wordwiki.sh normalize-shoebox-dates` (importWordWikiV1Db.sh step 8 +
 cutover recipe, per dz: reproducible-script steps only) rewrites current
 shoebox-date values dd/Mon/yyyy→ISO mute-in-place (backfill pattern;
 superseded versions keep original text as audit trail; idempotent,

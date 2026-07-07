@@ -78,8 +78,8 @@ set -e
 #                                      # and with --expect-no-changes a
 #                                      # read-only is-it-migrated probe)
 #
-# The whole pull-and-migrate rehearsal is packaged as ./migrateDevDb.sh
-# (which also documents the eventual production-cutover recipe).
+# The whole pull-and-migrate program is packaged as ./importWordWikiV1Db.sh
+# (the V1-db import; --no-pull --allow-production is the production cutover).
 #
 # Any command first cleanly stops a running server (SQLite single writer),
 # except `publish`, which only reads the db.

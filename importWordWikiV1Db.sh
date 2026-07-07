@@ -1,16 +1,30 @@
 #!/bin/bash
 set -e
 
-# The COMPLETE dev-db migration rehearsal, as one repeatable program:
-# pull the production db and rebuild it onto the controlled category +
-# lexical-form vocabularies, with every step validated.  Rerun any time;
-# every step is idempotent and the local db/content are disposable copies.
+# Import the WORDWIKI V1 PRODUCTION DATABASE into the current wordwiki
+# install, as one repeatable program: pull the V1 db, then rebuild it onto
+# the current model (controlled vocabularies, publication dimension,
+# orthography variants), every step validated and idempotent.
 #
-#   ./migrateDevDb.sh
+# We run this REPEATEDLY during development - each re-run re-rehearses the
+# whole migration against the latest V1 data - and will run it ONCE FOR REAL
+# on the production V2 target at cutover.
+#
+#   ./importWordWikiV1Db.sh                           # rehearsal: pull + migrate
+#   ./importWordWikiV1Db.sh --no-pull                 # migrate the db already here
+#   ./importWordWikiV1Db.sh --no-pull --allow-production
+#                                     # the REAL cutover on the V2 production
+#                                     # target: no pull (the V1 db IS the local
+#                                     # db), production marker honoured.
+#                                     # BACK UP the db file first!
+#
+# The PULL step is packaged separately as ./pullWordWikiV1Db.sh (fetch the
+# V1 db + make it runnable as a dev db) because re-pulling alone is a useful
+# loop; THIS script is that pull + the migration steps + the proofs.
 #
 # Steps:
 #   1. stop the server (BEFORE the rsync replaces the db under it)
-#   2. pull db + content from staging (pullDbFromPublic.sh, whose post-pull
+#   2. pull db + content from the V1 source (pullWordWikiV1Db.sh, whose post-pull
 #      recreates/seeds users - including the '~' automation identities and
 #      the 'test' robot - seeds passwords from the never-checked-in
 #      user-passwords.json, and marks the db 'dev')
@@ -48,70 +62,73 @@ set -e
 #      remainder should show post-migration)
 #  13. restart the server and smoke-test it over HTTP
 #
-# ---- The PRODUCTION cutover (when the day comes) is NOT this script ------
-# On the production host (no pull, no dev marking, no dev password):
-#   1. stop the server; BACK UP the db file
-#   2. ./wordwiki.sh repair-assertions --allow-production
-#   3. ./wordwiki.sh import-categories --allow-production
-#   4. ./wordwiki.sh import-categories --allow-production --expect-no-changes
-#   5. ./wordwiki.sh import-lexical-forms --allow-production
-#   6. ./wordwiki.sh import-lexical-forms --allow-production --expect-no-changes
-#   7. ./wordwiki.sh import-twitter-posts --allow-production
-#   8. ./wordwiki.sh import-twitter-posts --allow-production --expect-no-changes
-#   9. ./wordwiki.sh backfill-publication --allow-production
-#  10. ./wordwiki.sh backfill-publication --allow-production --expect-no-changes
-#  11. ./wordwiki.sh normalize-shoebox-dates --allow-production
-#  12. ./wordwiki.sh normalize-shoebox-dates --allow-production --expect-no-changes
-#  13. ./wordwiki.sh migrate-variants --allow-production
-#  14. ./wordwiki.sh migrate-variants --allow-production --expect-no-changes
-#  15. ./wordwiki.sh verify-migration   (read-only; same checks as here;
-#      expect a WARNING for entries created after the assignments dump)
-#  16. ./wordwiki.sh verify-workspace   (read-only structural invariants)
-#  17. start the server; ./wordwiki.sh publish; spot-check the site
+# ---- The PRODUCTION cutover (when the day comes) IS this script ----------
+# On the production host: stop the server, BACK UP the db file, then
+#   ./importWordWikiV1Db.sh --no-pull --allow-production
+# (verify-migration may WARN about entries created after the assignments
+# dump.)  Afterwards: ./wordwiki.sh publish; spot-check the site.
 # --------------------------------------------------------------------------
 
 cd "$(dirname "$0")"
+
+# Flags: --no-pull migrates the db already in place (a re-run, or the real
+# cutover); --allow-production is passed through to every mutating step (the
+# cutover target is marked db_purpose='production' and each step refuses it
+# otherwise).
+NO_PULL=0
+ALLOW_PROD=""
+for arg in "$@"; do
+    case "$arg" in
+        --no-pull)          NO_PULL=1 ;;
+        --allow-production) ALLOW_PROD="--allow-production" ;;
+        *) echo "unknown argument: $arg (known: --no-pull, --allow-production)" >&2; exit 1 ;;
+    esac
+done
 
 step() { echo; echo "=== $* ==="; }
 
 step "[1/13] stopping the server"
 ./wordwiki.sh stop
 
-step "[2/13] pulling production db + content from staging"
-./pullDbFromPublic.sh
+if [ "$NO_PULL" = 1 ]; then
+    step "[2/13] pull SKIPPED (--no-pull): migrating the db already in place"
+else
+    step "[2/13] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
+    ./pullWordWikiV1Db.sh
+fi
 
 step "[3/13] repairing pre-existing store corruption (idempotent)"
-./wordwiki.sh repair-assertions
+./wordwiki.sh repair-assertions $ALLOW_PROD
 
 step "[4/13] importing categories"
-./wordwiki.sh import-categories
+./wordwiki.sh import-categories $ALLOW_PROD
 
 step "[5/13] category import idempotency proof"
-./wordwiki.sh import-categories --expect-no-changes
+./wordwiki.sh import-categories $ALLOW_PROD --expect-no-changes
 
 step "[6/13] importing lexical forms (+ idempotency proof)"
-./wordwiki.sh import-lexical-forms
-./wordwiki.sh import-lexical-forms --expect-no-changes
+./wordwiki.sh import-lexical-forms $ALLOW_PROD
+./wordwiki.sh import-lexical-forms $ALLOW_PROD --expect-no-changes
 
 step "[7/13] importing legacy twitter-posts (+ idempotency proof)"
 # --report-skipped refreshes the committed hand-off list of the words a human
 # must place in production (homonyms/unmatched); it shrinks as they are fixed.
-./wordwiki.sh import-twitter-posts --report-skipped=skipped-twitter-posts.md
-./wordwiki.sh import-twitter-posts --expect-no-changes
+./wordwiki.sh import-twitter-posts $ALLOW_PROD --report-skipped=skipped-twitter-posts.md
+./wordwiki.sh import-twitter-posts $ALLOW_PROD --expect-no-changes
 
 step "[8/13] publication Phase 0: born-approve existing data (+ idempotency proof)"
-./wordwiki.sh backfill-publication
-./wordwiki.sh backfill-publication --expect-no-changes
+./wordwiki.sh backfill-publication $ALLOW_PROD
+./wordwiki.sh backfill-publication $ALLOW_PROD --expect-no-changes
 
 step "[9/13] normalizing legacy shoebox creation dates (+ idempotency proof)"
-./wordwiki.sh normalize-shoebox-dates
-./wordwiki.sh normalize-shoebox-dates --expect-no-changes
+./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD
+./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD --expect-no-changes
 
 step "[10/13] the orthography variant migration (+ idempotency proof)"
 # The committed report is the point-in-time record (hand-triage remainder,
 # per-action counts); the LIVE Variant Cleanup page is the draining queue.
-./wordwiki.sh migrate-variants --report variant-migration-report.md
-./wordwiki.sh migrate-variants --expect-no-changes
+./wordwiki.sh migrate-variants $ALLOW_PROD --report variant-migration-report.md
+./wordwiki.sh migrate-variants $ALLOW_PROD --expect-no-changes
 
 step "[11/13] verifying the migration"
 ./wordwiki.sh verify-migration
@@ -145,4 +162,4 @@ NFORMS=$(curl -s -b "$COOKIES" 'http://localhost:9000/ww/wordwiki.lexicalFormsPa
 echo "smoke ok: server 200, $NCATS categories, $NFORMS lexical forms"
 
 echo
-echo "migration rehearsal complete."
+echo "V1 db import complete."
