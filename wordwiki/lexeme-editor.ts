@@ -1094,9 +1094,10 @@ export class LexemeEditor {
         // and variant-less rows always pass); All restores everything.  The
         // state lives on the entry root's data-lens and the rules are
         // generated from the orthography TABLE, so fragments re-rendering
-        // inside keep filtering correctly.
-        const lensOrths = this.app.orthographies.allByOrder.all({})
-            .filter(o => !o.retired);
+        // inside keep filtering correctly.  PUBLISHABLE orthographies only
+        // (dz): the lens previews a publish target - there is no "what the
+        // public would see" for a source orthography.
+        const lensOrths = this.app.orthographies.publishableByOrder.all({});
         const lensStyle = lensOrths.map(o =>
             `[data-lens="${o.slug}"] [data-orth]:not([data-orth="${o.slug}"]) { display: none !important; }`)
             .join('\n');
