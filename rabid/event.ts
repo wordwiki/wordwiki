@@ -446,19 +446,14 @@ export class EventTable extends Table<Event> {
         props.class = 'container py-3 ' + props.class;
         // Adding a not-yet-created checklist is a quiet ☰ action next to the
         // title (document-friendly), not a "Create …" button in the flow.
+        // The title-row ☰ is just the "add a checklist" items now; editing the event
+        // is the ☰ ON the summary card below (right where those details live).
         const checklistAdds = rabid.task.ownerChecklistAddItems('event', event_id);
-        // A single ☰ next to the title: Edit event… (was a bare pencil - a menu so
-        // archive/etc. can join later) + the checklist-add items.
-        const eventActions: action.ActionMenuItem[] = [];
-        if(this.canEditRecord(e))
-            eventActions.push({label: 'Edit event…',
-                mode: {kind: 'modal', dialogUrl: `/rabid.event.renderForm(rabid.event.getById(${event_id}))`}});
-        eventActions.push(...checklistAdds);
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
-             eventActions.length
-                 ? action.actionMenu(eventActions, {ariaLabel: 'Event actions'})
+             checklistAdds.length
+                 ? action.actionMenu(checklistAdds, {ariaLabel: 'Add a checklist'})
                  : undefined],
             // Jump-links across the top: scroll to each section (fragment ids set on
             // the section wrappers below).
@@ -1150,21 +1145,29 @@ export class EventTable extends Table<Event> {
             );
         }
         
-        // Notes row (only show if present).  The detail page passes hideNotes
-        // and renders notes as its own prominent block below the card instead -
-        // notes are primary event content, not a small card field.
-        if (!opts.hideNotes && event.notes && event.notes.trim()) {
-            gridRows.push(
-                [h.div, {class: 'card-detail-row'},
-                    [h.div, {}, 'Notes:'],
-                    [h.div, {class: 'card-notes'}, this.fieldsByName.notes.render(event.notes)]
-                ]
-            );
-        }
-        
-        return [h.div, {class: 'card-summary'}, 
-            [h.div, {class: 'card-header'}, ...headerElements],
-            [h.div, {class: 'card-details-grid'}, ...gridRows]
+        // Notes render as their OWN prose block BELOW the labelled grid, with no
+        // "Notes:" label - a multi-line note (or a markdown list) looks wonky forced
+        // into the labelled-row layout.
+        const notesBlock = (!opts.hideNotes && event.notes && event.notes.trim())
+            ? [h.div, {class: 'lm-markdown card-notes mt-2'}, this.fieldsByName.notes.render(event.notes)]
+            : undefined;
+
+        // On the detail page a ☰ sits on the summary card itself, so it's obvious
+        // how to edit these details (the whole-card tap would be too big a target
+        // and collides with the sign-up/check-in ☰ menus inside).  A menu (not a
+        // bare pencil) leaves room for Archive/etc. later.
+        const cardMenu = (opts.editableCheckins && this.canEditRecord(event))
+            ? action.actionMenu([{label: 'Edit event…',
+                mode: {kind: 'modal', dialogUrl: `/rabid.event.renderForm(rabid.event.getById(${event_id}))`}}],
+                {ariaLabel: 'Event actions'})
+            : undefined;
+
+        return [h.div, {class: 'card-summary'},
+            [h.div, {class: 'card-header d-flex align-items-start gap-2'},
+             [h.div, {class: 'flex-grow-1'}, ...headerElements],
+             cardMenu],
+            [h.div, {class: 'card-details-grid'}, ...gridRows],
+            notesBlock,
         ];
     }
 }
