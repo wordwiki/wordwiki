@@ -1114,26 +1114,65 @@ export function seedProjects(rabid: Rabid): void {
         priority: 'low', deleted: 0});
     assign(stand, volunteers.filter((_, i) => i % 19 === 7).slice(0, 1).map(v => v.volunteer_id));
 
-    // Two checklist TEMPLATES (host/admin-managed definitions): instantiated on
-    // events to produce their setup/cleanup checklists.  No assignees, no due -
-    // structure only (assignment comes from the instance's owner).
-    const cleanup = rabid.project.insert({
-        name: 'Event Cleanup', is_template: 1, applies_to_table: 'event', owner_role: 'cleanup',
-        description: 'Post-event tidy so the shop is ready for the next crew.', deleted: 0});
-    const sweep = rabid.task.insert({project_id: cleanup, title: 'Sweep the floors', deleted: 0});
-    rabid.subtask.insert({task_id: sweep, title: 'Main floor', done: 0});
-    rabid.subtask.insert({task_id: sweep, title: 'Repair bays', done: 0});
-    rabid.task.insert({project_id: cleanup, title: 'Empty the bins', deleted: 0});
-    rabid.task.insert({project_id: cleanup, title: 'Return tools to the board', deleted: 0});
-    rabid.task.insert({project_id: cleanup, title: 'Wipe down the benches', deleted: 0});
-    rabid.task.insert({project_id: cleanup, title: 'Lock up', deleted: 0});
+    // Two checklist TEMPLATES (host/admin-managed definitions) from the shop's real
+    // opening + cleanup checklists (opening-checklist.org / shift-cleanup-checklist.org).
+    // Both are TWO-LEVEL (task -> subtasks); the opening list is one level in the
+    // .org, so it's wrapped under a single "Start of shift" task to share the shape.
+    // No assignees, no due - structure only (assignment comes from the instance).
+    const addChecklistTemplate = (name: string, role: string, description: string,
+                                  tasks: {title: string, subs: string[]}[]) => {
+        const project_id = rabid.project.insert({
+            name, is_template: 1, applies_to_table: 'event', owner_role: role,
+            description, deleted: 0});
+        for(const t of tasks) {
+            const task_id = rabid.task.insert({project_id, title: t.title, deleted: 0});
+            for(const s of t.subs) rabid.subtask.insert({task_id, title: s, done: 0});
+        }
+    };
 
-    const setup = rabid.project.insert({
-        name: 'Event Setup', is_template: 1, applies_to_table: 'event', owner_role: 'setup',
-        description: 'Open the shop and get ready before an event.', deleted: 0});
-    rabid.task.insert({project_id: setup, title: 'Unlock and lights on', deleted: 0});
-    rabid.task.insert({project_id: setup, title: 'Set out loaner tools', deleted: 0});
-    rabid.task.insert({project_id: setup, title: 'Check the sign-in sheet', deleted: 0});
+    addChecklistTemplate('Opening Checklist', 'setup', 'Start-of-shift shop checks.', [
+        {title: 'Start of shift', subs: [
+            'Walk the shop against the clean baseline',
+            'Not at baseline? Log it (logbook / whiteboard / photo, with date and shift)',
+            'Doors and alarm as expected',
+            'Cash/donation jar present',
+            'Stands and benches clear',
+            'Tools in their places',
+        ]},
+    ]);
+
+    addChecklistTemplate('Shift Cleanup Checklist', 'cleanup',
+        'End-of-shift tidy so the shop is ready for the next crew.', [
+        {title: 'Put everything back', subs: [
+            'Tools → crates / red toolbox / pegboard / closets',
+            'Pumps, stands, tables, info signs, chemicals, rugs, chairs → their spots',
+            'Parts → bins → shelves',
+            'Tires sorted, wheels hung, new donations → back storage room',
+            'Table next to the vise — cleared',
+            'Tray on the stationary stand (the permanently-installed one; all others are movable) — cleared',
+            'Shop/project bikes parked (not partially disassembled) or host-approved and tagged',
+        ]},
+        {title: 'Waste & recycling', subs: [
+            'Sort as you go: tubes → rubber bin, metal → metal, garbage → garbage',
+            'Dirty rags → rag bin',
+            'When full: bag garbage in black plastic bags / tie tires for recycling / bag other rubber for recycling',
+        ]},
+        {title: 'If volunteer hours follow', subs: [
+            'Everything not in use by a volunteer is cleaned and put back',
+            'Handoff state logged',
+            'Leave only: tool crates (tools sorted), bikes for sale, bike stand — or whatever the next host approves',
+        ]},
+        {title: 'Customers', subs: [
+            'All customer work finished; bikes taken home (unless next host agrees they stay)',
+        ]},
+        {title: 'Closing the shop (last shift / no next host)', subs: [
+            'Lights off',
+            'Cash/donation jar and valuable tools secured',
+            'Doors locked, windows closed, alarm armed (if you disarmed it)',
+            'Sweep or mop only if the floor is heavily soiled — not routine',
+            'Verbal handoff to next host',
+        ]},
+    ]);
 
     console.info('2 projects + 2 checklist templates created');
 }
