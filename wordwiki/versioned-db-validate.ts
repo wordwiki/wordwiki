@@ -33,6 +33,7 @@
  */
 import * as timestamp from "../liminal/timestamp.ts";
 import { VersionedDb, VersionedTuple } from "./workspace.ts";
+import { allowedVariantValues, type TagVariantPolicy } from "./variant-policy.ts";
 
 const END_OF_TIME = timestamp.END_OF_TIME;
 
@@ -45,6 +46,8 @@ export interface VersionRecord {
     published_from?: number;
     published_to?: number;
     change_action?: string | null;
+    /** The orthography column (used by the variant invariants only). */
+    variant?: string | null;
 }
 
 /** One fact, as the validator needs to see it (any representation adapts to
@@ -230,6 +233,65 @@ export function validateFacts(facts: Iterable<FactView>,
 }
 
 // --------------------------------------------------------------------------------
+// --- Variant (orthography) invariants — WARN MODE until the migration -----------
+// --------------------------------------------------------------------------------
+
+/**
+ * The fix-orthographies invariants (fix-orthographies.md "Migration
+ * mechanics"), driven by the schema's variant flags via variant-policy.ts:
+ *
+ *  - a tag with no variant field, or with $notVariant, must hold a blank
+ *    variant (the column drops for those tags in the migration);
+ *  - an orthographic tag must hold a NON-blank variant, and the value must
+ *    be in the orthography vocabulary — 'mm' only where $allowAll grants it.
+ *
+ * Checked on the CURRENT LIVE version only: the migration mutes current rows
+ * in place and history keeps its original values by design.
+ *
+ * These are separate from validateFacts (and excluded from
+ * assertVersionedDbValid) because today's pre-migration data violates them
+ * wholesale — verify-workspace reports them as WARNINGS.  After the
+ * migration they flip to throw-on-load alongside the structural invariants.
+ */
+export function validateVariantInvariants(
+        facts: Iterable<FactView>,
+        policy: Map<string, TagVariantPolicy>,
+        vocabulary: string[]): ValidationProblem[] {
+    const problems: ValidationProblem[] = [];
+    const add = (path: string, invariant: string, detail: string) =>
+        problems.push({ path, invariant, detail });
+
+    for (const fact of facts) {
+        const last = fact.versions[fact.versions.length - 1];
+        // Only current live versions: not deleted, open to END_OF_TIME.
+        if (!last || last.valid_to !== END_OF_TIME || last.valid_from === last.valid_to)
+            continue;
+        const p = policy.get(fact.ty);
+        if (!p) continue;   // unknown tags are the scan's finding, not ours
+        const v = last.variant;
+        const blank = v == null || v === '';
+
+        if (p.flags === null) {
+            if (!blank)
+                add(fact.path, "variant-on-variantless-tag",
+                    `'${p.tag}' has no variant field but holds '${v}'`);
+        } else if (p.flags.notVariant) {
+            if (!blank)
+                add(fact.path, "variant-on-dropped-tag",
+                    `'${p.tag}' is $notVariant but holds '${v}'`);
+        } else if (blank) {
+            add(fact.path, "variant-missing",
+                `'${p.tag}' is orthographic but its variant is blank`);
+        } else if (!allowedVariantValues(p.flags, vocabulary).has(v!)) {
+            add(fact.path, "variant-off-vocabulary",
+                `'${p.tag}' holds '${v}', not an allowed orthography` +
+                (v === 'mm' ? ` ('mm' needs $allowAll)` : ''));
+        }
+    }
+    return problems;
+}
+
+// --------------------------------------------------------------------------------
 // --- Adapter: the live workspace tree -> FactViews ------------------------------
 // --------------------------------------------------------------------------------
 
@@ -263,6 +325,7 @@ function walk(tuple: VersionedTuple, path: string,
                 published_from: a.published_from,
                 published_to: a.published_to,
                 change_action: a.change_action,
+                variant: a.variant,
             };
         });
         earliest = versions[0]?.valid_from ?? parentEarliestValidFrom;

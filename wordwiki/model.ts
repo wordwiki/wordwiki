@@ -481,12 +481,37 @@ export class EnumField extends StringField {
 }
 
 /**
+ * Flags classifying how a variant field relates to orthography
+ * (see fix-orthographies.md "The target model" for the full semantics).
+ */
+export interface VariantFlags {
+    /** The field never really was an orthography (it rode in from the old
+     *  locale intent); dropped in the orthography migration. Exclusive of
+     *  the other flags. */
+    notVariant?: boolean;
+    /** Mi'gmaq text potentially mixed with other-language text. */
+    mixed?: boolean;
+    /** Additionally permits the 'mm' ("All Mig'maq-Mi'kmaq") value: one
+     *  stored value that renders in every orthography.  A QUERY-PLANNING
+     *  fact: match-finding for this tag must query exact-or-'mm', where a
+     *  tag without it keeps the tight exact form. */
+    allowAll?: boolean;
+    /** New content defaults to 'mm' instead of the editor's working
+     *  orthography.  Requires allowAll. */
+    defaultAll?: boolean;
+    /** On control fields (todo, status): the *state* can be per-orthography. */
+    metaVariant?: boolean;
+}
+
+/**
  * Variant Field
  *
- *
+ * The orthography of the tuple's text (fix-orthographies.md narrows the old
+ * variant-as-locale intent to orthography, only).
  */
 export class VariantField extends EnumField {
-    constructor(name: string, bind: string, optional: boolean, style: Style={}) {
+    constructor(name: string, bind: string, optional: boolean, style: Style={},
+                public variantFlags: VariantFlags={}) {
         super(name, bind, optional, style);
     }
 
@@ -496,11 +521,31 @@ export class VariantField extends EnumField {
     override schemaTypename(): string { return 'variant'; }
     override sqlTypename(): string { return 'TEXT'; }
 
+    override schemaToCompactJson(): any {
+        const f = this.variantFlags;
+        const flagsJson = {} as any;
+        f.notVariant && (flagsJson.$notVariant = true);
+        f.mixed && (flagsJson.$mixed = true);
+        f.allowAll && (flagsJson.$allowAll = true);
+        f.defaultAll && (flagsJson.$defaultAll = true);
+        f.metaVariant && (flagsJson.$metaVariant = true);
+        return this.buildSchemaToCompactJson(this.schemaTypename(), flagsJson);
+    }
+
     static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
-        let {$type, $bind, $style, $optional, ...extra} = schema;
+        let {$type, $bind, $style, $optional,
+             $notVariant, $mixed, $allowAll, $defaultAll, $metaVariant, ...extra} = schema;
         $bind ??= 'variant';
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
-        return new VariantField(name, $bind, !!$optional, $style);
+        const variantFlags: VariantFlags = {
+            notVariant: !!$notVariant, mixed: !!$mixed, allowAll: !!$allowAll,
+            defaultAll: !!$defaultAll, metaVariant: !!$metaVariant };
+        if(variantFlags.notVariant &&
+            (variantFlags.mixed || variantFlags.allowAll || variantFlags.defaultAll || variantFlags.metaVariant))
+            throw new ValidationError(locus, `$notVariant cannot be combined with other variant flags on field '${name}'`);
+        if(variantFlags.defaultAll && !variantFlags.allowAll)
+            throw new ValidationError(locus, `$defaultAll requires $allowAll on field '${name}' (the 'mm' default must be an allowed value)`);
+        return new VariantField(name, $bind, !!$optional, $style, variantFlags);
     }
 }
 
@@ -907,6 +952,17 @@ export class RelationField extends Field {
         // TODO: locus needs asjusting here
         const fields = Object.entries(field_schema).map(([field_name, field_body]) =>
             parse_field(locus, field_name, field_body));
+
+        // Variant fields must be LEAVES (fix-orthographies.md "Rendering in
+        // an orthography"): rendering in orthography O prunes whole subtrees
+        // by variant, so an interior variant node could silently make a
+        // descendant with an opposing orthography unreachable in its own
+        // orthography's rendering.
+        const variantField = fields.find(f => f instanceof VariantField);
+        const childRelation = fields.find(f => f instanceof RelationField);
+        if(variantField && childRelation)
+            throw new ValidationError(locus,
+                `relation '${name}' has both a variant field ('${variantField.name}') and a child relation ('${childRelation.name}') - variant fields are only allowed on leaf relations`);
 
         const schema = new RelationField(name, $tag, fields, style);
 

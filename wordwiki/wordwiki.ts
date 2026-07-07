@@ -49,7 +49,11 @@ import * as lexicalForm from './lexical-form.ts';
 import * as instanceDir_ from './instance-dir.ts';
 import * as lexicalFormImport from './lexical-form-import.ts';
 import * as migrationVerify from './migration-verify.ts';
-import { validateVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
+import { validateVersionedDb, assertVersionedDbValid, validateVariantInvariants,
+         factViewsFromVersionedDb } from './versioned-db-validate.ts';
+import { variantPolicyByTag } from './variant-policy.ts';
+import { FindingsReport } from './findings.ts';
+import { scanVariants } from './variant-scan.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -1971,15 +1975,65 @@ if (import.meta.main) {
         // Structural validation of the persisted versioned model (read-only):
         // load the whole dict into the workspace and run the invariant sweep
         // (versioned-db-validate.ts). Exit 1 on any problem.
+        // The variant (orthography) invariants run too, but in WARN MODE:
+        // pre-migration data violates them wholesale, so they are aggregated
+        // as warnings and do not affect the exit code until the orthography
+        // migration lands (fix-orthographies.md).
         case 'verify-workspace': {
-            const problems = security.runSystem(() => {
+            const {problems, variantWarnings} = security.runSystem(() => {
                 ww.ensureNewStyleTables();
-                return validateVersionedDb(ww.workspace);
+                const facts = factViewsFromVersionedDb(ww.workspace);
+                return {
+                    problems: validateVersionedDb(ww.workspace),
+                    variantWarnings: validateVariantInvariants(
+                        facts, variantPolicyByTag(ww.dictSchema), Object.keys(entry.variants)),
+                };
             });
             for(const p of problems)
                 console.error(`PROBLEM [${p.invariant}] ${p.path}: ${p.detail}`);
-            console.info(`verify-workspace: ${problems.length} problem(s)`);
+            // Aggregate the (numerous, expected) variant warnings per
+            // invariant+tag, with a few sample paths each.
+            const groups = new Map<string, {n: number, samples: string[]}>();
+            for(const w of variantWarnings) {
+                const tag = w.path.split('/').pop()?.split(':')[0] ?? '?';
+                const key = `${w.invariant} on '${tag}'`;
+                const g = groups.get(key) ?? {n: 0, samples: []};
+                g.n++;
+                if(g.samples.length < 3) g.samples.push(w.path);
+                groups.set(key, g);
+            }
+            for(const [key, g] of groups)
+                console.warn(`WARNING [${key}] ×${g.n} - e.g. ${g.samples.join(', ')}`);
+            console.info(`verify-workspace: ${problems.length} problem(s), ` +
+                         `${variantWarnings.length} variant warning(s) (warn mode)`);
             Deno.exit(problems.length === 0 ? 0 : 1);
+            break;
+        }
+
+        // Scan current variant (orthography) values against the schema's $
+        // flags (fix-orthographies.md "Data scan") - read-only, reported via
+        // the findings API.  The $notVariant drop-gate PASS is a precondition
+        // the orthography migration re-checks at run time; the dirt findings
+        // (blank backfill workload, off-vocabulary values, ...) do not fail
+        // the scan.  Exit 0 iff the gate passes.
+        //   ./wordwiki.sh scan-variants [--report import-report/scan-variants.md]
+        case 'scan-variants': {
+            const reportIx = args.indexOf('--report');
+            const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
+            const gatePassed = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
+                const report = new FindingsReport('Variant (orthography) scan', {sourceDb});
+                const result = scanVariants(report, ww.dictSchema, Object.keys(entry.variants));
+                if(reportPath) {
+                    Deno.writeTextFileSync(reportPath, report.toMarkdown());
+                    console.info(`wrote ${reportPath}`);
+                }
+                console.info(`scan-variants: ${report.findingCount} finding(s); ` +
+                             `drop gate ${result.gatePassed ? 'PASS' : 'FAIL'}`);
+                return result.gatePassed;
+            });
+            Deno.exit(gatePassed ? 0 : 1);
             break;
         }
 

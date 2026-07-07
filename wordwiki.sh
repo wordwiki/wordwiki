@@ -55,7 +55,16 @@ set -e
 #   ./wordwiki.sh verify-migration     # read-only post-migration sanity
 #                                      # checks (exit 1 on failure)
 #   ./wordwiki.sh verify-workspace     # read-only structural invariants of
-#                                      # the whole assertion store (exit 1)
+#                                      # the whole assertion store (exit 1);
+#                                      # also reports the variant (orthography)
+#                                      # invariants as WARNINGS (warn mode
+#                                      # until the orthography migration)
+#   ./wordwiki.sh scan-variants        # read-only scan of variant values
+#                                      # against the schema's orthography
+#                                      # flags (fix-orthographies.md); exit 0
+#                                      # iff the $notVariant drop gate passes;
+#                                      # --report <path.md> writes the
+#                                      # findings report
 #
 # The whole pull-and-migrate rehearsal is packaged as ./migrateDevDb.sh
 # (which also documents the eventual production-cutover recipe).
