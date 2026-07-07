@@ -39,6 +39,7 @@ import { route, authenticated } from "../liminal/security.ts";
 import * as timestamp from '../liminal/timestamp.ts';
 import * as templates from './templates.ts';
 import * as entrySchema from './entry-schema.ts';
+import { variantsOverlap } from './variant-policy.ts';
 
 export interface Spelling { text: string; variant: string|null; }
 
@@ -60,10 +61,14 @@ export function conflictingSpellings(mine: Spelling[], theirs: Spelling[]): Spel
             if(m.text !== '' && m.text === t.text)
                 collisions.push({text: m.text, myVariant: m.variant, otherVariant: t.variant});
     if(collisions.length === 0) return [];
-    const sameOrtho = collisions.filter(c => c.myVariant === c.otherVariant);
+    // Orthography comparisons go through the CENTRAL predicate
+    // (variant-policy.ts), not raw equality: 'mm' (and a legacy blank)
+    // renders in every orthography, so 'mm' vs 'mm-li' is a SAME-orthography
+    // collision, and a word carrying a wildcard spelling is "written in"
+    // every orthography for the shared-orthography-distinguishes test.
+    const sameOrtho = collisions.filter(c => variantsOverlap(c.myVariant, c.otherVariant));
     if(sameOrtho.length > 0) return sameOrtho;
-    const theirVariants = new Set(theirs.map(s => s.variant));
-    const distinguishable = mine.some(s => theirVariants.has(s.variant));
+    const distinguishable = mine.some(m => theirs.some(t => variantsOverlap(m.variant, t.variant)));
     return distinguishable ? [] : collisions;
 }
 

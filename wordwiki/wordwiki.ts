@@ -21,7 +21,7 @@ import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import {ScannedDocument, ScannedPage, Layer, BoundingGroup, selectScannedDocumentByFriendlyId, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber, allScannedDocumentSchemaDml} from './scanned-document.ts';
-import {Assertion, updateAssertion, assertionPathToFields, getAssertionPath, highestTimestamp, selectAllAssertions, createAssertionDml} from './assertion.ts';
+import {Assertion, updateAssertion, assertionPathToFields, getAssertionPath, highestTimestamp, selectAllAssertions, createAssertionDml, ensureAssertionColumns} from './assertion.ts';
 import {dictSchemaJson} from "./entry-schema.ts";
 import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
 import * as pageEditorModule from './page-editor.ts';
@@ -1459,6 +1459,21 @@ export class WordWiki extends LiminalApp {
         }
     }
 
+    // The logged-in user's WORKING ORTHOGRAPHY (fix-orthographies.md): for
+    // now their user record's primary_orthography (the session-level
+    // switcher is future work).  New variant-bearing content defaults its
+    // orthography from this; undefined (unset) applies no default.
+    currentUserPrimaryOrthography(): string | undefined {
+        const actorId = security.current()?.actorId;
+        if(actorId === undefined) return undefined;
+        try {
+            return security.runSystem(() =>
+                this.users.getById(actorId).primary_orthography) || undefined;
+        } catch (_e) {
+            return undefined;
+        }
+    }
+
     // Always read the db_purpose marker as a trusted op.
     getDbPurpose(): string | undefined {
         try { return security.runSystem(() => this.config.getDbPurpose()); }
@@ -1649,8 +1664,11 @@ export class WordWiki extends LiminalApp {
 // Create the legacy raw-DML tables (both data worlds: the scanned-document
 // tables and the dict assertion table).  Idempotent; the new-style liminal
 // tables are created separately by WordWiki.ensureNewStyleTables().
+// ensureAssertionColumns applies LATE COLUMNS to an existing dict table
+// (CREATE TABLE IF NOT EXISTS adds new index lines but never new columns).
 export function createAllTables() {
     db().executeStatements(allScannedDocumentSchemaDml + createAssertionDml('dict'));
+    ensureAssertionColumns('dict');
 }
 
 export let wordwiki: WordWiki|undefined = undefined;

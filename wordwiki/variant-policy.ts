@@ -43,3 +43,55 @@ export function allowedVariantValues(flags: model.VariantFlags,
 export function isBlankVariant(v: string | null | undefined): boolean {
     return v == null || v === '';
 }
+
+/**
+ * A stored value that stands for EVERY orthography: the 'mm' ("All
+ * Mig'maq-Mi'kmaq") wildcard, and — until the migration backfills them — a
+ * legacy blank.  (Blank-as-wild is the pre-migration tolerance: the corpus
+ * predates orthography stamping, and treating a blank as scoped to nothing
+ * would silently hide legacy content.  Post-migration the validator flips to
+ * throw-on-load and blanks cease to exist.)
+ */
+export function isWildVariant(v: string | null | undefined): boolean {
+    return isBlankVariant(v) || v === 'mm';
+}
+
+/**
+ * THE central 'mm' predicate (fix-orthographies.md "The target model"): does
+ * a stored variant value match orthography `orthography`?  Rendering, search,
+ * publish and duplicate-spelling detection must agree exactly on this — do
+ * not re-derive it inline.
+ */
+export function variantMatches(fieldVariant: string | null | undefined,
+                               orthography: string): boolean {
+    return isWildVariant(fieldVariant) || fieldVariant === orthography;
+}
+
+/**
+ * Do two stored variant values match in SOME shared orthography?  (The pair
+ * form of variantMatches: true iff ∃O with variantMatches(a,O) ∧
+ * variantMatches(b,O) — a wildcard overlaps everything, otherwise exact.)
+ * Duplicate detection's "same orthography" is this, not raw equality: 'mm'
+ * vs 'mm-li' IS a same-orthography pair.
+ */
+export function variantsOverlap(a: string | null | undefined,
+                                b: string | null | undefined): boolean {
+    return isWildVariant(a) || isWildVariant(b) || a === b;
+}
+
+/**
+ * The SQL twin of variantMatches, shaped per tag by $allowAll
+ * (fix-orthographies.md: $allowAll is a QUERY-PLANNING fact): a tag without
+ * it keeps the tight, index-friendly exact form; an $allowAll tag must query
+ * exact-or-wildcard.  `column`/`orthographyParam` are spliced verbatim —
+ * pass identifiers/named params, never data.
+ *
+ * (Target-model semantics: no legacy-blank tolerance here.  Pre-migration
+ * SQL consumers must handle blanks explicitly if they need them.)
+ */
+export function variantMatchSql(flags: model.VariantFlags, column: string,
+                                orthographyParam: string): string {
+    return flags.allowAll
+        ? `${column} IN (${orthographyParam}, 'mm')`
+        : `${column} = ${orthographyParam}`;
+}

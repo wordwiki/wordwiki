@@ -12,7 +12,8 @@ import { withTestDb, TestTimeline, mkEntry, mkChild, mkTombstone, type Fixture }
 import * as model from "./model.ts";
 import { FindingsReport } from "./findings.ts";
 import { scanVariants } from "./variant-scan.ts";
-import { variantPolicyByTag, allowedVariantValues } from "./variant-policy.ts";
+import { variantPolicyByTag, allowedVariantValues, variantMatches, variantsOverlap,
+         variantMatchSql } from "./variant-policy.ts";
 import { validateVariantInvariants, factViewsFromVersionedDb } from "./versioned-db-validate.ts";
 
 const VOCABULARY = ['mm-li', 'mm-sf', 'mm-mp', 'mm-pm', 'mm'];
@@ -58,6 +59,26 @@ test("allowedVariantValues grants 'mm' only under $allowAll", () => {
     assert(!allowedVariantValues({}, VOCABULARY).has('mm'));
     assert(allowedVariantValues({allowAll: true}, VOCABULARY).has('mm'));
     assert(allowedVariantValues({}, VOCABULARY).has('mm-li'));
+});
+
+test("variantMatches: exact, 'mm' wildcard, legacy blank tolerance", () => {
+    assert(variantMatches('mm-li', 'mm-li'));
+    assert(!variantMatches('mm-li', 'mm-sf'));
+    assert(variantMatches('mm', 'mm-sf'));      // wildcard renders everywhere
+    assert(variantMatches(null, 'mm-sf'));      // legacy blank, pre-migration
+    assert(variantMatches('', 'mm-li'));
+});
+
+test("variantsOverlap: the pair form", () => {
+    assert(variantsOverlap('mm-li', 'mm-li'));
+    assert(!variantsOverlap('mm-li', 'mm-sf'));
+    assert(variantsOverlap('mm', 'mm-li'));     // the doc's mm-vs-mm-li case
+    assert(variantsOverlap(null, 'mm-sf'));
+});
+
+test("variantMatchSql: exact without $allowAll, exact-or-'mm' with", () => {
+    assertEquals(variantMatchSql({}, 'variant', ':o'), "variant = :o");
+    assertEquals(variantMatchSql({allowAll: true}, 'variant', ':o'), "variant IN (:o, 'mm')");
 });
 
 // --- seeded scan --------------------------------------------------------------

@@ -458,12 +458,22 @@ renders next to the value without pretending we have a locale model.
 
 The *data migration* is one event, but the code lands in test-green stages:
 
-1. Parser support for the new `$` flags (+ the variant-leaves parse rule);
-   the findings-report machinery (the scan subcommand is its first client);
-   validator invariants (warn mode).  Read-only, no risk, useful
-   immediately.
-2. Editor/render behavior tolerant of both old and new data
-   (`variantMatches`, working-orthography, annotation fields + UI).
+1. **BUILT (2026-07-07).**  Parser support for the new `$` flags (+ the
+   variant-leaves parse rule); the findings-report machinery (findings.ts;
+   the `scan-variants` subcommand is its first client — live gate: PASS);
+   validator invariants (warn mode, aggregated in verify-workspace).
+2. **BUILT (2026-07-07).**  `variantMatches`/`variantsOverlap` + the
+   $allowAll-driven SQL twin in variant-policy.ts (duplicate-spelling
+   detection adopted: 'mm' vs 'mm-li' is now a same-orthography pair;
+   legacy blank matches everything until the migration); working
+   orthography as `primary_orthography` on the user record (new-content
+   variant defaults from it, `$defaultAll` → 'mm'; run `upgrade-db --apply`
+   per instance; the session-level switcher remains future); annotation
+   fields (`aside` column added + late-column ALTER at startup, internal
+   note reuses `note`) with disclosure inputs in the edit/insert dialogs,
+   display next to the value (aside all audiences via the `$aside` JSON
+   projection, note internal-only), and distinct aside/internal-note chips
+   in the was-diff.
 3. The migration command (per-tag mapping, `--expect-no-changes`), run it,
    then flip the validator to throw-on-load.
 4. Auto-transliteration (section above): the button + button rules, the
@@ -561,10 +571,12 @@ mechanism.)
   status draft's migration mapping assumes yes).
 - Cleanup-report details: link-base config for the old live server; which
   reports (spl garbage variants, blank variants per tag, filled $notVariant).
-- Review-UI treatment of annotation deltas (show note-only changes
-  distinctly from value changes).
+- ~~Review-UI treatment of annotation deltas~~ (built 2026-07-07: the
+  was-diff names aside / internal-note deltas as their own chips).
 - Session-level working-orthography UI (picker placement; does it also drive
-  the editor's render orthography or only new-content defaults?).
+  the editor's render orthography or only new-content defaults?).  Stage 2
+  shipped the narrow version: `primary_orthography` on the user record
+  drives new-content defaults only; no session switcher yet.
 - Watson spellings (att key `watson-spelling`, 257 rows): real orthography
   in the vocabulary + migrate to `spl`, or declared out-of-scope?
 - Lifecycle synthesis for the 983 no-status entries (Unknown? InProcess?).

@@ -40,6 +40,18 @@ test("dup rule: a cross-orthography collision with NO shared orthography warns",
     assertEquals(c, [{text: "samqwan", myVariant: 'mm-li', otherVariant: 'mm-sf'}]);
 });
 
+test("dup rule: 'mm' vs a specific orthography is a SAME-orthography collision", () => {
+    // 'mm' renders in every orthography (variant-policy variantsOverlap), so
+    // this is not a distinguishable cross-orthography coincidence.
+    const c = conflictingSpellings([{text: "samqwan", variant: 'mm'}], [li("samqwan")]);
+    assertEquals(c, [{text: "samqwan", myVariant: 'mm', otherVariant: 'mm-li'}]);
+});
+
+test("dup rule: a legacy blank variant collides as every orthography", () => {
+    const c = conflictingSpellings([{text: "samqwan", variant: null}], [sf("samqwan")]);
+    assertEquals(c, [{text: "samqwan", myVariant: null, otherVariant: 'mm-sf'}]);
+});
+
 // --- db probe + editor warning + report --------------------------------------
 
 // Two colliding entries (same text, same orthography), one bystander.

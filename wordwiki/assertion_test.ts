@@ -9,7 +9,7 @@ import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals } from "../liminal/testing/assert.ts";
 import { Db, setDefaultDb } from "../liminal/db.ts";
 import * as timestamp from "../liminal/timestamp.ts";
-import { createAssertionDml, highestTimestamp, highestTimestampQueries } from "./assertion.ts";
+import { createAssertionDml, ensureAssertionColumns, highestTimestamp, highestTimestampQueries } from "./assertion.ts";
 
 const EOT = timestamp.END_OF_TIME;
 
@@ -72,4 +72,27 @@ test("highestTimestamp: both queries stay on their covering indexes (no scan)", 
                    `plan for '${sql}' degraded to a scan: ${details.join(' | ')}`);
         }
     });
+});
+
+// --- late assertion columns ---------------------------------------------------
+
+test("ensureAssertionColumns adds 'aside' to a pre-aside table, idempotently", () => {
+    const scratch = Db.openMemory();
+    setDefaultDb(scratch);
+    try {
+        // A legacy table created WITHOUT the aside column (as live instances
+        // predating the per-tuple annotations have).
+        scratch.executeStatements(
+            createAssertionDml('dict').replaceAll(/^.*aside TEXT,\n/gm, ''));
+        const cols = () => scratch.prepare<{name: string}, {tbl: string}>(
+            `SELECT name FROM pragma_table_info(:tbl)`).all({tbl: 'dict'}).map(r => r.name);
+        assert(!cols().includes('aside'));
+        ensureAssertionColumns('dict');
+        assert(cols().includes('aside'));
+        ensureAssertionColumns('dict');   // second run: no-op, no throw
+        assert(cols().includes('aside'));
+    } finally {
+        setDefaultDb(undefined);
+        scratch.close();
+    }
 });

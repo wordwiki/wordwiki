@@ -27,7 +27,7 @@
  */
 import { db, boolnum } from "../liminal/db.ts";
 import { Table, PrimaryKeyField, ForeignKeyField, BooleanField, StringField,
-         EmailField, SecretField, DateTimeField } from "../liminal/table.ts";
+         EmailField, SecretField, DateTimeField, EnumField } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block, plural } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
@@ -68,6 +68,12 @@ export interface User {
     name: string;
     email?: string;
 
+    // The orthography this editor works in (fix-orthographies.md): their NEW
+    // dictionary content's variant defaults from it (the future session-level
+    // working-orthography switcher seeds from it too).  Most editors have
+    // exactly one; unset = no default is applied.
+    primary_orthography?: string;
+
     // Comma-separated roles: admin / publish / testing.
     permissions?: string;
 
@@ -92,6 +98,12 @@ export class UserTable extends Table<User> {
                                          prompt: 'Username (short code stored in dictionary data - cannot be changed later)'}),
             new StringField('name', {}),
             new EmailField('email', {nullable: true}),
+            // Real orthographies only - the 'mm' wildcard is a stored-value
+            // convention, not something a person writes in.
+            new EnumField('primary_orthography',
+                Object.fromEntries(Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm')),
+                {nullable: true,
+                 prompt: 'Primary orthography (their new dictionary content defaults to it)'}),
             new StringField('permissions', {nullable: true, edit: admin,
                                             prompt: 'Permissions (admin, publish, testing, approve, ' +
                                                     'edit-users, edit-categories, edit-lexical-forms)'}),

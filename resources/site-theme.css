@@ -219,6 +219,21 @@ body {
 .lm-change-note summary { cursor: pointer; }
 .lm-change-note[open] summary { margin-bottom: .25rem; }
 
+/* The per-tuple annotation disclosures (lexeme-editor.ts
+   AnnotationDisclosureField): same closed-by-default pattern as the change
+   note, but they PERSIST on the tuple (open pre-filled when a value exists).
+   The internal-note textarea is visibly muted so it never reads as public
+   content while typing. */
+.lm-annotation summary { cursor: pointer; }
+.lm-annotation[open] summary { margin-bottom: .25rem; }
+.lm-annotation textarea.lm-annotation-note { background: var(--bs-tertiary-bg, #f8f9fa); }
+
+/* The rendered annotations on a fact's line (render-entry-meta.ts annotate):
+   the ASIDE is public content - quiet but not editorial; the INTERNAL note
+   is unmistakably editorial (muted + lock), editor audience only. */
+.lm-me-aside { font-style: italic; color: var(--bs-secondary-color, #6c757d); }
+.lm-me-internal-note { font-style: italic; }
+
 /* The reference scan (render-entry-meta.ts).  display:block + line-height:0 so
    the scan reserves its own height (an inline svg lets the transcription flow
    into it).  The scan renders at natural width - it fits the single-column word

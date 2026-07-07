@@ -140,9 +140,15 @@ export interface Assertion {
     confidence_expr?: string;
 
     /**
-     * Notes on this assertion
+     * Per-tuple annotations (fix-orthographies.md "Per-tuple annotations"):
+     * `note` is the INTERNAL note (long-unused column, repurposed - never
+     * published; researchers/collaborators); `aside` is the PUBLIC
+     * qualifying text rendered next to the field's value ("(Cape Breton)").
+     * Columns on the tuple, so they inherit the tuple's own orthography
+     * scope and participate in revision tracking like any field.
      */
     note?: string;
+    aside?: string;
 
     /**
      * Our present level of confidence (0-10) in this fact.
@@ -328,11 +334,33 @@ export const assertionFieldNames: Array<keyof Assertion> = [
 
     "order_key", "variant", "target_variant", "confidence_expr",
 
-    "note",
+    "note", "aside",
 
     "change_by_username", "change_action", "change_arg", "change_note",
     ];
 
+
+/**
+ * Columns added to the assertion tables after instances shipped: CREATE
+ * TABLE IF NOT EXISTS never alters an existing table (unlike new index
+ * lines, which do apply), so late columns need this explicit idempotent
+ * ALTER - run wherever createAssertionDml is applied (serve startup,
+ * test-db setup).
+ */
+const lateAssertionColumns: [name: string, type: string][] = [
+    // fix-orthographies per-tuple annotations: the public 'aside' (the
+    // internal note reuses the long-unused `note` column, so only aside is
+    // structurally new).
+    ['aside', 'TEXT'],
+];
+
+export function ensureAssertionColumns(tableName: string) {
+    const have = new Set(db().prepare<{name: string}, {tbl: string}>(
+        `SELECT name FROM pragma_table_info(:tbl)`).all({tbl: tableName}).map(r => r.name));
+    for(const [name, type] of lateAssertionColumns)
+        if(!have.has(name))
+            db().executeStatements(`ALTER TABLE ${tableName} ADD COLUMN ${name} ${type};`);
+}
 
 export const createAssertionDml = (tableName:string)=>block`
 /**/   CREATE TABLE IF NOT EXISTS ${tableName}(
@@ -386,6 +414,7 @@ export const createAssertionDml = (tableName:string)=>block`
 /**/       confidence_expr TEXT,
 /**/
 /**/       note TEXT,
+/**/       aside TEXT,
 /**/
 /**/       change_by_username TEXT,
 /**/       change_action TEXT,

@@ -114,6 +114,11 @@ export class WorkspaceNode implements entryMeta.EntryNode {
     identity(): entryMeta.TupleIdentity {
         return {entryId: this.entryId, factId: this.tq.src.id, parentFactId: this.parentFactId};
     }
+
+    annotation(name: 'aside' | 'note'): string | undefined {
+        const a = this.tq.mostRecentTupleVersion?.assertion;
+        return (name === 'aside' ? a?.aside : a?.note) || undefined;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -478,6 +483,57 @@ function changeNoteWidget(): table.Field {
 function formChangeNote(form: Record<string, any>): string | undefined {
     const n = typeof form.change_note === 'string' ? form.change_note.trim() : '';
     return n || undefined;
+}
+
+/**
+ * A per-tuple annotation input (fix-orthographies.md "Per-tuple
+ * annotations"), as a disclosure like the change note - but UNLIKE the
+ * change note it PERSISTS on the tuple, so when a value exists the
+ * disclosure opens pre-filled.  Two instances: the public 'aside' and the
+ * internal note (which reuses the assertion `note` column).
+ */
+class AnnotationDisclosureField extends TextAreaField {
+    constructor(name: string, private summary: string, private help: string,
+                private textClass: string) {
+        super(name, 2, {nullable: true});
+    }
+    override renderInput(value: any): Markup {
+        const text = String(value ?? '');
+        return [
+            ['div', {class: 'col-12'},
+             ['details', {class: 'lm-annotation', ...(text ? {open: ''} : {})},
+              ['summary', {class: 'text-muted small'}, this.summary],
+              ['div', {class: 'form-text mt-1'}, this.help],
+              ['textarea', {class: 'form-control ' + this.textClass, name: this.name,
+                            id: 'input-'+this.name, rows: this.rows},
+               text]]]];
+    }
+}
+
+/** The two annotation widgets appended (with the change note) to the
+ *  edit/insert dialogs.  Form names are prefixed so they can never collide
+ *  with a relation's own field names ('note' is a real field on two
+ *  relations). */
+function annotationWidgets(): table.Field[] {
+    return [
+        new AnnotationDisclosureField('fact_aside',
+            'Aside — shown with this value…',
+            'A short public qualifier displayed right next to this value — '
+            + 'e.g. “(Cape Breton)”. It is published with the word.',
+            'lm-annotation-aside'),
+        new AnnotationDisclosureField('fact_note',
+            'Internal note — never published…',
+            'Internal information about this value, for the dictionary team '
+            + 'and future researchers. Never shown on the public site.',
+            'lm-annotation-note text-muted'),
+    ];
+}
+
+/** An annotation's value from a dialog postback, normalized: trimmed,
+ *  undefined when blank (a cleared input REMOVES the annotation). */
+function formAnnotation(form: Record<string, any>, name: string): string | undefined {
+    const v = typeof form[name] === 'string' ? form[name].trim() : '';
+    return v || undefined;
 }
 
 /** A field whose value is free text (so a character/word diff is meaningful) -
@@ -1082,14 +1138,26 @@ export class LexemeEditor {
         const norm = (v: any) => (v === null || v === undefined || v === '') ? null : v;
         const sameValues = rf.scalarFields.every(f => f instanceof model.PrimaryKeyField
             || norm((baseline as any)[f.bind]) === norm((review.content as any)[f.bind]));
-        if(sameValues)
+        // Annotation (aside / internal note) deltas are shown DISTINCTLY from
+        // value deltas, so an approver sees at a glance that only a note
+        // moved (fix-orthographies.md "Per-tuple annotations").
+        const annChips: Markup[] = [];
+        if(norm(baseline.aside) !== norm(review.content.aside))
+            annChips.push([' ', ['span', {class: 'lm-cl-chip lm-cl-chip-edited'},
+                                 'aside', baseline.aside ? ' changed' : ' added']]);
+        if(norm(baseline.note) !== norm(review.content.note))
+            annChips.push([' ', ['span', {class: 'lm-cl-chip lm-cl-chip-edited'},
+                                 'internal note', baseline.note ? ' changed' : ' added']]);
+        if(sameValues) {
+            if(annChips.length > 0) return annChips;   // annotation-only edit: name it
             return ['span', {class: 'lm-cl-chip lm-cl-chip-edited'},
                     baseline.order_key !== review.content.order_key ? 'moved' : 'updated'];
+        }
         const fromText = factText(rf, baseline), toText = factText(rf, review.content);
         const old = fromText !== toText
             ? diffValues(fromText, toText).from
             : renderAssertionValues(rf, baseline);
-        return ['span', {class: 'lm-me-chg-was'}, ' was: ', old];
+        return [['span', {class: 'lm-me-chg-was'}, ' was: ', old], annChips];
     }
 
     /** Every pending fact of the entry, for the changes bar and approve-all.
@@ -1796,8 +1864,13 @@ export class LexemeEditor {
         // The optional change note starts empty (it describes THIS edit, not a
         // prior one) and is read raw on save into change_note - it rides the
         // version like a comment/revert reason and shows in the review timeline.
-        const form = action.renderParamForm([...widgets, noteWidget],
-            {...defaults, change_note: ''}, {
+        // The annotations (aside / internal note) PERSIST on the tuple, so
+        // they open pre-filled from the current version.
+        const form = action.renderParamForm([...widgets, ...annotationWidgets(), noteWidget],
+            {...defaults,
+             fact_aside: current.assertion.aside ?? '',
+             fact_note: current.assertion.note ?? '',
+             change_note: ''}, {
             title: `Edit ${rel.prompt}`,
             submitLabel: 'Save',
             hidden,
@@ -1858,9 +1931,24 @@ export class LexemeEditor {
                && Object.hasOwn((f.style as any).$options ?? {}, me))
                 defaults[f.name] = me;
 
+        // NEW content's orthography (fix-orthographies.md): a variant field
+        // defaults from the editing user's working orthography; $defaultAll
+        // fields default to the 'mm' wildcard instead.  As with the speaker
+        // default, the before- snapshot stays '', so an untouched default
+        // still submits as a change and is saved.  (Until the flagged schema
+        // lands, all flags read false and the working-orthography default
+        // applies to every variant field - visible in the dialog, and the
+        // migration drops the soon-to-be-$notVariant columns anyway.)
+        for(const f of fields)
+            if(f instanceof model.VariantField && !f.variantFlags.notVariant)
+                defaults[f.name] = f.variantFlags.defaultAll
+                    ? 'mm'
+                    : this.app.currentUserPrimaryOrthography();
+
         // Self-lift, as in editDialog (composable wherever it is loaded from).
         return [['script', {}, 'setTimeout(showModalEditor)'],
-                action.renderParamForm([...widgets, changeNoteWidget()], defaults, {
+                action.renderParamForm([...widgets, ...annotationWidgets(), changeNoteWidget()],
+                    {fact_aside: '', fact_note: '', ...defaults}, {
                     title: `New ${rel.prompt}`,
                     submitLabel: 'Save',
                     hidden,
@@ -2180,12 +2268,18 @@ export class LexemeEditor {
                              'Please close the dialog and re-open it to see the latest version.'};
 
         const changed = parseDialogFields(rel, form, this.vocabs);
-        if(Object.keys(changed).length === 0)
+        // The annotations are tuple state like any field: an annotation-only
+        // edit is a real edit (new version, normal approval flow).
+        const aside = formAnnotation(form, 'fact_aside');
+        const note = formAnnotation(form, 'fact_note');
+        const annotationsChanged = aside !== (current.assertion.aside || undefined)
+                                || note !== (current.assertion.note || undefined);
+        if(Object.keys(changed).length === 0 && !annotationsChanged)
             return this.reload(this.mutationTargets(entry_id, current.assertion, 'self', mode));
 
         // Re-assert the whole tuple: current values merged with the changes.
         // Starting from a copy of the current assertion preserves the columns
-        // the dialog doesn't model (tags, note, confidence, change_*).
+        // the dialog doesn't model (tags, confidence, change_*).
         const values = {...current.domainFields, ...changed};
         const newAssertion: Assertion = {
             ...current.assertion,
@@ -2196,6 +2290,7 @@ export class LexemeEditor {
             ...this.changeStamp(),
             ...unapprovedDimension,
             change_note: formChangeNote(form),
+            aside, note,
         };
         setAssertionFields(newAssertion, rel, values);
 
@@ -2251,6 +2346,8 @@ export class LexemeEditor {
             valid_to: timestamp.END_OF_TIME,
             ...this.changeStamp(),
             change_note: formChangeNote(form),
+            aside: formAnnotation(form, 'fact_aside'),
+            note: formAnnotation(form, 'fact_note'),
             order_key: this.insertOrderKey(relation, form),
         } as Assertion;
         setAssertionFields(newAssertion, rel, changed);

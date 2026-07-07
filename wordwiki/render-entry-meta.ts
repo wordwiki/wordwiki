@@ -113,6 +113,11 @@ export interface EntryNode {
     value(f: model.Field): any;
     // Versioned identity (editor only); undefined for plain JSON.
     identity?(): TupleIdentity | undefined;
+    // Per-tuple annotations (fix-orthographies.md): 'aside' is the public
+    // qualifying text rendered next to the tuple's value; 'note' is the
+    // internal annotation (editor audience only - the JSON projection never
+    // carries it, so JsonNode naturally yields undefined for it).
+    annotation?(name: 'aside' | 'note'): string | undefined;
 }
 
 /** Backend over the projected Entry JSON (relations are arrays keyed by field
@@ -124,6 +129,11 @@ export class JsonNode implements EntryNode {
         return Array.isArray(a) ? a.map(o => new JsonNode(o)) : [];
     }
     value(f: model.Field): any { return this.obj?.[(f as any).name]; }
+    // Only the PUBLIC aside is projected (workspace TupleVersion.toJSON);
+    // asking for the internal note is answered by its absence.
+    annotation(name: 'aside' | 'note'): string | undefined {
+        return name === 'aside' ? this.obj?.$aside ?? undefined : undefined;
+    }
 }
 
 // --- Small pure helpers (no config) ------------------------------------------
@@ -225,8 +235,26 @@ export class EntryRenderer {
     /** Wrap a tuple's rendered value as an editable surface (edit mode), or
      *  return it plain (read).  `tuple` must carry identity in edit mode. */
     protected surface(rf: model.RelationField, tuple: EntryNode, body: Markup): Markup {
+        const decorated = this.annotate(tuple, body);
         const id = this.editing && tuple.identity?.();
-        return id ? this.editing!.tupleSurface(rf, id, body) : body;
+        return id ? this.editing!.tupleSurface(rf, id, decorated) : decorated;
+    }
+
+    /** Append the tuple's annotations to its rendered value: the public
+     *  aside for every audience, the internal note only for the internal one
+     *  (the editor).  They ride INSIDE the surface, so an annotation edit
+     *  refreshes with the fact fragment like any value change. */
+    protected annotate(tuple: EntryNode, body: Markup): Markup {
+        const aside = tuple.annotation?.('aside');
+        const note = this.audience === 'internal' ? tuple.annotation?.('note') : undefined;
+        if (!aside && !note) return body;
+        const extra: Markup[] = [];
+        if (aside) extra.push(['span', { class: 'lm-me-aside' }, ' ', aside]);
+        if (note) extra.push(['span', { class: 'lm-me-internal-note text-muted small' },
+                              ' \u{1F512} ', note]);
+        // Append into the body's own element so the annotations share the
+        // value's line (the body is a block element for most tuple shapes).
+        return Array.isArray(body) ? [...body, extra] : [body, extra];
     }
 
     /** The empty-relation placeholder (edit mode only): a quiet line + an

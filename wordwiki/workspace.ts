@@ -447,7 +447,13 @@ export class TupleVersion {
     }
 
     toJSON(): Record<string,any> {
-        return {...this.domainFields};
+        // The PUBLIC aside annotation rides the projection under a $-key (no
+        // schema field can be named with a $, so it cannot collide) - this is
+        // how it reaches the read renderer and the public export.  The
+        // INTERNAL note deliberately does NOT: the projected JSON feeds
+        // public rendering (fix-orthographies.md "Per-tuple annotations").
+        return {...this.domainFields,
+                ...(this.assertion.aside ? {$aside: this.assertion.aside} : {})};
     }
 
     dump(): any {
