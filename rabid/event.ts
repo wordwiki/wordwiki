@@ -471,13 +471,13 @@ export class EventTable extends Table<Event> {
             this.renderEventSummary(event_id, {titleLink: false, hideTitle: true,
                                                editableCheckins: true, hideNotes: false,
                                                bare: true, hideCheckins: true}),
+            // "Volunteers": the checked-in face grid (match faces to names on a busy
+            // shift) - first, before the activity log.  The summary's Checked-in row
+            // is elided above (hideCheckins) in favour of this.  Not on a catch-all.
+            e.is_catch_all ? undefined : rabid.event_checkin.renderCheckinGrid(event_id),
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
-            // "Checked in" as a face grid (match faces to names on a busy shift) -
-            // the summary's Checked-in row is elided above (hideCheckins) in favour
-            // of this.  Not on a catch-all (no attendance there).
-            e.is_catch_all ? undefined : rabid.event_checkin.renderCheckinGrid(event_id),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
             // heading like the checklists below.  Wrapped in a stable #tasks anchor.
@@ -506,7 +506,7 @@ export class EventTable extends Table<Event> {
     // slash-separated secondary links (not default browser blue), a quiet strip.
     private renderSectionNav(): Markup {
         const links: [string, string][] = [
-            ['services', 'Services'], ['sales', 'Sales & giveaways'], ['checked-in', 'Checked in'],
+            ['volunteers', 'Volunteers'], ['services', 'Services'], ['sales', 'Sales & giveaways'],
             ['tasks', 'Tasks'], ['photos', 'Photos'], ['retrospectives', 'Retrospectives'],
         ];
         return [h.nav, {class: 'lm-section-nav small mb-4 pb-2 border-bottom', 'aria-label': 'Sections'},
@@ -2260,9 +2260,9 @@ export class EventCheckinTable extends Table<EventCheckin> {
         const props = liveReloadableProps([this.fkKey('event_id', event_id)],
             `rabid.event_checkin.renderCheckinGrid(${event_id})`);
         const items = this.checkinMenuItems(event_id, checkins);
-        return [h.div, {...props, id: 'checked-in'},
+        return [h.div, {...props, id: 'volunteers'},
             [h.div, {class: 'lm-doc-section-head'},
-             [h.h4, {class: 'lm-doc-section-label'}, 'Checked in'],
+             [h.h4, {class: 'lm-doc-section-label'}, 'Volunteers'],
              items.length ? action.actionMenu(items, {ariaLabel: 'Check-in actions'}) : undefined],
             [h.div, {class: 'lm-subsection'},
              checkins.length === 0

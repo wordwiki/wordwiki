@@ -225,7 +225,7 @@ test("checked-in volunteers render as a face grid (photo or outline); summary ro
         await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0, $arg1)`, id, carol));
 
         const grid = await asUser(bob, () => renderRoute(`rabid.event_checkin.renderCheckinGrid(${id})`));
-        assert(hasText(grid, 'Checked in'));
+        assert(hasText(grid, 'Volunteers'));
         assert(findByTestId(grid, `face-${bob}`) && findByTestId(grid, `face-${carol}`),
                'a tile per checked-in volunteer');
         const imgs = findAll(grid, (m: any) => Array.isArray(m) && m[0] === 'img');
