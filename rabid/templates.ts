@@ -17,6 +17,9 @@ export interface PageContent {
     // Show admin-only Admin-menu items (e.g. rebuild photo cache).  Set by the
     // dispatcher from the viewer's roles.
     isAdmin?: boolean;
+    // Show host/admin-only nav (e.g. "Today's log", which materialises the day's
+    // catch-all event).  Set by the dispatcher from the viewer's roles.
+    isHostOrAdmin?: boolean;
     // The liveness poller's bootstrap (LiminalApp.liveClientConfig), rendered
     // as window.__liminalLive.  Set by the dispatcher; the poller only runs on
     // pages that also contain an 'lm-live' fragment.
@@ -116,7 +119,7 @@ export function pageTemplate(content: PageContent): any {
 
          [h.body, {},
 
-          navBar(content.showTestClientLink, content.isAdmin),
+          navBar(content.showTestClientLink, content.isAdmin, content.isHostOrAdmin),
 
           // TODO probably move this somewhere else
           [h.audio, {id:'audioPlayer', preload:'none'},
@@ -147,7 +150,8 @@ export function pageTemplate(content: PageContent): any {
     );
 }
 
-export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = false): any {
+export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = false,
+                       isHostOrAdmin: boolean = false): any {
     return [
         [h.nav, {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
          [h.div, {class:"container-fluid"},
@@ -174,6 +178,14 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
             [h.li, {class:"nav-item"},
              [h.a, {class:"nav-link", href:"/events"}, 'Events'],
             ], //li
+
+            // Today's log: the day's Ad-hoc catch-all event, materialised on
+            // demand.  Host/admin only - it's where they record drop-in activity.
+            isHostOrAdmin
+                ? [h.li, {class:"nav-item"},
+                   [h.a, {class:"nav-link", href:"/todaysLog"}, "Today's log"],
+                  ] //li
+                : undefined,
 
             [h.li, {class:"nav-item"},
              [h.a, {class:"nav-link", href:"/service"}, 'Service'],
