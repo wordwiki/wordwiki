@@ -488,9 +488,11 @@ The *data migration* is one event, but the code lands in test-green stages:
    variant warnings 28,031 → 5 (exactly the hand-triage spellings).  The
    LIVE cleanup report (`wordwiki.variants.cleanupReport()`, nav "Variant
    Cleanup") is the staff triage queue — same findings vocabulary, second
-   renderer, drains as fixes land.  STILL TO DO at the real event: land the
-   flagged entry-schema (the migration refuses to run without it), add
-   `migrate-variants` to migrateDevDb.sh, run per instance, THEN flip the
+   renderer, drains as fixes land.  The flagged entry-schema is LANDED
+   (2026-07-07, dz's annotations) and `migrate-variants` is step 10 of
+   migrateDevDb.sh (+ steps 13/14 of the production-cutover recipe;
+   committed record: variant-migration-report.md).  STILL TO DO at the real
+   event: run per instance (staging, then production), THEN flip the
    variant invariants from verify-workspace warnings to throw-on-load
    (blocked until the 5 hand-triage spellings are resolved by the staff).
 4. Auto-transliteration (section above): the button + button rules, the
