@@ -1,0 +1,181 @@
+// deno-lint-ignore-file no-explicit-any
+/**
+ * Auto-transliteration (auto-transliterate.ts + transliterate.ts): the
+ * corpus-derived rules, the proposal verb's button rules (fill gaps only,
+ * never re-offer rejected output, version stamp, robot author), approve-all's
+ * structural exclusion + the explicit escape hatch, the evidence-in-row, and
+ * the corrections report.
+ */
+import { test } from "../liminal/testing/test.ts";
+import { assert, assertEquals } from "../liminal/testing/assert.ts";
+import { markupToString } from "../liminal/markup.ts";
+import { withTestDb, as, bornApprove, renderRoute, invoke,
+         TestTimeline, mkEntry, mkChild, type Fixture } from './testing.ts';
+import { db } from '../liminal/db.ts';
+import * as timestamp from '../liminal/timestamp.ts';
+import { transliterateLiToSf, TRANSLITERATOR_VERSION } from './transliterate.ts';
+import { proposeTransliterations, pureTextRelations,
+         AUTO_TRANSLITERATE_USERNAME } from './auto-transliterate.ts';
+
+const EOT = timestamp.END_OF_TIME;
+
+// --- the rules (corpus-verified examples) -------------------------------------
+
+test("rules: g→k and the sonorant-cluster apostrophe (corpus-verified)", () => {
+    assertEquals(transliterateLiToSf('angamatl'), 'ankamatl');   // g→k; nk takes no '
+    assertEquals(transliterateLiToSf('weltaq'), "wel'taq");      // l before t gains '
+    assertEquals(transliterateLiToSf('anawtig'), 'anawtik');     // w+t: NO insertion
+    assertEquals(transliterateLiToSf('Gesig'), 'Kesik');         // case preserved
+    assertEquals(transliterateLiToSf("gnt"), "kn't");            // n before t gains the apostrophe
+});
+
+test("rules: the v1 scope is schema-driven pure variant text relations", async () => {
+    await withTestDb((fx) => {
+        const tags = [...pureTextRelations(fx.ww.dictSchema).keys()].sort();
+        // Pure text: spellings, example texts, alternate forms, regional
+        // forms.  NOT the $mixed reference fields, NOT recordings, NOT
+        // status/todo ($metaVariant), NOT related_entry (no variant at all).
+        assertEquals(tags, ['alx', 'etx', 'orf', 'spl']);
+    });
+});
+
+// --- the proposal verb ---------------------------------------------------------
+
+function seedWord(fx: Fixture, entry_id = 1000, li = 'angamatl'): void {
+    const tl = new TestTimeline();
+    const e = mkEntry(entry_id, tl.next());
+    fx.ww.applyTransaction([e], {quiet: true});
+    fx.ww.applyTransaction([mkChild(e, 'spl', entry_id + 1, tl.next(),
+                                    {attr1: li, variant: 'mm-li'})], {quiet: true});
+    bornApprove(fx.ww);
+}
+
+const sfRows = (entry_id: number) => db().all<any, any>(
+    `SELECT * FROM dict WHERE ty = 'spl' AND id1 = :e AND variant = 'mm-sf'
+     ORDER BY valid_from, assertion_id`, {e: entry_id});
+
+test("transliterate: proposes a pending robot fact; fill-gaps + rejected rules", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);
+        const r = await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        assertEquals(r.action, 'reload');
+
+        const rows = sfRows(1000);
+        assertEquals(rows.length, 1);
+        const p = rows[0];
+        assertEquals(p.attr1, 'ankamatl');                              // the rules ran
+        assertEquals(p.change_by_username, AUTO_TRANSLITERATE_USERNAME); // robot author
+        assertEquals(p.change_arg, TRANSLITERATOR_VERSION);             // version stamp
+        assertEquals(p.published_from, null);                           // pending, not approved
+
+        // FILL GAPS ONLY: a second click proposes nothing (live sf exists).
+        const r2 = await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        assertEquals(r2.action, 'alert');
+        assertEquals(sfRows(1000).length, 1);
+
+        // REJECT the proposal (a revert of a never-published fact = a
+        // tombstone), then click again: the SAME output is never re-offered.
+        await as(fx, 'djz', () => fx.ww.lexemeOps.revertFact(p.id, 'not a word'));
+        const r3 = await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        assertEquals(r3.action, 'alert');
+        assert(String(r3.message).includes('rejected'), 'names the reason');
+        const direct = proposeTransliterations(fx.ww, 1000);
+        assertEquals(direct.proposed, 0);
+        assertEquals(direct.rejectedBefore, 1);
+    });
+});
+
+test("transliterate: never proposes over an existing human Smith-Francis text", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);
+        const tl = new TestTimeline();
+        const e = {assertion_id: 1000, id: 1000, ty: 'ent', ty0: 'dct', ty1: 'ent', id1: 1000} as any;
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1500, tl.next(),
+                                        {attr1: 'human-sf', variant: 'mm-sf'})], {quiet: true});
+        const stats = proposeTransliterations(fx.ww, 1000);
+        assertEquals(stats.proposed, 0);
+        assertEquals(stats.filledAlready, 1);
+    });
+});
+
+// --- approve-all exclusion + escape hatch --------------------------------------
+
+test("approve-all excludes robot proposals; the explicit hatch approves them", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);
+        // A human pending edit AND a robot proposal.
+        await as(fx, 'test', () => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
+            entry_id: '1000', fact_id: '1001', replaces_assertion_id: '1001',
+            'before-text': 'angamatl', text: 'angamatl2', 'before-variant': 'mm-li', variant: 'mm-li',
+        }));
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+
+        // The changes bar names the exclusion and offers the hatch.
+        const bar = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.metaChangesBarFragment(1000, true)')));
+        assert(bar.includes('Approve 1 auto-transliteration'), 'escape hatch offered');
+
+        // Approve all: the human edit publishes, the robot proposal does NOT.
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.approveAllChanges($arg0)`, 1000));
+        const li = db().all<any, any>(
+            `SELECT * FROM dict WHERE ty='spl' AND id1=1000 AND variant='mm-li'
+             AND valid_to = :eot`, {eot: EOT})[0];
+        assert(li.published_to === EOT, 'human edit approved');
+        const sf = sfRows(1000).at(-1);
+        assertEquals(sf.published_from, null, 'robot proposal still pending');
+
+        // The hatch approves it (normal op: robot author, human approver).
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.approveAutoTransliterations($arg0)`, 1000));
+        const approved = sfRows(1000).at(-1);
+        assertEquals(approved.change_action, 'approved');
+        assertEquals(approved.published_to, EOT);
+        assertEquals(approved.change_by_username, 'djz');
+    });
+});
+
+// --- evidence-in-row ------------------------------------------------------------
+
+test("a pending auto fact shows its Listuguj source on the row", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        assert(html.includes('from Listuguj:'), 'evidence label');
+        assert(html.includes('angamatl'), 'the li source text');
+    });
+});
+
+// --- the corrections report ------------------------------------------------------
+
+test("corrections report: corrected and rejected proposals become the corpus", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        const auto = sfRows(1000)[0];
+        // A human CORRECTS the proposal (with the why-note).
+        await as(fx, 'djz', () => invoke(fx.ww, 'wordwiki.lexeme.saveTuple($arg0)', {
+            entry_id: '1000', fact_id: String(auto.id),
+            replaces_assertion_id: String(auto.assertion_id),
+            'before-text': 'ankamatl', text: 'ankamatl-fixed',
+            'before-variant': 'mm-sf', variant: 'mm-sf',
+            change_note: 'irregular form',
+        }));
+
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.transliteration.correctionsReport()')));
+        assert(html.includes('angamatl'), 'li source column');
+        assert(html.includes('ankamatl'), 'the auto proposal');
+        assert(html.includes('ankamatl-fixed'), 'the human correction');
+        assert(html.includes('irregular form'), 'the why-note harvested');
+        assert(html.includes(TRANSLITERATOR_VERSION), 'per-version stats');
+    });
+});

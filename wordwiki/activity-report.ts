@@ -366,7 +366,62 @@ export class ActivityReport {
                     `${undated} published lexeme${undated === 1 ? '' : 's'}`],
                    ' with no creation date']
                 : [],
-            query.restrict_to_user ? [] : this.renderUserLines(buckets, query, windows)];
+            query.restrict_to_user ? [] : this.renderUserLines(buckets, query, windows),
+            this.renderTransliterationQuality(query)];
+    }
+
+    /** OBJECTIVE rubber-stamp detection (fix-orthographies.md
+     *  "Auto-transliteration"): per approver, how many machine proposals
+     *  they approved UNCHANGED vs corrected first.  A diligent reviewer
+     *  corrects some share (~5% expected); a 0%-corrector over hundreds of
+     *  approvals is statistically visible with no human re-review.  The
+     *  transliteration report carries the same split per rules version. */
+    private renderTransliterationQuality(query: ActivityQuery): Markup {
+        // Facts with a robot-authored version: their post-robot human
+        // versions tell the story - an 'approved' version with the SAME text
+        // as the proposal = approved unchanged; a text change = corrected.
+        const autos = db().all<any, any>(
+            `SELECT ty, id, attr1, change_arg FROM dict
+             WHERE change_by_username = '~auto-transliterate'`, {});
+        if(autos.length === 0) return [];
+        const byApprover = new Map<string, {unchanged: number, corrected: number}>();
+        const seen = new Set<string>();
+        for(const auto of autos) {
+            const key = `${auto.ty}:${auto.id}`;
+            if(seen.has(key)) continue;
+            seen.add(key);
+            const versions = db().all<any, any>(
+                `SELECT * FROM dict WHERE ty = :ty AND id = :id ORDER BY valid_from, assertion_id`,
+                {ty: auto.ty, id: auto.id});
+            const approval = versions.find(v => v.change_action === 'approved'
+                                                && v.valid_from !== v.valid_to);
+            if(!approval?.change_by_username) continue;
+            if(query.restrict_to_user && approval.change_by_username !== query.restrict_to_user)
+                continue;
+            const g = byApprover.get(approval.change_by_username) ?? {unchanged: 0, corrected: 0};
+            if(String(approval.attr1 ?? '') === String(auto.attr1 ?? '')) g.unchanged++;
+            else g.corrected++;
+            byApprover.set(approval.change_by_username, g);
+        }
+        if(byApprover.size === 0) return [];
+        return ['div', {class: 'mt-4'},
+            ['h3', {class: 'h6'}, 'Auto-transliteration review quality'],
+            ['p', {class: 'text-muted small mb-2'},
+             'Machine proposals approved unchanged vs corrected first - a healthy reviewer ',
+             'corrects a share of them (the transliterator is not perfect).'],
+            ['table', {class: 'table table-sm w-auto align-middle'},
+             ['thead', {}, ['tr', {},
+              ['th', {}, 'Approver'], ['th', {class: 'text-end'}, 'Approved unchanged'],
+              ['th', {class: 'text-end'}, 'Corrected first'],
+              ['th', {class: 'text-end'}, 'Correction rate']]],
+             ['tbody', {}, [...byApprover.entries()].map(([who, g]) => {
+                 const total = g.unchanged + g.corrected;
+                 return ['tr', {},
+                     ['td', {}, userLabel(who)],
+                     ['td', {class: 'text-end'}, String(g.unchanged)],
+                     ['td', {class: 'text-end'}, String(g.corrected)],
+                     ['td', {class: 'text-end'}, `${Math.round(g.corrected * 100 / total)}%`]];
+             })]]];
     }
 
     // A count cell: zeros read as quiet dashes so the actual activity pops;

@@ -67,6 +67,7 @@ import {renderGroupedChangeList, renderChangeGroup, initials,
         type ChangeEvent, type ChangeKind, type ChangeGroup} from './change-list.ts';
 import {diffValues} from './diff.ts';
 import {isAutomatedUsername} from './user.ts';
+import * as autoTransliterate from './auto-transliterate.ts';
 import {renderDuplicateSpellingWarning, type Spelling} from './spelling-duplicates.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
@@ -472,16 +473,20 @@ function isImportedEvent(a: Assertion): boolean {
  * deliberate path - there is room to say exactly what a change note is.
  */
 class ChangeNoteField extends TextAreaField {
+    constructor(name: string, rows: number, options: table.FieldOptions = {},
+                private summary = 'Add a change note (optional)…',
+                private help = 'A change note travels with this one edit and is shown to '
+                    + 'reviewers in the word’s history. It is not saved on the '
+                    + 'word itself — to record something about the word, use its '
+                    + 'Note field.') {
+        super(name, rows, options);
+    }
     override renderInput(value: any): Markup {
         return [
             ['div', {class: 'col-12'},
              ['details', {class: 'lm-change-note'},
-              ['summary', {class: 'text-muted small'}, 'Add a change note (optional)…'],
-              ['div', {class: 'form-text mt-1'},
-               'A change note travels with this one edit and is shown to '
-               + 'reviewers in the word’s history. It is not saved on the '
-               + 'word itself — to record something about the word, use its '
-               + 'Note field.'],
+              ['summary', {class: 'text-muted small'}, this.summary],
+              ['div', {class: 'form-text mt-1'}, this.help],
               ['textarea', {class: 'form-control', name: this.name, id: 'input-'+this.name,
                             rows: this.rows},
                String(value ?? '')]]]];
@@ -490,9 +495,18 @@ class ChangeNoteField extends TextAreaField {
 
 /** The optional change-note widget appended to the edit/insert dialogs.  Read
  *  raw on save into the version's change_note (it is NOT a relation field), so
- *  an edit can carry a rationale that shows in the review timeline. */
-function changeNoteWidget(): table.Field {
-    return new ChangeNoteField('change_note', 2, {nullable: true, prompt: 'Change note'});
+ *  an edit can carry a rationale that shows in the review timeline.
+ *  `correctingAuto`: editing a pending auto-transliteration - the note prompt
+ *  asks WHY the machine was wrong (loanword, irregular, ...), because every
+ *  such note improves the transliterator (fix-orthographies.md - the
+ *  corrections report harvests them). */
+function changeNoteWidget(correctingAuto = false): table.Field {
+    return correctingAuto
+        ? new ChangeNoteField('change_note', 2, {nullable: true, prompt: 'Change note'},
+            'Why was the auto version wrong? (optional note)…',
+            'A short reason (loanword, irregular form, …) travels with this correction '
+            + 'into the transliteration report and helps improve the transliterator.')
+        : new ChangeNoteField('change_note', 2, {nullable: true, prompt: 'Change note'});
 }
 
 /** The change note from a dialog postback, trimmed (undefined when blank). */
@@ -1047,11 +1061,22 @@ export class LexemeEditor {
               })
             : [];
 
+        // The auto-transliterate button (fix-orthographies.md): ANY editor
+        // may propose - the proposals are normal unapproved facts by the
+        // robot author, one word at a time.
+        const transliterate = action.actionButton('Transliterate\u2026',
+            {kind: 'confirm',
+             expr: `wordwiki.lexeme.transliterate(${entry_id})`,
+             message: 'Propose Smith-Francis versions of this word\u2019s Listuguj texts? ' +
+                      'The proposals go through the normal review process.',
+             deps: [this.rootTarget(entry_id)]},
+            'btn btn-sm btn-outline-secondary');
         return ['div', {class: 'lm-public-row d-flex align-items-center gap-2 flex-wrap mb-2'},
                 ['b', {class: 'small'}, 'Public: '],
                 chips,
                 archived ? ['span', {class: 'text-muted small'},
                             '(archived \u2014 not public while archived)'] : undefined,
+                transliterate,
                 menuItems.length > 0
                     ? action.actionMenu(menuItems, {ariaLabel: 'Public actions'})
                     : undefined];
@@ -1074,6 +1099,38 @@ export class LexemeEditor {
         this.app.lexemeOps.withdraw(entry_id, orthography);
         return this.reload([`.-entry-${entry_id}-public-`, `.-rel-${entry_id}-pub-`,
                             `.-entry-${entry_id}-activity-`]);
+    }
+
+    /** The auto-transliterate button: propose Smith-Francis siblings for
+     *  this word's Listuguj texts (auto-transliterate.ts - fill gaps only,
+     *  never re-offer a rejected output, version-stamped). */
+    @routeMutation(authenticated)
+    transliterate(entry_id: number): any {
+        const stats = autoTransliterate.proposeTransliterations(this.app, entry_id);
+        if(stats.proposed === 0)
+            return {action: 'alert', message: stats.rejectedBefore > 0
+                ? 'Nothing new to propose: the remaining transliterations were rejected before ' +
+                  '(they are re-offered only if the transliterator\u2019s output changes).'
+                : 'Nothing to transliterate: every Listuguj text here already has a ' +
+                  'Smith-Francis version.'};
+        return this.reload([this.rootTarget(entry_id), `.-entry-${entry_id}-activity-`]);
+    }
+
+    /** The approve-all ESCAPE HATCH for auto-transliterations: they are
+     *  excluded from Approve all (per-fact human eyes required - see
+     *  approveAllChanges), and this explicit separate action approves them
+     *  in one act when the approver really means it. */
+    @routeMutation(authenticated)
+    approveAutoTransliterations(entry_id: number): any {
+        const ops = this.app.lexemeOps;
+        const pending = this.metaPendingChanges(entry_id);
+        for(const p of pending.content) {
+            if(!isAutomatedUsername(p.review.content.change_by_username)) continue;
+            if(!ops.mayApprove(p.review.content.change_by_username ?? null)) continue;
+            try { ops.approveFact(p.fact_id); }
+            catch { /* tree gate - stays pending */ }
+        }
+        return this.reload([this.rootTarget(entry_id)]);
     }
 
     /** The reference scan + composed reference-book link (see wordView).
@@ -1114,10 +1171,20 @@ export class LexemeEditor {
                 // View-changes mode: the dot, opened up - an added row gets
                 // the changelog's chip, an edited row its old value inline on
                 // the SAME line ("was: ..."), never an indented history level.
-                const annotation: Markup = (!changes || !pending) ? ''
+                let annotation: Markup = (!changes || !pending) ? ''
                     : review.state === 'added'
                     ? ['span', {class: 'lm-cl-chip lm-cl-chip-added'}, 'added']
                     : this.wasAnnotation(rf, review);
+                // A pending AUTO-TRANSLITERATION shows its EVIDENCE - the
+                // Listuguj source - right on the row, in every look: the
+                // reviewer validates SF-against-Listuguj without navigating
+                // away (fix-orthographies.md "Auto-transliteration").
+                if(pending && isAutomatedUsername(current.assertion.change_by_username)
+                   && current.assertion.variant === autoTransliterate.TARGET_ORTHOGRAPHY) {
+                    const li = this.liSiblingText(id.entryId, id.parentFactId, rf);
+                    if(li) annotation = [annotation,
+                        ['span', {class: 'lm-me-chg-was'}, ' from Listuguj: ', li]];
+                }
                 const menu = action.actionMenu(
                     [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit', review),
                      ...this.demotedAddItems(id.entryId, id.factId, rf, q)],
@@ -1272,6 +1339,21 @@ export class LexemeEditor {
      *  pending version whose VALUES equal the baseline is a MOVE (only the
      *  order key differs) - "was: <the same thing>" would read as a bug, so
      *  the change is named instead. */
+    /** The current Listuguj text among a fact's siblings (the evidence line
+     *  for a pending auto-transliteration). */
+    private liSiblingText(entry_id: number, parent_fact_id: number,
+                          rf: model.RelationField): string | undefined {
+        const parent = this.findTupleInEntry(entry_id, parent_fact_id);
+        const rel = parent.childRelations[rf.tag];
+        if(!rel) return undefined;
+        return [...rel.tuples.values()]
+            .map(t => t.mostRecentTuple)
+            .filter(tv => tv?.isCurrent
+                    && tv!.assertion.variant === autoTransliterate.SOURCE_ORTHOGRAPHY)
+            .map(tv => factText(rf, tv!.assertion))
+            .find(t => t !== '');
+    }
+
     private wasAnnotation(rf: model.RelationField, review: FactReview<Assertion>): Markup {
         const baseline = review.baseline;
         if(!baseline) return '';
@@ -1370,13 +1452,26 @@ export class LexemeEditor {
         const deletions = pending.deletions.filter(p => p.visible).map(d =>
             barLine('deleted', d.rf,
                     d.review.baseline ? renderAssertionValues(d.rf, d.review.baseline) : ''));
+        const autoN = pending.content.filter(p => p.visible
+            && isAutomatedUsername(p.review.content.change_by_username)).length;
         const approve = this.app.lexemeOps.hasApprovePermission()
-            ? action.actionButton('Approve all',
+            ? [action.actionButton('Approve all',
                 {kind: 'confirm',
                  expr: `wordwiki.lexeme.approveAllChanges(${entry_id})`,
-                 message: `Approve all ${count.replace(' unapproved', '')} to this word?`,
+                 message: `Approve all ${count.replace(' unapproved', '')} to this word?` +
+                          (autoN > 0 ? ` (${autoN} auto-transliteration${autoN === 1 ? '' : 's'} ` +
+                                       'excluded - approve those per fact, or with their own button.)' : ''),
                  deps: [this.rootTarget(entry_id)]},
-                'btn btn-sm btn-success')
+                'btn btn-sm btn-success'),
+               autoN > 0
+                   ? action.actionButton(`Approve ${autoN} auto-transliteration${autoN === 1 ? '' : 's'}\u2026`,
+                       {kind: 'confirm',
+                        expr: `wordwiki.lexeme.approveAutoTransliterations(${entry_id})`,
+                        message: `Approve ${autoN} machine-proposed transliteration${autoN === 1 ? '' : 's'} ` +
+                                 'WITHOUT reading each one against its Listuguj source?',
+                        deps: [this.rootTarget(entry_id)]},
+                       'btn btn-sm btn-outline-success')
+                   : '']
             : '';
         return ['div', {class: 'lm-me-changes-bar'},
                 ['span', {}, count],
@@ -1985,7 +2080,8 @@ export class LexemeEditor {
         const fields = dialogFields(rel);
         const widgets = fields.map(f => widgetFor(f, rel, this.vocabs));
         const defaults = current.domainFields;
-        const noteWidget = changeNoteWidget();
+        const correctingAuto = isAutomatedUsername(current.assertion.change_by_username);
+        const noteWidget = changeNoteWidget(correctingAuto);
 
         // Speculation deps for the save (txd one-trip swap): a content edit -
         // the same keys saveEdit will emit (changeKeys, the shared source).
@@ -2335,6 +2431,12 @@ export class LexemeEditor {
         const ops = this.app.lexemeOps;
         const pending = this.metaPendingChanges(entry_id);
         for(const p of [...pending.content, ...pending.deletions.toReversed()]) {
+            // ROBOT-AUTHORED proposals (auto-transliterations) are excluded
+            // STRUCTURALLY - not a warning; warnings train click-through
+            // (fix-orthographies.md).  Each needs per-fact human eyes
+            // (approve-in-place is a keystroke), or the explicit
+            // approveAutoTransliterations escape hatch.
+            if(isAutomatedUsername(p.review.content.change_by_username)) continue;
             if(!ops.mayApprove(p.review.content.change_by_username ?? null)) continue;
             try { ops.approveFact(p.fact_id); }
             catch { /* a tree gate (e.g. an unapprovable pending parent) - stays pending */ }

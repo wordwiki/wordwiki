@@ -57,6 +57,7 @@ import { FindingsReport } from './findings.ts';
 import { scanVariants, VariantReports } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
+import { TransliterationReports } from './auto-transliterate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -161,6 +162,14 @@ export class WordWiki extends LiminalApp {
     #variants: VariantReports|undefined = undefined;
     @route(authenticated) @path get variants(): VariantReports {
         return this.#variants ??= new VariantReports(this);
+    }
+
+    // The transliteration corrections/accuracy report (the transliterator's
+    // development loop), reachable as wordwiki.transliteration.
+    // correctionsReport().  See auto-transliterate.ts.
+    #transliteration: TransliterationReports|undefined = undefined;
+    @route(authenticated) @path get transliteration(): TransliterationReports {
+        return this.#transliteration ??= new TransliterationReports(this);
     }
 
     // The monthly activity report, reachable as wordwiki.report.* (page
@@ -635,6 +644,7 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
              ['li', {}, ['a', {href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
              ['li', {}, ['a', {href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.transliteration.correctionsReport()'}, 'Transliteration Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],

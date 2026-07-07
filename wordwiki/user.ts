@@ -310,6 +310,8 @@ export const SYSTEM_USERS: {username: string, name: string}[] = [
     {username: '~category-import',     name: 'Category import (automated)'},
     {username: '~lexical-form-import', name: 'Lexical form import (automated)'},
     {username: '~twitter-post-import', name: 'Twitter-post import (automated)'},
+    {username: '~status-migrate',      name: 'Status migration (automated)'},
+    {username: '~auto-transliterate',  name: 'Auto-transliteration (robot author)'},
 ];
 
 // The dedicated test identity: tests and smoke checks log in as THIS user,

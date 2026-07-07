@@ -552,9 +552,26 @@ The *data migration* is one event, but the code lands in test-green stages:
    event: run per instance (staging, then production), THEN flip the
    variant invariants from verify-workspace warnings to throw-on-load
    (blocked until the 5 hand-triage spellings are resolved by the staff).
-4. Auto-transliteration (section above): the button + button rules, the
-   approve-all exclusion + evidence-in-row review changes, the corrections
-   report / regression corpus, the activity-report stats.
+4. **BUILT (2026-07-07).**  Auto-transliteration: the whole design above -
+   the Public-row `Transliterate…` button (any editor; one word at a time)
+   proposing normal pending facts by `~auto-transliterate` with
+   TRANSLITERATOR_VERSION in change_arg; fill-gaps-only + never-re-offer-
+   rejected-output; v1 scope = the schema-driven pure variant text relations
+   (spl/etx/alx/orf); approve-all EXCLUDES robot facts structurally with the
+   explicit "Approve N auto-transliterations…" escape hatch; a pending auto
+   fact shows `from Listuguj: <source>` on its row in every look; the
+   Transliteration Report (nav) = corrections/rejections with the why-notes
+   (the regression corpus), per-version outcome stats, and CURRENT-RULES
+   ACCURACY against every human li/sf pair; the activity report gains the
+   per-approver approved-unchanged vs corrected split (rubber-stamp
+   detection); the auto-fact edit dialog asks "why was the auto version
+   wrong?".  THE RULES (transliterate.ts, `li-sf/rules-v1`) are CORPUS-
+   DERIVED, not invented: g→k plus the sonorant+obstruent apostrophe
+   ([lnm]→'[ptj]), measured at **69.4% exact on the 1,627 human li/sf
+   pairs** - the linguistics beyond that (contextual g voicing, i→y glides,
+   iʼ→î, finer schwa placement) is the report-driven development loop, and
+   dz's ~95% target is rules work from here (edit rules, bump the version,
+   read the accuracy line).
 
 This is a major change touching db upgrade processes, schema, indexes, and a
 lot of code — the point of settling this document first is to get it all in

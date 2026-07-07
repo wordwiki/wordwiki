@@ -1,0 +1,328 @@
+// deno-lint-ignore-file no-explicit-any
+/**
+ * Auto-transliteration (fix-orthographies.md "Auto-transliteration" — THE
+ * motivation for the orthography fix): the editor's per-word button proposes
+ * Smith-Francis siblings for a word's Listuguj texts, as NORMAL UNAPPROVED
+ * facts authored by the `~auto-transliterate` system identity — so the
+ * standard review machinery does the safety work, and the two-person rule
+ * comes free (the author is a robot; ANY human approver satisfies it).
+ *
+ * BUTTON RULES (each dz-settled):
+ *  - ONE WORD AT A TIME, at edit time — never a bulk pass (transliterator
+ *    improvements made while working word n reach word n+1, and the review
+ *    queue only carries words someone is actively working on).
+ *  - FILL GAPS ONLY: a relation with ANY live Smith-Francis fact (human or
+ *    auto) is never touched.
+ *  - NEVER RE-PROPOSE A REJECTED transliteration unless the auto OUTPUT has
+ *    changed since: a rejected proposal is a tombstoned robot-authored fact;
+ *    re-offering the same wrong answer erodes the trust the workflow
+ *    depends on.
+ *  - The TRANSLITERATOR_VERSION is stamped in change_arg on every proposal
+ *    (per-version quality stats + the retroactive-undo tool need it).
+ *  - v1 scope: PURE variant text relations only (schema-driven: a variant
+ *    field with no $mixed/$notVariant/$metaVariant + a plain string content
+ *    field) — mixed English/Mi'gmaq text is a different, harder problem.
+ *    related_entry.unresolved_text is naturally out (no variant field).
+ *
+ * THE FEEDBACK LOOP IS DATA-DRIVEN: every human correction of an auto fact
+ * is mechanically harvestable from the assertion history (a non-robot
+ * version superseding a robot version, with the Listuguj source in the
+ * sibling fact) — the corrections report below lists them, and that corpus
+ * IS the transliterator's regression suite.  The report also measures the
+ * CURRENT rules against every human-authored li/sf pair in the dictionary.
+ */
+import { db } from '../liminal/db.ts';
+import { block } from '../liminal/strings.ts';
+import { Markup } from '../liminal/markup.ts';
+import { route, authenticated } from '../liminal/security.ts';
+import * as timestamp from '../liminal/timestamp.ts';
+import * as model from './model.ts';
+import * as templates from './templates.ts';
+import * as entrySchema from './entry-schema.ts';
+import { Assertion, assertionPathToFields, getAssertionPath } from './assertion.ts';
+import { VersionedTuple, VersionedRelation, generateAtEndOrderKey } from './workspace.ts';
+import { newId, placeholderTxTime } from './lexeme-ops.ts';
+import { transliterateLiToSf, TRANSLITERATOR_VERSION } from './transliterate.ts';
+import { variantPolicyByTag } from './variant-policy.ts';
+import type { WordWiki } from './wordwiki.ts';
+
+export const AUTO_TRANSLITERATE_USERNAME = '~auto-transliterate';
+export const SOURCE_ORTHOGRAPHY = 'mm-li';
+export const TARGET_ORTHOGRAPHY = 'mm-sf';
+
+const EOT = timestamp.END_OF_TIME;
+
+// --------------------------------------------------------------------------
+// --- The pure-variant-text relations (v1 scope), schema-driven -------------
+// --------------------------------------------------------------------------
+
+export interface PureTextRelation { tag: string; contentField: model.ScalarField; }
+
+/** The relations the transliterator may propose into: a PURE variant field
+ *  (orthography required, no $mixed) plus exactly one plain-text content
+ *  scalar.  Schema-driven, so a new pure text relation joins automatically. */
+export function pureTextRelations(schema: model.Schema): Map<string, PureTextRelation> {
+    const out = new Map<string, PureTextRelation>();
+    for(const [tag, p] of variantPolicyByTag(schema)) {
+        if(!p.flags || p.flags.notVariant || p.flags.mixed || p.flags.metaVariant) continue;
+        const rel = schema.relationsByTag[tag];
+        const texts = rel.scalarFields.filter(f =>
+            f instanceof model.StringField
+            && !(f instanceof model.EnumField)          // Variant < Enum < String
+            && !(f instanceof model.BlobField));        // audio/image < blob
+        if(texts.length !== 1) continue;
+        out.set(tag, {tag, contentField: texts[0]});
+    }
+    return out;
+}
+
+// --------------------------------------------------------------------------
+// --- The proposal op --------------------------------------------------------
+// --------------------------------------------------------------------------
+
+export interface ProposalStats {
+    proposed: number;
+    /** Relations skipped because a live Smith-Francis fact already exists. */
+    filledAlready: number;
+    /** Proposals withheld because a human rejected the same output before. */
+    rejectedBefore: number;
+}
+
+/**
+ * Propose Smith-Francis siblings for every GAP in one entry (the button's
+ * engine).  Facts are authored by the robot identity and queue for normal
+ * review; the caller (LexemeEditor.transliterate) supplies reload targets.
+ */
+export function proposeTransliterations(app: WordWiki, entry_id: number): ProposalStats {
+    const stats: ProposalStats = { proposed: 0, filledAlready: 0, rejectedBefore: 0 };
+    const pure = pureTextRelations(app.dictSchema);
+    const entryTuple = app.lexemeOps.entryTuple(entry_id);
+    const proposals: Assertion[] = [];
+
+    const walk = (tuple: VersionedTuple) => {
+        for(const rel of Object.values(tuple.childRelations) as VersionedRelation[]) {
+            const spec = pure.get(rel.schema.tag);
+            if(spec) visitRelation(rel, spec, tuple);
+            for(const child of rel.tuples.values()) walk(child);
+        }
+    };
+
+    const visitRelation = (rel: VersionedRelation, spec: PureTextRelation,
+                           parent: VersionedTuple) => {
+        const tuples = [...rel.tuples.values()];
+        const current = tuples
+            .map(t => t.mostRecentTuple)
+            .filter(tv => tv?.isCurrent)
+            .map(tv => tv!.assertion);
+        // FILL GAPS ONLY: any live SF fact (human or auto) closes the relation.
+        if(current.some(a => a.variant === TARGET_ORTHOGRAPHY)) {
+            stats.filledAlready++;
+            return;
+        }
+        const liTexts = current
+            .filter(a => a.variant === SOURCE_ORTHOGRAPHY)
+            .map(a => (a as any)[spec.contentField.bind] as string | null)
+            .filter((t): t is string => typeof t === 'string' && t.trim() !== '');
+        // Rejected proposals: tombstoned robot-authored facts in this
+        // relation; their PROPOSED text (the robot version's content).
+        const rejectedTexts = new Set<string>();
+        for(const t of tuples) {
+            if(t.mostRecentTuple?.isCurrent) continue;   // live: not a rejection
+            for(const v of t.tupleVersions)
+                if(v.assertion.change_by_username === AUTO_TRANSLITERATE_USERNAME
+                   && v.assertion.variant === TARGET_ORTHOGRAPHY)
+                    rejectedTexts.add(String((v.assertion as any)[spec.contentField.bind] ?? ''));
+        }
+        const parentAssertion = parent.currentAssertion;
+        if(!parentAssertion) return;   // deleted parent: nothing to hang off
+        const proposedHere = new Set<string>();
+        for(const li of liTexts) {
+            const sf = transliterateLiToSf(li);
+            if(rejectedTexts.has(sf)) { stats.rejectedBefore++; continue; }   // same output, said no
+            if(proposedHere.has(sf)) continue;   // two li texts, one sf output
+            proposedHere.add(sf);
+            const id = newId();
+            proposals.push({
+                ...assertionPathToFields([...getAssertionPath(parentAssertion),
+                                          [spec.tag, id]]),
+                assertion_id: id, id, ty: spec.tag,
+                valid_from: placeholderTxTime(), valid_to: EOT,
+                order_key: generateAtEndOrderKey(rel),
+                [spec.contentField.bind]: sf,
+                variant: TARGET_ORTHOGRAPHY,
+                change_by_username: AUTO_TRANSLITERATE_USERNAME,
+                change_arg: TRANSLITERATOR_VERSION,
+            } as Assertion);
+            stats.proposed++;
+        }
+    };
+
+    walk(entryTuple);
+    for(const a of proposals)
+        app.applyTransaction([a], {quiet: true});
+    return stats;
+}
+
+// --------------------------------------------------------------------------
+// --- The corrections report + rules accuracy (the development loop) --------
+// --------------------------------------------------------------------------
+
+interface CorrectionRow {
+    entry_id: number; tag: string; li: string;
+    auto: string; version: string | null;
+    outcome: 'corrected' | 'rejected' | 'approved-unchanged' | 'pending';
+    current: string | null; by: string | null; note: string | null;
+}
+
+export class TransliterationReports {
+    constructor(private app: WordWiki) {}
+
+    /** Every robot proposal ever made, classified from the assertion history:
+     *  corrected (the regression corpus), rejected, approved unchanged, or
+     *  still pending. */
+    corrections(): CorrectionRow[] {
+        const autos = db().all<any, any>(block`
+/**/       SELECT * FROM dict
+/**/       WHERE change_by_username = '${AUTO_TRANSLITERATE_USERNAME}'
+/**/       ORDER BY valid_from`, {});
+        const rows: CorrectionRow[] = [];
+        const seen = new Set<string>();
+        for(const auto of autos) {
+            const key = `${auto.ty}:${auto.id}`;
+            if(seen.has(key)) continue;
+            seen.add(key);
+            const versions = db().all<any, any>(
+                `SELECT * FROM dict WHERE ty = :ty AND id = :id ORDER BY valid_from, assertion_id`,
+                {ty: auto.ty, id: auto.id});
+            const last = versions[versions.length - 1];
+            const autoText = String(auto.attr1 ?? '');
+            const li = this.liSiblingText(auto) ?? '';
+            let outcome: CorrectionRow['outcome'];
+            let current: string | null = null, by: string | null = null, note: string | null = null;
+            if(last.valid_from === last.valid_to) {
+                outcome = 'rejected';
+                by = last.change_by_username ?? null;
+                note = last.change_note ?? null;
+            } else if(String(last.attr1 ?? '') !== autoText) {
+                outcome = 'corrected';
+                current = String(last.attr1 ?? '');
+                // The correcting human: the first non-robot version that
+                // changed the text (approvals re-assert unchanged text).
+                const corrector = versions.find(v =>
+                    v.change_by_username !== AUTO_TRANSLITERATE_USERNAME
+                    && String(v.attr1 ?? '') !== autoText);
+                by = corrector?.change_by_username ?? last.change_by_username ?? null;
+                note = corrector?.change_note ?? null;
+            } else if(last.change_by_username !== AUTO_TRANSLITERATE_USERNAME) {
+                outcome = 'approved-unchanged';
+                by = last.change_by_username ?? null;
+            } else {
+                outcome = 'pending';
+            }
+            rows.push({entry_id: auto.id1, tag: auto.ty, li, auto: autoText,
+                       version: auto.change_arg ?? null, outcome, current, by, note});
+        }
+        return rows;
+    }
+
+    /** The li sibling's current text (the evidence / regression input). */
+    private liSiblingText(a: any): string | undefined {
+        // The sibling shares the fact's PARENT id (the deepest idN above its
+        // own) and its tag.
+        const ids = [[a.ty1, a.id1], [a.ty2, a.id2], [a.ty3, a.id3],
+                     [a.ty4, a.id4], [a.ty5, a.id5]].filter(([t, _]) => t != null);
+        const parentId = ids.length >= 2 ? ids[ids.length - 2][1] : 0;
+        const parentCol = `id${ids.length - 1}`;
+        return db().first<{attr1: string}>(block`
+/**/       SELECT attr1 FROM dict
+/**/       WHERE valid_to = ${EOT} AND ty = :ty AND variant = '${SOURCE_ORTHOGRAPHY}'
+/**/             AND ${parentCol} = :pid AND attr1 IS NOT NULL LIMIT 1`,
+            {ty: a.ty, pid: parentId})?.attr1;
+    }
+
+    /** Rules accuracy against EVERY human-authored li/sf sibling pair in the
+     *  dictionary — the seed corpus (1,627 pairs at build time) plus every
+     *  approved transliteration since. */
+    rulesAccuracy(): {pairs: number, exact: number} {
+        const pure = pureTextRelations(this.app.dictSchema);
+        let pairs = 0, exact = 0;
+        for(const [tag, spec] of pure) {
+            const rows = db().all<any, any>(block`
+/**/           SELECT ty1,id1,ty2,id2,ty3,id3,ty4,id4,ty5,id5, variant, ${spec.contentField.bind} AS text
+/**/           FROM dict
+/**/           WHERE ty = :ty AND valid_to = ${EOT} AND ${spec.contentField.bind} IS NOT NULL
+/**/                 AND variant IN ('${SOURCE_ORTHOGRAPHY}', '${TARGET_ORTHOGRAPHY}')`, {ty: tag});
+            const groups = new Map<string, {li: string[], sf: string[]}>();
+            for(const r of rows) {
+                const ids = [[r.ty1, r.id1], [r.ty2, r.id2], [r.ty3, r.id3],
+                             [r.ty4, r.id4], [r.ty5, r.id5]].filter(([t, _]) => t != null);
+                const key = ids.slice(0, -1).map(([t, i]) => `${t}:${i}`).join('/') + '/' + tag;
+                if(!groups.has(key)) groups.set(key, {li: [], sf: []});
+                groups.get(key)![r.variant === SOURCE_ORTHOGRAPHY ? 'li' : 'sf'].push(r.text);
+            }
+            for(const g of groups.values())
+                if(g.li.length === 1 && g.sf.length === 1) {
+                    pairs++;
+                    if(transliterateLiToSf(g.li[0]) === g.sf[0]) exact++;
+                }
+        }
+        return {pairs, exact};
+    }
+
+    /** The report page: rules accuracy, per-version outcome stats, and the
+     *  corrections list (the regression corpus, newest data first). */
+    @route(authenticated)
+    correctionsReport(): any {
+        const rows = this.corrections();
+        const acc = this.rulesAccuracy();
+        const byVersion = new Map<string, {corrected: number, rejected: number,
+                                           approved: number, pending: number}>();
+        for(const r of rows) {
+            const v = r.version ?? '(unstamped)';
+            if(!byVersion.has(v)) byVersion.set(v, {corrected: 0, rejected: 0, approved: 0, pending: 0});
+            const g = byVersion.get(v)!;
+            if(r.outcome === 'corrected') g.corrected++;
+            else if(r.outcome === 'rejected') g.rejected++;
+            else if(r.outcome === 'approved-unchanged') g.approved++;
+            else g.pending++;
+        }
+        const title = 'Transliteration Report';
+        const outcomeRows = rows.filter(r => r.outcome === 'corrected' || r.outcome === 'rejected');
+        const link = (r: CorrectionRow) =>
+            ['a', {...templates.pageLinkProps(`/ww/wordwiki.entry(${r.entry_id})`),
+                   class: 'lm-nav-link'}, r.li || `entry ${r.entry_id}`];
+        const body: Markup = [
+            ['h1', {}, title],
+            ['p', {class: 'text-muted'},
+             `Current rules (${TRANSLITERATOR_VERSION}): ${acc.exact} of ${acc.pairs} ` +
+             'human-written Listuguj/Smith-Francis pairs transliterate exactly — every human ' +
+             'correction below is a regression case for the next rules version.'],
+            ['h2', {class: 'h5 mt-4'}, 'Proposals by transliterator version'],
+            ['table', {class: 'lm-data-table'},
+             ['thead', {}, ['tr', {},
+              ['th', {}, 'Version'], ['th', {}, 'Approved unchanged'], ['th', {}, 'Corrected'],
+              ['th', {}, 'Rejected'], ['th', {}, 'Pending']]],
+             ['tbody', {}, [...byVersion.entries()].map(([v, g]) =>
+              ['tr', {}, ['td', {}, v], ['td', {}, String(g.approved)],
+               ['td', {}, String(g.corrected)], ['td', {}, String(g.rejected)],
+               ['td', {}, String(g.pending)]])]],
+            ['h2', {class: 'h5 mt-4'}, 'Corrections + rejections (the regression corpus)'],
+            outcomeRows.length === 0
+                ? ['p', {class: 'text-muted'}, 'None yet.']
+                : ['table', {class: 'lm-data-table'},
+                   ['thead', {}, ['tr', {},
+                    ['th', {}, 'Listuguj source'], ['th', {}, 'Auto proposal'],
+                    ['th', {}, 'Human result'], ['th', {}, 'By'], ['th', {}, 'Why (note)']]],
+                   ['tbody', {}, outcomeRows.map(r =>
+                    ['tr', {},
+                     ['td', {}, link(r)],
+                     ['td', {class: 'text-muted'}, r.auto],
+                     ['td', {}, r.outcome === 'rejected'
+                         ? ['span', {class: 'badge text-bg-secondary'}, 'rejected']
+                         : (r.current ?? '')],
+                     ['td', {class: 'text-muted'}, r.by ?? ''],
+                     ['td', {class: 'text-muted'}, r.note ?? '']])]],
+        ];
+        return templates.pageTemplate({title, body});
+    }
+}
