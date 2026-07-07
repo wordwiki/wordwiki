@@ -1,0 +1,48 @@
+# Sample per-user systemd unit for running wordwiki as a service.
+#
+# This is a TEMPLATE, not a drop-in file: the absolute paths below are
+# user-specific.  Copy it, edit the marked lines, then install it as a *user*
+# unit (no root/sudo needed):
+#
+#   cp wordwiki.service.sample ~/.config/systemd/user/wordwiki.service
+#   # ...edit the paths + port below...
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now wordwiki.service
+#   loginctl enable-linger "$USER"      # start at boot + survive logout
+#
+# See systemd.md for the full write-up.
+
+[Unit]
+Description=WordWiki server (mmo-staging, port 9001)
+Documentation=file:///home/mikmaq/mmo-staging/wordwiki.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+
+# EDIT: absolute path to your wordwiki checkout.
+WorkingDirectory=/home/mikmaq/mmo-staging
+
+# EDIT: the port wordwiki.sh should serve on (it reads WORDWIKI_PORT).
+Environment=WORDWIKI_PORT=9001
+
+# systemd starts services with a minimal PATH, but wordwiki.sh -> transpile.sh
+# needs `deno` and `swc` (and rsync/curl) on PATH.  On this machine deno lives in
+# ~/.deno/bin and the swc binary in ~/bin; adjust these to wherever `which deno`
+# and `which swc` point for you.  Keep the standard system dirs at the end.
+Environment=PATH=/home/mikmaq/.deno/bin:/home/mikmaq/.local/bin:/home/mikmaq/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# ExecStart runs the server in the foreground (the `serve` default blocks), so
+# systemd tracks it directly.  ExecStop uses wordwiki.sh's clean HTTP shutdown
+# route so SQLite closes properly; systemd only falls back to SIGTERM/SIGKILL if
+# that times out.  EDIT: both paths must point at your checkout's wordwiki.sh.
+ExecStart=/home/mikmaq/mmo-staging/wordwiki.sh
+ExecStop=/home/mikmaq/mmo-staging/wordwiki.sh stop
+TimeoutStopSec=30
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
