@@ -14,9 +14,14 @@
  */
 import { db } from '../liminal/db.ts';
 import { block } from '../liminal/strings.ts';
+import { Markup } from '../liminal/markup.ts';
+import { route, authenticated } from '../liminal/security.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as model from './model.ts';
-import { FindingsReport } from './findings.ts';
+import * as templates from './templates.ts';
+import * as entrySchema from './entry-schema.ts';
+import type { WordWiki } from './wordwiki.ts';
+import { FindingsReport, renderFindingsMarkup } from './findings.ts';
 import { variantPolicyByTag, allowedVariantValues, isBlankVariant,
          type TagVariantPolicy } from './variant-policy.ts';
 
@@ -158,4 +163,33 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
     }
 
     return { gatePassed };
+}
+
+// --------------------------------------------------------------------------
+// --- The LIVE cleanup report (the staff triage queue) ----------------------
+// --------------------------------------------------------------------------
+
+/**
+ * The variant scan as a LIVE page — the second renderer of the one findings
+ * vocabulary (fix-orthographies.md "Findings publish path"): the same scan
+ * the subcommand runs, rendered against the CURRENT db on every request, so
+ * the page drains as fixes land.  This is the language staff's hand-triage
+ * queue (garbage spl variants, blank backfill workload, ...).
+ */
+export class VariantReports {
+    constructor(private app: WordWiki) {}
+
+    @route(authenticated)
+    cleanupReport(): Markup {
+        const report = new FindingsReport('Variant (orthography) cleanup', {quiet: true});
+        scanVariants(report, this.app.dictSchema, Object.keys(entrySchema.variants));
+        const title = 'Variant (orthography) cleanup';
+        const body: Markup = [
+            ['h1', {}, title],
+            ['p', {class: 'text-muted small mb-2'},
+             `${report.findingCount} finding(s) — a LIVE view of the current database; ` +
+             'this page drains as fixes land.'],
+            renderFindingsMarkup(report)];
+        return templates.pageTemplate({title, body});
+    }
 }

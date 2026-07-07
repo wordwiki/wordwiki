@@ -53,7 +53,8 @@ import { validateVersionedDb, assertVersionedDbValid, validateVariantInvariants,
          factViewsFromVersionedDb } from './versioned-db-validate.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
 import { FindingsReport } from './findings.ts';
-import { scanVariants } from './variant-scan.ts';
+import { scanVariants, VariantReports } from './variant-scan.ts';
+import { migrateVariants } from './variant-migrate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -146,6 +147,14 @@ export class WordWiki extends LiminalApp {
     #spellings: SpellingReports|undefined = undefined;
     @route(authenticated) @path get spellings(): SpellingReports {
         return this.#spellings ??= new SpellingReports();
+    }
+
+    // The LIVE variant-cleanup report (the language staff's triage queue,
+    // drains as fixes land), reachable as wordwiki.variants.cleanupReport().
+    // See variant-scan.ts VariantReports.
+    #variants: VariantReports|undefined = undefined;
+    @route(authenticated) @path get variants(): VariantReports {
+        return this.#variants ??= new VariantReports(this);
     }
 
     // The monthly activity report, reachable as wordwiki.report.* (page
@@ -611,6 +620,7 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.categoriesDirectory()'}, 'Entries by Category']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
              ['li', {}, ['a', {href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
              ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],
@@ -2052,6 +2062,41 @@ if (import.meta.main) {
                 return result.gatePassed;
             });
             Deno.exit(gatePassed ? 0 : 1);
+            break;
+        }
+
+        // THE variant (orthography) data migration - fix-orthographies.md
+        // "Migration mechanics".  Mute-in-place on current rows, idempotent,
+        // preconditions re-checked at run time (flagged schema, drop gate,
+        // mapping coverage - see variant-migrate.ts, incl. the per-tag blank
+        // backfill + value-fix DECISION TABLES).  Hand-triage rows are left
+        // for the live cleanup report (wordwiki.variants.cleanupReport()).
+        //   ./wordwiki.sh migrate-variants [--report path.md]
+        //   ./wordwiki.sh migrate-variants --expect-no-changes    # idempotency proof
+        case 'migrate-variants': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                    throw new Error("db is marked db_purpose='production' - " +
+                                    'run with --allow-production if you really mean it');
+                const reportIx = args.indexOf('--report');
+                const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
+                const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
+                const report = new FindingsReport('Variant (orthography) migration', {sourceDb});
+                const stats = migrateVariants(report, ww.dictSchema, Object.keys(entry.variants));
+                if(reportPath) {
+                    Deno.writeTextFileSync(reportPath, report.toMarkdown());
+                    console.info(`wrote ${reportPath}`);
+                }
+                if(args.includes('--expect-no-changes')) {
+                    if(stats.changed > 0)
+                        throw new Error(`--expect-no-changes: changed ${stats.changed} variant row(s)`);
+                    console.info('idempotency confirmed: re-run made no changes');
+                }
+                console.info(`migrate-variants: ${stats.changed} row(s) changed ` +
+                             `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
+            });
+            Deno.exit(0);
             break;
         }
 

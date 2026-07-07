@@ -65,6 +65,13 @@ set -e
 #                                      # iff the $notVariant drop gate passes;
 #                                      # --report <path.md> writes the
 #                                      # findings report
+#   ./wordwiki.sh migrate-variants     # THE orthography data migration:
+#                                      # blank normalize + $notVariant drop +
+#                                      # value fixes + per-tag blank backfill,
+#                                      # mute-in-place (idempotent; refuses
+#                                      # prod; needs the flagged schema;
+#                                      # --expect-no-changes proof mode;
+#                                      # --report <path.md>)
 #
 # The whole pull-and-migrate rehearsal is packaged as ./migrateDevDb.sh
 # (which also documents the eventual production-cutover recipe).

@@ -20,6 +20,9 @@
  * whose fixes are made there).
  */
 
+import { Markup } from '../liminal/markup.ts';
+import { markdownToMarkup } from '../liminal/markdown.ts';
+
 /** One cell of a findings table. */
 export type Cell = string | number;
 
@@ -139,6 +142,31 @@ export class FindingsReport {
         out.push('');
         return out.join('\n');
     }
+}
+
+/**
+ * The LIVE renderer of the findings vocabulary — the second renderer
+ * (toMarkdown is the committed point-in-time one): the same report rendered
+ * as page markup against the CURRENT db, so no generated-at banner (the
+ * caller states liveness).  Finding/info text is markdown (lexemeLink emits
+ * markdown links), rendered per item.
+ */
+export function renderFindingsMarkup(report: FindingsReport): Markup {
+    const inline = (text: string): Markup => markdownToMarkup(text);
+    return report.sections.map(s => [
+        ['h2', {class: 'h5 mt-4'}, s.title],
+        ['ul', {class: 'list-unstyled'},
+         s.items.map(item => {
+             switch(item.kind) {
+                 case 'finding': return ['li', {class: 'mb-1'}, ['strong', {}, inline(item.text)]];
+                 case 'info':    return ['li', {class: 'text-muted small'}, inline(item.text)];
+                 case 'table':   return ['li', {class: 'my-2'},
+                     ['table', {class: 'lm-data-table'},
+                      ['thead', {}, ['tr', {}, item.header.map(h => ['th', {}, h])]],
+                      ['tbody', {}, item.rows.map(row =>
+                          ['tr', {}, row.map(c => ['td', {}, String(c ?? '')])])]]];
+             }
+         })]]);
 }
 
 function mdCell(v: Cell): string {

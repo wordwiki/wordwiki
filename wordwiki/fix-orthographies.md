@@ -474,8 +474,25 @@ The *data migration* is one event, but the code lands in test-green stages:
    display next to the value (aside all audiences via the `$aside` JSON
    projection, note internal-only), and distinct aside/internal-note chips
    in the was-diff.
-3. The migration command (per-tag mapping, `--expect-no-changes`), run it,
-   then flip the validator to throw-on-load.
+3. **BUILT + REHEARSED ON DEV (2026-07-07).**  `migrate-variants`
+   (variant-migrate.ts): blank normalize (''/"null" → NULL), $notVariant +
+   variant-less columns emptied, explicit value fixes (rse mm→mm-pm ×15,
+   orf mm→mm-li ×2, spl mm→mm-li ×1), per-tag blank backfill from the
+   DECISION TABLE `blankBackfillByTag` ($defaultAll tags tdo/att/rnp/src →
+   'mm'; all others → 'mm-li', matching each tag's own non-blank
+   distribution, e.g. rse is 903×mm-li vs 11×mm-pm) — **dz to confirm the
+   two tables before the staging/production event**.  Mute-in-place,
+   idempotent (`--expect-no-changes` proven), preconditions re-checked at
+   run time (flagged schema in force, drop gate, mapping coverage),
+   refuses production.  Dev rehearsal: 32,184 rows changed; verify-workspace
+   variant warnings 28,031 → 5 (exactly the hand-triage spellings).  The
+   LIVE cleanup report (`wordwiki.variants.cleanupReport()`, nav "Variant
+   Cleanup") is the staff triage queue — same findings vocabulary, second
+   renderer, drains as fixes land.  STILL TO DO at the real event: land the
+   flagged entry-schema (the migration refuses to run without it), add
+   `migrate-variants` to migrateDevDb.sh, run per instance, THEN flip the
+   variant invariants from verify-workspace warnings to throw-on-load
+   (blocked until the 5 hand-triage spellings are resolved by the staff).
 4. Auto-transliteration (section above): the button + button rules, the
    approve-all exclusion + evidence-in-row review changes, the corrections
    report / regression corpus, the activity-report stats.
