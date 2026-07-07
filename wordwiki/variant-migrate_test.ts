@@ -12,7 +12,7 @@ import { db } from "../liminal/db.ts";
 import * as timestamp from "../liminal/timestamp.ts";
 import * as model from "./model.ts";
 import { FindingsReport } from "./findings.ts";
-import { migrateVariants } from "./variant-migrate.ts";
+import { migrateVariants, blankBackfillByTag, valueFixesByTag } from "./variant-migrate.ts";
 
 const VOCABULARY = ['mm-li', 'mm-sf', 'mm-mp', 'mm-pm', 'mm'];
 
@@ -70,6 +70,10 @@ const variantOf = (fact_id: number): string | null =>
         {id: fact_id, eot: timestamp.END_OF_TIME})[0].variant;
 
 function seed(fx: Fixture) {
+    // The fill-bookkeeping table outlives withTestDb's data reset (it is the
+    // migration's own companion table) - drop it so tests never see another
+    // test's fills.
+    db().executeStatements('DROP TABLE IF EXISTS variant_migration_fill;');
     const tl = new TestTimeline();
     const e = mkEntry(1000, tl.next());
     fx.ww.applyTransaction([e], {quiet: true});
@@ -187,5 +191,50 @@ test("migrate-variants --dry-run: reports every case, writes nothing", async () 
         const real = migrateVariants(new FindingsReport('real', {quiet: true}),
                                      flaggedSchema, VOCABULARY);
         assertEquals(real.changed, stats.changed);
+    });
+});
+
+test("migrate-variants: a changed decision table revises unedited fills only", async () => {
+    await withTestDb((fx) => {
+        seed(fx);
+        migrateVariants(new FindingsReport('m1', {quiet: true}), flaggedSchema, VOCABULARY);
+        // Post-run: spl blanks 1011/1012/1050 filled mm-li; 1013 value-fixed mm-li.
+
+        // A HUMAN touches one filled row: an edit re-versions the fact
+        // (carrying the variant the editor saw - ratified).
+        const tl2 = new TestTimeline();
+        const cur1011 = db().all<any, any>(
+            `SELECT * FROM dict WHERE id = 1011 AND valid_to = :eot`, {eot: timestamp.END_OF_TIME})[0];
+        fx.ww.applyTransaction([{...cur1011, assertion_id: 9011,
+                                 replaces_assertion_id: cur1011.assertion_id,
+                                 valid_from: tl2.next(), valid_to: timestamp.END_OF_TIME}], {quiet: true});
+
+        // dz changes his mind: blank spellings should have been mm-sf, and
+        // the spl value fix should have gone to mm-sf too.
+        const stats = migrateVariants(new FindingsReport('m2', {quiet: true}),
+                                      flaggedSchema, VOCABULARY, {
+            backfill: {...blankBackfillByTag, spl: 'mm-sf'},
+            valueFixes: {...valueFixesByTag, spl: {'mm': 'mm-sf'}},
+        });
+        // The unedited fills revised...
+        assertEquals(variantOf(1012), 'mm-sf');
+        assertEquals(variantOf(1050), 'mm-sf');
+        assertEquals(variantOf(1013), 'mm-sf');   // the value-fix row too
+        // ...the human-re-versioned row is NOT ours anymore.
+        assertEquals(variantOf(1011), 'mm-li');
+        assertEquals(stats.byAction['revise-fill'], 3);
+
+        // Idempotent under the new tables; and the released row's
+        // bookkeeping is gone.
+        const again = migrateVariants(new FindingsReport('m3', {quiet: true}),
+                                      flaggedSchema, VOCABULARY, {
+            backfill: {...blankBackfillByTag, spl: 'mm-sf'},
+            valueFixes: {...valueFixesByTag, spl: {'mm': 'mm-sf'}},
+        });
+        assertEquals(again.changed, 0);
+        const orphan = db().all<any, any>(
+            `SELECT * FROM variant_migration_fill WHERE assertion_id = :id`,
+            {id: cur1011.assertion_id});
+        assertEquals(orphan.length, 0);
     });
 });

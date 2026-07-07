@@ -480,8 +480,14 @@ The *data migration* is one event, but the code lands in test-green stages:
    orf mm→mm-li ×2, spl mm→mm-li ×1), per-tag blank backfill from the
    DECISION TABLE `blankBackfillByTag` ($defaultAll tags tdo/att/rnp/src →
    'mm'; all others → 'mm-li', matching each tag's own non-blank
-   distribution, e.g. rse is 903×mm-li vs 11×mm-pm) — **dz to confirm the
-   two tables before the staging/production event**.  Mute-in-place,
+   distribution, e.g. rse is 903×mm-li vs 11×mm-pm) — **ACCEPTED as
+   defaults by dz (2026-07-07), and CHANGEABLE IN A FUTURE RUN**: every
+   value the migration fills is recorded in the `variant_migration_fill`
+   bookkeeping table, so re-running after editing a decision table revises
+   exactly the rows still carrying an unedited migration fill; rows a human
+   has re-versioned or re-stamped since are released from bookkeeping and
+   never revised (an edit carries the variant the editor saw and saved —
+   ratification).  Mute-in-place,
    idempotent (`--expect-no-changes` proven), preconditions re-checked at
    run time (flagged schema in force, drop gate, mapping coverage),
    refuses production.  Dev rehearsal: 32,184 rows changed; verify-workspace

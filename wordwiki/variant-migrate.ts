@@ -14,6 +14,16 @@
  *   4. variant-less tags:     variant -> NULL (never should have had one)
  *   5. explicit VALUE FIXES (table below: mis-stamped rows)
  *   6. per-tag BLANK BACKFILL (table below: what a blank always meant)
+ *   7. REVISE earlier fills whose decision-table entry has since CHANGED
+ *
+ * The decision tables are DEFAULTS, CHANGEABLE IN A FUTURE RUN (dz): every
+ * value the migration writes in steps 5/6 is recorded in the
+ * `variant_migration_fill` bookkeeping table (assertion_id + what was
+ * filled).  Re-running after editing a table revises exactly the rows that
+ * still carry an unedited migration fill; a row a human has touched since —
+ * re-versioned, or its variant changed — is released from bookkeeping and
+ * never revised.  (A human edit creates a NEW assertion carrying the variant
+ * the editor SAW and saved, which counts as ratifying it.)
  *
  * What it deliberately does NOT do: the hand-triage rows (spelling text in
  * the variant column, ...) are left untouched — they are a human decision,
@@ -37,8 +47,9 @@ import { variantPolicyByTag, allowedVariantValues,
          type TagVariantPolicy } from './variant-policy.ts';
 
 // --------------------------------------------------------------------------
-// --- The per-tag decisions (data, stated for review — dz to confirm before
-// --- the staging/production event) ----------------------------------------
+// --- The per-tag decisions.  DEFAULTS accepted by dz (2026-07-07) - and
+// --- CHANGEABLE AFTERWARDS: edit a value here and re-run; the fill
+// --- bookkeeping revises the unedited fills (module comment, step 7). ------
 // --------------------------------------------------------------------------
 
 /**
@@ -90,6 +101,10 @@ export interface VariantMigrateOptions {
      *  read-only "is this db fully migrated?" probe, and a dry run against
      *  an unmigrated db is the REVIEW artifact for the decision tables. */
     dryRun?: boolean;
+    /** Decision-table overrides (tests; production edits the exported
+     *  consts, which are the defaults). */
+    backfill?: Record<string, string>;
+    valueFixes?: Record<string, Record<string, string>>;
 }
 
 export interface VariantMigrateStats {
@@ -106,6 +121,8 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
                                 vocabulary: string[],
                                 opts: VariantMigrateOptions = {}): VariantMigrateStats {
     const dryRun = !!opts.dryRun;
+    const backfill = opts.backfill ?? blankBackfillByTag;
+    const fixes = opts.valueFixes ?? valueFixesByTag;
     const policy = variantPolicyByTag(schema);
     const stats: VariantMigrateStats = { changed: 0, byAction: {} };
 
@@ -131,7 +148,7 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
          WHERE valid_to = :eot AND (variant IS NULL OR variant = '')
          GROUP BY ty`, {eot: EOT}).map(r => [r.ty, r.n]));
     const unmapped = keepers.filter(p => (blankCounts.get(p.tag) ?? 0) > 0
-                                         && !(p.tag in blankBackfillByTag));
+                                         && !(p.tag in backfill));
     if(unmapped.length > 0)
         throw new Error(`migrate-variants: keeper tag(s) with blank rows but no backfill ` +
                         `mapping: ${unmapped.map(p => p.tag).join(', ')} - every backfill ` +
@@ -140,8 +157,8 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
     // whose tag is absent from the schema is skipped (nothing to migrate) -
     // but a tag that IS present and is not a keeper is a misconfiguration.
     const mappedValues: [string, string][] = [
-        ...Object.entries(blankBackfillByTag),
-        ...Object.entries(valueFixesByTag).flatMap(([t, m]) =>
+        ...Object.entries(backfill),
+        ...Object.entries(fixes).flatMap(([t, m]) =>
             Object.values(m).map(v => [t, v] as [string, string]))];
     for(const [tag, value] of mappedValues) {
         const p = policy.get(tag);
@@ -160,7 +177,7 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
     {
         const ev = report.section('Decision evidence — the blank-backfill mapping');
         const evRows: (string|number)[][] = [];
-        for(const [tag, chosen] of Object.entries(blankBackfillByTag)) {
+        for(const [tag, chosen] of Object.entries(backfill)) {
             const p = policy.get(tag);
             if(!p?.flags || p.flags.notVariant) continue;
             const dist = db().all<{variant: string|null, n: number}, any>(
@@ -204,9 +221,10 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
     // sets - the value fixes); 'sample' lists the first few of a large set
     // (the backfills - the evidence table above carries the aggregate case).
     const apply = (action: string, tag: string, whereSql: string, setValue: string|null,
-                   params: Record<string, unknown>, detail?: 'enumerate'|'sample') => {
-        const rows = db().all<{id1: number, attr1: string|null, variant: string|null}, any>(
-            `SELECT id1, attr1, variant FROM dict
+                   params: Record<string, unknown>, detail?: 'enumerate'|'sample',
+                   recordFill?: {from: string|null}) => {
+        const rows = db().all<{assertion_id: number, id1: number, attr1: string|null, variant: string|null}, any>(
+            `SELECT assertion_id, id1, attr1, variant FROM dict
              WHERE valid_to = :eot AND ty = :ty AND ${whereSql}`,
             {eot: EOT, ty: tag, ...params});
         const n = rows.length;
@@ -218,6 +236,16 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
         db().execute(
             `UPDATE dict SET variant = :newValue WHERE valid_to = :eot AND ty = :ty AND ${whereSql}`,
             {newValue: setValue, eot: EOT, ty: tag, ...params});
+        // Decision-table actions record what they filled, so a future run
+        // with an EDITED table can revise exactly these rows (step 7).
+        if(recordFill && setValue !== null)
+            for(const r of rows)
+                db().execute(
+                    `INSERT OR REPLACE INTO variant_migration_fill
+                         (assertion_id, ty, from_variant, set_variant)
+                     VALUES (:assertion_id, :ty, :fromVariant, :setVariant)`,
+                    {assertion_id: r.assertion_id, ty: tag,
+                     fromVariant: recordFill.from, setVariant: setValue});
         stats.changed += n;
         stats.byAction[action] = (stats.byAction[action] ?? 0) + n;
         tableRows.push([action, relationDisplayName(tag), setValue ?? 'NULL', n]);
@@ -233,6 +261,16 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
             });
         }
     };
+
+    // The fill BOOKKEEPING (see the module comment: the decision tables are
+    // defaults, changeable in a future run).  Created outside the
+    // transaction so it exists even after a dry-run rollback.
+    db().executeStatements(
+        `CREATE TABLE IF NOT EXISTS variant_migration_fill(
+             assertion_id INTEGER PRIMARY KEY,
+             ty TEXT NOT NULL,
+             from_variant TEXT,
+             set_variant TEXT NOT NULL);`);
 
     db().beginTransaction();
     try {
@@ -250,16 +288,63 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
         // 5: explicit mis-stamp fixes - every case enumerated for review.
         // (Both mapping-driven loops act only on tags the schema knows as
         // keepers - see the precondition above.)
-        for(const [tag, fixes] of Object.entries(valueFixesByTag))
+        for(const [tag, tagFixes] of Object.entries(fixes))
             if(policy.get(tag)?.flags && !policy.get(tag)!.flags!.notVariant)
-                for(const [from, to] of Object.entries(fixes))
+                for(const [from, to] of Object.entries(tagFixes))
                     apply('value-fix', tag, `variant = :fromValue`, to, {fromValue: from},
-                          'enumerate');
+                          'enumerate', {from});
         // 6: the per-tag blank backfill - sampled for review (the decision
         // evidence section carries the aggregate case).
-        for(const [tag, to] of Object.entries(blankBackfillByTag))
+        for(const [tag, to] of Object.entries(backfill))
             if(policy.get(tag)?.flags && !policy.get(tag)!.flags!.notVariant)
-                apply('backfill-blank', tag, `variant IS NULL`, to, {}, 'sample');
+                apply('backfill-blank', tag, `variant IS NULL`, to, {}, 'sample', {from: null});
+
+        // 7: REVISE earlier fills whose decision-table entry has since
+        // changed.  Only rows still current AND still carrying exactly the
+        // recorded fill are ours to revise; anything else was ratified or
+        // superseded by a human - release it from bookkeeping.
+        {
+            const fills = db().all<{assertion_id: number, ty: string,
+                                    from_variant: string|null, set_variant: string}, any>(
+                `SELECT assertion_id, ty, from_variant, set_variant
+                 FROM variant_migration_fill`, {});
+            const revised = new Map<string, {n: number, to: string}>();
+            const reviseCases: (string|number)[][] = [];
+            for(const f of fills) {
+                const intended = f.from_variant == null
+                    ? backfill[f.ty]
+                    : fixes[f.ty]?.[f.from_variant];
+                if(intended === undefined || intended === f.set_variant) continue;
+                const cur = db().all<{variant: string|null, id1: number, attr1: string|null}, any>(
+                    `SELECT variant, id1, attr1 FROM dict
+                     WHERE assertion_id = :id AND valid_to = :eot`,
+                    {id: f.assertion_id, eot: EOT})[0];
+                if(cur && cur.variant === f.set_variant) {
+                    db().execute(`UPDATE dict SET variant = :v WHERE assertion_id = :id`,
+                                 {v: intended, id: f.assertion_id});
+                    db().execute(`UPDATE variant_migration_fill SET set_variant = :v
+                                  WHERE assertion_id = :id`,
+                                 {v: intended, id: f.assertion_id});
+                    stats.changed++;
+                    stats.byAction['revise-fill'] = (stats.byAction['revise-fill'] ?? 0) + 1;
+                    const g = revised.get(f.ty) ?? {n: 0, to: intended};
+                    g.n++; revised.set(f.ty, g);
+                    if(reviseCases.length < 10)
+                        reviseCases.push([report.lexemeLink(cur.id1, headwordOf(cur.id1)),
+                                          clip(cur.attr1), f.set_variant, intended]);
+                } else {
+                    db().execute(`DELETE FROM variant_migration_fill WHERE assertion_id = :id`,
+                                 {id: f.assertion_id});
+                }
+            }
+            for(const [ty, g] of revised)
+                tableRows.push(['revise-fill', relationDisplayName(ty), g.to, g.n]);
+            if(reviseCases.length > 0)
+                caseTables.push({
+                    title: `revise-fill: decision-table change re-applied to unedited fills (sample)`,
+                    rows: reviseCases,
+                    more: [...revised.values()].reduce((a, g) => a + g.n, 0) - reviseCases.length});
+        }
         if(dryRun) db().rollbackTransaction();
         else db().endTransaction();
     } catch(e) {
@@ -296,7 +381,7 @@ export function migrateVariants(report: FindingsReport, schema: model.Schema,
                 // In a DRY RUN the data is unchanged, so exclude what the run
                 // would have fixed (no-ops after a real run).
                 && r.variant !== '' && r.variant !== 'null'
-                && valueFixesByTag[p.tag]?.[r.variant] === undefined);
+                && fixes[p.tag]?.[r.variant] === undefined);
         for(const r of rows) {
             remaining++;
             rem.finding(`${relationDisplayName(p.tag)} ${report.lexemeLink(r.id1, r.attr1 ?? `entry ${r.id1}`)}: ` +
