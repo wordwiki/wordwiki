@@ -187,13 +187,8 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
                   ] //li
                 : undefined,
 
-            [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/service"}, 'Service'],
-            ], //li
-
-            [h.li, {class:"nav-item"},
-             [h.a, {class:"nav-link", href:"/sales"}, 'Sales'],
-            ], //li
+            // (Service and Sales are no longer top-level pages: activity is logged
+            // through events.  Their cross-event lists live under Reports below.)
 
             [h.li, {class:"nav-item"},
              [h.a, {class:"nav-link", href:"/committees"}, 'Committees'],
@@ -206,6 +201,10 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
              ], //a
              [h.ul, {class:"dropdown-menu"},
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/activityReport'}, 'Volunteer Activity Report']],
+              // Cross-event activity: the windowed lists of every service / sale,
+              // across all events (access to an individual record is via its event).
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/service'}, 'Services']],
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/sales'}, 'Sales']],
              ], //ul
             ], //li
 

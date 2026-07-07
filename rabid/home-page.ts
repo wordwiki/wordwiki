@@ -24,6 +24,15 @@ export function home(): Markup {
         [h.h3, {}, 'Volunteers'],
         rabid.volunteer.renderSearchableVolunteers(),
 
+        // A home entry point to reporting (the fuller set lives under the navbar's
+        // Reports menu).  Service/sale records are logged through events; these are
+        // the cross-event views.
+        [h.h3, {}, 'Reports'],
+        [h.ul, {class: 'list-unstyled'},
+         [h.li, {}, [h.a, {...templates.pageLinkProps('/activityReport')}, 'Volunteer Activity Report']],
+         [h.li, {}, [h.a, {...templates.pageLinkProps('/service')}, 'Services']],
+         [h.li, {}, [h.a, {...templates.pageLinkProps('/sales')}, 'Sales']]],
+
         // (The full event list lives on the /events page now - the home page
         // shows just the upcoming window above.)
     ];
