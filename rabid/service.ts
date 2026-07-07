@@ -27,6 +27,11 @@ export const routes = ()=> ({
 // (check-in flows for volunteers come later).
 const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
 
+// A framework-managed order column: hidden from the form, set by insert()/moves.
+class ManagedStringField extends StringField {
+    override isVisible(): boolean { return false; }
+}
+
 // --------------------------------------------------------------------------------
 // --- Service --------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -70,6 +75,10 @@ export interface Service {
     work_stand_id?: number;
 
     notes?: string;
+
+    // Sibling order within the event (orderkey.ts) - drives the event log's order
+    // and lets scanned rows be reordered / inserted between.  Managed.
+    order_key: string;
 }
 
 export type ServiceOpt = Partial<Service>;
@@ -112,9 +121,22 @@ export class ServiceTable extends Table<Service> {
             new DateTimeField('work_end_time', {nullable: true}),
             new IntegerField('work_stand_id', {nullable: true}),
             
-            new MarkdownField('notes', {nullable: true})
+            new MarkdownField('notes', {nullable: true}),
+            new ManagedStringField('order_key', {default: ''}),
         ])
     };
+
+    // Append at the end of the event's order; an explicit order_key (insert
+    // before/after) wins.
+    override insert<P extends ServiceOpt>(tuple: P): number {
+        const withManaged: any = {order_key: this.nextOrderKey(Number(tuple.event_id)), ...tuple};
+        return super.insert(withManaged);
+    }
+    private nextOrderKey(event_id: number): string {
+        const last = security.runSystem(() => db().prepare<{k: string}, {event_id: number}>(
+            'SELECT MAX(order_key) AS k FROM service WHERE event_id = :event_id').first({event_id}));
+        return orderkey.between(last?.k, undefined);
+    }
 
     defaultFieldEdit: security.Permission = hostOrAdmin;
     override get recordEdit(): security.Permission { return hostOrAdmin; }
@@ -139,7 +161,7 @@ export class ServiceTable extends Table<Service> {
 /**/   SELECT ${this.allFields}
 /**/          FROM service
 /**/          WHERE event_id = :event_id
-/**/          ORDER BY service_check_in_time IS NULL, service_check_in_time`);
+/**/          ORDER BY order_key, service_id`);
     }
 
     // Add a service bound to an event (the event page's "Add service…").  A
@@ -185,6 +207,48 @@ export class ServiceTable extends Table<Service> {
                 targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
+    // Insert a blank service directly before/after an anchor (for correcting a
+    // scanned intake - slotting in a missed row).  Blank client name -> "Unnamed
+    // client" until edited.
+    @routeMutation(hostOrAdmin)
+    insertRelative(anchor_id: number, position: string): Markup {
+        const anchor = this.getById(anchor_id);
+        const sibs = security.runSystem(() => this.servicesForEvent.all({event_id: anchor.event_id}));
+        const i = sibs.findIndex(s => s.service_id === anchor_id);
+        const order_key = position === 'before'
+            ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
+            : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
+        this.insert({event_id: anchor.event_id, client_name: '', service_kind: 'diy',
+                     service_description: '', client_number_of_people_served: 1,
+                     order_key} as Partial<Service>);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', anchor.event_id)]} as unknown as Markup;
+    }
+
+    @routeMutation(hostOrAdmin)
+    moveUp(id: number): Markup { return this.moveBy(id, -1); }
+    @routeMutation(hostOrAdmin)
+    moveDown(id: number): Markup { return this.moveBy(id, +1); }
+    private moveBy(id: number, dir: -1|1): Markup {
+        const s = this.getById(id);
+        const sibs = security.runSystem(() => this.servicesForEvent.all({event_id: s.event_id}));
+        const i = sibs.findIndex(x => x.service_id === id);
+        const j = i + dir;
+        if(i >= 0 && j >= 0 && j < sibs.length) {
+            const order_key = dir < 0
+                ? orderkey.between(sibs[j-1]?.order_key, sibs[j].order_key)
+                : orderkey.between(sibs[j].order_key, sibs[j+1]?.order_key);
+            this.update(id, {order_key} as any);
+        }
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', s.event_id)]} as unknown as Markup;
+    }
+
+    @routeMutation(hostOrAdmin)
+    remove(id: number): Markup {
+        const event_id = this.getById(id).event_id;
+        this.delete(id);
+        return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
+    }
+
     // Windowed variant for the Service page.  A NULL check-in time is a
     // pending/not-yet-checked-in record - always surface those (they're the
     // active work), plus checked-in services within [from, to].
@@ -225,9 +289,18 @@ export class ServiceTable extends Table<Service> {
                            s.service_description].filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
+        // tap anywhere drills in via the lm-nav-link name).  Editors get a ☰ menu
+        // (Edit + reorder + insert before/after + delete - the last few for fixing
+        // up scanned intake) in place of the old pencil.
         const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`);
+        const menu = this.canEditRecord(s) ? action.actionMenu([
+            {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.service.renderForm(rabid.service.getById(${id}))`}},
+            {label: 'Add before', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'before')`}},
+            {label: 'Add after', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'after')`}},
+            {label: 'Move up', mode: {kind: 'immediate', expr: `rabid.service.moveUp(${id})`}},
+            {label: 'Move down', mode: {kind: 'immediate', expr: `rabid.service.moveDown(${id})`}},
+            {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this service record?', expr: `rabid.service.remove(${id})`}},
+        ], {ariaLabel: 'Service actions'}) : undefined;
         return [h.div, {...item, 'data-testid': `service-row-${id}`},
             [h.div, {class: 'lm-item-body'},
              [h.div, {class: 'lm-item-primary'},
@@ -235,7 +308,7 @@ export class ServiceTable extends Table<Service> {
                      class: 'lm-nav-link'}, s.client_name || 'Unnamed client'],
               this.serviceBadges(s)],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
-            this.canEditRecord(s) ? this.editPencil(id) : undefined,
+            menu,
             navChevron(),
         ];
     }

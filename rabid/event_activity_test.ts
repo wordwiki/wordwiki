@@ -111,6 +111,30 @@ test("a catch-all (Ad-hoc) day: Activity log, titled by date, NO attendance", as
     });
 });
 
+test("services: add-after and move reorder the event's service rows", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        const order = () => asSystem(() =>
+            rabid.service.servicesForEvent.all({event_id: eid}).map(s => s.service_id));
+        const addSvc = (name: string) => asUser(alice, () =>
+            invoke(`rabid.service.addServiceForEvent($arg0)`,
+                {event_id: eid, client_name: name, service_description: 'x'}));
+        await addSvc('A'); await addSvc('B');
+        const [A, B] = order();
+
+        // Add-after A -> [A, C, B].
+        await asUser(alice, () => invoke(`rabid.service.insertRelative($arg0, $arg1)`, A, 'after'));
+        let ids = order();
+        assertEquals(ids.length, 3);
+        assertEquals(ids[0], A);
+        assertEquals(ids[2], B);
+
+        // Move B up -> [A, B, C].
+        await asUser(alice, () => invoke(`rabid.service.moveUp($arg0)`, B));
+        assertEquals(order()[1], B);
+    });
+});
+
 test("a catch-all is never listed on the Events page (even the undated section)", async () => {
     await withTestDb(async ({ alice }) => {
         insertEvent();   // a normal, dated event
