@@ -142,18 +142,20 @@ test("a template carries no people assignment: the line is hidden and assign rou
             () => r.project.customizeMembers(template_id), Error, 'not assigned to people'));
     }));
 
-test("event page: a quiet ☰ 'Add …' item; after instantiate, the checklist under its role heading + Resync", () =>
+test("event page: the checklist section always shows (a '+ set up' before, the tasks + Resync after)", () =>
     withTestDb(async ({alice}) => {
         const r = getRabid();
         const eid = asSystem(newEvent);
         const {template_id} = asSystem(newCleanupTemplate);
         const before = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${eid})`));
-        assert(hasText(before, 'Add Cleanup Tasks checklist'), 'offers to add the checklist via the ☰');
+        // The section stands even before setup - heading + a "Not set up yet" +.
+        assert(hasText(before, 'Cleanup Tasks'), 'the section heading always shows');
+        assert(hasText(before, 'Not set up yet'), 'shown as a + to set up');
+        assert(!hasText(before, 'Sweep'), 'no copied tasks before setup');
         asUser(alice, () => r.project.instantiateTemplate(template_id, 'event', eid));
         const after = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${eid})`));
-        assert(hasText(after, 'Cleanup'), 'role heading');
+        assert(hasText(after, 'Cleanup Tasks'), 'role heading');
         assert(hasText(after, 'Sweep'), 'copied task shown');
         assert(hasText(after, 'Resync from template'), 'resync affordance');
-        // ...and the create affordance is now gone from the ☰ (nothing left to add).
-        assert(!hasText(after, 'Add Cleanup Tasks checklist'), 'add item drops once instantiated');
+        assert(!hasText(after, 'Not set up yet'), 'the placeholder is gone once set up');
     }));

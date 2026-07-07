@@ -446,15 +446,11 @@ export class EventTable extends Table<Event> {
         props.class = 'container py-3 ' + props.class;
         // Adding a not-yet-created checklist is a quiet ☰ action next to the
         // title (document-friendly), not a "Create …" button in the flow.
-        // The title-row ☰ is just the "add a checklist" items now; editing the event
-        // is the ☰ ON the summary card below (right where those details live).
-        const checklistAdds = rabid.task.ownerChecklistAddItems('event', event_id);
+        // No title-row menu now: editing the event is the ☰ on the summary card,
+        // and setting up a checklist is the + on its (always-present) section below.
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
-             [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
-             checklistAdds.length
-                 ? action.actionMenu(checklistAdds, {ariaLabel: 'Add a checklist'})
-                 : undefined],
+             [h.h2, {class: 'mb-0'}, this.recordLabel(e)]],
             // Jump-links across the top: scroll to each section (fragment ids set on
             // the section wrappers below).
             this.renderSectionNav(),
