@@ -2073,27 +2073,36 @@ if (import.meta.main) {
         // for the live cleanup report (wordwiki.variants.cleanupReport()).
         //   ./wordwiki.sh migrate-variants [--report path.md]
         //   ./wordwiki.sh migrate-variants --expect-no-changes    # idempotency proof
+        //   ./wordwiki.sh migrate-variants --dry-run --report r.md  # REVIEW: report
+        //       every case (decision evidence, value fixes enumerated, backfill
+        //       samples) without writing; with --expect-no-changes it is a
+        //       read-only "is this db fully migrated?" probe
         case 'migrate-variants': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                const dryRun = args.includes('--dry-run');
+                if(!dryRun && ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
                 const reportIx = args.indexOf('--report');
                 const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
                 const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
-                const report = new FindingsReport('Variant (orthography) migration', {sourceDb});
-                const stats = migrateVariants(report, ww.dictSchema, Object.keys(entry.variants));
+                const report = new FindingsReport(
+                    `Variant (orthography) migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
+                const stats = migrateVariants(report, ww.dictSchema, Object.keys(entry.variants),
+                                              {dryRun});
                 if(reportPath) {
                     Deno.writeTextFileSync(reportPath, report.toMarkdown());
                     console.info(`wrote ${reportPath}`);
                 }
                 if(args.includes('--expect-no-changes')) {
                     if(stats.changed > 0)
-                        throw new Error(`--expect-no-changes: changed ${stats.changed} variant row(s)`);
-                    console.info('idempotency confirmed: re-run made no changes');
+                        throw new Error(`--expect-no-changes: ${dryRun ? 'would change' : 'changed'} ` +
+                                        `${stats.changed} variant row(s)`);
+                    console.info(dryRun ? 'read-only probe: the db is fully migrated'
+                                        : 'idempotency confirmed: re-run made no changes');
                 }
-                console.info(`migrate-variants: ${stats.changed} row(s) changed ` +
+                console.info(`migrate-variants: ${stats.changed} row(s) ${dryRun ? 'WOULD change (dry run)' : 'changed'} ` +
                              `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
             });
             Deno.exit(0);

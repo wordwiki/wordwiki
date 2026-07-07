@@ -71,7 +71,12 @@ set -e
 #                                      # mute-in-place (idempotent; refuses
 #                                      # prod; needs the flagged schema;
 #                                      # --expect-no-changes proof mode;
-#                                      # --report <path.md>)
+#                                      # --report <path.md>; --dry-run runs
+#                                      # everything in a rolled-back tx and
+#                                      # reports every case - the REVIEW
+#                                      # artifact for the decision tables,
+#                                      # and with --expect-no-changes a
+#                                      # read-only is-it-migrated probe)
 #
 # The whole pull-and-migrate rehearsal is packaged as ./migrateDevDb.sh
 # (which also documents the eventual production-cutover recipe).

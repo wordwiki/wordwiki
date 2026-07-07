@@ -152,3 +152,40 @@ test("migrate-variants: refuses when the drop gate fails", async () => {
                      Error, 'drop gate FAILS');
     });
 });
+
+test("migrate-variants --dry-run: reports every case, writes nothing", async () => {
+    await withTestDb((fx) => {
+        seed(fx);
+        const report = new FindingsReport('dry', {quiet: true});
+        const stats = migrateVariants(report, flaggedSchema, VOCABULARY, {dryRun: true});
+
+        // Nothing changed in the db...
+        assertEquals(variantOf(1011), '');         // blank spelling untouched
+        assertEquals(variantOf(1013), 'mm');       // value-fix candidate untouched
+        assertEquals(variantOf(1030), 'mm-li');    // $notVariant rec untouched
+        // ...but the stats say what WOULD change, same as a real run.
+        assert(stats.changed >= 7, `would-change ${stats.changed}`);
+
+        const md = report.toMarkdown();
+        // Decision evidence: the mapping is judgeable from the report alone.
+        assert(md.includes('Decision evidence'), 'evidence section');
+        assert(md.includes('blank becomes'), 'evidence table header');
+        // The cases: value fixes enumerated with headword links, backfills sampled.
+        assert(md.includes('The cases'), 'cases section');
+        assert(md.includes('value-fix `spl`: every case'), 'value-fix enumerated');
+        // The case row links by the entry's HEADWORD (its first spelling);
+        // the affected row's own text rides the field-text column.
+        assert(md.includes('[samqwan](/ww/wordwiki.entry(1000))'), 'headword-linked case row');
+        assert(md.includes('| waisis | mm | mm-li |'), 'value-fix case columns');
+        assert(md.includes('backfill-blank `spl`: sample'), 'backfill sampled');
+        // The dry-run remainder excludes what the run WOULD fix: the 'mm'
+        // value-fix candidate must not be listed as hand-triage.
+        assert(!md.includes("'mm' needs a human decision"), 'value-fix not in remainder');
+        assert(md.includes("'us's'g' needs a human decision"), 'true hand-triage still listed');
+
+        // A real run afterwards still works and changes the same number.
+        const real = migrateVariants(new FindingsReport('real', {quiet: true}),
+                                     flaggedSchema, VOCABULARY);
+        assertEquals(real.changed, stats.changed);
+    });
+});
