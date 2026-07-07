@@ -1235,8 +1235,17 @@ export class LexemeEditor {
                 if(pending && isAutomatedUsername(current.assertion.change_by_username)
                    && current.assertion.variant === autoTransliterate.TARGET_ORTHOGRAPHY) {
                     const li = this.liSiblingText(id.entryId, id.parentFactId, rf);
+                    // The calibrated confidence rides change_arg - the band
+                    // label focuses the approver's attention (dz): a 'low'
+                    // proposal warrants real scrutiny, a 'high' one is
+                    // probably right (and its correction rate is watched by
+                    // the report either way).
+                    const conf = /conf=(\d+)/.exec(current.assertion.change_arg ?? '')?.[1];
+                    const band = /band=(\w+)/.exec(current.assertion.change_arg ?? '')?.[1];
                     if(li) annotation = [annotation,
-                        ['span', {class: 'lm-me-chg-was'}, ' from Listuguj: ', li]];
+                        ['span', {class: 'lm-me-chg-was'}, ' from Listuguj: ', li],
+                        conf ? ['span', {class: `lm-me-chg-was lm-tr-band-${band ?? 'unknown'}`},
+                                ` ~${conf}% ${band ?? ''}`] : ''];
                 }
                 const menu = action.actionMenu(
                     [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit', review),

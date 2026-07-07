@@ -13,8 +13,10 @@ import { withTestDb, as, bornApprove, renderRoute, invoke,
          TestTimeline, mkEntry, mkChild, type Fixture } from './testing.ts';
 import { db } from '../liminal/db.ts';
 import * as timestamp from '../liminal/timestamp.ts';
-import { transliterateLiToSf, TRANSLITERATOR_VERSION, transliterateJavaRules,
+import { transliterateLiToSf, transliterateLiToSfScored, transliterationRiskMarkers,
+         TRANSLITERATOR_VERSION, transliterateJavaRules,
          transliterateJavaScanner } from './transliterate.ts';
+import { pairJunkReason } from './auto-transliterate.ts';
 import { proposeTransliterations, pureTextRelations,
          AUTO_TRANSLITERATE_USERNAME } from './auto-transliterate.ts';
 
@@ -73,7 +75,7 @@ test("transliterate: proposes a pending robot fact; fill-gaps + rejected rules",
         const p = rows[0];
         assertEquals(p.attr1, 'ankamatl');                              // the rules ran
         assertEquals(p.change_by_username, AUTO_TRANSLITERATE_USERNAME); // robot author
-        assertEquals(p.change_arg, TRANSLITERATOR_VERSION);             // version stamp
+        assert(String(p.change_arg).startsWith(TRANSLITERATOR_VERSION)); // version stamp (+ conf/band)
         assertEquals(p.published_from, null);                           // pending, not approved
 
         // FILL GAPS ONLY: a second click proposes nothing (live sf exists).
@@ -207,4 +209,48 @@ test("java ports: faithful behavior (pinned against the source's semantics)", ()
     // The commented-out sonorant block, enabled, is rules-v1's second rule.
     assertEquals(transliterateJavaScanner('weltaq', {withSonorantCluster: true}), "wel'taq");
     assertEquals(transliterateJavaScanner('weltaq'), 'weltaq');
+});
+
+// --- confidence scoring ----------------------------------------------------------
+
+test("confidence: markers detected; calibrated bands spread; conservative fallback", () => {
+    assertEquals(transliterationRiskMarkers('gesatg'), []);                    // clean
+    assertEquals(transliterationRiskMarkers('weltaq'), ['sonorant-cluster']);
+    assertEquals(transliterationRiskMarkers('algwiluatl'), ['l-before-k']);
+    assertEquals(transliterationRiskMarkers('welgtaq nemitg'),
+                 ['l-before-k']);
+    // The scored pair: text = the plain function; confidence = the band's
+    // MEASURED accuracy (clean is the best band; l-before-k the worst).
+    const clean = transliterateLiToSfScored('gesatg');
+    const hard = transliterateLiToSfScored('algiluatl');   // l-before-k, no cluster
+    assertEquals(clean.text, transliterateLiToSf('gesatg'));
+    assert(clean.confidence > hard.confidence, 'clean band above l-before-k band');
+    assert(hard.band === 'low' || hard.band === 'uncertain', 'lg words are flagged');
+    assert(clean.version.includes(TRANSLITERATOR_VERSION), 'version stamped');
+});
+
+test("oracle filter: an sf identical to its li DESPITE g is a suspected copy", () => {
+    assertEquals(pairJunkReason('angua', 'angua', 'spl'),
+                 'identical despite g (suspected unconverted copy)');
+    assertEquals(pairJunkReason('samqwan', 'samqwan', 'spl'), undefined);  // legit coincidence
+});
+
+test("proposals are stamped with the calibrated band; the report shows per-band outcomes", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);   // li = 'angamatl' (clean: nk takes no marker... has none)
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        const p = sfRows(1000)[0];
+        assert(String(p.change_arg).startsWith(TRANSLITERATOR_VERSION), 'version first');
+        assert(/conf=\d+/.test(p.change_arg), 'confidence stamped');
+        assert(/band=\w+/.test(p.change_arg), 'band stamped');
+
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.transliteration.correctionsReport()')));
+        assert(html.includes('Outcomes by confidence band'), 'per-band table');
+        // The review row shows the band beside the evidence.
+        const row = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        assert(/~\d+% \w+/.test(row), 'band label on the pending row');
+    });
 });

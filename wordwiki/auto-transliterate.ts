@@ -42,7 +42,7 @@ import * as entrySchema from './entry-schema.ts';
 import { Assertion, assertionPathToFields, getAssertionPath } from './assertion.ts';
 import { VersionedTuple, VersionedRelation, generateAtEndOrderKey } from './workspace.ts';
 import { newId, placeholderTxTime } from './lexeme-ops.ts';
-import { transliterateLiToSf, TRANSLITERATOR_VERSION,
+import { transliterateLiToSf, transliterateLiToSfScored, TRANSLITERATOR_VERSION,
          CANDIDATE_TRANSLITERATORS } from './transliterate.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
 import type { WordWiki } from './wordwiki.ts';
@@ -61,6 +61,12 @@ export function pairJunkReason(li: string, sf: string, tag: string): string | un
         if(text.includes('\n')) return `${side} is multi-line`;
         if(tag !== 'etx' && /,| or /.test(text)) return `${side} looks like a list (single-word tag)`;
     }
+    // An sf IDENTICAL to its li DESPITE containing g is almost certainly an
+    // unconverted copy-paste, not real Smith-Francis (g never survives the
+    // li->sf conversion in the attested rules) - it teaches the rules the
+    // opposite of the truth.  Identical pairs WITHOUT such letters are kept:
+    // orthographies legitimately coincide on many words.
+    if(li === sf && /[gG]/.test(li)) return 'identical despite g (suspected unconverted copy)';
     return undefined;
 }
 export const SOURCE_ORTHOGRAPHY = 'mm-li';
@@ -153,10 +159,16 @@ export function proposeTransliterations(app: WordWiki, entry_id: number): Propos
         if(!parentAssertion) return;   // deleted parent: nothing to hang off
         const proposedHere = new Set<string>();
         for(const li of liTexts) {
-            const sf = transliterateLiToSf(li);
+            const scored = transliterateLiToSfScored(li);
+            const sf = scored.text;
             if(rejectedTexts.has(sf)) { stats.rejectedBefore++; continue; }   // same output, said no
             if(proposedHere.has(sf)) continue;   // two li texts, one sf output
             proposedHere.add(sf);
+            // change_arg carries the version AND the calibrated confidence +
+            // risk markers (queryable forever: per-band correction rates,
+            // the review row's band label, the undo tool's targeting).
+            const changeArg = `${TRANSLITERATOR_VERSION} conf=${Math.round(scored.confidence * 100)} ` +
+                              `band=${scored.band} markers=${scored.markers.join('+') || 'clean'}`;
             const id = newId();
             proposals.push({
                 ...assertionPathToFields([...getAssertionPath(parentAssertion),
@@ -167,7 +179,7 @@ export function proposeTransliterations(app: WordWiki, entry_id: number): Propos
                 [spec.contentField.bind]: sf,
                 variant: TARGET_ORTHOGRAPHY,
                 change_by_username: AUTO_TRANSLITERATE_USERNAME,
-                change_arg: TRANSLITERATOR_VERSION,
+                change_arg: changeArg,
             } as Assertion);
             stats.proposed++;
         }
@@ -310,7 +322,7 @@ export class TransliterationReports {
         const byVersion = new Map<string, {corrected: number, rejected: number,
                                            approved: number, pending: number}>();
         for(const r of rows) {
-            const v = r.version ?? '(unstamped)';
+            const v = (r.version ?? '(unstamped)').split(' ')[0];
             if(!byVersion.has(v)) byVersion.set(v, {corrected: 0, rejected: 0, approved: 0, pending: 0});
             const g = byVersion.get(v)!;
             if(r.outcome === 'corrected') g.corrected++;
@@ -337,6 +349,34 @@ export class TransliterationReports {
               ['tr', {}, ['td', {}, c.name],
                ['td', {}, `${c.exact}/${c.pairs}`],
                ['td', {}, `${c.pairs > 0 ? Math.round(c.exact * 1000 / c.pairs) / 10 : 0}%`]])]],
+            ['h2', {class: 'h5 mt-4'}, 'Outcomes by confidence band'],
+            ['p', {class: 'text-muted small mb-1'},
+             'The calibration check: a band\u2019s correction rate should track its predicted ' +
+             'error rate - a \u201chigh\u201d band corrected often means the calibration is wrong.'],
+            (() => {
+                const byBand = new Map<string, {corrected: number, rejected: number,
+                                                approved: number, pending: number}>();
+                for(const r of rows) {
+                    const band = /band=(\w+)/.exec(r.version ?? '')?.[1] ?? '(unscored)';
+                    if(!byBand.has(band)) byBand.set(band, {corrected: 0, rejected: 0, approved: 0, pending: 0});
+                    const g = byBand.get(band)!;
+                    if(r.outcome === 'corrected') g.corrected++;
+                    else if(r.outcome === 'rejected') g.rejected++;
+                    else if(r.outcome === 'approved-unchanged') g.approved++;
+                    else g.pending++;
+                }
+                return ['table', {class: 'lm-data-table'},
+                    ['thead', {}, ['tr', {},
+                     ['th', {}, 'Band'], ['th', {}, 'Approved unchanged'], ['th', {}, 'Corrected'],
+                     ['th', {}, 'Rejected'], ['th', {}, 'Pending'], ['th', {}, 'Correction rate']]],
+                    ['tbody', {}, [...byBand.entries()].map(([band, g]) => {
+                        const settled = g.approved + g.corrected;
+                        return ['tr', {}, ['td', {}, band], ['td', {}, String(g.approved)],
+                            ['td', {}, String(g.corrected)], ['td', {}, String(g.rejected)],
+                            ['td', {}, String(g.pending)],
+                            ['td', {}, settled > 0 ? `${Math.round(g.corrected * 100 / settled)}%` : '\u2014']];
+                    })]];
+            })(),
             ['h2', {class: 'h5 mt-4'}, 'Proposals by transliterator version'],
             ['table', {class: 'lm-data-table'},
              ['thead', {}, ['tr', {},

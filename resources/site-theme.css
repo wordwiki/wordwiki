@@ -274,3 +274,9 @@ body {
    content only (never opacity on the row: the pending dot and menus must
    stay crisp), and PENDING rows are exempt at the class level, not here. */
 .lm-orth-other > .flex-grow-1 { color: var(--bs-secondary-color, #6c757d); }
+
+/* Confidence bands on pending auto-transliterations (lexeme-editor.ts): the
+   LOW band earns a warning tint - it genuinely needs eyes; the others stay
+   in the quiet was-chip family. */
+.lm-tr-band-low { background: rgba(220, 53, 69, .14); }
+.lm-tr-band-uncertain { background: rgba(255, 193, 7, .25); }

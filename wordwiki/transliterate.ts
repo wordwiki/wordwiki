@@ -192,3 +192,72 @@ export const CANDIDATE_TRANSLITERATORS: Array<{name: string, fn: (li: string) =>
     { name: 'java scanner', fn: (li) => transliterateJavaScanner(li) },
     { name: 'java scanner + sonorant rule', fn: (li) => transliterateJavaScanner(li, {withSonorantCluster: true}) },
 ];
+
+// --------------------------------------------------------------------------
+// --- Confidence scoring (dz: bands to focus editor attention) --------------
+// --------------------------------------------------------------------------
+
+import { CALIBRATION, CALIBRATION_VERSION } from './transliterate-calibration.ts';
+
+/**
+ * The RISK MARKERS: mechanically detectable situations (from the oracle
+ * harness's residual clusters) where the rules are known to be uncertain.
+ * Each marker is measurable - the calibration table records the rules'
+ * ACTUAL accuracy on oracle words carrying it - and the marker list itself
+ * is the language experts' agenda ("when does lg become l'k?" comes with 81
+ * counted examples).  Computed on the SOURCE (Listuguj) text.
+ */
+export function transliterationRiskMarkers(li: string): string[] {
+    const m: string[] = [];
+    const low = li.toLowerCase();
+    if(/[lnm][ptj]/.test(low)) m.push('sonorant-cluster');
+    if(/l[gk]/.test(low)) m.push('l-before-k');
+    if(li.split(/\s+/).some(w => w.replace(/[.,!?]+$/, '').toLowerCase().endsWith('ei')))
+        m.push('word-final-ei');
+    if(/[ptks]'[a-z]/.test(low)) m.push('schwa-cluster');
+    if(/ult/.test(low)) m.push('ult');
+    if(li.split(/\s+/).some(w => w in LEXICAL_EXCEPTIONS)) m.push('lexical-exception');
+    return m.sort();
+}
+
+export interface ScoredTransliteration {
+    text: string;
+    /** The MEASURED accuracy of this word's risk band on the oracle (0..1) -
+     *  calibrated, never guessed; 0.5 conservative default when the band has
+     *  never been measured. */
+    confidence: number;
+    /** Display band from the confidence: high / good / uncertain / low. */
+    band: 'high' | 'good' | 'uncertain' | 'low';
+    markers: string[];
+    version: string;
+}
+
+export function confidenceBand(confidence: number): ScoredTransliteration['band'] {
+    return confidence >= 0.9 ? 'high'
+         : confidence >= 0.75 ? 'good'
+         : confidence >= 0.5 ? 'uncertain'
+         : 'low';
+}
+
+/**
+ * The scored transliteration: the text plus its calibrated confidence.
+ * Lookup: the exact marker combination when the calibration measured it
+ * with enough support, else the MINIMUM of the single-marker accuracies
+ * (conservative: a word carrying a weak marker is at most as trustworthy as
+ * that marker), else 0.5.
+ */
+export function transliterateLiToSfScored(li: string): ScoredTransliteration {
+    const text = transliterateLiToSf(li);
+    const markers = transliterationRiskMarkers(li);
+    const key = markers.length === 0 ? 'clean' : markers.join(',');
+    let confidence: number;
+    if(CALIBRATION[key]) {
+        confidence = CALIBRATION[key].accuracy;
+    } else {
+        const singles = markers.map(m => CALIBRATION[m]?.accuracy)
+            .filter((a): a is number => a !== undefined);
+        confidence = singles.length > 0 ? Math.min(...singles) : 0.5;
+    }
+    return {text, confidence, band: confidenceBand(confidence), markers,
+            version: `${TRANSLITERATOR_VERSION}+${CALIBRATION_VERSION}`};
+}
