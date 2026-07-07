@@ -88,6 +88,18 @@ set -e
 #                                      # and with --expect-no-changes a
 #                                      # read-only is-it-migrated probe)
 #
+#   ./wordwiki.sh assemble-import-report <dir> <out.md> [expected...]
+#                                      # concatenate per-step findings
+#                                      # fragments into one report with an
+#                                      # executive summary (CRASHED/MISSING
+#                                      # markers); run by importWordWikiV1Db's
+#                                      # EXIT trap
+#
+# Every pipeline subcommand accepts --report=<path.md>: its log/finding
+# commentary lands in a findings fragment (written even on a crash).  The
+# server renders the assembled report + fragments at
+# /ww/wordwiki.importReport().
+#
 # The whole pull-and-migrate program is packaged as ./importWordWikiV1Db.sh
 # (the V1-db import; --no-pull --allow-production is the production cutover).
 #

@@ -255,6 +255,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliteration.correctionsReport()'}, 'Transliteration Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.importReport()'}, 'Import Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],

@@ -4,7 +4,7 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { FindingsReport } from "./findings.ts";
+import { FindingsReport, assembleImportReport } from "./findings.ts";
 
 function sampleReport(lexemeBase = ''): FindingsReport {
     const report = new FindingsReport('Variant (orthography) scan', {
@@ -58,4 +58,27 @@ test("table cells escape pipes and newlines", () => {
     const md = report.toMarkdown();
     assertStringIncludes(md, '| x\\|y z |');
     assert(!md.includes('| x|y'));
+});
+
+// --- the import-report assembler + served routes --------------------------------
+
+test("assembleImportReport: executive summary, CRASHED and MISSING markers", () => {
+    const frag = (title: string, findings: number, crashed = false) =>
+        `# ${title}\n\n**${findings} finding(s)** across 1 section(s):\n\n## Log\n\n- did things\n` +
+        (crashed ? '\n## CRASHED\n\n- **step failed: boom**\n' : '');
+    const md = assembleImportReport([
+        {name: '03-repair-assertions.md', content: frag('Repair', 0)},
+        {name: '10-migrate-status.md', content: frag('Status', 2, true)},
+    ], ['repair-assertions', 'migrate-status', 'verify-workspace']);
+    assertStringIncludes(md, '## Executive summary');
+    assertStringIncludes(md, '- 03-repair-assertions.md: 0 finding(s)');
+    assertStringIncludes(md, '- 10-migrate-status.md: 2 finding(s) — **STEP CRASHED**');
+    assertStringIncludes(md, '- verify-workspace: **MISSING**');
+    assertStringIncludes(md, 'did NOT complete cleanly');
+    // Fragments inlined with their headings demoted under the assembly.
+    assertStringIncludes(md, '## Repair');
+    // An all-clean run says so.
+    const clean = assembleImportReport(
+        [{name: '03-repair-assertions.md', content: frag('Repair', 0)}], ['repair-assertions']);
+    assertStringIncludes(clean, 'All reported steps completed.');
 });

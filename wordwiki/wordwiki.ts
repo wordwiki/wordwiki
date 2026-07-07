@@ -53,7 +53,7 @@ import * as migrationVerify from './migration-verify.ts';
 import { validateVersionedDb, assertVersionedDbValid, validateVariantInvariants,
          factViewsFromVersionedDb } from './versioned-db-validate.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
-import { FindingsReport } from './findings.ts';
+import { FindingsReport, assembleImportReport } from './findings.ts';
 import { scanVariants, VariantReports } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
@@ -176,6 +176,55 @@ export class WordWiki extends LiminalApp {
     #transliteration: TransliterationReports|undefined = undefined;
     @route(authenticated) @path get transliteration(): TransliterationReports {
         return this.#transliteration ??= new TransliterationReports(this);
+    }
+
+    // ----- The import report (the findings publish path) ---------------------
+    // importWordWikiV1Db.sh writes per-step fragments under
+    // <instance>/import-report/ and assembles import-report.md (via a trap,
+    // so crashes still report); these routes render them through the page
+    // template.  FIXED paths + a whitelisted fragment-name pattern - no
+    // path traversal surface.
+
+    @route(authenticated)
+    importReport(): templates.Page {
+        const fragments = (() => {
+            try {
+                return [...Deno.readDirSync('import-report')]
+                    .filter(e => e.isFile && /^[0-9]+-[a-z0-9-]+\.md$/.test(e.name))
+                    .map(e => e.name).sort();
+            } catch(_e) { return []; }
+        })();
+        const body: markup.Markup = [
+            fragments.length > 0
+                ? ['p', {class: 'text-muted small'}, 'Step fragments: ',
+                   fragments.map((n, i) => [i > 0 ? ' · ' : '',
+                       ['a', {href: `/ww/wordwiki.importReportFragment(${JSON.stringify(n)})`}, n]])]
+                : undefined,
+            this.renderMdReport('import-report.md',
+                'No import report yet - importWordWikiV1Db.sh assembles one on every run ' +
+                '(even a failed one).')];
+        return templates.page('Import Report', ['div', {class: 'container py-3'}, body]);
+    }
+
+    @route(authenticated)
+    importReportFragment(name: string): templates.Page {
+        if(!/^[0-9]+-[a-z0-9-]+\.md$/.test(name))
+            throw new Error(`'${name}' is not an import-report fragment name`);
+        return templates.page(`Import Report — ${name}`,
+            ['div', {class: 'container py-3'},
+             ['p', {class: 'small'}, ['a', {href: '/ww/wordwiki.importReport()'}, '← whole report']],
+             this.renderMdReport(`import-report/${name}`, 'No such fragment.')]);
+    }
+
+    // A committed/instance markdown file rendered under the page styles.
+    // PRIVATE + fixed callers only: never expose a path-taking route.
+    private renderMdReport(path: string, missing: string): markup.Markup {
+        try {
+            return ['div', {class: 'page-content'},
+                    markdown.markdownToMarkup(Deno.readTextFileSync(path))];
+        } catch(_e) {
+            return ['p', {class: 'text-muted'}, missing];
+        }
     }
 
     // The monthly activity report, reachable as wordwiki.report.* (page
@@ -651,6 +700,7 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
              ['li', {}, ['a', {href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
              ['li', {}, ['a', {href:'/ww/wordwiki.transliteration.correctionsReport()'}, 'Transliteration Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.importReport()'}, 'Import Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],
@@ -1729,6 +1779,39 @@ if (import.meta.main) {
     const args = Deno.args;
     const command = args[0];
     const ww = getWordWiki();
+
+    // The FINDINGS PUBLISH PATH (fix-orthographies.md): every pipeline
+    // subcommand accepts --report <path.md>; the migrator's own LOG CALLBACK
+    // (never raw stdout - the db layer's noise stays out by construction)
+    // accumulates into a findings fragment alongside the console echo, and a
+    // CRASH still writes the fragment with the error as a finding - so the
+    // assembled import report always tells the whole story.
+    // --report=<path> (preferred: never collides with positional args) or
+    // --report <path>.
+    const reportPathArg = (): string | undefined => {
+        const eq = args.find(a => a.startsWith('--report='));
+        if(eq) return eq.slice('--report='.length);
+        const i = args.indexOf('--report');
+        return i >= 0 ? args[i + 1] : undefined;
+    };
+    const dbDescription = () =>
+        `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
+    const stepReport = (title: string) => {
+        const report = new FindingsReport(title, {sourceDb: dbDescription()});
+        const section = report.section('Log');
+        const reportPath = reportPathArg();
+        const write = () => { if(reportPath) Deno.writeTextFileSync(reportPath, report.toMarkdown()); };
+        return {
+            report,
+            log: (m: string) => section.info(m),
+            finish: write,
+            crash: (e: unknown) => {
+                report.section('CRASHED').finding(
+                    `step failed: ${e instanceof Error ? e.message : String(e)}`);
+                write();
+            },
+        };
+    };
     switch(command) {
         case 'serve': {
             const port = Number(Deno.env.get('WORDWIKI_PORT') ?? '9000');
@@ -1884,39 +1967,44 @@ if (import.meta.main) {
         //   ./wordwiki.sh import-categories [categorization-dir]
         //                  [--username=NAME] [--allow-production]
         case 'import-categories': {
-            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
+            const reportValueIx = args.indexOf('--report') + 1;   // 0 when absent
+            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--') && i !== reportValueIx)
                 ?? new URL('../categorization', import.meta.url).pathname;
             // Stamped with the reserved automation identity by default
             // (history UI collapses '~' authors; restore refuses to cross
             // the migration) - --username=NAME for a human-attributed run.
             const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
                 ?? '~category-import';
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
-                if(!ww.users.byUsername.first({username}))
-                    throw new Error(`--username '${username}' is not in the user table`);
-                const schemeText = Deno.readTextFileSync(`${dir}/scheme.md`);
-                const assignmentsText = Deno.readTextFileSync(`${dir}/assignments.jsonl`);
-                const stats = categoryImport.importCategories(ww, {
-                    schemeText, assignmentsText, username,
-                    log: (msg) => console.info(msg),
+            const step = stepReport('Import categories');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                        throw new Error("db is marked db_purpose='production' - " +
+                                        'run with --allow-production if you really mean it');
+                    user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
+                    if(!ww.users.byUsername.first({username}))
+                        throw new Error(`--username '${username}' is not in the user table`);
+                    const schemeText = Deno.readTextFileSync(`${dir}/scheme.md`);
+                    const assignmentsText = Deno.readTextFileSync(`${dir}/assignments.jsonl`);
+                    const stats = categoryImport.importCategories(ww, {
+                        schemeText, assignmentsText, username,
+                        log: step.log,
+                    });
+                    // The idempotency proof for the migration recipe: a re-run
+                    // against an already-migrated db must be a pure no-op.
+                    if(args.includes('--expect-no-changes')) {
+                        const changes = stats.rewrite.entriesRewritten
+                            + stats.seed.seededNew + stats.seed.seededInternal + stats.seed.seededOld
+                            + stats.mute.valuesRenamed;
+                        if(changes > 0)
+                            throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
+                                            'the previous run did not reach the fixed point');
+                        step.log('idempotency confirmed: re-run made no changes');
+                    }
                 });
-                // The idempotency proof for the migration recipe: a re-run
-                // against an already-migrated db must be a pure no-op.
-                if(args.includes('--expect-no-changes')) {
-                    const changes = stats.rewrite.entriesRewritten
-                        + stats.seed.seededNew + stats.seed.seededInternal + stats.seed.seededOld
-                        + stats.mute.valuesRenamed;
-                    if(changes > 0)
-                        throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
-                                        'the previous run did not reach the fixed point');
-                    console.info('idempotency confirmed: re-run made no changes');
-                }
-            });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }
@@ -1932,11 +2020,14 @@ if (import.meta.main) {
         //   ./wordwiki.sh import-twitter-posts [legacy-file]
         //                  [--username=NAME] [--allow-production] [--expect-no-changes]
         case 'import-twitter-posts': {
-            const file = args.find((a, i) => i >= 1 && !a.startsWith('--'))
+            const reportValueIx = args.indexOf('--report') + 1;   // 0 when absent
+            const file = args.find((a, i) => i >= 1 && !a.startsWith('--') && i !== reportValueIx)
                 ?? new URL('../legacy-mmo.txt', import.meta.url).pathname;
             const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
                 ?? twitterPostImport.TWITTER_POST_IMPORT_USER;
-            security.runSystem(() => {
+            const step = stepReport('Import twitter posts');
+            try {
+              security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
@@ -1946,7 +2037,7 @@ if (import.meta.main) {
                     throw new Error(`--username '${username}' is not in the user table`);
                 const legacyText = Deno.readTextFileSync(file);
                 const stats = twitterPostImport.importTwitterPosts(ww, legacyText, {
-                    username, log: (msg) => console.info(msg),
+                    username, log: step.log,
                 });
                 // --report-skipped=<file>: (re)write the hand-off list of the
                 // homonyms/unmatched a human must place in production, with
@@ -1957,14 +2048,16 @@ if (import.meta.main) {
                     ?.slice('--report-skipped='.length);
                 if(reportPath) {
                     Deno.writeTextFileSync(reportPath, twitterPostImport.renderSkippedReport(stats));
-                    console.info(`wrote skipped-post report (${stats.ambiguous + stats.unmatched} entries) to ${reportPath}`);
+                    step.log(`wrote skipped-post report (${stats.ambiguous + stats.unmatched} entries) to ${reportPath}`);
                 }
                 if(args.includes('--expect-no-changes')) {
                     if(stats.added > 0)
                         throw new Error(`--expect-no-changes: the import added ${stats.added} twitter-posts`);
-                    console.info('idempotency confirmed: re-run made no changes');
+                    step.log('idempotency confirmed: re-run made no changes');
                 }
-            });
+              });
+              step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }
@@ -1978,16 +2071,20 @@ if (import.meta.main) {
         // in the repeatable migration flow (importWordWikiV1Db.sh). Refuses a
         // production db without --allow-production, like the imports.
         case 'repair-assertions': {
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                const stats = repairAssertions({log: (m) => console.info(m)});
-                console.info(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed, ` +
+            const step = stepReport('Repair assertions');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                        throw new Error("db is marked db_purpose='production' - " +
+                                        'run with --allow-production if you really mean it');
+                    const stats = repairAssertions({log: step.log});
+                    step.log(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed, ` +
                              `${stats.legacyPublishedPlaceholdersCleared} legacy published placeholder row(s) cleared, ` +
                              `${stats.orphanedChildrenTombstoned} orphaned live child(ren) tombstoned`);
-            });
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }
@@ -1999,19 +2096,22 @@ if (import.meta.main) {
         // refuses production without --allow-production. --expect-no-changes
         // proves a re-run is a no-op.
         case 'backfill-publication': {
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                const stats = backfillPublication({log: (m) => console.info(m),
-                                                   config: ww.config});
-                if(args.includes('--expect-no-changes')) {
-                    if(stats.bornApproved > 0)
-                        throw new Error(`--expect-no-changes: the backfill born-approved ${stats.bornApproved} facts`);
-                    console.info('idempotency confirmed: re-run made no changes');
-                }
-            });
+            const step = stepReport('Publication backfill (Phase 0)');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                        throw new Error("db is marked db_purpose='production' - " +
+                                        'run with --allow-production if you really mean it');
+                    const stats = backfillPublication({log: step.log, config: ww.config});
+                    if(args.includes('--expect-no-changes')) {
+                        if(stats.bornApproved > 0)
+                            throw new Error(`--expect-no-changes: the backfill born-approved ${stats.bornApproved} facts`);
+                        step.log('idempotency confirmed: re-run made no changes');
+                    }
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }
@@ -2023,18 +2123,22 @@ if (import.meta.main) {
         // Idempotent; refuses production without --allow-production.
         // --expect-no-changes proves a re-run is a no-op.
         case 'normalize-shoebox-dates': {
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                const stats = normalizeShoeboxDates({log: (m) => console.info(m)});
-                if(args.includes('--expect-no-changes')) {
-                    if(stats.normalized > 0)
-                        throw new Error(`--expect-no-changes: normalized ${stats.normalized} shoebox dates`);
-                    console.info('idempotency confirmed: re-run made no changes');
-                }
-            });
+            const step = stepReport('Normalize shoebox dates');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                        throw new Error("db is marked db_purpose='production' - " +
+                                        'run with --allow-production if you really mean it');
+                    const stats = normalizeShoeboxDates({log: step.log});
+                    if(args.includes('--expect-no-changes')) {
+                        if(stats.normalized > 0)
+                            throw new Error(`--expect-no-changes: normalized ${stats.normalized} shoebox dates`);
+                        step.log('idempotency confirmed: re-run made no changes');
+                    }
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }
@@ -2047,34 +2151,43 @@ if (import.meta.main) {
         // as warnings and do not affect the exit code until the orthography
         // migration lands (fix-orthographies.md).
         case 'verify-workspace': {
-            const {problems, variantWarnings} = security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const facts = factViewsFromVersionedDb(ww.workspace);
-                return {
-                    problems: validateVersionedDb(ww.workspace),
-                    variantWarnings: validateVariantInvariants(
-                        facts, variantPolicyByTag(ww.dictSchema),
-                        orthography.orthographyVocabulary(ww.orthographies)),
-                };
-            });
-            for(const p of problems)
-                console.error(`PROBLEM [${p.invariant}] ${p.path}: ${p.detail}`);
-            // Aggregate the (numerous, expected) variant warnings per
-            // invariant+tag, with a few sample paths each.
-            const groups = new Map<string, {n: number, samples: string[]}>();
-            for(const w of variantWarnings) {
-                const tag = w.path.split('/').pop()?.split(':')[0] ?? '?';
-                const key = `${w.invariant} on ${entry.relationDisplayName(tag)}`;
-                const g = groups.get(key) ?? {n: 0, samples: []};
-                g.n++;
-                if(g.samples.length < 3) g.samples.push(w.path);
-                groups.set(key, g);
-            }
-            for(const [key, g] of groups)
-                console.warn(`WARNING [${key}] ×${g.n} - e.g. ${g.samples.join(', ')}`);
-            console.info(`verify-workspace: ${problems.length} problem(s), ` +
+            const step = stepReport('Verify workspace (structural invariants)');
+            let problemCount = 0;
+            try {
+                const {problems, variantWarnings} = security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    const facts = factViewsFromVersionedDb(ww.workspace);
+                    return {
+                        problems: validateVersionedDb(ww.workspace),
+                        variantWarnings: validateVariantInvariants(
+                            facts, variantPolicyByTag(ww.dictSchema),
+                            orthography.orthographyVocabulary(ww.orthographies)),
+                    };
+                });
+                problemCount = problems.length;
+                if(problems.length > 0) {
+                    const sect = step.report.section('STRUCTURAL PROBLEMS');
+                    for(const p of problems)
+                        sect.finding(`[${p.invariant}] ${p.path}: ${p.detail}`);
+                }
+                // Aggregate the (numerous, expected) variant warnings per
+                // invariant+tag, with a few sample paths each.
+                const groups = new Map<string, {n: number, samples: string[]}>();
+                for(const w of variantWarnings) {
+                    const tag = w.path.split('/').pop()?.split(':')[0] ?? '?';
+                    const key = `${w.invariant} on ${entry.relationDisplayName(tag)}`;
+                    const g = groups.get(key) ?? {n: 0, samples: []};
+                    g.n++;
+                    if(g.samples.length < 3) g.samples.push(w.path);
+                    groups.set(key, g);
+                }
+                for(const [key, g] of groups)
+                    step.log(`WARNING [${key}] ×${g.n} - e.g. ${g.samples.join(', ')}`);
+                step.log(`verify-workspace: ${problems.length} problem(s), ` +
                          `${variantWarnings.length} variant warning(s) (warn mode)`);
-            Deno.exit(problems.length === 0 ? 0 : 1);
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
+            Deno.exit(problemCount === 0 ? 0 : 1);
             break;
         }
 
@@ -2125,8 +2238,7 @@ if (import.meta.main) {
                 if(!dryRun && ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
-                const reportIx = args.indexOf('--report');
-                const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
+                const reportPath = reportPathArg();
                 const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
                 const report = new FindingsReport(
                     `Variant (orthography) migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
@@ -2178,6 +2290,31 @@ if (import.meta.main) {
             break;
         }
 
+        // Assemble the per-step import-report fragments into ONE
+        // import-report.md with an executive summary (fix-orthographies.md
+        // "Findings publish path").  Run by importWordWikiV1Db.sh via a
+        // shell trap, so it happens EVEN WHEN A STEP CRASHES - a crash
+        // mid-migration is exactly when the report matters most.  Expected
+        // step names (beyond the fragments present) are listed as MISSING.
+        //   ./wordwiki.sh assemble-import-report <fragmentDir> <out.md> [expected...]
+        case 'assemble-import-report': {
+            const dir = args[1] ?? 'import-report';
+            const outPath = args[2] ?? 'import-report.md';
+            const expected = args.slice(3);
+            const fragments: {name: string, content: string}[] = [];
+            try {
+                const names = [...Deno.readDirSync(dir)]
+                    .filter(e => e.isFile && /^[0-9]+-[a-z0-9-]+\.md$/.test(e.name))
+                    .map(e => e.name).sort();
+                for(const name of names)
+                    fragments.push({name, content: Deno.readTextFileSync(`${dir}/${name}`)});
+            } catch(_e) { /* no fragment dir: assemble the empty story */ }
+            Deno.writeTextFileSync(outPath, assembleImportReport(fragments, expected));
+            console.info(`assembled ${fragments.length} fragment(s) into ${outPath}`);
+            Deno.exit(0);
+            break;
+        }
+
         // The STATUS REMODEL data migration (fix-orthographies.md "Status",
         // status-migrate.ts): publish gates from Completed statuses, the
         // lifecycle renames, sta variant blanking, and lifecycle synthesis
@@ -2192,8 +2329,7 @@ if (import.meta.main) {
                 if(!dryRun && ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
                     throw new Error("db is marked db_purpose='production' - " +
                                     'run with --allow-production if you really mean it');
-                const reportIx = args.indexOf('--report');
-                const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
+                const reportPath = reportPathArg();
                 const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
                 const report = new FindingsReport(
                     `Status remodel migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
@@ -2217,22 +2353,34 @@ if (import.meta.main) {
         }
 
         case 'verify-migration': {
-            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--'))
+            const reportValueIx = args.indexOf('--report') + 1;   // 0 when absent
+            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--') && i !== reportValueIx)
                 ?? new URL('../categorization', import.meta.url).pathname;
             const schemeText = (() => {
                 try { return Deno.readTextFileSync(`${dir}/scheme.md`); }
                 catch (_e) { return undefined; }
             })();
-            const ok = security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const report = migrationVerify.verifyMigration(ww, {schemeText});
-                for(const m of report.info)     console.info(`  info: ${m}`);
-                for(const m of report.warnings) console.info(`WARNING: ${m}`);
-                for(const m of report.failures) console.error(`FAILURE: ${m}`);
-                console.info(`verify-migration: ${report.failures.length} failures, ` +
-                             `${report.warnings.length} warnings`);
-                return report.failures.length === 0;
-            });
+            const step = stepReport('Verify migration');
+            let ok = false;
+            try {
+                ok = security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    const vr = migrationVerify.verifyMigration(ww, {schemeText});
+                    for(const m of vr.info) step.log(m);
+                    if(vr.warnings.length > 0) {
+                        const w = step.report.section('Warnings');
+                        for(const m of vr.warnings) w.finding(m);
+                    }
+                    if(vr.failures.length > 0) {
+                        const f = step.report.section('FAILURES');
+                        for(const m of vr.failures) f.finding(m);
+                    }
+                    step.log(`verify-migration: ${vr.failures.length} failures, ` +
+                             `${vr.warnings.length} warnings`);
+                    return vr.failures.length === 0;
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(ok ? 0 : 1);
             break;
         }
@@ -2291,24 +2439,28 @@ if (import.meta.main) {
             // Default stamp = the automation identity (see import-categories).
             const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
                 ?? '~lexical-form-import';
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
-                if(!ww.users.byUsername.first({username}))
-                    throw new Error(`--username '${username}' is not in the user table`);
-                const stats = lexicalFormImport.importLexicalForms(
-                    ww, {username, log: (msg) => console.info(msg)});
-                if(args.includes('--expect-no-changes')) {
-                    const changes = stats.seeded.inserted + stats.subentriesNormalized;
-                    if(changes > 0)
-                        throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
-                                        'the previous run did not reach the fixed point');
-                    console.info('idempotency confirmed: re-run made no changes');
-                }
-            });
+            const step = stepReport('Import lexical forms');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                        throw new Error("db is marked db_purpose='production' - " +
+                                        'run with --allow-production if you really mean it');
+                    user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
+                    if(!ww.users.byUsername.first({username}))
+                        throw new Error(`--username '${username}' is not in the user table`);
+                    const stats = lexicalFormImport.importLexicalForms(
+                        ww, {username, log: step.log});
+                    if(args.includes('--expect-no-changes')) {
+                        const changes = stats.seeded.inserted + stats.subentriesNormalized;
+                        if(changes > 0)
+                            throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
+                                            'the previous run did not reach the fixed point');
+                        step.log('idempotency confirmed: re-run made no changes');
+                    }
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }

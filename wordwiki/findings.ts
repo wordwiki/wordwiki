@@ -176,3 +176,49 @@ function mdCell(v: Cell): string {
 function mdEscape(text: string): string {
     return text.replaceAll('[', '\\[').replaceAll(']', '\\]');
 }
+
+// --------------------------------------------------------------------------
+// --- The import-report assembler --------------------------------------------
+// --------------------------------------------------------------------------
+
+/**
+ * Concatenate per-step report fragments into ONE import report with an
+ * EXECUTIVE SUMMARY at the top: per step, its finding count (parsed from the
+ * fragment's own summary line), a CRASHED marker when the step recorded a
+ * crash, and a MISSING line for every expected step with no fragment (it
+ * died before reporting, or never ran).  Pure - the subcommand does the file
+ * I/O.
+ */
+export function assembleImportReport(fragments: {name: string, content: string}[],
+                                     expectedSteps: string[] = []): string {
+    const out: string[] = [];
+    out.push('# Import report', '');
+    out.push(`> **⚠ Point-in-time report — assembled ${new Date().toISOString()} ` +
+             `from ${fragments.length} step fragment(s).**`);
+    out.push('> This is a record of one import run, not a live view.', '');
+
+    out.push('## Executive summary', '');
+    const present = new Set(fragments.map(f => f.name.replace(/^[0-9]+-/, '').replace(/\.md$/, '')));
+    let anyBad = false;
+    for(const f of fragments) {
+        const findings = /\*\*(\d+) finding\(s\)\*\*/.exec(f.content)?.[1] ?? '?';
+        const crashed = f.content.includes('## CRASHED');
+        if(crashed) anyBad = true;
+        out.push(`- ${f.name}: ${findings} finding(s)${crashed ? ' — **STEP CRASHED**' : ''}`);
+    }
+    for(const step of expectedSteps)
+        if(!present.has(step)) {
+            anyBad = true;
+            out.push(`- ${step}: **MISSING** (crashed before reporting, or never ran)`);
+        }
+    if(fragments.length === 0) out.push('- (no fragments found)');
+    out.push('', anyBad ? '**⚠ This run did NOT complete cleanly — see the markers above.**'
+                        : 'All reported steps completed.', '');
+
+    for(const f of fragments) {
+        out.push('', '---', '', `<!-- fragment: ${f.name} -->`);
+        // Demote the fragment's own headings one level under the assembly.
+        out.push(f.content.replace(/^#/gm, '##'));
+    }
+    return out.join('\n');
+}

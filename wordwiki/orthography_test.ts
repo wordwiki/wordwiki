@@ -194,3 +194,16 @@ test("the orthography lens: rows are filter-tagged, the control + rules render",
                'per-orthography hide rule generated');
     });
 });
+
+test("import-report routes: friendly when absent; fragment names are whitelisted", async () => {
+    await withTestDb(async (fx) => {
+        // No import-report.md in the test cwd: the friendly empty state.
+        const html = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.importReport()')));
+        assert(html.includes('No import report yet'), 'empty state');
+        // Path traversal is refused by the name whitelist.
+        await assertRejects(() => as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.importReportFragment('../secrets.md')`)),
+            Error, 'not an import-report fragment');
+    });
+});
