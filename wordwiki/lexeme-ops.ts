@@ -398,8 +398,11 @@ export class LexemeOps {
     makePublic(entry_id: number, orthography: string): MakePublicOutcome {
         this.requireUsername();
         this.requireApprovePermission('making a word public');
-        if(!(orthography in entrySchema.variants) || orthography === 'mm')
-            throw new Error(`'${orthography}' is not an orthography a word can be public in`);
+        // The orthography table's publishable flag is the rule (orthography.ts):
+        // the archaic source orthographies are never publish targets.
+        const o = this.app.orthographies.bySlug.first({slug: orthography});
+        if(!o || o.retired || !o.publishable)
+            throw new Error(`'${orthography}' is not a publishable orthography`);
         const tuple = this.gateTupleFor(entry_id, orthography);
         if(tuple && tuple.tupleVersions.some(v => v.isPublished))
             return {outcome: 'already-public'};

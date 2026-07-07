@@ -17,8 +17,8 @@
  *   - edit-users: may manage user records (create, edit others, disable) -
  *     but NOT the permissions field itself, which stays admin-only so the
  *     grant cannot escalate itself;
- *   - edit-categories / edit-lexical-forms: may curate those vocabularies
- *     (category.ts / lexical-form.ts).
+ *   - edit-categories / edit-lexical-forms / edit-orthographies: may curate
+ *     those vocabularies (category.ts / lexical-form.ts / orthography.ts).
  *
  * Password hashes live in their own table (not on user) so an error in a SQL
  * query involving the user table cannot accidentally leak a hash.  Sessions
@@ -52,6 +52,20 @@ const selfOrEditUsers = security.or(security.isSelf, editUsers);
 // data.  Editable only at CREATE, like category/lexical-form slugs.
 const usernameOnCreateOnly: security.Permission = a =>
     editUsers(a) && !(a.record as User|undefined)?.user_id;
+
+// The primary_orthography select options: the orthography table's
+// non-retired rows (queried at TABLE CONSTRUCTION, which happens per
+// request), falling back to the hard-coded seed map when the table is
+// missing/unseeded (early migrations, minimal tests).
+function primaryOrthographyChoices(): Record<string, string> {
+    try {
+        const rows = db().all<{slug: string, name: string}, {}>(
+            `SELECT slug, name FROM orthography WHERE retired = 0 ORDER BY order_key, slug`, {});
+        if(rows.length > 0)
+            return Object.fromEntries(rows.map(r => [r.slug, r.name]));
+    } catch(_e) { /* table absent: fall through */ }
+    return Object.fromEntries(Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm'));
+}
 
 // --------------------------------------------------------------------------------
 // --- User -----------------------------------------------------------------------
@@ -99,14 +113,16 @@ export class UserTable extends Table<User> {
             new StringField('name', {}),
             new EmailField('email', {nullable: true}),
             // Real orthographies only - the 'mm' wildcard is a stored-value
-            // convention, not something a person writes in.
-            new EnumField('primary_orthography',
-                Object.fromEntries(Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm')),
+            // convention, not something a person writes in.  Choices come
+            // from the orthography TABLE (non-retired rows), with the seed
+            // map as the fallback while a db is unseeded.
+            new EnumField('primary_orthography', primaryOrthographyChoices(),
                 {nullable: true,
                  prompt: 'Primary orthography (their new dictionary content defaults to it)'}),
             new StringField('permissions', {nullable: true, edit: admin,
                                             prompt: 'Permissions (admin, publish, testing, approve, ' +
-                                                    'edit-users, edit-categories, edit-lexical-forms)'}),
+                                                    'edit-users, edit-categories, edit-lexical-forms, ' +
+                                                    'edit-orthographies)'}),
             new BooleanField('disabled', {default: 0}),
         ]);
     }

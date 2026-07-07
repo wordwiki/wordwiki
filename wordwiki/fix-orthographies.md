@@ -475,6 +475,30 @@ version wrong?" → `change_note`) to capture the why (loanword, irregular).
 `variantMatches`, working-orthography, the `pub` gate) — phase 4 of the
 plan below.
 
+## The orthography TABLE (first-class vocabulary; dz 2026-07-07)
+
+**BUILT (2026-07-07).**  Which orthographies exist, their names, and whether
+words may GO PUBLIC in them are DATA, not code: the `orthography` table
+(peer of lexical-forms; slug create-only, name, `publishable`, retired,
+ordered; admin page "Orthography Table", `edit-orthographies` grant, seeded
+idempotently li ✓ / sf ✓ / mp ✗ / pm ✗).  Motivation (dz): the archaic
+Pacifique source orthographies must never be publish targets, and a
+hard-coded filter would be one more language hack — this system is heading
+toward other language-preservation projects, so the language-specific bits
+should gradually move to data.  The 'mm' wildcard is deliberately NOT a row
+(model semantics, variant-policy.ts); selects offer it only under
+`$allowAll` (fixing the old over-offering).  Consumers: variant selects,
+the Public row + makePublic (publishable only — non-publishable
+orthographies are HIDDEN, not greyed), user primary_orthography choices,
+report names, the scan/validator vocabulary — all table-first with the old
+map as unseeded fallback.  Public-row chips also suppress import-epoch
+dates (the mass-import time is not a meaningful date — a portable rule for
+any project that starts from a v1 import) and automation-account
+attributions; migrate-status now stamps gates from the GRANTING sta
+assertion's time and synthesized lifecycles from their entry's time (the
+dev db was surgically re-stamped to match: 6,576 gates read as
+grandfathered/no-date, 397 carry real completion dates).
+
 ## Regional variation / locale
 
 Long term, probably modeled in data.  For now (and even then, as the final

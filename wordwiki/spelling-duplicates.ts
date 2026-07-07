@@ -138,8 +138,19 @@ export function findDuplicateEntries(entry_id: number, mine: Spelling[]): Duplic
     return hits.sort((a, b) => a.entry_id - b.entry_id);
 }
 
-const variantName = (v: string|null): string =>
-    (v != null && entrySchema.variants[v]) || v || 'no orthography';
+// Table-first display names (orthography.ts is the vocabulary of record; the
+// entry-schema map is the unseeded-db fallback).  Per-call lookup - the
+// prepared query is memoized by the db layer, and admin renames show on the
+// next render (no stale module cache).
+const variantName = (v: string|null): string => {
+    if(v == null || v === '') return 'no orthography';
+    try {
+        const row = db().first<{name: string}>(
+            `SELECT name FROM orthography WHERE slug = :slug`, {slug: v});
+        if(row) return row.name;
+    } catch(_e) { /* unseeded db: fall through */ }
+    return entrySchema.variants[v] ?? v;
+};
 
 const headword = (spellings: Spelling[]): string =>
     spellings.map(s => s.text).join(' / ') || '(no spellings)';

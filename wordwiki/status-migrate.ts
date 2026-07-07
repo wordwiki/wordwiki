@@ -34,7 +34,7 @@
  */
 import { db } from '../liminal/db.ts';
 import * as timestamp from '../liminal/timestamp.ts';
-import { highestTimestamp, type Assertion } from './assertion.ts';
+import { type Assertion } from './assertion.ts';
 import { newId } from './lexeme-ops.ts';
 import * as entrySchema from './entry-schema.ts';
 import { relationDisplayName } from './entry-schema.ts';
@@ -70,9 +70,8 @@ export const STATUS_MIGRATION_DONE_KEY = 'status-migration-done';
 export interface StatusMigrateOptions {
     dryRun?: boolean;
     config?: BackfillConfig;
-    /** The tx timestamp for every row this migration writes.  Callers inside
-     *  a running app MUST pass the app allocator's value (bornApprove does) -
-     *  the default (db max + one tick) is only safe in a fresh CLI process. */
+    /** Unused since rows inherit their SOURCE assertion's time (the granting
+     *  sta / the entry); kept so callers passing an allocation stay valid. */
     now?: number;
 }
 
@@ -109,8 +108,6 @@ export function migrateStatus(report: FindingsReport,
              ORDER BY order_key LIMIT 1`, {eot: EOT, id1: entry_id})[0]?.attr1
         ?? `entry ${entry_id}`;
 
-    // One tx timestamp stamps every row this migration writes (like an import).
-    const now = opts.now ?? timestamp.nextTime(highestTimestamp('dict'));
 
     const act = report.section(dryRun
         ? 'Actions (DRY RUN — reported, NOT applied)'
@@ -122,8 +119,8 @@ export function migrateStatus(report: FindingsReport,
     db().beginTransaction();
     try {
         // --- 1. create the publish gates from gate-granting statuses.
-        const gateRows = db().all<{id1: number, variant: string|null}, any>(
-            `SELECT id1, variant FROM dict
+        const gateRows = db().all<{id1: number, variant: string|null, valid_from: number}, any>(
+            `SELECT id1, variant, valid_from FROM dict
              WHERE valid_to = :eot AND ty = '${entrySchema.StatusTag}'
                AND attr1 IN (${gateGrantingStatuses.map(v => `'${v}'`).join(',')})`, {eot: EOT});
         let created = 0, existing = 0;
@@ -136,12 +133,16 @@ export function migrateStatus(report: FindingsReport,
                    AND id1 = :e AND variant = :v`, {eot: EOT, e: r.id1, v: orthography})[0].n;
             if(already > 0) { existing++; continue; }
             const id = newId();
+            // The gate inherits the GRANTING sta assertion's time (dz): the
+            // word has been public since it was marked Completed, not since
+            // the migration ran.  (Imported rows carry the import epoch,
+            // which the UI already treats as "no meaningful date".)
             db().insert<Assertion, 'assertion_id'>('dict', {
                 ty0: entrySchema.DictTag, ty1: entrySchema.EntryTag, id1: r.id1,
                 ty2: entrySchema.PublicTag, id2: id,
                 assertion_id: id, id, ty: entrySchema.PublicTag,
-                valid_from: now, valid_to: EOT,
-                published_from: now, published_to: EOT,      // born-published: the gate IS approval
+                valid_from: r.valid_from, valid_to: EOT,
+                published_from: r.valid_from, published_to: EOT,   // born-published: the gate IS approval
                 order_key: '0.5',
                 variant: orthography,
                 change_by_username: MIGRATION_USERNAME,
@@ -200,8 +201,8 @@ export function migrateStatus(report: FindingsReport,
         }
 
         // --- 4. synthesize a lifecycle where none exists.
-        const orphans = db().all<{id: number}, any>(
-            `SELECT e.id AS id FROM dict e
+        const orphans = db().all<{id: number, valid_from: number}, any>(
+            `SELECT e.id AS id, e.valid_from AS valid_from FROM dict e
              WHERE e.valid_to = :eot AND e.ty = '${entrySchema.EntryTag}'
                AND NOT EXISTS (SELECT 1 FROM dict s
                                WHERE s.valid_to = :eot AND s.ty = '${entrySchema.StatusTag}'
@@ -209,12 +210,15 @@ export function migrateStatus(report: FindingsReport,
         const synthSamples: string[] = [];
         for(const o of orphans) {
             const id = newId();
+            // The synthesized lifecycle inherits its ENTRY's time: the word's
+            // status has been unknown since the word existed - a migration-day
+            // stamp would be a meaningless date in history views (dz).
             db().insert<Assertion, 'assertion_id'>('dict', {
                 ty0: entrySchema.DictTag, ty1: entrySchema.EntryTag, id1: o.id,
                 ty2: entrySchema.StatusTag, id2: id,
                 assertion_id: id, id, ty: entrySchema.StatusTag,
-                valid_from: now, valid_to: EOT,
-                published_from: now, published_to: EOT,
+                valid_from: o.valid_from, valid_to: EOT,
+                published_from: o.valid_from, published_to: EOT,
                 order_key: '0.5',
                 attr1: synthesizedLifecycle,
                 change_by_username: MIGRATION_USERNAME,

@@ -28,6 +28,7 @@ import { db } from '../liminal/db.ts';
 import { openTestDb, clearAllData } from '../liminal/testing/db-harness.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { migrateStatus } from './status-migrate.ts';
+import * as orthography from './orthography.ts';
 import { FindingsReport } from './findings.ts';
 import { setRoutePolicy } from "../liminal/liminal.ts";
 
@@ -62,6 +63,7 @@ export async function withTestDb(fn: (fx: Fixture) => any | Promise<any>): Promi
         for(const t of LEGACY_TABLES)
             db().execute(`DELETE FROM ${t}`, {});
         user.seedUsersFromEntrySchema(ww.users);
+        orthography.seedOrthographies(ww.orthographies);
         const userIds: Record<string, number> = {};
         for(const u of ww.users.allUsersByName.all({}))
             userIds[u.username] = u.user_id;

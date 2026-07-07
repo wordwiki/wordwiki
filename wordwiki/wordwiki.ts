@@ -11,6 +11,7 @@ import * as workspace from './workspace.ts';
 import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
+import * as orthography from './orthography.ts';
 import * as entryMeta from './render-entry-meta.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as templates from './templates.ts';
@@ -114,19 +115,23 @@ export class WordWiki extends LiminalApp {
     @path get userSession() { return new user.UserSessionTable(); }
     @route(authenticated) @path get categories() { return new category.CategoryTable(this); }
     @route(authenticated) @path get lexicalForms() { return new lexicalForm.LexicalFormTable(this); }
+    @route(authenticated) @path get orthographies() { return new orthography.OrthographyTable(this); }
 
     // The new-style tables (auto-created at startup; the legacy raw-DML tables
     // - scanned documents, bounding boxes, the dict assertion table - stay in
     // schema.ts).  More rabid-style tables will be added here over time.
     @lazy get tables() {
         return [this.config, this.users, this.passwordHash, this.userSession,
-                this.categories, this.lexicalForms];
+                this.categories, this.lexicalForms, this.orthographies];
     }
 
     // Create the new-style tables if missing (idempotent CREATE IF NOT EXISTS).
+    // Also seeds the (tiny, fixed) orthography vocabulary - reads first, so a
+    // seeded db sees no writes.
     ensureNewStyleTables() {
         for(const t of this.tables)
             db().executeStatements(t.createDMLString());
+        orthography.seedOrthographies(this.orthographies);
     }
 
     // The v2 (server-side htmx) lexeme editor, reachable as wordwiki.lexeme.*
@@ -223,6 +228,12 @@ export class WordWiki extends LiminalApp {
     @route(authenticated)
     lexicalFormsPage(): templates.Page {
         return templates.page('Lexical Form Table', this.lexicalForms.renderLexicalFormsPage());
+    }
+
+    // The orthography (writing system) vocabulary admin page.
+    @route(authenticated)
+    orthographiesPage(): templates.Page {
+        return templates.page('Orthography Table', this.orthographies.renderOrthographiesPage());
     }
 
     get lastAllocatedTxTimestamp() {
@@ -2018,7 +2029,8 @@ if (import.meta.main) {
                 return {
                     problems: validateVersionedDb(ww.workspace),
                     variantWarnings: validateVariantInvariants(
-                        facts, variantPolicyByTag(ww.dictSchema), Object.keys(entry.variants)),
+                        facts, variantPolicyByTag(ww.dictSchema),
+                        orthography.orthographyVocabulary(ww.orthographies)),
                 };
             });
             for(const p of problems)
@@ -2056,7 +2068,8 @@ if (import.meta.main) {
                 ww.ensureNewStyleTables();
                 const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
                 const report = new FindingsReport('Variant (orthography) scan', {sourceDb});
-                const result = scanVariants(report, ww.dictSchema, Object.keys(entry.variants));
+                const result = scanVariants(report, ww.dictSchema,
+                    orthography.orthographyVocabulary(ww.orthographies));
                 if(reportPath) {
                     Deno.writeTextFileSync(reportPath, report.toMarkdown());
                     console.info(`wrote ${reportPath}`);
@@ -2093,7 +2106,8 @@ if (import.meta.main) {
                 const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
                 const report = new FindingsReport(
                     `Variant (orthography) migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
-                const stats = migrateVariants(report, ww.dictSchema, Object.keys(entry.variants),
+                const stats = migrateVariants(report, ww.dictSchema,
+                                              orthography.orthographyVocabulary(ww.orthographies),
                                               {dryRun});
                 if(reportPath) {
                     Deno.writeTextFileSync(reportPath, report.toMarkdown());

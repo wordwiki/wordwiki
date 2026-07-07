@@ -160,7 +160,7 @@ test("makePublic: approve permission required; unapproved entries refused", asyn
         // The wildcard is not a gate orthography.
         await assertRejects(() => as(fx, 'djz', () =>
             invoke(fx.ww, `wordwiki.lexeme.makePublic($arg0, $arg1)`, 1000, 'mm')),
-            Error, 'not an orthography');
+            Error, 'not a publishable orthography');
     });
 });
 

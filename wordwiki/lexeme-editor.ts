@@ -72,6 +72,7 @@ import * as templates from './templates.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
+import * as orthographyTable from './orthography.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
 import {renderStandaloneGroup, singlePublicBoundingGroupEditorURL, imageRefDescription} from './render-page-editor.ts';
 import * as entryMeta from './render-entry-meta.ts';
@@ -296,8 +297,22 @@ function widgetFor(f: model.ScalarField, rel: model.RelationField,
     }
     // NOTE: instanceof order matters - the soft schema's field classes form
     // a hierarchy (Variant < Enum < String, Audio/Image < Blob < String).
-    if(f instanceof model.VariantField)
+    if(f instanceof model.VariantField) {
+        // Orthographies are a FIRST-CLASS vocabulary (orthography.ts); the
+        // 'mm' wildcard is model semantics, offered only where the schema
+        // grants $allowAll (the old hard-coded map over-offered it).
+        const orths = vocabs.orthographies();
+        if(orths.some(o => !o.retired)) {
+            const rows: VocabRow[] = orths.map(o =>
+                ({slug: o.slug, name: o.name, retired: o.retired}));
+            if(f.variantFlags.allowAll)
+                rows.push({slug: 'mm', name: entrySchema.variants['mm'], retired: 0});
+            return new VocabSelectField(f.name, rows,
+                {what: 'orthography', adminPage: 'Orthography Table'},
+                {nullable: true, prompt: f.prompt});
+        }
         return new table.EnumField(f.name, entrySchema.variants, {nullable: true, prompt: f.prompt});
+    }
     if(f instanceof model.EnumField)
         return new table.EnumField(f.name, (f.style as any).$options ?? {},
                                    {nullable: f.optional, prompt: f.prompt});
@@ -330,6 +345,7 @@ function widgetFor(f: model.ScalarField, rel: model.RelationField,
 interface VocabProviders {
     categories: () => category.Category[];
     lexicalForms: () => lexicalForm.LexicalForm[];
+    orthographies: () => orthographyTable.Orthography[];
 }
 
 function parseDialogFields(rel: model.RelationField, form: Record<string, any>,
@@ -602,6 +618,7 @@ export class LexemeEditor {
     private vocabs: VocabProviders = {
         categories: () => this.app.categories.allByOrder.all({}),
         lexicalForms: () => this.app.lexicalForms.allByOrder.all({}),
+        orthographies: () => this.app.orthographies.allByOrder.all({}),
     };
 
     // ------------------------------------------------------------------------
@@ -972,24 +989,37 @@ export class LexemeEditor {
         }
         const entryJson = this.app.entriesById.get(entry_id);
         const archived = entryJson ? entrySchema.isArchivedEntry(entryJson) : false;
-        const orthographies = Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm');
-        const dateOf = (a: Assertion) =>
-            timestamp.formatTimestampAsLocalTime(a.valid_from).split(' ')[0];
+        // PUBLISHABLE orthographies only (the orthography table's flag): the
+        // archaic source orthographies can never go public, so their chips
+        // would be permanent noise - hidden entirely (dz).
+        const orthographies = this.app.orthographies.publishableByOrder.all({})
+            .map(o => [o.slug, o.name] as [string, string]);
+        // A valid_from at the import epoch is the MASS-IMPORT time, not a
+        // meaningful date for people (same rule as isImportedEvent); an
+        // automation author is likewise noise (dz) - both are suppressed.
+        const dateOf = (a: Assertion): string | undefined =>
+            a.valid_from === timestamp.BEGINNING_OF_TIME ? undefined
+                : timestamp.formatTimestampAsLocalTime(a.valid_from).split(' ')[0];
+        const whoOf = (a: Assertion): string | undefined =>
+            isAutomatedUsername(a.change_by_username) ? undefined
+                : a.change_by_username ?? undefined;
 
         const chips: Markup[] = orthographies.map(([slug, name]) => {
             const st = states.get(slug);
             if(st?.published) {
                 const g = st.published;
+                const date = dateOf(g), who = whoOf(g);
                 return ['span', {class: 'lm-public-chip lm-public-chip-on'},
-                        name, ' \u2713 since ', dateOf(g),
-                        g.change_by_username ? ` (${g.change_by_username})` : '',
+                        name, ' \u2713',
+                        date ? ` since ${date}` : '',
+                        who ? ` (${who})` : '',
                         st.pendingWithdrawal ? ' \u2014 withdrawal pending' : ''];
             }
             if(st?.pendingProposal) {
-                const g = st.pendingProposal;
+                const who = whoOf(st.pendingProposal);
                 return ['span', {class: 'lm-public-chip lm-public-chip-off'},
                         name, ' \u2022 proposed',
-                        g.change_by_username ? ` (${g.change_by_username})` : '',
+                        who ? ` (${who})` : '',
                         ', pending approval'];
             }
             return ['span', {class: 'lm-public-chip lm-public-chip-off'}, name, ' \u2014'];
