@@ -534,9 +534,8 @@ export class EventTable extends Table<Event> {
             [h.div, {class: 'lm-doc-section-head'},
              [h.h5, {class: 'lm-doc-section-label'}, 'Sales & giveaways'],
              canAdd
-                 ? action.actionMenu([{label: 'Add sale…',
-                     mode: {kind: 'modal', dialogUrl: `/rabid.sale.newSaleForEventDialog(${event_id})`}}],
-                     {ariaLabel: 'Sale actions'})
+                 ? action.actionMenu(rabid.sale.saleAddMenuItems(event_id),
+                     {ariaLabel: 'Add a sale'})
                  : undefined],
             [h.div, {class: 'lm-subsection'},
              sales.length

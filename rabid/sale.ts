@@ -35,6 +35,19 @@ export const sale_kind_enum: Record<string, string> = {
     'other': 'Other',
 };
 
+// Giveaways/loans carry no money; everything else is a paid sale.  Drives both
+// the "Add ..." menu wording and which fields the add dialog shows.
+export function isFreeSaleKind(kind: string): boolean {
+    return kind.startsWith('free-') || kind === 'balance-bike-loan';
+}
+// The menu/dialog label for adding a sale of a given kind: a paid kind reads
+// "<Kind> Sale" (e.g. "Bike Sale"), a giveaway/loan by its own label (already
+// "Free ..." / "Balance ...").
+export function saleAddLabel(kind: string): string {
+    const label = sale_kind_enum[kind] ?? kind;
+    return isFreeSaleKind(kind) ? label : `${label} Sale`;
+}
+
 export const payment_method_enum: Record<string, string> = {
     'cash': 'Cash',
     'card': 'Card',
@@ -108,19 +121,34 @@ export class SaleTable extends Table<Sale> {
 /**/          ORDER BY sale_time DESC`);
     }
 
-    // Add a sale/giveaway bound to an event (the event page's "Add sale…").
-    // event_id rides hidden; sale_time (now) and sale_recorded_by (the actor) are
-    // stamped by the mutation, not entered.  host/admin only.
+    // The "Add ..." menu items for the event Activity section's Sales sub-section:
+    // one per sale kind (Add Bike Sale / Add Free Helmet / ...), each opening the
+    // pre-bound dialog for that kind.  New kinds in sale_kind_enum appear here
+    // automatically.
+    saleAddMenuItems(event_id: number): action.ActionMenuItem[] {
+        return Object.keys(sale_kind_enum).map(kind => ({
+            label: `Add ${saleAddLabel(kind)}`,
+            mode: {kind: 'modal' as const,
+                   dialogUrl: `/rabid.sale.newSaleForEventDialog(${event_id}, '${kind}')`},
+        }));
+    }
+
+    // Add a sale/giveaway of a specific KIND bound to an event (the kind is chosen
+    // from the Sales menu, so it's hidden here, not re-picked).  A giveaway/loan
+    // needs no amount or payment method.  event_id rides hidden; sale_time (now)
+    // and sale_recorded_by (the actor) are stamped by the mutation.  host/admin.
     @route(hostOrAdmin)
-    newSaleForEventDialog(event_id: number): Markup {
+    newSaleForEventDialog(event_id: number, sale_kind: string = 'bike'): Markup {
         const f = this.fieldsByName;
+        const paid = !isFreeSaleKind(sale_kind);
+        const fields = paid ? [f.description, f.amount, f.payment_method] : [f.description];
         return action.renderParamForm(
-            [f.sale_kind, f.description, f.amount, f.payment_method],
-            {sale_kind: 'bike', amount: 0, payment_method: 'cash'} as Partial<Sale>,
+            fields,
+            {amount: 0, payment_method: 'cash'} as Partial<Sale>,
             {
-                title: 'Add sale',
+                title: `Add ${saleAddLabel(sale_kind)}`,
                 submitLabel: 'Add',
-                hidden: {event_id},
+                hidden: {event_id, sale_kind},
                 dispatch: {onsubmit:
                     'event.preventDefault(); tx`rabid.sale.addSaleForEvent(${getFormJSON(event.target)})`'},
             });

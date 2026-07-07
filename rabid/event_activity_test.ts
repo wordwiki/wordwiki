@@ -80,11 +80,11 @@ test("the Add ☰ shows for a host, not a regular volunteer", async () => {
         const eid = insertEvent();
         const host = await detail(alice, eid);
         assert(hasText(host, 'Add service'));
-        assert(hasText(host, 'Add sale'));
+        assert(hasText(host, 'Add Bike Sale'));
 
         const regular = await detail(bob, eid);
         assert(!hasText(regular, 'Add service'));
-        assert(!hasText(regular, 'Add sale'));
+        assert(!hasText(regular, 'Add Bike Sale'));
         // ...but a regular still sees the Activity log itself.
         assert(hasText(regular, 'Activity'));
     });
@@ -137,6 +137,28 @@ test("Services and Sales are independent reloadable fragments (own fk key each)"
         const saleCls = String((sale as any)[1]?.class ?? '');
         assert(saleCls.includes(rabid.sale.fkKey('event_id', eid)), 'Sales keyed on sale fk');
         assert(!saleCls.includes(rabid.service.fkKey('event_id', eid)), 'Sales NOT keyed on service fk');
-        assert(hasText(sale, 'Add sale'));
+        assert(hasText(sale, 'Add Bike Sale'));
+    });
+});
+
+test("the Sales menu has one Add item per sale kind; a giveaway dialog omits amount", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        const sales = await asUser(alice, () => renderRoute(`rabid.event.renderEventSales(${eid})`));
+        for(const label of ['Add Bike Sale', 'Add Free Adult Bike', 'Add Free Kids Bike',
+                             'Add Free Helmet', 'Add Balance Bike Loan', 'Add Parts Sale', 'Add Other Sale'])
+            assert(hasText(sales, label), `menu has "${label}"`);
+
+        // A paid kind's dialog collects payment (the payment-method select shows
+        // 'Cash'); a giveaway/loan dialog has neither amount nor payment.
+        const bikeForm = await asUser(alice, () =>
+            renderRoute(`rabid.sale.newSaleForEventDialog(${eid}, 'bike')`));
+        assert(hasText(bikeForm, 'Add Bike Sale'));
+        assert(hasText(bikeForm, 'Cash'), 'paid dialog has a payment-method field');
+
+        const helmetForm = await asUser(alice, () =>
+            renderRoute(`rabid.sale.newSaleForEventDialog(${eid}, 'free-helmet')`));
+        assert(hasText(helmetForm, 'Add Free Helmet'));
+        assert(!hasText(helmetForm, 'Cash'), 'giveaway dialog has no payment-method field');
     });
 });
