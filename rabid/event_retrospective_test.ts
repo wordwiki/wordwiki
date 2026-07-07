@@ -97,6 +97,29 @@ test("a non-anonymous edit by a host preserves the original author (no reattribu
     });
 });
 
+test("hosts-only retrospectives are hidden from non-hosts, visible (badged) to hosts", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();
+        // bob (a regular volunteer) posts a hosts-only entry.
+        await asUser(bob, () => invoke(`rabid.event_retrospective.addRetrospective($arg0)`,
+            {event_id: id, feedback: 'Sensitive: a safety concern', host_only: 'on'}));
+        const r = rowsFor(id)[0];
+        assertEquals(r.host_only, 1);
+
+        // A non-host does NOT see it - in the section or via the row reload route.
+        const bobView = await asUser(bob, () => renderRoute(`rabid.event.renderEventRetrospectives(${id})`));
+        assert(!hasText(bobView, 'Sensitive'), 'hidden from a non-host in the section');
+        const bobRow = await asUser(bob, () =>
+            renderRoute(`rabid.event_retrospective.renderRowById(${r.event_retrospective_id})`));
+        assert(!hasText(bobRow, 'Sensitive'), 'hidden from a non-host on the reload path');
+
+        // A host sees it, badged 'Hosts only'.
+        const aliceView = await asUser(alice, () => renderRoute(`rabid.event.renderEventRetrospectives(${id})`));
+        assert(hasText(aliceView, 'Sensitive'));
+        assert(hasText(aliceView, 'Hosts only'));
+    });
+});
+
 test("the event page shows Retrospectives, its +, the explanatory note, and a section nav", async () => {
     await withTestDb(async ({ bob }) => {
         const id = insertEvent();

@@ -601,7 +601,10 @@ export class EventTable extends Table<Event> {
     // reload it; an edit reloads just the row).  A small note below explains it.
     @route(authenticated)
     renderEventRetrospectives(event_id: number): Markup {
-        const retros = security.runSystem(() => rabid.event_retrospective.forEvent.all({event_id}));
+        // Hosts-only entries are hidden from non-host volunteers.
+        const isHost = retroViewerIsHost();
+        const retros = security.runSystem(() => rabid.event_retrospective.forEvent.all({event_id}))
+            .filter(r => isHost || !r.host_only);
         const canAdd = security.current()?.actorId != null;
         const props = reloadableProps([rabid.event_retrospective.shapeKey('event_id', event_id)],
             `rabid.event.renderEventRetrospectives(${event_id})`);
@@ -1378,6 +1381,12 @@ export class EventPhotoTable extends Table<EventPhoto> {
 // cleared if it had been): we want candid feedback, including criticism.  ANY
 // logged-in volunteer can add one; the author (when recorded) or a host edits/deletes.
 
+// Is the current viewer a host/admin?  Gates hosts-only retrospectives.
+function retroViewerIsHost(): boolean {
+    const c = security.current();
+    return !!(c && (c.system || c.roles.has('host') || c.roles.has('admin')));
+}
+
 // Edit permission: a host/admin, or the recorded author of a non-anonymous entry.
 const retroEdit: security.Permission = security.or(
     hostOrAdmin,
@@ -1391,6 +1400,9 @@ export interface EventRetrospective {
     event_id: number;
     feedback: string;
     is_anonymous: boolnum;
+    // Restrict viewing to hosts/admins (sensitive feedback).  Orthogonal to
+    // is_anonymous - you can be anonymous AND hosts-only, or either alone.
+    host_only: boolnum;
     created_by?: number;
     created_time?: string;
 }
@@ -1403,6 +1415,7 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
             new ForeignKeyField('event_id', 'event', 'event_id', {indexed: true, edit: security.never}),
             new MarkdownField('feedback', {default: '', prompt: "How did it go? What worked, what didn't?"}),
             new CheckboxField('is_anonymous', {default: 0, prompt: 'Post anonymously'}),
+            new CheckboxField('host_only', {default: 0, prompt: 'Hosts only (hide from other volunteers)'}),
             // Managed: set from the actor on add (unless anonymous), cleared when an
             // entry becomes anonymous.  Never a form field.
             new VolunteerForeignKeyField('created_by', {nullable: true, edit: security.never}),
@@ -1432,7 +1445,7 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
     newRetrospectiveDialog(event_id: number): Markup {
         const f = this.fieldsByName;
         return action.renderParamForm(
-            [f.feedback, f.is_anonymous], {} as Partial<EventRetrospective>,
+            [f.feedback, f.is_anonymous, f.host_only], {} as Partial<EventRetrospective>,
             {
                 title: 'Add retrospective', submitLabel: 'Post',
                 hidden: {event_id},
@@ -1442,7 +1455,8 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
     }
 
     @routeMutation(authenticated)
-    addRetrospective(args: {event_id?: string|number, feedback?: string, is_anonymous?: unknown}): Markup {
+    addRetrospective(args: {event_id?: string|number, feedback?: string,
+                            is_anonymous?: unknown, host_only?: unknown}): Markup {
         const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
         const feedback = (args.feedback ?? '').trim();
@@ -1450,6 +1464,7 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
         const anon = this.parseAnon(args.is_anonymous);
         this.insert({
             event_id, feedback, is_anonymous: anon ? 1 : 0,
+            host_only: this.parseAnon(args.host_only) ? 1 : 0,
             created_by: anon ? null : (security.current()?.actorId ?? null),
             created_time: date.temporalToSqliteDateTime(date.orgNow()),
         } as EventRetrospectiveOpt);
@@ -1462,8 +1477,9 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
         if(!this.canEditRecord(r)) throw new Error('Not permitted to edit this retrospective');
         const f = this.fieldsByName;
         return action.renderParamForm(
-            [f.feedback, f.is_anonymous],
-            {feedback: r.feedback, is_anonymous: r.is_anonymous} as Partial<EventRetrospective>,
+            [f.feedback, f.is_anonymous, f.host_only],
+            {feedback: r.feedback, is_anonymous: r.is_anonymous,
+             host_only: r.host_only} as Partial<EventRetrospective>,
             {
                 title: 'Edit retrospective', submitLabel: 'Save',
                 hidden: {event_retrospective_id},
@@ -1473,7 +1489,8 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
     }
 
     @routeMutation(authenticated)
-    saveRetrospective(args: {event_retrospective_id?: string|number, feedback?: string, is_anonymous?: unknown}): Markup {
+    saveRetrospective(args: {event_retrospective_id?: string|number, feedback?: string,
+                             is_anonymous?: unknown, host_only?: unknown}): Markup {
         const id = Number(args?.event_retrospective_id);
         const r = this.getById(id);
         if(!this.canEditRecord(r)) throw new Error('Not permitted to edit this retrospective');
@@ -1484,8 +1501,9 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
         // -> keep the original author if still recorded, else (un-anonymising, where
         // the original was cleared) attribute to the editor doing it.
         const created_by = anon ? null : (r.created_by ?? (security.current()?.actorId ?? null));
-        this.updateNamedFields(id, ['feedback', 'is_anonymous', 'created_by'], {
-            feedback, is_anonymous: anon ? 1 : 0, created_by,
+        this.updateNamedFields(id, ['feedback', 'is_anonymous', 'host_only', 'created_by'], {
+            feedback, is_anonymous: anon ? 1 : 0,
+            host_only: this.parseAnon(args.host_only) ? 1 : 0, created_by,
         } as Partial<EventRetrospective>);
         return {action: 'reload', targets: ['.' + this.rowKey(id)]} as unknown as Markup;
     }
@@ -1500,7 +1518,12 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
     }
 
     @route(authenticated)
-    renderRowById(id: number): Markup { return this.renderRow(this.getById(id)); }
+    renderRowById(id: number): Markup {
+        const r = this.getById(id);
+        // A hosts-only entry never renders for a non-host (defends the reload path).
+        if(r.host_only && !retroViewerIsHost()) return undefined as unknown as Markup;
+        return this.renderRow(r);
+    }
     renderRow(r: EventRetrospective): Markup {
         const id = r.event_retrospective_id;
         const props = reloadableProps([this.rowKey(id)], `rabid.event_retrospective.renderRowById(${id})`);
@@ -1513,7 +1536,8 @@ export class EventRetrospectiveTable extends Table<EventRetrospective> {
         return [h.div, {...props, class: props.class + ' mb-3', 'data-testid': `retro-${id}`},
             [h.div, {class: 'lm-markdown'}, this.fieldsByName.feedback.render(r.feedback)],
             [h.div, {class: 'text-muted small d-flex align-items-center gap-2'},
-             [h.span, {}, '— ', author, when ? ` · ${when}` : ''],
+             [h.span, {}, '— ', author, when ? ` · ${when}` : '',
+              r.host_only ? [h.span, {class: 'badge text-bg-warning ms-2'}, 'Hosts only'] : undefined],
              canEdit
                  ? action.actionMenu([
                      {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.event_retrospective.editRetrospectiveDialog(${id})`}},
