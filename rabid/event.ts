@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, TableView, TableRenderer, Field, FieldSet, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, CheckboxField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron, reloadableProps, liveReloadableProps, sel, type Tuple } from "../liminal/table.ts";
+import { Table, TableView, TableRenderer, Field, FieldSet, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, DateField, CheckboxField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron, pencilIcon, reloadableProps, liveReloadableProps, sel, type Tuple } from "../liminal/table.ts";
 import * as dirty from "../liminal/dirty.ts";
 import { VolunteerForeignKeyField, activeVolunteersWithin } from "./volunteer-activity.ts";
 import { shortName, memberShortName, type MemberName } from "./volunteer.ts";
@@ -446,18 +446,30 @@ export class EventTable extends Table<Event> {
         props.class = 'container py-3 ' + props.class;
         // Adding a not-yet-created checklist is a quiet ☰ action next to the
         // title (document-friendly), not a "Create …" button in the flow.
-        // No title-row menu now: editing the event is the ☰ on the summary card,
-        // and setting up a checklist is the + on its (always-present) section below.
+        // Editing the event lives on the TITLE row - a pencil AND a ☰ (both, for
+        // obviousness; the ☰ leaves room for Archive/etc. later).  With the summary
+        // de-carded (bare) below, the details flow right under this, so editing here
+        // reads as editing exactly them.
+        const editUrl = `/rabid.event.renderForm(rabid.event.getById(${event_id}))`;
+        const canEdit = this.canEditRecord(e);
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
-             [h.h2, {class: 'mb-0'}, this.recordLabel(e)]],
+             [h.h2, {class: 'mb-0'}, this.recordLabel(e)],
+             canEdit
+                 ? action.actionButton(pencilIcon(), {kind: 'modal', dialogUrl: editUrl},
+                     'btn btn-link p-0 lm-edit-pencil', {'aria-label': 'Edit event', title: 'Edit event'})
+                 : undefined,
+             canEdit
+                 ? action.actionMenu([{label: 'Edit event…', mode: {kind: 'modal', dialogUrl: editUrl}}],
+                     {ariaLabel: 'Event actions'})
+                 : undefined],
             // Jump-links across the top: scroll to each section (fragment ids set on
             // the section wrappers below).
             this.renderSectionNav(),
-            // The summary "top box": no repeated title (the h2 above IS it), and the
-            // notes live inside it now (not a separate block).
+            // The summary, de-carded (bare): flows directly under the title.  No
+            // repeated title (the h2 above IS it); notes live inside it now.
             this.renderEventSummary(event_id, {titleLink: false, hideTitle: true,
-                                               editableCheckins: true, hideNotes: false}),
+                                               editableCheckins: true, hideNotes: false, bare: true}),
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
@@ -933,7 +945,7 @@ export class EventTable extends Table<Event> {
     // (the home upcoming-events cards) - the detail page itself passes false,
     // since there it would be a pointless self-link.
     @route(authenticated)
-    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean, hideTitle?: boolean} = {}): Markup {
+    renderEventSummary(event_id: number, opts: {titleLink?: boolean, editableCheckins?: boolean, hideNotes?: boolean, hideTitle?: boolean, bare?: boolean} = {}): Markup {
         const titleLink = opts.titleLink ?? true;
 
         // Get the event
@@ -1148,20 +1160,12 @@ export class EventTable extends Table<Event> {
             ? [h.div, {class: 'lm-markdown card-notes mt-2'}, this.fieldsByName.notes.render(event.notes)]
             : undefined;
 
-        // On the detail page a ☰ sits on the summary card itself, so it's obvious
-        // how to edit these details (the whole-card tap would be too big a target
-        // and collides with the sign-up/check-in ☰ menus inside).  A menu (not a
-        // bare pencil) leaves room for Archive/etc. later.
-        const cardMenu = (opts.editableCheckins && this.canEditRecord(event))
-            ? action.actionMenu([{label: 'Edit event…',
-                mode: {kind: 'modal', dialogUrl: `/rabid.event.renderForm(rabid.event.getById(${event_id}))`}}],
-                {ariaLabel: 'Event actions'})
-            : undefined;
-
-        return [h.div, {class: 'card-summary'},
-            [h.div, {class: 'card-header d-flex align-items-start gap-2'},
-             [h.div, {class: 'flex-grow-1'}, ...headerElements],
-             cardMenu],
+        // `bare` (the detail page): drop the card box so the details flow directly
+        // under the page title - no visual fence between the title and its content,
+        // so the title-row Edit affordance reads as editing exactly this.  Editing
+        // itself is up on the title row (see renderEventDetail), not here.
+        return [h.div, {class: opts.bare ? '' : 'card-summary'},
+            headerElements.length ? [h.div, {class: 'card-header'}, ...headerElements] : undefined,
             [h.div, {class: 'card-details-grid'}, ...gridRows],
             notesBlock,
         ];
