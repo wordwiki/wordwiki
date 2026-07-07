@@ -21,6 +21,14 @@
 (function () {
     'use strict';
 
+    // Idempotent: the agent is injected both by the app's page template (on every
+    // page, for a testing viewer) and by the test-client page itself.  Whichever
+    // runs first wins; later injections (or a boosted nav that re-runs a swapped-in
+    // script tag) no-op.  A full page load makes a fresh window, so the agent
+    // re-starts (and re-opts-in) then.
+    if(window.__liminalTestAgentStarted) return;
+    window.__liminalTestAgentStarted = true;
+
     const cfg = window.__liminalTestAgent;
     if(!cfg || !cfg.optIn || !cfg.poll || !cfg.result) {
         console.error('test-agent: window.__liminalTestAgent route config missing; not starting.');

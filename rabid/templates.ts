@@ -24,6 +24,13 @@ export interface PageContent {
     // as window.__liminalLive.  Set by the dispatcher; the poller only runs on
     // pages that also contain an 'lm-live' fragment.
     liveConfig?: {poll: string, epoch: string, seq: number};
+    // The browser test-client routes (LiminalApp.testClientRoutes).  Set by the
+    // dispatcher ONLY for a 'testing'-permission viewer on a non-production db.
+    // When present, every full page load starts the test agent (opt-in + poll),
+    // so ANY page - not just the test-client page - can be driven from server-side
+    // test code (evalInBrowser).  Injected outside #content so it survives boosted
+    // navigations (the agent keeps polling as you move between pages).
+    testAgent?: {optIn: string, poll: string, result: string};
 }
 
 // --- Page results -----------------------------------------------------------
@@ -139,6 +146,14 @@ export function pageTemplate(content: PageContent): any {
           // this script sits outside #content).
           content.liveConfig
               ? [h.script, {}, `window.__liminalLive = ${JSON.stringify(content.liveConfig)};`]
+              : undefined,
+
+          // The browser test agent (opt-in + long-poll for JS to run), on EVERY
+          // page for a testing viewer.  Outside #content, so a boosted nav leaves
+          // it running.  It sets the config, then appends the agent script.
+          content.testAgent
+              ? [h.script, {}, `window.__liminalTestAgent = ${JSON.stringify(content.testAgent)};
+(function(){var s=document.createElement('script');s.src='/resources/test-agent.js';s.async=true;document.body.appendChild(s);})();`]
               : undefined,
 
           // Framework scripts before app scripts (same ordering rule as the css).

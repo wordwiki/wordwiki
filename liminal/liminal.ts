@@ -886,7 +886,7 @@ export abstract class LiminalApp {
             [h.div, {class: 'container py-3'},
              [h.h2, {}, 'Browser test client'],
              [h.p, {class: 'text-muted'},
-              'This browser is now acting as the test client: server-side tests can run JS here and read the result. Leave this tab open. Opening this page again (here or elsewhere) makes that tab the active client.'],
+              'This browser is the test client: server-side tests can run JS in it and read the result. On a non-production database the agent runs on EVERY page in this browser, so it drives whatever page you are viewing - you need not stay here. The most-recently loaded page/tab in a testing browser is the active client; this page is a landing spot + status.'],
              [h.div, {id: 'test-agent-status', class: 'alert alert-secondary'}, 'starting…'],
              [h.button, {class: 'btn btn-outline-primary',
                          'hx-get': runTestsUrl, 'hx-target': '#test-agent-results', 'hx-swap': 'innerHTML'},

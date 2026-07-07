@@ -252,7 +252,11 @@ export class Rabid extends LiminalApp {
                                           isAdmin: security.current()?.roles.has('admin') ?? false,
                                           isHostOrAdmin: (security.current()?.roles.has('host')
                                               || security.current()?.roles.has('admin')) ?? false,
-                                          liveConfig: this.liveClientConfig()});
+                                          liveConfig: this.liveClientConfig(),
+                                          // Drive-any-page test agent: only for a testing viewer on a
+                                          // non-production db (the poll/opt-in routes self-gate the same way).
+                                          testAgent: (this.isTestDb && (security.current()?.roles.has('testing') ?? false))
+                                              ? this.testClientRoutes() : undefined});
         return result;
     }
 
