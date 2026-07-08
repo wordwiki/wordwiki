@@ -41,13 +41,13 @@ function seedEntryWithMissingRecordings(ww: any): void {
 }
 
 test("warnMissingRecordings: warnings (not errors), once per entry", async () => {
-    await withTestDb((fx: Fixture) => {
-        as(fx, 'djz', () => {
+    await withTestDb(async (fx: Fixture) => {
+        await as(fx, 'djz', async () => {
             seedEntryWithMissingRecordings(fx.ww);
             bornApprove(fx.ww);  // the public site is the published projection now
             const status = new PublishStatus();
             status.start();
-            const pub = new Publish(status, buildPublishSource(fx.ww));
+            const pub = new Publish(status, await buildPublishSource(fx.ww));
 
             const entry = fx.ww.publishedEntries.find((e: any) => e.entry_id === 1000)!;
             pub.warnMissingRecordings(entry);

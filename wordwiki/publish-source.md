@@ -1,11 +1,12 @@
 # The publish source (doc of record)
 
-*Status 2026-07-08: the bundle exists and the live publisher is driven off
-it for ALL DATA; the remaining db/fs touches are render-machinery, listed
-below.  `dump-publish-source` writes the JSON artifact, and
-`publish --from=<dump.json>` publishes FROM it (verified byte-identical
-to a live publish).  Linking the dumps from the generated site is the
-next stage.*
+*Status 2026-07-08: `publish --from=<dump.json>` needs NO DATABASE - the
+scan renders are bundle-ized.  Verified: the full site (16,046 html files)
+publishes byte-identically from the dump vs the live db, and a bare
+directory holding only the content/derived resource trees plus the dump
+publishes correctly with no database present.  The publisher is now a pure
+function of (bundle, resource files).  Linking the dumps from the
+generated site is the next stage.*
 
 ## Why this exists (the archival model)
 
@@ -50,7 +51,8 @@ builds omit it so the bundle stays deterministic and dumps diff cleanly).
 | `entries` | the PUBLISHED public projection as plain entry JSON — published facts only, no history, no pending edits, only entries public in `orthography` |
 | `categories` | the category vocabulary rows in display (theme) order |
 | `users` | the human users (`user_id`, `username`, `name`, `region`) — automation `~` identities excluded, disabled users included (history references former staff forever) |
-| `books` | per reference book: the `scanned_document` metadata row, `totalPages`, and `entryCountByPage` ([page, dictionary-reference count]) |
+| `books` | per reference book: the `scanned_document` metadata row, `totalPages`, `entryCountByPage` ([page, dictionary-reference count]), `taggingLayerId` (resolved — and created if missing — at BUILD time, so publishing itself is read-only), and `pageScans` (per page: dimensions, image url, the tagging groups + boxes) |
+| `scans` | per bounding group referenced by the entries' document references: the standalone scan render data — per-page box geometry with resolved content-addressed `tiles_url`s, plus the precomputed public book-page path and description |
 
 **Denormalize-on-export (the standalone-file rule)**: every reference KEY
 stored in the data (a recording's `speaker` username, a category slug, a
@@ -76,34 +78,35 @@ important API, and future consumers cannot file bug reports.  Bump
 `formatVersion` for breaking changes; strongly prefer additive ones;
 document every field here.
 
-## What the publisher still touches OUTSIDE the bundle
+## What the publisher touches OUTSIDE the bundle
 
-Enumerated 2026-07-08; each is render machinery, to be migrated in the
-publish-from-JSON stage (pre-resolved scan geometry/image references in the
-bundle, media manifest for audio):
+Everything the publisher consumes beyond the bundle is now RESOURCE FILES
+or code - no database:
 
-1. **Entry-page scan snippets** — `renderPageEditor.renderStandaloneGroup`,
-   `singlePublicBoundingGroupEditorURL`, `imageRefDescription`
-   (Publish.publicBoundingGroup): renders a document-reference's bounding
-   group from db rows (groups, boxes, pages, image paths).
-2. **Book pages** — `schema.getOrCreateNamedLayer` /
-   `selectLayerByLayerName` / `selectScannedPageByPageNumber` +
-   `renderPageEditor.renderAnnotatedPage` / `renderPageJumper`
-   (Publish.publishBookPage): the annotated page scan render.  (Note
-   `getOrCreateNamedLayer` can WRITE a missing Tagging layer - publishing
-   should become strictly read-only when this migrates.)
-3. **Audio file existence checks** — `Publish.warnMissingRecordings` stats
-   recording files on disk to warn about missing audio.  Becomes a check
-   against the (future) media manifest.
-3b. **RESOLVED (dz ruling 2026-07-08): book-page info boxes render PUBLIC
+1. **RESOLVED: entry-page scan snippets and book pages render from the
+   bundle** (2026-07-08).  The scan renders were split into serializable
+   data structs + loaders + pure renderers (render-page-editor.ts:
+   GroupScanData / BookPageScanData, loadGroupScanData /
+   loadBookPageScanData, renderStandaloneGroupFromData /
+   renderAnnotatedPageFromData).  The annotated-page render is a true
+   load+pure split (one code path); the standalone-group render keeps its
+   sync-with-embedded-tile-promise live form and has a MIRRORED pure twin
+   (change both - the full-site byte-diff is the drift alarm).
+   Image-tile paths are content-addressed and resolved (generating if
+   missing) at BUILD time, as is the Tagging layer id (the old render
+   path's get-or-create write) - publishing itself is read-only.
+2. **Audio: derived-store resolution + missing-recording warnings** —
+   `renderAudio` resolves the content-addressed compressed audio from the
+   content/derived resource trees at render time; this is a resource-file
+   read, within the "pure function of (bundle, resource files)" goal.
+   (An explicit media manifest in the bundle remains possible later.)
+3. **RESOLVED (dz ruling 2026-07-08): book-page info boxes render PUBLIC
    entries only.**  Historically the lookup used the full editor
    projection, so a public book page could render the current facts of a
    not-yet-public entry (caught by this phase's byte-diff verification).
-   Now the lookup is bundle-derived; a non-public entry's group gets the
-   same "Unknown group id" fallback a never-worked group always got.
-   Verified: republishing books/PDM/page-0101 changed exactly the 60
-   affected info boxes and nothing else.  Known acceptable imperfection
-   (dz): the info-box render itself is not versioned.
+   A non-public entry's group gets the same "Unknown group id" fallback a
+   never-worked group always got.  Known acceptable imperfection (dz):
+   the info-box render itself is not versioned.
 4. **Style/branding constants** — `config.bootstrapCssLink`,
    `config.bootstrapScriptTag`, `config.googleTagId`, and the Mi'kmaq
    public-site prose (about-us, `renderBookPageTopNote`'s PDM text): code
@@ -119,20 +122,19 @@ bundle, media manifest for audio):
     ./wordwiki.sh dump-publish-source ps.json
     ./wordwiki.sh publish --from=ps.json [targets] [--root=...]
 
-The DATA comes entirely from the file (the publish log records the dump's
-generatedAt as provenance); the scan renders still read the instance db
-(touches 1-2 above), so run it from the same instance dir.  Verified
-byte-identical to a live publish across home/404/all-words/about-us/
-top-words/all categories/an entry/a book page, and covered by the
-round-trip test in publish-source_test.ts.  The entries-identity staleness
-check does not apply to dump-driven runs (by design: a dump IS a snapshot).
+The publish needs NO DATABASE: the data comes entirely from the file (the
+publish log records the dump's generatedAt as provenance), and the only
+other inputs are the content/derived resource trees (audio resolution) -
+a bare directory holding those two symlinks plus the dump publishes the
+site.  Verified byte-identical to a live publish across the FULL site
+(16,046 html files), and covered by the round-trip test in
+publish-source_test.ts.  The entries-identity staleness check does not
+apply to dump-driven runs (by design: a dump IS a snapshot).
 
 ## Next stages
 
-1. Migrate touches 1-2 (+3's media manifest) into the bundle (scan
-   geometry + content-addressed image refs) so `Publish` is a pure function
-   of (bundle, resource files) and `--from` needs no db at all.
-2. The generated site links its own dumps (reduced + full-history) with
+1. The generated site links its own dumps (reduced + full-history) with
    licensing - every archived copy carries its seed.
-3. The standalone generator example a community can fork (imports the
-   bundle reader + pure renderers only).
+2. The standalone generator example a community can fork (imports the
+   bundle reader + pure renderers only - now genuinely possible, since
+   the publisher is a pure function of the bundle + resource files).

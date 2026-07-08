@@ -558,11 +558,11 @@ export async function cliMain(args: string[]): Promise<void> {
         // bundle itself stays deterministic/diffable when built in memory.
         //   ./wordwiki.sh dump-publish-source [path.json]
         case 'dump-publish-source': {
-            security.runSystem(() => {
+            await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
                 const path = args[1] && !args[1].startsWith('--') ? args[1]
                     : 'publish-source.json';
-                const source = buildPublishSource(ww);
+                const source = await buildPublishSource(ww);
                 Deno.writeTextFileSync(path, JSON.stringify(
                     {...source, generatedAt: new Date().toISOString()}, null, 1));
                 console.info(`wrote publish source to ${path}: ` +
@@ -691,10 +691,13 @@ export async function cliMain(args: string[]): Promise<void> {
             const root = args.find(a => a.startsWith('--root='))?.slice('--root='.length) || '.';
             const fromPath = args.find(a => a.startsWith('--from='))?.slice('--from='.length);
             const exitCode = await security.runSystem(async () => {
-                ww.ensureNewStyleTables();
+                // From a dump, the publish NEEDS NO DB - don't touch it
+                // (this is what lets a bare dir with only the resource
+                // files publish the site).
+                if(!fromPath) ww.ensureNewStyleTables();
                 const source = fromPath
                     ? publishSourceFromJson(Deno.readTextFileSync(fromPath))
-                    : buildPublishSource(ww);
+                    : await buildPublishSource(ww);
                 const status = new publish.PublishStatus();
                 status.start();
                 const pub = new publish.Publish(status, source, root);

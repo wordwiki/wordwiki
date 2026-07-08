@@ -34,9 +34,9 @@ function seedTwoPublicWords(fx: Fixture): void {
 }
 
 test("buildPublishSource: shape, and entries keep the live view's identity", async () => {
-    await withTestDb((fx: Fixture) => {
+    await withTestDb(async (fx: Fixture) => {
         seedTwoPublicWords(fx);
-        const source = buildPublishSource(fx.ww);
+        const source = await buildPublishSource(fx.ww);
         assertEquals(source.formatVersion, PUBLISH_SOURCE_FORMAT_VERSION);
         assertEquals(source.orthography, 'mm-li');
         assertEquals(source.dbPurpose, fx.ww.getDbPurpose() ?? 'unmarked');
@@ -57,9 +57,9 @@ test("buildPublishSource: shape, and entries keep the live view's identity", asy
 });
 
 test("a JSON round-trip of the bundle drives Publish identically", async () => {
-    await withTestDb((fx: Fixture) => {
+    await withTestDb(async (fx: Fixture) => {
         seedTwoPublicWords(fx);
-        const source = buildPublishSource(fx.ww);
+        const source = await buildPublishSource(fx.ww);
         const roundTripped = publishSourceFromJson(JSON.stringify(source));
 
         const live = new Publish(new PublishStatus(), source);
@@ -81,7 +81,7 @@ test("a JSON round-trip of the bundle drives Publish identically", async () => {
 test("a dump-driven publish emits byte-identical files to a live one", async () => {
     await withTestDb(async (fx: Fixture) => {
         seedTwoPublicWords(fx);
-        const source = buildPublishSource(fx.ww);
+        const source = await buildPublishSource(fx.ww);
         const roundTripped = publishSourceFromJson(JSON.stringify(
             {...source, generatedAt: '2026-07-08T00:00:00.000Z'}));
 

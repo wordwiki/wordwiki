@@ -1031,6 +1031,15 @@ interface RenderCtx {
     renderInternalNotes?: boolean,
     noTargetOnRefImages?: boolean;
     docRefsFirst?: boolean;
+    // Bundle-backed scan renderers (publish-source.md): when set, document
+    // references render through these instead of the db-backed module
+    // functions - a from-dump publish renders scans with NO db.  All three
+    // return the same shapes the db-backed defaults do ('' = unresolvable).
+    scanRenderers?: {
+        renderStandaloneGroup(rootPath: string, bounding_group_id: number): any;
+        publicBookPageUrl(rootPath: string, bounding_group_id: number): string;
+        imageRefDescription(bounding_group_id: number): string;
+    };
     // Entry pages: repeat the meanings on the title line after the headword
     // (`headword : meanings`) - the audience is largely non-fluent, so the
     // English must be right up front.  Same slash-joined form as the
@@ -1245,18 +1254,23 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
     //     we don't try to pull client-side only deps on the web.
     let standaloneGroupRender: any = [];
     if(!ctx.suppressReferenceImages)
-        standaloneGroupRender = renderStandaloneGroup(ctx.rootPath, ref.bounding_group_id); // REMOVE_FOR_WEB
+        standaloneGroupRender = ctx.scanRenderers
+            ? ctx.scanRenderers.renderStandaloneGroup(ctx.rootPath, ref.bounding_group_id)
+            : renderStandaloneGroup(ctx.rootPath, ref.bounding_group_id); // REMOVE_FOR_WEB
     const title = 'Title';
     let refUrl: string;
-    try {
+    if(ctx.scanRenderers) {
+        refUrl = ctx.scanRenderers.publicBookPageUrl(ctx.rootPath, ref.bounding_group_id);
+    } else try {
         refUrl = singlePublicBoundingGroupEditorURL(ctx.rootPath, ref.bounding_group_id, title); // REMOVE_FOR_WEB
     } catch(ex) {
         refUrl = '';
     }
-    //refUrl = ''; // REMOVE REMOVE REMOVE
 
     let refDescription: string;
-    try {
+    if(ctx.scanRenderers) {
+        refDescription = ctx.scanRenderers.imageRefDescription(ref.bounding_group_id);
+    } else try {
         refDescription = imageRefDescription(ref.bounding_group_id); // REMOVE_FOR_WEB
     } catch(ex) {
         refDescription = '';

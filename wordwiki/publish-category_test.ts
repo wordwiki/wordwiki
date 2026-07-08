@@ -28,14 +28,14 @@ function seedPublishedEntry(ww: any, tl: TestTimeline, entryId: number,
                                      {attr1: cat, order_key: `0.${i+2}`})], {quiet: true}));
 }
 
-function mkPublish(fx: Fixture): Publish {
+async function mkPublish(fx: Fixture): Promise<Publish> {
     bornApprove(fx.ww);  // the public site is the published projection now
-    return new Publish(new PublishStatus(), buildPublishSource(fx.ww));
+    return new Publish(new PublishStatus(), await buildPublishSource(fx.ww));
 }
 
 test("public categories: internal '~' slugs filtered, table order, display names", async () => {
-    await withTestDb((fx) => {
-        as(fx, 'djz', () => {
+    await withTestDb(async (fx) => {
+        await as(fx, 'djz', async () => {
             const tl = new TestTimeline();
             // Seed in NON-alphabetical table order: weather before family.
             fx.ww.categories.insert({slug: 'weather', name: 'Weather', theme: 'Land, Water & Sky'});
@@ -46,7 +46,7 @@ test("public categories: internal '~' slugs filtered, table order, display names
             seedPublishedEntry(fx.ww, tl, 2000, 'bbb', ['weather', 'family', '~needs-human']);
             seedPublishedEntry(fx.ww, tl, 3000, 'ccc', ['zz-not-in-table']);
 
-            const pub = mkPublish(fx);
+            const pub = await mkPublish(fx);
 
             // The directory/page list: no '~' slugs anywhere; table order first
             // (weather then family), un-tabled values after, with counts.
@@ -67,8 +67,8 @@ test("public categories: internal '~' slugs filtered, table order, display names
 });
 
 test("publicCategoryGroups: theme groups, internal filtered, un-tabled trail", async () => {
-    await withTestDb((fx) => {
-        as(fx, 'djz', () => {
+    await withTestDb(async (fx) => {
+        await as(fx, 'djz', async () => {
             const tl = new TestTimeline();
             fx.ww.categories.insert({slug: 'people', name: 'People', theme: 'People & Relationships'});
             fx.ww.categories.insert({slug: 'family', name: 'Family & Kinship', theme: 'People & Relationships'});
@@ -78,7 +78,7 @@ test("publicCategoryGroups: theme groups, internal filtered, un-tabled trail", a
             seedPublishedEntry(fx.ww, tl, 1000, 'aaa', ['people', 'family', '~old-kinship']);
             seedPublishedEntry(fx.ww, tl, 2000, 'bbb', ['weather', 'zz-not-in-table']);
 
-            const groups = mkPublish(fx).publicCategoryGroups();
+            const groups = (await mkPublish(fx)).publicCategoryGroups();
             // Themes alphabetical by title; the un-tabled 'Other categories'
             // group always trails.
             assertEquals(groups.map(g => g.theme),
@@ -95,12 +95,12 @@ test("publicCategoryGroups: theme groups, internal filtered, un-tabled trail", a
 });
 
 test("public categories: pre-import db (empty table) degrades to raw values", async () => {
-    await withTestDb((fx) => {
-        as(fx, 'djz', () => {
+    await withTestDb(async (fx) => {
+        await as(fx, 'djz', async () => {
             const tl = new TestTimeline();
             seedPublishedEntry(fx.ww, tl, 1000, 'aaa', ['kinship', 'fish']);
 
-            const pub = mkPublish(fx);
+            const pub = await mkPublish(fx);
             // No table rows: alphabetical, raw names - but '~' would still
             // filter (the marker lives in the data, not the table).
             assertEquals(pub.publicCategories(), [['fish', 1], ['kinship', 1]]);
@@ -120,8 +120,8 @@ test("public categories: pre-import db (empty table) degrades to raw values", as
 // and including its own.  cumulativeTierEntries does that union + dedup + sort.
 
 test("Top Words: buckets are cumulative, deduped, and spelling-sorted", async () => {
-    await withTestDb((fx) => {
-        as(fx, 'djz', () => {
+    await withTestDb(async (fx) => {
+        await as(fx, 'djz', async () => {
             const tl = new TestTimeline();
             // ccc is in the top-10; aaa in top-100; bbb in top-1000.  ddd is
             // double-tagged (top-10 AND top-100) to exercise dedup.
@@ -130,7 +130,7 @@ test("Top Words: buckets are cumulative, deduped, and spelling-sorted", async ()
             seedPublishedEntry(fx.ww, tl, 2000, 'aaa', ['~tier-top-100']);
             seedPublishedEntry(fx.ww, tl, 3000, 'bbb', ['~tier-top-1000']);
 
-            const pub = mkPublish(fx);
+            const pub = await mkPublish(fx);
             const ids = (slugs: string[]) =>
                 pub.cumulativeTierEntries(slugs).map((e: any) => e.entry_id);
 
@@ -148,7 +148,7 @@ test("Top Words: buckets are cumulative, deduped, and spelling-sorted", async ()
 test("Top Words: publishTopWords emits a directory + a page per tier with cumulative counts", async () => {
     await withTestDb(async (fx) => {
         // Seed under the actor (synchronous prefix), then do file IO after.
-        const root = as(fx, 'djz', () => {
+        const root = await as(fx, 'djz', async () => {
             const tl = new TestTimeline();
             seedPublishedEntry(fx.ww, tl, 1000, 'ccc', ['~tier-top-10']);
             seedPublishedEntry(fx.ww, tl, 2000, 'aaa', ['~tier-top-100']);
@@ -158,7 +158,7 @@ test("Top Words: publishTopWords emits a directory + a page per tier with cumula
         });
         void root;
         const tmp = await Deno.makeTempDir({prefix: 'wordwiki-topwords-test-'});
-        const pub = new Publish(new PublishStatus(), buildPublishSource(fx.ww), tmp);
+        const pub = new Publish(new PublishStatus(), await buildPublishSource(fx.ww), tmp);
 
         await pub.publishTopWords();
 

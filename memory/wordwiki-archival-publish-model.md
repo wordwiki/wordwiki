@@ -16,6 +16,23 @@ DATA FILES convertible to any future medium (unbounded) — both simplified
 (no history) and full versions, linked FROM the site, cleanly licensed, so
 they get archived, 4) paper via .pdf (survives computing, loses audio).
 
+**STAGE 3 BUILT (2026-07-08): scan renders bundle-ized — publish --from
+needs NO DATABASE.** Scan renders split into serializable structs +
+loaders + pure renderers (render-page-editor.ts: GroupScanData/
+BookPageScanData, loadGroupScanData/loadBookPageScanData,
+renderStandaloneGroupFromData/renderAnnotatedPageFromData). Annotated
+page = true load+pure split (one code path); standalone group = MIRRORED
+pure twin (live one embeds a tile promise in sync markup — change both;
+the full-site byte-diff is the drift alarm). Bundle: scans[] (1,585
+groups, tile urls resolved at build) + books[].pageScans (1,995 pages) +
+taggingLayerId (get-or-create moved to BUILD; publishing read-only);
+31.6MB, 4s dump. renderDocumentReference takes ctx.scanRenderers
+(bundle-backed injection). buildPublishSource is ASYNC now. VERIFIED:
+full site (16,046 files) byte-identical live vs from-dump; a bare dir
+with only content/+derived/ symlinks + the dump publishes with NO
+database dir present. Publisher = pure function of (bundle, resource
+files); audio resolution reads the content-addressed resource trees.
+
 **STAGE 2 BUILT (2026-07-08): publish --from=<dump.json>.**
 `./wordwiki.sh publish --from=ps.json [targets] [--root=...]` — the DATA
 comes entirely from the dumped bundle (publish log records the dump's

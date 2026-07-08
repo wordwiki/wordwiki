@@ -23,7 +23,10 @@
 import {Entry} from './entry-schema.ts';
 import * as category from './category.ts';
 import * as user from './user.ts';
-import {ScannedDocument, selectAllScannedDocuments, maxPageNumberForDocument} from './scanned-document.ts';
+import {ScannedDocument, selectAllScannedDocuments, maxPageNumberForDocument,
+        selectScannedPageByPageNumber, getOrCreateNamedLayer} from './scanned-document.ts';
+import {GroupScanData, BookPageScanData,
+        loadGroupScanData, loadBookPageScanData} from './render-page-editor.ts';
 import {siteConfig} from './site-config.ts';
 import type {SiteView} from './site-view.ts';
 
@@ -48,6 +51,13 @@ export interface PublishSourceBook {
     /** [page_number, dictionary-reference count] for pages that have
      *  references worked through into dictionary entries. */
     entryCountByPage: [number, number][];
+    /** The Tagging layer whose groups the public book pages show (resolved
+     *  - and created if missing, as the old render path did - at BUILD
+     *  time, so publishing itself is read-only). */
+    taggingLayerId: number;
+    /** Per page (index = page_number-1): everything the annotated-page
+     *  render needs - dimensions, image url, the tagging groups + boxes. */
+    pageScans: BookPageScanData[];
 }
 
 export interface PublishSource {
@@ -72,6 +82,11 @@ export interface PublishSource {
     users: PublishSourceUser[];
     /** The reference books, with per-page dictionary-reference counts. */
     books: PublishSourceBook[];
+    /** The standalone scan render data for every bounding group referenced
+     *  by the entries' document references - so entry pages and book-page
+     *  info boxes render their scan snippets with no db.  Sorted by group
+     *  id for deterministic dumps. */
+    scans: GroupScanData[];
 }
 
 /** What building a PublishSource needs from the app - WordWiki satisfies
@@ -84,15 +99,38 @@ export interface PublishSourceApp {
     entryCountByPage(book: string): Array<[number, number]>;
 }
 
-export function buildPublishSource(app: PublishSourceApp): PublishSource {
+export async function buildPublishSource(app: PublishSourceApp): Promise<PublishSource> {
     const site = app.site();
     const books: PublishSourceBook[] =
-        selectAllScannedDocuments().all({}).map(document => ({
-            document,
-            totalPages: maxPageNumberForDocument()
-                .required({document_id: document.document_id}).max_page_number,
-            entryCountByPage: app.entryCountByPage(document.friendly_document_id),
-        }));
+        selectAllScannedDocuments().all({}).map(document => {
+            const totalPages = maxPageNumberForDocument()
+                .required({document_id: document.document_id}).max_page_number;
+            const taggingLayerId = getOrCreateNamedLayer(document.document_id, 'Tagging', 0);
+            const pageScans: BookPageScanData[] = [];
+            for(let page_number = 1; page_number <= totalPages; page_number++) {
+                const page_id = selectScannedPageByPageNumber()
+                    .required({document_id: document.document_id, page_number}).page_id;
+                pageScans.push(loadBookPageScanData(page_id, taggingLayerId));
+            }
+            return {
+                document,
+                totalPages,
+                entryCountByPage: app.entryCountByPage(document.friendly_document_id),
+                taggingLayerId,
+                pageScans,
+            };
+        });
+
+    // Every bounding group the public entries reference (their document
+    // references) - the standalone scan snippets on entry pages and in the
+    // book-page info boxes.  Loading resolves (and generates if missing)
+    // the content-addressed image tiles, hence async.
+    const groupIds = Array.from(new Set(site.publicEntries.flatMap(e =>
+        e.subentry.flatMap(s => s.document_reference.map(d => d.bounding_group_id)))))
+        .toSorted((a, b) => a - b);
+    const scans: GroupScanData[] = [];
+    for(const id of groupIds)
+        scans.push(await loadGroupScanData(id));
     const categories = (() => {
         try { return app.categories.allByOrder.all({}); }
         catch (_e) { return [] as category.Category[]; }  // pre-import db
@@ -120,6 +158,7 @@ export function buildPublishSource(app: PublishSourceApp): PublishSource {
         categories,
         users,
         books,
+        scans,
     };
 }
 

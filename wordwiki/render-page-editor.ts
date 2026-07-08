@@ -216,56 +216,148 @@ async function samplePageRender(friendly_document_id: string, page_number: numbe
     console.info(renderToStringViaLinkeDOM(markup));
 }
 
+// --------------------------------------------------------------------------------
+// --- Serializable scan data (publish-source.md "bundle-ize scan renders") --------
+// --------------------------------------------------------------------------------
+//
+// The scan renders the PUBLISHER needs, split into (a) plain serializable
+// DATA structs, (b) db LOADERS that build them, and (c) PURE renderers over
+// them.  The publish-source bundle carries the structs, so a from-dump
+// publish renders scans with NO db.  The annotated-page render below is a
+// true load+pure split (one render code path); the standalone-group render
+// keeps its historical sync-with-embedded-tile-promise form for live pages
+// and has a MIRRORED pure twin further down (drift is pinned by test).
+
+export interface ScanBox { bounding_box_id: number; x: number; y: number; w: number; h: number; }
+
+/** One page's worth of a bounding group's boxes, with everything the pure
+ *  standalone render needs about the page. */
+export interface GroupScanPart {
+    page_id: number;
+    width: number; height: number;       // page dimensions
+    tiles_url: string;                   // resolved tile-dir path (site-relative)
+    boxes: ScanBox[];
+}
+
+export interface GroupScanData {
+    bounding_group_id: number;
+    parts: GroupScanPart[];              // per page, in render order; [] = empty group
+    book_page_path: string;              // site-relative public book page ('' if unresolvable)
+    description: string;                 // imageRefDescription ('' if unresolvable)
+}
+
+export interface PageScanGroup {
+    bounding_group_id: number;
+    color: string|null;
+    boxes: ScanBox[];
+}
+
+export interface BookPageScanData {
+    page_id: number; document_id: number; page_number: number;
+    width: number; height: number;
+    image_url: string;                   // the page image (site-relative, no leading /)
+    groups: PageScanGroup[];             // the layer's groups, in query order
+}
+
+const scanBox = (b: {bounding_box_id: number, x: number, y: number, w: number, h: number}): ScanBox =>
+    ({bounding_box_id: b.bounding_box_id, x: b.x, y: b.y, w: b.w, h: b.h});
+
+/** Load the standalone-scan data for one bounding group (async: resolves -
+ *  and generates if missing - the content-addressed image tiles).  The
+ *  book-page path / description mirror the old callers' try/catch-to-''. */
+export async function loadGroupScanData(bounding_group_id: number): Promise<GroupScanData> {
+    const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+    const boxesByPage = utils.groupToMap(boxes, b=>b.page_id);
+    const parts: GroupScanPart[] = [];
+    for(const [page_id, pageBoxes] of boxesByPage.entries()) {
+        const page = selectScannedPage().required({page_id});
+        const tiles_url = await derivedPageImages.getTilesForImage(
+            page.image_ref, config.defaultTileWidth, config.defaultTileHeight);
+        parts.push({page_id, width: page.width, height: page.height,
+                    tiles_url, boxes: pageBoxes.map(scanBox)});
+    }
+    let book_page_path = ''; let description = '';
+    try {
+        book_page_path = singlePublicBoundingGroupEditorURL('', bounding_group_id, '');
+    } catch { /* '' */ }
+    try { description = imageRefDescription(bounding_group_id); } catch { /* '' */ }
+    return {bounding_group_id, parts, book_page_path, description};
+}
+
+/** Load the annotated-page data for one page+layer (the publisher's shape:
+ *  no reference layers, no locked group - those stay live-editor-only). */
+export function loadBookPageScanData(page_id: number, layer_id: number): BookPageScanData {
+    const page = selectScannedPage().required({page_id});
+    const boxes = boxesForPageLayer().all({page_id, layer_id});
+    const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
+    const groups: PageScanGroup[] = [...boxesByGroup.entries()].map(([groupId, gBoxes]) =>
+        ({bounding_group_id: groupId,
+          color: gBoxes[0].color ?? null,
+          boxes: gBoxes.map(scanBox)}));
+    return {page_id, document_id: page.document_id, page_number: page.page_number,
+            width: page.width, height: page.height,
+            image_url: page.image_ref, groups};
+}
+
 export function renderAnnotatedPage(cfg: PageRenderConfig, page_id: number): { markup: Markup, groupIds: number[] } {
     const page = selectScannedPage().required({page_id});
-    const pageImageUrl = '/'+page.image_ref;
-
-    // --- Render user blocks
-    const boxes = boxesForPageLayer().all({page_id, layer_id: cfg.layer_id});
-    const boxesByGroup = utils.groupToMap(boxes, box=>box.bounding_group_id);
-    const blocksSvg =
-        [...boxesByGroup.entries()].
-        map(([groupId, boxes])=>renderGroup(
-            page, groupId, boxes,
-            {lockedGroupId: cfg.locked_bounding_group_id}));
-
-    // --- If the locked bounding group has no boxes in this page,
-    //     render it anyway as an empty group
-    const emptyLockedGroupSvg =
-        (cfg.locked_bounding_group_id && !boxesByGroup.has(cfg.locked_bounding_group_id))
-        ? [renderEmptyGroup(page, cfg.locked_bounding_group_id)]
-        : undefined;
 
     // --- We don't render reference boxes that have been imported to user
     //     boxes that are still active on the page.
+    const boxes = boxesForPageLayer().all({page_id, layer_id: cfg.layer_id});
     const importedFromBoundingBoxIds =
         new Set(boxes.map(b=>b.imported_from_bounding_box_id).filter(b=>b!==null));
 
-    // --- Render reference layers
+    // --- Render reference layers (live editor only; the publisher passes none)
     const refBlocksSvg:any = cfg.reference_layer_ids.flatMap(layer_id=> {
         const refBoxes = boxesForPageLayer().all({page_id, layer_id})
             .filter(b=>!importedFromBoundingBoxIds.has(b.bounding_box_id));
         const refBoxesByGroup = utils.groupToMap(refBoxes, box=>box.bounding_group_id);
         return [...refBoxesByGroup.entries()].
             map(([groupId, boxes])=>renderGroup(
-                page, groupId, boxes, {isRefLayer: true,
-                                       highlightBoxIds: new Set(cfg.highlight_ref_bounding_box_ids??[])}));
+                {width: page.width, height: page.height}, groupId, boxes,
+                {isRefLayer: true,
+                 highlightBoxIds: new Set(cfg.highlight_ref_bounding_box_ids??[])}));
     });
+
+    return renderAnnotatedPageFromData(cfg, loadBookPageScanData(page_id, cfg.layer_id),
+                                       {refBlocksSvg});
+}
+
+/** The PURE annotated-page render (the one code path - the live
+ *  renderAnnotatedPage above loads the same struct and adds the
+ *  live-editor-only reference-layer svg via `extra`). */
+export function renderAnnotatedPageFromData(cfg: PageRenderConfig, data: BookPageScanData,
+                                            extra: {refBlocksSvg?: any} = {}): { markup: Markup, groupIds: number[] } {
+    const pageImageUrl = '/'+data.image_url;
+    const pageDims = {width: data.width, height: data.height};
+
+    const blocksSvg = data.groups.map(g=>renderGroup(
+        pageDims, g.bounding_group_id,
+        g.boxes.map(b => ({...b, color: g.color ?? undefined})),
+        {lockedGroupId: cfg.locked_bounding_group_id}));
+
+    // --- If the locked bounding group has no boxes in this page,
+    //     render it anyway as an empty group
+    const emptyLockedGroupSvg =
+        (cfg.locked_bounding_group_id && !data.groups.some(g=>g.bounding_group_id === cfg.locked_bounding_group_id))
+        ? [renderEmptyGroup(cfg.locked_bounding_group_id)]
+        : undefined;
 
     const scale_factor = cfg.scale_factor ?? 4;
     const annotatedPage =
         ['div', {id: 'annotatedPage'},
          //['img', {src:pageImageUrl, width:page.width, height:page.height}],
          ['svg', {id: 'scanned-page',
-                  width:page.width/scale_factor,  // add Math.floor ???
-                  height:page.height/scale_factor,
-                  viewBox: `0 0 ${page.width} ${page.height}`,
+                  width:data.width/scale_factor,  // add Math.floor ???
+                  height:data.height/scale_factor,
+                  viewBox: `0 0 ${data.width} ${data.height}`,
                   onmousedown: 'scannedPageMouseDown(event)',
                   onmousemove: 'scannedPageMouseMove(event)',
                   onmouseup: 'scannedPageMouseUp(event)',
-                  'data-document-id': page.document_id,
-                  'data-page-id': page_id,
-                  'data-page-number': page.page_number,
+                  'data-document-id': data.document_id,
+                  'data-page-id': data.page_id,
+                  'data-page-number': data.page_number,
                   'data-layer-id': cfg.layer_id,
                   'data-scale-factor': scale_factor,
                   ...(cfg.locked_bounding_group_id
@@ -273,16 +365,17 @@ export function renderAnnotatedPage(cfg: PageRenderConfig, page_id: number): { m
                          `bg_${cfg.locked_bounding_group_id}`}
                       : {}),
                  },
-          ['image', {href:pageImageUrl, x:0, y:0, width:page.width, height:page.height}],
-          refBlocksSvg,
+          ['image', {href:pageImageUrl, x:0, y:0, width:data.width, height:data.height}],
+          extra.refBlocksSvg,
           blocksSvg,
           emptyLockedGroupSvg]];
 
-    return {markup: annotatedPage, groupIds: Array.from(new Set(boxesByGroup.keys()))};
+    return {markup: annotatedPage, groupIds: data.groups.map(g=>g.bounding_group_id)};
 }
 
-function renderGroup(page: ScannedPage,
-                     groupId: number, boxes: BoxGroupJoin[],
+function renderGroup(page: {width: number, height: number},
+                     groupId: number,
+                     boxes: Array<ScanBox & {color?: string|null}>,
                      opts: {
                          lockedGroupId?: number,
                          isRefLayer?: boolean,
@@ -293,7 +386,7 @@ function renderGroup(page: ScannedPage,
     const highlightBoxIds = opts.highlightBoxIds ?? new Set<number>();
 
     utils.assert(boxes.length > 0, 'Cannot render an empty group');
-    const group: GroupJoinPartial = boxes[0];
+    const group = boxes[0];
 
     // --- Group frame contains all boxes + a margin.
     const groupMargin = 10;
@@ -311,7 +404,7 @@ function renderGroup(page: ScannedPage,
         case isRefLayer: stroke = 'grey'; break;
         case lockedGroupId !== undefined && groupId === lockedGroupId: stroke = 'green'; break;
         case lockedGroupId !== undefined && groupId !== lockedGroupId: stroke = 'yellow'; break;
-        case group.color !== undefined: stroke = group.color; break;
+        case group.color !== undefined && group.color !== null: stroke = group.color; break;
         default: stroke = 'yellow'; break;
     }
     //console.info('stroke color', stroke);
@@ -325,8 +418,7 @@ function renderGroup(page: ScannedPage,
         ]);
 }
 
-function renderEmptyGroup(page: ScannedPage,
-                          groupId: number): any {
+function renderEmptyGroup(groupId: number): any {
     const groupMargin = 10;
     const groupX = 0;
     const groupY = 0;
@@ -341,7 +433,7 @@ function renderEmptyGroup(page: ScannedPage,
         ]);
 }
 
-function renderBox(box: BoxGroupJoin,
+function renderBox(box: ScanBox,
                    isRefLayer: boolean=false,
                    highlightBoxIds:Set<number>=new Set()): any {
     const boxClass = ['box',
@@ -888,6 +980,90 @@ export function renderStandaloneBoxes(rootPath: string,
            ]; // svg
 }
 
+/** PURE twin of renderStandaloneGroup over bundle data.  MIRRORS the
+ *  function above - the live one must stay sync (its callers embed the
+ *  tile promise in markup), so the two cannot share one body; the
+ *  render-equivalence test in publish-source_test.ts pins them together.
+ *  Change BOTH or the test fails. */
+export function renderStandaloneGroupFromData(rootPath: string,
+                                              data: GroupScanData,
+                                              scale_factor:number=4,
+                                              box_stroke:string = 'green'): SizedSvgMarkup {
+    if(data.parts.length === 0) {
+        return renderWarningMessageAsSvg('Empty Group');
+    }
+
+    // --- Do per-page tiled SVG renderings
+    const svgsByPage = data.parts.map(
+        part=>renderStandaloneBoxesFromPart(rootPath, part, scale_factor, box_stroke));
+
+    // --- Layout the group renderings in a larger SVG
+    const margin = 10;
+    const totalHeight = svgsByPage.reduce((total, svg)=>total+svg[1].height+margin*2, 0);
+    const maxWidth = Math.max(...svgsByPage.map(svg=>svg[1].width))+margin*2;
+
+    const groupSvgs: SizedSvgMarkup[] = [];
+    let y = 0;
+    for(const s of svgsByPage) {
+        s[1].y = y+margin;
+        s[1].x = margin;
+        y += s[1].height + margin;
+        groupSvgs.push(s);
+    }
+
+    return ['svg', {width:maxWidth, height:totalHeight,
+                    viewBox: `0 0 ${maxWidth} ${totalHeight}`
+                   },
+            groupSvgs,
+           ]; // svg
+}
+
+/** PURE twin of renderStandaloneBoxes over one GroupScanPart (see
+ *  renderStandaloneGroupFromData's mirror note). */
+export function renderStandaloneBoxesFromPart(rootPath: string,
+                                              part: GroupScanPart,
+                                              scale_factor:number=4,
+                                              box_stroke:string = 'green'): SizedSvgMarkup {
+    const boxes = part.boxes;
+    if(boxes.length === 0) {
+        return renderWarningMessageAsSvg('Empty Group');
+    }
+
+    // --- Group frame contains all boxes + a margin
+    //     (note that margin is reduced if there is not enough space)
+    const groupMargin = 75;
+    const groupX = Math.max(Math.min(...boxes.map(b=>b.x)) - groupMargin, 0);
+    const groupY = Math.max(Math.min(...boxes.map(b=>b.y)) - groupMargin, 0);
+    const groupRight = Math.min(Math.max(...boxes.map(b=>b.x+b.w)) + groupMargin, part.width);
+    const groupBottom = Math.min(Math.max(...boxes.map(b=>b.y+b.h)) + groupMargin, part.height);
+    const groupWidth = groupRight-groupX;
+    const groupHeight = groupBottom-groupY;
+
+    const groupSvg =
+        ['svg', {class:`group`, stroke: box_stroke},
+         ['rect', {class:"group-frame", x:groupX, y:groupY,
+                   width:groupRight-groupX,
+                   height:groupBottom-groupY}],
+
+         boxes.map(box=>
+             ['svg', {class:`box`, x:box.x-groupX, y:box.y-groupY, width:box.w, height:box.h, id: `bb_${box.bounding_box_id}`},
+              ['rect', {class:"frame", x:0, y:0, width:'100%', height:'100%'}]
+             ])
+        ];
+
+    const image = renderTiledImageFromTiles(rootPath, part.tiles_url, part.width, part.height,
+        -groupX, -groupY, groupWidth, groupHeight);
+
+    return ['svg', {width:groupWidth/scale_factor, height:groupHeight/scale_factor,
+                    viewBox: `0 0 ${groupWidth} ${groupHeight}`,
+                    'data-page-id': part.page_id,
+                    'data-scale-factor': scale_factor,
+                   },
+            image,
+            groupSvg,
+           ]; // svg
+}
+
 export function renderWarningMessageAsSvg(message: string, width:number=240, height:number=30): SizedSvgMarkup {
     return ['svg', {width, height, viewBox:`0 0 ${width} ${height}`, xmlns:'http://www.w3.org/2000/svg'},
             ['text', {x:0, y:20, class: 'warning'}, message]];
@@ -898,8 +1074,19 @@ export async function renderTiledImage(rootPath: string, srcImagePath: string,
                                        x: number, y: number, w: number, h: number,
                                        maxTileWidth=config.defaultTileWidth,
                                        maxTileHeight=config.defaultTileHeight): Promise<any> {
-
     const tilesPath = await derivedPageImages.getTilesForImage(srcImagePath, maxTileWidth, maxTileHeight);
+    return renderTiledImageFromTiles(rootPath, tilesPath, srcImageWidth, srcImageHeight,
+                                     x, y, w, h, maxTileWidth, maxTileHeight);
+}
+
+/** The PURE tile grid over an already-resolved tiles path (the one code
+ *  path - renderTiledImage above resolves then delegates; the publish
+ *  bundle carries resolved tiles_url values). */
+export function renderTiledImageFromTiles(rootPath: string, tilesPath: string,
+                                       srcImageWidth: number, srcImageHeight: number,
+                                       x: number, y: number, w: number, h: number,
+                                       maxTileWidth=config.defaultTileWidth,
+                                       maxTileHeight=config.defaultTileHeight): any {
     const srcImageWidthInTiles = Math.ceil(srcImageWidth / maxTileWidth);
     const srcImageHeightInTiles = Math.ceil(srcImageHeight / maxTileHeight);
 

@@ -13,6 +13,7 @@ import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
 import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
 import {PublishSource, PublishSourceBook, buildPublishSource} from './publish-source.ts';
+import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
 import * as entryschema from './entry-schema.ts';
@@ -204,7 +205,7 @@ export function startPublish(): any {
             try {
                 const wordWiki = getWordWiki();
                 const publish = new Publish(publishStatusSingleton,
-                                            buildPublishSource(wordWiki));
+                                            await buildPublishSource(wordWiki));
                 await publish.publish();
             } catch (e) {
                 if(e instanceof Error) {
@@ -234,7 +235,7 @@ export async function publish(publishOptions: PublishOptions) {
         const wordWiki = getWordWiki();
         wordWiki.requestWorkspaceReload();
         const publish = new Publish(publishStatusSingleton,
-                                    buildPublishSource(wordWiki),
+                                    await buildPublishSource(wordWiki),
                                     ".",
                                     publishOptions);
         await publish.publish();
@@ -1156,10 +1157,39 @@ including remixing, transforming, and building upon the material, for any non-co
     /** The public reference presentation for the metadata renderer: the scan
      *  and its book/page description, both linked to the public bounding-group
      *  page (the same shape the hand renderer's public reference block had). */
+    #scanById: Map<number, GroupScanData>|undefined;
+    get scanById(): Map<number, GroupScanData> {
+        return this.#scanById ??= new Map(this.source.scans.map(s => [s.bounding_group_id, s]));
+    }
+
+    // The bundle-backed twins of the db scan-render trio, shared by the
+    // entry pages (publicBoundingGroup below) and the book-page info boxes
+    // (renderEntry's ctx.scanRenderers).  A group id missing from the
+    // bundle renders like an empty group.
+    scanStandaloneGroup(rootPath: string, id: number): any {
+        const data = this.scanById.get(id);
+        return data ? renderPageEditor.renderStandaloneGroupFromData(rootPath, data)
+                    : renderPageEditor.renderWarningMessageAsSvg('Empty Group');
+    }
+    scanBookPageUrl(rootPath: string, id: number): string {
+        const path = this.scanById.get(id)?.book_page_path ?? '';
+        return path ? `${rootPath}${path}` : '';
+    }
+    scanDescription(id: number): string {
+        return this.scanById.get(id)?.description ?? '';
+    }
+    scanRenderers() {
+        return {
+            renderStandaloneGroup: (rootPath: string, id: number) => this.scanStandaloneGroup(rootPath, id),
+            publicBookPageUrl: (rootPath: string, id: number) => this.scanBookPageUrl(rootPath, id),
+            imageRefDescription: (id: number) => this.scanDescription(id),
+        };
+    }
+
     private publicBoundingGroup(rootPath: string, id: number): any {
-        const scan = renderPageEditor.renderStandaloneGroup(rootPath, id);
-        let url = ''; try { url = renderPageEditor.singlePublicBoundingGroupEditorURL(rootPath, id, ''); } catch { /**/ }
-        let desc = ''; try { desc = renderPageEditor.imageRefDescription(id); } catch { /**/ }
+        const scan = this.scanStandaloneGroup(rootPath, id);
+        const url = this.scanBookPageUrl(rootPath, id);
+        const desc = this.scanDescription(id);
         return ['div', {},
             ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
             desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
@@ -1450,25 +1480,22 @@ including remixing, transforming, and building upon the material, for any non-co
      */
     async publishBookPage(publicBookId: string, page_number: number, total_pages_in_document: number) {
         const rootPath = '../../../../';
-        const reference_layer_name = 'Text';
-        
-        // Book metadata from the bundle; the page/layer/scan RENDERING below
-        // is still db-bound (see publish-source.md "Remaining db touches").
-        const document = this.bookByFriendlyId(publicBookId).document;
-        const document_id = document.document_id;
-        const taggingLayer = schema.getOrCreateNamedLayer(document_id, 'Tagging', 0);
 
-        const referenceLayer = schema.selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
-        const page = schema.selectScannedPageByPageNumber().required({document_id, page_number});
+        // Everything from the bundle: book metadata, the Tagging layer id
+        // (resolved at BUILD time - publishing is read-only), and the page's
+        // scan data.  No db.
+        const book = this.bookByFriendlyId(publicBookId);
+        const document = book.document;
+        const pageScan = book.pageScans[page_number-1]
+            ?? panic(`no page scan for ${publicBookId} page ${page_number}`);
 
         const cfg: renderPageEditor.PageViewerConfig = {
-            layer_id: taggingLayer,
-            //reference_layer_ids: [referenceLayer.layer_id],
+            layer_id: book.taggingLayerId,
             reference_layer_ids: [],
             total_pages_in_document,
         };
 
-        const {markup, groupIds} = renderPageEditor.renderAnnotatedPage(cfg, page.page_id);
+        const {markup, groupIds} = renderPageEditor.renderAnnotatedPageFromData(cfg, pageScan);
 
         const infoBoxesById: Record<string, string> = {};
         for(const groupId of groupIds) {
@@ -1482,10 +1509,10 @@ including remixing, transforming, and building upon the material, for any non-co
 
         const body = [
             ['div', {},
-             ['h1', {}, `${document.title} - Page ${page.page_number}`],
+             ['h1', {}, `${document.title} - Page ${pageScan.page_number}`],
              cfg.title && ['h2', {}, cfg.title],
              this.renderBookPageTopNote(publicBookId, document),
-             renderPageEditor.renderPageJumper(page.page_number, total_pages_in_document,
+             renderPageEditor.renderPageJumper(pageScan.page_number, total_pages_in_document,
                                                (page_number:number) => `${rootPath}${this.pathForBookPage(publicBookId, page_number)}`),
             ], // /div
 
@@ -1564,7 +1591,8 @@ including remixing, transforming, and building upon the material, for any non-co
         this.warnMissingRecordings(entry);
         const entryMarkup:any[] = [
             'div', {style: 'overflow: auto;'},
-            entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true}, entry)];
+            entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true,
+                                     scanRenderers: this.scanRenderers()}, entry)];
         const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
         //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
         // if(entry.entry_id === 145979) {  // ugsuguni
