@@ -49,6 +49,7 @@ export interface EntryRenderConfig {
     // it out of this module lets the renderer run on the public export too.
     // Given the bounding_group_id, return the full reference presentation.
     renderBoundingGroup?: (bounding_group_id: number) => Markup;
+    resolveAudioUrl?: audio.AudioUrlResolver;
     // Optional affordance appended INSIDE the headword <h1> (the standard edit
     // pencil).  Context-specific, so injected - the public export passes none.
     titleAffordance?: Markup;
@@ -209,6 +210,7 @@ export class EntryRenderer {
     readonly mode: "read";
     readonly publicKeys: Set<string>;
     readonly renderBoundingGroup?: (id: number) => Markup;
+    readonly resolveAudioUrl?: audio.AudioUrlResolver;
     readonly titleAffordance?: Markup;
     readonly editing?: EditingHooks;
     readonly valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
@@ -220,6 +222,7 @@ export class EntryRenderer {
         this.mode = cfg.mode ?? "read";
         this.publicKeys = new Set(cfg.publicKeys ?? []);
         this.renderBoundingGroup = cfg.renderBoundingGroup;
+        this.resolveAudioUrl = cfg.resolveAudioUrl;
         this.titleAffordance = cfg.titleAffordance;
         this.editing = cfg.editing;
         this.valueLabel = cfg.valueLabel;
@@ -334,7 +337,7 @@ export class EntryRenderer {
     protected renderScalarValue(f: model.ScalarField, value: any): Markup {
         if (value === null || value === undefined || value === "") return "";
         if (f instanceof model.AudioField)
-            return audio.renderAudio(value, audio.audioPlayIcon, undefined, this.rootPath);
+            return audio.renderAudio(value, audio.audioPlayIcon, undefined, this.rootPath, undefined, this.resolveAudioUrl);
         if (f instanceof model.ImageField)
             return ["img", { src: this.rootPath + value, style: "max-width: 12rem; height: auto;" }];
         if (f.style.$shape === "boundingGroup")   // the reference scan (+ link)

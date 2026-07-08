@@ -55,6 +55,7 @@ builds omit it so the bundle stays deterministic and dumps diff cleanly).
 | `users` | the human users (`user_id`, `username`, `name`, `region`) — automation `~` identities excluded, disabled users included (history references former staff forever) |
 | `books` | per reference book: the `scanned_document` metadata row, `totalPages`, `entryCountByPage` ([page, dictionary-reference count]), `taggingLayerId` (resolved — and created if missing — at BUILD time, so publishing itself is read-only), and `pageScans` (per page: dimensions, image url, the tagging groups + boxes) |
 | `scans` | per bounding group referenced by the entries' document references: the standalone scan render data — per-page box geometry with resolved content-addressed `tiles_url`s, plus the precomputed public book-page path and description |
+| `media` | every audio reference in the entries (schema-driven: any AudioField), with the derivation DONE at build time: `{source, served}` — the stored source content path and, as a peer, the derived trimmed/compressed `.mp3` path the site actually plays.  A failed derivation records `{source, error}` so a from-dump render degrades identically.  Without this, the reduced form's source hashes are unusable except through the originals + the derivation machinery (dz 2026-07-08) |
 
 **Denormalize-on-export (the standalone-file rule)**: every reference KEY
 stored in the data (a recording's `speaker` username, a category slug, a
@@ -97,11 +98,13 @@ or code - no database:
    Image-tile paths are content-addressed and resolved (generating if
    missing) at BUILD time, as is the Tagging layer id (the old render
    path's get-or-create write) - publishing itself is read-only.
-2. **Audio: derived-store resolution + missing-recording warnings** —
-   `renderAudio` resolves the content-addressed compressed audio from the
-   content/derived resource trees at render time; this is a resource-file
-   read, within the "pure function of (bundle, resource files)" goal.
-   (An explicit media manifest in the bundle remains possible later.)
+2. **RESOLVED: audio renders from the bundle's media manifest**
+   (2026-07-08).  `renderAudio` takes an optional resolver
+   (audio.AudioUrlResolver); the publisher's resolver reads the bundle's
+   `media` section, so publishing touches neither the derivation
+   machinery nor the source audio - a directory containing NOTHING but
+   the dump publishes the site byte-identically.
+   `Publish.warnMissingRecordings` (empty-field checks) needs no fs.
 3. **RESOLVED (dz ruling 2026-07-08): book-page info boxes render PUBLIC
    entries only.**  Historically the lookup used the full editor
    projection, so a public book page could render the current facts of a

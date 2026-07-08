@@ -1048,6 +1048,10 @@ interface RenderCtx {
         publicBookPageUrl(rootPath: string, bounding_group_id: number): string;
         imageRefDescription(bounding_group_id: number): string;
     };
+    // Bundle-backed audio urls (the publish-source media manifest): when
+    // set, recordings render from build-time-resolved derived paths - no
+    // derivation machinery (and no source audio) at render time.
+    resolveAudioUrl?: audio.AudioUrlResolver;
     // Entry pages: repeat the meanings on the title line after the headword
     // (`headword : meanings`) - the audience is largely non-fluent, so the
     // English must be right up front.  Same slash-joined form as the
@@ -1087,7 +1091,7 @@ export function renderEntryRecordings(ctx: RenderCtx, e: Entry, recordings: Reco
           recordings.length === 0
              ? ['li', {}, 'No recordings']
              : recordings.map(r=>['li', {},
-                                  audio.renderAudio(r.recording, `Recording by ${r.speaker}`, undefined, ctx.rootPath)])
+                                  audio.renderAudio(r.recording, `Recording by ${r.speaker}`, undefined, ctx.rootPath, undefined, ctx.resolveAudioUrl)])
          ] // ul
         ]
     ];
@@ -1190,7 +1194,7 @@ export function renderExample(ctx: RenderCtx, e: Entry, example: Example): any {
     return [
         example.example_text.filter(t=>t.variant==defaultVariant || !t.variant).map(t=>['div', {}, ['b', {}, 'Text: '], t.example_text]),
         example.example_translation.map(t=>['div', {}, ['b', {}, 'Translation: '], ['i', {}, t.example_translation]]),
-        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, [`Recording by ${r.speaker} `, audio.audioPlayIcon], undefined, ctx.rootPath)])
+        example.example_recording.map(r=>['div', {}, ['b', {}, 'Recording: '], audio.renderAudio(r.recording, [`Recording by ${r.speaker} `, audio.audioPlayIcon], undefined, ctx.rootPath, undefined, ctx.resolveAudioUrl)])
     ];
 }
 

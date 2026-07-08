@@ -29,6 +29,7 @@ import {ScannedDocument, selectAllScannedDocuments, maxPageNumberForDocument,
         selectScannedPageByPageNumber, getOrCreateNamedLayer} from './scanned-document.ts';
 import {GroupScanData, BookPageScanData,
         loadGroupScanData, loadBookPageScanData} from './render-page-editor.ts';
+import {getCompressedRecordingPath} from './audio.ts';
 import {siteConfig} from './site-config.ts';
 import type {SiteView} from './site-view.ts';
 
@@ -43,6 +44,17 @@ export interface PublishSourceUser {
     username: string;
     name: string;
     region?: string;
+}
+
+/** One audio reference, with the derivation DONE at build time: the
+ *  source content path (as stored in the data - archival provenance) and,
+ *  as a peer, the SERVED derived path (trimmed/compressed mp3) the site
+ *  actually plays.  A failed derivation records its error instead, so a
+ *  from-dump publish degrades exactly like a live one. */
+export interface PublishSourceMedia {
+    source: string;
+    served?: string;
+    error?: string;
 }
 
 export interface PublishSourceBook {
@@ -113,6 +125,11 @@ export interface PublishSource {
      *  info boxes render their scan snippets with no db.  Sorted by group
      *  id for deterministic dumps. */
     scans: GroupScanData[];
+    /** Every audio reference in the entries, resolved through the derived
+     *  store at BUILD time (source -> served .mp3) - without this, the
+     *  reduced form's source hashes are unusable except through the
+     *  originals + the derivation machinery.  Sorted by source. */
+    media: PublishSourceMedia[];
 }
 
 /** What building a PublishSource needs from the app - WordWiki satisfies
@@ -204,6 +221,20 @@ export async function buildPublishSource(app: PublishSourceApp,
     const scans: GroupScanData[] = [];
     for(const id of groupIds)
         scans.push(await loadGroupScanData(id));
+
+    // Every audio reference (schema-driven: any AudioField value), each
+    // resolved - derived if not yet cached - to the served mp3.  A failed
+    // derivation (e.g. a recording row naming a missing file) records the
+    // error message so the from-dump render degrades identically.
+    const audioSources = collectAudioSources(entries);
+    const media: PublishSourceMedia[] = [];
+    for(const source of audioSources) {
+        try {
+            media.push({source, served: await getCompressedRecordingPath(source)});
+        } catch (e) {
+            media.push({source, error: String((e as Error)?.message ?? e)});
+        }
+    }
     const categories = (() => {
         try { return app.categories.allByOrder.all({}); }
         catch (_e) { return [] as category.Category[]; }  // pre-import db
@@ -235,7 +266,29 @@ export async function buildPublishSource(app: PublishSourceApp,
         users,
         books,
         scans,
+        media,
     };
+}
+
+/** Every distinct non-empty AudioField value in the entries, schema-driven
+ *  (recordings, example recordings, and any future audio field), sorted. */
+export function collectAudioSources(entries: Entry[]): string[] {
+    const root = parsedDictSchema().relationsByTag[EntryTag];
+    const out = new Set<string>();
+    const walk = (rel: model.RelationField, tuple: any): void => {
+        for(const f of rel.scalarFields)
+            if(f instanceof model.AudioField) {
+                const v = (tuple as any)[f.name];
+                if(typeof v === 'string' && v !== '') out.add(v);
+            }
+        for(const child of rel.relationFields) {
+            const arr = (tuple as any)[child.name];
+            if(Array.isArray(arr))
+                for(const t of arr) walk(child, t);
+        }
+    };
+    for(const e of entries) walk(root, e);
+    return Array.from(out).toSorted();
 }
 
 /** Parse a dumped publish source, gating on the format version.  (A source

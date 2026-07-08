@@ -1176,7 +1176,7 @@ including remixing, transforming, and building upon the material, for any non-co
         return [
             ['a', {href: rootPath+this.pathForEntry(e)}, ['strong', {}, spellings.join(', ')], ' : ', glosses.join(' / ')],
             (includeAudioLink && sampleRecording) ?
-                audio.renderAudio(sampleRecording.recording, audio.audioPlayIcon, 'Play recording', rootPath, 'audio-icon') : [],
+                audio.renderAudio(sampleRecording.recording, audio.audioPlayIcon, 'Play recording', rootPath, 'audio-icon', this.resolveAudioUrl) : [],
         ];
     }
 
@@ -1216,7 +1216,8 @@ including remixing, transforming, and building upon the material, for any non-co
         // the reference's editorial note), and the non-public attr keys.
         const entryMarkup: any = entryMeta.renderEntryMeta(
             {rootPath, audience: 'public', publicKeys: ['borrowed-word'],
-             renderBoundingGroup: (gid: number) => this.publicBoundingGroup(rootPath, gid)},
+             renderBoundingGroup: (gid: number) => this.publicBoundingGroup(rootPath, gid),
+             resolveAudioUrl: this.resolveAudioUrl},
             entryschema.parsedDictSchema().relationsByTag[entryschema.EntryTag], entry);
         // renderCategoriesForEntry here.
 
@@ -1274,6 +1275,16 @@ including remixing, transforming, and building upon the material, for any non-co
             imageRefDescription: (id: number) => this.scanDescription(id),
         };
     }
+
+    // The bundle's media manifest: recordings render from build-time-
+    // resolved derived paths - the publisher never touches the derivation
+    // machinery or the source audio.
+    #mediaBySource: Map<string, {served?: string, error?: string}>|undefined;
+    resolveAudioUrl: audio.AudioUrlResolver = (source: string) => {
+        this.#mediaBySource ??= new Map(this.source.media.map(m =>
+            [m.source, {served: m.served, error: m.error}]));
+        return this.#mediaBySource.get(source);
+    };
 
     private publicBoundingGroup(rootPath: string, id: number): any {
         const scan = this.scanStandaloneGroup(rootPath, id);
@@ -1681,7 +1692,8 @@ including remixing, transforming, and building upon the material, for any non-co
         const entryMarkup:any[] = [
             'div', {style: 'overflow: auto;'},
             entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true,
-                                     scanRenderers: this.scanRenderers()}, entry)];
+                                     scanRenderers: this.scanRenderers(),
+                                     resolveAudioUrl: this.resolveAudioUrl}, entry)];
         const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
         //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
         // if(entry.entry_id === 145979) {  // ugsuguni

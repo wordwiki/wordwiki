@@ -86,12 +86,38 @@ export const audioPlayIcon: any =
 
 // `label` is usually a string (e.g. "Recording by X") but may be markup (the
 // list speaker passes the audioPlayIcon SVG).
-export function renderAudio(recording: string|null|undefined, label: any, hoverText: string|undefined=undefined, rootPath: string='', className: string|undefined=undefined): any {
+/** A build-time-resolved audio lookup (the publish-source media
+ *  manifest): source content path -> the SERVED derived path, or the
+ *  derivation error captured at build time.  undefined = unknown source. */
+export type AudioUrlResolver =
+    (source: string) => {served?: string, error?: string} | undefined;
+
+export function renderAudio(recording: string|null|undefined, label: any, hoverText: string|undefined=undefined, rootPath: string='', className: string|undefined=undefined, resolveUrl?: AudioUrlResolver): any {
     // A missing recording must never break the page: render a calm marker
     // instead.  (The publisher separately reports these as WARNINGS - it is
     // the final validation pass - see Publish.warnMissingRecordings.)
     if(recording == null || recording === '')
         return ['i', {class: 'text-muted'}, label, ' (recording missing)'];
+    // The publish path: the derivation was done when the publish-source
+    // bundle was BUILT (media manifest) - render from the lookup, never
+    // touching the derivation machinery (or the source audio) here.  The
+    // error branch mirrors the live catch below byte-for-byte, with the
+    // error message that was captured at build time.
+    if(resolveUrl) {
+        const resolved = resolveUrl(recording)
+            ?? {error: 'not in the publish media manifest'};
+        if(resolved.served === undefined)
+            return ['i', {class: 'text-muted'},
+                    label, ' (recording unavailable: ',
+                    String(resolved.error ?? 'unknown'), ')'];
+        const audioUrl = rootPath + resolved.served;
+        return ['a',
+                {onclick: `event.preventDefault(); event.stopPropagation(); playAudio('${audioUrl}');`,
+                 href: audioUrl,
+                 ...(className ? {class: className} : {}),
+                 ...(hoverText ? {title: hoverText} : {})},
+                label];
+    }
     return (async ()=>{
         //console.info('in render audio', recording, label);
         try {
