@@ -82,6 +82,11 @@ export interface User {
     name: string;
     email?: string;
 
+    // The user's community/region (e.g. Listuguj) - published alongside
+    // their name where their recordings appear (the publish-source bundle
+    // denormalizes it), so unset means "not stated", not private.
+    region?: string;
+
     // The orthography this editor works in (fix-orthographies.md): their NEW
     // dictionary content's variant defaults from it (the future session-level
     // working-orthography switcher seeds from it too).  Most editors have
@@ -111,6 +116,8 @@ export class UserTable extends Table<User> {
             new StringField('username', {indexed: true, unique: true, edit: usernameOnCreateOnly,
                                          prompt: 'Username (short code stored in dictionary data - cannot be changed later)'}),
             new StringField('name', {}),
+            new StringField('region', {nullable: true,
+                prompt: 'Region / community (published next to their name where their recordings appear)'}),
             new EmailField('email', {nullable: true}),
             // Real orthographies only - the 'mm' wildcard is a stored-value
             // convention, not something a person writes in.  Choices come

@@ -47,6 +47,12 @@ test("buildPublishSource: shape, and entries keep the live view's identity", asy
                'in-memory bundle shares the live view entries array');
         // No timestamp on in-memory builds - the bundle stays deterministic.
         assertEquals(source.generatedAt, undefined);
+        // The users section: in-data usernames (recording speakers, ...)
+        // resolve within the file; automation identities are excluded.
+        const djz = source.users.find(u => u.username === 'djz');
+        assertEquals(djz?.name, 'David Ziegler');
+        assert(source.users.every(u => !u.username.startsWith('~')),
+               'automation identities are not users');
     });
 });
 

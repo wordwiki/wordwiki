@@ -47,7 +47,21 @@ builds omit it so the bundle stays deterministic and dumps diff cleanly).
 | `dbPurpose` | the building db's marker, logged into the publish |
 | `entries` | the PUBLISHED public projection as plain entry JSON — published facts only, no history, no pending edits, only entries public in `orthography` |
 | `categories` | the category vocabulary rows in display (theme) order |
+| `users` | the human users (`user_id`, `username`, `name`, `region`) — automation `~` identities excluded, disabled users included (history references former staff forever) |
 | `books` | per reference book: the `scanned_document` metadata row, `totalPages`, and `entryCountByPage` ([page, dictionary-reference count]) |
+
+**Denormalize-on-export (the standalone-file rule)**: every reference KEY
+stored in the data (a recording's `speaker` username, a category slug, a
+book's friendly id) must resolve WITHIN the file - the bundle carries the
+referenced records alongside the data, and the reference keeps its
+original stored form.  This is deliberately a lookup section rather than
+inline copies at each reference: the entries in the bundle are the exact
+projection the renderers consume (and, in-memory, the very same array the
+staleness check compares), so enriched inline copies could silently drift
+from what actually renders.  It also removes the pressure for
+"meaningful" foreign keys in the data model: if the data later moves from
+slugs/usernames to ids, the bundle keeps resolving in-file and only the
+key column changes.
 
 Derived indexes (by-category, category counts, by-reference-group, public
 ids, collation) are NOT serialized: consumers compute them with the shared

@@ -22,11 +22,23 @@
 
 import {Entry} from './entry-schema.ts';
 import * as category from './category.ts';
+import * as user from './user.ts';
 import {ScannedDocument, selectAllScannedDocuments, maxPageNumberForDocument} from './scanned-document.ts';
 import {siteConfig} from './site-config.ts';
 import type {SiteView} from './site-view.ts';
 
 export const PUBLISH_SOURCE_FORMAT_VERSION = 1;
+
+/** A user record REFERENCED from the data (recording speakers, todo
+ *  assignees, ...), so every in-data username resolves WITHIN the file.
+ *  user_id rides along so a future id-keyed data model changes nothing
+ *  here. */
+export interface PublishSourceUser {
+    user_id: number;
+    username: string;
+    name: string;
+    region?: string;
+}
 
 export interface PublishSourceBook {
     /** The reference book's metadata (title, author, source credits...). */
@@ -52,8 +64,12 @@ export interface PublishSource {
     /** The REDUCED public projection: every entry on the site, as plain
      *  entry JSON - published facts only, no history, no pending edits. */
     entries: Entry[];
-    /** The category vocabulary rows, in display (theme-block) order. */
+    /** The category vocabulary rows, in display (theme-block) order.
+     *  In-data category references (slugs) resolve against these. */
     categories: category.Category[];
+    /** The human users, so in-data usernames (recording speakers, ...)
+     *  resolve to a name and region WITHIN the file. */
+    users: PublishSourceUser[];
     /** The reference books, with per-page dictionary-reference counts. */
     books: PublishSourceBook[];
 }
@@ -64,6 +80,7 @@ export interface PublishSourceApp {
     site(orthography?: string): SiteView;
     getDbPurpose(): string | undefined;
     readonly categories: category.CategoryTable;
+    readonly users: user.UserTable;
     entryCountByPage(book: string): Array<[number, number]>;
 }
 
@@ -80,6 +97,18 @@ export function buildPublishSource(app: PublishSourceApp): PublishSource {
         try { return app.categories.allByOrder.all({}); }
         catch (_e) { return [] as category.Category[]; }  // pre-import db
     })();
+    // Every HUMAN user (automation '~' identities never speak or get
+    // assignments), disabled included - history and recordings reference
+    // former staff forever.  Sorted for deterministic dumps.
+    const users: PublishSourceUser[] = (() => {
+        try {
+            return app.users.allUsersByName.all({})
+                .filter(u => !u.username.startsWith('~'))
+                .map(u => ({user_id: u.user_id, username: u.username,
+                            name: u.name, region: u.region ?? undefined}))
+                .toSorted((a, b) => a.username < b.username ? -1 : 1);
+        } catch (_e) { return []; }   // pre-migration db: no user table yet
+    })();
     return {
         formatVersion: PUBLISH_SOURCE_FORMAT_VERSION,
         orthography: site.orthography,
@@ -89,6 +118,7 @@ export function buildPublishSource(app: PublishSourceApp): PublishSource {
         // staleness check is entries-IDENTITY against the live view.
         entries: site.publicEntries,
         categories,
+        users,
         books,
     };
 }
