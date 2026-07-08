@@ -199,11 +199,11 @@ test("import-report routes: friendly when absent; fragment names are whitelisted
     await withTestDb(async (fx) => {
         // No import-report.md in the test cwd: the friendly empty state.
         const html = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.importReport()')));
+            renderRoute(fx.ww, 'wordwiki.reports.importReport()')));
         assert(html.includes('No import report yet'), 'empty state');
         // Path traversal is refused by the name whitelist.
         await assertRejects(() => as(fx, 'djz', () =>
-            renderRoute(fx.ww, `wordwiki.importReportFragment('../secrets.md')`)),
+            renderRoute(fx.ww, `wordwiki.reports.importReportFragment('../secrets.md')`)),
             Error, 'not an import-report fragment');
     });
 });

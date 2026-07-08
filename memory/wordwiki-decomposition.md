@@ -50,11 +50,20 @@ explicitly does NOT matter — only the generated public site's URLs do.
    delegates) stay PINNED to site() — they are about THE public site,
    whoever is looking. Differential test in working-orthography_test.ts.
 
+6. `wordwiki/reports.ts` — EditorReports under wordwiki.reports.*
+   (categoriesDirectory, entriesForCategory, todoReport,
+   entriesByTwitterPostStatus, wordADayPicker, entriesByPDMPage(Directory),
+   importReport(Fragment)). Ctor takes the NARROW ReportsApp interface
+   (store, site(), workingSite(), categories, entryCountByPage) — WordWiki
+   satisfies it structurally; this is the dep-narrowing pattern for future
+   modules. entryCountByPage STAYS on WordWiki (publish.ts consumes it
+   too). wordwiki.entry(id) route kept — committed findings reports link
+   to it. wordwiki.ts is 915 lines (was 2488).
+
 **Remaining plan (dz-approved shape, not yet requested to build):**
-6. report routes into namespace modules (wordwiki.reports.* etc.) with
-   narrowed dep interfaces. 7. config pass on Mi'kmaq-specific constants
-   (reference books from scanned_document table, PDM report parameterized,
-   login branding, collator per orthography, entry.users/entry.todos maps).
+7. config pass on Mi'kmaq-specific constants (reference books from
+   scanned_document table, PDM report parameterized, login branding,
+   collator per orthography, entry.users/entry.todos maps).
    Also flagged: per-orthography spelling-lane SORT in SiteView (today all
    views sort by spelling[0]; changing it would diff the public site, so it
    was deliberately left out of step 5).
