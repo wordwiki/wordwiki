@@ -28,7 +28,7 @@ import { FindingsReport, assembleImportReport } from './findings.ts';
 import { scanVariants } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
-import { pairJunkReason } from './auto-transliterate.ts';
+import { pairJunkReason, autoPublishSf } from './auto-transliterate.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -518,6 +518,35 @@ export async function cliMain(args: string[]): Promise<void> {
                 console.info(`migrate-variants: ${stats.changed} row(s) ${dryRun ? 'WOULD change (dry run)' : 'changed'} ` +
                              `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
             });
+            Deno.exit(0);
+            break;
+        }
+
+        // TESTING (dz 2026-07-08): auto-publish every SF-READY word (li-public
+        // with ALL li content transliterated to SF - see sfReadinessScan) as
+        // mm-sf, with a born-published gate.  On the production flow this
+        // decision belongs to the staff, guided by
+        // wordwiki.transliterationReports.sfReadyReport(); this subcommand
+        // gives the freshly imported test db an SF site to look at.
+        // Idempotent; refuses production without --allow-production.
+        //   ./wordwiki.sh auto-publish-sf [--expect-no-changes] [--report=path.md]
+        case 'auto-publish-sf': {
+            const step = stepReport('Auto-publish SF-ready words (TESTING)');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
+                        throw new Error("db is marked db_purpose='production' - " +
+                                        'run with --allow-production if you really mean it');
+                    user.seedUsersFromEntrySchema(ww.users);   // the ~ identities ride along
+                    const stats = autoPublishSf(ww, {log: step.log});
+                    if(args.includes('--expect-no-changes') && stats.published > 0)
+                        throw new Error(`--expect-no-changes: auto-published ${stats.published} words as SF`);
+                    if(args.includes('--expect-no-changes'))
+                        step.log('idempotency confirmed: re-run made no changes');
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
             Deno.exit(0);
             break;
         }

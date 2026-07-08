@@ -70,11 +70,16 @@ set -e
 #      (flagged schema, scan drop gate, mapping coverage); hand-triage rows
 #      left for the live Variant Cleanup report; refreshes the committed
 #      variant-migration-report.md; idempotent + proof
-#  12. verify-migration: read-only invariant checks; exits nonzero on failure
-#  13. verify-workspace: read-only STRUCTURAL invariants of the whole store
+#  12. auto-publish-sf: TESTING (dz 2026-07-08) - every li-public word whose
+#      li content is FULLY matched by SF facts gets a born-published mm-sf
+#      gate, so the test db has an SF site to look at.  Production will
+#      instead guide the staff via the SF-Ready Words report; idempotent +
+#      proof
+#  13. verify-migration: read-only invariant checks; exits nonzero on failure
+#  14. verify-workspace: read-only STRUCTURAL invariants of the whole store
 #      (variant invariants reported as warnings - only the hand-triage
 #      remainder should show post-migration)
-#  14. start the server, smoke-test it over HTTP, then STOP it - the import
+#  15. start the server, smoke-test it over HTTP, then STOP it - the import
 #      must end with the db AT REST: updateStaging.sh rsyncs the db file,
 #      and pushing one with a live writer risks a torn copy.  Restart by
 #      hand (./wordwiki.sh) when you want to poke around
@@ -133,6 +138,7 @@ import-twitter-posts import-twitter-posts-proof \
 backfill-publication backfill-publication-proof \
 normalize-shoebox-dates normalize-shoebox-dates-proof \
 migrate-status migrate-status-proof migrate-variants migrate-variants-proof \
+auto-publish-sf auto-publish-sf-proof \
 verify-migration verify-workspace smoke"
 # ONE consolidated EXIT trap (bash keeps a single trap per signal - the
 # smoke test's cookie cleanup lives here too, NOT in its own trap, which
@@ -145,61 +151,69 @@ finish() {
 }
 trap finish EXIT
 
-step "[1/14] server liveness check passed above (wordwiki.pid absent)"
+step "[1/15] server liveness check passed above (wordwiki.pid absent)"
 
 if [ "$NO_PULL" = 1 ]; then
-    step "[2/14] pull SKIPPED (--no-pull): migrating the db already in place"
+    step "[2/15] pull SKIPPED (--no-pull): migrating the db already in place"
 else
-    step "[2/14] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
+    step "[2/15] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
     ./pullWordWikiV1Db.sh
 fi
 
-step "[3/14] repairing pre-existing store corruption (idempotent)"
+step "[3/15] repairing pre-existing store corruption (idempotent)"
 ./wordwiki.sh repair-assertions $ALLOW_PROD --report=$RD/03-repair-assertions.md
 
-step "[4/14] importing categories"
+step "[4/15] importing categories"
 ./wordwiki.sh import-categories $ALLOW_PROD --report=$RD/04-import-categories.md
 
-step "[5/14] category import idempotency proof"
+step "[5/15] category import idempotency proof"
 ./wordwiki.sh import-categories $ALLOW_PROD --expect-no-changes --report=$RD/05-import-categories-proof.md
 
-step "[6/14] importing lexical forms (+ idempotency proof)"
+step "[6/15] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms $ALLOW_PROD --report=$RD/06-import-lexical-forms.md
 ./wordwiki.sh import-lexical-forms $ALLOW_PROD --expect-no-changes --report=$RD/06-import-lexical-forms-proof.md
 
-step "[7/14] importing legacy twitter-posts (+ idempotency proof)"
+step "[7/15] importing legacy twitter-posts (+ idempotency proof)"
 # --report-skipped refreshes the committed hand-off list of the words a human
 # must place in production (homonyms/unmatched); it shrinks as they are fixed.
 ./wordwiki.sh import-twitter-posts $ALLOW_PROD --report-skipped=skipped-twitter-posts.md --report=$RD/07-import-twitter-posts.md
 ./wordwiki.sh import-twitter-posts $ALLOW_PROD --expect-no-changes --report=$RD/07-import-twitter-posts-proof.md
 
-step "[8/14] publication Phase 0: born-approve existing data (+ idempotency proof)"
+step "[8/15] publication Phase 0: born-approve existing data (+ idempotency proof)"
 ./wordwiki.sh backfill-publication $ALLOW_PROD --report=$RD/08-backfill-publication.md
 ./wordwiki.sh backfill-publication $ALLOW_PROD --expect-no-changes --report=$RD/08-backfill-publication-proof.md
 
-step "[9/14] normalizing legacy shoebox creation dates (+ idempotency proof)"
+step "[9/15] normalizing legacy shoebox creation dates (+ idempotency proof)"
 ./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD --report=$RD/09-normalize-shoebox-dates.md
 ./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD --expect-no-changes --report=$RD/09-normalize-shoebox-dates-proof.md
 
-step "[10/14] the status remodel migration (+ idempotency proof)"
+step "[10/15] the status remodel migration (+ idempotency proof)"
 # Gates + renames + lifecycle synthesis; the committed report names the
 # CompleteAsPDMOnly words that leave the public site.
 ./wordwiki.sh migrate-status $ALLOW_PROD --report=$RD/10-migrate-status.md
 ./wordwiki.sh migrate-status $ALLOW_PROD --expect-no-changes --report=$RD/10-migrate-status-proof.md
 
-step "[11/14] the orthography variant migration (+ idempotency proof)"
+step "[11/15] the orthography variant migration (+ idempotency proof)"
 # The committed report is the point-in-time record (hand-triage remainder,
 # per-action counts); the LIVE Variant Cleanup page is the draining queue.
 ./wordwiki.sh migrate-variants $ALLOW_PROD --report=$RD/11-migrate-variants.md
 ./wordwiki.sh migrate-variants $ALLOW_PROD --expect-no-changes --report=$RD/11-migrate-variants-proof.md
 
-step "[12/14] verifying the migration"
-./wordwiki.sh verify-migration --report=$RD/12-verify-migration.md
+step "[12/15] TESTING: auto-publishing fully-transliterated words as SF (+ proof)"
+# The SF-site prototype (dz 2026-07-08): every li-public word whose li
+# content is FULLY matched by SF facts gets a born-published mm-sf gate.
+# On the production flow this decision belongs to the staff, guided by the
+# SF-Ready Words report - this step exists so the test db has an SF site.
+./wordwiki.sh auto-publish-sf $ALLOW_PROD --report=$RD/12-auto-publish-sf.md
+./wordwiki.sh auto-publish-sf $ALLOW_PROD --expect-no-changes --report=$RD/12-auto-publish-sf-proof.md
 
-step "[13/14] verifying the assertion store is structurally well-formed"
-./wordwiki.sh verify-workspace --report=$RD/13-verify-workspace.md
+step "[13/15] verifying the migration"
+./wordwiki.sh verify-migration --report=$RD/13-verify-migration.md
 
-step "[14/14] starting the server + smoke test (stopped again after)"
+step "[14/15] verifying the assertion store is structurally well-formed"
+./wordwiki.sh verify-workspace --report=$RD/14-verify-workspace.md
+
+step "[15/15] starting the server + smoke test (stopped again after)"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break
@@ -222,7 +236,7 @@ NFORMS=$(curl -s -b "$COOKIES" 'http://localhost:9000/ww/wordwiki.lexicalFormsPa
         | tr '<' '\n' | grep -c 'data-testid="lexical-form-row-')
 [ "$NFORMS" -ge 15 ] || { echo "SMOKE FAIL: lexical forms page shows only $NFORMS rows"; exit 1; }
 echo "smoke ok: server 200, $NCATS categories, $NFORMS lexical forms"
-cat > "$RUN_DIR/$RD/14-smoke.md" <<SMOKE
+cat > "$RUN_DIR/$RD/15-smoke.md" <<SMOKE
 # Smoke test
 
 **0 finding(s)** across 1 section(s):

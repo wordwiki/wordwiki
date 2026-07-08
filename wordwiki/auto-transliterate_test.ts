@@ -19,8 +19,8 @@ import { transliterateLiToSf, transliterateLiToSfScored, transliterateCandidates
          transliterateJavaScanner } from './transliterate.ts';
 import { pairJunkReason } from './auto-transliterate.ts';
 import * as entrySchema from './entry-schema.ts';
-import { proposeTransliterations, pureTextRelations,
-         AUTO_TRANSLITERATE_USERNAME } from './auto-transliterate.ts';
+import { proposeTransliterations, pureTextRelations, sfReadinessScan, isSfReady,
+         autoPublishSf, AUTO_TRANSLITERATE_USERNAME } from './auto-transliterate.ts';
 
 const EOT = timestamp.END_OF_TIME;
 
@@ -298,5 +298,59 @@ test("pick: replaces the robot's text with the chosen candidate and approves it"
         assert(pick, 'the pick version exists');
         assert(String(pick.change_arg).includes('pick=1'), 'the labeled branch decision');
         assertEquals(pick.attr1, wantAlt.text);
+    });
+});
+
+test("sf readiness: coverage rule, report, and the TESTING auto-publish", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        // 1000: li spelling WITH an sf sibling + Completed -> li-public, SF-READY.
+        const a = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([a], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, 'spl', 1010, tl.next(),
+            {attr1: 'samqwan', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, 'spl', 1011, tl.next(),
+            {attr1: 'samuqwan', variant: 'mm-sf', order_key: '0.6'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, 'sta', 1020, tl.next(),
+            {attr1: 'Completed', order_key: '0.5'})], {quiet: true});
+        // 2000: li spelling with NO sf -> li-public but NOT ready.
+        const b = mkEntry(2000, tl.next());
+        fx.ww.applyTransaction([b], {quiet: true});
+        fx.ww.applyTransaction([mkChild(b, 'spl', 2010, tl.next(),
+            {attr1: 'waqami', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(b, 'sta', 2020, tl.next(),
+            {attr1: 'Completed', order_key: '0.5'})], {quiet: true});
+        bornApprove(fx.ww);
+
+        // The coverage rule.
+        const scan = sfReadinessScan(fx.ww);
+        assertEquals(scan.length, 2);
+        const byId = new Map(scan.map(r => [r.entry_id, r]));
+        assert(isSfReady(byId.get(1000)!), 'sf sibling on every li slot = ready');
+        assert(!isSfReady(byId.get(2000)!), 'a gap = not ready');
+        assert(!byId.get(1000)!.sfPublic, 'not yet public in sf');
+
+        // The report lists the actionable word.
+        const before = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.transliterationReports.sfReadyReport()')));
+        assert(before.includes('samqwan'), 'ready word listed');
+        assert(before.includes('1 ready to be made public'), 'actionable count');
+
+        // TESTING auto-publish: the ready word gains a born-published sf gate.
+        const stats = autoPublishSf(fx.ww, {log: () => {}});
+        assertEquals(stats.published, 1);
+        assertEquals(stats.notReady, 1);
+        const pubA = fx.ww.publishedEntries.find((e: any) => e.entry_id === 1000)!;
+        assert(entrySchema.entryIsPublicIn(pubA, 'mm-sf'), 'now public in sf');
+        const pubB = fx.ww.publishedEntries.find((e: any) => e.entry_id === 2000)!;
+        assert(!entrySchema.entryIsPublicIn(pubB, 'mm-sf'), 'the gapped word is not');
+
+        // Idempotent; and the report drains.
+        const again = autoPublishSf(fx.ww, {log: () => {}});
+        assertEquals(again.published, 0);
+        assertEquals(again.alreadyGated, 1);
+        const after = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.transliterationReports.sfReadyReport()')));
+        assert(after.includes('0 ready to be made public'), 'report drained');
     });
 });

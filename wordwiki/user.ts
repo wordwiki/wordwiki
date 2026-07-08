@@ -320,6 +320,7 @@ export const SYSTEM_USERS: {username: string, name: string}[] = [
     {username: '~twitter-post-import', name: 'Twitter-post import (automated)'},
     {username: '~status-migrate',      name: 'Status migration (automated)'},
     {username: '~auto-transliterate',  name: 'Auto-transliteration (robot author)'},
+    {username: '~sf-auto-publish',     name: 'SF auto-publish (testing, automated)'},
 ];
 
 // The dedicated test identity: tests and smoke checks log in as THIS user,

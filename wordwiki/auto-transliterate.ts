@@ -209,6 +209,104 @@ export function proposeTransliterations(app: WordWiki, entry_id: number): Propos
 }
 
 // --------------------------------------------------------------------------
+// --- SF readiness (the SF-site prototype - dz 2026-07-08) ------------------
+// --------------------------------------------------------------------------
+
+export const SF_AUTO_PUBLISH_USERNAME = '~sf-auto-publish';
+
+export interface SfReadiness {
+    entry_id: number;
+    /** Pure-text relation instances holding live mm-li content. */
+    liRelations: number;
+    /** Of those, how many also hold a live mm-sf fact. */
+    sfFilled: number;
+    /** Already public in mm-sf (published gate). */
+    sfPublic: boolean;
+}
+
+/** A word is SF-READY when every pure-text relation instance holding live
+ *  mm-li content also holds a live mm-sf fact. */
+export const isSfReady = (r: SfReadiness): boolean =>
+    r.liRelations > 0 && r.sfFilled === r.liRelations;
+
+/** Scan the LI-PUBLIC words for SF readiness.  The coverage notion is the
+ *  transliterator's own (pureTextRelations + its filled test), so the
+ *  readiness report and the gap-filling proposals can never disagree about
+ *  "done".  PENDING (unapproved) SF facts count: readiness guides review,
+ *  and the testing auto-publish runs on freshly imported data. */
+export function sfReadinessScan(app: WordWiki): SfReadiness[] {
+    const pure = pureTextRelations(app.dictSchema);
+    const out: SfReadiness[] = [];
+    for(const e of app.site(SOURCE_ORTHOGRAPHY).publicEntries) {
+        let liRelations = 0, sfFilled = 0;
+        const walk = (tuple: VersionedTuple) => {
+            for(const rel of Object.values(tuple.childRelations) as VersionedRelation[]) {
+                const spec = pure.get(rel.schema.tag);
+                if(spec) {
+                    const current = [...rel.tuples.values()]
+                        .map(t => t.mostRecentTuple)
+                        .filter(tv => tv?.isCurrent)
+                        .map(tv => tv!.assertion);
+                    const hasLi = current.some(a => a.variant === SOURCE_ORTHOGRAPHY
+                        && String((a as any)[spec.contentField.bind] ?? '').trim() !== '');
+                    if(hasLi) {
+                        liRelations++;
+                        if(current.some(a => a.variant === TARGET_ORTHOGRAPHY))
+                            sfFilled++;
+                    }
+                }
+                for(const child of rel.tuples.values()) walk(child);
+            }
+        };
+        walk(app.lexemeOps.entryTuple(e.entry_id));
+        out.push({entry_id: e.entry_id, liRelations, sfFilled,
+                  sfPublic: entrySchema.entryIsPublicIn(e, TARGET_ORTHOGRAPHY)});
+    }
+    return out;
+}
+
+/** TESTING ONLY (dz): auto-publish every SF-ready word as mm-sf, with a
+ *  born-published gate (the cutover convention - the gate IS the
+ *  approval).  On the production flow this decision belongs to the staff,
+ *  guided by the SF-ready report; this exists so the freshly imported
+ *  test db has an SF site to look at.  Idempotent: an entry with ANY
+ *  current mm-sf gate row (published or pending) is left alone. */
+export function autoPublishSf(app: WordWiki, opts: {log?: (m: string) => void} = {})
+        : {published: number, alreadyGated: number, notReady: number} {
+    const log = opts.log ?? ((m: string) => console.info(m));
+    const scan = sfReadinessScan(app);
+    let published = 0, alreadyGated = 0, notReady = 0;
+    db().transaction(() => {
+        for(const r of scan) {
+            if(!isSfReady(r)) { notReady++; continue; }
+            const gates = db().all<{n: number}, any>(
+                `SELECT COUNT(*) AS n FROM dict
+                 WHERE valid_to = :eot AND ty = '${entrySchema.PublicTag}'
+                   AND id1 = :e AND variant = :v`,
+                {eot: EOT, e: r.entry_id, v: TARGET_ORTHOGRAPHY})[0].n;
+            if(gates > 0) { alreadyGated++; continue; }
+            const ts = app.allocTxTimestamps(1, {quiet: true});
+            const id = newId();
+            db().insert<Assertion, 'assertion_id'>('dict', {
+                ty0: entrySchema.DictTag, ty1: entrySchema.EntryTag, id1: r.entry_id,
+                ty2: entrySchema.PublicTag, id2: id,
+                assertion_id: id, id, ty: entrySchema.PublicTag,
+                valid_from: ts, valid_to: EOT,
+                published_from: ts, published_to: EOT,   // born-published: the gate IS approval
+                order_key: '0.5',
+                variant: TARGET_ORTHOGRAPHY,
+                change_by_username: SF_AUTO_PUBLISH_USERNAME,
+            } as Assertion, 'assertion_id');
+            published++;
+        }
+    });
+    if(published > 0) app.requestWorkspaceReload();
+    log(`auto-publish-sf: ${published} word(s) newly public in ${TARGET_ORTHOGRAPHY}; ` +
+        `${alreadyGated} already gated; ${notReady} of ${scan.length} li-public words not SF-ready`);
+    return {published, alreadyGated, notReady};
+}
+
+// --------------------------------------------------------------------------
 // --- The corrections report + rules accuracy (the development loop) --------
 // --------------------------------------------------------------------------
 
@@ -345,6 +443,43 @@ export class TransliterationReports {
 
     /** The report page: rules accuracy, per-version outcome stats, and the
      *  corrections list (the regression corpus, newest data first). */
+    /** The SF-READINESS report (the SF-site prototype): which li-public
+     *  words have ALL their li content transliterated to SF - on the
+     *  production flow this guides the staff to the words that are
+     *  SF-publishable.  Actionable list = ready but not yet SF-public. */
+    @route(authenticated)
+    sfReadyReport(): any {
+        const scan = sfReadinessScan(this.app);
+        const ready = scan.filter(isSfReady);
+        const actionable = ready.filter(r => !r.sfPublic);
+        const headword = (entry_id: number): string => {
+            const e = this.app.store.entriesById.get(entry_id);
+            return e?.spelling?.[0]?.text || `entry ${entry_id}`;
+        };
+        const title = 'SF-ready words';
+        const body = [
+            ['h1', {}, title],
+            ['p', {class: 'text-muted'},
+             `Words published in Listuguj whose Listuguj content is FULLY matched ` +
+             `by Smith-Francis facts (pending ones count - readiness guides review). ` +
+             `The coverage rule is the transliterator's own, so this report and the ` +
+             `gap-filling proposals always agree.`],
+            ['ul', {},
+             ['li', {}, `${scan.length} words public in Listuguj`],
+             ['li', {}, `${ready.length} fully transliterated to Smith-Francis`],
+             ['li', {}, `${ready.length - actionable.length} of those already public in Smith-Francis`],
+             ['li', {}, ['b', {}, `${actionable.length} ready to be made public in Smith-Francis`]]],
+            actionable.length === 0
+                ? ['p', {class: 'text-muted'}, 'Nothing actionable.']
+                : ['ul', {},
+                   actionable.map(r => ['li', {},
+                       templates.lexemeLink(r.entry_id, headword(r.entry_id), {pencil: false}),
+                       ['span', {class: 'text-muted'},
+                        ` — ${r.sfFilled}/${r.liRelations} content slots covered`]])],
+        ];
+        return templates.pageTemplate({title, body});
+    }
+
     @route(authenticated)
     correctionsReport(): any {
         const rows = this.corrections();

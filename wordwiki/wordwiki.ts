@@ -487,6 +487,7 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.spellingReports.duplicatesReport()'}, 'Duplicate Spellings']],
              ['li', {}, ['a', {href:'/ww/wordwiki.variantReports.cleanupReport()'}, 'Variant Cleanup']],
              ['li', {}, ['a', {href:'/ww/wordwiki.transliterationReports.correctionsReport()'}, 'Transliteration Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.transliterationReports.sfReadyReport()'}, 'SF-Ready Words']],
              ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
