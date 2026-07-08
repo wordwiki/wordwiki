@@ -108,6 +108,90 @@ test("a dump-driven publish emits byte-identical files to a live one", async () 
     });
 });
 
+test("orthography selection: sf / li / both bundles pick the right entries", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seedTwoPublicWords(fx);   // 1000 samqwan, 2000 waqami: li-public (Completed)
+        // 3000: SF-ONLY public - an explicit mm-sf pub gate, no Completed
+        // status (so the cutover bless creates no li gate).
+        const tl = new TestTimeline();
+        const e = mkEntry(3000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 3010, tl.next(),
+            {attr1: 'sfword', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'pub', 3020, tl.next(),
+            {variant: 'mm-sf', order_key: '0.5'})], {quiet: true});
+        bornApprove(fx.ww);
+
+        const ids = (s: any) => s.entries.map((e: any) => e.entry_id).toSorted();
+
+        const li = await buildPublishSource(fx.ww);
+        assertEquals(ids(li), [1000, 2000]);
+        assertEquals(li.orthographies, ['mm-li']);
+        assertEquals(li.variantContent, 'all');
+        assert(li.entries === fx.ww.publishedEntries, 'default keeps live identity');
+
+        const sf = await buildPublishSource(fx.ww, {orthographies: ['mm-sf']});
+        assertEquals(ids(sf), [3000]);
+        assertEquals(sf.orthography, 'mm-sf');
+
+        const both = await buildPublishSource(fx.ww, {orthographies: ['mm-li', 'mm-sf']});
+        assertEquals(ids(both), [1000, 2000, 3000]);
+        assertEquals(both.orthography, 'mm-li');   // primary = first listed
+
+        // Public ids in the sf bundle: no mm-sf spelling, so the id falls
+        // back to the first spelling in any orthography (pinned - it names
+        // the entry-page files).
+        const pub = new Publish(new PublishStatus(), sf);
+        assertEquals(Array.from(pub.entryToPublicId.values()), ['sfword']);
+    });
+});
+
+test("variantContent 'selected' filters lanes but never provenance", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        // One li-public word carrying: an li + an sf spelling, an 'en'
+        // translation ($notVariant relic), and a document reference whose
+        // transliteration is in Pacifique Manuscript orthography
+        // ($sourceOrthography provenance).
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1010, tl.next(),
+            {attr1: 'samqwan', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1011, tl.next(),
+            {attr1: 'samuqwan', variant: 'mm-sf', order_key: '0.6'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'sta', 1020, tl.next(),
+            {attr1: 'Completed', order_key: '0.5'})], {quiet: true});
+        const s = mkChild(e, 'sub', 1100, tl.next(), {order_key: '0.5'});
+        fx.ww.applyTransaction([s], {quiet: true});
+        fx.ww.applyTransaction([mkChild(s, 'tra', 1200, tl.next(),
+            {attr1: 'water', variant: 'en', order_key: '0.5'})], {quiet: true});
+        const ref = mkChild(s, 'ref', 1300, tl.next(), {attr1: '999999', order_key: '0.5'});
+        fx.ww.applyTransaction([ref], {quiet: true});
+        fx.ww.applyTransaction([mkChild(ref, 'rtl', 1310, tl.next(),
+            {attr1: 'samgwan', variant: 'mm-pm', order_key: '0.5'})], {quiet: true});
+        bornApprove(fx.ww);
+
+        const all = await buildPublishSource(fx.ww, {orthographies: ['mm-li']});
+        assertEquals(all.entries[0].spelling.length, 2, "'all' keeps every lane");
+
+        const sel = await buildPublishSource(fx.ww,
+            {orthographies: ['mm-li'], variantContent: 'selected'});
+        const entry = sel.entries[0];
+        assertEquals(entry.spelling.map((sp: any) => sp.text), ['samqwan'],
+                     'the sf spelling lane is filtered out');
+        assertEquals(entry.subentry[0].translation.map((t: any) => t.translation), ['water'],
+                     '$notVariant relics are not lanes - kept');
+        assertEquals(entry.subentry[0].document_reference[0].transliteration
+                         .map((t: any) => t.transliteration), ['samgwan'],
+                     '$sourceOrthography provenance always passes');
+        assertEquals(entry.public.length, 1, 'the li pub gate row is kept');
+        // The LIVE projection was not mutated by the filtering.
+        assertEquals(fx.ww.publishedEntries[0].spelling.length, 2);
+        // The scan list follows the (filtered) entries' refs.
+        assertEquals(sel.scans.map(sc => String(sc.bounding_group_id)), ['999999']);
+    });
+});
+
 test("publishSourceFromJson: rejects an unknown formatVersion", async () => {
     await withTestDb(async () => {
         await assertRejects(async () =>

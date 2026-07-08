@@ -598,7 +598,9 @@ export const dictSchemaJson = {
                     $tag: RefTransliterationTag,
                     transliteration_id: {$type: 'primary_key'},
                     transliteration: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
-                    variant: {$type: 'variant', $mixed: true},
+                    // The SOURCE's orthography (provenance) - survives
+                    // every orthography-selection filter.
+                    variant: {$type: 'variant', $mixed: true, $sourceOrthography: true},
                     $style: { $shape: 'compactInlineListRelation',
                               $view: { order: 3, label: 'inline', empty: 'elide' } },
                 },
@@ -608,7 +610,9 @@ export const dictSchemaJson = {
                     $tag: RefSourceAsEntryTag,
                     source_as_entry_id: {$type: 'primary_key'},
                     source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
-                    variant: {$type: 'variant', $mixed: true},
+                    // The SOURCE's orthography (provenance) - survives
+                    // every orthography-selection filter.
+                    variant: {$type: 'variant', $mixed: true, $sourceOrthography: true},
                     $style: { $shape: 'compactInlineListRelation',
                               $view: { order: 4, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },
@@ -618,7 +622,9 @@ export const dictSchemaJson = {
                     $tag: RefNormalizedSourceAsEntryTag,
                     normalized_source_as_entry_id: {$type: 'primary_key'},
                     normalized_source_as_entry: {$type: 'string', $bind: 'attr1', $style: { $width: 60, $height: 5 }},
-                    variant: {$type: 'variant', $mixed: true},
+                    // The SOURCE's orthography (provenance) - survives
+                    // every orthography-selection filter.
+                    variant: {$type: 'variant', $mixed: true, $sourceOrthography: true},
                     $style: { $shape: 'compactInlineListRelation',
                               $view: { order: 5, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },
@@ -628,7 +634,9 @@ export const dictSchemaJson = {
                     $tag: RefForeignReferenceTag,
                     foreign_reference_id: {$type: 'primary_key'},
                     foreign_reference: {$type: 'string', $bind: 'attr1', $style: { $width: 60 }},
-                    variant: {$type: 'variant', $mixed: true},
+                    // The SOURCE's orthography (provenance) - survives
+                    // every orthography-selection filter.
+                    variant: {$type: 'variant', $mixed: true, $sourceOrthography: true},
                     $style: { $shape: 'compactInlineListRelation',
                               $view: { order: 6, label: 'inline', empty: 'elide', emptyEdit: 'menu' } },
                 },

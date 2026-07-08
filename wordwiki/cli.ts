@@ -557,12 +557,27 @@ export async function cliMain(args: string[]): Promise<void> {
         // off the same bundle.  generatedAt is stamped HERE only, so the
         // bundle itself stays deterministic/diffable when built in memory.
         //   ./wordwiki.sh dump-publish-source [path.json]
+        //          [--orthographies=mm-sf[,mm-li...]]   entries public in ANY of
+        //              these; the FIRST is the primary (public ids).  Default:
+        //              the public site's orthography.
+        //          [--variant-content=all|selected]     'selected' filters each
+        //              entry's variant-tagged tuples to the selected lanes
+        //              ($sourceOrthography provenance fields always pass).
         case 'dump-publish-source': {
             await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
                 const path = args[1] && !args[1].startsWith('--') ? args[1]
                     : 'publish-source.json';
-                const source = await buildPublishSource(ww);
+                const orthographiesArg = args.find(a => a.startsWith('--orthographies='))
+                    ?.slice('--orthographies='.length);
+                const variantContentArg = args.find(a => a.startsWith('--variant-content='))
+                    ?.slice('--variant-content='.length);
+                if(variantContentArg && variantContentArg !== 'all' && variantContentArg !== 'selected')
+                    throw new Error("--variant-content must be 'all' or 'selected'");
+                const source = await buildPublishSource(ww, {
+                    orthographies: orthographiesArg?.split(',').map(s => s.trim()).filter(Boolean),
+                    variantContent: variantContentArg as 'all'|'selected'|undefined,
+                });
                 Deno.writeTextFileSync(path, JSON.stringify(
                     {...source, generatedAt: new Date().toISOString()}, null, 1));
                 console.info(`wrote publish source to ${path}: ` +
@@ -570,7 +585,8 @@ export async function cliMain(args: string[]): Promise<void> {
                              `${source.categories.length} categories, ` +
                              `${source.users.length} users, ` +
                              `${source.books.length} books ` +
-                             `[orthography: ${source.orthography}, db_purpose: ${source.dbPurpose}]`);
+                             `[orthographies: ${source.orthographies.join('+')}, ` +
+                             `variant content: ${source.variantContent}, db_purpose: ${source.dbPurpose}]`);
             });
             Deno.exit(0);
             break;

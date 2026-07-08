@@ -45,7 +45,9 @@ builds omit it so the bundle stays deterministic and dumps diff cleanly).
 |---|---|
 | `formatVersion` | `1`; readers gate on it (`publishSourceFromJson`) |
 | `generatedAt` | ISO timestamp, dump-time only |
-| `orthography` | the orthography this site renders (`mm-li` today) |
+| `orthography` | the PRIMARY orthography (= `orthographies[0]`): drives the entry-page public ids and the publisher's defaultVariant |
+| `orthographies` | the pub-gate SELECTION set: the bundle contains the entries public in ANY of these (`dump-publish-source --orthographies=mm-sf[,mm-li]`; default = the public site's orthography) |
+| `variantContent` | `all` (default): each entry carries every orthography's content. `selected`: variant-tagged tuples are filtered to the selected lanes — EXCEPT `$sourceOrthography` provenance fields (the reference transliteration/source-as-entry family: the variant records the HISTORICAL SOURCE's orthography, never a display lane) and `$notVariant` locale relics; `'mm'`-wildcard and legacy-blank variants match every lane (`variantMatches`).  Filtering builds new entry objects, so the live entries-identity applies only to the default single-orthography/`all` shape |
 | `collationLocale` | `Intl.Collator` locale for source-language sorting |
 | `dbPurpose` | the building db's marker, logged into the publish |
 | `entries` | the PUBLISHED public projection as plain entry JSON — published facts only, no history, no pending edits, only entries public in `orthography` |
@@ -130,6 +132,19 @@ site.  Verified byte-identical to a live publish across the FULL site
 (16,046 html files), and covered by the round-trip test in
 publish-source_test.ts.  The entries-identity staleness check does not
 apply to dump-driven runs (by design: a dump IS a snapshot).
+
+## Orthography-selected bundles
+
+    ./wordwiki.sh dump-publish-source sf.json --orthographies=mm-sf
+    ./wordwiki.sh dump-publish-source both.json --orthographies=mm-li,mm-sf
+    ./wordwiki.sh dump-publish-source li.json --variant-content=selected
+
+The `$sourceOrthography` annotation lives on the variant FIELD in the
+schema (`model.ts` VariantFlags; declared in `entry-schema.ts` on the
+document-reference `transliteration` / `source_as_entry` /
+`normalized_source_as_entry` / `foreign_reference` variants) - an explicit
+declaration, not guessed from values or publish state, and available to
+the editor's working-orthography lens later for the same purpose.
 
 ## Next stages
 

@@ -1,8 +1,8 @@
 // deno-lint-ignore-file no-explicit-any
 /**
  * The variant orthography flags ($notVariant/$mixed/$allowAll/$defaultAll/
- * $metaVariant — fix-orthographies.md "The target model") and the
- * variant-fields-are-leaves parse rule.
+ * $metaVariant/$sourceOrthography — fix-orthographies.md "The target
+ * model") and the variant-fields-are-leaves parse rule.
  */
 import { test } from "../liminal/testing/test.ts";
 import { assertEquals, assertThrows } from "../liminal/testing/assert.ts";
@@ -32,10 +32,11 @@ function variantFieldOf(rel: model.RelationField): model.VariantField {
 test("variant with no flags parses with all flags false", () => {
     const v = variantFieldOf(parseRelation(leafRelation({$type: 'variant'})));
     assertEquals(v.variantFlags, {
-        notVariant: false, mixed: false, allowAll: false, defaultAll: false, metaVariant: false });
+        notVariant: false, mixed: false, allowAll: false, defaultAll: false, metaVariant: false,
+        sourceOrthography: false });
 });
 
-test("all five flags parse onto variantFlags", () => {
+test("all six flags parse onto variantFlags", () => {
     const v1 = variantFieldOf(parseRelation(leafRelation(
         {$type: 'variant', $notVariant: true})));
     assertEquals(v1.variantFlags.notVariant, true);
@@ -43,12 +44,18 @@ test("all five flags parse onto variantFlags", () => {
     const v2 = variantFieldOf(parseRelation(leafRelation(
         {$type: 'variant', $mixed: true, $allowAll: true, $defaultAll: true})));
     assertEquals(v2.variantFlags,
-        { notVariant: false, mixed: true, allowAll: true, defaultAll: true, metaVariant: false });
+        { notVariant: false, mixed: true, allowAll: true, defaultAll: true, metaVariant: false,
+          sourceOrthography: false });
 
     const v3 = variantFieldOf(parseRelation(leafRelation(
         {$type: 'variant', $metaVariant: true, $allowAll: true, $defaultAll: true})));
     assertEquals(v3.variantFlags,
-        { notVariant: false, mixed: false, allowAll: true, defaultAll: true, metaVariant: true });
+        { notVariant: false, mixed: false, allowAll: true, defaultAll: true, metaVariant: true,
+          sourceOrthography: false });
+
+    const v4 = variantFieldOf(parseRelation(leafRelation(
+        {$type: 'variant', $mixed: true, $sourceOrthography: true})));
+    assertEquals(v4.variantFlags.sourceOrthography, true);
 });
 
 test("flags round-trip through schemaToCompactJson", () => {
@@ -64,7 +71,13 @@ test("flags round-trip through schemaToCompactJson", () => {
     // And the dump reparses to the same flags.
     const reparsed = variantFieldOf(parseRelation(dumped));
     assertEquals(reparsed.variantFlags,
-        { notVariant: false, mixed: true, allowAll: true, defaultAll: true, metaVariant: false });
+        { notVariant: false, mixed: true, allowAll: true, defaultAll: true, metaVariant: false,
+          sourceOrthography: false });
+
+    // $sourceOrthography round-trips too.
+    const srcRel = parseRelation(leafRelation({$type: 'variant', $sourceOrthography: true}));
+    srcRel.resolve();
+    assertEquals(srcRel.schemaToCompactJson().variant.$sourceOrthography, true);
 });
 
 test("$notVariant is exclusive of the other flags", () => {

@@ -16,6 +16,21 @@ DATA FILES convertible to any future medium (unbounded) — both simplified
 (no history) and full versions, linked FROM the site, cleanly licensed, so
 they get archived, 4) paper via .pdf (survives computing, loses audio).
 
+**STAGE 4 BUILT (2026-07-08): orthography-selected bundles.**
+buildPublishSource(app, {orthographies: ['mm-sf',...], variantContent:
+'all'|'selected'}); entries public in ANY selected (union), FIRST is
+primary (public ids/defaultVariant); 'selected' filters variant-tagged
+tuples to the chosen lanes via a schema-driven walk (filterEntryVariants),
+EXCEPT the new $sourceOrthography VariantFlag (provenance — declared on
+the 4 document_reference variant fields: transliteration/source_as_entry/
+normalized_source_as_entry/foreign_reference) and $notVariant relics;
+'mm'/blank pass everywhere (variantMatches). CLI:
+dump-publish-source --orthographies=a,b --variant-content=selected.
+Real-data checks: sf bundle = 0 entries (no sf gates yet — truthful);
+both = 6973; selected li drops 352 non-li spelling lanes, keeps all 687
+provenance ref transliterations. Default publish byte-unchanged; entries
+identity kept only for the default single/'all' shape.
+
 **STAGE 3 BUILT (2026-07-08): scan renders bundle-ized — publish --from
 needs NO DATABASE.** Scan renders split into serializable structs +
 loaders + pure renderers (render-page-editor.ts: GroupScanData/

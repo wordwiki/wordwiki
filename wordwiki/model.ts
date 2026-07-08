@@ -501,6 +501,14 @@ export interface VariantFlags {
     defaultAll?: boolean;
     /** On control fields (todo, status): the *state* can be per-orthography. */
     metaVariant?: boolean;
+    /** The variant records the orthography OF THE HISTORICAL SOURCE
+     *  (provenance - e.g. a reference transliteration in Pacifique
+     *  Manuscript orthography), NOT a display lane: orthography-selection
+     *  filters (the publish-source variantContent filter, and eventually
+     *  the editor's working-orthography lens) must always pass it
+     *  through.  An explicit annotation, not guessed from the value or
+     *  the publish state (dz 2026-07-08). */
+    sourceOrthography?: boolean;
 }
 
 /**
@@ -529,19 +537,21 @@ export class VariantField extends EnumField {
         f.allowAll && (flagsJson.$allowAll = true);
         f.defaultAll && (flagsJson.$defaultAll = true);
         f.metaVariant && (flagsJson.$metaVariant = true);
+        f.sourceOrthography && (flagsJson.$sourceOrthography = true);
         return this.buildSchemaToCompactJson(this.schemaTypename(), flagsJson);
     }
 
     static override parseSchemaFromCompactJson(locus: string, name: string, schema: any): VariantField {
         let {$type, $bind, $style, $optional,
-             $notVariant, $mixed, $allowAll, $defaultAll, $metaVariant, ...extra} = schema;
+             $notVariant, $mixed, $allowAll, $defaultAll, $metaVariant, $sourceOrthography, ...extra} = schema;
         $bind ??= 'variant';
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'variant');
         const variantFlags: VariantFlags = {
             notVariant: !!$notVariant, mixed: !!$mixed, allowAll: !!$allowAll,
-            defaultAll: !!$defaultAll, metaVariant: !!$metaVariant };
+            defaultAll: !!$defaultAll, metaVariant: !!$metaVariant,
+            sourceOrthography: !!$sourceOrthography };
         if(variantFlags.notVariant &&
-            (variantFlags.mixed || variantFlags.allowAll || variantFlags.defaultAll || variantFlags.metaVariant))
+            (variantFlags.mixed || variantFlags.allowAll || variantFlags.defaultAll || variantFlags.metaVariant || variantFlags.sourceOrthography))
             throw new ValidationError(locus, `$notVariant cannot be combined with other variant flags on field '${name}'`);
         if(variantFlags.defaultAll && !variantFlags.allowAll)
             throw new ValidationError(locus, `$defaultAll requires $allowAll on field '${name}' (the 'mm' default must be an allowed value)`);

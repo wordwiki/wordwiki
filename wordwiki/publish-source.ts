@@ -20,7 +20,9 @@
  * publish-source.md.
  */
 
-import {Entry} from './entry-schema.ts';
+import {Entry, entryIsPublicIn, parsedDictSchema, EntryTag} from './entry-schema.ts';
+import * as model from './model.ts';
+import {variantMatches} from './variant-policy.ts';
 import * as category from './category.ts';
 import * as user from './user.ts';
 import {ScannedDocument, selectAllScannedDocuments, maxPageNumberForDocument,
@@ -60,13 +62,37 @@ export interface PublishSourceBook {
     pageScans: BookPageScanData[];
 }
 
+export interface PublishSourceOpts {
+    /** Which pub-gate lanes SELECT entries: an entry is in the bundle iff
+     *  it is public in ANY of these.  The FIRST is the primary (it drives
+     *  the entry-page public ids and the publisher's defaultVariant).
+     *  Default: [the public site's orthography] - today's bundle. */
+    orthographies?: string[];
+    /** 'all' (default): each entry carries every orthography's content.
+     *  'selected': variant-tagged tuples are filtered to the selected
+     *  orthographies - EXCEPT fields whose variant is annotated
+     *  $sourceOrthography in the schema (historical-source provenance,
+     *  e.g. the reference transliterations), which always pass, and
+     *  $notVariant pseudo-variants (locale relics, dropped by the
+     *  orthography migration), which are not orthography lanes at all.
+     *  'mm'-wildcard and legacy-blank variants match every lane
+     *  (variantMatches, THE central predicate). */
+    variantContent?: 'all' | 'selected';
+}
+
 export interface PublishSource {
     formatVersion: number;
     /** Stamped by dump-publish-source only; absent on in-memory builds
      *  (keeps the bundle itself deterministic for diffing). */
     generatedAt?: string;
-    /** The orthography this site is rendered in. */
+    /** The PRIMARY orthography (= orthographies[0]): drives the entry-page
+     *  public ids and the publisher's defaultVariant. */
     orthography: string;
+    /** The pub-gate selection set: entries public in ANY of these. */
+    orthographies: string[];
+    /** Whether each entry carries all orthographies' content or was
+     *  filtered to the selected lanes (see PublishSourceOpts). */
+    variantContent: 'all' | 'selected';
     /** Collation locale for source-language sorting. */
     collationLocale: string;
     /** The db_purpose marker of the building db (logged into the publish). */
@@ -99,8 +125,55 @@ export interface PublishSourceApp {
     entryCountByPage(book: string): Array<[number, number]>;
 }
 
-export async function buildPublishSource(app: PublishSourceApp): Promise<PublishSource> {
-    const site = app.site();
+/** Filter one entry's variant-tagged tuples to the selected orthographies
+ *  (schema-driven; see PublishSourceOpts.variantContent).  Returns a NEW
+ *  object tree - the live projection is never mutated. */
+export function filterEntryVariants(entry: Entry, orthographies: string[]): Entry {
+    const root = parsedDictSchema().relationsByTag[EntryTag];
+    const keepTuple = (rel: model.RelationField, tuple: any): boolean => {
+        const vf = rel.scalarFields.find(f => f instanceof model.VariantField) as
+            model.VariantField | undefined;
+        if(!vf) return true;
+        const flags = vf.variantFlags;
+        // Provenance tags and locale relics are not display lanes - always pass.
+        if(flags.sourceOrthography || flags.notVariant) return true;
+        const v = (tuple as any)[vf.name];
+        return orthographies.some(o => variantMatches(v, o));
+    };
+    const filterChildren = (rel: model.RelationField, tuple: any): any => {
+        const out = {...tuple};
+        for(const child of rel.relationFields) {
+            const arr = (tuple as any)[child.name];
+            if(Array.isArray(arr))
+                out[child.name] = arr
+                    .filter((t: any) => keepTuple(child, t))
+                    .map((t: any) => filterChildren(child, t));
+        }
+        return out;
+    };
+    return filterChildren(root, entry) as Entry;
+}
+
+export async function buildPublishSource(app: PublishSourceApp,
+                                         opts: PublishSourceOpts = {}): Promise<PublishSource> {
+    const orthographies = opts.orthographies ?? [siteConfig.publicSiteOrthography];
+    const variantContent = opts.variantContent ?? 'all';
+    if(orthographies.length === 0)
+        throw new Error('publish source needs at least one orthography');
+    const site = app.site(orthographies[0]);
+
+    // Entry selection: public in ANY selected orthography, in published-
+    // projection order.  The single-orthography unfiltered default keeps
+    // the live view's ARRAY IDENTITY (the publish staleness check);
+    // multi-orthography or filtered bundles are dump artifacts and build
+    // new arrays.
+    let entries: Entry[] =
+        orthographies.length === 1
+            ? site.publicEntries
+            : site.store.publishedProjection.filter(e =>
+                orthographies.some(o => entryIsPublicIn(e, o)));
+    if(variantContent === 'selected')
+        entries = entries.map(e => filterEntryVariants(e, orthographies));
     const books: PublishSourceBook[] =
         selectAllScannedDocuments().all({}).map(document => {
             const totalPages = maxPageNumberForDocument()
@@ -121,11 +194,11 @@ export async function buildPublishSource(app: PublishSourceApp): Promise<Publish
             };
         });
 
-    // Every bounding group the public entries reference (their document
+    // Every bounding group the bundle's entries reference (their document
     // references) - the standalone scan snippets on entry pages and in the
     // book-page info boxes.  Loading resolves (and generates if missing)
     // the content-addressed image tiles, hence async.
-    const groupIds = Array.from(new Set(site.publicEntries.flatMap(e =>
+    const groupIds = Array.from(new Set(entries.flatMap(e =>
         e.subentry.flatMap(s => s.document_reference.map(d => d.bounding_group_id)))))
         .toSorted((a, b) => a - b);
     const scans: GroupScanData[] = [];
@@ -149,12 +222,15 @@ export async function buildPublishSource(app: PublishSourceApp): Promise<Publish
     })();
     return {
         formatVersion: PUBLISH_SOURCE_FORMAT_VERSION,
-        orthography: site.orthography,
+        orthography: orthographies[0],
+        orthographies,
+        variantContent,
         collationLocale: siteConfig.collationLocale,
         dbPurpose: app.getDbPurpose() ?? 'unmarked',
-        // The view's entries array ITSELF, not a copy: the publish
-        // staleness check is entries-IDENTITY against the live view.
-        entries: site.publicEntries,
+        // In the default single-orthography/'all' shape this is the live
+        // view's entries array ITSELF, not a copy: the publish staleness
+        // check is entries-IDENTITY against the live view.
+        entries,
         categories,
         users,
         books,
