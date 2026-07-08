@@ -441,6 +441,8 @@ export class ServiceTable extends Table<Service> {
             [h.div, {class: 'mt-4'},
              rabid.task.renderOwnerTasks('service', service_id, null, /*docHeading*/ true),
              rabid.task.renderOwnerChecklists('service', service_id)],
+            // Photos of the bike / the problem (the generic gallery, gallery.ts).
+            [h.div, {class: 'mt-4'}, rabid.gallery_photo.renderGallery('service', service_id)],
         ];
     }
 }

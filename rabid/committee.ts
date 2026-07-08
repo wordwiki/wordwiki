@@ -258,6 +258,8 @@ export class CommitteeTable extends Table<Committee> {
             // the Members/Projects section labels above (and it indents its own
             // task list into a .lm-subsection).
             rabid.task.renderOwnerTasks('committee', committee_id, null, true),
+            // Photos (the generic gallery, gallery.ts).
+            [h.div, {class: 'mt-4'}, rabid.gallery_photo.renderGallery('committee', committee_id)],
         ];
     }
 }
