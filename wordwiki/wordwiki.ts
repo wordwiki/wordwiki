@@ -163,6 +163,17 @@ export class WordWiki extends LiminalApp {
         orthography.seedOrthographies(this.orthographies);
     }
 
+    // ----- Route namespaces ---------------------------------------------------
+    // NAMING: each getter (= the URL namespace) is the lowerCamel of its
+    // class - EditorReports is wordwiki.editorReports.* (dz 2026-07-08;
+    // 'reports' vs 'report' was unreadable).
+    // LIFECYCLE: these memoized instances are ROUTE NAMESPACES, not caches -
+    // created once and NEVER dropped on data invalidation.  They must
+    // therefore hold NO data state: every data cache belongs in
+    // DictionaryStore / SiteView (dropped wholesale on every mutation).
+    // Audited 2026-07-08: all namespace classes are stateless (per-render
+    // closure memos are fine; instance fields holding data are not).
+
     // The v2 (server-side htmx) lexeme editor, reachable as wordwiki.lexeme.*
     // (e.g. /ww/wordwiki.lexeme.entryPage(<entry_id>)).  See lexeme-editor-design.md.
     #lexeme: LexemeEditor|undefined = undefined;
@@ -177,45 +188,45 @@ export class WordWiki extends LiminalApp {
         return this.#feed ??= new ChangeFeed(this);
     }
 
-    // The duplicate-spelling report, reachable as wordwiki.spellings.*
-    // (wordwiki.spellings.duplicatesReport()).  See spelling-duplicates.ts.
-    #spellings: SpellingReports|undefined = undefined;
-    @route(authenticated) @path get spellings(): SpellingReports {
-        return this.#spellings ??= new SpellingReports();
+    // The duplicate-spelling report, reachable as wordwiki.spellingReports.*
+    // (wordwiki.spellingReports.duplicatesReport()).  See spelling-duplicates.ts.
+    #spellingReports: SpellingReports|undefined = undefined;
+    @route(authenticated) @path get spellingReports(): SpellingReports {
+        return this.#spellingReports ??= new SpellingReports();
     }
 
     // The LIVE variant-cleanup report (the language staff's triage queue,
-    // drains as fixes land), reachable as wordwiki.variants.cleanupReport().
+    // drains as fixes land), reachable as wordwiki.variantReports.cleanupReport().
     // See variant-scan.ts VariantReports.
-    #variants: VariantReports|undefined = undefined;
-    @route(authenticated) @path get variants(): VariantReports {
-        return this.#variants ??= new VariantReports(this);
+    #variantReports: VariantReports|undefined = undefined;
+    @route(authenticated) @path get variantReports(): VariantReports {
+        return this.#variantReports ??= new VariantReports(this);
     }
 
     // The transliteration corrections/accuracy report (the transliterator's
-    // development loop), reachable as wordwiki.transliteration.
+    // development loop), reachable as wordwiki.transliterationReports.
     // correctionsReport().  See auto-transliterate.ts.
-    #transliteration: TransliterationReports|undefined = undefined;
-    @route(authenticated) @path get transliteration(): TransliterationReports {
-        return this.#transliteration ??= new TransliterationReports(this);
+    #transliterationReports: TransliterationReports|undefined = undefined;
+    @route(authenticated) @path get transliterationReports(): TransliterationReports {
+        return this.#transliterationReports ??= new TransliterationReports(this);
     }
 
     // The misc editor reports (categories directory, TODO, twitter post
     // status, the word-a-day picker, entries-by-PDM-page, the import
-    // report), reachable as wordwiki.reports.*.  See reports.ts - the
+    // report), reachable as wordwiki.editorReports.*.  See reports.ts - the
     // constructor takes the NARROW ReportsApp interface.
-    #reports: EditorReports|undefined = undefined;
-    @route(authenticated) @path get reports(): EditorReports {
-        return this.#reports ??= new EditorReports(this);
+    #editorReports: EditorReports|undefined = undefined;
+    @route(authenticated) @path get editorReports(): EditorReports {
+        return this.#editorReports ??= new EditorReports(this);
     }
 
 
-    // The monthly activity report, reachable as wordwiki.report.* (page
+    // The monthly activity report, reachable as wordwiki.activityReport.* (page
     // alias: wordwiki.activity({months, restrict_to_user})).  See
     // activity-report.ts.
-    #report: ActivityReport|undefined = undefined;
-    @route(authenticated) @path get report(): ActivityReport {
-        return this.#report ??= new ActivityReport(this);
+    #activityReport: ActivityReport|undefined = undefined;
+    @route(authenticated) @path get activityReport(): ActivityReport {
+        return this.#activityReport ??= new ActivityReport(this);
     }
 
     // Recently changed WORDS - the reviewer's word-at-a-time approval loop
@@ -440,7 +451,7 @@ export class WordWiki extends LiminalApp {
     // query argument (activityQuery) fully determines the page.
     @route(authenticated)
     activity(q?: Record<string, any>): templates.Page {
-        return this.report.activityPage(q);
+        return this.activityReport.activityPage(q);
     }
 
     // Recently changed words (see recent-words.ts): one row per word, newest
@@ -470,16 +481,16 @@ export class WordWiki extends LiminalApp {
             ['br', {}],
             ['h3', {}, 'Reports'],
             ['ul', {},
-             ['li', {}, ['a', {href:'/ww/wordwiki.reports.categoriesDirectory()'}, 'Entries by Category']],
-             ['li', {}, ['a', {href:`/ww/wordwiki.reports.entriesByBookPageDirectory(${JSON.stringify(siteConfig.primarySourceBook)})`},
+             ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.categoriesDirectory()'}, 'Entries by Category']],
+             ['li', {}, ['a', {href:`/ww/wordwiki.editorReports.entriesByBookPageDirectory(${JSON.stringify(siteConfig.primarySourceBook)})`},
                          `Entries by ${siteConfig.primarySourceBook} Page`]],
-             ['li', {}, ['a', {href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.transliteration.correctionsReport()'}, 'Transliteration Report']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.reports.importReport()'}, 'Import Report']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.reports.todoReport(null, null)'}, 'TODO Report']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.reports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.reports.wordADayPicker()'}, 'Word-a-day Picker']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.spellingReports.duplicatesReport()'}, 'Duplicate Spellings']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.variantReports.cleanupReport()'}, 'Variant Cleanup']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.transliterationReports.correctionsReport()'}, 'Transliteration Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.todoReport(null, null)'}, 'TODO Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.wordADayPicker()'}, 'Word-a-day Picker']],
             ],
 
             ['br', {}],

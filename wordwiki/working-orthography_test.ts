@@ -52,11 +52,11 @@ test("categoriesDirectory follows the editor's working orthography", async () =>
         // No primary_orthography: the report falls back to the public
         // site's view and counts the mm-li-public entry.
         const li = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.reports.categoriesDirectory()')));
+            renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
         assert(li.includes('water'), 'mm-li public entry counted in the default view');
 
         const liCat = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.reports.entriesForCategory("water")')));
+            renderRoute(fx.ww, 'wordwiki.editorReports.entriesForCategory("water")')));
         assert(liCat.includes('samqwan'), 'entry listed under its category');
 
         // An mm-sf editor sees the mm-sf view - nothing is public there
@@ -65,12 +65,12 @@ test("categoriesDirectory follows the editor's working orthography", async () =>
             fx.ww.users.updateNamedFields(fx.userIds['djz'],
                 ['primary_orthography'], {primary_orthography: 'mm-sf'} as any));
         const sf = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.reports.categoriesDirectory()')));
+            renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
         assert(!sf.includes('water'), 'nothing is public in mm-sf yet');
         assert(sf.includes('mm-sf'), 'the page names the working orthography');
 
         const sfCat = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.reports.entriesForCategory("water")')));
+            renderRoute(fx.ww, 'wordwiki.editorReports.entriesForCategory("water")')));
         assert(!sfCat.includes('samqwan'), 'category listing follows the view too');
     });
 });

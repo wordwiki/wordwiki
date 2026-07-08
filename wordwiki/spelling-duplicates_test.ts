@@ -173,7 +173,7 @@ test("dup report: groups colliding words by text, via dispatch", async () => {
         assertEquals(groups[0].entries.map(e => e.entry_id), [1000, 2000]);
 
         const page = markupToString(await as(fx, "djz", () =>
-            renderRoute(fx.ww, 'wordwiki.spellings.duplicatesReport()')));
+            renderRoute(fx.ww, 'wordwiki.spellingReports.duplicatesReport()')));
         assertStringIncludes(page, "lm-data-section");
         assertStringIncludes(page, "samqwan");
         assertStringIncludes(page, "wordwiki.entry(1000)");

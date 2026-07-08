@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 /**
- * The misc EDITOR REPORTS, reachable as wordwiki.reports.* - the read-only
+ * The misc EDITOR REPORTS, reachable as wordwiki.editorReports.* - the read-only
  * report pages that accreted on the app class (categories directory, TODO,
  * twitter post status, the word-a-day picker, entries-by-PDM-page, the
  * import report).  Moved here in the WordWiki decomposition; the special-
@@ -73,7 +73,7 @@ export class EditorReports {
 
         const categoryLink = (value: string, label: string) =>
             ['li', {}, ['a',
-                        {href:`/ww/wordwiki.reports.entriesForCategory(${JSON.stringify(value)})`},
+                        {href:`/ww/wordwiki.editorReports.entriesForCategory(${JSON.stringify(value)})`},
                         label, ` (${counts.get(value)} entries)`]];
 
         const body = [
@@ -133,13 +133,13 @@ export class EditorReports {
 
         const userPicker = ['div', {}, ['b', {}, 'Assigned To: '],
                             Object.entries(entry.users).map(([user_id, user_name])=>
-                                [['a', {href:`/ww/wordwiki.reports.todoReport(${JSON.stringify(user_id)}, ${JSON.stringify(restrictToTask)})`}, user_id], ' / ']),
-                            ['a', {href:`/ww/wordwiki.reports.todoReport(null, ${JSON.stringify(restrictToTask)})`}, 'ALL USERS']];
+                                [['a', {href:`/ww/wordwiki.editorReports.todoReport(${JSON.stringify(user_id)}, ${JSON.stringify(restrictToTask)})`}, user_id], ' / ']),
+                            ['a', {href:`/ww/wordwiki.editorReports.todoReport(null, ${JSON.stringify(restrictToTask)})`}, 'ALL USERS']];
 
         const taskPicker = ['div', {}, ['b', {}, 'Task Kind: '],
                             Object.entries(entry.todos).map(([todo_id, todo_name])=>
-                                [['a', {href:`/ww/wordwiki.reports.todoReport(${JSON.stringify(restrictToUser)}, ${JSON.stringify(todo_id)})`}, todo_name], ' / ']),
-                            ['a', {href:`/ww/wordwiki.reports.todoReport(${JSON.stringify(restrictToUser)}, null)`}, 'ALL TASKS']];
+                                [['a', {href:`/ww/wordwiki.editorReports.todoReport(${JSON.stringify(restrictToUser)}, ${JSON.stringify(todo_id)})`}, todo_name], ' / ']),
+                            ['a', {href:`/ww/wordwiki.editorReports.todoReport(${JSON.stringify(restrictToUser)}, null)`}, 'ALL TASKS']];
 
         const entriesForTODO = this.getEntriesForTODO(restrictToUser, restrictToTask);
 
@@ -199,7 +199,7 @@ export class EditorReports {
         const body = [
             ['h2', {}, title],
             ['div', {class: 'mb-2'},
-             ['a', {href: '/ww/wordwiki.reports.wordADayPicker()'},
+             ['a', {href: '/ww/wordwiki.editorReports.wordADayPicker()'},
               'Looking for a word to post?  The word-a-day picker']],
 
             ['div', {},
@@ -270,7 +270,7 @@ export class EditorReports {
             ['h1', {}, title],
             ['div', {class: 'mb-3'},
              `${unpostedIds.size} public words not yet posted.  `,
-             ['a', {href: '/ww/wordwiki.reports.entriesByTwitterPostStatus()'},
+             ['a', {href: '/ww/wordwiki.editorReports.entriesByTwitterPostStatus()'},
               'Words already posted']],
 
             // The jump index: every category with its unposted count.
@@ -316,7 +316,7 @@ export class EditorReports {
             ['ul', {},
              entryCountByPage.map(([page_number, entry_count])=>
                  ['li', {},
-                  ['a', {href:`/ww/wordwiki.reports.entriesByBookPage(${JSON.stringify(book)}, ${page_number})`},
+                  ['a', {href:`/ww/wordwiki.editorReports.entriesByBookPage(${JSON.stringify(book)}, ${page_number})`},
                    `${book} page ${page_number} has ${entry_count} entries`]
                  ])
             ]
@@ -415,7 +415,7 @@ export class EditorReports {
             fragments.length > 0
                 ? ['p', {class: 'text-muted small'}, 'Step fragments: ',
                    fragments.map((n, i) => [i > 0 ? ' · ' : '',
-                       ['a', {href: `/ww/wordwiki.reports.importReportFragment(${JSON.stringify(n)})`}, n]])]
+                       ['a', {href: `/ww/wordwiki.editorReports.importReportFragment(${JSON.stringify(n)})`}, n]])]
                 : undefined,
             this.renderMdReport('import-report.md',
                 'No import report yet - importWordWikiV1Db.sh assembles one on every run ' +
@@ -429,7 +429,7 @@ export class EditorReports {
             throw new Error(`'${name}' is not an import-report fragment name`);
         return templates.page(`Import Report — ${name}`,
             ['div', {class: 'container py-3'},
-             ['p', {class: 'small'}, ['a', {href: '/ww/wordwiki.reports.importReport()'}, '← whole report']],
+             ['p', {class: 'small'}, ['a', {href: '/ww/wordwiki.editorReports.importReport()'}, '← whole report']],
              this.renderMdReport(`import-report/${name}`, 'No such fragment.')]);
     }
 

@@ -145,7 +145,7 @@ test("activity query: stays on its valid_from index range (no table scan)", () =
 // --- The rendered report -----------------------------------------------------------
 
 const reportHtml = (fx: Fixture, q: Record<string, any>) =>
-    markupToString(fx.ww.report.renderReport(activityQuery.normalize(q) as ActivityQuery));
+    markupToString(fx.ww.activityReport.renderReport(activityQuery.normalize(q) as ActivityQuery));
 
 // The pretty-printer breaks elements across lines; fold whitespace away so a
 // cell like <td class='text-end'>3</td> can be asserted as one string.
@@ -211,7 +211,7 @@ test("report: counts this month's actions; the born-published corpus is invisibl
             // djz's 2 changes both touch entry 3000: one lexeme.
             assertStringIncludes(html, "2changes·on1lexeme·1newpublishedlexeme");
             assertStringIncludes(html, "wordwiki.changes({from_time:");
-            assertStringIncludes(html, "wordwiki.report.createdPage(");
+            assertStringIncludes(html, "wordwiki.activityReport.createdPage(");
             // Grouped by year: a bold totals row leads the year, its new-
             // lexemes total linking to the whole-year created page.
             assertStringIncludes(html, "lm-activity-year");
@@ -274,16 +274,16 @@ test("created page + no-limit default: undated imports counted and listed", asyn
             // date; the undated page (0,0) lists the import.
             const now = new Date();
             const pageHtml = (p: any) => markupToString(p.body);
-            const created = pageHtml(fx.ww.report.createdPage(
+            const created = pageHtml(fx.ww.activityReport.createdPage(
                 now.getFullYear(), now.getMonth() + 1));
             assertStringIncludes(created, "Published lexemes created in");
             assertStringIncludes(created, "wordwiki.wordView(1000)");
             assertEquals(created.includes("wordwiki.wordView(9999)"), false);
             // month 0 = the whole year.
-            const yearPage = pageHtml(fx.ww.report.createdPage(now.getFullYear(), 0));
+            const yearPage = pageHtml(fx.ww.activityReport.createdPage(now.getFullYear(), 0));
             assertStringIncludes(yearPage, `Published lexemes created in ${now.getFullYear()}`);
             assertStringIncludes(yearPage, "wordwiki.wordView(1000)");
-            const undated = pageHtml(fx.ww.report.createdPage(0, 0));
+            const undated = pageHtml(fx.ww.activityReport.createdPage(0, 0));
             assertStringIncludes(undated, "Published lexemes with no creation date");
             assertStringIncludes(undated, "wordwiki.wordView(9999)");
             assertEquals(undated.includes("wordwiki.wordView(1000)"), false);
@@ -294,11 +294,11 @@ test("created page + no-limit default: undated imports counted and listed", asyn
 test("report filter dialog: generated from the query's own fields; apply navigates", async () => {
     await withTestDb((fx) => {
         as(fx, "djz", () => {
-            const dialog = markupToString(fx.ww.report.filterDialog({}));
+            const dialog = markupToString(fx.ww.activityReport.filterDialog({}));
             assertStringIncludes(dialog, "name=months");
             assertStringIncludes(dialog, "name=restrict_to_user");
             assertStringIncludes(dialog, "applyFilter");
-            const r = fx.ww.report.applyFilter({months: "6", restrict_to_user: "dmm"});
+            const r = fx.ww.activityReport.applyFilter({months: "6", restrict_to_user: "dmm"});
             assertEquals(r.action, "navigate");
             assertEquals(r.url, `/ww/wordwiki.activity({months:6,restrict_to_user:"dmm"})`);
         });

@@ -28,7 +28,7 @@
  * Consumers: the incremental warning atop the lexeme editor (the editor's
  * root fragment re-renders on every spelling mutation already - the headword
  * titleRole widens changeKeys to the entry root - so NO editor plumbing),
- * and the whole-dictionary duplicates report (wordwiki.spellings.
+ * and the whole-dictionary duplicates report (wordwiki.spellingReports.
  * duplicatesReport()).  Matching is EXACT text for now; the report will show
  * whether case/apostrophe normalization is worth adding.
  */
@@ -220,7 +220,7 @@ export function findAllDuplicateGroups(): DuplicateGroup[] {
     return groups.sort((a, b) => a.text.localeCompare(b.text));
 }
 
-/** The report routes, namespaced as wordwiki.spellings.* */
+/** The report routes, namespaced as wordwiki.spellingReports.* */
 export class SpellingReports {
 
     /** All words with duplicate spellings: a dense data table (the

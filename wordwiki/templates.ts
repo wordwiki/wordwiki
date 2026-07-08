@@ -227,7 +227,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
            ['ul', {class:'navbar-nav me-auto mb-2 mb-lg-0'},
 
             ['li', {class:'nav-item'},
-             ['a', {class:'nav-link', href:'/ww/wordwiki.reports.categoriesDirectory()'}, 'Categories']],
+             ['a', {class:'nav-link', href:'/ww/wordwiki.editorReports.categoriesDirectory()'}, 'Categories']],
 
             // --- Reference Books
             ['li', {class:'nav-item dropdown'},
@@ -252,16 +252,16 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.changes()'}, 'Recent Changes']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.activity()'}, 'Monthly Activity']],
               ['li', {}, ['a', {class:'dropdown-item',
-                  href:`/ww/wordwiki.reports.entriesByBookPageDirectory(${JSON.stringify(siteConfig.primarySourceBook)})`},
+                  href:`/ww/wordwiki.editorReports.entriesByBookPageDirectory(${JSON.stringify(siteConfig.primarySourceBook)})`},
             `Entries by ${siteConfig.primarySourceBook} page`]],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.categoriesDirectory()'}, 'Entries by Category']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliteration.correctionsReport()'}, 'Transliteration Report']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.importReport()'}, 'Import Report']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.todoReport(null, null)'}, 'TODO Report']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.wordADayPicker()'}, 'Word-a-day Picker']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.categoriesDirectory()'}, 'Entries by Category']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.spellingReports.duplicatesReport()'}, 'Duplicate Spellings']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.variantReports.cleanupReport()'}, 'Variant Cleanup']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliterationReports.correctionsReport()'}, 'Transliteration Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.todoReport(null, null)'}, 'TODO Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.wordADayPicker()'}, 'Word-a-day Picker']],
              ]],
 
             // --- Admin

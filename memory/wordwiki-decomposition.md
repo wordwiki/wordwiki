@@ -50,7 +50,7 @@ explicitly does NOT matter — only the generated public site's URLs do.
    delegates) stay PINNED to site() — they are about THE public site,
    whoever is looking. Differential test in working-orthography_test.ts.
 
-6. `wordwiki/reports.ts` — EditorReports under wordwiki.reports.*
+6. `wordwiki/reports.ts` — EditorReports under wordwiki.editorReports.*
    (categoriesDirectory, entriesForCategory, todoReport,
    entriesByTwitterPostStatus, wordADayPicker, entriesByPDMPage(Directory),
    importReport(Fragment)). Ctor takes the NARROW ReportsApp interface
@@ -66,7 +66,7 @@ explicitly does NOT matter — only the generated public site's URLs do.
    PUBLIC_SITE_ORTHOGRAPHY + getSpellings defaultVariant, SiteView's
    collator, navbar brand, and the login card read it. Home's Reference
    Books come from the scanned_document table (selectAllScannedDocuments).
-   PDM reports parameterized: wordwiki.reports.entriesByBookPage(Directory)
+   PDM reports parameterized: wordwiki.editorReports.entriesByBookPage(Directory)
    (book, ...) and WordWiki.entryCountByPage(book) (Map cache per book;
    publish passes its publicBookId). The literal module is the STEPPING
    STONE to db-sourced config (see [[wordwiki-archival-publish-model]]) —
@@ -86,3 +86,13 @@ explicitly does NOT matter — only the generated public site's URLs do.
   spelling[0]; changing it diffs the public site — needs dz review).
 
 Relates to [[fix-orthographies]], [[publication-approval-model]].
+
+**Namespace conventions (dz 2026-07-08):** getter/field = lowerCamel of the
+class name (wordwiki.editorReports / activityReport / spellingReports /
+variantReports / transliterationReports — 'reports' vs 'report' was
+unreadable). LIFECYCLE RULE: the memoized namespace instances are ROUTE
+NAMESPACES, never dropped on invalidation, so they must hold NO data state
+— every data cache belongs in DictionaryStore/SiteView (dropped on every
+mutation). Convention documented at the getter block in wordwiki.ts;
+audited clean. Non-report namespaces (lexeme, feed, pages, audio, publish)
+kept their short names.

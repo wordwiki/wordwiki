@@ -61,7 +61,7 @@ import {CHANGE_ROW, UserField, feedUsers, userLabel, feedQuery} from './change-f
 import type {WordWiki} from './wordwiki.ts';
 
 // All report routes live under /ww/ (see lexeme-editor.ts R).
-const R = '/ww/wordwiki.report';
+const R = '/ww/wordwiki.activityReport';
 
 const ACTIVITY_MAX_MONTHS = 400;   // sanity cap; deep enough for the 2000+ record
 
@@ -323,7 +323,7 @@ export class ActivityReport {
                 title: 'Filter the activity report',
                 submitLabel: 'Apply',
                 dispatch: {id: 'edit-form',
-                           onsubmit: 'event.preventDefault(); tx`wordwiki.report.applyFilter(${getFormJSON(event.target)})`'},
+                           onsubmit: 'event.preventDefault(); tx`wordwiki.activityReport.applyFilter(${getFormJSON(event.target)})`'},
             })];
     }
 

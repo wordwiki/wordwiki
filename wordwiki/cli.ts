@@ -483,7 +483,7 @@ export async function cliMain(args: string[]): Promise<void> {
         // preconditions re-checked at run time (flagged schema, drop gate,
         // mapping coverage - see variant-migrate.ts, incl. the per-tag blank
         // backfill + value-fix DECISION TABLES).  Hand-triage rows are left
-        // for the live cleanup report (wordwiki.variants.cleanupReport()).
+        // for the live cleanup report (wordwiki.variantReports.cleanupReport()).
         //   ./wordwiki.sh migrate-variants [--report path.md]
         //   ./wordwiki.sh migrate-variants --expect-no-changes    # idempotency proof
         //   ./wordwiki.sh migrate-variants --dry-run --report r.md  # REVIEW: report
@@ -532,7 +532,7 @@ export async function cliMain(args: string[]): Promise<void> {
                 ww.ensureNewStyleTables();
                 const path = args[1] && !args[1].startsWith('--') ? args[1]
                     : 'transliteration-pairs.json';
-                const {pairs} = ww.transliteration.corpusPairs();
+                const {pairs} = ww.transliterationReports.corpusPairs();
                 const clean: typeof pairs = [];
                 const excluded = new Map<string, number>();
                 for(const p of pairs) {

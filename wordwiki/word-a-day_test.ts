@@ -45,7 +45,7 @@ test("word-a-day picker: unposted public words by category", async () => {
             seed("ddd", {cat: "animals", completed: false});        // not public
             bornApprove(fx.ww);
 
-            const html = markupToString(fx.ww.reports.wordADayPicker());
+            const html = markupToString(fx.ww.editorReports.wordADayPicker());
             assertStringIncludes(html, "2 public words not yet posted");
             assertStringIncludes(html, "aaa");
             assertStringIncludes(html, "ccc");

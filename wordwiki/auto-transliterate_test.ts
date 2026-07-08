@@ -182,7 +182,7 @@ test("corrections report: corrected and rejected proposals become the corpus", a
         }));
 
         const html = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.transliteration.correctionsReport()')));
+            renderRoute(fx.ww, 'wordwiki.transliterationReports.correctionsReport()')));
         assert(html.includes('angamatl'), 'li source column');
         assert(html.includes('ankamatl'), 'the auto proposal');
         assert(html.includes('ankamatl-fixed'), 'the human correction');
@@ -248,7 +248,7 @@ test("proposals are stamped with the calibrated band; the report shows per-band 
         assert(/band=\w+/.test(p.change_arg), 'band stamped');
 
         const html = markupToString(await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.transliteration.correctionsReport()')));
+            renderRoute(fx.ww, 'wordwiki.transliterationReports.correctionsReport()')));
         assert(html.includes('Outcomes by confidence band'), 'per-band table');
         // The review row shows the band beside the evidence.
         const row = markupToString(await as(fx, 'djz', () =>

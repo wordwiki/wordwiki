@@ -181,7 +181,7 @@ test("cleanup report: renders via dispatch (route declared), live view", async (
         seed(fx, {dirty: false});
         const { as, renderRoute } = await import('./testing.ts');
         const markup = await as(fx, 'djz', () =>
-            renderRoute(fx.ww, 'wordwiki.variants.cleanupReport()'));
+            renderRoute(fx.ww, 'wordwiki.variantReports.cleanupReport()'));
         const html = (await import('../liminal/markup.ts')).markupToString(markup);
         assertStringIncludes(html, 'Variant (orthography) cleanup');
         assertStringIncludes(html, 'LIVE view');
