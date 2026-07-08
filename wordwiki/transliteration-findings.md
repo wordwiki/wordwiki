@@ -6,9 +6,11 @@ the dictionary's own data.  Two audiences, two sections: the **language
 experts** who can answer the open questions, and a **future Claude** picking
 the work back up once that feedback exists.
 
-Current state: the machine converts Listuguj text to Smith-Francis at
-**73.8% exact match** (validated on held-out human-written pairs it never
-trained on).  Every number in this document is measured, not estimated.
+Current state (updated 2026-07-08): the machine converts Listuguj text to
+Smith-Francis at **75.5% exact match**, and when allowed to offer **up to
+five ranked candidates**, the right answer is among them **84.4%** of the
+time (all validated on held-out human-written pairs it never trained on).
+Every number in this document is measured, not estimated.
 
 ---
 
@@ -27,15 +29,30 @@ from the team's practice, nothing else.
 What it currently does:
 
 1. **g → k** everywhere (this is right ~99% of the time in your writing).
-2. **Insert the apostrophe in l/n/m + t/p/j clusters** (weltaq → wel'taq) —
-   with exceptions found in the data: not at the start of a word (*Lpa*
-   stays *Lpa*), and not in the u+l+t context (*apjelmultimkewei*).
-3. **A short list of irregular words**: ugjit → wjit, goqwei → koqwey.
+2. **Weigh each ambiguous spot by how your writing usually resolves it**:
+   the cluster apostrophe (weltaq → wel'taq — but not at the start of a
+   word, and not in u+l+t), word-final -ei vs -ey, and the '/î choice are
+   each decided by their measured frequency in their exact context, not by
+   a fixed rule.
+3. **Use the word's part of speech** where it knows it (97% of entries):
+   vai verbs keep word-final -ei; vit tends to -ey (see Q3).
+4. **A short list of irregular words**: ugjit → wjit, goqwei → koqwey.
 
-Each machine proposal now carries a **confidence label** (measured, not
+Each machine proposal carries a **confidence label** (measured, not
 guessed): about half of all words are in a band the machine gets right 86%
 of the time; a small slice (the *lg* words below) it gets right barely 1
 time in 5, and the editor marks those for real scrutiny.
+
+**New: multiple suggestions, one click.**  Where the machine is unsure, it
+no longer commits blindly: the proposal row shows the runner-up spellings
+as small buttons (each explaining its difference — "apostrophe at l·t",
+"word-final -ey").  If the machine's first guess is wrong but a runner-up
+is right — which covers most of its mistakes — **fixing it is one click**:
+the clicked spelling replaces the guess and is approved in the same act.
+Measured: the right answer is somewhere in the top five suggestions for
+**84.4%** of words (top guess alone: 75.5%).  And every click teaches the
+machine which way that ambiguity resolves — clicks are the highest-value
+feedback you can give it, even better than typed corrections.
 
 ### The open questions — your agenda, with the evidence
 
@@ -169,6 +186,12 @@ deno run ... oracle.json --calibrate                       # regen calibration
    pairs *without* g are legitimate.
 6. **The cluster output IS the agenda** — the Part 1 questions above are
    the top clusters, verbatim.
+7. **Differential-test ports against their prototypes** — the TS candidate
+   engine "scored 55%" until a py-vs-ts differential (2 disagreements in
+   294) proved the port right and exposed a measurement bug instead.
+8. **When a forced choice is wrong ~25% of the time, stop forcing it** —
+   enumerate the branches and let a human click; 75.5% top-1 became 84.4%
+   top-5, and each click is labeled training data.
 
 ### The ceiling, and what expert feedback unblocks
 
@@ -194,6 +217,43 @@ arrives:
   be the *wrong* target) — do not tune further until that's settled if it
   comes up.
 
+### The ranked-candidate engine (rules-v3/v4) and click-to-pick
+
+The residual ambiguities are BINARY BRANCH SITES (cluster apostrophe;
+word-final -ei/-ey; schwa '/î).  `transliterateCandidates(li, k, {pos})`
+enumerates both branches of every site (capped at 6 sites), ranks the
+combinations by the product of each branch's measured context probability
+(`BRANCH_PROBABILITIES` in the generated calibration file), and returns the
+top k with the distinguishing branch decisions named (near-deterministic
+branches, P≤.1 or ≥.9, are left out of the labels).  Top-1 IS the engine.
+Holdout: top-1 75.5%, top-2 83.0%, top-5 84.4% — the gain is front-loaded,
+so 5 is a UI cap, not a knob worth raising.
+
+Invariants and gotchas:
+- **The pick verb re-derives candidates by INDEX** — the chips
+  (lexeme-editor tupleSurface), `pickTransliteration`, and the proposal op
+  must all call `transliterateCandidates` with the SAME pos
+  (`singleSubentryPos(app, entry_id)`) or indexes disagree.
+- **Pick = bounded self-approve**: the picker chooses among
+  machine-generated candidates and cannot inject text, so
+  `approveFact(fact_id, {allowSelfApprove: true})` is sound there — free
+  text keeps the normal two-person path.  A pick's change_action is
+  `pick-transliteration`, its change_arg carries `pick=N` + the branch
+  decisions: a LABELED branch resolution, the highest-value training
+  signal (mine these before free-text corrections).
+- **`--calibrate` evaluates the table loaded at process start** — after
+  writing a fresh table, run it a second time to score it.  (First
+  symptom seen: top-1 "55%", which was the empty bootstrap table, not the
+  engine.  A differential test against a prototype settled it.)
+- Branch keys: `cluster:<before>|<son>|<obs>`, `ei:<posClass>`,
+  `schwa:<c1>|<c2>`; `branchP` uses exact key at n≥5, else the kind
+  marginal, else 0.5.  posClass is vai/vit/other/'' — splits must be
+  chosen on TRAIN (the 2-way vai/other variant flipped non-vai to a 0.50
+  coin and cost a holdout word; 3-way is what train supports).
+- **±1 holdout word is noise** — don't chase it, and don't ship a variant
+  that only train likes.  The pos split shipped because its probabilities
+  are TRUER per class (better ranking), not because top-1 moved.
+
 ### Confidence system invariants
 
 - Confidence = measured band accuracy; calibration is REGENERATED after any
@@ -211,6 +271,10 @@ arrives:
 
 ### Watch-outs
 
+- A PICKED alternate counts as 'corrected' in the corrections report (text
+  differs from the robot's) — right for the calibration audit, but when
+  mining corrections as a corpus, `change_action='pick-transliteration'`
+  rows are the pre-labeled subset; handle them first and separately.
 - The oracle GROWS as transliterations get approved — the corpus
   distribution shifts toward machine-influenced pairs over time.  Human
   *corrections* are the highest-value pairs; consider weighting them.
