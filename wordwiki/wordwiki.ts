@@ -3,11 +3,7 @@ import * as markup from '../liminal/markup.ts';
 import * as model from './model.ts';
 import * as renderPageEditor from './render-page-editor.ts';
 import * as server from '../liminal/http-server.ts';
-import * as strings from "../liminal/strings.ts";
-import * as utils from "../liminal/utils.ts";
-import * as random from "../liminal/random.ts";
 import {panic} from '../liminal/utils.ts';
-import * as workspace from './workspace.ts';
 import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
@@ -21,15 +17,11 @@ import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import {ScannedDocument, ScannedPage, Layer, BoundingGroup, selectScannedDocumentByFriendlyId, selectBoundingBoxesForGroup, getOrCreateNamedLayer, selectScannedPageByPageNumber, allScannedDocumentSchemaDml} from './scanned-document.ts';
-import {Assertion, updateAssertion, assertionPathToFields, getAssertionPath, highestTimestamp, selectAllAssertions, createAssertionDml, ensureAssertionColumns} from './assertion.ts';
-import {dictSchemaJson} from "./entry-schema.ts";
-import {pageEditor, PageEditorConfig, renderStandaloneGroup} from './render-page-editor.ts';
-import * as pageEditorModule from './page-editor.ts';
-import * as pageViewerModule from './page-viewer.ts';
+import {selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber, allScannedDocumentSchemaDml} from './scanned-document.ts';
+import {Assertion, createAssertionDml, ensureAssertionColumns} from './assertion.ts';
+import {pageEditor, renderStandaloneGroup} from './render-page-editor.ts';
 
 import {LiminalApp, type TestClientSession, type TestCase} from '../liminal/liminal.ts';
-import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
 import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
@@ -44,24 +36,11 @@ import {RecentWords} from './recent-words.ts';
 import {LexemeOps} from './lexeme-ops.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
-import * as categoryImport from './category-import.ts';
-import * as twitterPostImport from './twitter-post-import.ts';
 import * as lexicalForm from './lexical-form.ts';
-import * as instanceDir_ from './instance-dir.ts';
-import * as lexicalFormImport from './lexical-form-import.ts';
-import * as migrationVerify from './migration-verify.ts';
-import { validateVersionedDb, assertVersionedDbValid, validateVariantInvariants,
-         factViewsFromVersionedDb } from './versioned-db-validate.ts';
-import { variantPolicyByTag } from './variant-policy.ts';
-import { FindingsReport, assembleImportReport } from './findings.ts';
+import {DictionaryStore} from './dictionary-store.ts';
 import * as findings from './findings.ts';
-import { scanVariants, VariantReports } from './variant-scan.ts';
-import { migrateVariants } from './variant-migrate.ts';
-import { migrateStatus } from './status-migrate.ts';
-import { TransliterationReports, pairJunkReason } from './auto-transliterate.ts';
-import { repairAssertions } from './repair-assertions.ts';
-import { backfillPublication } from './publication-backfill.ts';
-import { normalizeShoeboxDates } from './creation-dates.ts';
+import { VariantReports } from './variant-scan.ts';
+import { TransliterationReports } from './auto-transliterate.ts';
 import * as markdown from '../liminal/markdown.ts';
 
 /**
@@ -69,27 +48,33 @@ import * as markdown from '../liminal/markdown.ts';
  */
 export class WordWiki extends LiminalApp {
     routes: Record<string, any>;
-    dictSchema: model.Schema;
-    #workspace: VersionedDb|undefined = undefined;
-    #entries: entry.Entry[]|undefined = undefined;
-    #entriesById: Map<number, entry.Entry>|undefined = undefined;
+
+    /** The versioned model layer (workspace + tx machinery + the
+     *  orthography-agnostic projections) - see dictionary-store.ts. */
+    readonly store: DictionaryStore;
+
+    // The SITE-WORLD caches: built over the store's projections but
+    // orthography-DEPENDENT (public gate, category grouping, collation).
+    // These are the ones that fork per orthography (fix-orthographies.md);
+    // they move onto a per-orthography SiteView next.  The store drops them
+    // whenever its own projections are invalidated.
+    #publishedEntries: entry.Entry[]|undefined = undefined;
     #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
-    #publishedEntries: any|undefined = undefined;
-    #publishedProjection: entry.Entry[]|undefined = undefined;
-    #publishedEntriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
-    #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
     #entryCountByPage: Array<[number, number]>|undefined = undefined;
-    #lastAllocatedTxTimestamp: number|undefined;
     sourceLangCollator = Intl.Collator('en'); // TODO make configurable XXX
-    
+
     /**
      *
      */
     constructor() {
         super();
 
-        // --- Load schema and create an empty workspace
-        this.dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+        this.store = new DictionaryStore({onDerivedInvalidated: () => {
+            this.#publishedEntries = undefined;
+            this.#entriesByCategory = undefined;
+            this.#entryCountByPage = undefined;
+        }});
+
         // --- Set up our routes
         // The page-editor / audio / publish routes are NOT spread in here as
         // bare top-level functions anymore: they live under the @route-gated
@@ -101,6 +86,27 @@ export class WordWiki extends LiminalApp {
             {wordwiki: this},
         );
     }
+
+    // ----- Store delegates ----------------------------------------------------
+    // The historical WordWiki surface for the model layer, preserved so the
+    // many existing consumers (and tests) keep working; new code should reach
+    // app.store directly, and consumers migrate as they are touched.
+    get dictSchema(): model.Schema { return this.store.dictSchema; }
+    get workspace(): VersionedDb { return this.store.workspace; }
+    get entries(): entry.Entry[] { return this.store.entries; }
+    get entriesById(): Map<number, entry.Entry> { return this.store.entriesById; }
+    get entriesByReferenceGroupId(): Map<number, entry.Entry> { return this.store.entriesByReferenceGroupId; }
+    get publishedProjection(): entry.Entry[] { return this.store.publishedProjection; }
+    get lastAllocatedTxTimestamp() { return this.store.lastAllocatedTxTimestamp; }
+    allocTxTimestamps(count: number=1, opts: {quiet?: boolean} = {}) {
+        return this.store.allocTxTimestamps(count, opts);
+    }
+    applyTransactions(assertions: Assertion[]) { this.store.applyTransactions(assertions); }
+    applyTransaction(assertions: Assertion[], opts: {quiet?: boolean} = {}) {
+        this.store.applyTransaction(assertions, opts);
+    }
+    requestWorkspaceReload() { this.store.requestWorkspaceReload(); }
+    requestEntriesJSONReload() { this.store.requestEntriesJSONReload(); }
 
     [serialize](): string {
         return 'wordwiki';
@@ -302,81 +308,6 @@ export class WordWiki extends LiminalApp {
         return templates.page('Orthography Table', this.orthographies.renderOrthographiesPage());
     }
 
-    get lastAllocatedTxTimestamp() {
-        // TODO as we add more tables, this will need to be extended.
-        return this.#lastAllocatedTxTimestamp ??= highestTimestamp('dict');
-    }
-
-    allocTxTimestamps(count: number=1, opts: {quiet?: boolean} = {}) {
-        const lastTxTimestamp = this.lastAllocatedTxTimestamp;
-        const nextTxTimestamp = timestamp.nextTime(lastTxTimestamp);
-        utils.assert(count>=1);
-        this.#lastAllocatedTxTimestamp = nextTxTimestamp + count - 1;
-        if(!opts.quiet)
-            console.info('alloced timestamp', {last: lastTxTimestamp, next: nextTxTimestamp, next_txt: timestamp.formatTimestampAsLocalTime(nextTxTimestamp)});
-        return nextTxTimestamp;
-    }
-
-    get workspace() {
-        return this.#workspace ??= (()=>{
-
-            // --- Create workspace
-            const workspace = new VersionedDb([this.dictSchema]);
-
-            // --- Do load of dictionary
-            const assertions = selectAllAssertions('dict').all();
-            assertions.forEach((a:Assertion)=>workspace.untrackedApplyAssertion(a));
-
-            // --- Fail loud on a structurally broken store rather than letting
-            //     derivations (and more edits) pile on top of corruption. The
-            //     incremental apply above catches chain/overlap/dup-id; this
-            //     adds the global/tail invariants (orphans, dangling heads,
-            //     containment). Run repair-assertions / verify-workspace if it
-            //     fires. (One O(n) sweep per full load - startup and post-
-            //     failed-tx reload, not per edit.)
-            assertVersionedDbValid(workspace);
-
-            return workspace;
-        })();
-    }
-
-    requestWorkspaceReload() {
-        this.#workspace = undefined;
-        this.requestEntriesJSONReload();
-    }
-
-    requestEntriesJSONReload() {
-        this.#entries = undefined;
-        this.#entriesByCategory = undefined;
-        this.#entriesById = undefined;
-        // This needs to be more complicated when publishing multiple dialects.
-        this.#publishedEntries = undefined;
-        this.#publishedProjection = undefined;
-        this.#publishedEntriesByCategory = undefined;
-        this.#entriesByReferenceGroupId = undefined;
-        this.#entryCountByPage = undefined;
-    }
-
-    /**
-     *
-     */
-    get entries(): entry.Entry[] {
-        return this.#entries ??=
-            new workspace.CurrentTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry;
-    }
-
-    /**
-     * The PUBLISHED projection of the dictionary (publication-model.md): every
-     * entry built from its published-current facts (published_to=END_OF_TIME),
-     * not its valid-current facts. After the Phase 0 backfill this equals the
-     * valid projection for approved data; once pending edits exist it diverges
-     * (the public sees the last approved value, not the in-flight one).
-     */
-    get publishedProjection(): entry.Entry[] {
-        return this.#publishedProjection ??=
-            new workspace.PublishedTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry ?? [];
-    }
-
     /**
      * The entries the public site renders - the COMPOSITION RULE
      * (fix-orthographies.md "Status"): the base projection is the PUBLISHED
@@ -390,121 +321,6 @@ export class WordWiki extends LiminalApp {
         return this.#publishedEntries ??=
             Array.from(this.publishedProjection.filter(
                 e => entry.entryIsPublicIn(e, entry.PUBLIC_SITE_ORTHOGRAPHY)));
-    }
-
-    get entriesByReferenceGroupId(): Map<number, entry.Entry> {
-        return this.#entriesByReferenceGroupId ??= (()=>{
-            const refToEntry: Array<[number, entry.Entry]> = this.entries.flatMap(e=>e.subentry.flatMap(s=>
-                s.document_reference.map(d=>[d.bounding_group_id, e] as [number, entry.Entry])));
-            return new Map(refToEntry);
-        })();
-    }
-
-    get entriesById(): Map<number, entry.Entry> {
-        return this.#entriesById ??= (()=>
-            new Map(this.entries.map(e=>[e.entry_id, e])))();
-    }
-    
-    applyTransactions(assertions: Assertion[]) {
-
-        // --- Partition assertions into txes by valid_from
-        const txIds = assertions.map(a=>a.valid_from);
-        utils.assert(txIds.join(',') === txIds.toSorted((a,b)=>a-b).join(','),
-                     'assertions in a tx group must be in valid_from order');
-        const transactionsById = Map.groupBy(assertions, a=>a.valid_from);
-
-        try {
-            db().transaction(()=>{
-                Array.from(transactionsById.values()).forEach(a=>this.applyTransaction(a));
-            });
-        } catch (e) {
-            // --- Request workspace reload
-            this.requestWorkspaceReload();
-            throw e;
-        }
-    }
-
-    /**
-     * This should probaly move to workspace.
-     *
-     */
-    applyTransaction(assertions: Assertion[], opts: {quiet?: boolean} = {}) {
-
-        if(!opts.quiet)
-            console.info('Applying TX',
-                         JSON.stringify(assertions, undefined, 2));
-
-        // --- Allocate a new server timestamp for this tx
-        //     TODO we may want to allocate multiple here to give client new base.
-        const serverTimestamp = this.allocTxTimestamps(1, opts);
-
-        // --- No assertions can be trivially applied (we check this
-        //     because our consistency checks can't handle this case)
-        if(assertions.length === 0)
-            return;
-
-        // ---- Validate that this is a single tx (all assertions have the same
-        //      valid_from)
-        // THIS WILL NOT BE TRUE FOR OUR NEW SAVE FEATURE, IT CONSISTS OF MULTIPLE TXes.
-        // (with potential repeated writes to the same assertion).
-        // HOW TO HANDLE THIS:
-        //  - they will be in order - do we want to break it down into separate txes
-        //    (or have that be part of the update protocol so we don't have to reverse
-        //    engineer it.
-        //  - do we want applying all the TXes to be one DB transaction? - if not, we can
-        //    just break it down into multiple Txes and apply them separately.
-        //  - this is probably fine for now (we can wrap the whole outer thing in a DB tx
-        //    to ...)
-
-        const clientTimestamp = assertions[0].valid_from;
-        assertions.forEach(a=>{
-            if(a.valid_from !== clientTimestamp)
-                throw new Error(`All assertions in a transaction must have the same timestamp`);
-            if(!(a.valid_to === timestamp.END_OF_TIME || a.valid_to === clientTimestamp))
-                throw new Error(`Assertions can either be valid to the tx time (a delete tombstone) or valid till the end of time`);
-        });
-
-        try {
-            // --- Rewrite client timestamps to our newly allocated server timestamp
-            assertions.forEach(a=>{
-                if(a.valid_from === clientTimestamp)
-                    a.valid_from = serverTimestamp;
-                if(a.valid_to === clientTimestamp)
-                    a.valid_to = serverTimestamp;
-            });
-
-            if(!opts.quiet)
-                console.info('Applying TX after advancing to server timestamp',
-                             serverTimestamp,
-                             JSON.stringify(assertions, undefined, 2));
-
-            // --- Apply assertions to workspace (throwing exception if incompatible)
-            // TODO swith to an apply method that gives us enough info to update the valid_to
-            //      on the prev record.
-            const updatedPrevAssertions =
-                assertions.map(a=>this.workspace.applyProposedAssertion(a));
-
-            // --- Apply assertions to DB (in a TX) doing some confirmation as we go.
-            db().transaction(()=>{
-                // Trick here is that we need prev txids - workspace can give us those.
-                // Then can load them an confirm that their valid_to matches, then update.
-                // We can get the whole prev anyway.
-                // For now, just persist as they are.
-                // TODO XXX embedding 'dict' in here is BAD (also in insert)
-                updatedPrevAssertions.forEach(p=>
-                    p && updateAssertion('dict', p.assertion_id, ['valid_to'], {valid_to: p.valid_to}));
-                assertions.forEach(a=>
-                    db().insert<Assertion, 'assertion_id'>('dict', a, 'assertion_id'));
-            });
-
-            // --- Request rebuld of entries JSON
-            this.requestEntriesJSONReload();
-
-        } catch (e) {
-            // --- Request workspace reload
-            this.requestWorkspaceReload();
-            throw e;
-        }
     }
 
     /**
@@ -683,9 +499,6 @@ export class WordWiki extends LiminalApp {
             ['br', {}],
             ['h3', {}, 'Search'],
             this.searchForm(),
-            // --- Add new entry button
-            // ['div', {},
-            //  ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
 
             ['br', {}],
             ['h3', {}, 'Review'],
@@ -706,8 +519,6 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],
-             //['li', {}, ['a', {href:'/ww/wordwiki.entriesByEnglishGloss()'}, 'Entries by English Gloss']],
             ],
 
             ['br', {}],
@@ -791,21 +602,6 @@ export class WordWiki extends LiminalApp {
             matches = this.entries;
         }
 
-        // if(filters.length > 0) {
-        //     for(const entry of matches) {
-
-        //     }
-        // }
-
-
-        // const entriesWithHouseGloss = search === '' ? [] :
-        //     this.entries.filter(
-        //         entry=>entry.subentry.some(
-        //             subentry=>subentry.gloss.some(
-        //                 gloss=>gloss.gloss.startsWith(search))));
-
-        //console.info('entriesWithHouseGloss', JSON.stringify(entriesWithHouseGloss, undefined, 2));
-
         const title = ['Query for ', search];
 
         function renderEntryItem(e: entry.Entry): any {
@@ -820,9 +616,6 @@ export class WordWiki extends LiminalApp {
             // --- Query form
             this.searchForm(search),
 
-            // --- Add new entry button
-            // ['div', {},
-            //  ['button', {onclick:'imports.launchNewLexeme()'}, 'Add new Entry']],
             // --- Results
             ['ul', {},
              matches.slice(0, 500).map(e=>['li', {}, renderEntryItem(e)]),
@@ -832,31 +625,6 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
 
-    searchDocumentsForm(search?: string): any {
-        return [
-            ['form', {class:'row row-cols-lg-auto g-3 align-items-center', name: 'search', method: 'get', action:'/ww/wordwiki.searchDocumentsPage(query)'},
-
-             // --- Search text row
-             ['div', {class:'col-12'},
-              ['label', {for:'searchText', class:'visually-hidden'}, 'Search Text'],
-              ['div', {class:'input-group'},
-               ['input', {type:'text',
-                          class:'form-control',
-                          id:'searchText', name:'searchText',
-                          value:search ?? ''}]]
-             ], // row
-
-             ['div', {class:'col-12'},
-              ['button', {type:'submit', class:'btn btn-primary'}, 'Search Documents']],
-            ], // form
-        ];
-    }
-
-
-    @route(authenticated)
-    searchDocumentsPage(query?: {searchText?: string}): any {
-        throw new Error('not impl yetc');
-    }
 
     get entriesByCategory(): Map<string, entry.Entry[]> {
         return this.#entriesByCategory ??= (()=>{
@@ -890,16 +658,6 @@ export class WordWiki extends LiminalApp {
                 entry=>entry.subentry.some(
                     subentry=>subentry.category.some(
                         cat=>cat.category === category)));        
-    }
-
-    getCategories0(): Map<string, number> {
-        return new Map(Array.from(Map.groupBy(this.publishedEntries.
-            flatMap(e=>
-                e.subentry.flatMap(s=>
-                    s.category.flatMap(c=>
-                        c.category))), category=>category)
-            .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
-            .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]));
     }
 
     getCategories(): Map<string, number> {
@@ -993,39 +751,6 @@ export class WordWiki extends LiminalApp {
                     !todo.done &&
                     (restrictToTask == null || todo.todo === restrictToTask) &&
                     (restrictToUser == null || todo.assigned_to === restrictToUser)));
-    }
-    
-    variantReport(): any {
-        
-        function findAllVariantFieldValues(entry: Record<string, any>,
-                                           v: Record<string, any>,
-                                           variants: Set<string>) {
-            const variant = v['variant'];
-            if(variant) {
-                variants.add(variant);
-                if(variant !== 'mm-li' && variant !== 'mm-sf')
-                    console.info('VARIANT:', variant, typeof variant, entry);
-            }
-            for(const [key, val] of Object.entries(v)) {
-                //console.info('CONSIDERING', key, val);
-                if(Array.isArray(val))
-                    val.forEach(a=>findAllVariantFieldValues(entry, a, variants));
-                else if(val != null && utils.isObjectLiteral(val))
-                    findAllVariantFieldValues(entry, val, variants);
-            }
-        }
-
-        const variants = new Set<string>();
-        this.entries.forEach(entry=>findAllVariantFieldValues(entry, entry, variants));
-        
-        const title = 'Variant Report';
-        const body = ['div', {}, 'Variant report',
-                      ['ul', {},
-                       Array.from(variants.values()).map(v=>['li', {}, v])
-                      ],
-                     ];
-        
-        return templates.pageTemplate({title, body});
     }
 
     @route(authenticated)
@@ -1200,137 +925,6 @@ export class WordWiki extends LiminalApp {
         return templates.pageTemplate({title, body});
     }
 
-    @route(authenticated)
-    entriesByPronunciation(): any {
-        throw new Error('no working yet');
-       const entriesByPronunciation = utils.multi_partition_by(
-           this.entries,
-           e=>e.subentry.flatMap(s=>s.pronunciation_guide.flatMap(p=>p.pronunciation_guide)));
-                                             
-       const entriesByPronunciationSorted =
-           new Map(Array.from(entriesByPronunciation.entries()).
-           toSorted((a, b) =>
-               this.sourceLangCollator.compare(a[0], b[0])));
-           
-       
-
-       //console.info('SORTED', entriesByPronunciationSorted);
-       Array.from(entriesByPronunciationSorted.entries()).forEach((pronunciation, entries) => console.info('pron', pronunciation, 'entries', entries));
-        // function renderEntryItem(e: entry.Entry): any {
-        //     return [
-        //         (getTwitterPostStatusForEntry(e) ?? 'Not posted on twitter'),
-        //         ' -- ', 
-        //         ['a', {href: `/ww/wordwiki.entry(${e.entry_id})`}, entry.renderEntryCompactSummaryCore(e)]
-        //     ];
-        // }
-
-        const title = "Entries by Pronunciation";
-        const body = [
-            ['h2', {}, title],
-
-            ['div', {},
-             ['ul', {},
-              Array.from(entriesByPronunciationSorted.entries()).map((pronunciation, entries) => ['li', {}, pronunciation])
-             ], // ul
-            ] // div
-        ];
-
-        return templates.pageTemplate({title, body});
-    }
-    
-    @route(authenticated)
-    entriesByEnglishGloss(): any {
-    }
-    
-    
-    // entriesByStatusDirectory(): any {
-    //     const title = `Entries By Status`;
-
-    //     const cats: [string, number][] = Array.from(Map.groupBy(this.entries.
-    //         flatMap(e=>
-    //             e.status.flatMap(s=>s.status))), e=>e)
-    //             .toSorted((a: [string, number], b: [string, number])=>b[1]-a[1]);
-
-
-    //     const body = [
-    //         ['h1', {}, title],
-    //         ['ul', {},
-    //          cats.map(cat=>
-    //              ['li', {}, ['a',
-    //                          {href:`/ww/wordwiki.entriesForStatus(${JSON.stringify(cat[0])})`},
-    //                          cat[0], ` (${cat[1]} entries)`]]),
-    //         ]
-    //     ];
-
-    //     return templates.pageTemplate({title, body});
-    // }
-
-    @route(authenticated)
-    entriesForStatus(status?: string): any {
-        status = String(status ?? '');
-
-        const entriesForStatus = status === '' ? [] :
-            this.entries.filter(
-                entry=>entry.status.some(
-                    s=>s.status === status));
-        const title = ['Entries for status ', status];
-
-        function renderEntryItem(e: entry.Entry): any {
-            return [
-                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e), {pencil: false})
-            ];
-        }
-
-        const body = [
-            ['h2', {}, title],
-
-            // --- Add new entry button
-            ['div', {},
-             ['ul', {},
-              entriesForStatus
-                  .map(e=>['li', {}, renderEntryItem(e)]),
-             ] // ul
-            ] // div
-        ];
-
-        return templates.pageTemplate({title, body});
-    }
-
-
-    emptyBoundingBoxes(): any {
-
-    }
-
-    entriesWithProblem(): any {
-        const title = `Entries With empty example translation`;
-
-        const entriesWithProblem =
-            this.entries.filter(
-                entry=>entry.subentry.some(
-                    subentry=>subentry.example.some(
-                        example=>example.example_translation.some(
-                            example_translation=>example_translation.example_translation === ''))));
-
-        function renderEntryItem(e: entry.Entry): any {
-            return [
-                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e))
-            ];
-        }
-
-        const body = [
-            ['h2', {}, title],
-
-            // --- Add new entry button
-            ['div', {},
-             ['ul', {},
-              entriesWithProblem
-                  .map(e=>['li', {}, renderEntryItem(e)]),
-             ] // ul
-            ] // div
-        ];
-
-        return templates.pageTemplate({title, body});
-    }
 
     get entryCountByPage(): Array<[number, number]> {
         return this.#entryCountByPage ??= (()=>{
@@ -1362,31 +956,6 @@ export class WordWiki extends LiminalApp {
     @route(authenticated)
     entriesByPDMPageDirectory(): any {
         const title = `Entries by PDM Page Directory`;
-
-//         const pdmDocumentId =
-//             selectScannedDocumentByFriendlyId()
-//                 .required({friendly_document_id: 'PDM'})
-//                 .document_id;
-
-//         console.time('entryCountByPage');
-//         const entryCountByPage = db().
-//             all<{page_number: number, entry_count: number}>(
-//                 block`
-// /**/     SELECT pg.page_number AS page_number, COUNT(DISTINCT bg.bounding_group_id) as entry_count
-// /**/       FROM dict AS ref
-// /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
-// /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
-// /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
-// /**/       WHERE ref.ty = 'ref' AND
-// /**/             bg.document_id = :document_id AND
-// /**/             bb.page_id IS NOT NULL
-// /**/       GROUP BY pg.page_number ORDER BY pg.page_number`, {document_id: pdmDocumentId});
-//         console.timeEnd('entryCountByPage');
-
-        //const entryCountByPageMap = Map.fromEntr
-
-        
-        // console.info('entryCountByPage', entryCountByPage);
 
         const entryCountByPage = this.entryCountByPage;
         
@@ -1434,19 +1003,6 @@ export class WordWiki extends LiminalApp {
 /**/             bb.page_id = :page_id
 /**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id: pdmPageId});
 
-
-//         const entriesInDocRefOrder = db().
-//             all<{page_number: number, x: number, bounding_group_id: number, entry_id: number}, {document_id:number}>(
-//                 block`
-// /**/     SELECT DISTINCT pg.page_number AS page_number, bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
-// /**/       FROM dict AS ref
-// /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
-// /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
-// /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id
-// /**/       WHERE ref.ty = 'ref' AND
-// /**/             pg.page_number = :page_number AND
-// /**/             bg.document_id = :document_id
-// /**/       ORDER BY pg.page_number, bb.y, bb.x, ref.id1`, {document_id: pdmDocumentId});
         console.timeEnd('entriesInDocRefOrder');
 
         console.info('entriesForPageInDocRefOrder', entriesInDocRefOrder);
@@ -1777,712 +1333,14 @@ export function getWordWiki(): WordWiki {
     return wordwiki ??= new WordWiki();
 }
 
+
 if (import.meta.main) {
-    const args = Deno.args;
-    const command = args[0];
-    const ww = getWordWiki();
-
-    // The FINDINGS PUBLISH PATH (fix-orthographies.md): every pipeline
-    // subcommand accepts --report <path.md>; the migrator's own LOG CALLBACK
-    // (never raw stdout - the db layer's noise stays out by construction)
-    // accumulates into a findings fragment alongside the console echo, and a
-    // CRASH still writes the fragment with the error as a finding - so the
-    // assembled import report always tells the whole story.
-    // --report=<path> (preferred: never collides with positional args) or
-    // --report <path>.
-    const reportPathArg = (): string | undefined => {
-        const eq = args.find(a => a.startsWith('--report='));
-        if(eq) return eq.slice('--report='.length);
-        const i = args.indexOf('--report');
-        return i >= 0 ? args[i + 1] : undefined;
-    };
-    const dbDescription = () =>
-        `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
-    const stepReport = (title: string) => {
-        const report = new FindingsReport(title, {sourceDb: dbDescription()});
-        const section = report.section('Log');
-        const reportPath = reportPathArg();
-        const write = () => { if(reportPath) Deno.writeTextFileSync(reportPath, report.toMarkdown()); };
-        return {
-            report,
-            log: (m: string) => section.info(m),
-            finish: write,
-            crash: (e: unknown) => {
-                report.section('CRASHED').finding(
-                    `step failed: ${e instanceof Error ? e.message : String(e)}`);
-                write();
-            },
-        };
-    };
-    switch(command) {
-        case 'serve': {
-            const port = Number(Deno.env.get('WORDWIKI_PORT') ?? '9000');
-            const instanceDir = Deno.cwd();
-
-            // Verify the instance is actually set up (don't silently serve an
-            // empty/mis-pointed dir), then take the db write-lock.
-            const {errors, warnings} = instanceDir_.checkInstanceStores(instanceDir);
-            for(const w of warnings) console.warn(`WARNING: instance store ${w}`);
-            if(errors.length > 0) {
-                console.error(`wordwiki instance dir '${instanceDir}' is not set up - refusing to start:`);
-                for(const e of errors) console.error(`  ${e}`);
-                Deno.exit(1);
-            }
-            instanceDir_.acquireDbLock(instanceDir);
-
-            // Both are idempotent (all IF NOT EXISTS): createAllTables also
-            // APPLIES NEW INDEX LINES to an existing db - without it a new
-            // index in createAssertionDml never reaches long-lived instances
-            // (this bit the fixed valid_to partial indexes once already).
-            security.runSystem(() => { ww.ensureNewStyleTables(); createAllTables(); });
-
-            // Announce exactly which instance/db/port we are on (so a glance at
-            // the log catches "I thought this was the dev/prod instance").
-            console.info(`wordwiki serving:`);
-            console.info(`  instance dir : ${instanceDir}`);
-            console.info(`  database     : ${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()}  [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`);
-            console.info(`  port         : ${port}`);
-
-            // Legacy-template pages don't go through coercePageResult, so the
-            // navbar's test-client-link default is set once here instead.
-            templates.setDefaultShowTestClientLink(ww.isTestDb);
-            ww.startServer({hostname: 'localhost', port,
-                            allowSchemaMismatch: args.includes('--allow-schema-mismatch')});
-            break;
-        }
-
-        // Compare the db against the declared (new-style) table model; with
-        // --apply, bring it up to date (additive changes only - see
-        // liminal/schema-upgrade.ts; a backup is taken first).  The legacy
-        // raw-DML tables (scanned documents, dict, ...) are not covered: they
-        // show up as ignorable notes.  Stop the server before --apply.
-        case 'upgrade-db': {
-            const code = security.runSystem(() =>
-                schemaUpgrade.upgradeDbCommand(ww.tables, args.slice(1)));
-            Deno.exit(code);
-            break;
-        }
-
-        // One-time migration: replace the old (never-used) raw-DML user table
-        // with the new liminal-style one and seed it from the hardcoded users
-        // map in entry-schema.ts.  Refuses if the old table has rows.
-        case 'upgrade-users': {
-            security.runSystem(() => {
-                const userCount = (() => {
-                    try { return db().prepare<{n: number}, {}>('SELECT COUNT(*) AS n FROM user').required({}).n; }
-                    catch (_e) { return 0; }  // no user table at all
-                })();
-                const hasNewShape = (() => {
-                    try { db().prepare('SELECT permissions FROM user LIMIT 1').all({}); return true; }
-                    catch (_e) { return false; }
-                })();
-                if(userCount > 0 && !hasNewShape)
-                    throw new Error(`user table has ${userCount} rows but the OLD schema - migrate manually`);
-                if(!hasNewShape) {
-                    console.info('dropping old-style empty user table');
-                    db().execute('DROP TABLE IF EXISTS user', {});
-                }
-                ww.ensureNewStyleTables();
-                const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
-                const pw = user.seedPasswordsFromFile(ww.users, ww.passwordHash,
-                    new URL('../user-passwords.json', import.meta.url).pathname);
-                console.info(`user table upgraded: ${inserted} users seeded, ${skipped} already present, ` +
-                             `${pw.set} passwords seeded (${pw.kept} already set)`);
-                console.info('set a password with: wordwiki.ts set-password <username> <password>');
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        // Set (or replace) a user's password.  Run with the server stopped
-        // (SQLite single writer).
-        case 'set-password': {
-            const [username, password] = [args[1], args[2]];
-            if(!username || !password)
-                throw new Error('usage: set-password <username> <password>');
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const u = ww.users.byUsername.first({username})
-                    ?? panic(`no user with username '${username}' (run upgrade-users first?)`);
-                ww.passwordHash.setPassword(u.user_id, password);
-                console.info(`password set for ${u.name} (${username})`);
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        // Everything a freshly-pulled PRODUCTION db needs to run as the dev
-        // db: upgrade/seed the user table (production still has the old empty
-        // one), seed passwords from user-passwords.json, and mark the db
-        // 'dev'.  Re-run after every pull until the new version IS production.
-        //   ./wordwiki.sh post-pull
-        // Stop the server and nothing else.  (wordwiki.sh stops any running
-        // server before dispatching ANY command, so by the time we get here
-        // the work is done - this command just gives the stop a name for
-        // scripts like importWordWikiV1Db.sh.)
-        case 'stop':
-            console.info('server stopped (if one was running)');
-            Deno.exit(0);
-            break;
-
-        case 'post-pull': {
-            security.runSystem(() => {
-                // Same logic as upgrade-users: replace an old-shape (empty)
-                // user table, create anything missing, seed from the
-                // entry-schema users map (idempotent - existing rows kept).
-                const hasNewShape = (() => {
-                    try { db().prepare('SELECT permissions FROM user LIMIT 1').all({}); return true; }
-                    catch (_e) { return false; }
-                })();
-                if(!hasNewShape) {
-                    const userCount = (() => {
-                        try { return db().prepare<{n: number}, {}>('SELECT COUNT(*) AS n FROM user').required({}).n; }
-                        catch (_e) { return 0; }
-                    })();
-                    if(userCount > 0)
-                        throw new Error(`user table has ${userCount} rows but the OLD schema - migrate manually`);
-                    console.info('dropping old-style empty user table');
-                    db().execute('DROP TABLE IF EXISTS user', {});
-                }
-                ww.ensureNewStyleTables();
-                const {inserted, skipped} = user.seedUsersFromEntrySchema(ww.users);
-                // Everyone (including the 'test' user) keeps the password
-                // from the (never-checked-in) user-passwords.json - fills in
-                // only users with no password yet.
-                const pw = user.seedPasswordsFromFile(ww.users, ww.passwordHash,
-                    new URL('../user-passwords.json', import.meta.url).pathname);
-                ww.config.setDbPurpose('dev');
-                console.info(`post-pull complete: ${inserted} users seeded (${skipped} already present), ` +
-                             `${pw.set} passwords seeded (${pw.kept} already set), db marked 'dev'`);
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        // Import the batch re-categorization (see categorization/ and
-        // category-import.ts): seed the category table (new scheme + internal
-        // + retired ~old-*) and rewrite every entry's category tuples via
-        // applyTransaction.  Idempotent - re-run freely after pulls; entries
-        // already in the desired state are skipped.  This is the prototype
-        // for the eventual production import, so it refuses a production-
-        // marked db unless --allow-production is given.
-        //   ./wordwiki.sh import-categories [categorization-dir]
-        //                  [--username=NAME] [--allow-production]
-        case 'import-categories': {
-            const reportValueIx = args.indexOf('--report') + 1;   // 0 when absent
-            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--') && i !== reportValueIx)
-                ?? new URL('../categorization', import.meta.url).pathname;
-            // Stamped with the reserved automation identity by default
-            // (history UI collapses '~' authors; restore refuses to cross
-            // the migration) - --username=NAME for a human-attributed run.
-            const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
-                ?? '~category-import';
-            const step = stepReport('Import categories');
-            try {
-                security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                        throw new Error("db is marked db_purpose='production' - " +
-                                        'run with --allow-production if you really mean it');
-                    user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
-                    if(!ww.users.byUsername.first({username}))
-                        throw new Error(`--username '${username}' is not in the user table`);
-                    const schemeText = Deno.readTextFileSync(`${dir}/scheme.md`);
-                    const assignmentsText = Deno.readTextFileSync(`${dir}/assignments.jsonl`);
-                    const stats = categoryImport.importCategories(ww, {
-                        schemeText, assignmentsText, username,
-                        log: step.log,
-                    });
-                    // The idempotency proof for the migration recipe: a re-run
-                    // against an already-migrated db must be a pure no-op.
-                    if(args.includes('--expect-no-changes')) {
-                        const changes = stats.rewrite.entriesRewritten
-                            + stats.seed.seededNew + stats.seed.seededInternal + stats.seed.seededOld
-                            + stats.mute.valuesRenamed;
-                        if(changes > 0)
-                            throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
-                                            'the previous run did not reach the fixed point');
-                        step.log('idempotency confirmed: re-run made no changes');
-                    }
-                });
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(0);
-            break;
-        }
-
-        // Backfill the twitter-post attribute from the retired legacy Shoebox
-        // dump (word-a-day kept being posted there for ~2 years post-retirement;
-        // see twitter-post-import.ts).  Matches each legacy lexeme to a current
-        // entry by Listuguj spelling and adds a twitter-post to unambiguous
-        // matches that lack one; homonyms/unmatched are skipped and logged.
-        // Idempotent (re-run adds nothing); refuses production without
-        // --allow-production.  Runs BEFORE backfill-publication so the new
-        // rows get born-approved.
-        //   ./wordwiki.sh import-twitter-posts [legacy-file]
-        //                  [--username=NAME] [--allow-production] [--expect-no-changes]
-        case 'import-twitter-posts': {
-            const reportValueIx = args.indexOf('--report') + 1;   // 0 when absent
-            const file = args.find((a, i) => i >= 1 && !a.startsWith('--') && i !== reportValueIx)
-                ?? new URL('../legacy-mmo.txt', import.meta.url).pathname;
-            const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
-                ?? twitterPostImport.TWITTER_POST_IMPORT_USER;
-            const step = stepReport('Import twitter posts');
-            try {
-              security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                user.seedUsersFromEntrySchema(ww.users);   // the ~ import identities ride along
-                if(!ww.users.byUsername.first({username}))
-                    throw new Error(`--username '${username}' is not in the user table`);
-                const legacyText = Deno.readTextFileSync(file);
-                const stats = twitterPostImport.importTwitterPosts(ww, legacyText, {
-                    username, log: step.log,
-                });
-                // --report-skipped=<file>: (re)write the hand-off list of the
-                // homonyms/unmatched a human must place in production, with
-                // live links to the production editor.  Regenerated every
-                // migrate so the committed skipped-twitter-posts.md tracks the
-                // shrinking list.
-                const reportPath = args.find(a => a.startsWith('--report-skipped='))
-                    ?.slice('--report-skipped='.length);
-                if(reportPath) {
-                    Deno.writeTextFileSync(reportPath, twitterPostImport.renderSkippedReport(stats));
-                    step.log(`wrote skipped-post report (${stats.ambiguous + stats.unmatched} entries) to ${reportPath}`);
-                }
-                if(args.includes('--expect-no-changes')) {
-                    if(stats.added > 0)
-                        throw new Error(`--expect-no-changes: the import added ${stats.added} twitter-posts`);
-                    step.log('idempotency confirmed: re-run made no changes');
-                }
-              });
-              step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(0);
-            break;
-        }
-
-        // Read-only post-migration sanity checks (see migration-verify.ts);
-        // exit 1 on violated invariants.  [dir] supplies scheme.md for the
-        // exact scheme-vs-table check (defaults like import-categories).
-        // Idempotent structural repairs of the assertion store (repair-
-        // assertions.ts): fixes corruption surfaced by verify-workspace -
-        // currently dangling chain heads. A no-op on a clean db, so it rides
-        // in the repeatable migration flow (importWordWikiV1Db.sh). Refuses a
-        // production db without --allow-production, like the imports.
-        case 'repair-assertions': {
-            const step = stepReport('Repair assertions');
-            try {
-                security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                        throw new Error("db is marked db_purpose='production' - " +
-                                        'run with --allow-production if you really mean it');
-                    const stats = repairAssertions({log: step.log});
-                    step.log(`repair-assertions: ${stats.danglingChainHeadsFixed} dangling chain head(s) fixed, ` +
-                             `${stats.legacyPublishedPlaceholdersCleared} legacy published placeholder row(s) cleared, ` +
-                             `${stats.orphanedChildrenTombstoned} orphaned live child(ren) tombstoned`);
-                });
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(0);
-            break;
-        }
-
-        // Phase 0 of the publication model (publication-backfill.ts): born-approve
-        // the existing accepted state - the current live fact of every chain,
-        // whatever its entry's status (the cutover blesses the whole offline-
-        // approved dictionary) - by mute-in-place (no approval rows). Idempotent;
-        // refuses production without --allow-production. --expect-no-changes
-        // proves a re-run is a no-op.
-        case 'backfill-publication': {
-            const step = stepReport('Publication backfill (Phase 0)');
-            try {
-                security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                        throw new Error("db is marked db_purpose='production' - " +
-                                        'run with --allow-production if you really mean it');
-                    const stats = backfillPublication({log: step.log, config: ww.config});
-                    if(args.includes('--expect-no-changes')) {
-                        if(stats.bornApproved > 0)
-                            throw new Error(`--expect-no-changes: the backfill born-approved ${stats.bornApproved} facts`);
-                        step.log('idempotency confirmed: re-run made no changes');
-                    }
-                });
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(0);
-            break;
-        }
-
-        // Normalize the legacy shoebox-date attribute values to ISO yyyy-mm-dd
-        // (creation-dates.ts): the imported lexemes' creation dates, made
-        // machine-readable in place (mute-in-place like the backfill - no new
-        // assertion rows; superseded versions keep their original text).
-        // Idempotent; refuses production without --allow-production.
-        // --expect-no-changes proves a re-run is a no-op.
-        case 'normalize-shoebox-dates': {
-            const step = stepReport('Normalize shoebox dates');
-            try {
-                security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                        throw new Error("db is marked db_purpose='production' - " +
-                                        'run with --allow-production if you really mean it');
-                    const stats = normalizeShoeboxDates({log: step.log});
-                    if(args.includes('--expect-no-changes')) {
-                        if(stats.normalized > 0)
-                            throw new Error(`--expect-no-changes: normalized ${stats.normalized} shoebox dates`);
-                        step.log('idempotency confirmed: re-run made no changes');
-                    }
-                });
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(0);
-            break;
-        }
-
-        // Structural validation of the persisted versioned model (read-only):
-        // load the whole dict into the workspace and run the invariant sweep
-        // (versioned-db-validate.ts). Exit 1 on any problem.
-        // The variant (orthography) invariants run too, but in WARN MODE:
-        // pre-migration data violates them wholesale, so they are aggregated
-        // as warnings and do not affect the exit code until the orthography
-        // migration lands (fix-orthographies.md).
-        case 'verify-workspace': {
-            const step = stepReport('Verify workspace (structural invariants)');
-            let problemCount = 0;
-            try {
-                const {problems, variantWarnings} = security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    const facts = factViewsFromVersionedDb(ww.workspace);
-                    return {
-                        problems: validateVersionedDb(ww.workspace),
-                        variantWarnings: validateVariantInvariants(
-                            facts, variantPolicyByTag(ww.dictSchema),
-                            orthography.orthographyVocabulary(ww.orthographies)),
-                    };
-                });
-                problemCount = problems.length;
-                if(problems.length > 0) {
-                    const sect = step.report.section('STRUCTURAL PROBLEMS');
-                    for(const p of problems)
-                        sect.finding(`[${p.invariant}] ${p.path}: ${p.detail}`);
-                }
-                // Aggregate the (numerous, expected) variant warnings per
-                // invariant+tag, with a few sample paths each.
-                const groups = new Map<string, {n: number, samples: string[]}>();
-                for(const w of variantWarnings) {
-                    const tag = w.path.split('/').pop()?.split(':')[0] ?? '?';
-                    const key = `${w.invariant} on ${entry.relationDisplayName(tag)}`;
-                    const g = groups.get(key) ?? {n: 0, samples: []};
-                    g.n++;
-                    if(g.samples.length < 3) g.samples.push(w.path);
-                    groups.set(key, g);
-                }
-                for(const [key, g] of groups)
-                    step.log(`WARNING [${key}] ×${g.n} - e.g. ${g.samples.join(', ')}`);
-                step.log(`verify-workspace: ${problems.length} problem(s), ` +
-                         `${variantWarnings.length} variant warning(s) (warn mode)`);
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(problemCount === 0 ? 0 : 1);
-            break;
-        }
-
-        // Scan current variant (orthography) values against the schema's $
-        // flags (fix-orthographies.md "Data scan") - read-only, reported via
-        // the findings API.  The $notVariant drop-gate PASS is a precondition
-        // the orthography migration re-checks at run time; the dirt findings
-        // (blank backfill workload, off-vocabulary values, ...) do not fail
-        // the scan.  Exit 0 iff the gate passes.
-        //   ./wordwiki.sh scan-variants [--report import-report/scan-variants.md]
-        case 'scan-variants': {
-            const reportIx = args.indexOf('--report');
-            const reportPath = reportIx >= 0 ? args[reportIx + 1] : undefined;
-            const gatePassed = security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
-                const report = new FindingsReport('Variant (orthography) scan', {sourceDb});
-                const result = scanVariants(report, ww.dictSchema,
-                    orthography.orthographyVocabulary(ww.orthographies));
-                if(reportPath) {
-                    Deno.writeTextFileSync(reportPath, report.toMarkdown());
-                    console.info(`wrote ${reportPath}`);
-                }
-                console.info(`scan-variants: ${report.findingCount} finding(s); ` +
-                             `drop gate ${result.gatePassed ? 'PASS' : 'FAIL'}`);
-                return result.gatePassed;
-            });
-            Deno.exit(gatePassed ? 0 : 1);
-            break;
-        }
-
-        // THE variant (orthography) data migration - fix-orthographies.md
-        // "Migration mechanics".  Mute-in-place on current rows, idempotent,
-        // preconditions re-checked at run time (flagged schema, drop gate,
-        // mapping coverage - see variant-migrate.ts, incl. the per-tag blank
-        // backfill + value-fix DECISION TABLES).  Hand-triage rows are left
-        // for the live cleanup report (wordwiki.variants.cleanupReport()).
-        //   ./wordwiki.sh migrate-variants [--report path.md]
-        //   ./wordwiki.sh migrate-variants --expect-no-changes    # idempotency proof
-        //   ./wordwiki.sh migrate-variants --dry-run --report r.md  # REVIEW: report
-        //       every case (decision evidence, value fixes enumerated, backfill
-        //       samples) without writing; with --expect-no-changes it is a
-        //       read-only "is this db fully migrated?" probe
-        case 'migrate-variants': {
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const dryRun = args.includes('--dry-run');
-                if(!dryRun && ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                const reportPath = reportPathArg();
-                const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
-                const report = new FindingsReport(
-                    `Variant (orthography) migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
-                const stats = migrateVariants(report, ww.dictSchema,
-                                              orthography.orthographyVocabulary(ww.orthographies),
-                                              {dryRun});
-                if(reportPath) {
-                    Deno.writeTextFileSync(reportPath, report.toMarkdown());
-                    console.info(`wrote ${reportPath}`);
-                }
-                if(args.includes('--expect-no-changes')) {
-                    if(stats.changed > 0)
-                        throw new Error(`--expect-no-changes: ${dryRun ? 'would change' : 'changed'} ` +
-                                        `${stats.changed} variant row(s)`);
-                    console.info(dryRun ? 'read-only probe: the db is fully migrated'
-                                        : 'idempotency confirmed: re-run made no changes');
-                }
-                console.info(`migrate-variants: ${stats.changed} row(s) ${dryRun ? 'WOULD change (dry run)' : 'changed'} ` +
-                             `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        // Export the transliteration ORACLE: every clean human-written
-        // Listuguj/Smith-Francis sibling pair, as JSON for the standalone
-        // rules-iteration harness (wordwiki/transliterate-harness.ts).
-        // Junky pairs are EXCLUDED AND NAMED (never silently).
-        //   ./wordwiki.sh export-transliteration-pairs [path.json]
-        case 'export-transliteration-pairs': {
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const path = args[1] && !args[1].startsWith('--') ? args[1]
-                    : 'transliteration-pairs.json';
-                const {pairs} = ww.transliteration.corpusPairs();
-                const clean: typeof pairs = [];
-                const excluded = new Map<string, number>();
-                for(const p of pairs) {
-                    const reason = pairJunkReason(p.li, p.sf, p.tag);
-                    if(reason) excluded.set(reason, (excluded.get(reason) ?? 0) + 1);
-                    else clean.push(p);
-                }
-                Deno.writeTextFileSync(path, JSON.stringify(clean, null, 1));
-                console.info(`wrote ${clean.length} clean pairs to ${path}`);
-                for(const [reason, n] of excluded)
-                    console.info(`  excluded ×${n}: ${reason}`);
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        // Assemble the per-step import-report fragments into ONE
-        // import-report.md with an executive summary (fix-orthographies.md
-        // "Findings publish path").  Run by importWordWikiV1Db.sh via a
-        // shell trap, so it happens EVEN WHEN A STEP CRASHES - a crash
-        // mid-migration is exactly when the report matters most.  Expected
-        // step names (beyond the fragments present) are listed as MISSING.
-        //   ./wordwiki.sh assemble-import-report <fragmentDir> <out.md> [expected...]
-        case 'assemble-import-report': {
-            const dir = args[1] ?? 'import-report';
-            const outPath = args[2] ?? 'import-report.md';
-            const expected = args.slice(3);
-            const fragments: {name: string, content: string}[] = [];
-            try {
-                const names = [...Deno.readDirSync(dir)]
-                    .filter(e => e.isFile && /^[0-9]+-[a-z0-9-]+\.md$/.test(e.name))
-                    .map(e => e.name).sort();
-                for(const name of names)
-                    fragments.push({name, content: Deno.readTextFileSync(`${dir}/${name}`)});
-            } catch(_e) { /* no fragment dir: assemble the empty story */ }
-            Deno.writeTextFileSync(outPath, assembleImportReport(fragments, expected));
-            console.info(`assembled ${fragments.length} fragment(s) into ${outPath}`);
-            Deno.exit(0);
-            break;
-        }
-
-        // The STATUS REMODEL data migration (fix-orthographies.md "Status",
-        // status-migrate.ts): publish gates from Completed statuses, the
-        // lifecycle renames, sta variant blanking, and lifecycle synthesis
-        // for no-status entries.  ONCE PER DB (config marker), dry-runnable.
-        // Runs BEFORE migrate-variants in the pipeline (it reads sta variants
-        // for the gate orthography, then blanks them).
-        //   ./wordwiki.sh migrate-status [--dry-run] [--report path.md] [--expect-no-changes]
-        case 'migrate-status': {
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                const dryRun = args.includes('--dry-run');
-                if(!dryRun && ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                    throw new Error("db is marked db_purpose='production' - " +
-                                    'run with --allow-production if you really mean it');
-                const reportPath = reportPathArg();
-                const sourceDb = `${(()=>{try{return Deno.realPathSync('database/db.db');}catch{return 'database/db.db';}})()} [db_purpose: ${ww.getDbPurpose() ?? 'unmarked'}]`;
-                const report = new FindingsReport(
-                    `Status remodel migration${dryRun ? ' — DRY RUN' : ''}`, {sourceDb});
-                const stats = migrateStatus(report, {dryRun, config: ww.config});
-                if(reportPath) {
-                    Deno.writeTextFileSync(reportPath, report.toMarkdown());
-                    console.info(`wrote ${reportPath}`);
-                }
-                if(args.includes('--expect-no-changes')) {
-                    if(stats.changed > 0)
-                        throw new Error(`--expect-no-changes: ${dryRun ? 'would change' : 'changed'} ` +
-                                        `${stats.changed} row(s)`);
-                    console.info(dryRun ? 'read-only probe: the status remodel is done on this db'
-                                        : 'idempotency confirmed: re-run made no changes');
-                }
-                console.info(`migrate-status: ${stats.changed} change(s) ` +
-                             `(${Object.entries(stats.byAction).map(([a, n]) => `${a} ${n}`).join(', ') || 'nothing to do'})`);
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        case 'verify-migration': {
-            const reportValueIx = args.indexOf('--report') + 1;   // 0 when absent
-            const dir = args.find((a, i) => i >= 1 && !a.startsWith('--') && i !== reportValueIx)
-                ?? new URL('../categorization', import.meta.url).pathname;
-            const schemeText = (() => {
-                try { return Deno.readTextFileSync(`${dir}/scheme.md`); }
-                catch (_e) { return undefined; }
-            })();
-            const step = stepReport('Verify migration');
-            let ok = false;
-            try {
-                ok = security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    const vr = migrationVerify.verifyMigration(ww, {schemeText});
-                    for(const m of vr.info) step.log(m);
-                    if(vr.warnings.length > 0) {
-                        const w = step.report.section('Warnings');
-                        for(const m of vr.warnings) w.finding(m);
-                    }
-                    if(vr.failures.length > 0) {
-                        const f = step.report.section('FAILURES');
-                        for(const m of vr.failures) f.finding(m);
-                    }
-                    step.log(`verify-migration: ${vr.failures.length} failures, ` +
-                             `${vr.warnings.length} warnings`);
-                    return vr.failures.length === 0;
-                });
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(ok ? 0 : 1);
-            break;
-        }
-
-        // Publish from the CLI - the whole site, or just the named targets
-        // for quick turnaround while iterating on templates.  Targets are
-        // site-relative paths ("the URL you want rebuilt" - see
-        // parsePublishTarget in publish.ts for the grammar); errors and
-        // warnings go to stdout and a non-zero exit means errors.
-        // Publishing only READS the db, so wordwiki.sh leaves the dev
-        // server running for this command.
-        //   ./wordwiki.sh publish                                 # everything
-        //   ./wordwiki.sh publish entries/samqwan categories/water
-        //   ./wordwiki.sh publish --root=/tmp/staging categories    # other tree
-        case 'publish': {
-            const targets = args.slice(1).filter(a => !a.startsWith('--'));
-            const root = args.find(a => a.startsWith('--root='))?.slice('--root='.length) || '.';
-            const exitCode = await security.runSystem(async () => {
-                const status = new publish.PublishStatus();
-                status.start();
-                const pub = new publish.Publish(status, ww, ww.publishedEntries, root);
-                if(root !== '.')
-                    await Deno.mkdir(root, {recursive: true});
-                try {
-                    if(targets.length === 0)
-                        await pub.publish();
-                    else
-                        await pub.publishTargets(targets);
-                } catch(e) {
-                    status.errors.push(String(e instanceof Error ? (e.stack ?? e.message) : e));
-                }
-                status.end();
-                for(const w of status.warnings)
-                    console.info(`WARNING: ${publish.publishMessageText(w)}`);
-                for(const err of status.errors)
-                    console.error(`ERROR: ${publish.publishMessageText(err)}`);
-                const secs = Math.round(((status.endTime ?? 0) - (status.startTime ?? 0)) / 1000);
-                console.info(`publish${targets.length ? ` of ${targets.join(', ')}` : ''} ` +
-                             `completed in ${secs}s: ` +
-                             `${status.errors.length} errors, ${status.warnings.length} warnings`);
-                return status.errors.length > 0 ? 1 : 0;
-            });
-            Deno.exit(exitCode);
-            break;
-        }
-
-        // Import the lexical form (part of speech) vocabulary (see
-        // lexical-form-import.ts): seed the curated table, normalize the
-        // UNAMBIGUOUS legacy values in the data ('vii ' -> vii, 'particle'
-        // -> PTCL) via applyTransaction, and report the remaining un-tabled
-        // values as the team's curation worklist.  Idempotent; guarded like
-        // import-categories.
-        //   ./wordwiki.sh import-lexical-forms [--username=NAME] [--allow-production]
-        case 'import-lexical-forms':
-        case 'seed-lexical-forms': {   // older name kept as an alias
-            // Default stamp = the automation identity (see import-categories).
-            const username = args.find(a => a.startsWith('--username='))?.slice('--username='.length)
-                ?? '~lexical-form-import';
-            const step = stepReport('Import lexical forms');
-            try {
-                security.runSystem(() => {
-                    ww.ensureNewStyleTables();
-                    if(ww.config.getDbPurpose() === 'production' && !args.includes('--allow-production'))
-                        throw new Error("db is marked db_purpose='production' - " +
-                                        'run with --allow-production if you really mean it');
-                    user.seedUsersFromEntrySchema(ww.users);   // the system users ride along post-pull
-                    if(!ww.users.byUsername.first({username}))
-                        throw new Error(`--username '${username}' is not in the user table`);
-                    const stats = lexicalFormImport.importLexicalForms(
-                        ww, {username, log: step.log});
-                    if(args.includes('--expect-no-changes')) {
-                        const changes = stats.seeded.inserted + stats.subentriesNormalized;
-                        if(changes > 0)
-                            throw new Error(`--expect-no-changes: the import made ${changes} changes - ` +
-                                            'the previous run did not reach the fixed point');
-                        step.log('idempotency confirmed: re-run made no changes');
-                    }
-                });
-                step.finish();
-            } catch(e) { step.crash(e); throw e; }
-            Deno.exit(0);
-            break;
-        }
-
-        // Mark the database's purpose (production databases refuse destructive
-        // test/dev operations and get Secure cookies).
-        case 'set-db-purpose': {
-            const purpose = args[1];
-            if(purpose !== 'production' && purpose !== 'dev' && purpose !== 'test')
-                throw new Error('usage: set-db-purpose production|dev|test');
-            security.runSystem(() => {
-                ww.ensureNewStyleTables();
-                ww.config.setDbPurpose(purpose);
-                console.info(`db_purpose set to '${purpose}'`);
-            });
-            Deno.exit(0);
-            break;
-        }
-
-        default:
-            throw new Error(`incorrect usage: unknown command "${command}"`);
-    }
+    // The CLI (serve + the import/migration pipeline subcommands) lives in
+    // cli.ts.  cli.ts statically imports THIS module, so a top-level `await
+    // import(...)` here would deadlock: this module would pause awaiting
+    // cli.ts, which cannot finish evaluating until this module has.  .then()
+    // lets this module complete first; a cliMain rejection surfaces as an
+    // uncaught error (non-zero exit), same as the old inline main block.
+    // wordwiki.sh still runs THIS file.
+    import('./cli.ts').then(m => m.cliMain(Deno.args));
 }

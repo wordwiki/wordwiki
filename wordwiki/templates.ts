@@ -259,7 +259,6 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.todoReport(null, null)'}, 'TODO Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.wordADayPicker()'}, 'Word-a-day Picker']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.entriesByPronunciation()'}, 'Entries By Pronunciation']],
              ]],
 
             // --- Admin
