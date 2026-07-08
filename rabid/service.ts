@@ -5,7 +5,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon, editButtonProps } from "../liminal/table.ts";
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
@@ -304,10 +304,17 @@ export class ServiceTable extends Table<Service> {
         const secondary = [s.bike_description, s.service_description].filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name).  Editors get a ☰ menu
-        // (Edit + reorder + insert before/after + delete - the last few for fixing
-        // up scanned intake) in place of the old pencil.
+        // tap anywhere drills in via the lm-nav-link name).  Editors get BOTH a
+        // pencil (the natural, obvious "edit this" - opens the same conditional
+        // form) AND a ☰ menu (reorder + insert before/after + delete, mostly for
+        // fixing up scanned intake).  A <button> click never triggers the row's
+        // navigation (lmNavigableClick bails on buttons).
         const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`, {}, /*live*/ true);
+        const pencil = this.canEditRecord(s)
+            ? [h.button, {...editButtonProps(`rabid.service.renderServiceForm(${id})`),
+                          class: 'edit lm-edit-pencil', type: 'button', 'aria-label': 'Edit service'},
+               pencilIcon()]
+            : undefined;
         const menu = this.canEditRecord(s) ? action.actionMenu([
             {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.service.renderServiceForm(${id})`}},
             {label: 'Add before', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'before')`}},
@@ -323,6 +330,7 @@ export class ServiceTable extends Table<Service> {
                      class: 'lm-nav-link'}, s.client_name || 'Unnamed client'],
               this.serviceBadges(s)],
              [h.div, {class: 'lm-item-secondary'}, secondary]],
+            pencil,
             menu,
             navChevron(),
         ];
