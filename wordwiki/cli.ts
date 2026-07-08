@@ -568,6 +568,7 @@ export async function cliMain(args: string[]): Promise<void> {
                 console.info(`wrote publish source to ${path}: ` +
                              `${source.entries.length} entries, ` +
                              `${source.categories.length} categories, ` +
+                             `${source.users.length} users, ` +
                              `${source.books.length} books ` +
                              `[orthography: ${source.orthography}, db_purpose: ${source.dbPurpose}]`);
             });

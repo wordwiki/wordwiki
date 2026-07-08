@@ -11,7 +11,7 @@ import {block} from '../liminal/strings.ts';
 import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
-import {entriesByCategoryOf, categoryCountsOf} from './site-view.ts';
+import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
 import {PublishSource, PublishSourceBook, buildPublishSource} from './publish-source.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
@@ -369,6 +369,10 @@ export class Publish {
     #entriesByCategory: Map<string, Entry[]>|undefined;
     get entriesByCategory(): Map<string, Entry[]> {
         return this.#entriesByCategory ??= entriesByCategoryOf(this.entries, this.collator);
+    }
+    #entriesByReferenceGroupId: Map<number, Entry>|undefined;
+    get entriesByReferenceGroupId(): Map<number, Entry> {
+        return this.#entriesByReferenceGroupId ??= entriesByReferenceGroupIdOf(this.entries);
     }
     categoryCounts(): Map<string, number> {
         return categoryCountsOf(this.entries, this.collator);
@@ -1545,13 +1549,12 @@ including remixing, transforming, and building upon the material, for any non-co
     }
     
     async renderDocumentReferenceInfoBox(rootPath: string, groupId: number): Promise<string> {
-        // REMAINING APP TOUCH (publish-source.md): the book-page info boxes
-        // look up entries across the FULL editor projection - historical
-        // behavior, which shows an info box even for a NOT-YET-PUBLIC entry
-        // (and renders its current facts).  Flagged as a publication-model
-        // question; preserving it byte-identically means reaching past the
-        // bundle here.
-        const entry = getWordWiki().store.entriesByReferenceGroupId.get(groupId);
+        // PUBLIC entries only (dz ruling 2026-07-08): a not-yet-public
+        // entry's facts must not render onto the public book page, so its
+        // group gets the same fallback a never-worked group always got.
+        // (Historically this looked up the FULL editor projection and
+        // leaked in-flight content - see publish-source.md.)
+        const entry = this.entriesByReferenceGroupId.get(groupId);
         if(!entry)
             return (`Unknown group id ${groupId}`);
         this.warnMissingRecordings(entry);

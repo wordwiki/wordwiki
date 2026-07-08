@@ -26,10 +26,14 @@ stamped at dump time only — in-memory bundles stay deterministic). Doc of
 record: wordwiki/publish-source.md (format table + the REMAINING db/fs
 touch enumeration: entry-scan snippets, book-page render, audio fs checks,
 style constants, dict schema). Verified byte-identical publish.
-FLAGGED FOR DZ: book-page info boxes render entries from the FULL editor
-projection (incl. NOT-public entries' current facts) — historical behavior
-preserved via an explicit getWordWiki() touch in
-renderDocumentReferenceInfoBox; caught by the byte-diff.
+RESOLVED (dz, same day): book-page info boxes render PUBLIC entries only
+(non-public groups get the historical "Unknown group id" fallback; dz
+accepts that the info-box render itself is unversioned). The bundle also
+DENORMALIZES-ON-EXPORT (the standalone-file rule): a `users` section
+(user_id/username/name/region — user.region is a new user-table column)
+resolves recording speakers in-file; category rows/book rows already did
+this for slugs/friendly-ids. Lookup SECTIONS, not inline copies — the
+entries array stays the renderers' own projection (identity + no drift).
 
 **Publish-via-JSON proposal (dz floated, Claude endorsed; stage 1 above
 built, rest NOT yet):**

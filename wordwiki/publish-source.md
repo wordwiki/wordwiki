@@ -93,18 +93,15 @@ bundle, media manifest for audio):
 3. **Audio file existence checks** — `Publish.warnMissingRecordings` stats
    recording files on disk to warn about missing audio.  Becomes a check
    against the (future) media manifest.
-3b. **Book-page info boxes read the FULL editor projection** —
-   `renderDocumentReferenceInfoBox` looks up the entry for each tagged
-   group via `getWordWiki().store.entriesByReferenceGroupId` (ALL entries,
-   not just public ones).  This is historical behavior, preserved
-   byte-identically — but it means a public book page can render the
-   CURRENT facts of a not-yet-public entry.  **Flagged as a
-   publication-model question for dz**: if the answer is "info boxes only
-   for public entries", the lookup moves onto the bundle (one line) and
-   the affected book pages change; if non-public entries should show
-   SOMETHING, the bundle needs a reduced/approved form of them.  (Caught
-   by the byte-diff verification when this phase first derived the lookup
-   from the bundle's public entries.)
+3b. **RESOLVED (dz ruling 2026-07-08): book-page info boxes render PUBLIC
+   entries only.**  Historically the lookup used the full editor
+   projection, so a public book page could render the current facts of a
+   not-yet-public entry (caught by this phase's byte-diff verification).
+   Now the lookup is bundle-derived; a non-public entry's group gets the
+   same "Unknown group id" fallback a never-worked group always got.
+   Verified: republishing books/PDM/page-0101 changed exactly the 60
+   affected info boxes and nothing else.  Known acceptable imperfection
+   (dz): the info-box render itself is not versioned.
 4. **Style/branding constants** — `config.bootstrapCssLink`,
    `config.bootstrapScriptTag`, `config.googleTagId`, and the Mi'kmaq
    public-site prose (about-us, `renderBookPageTopNote`'s PDM text): code
