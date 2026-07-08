@@ -8,6 +8,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, as, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
+import { buildPublishSource } from "./publish-source.ts";
 import { Publish, PublishStatus } from "./publish.ts";
 
 // A PUBLISHED entry (status Completed) with one subentry carrying the given
@@ -29,7 +30,7 @@ function seedPublishedEntry(ww: any, tl: TestTimeline, entryId: number,
 
 function mkPublish(fx: Fixture): Publish {
     bornApprove(fx.ww);  // the public site is the published projection now
-    return new Publish(new PublishStatus(), fx.ww, fx.ww.site());
+    return new Publish(new PublishStatus(), buildPublishSource(fx.ww));
 }
 
 test("public categories: internal '~' slugs filtered, table order, display names", async () => {
@@ -157,7 +158,7 @@ test("Top Words: publishTopWords emits a directory + a page per tier with cumula
         });
         void root;
         const tmp = await Deno.makeTempDir({prefix: 'wordwiki-topwords-test-'});
-        const pub = new Publish(new PublishStatus(), fx.ww, fx.ww.site(), tmp);
+        const pub = new Publish(new PublishStatus(), buildPublishSource(fx.ww), tmp);
 
         await pub.publishTopWords();
 

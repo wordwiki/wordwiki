@@ -20,6 +20,54 @@ import * as entry from './entry-schema.ts';
 import type {DictionaryStore} from './dictionary-store.ts';
 import {siteConfig} from './site-config.ts';
 
+// --- The derivations, as PURE functions over (entries, collator) -----------
+// Shared by the live SiteView and the PublishSource index (publish-source.ts)
+// so the site and a publish driven from a dump can never drift.
+
+export function entriesByCategoryOf(entries: entry.Entry[],
+                                    collator: Intl.Collator): Map<string, entry.Entry[]> {
+    const entriesByCategoryArray: [string, entry.Entry][] =
+        entries.flatMap(e=>e.subentry.flatMap(s=>
+            s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
+
+    const grouped: Map<string, [string, entry.Entry][]> =
+        Map.groupBy(entriesByCategoryArray, a=>a[0])
+
+    return new Map(
+        Array.from(grouped.entries()).map(([category, ent])=>
+            [category, ent.map(e=>e[1])
+                .toSorted((a: entry.Entry, b: entry.Entry) =>
+                    // TODO: pick spelling for sort better! (+locale etc)
+                    collator.compare((a.spelling[0]?.text)??'',
+                                     (b.spelling[0]?.text)??''))]));
+}
+
+/** Every category value in use, with its entry count, in collation order. */
+export function categoryCountsOf(entries: entry.Entry[],
+                                 collator: Intl.Collator): Map<string, number> {
+    return new Map(Array.from(Map.groupBy(entries.
+        flatMap(e=>
+            e.subentry.flatMap(s=>
+                s.category.flatMap(c=>
+                    c.category))), category=>category)
+        .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
+        .toSorted((a: [string, number], b: [string, number])=>
+            collator.compare(a[0]??'', b[0]??'')));
+}
+
+export function entriesForCategoryOf(entries: entry.Entry[], category: string): entry.Entry[] {
+    return category === '' ? [] :
+        entries.filter(
+            entry=>entry.subentry.some(
+                subentry=>subentry.category.some(
+                    cat=>cat.category === category)));
+}
+
+export function entriesByReferenceGroupIdOf(entries: entry.Entry[]): Map<number, entry.Entry> {
+    return new Map(entries.flatMap(e=>e.subentry.flatMap(s=>
+        s.document_reference.map(d=>[d.bounding_group_id, e] as [number, entry.Entry]))));
+}
+
 export class SiteView {
     #publicEntries: entry.Entry[]|undefined = undefined;
     #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
@@ -48,46 +96,17 @@ export class SiteView {
     }
 
     get entriesByCategory(): Map<string, entry.Entry[]> {
-        return this.#entriesByCategory ??= (()=>{
-            const entriesByCategoryArray: [string, entry.Entry][] =
-                this.publicEntries.flatMap(e=>e.subentry.flatMap(s=>
-                    s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
-
-            const entriesByCategory1: Map<string, [string, entry.Entry][]> =
-                Map.groupBy(entriesByCategoryArray, a=>a[0])
-
-            const entriesByCategory2: [string, entry.Entry[]][] =
-                Array.from(entriesByCategory1.entries()).map(([category, ent])=>
-                    [category, ent.map(e=>e[1])
-                        .toSorted((a: entry.Entry, b: entry.Entry) =>
-                            // TODO: pick spelling for sort better! (+locale etc)
-                            this.collator
-                                .compare((a.spelling[0]?.text)??'',
-                                         (b.spelling[0]?.text)??''))]);
-
-            return new Map(entriesByCategory2);
-        })();
+        return this.#entriesByCategory ??=
+            entriesByCategoryOf(this.publicEntries, this.collator);
     }
 
     /** Every category value in use, with its public-entry count, in
      *  collation order. */
     categoryCounts(): Map<string, number> {
-        return new Map(Array.from(Map.groupBy(this.publicEntries.
-            flatMap(e=>
-                e.subentry.flatMap(s=>
-                    s.category.flatMap(c=>
-                        c.category))), category=>category)
-            .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
-            .toSorted((a: [string, number], b: [string, number])=>
-                this.collator
-                    .compare(a[0]??'', b[0]??'')));
+        return categoryCountsOf(this.publicEntries, this.collator);
     }
 
     entriesForCategory(category: string): entry.Entry[] {
-        return category === '' ? [] :
-            this.publicEntries.filter(
-                entry=>entry.subentry.some(
-                    subentry=>subentry.category.some(
-                        cat=>cat.category === category)));
+        return entriesForCategoryOf(this.publicEntries, category);
     }
 }

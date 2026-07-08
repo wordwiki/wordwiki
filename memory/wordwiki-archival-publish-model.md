@@ -16,7 +16,23 @@ DATA FILES convertible to any future medium (unbounded) — both simplified
 (no history) and full versions, linked FROM the site, cleanly licensed, so
 they get archived, 4) paper via .pdf (survives computing, loses audio).
 
-**Publish-via-JSON proposal (dz floated, Claude endorsed; NOT yet built):**
+**STAGE 1 BUILT (2026-07-08): the PublishSource bundle.**
+publish-source.ts (PublishSource formatVersion 1 + buildPublishSource +
+publishSourceFromJson); Publish's ctor takes ONLY the bundle (no app/site
+param); derived indexes via site-view.ts's shared pure functions
+(entriesByCategoryOf etc.) so dump-driven and live publishes cannot drift;
+`./wordwiki.sh dump-publish-source [path.json]` writes it (generatedAt
+stamped at dump time only — in-memory bundles stay deterministic). Doc of
+record: wordwiki/publish-source.md (format table + the REMAINING db/fs
+touch enumeration: entry-scan snippets, book-page render, audio fs checks,
+style constants, dict schema). Verified byte-identical publish.
+FLAGGED FOR DZ: book-page info boxes render entries from the FULL editor
+projection (incl. NOT-public entries' current facts) — historical behavior
+preserved via an explicit getWordWiki() touch in
+renderDocumentReferenceInfoBox; caught by the byte-diff.
+
+**Publish-via-JSON proposal (dz floated, Claude endorsed; stage 1 above
+built, rest NOT yet):**
 publish flow becomes (a) dump everything the public site needs to .json
 files, (b) a standalone generator loads the JSONs and emits the site. Two
 rationales: the stage-3 artifact is GUARANTEED CORRECT because it is

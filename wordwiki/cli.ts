@@ -33,6 +33,7 @@ import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
+import { buildPublishSource } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
     const command = args[0];
@@ -548,6 +549,32 @@ export async function cliMain(args: string[]): Promise<void> {
             break;
         }
 
+        // Dump the PUBLISH SOURCE: the reduced, simplified projection the
+        // public-site generator consumes, as ONE versioned JSON bundle (doc
+        // of record: wordwiki/publish-source.md).  This is the stage-3
+        // ARCHIVAL artifact - neutral-format data meant to outlive the
+        // software - and it cannot rot, because the live publish is driven
+        // off the same bundle.  generatedAt is stamped HERE only, so the
+        // bundle itself stays deterministic/diffable when built in memory.
+        //   ./wordwiki.sh dump-publish-source [path.json]
+        case 'dump-publish-source': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const path = args[1] && !args[1].startsWith('--') ? args[1]
+                    : 'publish-source.json';
+                const source = buildPublishSource(ww);
+                Deno.writeTextFileSync(path, JSON.stringify(
+                    {...source, generatedAt: new Date().toISOString()}, null, 1));
+                console.info(`wrote publish source to ${path}: ` +
+                             `${source.entries.length} entries, ` +
+                             `${source.categories.length} categories, ` +
+                             `${source.books.length} books ` +
+                             `[orthography: ${source.orthography}, db_purpose: ${source.dbPurpose}]`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
         // Assemble the per-step import-report fragments into ONE
         // import-report.md with an executive summary (fix-orthographies.md
         // "Findings publish path").  Run by importWordWikiV1Db.sh via a
@@ -657,9 +684,10 @@ export async function cliMain(args: string[]): Promise<void> {
             const targets = args.slice(1).filter(a => !a.startsWith('--'));
             const root = args.find(a => a.startsWith('--root='))?.slice('--root='.length) || '.';
             const exitCode = await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
                 const status = new publish.PublishStatus();
                 status.start();
-                const pub = new publish.Publish(status, ww, ww.site(), root);
+                const pub = new publish.Publish(status, buildPublishSource(ww), root);
                 if(root !== '.')
                     await Deno.mkdir(root, {recursive: true});
                 try {

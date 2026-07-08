@@ -27,7 +27,7 @@ import * as utils from '../liminal/utils.ts';
 import {db} from '../liminal/db.ts';
 import {Assertion, updateAssertion, highestTimestamp, selectAllAssertions} from './assertion.ts';
 import {assertVersionedDbValid} from './versioned-db-validate.ts';
-import {SiteView} from './site-view.ts';
+import {SiteView, entriesByReferenceGroupIdOf} from './site-view.ts';
 
 export class DictionaryStore {
     readonly dictSchema: model.Schema;
@@ -123,11 +123,8 @@ export class DictionaryStore {
     }
 
     get entriesByReferenceGroupId(): Map<number, entry.Entry> {
-        return this.#entriesByReferenceGroupId ??= (()=>{
-            const refToEntry: Array<[number, entry.Entry]> = this.entries.flatMap(e=>e.subentry.flatMap(s=>
-                s.document_reference.map(d=>[d.bounding_group_id, e] as [number, entry.Entry])));
-            return new Map(refToEntry);
-        })();
+        return this.#entriesByReferenceGroupId ??=
+            entriesByReferenceGroupIdOf(this.entries);
     }
 
     get lastAllocatedTxTimestamp() {

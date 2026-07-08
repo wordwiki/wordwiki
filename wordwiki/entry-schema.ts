@@ -991,6 +991,14 @@ export function getStableFeaturedRecording(e: Entry): Recording|undefined {
         : e.recording[e.entry_id % e.recording.length];
 }
 
+// The parsed dict schema as a module-level lazy singleton, for consumers
+// with no app instance (the publisher renders entry metadata against it).
+// Parsing is deterministic, so this is interchangeable with the store's copy.
+let _parsedDictSchema: model.Schema|undefined;
+export function parsedDictSchema(): model.Schema {
+    return _parsedDictSchema ??= model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+}
+
 function test() {
     const dictSchema = model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
     console.info('Schema', dictSchema);

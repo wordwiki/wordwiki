@@ -10,8 +10,9 @@ import * as strings from '../liminal/strings.ts';
 import {block} from '../liminal/strings.ts';
 import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
-import {getWordWiki, WordWiki} from './wordwiki.ts';
-import {SiteView} from './site-view.ts';
+import {getWordWiki} from './wordwiki.ts';
+import {entriesByCategoryOf, categoryCountsOf} from './site-view.ts';
+import {PublishSource, PublishSourceBook, buildPublishSource} from './publish-source.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
 import * as entryschema from './entry-schema.ts';
@@ -22,9 +23,6 @@ import * as schema from './scanned-document.ts';
 import {renderToStringViaLinkeDOM, asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
 import * as renderPageEditor from './render-page-editor.ts';
 import * as entryMeta from './render-entry-meta.ts';
-
-export const REFERENCE_BOOK_IDS =
-    ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'];
 
 // --------------------------------------------------------------------------------
 // --- Stale-page pruning (orphan GC) ---------------------------------------------
@@ -206,8 +204,7 @@ export function startPublish(): any {
             try {
                 const wordWiki = getWordWiki();
                 const publish = new Publish(publishStatusSingleton,
-                                            wordWiki,
-                                            wordWiki.site());
+                                            buildPublishSource(wordWiki));
                 await publish.publish();
             } catch (e) {
                 if(e instanceof Error) {
@@ -237,8 +234,7 @@ export async function publish(publishOptions: PublishOptions) {
         const wordWiki = getWordWiki();
         wordWiki.requestWorkspaceReload();
         const publish = new Publish(publishStatusSingleton,
-                                    wordWiki,
-                                    wordWiki.site(),
+                                    buildPublishSource(wordWiki),
                                     ".",
                                     publishOptions);
         await publish.publish();
@@ -347,25 +343,39 @@ export function parsePublishTarget(raw: string): PublishTarget {
 
 export class Publish {
     entryToPublicId: Map<Entry, string>;
-    /** The orthography being published - the site view's. */
+    /** The orthography being published - the source bundle's. */
     defaultVariant: string;
-    /** SNAPSHOT of the view's public entries, taken at construction: a
-     *  mid-publish db change swaps in a fresh view (and array), so the
-     *  caller's entries-identity staleness check keeps working. */
+    /** The bundle's public entries (the same ARRAY, not a copy - the
+     *  caller's entries-identity staleness check depends on it). */
     entries: Entry[];
+    collator: Intl.Collator;
 
     // The manifest of SITE-RELATIVE paths actually written this run.  Routing
     // every page write through writePage() keeps this complete and authoritative
     // - pruneOrphanedPages() deletes only *.html files NOT in this set.
     emittedPaths: Set<string> = new Set();
 
-    constructor(public status: PublishStatus, public wordWiki: WordWiki,
-                public site: SiteView,
+    constructor(public status: PublishStatus, public source: PublishSource,
                 public publishRoot: string = '.',
                 public options: PublishOptions = {}) {
-        this.entries = site.publicEntries;
-        this.defaultVariant = site.orthography;
+        this.entries = source.entries;
+        this.defaultVariant = source.orthography;
+        this.collator = Intl.Collator(source.collationLocale);
         this.entryToPublicId = this.computeEntryPublicIds(this.entries, this.defaultVariant);
+    }
+
+    // Derived indexes over the bundle, via the SAME pure functions the live
+    // site views use (site-view.ts) - a dump-driven publish cannot drift.
+    #entriesByCategory: Map<string, Entry[]>|undefined;
+    get entriesByCategory(): Map<string, Entry[]> {
+        return this.#entriesByCategory ??= entriesByCategoryOf(this.entries, this.collator);
+    }
+    categoryCounts(): Map<string, number> {
+        return categoryCountsOf(this.entries, this.collator);
+    }
+    bookByFriendlyId(book: string): PublishSourceBook {
+        return this.source.books.find(b => b.document.friendly_document_id === book)
+            ?? panic(`no reference book '${book}' in the publish source`);
     }
 
     // Path discipline: every `*Path`/`pathFor*` helper returns a
@@ -400,12 +410,7 @@ export class Publish {
     #categoryBySlug: Map<string, category.Category>|undefined;
     get categoryBySlug(): Map<string, category.Category> {
         return this.#categoryBySlug ??= (() => {
-            try {
-                return new Map(this.wordWiki.categories.allByOrder.all({})
-                    .map(c => [c.slug, c]));
-            } catch (_e) {
-                return new Map();   // pre-import db: no category table yet
-            }
+            return new Map(this.source.categories.map(c => [c.slug, c]));
         })();
     }
 
@@ -454,12 +459,12 @@ export class Publish {
      * the tabled ones.
      */
     publicCategories(): Array<[string, number]> {
-        const cats = Array.from(this.site.categoryCounts().entries())
+        const cats = Array.from(this.categoryCounts().entries())
             .filter(([slug, _n]) => !category.isInternalCategorySlug(slug));
         const order = new Map(Array.from(this.categoryBySlug.keys()).map((slug, i) => [slug, i]));
         return cats.toSorted(([a], [b]) =>
             (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity)
-            || this.site.collator.compare(a, b));
+            || this.collator.compare(a, b));
     }
 
     /**
@@ -480,7 +485,7 @@ export class Publish {
                                     count: counts.get(c.slug)!}))}));
         const untabled = Array.from(counts.entries())
             .filter(([slug, _n]) => !tabledSlugs.has(slug))
-            .toSorted(([a], [b]) => this.site.collator.compare(a, b))
+            .toSorted(([a], [b]) => this.collator.compare(a, b))
             .map(([slug, count]) => ({slug, name: slug, count}));
         if(untabled.length > 0)
             groups.push({theme: groups.length > 0 ? 'Other categories' : 'Categories',
@@ -505,8 +510,8 @@ export class Publish {
 
         // --- Publish books
         if(!this.options.suppressPublishBooks) {
-            for(const book of REFERENCE_BOOK_IDS)
-                await this.publishBook(book);
+            for(const book of this.source.books)
+                await this.publishBook(book.document.friendly_document_id);
         }
 
         // --- Publish categories (and the Top Words listing, same curation)
@@ -534,7 +539,7 @@ export class Publish {
         let instanceDir = '?';
         try { instanceDir = Deno.cwd(); } catch { /* ignore */ }
         let purpose = 'unmarked';
-        try { purpose = this.wordWiki.getDbPurpose() ?? 'unmarked'; } catch { /* ignore */ }
+        purpose = this.source.dbPurpose;
         this.status.log.push(`Publishing from instance '${instanceDir}' [db_purpose: ${purpose}].`);
         for(const dir of ['entries', 'categories', 'top-words', 'books', 'servlet']) {
             try {
@@ -658,17 +663,14 @@ export class Publish {
                     await this.publishItem('Top Words', ()=>this.publishTopWords());
                     break;
                 case 'books-all':
-                    for(const book of REFERENCE_BOOK_IDS)
-                        await this.publishBook(book);
+                    for(const book of this.source.books)
+                        await this.publishBook(book.document.friendly_document_id);
                     break;
                 case 'book':
                     await this.publishBook(t.book);
                     break;
                 case 'book-page': {
-                    const document = schema.selectScannedDocumentByFriendlyId()
-                        .required({friendly_document_id: t.book});
-                    const pagesInDocument = schema.maxPageNumberForDocument()
-                        .required({document_id: document.document_id}).max_page_number;
+                    const pagesInDocument = this.bookByFriendlyId(t.book).totalPages;
                     const tt = t;
                     await this.publishItem(`Book ${tt.book} page ${tt.page}`,
                                            ()=>this.publishBookPage(tt.book, tt.page, pagesInDocument));
@@ -1117,7 +1119,7 @@ including remixing, transforming, and building upon the material, for any non-co
         const entryMarkup: any = entryMeta.renderEntryMeta(
             {rootPath, audience: 'public', publicKeys: ['borrowed-word'],
              renderBoundingGroup: (gid: number) => this.publicBoundingGroup(rootPath, gid)},
-            this.wordWiki.dictSchema.relationsByTag[entryschema.EntryTag], entry);
+            entryschema.parsedDictSchema().relationsByTag[entryschema.EntryTag], entry);
         // renderCategoriesForEntry here.
 
         const entryCategories = this.publicEntryCategories(entry);
@@ -1129,7 +1131,7 @@ including remixing, transforming, and building upon the material, for any non-co
                 ['h2', {}, `Related entries for category "${this.publicCategoryName(category)}"`],
                 ['div', {},
                  ['ul', {},
-                  (this.site.entriesByCategory.get(category)??[])
+                  (this.entriesByCategory.get(category)??[])
                       .map(e=>['li', {}, this.renderEntryPublicLink(rootPath, e, false)]),
                  ] // ul
                 ] // div
@@ -1288,7 +1290,7 @@ including remixing, transforming, and building upon the material, for any non-co
      *
      */
     async publishCategory(category: string): Promise<void> {
-        const entriesForCategory = this.site.entriesByCategory.get(category)??[];
+        const entriesForCategory = this.entriesByCategory.get(category)??[];
         await this.publishEntryListPage(
             this.categoriesDir, category,
             ['Entries for category ', this.publicCategoryName(category)],
@@ -1318,10 +1320,10 @@ including remixing, transforming, and building upon the material, for any non-co
         const seen = new Set<number>();
         const out: Entry[] = [];
         for(const slug of tierSlugs)
-            for(const e of this.site.entriesByCategory.get(slug) ?? [])
+            for(const e of this.entriesByCategory.get(slug) ?? [])
                 if(!seen.has(e.entry_id)) { seen.add(e.entry_id); out.push(e); }
         return out.toSorted((a, b) =>
-            this.site.collator.compare(
+            this.collator.compare(
                 a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
     }
 
@@ -1428,9 +1430,7 @@ including remixing, transforming, and building upon the material, for any non-co
      *
      */
     async publishBook(publicBookId: string) {
-        const document = schema.selectScannedDocumentByFriendlyId().required({friendly_document_id: publicBookId});
-        const pagesInDocument = schema.maxPageNumberForDocument().
-            required({document_id: document.document_id}).max_page_number;
+        const pagesInDocument = this.bookByFriendlyId(publicBookId).totalPages;
         for(let pageNum=1; pageNum<=pagesInDocument; pageNum++) {
             await this.publishItem(`Book ${publicBookId} page ${pageNum}`,
                                    ()=>this.publishBookPage(publicBookId, pageNum, pagesInDocument));
@@ -1444,7 +1444,9 @@ including remixing, transforming, and building upon the material, for any non-co
         const rootPath = '../../../../';
         const reference_layer_name = 'Text';
         
-        const document = schema.selectScannedDocumentByFriendlyId().required({friendly_document_id: publicBookId});
+        // Book metadata from the bundle; the page/layer/scan RENDERING below
+        // is still db-bound (see publish-source.md "Remaining db touches").
+        const document = this.bookByFriendlyId(publicBookId).document;
         const document_id = document.document_id;
         const taggingLayer = schema.getOrCreateNamedLayer(document_id, 'Tagging', 0);
 
@@ -1509,7 +1511,7 @@ including remixing, transforming, and building upon the material, for any non-co
                      `This is a page from the Pacifique Dictionary Manuscripts, a handwritten Mi'gmaq - French dictionary written in the first half of the 1900’s. `],
                     ['p', {}, `Click on a colored box to see the worked through construction of a modern dictionary entry from a source entry.`],
                     ['p', {}, 'The project is newly underway, pages that we have worked on are: ',
-                     this.wordWiki.entryCountByPage(publicBookId).
+                     this.bookByFriendlyId(publicBookId).entryCountByPage.
                         filter(([pageNumber, entryCount]) => entryCount > 1).
                         map(([pageNumber, entryCount])=>
                             [['a', {href:`${rootPath}${this.pathForBookPage(publicBookId, pageNumber)}`}, `${pageNumber}`], ' '])
@@ -1543,7 +1545,13 @@ including remixing, transforming, and building upon the material, for any non-co
     }
     
     async renderDocumentReferenceInfoBox(rootPath: string, groupId: number): Promise<string> {
-        const entry = this.wordWiki.entriesByReferenceGroupId.get(groupId);
+        // REMAINING APP TOUCH (publish-source.md): the book-page info boxes
+        // look up entries across the FULL editor projection - historical
+        // behavior, which shows an info box even for a NOT-YET-PUBLIC entry
+        // (and renders its current facts).  Flagged as a publication-model
+        // question; preserving it byte-identically means reaching past the
+        // bundle here.
+        const entry = getWordWiki().store.entriesByReferenceGroupId.get(groupId);
         if(!entry)
             return (`Unknown group id ${groupId}`);
         this.warnMissingRecordings(entry);

@@ -7,6 +7,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { withTestDb, as, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
+import { buildPublishSource } from "./publish-source.ts";
 import { Publish, PublishStatus, publishMessageText, publishMessageEntryId, publishStatus } from "./publish.ts";
 import { renderAudio } from "./audio.ts";
 import { markupToString } from "../liminal/markup.ts";
@@ -46,7 +47,7 @@ test("warnMissingRecordings: warnings (not errors), once per entry", async () =>
             bornApprove(fx.ww);  // the public site is the published projection now
             const status = new PublishStatus();
             status.start();
-            const pub = new Publish(status, fx.ww, fx.ww.site());
+            const pub = new Publish(status, buildPublishSource(fx.ww));
 
             const entry = fx.ww.publishedEntries.find((e: any) => e.entry_id === 1000)!;
             pub.warnMissingRecordings(entry);

@@ -12,13 +12,14 @@ import { assert, assertFalse, assertStringIncludes } from "../liminal/testing/as
 import { exists } from "std/fs/mod.ts";
 import { withTestDb, type Fixture } from "./testing.ts";
 import { Publish, PublishStatus, PUBLISH_MARKER_FILE } from "./publish.ts";
+import { buildPublishSource } from "./publish-source.ts";
 
 // Build a Publish rooted at a fresh temp dir.  We drive pruneOrphanedPages()
 // directly with a hand-set manifest, so no real entries/DB seeding is needed.
 async function mkPrunable(fx: Fixture, options: any = {}):
     Promise<{pub: Publish, root: string}> {
     const root = await Deno.makeTempDir({prefix: 'wordwiki-prune-test-'});
-    const pub = new Publish(new PublishStatus(), fx.ww, fx.ww.site(), root, options);
+    const pub = new Publish(new PublishStatus(), buildPublishSource(fx.ww), root, options);
     return {pub, root};
 }
 
