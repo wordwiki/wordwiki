@@ -31,14 +31,9 @@ function insertSale(by: number): number {
 function insertService(): number {
     const event_id = newEvent();
     return asSystem(() => rabid.service.insert({
-        event_id, client_name: 'Jo Client', client_postal: undefined,
-        client_phone: '(555) 999-0000', client_number_of_people_served: 1,
-        service_kind: 'diy', service_description: 'Flat tire',
-        service_check_in_time: '2026-06-13 13:00:00', service_done: 0,
-        service_record_closed_time: undefined,
-        will_pick_up: 0, scheduled_pick_up_time: undefined, pick_up_done: 0,
-        work_start_time: undefined, work_end_time: undefined, work_stand_id: undefined,
-        notes: undefined,
+        event_id, client_name: 'Jo Client',
+        client_phone: '(555) 999-0000',
+        service_kind: 'diy', bike_description: 'Blue commuter', service_description: 'Flat tire',
     }));
 }
 
@@ -96,7 +91,7 @@ test("service rows: edit ☰ for hosts only; client phone redacted for regulars"
 
         await asUser(bob, () => assertRejects(
             () => invoke("rabid.service.saveForm($arg0)", {
-                service_id: String(id), service_done: "1", "before-service_done": "0"}),
+                service_id: String(id), client_name: "Hijacked", "before-client_name": "Jo Client"}),
             Error, "Not permitted to edit this service"));
     });
 });

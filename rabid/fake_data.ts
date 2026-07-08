@@ -1224,12 +1224,22 @@ export function seedActivity(rabid: Rabid, opts: { baseSeed?: number } = {}): vo
         {weight: 2, value: 'free-kids-bike'}, {weight: 2, value: 'free-helmet'},
         {weight: 1, value: 'balance-bike-loan'}]);
 
+    const bikeDesc = () => faker.helpers.arrayElement([
+        'Blue commuter', 'Kids 20"', 'Red mountain bike', 'Hybrid', 'Vintage road bike',
+        'Folding bike', 'BMX', 'Step-through cruiser', 'Gravel bike']);
+
     let services = 0, sales = 0;
-    const addService = (event_id: number, when: string, done: boolnum) => {
+    const addService = (event_id: number) => {
+        const kind = serviceKind();
+        const full = kind === 'full';   // only drop-offs carry the pickup checklist
         rabid.service.insert({
             event_id, client_name: faker.person.fullName(), client_postal: fsa(),
-            client_number_of_people_served: 1, service_kind: serviceKind(),
-            service_description: repair(), service_check_in_time: when, service_done: done,
+            service_kind: kind, bike_description: bikeDesc(), service_description: repair(),
+            ...(full ? {
+                client_phone: faker.phone.number(),
+                drop_off_ready_call_done: (rand() < 0.5 ? 1 : 0) as boolnum,
+                drop_off_pick_up_done: (rand() < 0.4 ? 1 : 0) as boolnum,
+            } : {}),
         } as service.ServiceOpt);
         services++;
     };
@@ -1251,7 +1261,7 @@ export function seedActivity(rabid: Rabid, opts: { baseSeed?: number } = {}): vo
     for(const e of pastEvents) {
         const n = faker.helpers.rangeToNumber({min: 0, max: 5});
         for(let i = 0; i < n; i++)
-            addService(e.event_id, e.start_time!, rand() < 0.7 ? 1 : 0);
+            addService(e.event_id);
         const m = faker.helpers.rangeToNumber({min: 0, max: 2});
         for(let i = 0; i < m; i++) addSale(e.event_id, e.start_time!);
     }
@@ -1261,7 +1271,7 @@ export function seedActivity(rabid: Rabid, opts: { baseSeed?: number } = {}): vo
     for(const day of adHocDays) {
         const eid = rabid.event.catchAllForDate(day, /*create*/ true)!;
         for(let i = 0; i < faker.helpers.rangeToNumber({min: 1, max: 3}); i++)
-            addService(eid, `${day} 14:00:00`, 1);
+            addService(eid);
         addSale(eid, `${day} 15:00:00`);
     }
     console.info(`Activity: ${services} services, ${sales} sales/giveaways `

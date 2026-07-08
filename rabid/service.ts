@@ -5,7 +5,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon } from "../liminal/table.ts";
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
@@ -53,26 +53,43 @@ export interface Service {
     // for activity; there are no standalone services.
     event_id: number;
 
-    client_name: string;
-    client_postal?: string;
-    client_phone?: string;
-    client_number_of_people_served: number;
-
     service_kind: string;
-    service_description: string;
-    service_check_in_time?: string;
-    service_done: boolnum;
+
+    // name, bike_description, service_description, client_postal are the core fields
+    client_name: string;
+    bike_description?: string; // added
+    service_description?: string;
+    client_postal?: string;
+
+    // only used for when bikes are dropped off (mostly clients stay
+    // with the bike, so we don't need this)
+    client_phone?: string;
+
+    // Sometimes we will provide training to multiple people on
+    // one bike - we can record this here (defaults to 1)
+    // NOTE: removed this one - too much work to track.
+    //client_number_of_people_served: number;
+
+    // NOTE: removed this one - we don't know this - the event is enoght
+    //service_check_in_time?: string;
+
     // Will often be quite a bit after service is complete so should not
-    // be used to compute total service time.
-    service_record_closed_time?: string;
+    // be used to compute total service time.  NOTE removing this one - we don't close records
+    // (because mostly DIY)
+    //service_record_closed_time?: string;
 
-    will_pick_up: boolnum;
-    scheduled_pick_up_time?: string;
-    pick_up_done: boolnum;
+    // Presently only used when service_kind == 'full' (but may add more service kinds that use this)
+    // Ideally, would only show in the UI when service_kind == 'full'
+    drop_off_notes: string;
+    drop_off_scheduled_pick_up_time?: string;
+    drop_off_ready_call_done: boolnum;
+    //drop_off_pick_up_call_done: boolnum;
+    drop_off_pick_up_done: boolnum;
 
-    work_start_time?: string;
-    work_end_time?: string;
-    work_stand_id?: number;
+    // Removed - too COMPLICATED
+    //work_start_time?: string;
+    //work_end_time?: string;
+    //work_stand_id?: number;
 
     notes?: string;
 
@@ -94,34 +111,33 @@ export class ServiceTable extends Table<Service> {
             // user-editable: a service is bound to its event, so the edit form omits it.
             new ForeignKeyField('event_id', "event", "event_id", {indexed: true, edit: security.never}),
 
-            // Note: we don't track customers - thus no separate customer table.
+            new EnumField('service_kind', service_kind_enum, {default: 'diy'}),
+
+            // The core intake fields (name / bike / work needed / postal - the
+            // shape of the scanned intake table).  Strings are NOT NULL DEFAULT ''
+            // (one canonical empty, never null); client_name is the only required
+            // one (bare {} -> non-empty enforced).  We don't track customers - no
+            // separate customer table.
             new StringField('client_name', {}),
-            // Not full postal code - just prefix that is long enough to know general area.
-            // (First 3 characters of Canadian postal code for us).
-            new StringField('client_postal', {nullable: true}),
-            
+            new StringField('bike_description', {default: ''}),
+            new StringField('service_description', {default: ''}),
+            // Not the full postal code - just the prefix (first 3 of a Canadian
+            // code) for general area.
+            new StringField('client_postal', {default: ''}),
             // Client PII: clients are not volunteers and never opted into the
             // open-books model - their phone is host/admin-only, redacted for
-            // everyone else.
-            new StringField('client_phone', {nullable: true, view: hostOrAdmin, redact: true}),
+            // everyone else.  Mostly only relevant to drop-offs.
+            new StringField('client_phone', {default: '', view: hostOrAdmin, redact: true}),
 
-            new IntegerField('client_number_of_people_served', {default: 1}),
-            
-            new EnumField('service_kind', service_kind_enum, {default: 'diy'}),
-            new StringField('service_description', {}),
-            new DateTimeField('service_check_in_time', {nullable: true}),
-            new BooleanField('service_done', {default: 0}),
-            new DateTimeField('service_record_closed_time', {nullable: true}),
-            
-            new BooleanField('will_pick_up', {default: 0}),
-            new DateTimeField('scheduled_pick_up_time', {nullable: true}),
-            new BooleanField('pick_up_done', {default: 0}),
-            
-            new DateTimeField('work_start_time', {nullable: true}),
-            new DateTimeField('work_end_time', {nullable: true}),
-            new IntegerField('work_stand_id', {nullable: true}),
-            
-            new MarkdownField('notes', {nullable: true}),
+            // Drop-off ("We Repair" / full) service: the bike is LEFT, so it needs a
+            // small ready-call / pickup checklist.  Empty/0 for the common DIY case
+            // (client stays with the bike).  Shown in the UI only for kind 'full'.
+            new StringField('drop_off_notes', {default: ''}),
+            new DateTimeField('drop_off_scheduled_pick_up_time', {nullable: true}),
+            new BooleanField('drop_off_ready_call_done', {default: 0}),
+            new BooleanField('drop_off_pick_up_done', {default: 0}),
+
+            new MarkdownField('notes', {default: ''}),
             new ManagedStringField('order_key', {default: ''}),
         ])
     };
@@ -150,11 +166,11 @@ export class ServiceTable extends Table<Service> {
         return this.prepare<Service, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM service
-/**/          ORDER BY service_check_in_time DESC`);
+/**/          ORDER BY service_id DESC`);
     }
 
-    // The services logged at one event (its Activity section).  Ordered by
-    // check-in time (NULLs - not-yet-checked-in - sort last).
+    // The services logged at one event (its Activity section), in the event log's
+    // display order.
     @path
     get servicesForEvent() {
         return this.prepare<Service, {event_id: number}>(block`
@@ -171,10 +187,11 @@ export class ServiceTable extends Table<Service> {
     @route(hostOrAdmin)
     newServiceForEventDialog(event_id: number): Markup {
         const f = this.fieldsByName;
+        // The scanned-intake core: name / bike / work needed / postal + kind.  The
+        // rest (phone, drop-off checklist) is filled in later via the detail edit.
         return action.renderParamForm(
-            [f.client_name, f.client_postal, f.client_phone, f.service_kind,
-             f.service_description, f.client_number_of_people_served],
-            {service_kind: 'diy', client_number_of_people_served: 1} as Partial<Service>,
+            [f.client_name, f.bike_description, f.service_description, f.client_postal, f.service_kind],
+            {service_kind: 'diy'} as Partial<Service>,
             {
                 title: 'Add service',
                 submitLabel: 'Add',
@@ -186,20 +203,18 @@ export class ServiceTable extends Table<Service> {
 
     @routeMutation(hostOrAdmin)
     addServiceForEvent(args: {event_id?: string|number, client_name?: string,
-                              client_postal?: string, client_phone?: string,
-                              service_kind?: string, service_description?: string,
-                              client_number_of_people_served?: string|number}): Markup {
+                              bike_description?: string, service_description?: string,
+                              client_postal?: string, service_kind?: string}): Markup {
         const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
         const client_name = (args.client_name ?? '').trim();
         if(!client_name) throw new Error('Client name is required');
         this.insert({
             event_id, client_name,
-            client_postal: (args.client_postal ?? '') || undefined,
-            client_phone: (args.client_phone ?? '') || undefined,
-            service_kind: args.service_kind || 'diy',
+            bike_description: (args.bike_description ?? '').trim(),
             service_description: (args.service_description ?? '').trim(),
-            client_number_of_people_served: Number(args.client_number_of_people_served) || 1,
+            client_postal: (args.client_postal ?? '').trim(),
+            service_kind: args.service_kind || 'diy',
         } as Partial<Service>);
         // A new row changes the section's shape -> reload the section (it's
         // registered on the shape key; an edit reloads only its own row).
@@ -219,7 +234,6 @@ export class ServiceTable extends Table<Service> {
             ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
             : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
         this.insert({event_id: anchor.event_id, client_name: '', service_kind: 'diy',
-                     service_description: '', client_number_of_people_served: 1,
                      order_key} as Partial<Service>);
         return {action: 'reload', targets: ['.' + this.shapeKey('event_id', anchor.event_id)]} as unknown as Markup;
     }
@@ -249,17 +263,18 @@ export class ServiceTable extends Table<Service> {
         return {action: 'reload', targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
-    // Windowed variant for the Service page.  A NULL check-in time is a
-    // pending/not-yet-checked-in record - always surface those (they're the
-    // active work), plus checked-in services within [from, to].
+    // Windowed variant for the Service page.  A service has no time of its own
+    // (minimal ceremony - the EVENT supplies the time); we window by the owning
+    // event's date, newest first.
     @path
     get servicesInWindow() {
         return this.prepare<Service, {from: string, to: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM service
-/**/          WHERE service_check_in_time IS NULL
-/**/             OR DATE(service_check_in_time) BETWEEN :from AND :to
-/**/          ORDER BY service_check_in_time DESC`);
+/**/          WHERE DATE((SELECT start_time FROM event WHERE event.event_id = service.event_id))
+/**/                BETWEEN :from AND :to
+/**/          ORDER BY (SELECT start_time FROM event WHERE event.event_id = service.event_id) DESC,
+/**/                   service.order_key`);
     }
 
     // ------------------------------------------------------------------------
@@ -277,16 +292,16 @@ export class ServiceTable extends Table<Service> {
     serviceBadges(s: Service): Markup {
         return [
             [h.span, {class: 'badge text-bg-light border ms-2'}, service_kind_enum[s.service_kind] ?? s.service_kind],
-            s.service_done ? [h.span, {class: 'badge text-bg-success ms-1'}, 'Done'] : undefined,
-            s.will_pick_up && !s.pick_up_done
-                ? [h.span, {class: 'badge text-bg-warning ms-1'}, 'Pickup pending'] : undefined,
+            // Drop-off ('full') bikes are the only ones with a lifecycle: flag one
+            // that's still waiting to be collected.
+            (s.service_kind === 'full' && !s.drop_off_pick_up_done)
+                ? [h.span, {class: 'badge text-bg-warning ms-1'}, 'Awaiting pickup'] : undefined,
         ];
     }
 
     renderServiceRow(s: Service): Markup {
         const id = s.service_id;
-        const secondary = [date.sqliteDateTimeToString(s.service_check_in_time ?? null),
-                           s.service_description].filter(Boolean).join(' · ');
+        const secondary = [s.bike_description, s.service_description].filter(Boolean).join(' · ');
 
         // One navigable row species for every viewer (Table.detailItemProps:
         // tap anywhere drills in via the lm-nav-link name).  Editors get a ☰ menu
@@ -294,7 +309,7 @@ export class ServiceTable extends Table<Service> {
         // up scanned intake) in place of the old pencil.
         const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`, {}, /*live*/ true);
         const menu = this.canEditRecord(s) ? action.actionMenu([
-            {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.service.renderForm(rabid.service.getById(${id}))`}},
+            {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.service.renderServiceForm(${id})`}},
             {label: 'Add before', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'before')`}},
             {label: 'Add after', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'after')`}},
             {label: 'Move up', mode: {kind: 'immediate', expr: `rabid.service.moveUp(${id})`}},
@@ -317,6 +332,20 @@ export class ServiceTable extends Table<Service> {
     @route(authenticated)
     renderServiceRowById(id: number): Markup {
         return this.renderServiceRow(this.getById(id));
+    }
+
+    // The service edit form.  The drop-off checklist fields appear only for a
+    // 'full' (We Repair) service - a bike that's left needs the ready-call/pickup
+    // steps; DIY etc. don't, so their form stays uncluttered (minimal ceremony).
+    // Switching a record TO 'full' reveals them the next time the form is opened.
+    @route(hostOrAdmin)
+    renderServiceForm(id: number): Markup {
+        const s = this.getById(id);
+        const core = ['service_kind', 'client_name', 'bike_description', 'service_description',
+                      'client_postal', 'client_phone', 'notes'];
+        const dropOff = ['drop_off_scheduled_pick_up_time', 'drop_off_ready_call_done',
+                         'drop_off_pick_up_done', 'drop_off_notes'];
+        return this.renderEditForm(s, s.service_kind === 'full' ? [...core, ...dropOff] : core);
     }
 
     // The Service page query: a from/to date window (page-state; liminal.md
@@ -370,26 +399,30 @@ export class ServiceTable extends Table<Service> {
         props.class = 'container py-3 ' + props.class;
         const row = (label: string, value: Markup) =>
             [[h.dt, {class: 'col-sm-3'}, label], [h.dd, {class: 'col-sm-9'}, value]];
+        const dropOff = s.service_kind === 'full';
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, s.client_name || 'Unnamed client'],
              this.serviceBadges(s),
-             this.canEditRecord(s) ? this.editPencil(service_id) : undefined],
+             this.canEditRecord(s)
+                 ? action.actionButton(pencilIcon(), {kind: 'modal', dialogUrl: `/rabid.service.renderServiceForm(${service_id})`},
+                     'btn btn-link p-0 lm-edit-pencil', {'aria-label': 'Edit service', title: 'Edit service'})
+                 : undefined],
             [h.dl, {class: 'row mb-0'},
              row('Kind', service_kind_enum[s.service_kind] ?? s.service_kind),
-             row('Description', s.service_description || '—'),
-             row('Checked in', date.sqliteDateTimeToString(s.service_check_in_time ?? null, '—')),
-             row('Client phone', renderFieldValue(f.client_phone, s.client_phone) || '—'),
+             row('Bike', s.bike_description || '—'),
+             row('Work needed', s.service_description || '—'),
              row('Client postal', s.client_postal || '—'),
-             row('People served', String(s.client_number_of_people_served ?? 1)),
-             row('Pickup', s.will_pick_up
-                 ? `${s.pick_up_done ? 'Done' : 'Pending'}${s.scheduled_pick_up_time
-                     ? ' · ' + date.sqliteDateTimeToString(s.scheduled_pick_up_time) : ''}`
-                 : '—'),
-             row('Work', s.work_start_time
-                 ? `${date.sqliteDateTimeToString(s.work_start_time)}${s.work_end_time
-                     ? ' - ' + date.sqliteDateTimeToTimeString(s.work_end_time) : ''}`
-                 : '—'),
+             row('Client phone', renderFieldValue(f.client_phone, s.client_phone) || '—'),
+             // The drop-off checklist, only for a "full" service (a left bike).
+             ...(dropOff ? [
+                 row('Pickup', s.drop_off_pick_up_done ? 'Picked up'
+                     : (s.drop_off_scheduled_pick_up_time
+                         ? 'Scheduled ' + date.sqliteDateTimeToString(s.drop_off_scheduled_pick_up_time)
+                         : 'Awaiting pickup')),
+                 row('Ready call', s.drop_off_ready_call_done ? 'Made' : 'Not yet'),
+                 row('Drop-off notes', s.drop_off_notes || '—'),
+             ] : []),
              row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
             ],
         ];
