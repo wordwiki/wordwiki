@@ -115,10 +115,27 @@ export interface ProposalStats {
  * engine).  Facts are authored by the robot identity and queue for normal
  * review; the caller (LexemeEditor.transliterate) supplies reload targets.
  */
+/** The entry's part of speech via the SINGLE-SUBENTRY 1-1 (dz): pos lives
+ *  on the subentry; when the entry has exactly one, every field of the
+ *  entry shares it (97% of entries).  Multi-subentry entries: undefined.
+ *  THE one lookup shared by the proposal op, the pick verb and the chips -
+ *  their candidate INDEXES must agree. */
+export function singleSubentryPos(app: WordWiki, entry_id: number): string | undefined {
+    const entryTuple = app.lexemeOps.entryTuple(entry_id);
+    const subs = Object.values(entryTuple.childRelations)
+        .filter(rel => (rel as VersionedRelation).schema.tag === 'sub')
+        .flatMap(rel => [...(rel as VersionedRelation).tuples.values()])
+        .map(t => t.mostRecentTuple)
+        .filter(tv => tv?.isCurrent);
+    if(subs.length !== 1) return undefined;
+    return (subs[0]!.assertion.attr1 as string | null) ?? undefined;
+}
+
 export function proposeTransliterations(app: WordWiki, entry_id: number): ProposalStats {
     const stats: ProposalStats = { proposed: 0, filledAlready: 0, rejectedBefore: 0 };
     const pure = pureTextRelations(app.dictSchema);
     const entryTuple = app.lexemeOps.entryTuple(entry_id);
+    const pos = singleSubentryPos(app, entry_id);
     const proposals: Assertion[] = [];
 
     const walk = (tuple: VersionedTuple) => {
@@ -159,7 +176,7 @@ export function proposeTransliterations(app: WordWiki, entry_id: number): Propos
         if(!parentAssertion) return;   // deleted parent: nothing to hang off
         const proposedHere = new Set<string>();
         for(const li of liTexts) {
-            const scored = transliterateLiToSfScored(li);
+            const scored = transliterateLiToSfScored(li, {pos});
             const sf = scored.text;
             if(rejectedTexts.has(sf)) { stats.rejectedBefore++; continue; }   // same output, said no
             if(proposedHere.has(sf)) continue;   // two li texts, one sf output
@@ -273,7 +290,7 @@ export class TransliterationReports {
      *  approved transliteration since. */
     rulesAccuracy(): {pairs: number, exact: number} {
         const {pairs} = this.corpusPairs();
-        const exact = pairs.filter(p => transliterateLiToSf(p.li) === p.sf).length;
+        const exact = pairs.filter(p => transliterateLiToSf(p.li, {pos: p.pos}) === p.sf).length;
         return {pairs: pairs.length, exact};
     }
 
@@ -284,31 +301,44 @@ export class TransliterationReports {
         const {pairs} = this.corpusPairs();
         return CANDIDATE_TRANSLITERATORS.map(c => ({
             name: c.name,
-            exact: pairs.filter(p => c.fn(p.li) === p.sf).length,
+            exact: pairs.filter(p => c.fn(p.li, {pos: p.pos}) === p.sf).length,
             pairs: pairs.length,
         }));
     }
 
-    corpusPairs(): {pairs: Array<{li: string, sf: string, tag: string}>} {
+    corpusPairs(): {pairs: Array<{li: string, sf: string, tag: string, pos?: string}>} {
         const pure = pureTextRelations(this.app.dictSchema);
-        const out: Array<{li: string, sf: string, tag: string}> = [];
+        // PART OF SPEECH via the single-subentry 1-1 (dz): part_of_speech
+        // lives on the subentry, not beside the spelling - but 97% of
+        // entries have exactly ONE subentry, and there every field of the
+        // entry is 1-1 with that sub's POS.  Multi-subentry entries get no
+        // pos (ambiguous).  The old expert rules conditioned ey-handling on
+        // noun-ness (Transliterate.java rule 100), so the rule finder wants
+        // this column.
+        const posByEntry = new Map<number, string|undefined>();
+        for(const r of db().all<any, any>(block`
+/**/           SELECT id1, attr1 FROM dict WHERE ty = 'sub' AND valid_to = ${EOT}`, {})) {
+            posByEntry.set(r.id1, posByEntry.has(r.id1) ? undefined : (r.attr1 ?? undefined));
+        }
+        const out: Array<{li: string, sf: string, tag: string, pos?: string}> = [];
         for(const [tag, spec] of pure) {
             const rows = db().all<any, any>(block`
 /**/           SELECT ty1,id1,ty2,id2,ty3,id3,ty4,id4,ty5,id5, variant, ${spec.contentField.bind} AS text
 /**/           FROM dict
 /**/           WHERE ty = :ty AND valid_to = ${EOT} AND ${spec.contentField.bind} IS NOT NULL
 /**/                 AND variant IN ('${SOURCE_ORTHOGRAPHY}', '${TARGET_ORTHOGRAPHY}')`, {ty: tag});
-            const groups = new Map<string, {li: string[], sf: string[]}>();
+            const groups = new Map<string, {li: string[], sf: string[], entry: number}>();
             for(const r of rows) {
                 const ids = [[r.ty1, r.id1], [r.ty2, r.id2], [r.ty3, r.id3],
                              [r.ty4, r.id4], [r.ty5, r.id5]].filter(([t, _]) => t != null);
                 const key = ids.slice(0, -1).map(([t, i]) => `${t}:${i}`).join('/') + '/' + tag;
-                if(!groups.has(key)) groups.set(key, {li: [], sf: []});
+                if(!groups.has(key)) groups.set(key, {li: [], sf: [], entry: r.id1});
                 groups.get(key)![r.variant === SOURCE_ORTHOGRAPHY ? 'li' : 'sf'].push(r.text);
             }
             for(const g of groups.values())
                 if(g.li.length === 1 && g.sf.length === 1)
-                    out.push({li: g.li[0], sf: g.sf[0], tag});
+                    out.push({li: g.li[0], sf: g.sf[0], tag,
+                              pos: posByEntry.get(g.entry) ?? undefined});
         }
         return {pairs: out};
     }

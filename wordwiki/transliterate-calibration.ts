@@ -5,7 +5,7 @@
  * rate of the current rules on the TRAIN folds of the oracle (holdout
  * validation is printed by the harness at generation time).
  */
-export const CALIBRATION_VERSION = "li-sf/rules-v3@2026-07-08/1233pairs";
+export const CALIBRATION_VERSION = "li-sf/rules-v4@2026-07-08/1233pairs";
 export const CALIBRATION: Record<string, {n: number, accuracy: number}> = {
     "clean": {
         "n": 620,
@@ -60,9 +60,9 @@ export const BRANCH_PROBABILITIES: Record<string, {taken: number, total: number}
         "taken": 0,
         "total": 64
     },
-    "ei:": {
-        "taken": 20,
-        "total": 51
+    "ei:other": {
+        "taken": 10,
+        "total": 18
     },
     "schwa:t|k": {
         "taken": 1,
@@ -260,6 +260,10 @@ export const BRANCH_PROBABILITIES: Record<string, {taken: number, total: number}
         "taken": 0,
         "total": 1
     },
+    "ei:vit": {
+        "taken": 6,
+        "total": 10
+    },
     "schwa:t|p": {
         "taken": 0,
         "total": 6
@@ -271,6 +275,10 @@ export const BRANCH_PROBABILITIES: Record<string, {taken: number, total: number}
     "cluster:a|n|j": {
         "taken": 0,
         "total": 2
+    },
+    "ei:vai": {
+        "taken": 4,
+        "total": 23
     },
     "schwa:k|t": {
         "taken": 0,

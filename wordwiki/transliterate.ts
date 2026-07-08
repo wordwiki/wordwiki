@@ -26,7 +26,7 @@
  * retroactive-undo tool's targeting.  Bump it on ANY rule change.
  */
 
-export const TRANSLITERATOR_VERSION = 'li-sf/rules-v3';
+export const TRANSLITERATOR_VERSION = 'li-sf/rules-v4';
 
 // Sonorants that take the schwa/syllabicity apostrophe before a following
 // obstruent in Smith-Francis (corpus: l_t ×150, n_t ×89, l_p ×81, n_j ×73…;
@@ -72,11 +72,29 @@ export const LEXICAL_EXCEPTIONS: Record<string, string> = {
  * Deterministic and total (unknown characters pass through) — callers decide
  * whether an output is worth proposing (e.g. skip when identical).
  */
-export function transliterateLiToSf(text: string): string {
-    // rules-v3: the top-ranked CANDIDATE (see transliterateCandidates below)
+export function transliterateLiToSf(text: string, opts: TransliterateOpts = {}): string {
+    // rules-v4: the top-ranked CANDIDATE (see transliterateCandidates below)
     // - every ambiguous branch decided by its MEASURED context probability
-    // instead of a fixed rule.  Holdout: 75.9% (v2's fixed choices: 73.8%).
-    return transliterateCandidates(text, 1)[0].text;
+    // instead of a fixed rule; the word-final -ei branch is additionally
+    // conditioned on PART OF SPEECH when the caller knows it (dz: the
+    // single-subentry 1-1 covers 97% of entries; measured: vai verbs KEEP
+    // -ei 25-of-30 while other classes lean -ey - the old expert rules'
+    // rule-100 noun hunch, corrected by data).
+    return transliterateCandidates(text, 1, opts)[0].text;
+}
+
+export interface TransliterateOpts {
+    /** The word's part of speech, when known (lexical-forms vocabulary:
+     *  vai/vat/vit/na/ni/...).  Conditions the -ei/-ey branch. */
+    pos?: string;
+}
+
+/** The pos CLASS used in branch keys - only the splits the TRAIN corpus
+ *  supports with n≥5 each: vai (keeps -ei, P(ey)=.17), vit (takes -ey,
+ *  P(ey)=.60), everything else (keeps, P(ey)=.44).  Unknown pos falls back
+ *  to the kind marginal. */
+function posClass(pos: string | undefined): string {
+    return pos === 'vai' ? 'vai' : pos === 'vit' ? 'vit' : pos ? 'other' : '';
 }
 
 /** rules-v2, FROZEN for the comparison dashboard: lexical exceptions + g→k
@@ -191,7 +209,8 @@ export function transliterateJavaScanner(src: string,
  * the intended SF target is a language-team decision; the numbers say only
  * "which matches what the team writes TODAY".
  */
-export const CANDIDATE_TRANSLITERATORS: Array<{name: string, fn: (li: string) => string}> = [
+export const CANDIDATE_TRANSLITERATORS: Array<{name: string,
+        fn: (li: string, opts?: TransliterateOpts) => string}> = [
     { name: `${TRANSLITERATOR_VERSION} (current)`, fn: transliterateLiToSf },
     { name: 'li-sf/rules-v2 (frozen)', fn: transliterateRulesV2 },
     { name: 'li-sf/rules-v1 (frozen)', fn: transliterateRulesV1 },
@@ -253,8 +272,9 @@ export function confidenceBand(confidence: number): ScoredTransliteration['band'
  * (conservative: a word carrying a weak marker is at most as trustworthy as
  * that marker), else 0.5.
  */
-export function transliterateLiToSfScored(li: string): ScoredTransliteration {
-    const text = transliterateLiToSf(li);
+export function transliterateLiToSfScored(li: string,
+                                          opts: TransliterateOpts = {}): ScoredTransliteration {
+    const text = transliterateLiToSf(li, opts);
     const markers = transliterationRiskMarkers(li);
     const key = markers.length === 0 ? 'clean' : markers.join(',');
     let confidence: number;
@@ -308,7 +328,7 @@ function branchP(kind: string, key: string): number {
 }
 
 /** The branch sites of a base (post lexical-exception, post g→k) text. */
-function branchSites(base: string): BranchSite[] {
+function branchSites(base: string, opts: TransliterateOpts = {}): BranchSite[] {
     const out: BranchSite[] = [];
     const low = base.toLowerCase();
     for(let i = 0; i + 1 < low.length; i++) {
@@ -321,7 +341,8 @@ function branchSites(base: string): BranchSite[] {
         }
     }
     for(const m of base.matchAll(/[eE][iI](?=[\s.,!?]|$)/g))
-        out.push({kind: 'ei', index: m.index!, key: 'ei:', label: 'word-final -ey'});
+        out.push({kind: 'ei', index: m.index!, key: `ei:${posClass(opts.pos)}`,
+                  label: 'word-final -ey'});
     for(const m of base.matchAll(/[ptksPTKS]'(?=[a-zA-Z])/g))
         out.push({kind: 'schwa', index: m.index! + 1,
                   key: `schwa:${base[m.index!].toLowerCase()}|${base[m.index! + 2].toLowerCase()}`,
@@ -333,10 +354,11 @@ function branchSites(base: string): BranchSite[] {
  * Up to k ranked candidates.  Always at least one (the top-ranked branch
  * combination); a word with no ambiguous sites yields exactly one.
  */
-export function transliterateCandidates(li: string, k = 5): TransliterationCandidate[] {
+export function transliterateCandidates(li: string, k = 5,
+                                        opts: TransliterateOpts = {}): TransliterationCandidate[] {
     let base = li.replace(/[^\s.,!?]+/g, w => LEXICAL_EXCEPTIONS[w] ?? w);
     base = base.replaceAll('g', 'k').replaceAll('G', 'K');
-    const sites = branchSites(base);
+    const sites = branchSites(base, opts);
     const combos: {probability: number, bits: number}[] = [];
     for(let bits = 0; bits < (1 << sites.length); bits++) {
         let probability = 1;

@@ -66,13 +66,17 @@ The machine found one clean sub-rule (u+l+t never inserts; u+l+p always
 does) but the rest conflicts within identical spellings, which means the
 conditioning is something spelling doesn't show — your call on what.
 
-**Q3. Word-final *-ei*: does it become *-ey*?**
-Your writing splits **41 keep / 23 change** (*Pilei → Piley*,
-*Mijipjewei → Mijipjewey*, but *angamsutiei* stays).  Intriguingly, the
-previous generation's expert rules (Transliterate.java, rule 100) made
-ey-handling conditional on the word being a **noun** — is -ei → -ey
-grammatically conditioned?  If you can state the condition, the machine can
-apply it (it knows each word's part of speech).
+**Q3. Word-final *-ei*: does it become *-ey*?  — PARTIALLY ANSWERED
+(2026-07-08, by part of speech).**
+Your writing splits **41 keep / 23 change** overall — but split by part of
+speech (via the single-subentry 1-1: 97% of entries), a real pattern
+appears: **vai verbs keep -ei 25 of 30 times**, vit leans -ey (8 of 13),
+and the noun classes are mixed.  So the old rule-100 hunch (noun-
+conditioned) was pointing at grammatical conditioning but had the class
+wrong: it is the VERB paradigm that protects -ei (likely because -ei is an
+inflectional ending there).  The machine now conditions this branch on
+part of speech.  Remaining question for you: is the vit/noun behaviour a
+real rule or just thin data?
 
 **Q4. The apostrophe vs barred-i (î) convention — a decision, not a rule.**
 The previous generation's expert rules write the older Smith-Francis style:
@@ -142,7 +146,8 @@ deno run ... oracle.json --calibrate                       # regen calibration
 |---|---|---|---|
 | li-sf/rules-v1 (g→k + [lnm][ptj] apostrophe) | 70.6% | 70.1% | both rules corpus-mined |
 | li-sf/rules-v2 (+ lexical exceptions, word-start, ult) | 73.5% | 73.8% | frozen |
-| li-sf/rules-v3 (probability-RANKED branch decisions) | — | **75.9%** | current engine; its top-5 candidates hit **84.4%** (click-to-pick) |
+| li-sf/rules-v3 (probability-RANKED branch decisions) | — | 75.9% | frozen in spirit (v4 = v3 + pos) |
+| li-sf/rules-v4 (+ pos-conditioned -ei branch) | 75.0% | **75.5%** | current engine; top-1 statistically unchanged (±1 word) but per-class probabilities truer; top-5 **84.4%** |
 | Java rules pipeline (expert set, ported) | — | — | 35.9% on ALL |
 | Java scanner (what the old system served) | — | — | 47.4% (48.9% + sonorant) |
 
@@ -171,11 +176,14 @@ Character-window rules are exhausted: the remaining clusters contain
 conflicting demands inside identical windows (Q1/Q2 above).  When feedback
 arrives:
 
-- **Grammatical conditioning (Q3)**: part-of-speech is available — the
-  entry's subentry `part_of_speech` (lexical-forms vocabulary); the
-  proposal op has entry context, and the old export scripts already
-  demonstrated a noun flag per pair.  Java rule 100's `isNoun` precondition
-  is the precedent.
+- **Grammatical conditioning (Q3)**: BUILT (2026-07-08).  The oracle
+  export carries `pos` (single-subentry 1-1, `singleSubentryPos`); the
+  engine's -ei branch key splits by pos class (vai/vit/other, see
+  `posClass`); the proposal op, pick verb and chips all pass the same pos.
+  Result: top-1 unchanged within noise, probabilities per class now
+  measured (vai keeps -ei at .17, the rest ~.55).  The pattern for any
+  future pos-conditioned rule is in place — mine by `p.pos`, split the
+  branch key, let branchP's n≥5 threshold govern.
 - **Morphology/syllable conditioning (Q1/Q2)**: needs either expert-stated
   rules (encode + measure as usual) or a segmentation the schema doesn't
   have.  If experts stall, the fallback is a **learned weighted transducer**

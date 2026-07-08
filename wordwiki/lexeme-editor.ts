@@ -1206,7 +1206,9 @@ export class LexemeEditor {
         const parentFactId = path[path.length - 2][1];
         const li = this.liSiblingText(entry_id, parentFactId, rf)
             ?? panic('no Listuguj source for', fact_id);
-        const chosen = transliterateCandidates(li, 5)[candidate_index];
+        // The SAME pos the chips used - candidate indexes must agree.
+        const chosen = transliterateCandidates(li, 5,
+            {pos: autoTransliterate.singleSubentryPos(this.app, entry_id)})[candidate_index];
         if(!chosen) throw new Error(`no candidate #${candidate_index} for this word`);
 
         if(chosen.text !== factText(rf, current.assertion)) {
@@ -1312,7 +1314,8 @@ export class LexemeEditor {
                     // they always reflect the current engine.
                     const currentText = factText(rf, current.assertion);
                     const picks = li === undefined ? [] :
-                        transliterateCandidates(li, 5)
+                        transliterateCandidates(li, 5,
+                            {pos: autoTransliterate.singleSubentryPos(this.app, id.entryId)})
                         .map((c, ci) => ({c, ci}))
                         .filter(x => x.c.text !== currentText)
                         .slice(0, 3)
