@@ -60,12 +60,29 @@ explicitly does NOT matter — only the generated public site's URLs do.
    too). wordwiki.entry(id) route kept — committed findings reports link
    to it. wordwiki.ts is 915 lines (was 2488).
 
-**Remaining plan (dz-approved shape, not yet requested to build):**
-7. config pass on Mi'kmaq-specific constants (reference books from
-   scanned_document table, PDM report parameterized, login branding,
-   collator per orthography, entry.users/entry.todos maps).
-   Also flagged: per-orthography spelling-lane SORT in SiteView (today all
-   views sort by spelling[0]; changing it would diff the public site, so it
-   was deliberately left out of step 5).
+7. `wordwiki/site-config.ts` — the de-Mi'kmaq seam: typed SiteConfig
+   literal (editorName/editorSubtitle, publicSiteOrthography,
+   collationLocale, primarySourceBook). entry-schema's
+   PUBLIC_SITE_ORTHOGRAPHY + getSpellings defaultVariant, SiteView's
+   collator, navbar brand, and the login card read it. Home's Reference
+   Books come from the scanned_document table (selectAllScannedDocuments).
+   PDM reports parameterized: wordwiki.reports.entriesByBookPage(Directory)
+   (book, ...) and WordWiki.entryCountByPage(book) (Map cache per book;
+   publish passes its publicBookId). The literal module is the STEPPING
+   STONE to db-sourced config (see [[wordwiki-archival-publish-model]]) —
+   its interface is the future config-table schema; when swapped, derived
+   consts (PUBLIC_SITE_ORTHOGRAPHY) must become getters.
+
+**Known residuals (deliberately not done):**
+- username→display-name lookups still read the entry-schema `users` seed
+  map in 6 modules (change-feed, lexeme-editor, recent-words, reports/todo);
+  converting to users-TABLE-driven names (cached) is a self-contained
+  follow-up. entry.users stays as the V1 import SEED regardless (frozen for
+  cutover). entry.todos = legacy todo vocabulary, display-only.
+- publish.ts public-site CONTENT is still Mi'kmaq-specific (about-us,
+  renderBookPageTopNote's PDM prose) — belongs to the publish-from-JSON
+  phase, not a config pass.
+- per-orthography spelling-lane SORT in SiteView (all views sort by
+  spelling[0]; changing it diffs the public site — needs dz review).
 
 Relates to [[fix-orthographies]], [[publication-approval-model]].

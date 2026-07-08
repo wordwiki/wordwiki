@@ -1509,7 +1509,7 @@ including remixing, transforming, and building upon the material, for any non-co
                      `This is a page from the Pacifique Dictionary Manuscripts, a handwritten Mi'gmaq - French dictionary written in the first half of the 1900’s. `],
                     ['p', {}, `Click on a colored box to see the worked through construction of a modern dictionary entry from a source entry.`],
                     ['p', {}, 'The project is newly underway, pages that we have worked on are: ',
-                     this.wordWiki.entryCountByPage.
+                     this.wordWiki.entryCountByPage(publicBookId).
                         filter(([pageNumber, entryCount]) => entryCount > 1).
                         map(([pageNumber, entryCount])=>
                             [['a', {href:`${rootPath}${this.pathForBookPage(publicBookId, pageNumber)}`}, `${pageNumber}`], ' '])

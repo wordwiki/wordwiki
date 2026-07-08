@@ -15,7 +15,7 @@ import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import {selectScannedDocumentByFriendlyId, allScannedDocumentSchemaDml} from './scanned-document.ts';
+import {selectScannedDocumentByFriendlyId, selectAllScannedDocuments, allScannedDocumentSchemaDml} from './scanned-document.ts';
 import {Assertion, createAssertionDml, ensureAssertionColumns} from './assertion.ts';
 import {pageEditor} from './render-page-editor.ts';
 
@@ -36,6 +36,7 @@ import * as user from './user.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import {DictionaryStore} from './dictionary-store.ts';
+import {siteConfig} from './site-config.ts';
 import {SiteView} from './site-view.ts';
 import { VariantReports } from './variant-scan.ts';
 import { TransliterationReports } from './auto-transliterate.ts';
@@ -53,7 +54,7 @@ export class WordWiki extends LiminalApp {
 
     // Report-world cache: a db query, not a projection, but derived from the
     // same data - dropped on every store invalidation like the projections.
-    #entryCountByPage: Array<[number, number]>|undefined = undefined;
+    #entryCountByPage: Map<string, Array<[number, number]>> = new Map();
 
     /**
      *
@@ -62,7 +63,7 @@ export class WordWiki extends LiminalApp {
         super();
 
         this.store = new DictionaryStore({onDerivedInvalidated: () => {
-            this.#entryCountByPage = undefined;
+            this.#entryCountByPage = new Map();
         }});
 
         // --- Set up our routes
@@ -470,7 +471,8 @@ export class WordWiki extends LiminalApp {
             ['h3', {}, 'Reports'],
             ['ul', {},
              ['li', {}, ['a', {href:'/ww/wordwiki.reports.categoriesDirectory()'}, 'Entries by Category']],
-             ['li', {}, ['a', {href:'/ww/wordwiki.reports.entriesByPDMPageDirectory()'}, 'Entries by PDM Page']],
+             ['li', {}, ['a', {href:`/ww/wordwiki.reports.entriesByBookPageDirectory(${JSON.stringify(siteConfig.primarySourceBook)})`},
+                         `Entries by ${siteConfig.primarySourceBook} Page`]],
              ['li', {}, ['a', {href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
              ['li', {}, ['a', {href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],
              ['li', {}, ['a', {href:'/ww/wordwiki.transliteration.correctionsReport()'}, 'Transliteration Report']],
@@ -482,12 +484,13 @@ export class WordWiki extends LiminalApp {
 
             ['br', {}],
             ['h3', {}, 'Reference Books'],
+            // Straight from the scanned_document table: another community's
+            // books are a data change, not a code change.
             ['ul', {},
-             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("PDM")`}, 'PDM']],
-             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("Rand")`}, 'Rand']],
-             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("Clark")`}, 'Clark']],
-             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("PacifiquesGeography")`}, 'PacifiquesGeography']],
-             ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor("RandFirstReadingBook")`}, 'RandFirstReadingBook']]],
+             selectAllScannedDocuments().all({}).map(d =>
+                 ['li', {}, ['a', {href:`/ww/wordwiki.pages.pageEditor(${JSON.stringify(d.friendly_document_id)})`,
+                                   title: d.title},
+                             d.friendly_document_id]])],
         ];
 
         return templates.pageTemplate({title, body});
@@ -585,15 +588,18 @@ export class WordWiki extends LiminalApp {
     }
 
 
-    get entryCountByPage(): Array<[number, number]> {
-        return this.#entryCountByPage ??= (()=>{
-            const pdmDocumentId =
+    /** Per-page dictionary-reference counts for one reference book (a
+     *  scanned_document friendly id).  Cached per book; dropped with the
+     *  projections. */
+    entryCountByPage(book: string): Array<[number, number]> {
+        let counts = this.#entryCountByPage.get(book);
+        if(counts === undefined) {
+            const documentId =
                 selectScannedDocumentByFriendlyId()
-                    .required({friendly_document_id: 'PDM'})
+                    .required({friendly_document_id: book})
                     .document_id;
 
-            //console.time('entryCountByPage');
-            const entryCountByPage = db().
+            counts = db().
                 all<{page_number: number, entry_count: number}>(
                     block`
 /**/     SELECT pg.page_number AS page_number, COUNT(DISTINCT bg.bounding_group_id) as entry_count
@@ -604,12 +610,11 @@ export class WordWiki extends LiminalApp {
 /**/       WHERE ref.ty = 'ref' AND
 /**/             bg.document_id = :document_id AND
 /**/             bb.page_id IS NOT NULL
-/**/       GROUP BY pg.page_number ORDER BY pg.page_number`, {document_id: pdmDocumentId});
-            //console.timeEnd('entryCountByPage');
-
-            //console.info('entryCountByPage', entryCountByPage);
-            return entryCountByPage.map(e=>[e.page_number, e.entry_count]);
-        })();
+/**/       GROUP BY pg.page_number ORDER BY pg.page_number`, {document_id: documentId}).
+                map(e=>[e.page_number, e.entry_count] as [number, number]);
+            this.#entryCountByPage.set(book, counts);
+        }
+        return counts;
     }
     
     /**
@@ -765,8 +770,8 @@ export class WordWiki extends LiminalApp {
               ['div', {class: 'col-md-6 col-lg-5'},
                ['div', {class: 'card shadow'},
                 ['div', {class: 'card-body p-5'},
-                 ['h1', {class: 'text-center mb-2'}, 'MMO Editor'],
-                 ['p', {class: 'text-center text-muted mb-4'}, `The Mi'gmaq-Mi'kmaq Online dictionary editor`],
+                 ['h1', {class: 'text-center mb-2'}, siteConfig.editorName],
+                 ['p', {class: 'text-center text-muted mb-4'}, siteConfig.editorSubtitle],
                  errorMessage
                      ? ['div', {class: 'alert alert-danger', role: 'alert'}, errorMessage]
                      : undefined,

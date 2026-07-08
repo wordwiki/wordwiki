@@ -18,14 +18,17 @@
 
 import * as entry from './entry-schema.ts';
 import type {DictionaryStore} from './dictionary-store.ts';
+import {siteConfig} from './site-config.ts';
 
 export class SiteView {
     #publicEntries: entry.Entry[]|undefined = undefined;
     #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
 
-    /** Source-language collation for this orthography.
-     *  TODO make configurable (per orthography, from config) XXX */
-    readonly collator = Intl.Collator('en');
+    /** Source-language collation for this orthography - one configured
+     *  locale for all orthographies today (siteConfig.collationLocale);
+     *  per-orthography is the seam if a community's orthographies ever
+     *  collate differently. */
+    readonly collator = Intl.Collator(siteConfig.collationLocale);
 
     constructor(readonly store: DictionaryStore, readonly orthography: string) {}
 

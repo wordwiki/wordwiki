@@ -10,7 +10,7 @@
  *
  * The constructor takes the NARROW ReportsApp interface, not the whole app:
  * a report can only reach the store, the site views, the category table and
- * the PDM page counts - which is everything a read-only report should need.
+ * the book page counts - which is everything a read-only report should need.
  * WordWiki satisfies it structurally.
  */
 
@@ -37,7 +37,7 @@ export interface ReportsApp {
     site(orthography?: string): SiteView;
     workingSite(): SiteView;
     readonly categories: category.CategoryTable;
-    readonly entryCountByPage: Array<[number, number]>;
+    entryCountByPage(book: string): Array<[number, number]>;
 }
 
 /** Is this entry already posted as a word-a-day (twitter/bluesky)?  The
@@ -305,18 +305,19 @@ export class EditorReports {
     }
 
     @route(authenticated)
-    entriesByPDMPageDirectory(): any {
-        const title = `Entries by PDM Page Directory`;
+    entriesByBookPageDirectory(book: string): any {
+        typeof book === 'string' || panic('expected book (friendly document id)');
+        const title = `Entries by ${book} Page Directory`;
 
-        const entryCountByPage = this.app.entryCountByPage;
+        const entryCountByPage = this.app.entryCountByPage(book);
 
         const body = [
             ['h1', {}, title],
             ['ul', {},
              entryCountByPage.map(([page_number, entry_count])=>
                  ['li', {},
-                  ['a', {href:`/ww/wordwiki.reports.entriesByPDMPage(${page_number})`},
-                   `PDM page ${page_number} has ${entry_count} entries`]
+                  ['a', {href:`/ww/wordwiki.reports.entriesByBookPage(${JSON.stringify(book)}, ${page_number})`},
+                   `${book} page ${page_number} has ${entry_count} entries`]
                  ])
             ]
         ];
@@ -325,19 +326,20 @@ export class EditorReports {
     }
 
     @route(authenticated)
-    entriesByPDMPage(page_number: number): any {
+    entriesByBookPage(book: string, page_number: number): any {
+        typeof book === 'string' || panic('expected book (friendly document id)');
         typeof page_number === 'number' || panic('expected page number');
 
-        const title = `Entries for PDM Page ${page_number}`;
+        const title = `Entries for ${book} Page ${page_number}`;
 
-        const pdmDocumentId =
+        const documentId =
             selectScannedDocumentByFriendlyId()
-                .required({friendly_document_id: 'PDM'})
+                .required({friendly_document_id: book})
                 .document_id;
 
-        const pdmPageId =
+        const pageId =
             selectScannedPageByPageNumber()
-                .required({document_id: pdmDocumentId, page_number}).page_id;
+                .required({document_id: documentId, page_number}).page_id;
 
         console.time('entriesInDocRefOrder');
         // TODO XXX the page_number returned here is pointless now that this
@@ -352,7 +354,7 @@ export class EditorReports {
 /**/       WHERE ref.valid_to = 9007199254740991 AND
 /**/             ref.ty = 'ref' AND
 /**/             bb.page_id = :page_id
-/**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id: pdmPageId});
+/**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id: pageId});
 
         console.timeEnd('entriesInDocRefOrder');
 

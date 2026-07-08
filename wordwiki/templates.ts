@@ -6,6 +6,7 @@ import {htmxConfigMeta, htmxScriptTag} from "../liminal/htmx.ts";
 import {assetUrl} from "../liminal/assets.ts";
 import {pencilIcon} from "../liminal/table.ts";
 import * as security from "../liminal/security.ts";
+import {siteConfig} from './site-config.ts';
 
 export interface PageContent {
     title?: any;
@@ -219,7 +220,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
     return (
         ['nav', {class:'navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body', 'data-bs-theme':'dark'},
          ['div', {class:'container-fluid'},
-          ['a', {class:'navbar-brand', href:'/ww/'}, 'MMO Editor'],
+          ['a', {class:'navbar-brand', href:'/ww/'}, siteConfig.editorName],
           ['button', {class:'navbar-toggler', type:'button', 'data-bs-toggle':'collapse', 'data-bs-target':'#navbarSupportedContent', 'aria-controls':'navbarSupportedContent', 'aria-expanded':'false', 'aria-label':'Toggle navigation'},
            ['span', {class:'navbar-toggler-icon'}]],
           ['div', {class:'collapse navbar-collapse', id:'navbarSupportedContent'},
@@ -250,7 +251,9 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:"/ww/wordwiki.recentlyChangedWords({mode:'all'})"}, 'Recently Changed Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.changes()'}, 'Recent Changes']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.activity()'}, 'Monthly Activity']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.entriesByPDMPageDirectory()'}, 'Entries by PDM page']],
+              ['li', {}, ['a', {class:'dropdown-item',
+                  href:`/ww/wordwiki.reports.entriesByBookPageDirectory(${JSON.stringify(siteConfig.primarySourceBook)})`},
+            `Entries by ${siteConfig.primarySourceBook} page`]],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.reports.categoriesDirectory()'}, 'Entries by Category']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.spellings.duplicatesReport()'}, 'Duplicate Spellings']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.variants.cleanupReport()'}, 'Variant Cleanup']],

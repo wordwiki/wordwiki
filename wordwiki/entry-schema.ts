@@ -17,6 +17,7 @@ import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundi
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as random from '../liminal/random.ts';
 import { variantMatches } from './variant-policy.ts';
+import { siteConfig } from './site-config.ts';
 
 export const DictTag = 'dct';          // dict
 export const EntryTag = 'ent';         // entr
@@ -898,7 +899,8 @@ export interface Recording {
 
 // The orthography today's public site renders (and therefore the pub gate it
 // composes on).  Publishing more orthographies = more calls with other values.
-export const PUBLIC_SITE_ORTHOGRAPHY = 'mm-li';
+// The VALUE lives in the per-community site config.
+export const PUBLIC_SITE_ORTHOGRAPHY = siteConfig.publicSiteOrthography;
 
 /**
  * THE COMPOSITION RULE (fix-orthographies.md "Status"): a word is public in
@@ -929,7 +931,7 @@ export function computeNormalizedSearchTerms(e: Entry): string[] {
 }
 
 // XXX DO THIS PROPERLY!!!!
-const defaultVariant = 'mm-li';
+const defaultVariant = siteConfig.publicSiteOrthography;
 
 export function getSpellings(e: Entry): Spelling[] {
     return e.spelling.filter(s=>s.variant == defaultVariant || !s.variant);

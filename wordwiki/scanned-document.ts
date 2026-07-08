@@ -91,6 +91,11 @@ export const selectScannedDocumentByFriendlyId = ()=>db().prepare<ScannedDocumen
 /**/          FROM scanned_document
 /**/          WHERE friendly_document_id = :friendly_document_id`);
 
+export const selectAllScannedDocuments = ()=>db().prepare<ScannedDocument, {}>(block`
+/**/   SELECT ${scannedDocumentFieldNames.join()}
+/**/          FROM scanned_document
+/**/          ORDER BY document_id`);
+
 // --------------------------------------------------------------------------------
 // --- Scanned Page ---------------------------------------------------------------
 // --------------------------------------------------------------------------------
