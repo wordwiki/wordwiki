@@ -278,6 +278,7 @@ export class UserTable extends Table<User> {
              this.canEditRecord(u) ? this.editPencil(user_id) : undefined],
             ['dl', {class: 'row mb-0'},
              row('Username', u.username),
+             row('Region', u.region || '—'),
              row('Email', u.email || '—'),
              row('Permissions', u.permissions || '—'),
             ],
