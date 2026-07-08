@@ -545,6 +545,10 @@ export class Publish {
         let purpose = 'unmarked';
         purpose = this.source.dbPurpose;
         this.status.log.push(`Publishing from instance '${instanceDir}' [db_purpose: ${purpose}].`);
+        if(this.source.generatedAt)
+            this.status.log.push(
+                `Data from a DUMPED publish source generated ${this.source.generatedAt} ` +
+                `(${this.source.entries.length} entries) - not the live db.`);
         for(const dir of ['entries', 'categories', 'top-words', 'books', 'servlet']) {
             try {
                 if(Deno.lstatSync(this.fsPath(dir)).isSymlink)

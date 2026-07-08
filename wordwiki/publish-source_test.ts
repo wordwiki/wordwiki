@@ -78,6 +78,36 @@ test("a JSON round-trip of the bundle drives Publish identically", async () => {
     });
 });
 
+test("a dump-driven publish emits byte-identical files to a live one", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seedTwoPublicWords(fx);
+        const source = buildPublishSource(fx.ww);
+        const roundTripped = publishSourceFromJson(JSON.stringify(
+            {...source, generatedAt: '2026-07-08T00:00:00.000Z'}));
+
+        const emit = async (src2: any) => {
+            const root = await Deno.makeTempDir({prefix: 'wordwiki-from-json-test-'});
+            const pub = new Publish(new PublishStatus(), src2, root);
+            await Deno.mkdir(`${root}/categories`, {recursive: true});
+            await pub.publishTopWords();
+            await pub.publishCategory('water');
+            const files = new Map<string, string>();
+            for(const path of pub.emittedPaths)
+                files.set(path, await Deno.readTextFile(`${root}/${path}`));
+            await Deno.remove(root, {recursive: true});
+            return files;
+        };
+
+        const live = await emit(source);
+        const dumped = await emit(roundTripped);
+        assertEquals(Array.from(dumped.keys()).toSorted(),
+                     Array.from(live.keys()).toSorted());
+        for(const [path, content] of live)
+            assertEquals(dumped.get(path), content, `content differs: ${path}`);
+        assert(live.size > 0, 'the comparison actually covered files');
+    });
+});
+
 test("publishSourceFromJson: rejects an unknown formatVersion", async () => {
     await withTestDb(async () => {
         await assertRejects(async () =>

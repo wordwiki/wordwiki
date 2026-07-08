@@ -2,8 +2,10 @@
 
 *Status 2026-07-08: the bundle exists and the live publisher is driven off
 it for ALL DATA; the remaining db/fs touches are render-machinery, listed
-below.  `dump-publish-source` writes the JSON artifact.  Publish-from-JSON
-and linking the dumps from the generated site are the next stages.*
+below.  `dump-publish-source` writes the JSON artifact, and
+`publish --from=<dump.json>` publishes FROM it (verified byte-identical
+to a live publish).  Linking the dumps from the generated site is the
+next stage.*
 
 ## Why this exists (the archival model)
 
@@ -112,14 +114,25 @@ bundle, media manifest for audio):
    is code the generator imports, not a db touch; a future formatVersion
    may embed the compact schema JSON in the bundle instead.
 
+## Publishing from a dump
+
+    ./wordwiki.sh dump-publish-source ps.json
+    ./wordwiki.sh publish --from=ps.json [targets] [--root=...]
+
+The DATA comes entirely from the file (the publish log records the dump's
+generatedAt as provenance); the scan renders still read the instance db
+(touches 1-2 above), so run it from the same instance dir.  Verified
+byte-identical to a live publish across home/404/all-words/about-us/
+top-words/all categories/an entry/a book page, and covered by the
+round-trip test in publish-source_test.ts.  The entries-identity staleness
+check does not apply to dump-driven runs (by design: a dump IS a snapshot).
+
 ## Next stages
 
-1. Migrate touches 1-3 into the bundle (scan geometry + content-addressed
-   image refs; media manifest) so `Publish` is a pure function of
-   (bundle, resource files).
-2. `publish --from=publish-source.json` (uses `publishSourceFromJson`; the
-   entries-identity staleness check does not apply to dump-driven runs).
-3. The generated site links its own dumps (reduced + full-history) with
+1. Migrate touches 1-2 (+3's media manifest) into the bundle (scan
+   geometry + content-addressed image refs) so `Publish` is a pure function
+   of (bundle, resource files) and `--from` needs no db at all.
+2. The generated site links its own dumps (reduced + full-history) with
    licensing - every archived copy carries its seed.
-4. The standalone generator example a community can fork (imports the
+3. The standalone generator example a community can fork (imports the
    bundle reader + pure renderers only).

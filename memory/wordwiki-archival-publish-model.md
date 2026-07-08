@@ -16,6 +16,17 @@ DATA FILES convertible to any future medium (unbounded) — both simplified
 (no history) and full versions, linked FROM the site, cleanly licensed, so
 they get archived, 4) paper via .pdf (survives computing, loses audio).
 
+**STAGE 2 BUILT (2026-07-08): publish --from=<dump.json>.**
+`./wordwiki.sh publish --from=ps.json [targets] [--root=...]` — the DATA
+comes entirely from the dumped bundle (publish log records the dump's
+generatedAt as provenance); scan renders still read the instance db, so
+run from the same instance dir. VERIFIED: the ENTIRE site (16,046 html
+files — all entries, categories, book pages) publishes BYTE-IDENTICALLY
+from the dump vs the live db; also a unit round-trip file-equivalence
+test. Full CLI publish ≈ 30s. Remaining: bundle-ize scan renders/media
+manifest (then --from needs no db), site links its own dumps + licensing,
+standalone generator example.
+
 **STAGE 1 BUILT (2026-07-08): the PublishSource bundle.**
 publish-source.ts (PublishSource formatVersion 1 + buildPublishSource +
 publishSourceFromJson); Publish's ctor takes ONLY the bundle (no app/site

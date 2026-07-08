@@ -33,7 +33,7 @@ import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
-import { buildPublishSource } from './publish-source.ts';
+import { buildPublishSource, publishSourceFromJson } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
     const command = args[0];
@@ -681,14 +681,23 @@ export async function cliMain(args: string[]): Promise<void> {
         //   ./wordwiki.sh publish                                 # everything
         //   ./wordwiki.sh publish entries/samqwan categories/water
         //   ./wordwiki.sh publish --root=/tmp/staging categories    # other tree
+        //   ./wordwiki.sh publish --from=publish-source.json ...    # DATA from a
+        //       dumped publish source (dump-publish-source) instead of the live
+        //       db - the archival bundle is load-bearing end to end.  The scan
+        //       renders still read the instance db (publish-source.md lists the
+        //       remaining touches), so run it from the same instance dir.
         case 'publish': {
             const targets = args.slice(1).filter(a => !a.startsWith('--'));
             const root = args.find(a => a.startsWith('--root='))?.slice('--root='.length) || '.';
+            const fromPath = args.find(a => a.startsWith('--from='))?.slice('--from='.length);
             const exitCode = await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
+                const source = fromPath
+                    ? publishSourceFromJson(Deno.readTextFileSync(fromPath))
+                    : buildPublishSource(ww);
                 const status = new publish.PublishStatus();
                 status.start();
-                const pub = new publish.Publish(status, buildPublishSource(ww), root);
+                const pub = new publish.Publish(status, source, root);
                 if(root !== '.')
                     await Deno.mkdir(root, {recursive: true});
                 try {
