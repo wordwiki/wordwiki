@@ -54,6 +54,7 @@ import { validateVersionedDb, assertVersionedDbValid, validateVariantInvariants,
          factViewsFromVersionedDb } from './versioned-db-validate.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
 import { FindingsReport, assembleImportReport } from './findings.ts';
+import * as findings from './findings.ts';
 import { scanVariants, VariantReports } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
@@ -189,9 +190,10 @@ export class WordWiki extends LiminalApp {
     importReport(): templates.Page {
         const fragments = (() => {
             try {
-                return [...Deno.readDirSync('import-report')]
-                    .filter(e => e.isFile && /^[0-9]+-[a-z0-9-]+\.md$/.test(e.name))
-                    .map(e => e.name).sort();
+                return findings.sortFragments(
+                    [...Deno.readDirSync('import-report')]
+                        .filter(e => e.isFile && /^[0-9]+-[a-z0-9-]+\.md$/.test(e.name))
+                        .map(e => ({name: e.name}))).map(f => f.name);
             } catch(_e) { return []; }
         })();
         const body: markup.Markup = [

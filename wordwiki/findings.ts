@@ -198,6 +198,7 @@ export function assembleImportReport(fragments: {name: string, content: string}[
     out.push('> This is a record of one import run, not a live view.', '');
 
     out.push('## Executive summary', '');
+    fragments = sortFragments(fragments);
     const present = new Set(fragments.map(f => f.name.replace(/^[0-9]+-/, '').replace(/\.md$/, '')));
     let anyBad = false;
     for(const f of fragments) {
@@ -215,10 +216,20 @@ export function assembleImportReport(fragments: {name: string, content: string}[
     out.push('', anyBad ? '**⚠ This run did NOT complete cleanly — see the markers above.**'
                         : 'All reported steps completed.', '');
 
-    for(const f of fragments) {
-        out.push('', '---', '', `<!-- fragment: ${f.name} -->`);
+    for(const f of sortFragments(fragments)) {
+        // A visible provenance line (an HTML comment renders as literal text
+        // under the markdown renderer).
+        out.push('', '---', '', `*fragment: ${f.name}*`);
         // Demote the fragment's own headings one level under the assembly.
         out.push(f.content.replace(/^#/gm, '##'));
     }
     return out.join('\n');
+}
+
+/** Pipeline order: by the fragment's stem, so '10-migrate-status.md' comes
+ *  BEFORE '10-migrate-status-proof.md' (raw filename order puts -proof
+ *  first: '-' < '.'). */
+export function sortFragments<T extends {name: string}>(fragments: T[]): T[] {
+    const stem = (n: string) => n.replace(/\.md$/, '');
+    return [...fragments].sort((a, b) => stem(a.name) < stem(b.name) ? -1 : 1);
 }

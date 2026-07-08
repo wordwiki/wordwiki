@@ -71,6 +71,8 @@ test("assembleImportReport: executive summary, CRASHED and MISSING markers", () 
         {name: '10-migrate-status.md', content: frag('Status', 2, true)},
     ], ['repair-assertions', 'migrate-status', 'verify-workspace']);
     assertStringIncludes(md, '## Executive summary');
+    assertStringIncludes(md, '*fragment: 03-repair-assertions.md*');   // visible provenance, no HTML comment
+    assert(!md.includes('<!--'), 'markdown renderer shows comments literally - never emit them');
     assertStringIncludes(md, '- 03-repair-assertions.md: 0 finding(s)');
     assertStringIncludes(md, '- 10-migrate-status.md: 2 finding(s) — **STEP CRASHED**');
     assertStringIncludes(md, '- verify-workspace: **MISSING**');
@@ -81,4 +83,12 @@ test("assembleImportReport: executive summary, CRASHED and MISSING markers", () 
     const clean = assembleImportReport(
         [{name: '03-repair-assertions.md', content: frag('Repair', 0)}], ['repair-assertions']);
     assertStringIncludes(clean, 'All reported steps completed.');
+    // Pipeline order: the main step BEFORE its -proof (raw name order would
+    // put -proof first: '-' < '.').
+    const ordered = assembleImportReport([
+        {name: '10-migrate-status-proof.md', content: frag('Proof', 0)},
+        {name: '10-migrate-status.md', content: frag('Status', 0)},
+    ]);
+    assert(ordered.indexOf('10-migrate-status.md') < ordered.indexOf('10-migrate-status-proof.md'),
+           'main step precedes its proof');
 });
