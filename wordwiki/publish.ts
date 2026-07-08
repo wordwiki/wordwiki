@@ -12,7 +12,7 @@ import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
 import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
-import {PublishSource, PublishSourceBook, buildPublishSource} from './publish-source.ts';
+import {PublishSource, PublishSourceBook, buildPublishSource, writeFullHistoryDump} from './publish-source.ts';
 import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
@@ -204,6 +204,7 @@ export function startPublish(): any {
             publishStatusSingleton.start();
             try {
                 const wordWiki = getWordWiki();
+                writeFullHistoryDump(wordWiki, '.');
                 const publish = new Publish(publishStatusSingleton,
                                             await buildPublishSource(wordWiki));
                 await publish.publish();
@@ -234,6 +235,7 @@ export async function publish(publishOptions: PublishOptions) {
     try {
         const wordWiki = getWordWiki();
         wordWiki.requestWorkspaceReload();
+        writeFullHistoryDump(wordWiki, '.');
         const publish = new Publish(publishStatusSingleton,
                                     await buildPublishSource(wordWiki),
                                     ".",
@@ -878,6 +880,11 @@ export class Publish {
         return 'data/index.html';
     }
 
+    haveFullHistoryDump(): boolean {
+        try { Deno.statSync(this.fsPath('data/full-history.json')); return true; }
+        catch { return false; }
+    }
+
     async publishDataDownloads(): Promise<void> {
         await Deno.mkdir(this.fsPath('data'), {recursive: true});
 
@@ -923,13 +930,22 @@ current: the site existing is the proof.`,
                this.source.generatedAt ? ` Generated ${this.source.generatedAt}.` : ''],
               ['li', {},
                ['a', {href: 'publish-source-format.md'}, 'publish-source-format.md'],
-               ' — documentation of the file format, so the data can be read without this project\'s source code.']],
+               ' — documentation of the file format, so the data can be read without this project\'s source code.'],
+              this.haveFullHistoryDump()
+                  ? ['li', {},
+                     ['a', {href: 'full-history.json'}, 'full-history.json'],
+                     ` — the COMPLETE versioned data: every fact with its whole
+editorial history (who, when, every superseded version).  Larger and
+requiring more sophistication to interpret; the file above is the
+simplified form.`]
+                  : undefined],
 
              ['p', {}, `The recordings and manuscript images are referenced from the
 data by stable content-addressed paths under this site's `,
               ['code', {}, 'derived/'], ' and ', ['code', {}, 'content/'],
               ` directories - a mirror of the whole site therefore contains everything.`],
 
+             this.haveFullHistoryDump() ? undefined :
              ['p', {}, `These files are the simplified, current-published form of the
 data (no editorial history).  The complete versioned editorial history is
 preserved by the project separately.`],

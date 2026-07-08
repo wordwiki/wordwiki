@@ -104,7 +104,8 @@ set -e
 # (the V1-db import; --no-pull --allow-production is the production cutover).
 #
 # Any command first cleanly stops a running server (SQLite single writer),
-# except `publish`, which only reads the db.
+# except the read-only commands (publish, dump-publish-source,
+# dump-full-history, backup-db), which run alongside the live server.
 
 WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
 RUN_DIR="${WORDWIKI_DIR:-$WORDWIKI_SRC/mmo}"
@@ -148,10 +149,18 @@ cd "$RUN_DIR"
 # We stop it the clean way: ask the server to shut itself down via its
 # authenticated shutdown route, so SQLite closes properly.  We only fall back
 # to SIGKILL if a wedged server ignores the request and outlives the timeout.
-# `publish` only READS the db (it writes site files), so it runs happily
-# alongside the server - skip the stop-the-server dance for it, which is
-# exactly what you want when iterating on the public-site templates.
-if [ "$1" != "publish" ] && [ -f "$PIDFILE" ]; then
+# READ-ONLY commands run happily alongside the server - skip the
+# stop-the-server dance for them.  `publish` (reads db, writes site files)
+# is what you want when iterating on templates; the dump/backup commands
+# exist precisely to run against a LIVE server (backup-db is VACUUM INTO,
+# an ordinary read transaction - daily systemd snapshots must not restart
+# the site).
+case "$1" in
+    publish|dump-publish-source|dump-full-history|backup-db)
+        SKIP_STOP=1;;
+    *)  SKIP_STOP=0;;
+esac
+if [ "$SKIP_STOP" != "1" ] && [ -f "$PIDFILE" ]; then
     OLDPID=$(cat "$PIDFILE" 2>/dev/null || true)
     # Act only if that pid is alive AND really is a wordwiki - reading
     # /proc/PID/cmdline both confirms liveness and guards against a stale

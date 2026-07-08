@@ -33,7 +33,7 @@ import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
-import { buildPublishSource, publishSourceFromJson } from './publish-source.ts';
+import { buildPublishSource, publishSourceFromJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
     const command = args[0];
@@ -592,6 +592,39 @@ export async function cliMain(args: string[]): Promise<void> {
             break;
         }
 
+        // Dump the FULL-HISTORY JSON (the versioned assertion tree - every
+        // fact with its whole version chain): the archival counterpart of
+        // dump-publish-source's reduced bundle.  Live publishes refresh it
+        // onto the site's data/ automatically; this command is for backups.
+        //   ./wordwiki.sh dump-full-history [path.json]
+        case 'dump-full-history': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const path = args[1] && !args[1].startsWith('--') ? args[1]
+                    : 'full-history.json';
+                Deno.writeTextFileSync(path, JSON.stringify(ww.store.workspace.dump()));
+                console.info(`wrote full-history dump to ${path}`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // A CONSISTENT db snapshot via VACUUM INTO - safe while the server
+        // is running (it is an ordinary read transaction), which is the
+        // whole point: backupSite.sh calls this so daily snapshots never
+        // risk a torn copy of a live db file.
+        //   ./wordwiki.sh backup-db <target-path>
+        case 'backup-db': {
+            const target = args[1];
+            if(!target) throw new Error('usage: backup-db <target-path>');
+            security.runSystem(() => {
+                db().execute<{path: string}>('VACUUM INTO :path', {path: target});
+                console.info(`db snapshot written to ${target} (VACUUM INTO)`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
         // Assemble the per-step import-report fragments into ONE
         // import-report.md with an executive summary (fix-orthographies.md
         // "Findings publish path").  Run by importWordWikiV1Db.sh via a
@@ -714,6 +747,10 @@ export async function cliMain(args: string[]): Promise<void> {
                 const source = fromPath
                     ? publishSourceFromJson(Deno.readTextFileSync(fromPath))
                     : await buildPublishSource(ww);
+                // A LIVE publish refreshes the full-history dump beside the
+                // reduced bundle (the data page lists it when present); a
+                // from-dump publish has no db and keeps whatever is there.
+                if(!fromPath) writeFullHistoryDump(ww, root);
                 const status = new publish.PublishStatus();
                 status.start();
                 const pub = new publish.Publish(status, source, root);

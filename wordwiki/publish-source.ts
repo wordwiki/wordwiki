@@ -291,6 +291,19 @@ export function collectAudioSources(entries: Entry[]): string[] {
     return Array.from(out).toSorted();
 }
 
+/** Write the FULL-HISTORY dump - the versioned assertion tree
+ *  (workspace.ts dump(): every fact with its whole version chain) - the
+ *  archival counterpart of the reduced bundle.  Written into
+ *  `<publishRoot>/data/` by every LIVE publish (a from-dump publish has
+ *  no db and leaves any existing file in place); also available as
+ *  `./wordwiki.sh dump-full-history [path]`. */
+export function writeFullHistoryDump(app: PublishSourceApp, publishRoot: string): string {
+    const path = `${publishRoot}/data/full-history.json`;
+    Deno.mkdirSync(`${publishRoot}/data`, {recursive: true});
+    Deno.writeTextFileSync(path, JSON.stringify(app.site().store.workspace.dump()));
+    return path;
+}
+
 /** Parse a dumped publish source, gating on the format version.  (A source
  *  loaded from JSON naturally cannot satisfy the live staleness identity
  *  check - from-dump publishing is for standalone generation.) */
