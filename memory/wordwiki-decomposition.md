@@ -41,11 +41,22 @@ explicitly does NOT matter — only the generated public site's URLs do.
    construction; defaultVariant = site.orthography, replacing the 'mm-li'
    hardcode).
 
+5. `WordWiki.workingSite()` = site(currentWorkingOrthography ?? PUBLIC).
+   POLICY SPLIT: editor REPORTS about the dictionary content
+   (categoriesDirectory, entriesForCategory) follow the editor's working
+   orthography (with a visible "showing your working orthography (mm-sf)"
+   note when non-default); public-site FEATURES (publish, word-a-day
+   picker, activity report's public markers, the publishedEntries-family
+   delegates) stay PINNED to site() — they are about THE public site,
+   whoever is looking. Differential test in working-orthography_test.ts.
+
 **Remaining plan (dz-approved shape, not yet requested to build):**
-5. render-time selection via currentWorkingOrthography. 6. report routes
-   into namespace modules (wordwiki.reports.* etc.) with narrowed dep
-   interfaces. 7. config pass on Mi'kmaq-specific constants (reference books
-   from scanned_document table, PDM report parameterized, login branding,
-   collator per orthography, entry.users/entry.todos maps).
+6. report routes into namespace modules (wordwiki.reports.* etc.) with
+   narrowed dep interfaces. 7. config pass on Mi'kmaq-specific constants
+   (reference books from scanned_document table, PDM report parameterized,
+   login branding, collator per orthography, entry.users/entry.todos maps).
+   Also flagged: per-orthography spelling-lane SORT in SiteView (today all
+   views sort by spelling[0]; changing it would diff the public site, so it
+   was deliberately left out of step 5).
 
 Relates to [[fix-orthographies]], [[publication-approval-model]].

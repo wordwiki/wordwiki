@@ -109,6 +109,14 @@ export class WordWiki extends LiminalApp {
     site(orthography: string = entry.PUBLIC_SITE_ORTHOGRAPHY): SiteView {
         return this.store.site(orthography);
     }
+    /** The site view INTERNAL rendering uses: the logged-in editor's working
+     *  orthography (fix-orthographies.md), falling back to the public site's
+     *  orthography when anonymous/unset.  Public-site FEATURES - publish,
+     *  the word-a-day picker, "is it on the site" markers - stay pinned to
+     *  site(): they are about THE public site, whoever is looking. */
+    workingSite(): SiteView {
+        return this.site(this.currentWorkingOrthography() ?? entry.PUBLIC_SITE_ORTHOGRAPHY);
+    }
     get sourceLangCollator(): Intl.Collator { return this.site().collator; }
     get publishedEntries(): entry.Entry[] { return this.site().publicEntries; }
     get entriesByCategory(): Map<string, entry.Entry[]> { return this.site().entriesByCategory; }
@@ -628,12 +636,14 @@ export class WordWiki extends LiminalApp {
         // end - names sorted within).  This is the EDITOR report, so internal
         // '~' categories are shown; the public site filters them.  Values
         // with no table row (a pre-import db) trail in their own group.
-        const counts = this.getCategories();
+        // Counts are public entries in the EDITOR'S working orthography.
+        const site = this.workingSite();
+        const counts = site.categoryCounts();
         const tabled = this.categories.allByOrder.all({}).filter(c => counts.has(c.slug));
         const tabledSlugs = new Set(tabled.map(c => c.slug));
         const untabled = Array.from(counts.keys())
             .filter(v => !tabledSlugs.has(v))
-            .toSorted((a, b) => this.sourceLangCollator.compare(a, b));
+            .toSorted((a, b) => site.collator.compare(a, b));
 
         const categoryLink = (value: string, label: string) =>
             ['li', {}, ['a',
@@ -642,6 +652,13 @@ export class WordWiki extends LiminalApp {
 
         const body = [
             ['h1', {}, title],
+            // Working in a non-default orthography changes what counts as
+            // public here - say so rather than leaving a puzzling near-empty
+            // page.  (Invisible in the default case.)
+            site.orthography !== entry.PUBLIC_SITE_ORTHOGRAPHY
+                ? ['p', {class: 'text-muted'},
+                   `Showing entries public in your working orthography (${site.orthography}).`]
+                : undefined,
             category.groupByTheme(tabled).map(group => [
                 ['h3', {}, group.theme],
                 ['ul', {}, group.cats.map(c => categoryLink(c.slug, `${c.name} (${c.slug})`))],
@@ -699,7 +716,7 @@ export class WordWiki extends LiminalApp {
     entriesForCategory(category?: string): any {
         category = String(category ?? '');
 
-        const entriesForCategory = this.getEntriesForCategory(category);
+        const entriesForCategory = this.workingSite().entriesForCategory(category);
         const title = ['Entries for category ', category];
         
         function renderEntryItem(e: entry.Entry): any {
@@ -793,18 +810,22 @@ export class WordWiki extends LiminalApp {
     @route(authenticated)
     wordADayPicker(): any {
         const title = 'Word-a-day picker';
-        const unpostedIds = new Set(this.publishedEntries
+        // Deliberately THE PUBLIC SITE's view (not the editor's working
+        // orthography): the picker feeds the public word-a-day post, so a
+        // pick must be publicly visible ON THE SITE, whoever is browsing.
+        const site = this.site();
+        const unpostedIds = new Set(site.publicEntries
             .filter(e => !WordWiki.isTwitterPosted(e)).map(e => e.entry_id));
 
         const byCat = new Map<string, entry.Entry[]>();
-        for(const [cat, entries] of this.entriesByCategory.entries()) {
+        for(const [cat, entries] of site.entriesByCategory.entries()) {
             const un = entries.filter(e => unpostedIds.has(e.entry_id));
             if(un.length > 0) byCat.set(cat, un);
         }
-        const uncategorized = this.publishedEntries
+        const uncategorized = site.publicEntries
             .filter(e => unpostedIds.has(e.entry_id)
                          && e.subentry.every(s => s.category.length === 0))
-            .toSorted((a, b) => this.sourceLangCollator.compare(
+            .toSorted((a, b) => site.collator.compare(
                 a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
 
         // Theme grouping via the category table, like categoriesDirectory;
@@ -813,7 +834,7 @@ export class WordWiki extends LiminalApp {
         const tabledSlugs = new Set(tabled.map(c => c.slug));
         const untabled = Array.from(byCat.keys())
             .filter(v => !tabledSlugs.has(v))
-            .toSorted((a, b) => this.sourceLangCollator.compare(a, b));
+            .toSorted((a, b) => site.collator.compare(a, b));
         const groups = category.groupByTheme(tabled);
 
         const anchor = (slug: string) => `cat-${slug}`;
