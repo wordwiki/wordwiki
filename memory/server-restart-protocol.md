@@ -43,6 +43,18 @@ stale pidfile, re-run the .sh, and verify the running pid changed. Avoid the
 race in the first place: never launch `serve` while another wordwiki.sh command
 may still be in its stop-dance; wait for the previous command to fully exit.
 
+**Cross-container pidfile guard (dz, 2026-07-08):** dz runs
+importWordWikiV1Db.sh / updateStaging.sh OUTSIDE the container against the
+same instance dir where the server runs INSIDE it — there the /proc-based
+liveness check can't see the server (different pid namespace) and
+wordwiki.sh's stop is a silent no-op. Both scripts therefore REFUSE to run
+while `<instance>/wordwiki.pid` exists (presence alone, deliberately
+conservative; dz accepts occasionally rm-ing a stale pidfile). Consequence
+for the dev loop INSIDE the container: stop the server (`./wordwiki.sh
+stop`) before running the import script — its old auto-stop step is gone.
+**Why:** copying into/out of a live db file risks a torn copy. Apply the
+same presence-check to any future script that touches the db file.
+
 **Publish gotcha:** the in-app Publish button (`wordwiki.publish.startPublish`)
 runs INSIDE the live server process, so it uses whatever code the server was
 started with. After editing any publish/render code you MUST restart the server
