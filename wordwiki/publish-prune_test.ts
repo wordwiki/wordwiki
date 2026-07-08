@@ -18,7 +18,7 @@ import { Publish, PublishStatus, PUBLISH_MARKER_FILE } from "./publish.ts";
 async function mkPrunable(fx: Fixture, options: any = {}):
     Promise<{pub: Publish, root: string}> {
     const root = await Deno.makeTempDir({prefix: 'wordwiki-prune-test-'});
-    const pub = new Publish(new PublishStatus(), fx.ww, [], root, options);
+    const pub = new Publish(new PublishStatus(), fx.ww, fx.ww.site(), root, options);
     return {pub, root};
 }
 

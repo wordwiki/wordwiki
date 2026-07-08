@@ -46,7 +46,7 @@ test("warnMissingRecordings: warnings (not errors), once per entry", async () =>
             bornApprove(fx.ww);  // the public site is the published projection now
             const status = new PublishStatus();
             status.start();
-            const pub = new Publish(status, fx.ww, fx.ww.publishedEntries);
+            const pub = new Publish(status, fx.ww, fx.ww.site());
 
             const entry = fx.ww.publishedEntries.find((e: any) => e.entry_id === 1000)!;
             pub.warnMissingRecordings(entry);

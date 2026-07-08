@@ -27,6 +27,7 @@ import * as utils from '../liminal/utils.ts';
 import {db} from '../liminal/db.ts';
 import {Assertion, updateAssertion, highestTimestamp, selectAllAssertions} from './assertion.ts';
 import {assertVersionedDbValid} from './versioned-db-validate.ts';
+import {SiteView} from './site-view.ts';
 
 export class DictionaryStore {
     readonly dictSchema: model.Schema;
@@ -38,6 +39,7 @@ export class DictionaryStore {
     #entriesById: Map<number, entry.Entry>|undefined = undefined;
     #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
     #publishedProjection: entry.Entry[]|undefined = undefined;
+    #siteViews: Map<string, SiteView> = new Map();
     #lastAllocatedTxTimestamp: number|undefined;
 
     constructor(private opts: {onDerivedInvalidated?: () => void} = {}) {
@@ -78,9 +80,21 @@ export class DictionaryStore {
         this.#entriesById = undefined;
         this.#entriesByReferenceGroupId = undefined;
         this.#publishedProjection = undefined;
-        // The owner's downstream caches (the per-orthography site views) are
-        // built over these projections - drop them in the same breath.
+        // The site views are built over these projections: drop them
+        // WHOLESALE (never reuse an instance), so view identity == projection
+        // freshness - the publish staleness check depends on this.
+        this.#siteViews = new Map();
+        // Owner caches built over these projections drop in the same breath.
         this.opts.onDerivedInvalidated?.();
+    }
+
+    /** The per-orthography site view (site-view.ts): created on demand,
+     *  dropped wholesale on invalidation. */
+    site(orthography: string): SiteView {
+        let v = this.#siteViews.get(orthography);
+        if(v === undefined)
+            this.#siteViews.set(orthography, v = new SiteView(this, orthography));
+        return v;
     }
 
     /** The VALID projection: every entry built from its currently-valid

@@ -29,7 +29,7 @@ function seedPublishedEntry(ww: any, tl: TestTimeline, entryId: number,
 
 function mkPublish(fx: Fixture): Publish {
     bornApprove(fx.ww);  // the public site is the published projection now
-    return new Publish(new PublishStatus(), fx.ww, fx.ww.publishedEntries);
+    return new Publish(new PublishStatus(), fx.ww, fx.ww.site());
 }
 
 test("public categories: internal '~' slugs filtered, table order, display names", async () => {
@@ -157,7 +157,7 @@ test("Top Words: publishTopWords emits a directory + a page per tier with cumula
         });
         void root;
         const tmp = await Deno.makeTempDir({prefix: 'wordwiki-topwords-test-'});
-        const pub = new Publish(new PublishStatus(), fx.ww, fx.ww.publishedEntries, tmp);
+        const pub = new Publish(new PublishStatus(), fx.ww, fx.ww.site(), tmp);
 
         await pub.publishTopWords();
 

@@ -38,6 +38,7 @@ import * as user from './user.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import {DictionaryStore} from './dictionary-store.ts';
+import {SiteView} from './site-view.ts';
 import * as findings from './findings.ts';
 import { VariantReports } from './variant-scan.ts';
 import { TransliterationReports } from './auto-transliterate.ts';
@@ -53,15 +54,9 @@ export class WordWiki extends LiminalApp {
      *  orthography-agnostic projections) - see dictionary-store.ts. */
     readonly store: DictionaryStore;
 
-    // The SITE-WORLD caches: built over the store's projections but
-    // orthography-DEPENDENT (public gate, category grouping, collation).
-    // These are the ones that fork per orthography (fix-orthographies.md);
-    // they move onto a per-orthography SiteView next.  The store drops them
-    // whenever its own projections are invalidated.
-    #publishedEntries: entry.Entry[]|undefined = undefined;
-    #entriesByCategory: Map<string, entry.Entry[]>|undefined = undefined;
+    // Report-world cache: a db query, not a projection, but derived from the
+    // same data - dropped on every store invalidation like the projections.
     #entryCountByPage: Array<[number, number]>|undefined = undefined;
-    sourceLangCollator = Intl.Collator('en'); // TODO make configurable XXX
 
     /**
      *
@@ -70,8 +65,6 @@ export class WordWiki extends LiminalApp {
         super();
 
         this.store = new DictionaryStore({onDerivedInvalidated: () => {
-            this.#publishedEntries = undefined;
-            this.#entriesByCategory = undefined;
             this.#entryCountByPage = undefined;
         }});
 
@@ -107,6 +100,22 @@ export class WordWiki extends LiminalApp {
     }
     requestWorkspaceReload() { this.store.requestWorkspaceReload(); }
     requestEntriesJSONReload() { this.store.requestEntriesJSONReload(); }
+
+    // ----- Site-view delegates -------------------------------------------------
+    // The per-orthography site view (site-view.ts).  Every consumer of "the
+    // public dictionary" goes through here; for now everything renders THE
+    // public site's orthography - render-time selection by the user's
+    // working orthography is the next step of the multi-orthography work.
+    site(orthography: string = entry.PUBLIC_SITE_ORTHOGRAPHY): SiteView {
+        return this.store.site(orthography);
+    }
+    get sourceLangCollator(): Intl.Collator { return this.site().collator; }
+    get publishedEntries(): entry.Entry[] { return this.site().publicEntries; }
+    get entriesByCategory(): Map<string, entry.Entry[]> { return this.site().entriesByCategory; }
+    getCategories(): Map<string, number> { return this.site().categoryCounts(); }
+    getEntriesForCategory(category: string): entry.Entry[] {
+        return this.site().entriesForCategory(category);
+    }
 
     [serialize](): string {
         return 'wordwiki';
@@ -306,21 +315,6 @@ export class WordWiki extends LiminalApp {
     @route(authenticated)
     orthographiesPage(): templates.Page {
         return templates.page('Orthography Table', this.orthographies.renderOrthographiesPage());
-    }
-
-    /**
-     * The entries the public site renders - the COMPOSITION RULE
-     * (fix-orthographies.md "Status"): the base projection is the PUBLISHED
-     * one (per-fact approval), and an entry is on the site iff it is public
-     * in the site's orthography - lifecycle not Archived* AND the
-     * per-orthography pub gate is set (entryIsPublicIn).  Approval is used
-     * while building too, so an in-progress entry may carry published facts,
-     * but stays off the public site until someone makes it public.
-     */
-    get publishedEntries(): entry.Entry[] {
-        return this.#publishedEntries ??=
-            Array.from(this.publishedProjection.filter(
-                e => entry.entryIsPublicIn(e, entry.PUBLIC_SITE_ORTHOGRAPHY)));
     }
 
     /**
@@ -624,58 +618,6 @@ export class WordWiki extends LiminalApp {
 
         return templates.pageTemplate({title, body});
     }
-
-
-    get entriesByCategory(): Map<string, entry.Entry[]> {
-        return this.#entriesByCategory ??= (()=>{
-            //console.time('computing entriesByCategory');
-            const entriesByCategoryArray: [string, entry.Entry][]  = 
-                this.publishedEntries.flatMap(e=>e.subentry.flatMap(s=>
-                    s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
-
-            const entriesByCategory1: Map<string, [string, entry.Entry][]> =
-                Map.groupBy(entriesByCategoryArray, a=>a[0])
-
-            const entriesByCategory2: [string, entry.Entry[]][] =
-                Array.from(entriesByCategory1.entries()).map(([category, ent])=>
-                    [category, ent.map(e=>e[1])
-                        .toSorted((a: entry.Entry, b: entry.Entry) =>
-                            // TODO: pick spelling for sort better! (+locale etc)
-                            this.sourceLangCollator
-                                .compare((a.spelling[0]?.text)??'',
-                                         (b.spelling[0]?.text)??''))]);
-            
-            const entriesByCategory = new Map(entriesByCategory2);
-            
-            //console.timeEnd('computing entriesByCategory');
-            return entriesByCategory;
-        })();
-    }
-
-    getEntriesForCategory(category: string): entry.Entry[] {
-        return category === '' ? [] :
-            this.publishedEntries.filter(
-                entry=>entry.subentry.some(
-                    subentry=>subentry.category.some(
-                        cat=>cat.category === category)));        
-    }
-
-    getCategories(): Map<string, number> {
-        return new Map(Array.from(Map.groupBy(this.publishedEntries.
-            flatMap(e=>
-                e.subentry.flatMap(s=>
-                    s.category.flatMap(c=>
-                        c.category))), category=>category)
-            .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
-            .toSorted((a: [string, number], b: [string, number])=>
-                this.sourceLangCollator
-                    .compare(a[0]??'', b[0]??'')));
-    }
-    
-
-
-
-    
 
     @route(authenticated)
     categoriesDirectory(): any {

@@ -11,6 +11,7 @@ import {block} from '../liminal/strings.ts';
 import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki, WordWiki} from './wordwiki.ts';
+import {SiteView} from './site-view.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
 import * as entryschema from './entry-schema.ts';
@@ -206,7 +207,7 @@ export function startPublish(): any {
                 const wordWiki = getWordWiki();
                 const publish = new Publish(publishStatusSingleton,
                                             wordWiki,
-                                            wordWiki.publishedEntries);
+                                            wordWiki.site());
                 await publish.publish();
             } catch (e) {
                 if(e instanceof Error) {
@@ -237,7 +238,7 @@ export async function publish(publishOptions: PublishOptions) {
         wordWiki.requestWorkspaceReload();
         const publish = new Publish(publishStatusSingleton,
                                     wordWiki,
-                                    wordWiki.publishedEntries,
+                                    wordWiki.site(),
                                     ".",
                                     publishOptions);
         await publish.publish();
@@ -346,7 +347,12 @@ export function parsePublishTarget(raw: string): PublishTarget {
 
 export class Publish {
     entryToPublicId: Map<Entry, string>;
-    defaultVariant: string = 'mm-li';
+    /** The orthography being published - the site view's. */
+    defaultVariant: string;
+    /** SNAPSHOT of the view's public entries, taken at construction: a
+     *  mid-publish db change swaps in a fresh view (and array), so the
+     *  caller's entries-identity staleness check keeps working. */
+    entries: Entry[];
 
     // The manifest of SITE-RELATIVE paths actually written this run.  Routing
     // every page write through writePage() keeps this complete and authoritative
@@ -354,10 +360,12 @@ export class Publish {
     emittedPaths: Set<string> = new Set();
 
     constructor(public status: PublishStatus, public wordWiki: WordWiki,
-                public entries: Entry[],
+                public site: SiteView,
                 public publishRoot: string = '.',
                 public options: PublishOptions = {}) {
-        this.entryToPublicId = this.computeEntryPublicIds(entries, this.defaultVariant);
+        this.entries = site.publicEntries;
+        this.defaultVariant = site.orthography;
+        this.entryToPublicId = this.computeEntryPublicIds(this.entries, this.defaultVariant);
     }
 
     // Path discipline: every `*Path`/`pathFor*` helper returns a
@@ -446,12 +454,12 @@ export class Publish {
      * the tabled ones.
      */
     publicCategories(): Array<[string, number]> {
-        const cats = Array.from(this.wordWiki.getCategories().entries())
+        const cats = Array.from(this.site.categoryCounts().entries())
             .filter(([slug, _n]) => !category.isInternalCategorySlug(slug));
         const order = new Map(Array.from(this.categoryBySlug.keys()).map((slug, i) => [slug, i]));
         return cats.toSorted(([a], [b]) =>
             (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity)
-            || this.wordWiki.sourceLangCollator.compare(a, b));
+            || this.site.collator.compare(a, b));
     }
 
     /**
@@ -472,7 +480,7 @@ export class Publish {
                                     count: counts.get(c.slug)!}))}));
         const untabled = Array.from(counts.entries())
             .filter(([slug, _n]) => !tabledSlugs.has(slug))
-            .toSorted(([a], [b]) => this.wordWiki.sourceLangCollator.compare(a, b))
+            .toSorted(([a], [b]) => this.site.collator.compare(a, b))
             .map(([slug, count]) => ({slug, name: slug, count}));
         if(untabled.length > 0)
             groups.push({theme: groups.length > 0 ? 'Other categories' : 'Categories',
@@ -1121,7 +1129,7 @@ including remixing, transforming, and building upon the material, for any non-co
                 ['h2', {}, `Related entries for category "${this.publicCategoryName(category)}"`],
                 ['div', {},
                  ['ul', {},
-                  (this.wordWiki.entriesByCategory.get(category)??[])
+                  (this.site.entriesByCategory.get(category)??[])
                       .map(e=>['li', {}, this.renderEntryPublicLink(rootPath, e, false)]),
                  ] // ul
                 ] // div
@@ -1280,7 +1288,7 @@ including remixing, transforming, and building upon the material, for any non-co
      *
      */
     async publishCategory(category: string): Promise<void> {
-        const entriesForCategory = this.wordWiki.entriesByCategory.get(category)??[];
+        const entriesForCategory = this.site.entriesByCategory.get(category)??[];
         await this.publishEntryListPage(
             this.categoriesDir, category,
             ['Entries for category ', this.publicCategoryName(category)],
@@ -1310,10 +1318,10 @@ including remixing, transforming, and building upon the material, for any non-co
         const seen = new Set<number>();
         const out: Entry[] = [];
         for(const slug of tierSlugs)
-            for(const e of this.wordWiki.entriesByCategory.get(slug) ?? [])
+            for(const e of this.site.entriesByCategory.get(slug) ?? [])
                 if(!seen.has(e.entry_id)) { seen.add(e.entry_id); out.push(e); }
         return out.toSorted((a, b) =>
-            this.wordWiki.sourceLangCollator.compare(
+            this.site.collator.compare(
                 a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
     }
 

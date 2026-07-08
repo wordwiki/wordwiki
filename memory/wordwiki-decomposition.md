@@ -26,19 +26,26 @@ explicitly does NOT matter — only the generated public site's URLs do.
    load+validate, tx timestamps, applyTransaction(s), and the
    orthography-AGNOSTIC projections (entries, entriesById,
    entriesByReferenceGroupId, publishedProjection). WordWiki keeps thin
-   delegates (~380 consumer/test references unchanged) + the SITE-WORLD
-   caches (publishedEntries, entriesByCategory, entryCountByPage,
-   sourceLangCollator) which are cleared via the store's
-   onDerivedInvalidated callback.
+   delegates (~380 consumer/test references unchanged); the store's
+   onDerivedInvalidated callback clears WordWiki's remaining
+   #entryCountByPage cache.
+4. `wordwiki/site-view.ts` — SiteView per orthography: publicEntries
+   (entryIsPublicIn), entriesByCategory, categoryCounts(),
+   entriesForCategory(), collator. Store holds Map<orth, SiteView>, dropped
+   WHOLESALE on invalidation (never reused) so view identity == projection
+   freshness — the publish mid-run staleness check
+   (`publish.entries !== wordWiki.publishedEntries`) depends on this.
+   Entry objects are shared with the base projection. WordWiki.site(orth =
+   PUBLIC_SITE_ORTHOGRAPHY) + delegates (publishedEntries etc.) preserve the
+   old surface. Publish ctor now takes the SiteView (entries snapshotted at
+   construction; defaultVariant = site.orthography, replacing the 'mm-li'
+   hardcode).
 
 **Remaining plan (dz-approved shape, not yet requested to build):**
-4. SiteView per orthography (store holds Map<orth, SiteView>; publicEntries
-   via entryIsPublicIn, byCategory, collation; Entry objects shared with the
-   base projection). Publish takes a SiteView. 5. render-time selection via
-   currentWorkingOrthography. 6. report routes into namespace modules
-   (wordwiki.reports.* etc.) with narrowed dep interfaces. 7. config pass on
-   Mi'kmaq-specific constants (reference books from scanned_document table,
-   PDM report parameterized, login branding, collator per orthography,
-   entry.users/entry.todos maps).
+5. render-time selection via currentWorkingOrthography. 6. report routes
+   into namespace modules (wordwiki.reports.* etc.) with narrowed dep
+   interfaces. 7. config pass on Mi'kmaq-specific constants (reference books
+   from scanned_document table, PDM report parameterized, login branding,
+   collator per orthography, entry.users/entry.todos maps).
 
 Relates to [[fix-orthographies]], [[publication-approval-model]].

@@ -659,7 +659,7 @@ export async function cliMain(args: string[]): Promise<void> {
             const exitCode = await security.runSystem(async () => {
                 const status = new publish.PublishStatus();
                 status.start();
-                const pub = new publish.Publish(status, ww, ww.publishedEntries, root);
+                const pub = new publish.Publish(status, ww, ww.site(), root);
                 if(root !== '.')
                     await Deno.mkdir(root, {recursive: true});
                 try {
