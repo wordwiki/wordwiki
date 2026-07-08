@@ -164,3 +164,41 @@ test("event page: the checklist section always shows (a '+ set up' before, the t
         assert(hasText(after, 'Resync from template'), 'resync affordance');
         assert(!hasText(after, 'Not set up yet'), 'the placeholder is gone once set up');
     }));
+
+// --- Service-owned tasks (same generic owner machinery as events) ---------------
+
+function newService(event_id: number): number {
+    return getRabid().service.insert({
+        event_id, client_name: 'Jo', service_kind: 'full', bike_description: 'Red mtb'} as any);
+}
+function newBikeTemplate(): number {
+    const r = getRabid();
+    const tid = r.project.insert({is_template: 1, applies_to_table: 'service', owner_role: 'bike',
+        name: 'Bike Checklist', deleted: 0} as any);
+    const brakes = r.task.insert({project_id: tid, title: 'Brakes', deleted: 0} as any);
+    r.subtask.insert({task_id: brakes, title: 'Front engages firmly', done: 0} as any);
+    return tid;
+}
+
+test("a service owns tasks lazily; its detail shows Tasks + the Bike Checklist", () =>
+    withTestDb(async ({alice}) => {
+        const r = getRabid();
+        const eid = asSystem(newEvent);
+        const sid = asSystem(() => newService(eid));
+        const tid = asSystem(newBikeTemplate);
+
+        // Viewing the detail renders both sections but creates NO owned project (lazy).
+        const detail = await asUser(alice, () => renderRoute(`rabid.service.detailPage(${sid})`));
+        assert(hasText(detail, 'Tasks'), 'the generic Tasks section shows');
+        assert(hasText(detail, 'Bike Checklist'), 'the Bike Checklist section shows (a + for a host)');
+        assertEquals(asSystem(() => r.project.forOwner('service', sid, null)), undefined,
+                     'no project created just by viewing (lazy)');
+        assertEquals(asSystem(() => r.project.forOwner('service', sid, 'bike')), undefined,
+                     'no checklist instance until set up');
+
+        // Setting up the Bike Checklist creates the owned instance (owner_role 'bike').
+        const pid = asUser(alice, () => r.project.instantiateTemplate(tid, 'service', sid));
+        assertEquals(r.project.getById(pid).owner_role, 'bike');
+        const after = await asUser(alice, () => renderRoute(`rabid.service.detailPage(${sid})`));
+        assert(hasText(after, 'Brakes'), 'the checklist task appears once set up');
+    }));

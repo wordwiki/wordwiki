@@ -901,6 +901,7 @@ export const project_role_enum: Record<string, string> = {
     'setup': 'Setup Tasks',
     'cleanup': 'Cleanup Tasks',
     'safety': 'Safety',
+    'bike': 'Bike Checklist',   // service owner: the per-bike QC/safety checklist
 };
 
 // The owner types a template can instantiate for (project.applies_to_table) -
@@ -908,6 +909,7 @@ export const project_role_enum: Record<string, string> = {
 export const template_owner_table_enum: Record<string, string> = {
     'event': 'Event',
     'volunteer': 'Volunteer',
+    'service': 'Service',
 };
 
 export interface Task {

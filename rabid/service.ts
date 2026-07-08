@@ -19,6 +19,7 @@ import {route, routeMutation, authenticated} from "../liminal/security.ts";
 import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import * as pageQueries from './page-queries.ts';
+import {rabid} from './rabid.ts';
 
 export const routes = ()=> ({
 });
@@ -433,6 +434,13 @@ export class ServiceTable extends Table<Service> {
              ] : []),
              row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
             ],
+            // The service's own tasks - same generic owner machinery as events: a
+            // free-form Tasks list (any volunteer can add) + the Bike Checklist,
+            // instantiated from its template.  Both are created lazily (0 db rows
+            // until the first task / the checklist is set up).
+            [h.div, {class: 'mt-4'},
+             rabid.task.renderOwnerTasks('service', service_id, null, /*docHeading*/ true),
+             rabid.task.renderOwnerChecklists('service', service_id)],
         ];
     }
 }

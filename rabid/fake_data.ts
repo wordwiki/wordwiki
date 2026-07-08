@@ -1120,9 +1120,10 @@ export function seedProjects(rabid: Rabid): void {
     // .org, so it's wrapped under a single "Start of shift" task to share the shape.
     // No assignees, no due - structure only (assignment comes from the instance).
     const addChecklistTemplate = (name: string, role: string, description: string,
-                                  tasks: {title: string, subs: string[]}[]) => {
+                                  tasks: {title: string, subs: string[]}[],
+                                  applies_to_table = 'event') => {
         const project_id = rabid.project.insert({
-            name, is_template: 1, applies_to_table: 'event', owner_role: role,
+            name, is_template: 1, applies_to_table, owner_role: role,
             description, deleted: 0});
         for(const t of tasks) {
             const task_id = rabid.task.insert({project_id, title: t.title, deleted: 0});
@@ -1174,7 +1175,37 @@ export function seedProjects(rabid: Rabid): void {
         ]},
     ]);
 
-    console.info('2 projects + 2 checklist templates created');
+    // A SERVICE-owned template: the per-bike safety/QC checklist, instantiated
+    // lazily on a service's detail page (applies_to_table 'service', role 'bike').
+    addChecklistTemplate('Bike Checklist', 'bike',
+        'Per-bike safety / quality check before it goes back out.', [
+        {title: 'Brakes', subs: [
+            'Front and rear engage firmly, lever not to the bar',
+            'Pads have life and are aligned to the rim/rotor',
+            'Cables/hoses in good shape',
+        ]},
+        {title: 'Wheels & tires', subs: [
+            'Wheels true and round; spoke tension even',
+            'Tires not cracked/worn; correct pressure',
+            'Quick-releases / thru-axles tight',
+        ]},
+        {title: 'Drivetrain', subs: [
+            'Chain not worn; runs clean',
+            'Shifts crisply across the range',
+            'Cranks and pedals tight, no play',
+        ]},
+        {title: 'Cockpit & frame', subs: [
+            'Headset and stem tight; bars aligned',
+            'Saddle and seatpost secure at a sensible height',
+            'No cracks / obvious frame damage',
+        ]},
+        {title: 'Final', subs: [
+            'Quick test ride',
+            'Reflectors / lights / bell as appropriate',
+        ]},
+    ], /*applies_to_table*/ 'service');
+
+    console.info('2 projects + 3 checklist templates created (2 event + 1 service Bike Checklist)');
 }
 
 // Instantiate the Event Cleanup checklist on a couple of recent events (some
