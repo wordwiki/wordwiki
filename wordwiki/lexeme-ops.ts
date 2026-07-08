@@ -303,7 +303,8 @@ export class LexemeOps {
      *  permission and an approver ≠ the content's author, unless the approver
      *  may self-approve.  Returns the typed outcome; the caller (the editor's
      *  review mode) decides what to reload. */
-    approveFact(fact_id: number): PublicationOutcome {
+    approveFact(fact_id: number,
+                opts: {allowSelfApprove?: boolean} = {}): PublicationOutcome {
         const approver = this.requireUsername();
         this.requireApprovePermission('approving');
 
@@ -329,7 +330,11 @@ export class LexemeOps {
 
         this.runPublicationOp((now, aid) =>
             publicationOps.approve(this.app.workspace, fact_id, approver, now, aid,
-                                   {allowSelfApprove: this.canSelfApprove()}));
+                                   // Callers may grant self-approve for BOUNDED
+                                   // acts (pickTransliteration: a supervised
+                                   // choice among machine-generated candidates,
+                                   // no free text) - default is the role check.
+                                   {allowSelfApprove: opts.allowSelfApprove ?? this.canSelfApprove()}));
         return {outcome: 'approved'};
     }
 

@@ -141,7 +141,8 @@ deno run ... oracle.json --calibrate                       # regen calibration
 | Version | Train | Holdout | Notes |
 |---|---|---|---|
 | li-sf/rules-v1 (g→k + [lnm][ptj] apostrophe) | 70.6% | 70.1% | both rules corpus-mined |
-| li-sf/rules-v2 (+ lexical exceptions, word-start, ult) | 73.5% | **73.8%** | current engine |
+| li-sf/rules-v2 (+ lexical exceptions, word-start, ult) | 73.5% | 73.8% | frozen |
+| li-sf/rules-v3 (probability-RANKED branch decisions) | — | **75.9%** | current engine; its top-5 candidates hit **84.4%** (click-to-pick) |
 | Java rules pipeline (expert set, ported) | — | — | 35.9% on ALL |
 | Java scanner (what the old system served) | — | — | 47.4% (48.9% + sonorant) |
 

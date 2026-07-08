@@ -13,10 +13,12 @@ import { withTestDb, as, bornApprove, renderRoute, invoke,
          TestTimeline, mkEntry, mkChild, type Fixture } from './testing.ts';
 import { db } from '../liminal/db.ts';
 import * as timestamp from '../liminal/timestamp.ts';
-import { transliterateLiToSf, transliterateLiToSfScored, transliterationRiskMarkers,
+import { transliterateLiToSf, transliterateLiToSfScored, transliterateCandidates,
+         transliterationRiskMarkers,
          TRANSLITERATOR_VERSION, transliterateJavaRules,
          transliterateJavaScanner } from './transliterate.ts';
 import { pairJunkReason } from './auto-transliterate.ts';
+import * as entrySchema from './entry-schema.ts';
 import { proposeTransliterations, pureTextRelations,
          AUTO_TRANSLITERATE_USERNAME } from './auto-transliterate.ts';
 
@@ -252,5 +254,49 @@ test("proposals are stamped with the calibrated band; the report shows per-band 
         const row = markupToString(await as(fx, 'djz', () =>
             renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
         assert(/~\d+% \w+/.test(row), 'band label on the pending row');
+    });
+});
+
+// --- ranked candidates + click-to-pick -------------------------------------------
+
+test("candidates: ranked, deduped, decisions named; v3 top-1 is the engine", () => {
+    const cands = transliterateCandidates('weltaq');
+    assert(cands.length >= 2, 'ambiguous word offers alternates');
+    assertEquals(cands[0].text, transliterateLiToSf('weltaq'));   // top-1 IS the engine
+    assert(cands.some(c => c.text === "wel'taq") && cands.some(c => c.text === 'weltaq'),
+           'both branches offered');
+    assert(cands[0].probability >= cands[1].probability, 'ranked');
+    assert(cands.some(c => c.decisions.some(d => d.includes('l·t'))), 'decisions named');
+    // No ambiguous site: exactly one candidate.
+    assertEquals(transliterateCandidates('gesatg').length, 1);
+});
+
+test("pick: replaces the robot's text with the chosen candidate and approves it", async () => {
+    await withTestDb(async (fx) => {
+        seedWord(fx);   // li 'angamatl' at fact 1201's relation
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.transliterate($arg0)`, 1000));
+        const sf = sfRows(1000)[0];
+        // The row offers pick chips for the alternates.
+        const row = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.lexeme.renderMetaEntry(1000)')));
+        assert(row.includes('pickTransliteration'), 'chips offered');
+        // Pick candidate #1 (an alternate): the fact's text becomes that
+        // candidate and it is APPROVED in one act (bounded self-approve).
+        const wantAlt = transliterateCandidates('angamatl', 5)[1];
+        await as(fx, 'djz', () =>
+            invoke(fx.ww, `wordwiki.lexeme.pickTransliteration($arg0, $arg1, 1)`,
+                   1000, sf.id));
+        const versions = fx.ww.workspace.getTableByTag(entrySchema.DictTag)
+            .getTupleById(sf.id)!.tupleVersions.map(v => v.assertion);
+        // The chain: robot proposal -> the PICK (human-authored, labeled) ->
+        // the approve receipt (published dimension stamped).
+        const after = versions.at(-1)!;
+        assertEquals(after.attr1, wantAlt.text);
+        assert(after.published_from != null, 'pick approves in one act');
+        const pick = versions.find(a => a.change_action === 'pick-transliteration')!;
+        assert(pick, 'the pick version exists');
+        assert(String(pick.change_arg).includes('pick=1'), 'the labeled branch decision');
+        assertEquals(pick.attr1, wantAlt.text);
     });
 });

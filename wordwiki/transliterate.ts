@@ -9,8 +9,10 @@
  * and measured against them via the ORACLE HARNESS
  * (transliterate-harness.ts; export via `wordwiki.sh
  * export-transliteration-pairs`) — with a held-out fold, so a rule that
- * only memorizes the training pairs is caught.  rules-v2 scores 73.8%
- * EXACT on the untouched holdout (v1: 70.1%; 2026-07-07 dev db).  The
+ * only memorizes the training pairs is caught.  rules-v3 (ranked branch
+ * decisions) scores 75.9% EXACT on the untouched holdout (v2: 73.8%, v1:
+ * 70.1%; 2026-07-07 dev db) - and its top-5 CANDIDATES contain the right
+ * answer 84.4% of the time (the click-to-pick chips).  The
  * residual clusters show CONFLICTING demands inside identical character
  * windows (aqantie'umk wants no apostrophe at n_t where weltaq wants one at
  * l_t) — the char-rule ceiling; going further needs morphology/syllable
@@ -24,7 +26,7 @@
  * retroactive-undo tool's targeting.  Bump it on ANY rule change.
  */
 
-export const TRANSLITERATOR_VERSION = 'li-sf/rules-v2';
+export const TRANSLITERATOR_VERSION = 'li-sf/rules-v3';
 
 // Sonorants that take the schwa/syllabicity apostrophe before a following
 // obstruent in Smith-Francis (corpus: l_t ×150, n_t ×89, l_p ×81, n_j ×73…;
@@ -71,13 +73,17 @@ export const LEXICAL_EXCEPTIONS: Record<string, string> = {
  * whether an output is worth proposing (e.g. skip when identical).
  */
 export function transliterateLiToSf(text: string): string {
-    // Rule 0: whole-word lexical exceptions.
+    // rules-v3: the top-ranked CANDIDATE (see transliterateCandidates below)
+    // - every ambiguous branch decided by its MEASURED context probability
+    // instead of a fixed rule.  Holdout: 75.9% (v2's fixed choices: 73.8%).
+    return transliterateCandidates(text, 1)[0].text;
+}
+
+/** rules-v2, FROZEN for the comparison dashboard: lexical exceptions + g→k
+ *  + fixed cluster-apostrophe choices (word-start and u+l+t excepted). */
+export function transliterateRulesV2(text: string): string {
     let s = text.replace(/[^\s.,!?]+/g, w => LEXICAL_EXCEPTIONS[w] ?? w);
-    // Rule 1: Listuguj ⟨g⟩ is Smith-Francis ⟨k⟩ (1,429 aligned corpus
-    // substitutions; the minority contextual g-survivals are a future rule).
     s = s.replaceAll('g', 'k').replaceAll('G', 'K');
-    // Rule 2: insert the apostrophe in sonorant+obstruent clusters (with the
-    // v2 exceptions above), to a fixpoint so runs like 'lnt' resolve fully.
     return insertClusterApostrophes(s);
 }
 
@@ -187,6 +193,7 @@ export function transliterateJavaScanner(src: string,
  */
 export const CANDIDATE_TRANSLITERATORS: Array<{name: string, fn: (li: string) => string}> = [
     { name: `${TRANSLITERATOR_VERSION} (current)`, fn: transliterateLiToSf },
+    { name: 'li-sf/rules-v2 (frozen)', fn: transliterateRulesV2 },
     { name: 'li-sf/rules-v1 (frozen)', fn: transliterateRulesV1 },
     { name: 'java pipeline (rules 90-170, î)', fn: (li) => transliterateJavaRules(li, {barredI: '\u00ee'}) },
     { name: 'java scanner', fn: (li) => transliterateJavaScanner(li) },
@@ -197,7 +204,7 @@ export const CANDIDATE_TRANSLITERATORS: Array<{name: string, fn: (li: string) =>
 // --- Confidence scoring (dz: bands to focus editor attention) --------------
 // --------------------------------------------------------------------------
 
-import { CALIBRATION, CALIBRATION_VERSION } from './transliterate-calibration.ts';
+import { CALIBRATION, CALIBRATION_VERSION, BRANCH_PROBABILITIES } from './transliterate-calibration.ts';
 
 /**
  * The RISK MARKERS: mechanically detectable situations (from the oracle
@@ -260,4 +267,117 @@ export function transliterateLiToSfScored(li: string): ScoredTransliteration {
     }
     return {text, confidence, band: confidenceBand(confidence), markers,
             version: `${TRANSLITERATOR_VERSION}+${CALIBRATION_VERSION}`};
+}
+
+// --------------------------------------------------------------------------
+// --- Ranked candidates (dz: top-k + click-to-pick) --------------------------
+// --------------------------------------------------------------------------
+//
+// The residual ambiguities are BINARY BRANCH POINTS (apostrophe or not at a
+// sonorant cluster; word-final ei or ey; schwa apostrophe or î), so instead
+// of forcing one answer, enumerate both branches of each site, rank the
+// combinations by the PRODUCT of the branches\' measured context
+// probabilities (mined into BRANCH_PROBABILITIES by the harness
+// --calibrate), and return the top k.  Holdout: the correct answer is
+// top-1 75.9%, top-2 83.0%, top-5 84.4% - so a click-to-pick UI turns most
+// residual corrections into one click.  Each candidate names its branch
+// DECISIONS - the annotation for the pick chips, and (once picked) a
+// labeled branch decision for the learning loop.
+
+export interface TransliterationCandidate {
+    text: string;
+    /** Product of the branch probabilities - a RANKING score, not a
+     *  calibrated confidence (transliterateLiToSfScored has that). */
+    probability: number;
+    /** Human-readable branch decisions distinguishing this candidate. */
+    decisions: string[];
+}
+
+type BranchSite = {kind: 'cluster' | 'ei' | 'schwa', index: number, key: string,
+                   label: string};
+
+/** Branch probability for a mined context key: exact when supported (n≥5),
+ *  else the per-kind marginal, else 0.5. */
+function branchP(kind: string, key: string): number {
+    const exact = BRANCH_PROBABILITIES[key];
+    if(exact && exact.total >= 5) return exact.taken / exact.total;
+    let taken = 0, total = 0;
+    for(const [k, v] of Object.entries(BRANCH_PROBABILITIES))
+        if(k.startsWith(kind + ':')) { taken += v.taken; total += v.total; }
+    return total > 0 ? taken / total : 0.5;
+}
+
+/** The branch sites of a base (post lexical-exception, post g→k) text. */
+function branchSites(base: string): BranchSite[] {
+    const out: BranchSite[] = [];
+    const low = base.toLowerCase();
+    for(let i = 0; i + 1 < low.length; i++) {
+        if(SONORANTS.includes(base[i]) && (OBSTRUENTS + 'kK').includes(base[i+1])) {
+            const before = i === 0 ? '' : low[i-1];
+            if(before === '' || /\s/.test(before) || before === "'") continue;  // word start / separated
+            out.push({kind: 'cluster', index: i,
+                      key: `cluster:${before}|${low[i]}|${low[i+1]}`,
+                      label: `apostrophe at ${low[i]}·${low[i+1]}`});
+        }
+    }
+    for(const m of base.matchAll(/[eE][iI](?=[\s.,!?]|$)/g))
+        out.push({kind: 'ei', index: m.index!, key: 'ei:', label: 'word-final -ey'});
+    for(const m of base.matchAll(/[ptksPTKS]'(?=[a-zA-Z])/g))
+        out.push({kind: 'schwa', index: m.index! + 1,
+                  key: `schwa:${base[m.index!].toLowerCase()}|${base[m.index! + 2].toLowerCase()}`,
+                  label: `î for the ${base[m.index!].toLowerCase()}' schwa`});
+    return out.slice(0, 6);   // combinatorial cap; >6 sites is sentence territory
+}
+
+/**
+ * Up to k ranked candidates.  Always at least one (the top-ranked branch
+ * combination); a word with no ambiguous sites yields exactly one.
+ */
+export function transliterateCandidates(li: string, k = 5): TransliterationCandidate[] {
+    let base = li.replace(/[^\s.,!?]+/g, w => LEXICAL_EXCEPTIONS[w] ?? w);
+    base = base.replaceAll('g', 'k').replaceAll('G', 'K');
+    const sites = branchSites(base);
+    const combos: {probability: number, bits: number}[] = [];
+    for(let bits = 0; bits < (1 << sites.length); bits++) {
+        let probability = 1;
+        for(let j = 0; j < sites.length; j++) {
+            const pTake = branchP(sites[j].kind, sites[j].key);
+            probability *= (bits & (1 << j)) ? pTake : 1 - pTake;
+        }
+        combos.push({probability, bits});
+    }
+    combos.sort((a, b) => b.probability - a.probability);
+    const out: TransliterationCandidate[] = [];
+    const seen = new Set<string>();
+    for(const {probability, bits} of combos) {
+        // Apply taken branches right-to-left so indexes stay valid.
+        let text = base;
+        const decisions: string[] = [];
+        for(let j = sites.length - 1; j >= 0; j--) {
+            const site = sites[j];
+            const taken = (bits & (1 << j)) !== 0;
+            if(sites.length > 0 && branchAmbiguous(site)) 
+                decisions.unshift(taken ? site.label : `no ${site.label}`);
+            if(!taken) continue;
+            if(site.kind === 'cluster')
+                text = text.slice(0, site.index + 1) + "'" + text.slice(site.index + 1);
+            else if(site.kind === 'ei')
+                text = text.slice(0, site.index) + text[site.index] + 'y' + text.slice(site.index + 2);
+            else   // schwa: the apostrophe at index becomes î
+                text = text.slice(0, site.index) + 'î' + text.slice(site.index + 1);
+        }
+        if(seen.has(text)) continue;
+        seen.add(text);
+        out.push({text, probability, decisions});
+        if(out.length >= k) break;
+    }
+    return out;
+}
+
+/** A site is worth ANNOTATING when its measured probability is genuinely
+ *  uncertain - near-deterministic branches (P ≤ .1 or ≥ .9) would only add
+ *  noise to the chip labels. */
+function branchAmbiguous(site: BranchSite): boolean {
+    const p = branchP(site.kind, site.key);
+    return p > 0.1 && p < 0.9;
 }

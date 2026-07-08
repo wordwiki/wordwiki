@@ -68,6 +68,7 @@ import {renderGroupedChangeList, renderChangeGroup, initials,
 import {diffValues} from './diff.ts';
 import {isAutomatedUsername} from './user.ts';
 import * as autoTransliterate from './auto-transliterate.ts';
+import { transliterateCandidates, TRANSLITERATOR_VERSION } from './transliterate.ts';
 import {renderDuplicateSpellingWarning, type Spelling} from './spelling-duplicates.ts';
 import * as templates from './templates.ts';
 import * as category from './category.ts';
@@ -1172,6 +1173,67 @@ export class LexemeEditor {
         return this.reload([this.rootTarget(entry_id)]);
     }
 
+    /** CLICK-TO-PICK (dz): a pending auto-transliteration's row offers the
+     *  runner-up candidates as chips; picking one replaces the robot's text
+     *  with the chosen MACHINE-GENERATED candidate (a human-authored edit -
+     *  full history) and approves it in one act.  Self-approve is sound here
+     *  because the choice is BOUNDED - the picker selects among the
+     *  engine's candidates, and cannot inject text (free-text corrections
+     *  go through the normal edit dialog and normal review).  A picker
+     *  without approve permission still records the pick; it stays pending.
+     *  The pick's change_arg names the branch decisions - a LABELED
+     *  training example for the rules loop. */
+    @routeMutation(authenticated)
+    pickTransliteration(entry_id: number, fact_id: number, candidate_index: number,
+                        mode: EditMode = 'edit'): any {
+        const tuple = this.findTupleInEntry(entry_id, fact_id);
+        const q = new CurrentTupleQuery(tuple);
+        const current = q.mostRecentTupleVersion ?? panic('no versions for', fact_id);
+        if(!current.isCurrent)
+            return {action: 'alert', message: 'This item was deleted since you opened the page.'};
+        const review = classifyFact(tuple.tupleVersions.map(v => v.assertion),
+                                    timestamp.END_OF_TIME);
+        if(review.state !== 'added' && review.state !== 'edited')
+            return {action: 'alert', message: 'This item is not pending review.'};
+        if(current.assertion.variant !== autoTransliterate.TARGET_ORTHOGRAPHY
+           || !isAutomatedUsername(latestRobotAuthor(tuple)))
+            throw new Error('pick applies only to pending auto-transliterations');
+
+        const rf = this.app.dictSchema.relationsByTag[current.assertion.ty] as model.RelationField;
+        const spec = autoTransliterate.pureTextRelations(this.app.dictSchema)
+            .get(current.assertion.ty) ?? panic('not a transliterable relation', current.assertion.ty);
+        const path = getAssertionPath(current.assertion);
+        const parentFactId = path[path.length - 2][1];
+        const li = this.liSiblingText(entry_id, parentFactId, rf)
+            ?? panic('no Listuguj source for', fact_id);
+        const chosen = transliterateCandidates(li, 5)[candidate_index];
+        if(!chosen) throw new Error(`no candidate #${candidate_index} for this word`);
+
+        if(chosen.text !== factText(rf, current.assertion)) {
+            const newAssertion: Assertion = {
+                ...current.assertion,
+                assertion_id: newId(),
+                replaces_assertion_id: current.assertion.assertion_id,
+                valid_from: placeholderTxTime(),
+                valid_to: timestamp.END_OF_TIME,
+                ...this.changeStamp(),
+                ...unapprovedDimension,
+                [spec.contentField.bind]: chosen.text,
+                change_action: 'pick-transliteration',
+                change_arg: `${TRANSLITERATOR_VERSION} pick=${candidate_index} ` +
+                            `decisions=${chosen.decisions.join('; ') || '(none)'}`,
+                change_note: undefined,
+            };
+            this.app.applyTransaction([newAssertion]);
+        }
+        if(this.app.lexemeOps.hasApprovePermission()) {
+            try { this.app.lexemeOps.approveFact(fact_id, {allowSelfApprove: true}); }
+            catch { /* tree-ordering gate: the pick stays pending */ }
+        }
+        return this.reload([...this.mutationTargets(entry_id, current.assertion, 'self', mode),
+                            ...this.approveTargets(entry_id, fact_id)]);
+    }
+
     /** The reference scan + composed reference-book link (see wordView).
      *  data-bounding-group lets the tagger's done-editing postMessage find and
      *  reload this reference's fragment (the meta page renders the scan as
@@ -1242,10 +1304,29 @@ export class LexemeEditor {
                     // the report either way).
                     const conf = /conf=(\d+)/.exec(current.assertion.change_arg ?? '')?.[1];
                     const band = /band=(\w+)/.exec(current.assertion.change_arg ?? '')?.[1];
+                    // CLICK-TO-PICK (dz): the runner-up candidates as chips -
+                    // for the ~9% of words where the right answer is among
+                    // the alternates, the correction is ONE CLICK (picked +
+                    // approved), and the pick is a labeled branch decision
+                    // for the rules loop.  Chips are recomputed live, so
+                    // they always reflect the current engine.
+                    const currentText = factText(rf, current.assertion);
+                    const picks = li === undefined ? [] :
+                        transliterateCandidates(li, 5)
+                        .map((c, ci) => ({c, ci}))
+                        .filter(x => x.c.text !== currentText)
+                        .slice(0, 3)
+                        .map(x => [' ', action.actionButton(x.c.text,
+                            {kind: 'immediate',
+                             expr: `wordwiki.lexeme.pickTransliteration(${id.entryId}, ${id.factId}, ${x.ci})`},
+                            'btn btn-sm btn-outline-secondary py-0 lm-tr-pick',
+                            {title: x.c.decisions.join('; ') || 'alternate'})]);
                     if(li) annotation = [annotation,
                         ['span', {class: 'lm-me-chg-was'}, ' from Listuguj: ', li],
                         conf ? ['span', {class: `lm-me-chg-was lm-tr-band-${band ?? 'unknown'}`},
-                                ` ~${conf}% ${band ?? ''}`] : ''];
+                                ` ~${conf}% ${band ?? ''}`] : '',
+                        picks.length > 0
+                            ? ['span', {class: 'lm-me-chg-was'}, ' or:', picks] : ''];
                 }
                 const menu = action.actionMenu(
                     [...this.editMenuItems(id.entryId, id.factId, rf, current.assertion, 'edit', review),
@@ -2931,4 +3012,15 @@ export class LexemeEditor {
     private findTupleInEntry(entry_id: number, fact_id: number): VersionedTuple {
         return this.app.lexemeOps.findTupleInEntry(entry_id, fact_id);
     }
+}
+
+/** The most recent AUTOMATED author in a fact's version chain - a pending
+ *  proposal remains an "auto-transliteration" even after a human's pick or
+ *  edit created a newer version on top of the robot's. */
+function latestRobotAuthor(tuple: {tupleVersions: {assertion: Assertion}[]}): string {
+    for(let i = tuple.tupleVersions.length - 1; i >= 0; i--) {
+        const by = tuple.tupleVersions[i].assertion.change_by_username;
+        if(by && isAutomatedUsername(by)) return by;
+    }
+    return '';
 }

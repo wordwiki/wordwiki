@@ -5,31 +5,31 @@
  * rate of the current rules on the TRAIN folds of the oracle (holdout
  * validation is printed by the harness at generation time).
  */
-export const CALIBRATION_VERSION = "li-sf/rules-v2@2026-07-07/1236pairs";
+export const CALIBRATION_VERSION = "li-sf/rules-v3@2026-07-08/1233pairs";
 export const CALIBRATION: Record<string, {n: number, accuracy: number}> = {
     "clean": {
-        "n": 621,
-        "accuracy": 0.857
+        "n": 620,
+        "accuracy": 0.863
     },
     "l-before-k": {
         "n": 60,
-        "accuracy": 0.167
-    },
-    "schwa-cluster": {
-        "n": 78,
-        "accuracy": 0.846
+        "accuracy": 0.433
     },
     "word-final-ei": {
         "n": 26,
-        "accuracy": 0.577
+        "accuracy": 0.615
+    },
+    "schwa-cluster": {
+        "n": 77,
+        "accuracy": 0.857
     },
     "sonorant-cluster": {
-        "n": 323,
-        "accuracy": 0.712
+        "n": 322,
+        "accuracy": 0.702
     },
     "schwa-cluster,sonorant-cluster": {
         "n": 28,
-        "accuracy": 0.357
+        "accuracy": 0.393
     },
     "sonorant-cluster,ult": {
         "n": 47,
@@ -37,14 +37,355 @@ export const CALIBRATION: Record<string, {n: number, accuracy: number}> = {
     },
     "l-before-k,sonorant-cluster": {
         "n": 10,
-        "accuracy": 0.5
+        "accuracy": 0.2
     },
     "ult": {
         "n": 54,
-        "accuracy": 0.593
+        "accuracy": 0.574
     },
     "lexical-exception": {
         "n": 18,
-        "accuracy": 0.389
+        "accuracy": 0.333
+    }
+};
+
+/** Branch-taken frequencies per context site, for the ranked-candidate
+ *  engine (transliterateCandidates).  Same generation run as CALIBRATION. */
+export const BRANCH_PROBABILITIES: Record<string, {taken: number, total: number}> = {
+    "cluster:a|l|k": {
+        "taken": 5,
+        "total": 13
+    },
+    "cluster:a|n|k": {
+        "taken": 0,
+        "total": 64
+    },
+    "ei:": {
+        "taken": 20,
+        "total": 51
+    },
+    "schwa:t|k": {
+        "taken": 1,
+        "total": 3
+    },
+    "cluster:a|n|t": {
+        "taken": 22,
+        "total": 29
+    },
+    "schwa:s|k": {
+        "taken": 6,
+        "total": 39
+    },
+    "cluster:i|n|k": {
+        "taken": 0,
+        "total": 22
+    },
+    "cluster:u|l|t": {
+        "taken": 14,
+        "total": 56
+    },
+    "cluster:i|m|k": {
+        "taken": 0,
+        "total": 13
+    },
+    "schwa:k|k": {
+        "taken": 1,
+        "total": 4
+    },
+    "schwa:s|s": {
+        "taken": 0,
+        "total": 11
+    },
+    "schwa:s|t": {
+        "taken": 1,
+        "total": 18
+    },
+    "schwa:p|t": {
+        "taken": 6,
+        "total": 11
+    },
+    "schwa:t|s": {
+        "taken": 2,
+        "total": 18
+    },
+    "schwa:t|t": {
+        "taken": 0,
+        "total": 12
+    },
+    "cluster:e|n|k": {
+        "taken": 0,
+        "total": 6
+    },
+    "cluster:u|m|k": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:a|m|k": {
+        "taken": 0,
+        "total": 6
+    },
+    "cluster:o|m|k": {
+        "taken": 0,
+        "total": 12
+    },
+    "cluster:k|l|t": {
+        "taken": 9,
+        "total": 9
+    },
+    "cluster:e|l|k": {
+        "taken": 15,
+        "total": 20
+    },
+    "cluster:e|l|p": {
+        "taken": 19,
+        "total": 23
+    },
+    "cluster:e|l|t": {
+        "taken": 34,
+        "total": 41
+    },
+    "cluster:t|l|t": {
+        "taken": 14,
+        "total": 15
+    },
+    "cluster:o|n|t": {
+        "taken": 3,
+        "total": 3
+    },
+    "cluster:k|l|p": {
+        "taken": 2,
+        "total": 2
+    },
+    "cluster:k|m|t": {
+        "taken": 4,
+        "total": 4
+    },
+    "cluster:u|n|t": {
+        "taken": 17,
+        "total": 17
+    },
+    "cluster:i|l|k": {
+        "taken": 2,
+        "total": 6
+    },
+    "cluster:i|l|j": {
+        "taken": 8,
+        "total": 8
+    },
+    "cluster:a|m|p": {
+        "taken": 3,
+        "total": 3
+    },
+    "cluster:a|l|p": {
+        "taken": 9,
+        "total": 10
+    },
+    "cluster:a|l|t": {
+        "taken": 41,
+        "total": 42
+    },
+    "cluster:t|n|t": {
+        "taken": 3,
+        "total": 5
+    },
+    "cluster:m|n|t": {
+        "taken": 16,
+        "total": 19
+    },
+    "cluster:u|n|k": {
+        "taken": 2,
+        "total": 8
+    },
+    "cluster:a|n|p": {
+        "taken": 5,
+        "total": 7
+    },
+    "cluster:u|l|p": {
+        "taken": 17,
+        "total": 18
+    },
+    "cluster:p|n|j": {
+        "taken": 3,
+        "total": 3
+    },
+    "cluster:e|m|j": {
+        "taken": 1,
+        "total": 1
+    },
+    "cluster:e|m|p": {
+        "taken": 1,
+        "total": 1
+    },
+    "cluster:e|m|t": {
+        "taken": 3,
+        "total": 5
+    },
+    "cluster:u|l|k": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:o|l|k": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:k|n|t": {
+        "taken": 8,
+        "total": 8
+    },
+    "cluster:s|n|k": {
+        "taken": 9,
+        "total": 9
+    },
+    "cluster:t|m|k": {
+        "taken": 3,
+        "total": 5
+    },
+    "cluster:t|m|t": {
+        "taken": 4,
+        "total": 4
+    },
+    "cluster:u|n|j": {
+        "taken": 11,
+        "total": 16
+    },
+    "schwa:p|s": {
+        "taken": 3,
+        "total": 3
+    },
+    "cluster:e|n|j": {
+        "taken": 38,
+        "total": 38
+    },
+    "cluster:i|n|j": {
+        "taken": 0,
+        "total": 1
+    },
+    "schwa:t|p": {
+        "taken": 0,
+        "total": 6
+    },
+    "cluster:i|n|t": {
+        "taken": 7,
+        "total": 8
+    },
+    "cluster:a|n|j": {
+        "taken": 0,
+        "total": 2
+    },
+    "schwa:k|t": {
+        "taken": 0,
+        "total": 9
+    },
+    "schwa:s|i": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:n|n|j": {
+        "taken": 4,
+        "total": 8
+    },
+    "cluster:n|n|k": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:p|m|t": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:e|m|k": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:k|n|k": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:u|m|t": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:e|l|j": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:a|m|j": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:t|n|k": {
+        "taken": 0,
+        "total": 4
+    },
+    "cluster:n|m|t": {
+        "taken": 0,
+        "total": 4
+    },
+    "cluster:s|m|k": {
+        "taken": 0,
+        "total": 3
+    },
+    "schwa:k|s": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:k|n|j": {
+        "taken": 0,
+        "total": 1
+    },
+    "schwa:k|p": {
+        "taken": 1,
+        "total": 3
+    },
+    "schwa:p|p": {
+        "taken": 0,
+        "total": 3
+    },
+    "cluster:i|m|t": {
+        "taken": 0,
+        "total": 3
+    },
+    "cluster:s|m|t": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:l|m|k": {
+        "taken": 1,
+        "total": 2
+    },
+    "cluster:n|m|k": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:i|n|p": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:i|l|p": {
+        "taken": 4,
+        "total": 4
+    },
+    "cluster:t|l|p": {
+        "taken": 0,
+        "total": 2
+    },
+    "cluster:u|l|j": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:a|l|j": {
+        "taken": 0,
+        "total": 1
+    },
+    "cluster:o|l|t": {
+        "taken": 0,
+        "total": 4
+    },
+    "cluster:m|l|k": {
+        "taken": 2,
+        "total": 2
+    },
+    "cluster:p|l|k": {
+        "taken": 2,
+        "total": 2
     }
 };
