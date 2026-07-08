@@ -28,7 +28,10 @@ set -e
 # /ww/wordwiki.importReport().
 #
 # Steps:
-#   1. stop the server (BEFORE the rsync replaces the db under it)
+#   1. REFUSE if <instance>/wordwiki.pid exists: a server may be live -
+#      possibly inside the container, where this script (run outside) cannot
+#      stop or even see it.  Stop it from its own environment first, or
+#      remove a stale pidfile
 #   2. pull db + content from the V1 source (pullWordWikiV1Db.sh, whose post-pull
 #      recreates/seeds users - including the '~' automation identities and
 #      the 'test' robot - seeds passwords from the never-checked-in
@@ -86,6 +89,20 @@ set -e
 cd "$(dirname "$0")"
 RUN_DIR="${WORDWIKI_DIR:-$PWD/mmo}"
 
+# REFUSE while a server may be live (dz): this script often runs OUTSIDE the
+# container while the server runs INSIDE it, where wordwiki.sh's /proc-based
+# liveness check cannot see across the pid namespace - so pidfile PRESENCE is
+# the signal, deliberately conservative.  Working over a live db file risks a
+# torn copy.  If the server is genuinely down, remove the stale file and
+# re-run.
+PIDFILE="$RUN_DIR/wordwiki.pid"
+if [ -f "$PIDFILE" ]; then
+    echo "REFUSING: $PIDFILE exists - a wordwiki server may be running (possibly inside the container)." >&2
+    echo "Stop it from the environment it runs in (./wordwiki.sh stop), or remove the stale pidfile:" >&2
+    echo "    rm '$PIDFILE'" >&2
+    exit 1
+fi
+
 # Flags: --no-pull migrates the db already in place (a re-run, or the real
 # cutover); --allow-production is passed through to every mutating step (the
 # cutover target is marked db_purpose='production' and each step refuses it
@@ -128,8 +145,7 @@ finish() {
 }
 trap finish EXIT
 
-step "[1/14] stopping the server"
-./wordwiki.sh stop
+step "[1/14] server liveness check passed above (wordwiki.pid absent)"
 
 if [ "$NO_PULL" = 1 ]; then
     step "[2/14] pull SKIPPED (--no-pull): migrating the db already in place"

@@ -30,6 +30,20 @@ STAGING_DIR="${STAGING_DIR:-mmo-staging}"
 DB="$RUN_DIR/database/db.db"
 [ -f "$DB" ] || { echo "local db '$DB' not found (set WORDWIKI_DIR?)" >&2; exit 1; }
 
+# REFUSE while a server may be live (dz): this script often runs OUTSIDE the
+# container while the server runs INSIDE it, where wordwiki.sh's /proc-based
+# liveness check cannot see across the pid namespace - so pidfile PRESENCE is
+# the signal, deliberately conservative.  Working over a live db file risks a
+# torn copy.  If the server is genuinely down, remove the stale file and
+# re-run.
+PIDFILE="$RUN_DIR/wordwiki.pid"
+if [ -f "$PIDFILE" ]; then
+    echo "REFUSING: $PIDFILE exists - a wordwiki server may be running (possibly inside the container)." >&2
+    echo "Stop it from the environment it runs in (./wordwiki.sh stop), or remove the stale pidfile:" >&2
+    echo "    rm '$PIDFILE'" >&2
+    exit 1
+fi
+
 # `systemctl --user` over a non-login ssh needs XDG_RUNTIME_DIR pointed at the
 # user bus (lingering is enabled, so the manager is up even with no session).
 SC="XDG_RUNTIME_DIR=/run/user/\$(id -u) systemctl --user"
