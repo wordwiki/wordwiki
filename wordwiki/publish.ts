@@ -276,6 +276,7 @@ interface PublishOptions {
  *
  *   (empty) | index.html | home      home page
  *   404 | all-words | about-us       the other top-level pages
+ *   data                              the data-downloads page + the bundle
  *   categories                       categories directory + every category page
  *   categories/water                 one category page
  *   top-words                        Top Words directory + its tier pages
@@ -290,6 +291,7 @@ interface PublishOptions {
  */
 export type PublishTarget =
     | {kind: 'home'} | {kind: '404'} | {kind: 'all-words'} | {kind: 'about-us'}
+    | {kind: 'data'}
     | {kind: 'categories-all'}
     | {kind: 'category', slug: string}
     | {kind: 'top-words'}
@@ -313,6 +315,7 @@ export function parsePublishTarget(raw: string): PublishTarget {
     if(t === '404') return {kind: '404'};
     if(t === 'all-words') return {kind: 'all-words'};
     if(t === 'about-us') return {kind: 'about-us'};
+    if(t === 'data') return {kind: 'data'};
     if(t === 'top-words') return {kind: 'top-words'};
 
     const parts = t.split('/');
@@ -512,6 +515,7 @@ export class Publish {
         await this.publishItem('404 Page', ()=>this.publish404Page());
         await this.publishItem('All Words Page', ()=>this.publishAllWordsPage());
         await this.publishItem('About Us', ()=>this.publishAboutUsPage());
+        await this.publishItem('Data Downloads', ()=>this.publishDataDownloads());
 
         // --- Publish books
         if(!this.options.suppressPublishBooks) {
@@ -660,6 +664,7 @@ export class Publish {
                 case '404':       await this.publishItem('404 Page', ()=>this.publish404Page()); break;
                 case 'all-words': await this.publishItem('All Words Page', ()=>this.publishAllWordsPage()); break;
                 case 'about-us':  await this.publishItem('About Us', ()=>this.publishAboutUsPage()); break;
+                case 'data':      await this.publishItem('Data Downloads', ()=>this.publishDataDownloads()); break;
                 case 'categories-all':
                     await this.publishItem('Categories Directory', ()=>this.publishCategoriesDirectory());
                     await this.publishCategories();
@@ -863,6 +868,85 @@ export class Publish {
     get aboutUsPath(): string {
         return 'about-us.html';
     }
+
+    // ----- The data downloads (publish-source.md "site links its own dumps") --
+    // The archival stage-3 artifact, ON the site it generated: every crawled
+    // or mirrored copy of the site then carries the neutral-format data (and
+    // the license) needed to regenerate or convert it - the site's own seed.
+
+    get dataPagePath(): string {
+        return 'data/index.html';
+    }
+
+    async publishDataDownloads(): Promise<void> {
+        await Deno.mkdir(this.fsPath('data'), {recursive: true});
+
+        // The EXACT bundle this publish ran from - not a separate export
+        // that could drift.  A live build carries no timestamp (so
+        // republishing unchanged data rewrites nothing); a --from publish
+        // passes its dump's generatedAt through as provenance.
+        await writeUTF8FileIfContentsChanged(
+            this.fsPath('data/publish-source.json'),
+            JSON.stringify(this.source, null, 1));
+
+        // The format documentation rides along, so a future reader of the
+        // file never needs this project's repository.
+        try {
+            const formatDoc = Deno.readTextFileSync(
+                new URL('./publish-source.md', import.meta.url));
+            await writeUTF8FileIfContentsChanged(
+                this.fsPath('data/publish-source-format.md'), formatDoc);
+        } catch (e) {
+            this.status.warnings.push(`data downloads: could not copy the format doc: ${e}`);
+        }
+
+        const rootPath = '../';
+        const title = 'Dictionary Data';
+        const body =
+            ['div', {},
+             ['h1', {}, title],
+
+             ['p', {}, `This dictionary's data is made to outlive any one website or
+program.  The files below are the complete machine-readable content of this
+site, in plain JSON - every published word with its spellings, meanings,
+examples, recordings and source-manuscript references.  If you are reading
+this on an archived or mirrored copy of the site: these files are all you
+need to carry the dictionary forward into whatever comes next.`],
+
+             ['h2', {}, 'Files'],
+             ['ul', {},
+              ['li', {},
+               ['a', {href: 'publish-source.json'}, 'publish-source.json'],
+               ` — the dictionary data (${this.entries.length} words).  This is the
+exact file this site was generated from, so it is always complete and
+current: the site existing is the proof.`,
+               this.source.generatedAt ? ` Generated ${this.source.generatedAt}.` : ''],
+              ['li', {},
+               ['a', {href: 'publish-source-format.md'}, 'publish-source-format.md'],
+               ' — documentation of the file format, so the data can be read without this project\'s source code.']],
+
+             ['p', {}, `The recordings and manuscript images are referenced from the
+data by stable content-addressed paths under this site's `,
+              ['code', {}, 'derived/'], ' and ', ['code', {}, 'content/'],
+              ` directories - a mirror of the whole site therefore contains everything.`],
+
+             ['p', {}, `These files are the simplified, current-published form of the
+data (no editorial history).  The complete versioned editorial history is
+preserved by the project separately.`],
+
+             ['h3', {}, 'License'],
+             ['p', {}, 'This work is licensed under the ',
+              ['a', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, 'Creative Commons Attribution-NonCommercial 4.0 International license']],
+             ['p', {},
+              ` You are free to
+share copy and redistribute the material in any medium or format
+including remixing, transforming, and building upon the material, for any non-commercial purpose as long as you give appropriate credit.  `,
+             ]
+            ];
+
+        await this.writePage(this.dataPagePath,
+                             this.publicPageTemplate(rootPath, {title, body}));
+    }
     
     async publishAboutUsPage(): Promise<void> {
 
@@ -995,6 +1079,11 @@ export class Publish {
               ['a', {href:'https://islandlives.ca/'}, 'https://islandlives.ca/']],
             ],
             
+            ['h3', {}, 'Dictionary Data'],
+            ['p', {}, 'The complete machine-readable data behind this site - every published word with its spellings, meanings, examples, recordings and source references - is ',
+             ['a', {href: './data/index.html'}, 'available for download'],
+             ' under the same license as the site, so the language data can outlive any one website or program.'],
+
             ['h3', {}, 'License'],
             ['p', {}, 'This work is licensed under the ',
              ['a', {href:'https://creativecommons.org/licenses/by-nc/4.0/deed.en'}, 'Creative Commons Attribution-NonCommercial 4.0 International license']],

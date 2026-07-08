@@ -146,10 +146,28 @@ document-reference `transliteration` / `source_as_entry` /
 declaration, not guessed from values or publish state, and available to
 the editor's working-orthography lens later for the same purpose.
 
+## The site carries its own seed (built 2026-07-08)
+
+Every publish writes `data/` onto the generated site:
+
+- `data/publish-source.json` — the EXACT bundle the publish ran from (a
+  live build carries no timestamp so unchanged data rewrites nothing; a
+  `--from` publish passes its dump's generatedAt through as provenance,
+  shown on the data page).
+- `data/publish-source-format.md` — this document, so a reader of the
+  file never needs the project's repository.
+- `data/index.html` — the human-readable data page: what the files are,
+  the media note (content-addressed under the site's own derived/ +
+  content/, so a full mirror contains everything), and the license
+  (CC BY-NC 4.0, the same text as the site's About page, which links
+  here).
+
+The full-history dump is NOT on the site yet (the page says the project
+preserves it separately); shipping it is open.
+
 ## Next stages
 
-1. The generated site links its own dumps (reduced + full-history) with
-   licensing - every archived copy carries its seed.
-2. The standalone generator example a community can fork (imports the
+1. The standalone generator example a community can fork (imports the
    bundle reader + pure renderers only - now genuinely possible, since
    the publisher is a pure function of the bundle + resource files).
+2. Ship the full-history dump alongside the reduced one on data/.

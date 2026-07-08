@@ -192,6 +192,36 @@ test("variantContent 'selected' filters lanes but never provenance", async () =>
     });
 });
 
+test("the site carries its own seed: data downloads emit the bundle + docs + license", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seedTwoPublicWords(fx);
+        const source = await buildPublishSource(fx.ww);
+        const root = await Deno.makeTempDir({prefix: 'wordwiki-data-downloads-test-'});
+        const pub = new Publish(new PublishStatus(), source, root);
+
+        await pub.publishDataDownloads();
+
+        // The bundle on the site is the EXACT source of this publish.
+        const onSite = publishSourceFromJson(
+            await Deno.readTextFile(`${root}/data/publish-source.json`));
+        assertEquals(onSite.entries.length, source.entries.length);
+        assertEquals(onSite.formatVersion, source.formatVersion);
+
+        // The format doc rides along.
+        const doc = await Deno.readTextFile(`${root}/data/publish-source-format.md`);
+        assert(doc.includes('# The publish source'), 'format doc content');
+
+        // The data page: license + file links, and it is in the prune
+        // manifest (writePage).
+        const page = await Deno.readTextFile(`${root}/data/index.html`);
+        assert(page.includes('Creative Commons Attribution-NonCommercial'), 'license stated');
+        assert(page.includes('publish-source.json'), 'links the bundle');
+        assert(pub.emittedPaths.has('data/index.html'), 'page in the emitted manifest');
+
+        await Deno.remove(root, {recursive: true});
+    });
+});
+
 test("publishSourceFromJson: rejects an unknown formatVersion", async () => {
     await withTestDb(async () => {
         await assertRejects(async () =>

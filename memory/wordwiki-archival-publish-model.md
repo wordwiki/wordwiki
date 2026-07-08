@@ -16,6 +16,16 @@ DATA FILES convertible to any future medium (unbounded) — both simplified
 (no history) and full versions, linked FROM the site, cleanly licensed, so
 they get archived, 4) paper via .pdf (survives computing, loses audio).
 
+**STAGE 5 BUILT (2026-07-08): the site carries its own seed.** Every
+publish writes data/publish-source.json (the EXACT bundle used; no
+timestamp on live builds so unchanged republish rewrites nothing; --from
+passes the dump's generatedAt through as provenance) +
+data/publish-source-format.md + data/index.html (data page w/ the site's
+actual license: CC BY-NC 4.0 — NOT share-alike; dz pointed at publish.ts'
+existing license link). about-us links it ("Dictionary Data" section).
+'data' publish target; always in a full publish. Remaining: full-history
+dump on data/, standalone generator example.
+
 **STAGE 4 BUILT (2026-07-08): orthography-selected bundles.**
 buildPublishSource(app, {orthographies: ['mm-sf',...], variantContent:
 'all'|'selected'}); entries public in ANY selected (union), FIRST is
