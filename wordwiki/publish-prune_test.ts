@@ -11,7 +11,7 @@ import { test } from "../liminal/testing/test.ts";
 import { assert, assertFalse, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { exists } from "std/fs/mod.ts";
 import { withTestDb, type Fixture } from "./testing.ts";
-import { Publish, PublishStatus, PUBLISH_MARKER_FILE } from "./publish.ts";
+import { Publish, PublishStatus, TREE_MARKER_FILE } from "./publish.ts";
 import { buildPublishSource } from "./publish-source.ts";
 
 // Build a Publish rooted at a fresh temp dir.  We drive pruneOrphanedPages()
@@ -37,7 +37,7 @@ function padManifest(pub: Publish, n = 150): void {
     for(let i = 0; i < n; i++) pub.emittedPaths.add(`entries/pad/p${i}.html`);
 }
 
-test("prune: NO marker => nothing deleted (opt-in)", async () => {
+test("prune: NO ownership marker => nothing deleted", async () => {
     await withTestDb(async (fx) => {
         const {pub, root} = await mkPrunable(fx);
         await touch(root, 'categories/orphan.html');
@@ -48,7 +48,7 @@ test("prune: NO marker => nothing deleted (opt-in)", async () => {
         await pub.pruneOrphanedPages();
         assert(await there(root, 'categories/orphan.html'), 'orphan kept (no marker)');
         assert(await there(root, 'categories/live.html'));
-        assertStringIncludes(pub.status.warnings.join('\n'), PUBLISH_MARKER_FILE);
+        assertStringIncludes(pub.status.warnings.join('\n'), TREE_MARKER_FILE);
         await Deno.remove(root, {recursive: true});
     });
 });
@@ -56,7 +56,8 @@ test("prune: NO marker => nothing deleted (opt-in)", async () => {
 test("prune: marker + healthy manifest => orphans removed, live + non-html kept", async () => {
     await withTestDb(async (fx) => {
         const {pub, root} = await mkPrunable(fx);
-        await touch(root, PUBLISH_MARKER_FILE, '');         // opt in
+        await touch(root, TREE_MARKER_FILE, '');         // opt in (legacy root = its own tree)
+        await touch(root, `servlet/${TREE_MARKER_FILE}`, '');   // forwarders ride their dir's stamp
         await touch(root, 'categories/astronomy.html');     // ORPHAN (the bug)
         await touch(root, 'categories/sky.html');           // live
         await touch(root, 'categories/notes.txt', 'keep');  // non-html -> never touched
@@ -75,7 +76,7 @@ test("prune: marker + healthy manifest => orphans removed, live + non-html kept"
         assert(await there(root, 'categories/sky.html'), 'live category kept');
         assert(await there(root, 'entries/g/galq/galq.html'), 'live entry kept');
         assert(await there(root, 'categories/notes.txt'), 'non-.html never deleted');
-        assert(await there(root, PUBLISH_MARKER_FILE), 'marker never deleted');
+        assert(await there(root, TREE_MARKER_FILE), 'marker never deleted');
         assertStringIncludes(pub.status.log.join('\n'), 'removed 3 orphaned');
         await Deno.remove(root, {recursive: true});
     });
@@ -86,7 +87,7 @@ test("prune: suppressed section's directory is left alone", async () => {
         // Categories suppressed this run => its tree emitted nothing, so it
         // must NOT be pruned (else every category page looks orphaned).
         const {pub, root} = await mkPrunable(fx, {suppressPublishCategories: true});
-        await touch(root, PUBLISH_MARKER_FILE, '');
+        await touch(root, TREE_MARKER_FILE, '');
         await touch(root, 'categories/orphan.html');        // would-be orphan, but section off
         await touch(root, 'entries/e/orphan/orphan.html');  // entries section ran -> orphan
         padManifest(pub);
@@ -102,7 +103,7 @@ test("prune: suppressed section's directory is left alone", async () => {
 test("prune: publish errors this run => skip (manifest may be incomplete)", async () => {
     await withTestDb(async (fx) => {
         const {pub, root} = await mkPrunable(fx);
-        await touch(root, PUBLISH_MARKER_FILE, '');
+        await touch(root, TREE_MARKER_FILE, '');
         await touch(root, 'categories/orphan.html');
         padManifest(pub);
         pub.status.errors.push('some page failed to render');
@@ -118,14 +119,14 @@ test("prune: publish errors this run => skip (manifest may be incomplete)", asyn
 test("prune: implausibly small manifest => abort, delete nothing", async () => {
     await withTestDb(async (fx) => {
         const {pub, root} = await mkPrunable(fx);
-        await touch(root, PUBLISH_MARKER_FILE, '');
+        await touch(root, TREE_MARKER_FILE, '');
         await touch(root, 'categories/orphan.html');
         pub.emittedPaths.add('categories/live.html');   // only 1 page -> below floor
 
         await pub.pruneOrphanedPages();
 
         assert(await there(root, 'categories/orphan.html'), 'nothing deleted when manifest looks broken');
-        assertStringIncludes(pub.status.errors.join('\n'), 'ABORTED');
+        assertStringIncludes(pub.status.warnings.join('\n'), 'ABORTED');
         await Deno.remove(root, {recursive: true});
     });
 });

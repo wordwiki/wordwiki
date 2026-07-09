@@ -109,3 +109,17 @@ One run, all publishable orthographies (`./wordwiki.sh publish`):
   (make it presence-filtered, like categories), or it keys off
   `edition` and cross-links via `primary`.  Anything that fits
   neither bucket is a design smell - take it back to dz.
+
+- OWNERSHIP MARKERS (2026-07-09, replaced the operator-placed
+  `.wordwiki-publish-root` prune gate): the publisher stamps
+  `.wordwiki-publish-tree` into every directory it creates and owns
+  whole (the /li /sf trees + the root /servlet), and REFUSES to
+  publish into an existing unmarked one - so an orthography whose URL
+  segment collides with a directory already in the publish root
+  ('database', a playground dir) aborts the WHOLE run with nothing
+  written, instead of overwriting it.  Prune walks only inside
+  stamped dirs (automatic - no operator step; the marker is not
+  .html, so prune can never eat it).  Blessing a publisher tree from
+  before the marker: `touch <tree>/.wordwiki-publish-tree` (a fresh
+  root needs nothing).  The prune sanity floor (<100 pages) is a
+  warning now, not an error - small young sites hit it legitimately.

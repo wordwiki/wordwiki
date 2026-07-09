@@ -152,11 +152,12 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
 // Prune on a RELATIVE publish root ('.', the live layout): std walk
 // normalizes relative roots, which made GUARD 5's prefix check skip every
 // file - prune was a silent NO-OP exactly where it matters (caught by
-// arming the live root, 2026-07-09).  Also pins the scoping dz asked
-// about: prune walks ONLY the tree-scoped section dirs (+ the root
-// servlet/words) - root-level bystander files are structurally
-// unreachable.
-test("multi-tree prune: relative publish root, tree-scoped, bystanders survive", async () => {
+// arming the live root, 2026-07-09).  Also pins the OWNERSHIP-MARKER model
+// (dz, same day - replaced the operator-placed root gate): the first
+// publish stamps the dirs it creates (.wordwiki-publish-tree in /li /sf
+// /servlet), prune walks ONLY inside stamped dirs, and root-level
+// bystander files are structurally unreachable.
+test("multi-tree prune: relative root, auto-stamped trees, bystanders survive", async () => {
     await withTestDb(async (fx: Fixture) => {
         seedMany(fx);
         const sources = await buildAllPublishSources(fx.ww);
@@ -164,25 +165,35 @@ test("multi-tree prune: relative publish root, tree-scoped, bystanders survive",
         const prevCwd = Deno.cwd();
         try {
             Deno.chdir(root);
-            await Deno.writeTextFile('.wordwiki-publish-root', '');
-            // Stale pages "from before the edition model": a preview-tree
-            // book page and an orphan entry page...
+            // Root-level bystanders (dz's playground): prune must never
+            // touch them, .html or not.
+            await Deno.writeTextFile('bystander.html', 'mine');
+            await Deno.mkdir('react-play', {recursive: true});
+            await Deno.writeTextFile('react-play/play.html', 'mine');
+
+            // Publish #1 creates and STAMPS the owned dirs - no operator
+            // marker step.
+            const status1 = new PublishStatus();
+            status1.start();
+            await publishMultiTree(status1, sources, '.');
+            status1.end();
+            assertEquals(status1.errors, []);
+            const exists = (p: string) => { try { Deno.statSync(p); return true; } catch { return false; } };
+            assert(exists('li/.wordwiki-publish-tree') && exists('sf/.wordwiki-publish-tree')
+                   && exists('servlet/.wordwiki-publish-tree'), 'owned dirs stamped');
+
+            // Stale pages "from an earlier publish": a preview-tree book
+            // page and an orphan entry page.
             await Deno.mkdir('sf/books/PDM/page-0001', {recursive: true});
             await Deno.writeTextFile('sf/books/PDM/page-0001/index.html', 'stale');
             await Deno.mkdir('li/entries/z/zombie', {recursive: true});
             await Deno.writeTextFile('li/entries/z/zombie/zombie.html', 'stale');
-            // ...and root-level bystanders (dz's playground) prune must
-            // never touch, .html or not.
-            await Deno.writeTextFile('bystander.html', 'mine');
-            await Deno.mkdir('react-play', {recursive: true});
-            await Deno.writeTextFile('react-play/play.html', 'mine');
 
             const status = new PublishStatus();
             status.start();
             await publishMultiTree(status, sources, '.');
             status.end();
             assertEquals(status.errors, []);
-            const exists = (p: string) => { try { Deno.statSync(p); return true; } catch { return false; } };
             assert(!exists('sf/books/PDM/page-0001/index.html'), 'stale preview book page pruned');
             assert(!exists('li/entries/z/zombie/zombie.html'), 'orphan entry page pruned');
             assert(exists('bystander.html'), 'root bystander file untouched');
@@ -191,10 +202,39 @@ test("multi-tree prune: relative publish root, tree-scoped, bystanders survive",
                    'live pages kept');
             const pruneLog = status.log.filter(l =>
                 typeof l === 'string' && l.includes('prune complete'));
-            assert(pruneLog.length > 0, 'prune ran (marker armed, floor cleared)');
+            assert(pruneLog.length > 0, 'prune ran (auto-stamped, floor cleared)');
         } finally {
             Deno.chdir(prevCwd);
             await Deno.remove(root, {recursive: true});
         }
+    });
+});
+
+// The ownership REFUSAL (dz 2026-07-09): creating an orthography whose URL
+// segment matches an existing directory in the publish root must not let a
+// publish overwrite that directory - an existing UNMARKED dir aborts the
+// whole run with nothing written anywhere.
+test("multi-tree publish: refuses an existing unmarked tree dir, writes nothing", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        const sources = await buildAllPublishSources(fx.ww);
+        const root = await Deno.makeTempDir({prefix: 'wordwiki-refuse-test-'});
+        // 'sf' already exists as SOMEBODY'S directory, no marker.
+        await Deno.mkdir(`${root}/sf`, {recursive: true});
+        await Deno.writeTextFile(`${root}/sf/precious.txt`, 'user data');
+
+        const status = new PublishStatus();
+        status.start();
+        await publishMultiTree(status, sources, root);
+        status.end();
+
+        assert(status.errors.length > 0, 'run refused');
+        assertStringIncludes(String(status.errors[0]), '.wordwiki-publish-tree');
+        const exists = (p: string) => { try { Deno.statSync(`${root}/${p}`); return true; } catch { return false; } };
+        assertEquals(Deno.readTextFileSync(`${root}/sf/precious.txt`), 'user data');
+        assert(!exists('sf/index.html'), 'nothing written into the refused dir');
+        assert(!exists('li/index.html') && !exists('index.html'),
+               'refusal aborts the WHOLE run - the other trees are not written either');
+        await Deno.remove(root, {recursive: true});
     });
 });

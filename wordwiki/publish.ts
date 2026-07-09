@@ -41,10 +41,11 @@ import * as entryMeta from './render-entry-meta.ts';
 //
 // Deleting files from a publish root is dangerous, so this is wrapped in layers
 // of paranoia (see pruneOrphanedPages):
-//   - OPT-IN MARKER: prune only runs if PUBLISH_MARKER_FILE exists in the
-//     publish root.  The publisher NEVER creates it - a human places it once to
-//     bless a directory as a real publish root.  Misconfigured root => no marker
-//     => nothing deleted.
+//   - OWNERSHIP MARKER: prune only walks inside directories stamped with
+//     TREE_MARKER_FILE (see below) - the publisher stamps the dirs IT creates
+//     (the /li /sf trees, the root /servlet), so a misconfigured root's
+//     directories are unstamped and nothing is deleted.  (Replaced the old
+//     operator-placed root-level gate, dz 2026-07-09.)
 //   - FULL-PUBLISH ONLY: prune runs from publish() (the complete run), never
 //     from publishTargets() (partial), and only over sections that actually ran.
 //   - MANIFEST-DRIVEN: it deletes only files NOT in emittedPaths (the exact set
@@ -56,9 +57,23 @@ import * as entryMeta from './render-entry-meta.ts';
 //   - SCOPE: it only walks PRUNE_*_DIRS (categories / entries / forwarders);
 //     resources, books, images, and everything else are never touched.
 
-// Operator-placed marker that opts a publish root in to pruning.  Created by a
-// human (`touch`), never by the publisher.
-export const PUBLISH_MARKER_FILE = '.wordwiki-publish-root';
+// The per-directory OWNERSHIP marker (dz 2026-07-09; replaced the old
+// operator-placed root-level .wordwiki-publish-root prune gate): the
+// publisher stamps it into every directory it creates and owns whole - the
+// orthography trees (/li, /sf) and the root /servlet forwarder dir - and
+// REFUSES to publish into an existing one that lacks it.  This is what
+// keeps an orthography whose URL segment happens to collide with a
+// directory already in the publish root ('database', someone's playground
+// dir...) from letting a publish overwrite that directory.  Prune walks
+// ONLY inside stamped directories (a per-tree gate, automatic where the
+// publisher created the dir).  The marker itself is never prunable (prune
+// only deletes *.html) and is re-ensured on every publish.  To bless a
+// publisher-created tree from before the marker existed: touch it.
+export const TREE_MARKER_FILE = '.wordwiki-publish-tree';
+const TREE_MARKER_CONTENT =
+    'Created by wordwiki publish: this directory is a publisher-owned tree.\n' +
+    'Publish refuses to write into an existing tree directory without this marker,\n' +
+    'and stale-page pruning only runs inside marked directories.\n';
 
 // Publisher-owned directories that pruneOrphanedPages may delete orphan *.html
 // from.  Each group is only pruned when its section actually ran this publish.
@@ -439,8 +454,17 @@ export async function publishMultiTree(status: PublishStatus,
         });
     }
 
+    // Claim every publisher-owned directory BEFORE anything publishes: each
+    // is either created-and-stamped now or already stamped; one existing
+    // UNMARKED directory aborts the WHOLE run with nothing written.
+    const refusals: string[] = [];
+    for(const tree of trees) refusals.push(...await tree.claimOwnedDirs());
+    if(refusals.length > 0) {
+        status.errors.push(...refusals);
+        return;
+    }
+
     for(const tree of trees) {
-        await Deno.mkdir(tree.fsPath(''), {recursive: true});
         status.log.push(`--- publishing the ${tree.source.orthographyName} tree (/${tree.treePrefix}) ---`);
         if(opts.targets?.length) await tree.publishTargets(opts.targets);
         else await tree.publish();
@@ -734,6 +758,15 @@ export class Publish {
         // --- If publish root dir does not exist, create it.
         await Deno.mkdir(this.publishRoot, {recursive: true});
 
+        // --- Claim the owned dirs (create-and-stamp / accept-stamped /
+        //     refuse-unmarked).  publishMultiTree already claimed for all
+        //     trees up front; this covers direct single-tree callers.
+        const refusals = await this.claimOwnedDirs();
+        if(refusals.length > 0) {
+            this.status.errors.push(...refusals);
+            return;
+        }
+
         // --- Record which instance/db this site was built from, and warn if the
         //     output dirs are shared (two instances publishing into one tree
         //     clobber each other) - part of the off-the-rails net.
@@ -778,6 +811,45 @@ export class Publish {
             await this.pruneOrphanedPages();
     }
 
+    /** The whole directories this tree owns: its orthography tree dir
+     *  (/li, /sf - when tree-prefixed) and the root /servlet forwarder dir
+     *  (when this tree writes the forwarders). */
+    ownedDirs(): string[] {
+        const dirs: string[] = [];
+        if(this.treePrefix) dirs.push(this.fsPath('').replace(/\/+$/, ''));
+        if(this.options.writeForwarders ?? true) dirs.push(this.rootFsPath('servlet'));
+        return dirs;
+    }
+
+    /** CLAIM the publisher-owned directories before writing anything: a
+     *  missing dir is created and stamped with TREE_MARKER_FILE; a stamped
+     *  dir is accepted (marker re-ensured); an existing UNMARKED dir is
+     *  REFUSED (returned as an error message) - it is somebody's data, not
+     *  publisher output (dz 2026-07-09: an orthography URL segment must
+     *  not be able to overwrite an arbitrary directory in the publish
+     *  root).  Callers abort the run on any refusal, before any write. */
+    async claimOwnedDirs(): Promise<string[]> {
+        const refusals: string[] = [];
+        for(const dir of this.ownedDirs()) {
+            const marker = `${dir}/${TREE_MARKER_FILE}`;
+            if(await fsExists(dir)) {
+                if(!(await fsExists(marker))) {
+                    refusals.push(
+                        `REFUSING to publish into existing directory '${dir}': it has no ` +
+                        `'${TREE_MARKER_FILE}' ownership marker, so it is not publisher-created - ` +
+                        `an orthography URL segment may be colliding with a directory of yours.  ` +
+                        `(If it IS publisher output from before the marker existed, bless it: ` +
+                        `touch '${marker}'.)`);
+                    continue;
+                }
+            } else {
+                await Deno.mkdir(dir, {recursive: true});
+            }
+            await writeUTF8FileIfContentsChanged(marker, TREE_MARKER_CONTENT);
+        }
+        return refusals;
+    }
+
     // Note the building instance + db_purpose in the publish log, and warn if a
     // publish OUTPUT dir is a symlink (a shared output tree means two instances
     // publishing will clobber each other).
@@ -810,18 +882,26 @@ export class Publish {
      *
      * Deleting from a publish root is dangerous, so every layer here is a
      * fail-SAFE (skip/abort rather than risk a wrong delete).  See the block
-     * comment by PUBLISH_MARKER_FILE for the rationale of each guard.  Call this
+     * comment by TREE_MARKER_FILE for the rationale of each guard.  Call this
      * ONLY at the end of a full publish() - the manifest (emittedPaths) must be
      * complete for "not in the manifest" to mean "orphan".
      */
     async pruneOrphanedPages(): Promise<void> {
-        // GUARD 1 - opt-in marker.  The publisher never creates it; a human
-        // places it to bless a directory as a real publish root.  No marker =>
-        // never delete anything (e.g. a misconfigured publishRoot).
-        if(!(await fsExists(this.rootFsPath(PUBLISH_MARKER_FILE)))) {
+        // GUARD 1 - ownership markers.  Prune only walks inside directories
+        // the publisher has STAMPED as its own (claimOwnedDirs): the tree
+        // dir for the tree-scoped sections, the root servlet dir for the
+        // legacy forwarders.  The stamp is automatic where the publisher
+        // created the dir; anything unstamped is never walked.  (For a
+        // legacy single-tree root - treePrefix '' - the "tree dir" is the
+        // publish root itself, which the publisher never stamps: touch the
+        // marker there to opt such a root in, the old root-gate behavior.)
+        const treeOwned = await fsExists(this.fsPath(TREE_MARKER_FILE));
+        const servletOwned = await fsExists(this.rootFsPath(`servlet/${TREE_MARKER_FILE}`));
+        if(!treeOwned) {
             this.status.warnings.push(
-                `Stale-page prune SKIPPED: no '${PUBLISH_MARKER_FILE}' marker in publish root `+
-                `'${this.publishRoot}'. Create it (touch) to enable pruning of orphaned pages.`);
+                `Stale-page prune SKIPPED for '${this.treePrefix || this.publishRoot}': no `+
+                `'${TREE_MARKER_FILE}' ownership marker. The publisher stamps directories it `+
+                `creates; touch the marker to bless a pre-marker tree.`);
             return;
         }
 
@@ -836,11 +916,15 @@ export class Publish {
         }
 
         // GUARD 3 - sanity floor.  An implausibly small manifest means something
-        // broke upstream; refuse rather than risk deleting a live site.
+        // broke upstream; refuse rather than risk deleting a live site.  A
+        // WARNING, not an error: since the ownership stamps made pruning
+        // automatic, a legitimately small site (a young dictionary) lands
+        // here on every publish.
         if(this.emittedPaths.size < PRUNE_MIN_MANIFEST) {
-            this.status.errors.push(
+            this.status.warnings.push(
                 `Stale-page prune ABORTED: only ${this.emittedPaths.size} pages emitted `+
-                `(< ${PRUNE_MIN_MANIFEST}); manifest looks broken - refusing to delete anything.`);
+                `(< ${PRUNE_MIN_MANIFEST}); refusing to delete anything (broken manifest? `+
+                `a site this small has little to prune anyway).`);
             return;
         }
 
@@ -862,7 +946,9 @@ export class Publish {
             dirs.push(this.treePrefix + 'books');
         if(!this.options.suppressPublishEntries) {
             dirs.push(this.treePrefix + 'entries');
-            if(this.options.writeForwarders ?? true) dirs.push('servlet/words');
+            // The root-level forwarders ride their own dir's stamp.
+            if((this.options.writeForwarders ?? true) && servletOwned)
+                dirs.push('servlet/words');
         }
         if(dirs.length === 0) return;
 
