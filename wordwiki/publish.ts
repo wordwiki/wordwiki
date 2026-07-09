@@ -13,6 +13,7 @@ import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
 import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
 import {PublishSource, PublishSourceBook, buildPublishSource, writeFullHistoryDump} from './publish-source.ts';
+import type * as model from './model.ts';
 import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
@@ -1233,7 +1234,9 @@ including remixing, transforming, and building upon the material, for any non-co
         const entryMarkup: any = entryMeta.renderEntryMeta(
             {rootPath, audience: 'public', publicKeys: ['borrowed-word'],
              renderBoundingGroup: (gid: number) => this.publicBoundingGroup(rootPath, gid),
-             resolveAudioUrl: this.resolveAudioUrl},
+             resolveAudioUrl: this.resolveAudioUrl,
+             valueLabel: (f: model.ScalarField, v: any) =>
+                 f.name === 'speaker' ? this.speakerLabel(String(v)) : undefined},
             entryschema.parsedDictSchema().relationsByTag[entryschema.EntryTag], entry);
         // renderCategoriesForEntry here.
 
@@ -1291,6 +1294,18 @@ including remixing, transforming, and building upon the material, for any non-co
             imageRefDescription: (id: number) => this.scanDescription(id),
         };
     }
+
+    // The speaker's display label - "Name (Region)" - from the bundle's
+    // users section (dz: the region, from the user record, next to the
+    // name in recordings).  Unknown usernames render as stored.
+    #speakerByUsername: Map<string, {name: string, region?: string}>|undefined;
+    speakerLabel = (username: string): string => {
+        this.#speakerByUsername ??= new Map(this.source.users.map(u =>
+            [u.username, {name: u.name, region: u.region}]));
+        const u = this.#speakerByUsername.get(username);
+        if(!u) return username;
+        return u.region ? `${u.name} (${u.region})` : u.name;
+    };
 
     // The bundle's media manifest: recordings render from build-time-
     // resolved derived paths - the publisher never touches the derivation
@@ -1709,7 +1724,8 @@ including remixing, transforming, and building upon the material, for any non-co
             'div', {style: 'overflow: auto;'},
             entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true,
                                      scanRenderers: this.scanRenderers(),
-                                     resolveAudioUrl: this.resolveAudioUrl}, entry)];
+                                     resolveAudioUrl: this.resolveAudioUrl,
+                                     speakerLabel: this.speakerLabel}, entry)];
         const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
         //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
         // if(entry.entry_id === 145979) {  // ugsuguni

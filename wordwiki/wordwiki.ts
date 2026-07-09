@@ -391,6 +391,8 @@ export class WordWiki extends LiminalApp {
             ? entryMeta.renderEntryMeta(
                   {rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
                    renderBoundingGroup: this.wordViewBoundingGroup,
+                   valueLabel: (f, v) =>
+                       f.name === 'speaker' ? this.speakerDisplayLabel(String(v)) : undefined,
                    titleAffordance: this.wordViewPencil(entry_id, e)},
                   this.dictSchema.relationsByTag[entry.EntryTag], e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
@@ -398,6 +400,17 @@ export class WordWiki extends LiminalApp {
             ['div', {class: 'container py-3'},
              lensBanner,
              ['div', {class: 'page-content'}, rendered]]);
+    }
+
+    // The speaker's display label beside a recording - "Name (Region)" -
+    // from the users TABLE (the publisher's twin reads the bundle's users
+    // section).  Unknown usernames render as stored.
+    private speakerDisplayLabel(username: string): string {
+        try {
+            const u = security.runSystem(() => this.users.byUsername.first({username}));
+            if(u) return u.region ? `${u.name} (${u.region})` : u.name;
+        } catch { /* pre-migration db */ }
+        return entry.users[username] ?? username;
     }
 
     // The orthography's display name: the table is the authority, the seed

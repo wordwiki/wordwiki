@@ -113,3 +113,34 @@ test("word view orthography lens: lane filtered, banner shown, link helper targe
         assertStringIncludes(link, 'wordwiki.wordView(1000, "mm-sf")');
     });
 });
+
+import * as security from '../liminal/security.ts';
+import { buildPublishSource } from './publish-source.ts';
+import { Publish, PublishStatus } from './publish.ts';
+
+test("recordings show the speaker's name with their region in brackets", async () => {
+    await withTestDb(async (fx) => {
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['region'], {region: 'Listuguj'} as any));
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, "spl", 1010, tl.next(),
+            {attr1: "samqwan", variant: "mm-li", order_key: "0.5"})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, "rec", 1020, tl.next(),
+            {attr1: "", attr2: "djz", order_key: "0.5"})], {quiet: true});
+
+        // The word view (table-backed label).
+        const view = markupToString(await as(fx, "djz", () =>
+            renderRoute(fx.ww, "wordwiki.wordView(1000)")));
+        assertStringIncludes(view, "David Ziegler (Listuguj)");
+
+        // The publish path (bundle-backed label): the bundle's users
+        // section carries the region, and the info-box renderer uses it.
+        const source = await as(fx, "system", () => buildPublishSource(fx.ww));
+        const pub = new Publish(new PublishStatus(), source);
+        assertEquals(pub.speakerLabel("djz"), "David Ziegler (Listuguj)");
+        assertEquals(pub.speakerLabel("nobody-such"), "nobody-such");
+    });
+});
