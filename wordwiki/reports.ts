@@ -87,7 +87,7 @@ export class EditorReports {
                 : undefined,
             category.groupByTheme(tabled).map(group => [
                 ['h3', {}, group.theme],
-                ['ul', {}, group.cats.map(c => categoryLink(c.slug, `${c.name} (${c.slug})`))],
+                ['ul', {}, group.cats.map(c => categoryLink(c.slug, c.name))],
             ]),
             untabled.length > 0
                 ? [['h3', {}, 'Not in the category table'],

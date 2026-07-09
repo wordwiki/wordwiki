@@ -894,6 +894,7 @@ export class LexemeEditor {
             editing: this.metaEditingHooks(entry_id, changes),
             valueLabel: this.vocabValueLabel(),
             orthographyBadge: this.orthographyBadge(),
+            titleOrthography: this.app.currentWorkingOrthography(),
         });
     }
 
@@ -1263,7 +1264,10 @@ export class LexemeEditor {
         // blanks and unknown slugs never dim; and PENDING facts STAY BRIGHT
         // (a Listuguj approver reviewing Smith-Francis proposals must not
         // find the work faded - needs-eyes beats not-my-lane).
-        const working = this.app.currentWorkingOrthography();
+        // The ALL ('mm') override is a VIEWING mode: no lane is "other",
+        // so nothing dims.
+        const working0 = this.app.currentWorkingOrthography();
+        const working = working0 === 'mm' ? undefined : working0;
         const livingOrths = working
             ? new Set(this.app.orthographies.publishableByOrder.all({}).map(o => o.slug))
             : undefined;
@@ -2331,7 +2335,7 @@ export class LexemeEditor {
             if(f instanceof model.VariantField && !f.variantFlags.notVariant)
                 defaults[f.name] = f.variantFlags.defaultAll
                     ? 'mm'
-                    : this.app.currentUserPrimaryOrthography();
+                    : this.app.newContentOrthography();
 
         // Self-lift, as in editDialog (composable wherever it is loaded from).
         return [['script', {}, 'setTimeout(showModalEditor)'],

@@ -41,3 +41,17 @@ sessionToken (resolveSecurityContext stashes it). templates.ts gets the
 status via setOrthographyStatusProvider (injected in WordWiki ctor — no
 import cycle). The one-word wordView lens (wordView(id, orthography))
 remains the explicit per-page override.
+
+**ALL mode + title-lane rules (2026-07-09):** override value 'mm' = the
+ALL viewing mode (multi-orthography rendering: every lane, Li/SF badges,
+'/'-joined titles). newContentOrthography() = specific working lane, or
+primary when ALL/'unset' (creation must never default to the wildcard) —
+insert dialogs use IT, not primary directly. Title lines
+(word view + editor, via EntryRenderConfig.titleOrthography) show only
+the working lane's spellings; RULE: a lane-filtered title brings the
+spelling section back into the BODY with badges (hidden content must stay
+reachable through explicit presentation). Switch/clear bounces back to
+the originating page (returnTo, site-relative-only guard).
+**dz TODO: genericize the 'mm' wildcard value itself** — another
+Mi'gmaq-ism in the data model (stored values!) to migrate for
+multi-language support.

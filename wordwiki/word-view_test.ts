@@ -144,3 +144,38 @@ test("recordings show the speaker's name with their region in brackets", async (
         assertEquals(pub.speakerLabel("nobody-such"), "nobody-such");
     });
 });
+
+test("word-view title follows the working lane; body keeps all lanes with badges", async () => {
+    await withTestDb(async (fx) => {
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, "spl", 1010, tl.next(),
+            {attr1: "samqwan", variant: "mm-li", order_key: "0.5"})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, "spl", 1011, tl.next(),
+            {attr1: "samuqwan", variant: "mm-sf", order_key: "0.6"})], {quiet: true});
+
+        // An li-working user: the TITLE is li only; the body still carries
+        // the sf lane, marked with its badge.
+        const view = markupToString(await as(fx, "djz", () =>
+            renderRoute(fx.ww, "wordwiki.wordView(1000)")));
+        const h1 = view.match(/<h1[^>]*>[\s\S]*?<\/h1>/)![0];
+        assertStringIncludes(h1, "samqwan");
+        assertEquals(h1.includes("samuqwan"), false);
+        assertStringIncludes(view, "samuqwan");            // body keeps the lane
+        assertStringIncludes(view, "lm-me-orth");          // ...with a badge
+        assertStringIncludes(view, ">SF<");
+
+        // No working lane (= the ALL case): the '/'-joined title.
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: ''} as any));
+        const joined = markupToString(await as(fx, "djz", () =>
+            renderRoute(fx.ww, "wordwiki.wordView(1000)")));
+        const h1b = joined.match(/<h1[^>]*>[\s\S]*?<\/h1>/)![0];
+        assertStringIncludes(h1b, "samqwan / samuqwan");
+    });
+});

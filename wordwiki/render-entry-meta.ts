@@ -31,6 +31,7 @@ import { Markup } from "../liminal/markup.ts";
 import * as model from "./model.ts";
 import { markdownToMarkup } from "../liminal/markdown.ts";
 import * as audio from "./audio.ts";  // REMOVE_FOR_WEB
+import { variantMatches } from "./variant-policy.ts";
 
 // --- Config ------------------------------------------------------------------
 
@@ -59,6 +60,12 @@ export interface EntryRenderConfig {
     // undefined to fall through to the default rendering (incl. static
     // $options), so unknown/legacy values still show raw.
     valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
+    // The TITLE LINE's orthography (dz 2026-07-09): headword-role values
+    // filter to this lane ('mm'/blank always pass) - the title shows YOUR
+    // working orthography's spelling, not every lane's (a holdover from
+    // the per-orthography view).  The body still shows all lanes.  A word
+    // with nothing in the lane falls back to all lanes (never a blank h1).
+    titleOrthography?: string;
     // The QUIET orthography marker beside a variant-bearing tuple's text
     // (dz: side-by-side orthographies must be tellable apart, without
     // clutter).  Given the variant slug, return the tiny label ('Li') or
@@ -214,6 +221,7 @@ export class EntryRenderer {
     readonly titleAffordance?: Markup;
     readonly editing?: EditingHooks;
     readonly valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
+    readonly titleOrthography?: string;
     readonly orthographyBadge?: (variantSlug: string) => string | undefined;
 
     constructor(cfg: EntryRenderConfig) {
@@ -226,6 +234,7 @@ export class EntryRenderer {
         this.titleAffordance = cfg.titleAffordance;
         this.editing = cfg.editing;
         this.valueLabel = cfg.valueLabel;
+        this.titleOrthography = cfg.titleOrthography;
         this.orthographyBadge = cfg.orthographyBadge;
     }
 
@@ -299,7 +308,10 @@ export class EntryRenderer {
     /** The <h1> (headwords + glosses collected from the whole tree) - its own
      *  entry point so the editor's title FRAGMENT can re-render just it. */
     renderTitle(entryRelation: model.RelationField, node: EntryNode): Markup {
-        const headwords = this.collectTitleValues(entryRelation, node, "headword");
+        let headwords = this.collectTitleValues(entryRelation, node, "headword",
+                                                this.titleOrthography);
+        if(headwords.length === 0 && this.titleOrthography)
+            headwords = this.collectTitleValues(entryRelation, node, "headword");
         const glosses = this.collectTitleValues(entryRelation, node, "gloss");
         const title: Markup = ["h1", { class: "entry-scope" },
             headwords.join(" / "),
@@ -314,8 +326,23 @@ export class EntryRenderer {
      *  (it stays in the title too). */
     protected renderBody(entryRelation: model.RelationField, node: EntryNode): Markup {
         return this.childRelations(entryRelation)
-            .filter(cr => !!this.editing || view(cr).titleRole !== "headword")
+            .filter(cr => !!this.editing || view(cr).titleRole !== "headword"
+                    || this.titleHidLanes(cr, node))
             .map(cr => this.renderRelation(cr, node));
+    }
+
+    /** Did the lane-filtered TITLE hide any of this headword relation's
+     *  values?  Then the section is NOT title-only: it renders in the body
+     *  (with the lane badges), so other-orthography spellings stay visible
+     *  - hidden content must always be reachable through explicit
+     *  presentation, never silently gone. */
+    protected titleHidLanes(cr: model.RelationField, node: EntryNode): boolean {
+        if (!this.titleOrthography) return false;
+        const vf = cr.scalarFields.find(f => f instanceof model.VariantField) as
+            model.VariantField | undefined;
+        if (!vf) return false;
+        return node.children(cr).some(t =>
+            !variantMatches(t.value(vf) as string | null, this.titleOrthography!));
     }
 
     // --- scalars -------------------------------------------------------------
@@ -515,7 +542,20 @@ export class EntryRenderer {
         if ((v.compose && !editing) || orderedChildRelations(rf).length === 0) {
             // Joined onto one line - READ only (edit needs each tuple editable).
             if (v.join !== undefined && !editing) {
-                const items = tuples.map(t => this.tupleInlineValue(rf, t)).filter(m => !isEmptyMarkup(m));
+                // Each joined value carries its lane badge (the join path
+                // bypasses the per-tuple annotate) - side-by-side
+                // orthographies must be tellable apart here too.
+                const items = tuples.map(t => {
+                    const m = this.tupleInlineValue(rf, t);
+                    if (isEmptyMarkup(m) || !this.orthographyBadge) return m;
+                    const vf = rf.scalarFields.find(f => f instanceof model.VariantField);
+                    const slug = vf ? t.value(vf) : undefined;
+                    if (typeof slug === 'string' && slug !== '' && slug !== 'mm') {
+                        const badge = this.orthographyBadge(slug);
+                        if (badge) return [m, ['span', { class: 'lm-me-orth' }, badge]];
+                    }
+                    return m;
+                }).filter(m => !isEmptyMarkup(m));
                 if (items.length === 0) return "";
                 const joined = intersperse(items, v.join);
                 return (v.label === "inline")
@@ -593,18 +633,24 @@ export class EntryRenderer {
 
     /** Collect the values of every field marked with the given titleRole,
      *  walking the whole entry tree (headword on spelling, glosses on subentry). */
-    protected collectTitleValues(rf: model.RelationField, node: EntryNode, role: string): string[] {
+    protected collectTitleValues(rf: model.RelationField, node: EntryNode, role: string,
+                                 orthography?: string): string[] {
         const out: string[] = [];
         for (const cr of rf.relationFields) {
             const tuples = node.children(cr);
             if (view(cr).titleRole === role) {
                 const scalar = contentScalars(cr)[0];
+                const vf = cr.scalarFields.find(f => f instanceof model.VariantField) as
+                    model.VariantField | undefined;
                 if (scalar) for (const t of tuples) {
+                    if (orthography && vf
+                        && !variantMatches(t.value(vf) as string | null, orthography))
+                        continue;
                     const val = t.value(scalar);
                     if (val !== null && val !== undefined && val !== "") out.push(String(val));
                 }
             } else {
-                for (const t of tuples) out.push(...this.collectTitleValues(cr, t, role));
+                for (const t of tuples) out.push(...this.collectTitleValues(cr, t, role, orthography));
             }
         }
         return out;

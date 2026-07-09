@@ -1,0 +1,193 @@
+
+❯ valid_from and valid_to is how we have a chain of assertions, with the last assertion either having a deletion time (for retract),    or something like end_of_time for a still valid assertion.  Note that this that userfull queries, joins, heirarchable queries etc     are possible on this model, and using times like we do also allows point in time queries (though those wouild be more expensive).     the peer mechanism that has not been fleshed out: published_from and published_to is intended to mark time ranges when the tuple is   the current published truth.  An example of a simple case: a published fact with no pending edits will hav valid_to and               published_to stay at end of time, but the valid_to will end, and will become the valid_from for the replacement fact.  Later          someone will come along and approve the new fact, in which case we will drop a change_action of 'approved', and set the               published_to of the origial published fact to end at the current time, and the new approved ... etc.  This is just a sketch.  Do      you undersdtand?                                                                                                                    
+● Yes, I understand — and it's a nice design. Let me play it back with the invariants that fall out, partly to confirm and partly
+  because a couple of them are subtle.
+
+  Two independent "currency" dimensions over one version chain. valid_from/valid_to is editorial currency: what the editors' workspace  considers the live version (chained, valid_to of one version = valid_from of its replacement, last one open to END_OF_TIME or
+  closed by a retraction). published_from/published_to is approval currency: the interval during which that same version was the
+  published truth. The editor view is valid_to = EOT; the public view is published_to = EOT; both are cheap indexed predicates, and
+  both dimensions support point-in-time queries ("what did the public site say on March 3rd" vs "what did the editors believe") at
+  range-query cost.
+
+  The crux — the intervals are not nested. In your example, when the proposal lands at t1, A has valid_to = t1 but published_to still
+  EOT: A is no longer editorially current but remains the published truth. So published_to can extend past valid_to, and conversely a
+  pending version B has a valid interval but no published interval at all (yet). The two dimensions genuinely decouple — that's what
+  makes "the site shows the approved truth while edits accumulate" work without any draft-copy machinery.
+
+  The mutation discipline stays coherent. Closing valid_to on the prior assertion is already an in-place write in today's model;
+  approval closing A's published_to and stamping B's published_from is the same species. The rule that keeps this honest: content and
+  identity fields are immutable; interval ends are the only mutable cells, and they move exactly once, from END_OF_TIME to a concrete
+  time — never reopened. The change_action: 'approved' record then carries the who/when of the approval event itself (the publication
+  analog of change_by_username).
+
+  A few things the sketch leaves open, which I'd flag for the fleshing-out rather than resolve now:
+
+  1. Skipped intermediates. If B is proposed, then edited again to C before anyone approves, approval blesses C; B ends up with a
+  valid interval but no published interval ever. That's correct — B was never the published truth — but it means "no published
+  interval" is ambiguous between "never approved" and "superseded before approval," distinguishable only via the chain. Probably fine;  worth saying out loud.
+  2. Retractions. An approved deletion = closing A's published_to with no successor carrying an open published interval (the tombstone  itself never "publishes"). The fact simply leaves the public view; the change_action records why.
+  3. Approval granularity. A proposed new subentry comes with children (glosses, examples). Approval is presumably per proposal (a
+  subtree or transaction group), not per tuple — all-or-nothing — or the public could see a subentry with half its children. This is
+  where the one-assertion-per-tx timestamp constraint may bite again.
+  4. Batch migrations. The category import on production would presumably set both intervals in one motion (auto-approved by the
+  automation identity) — the ~ username giving the approval audit trail for free.
+
+  And one happy consequence: publishedEntries stops being a status-field filter and becomes a query over published_to = EOT —
+  publishing and approval unify into one mechanism, with the status field freed to mean editorial workflow rather than public
+  visibility.
+
+  Is the sketch's intent that approval is the only way published_* ever gets set (i.e., even a brand-new entry's first publication is
+  an approval event), or would some editor roles publish-on-save (auto-approve their own edits)? That's the main fork in the road I
+  see when this gets built.
+
+✻ Crunched for 58s
+
+❯ brand new entries also need approval.  The goal it to allow untrusted contributors to contrubute to the dictionary - and even for     trusted contributors, to have every change approved by one other senior persion (with audit log).  A few other bits: when reverting   a fact, the change_action would be reverted (or similar), but there would be a required change_note that would say why it was         reverted.  There would also be an change action called 'comment' that would include no changes, but would allow someone to, for       example, comment on their rejection.  Any other ideas about how to flesh out this model?                                            
+● Yes — and the comment action is the tell for the biggest structural suggestion I have, so let me start there.
+
+  1. The action log wants to be its own table, with proposed in it
+
+  A comment "includes no changes" — so it can't be an assertion row (there's no new version to hang it on). That pushes the whole
+  change_action family out of the assertion columns into a first-class event stream: (action_id, target, action, change_note, 
+  by_username, at_time) where action ∈ proposed | approved | rejected | reverted | comment | withdrawn. Two nice consequences: the
+  audit log you want is this table read in order (a proposal's row reads like a conversation: proposed → comment → rejected+note →
+  proposed → approved), and proposed becoming an explicit event means the assertion write and the review request decouple cleanly. I'd  add rejected (with a required note, same as revert) and withdrawn (contributor gives up; closes the valid chain back) to your list
+  — rejection currently only exists in your sketch as something someone comments about.
+
+  2. The unit of review should be a proposal, not a tuple
+
+  This is the one I'd nail down before anything else. An untrusted contributor's real edit touches several tuples (a new subentry
+  arrives with glosses, examples, a recording). Reviewing tuple-by-tuple is both miserable and wrong — approving half a subtree
+  publishes a subentry with missing children. So: a proposal_id stamped on the assertions of one coherent change, with actions
+  targeting the proposal. It also solves ordering (approve all-or-nothing), gives the review UI its natural unit, and sidesteps the
+  one-assertion-per-tx timestamp constraint becoming a semantic problem.
+
+  3. The approver≠author rule is a machine-checkable invariant
+
+  "Every change approved by one other senior person" decomposes into things verify-migration-style checks can enforce forever:
+
+  - every published_from has a matching approved action whose actor ≠ the version's change_by_username (and holds the approve role);
+  - at most one open published_to per fact; a fact's published intervals never overlap; published_from ≥ that version's valid_from;
+  - tombstones never carry published intervals (a deletion publishes as the predecessor's interval closing).
+
+  Given the verification habit this project now has, I'd write these checks the same week the columns go live.
+
+  4. Distinguish the emergency path from the review path
+
+  Revert-with-required-note is the review-flow correction. But there's a moderation case where bad content must leave the public site
+  now, faster than a replacement can be approved: an explicit unpublish (close published_to with no successor, required note). The
+  published view simply loses the fact; the valid chain and review flow proceed at their own pace. Without this, your only fast hammer  is approving something else, which conflates "remove harm" with "bless replacement."
+
+  5. Consequences worth cashing in early
+
+  - Review status is derivable but wanted constantly (pending / changes-requested / approved / withdrawn per fact and per proposal) —
+  decide up front whether it's computed from the log or denormalized, because the editor UI will badge it everywhere.
+  - The review queue is the workflow surface: a page of pending proposals, each rendering a diff (trivial — versions chain by
+  replaces_assertion_id, so old-published vs new-proposed values are right there), approve/reject with note. With only one or two
+  seniors, approval debt is the operational risk, so the queue must make batch approval cheap.
+  - publishedEntries becomes published_to = EOT and the CLI publish gets a precise dirty set for free: pages needing republish =
+  entries with published-interval changes since the last publish. Your 2-second targeted publish turns into an exact incremental one.
+  - Point-in-time public site: a scholar can cite "the dictionary as of date X" and the db can reproduce that rendering — very much in  the 1000-year spirit.
+  - Migrations: a production import should set both intervals (auto-publish) but record a human in the approval log — e.g. the import
+  requires --approved-by=<senior> so even the batch path satisfies the two-person rule in the audit trail.
+
+  The two decisions I'd make first, because everything else hangs off them: the action log as its own table, and the proposal as the
+  review unit. Both are cheap now and expensive to retrofit after contributor edits start accumulating.
+
+✻ Brewed for 1m 14s
+
+❯ First the proposal as a first class thing: The editor is a live editor, as each individual fact is asserted it goes live in the       table.  There is no 'load a lexeme up, work on it, then post it if it doesn't collide' model.  I was thinking of having the           following flows: users can see a view of everthing that has changed in a lexeme, and either interact with it piecemeal, or do a       bulk approve.  Perhaps doing some piecemeal rejects first.  Secondly, if there is a lot of change, over time, there could be          post-hoc constructed edit sessions that can be worked with in the same way (a set of changes done by one user in one period of        time) - but this would be a later thing.  Please push back.                                                                           
+● You asked for push-back, but on the core point I have to concede first, because your model wins on the merits: the fact that edit 
+  sessions can be reconstructed post hoc proves the grouping never needed to exist at write time. Every assertion already carries
+  author + timestamp; sessionization is a query, deferrable forever, backfillable for all history the day you want it. A write-time
+  proposal_id would have been a commitment bolted onto the live editor for information the data already contains. You're right, I was
+  importing the PR model into a system whose whole character is "every assertion goes live now." Withdrawn.
+
+  Now the actual push-back — the places where the per-lexeme-diff model needs decisions or it will bite:
+
+  1. The atom of approval must stay the fact-version, and bulk approve must decompose. "Everything changed in this lexeme" conflates
+  authors. If untrusted A and senior B both touched the lexeme, a bulk approve that records "lexeme approved" destroys exactly the
+  audit trail you're building this for, and makes the approver≠author rule unverifiable. So: bulk approve is UI sugar that expands to
+  per-fact approval actions, each checked against that fact's author. Which forces a decision you should make now: when a senior
+  bulk-approves a lexeme containing some of their own edits, does the bulk skip those facts (with a "2 of yours still need another
+  senior" notice) or refuse outright? I'd vote skip-and-notify — refusing punishes the common collaborative case.
+
+  2. You need a structural dependency rule or piecemeal approval can publish nonsense. Approving a new gloss whose new parent subentry  is still pending would publish a child under an unpublished parent. The rule is small: approving a fact implies approving its
+  pending ancestors; rejecting a parent implies its pending descendants. Three lines of closure logic, but it must exist before the
+  first piecemeal approve, not after.
+
+  3. Decide what reject does to the workspace. In a live editor, reject doesn't restore anything — the rejected version stays
+  valid-current, so editors keep seeing content the public never will, indefinitely. Sometimes that's right (contributor reworks it).
+  But for junk, the reviewer's common case is "reject AND put the workspace back to the published state," which is your
+  revert-with-required-note. The review UI needs both verbs side by side, or seniors will leave the workspace littered with zombie
+  rejected edits.
+
+  4. Partial approval can ship a frankenstein entry — show the preview. Facts are mostly independent, but some edits are semantically
+  coupled (spelling changed and the examples that quote it). Piecemeal approve/reject means the published entry becomes a mix of old
+  and new. The reviewer owns that judgment, but the diff view should render "this is what the public entry will look like after this
+  partial approval" so they make it with eyes open. UI, not schema — but it's the difference between piecemeal being a power tool and
+  a footgun.
+
+  5. Keep one grouping handle anyway — in the action log, not the data. When Mary bulk-approves 17 facts, the log should record one
+  approval event with 17 targets, not 17 unrelated rows — otherwise "what exactly did Mary review as a unit?" is unanswerable later,
+  which weakens the audit story you're explicitly building. That's an event_id on the action rows: trivially cheap, fully compatible
+  with the live model, and it's also what a future post-hoc session review would hang its decisions off.
+
+  6. The review queue becomes a query — make sure it's a cheap one. "Lexemes with pending changes" = facts whose current version has
+  no open published interval (plus pending retractions whose predecessor is still published). Fine as a definition, but it's a
+  full-dict scan shape; when the columns go live, give it the index it deserves on day one, because this query is the seniors'
+  worklist and it runs every time they look.
+
+  None of these resurrect the proposal object — they're all per-fact mechanics plus one audit-log event id. The per-lexeme diff as the  review surface, with post-hoc sessions later, is the right architecture for this system.
+
+✻ Brewed for 1m 14s
+
+❯ as to 3, the intent was that reject reasserts the previous values (and becomes the new published version).  You are trying to push    me towards an action log model instead which I am still thinking about.  WIth this model of reject, the rejected value is still       part of history, but the correct value is restored.                                                                                   
+● That's a better reject than the one I was worried about — and it materially weakens my action-log case, which I'll own at the end.
+
+  Why reject-as-reassert is strong
+
+  It keeps the entire review lifecycle inside the one mechanism you already have. The rejection is an assertion: it carries who (the
+  senior, in change_by_username), when, why (change_action='rejected' + required change_note), the rejected content stays in the chain  as ordinary history (auditable, restorable if the senior was wrong, citable in a dispute), and workspace and published state
+  re-converge immediately — no zombie divergence, which was the substance of my #3. It's also literally your existing restoreVersion
+  plus a stamp and a note, so the editor already knows how to do it. One mechanism, no new species.
+
+  Two branches to pin down
+
+  Reject of a brand-new fact — there are no previous values to re-assert. The natural form is: reject = tombstone authored by the
+  senior, carrying the same change_action/change_note. History keeps the proposed fact and its rejection. Same shape, different
+  terminal — just worth writing down so the first implementation doesn't improvise.
+
+  The self-approval carve-out. The reject-reassertion is authored by the senior and becomes published immediately, with no second
+  senior — formally violating "every change approved by another." The resolution is to state the invariant precisely: every newly 
+  published value requires independent approval; re-publication of values that were previously approved for this fact requires only 
+  the republisher's authority. The machine check (and you'll want one) compares the rejection's values against the fact's prior
+  published versions — by construction they match, so no new content enters publication on a single signature. Without the carve-out
+  written down, the naive invariant check would flag every rejection ever made. Related micro-invariant: the old version's
+  published_to closure and the rejection's published_from must be the same instant — no gap (public site briefly shows nothing) and no  overlap (two published truths).
+
+  On the action log — updating my position honestly
+
+  You're right that I was pushing, so here's the fair accounting after your reject design. The log had three jobs in my version: carry  reject/revert audit, group bulk approvals, and host comments. Your model now covers the first natively (the rejection assertion is
+  the audit record), and approval needs only a small column family on the assertion — approved_by beside published_from — for each row  to tell its complete story: who wrote it, who published it, when, why it ended. The bulk-approve grouping I argued for turns out to
+  be reconstructible post hoc — same approver, same timestamp — which is exactly the argument you used to defer edit sessions, so
+  consistency obliges me to accept it here too.
+
+  That leaves comments as the log's only remaining justification: the one event with no assertion to live on. And even there you have
+  options inside the existing model (the entry schema already has a note relation; or a comment could simply be a thing you defer
+  entirely — nothing about the intervals or approval columns forecloses adding a comment store later). So my honest recommendation
+  now: don't decide the action log yet. Add published_from/published_to/approved_by as assertion columns, implement
+  approve/reject/revert as you've sketched, and let comments force the log question only if and when they're actually wanted. Nothing
+  irreversible is lost by waiting — which, by this point, seems to be the design principle this whole system keeps teaching me.
+
+✻ Cooked for 1m 5s
+
+❯ why are you opposed to comments just reasserting the same value (but with an change_action='comment' and the comment in the note      field).  Yes, it is slightly hacky, but reasserting is somewhat similar to what we do for restore, and it means that the discussion   is a first class part of the edit history.  Please push back.                                                                         
+● There's an issue with the selected model (claude-fable-5[1m]). It may not exist or you may not have access to it. Run /model to pick  a different model.
+
+✻ Sautéed for 0s
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────❯ 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  ~/wordwiki   cache: 415K hit / 2 new · 87 write                                                                      418768 tokens
+  ⏵⏵ accept edits on (shift+tab to cycle) · ← for agents                                                 current: 2.1.170 · latest:
+
