@@ -9,13 +9,15 @@ import { withTestDb, renderRoute, asUser, asSystem } from "./testing.ts";
 import { StringField } from "../liminal/table.ts";
 import { rabid } from "./rabid.ts";
 
-function insertServiceDiy(): number {
-    const event_id = asSystem(() => rabid.event.insert({
+function insertEvent(): number {
+    return asSystem(() => rabid.event.insert({
         event_kind: 'public', description: 'Night', location_description: '', location_url: '',
         is_remote_event: 0, volunteer_only: 0, start_time: '2026-06-20 19:00:00',
         end_time: '2026-06-20 21:00:00', total_cash_collected: 0, notes: ''} as any));
+}
+function insertServiceDiy(): number {
     return asSystem(() => rabid.service.insert(
-        {event_id, client_name: 'Jo', service_kind: 'diy', bike_description: 'Red mtb'} as any));
+        {event_id: insertEvent(), client_name: 'Jo', service_kind: 'diy', bike_description: 'Red mtb'} as any));
 }
 
 test("showWhen renders a field inside a data-show-when wrapper carrying its state token", () => {
@@ -45,4 +47,16 @@ test("service form: drop-off fields render for ANY kind, wrapped to reveal only 
         // ...each wrapped with the token that reveals it when service_kind is 'full'.
         assert(s.includes('data-show-when') && s.includes('enum__service_kind__full'),
                'drop-off fields carry the reveal token');
+    }));
+
+test("add dialog is the SAME form as edit: drop-off fields present + wrapped (hide/show works on add too)", () =>
+    withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        const dialog = await asUser(alice, () => renderRoute(`rabid.service.newServiceForEventDialog(${eid})`));
+        const s = JSON.stringify(dialog);
+        assert(s.includes('service_kind') && s.includes('client_name'), 'driver + core fields');
+        assert(s.includes('drop_off_notes') && s.includes('drop_off_ready_call_done'),
+               'the add dialog now carries the drop-off fields too');
+        assert(s.includes('data-show-when') && s.includes('enum__service_kind__full'),
+               'wrapped for reveal - hide/show works on add, not just edit');
     }));

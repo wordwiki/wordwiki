@@ -46,6 +46,25 @@ export const service_kind_enum: Record<string, string> = {
 // Drop-off fields appear in the service form only while service_kind is 'full'.
 const showForFull = {field: 'service_kind', in: ['full']};
 
+// ONE field order for BOTH the add dialog and the edit form: client fields, then
+// service_kind sitting directly before the drop-off block it reveals (showWhen),
+// then notes.  So add and edit are the same dialog and the show/hide works in both.
+const SERVICE_FORM_FIELDS = [
+    'client_name', 'bike_description', 'service_description', 'client_postal', 'client_phone',
+    'service_kind',
+    'drop_off_notes', 'drop_off_scheduled_pick_up_time', 'drop_off_ready_call_done', 'drop_off_pick_up_done',
+    'notes',
+];
+
+// The posted service add form (getFormJSON values + the hidden anchor/event).
+interface ServiceFormArgs {
+    event_id?: string|number; anchor_id?: string|number; position?: string;
+    client_name?: string; bike_description?: string; service_description?: string;
+    client_postal?: string; client_phone?: string; service_kind?: string;
+    drop_off_notes?: string; drop_off_scheduled_pick_up_time?: string;
+    drop_off_ready_call_done?: string; drop_off_pick_up_done?: string; notes?: string;
+}
+
 export interface Service {
     service_id: number;
 
@@ -186,17 +205,34 @@ export class ServiceTable extends Table<Service> {
     // curated intake subset (the rest is filled in later via the detail edit
     // form); event_id rides as a hidden field so the record lands on this event.
     // host/admin only, like all service editing.
-    // The scanned-intake core: name / bike / work needed / postal + kind.  Phone +
-    // the drop-off checklist are filled in later via the detail edit.
-    private serviceIntakeFields(): Field[] {
-        const f = this.fieldsByName;
-        return [f.client_name, f.bike_description, f.service_description, f.client_postal, f.service_kind];
+    private serviceFormFields(): Field[] {
+        return SERVICE_FORM_FIELDS.map(n => this.fieldsByName[n]);
+    }
+
+    // Coerce the intake/edit form's extra (beyond name) fields for an insert -
+    // reusing each field's own parser for the datetime; checkboxes are present-when-
+    // checked.  Client_name is handled by the caller (it's the one required field).
+    private serviceValuesFromArgs(args: ServiceFormArgs): Partial<Service> {
+        const dt = args.drop_off_scheduled_pick_up_time;
+        return {
+            bike_description: (args.bike_description ?? '').trim(),
+            service_description: (args.service_description ?? '').trim(),
+            client_postal: (args.client_postal ?? '').trim(),
+            client_phone: (args.client_phone ?? '').trim(),
+            service_kind: args.service_kind || 'diy',
+            drop_off_notes: (args.drop_off_notes ?? '').trim(),
+            drop_off_scheduled_pick_up_time: dt
+                ? this.fieldsByName.drop_off_scheduled_pick_up_time.parseSimpleInput(dt) : undefined,
+            drop_off_ready_call_done: args.drop_off_ready_call_done ? 1 : 0,
+            drop_off_pick_up_done: args.drop_off_pick_up_done ? 1 : 0,
+            notes: (args.notes ?? '').trim(),
+        } as Partial<Service>;
     }
 
     @route(hostOrAdmin)
     newServiceForEventDialog(event_id: number): Markup {
         return action.renderParamForm(
-            this.serviceIntakeFields(),
+            this.serviceFormFields(),
             {service_kind: 'diy'} as Partial<Service>,
             {
                 title: 'Add service',
@@ -208,20 +244,12 @@ export class ServiceTable extends Table<Service> {
     }
 
     @routeMutation(hostOrAdmin)
-    addServiceForEvent(args: {event_id?: string|number, client_name?: string,
-                              bike_description?: string, service_description?: string,
-                              client_postal?: string, service_kind?: string}): Markup {
+    addServiceForEvent(args: ServiceFormArgs): Markup {
         const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
         const client_name = (args.client_name ?? '').trim();
         if(!client_name) throw new Error('Client name is required');
-        this.insert({
-            event_id, client_name,
-            bike_description: (args.bike_description ?? '').trim(),
-            service_description: (args.service_description ?? '').trim(),
-            client_postal: (args.client_postal ?? '').trim(),
-            service_kind: args.service_kind || 'diy',
-        } as Partial<Service>);
+        this.insert({event_id, client_name, ...this.serviceValuesFromArgs(args)} as Partial<Service>);
         // A new row changes the section's shape -> reload the section (it's
         // registered on the shape key; an edit reloads only its own row).
         return {action: 'reload',
@@ -235,7 +263,7 @@ export class ServiceTable extends Table<Service> {
     newServiceRelativeDialog(anchor_id: number, position: string): Markup {
         this.getById(anchor_id);   // 404 early if the anchor is gone
         return action.renderParamForm(
-            this.serviceIntakeFields(),
+            this.serviceFormFields(),
             {service_kind: 'diy'} as Partial<Service>,
             {
                 title: position === 'before' ? 'Add service before' : 'Add service after',
@@ -247,9 +275,7 @@ export class ServiceTable extends Table<Service> {
     }
 
     @routeMutation(hostOrAdmin)
-    addServiceRelative(args: {anchor_id?: string|number, position?: string, client_name?: string,
-                              bike_description?: string, service_description?: string,
-                              client_postal?: string, service_kind?: string}): Markup {
+    addServiceRelative(args: ServiceFormArgs): Markup {
         const anchor_id = Number(args?.anchor_id);
         if(!Number.isInteger(anchor_id) || !anchor_id) throw new Error('Missing anchor');
         const anchor = this.getById(anchor_id);
@@ -260,14 +286,8 @@ export class ServiceTable extends Table<Service> {
         const order_key = args.position === 'before'
             ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
             : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
-        this.insert({
-            event_id: anchor.event_id, client_name,
-            bike_description: (args.bike_description ?? '').trim(),
-            service_description: (args.service_description ?? '').trim(),
-            client_postal: (args.client_postal ?? '').trim(),
-            service_kind: args.service_kind || 'diy',
-            order_key,
-        } as Partial<Service>);
+        this.insert({event_id: anchor.event_id, client_name, order_key,
+                     ...this.serviceValuesFromArgs(args)} as Partial<Service>);
         return {action: 'reload', targets: ['.' + this.shapeKey('event_id', anchor.event_id)]} as unknown as Markup;
     }
 
@@ -375,13 +395,13 @@ export class ServiceTable extends Table<Service> {
         return this.renderServiceRow(this.getById(id));
     }
 
-    // The service edit form.  All fields are rendered; the drop-off checklist ones
-    // carry showWhen (see the constructor), so the client reveals/hides them LIVE
-    // as service_kind changes - 'full' (We Repair) shows them, other kinds don't,
-    // no reopen needed (form-state mechanism, liminal.md).
+    // The service edit form - the SAME field set + order as the add dialog
+    // (SERVICE_FORM_FIELDS).  The drop-off fields carry showWhen, so the client
+    // reveals/hides them LIVE as service_kind changes ('full' shows them), no
+    // reopen needed (form-state mechanism, liminal.md).
     @route(hostOrAdmin)
     renderServiceForm(id: number): Markup {
-        return this.renderEditForm(this.getById(id));
+        return this.renderEditForm(this.getById(id), SERVICE_FORM_FIELDS);
     }
 
     // The Service page query: a from/to date window (page-state; liminal.md
