@@ -176,3 +176,34 @@ test("gallery: rotatePhoto turns the photo; a service-sheets card is contain-fit
         assertStringIncludes(JSON.stringify(card2), 'serveCropped');
     });
 });
+
+test("sheets edit form: rotate incl. 180°, no bogus crop framing (contain preview)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const photoPath = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
+        const pid = asSystem(() => rabid.gallery_photo.insert(
+            {owner_table: 'event', owner_id: id, scope: 'service-sheets', photo: photoPath} as any));
+        const form = await asUser(alice, () => renderRoute(`rabid.gallery_photo.renderPhotoEditForm(${pid},"photo")`));
+        const s = JSON.stringify(form);
+        // Rotate deltas are POSITIVE (route interpreter can't parse -90); 270 == left.
+        assert(s.includes('rotatePhoto') && s.includes(',270)') && s.includes(',180)') && s.includes(',90)'),
+            'left(270) / 180 / right(90) rotate buttons');
+        assert(s.includes('180°'), 'has the upside-down affordance');
+        // Contain scope: whole-image preview, never cover-crop framing tiles.
+        assertStringIncludes(s, 'serveContained');
+        assert(!s.includes('serveCropped'), 'no cover-crop preview/tiles for a contain scope');
+    });
+});
+
+test("sheets gallery header uses a ☰ menu (room for the scan action); plain gallery uses +", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const detail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
+        const sheets = findByTestId(detail, `gallery-event-${id}-service-sheets`);
+        assert(sheets, 'the sheets gallery renders');
+        assert(hasText(sheets, 'Add photo'), 'its add affordance is a menu with an Add photo… item');
+        // The plain Photos gallery keeps a bare + (labelled "Add to Photos"), no menu item text.
+        const plain = findByTestId(detail, `gallery-event-${id}`);
+        assert(plain && !hasText(plain, 'Add photo'), 'the plain gallery has no menu item');
+    });
+});

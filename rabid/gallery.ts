@@ -90,6 +90,17 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     }
     override formTitle(_p: GalleryPhoto): string { return 'Edit photo'; }
 
+    // Sheet scopes display contain-fit (whole image), so the edit modal must NOT
+    // offer cover-crop framing, and its preview shows the whole (rotatable) image.
+    protected override offersCropFraming(record: GalleryPhoto, _field: ImageField): boolean {
+        return !CONTAIN_SCOPES.has(record.scope);
+    }
+    protected override renderPhotoPreview(record: GalleryPhoto, field: ImageField, value: string): Markup {
+        return CONTAIN_SCOPES.has(record.scope)
+            ? rabid.photo.containedImg(value, 1024, 1024, {class: 'lm-photo-preview'})
+            : super.renderPhotoPreview(record, field, value);
+    }
+
     // The owner+scope shape key (hand-minted - owner is composite, no single fk).
     // Default scope keeps the pre-scope key unchanged.
     private ownerShapeKey(owner_table: string, owner_id: number, scope: string): string {
@@ -149,15 +160,24 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
         return [h.div, {...props, id: domId, 'data-testid': `gallery-${owner_table}-${owner_id}${scope ? '-' + scope : ''}`},
             [h.div, {class: 'lm-doc-section-head'},
              [h.h4, {class: 'lm-doc-section-label'}, title],
-             canAdd
-                 ? action.actionButton(action.plusIcon(),
-                     {kind: 'modal', dialogUrl: `/rabid.gallery_photo.newPhotoDialog('${owner_table}', ${owner_id}, '${scope}')`},
-                     'lm-menu-button', {'aria-label': `Add to ${title}`, title: `Add to ${title}`})
-                 : undefined],
+             canAdd ? this.renderGalleryAdd(owner_table, owner_id, scope, title) : undefined],
             [h.div, {class: 'lm-subsection'},
              photos.length
                  ? photos.map(p => this.renderPhotoCard(p))
                  : [h.p, {class: 'text-muted small mb-0'}, 'No photos yet.']]];
+    }
+
+    // The section header's add affordance.  A plain gallery gets a bare "+".  A
+    // sheet-scope gallery gets a ☰ menu instead, so the future "Import scanned
+    // records…" (scan → extract) action has a home beside "Add photo…".
+    private renderGalleryAdd(owner_table: string, owner_id: number, scope: string, title: string): Markup {
+        const addDialog = `/rabid.gallery_photo.newPhotoDialog('${owner_table}', ${owner_id}, '${scope}')`;
+        if(CONTAIN_SCOPES.has(scope))
+            return action.actionMenu([
+                {label: 'Add photo…', mode: {kind: 'modal', dialogUrl: addDialog}},
+            ], {ariaLabel: `${title} actions`});
+        return action.actionButton(action.plusIcon(), {kind: 'modal', dialogUrl: addDialog},
+            'lm-menu-button', {'aria-label': `Add to ${title}`, title: `Add to ${title}`});
     }
 
     // The add dialog: pick a photo (the ImageField's file picker uploads to the

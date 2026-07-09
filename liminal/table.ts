@@ -716,28 +716,27 @@ export class Table<T extends Tuple> extends FieldSet {
         if(!hasPhoto)
             return ['div', {'data-testid': 'photo-edit-form'}, this.renderEditForm(record, [fieldName])];
 
-        // Edit mode: crop framing (when it matters) or a preview, plus Remove.
-        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].detail;
+        // Edit mode: crop framing (when it matters AND we actually crop) or a plain
+        // preview, plus rotate + Remove.
         const svc = photoServiceFor(field.photoServicePath);
-        // Show the framing picker when the aspect differs enough to matter - or
-        // when we can't tell (no registered service / unreadable source), erring
-        // toward offering the choice.
-        const showCrop = !svc || await svc.needsFramingPicker(value, w, h);
+        // Show the framing picker only when this record IS cover-cropped (a contain-
+        // fit display never crops) AND the aspect differs enough to matter.
+        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].detail;
+        const showCrop = this.offersCropFraming(record, field)
+            && (!svc || await svc.needsFramingPicker(value, w, h));
         const body: Markup = showCrop
             ? this.renderPhotoCropTiles(record, field, value)
-            // No framing choice needed: a small preview so the modal has context.
-            : ['img', {src: photoCroppedSrc(field.photoServicePath, value, w, h),
-                       class: 'lm-photo-preview', alt: ''}];
+            // No framing choice: a preview so the modal has context.
+            : this.renderPhotoPreview(record, field, value);
         const deps = this.speculatedSaveTargets(record);
         const fn = JSON.stringify(fieldName);
-        // Rotate (↺ / ↻): a quarter turn, applied to the original before crop/resize
-        // (photo.ts) - for a sideways scan with no EXIF orientation.
-        const rotateLeft = action.actionButton('↺',
-            {kind: 'immediate', expr: `${this}.rotatePhoto(${id},${fn},-90)`, deps},
-            'btn btn-outline-secondary btn-sm', {title: 'Rotate left', 'aria-label': 'Rotate left'});
-        const rotateRight = action.actionButton('↻',
-            {kind: 'immediate', expr: `${this}.rotatePhoto(${id},${fn},90)`, deps},
-            'btn btn-outline-secondary btn-sm', {title: 'Rotate right', 'aria-label': 'Rotate right'});
+        // Rotate: quarter turns applied to the original before crop/resize (photo.ts)
+        // - for a scan with no EXIF orientation.  All deltas POSITIVE (the route
+        // interpreter can't parse a negative literal); 270 == a left turn.  A 180
+        // button too, since each turn closes the modal (no double-edit for upside-down).
+        const rotate = (label: string, delta: number, title: string) => action.actionButton(label,
+            {kind: 'immediate', expr: `${this}.rotatePhoto(${id},${fn},${delta})`, deps},
+            'btn btn-outline-secondary btn-sm', {title, 'aria-label': title});
         const removeButton = action.actionButton('Remove photo',
             {kind: 'confirm', message: 'Remove this photo?',
              expr: `${this}.removePhoto(${id},${fn})`, deps},
@@ -745,7 +744,21 @@ export class Table<T extends Tuple> extends FieldSet {
         return ['div', {'data-testid': 'photo-edit-form'},
             body,
             ['div', {class: 'mt-3 d-flex flex-wrap align-items-center gap-2'},
-             rotateLeft, rotateRight, ['span', {class: 'flex-grow-1'}], removeButton]];
+             rotate('↺', 270, 'Rotate left'), rotate('180°', 180, 'Turn upside down'),
+             rotate('↻', 90, 'Rotate right'), ['span', {class: 'flex-grow-1'}], removeButton]];
+    }
+
+    /** Whether the crop-framing picker applies to this record's photo.  Default
+     *  yes; a display that never cover-crops (contain-fit) overrides to false so the
+     *  edit modal doesn't offer a meaningless framing choice. */
+    protected offersCropFraming(_record: T, _field: ImageField): boolean { return true; }
+
+    /** The non-cropping preview in the edit modal.  Default: a cover-crop at the
+     *  field's detail aspect; a contain-fit display overrides to show the whole image. */
+    protected renderPhotoPreview(_record: T, field: ImageField, value: string): Markup {
+        const [w, h] = PHOTO_ASPECT_SIZES[field.aspect].detail;
+        return ['img', {src: photoCroppedSrc(field.photoServicePath, value, w, h),
+                        class: 'lm-photo-preview', alt: ''}];
     }
 
     /**
