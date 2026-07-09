@@ -17,7 +17,7 @@ function insertEvent(): number {
         total_cash_collected: 0, notes: ''} as any));
 }
 const ownerPhotos = (owner_table: string, owner_id: number) =>
-    asSystem(() => rabid.gallery_photo.forOwner.all({owner_table, owner_id}));
+    asSystem(() => rabid.gallery_photo.forOwner.all({owner_table, owner_id, scope: ''}));
 
 test("gallery: a host sees the section + Add; a regular sees none when empty (on an event)", async () => {
     await withTestDb(async ({ alice, bob }) => {
@@ -128,5 +128,24 @@ test("gallery attaches to service + committee too (generic owner)", async () => 
         const cid = asSystem(() => rabid.committee.insert({name: 'Outreach'} as any));
         const cdetail = await asUser(alice, () => renderRoute(`rabid.committee.detailPage(${cid})`));
         assert(findByTestId(cdetail, `gallery-committee-${cid}`), 'committee detail carries the gallery');
+    });
+});
+
+test("scope: two galleries on one owner are independent (event photos vs service sheets)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        await asUser(alice, () => invoke(`rabid.gallery_photo.addPhoto($arg0)`,
+            {owner_table: 'event', owner_id: id, caption: 'Action shot'}));                 // default scope
+        await asUser(alice, () => invoke(`rabid.gallery_photo.addPhoto($arg0)`,
+            {owner_table: 'event', owner_id: id, scope: 'service-sheets', caption: 'Sheet 1'}));
+        assertEquals(ownerPhotos('event', id).length, 1, 'default scope has just its photo');
+        assertEquals(asSystem(() => rabid.gallery_photo.forOwner.all(
+            {owner_table: 'event', owner_id: id, scope: 'service-sheets'})).length, 1, 'sheets scope has just its photo');
+
+        // The event detail renders BOTH galleries - distinct testids + the sheets heading.
+        const detail = await asUser(alice, () => renderRoute(`rabid.event.detailPage(${id})`));
+        assert(findByTestId(detail, `gallery-event-${id}`), 'the default gallery');
+        assert(findByTestId(detail, `gallery-event-${id}-service-sheets`), 'the service-sheets gallery');
+        assert(hasText(detail, 'Service Record Sheets'), 'the sheets heading');
     });
 });

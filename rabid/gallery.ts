@@ -41,6 +41,10 @@ export interface GalleryPhoto {
     gallery_photo_id: number;
     owner_table: string;
     owner_id: number;
+    // Which gallery on the owner: '' is the default (e.g. an event's photos), a
+    // named scope is a SEPARATE gallery on the same owner (e.g. 'service-sheets').
+    // Permission still follows (owner_table, owner_id); the scope only partitions.
+    scope: string;
     caption: string;
     photographer: string;
     order_key: string;
@@ -64,6 +68,8 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
             // project/task).  Bound - not user-editable.
             new StringField('owner_table', {edit: security.never}),
             new IntegerField('owner_id', {indexed: true, edit: security.never}),
+            // The gallery scope on the owner ('' = default).  Bound, not editable.
+            new StringField('scope', {default: '', edit: security.never}),
             new StringField('caption', {default: '', prompt: 'Caption'}),
             new StringField('photographer', {default: '', prompt: 'Photographer'}),
             // Sibling order within one owner's gallery (orderkey.ts); a shape column,
@@ -79,37 +85,39 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     }
     override formTitle(_p: GalleryPhoto): string { return 'Edit photo'; }
 
-    // The owner-scoped shape key (hand-minted - owner is composite, no single fk).
-    private ownerShapeKey(owner_table: string, owner_id: number): string {
-        return `-gallery_photo-${owner_table}-${owner_id}-shape-`;
+    // The owner+scope shape key (hand-minted - owner is composite, no single fk).
+    // Default scope keeps the pre-scope key unchanged.
+    private ownerShapeKey(owner_table: string, owner_id: number, scope: string): string {
+        return `-gallery_photo-${owner_table}-${owner_id}${scope ? '-' + scope : ''}-shape-`;
     }
 
-    // Append at the end of this owner's order; an explicit order_key wins.
+    // Append at the end of this owner+scope's order; an explicit order_key wins.
     override insert<P extends GalleryPhotoOpt>(tuple: P): number {
-        const withManaged: any = {order_key: this.nextOrderKey(String(tuple.owner_table), Number(tuple.owner_id)), ...tuple};
+        const withManaged: any = {order_key: this.nextOrderKey(
+            String(tuple.owner_table), Number(tuple.owner_id), String((tuple as any).scope ?? '')), ...tuple};
         return super.insert(withManaged);
     }
-    private nextOrderKey(owner_table: string, owner_id: number): string {
-        const last = security.runSystem(() => db().prepare<{k: string}, {owner_table: string, owner_id: number}>(
-            'SELECT MAX(order_key) AS k FROM gallery_photo WHERE owner_table = :owner_table AND owner_id = :owner_id')
-            .first({owner_table, owner_id}));
+    private nextOrderKey(owner_table: string, owner_id: number, scope: string): string {
+        const last = security.runSystem(() => db().prepare<{k: string}, {owner_table: string, owner_id: number, scope: string}>(
+            'SELECT MAX(order_key) AS k FROM gallery_photo WHERE owner_table = :owner_table AND owner_id = :owner_id AND scope = :scope')
+            .first({owner_table, owner_id, scope}));
         return orderkey.between(last?.k, undefined);
     }
 
     @path
     get forOwner() {
-        return this.prepare<GalleryPhoto, {owner_table: string, owner_id: number}>(block`
+        return this.prepare<GalleryPhoto, {owner_table: string, owner_id: number, scope: string}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM gallery_photo
-/**/          WHERE owner_table = :owner_table AND owner_id = :owner_id
+/**/          WHERE owner_table = :owner_table AND owner_id = :owner_id AND scope = :scope
 /**/          ORDER BY order_key, gallery_photo_id`);
     }
 
-    // Reload the owner's section: same-browser via the returned target, cross-browser
-    // via the dirty log (recorded here since the composite owner has no auto-emitted
-    // shape key).
-    private reloadOwner(owner_table: string, owner_id: number): Markup {
-        const key = this.ownerShapeKey(owner_table, owner_id);
+    // Reload the owner+scope's section: same-browser via the returned target,
+    // cross-browser via the dirty log (recorded here since the composite owner has
+    // no auto-emitted shape key).
+    private reloadOwner(owner_table: string, owner_id: number, scope: string): Markup {
+        const key = this.ownerShapeKey(owner_table, owner_id, scope);
         dirty.record([key]);
         return {action: 'reload', targets: ['.' + key]} as unknown as Markup;
     }
@@ -121,20 +129,25 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     // A "Photos" section for one owner: a live, shape-keyed fragment (add/delete
     // refresh it) with a "+" to add straight from the picker.  Renders nothing for
     // a non-editor with no photos.
+    // A gallery section for one owner+scope: a live, shape-keyed fragment (add/delete
+    // refresh it) with a "+" to add straight from the picker.  Renders nothing for a
+    // non-editor with no photos.  `scope` selects one of several galleries on an owner
+    // (''=default); `title` is the section heading.
     @route(authenticated)
-    renderGallery(owner_table: string, owner_id: number): Markup {
-        const photos = security.runSystem(() => this.forOwner.all({owner_table, owner_id}));
+    renderGallery(owner_table: string, owner_id: number, scope: string = '', title: string = 'Photos'): Markup {
+        const photos = security.runSystem(() => this.forOwner.all({owner_table, owner_id, scope}));
         const canAdd = ownerCanEdit(owner_table, owner_id);
         if(!canAdd && photos.length === 0) return undefined as unknown as Markup;
-        const props = liveReloadableProps([this.ownerShapeKey(owner_table, owner_id)],
-            `rabid.gallery_photo.renderGallery('${owner_table}', ${owner_id})`);
-        return [h.div, {...props, id: 'photos', 'data-testid': `gallery-${owner_table}-${owner_id}`},
+        const props = liveReloadableProps([this.ownerShapeKey(owner_table, owner_id, scope)],
+            `rabid.gallery_photo.renderGallery('${owner_table}', ${owner_id}, '${scope}', '${title}')`);
+        const domId = scope ? `photos-${scope}` : 'photos';
+        return [h.div, {...props, id: domId, 'data-testid': `gallery-${owner_table}-${owner_id}${scope ? '-' + scope : ''}`},
             [h.div, {class: 'lm-doc-section-head'},
-             [h.h4, {class: 'lm-doc-section-label'}, 'Photos'],
+             [h.h4, {class: 'lm-doc-section-label'}, title],
              canAdd
                  ? action.actionButton(action.plusIcon(),
-                     {kind: 'modal', dialogUrl: `/rabid.gallery_photo.newPhotoDialog('${owner_table}', ${owner_id})`},
-                     'lm-menu-button', {'aria-label': 'Add a photo', title: 'Add a photo'})
+                     {kind: 'modal', dialogUrl: `/rabid.gallery_photo.newPhotoDialog('${owner_table}', ${owner_id}, '${scope}')`},
+                     'lm-menu-button', {'aria-label': `Add to ${title}`, title: `Add to ${title}`})
                  : undefined],
             [h.div, {class: 'lm-subsection'},
              photos.length
@@ -145,7 +158,7 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     // The add dialog: pick a photo (the ImageField's file picker uploads to the
     // content store on select) + caption + photographer; submit creates the card.
     @route(authenticated)
-    newPhotoDialog(owner_table: string, owner_id: number): Markup {
+    newPhotoDialog(owner_table: string, owner_id: number, scope: string = ''): Markup {
         assertOwnerEdit(owner_table, owner_id);
         const f = this.fieldsByName;
         return action.renderParamForm(
@@ -153,26 +166,27 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
             {
                 title: 'Add photo',
                 submitLabel: 'Add',
-                hidden: {owner_table, owner_id},
+                hidden: {owner_table, owner_id, scope},
                 dispatch: {onsubmit:
                     'event.preventDefault(); tx`rabid.gallery_photo.addPhoto(${getFormJSON(event.target)})`'},
             });
     }
 
     @routeMutation(authenticated)
-    addPhoto(args: {owner_table?: string, owner_id?: string|number, photo?: string,
+    addPhoto(args: {owner_table?: string, owner_id?: string|number, scope?: string, photo?: string,
                     caption?: string, photographer?: string}): Markup {
         const owner_table = String(args?.owner_table ?? '');
         const owner_id = Number(args?.owner_id);
+        const scope = String(args?.scope ?? '');
         if(!owner_table || !Number.isInteger(owner_id) || !owner_id) throw new Error('Missing owner');
         assertOwnerEdit(owner_table, owner_id);
         this.insert({
-            owner_table, owner_id,
+            owner_table, owner_id, scope,
             photo: (args.photo ?? '') || undefined,
             caption: (args.caption ?? '').trim(),
             photographer: (args.photographer ?? '').trim(),
         } as GalleryPhotoOpt);
-        return this.reloadOwner(owner_table, owner_id);
+        return this.reloadOwner(owner_table, owner_id, scope);
     }
 
     // Insert a new (empty) card directly before/after an anchor, in place; upload
@@ -181,14 +195,15 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     insertRelative(anchor_id: number, position: string): Markup {
         const anchor = this.getById(anchor_id);
         assertOwnerEdit(anchor.owner_table, anchor.owner_id);
-        const sibs = security.runSystem(() => this.forOwner.all({owner_table: anchor.owner_table, owner_id: anchor.owner_id}));
+        const sibs = security.runSystem(() => this.forOwner.all(
+            {owner_table: anchor.owner_table, owner_id: anchor.owner_id, scope: anchor.scope}));
         const i = sibs.findIndex(s => s.gallery_photo_id === anchor_id);
         const order_key = position === 'before'
             ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
             : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
-        this.insert({owner_table: anchor.owner_table, owner_id: anchor.owner_id,
+        this.insert({owner_table: anchor.owner_table, owner_id: anchor.owner_id, scope: anchor.scope,
                      caption: '', photographer: '', order_key} as GalleryPhotoOpt);
-        return this.reloadOwner(anchor.owner_table, anchor.owner_id);
+        return this.reloadOwner(anchor.owner_table, anchor.owner_id, anchor.scope);
     }
 
     @routeMutation(authenticated)
@@ -198,7 +213,8 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     private moveBy(id: number, dir: -1|1): Markup {
         const p = this.getById(id);
         assertOwnerEdit(p.owner_table, p.owner_id);
-        const sibs = security.runSystem(() => this.forOwner.all({owner_table: p.owner_table, owner_id: p.owner_id}));
+        const sibs = security.runSystem(() => this.forOwner.all(
+            {owner_table: p.owner_table, owner_id: p.owner_id, scope: p.scope}));
         const i = sibs.findIndex(s => s.gallery_photo_id === id);
         const j = i + dir;
         if(i >= 0 && j >= 0 && j < sibs.length) {
@@ -207,7 +223,7 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
                 : orderkey.between(sibs[j].order_key, sibs[j+1]?.order_key);
             this.update(id, {order_key} as any);
         }
-        return this.reloadOwner(p.owner_table, p.owner_id);
+        return this.reloadOwner(p.owner_table, p.owner_id, p.scope);
     }
 
     @routeMutation(authenticated)
@@ -215,7 +231,7 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
         const p = this.getById(id);
         assertOwnerEdit(p.owner_table, p.owner_id);
         this.delete(id);
-        return this.reloadOwner(p.owner_table, p.owner_id);
+        return this.reloadOwner(p.owner_table, p.owner_id, p.scope);
     }
 
     // The Edit Photo modal: the generic photo editor (upload / crop / remove) plus,
