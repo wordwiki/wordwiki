@@ -952,6 +952,15 @@ export function getSpellings(e: Entry, orthography: string = defaultVariant): Sp
 /**
  *
  */
+// The tiny lane label for the fallback spelling's superscript (the
+// editor's Li/SF badge vocabulary) - injected by the app (the
+// abbreviations live in the orthography table); un-injected shows the
+// raw slug.
+let orthographyAbbrHook: ((slug: string) => string) | undefined;
+export function setOrthographyAbbrHook(fn: (slug: string) => string): void {
+    orthographyAbbrHook = fn;
+}
+
 export function renderEntryCompactSummary(e: Entry, opts: {orthography?: string} = {}): any {
     return ['div', {}, renderEntryCompactSummaryCore(e, opts)];
 }
@@ -960,8 +969,18 @@ export function renderEntryCompactSummary(e: Entry, opts: {orthography?: string}
 // just done for compat.
 export function renderEntryCompactSummaryCore(e: Entry, opts: {orthography?: string} = {}): any {
     const spellings = getSpellings(e, opts.orthography).map(s=>s.text);
+    // No spelling in the selected lane: show the FIRST spelling in any
+    // lane, greyed with its lane superscript (dz: wrong-orthography text
+    // is still somewhat readable cross-ortho, and beats a blank headword;
+    // no per-lane fallback chains for now).
+    const fallback = spellings.length === 0 ? e.spelling[0] : undefined;
+    const headword = fallback
+        ? ['strong', {}, ['span', {class: 'text-muted'}, fallback.text],
+           ['span', {class: 'lm-me-orth'},
+            orthographyAbbrHook?.(fallback.variant ?? '') ?? (fallback.variant ?? '')]]
+        : ['strong', {}, spellings.join(', ')];
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
-    return [['strong', {}, spellings.join(', ')],
+    return [headword,
             // Archival is our delete, but archived words still appear in
             // internal searches/lists - so their presentation line says so.
             isArchivedEntry(e)

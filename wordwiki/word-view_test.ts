@@ -218,5 +218,28 @@ test("word links: the inverse 'not public' badge; pencils on bulk lists too", as
             assertStringIncludes(listing, "wordwiki.wordEditor(2000)");
             assertStringIncludes(listing, "not public");
         });
+
+        // Publicness is asked IN THE WORKING LANE (dz): the li-public word
+        // IS not-public to an sf-working editor - their public site is the
+        // sf one.
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-sf'} as any));
+        await as(fx, "djz", async () => {
+            const sfEye = markupToString(lexemeLink(1000, "samqwan"));
+            assertStringIncludes(sfEye, "not public");
+            // And the sf LENS page asks in the lens lane.
+            const lensed = markupToString(
+                await renderRoute(fx.ww, "wordwiki.wordView(1000, 'mm-sf')"));
+            assertStringIncludes(lensed, "not public");
+            // Back in the li lane the same word is unmarked.
+        });
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
+        await as(fx, "djz", () => {
+            const liEye = markupToString(lexemeLink(1000, "samqwan"));
+            assertEquals(liEye.includes("not public"), false, "public in the li lane = unmarked");
+        });
     });
 });

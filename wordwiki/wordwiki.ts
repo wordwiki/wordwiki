@@ -71,7 +71,10 @@ export class WordWiki extends LiminalApp {
         // switcher, override banner) through this provider - templates.ts
         // cannot import the app (cycle), so it is injected once here.
         templates.setOrthographyStatusProvider(() => this.orthographyStatus());
-        templates.setEntryPublicnessProvider(id => this.store.publicEntryIds.has(id));
+        // Publicness is asked IN THE WORKING LANE ('mm'/unset = any lane).
+        entry.setOrthographyAbbrHook(slug => this.orthographyAbbr(slug));
+        templates.setEntryPublicnessProvider(id =>
+            this.store.publicEntryIdsIn(this.currentWorkingOrthography() ?? 'mm').has(id));
 
         // --- Set up our routes
         // The page-editor / audio / publish routes are NOT spread in here as
@@ -413,7 +416,7 @@ export class WordWiki extends LiminalApp {
                    // marked with the editor's Li/SF badges.
                    titleOrthography: orthography || this.currentWorkingOrthography(),
                    orthographyBadge: (slug: string) => this.orthographyAbbr(slug),
-                   titleAffordance: this.wordViewPencil(entry_id, e)},
+                   titleAffordance: this.wordViewPencil(entry_id, e, orthography || undefined)},
                   this.dictSchema.relationsByTag[entry.EntryTag], e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
         return templates.page(title,
@@ -455,8 +458,11 @@ export class WordWiki extends LiminalApp {
 
     /** The edit pencil INSIDE the headword <h1> (trailing the glosses), so it
      *  reads as part of the title line and never drops to its own row. */
-    private wordViewPencil(entry_id: number, e: entry.Entry): any {
-        const notPublic = !this.store.publicEntryIds.has(entry_id)
+    private wordViewPencil(entry_id: number, e: entry.Entry, lens?: string): any {
+        // The lens orthography beats the working lane: the question on a
+        // lensed page is "is it public in THE LANE I AM LOOKING THROUGH".
+        const lane = lens || this.currentWorkingOrthography() || 'mm';
+        const notPublic = !this.store.publicEntryIdsIn(lane).has(entry_id)
             ? ['span', {class: 'badge border text-muted ms-2 align-middle fs-6',
                         title: 'This word is not on the public site yet'}, 'not public']
             : undefined;

@@ -262,3 +262,29 @@ test("search follows the working lane: pool AND presentation", async () => {
                'result links the lensed view');
     });
 });
+
+test("summary fallback: no spelling in the lane -> greyed first spelling + superscript", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        // sf presence via a definition, but NO sf spelling.
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1010, tl.next(),
+            {attr1: 'samqwan', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        const s = mkChild(e, 'sub', 1100, tl.next(), {order_key: '0.5'});
+        fx.ww.applyTransaction([s], {quiet: true});
+        fx.ww.applyTransaction([mkChild(s, 'alt', 1110, tl.next(),
+            {attr1: 'samuqwanl', variant: 'mm-sf', order_key: '0.5'})], {quiet: true});
+
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-sf'} as any));
+        const h = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.searchPage(query)',
+                        {queryArgs: {searchText: 'samq'}})));
+        assert(h.includes('samqwan'), 'the first-lane spelling stands in');
+        assert(h.includes('text-muted'), 'greyed');
+        assert(h.includes('lm-me-orth'), 'with its lane superscript');
+        assert(h.includes('>Li<'), 'the superscript names the lane');
+    });
+});

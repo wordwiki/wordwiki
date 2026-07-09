@@ -41,7 +41,7 @@ export class DictionaryStore {
     #publishedProjection: entry.Entry[]|undefined = undefined;
     #siteViews: Map<string, SiteView> = new Map();
     #entriesWithContentIn: Map<string, Set<number>> = new Map();
-    #publicEntryIds: Set<number>|undefined = undefined;
+    #publicEntryIdsIn: Map<string, Set<number>> = new Map();
     #lastAllocatedTxTimestamp: number|undefined;
 
     constructor(private opts: {onDerivedInvalidated?: () => void} = {}) {
@@ -87,23 +87,32 @@ export class DictionaryStore {
         // freshness - the publish staleness check depends on this.
         this.#siteViews = new Map();
         this.#entriesWithContentIn = new Map();
-        this.#publicEntryIds = undefined;
+        this.#publicEntryIdsIn = new Map();
         // Owner caches built over these projections drop in the same breath.
         this.opts.onDerivedInvalidated?.();
     }
 
-    /** The entry ids public in AT LEAST ONE orthography - on SOME public
-     *  site: not archived, with a PUBLISHED pub gate (the published
-     *  projection's view of e.public contains only published-current
-     *  gates).  The INVERSE drives the subtle 'not public' badge on word
-     *  links: published is the common case, so the exceptional state is
-     *  the marked one (dz 2026-07-09 - an editor seeing an error on an
-     *  unpublished word must not think it is live). */
-    get publicEntryIds(): Set<number> {
-        return this.#publicEntryIds ??= new Set(
-            this.publishedProjection
-                .filter(e => (e.public ?? []).length > 0 && !entry.isArchivedEntry(e))
+    /** The entry ids PUBLIC IN this orthography (entryIsPublicIn over the
+     *  published projection); 'mm' asks "public in ANY lane" (an explicit
+     *  case - variantMatches wildcards only the STORED side, so
+     *  entryIsPublicIn(e, 'mm') would NOT mean that).  The INVERSE drives
+     *  the subtle 'not public' badge on word links: published is the
+     *  common case, so the exceptional state is the marked one, and the
+     *  question is asked IN THE WORKING LANE (dz 2026-07-09: a word
+     *  public in li but not sf IS not-public to the sf editor - their
+     *  public site is the sf one).  Lazily cached per orthography,
+     *  dropped with the projections. */
+    publicEntryIdsIn(orthography: string): Set<number> {
+        let s = this.#publicEntryIdsIn.get(orthography);
+        if(s === undefined) {
+            s = new Set(this.publishedProjection
+                .filter(e => orthography === 'mm'
+                    ? (e.public ?? []).length > 0 && !entry.isArchivedEntry(e)
+                    : entry.entryIsPublicIn(e, orthography))
                 .map(e => e.entry_id));
+            this.#publicEntryIdsIn.set(orthography, s);
+        }
+        return s;
     }
 
     /** The entry ids having ANY current fact tagged EXACTLY this
