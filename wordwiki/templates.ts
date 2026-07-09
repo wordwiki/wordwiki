@@ -252,10 +252,15 @@ function orthographyStatus(): OrthographyStatus | undefined {
 // appears on legacy-template pages).  Lives OUTSIDE the collapse, so it
 // stays visible on small screens too.
 function orthographyBadgeSwitcher(status: OrthographyStatus): any {
+    // Switching re-renders the SAME page in the new orthography (dz: it is
+    // common to want to see one result both ways; a lane with no text may
+    // render sparse - accepted).  returnTo is filled at submit time.
     const choiceItem = (label: any, orthography: string, active: boolean) =>
         ['li', {},
-         ['form', {method: 'post', action: '/ww/wordwiki.setOrthographyOverride(bodyArgs)', class: 'm-0'},
+         ['form', {method: 'post', action: '/ww/wordwiki.setOrthographyOverride(bodyArgs)', class: 'm-0',
+                   onsubmit: 'this.returnTo.value = location.pathname + location.search'},
           ['input', {type: 'hidden', name: 'orthography', value: orthography}],
+          ['input', {type: 'hidden', name: 'returnTo', value: ''}],
           ['button', {type: 'submit',
                       class: `dropdown-item${active ? ' active' : ''}`}, label]]];
     return ['div', {class: 'dropdown d-inline-block me-2'},
@@ -281,8 +286,10 @@ function orthographyOverrideBanner(status: OrthographyStatus | undefined): any {
         ['b', {}, status.override.name],
         ' for this session — new content, defaults and reports use it. ',
         ['form', {method: 'post', action: '/ww/wordwiki.setOrthographyOverride(bodyArgs)',
-                  class: 'd-inline m-0'},
+                  class: 'd-inline m-0',
+                  onsubmit: 'this.returnTo.value = location.pathname + location.search'},
          ['input', {type: 'hidden', name: 'orthography', value: ''}],
+         ['input', {type: 'hidden', name: 'returnTo', value: ''}],
          ['button', {type: 'submit', class: 'btn btn-link btn-sm p-0 align-baseline'},
           'Clear override']]];
 }

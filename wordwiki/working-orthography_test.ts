@@ -118,6 +118,17 @@ test("session override beats primary_orthography; set/clear via the route", asyn
             // Clear ('' = back to the profile default).
             await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)', {orthography: ''});
             assertEquals(fx.ww.currentWorkingOrthography(), 'mm-li');
+
+            // The switch bounces back to the page it was made FROM (dz:
+            // re-render the same page in the new orthography) - but only
+            // to site-relative paths, never an open redirect.
+            const back: any = await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)',
+                {orthography: 'mm-sf', returnTo: '/ww/wordwiki.editorReports.categoriesDirectory()'});
+            assertEquals(back.headers['Location'],
+                         '/ww/wordwiki.editorReports.categoriesDirectory()');
+            const evil: any = await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)',
+                {orthography: '', returnTo: '//evil.example/x'});
+            assertEquals(evil.headers['Location'], '/ww/');
         });
     });
 });
@@ -183,5 +194,29 @@ test("the working-site reports follow the session override", async () => {
             markupToString(await renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
         assert(!h.includes('water'), 'the mm-sf view: nothing public there');
         assert(h.includes('mm-sf'), 'the report names the working orthography');
+    });
+});
+
+test("ALL ('mm') override: viewing mode - creation falls back to the profile lane", async () => {
+    await withTestDb(async (fx) => {
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
+        await withSession(fx, 'djz', 'tok-4', async () => {
+            await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)', {orthography: 'mm'});
+            assertEquals(fx.ww.currentWorkingOrthography(), 'mm');
+            // New content must NOT default to the wildcard.
+            assertEquals(fx.ww.newContentOrthography(), 'mm-li');
+            // A specific override DOES drive creation.
+            await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)', {orthography: 'mm-sf'});
+            assertEquals(fx.ww.newContentOrthography(), 'mm-sf');
+        });
+        // The badge names the ALL mode.
+        security.runSystem(() => fx.ww.userSession.setOrthographyOverride('tok-4', 'mm'));
+        withSession(fx, 'djz', 'tok-4', () => {
+            const h = markupToString(templates.navBar());
+            assert(h.includes('All</span>'), "the badge reads 'All'");
+            assert(h.includes('All orthographies'), 'banner/switcher name it in full');
+        });
     });
 });

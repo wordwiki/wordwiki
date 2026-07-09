@@ -393,6 +393,11 @@ export class WordWiki extends LiminalApp {
                    renderBoundingGroup: this.wordViewBoundingGroup,
                    valueLabel: (f, v) =>
                        f.name === 'speaker' ? this.speakerDisplayLabel(String(v)) : undefined,
+                   // The TITLE shows the working lane's spelling ('mm'/unset
+                   // = every lane, '/'-joined); the body shows all lanes,
+                   // marked with the editor's Li/SF badges.
+                   titleOrthography: orthography || this.currentWorkingOrthography(),
+                   orthographyBadge: (slug: string) => this.orthographyAbbr(slug),
                    titleAffordance: this.wordViewPencil(entry_id, e)},
                   this.dictSchema.relationsByTag[entry.EntryTag], e)
             : ['p', {class: 'text-muted'}, 'Word not found.'];
@@ -411,6 +416,16 @@ export class WordWiki extends LiminalApp {
             if(u) return u.region ? `${u.name} (${u.region})` : u.name;
         } catch { /* pre-migration db */ }
         return entry.users[username] ?? username;
+    }
+
+    // The tiny lane marker (the editor's Li/SF badge vocabulary).
+    private orthographyAbbr(slug: string): string {
+        try {
+            const row = security.runSystem(() => this.orthographies.allByOrder.all({}))
+                .find(o => o.slug === slug);
+            if(row) return row.abbreviation || row.name || slug;
+        } catch { /* pre-migration db */ }
+        return slug;
     }
 
     // The orthography's display name: the table is the authority, the seed
@@ -779,22 +794,38 @@ export class WordWiki extends LiminalApp {
         return this.sessionOrthographyOverride() ?? this.currentUserPrimaryOrthography();
     }
 
+    // The orthography NEW variant-bearing content defaults to: the working
+    // orthography when it names a SPECIFIC lane.  The ALL ('mm') override
+    // is a VIEWING mode - creation falls back to the profile lane (typing
+    // wildcard-tagged content by default would be wrong).
+    newContentOrthography(): string | undefined {
+        const w = this.currentWorkingOrthography();
+        return w && w !== 'mm' ? w : this.currentUserPrimaryOrthography();
+    }
+
     // Set ('' clears) the session's working-orthography override - the
     // navbar switcher's plain form POST (no htmx dependency: the navbar
     // also appears on legacy-template pages).  Validated against the
     // non-retired orthography vocabulary.
     @routeMutation(authenticated)
-    setOrthographyOverride(args: {orthography?: string}): server.Response {
+    setOrthographyOverride(args: {orthography?: string, returnTo?: string}): server.Response {
         const orthography = args.orthography ?? '';
         const token = security.current()?.sessionToken;
         if(!token) throw new Error('no login session');
-        if(orthography !== '') {
+        // 'mm' is the ALL override: the multi-orthography rendering (every
+        // lane on each page, with the Li/SF markers), not a table row.
+        if(orthography !== '' && orthography !== 'mm') {
             const known = security.runSystem(() => this.orthographies.allByOrder.all({}))
                 .some(o => o.slug === orthography && !o.retired);
             if(!known) throw new Error(`'${orthography}' is not an orthography`);
         }
         security.runSystem(() => this.userSession.setOrthographyOverride(token, orthography));
-        return server.forwardResponse('/ww/');
+        // Back to the page the switch was made FROM, re-rendered in the new
+        // orthography (dz: seeing the same result both ways is the common
+        // want).  Site-relative paths only - never an open redirect.
+        const returnTo = args.returnTo ?? '';
+        const safe = returnTo.startsWith('/') && !returnTo.startsWith('//');
+        return server.forwardResponse(safe ? returnTo : '/ww/');
     }
 
     // The navbar's orthography status (templates.setOrthographyStatusProvider,
@@ -805,6 +836,7 @@ export class WordWiki extends LiminalApp {
         try {
             const rows = security.runSystem(() => this.orthographies.allByOrder.all({}));
             const label = (slug: string) => {
+                if(slug === 'mm') return {abbr: 'All', name: 'All orthographies'};
                 const row = rows.find(o => o.slug === slug);
                 return {abbr: row?.abbreviation || row?.name || slug,
                         name: row?.name || entry.variants[slug] || slug};
@@ -816,8 +848,13 @@ export class WordWiki extends LiminalApp {
                     ? {slug: effective, abbr: label(effective).abbr} : undefined,
                 override: override
                     ? {slug: override, name: label(override).name} : undefined,
-                choices: rows.filter(o => !o.retired && o.publishable)
-                    .map(o => ({slug: o.slug, name: o.name || o.slug})),
+                choices: [
+                    ...rows.filter(o => !o.retired && o.publishable)
+                        .map(o => ({slug: o.slug, name: o.name || o.slug})),
+                    // The multi-orthography rendering (dz): every lane on
+                    // each page, marked with the editor's Li/SF badges.
+                    {slug: 'mm', name: 'All orthographies'},
+                ],
             };
         } catch (_e) {
             return undefined;   // pre-migration db: no orthography table yet
