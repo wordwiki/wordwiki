@@ -125,8 +125,9 @@ test("services: add-after and move reorder the event's service rows", async () =
         await addSvc('A'); await addSvc('B');
         const [A, B] = order();
 
-        // Add-after A -> [A, C, B].
-        await asUser(alice, () => invoke(`rabid.service.insertRelative($arg0, $arg1)`, A, 'after'));
+        // Add-after A (via the intake dialog's submit handler) -> [A, C, B].
+        await asUser(alice, () => invoke(`rabid.service.addServiceRelative($arg0)`,
+            {anchor_id: A, position: 'after', client_name: 'C', service_description: 'x'}));
         let ids = order();
         assertEquals(ids.length, 3);
         assertEquals(ids[0], A);

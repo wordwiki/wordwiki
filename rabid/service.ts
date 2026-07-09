@@ -40,9 +40,6 @@ class ManagedStringField extends StringField {
 export const service_kind_enum: Record<string, string> = {
     'diy': 'DIY',
     'full': 'We Repair',
-    'adult-learn': 'Adult Learn to Ride',
-    'kid-learn': 'Kid Learn to Ride',
-    'vocational': 'Vocational Training',
     'other': 'Other',
 };
 
@@ -189,13 +186,17 @@ export class ServiceTable extends Table<Service> {
     // curated intake subset (the rest is filled in later via the detail edit
     // form); event_id rides as a hidden field so the record lands on this event.
     // host/admin only, like all service editing.
+    // The scanned-intake core: name / bike / work needed / postal + kind.  Phone +
+    // the drop-off checklist are filled in later via the detail edit.
+    private serviceIntakeFields(): Field[] {
+        const f = this.fieldsByName;
+        return [f.client_name, f.bike_description, f.service_description, f.client_postal, f.service_kind];
+    }
+
     @route(hostOrAdmin)
     newServiceForEventDialog(event_id: number): Markup {
-        const f = this.fieldsByName;
-        // The scanned-intake core: name / bike / work needed / postal + kind.  The
-        // rest (phone, drop-off checklist) is filled in later via the detail edit.
         return action.renderParamForm(
-            [f.client_name, f.bike_description, f.service_description, f.client_postal, f.service_kind],
+            this.serviceIntakeFields(),
             {service_kind: 'diy'} as Partial<Service>,
             {
                 title: 'Add service',
@@ -227,19 +228,46 @@ export class ServiceTable extends Table<Service> {
                 targets: ['.' + this.shapeKey('event_id', event_id)]} as unknown as Markup;
     }
 
-    // Insert a blank service directly before/after an anchor (for correcting a
-    // scanned intake - slotting in a missed row).  Blank client name -> "Unnamed
-    // client" until edited.
+    // Add a service before/after an anchor via the SAME intake dialog (not a blank
+    // row) - for slotting a missed row into a scanned batch.  The dialog carries the
+    // anchor + position; the insert lands at that slot.
+    @route(hostOrAdmin)
+    newServiceRelativeDialog(anchor_id: number, position: string): Markup {
+        this.getById(anchor_id);   // 404 early if the anchor is gone
+        return action.renderParamForm(
+            this.serviceIntakeFields(),
+            {service_kind: 'diy'} as Partial<Service>,
+            {
+                title: position === 'before' ? 'Add service before' : 'Add service after',
+                submitLabel: 'Add',
+                hidden: {anchor_id, position},
+                dispatch: {onsubmit:
+                    'event.preventDefault(); tx`rabid.service.addServiceRelative(${getFormJSON(event.target)})`'},
+            });
+    }
+
     @routeMutation(hostOrAdmin)
-    insertRelative(anchor_id: number, position: string): Markup {
+    addServiceRelative(args: {anchor_id?: string|number, position?: string, client_name?: string,
+                              bike_description?: string, service_description?: string,
+                              client_postal?: string, service_kind?: string}): Markup {
+        const anchor_id = Number(args?.anchor_id);
+        if(!Number.isInteger(anchor_id) || !anchor_id) throw new Error('Missing anchor');
         const anchor = this.getById(anchor_id);
+        const client_name = (args.client_name ?? '').trim();
+        if(!client_name) throw new Error('Client name is required');
         const sibs = security.runSystem(() => this.servicesForEvent.all({event_id: anchor.event_id}));
         const i = sibs.findIndex(s => s.service_id === anchor_id);
-        const order_key = position === 'before'
+        const order_key = args.position === 'before'
             ? orderkey.between(sibs[i-1]?.order_key, sibs[i]?.order_key)
             : orderkey.between(sibs[i]?.order_key, sibs[i+1]?.order_key);
-        this.insert({event_id: anchor.event_id, client_name: '', service_kind: 'diy',
-                     order_key} as Partial<Service>);
+        this.insert({
+            event_id: anchor.event_id, client_name,
+            bike_description: (args.bike_description ?? '').trim(),
+            service_description: (args.service_description ?? '').trim(),
+            client_postal: (args.client_postal ?? '').trim(),
+            service_kind: args.service_kind || 'diy',
+            order_key,
+        } as Partial<Service>);
         return {action: 'reload', targets: ['.' + this.shapeKey('event_id', anchor.event_id)]} as unknown as Markup;
     }
 
@@ -322,8 +350,8 @@ export class ServiceTable extends Table<Service> {
             : undefined;
         const menu = this.canEditRecord(s) ? action.actionMenu([
             {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/rabid.service.renderServiceForm(${id})`}},
-            {label: 'Add before', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'before')`}},
-            {label: 'Add after', mode: {kind: 'immediate', expr: `rabid.service.insertRelative(${id}, 'after')`}},
+            {label: 'Add before…', mode: {kind: 'modal', dialogUrl: `/rabid.service.newServiceRelativeDialog(${id}, 'before')`}},
+            {label: 'Add after…', mode: {kind: 'modal', dialogUrl: `/rabid.service.newServiceRelativeDialog(${id}, 'after')`}},
             {label: 'Move up', mode: {kind: 'immediate', expr: `rabid.service.moveUp(${id})`}},
             {label: 'Move down', mode: {kind: 'immediate', expr: `rabid.service.moveDown(${id})`}},
             {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this service record?', expr: `rabid.service.remove(${id})`}},
