@@ -244,22 +244,28 @@ function orthographyStatus(): OrthographyStatus | undefined {
     try { return orthographyStatusProvider?.(); } catch { return undefined; }
 }
 
-// The switcher: a quiet navbar dropdown; each choice is a plain form POST
-// (no htmx dependency - the navbar also appears on legacy-template pages).
-function orthographySwitcher(status: OrthographyStatus): any {
+// The switcher: the grey working-lane BADGE beside the brand IS the
+// control (dz: more obvious than a menu item, and the collapsing navbar
+// is already near the triple-bar threshold - no new menu items).  The
+// dropdown-toggle caret + a title make the badge read as clickable; each
+// choice is a plain form POST (no htmx dependency - the navbar also
+// appears on legacy-template pages).  Lives OUTSIDE the collapse, so it
+// stays visible on small screens too.
+function orthographyBadgeSwitcher(status: OrthographyStatus): any {
     const choiceItem = (label: any, orthography: string, active: boolean) =>
         ['li', {},
          ['form', {method: 'post', action: '/ww/wordwiki.setOrthographyOverride(bodyArgs)', class: 'm-0'},
           ['input', {type: 'hidden', name: 'orthography', value: orthography}],
           ['button', {type: 'submit',
                       class: `dropdown-item${active ? ' active' : ''}`}, label]]];
-    return ['li', {class: 'nav-item dropdown'},
-        ['a', {class: 'nav-link dropdown-toggle text-nowrap', href: '#', role: 'button',
-               'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
-               title: 'Working orthography'},
-         'Orthography',
-         status.effective ? [' ', ['span', {class: 'badge text-bg-secondary'}, status.effective.abbr]] : undefined],
-        ['ul', {class: 'dropdown-menu dropdown-menu-end'},
+    return ['div', {class: 'dropdown d-inline-block me-2'},
+        ['a', {class: 'dropdown-toggle text-light text-decoration-none', href: '#',
+               role: 'button', 'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
+               title: 'Working orthography — click to change'},
+         ['span', {class: 'badge text-bg-secondary'},
+          status.effective?.abbr ?? '–']],
+        ['ul', {class: 'dropdown-menu'},
+         ['li', {}, ['h6', {class: 'dropdown-header'}, 'Working orthography']],
          choiceItem('From my profile (default)', '', !status.override),
          ['li', {}, ['hr', {class: 'dropdown-divider'}]],
          status.choices.map(c =>
@@ -290,9 +296,10 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
     return ([
         ['nav', {class:'navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body', 'data-bs-theme':'dark'},
          ['div', {class:'container-fluid'},
-          ['a', {class:'navbar-brand', href:'/ww/'}, siteConfig.editorName,
-           // The subtle level-1 notice: your working lane, on the brand.
-           oStatus?.effective ? ` · ${oStatus.effective.abbr}` : ''],
+          ['a', {class:'navbar-brand me-2', href:'/ww/'}, siteConfig.editorName],
+          // The level-1 notice AND the switcher in one: the grey working-
+          // lane badge beside the brand, click to change.
+          oStatus ? orthographyBadgeSwitcher(oStatus) : undefined,
           ['button', {class:'navbar-toggler', type:'button', 'data-bs-toggle':'collapse', 'data-bs-target':'#navbarSupportedContent', 'aria-controls':'navbarSupportedContent', 'aria-expanded':'false', 'aria-label':'Toggle navigation'},
            ['span', {class:'navbar-toggler-icon'}]],
           ['div', {class:'collapse navbar-collapse', id:'navbarSupportedContent'},
@@ -359,8 +366,6 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
 
             ['li', {class:'nav-item'},
              ['a', {class:'nav-link text-nowrap', href:'/index.html'}, 'Public Site']],
-
-            oStatus ? orthographySwitcher(oStatus) : undefined,
 
             showTestClientLink && !testClientLinkHidden
                 ? ['li', {class:'nav-item'},

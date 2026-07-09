@@ -138,8 +138,9 @@ test("navbar: brand suffix for the working lane; PROMINENT banner only when over
                 ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
         withSession(fx, 'djz', 'tok-2', () => {
             const h = html();
-            assert(h.includes('· Li'), 'brand carries the working lane');
-            assert(h.includes('setOrthographyOverride'), 'the switcher is present');
+            assert(h.includes('Li</span>'), 'the working-lane badge beside the brand');
+            assert(h.includes('setOrthographyOverride'), 'the badge IS the switcher');
+            assert(h.includes('Working orthography'), 'the badge announces itself');
             assert(!h.includes('overridden'), 'no banner without an override');
         });
 
@@ -148,7 +149,7 @@ test("navbar: brand suffix for the working lane; PROMINENT banner only when over
         security.runSystem(() => fx.ww.userSession.setOrthographyOverride('tok-2', 'mm-sf'));
         withSession(fx, 'djz', 'tok-2', () => {
             const h = html();
-            assert(h.includes('· SF'), 'suffix shows the effective (overridden) lane');
+            assert(h.includes('SF</span>'), 'the badge shows the effective (overridden) lane');
             assert(h.includes('overridden to'), 'the banner is present');
             assert(h.includes('Smith-Francis'), 'named in full');
             assert(h.includes('Clear override'), 'one-click way out');
