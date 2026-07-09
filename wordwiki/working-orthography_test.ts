@@ -231,3 +231,34 @@ test("ALL ('mm') override: viewing mode - creation falls back to the profile lan
         });
     });
 });
+
+test("search follows the working lane: pool AND presentation", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        // 1000 has sf presence (li + sf spellings); 2000 is li-only.
+        const a = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([a], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, 'spl', 1010, tl.next(),
+            {attr1: 'samqwan', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, 'spl', 1011, tl.next(),
+            {attr1: 'samuqwan', variant: 'mm-sf', order_key: '0.6'})], {quiet: true});
+        const b = mkEntry(2000, tl.next());
+        fx.ww.applyTransaction([b], {quiet: true});
+        fx.ww.applyTransaction([mkChild(b, 'spl', 2010, tl.next(),
+            {attr1: 'samqwatl', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-sf'} as any));
+        const h = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.searchPage(query)',
+                        {queryArgs: {searchText: 'samq'}})));
+        // Pool: only the word with sf-tagged content; matched BY its li text.
+        assert(!h.includes('samqwatl'), 'li-only word not in the sf lane pool');
+        // Presentation: the sf spelling is the headword.
+        assert(h.includes('samuqwan'), 'result presented in the working lane');
+        assert(h.includes('wordView(1000, "mm-sf")')
+               || h.includes('wordView(1000, &quot;mm-sf&quot;)'),
+               'result links the lensed view');
+    });
+});

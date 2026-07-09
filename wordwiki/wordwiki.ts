@@ -639,10 +639,15 @@ export class WordWiki extends LiminalApp {
         const searchRegex = new RegExp(searchRegexSrc, 'i');
         console.info('SEARCH IS', search, 'REGEX IS', searchRegexSrc);
 
+        // The pool is the editor's WORKING LANE (content presence, work in
+        // progress included) - same as the category reports.  Matching still
+        // looks at every lane's text of those words (an sf editor can find a
+        // word by its li spelling).
+        const pool = this.workingEntries();
         let matches: entry.Entry[] = [];
         if (search !== '') {
             const matchesSet:Set<entry.Entry> = new Set();
-            for(const entry of this.entries) {
+            for(const entry of pool) {
                 for(const spelling of entry.spelling) {
                     if(searchRegex.test(spelling.text))
                         matchesSet.add(entry);
@@ -656,14 +661,19 @@ export class WordWiki extends LiminalApp {
             }
             matches = Array.from(matchesSet.values());
         } else {
-            matches = this.entries;
+            matches = pool;
         }
 
         const title = ['Query for ', search];
 
+        // Present (and lens-link) each result in the working lane, like the
+        // category listings.
+        const lane = this.workingLane()?.orthography;
         function renderEntryItem(e: entry.Entry): any {
             return [
-                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e))
+                templates.lexemeLink(e.entry_id,
+                    entry.renderEntryCompactSummary(e, {orthography: lane}),
+                    {viewOrthography: lane})
             ];
         }
 
