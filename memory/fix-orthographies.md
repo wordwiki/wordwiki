@@ -55,3 +55,15 @@ the originating page (returnTo, site-relative-only guard).
 **dz TODO: genericize the 'mm' wildcard value itself** — another
 Mi'gmaq-ism in the data model (stored values!) to migrate for
 multi-language support.
+
+**Editorial lane PRESENCE (dz 2026-07-09):** editor working-lane views
+(categoriesDirectory, entriesForCategory) filter by
+store.entriesWithContentIn(orth) — a lazy per-orthography Set<entry_id>
+from ONE indexed SQL (current rows, variant = orth EXACT — wildcard
+'mm' excluded or the filter is vacuous; pending facts INCLUDED: a word
+under sf edit belongs to the sf lane with no explicit transition), over
+the CURRENT projection (WordWiki.workingEntries()). The PUBLIC notion
+stays entryIsPublicIn (pub gate) — two different questions. dz expects
+this presence set to become upstream for other lane computations.
+workingSite() is GONE (replaced by workingEntries + workingLane).
+Real db: 644 sf-presence vs 211 sf-public.

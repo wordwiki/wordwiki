@@ -113,13 +113,27 @@ export class WordWiki extends LiminalApp {
     site(orthography: string = entry.PUBLIC_SITE_ORTHOGRAPHY): SiteView {
         return this.store.site(orthography);
     }
-    /** The site view INTERNAL rendering uses: the logged-in editor's working
-     *  orthography (fix-orthographies.md), falling back to the public site's
-     *  orthography when anonymous/unset.  Public-site FEATURES - publish,
-     *  the word-a-day picker, "is it on the site" markers - stay pinned to
-     *  site(): they are about THE public site, whoever is looking. */
-    workingSite(): SiteView {
-        return this.site(this.currentWorkingOrthography() ?? entry.PUBLIC_SITE_ORTHOGRAPHY);
+    /** The EDITOR's working-lane entry pool (dz 2026-07-09): the CURRENT
+     *  projection (work in progress included) filtered by editorial
+     *  PRESENCE in the working lane - any current fact tagged exactly that
+     *  orthography (store.entriesWithContentIn).  NOT the public/pub-gate
+     *  notion: a word whose SF content is mid-edit belongs to the SF
+     *  editor's views precisely then.  ALL ('mm') and unset lanes filter
+     *  nothing.  Public-site FEATURES - publish, the word-a-day picker,
+     *  "is it on the site" markers - stay pinned to site(). */
+    workingEntries(): entry.Entry[] {
+        const w = this.currentWorkingOrthography();
+        if(!w || w === 'mm') return this.store.entries;
+        const present = this.store.entriesWithContentIn(w);
+        return this.store.entries.filter(e => present.has(e.entry_id));
+    }
+
+    /** The working lane as a display fact for report headers: the SPECIFIC
+     *  lane's slug+name, or undefined when unset/ALL (no filtering). */
+    workingLane(): {orthography: string, name: string} | undefined {
+        const w = this.currentWorkingOrthography();
+        if(!w || w === 'mm') return undefined;
+        return {orthography: w, name: this.orthographyDisplayName(w)};
     }
     get sourceLangCollator(): Intl.Collator { return this.site().collator; }
     get publishedEntries(): entry.Entry[] { return this.site().publicEntries; }

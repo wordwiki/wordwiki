@@ -28,6 +28,7 @@ import {selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber} from '
 import {renderStandaloneGroup} from './render-page-editor.ts';
 import type {DictionaryStore} from './dictionary-store.ts';
 import type {SiteView} from './site-view.ts';
+import {categoryCountsOf, entriesForCategoryOf} from './site-view.ts';
 
 /** What a read-only editor report may reach.  WordWiki satisfies this
  *  structurally; keeping the parameter NARROW is what stops the next report
@@ -35,7 +36,10 @@ import type {SiteView} from './site-view.ts';
 export interface ReportsApp {
     readonly store: DictionaryStore;
     site(orthography?: string): SiteView;
-    workingSite(): SiteView;
+    /** The editor's working-lane pool: the CURRENT projection filtered by
+     *  editorial presence in the lane (work in progress included). */
+    workingEntries(): entry.Entry[];
+    workingLane(): {orthography: string, name: string} | undefined;
     readonly categories: category.CategoryTable;
     entryCountByPage(book: string): Array<[number, number]>;
 }
@@ -62,14 +66,18 @@ export class EditorReports {
         // end - names sorted within).  This is the EDITOR report, so internal
         // '~' categories are shown; the public site filters them.  Values
         // with no table row (a pre-import db) trail in their own group.
-        // Counts are public entries in the EDITOR'S working orthography.
-        const site = this.app.workingSite();
-        const counts = site.categoryCounts();
+        // The POOL is the editor's working lane: every word with content
+        // tagged that orthography, WORK IN PROGRESS INCLUDED (dz: the
+        // published/pub-gate notion leaves out words under edit, which is
+        // incorrect for the editor).
+        const entries = this.app.workingEntries();
+        const collator = this.app.site().collator;
+        const counts = categoryCountsOf(entries, collator);
         const tabled = this.app.categories.allByOrder.all({}).filter(c => counts.has(c.slug));
         const tabledSlugs = new Set(tabled.map(c => c.slug));
         const untabled = Array.from(counts.keys())
             .filter(v => !tabledSlugs.has(v))
-            .toSorted((a, b) => site.collator.compare(a, b));
+            .toSorted((a, b) => collator.compare(a, b));
 
         const categoryLink = (value: string, label: string) =>
             ['li', {}, ['a',
@@ -78,12 +86,13 @@ export class EditorReports {
 
         const body = [
             ['h1', {}, title],
-            // Working in a non-default orthography changes what counts as
-            // public here - say so rather than leaving a puzzling near-empty
-            // page.  (Invisible in the default case.)
-            site.orthography !== entry.PUBLIC_SITE_ORTHOGRAPHY
+            // A specific working lane changes what is counted - say so
+            // rather than leaving a puzzling near-empty page.  (No note when
+            // unset or ALL: nothing is filtered.)
+            this.app.workingLane()
                 ? ['p', {class: 'text-muted'},
-                   `Showing entries public in your working orthography (${site.orthography}).`]
+                   `Showing words with ${this.app.workingLane()!.name} content — ` +
+                   'including work in progress.']
                 : undefined,
             category.groupByTheme(tabled).map(group => [
                 ['h3', {}, group.theme],
@@ -102,12 +111,18 @@ export class EditorReports {
     entriesForCategory(category?: string): any {
         category = String(category ?? '');
 
-        const entriesForCategory = this.app.workingSite().entriesForCategory(category);
+        const entriesForCategory = entriesForCategoryOf(this.app.workingEntries(), category);
         const title = ['Entries for category ', category];
 
+        // Present each word in the WORKING lane (the lane the pool was
+        // filtered by), falling back to the default presentation when
+        // unset/ALL.
+        const lane = this.app.workingLane()?.orthography;
         function renderEntryItem(e: entry.Entry): any {
             return [
-                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e), {pencil: false})
+                templates.lexemeLink(e.entry_id,
+                    entry.renderEntryCompactSummary(e, {orthography: lane}),
+                    {pencil: false, viewOrthography: lane})
             ];
         }
 

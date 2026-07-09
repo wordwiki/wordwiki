@@ -66,12 +66,23 @@ test("categoriesDirectory follows the editor's working orthography", async () =>
                 ['primary_orthography'], {primary_orthography: 'mm-sf'} as any));
         const sf = markupToString(await as(fx, 'djz', () =>
             renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
-        assert(!sf.includes('water'), 'nothing is public in mm-sf yet');
-        assert(sf.includes('mm-sf'), 'the page names the working orthography');
+        assert(!sf.includes('water'), 'no sf-tagged content on the word yet');
+        assert(sf.includes('Smith-Francis'), 'the page names the working lane');
+        const sfCat0 = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.editorReports.entriesForCategory("water")')));
+        assert(!sfCat0.includes('samqwan'), 'category listing follows the lane too');
 
+        // THE POINT of presence-based lanes (dz): a PENDING sf fact - work
+        // in progress, not published, not gated - puts the word in the sf
+        // editor's view immediately, no explicit transition.
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1011, tl.next(),
+            {attr1: 'samuqwan', variant: 'mm-sf', order_key: '0.6'})], {quiet: true});
+        const sf2 = markupToString(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
+        assert(sf2.includes('water'), 'a word under sf edit appears in the sf lane');
         const sfCat = markupToString(await as(fx, 'djz', () =>
             renderRoute(fx.ww, 'wordwiki.editorReports.entriesForCategory("water")')));
-        assert(!sfCat.includes('samqwan'), 'category listing follows the view too');
+        assert(sfCat.includes('samuqwan'), 'and is listed under its category');
     });
 });
 
@@ -192,8 +203,8 @@ test("the working-site reports follow the session override", async () => {
         });
         const h = await withSession(fx, 'djz', 'tok-3', async () =>
             markupToString(await renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
-        assert(!h.includes('water'), 'the mm-sf view: nothing public there');
-        assert(h.includes('mm-sf'), 'the report names the working orthography');
+        assert(!h.includes('water'), 'the mm-sf lane: no sf-tagged content on the word');
+        assert(h.includes('Smith-Francis'), 'the report names the working lane');
     });
 });
 

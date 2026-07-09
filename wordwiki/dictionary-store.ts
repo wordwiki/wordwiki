@@ -40,6 +40,7 @@ export class DictionaryStore {
     #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
     #publishedProjection: entry.Entry[]|undefined = undefined;
     #siteViews: Map<string, SiteView> = new Map();
+    #entriesWithContentIn: Map<string, Set<number>> = new Map();
     #lastAllocatedTxTimestamp: number|undefined;
 
     constructor(private opts: {onDerivedInvalidated?: () => void} = {}) {
@@ -84,8 +85,31 @@ export class DictionaryStore {
         // WHOLESALE (never reuse an instance), so view identity == projection
         // freshness - the publish staleness check depends on this.
         this.#siteViews = new Map();
+        this.#entriesWithContentIn = new Map();
         // Owner caches built over these projections drop in the same breath.
         this.opts.onDerivedInvalidated?.();
+    }
+
+    /** The entry ids having ANY current fact tagged EXACTLY this
+     *  orthography - PENDING facts included: this is EDITORIAL PRESENCE in
+     *  a lane ("has ortho-content tagged with that ortho", dz 2026-07-09),
+     *  so a word under edit belongs to its lane's editor views without
+     *  anyone explicitly transitioning it.  Deliberately EXACT (not
+     *  variantMatches): wildcard/'mm' content is every-lane by definition
+     *  and would make the filter vacuous.  One indexed query, lazily
+     *  cached per orthography, dropped with the projections.  The PUBLIC
+     *  notion stays entryIsPublicIn (the pub gate) - two different
+     *  questions. */
+    entriesWithContentIn(orthography: string): Set<number> {
+        let s = this.#entriesWithContentIn.get(orthography);
+        if(s === undefined) {
+            s = new Set(db().all<{id1: number}, {v: string}>(
+                `SELECT DISTINCT id1 FROM ${this.assertionTable}
+                  WHERE valid_to = ${timestamp.END_OF_TIME} AND variant = :v`,
+                {v: orthography}).map(r => r.id1));
+            this.#entriesWithContentIn.set(orthography, s);
+        }
+        return s;
     }
 
     /** The per-orthography site view (site-view.ts): created on demand,
