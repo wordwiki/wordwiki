@@ -178,6 +178,14 @@ svg.box.active:(not .ref) circle {
 .pe-layout { display: flex; gap: .75rem; align-items: flex-start; }
 .pe-main { flex: 1 1 auto; min-width: 0; }
 
+/* The page SVG shares the row with the sidebar: fill whatever width is
+   left (shrinking beside the open sidebar, expanding when it collapses).
+   Safe because the client computes the screen->page coordinate ratio from
+   LIVE geometry (viewBox / rendered width), not the static scale factor.
+   The locked/popup single-group editor has no .pe-main and keeps its
+   fixed-size render. */
+.pe-main #scanned-page { width: 100%; height: auto; }
+
 .pe-sidebar { flex: 0 0 20rem; position: sticky; top: 0; max-height: 100vh;
               overflow-y: auto; font-size: .9rem; padding: 0 .5rem .5rem;
               border-left: 1px solid #ddd; }

@@ -673,7 +673,16 @@ function getContainingPageId(e: Element): number {
 }
 
 function getContainingScaleFactor(e: Element): number {
-    return getIntAttribute(getScannedPageForElement(e), 'data-scale-factor');
+    // LIVE geometry, not the static data-scale-factor attribute: the page
+    // SVG is responsive now (it shrinks to share the row with the word
+    // sidebar and expands when the sidebar collapses), so the real
+    // screen->page-coordinate ratio is viewBox width over rendered width.
+    const page = getScannedPageForElement(e);
+    const viewBoxWidth = Number((page.getAttribute('viewBox') ?? '').split(/\s+/)[2]);
+    const renderedWidth = page.getBoundingClientRect().width;
+    if(!(viewBoxWidth > 0) || !(renderedWidth > 0))
+        return getIntAttribute(page, 'data-scale-factor');   // degenerate: old behavior
+    return viewBoxWidth / renderedWidth;
 }
 
 function getLockedBoundingGroupId(): string|null {
@@ -1276,7 +1285,7 @@ function pageBoxHoverEnter(event: MouseEvent) {
     // answer, and the sidebar is where the ambiguity reads clearly.
     const rows = sidebarRowsForGroup(groupId);
     rows.forEach(row=>row.classList.add('pe-hl'));
-    rows[0]?.scrollIntoView({block: 'nearest'});
+    if(rows[0]) scrollRowIntoSidebarView(rows[0]);
     showPageHoverTip(rows, event);
 }
 
@@ -1297,6 +1306,22 @@ function sidebarRowsForGroup(groupId: string): Element[] {
 function clearSidebarRowHighlights() {
     document.querySelectorAll('#pageWordSidebar li.pe-word.pe-hl')
         .forEach(row=>row.classList.remove('pe-hl'));
+}
+
+/** Bring a row into the SIDEBAR's view.  Not scrollIntoView: that also
+ *  scrolls the page itself (annoying mid-hover), and it considers a row
+ *  hidden UNDER the sidebar's sticky header to be 'in view'. */
+function scrollRowIntoSidebarView(row: Element) {
+    const sidebar = document.getElementById('pageWordSidebar');
+    if(!sidebar) return;
+    const head = sidebar.querySelector('.pe-sidebar-head');
+    const headHeight = head instanceof HTMLElement ? head.offsetHeight : 0;
+    const r = row.getBoundingClientRect();
+    const s = sidebar.getBoundingClientRect();
+    if(r.top < s.top + headHeight)
+        sidebar.scrollTop -= (s.top + headHeight - r.top);
+    else if(r.bottom > s.bottom)
+        sidebar.scrollTop += (r.bottom - s.bottom);
 }
 
 // --- The tooltip clones the sidebar rows' summary lines (one render of
