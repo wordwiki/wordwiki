@@ -279,10 +279,16 @@ export class EventTable extends Table<Event> {
             !e.is_catch_all
             && (!q.public_only || !e.volunteer_only)
             && (!q.away_only || !!e.is_remote_event);
-        const future = all.filter(e => e.start_time && e.start_time > now
+        // "Now": events happening around this moment (see isNowEvent) - they get
+        // their own top section and are lifted OUT of Upcoming/Past so they appear
+        // once.  Unlike Upcoming, Now ignores the away/public filter (you want to
+        // see whatever is happening, in-shop or not).
+        const nowEvents = all.filter(e => this.isNowEvent(e));
+        const nowIds = new Set(nowEvents.map(e => e.event_id));
+        const future = all.filter(e => e.start_time && e.start_time > now && !nowIds.has(e.event_id)
                                        && inRange(e, upW.from, upW.to) && matches(e, upQ));
         const undated = all.filter(e => !e.start_time && matches(e, upQ));   // TBD: window N/A
-        const pastEvents = all.filter(e => e.start_time && e.start_time <= now
+        const pastEvents = all.filter(e => e.start_time && e.start_time <= now && !nowIds.has(e.event_id)
                                      && inRange(e, pastW.from, pastW.to) && matches(e, pastQ))
             .reverse();                                                       // most recent first
         const upcoming = [...future, ...undated];
@@ -305,16 +311,32 @@ export class EventTable extends Table<Event> {
         const upMenu: action.ActionMenuItem[] = [{label: 'Filter…',
             mode: {kind: 'modal',
                    dialogUrl: `/rabid.event.upcomingFilterDialog(${EventTable.eventFilter.literal(upQ)}, ${EventTable.eventFilter.literal(pastQ)})`}}];
+        // Slash-separated jump-nav (like the event detail page): Now (only when
+        // there is one) / Upcoming / Past.
+        const navLinks: [string, string][] = [
+            ...(nowEvents.length ? [['now', 'Now'] as [string, string]] : []),
+            ['upcoming', 'Upcoming'], ['past', 'Past'],
+        ];
         return [h.div, {class: 'container py-3'},
             [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
              [h.h2, {class: 'mb-0'}, 'Events'],
              pageMenu.length ? action.actionMenu(pageMenu, {ariaLabel: 'Event actions'}) : undefined],
-            [h.h4, {class: 'mt-4 mb-1'}, 'Upcoming events'],
+            [h.nav, {class: 'lm-section-nav small mb-3 pb-2 border-bottom', 'aria-label': 'Sections'},
+             ...navLinks.flatMap(([id, label], i) => [
+                 i > 0 ? [h.span, {class: 'text-muted mx-2'}, '/'] : undefined,
+                 [h.a, {href: '#' + id, class: 'link-secondary text-decoration-none'}, label]])],
+            // The Now section - omitted entirely (heading included) when empty.
+            nowEvents.length
+                ? [h.div, {},
+                   [h.h4, {id: 'now', class: 'mt-4 mb-1'}, 'Now'],
+                   this.renderNowEvents(nowEvents)]
+                : undefined,
+            [h.h4, {id: 'upcoming', class: 'mt-4 mb-1'}, 'Upcoming events'],
             pageQueries.renderSummaryMenu(upSummary, upMenu, 'upcoming-bar'),
             upcoming.length > 0
                 ? this.renderEventScheduleTable(upcoming)
                 : [h.p, {class: 'text-muted'}, 'No upcoming events in this range.'],
-            [h.h4, {class: 'mt-4 mb-1'}, 'Past events'],
+            [h.h4, {id: 'past', class: 'mt-4 mb-1'}, 'Past events'],
             pageQueries.renderWindowBar({
                 fieldSet: EventTable.eventFilter, pageRoute: 'events',
                 filterDialogRoute: 'rabid.event.pastFilterDialog',
@@ -698,6 +720,19 @@ export class EventTable extends Table<Event> {
         return [h.table, {class: 'table table-sm align-middle'}, [h.tbody, {}, ...rows]];
     }
 
+    // The "Now" section: the same schedule rows, but in NOW MODE (self-toggle is
+    // "I am Here" / check-in, attendance line instead of sign-ups) and without the
+    // week grouping (they're all ~now).
+    private renderNowEvents(events: Event[]): Markup {
+        const ids = events.map(e => e.event_id);
+        const commitments = this.peopleByEvents('event_commitment', ids);
+        const checkins = this.peopleByEvents('event_checkin', ids);
+        const actorId = security.current()?.actorId;
+        return [h.table, {class: 'table table-sm align-middle'},
+            [h.tbody, {}, ...events.map(e => this.renderEventScheduleRow(
+                e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId, /*nowMode*/ true))]];
+    }
+
     // The current phase of an event by its times: future (not started), running
     // (started, not yet ended), or past (ended).  Drives whether a schedule row
     // shows sign-ups (future) or attendance (running/past).
@@ -706,6 +741,19 @@ export class EventTable extends Table<Event> {
         if (!e.start_time || e.start_time > now) return 'future';
         if (e.end_time && e.end_time < now) return 'past';
         return 'running';
+    }
+
+    // "Now": a real (non-catch-all) scheduled event that is happening around now -
+    // from 30 min before it starts until 30 min after it ends.  These get their own
+    // Events-page section, and their self-toggle is a check-in ("I am Here") rather
+    // than a sign-up.  Used both to build the section and (per row) to reload it in
+    // the same mode.
+    private isNowEvent(e: Event): boolean {
+        if (e.is_catch_all || !e.start_time) return false;
+        const nowT = date.orgNow();
+        const soon = date.temporalToSqliteDateTime(nowT.add({minutes: 30}));      // starts within 30 min
+        const cutoff = date.temporalToSqliteDateTime(nowT.subtract({minutes: 30})); // ends no earlier than 30 min ago
+        return e.start_time <= soon && (e.end_time ?? e.start_time) >= cutoff;
     }
 
     // People (short-names + ids) attached to a set of events, in one query, from
@@ -773,7 +821,10 @@ export class EventTable extends Table<Event> {
         const e = this.getById(event_id);
         const commitments = this.peopleByEvents('event_commitment', [event_id]).get(event_id) ?? [];
         const checkins = this.peopleByEvents('event_checkin', [event_id]).get(event_id) ?? [];
-        return this.renderEventScheduleRow(e, commitments, checkins, security.current()?.actorId);
+        // Recompute now-mode so a reloaded row (after a check-in) keeps the "I am
+        // Here" behaviour that its section rendered it with.
+        return this.renderEventScheduleRow(e, commitments, checkins, security.current()?.actorId,
+                                           this.isNowEvent(e));
     }
 
     // One event as a compact, PHASE-AWARE table row: WHEN (day + from–to time,
@@ -786,7 +837,7 @@ export class EventTable extends Table<Event> {
     // real width on narrow/mobile screens.
     renderEventScheduleRow(e: Event, commitments: Array<{id: number, name: string}>,
                            checkins: Array<{id: number, name: string}>,
-                           actorId: number|undefined): Markup {
+                           actorId: number|undefined, nowMode: boolean = false): Markup {
         const id = e.event_id;
         const phase = this.eventPhase(e);
         const day = e.start_time
@@ -800,19 +851,23 @@ export class EventTable extends Table<Event> {
             : '';
         const remote = this.remoteText(e);
 
-        // Future shows commitments; running/past show attendance, with 'ghosts'
-        // (committed but not checked in) as a quiet second line.
-        const future = phase === 'future';
+        // Future shows commitments; running/past (and NOW mode) show attendance,
+        // with 'ghosts' (committed but not checked in) as a quiet second line.  In
+        // now mode a not-yet-started event is treated as attendance too - you're
+        // checking IN, not signing up.
+        const future = phase === 'future' && !nowMode;
         const attending = future ? commitments : checkins;
         const selfAttending = actorId !== undefined && attending.some(p => p.id === actorId);
         const checkedInIds = new Set(checkins.map(p => p.id));
         const ghosts = future ? [] : commitments.filter(c => !checkedInIds.has(c.id));
-        const line = ({
-            future:  {label: 'Going',    empty: 'No one signed up yet'},
-            running: {label: 'Here now', empty: 'No one here yet'},
-            past:    {label: 'Attended', empty: 'No one checked in'},
-        } as const)[phase];
-        const ghostLabel = phase === 'running' ? 'Not here yet' : 'Not checked in';
+        const line = nowMode
+            ? {label: 'Here', empty: 'No one here yet'}
+            : ({
+                future:  {label: 'Going',    empty: 'No one signed up yet'},
+                running: {label: 'Here now', empty: 'No one here yet'},
+                past:    {label: 'Attended', empty: 'No one checked in'},
+              } as const)[phase];
+        const ghostLabel = (nowMode || phase === 'running') ? 'Not here yet' : 'Not checked in';
 
         // The toggle mutates event_commitment (future) or event_checkin
         // (running/past) - register THAT table's event fk key so the mutation's
@@ -849,8 +904,8 @@ export class EventTable extends Table<Event> {
              ghosts.length ? this.renderPeopleLine(ghostLabel, ghosts, actorId, undefined, {ghost: true}) : undefined],
             [h.td, {class: 'text-end text-nowrap align-top'},
              [h.div, {class: 'd-inline-flex align-items-center gap-2'},
-              this.renderSelfAttendToggle(id, phase, selfAttending, actorId),
-              phase === 'running' ? this.renderRowCheckinMenu(e, checkedInIds, actorId) : undefined,
+              this.renderSelfAttendToggle(id, phase, selfAttending, actorId, nowMode),
+              (nowMode || phase === 'running') ? this.renderRowCheckinMenu(e, checkedInIds, actorId) : undefined,
               navChevron()]],
         ];
     }
@@ -881,9 +936,12 @@ export class EventTable extends Table<Event> {
     // running = Check in / Here ✓ and past = I was there / Was there ✓ (check-in,
     // which works retroactively).  Logged-in volunteers only.
     private renderSelfAttendToggle(event_id: number, phase: 'future'|'running'|'past',
-                                   selfAttending: boolean, actorId: number|undefined): Markup {
+                                   selfAttending: boolean, actorId: number|undefined,
+                                   nowMode: boolean = false): Markup {
         if (actorId === undefined) return undefined;
-        if (phase === 'future') {
+        // Now mode is a check-in ("I am Here"), even for an event that hasn't quite
+        // started - so skip the sign-up branch.
+        if (phase === 'future' && !nowMode) {
             return selfAttending
                 ? action.actionButton('Going ✓',
                     {kind: 'immediate', expr: `rabid.event_commitment.uncommit(${event_id},${actorId})`},
@@ -892,9 +950,10 @@ export class EventTable extends Table<Event> {
                     {kind: 'immediate', expr: `rabid.event_commitment.commitSelf(${event_id})`},
                     'btn btn-outline-primary lm-row-action', {title: 'Sign up for this event'});
         }
-        const onLabel = phase === 'running' ? 'Here ✓' : 'Was there ✓';
-        const offLabel = phase === 'running' ? 'Check in' : 'I was there';
-        const offTitle = phase === 'running' ? 'Check yourself in' : 'Record that you were there';
+        const onLabel = nowMode ? 'Here ✓' : (phase === 'running' ? 'Here ✓' : 'Was there ✓');
+        const offLabel = nowMode ? 'I am Here' : (phase === 'running' ? 'Check in' : 'I was there');
+        const offTitle = nowMode ? "Check yourself in - you're here"
+            : (phase === 'running' ? 'Check yourself in' : 'Record that you were there');
         return selfAttending
             ? action.actionButton(onLabel,
                 {kind: 'immediate', expr: `rabid.event_checkin.checkOut(${event_id},${actorId})`},

@@ -440,3 +440,33 @@ test("the event detail page renders the sign-up and check-in editors", async () 
         assert(!!find(detail, byClass(`-event_checkin-event_id-${id}-`)));
     });
 });
+
+// A "happening now" event (start `startMin` from now, running `hours`).
+function insertEventAround(startMin: number, hours: number, desc: string): number {
+    const start = date.temporalToSqliteDateTime(date.orgNow().add({minutes: startMin}));
+    const end = date.temporalToSqliteDateTime(date.orgNow().add({minutes: startMin + hours * 60}));
+    return asSystem(() => rabid.event.insert({
+        event_kind: 'public', description: desc, location_description: '', location_url: '',
+        is_remote_event: 1, volunteer_only: 0, start_time: start, end_time: end,
+        total_cash_collected: 0, notes: '',
+    } as any));
+}
+
+test("Events page: a happening-now event gets a 'Now' section + 'I am Here'; nothing when none", async () => {
+    await withTestDb(async ({ alice }) => {
+        // Nothing happening now -> no Now section / no now-mode toggle.
+        const empty = await asUser(alice, () => rabid.event.renderEventsPage());
+        assert(!hasText(empty, 'I am Here'), 'no now-mode button when nothing is happening');
+
+        // An event starting in 5 min, running 2 h -> it's "now".
+        insertEventAround(5, 2, 'Pop-up Now');
+        const page = await asUser(alice, () => rabid.event.renderEventsPage());
+        assert(hasText(page, 'Now'), 'the Now heading shows');
+        assert(hasText(page, 'Pop-up Now'), 'the now event is listed');
+        assert(hasText(page, 'I am Here'), "its self-toggle is 'I am Here', not 'Sign up'");
+        // A far-future event still uses the normal sign-up flow (not now mode).
+        insertEventAround(60 * 24 * 3, 2, 'Future Fair');   // 3 days out
+        const page2 = await asUser(alice, () => rabid.event.renderEventsPage());
+        assert(hasText(page2, 'Future Fair') && hasText(page2, 'Sign up'), 'a future event still signs up');
+    });
+});

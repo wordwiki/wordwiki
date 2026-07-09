@@ -410,7 +410,24 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
     faker.seed(((opts.baseSeed ?? 1) ^ hashSeed('events')) >>> 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
-    
+
+    // A "happening now" event so the Events page's Now section is observable right
+    // after regen: starts ~10 min from now, runs ~2 h.  A public away event.
+    {
+        const soon = new Date(Date.now() + 10 * 60 * 1000);
+        const done = new Date(Date.now() + 2 * 60 * 60 * 1000);
+        rabid.event.insert({
+            event_kind: 'public',
+            description: 'Pop-up Repair (happening now)',
+            location_description: 'Riverside Community Centre', location_url: '',
+            is_remote_event: 1, volunteer_only: 0,
+            shop_load_time: undefined, setup_time: undefined,
+            start_time: localDateTimeStr(soon),
+            end_time: localDateTimeStr(done),
+            total_cash_collected: 0, notes: '',
+        });
+    }
+
     {
         // Generate events for every Saturday from May 1st 2022 to mid-October 2025
         const startDate = new Date('2022-05-07');
