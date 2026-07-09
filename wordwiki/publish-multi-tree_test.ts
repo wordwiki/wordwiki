@@ -36,6 +36,24 @@ function seed(fx: Fixture): void {
     bornApprove(fx.ww);
 }
 
+// Enough li-public words to clear PRUNE_MIN_MANIFEST (the sanity floor
+// refuses to prune tiny manifests, so the prune test needs a real-ish site).
+function seedMany(fx: Fixture): void {
+    const tl = new TestTimeline();
+    const letters = 'abcdefghij';
+    for(let i = 0; i < 60; i++) {
+        const base = 10000 + i*100;
+        const spelling = `w${letters[Math.floor(i/10)]}${letters[i%10]}`;
+        const e = mkEntry(base, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', base+10, tl.next(),
+            {attr1: spelling, variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'sta', base+20, tl.next(),
+            {attr1: 'Completed', order_key: '0.5'})], {quiet: true});
+    }
+    bornApprove(fx.ww);
+}
+
 test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", async () => {
     await withTestDb(async (fx: Fixture) => {
         seed(fx);
@@ -128,5 +146,55 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
         assert(!exists('li/servlet') && !exists('sf/servlet'), 'servlet stays at the root');
 
         await Deno.remove(root, {recursive: true});
+    });
+});
+
+// Prune on a RELATIVE publish root ('.', the live layout): std walk
+// normalizes relative roots, which made GUARD 5's prefix check skip every
+// file - prune was a silent NO-OP exactly where it matters (caught by
+// arming the live root, 2026-07-09).  Also pins the scoping dz asked
+// about: prune walks ONLY the tree-scoped section dirs (+ the root
+// servlet/words) - root-level bystander files are structurally
+// unreachable.
+test("multi-tree prune: relative publish root, tree-scoped, bystanders survive", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seedMany(fx);
+        const sources = await buildAllPublishSources(fx.ww);
+        const root = await Deno.makeTempDir({prefix: 'wordwiki-prune-test-'});
+        const prevCwd = Deno.cwd();
+        try {
+            Deno.chdir(root);
+            await Deno.writeTextFile('.wordwiki-publish-root', '');
+            // Stale pages "from before the edition model": a preview-tree
+            // book page and an orphan entry page...
+            await Deno.mkdir('sf/books/PDM/page-0001', {recursive: true});
+            await Deno.writeTextFile('sf/books/PDM/page-0001/index.html', 'stale');
+            await Deno.mkdir('li/entries/z/zombie', {recursive: true});
+            await Deno.writeTextFile('li/entries/z/zombie/zombie.html', 'stale');
+            // ...and root-level bystanders (dz's playground) prune must
+            // never touch, .html or not.
+            await Deno.writeTextFile('bystander.html', 'mine');
+            await Deno.mkdir('react-play', {recursive: true});
+            await Deno.writeTextFile('react-play/play.html', 'mine');
+
+            const status = new PublishStatus();
+            status.start();
+            await publishMultiTree(status, sources, '.');
+            status.end();
+            assertEquals(status.errors, []);
+            const exists = (p: string) => { try { Deno.statSync(p); return true; } catch { return false; } };
+            assert(!exists('sf/books/PDM/page-0001/index.html'), 'stale preview book page pruned');
+            assert(!exists('li/entries/z/zombie/zombie.html'), 'orphan entry page pruned');
+            assert(exists('bystander.html'), 'root bystander file untouched');
+            assert(exists('react-play/play.html'), 'non-section root dir untouched');
+            assert(exists('index.html') && exists('li/index.html') && exists('sf/index.html'),
+                   'live pages kept');
+            const pruneLog = status.log.filter(l =>
+                typeof l === 'string' && l.includes('prune complete'));
+            assert(pruneLog.length > 0, 'prune ran (marker armed, floor cleared)');
+        } finally {
+            Deno.chdir(prevCwd);
+            await Deno.remove(root, {recursive: true});
+        }
     });
 });

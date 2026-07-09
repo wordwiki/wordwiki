@@ -17,6 +17,7 @@ import type * as model from './model.ts';
 import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
+import { resolve as pathResolve } from "std/path/mod.ts";
 import * as entryschema from './entry-schema.ts';
 import * as category from './category.ts';
 import {Entry} from './entry-schema.ts';
@@ -865,14 +866,18 @@ export class Publish {
         }
         if(dirs.length === 0) return;
 
-        // publishRoot-prefixed paths from the walk map back to site-relative
-        // (manifest) keys by stripping this exact prefix.
-        const prefix = this.publishRoot.replace(/\/+$/, '') + '/';
+        // Walk with ABSOLUTE paths and map back to site-relative (manifest)
+        // keys by stripping the absolute publish-root prefix.  It MUST be
+        // absolute on both sides: std walk normalizes a relative root, so a
+        // '.' publish root yielded 'sf/books/...' against a './' prefix and
+        // GUARD 5 silently skipped every file - prune was a NO-OP on
+        // relative publish roots (caught arming the live root, 2026-07-09).
+        const prefix = pathResolve(this.publishRoot) + '/';
 
         let pruned = 0;
         const removed: string[] = [];
         for(const dir of dirs) {
-            const dirFs = this.rootFsPath(dir);
+            const dirFs = pathResolve(this.rootFsPath(dir));
             if(!(await fsExists(dirFs))) continue;
             // followSymlinks:false => never traverse out of the publish tree.
             for await (const ent of fsWalk(dirFs, {includeDirs: false, followSymlinks: false})) {
