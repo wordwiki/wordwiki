@@ -60,3 +60,45 @@ test("add dialog is the SAME form as edit: drop-off fields present + wrapped (hi
         assert(s.includes('data-show-when') && s.includes('enum__service_kind__full'),
                'wrapped for reveal - hide/show works on add, not just edit');
     }));
+
+// --- Sale: money fields conditional on paid kinds; phone on the loan kind -------
+
+function insertSale(kind: string, actor: number): number {
+    return asSystem(() => rabid.sale.insert({
+        event_id: insertEvent(), sale_time: '2026-06-20 14:00:00', sale_recorded_by: actor,
+        sale_kind: kind, description: 'Blue commuter', amount: kind === 'bike' ? 80 : 0,
+        payment_method: 'cash'} as any));
+}
+
+test("sale edit form: amount/payment wrapped for paid kinds, phone for the loan; auto fields omitted", () =>
+    withTestDb(async ({ alice }) => {
+        const sid = insertSale('bike', alice);
+        const form = await asUser(alice, () => renderRoute(`rabid.sale.renderForm(rabid.sale.getById(${sid}))`));
+        const s = JSON.stringify(form);
+        // edit:never auto fields don't appear as inputs in the editor.  (The field
+        // names still show inside dirty-key selectors in the dispatch, so check for
+        // an actual input name, not the bare substring.)
+        assert(!s.includes('"name":"sale_recorded_by"') && !s.includes('"name":"sale_time"'),
+               'sale_time / sale_recorded_by are not editable inputs');
+        // amount + payment reveal for the PAID kinds (derived from isFreeSaleKind).
+        assert(s.includes('data-show-when') && s.includes('enum__sale_kind__bike'),
+               'money fields carry the paid-kind reveal token');
+        // client_phone reveals only for a balance-bike loan.
+        assert(s.includes('enum__sale_kind__balance-bike-loan'), 'phone carries the loan reveal token');
+        // client_name is unconditional (always shown - no wrapper token needed).
+        assert(s.includes('client_name'), 'client_name always present');
+    }));
+
+test("sale add menu is per-kind: a loan dialog has name+phone (no money); a bike has name+money", () =>
+    withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        const loan = JSON.stringify(await asUser(alice, () =>
+            renderRoute(`rabid.sale.newSaleForEventDialog(${eid}, 'balance-bike-loan')`)));
+        assert(loan.includes('client_name') && loan.includes('client_phone'), 'loan: name + phone');
+        assert(!loan.includes('"name":"amount"'), 'loan: no amount');
+
+        const bike = JSON.stringify(await asUser(alice, () =>
+            renderRoute(`rabid.sale.newSaleForEventDialog(${eid}, 'bike')`)));
+        assert(bike.includes('client_name') && bike.includes('"name":"amount"'), 'bike: name + amount');
+        assert(!bike.includes('client_phone'), 'bike: no phone');
+    }));

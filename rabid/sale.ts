@@ -61,18 +61,38 @@ export interface Sale {
     // event - a scheduled event or the day's Ad-hoc catch-all (event.ts
     // catchAllForDate).  The event is the aggregate root for activity.
     event_id: number;
+
+    // These should not display in the editor - they are auto set only
     sale_time: string;
     sale_recorded_by: number;
+
     sale_kind: string;
+
+    // Optional: used mostly for loans
+    client_name: string;
     description: string;
+    // Optional: used primarily for balance bike loans.
+    client_phone?: string;
+
     // Optional photo of the item (a content-store path - see liminal/photo.ts).
     photo?: string;
+
+    // Amount and payment method.  Should not be displayed for the free and loan sale_kinds.
     amount: number;
     payment_method: string;
+    
     notes?: string;
 }
 
 export type SaleOpt = Partial<Sale>;
+
+// The paid sale kinds (everything that isn't free/loan) - the single source of
+// truth is isFreeSaleKind, so this can't drift as kinds are added.  amount +
+// payment_method show only for these.
+const PAID_SALE_KINDS = Object.keys(sale_kind_enum).filter(k => !isFreeSaleKind(k));
+const showForPaid = {field: 'sale_kind', in: PAID_SALE_KINDS};
+// A phone number is only relevant to a balance-bike loan.
+const showForLoan = {field: 'sale_kind', in: ['balance-bike-loan']};
 
 export class SaleTable extends Table<Sale> {
 
@@ -83,15 +103,23 @@ export class SaleTable extends Table<Sale> {
             // catch-all).  Mandatory - the event is the aggregate root.  Not
             // user-editable: a sale is bound to its event, so the edit form omits it.
             new ForeignKeyField('event_id', "event", "event_id", {indexed: true, edit: security.never}),
-            new DateTimeField('sale_time', {}),
+            // Auto-set on insert (org-now / the acting volunteer); never user-editable.
+            new DateTimeField('sale_time', {edit: security.never}),
             // (was unique:true - a copy-paste bug that would have limited each
             // volunteer to recording ONE sale ever)
-            new VolunteerForeignKeyField('sale_recorded_by', {indexed: true}),
+            new VolunteerForeignKeyField('sale_recorded_by', {indexed: true, edit: security.never}),
             new EnumField('sale_kind', sale_kind_enum, {}),
+            // Optional; mostly for loans (a name to hold the loaned bike against).
+            // Always shown.
+            new StringField('client_name', {default: ''}),
             new StringField('description', {default: ''}),
+            // Optional contact number - only for a balance-bike loan (showWhen).
+            new StringField('client_phone', {default: '', showWhen: showForLoan}),
             new ImageField('photo', 'rabid.photo', {aspect: 'landscape', nullable: true, prompt: 'Photo'}),
-            new FloatingPointField('amount', {}),
-            new EnumField('payment_method', payment_method_enum, {default: 'cash'}),
+            // Money: only the PAID kinds (free/loan carry none) - showWhen; default 0
+            // so a hidden amount isn't treated as a missing required field.
+            new FloatingPointField('amount', {default: 0, showWhen: showForPaid}),
+            new EnumField('payment_method', payment_method_enum, {default: 'cash', showWhen: showForPaid}),
             new MarkdownField('notes', {nullable: true})
         ])
     };
@@ -141,8 +169,15 @@ export class SaleTable extends Table<Sale> {
     @route(hostOrAdmin)
     newSaleForEventDialog(event_id: number, sale_kind: string = 'bike'): Markup {
         const f = this.fieldsByName;
+        // The kind is fixed by the menu (hidden), so we pick the right fields
+        // server-side here rather than via showWhen (which drives the EDIT form,
+        // where the kind IS a select).  Name always; phone for a loan; money for a
+        // paid kind.
         const paid = !isFreeSaleKind(sale_kind);
-        const fields = paid ? [f.description, f.amount, f.payment_method] : [f.description];
+        const isLoan = sale_kind === 'balance-bike-loan';
+        const fields = [f.client_name, f.description,
+                        ...(isLoan ? [f.client_phone] : []),
+                        ...(paid ? [f.amount, f.payment_method] : [])];
         return action.renderParamForm(
             fields,
             {amount: 0, payment_method: 'cash'} as Partial<Sale>,
@@ -157,8 +192,8 @@ export class SaleTable extends Table<Sale> {
 
     @routeMutation(hostOrAdmin)
     addSaleForEvent(args: {event_id?: string|number, sale_kind?: string,
-                           description?: string, amount?: string|number,
-                           payment_method?: string}): Markup {
+                           client_name?: string, description?: string, client_phone?: string,
+                           amount?: string|number, payment_method?: string}): Markup {
         const event_id = Number(args?.event_id);
         if(!Number.isInteger(event_id) || !event_id) throw new Error('Missing event');
         const sale_kind = args.sale_kind || 'bike';
@@ -166,7 +201,9 @@ export class SaleTable extends Table<Sale> {
             event_id, sale_kind,
             sale_time: date.temporalToSqliteDateTime(date.orgNow()),
             sale_recorded_by: security.current()!.actorId!,
+            client_name: (args.client_name ?? '').trim(),
             description: (args.description ?? '').trim(),
+            client_phone: (args.client_phone ?? '').trim(),
             amount: Number(args.amount) || 0,
             payment_method: args.payment_method || 'cash',
         } as Partial<Sale>);
@@ -208,7 +245,8 @@ export class SaleTable extends Table<Sale> {
             [h.span, {class: 'badge text-bg-light border ms-2'}, sale_kind_enum[s.sale_kind] ?? s.sale_kind],
             paid ? [h.span, {class: 'badge text-bg-light border ms-1'}, payment_method_enum[s.payment_method] ?? s.payment_method] : undefined,
         ];
-        const secondary = [date.sqliteDateTimeToString(s.sale_time), paid ? `$${(s.amount ?? 0).toFixed(2)}` : undefined]
+        const secondary = [date.sqliteDateTimeToString(s.sale_time), s.client_name || undefined,
+                           paid ? `$${(s.amount ?? 0).toFixed(2)}` : undefined]
             .filter(Boolean).join(' · ');
 
         // A bike sale with a photo leads with a small thumbnail.
@@ -306,6 +344,8 @@ export class SaleTable extends Table<Sale> {
              row('Kind', [sale_kind_enum[s.sale_kind] ?? s.sale_kind,
                           recordedByMk ? [' · recorded by ', recordedByMk] : undefined]),
              row('Time', date.sqliteDateTimeToString(s.sale_time, '—')),
+             s.client_name ? row('Client', s.client_name) : undefined,
+             s.client_phone ? row('Client phone', s.client_phone) : undefined,
              paid ? row('Amount', `$${(s.amount ?? 0).toFixed(2)}`) : undefined,
              paid ? row('Payment', payment_method_enum[s.payment_method] ?? s.payment_method) : undefined,
              s.notes ? row('Notes', this.fieldsByName.notes.render(s.notes)) : undefined,

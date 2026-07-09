@@ -1277,12 +1277,15 @@ export function seedActivity(rabid: Rabid, opts: { baseSeed?: number } = {}): vo
     const addSale = (event_id: number, when: string) => {
         const kind = saleKind();
         const free = kind !== 'bike';
+        const loan = kind === 'balance-bike-loan';   // loans carry a client name + phone
         rabid.sale.insert({
             event_id, sale_time: when,
             sale_recorded_by: faker.helpers.arrayElement(recorderIds),
             sale_kind: kind,
+            client_name: loan ? faker.person.fullName() : '',
             description: faker.helpers.arrayElement(['Blue commuter', 'Kids 20"', 'Road bike',
                 'Hybrid', 'Mountain bike', 'Helmet']),
+            client_phone: loan ? faker.phone.number() : '',
             amount: free ? 0 : faker.helpers.rangeToNumber({min: 40, max: 220}),
             payment_method: 'cash',
         } as sale.SaleOpt);
