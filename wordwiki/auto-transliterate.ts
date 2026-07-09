@@ -452,10 +452,6 @@ export class TransliterationReports {
         const scan = sfReadinessScan(this.app);
         const ready = scan.filter(isSfReady);
         const actionable = ready.filter(r => !r.sfPublic);
-        const headword = (entry_id: number): string => {
-            const e = this.app.store.entriesById.get(entry_id);
-            return e?.spelling?.[0]?.text || `entry ${entry_id}`;
-        };
         const title = 'SF-ready words';
         const body = [
             ['h1', {}, title],
@@ -472,10 +468,21 @@ export class TransliterationReports {
             actionable.length === 0
                 ? ['p', {class: 'text-muted'}, 'Nothing actionable.']
                 : ['ul', {},
-                   actionable.map(r => ['li', {},
-                       templates.lexemeLink(r.entry_id, headword(r.entry_id), {pencil: false}),
-                       ['span', {class: 'text-muted'},
-                        ` — ${r.sfFilled}/${r.liRelations} content slots covered`]])],
+                   // The normal word-link presentation, FORCED to the SF lane
+                   // (dz: people prioritizing from this list need the English
+                   // gloss, and should see the word as the SF site will show
+                   // it).  Every actionable word has SF spellings by
+                   // definition - readiness requires the spelling slot filled.
+                   actionable.map(r => {
+                       const e = this.app.store.entriesById.get(r.entry_id);
+                       return ['li', {},
+                           e ? templates.lexemeLink(r.entry_id,
+                                   entrySchema.renderEntryCompactSummary(
+                                       e, {orthography: TARGET_ORTHOGRAPHY}),
+                                   {pencil: false})
+                             : templates.lexemeLink(r.entry_id, `entry ${r.entry_id}`,
+                                                    {pencil: false})];
+                   })],
         ];
         return templates.pageTemplate({title, body});
     }

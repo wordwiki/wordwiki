@@ -313,6 +313,10 @@ test("sf readiness: coverage rule, report, and the TESTING auto-publish", async 
             {attr1: 'samuqwan', variant: 'mm-sf', order_key: '0.6'})], {quiet: true});
         fx.ww.applyTransaction([mkChild(a, 'sta', 1020, tl.next(),
             {attr1: 'Completed', order_key: '0.5'})], {quiet: true});
+        const aSub = mkChild(a, 'sub', 1100, tl.next(), {order_key: '0.5'});
+        fx.ww.applyTransaction([aSub], {quiet: true});
+        fx.ww.applyTransaction([mkChild(aSub, 'gls', 1110, tl.next(),
+            {attr1: 'water', order_key: '0.5'})], {quiet: true});
         // 2000: li spelling with NO sf -> li-public but NOT ready.
         const b = mkEntry(2000, tl.next());
         fx.ww.applyTransaction([b], {quiet: true});
@@ -330,10 +334,15 @@ test("sf readiness: coverage rule, report, and the TESTING auto-publish", async 
         assert(!isSfReady(byId.get(2000)!), 'a gap = not ready');
         assert(!byId.get(1000)!.sfPublic, 'not yet public in sf');
 
-        // The report lists the actionable word.
+        // The report lists the actionable word in the NORMAL word-link
+        // presentation, FORCED to the SF lane, gloss included (dz: the
+        // prioritizing user needs the English, and should see the word as
+        // the SF site will show it).
         const before = markupToString(await as(fx, 'djz', () =>
             renderRoute(fx.ww, 'wordwiki.transliterationReports.sfReadyReport()')));
-        assert(before.includes('samqwan'), 'ready word listed');
+        assert(before.includes('samuqwan'), 'the SF spelling is shown, not the li one');
+        assert(!before.includes('>samqwan<'), 'the li spelling is not the headword');
+        assert(before.includes('water'), 'the English gloss rides along');
         assert(before.includes('1 ready to be made public'), 'actionable count');
 
         // TESTING auto-publish: the ready word gains a born-published sf gate.

@@ -941,25 +941,25 @@ export function computeNormalizedSearchTerms(e: Entry): string[] {
 // XXX DO THIS PROPERLY!!!!
 const defaultVariant = siteConfig.publicSiteOrthography;
 
-export function getSpellings(e: Entry): Spelling[] {
-    return e.spelling.filter(s=>s.variant == defaultVariant || !s.variant);
+/** The entry's spellings in ONE orthography lane (legacy blanks count as
+ *  every lane).  Default: the public site's orthography; pass another to
+ *  present the entry in that lane (e.g. the SF-ready report forces mm-sf
+ *  so users see the word as the SF site would show it). */
+export function getSpellings(e: Entry, orthography: string = defaultVariant): Spelling[] {
+    return e.spelling.filter(s=>s.variant == orthography || !s.variant);
 }
 
 /**
  *
  */
-export function renderEntryCompactSummary(e: Entry): any {
-    // TODO handle dialects here.
-    // const spellings = e.spelling.map(s=>s.text);
-    // const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
-    return ['div', {}, renderEntryCompactSummaryCore(e)];
+export function renderEntryCompactSummary(e: Entry, opts: {orthography?: string} = {}): any {
+    return ['div', {}, renderEntryCompactSummaryCore(e, opts)];
 }
 
 // Note the factoring into Summary/SummaryCore should be replaced, this is
 // just done for compat.
-export function renderEntryCompactSummaryCore(e: Entry): any {
-    // TODO handle dialects here.
-    const spellings = getSpellings(e).map(s=>s.text);
+export function renderEntryCompactSummaryCore(e: Entry, opts: {orthography?: string} = {}): any {
+    const spellings = getSpellings(e, opts.orthography).map(s=>s.text);
     const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
     return [['strong', {}, spellings.join(', ')],
             // Archival is our delete, but archived words still appear in
