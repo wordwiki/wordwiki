@@ -19,6 +19,10 @@ export interface SecurityContext {
     actorId: number | undefined;   // logged-in volunteer id (undefined if anonymous)
     roles: Set<string>;
     system?: boolean;              // trusted/system context - bypasses all guards
+    /** The login-session token this request rode in on, when there is one -
+     *  lets apps reach per-SESSION state (e.g. wordwiki's transient
+     *  working-orthography override) without re-plumbing every call. */
+    sessionToken?: string;
 }
 
 // What a permission is evaluated against.

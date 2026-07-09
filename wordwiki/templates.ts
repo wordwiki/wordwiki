@@ -219,15 +219,80 @@ let defaultShowTestClientLink = false;
 // Flip to false to bring it back; the test-client PAGE itself stays reachable
 // at /ww/wordwiki.testClientPage().
 const testClientLinkHidden = true;
+// --- Working-orthography status (dz 2026-07-09) -----------------------------
+//
+// TWO display levels: the EFFECTIVE working orthography is a subtle brand
+// suffix ("MMO Editor · SF" - the abbreviation, same vocabulary as the
+// editor's lane badges), shown whenever one is set - it names YOUR lane,
+// including the default one.  The session OVERRIDE additionally gets a
+// PROMINENT amber banner on every page (it changes what SAVING does -
+// modality must be un-missable) with the one-click way out inline.
+// The app injects the provider (templates cannot import the app - cycle);
+// undefined = anonymous/pre-migration: no orthography UI at all.
+
+export interface OrthographyStatus {
+    effective?: {slug: string, abbr: string};
+    override?: {slug: string, name: string};
+    choices: {slug: string, name: string}[];
+}
+
+let orthographyStatusProvider: (() => OrthographyStatus | undefined) | undefined;
+export function setOrthographyStatusProvider(fn: () => OrthographyStatus | undefined): void {
+    orthographyStatusProvider = fn;
+}
+function orthographyStatus(): OrthographyStatus | undefined {
+    try { return orthographyStatusProvider?.(); } catch { return undefined; }
+}
+
+// The switcher: a quiet navbar dropdown; each choice is a plain form POST
+// (no htmx dependency - the navbar also appears on legacy-template pages).
+function orthographySwitcher(status: OrthographyStatus): any {
+    const choiceItem = (label: any, orthography: string, active: boolean) =>
+        ['li', {},
+         ['form', {method: 'post', action: '/ww/wordwiki.setOrthographyOverride(bodyArgs)', class: 'm-0'},
+          ['input', {type: 'hidden', name: 'orthography', value: orthography}],
+          ['button', {type: 'submit',
+                      class: `dropdown-item${active ? ' active' : ''}`}, label]]];
+    return ['li', {class: 'nav-item dropdown'},
+        ['a', {class: 'nav-link dropdown-toggle text-nowrap', href: '#', role: 'button',
+               'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
+               title: 'Working orthography'},
+         'Orthography',
+         status.effective ? [' ', ['span', {class: 'badge text-bg-secondary'}, status.effective.abbr]] : undefined],
+        ['ul', {class: 'dropdown-menu dropdown-menu-end'},
+         choiceItem('From my profile (default)', '', !status.override),
+         ['li', {}, ['hr', {class: 'dropdown-divider'}]],
+         status.choices.map(c =>
+             choiceItem(`Override: ${c.name}`, c.slug, status.override?.slug === c.slug))]];
+}
+
+// The PROMINENT override banner, rendered as part of the site chrome
+// (navBar returns it alongside the nav, so both page templates carry it).
+function orthographyOverrideBanner(status: OrthographyStatus | undefined): any {
+    if(!status?.override) return undefined;
+    return ['div', {class: 'alert alert-warning rounded-0 border-0 py-2 mb-0 text-center'},
+        '⚠ Working orthography overridden to ',
+        ['b', {}, status.override.name],
+        ' for this session — new content, defaults and reports use it. ',
+        ['form', {method: 'post', action: '/ww/wordwiki.setOrthographyOverride(bodyArgs)',
+                  class: 'd-inline m-0'},
+         ['input', {type: 'hidden', name: 'orthography', value: ''}],
+         ['button', {type: 'submit', class: 'btn btn-link btn-sm p-0 align-baseline'},
+          'Clear override']]];
+}
+
 export function setDefaultShowTestClientLink(v: boolean): void {
     defaultShowTestClientLink = v;
 }
 
 export function navBar(showTestClientLink: boolean = defaultShowTestClientLink): any {
-    return (
+    const oStatus = orthographyStatus();
+    return ([
         ['nav', {class:'navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body', 'data-bs-theme':'dark'},
          ['div', {class:'container-fluid'},
-          ['a', {class:'navbar-brand', href:'/ww/'}, siteConfig.editorName],
+          ['a', {class:'navbar-brand', href:'/ww/'}, siteConfig.editorName,
+           // The subtle level-1 notice: your working lane, on the brand.
+           oStatus?.effective ? ` · ${oStatus.effective.abbr}` : ''],
           ['button', {class:'navbar-toggler', type:'button', 'data-bs-toggle':'collapse', 'data-bs-target':'#navbarSupportedContent', 'aria-controls':'navbarSupportedContent', 'aria-expanded':'false', 'aria-label':'Toggle navigation'},
            ['span', {class:'navbar-toggler-icon'}]],
           ['div', {class:'collapse navbar-collapse', id:'navbarSupportedContent'},
@@ -295,6 +360,8 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
             ['li', {class:'nav-item'},
              ['a', {class:'nav-link text-nowrap', href:'/index.html'}, 'Public Site']],
 
+            oStatus ? orthographySwitcher(oStatus) : undefined,
+
             showTestClientLink && !testClientLinkHidden
                 ? ['li', {class:'nav-item'},
                    ['button', {type:'button', class:'nav-link btn btn-link text-warning text-nowrap',
@@ -317,7 +384,10 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
             ['li', {class:'nav-item'},
              ['form', {method:'post', action:'/ww/wordwiki.logout(session_token)', class:'m-0'},
               ['button', {type:'submit', class:'nav-link btn btn-link'}, 'Logout']]]],
-          ]]]);
+          ]]],
+        // The level-2 notice: the override banner rides with the navbar so
+        // BOTH page templates carry it on every page.
+        orthographyOverrideBanner(oStatus)]);
 }
 
 export function pageTemplate(content: PageContent): any {

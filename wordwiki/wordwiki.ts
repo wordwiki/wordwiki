@@ -67,6 +67,11 @@ export class WordWiki extends LiminalApp {
             this.#entryCountByPage = new Map();
         }});
 
+        // The navbar renders the working-orthography status (brand suffix,
+        // switcher, override banner) through this provider - templates.ts
+        // cannot import the app (cycle), so it is injected once here.
+        templates.setOrthographyStatusProvider(() => this.orthographyStatus());
+
         // --- Set up our routes
         // The page-editor / audio / publish routes are NOT spread in here as
         // bare top-level functions anymore: they live under the @route-gated
@@ -704,6 +709,7 @@ export class WordWiki extends LiminalApp {
                 return {
                     actorId: session?.user_id,
                     roles: security.rolesFromPermissionsField(actor?.permissions),
+                    sessionToken: session?.session_token,
                 };
             } catch (_e) {
                 return {actorId: undefined, roles: new Set<string>()};
@@ -738,12 +744,71 @@ export class WordWiki extends LiminalApp {
         }
     }
 
-    // THE working-orthography resolution (fix-orthographies.md): today the
-    // user record's primary_orthography; when the session-level switcher
-    // lands it resolves session ?? primary here, and every consumer (variant
-    // defaults, the editor's other-lane dimming) follows for free.
+    // The session's TRANSIENT working-orthography override (dz 2026-07-09):
+    // rides on the login-session row, set/cleared from the navbar switcher.
+    sessionOrthographyOverride(): string | undefined {
+        const token = security.current()?.sessionToken;
+        if(!token) return undefined;
+        try {
+            return security.runSystem(() =>
+                this.userSession.getBySessionToken.first({session_token: token})
+                    ?.orthography_override) || undefined;
+        } catch (_e) {
+            return undefined;
+        }
+    }
+
+    // THE working-orthography resolution (fix-orthographies.md): the
+    // session override beats the user record's primary_orthography; every
+    // consumer (new-tuple variant defaults, the working-site reports, the
+    // editor's other-lane treatment) follows from here.
     currentWorkingOrthography(): string | undefined {
-        return this.currentUserPrimaryOrthography();
+        return this.sessionOrthographyOverride() ?? this.currentUserPrimaryOrthography();
+    }
+
+    // Set ('' clears) the session's working-orthography override - the
+    // navbar switcher's plain form POST (no htmx dependency: the navbar
+    // also appears on legacy-template pages).  Validated against the
+    // non-retired orthography vocabulary.
+    @routeMutation(authenticated)
+    setOrthographyOverride(args: {orthography?: string}): server.Response {
+        const orthography = args.orthography ?? '';
+        const token = security.current()?.sessionToken;
+        if(!token) throw new Error('no login session');
+        if(orthography !== '') {
+            const known = security.runSystem(() => this.orthographies.allByOrder.all({}))
+                .some(o => o.slug === orthography && !o.retired);
+            if(!known) throw new Error(`'${orthography}' is not an orthography`);
+        }
+        security.runSystem(() => this.userSession.setOrthographyOverride(token, orthography));
+        return server.forwardResponse('/ww/');
+    }
+
+    // The navbar's orthography status (templates.setOrthographyStatusProvider,
+    // wired in the constructor): the brand suffix, the switcher choices, and
+    // the PROMINENT banner while the session override is active.
+    orthographyStatus(): templates.OrthographyStatus | undefined {
+        if(security.current()?.actorId === undefined) return undefined;
+        try {
+            const rows = security.runSystem(() => this.orthographies.allByOrder.all({}));
+            const label = (slug: string) => {
+                const row = rows.find(o => o.slug === slug);
+                return {abbr: row?.abbreviation || row?.name || slug,
+                        name: row?.name || entry.variants[slug] || slug};
+            };
+            const override = this.sessionOrthographyOverride();
+            const effective = this.currentWorkingOrthography();
+            return {
+                effective: effective
+                    ? {slug: effective, abbr: label(effective).abbr} : undefined,
+                override: override
+                    ? {slug: override, name: label(override).name} : undefined,
+                choices: rows.filter(o => !o.retired && o.publishable)
+                    .map(o => ({slug: o.slug, name: o.name || o.slug})),
+            };
+        } catch (_e) {
+            return undefined;   // pre-migration db: no orthography table yet
+        }
     }
 
     // Always read the db_purpose marker as a trusted op.

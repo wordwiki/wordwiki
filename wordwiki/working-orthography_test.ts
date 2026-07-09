@@ -5,9 +5,9 @@
  * dialog; unset applies no default.
  */
 import { test } from "../liminal/testing/test.ts";
-import { assert } from "../liminal/testing/assert.ts";
+import { assert, assertEquals } from "../liminal/testing/assert.ts";
 import { markupToString } from "../liminal/markup.ts";
-import { withTestDb, as, renderRoute, TestTimeline, mkEntry, mkChild, bornApprove } from './testing.ts';
+import { withTestDb, as, renderRoute, invoke, TestTimeline, mkEntry, mkChild, bornApprove } from './testing.ts';
 import * as security from '../liminal/security.ts';
 
 test("insert dialog: variant defaults from the user's primary_orthography", async () => {
@@ -72,5 +72,115 @@ test("categoriesDirectory follows the editor's working orthography", async () =>
         const sfCat = markupToString(await as(fx, 'djz', () =>
             renderRoute(fx.ww, 'wordwiki.editorReports.entriesForCategory("water")')));
         assert(!sfCat.includes('samqwan'), 'category listing follows the view too');
+    });
+});
+
+import * as templates from './templates.ts';
+import * as date from '../liminal/date.ts';
+
+// A logged-in context WITH a session row (the transient-override tests
+// need context.sessionToken, which plain as() does not set).
+function withSession<T>(fx: any, username: string, session_token: string, fn: () => T): T {
+    const actorId = fx.userIds[username];
+    const u = security.runSystem(() => fx.ww.users.getById(actorId));
+    security.runSystem(() => {
+        if(!fx.ww.userSession.getBySessionToken.first({session_token})) {
+            const now = date.currentSqliteDateTime();
+            fx.ww.userSession.insert({session_token, user_id: actorId,
+                start_time: now, last_resume_time: now, last_ip: ''});
+        }
+    });
+    return security.run({actorId, roles: security.rolesFromPermissionsField(u.permissions),
+                         sessionToken: session_token}, fn);
+}
+
+test("session override beats primary_orthography; set/clear via the route", async () => {
+    await withTestDb(async (fx) => {
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
+
+        await withSession(fx, 'djz', 'tok-1', async () => {
+            assertEquals(fx.ww.currentWorkingOrthography(), 'mm-li');
+
+            // Set the override through the ROUTE (dispatch, POST - the
+            // route-undeclared pattern).
+            await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)', {orthography: 'mm-sf'});
+            assertEquals(fx.ww.sessionOrthographyOverride(), 'mm-sf');
+            assertEquals(fx.ww.currentWorkingOrthography(), 'mm-sf');
+
+            // An unknown orthography is refused.
+            let threw = false;
+            try { await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)', {orthography: 'xx-zz'}); }
+            catch { threw = true; }
+            assert(threw, 'bad slug refused');
+
+            // Clear ('' = back to the profile default).
+            await invoke(fx.ww, 'wordwiki.setOrthographyOverride($arg0)', {orthography: ''});
+            assertEquals(fx.ww.currentWorkingOrthography(), 'mm-li');
+        });
+    });
+});
+
+test("navbar: brand suffix for the working lane; PROMINENT banner only when overridden", async () => {
+    await withTestDb(async (fx) => {
+        const html = () => markupToString(templates.navBar());
+
+        // Anonymous: no orthography UI at all.
+        security.run({actorId: undefined, roles: new Set()}, () => {
+            const h = html();
+            assert(!h.includes('setOrthographyOverride'), 'no switcher for anonymous');
+        });
+
+        // Primary set, no override: the subtle level-1 suffix, no banner.
+        security.runSystem(() =>
+            fx.ww.users.updateNamedFields(fx.userIds['djz'],
+                ['primary_orthography'], {primary_orthography: 'mm-li'} as any));
+        withSession(fx, 'djz', 'tok-2', () => {
+            const h = html();
+            assert(h.includes('· Li'), 'brand carries the working lane');
+            assert(h.includes('setOrthographyOverride'), 'the switcher is present');
+            assert(!h.includes('overridden'), 'no banner without an override');
+        });
+
+        // Override active: suffix follows the EFFECTIVE lane + the amber
+        // banner with the inline way out.
+        security.runSystem(() => fx.ww.userSession.setOrthographyOverride('tok-2', 'mm-sf'));
+        withSession(fx, 'djz', 'tok-2', () => {
+            const h = html();
+            assert(h.includes('· SF'), 'suffix shows the effective (overridden) lane');
+            assert(h.includes('overridden to'), 'the banner is present');
+            assert(h.includes('Smith-Francis'), 'named in full');
+            assert(h.includes('Clear override'), 'one-click way out');
+        });
+    });
+});
+
+test("the working-site reports follow the session override", async () => {
+    await withTestDb(async (fx) => {
+        // (Same seed as the primary_orthography differential above.)
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'spl', 1010, tl.next(),
+            {attr1: 'samqwan', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, 'sta', 1020, tl.next(),
+            {attr1: 'Completed', order_key: '0.5'})], {quiet: true});
+        const s = mkChild(e, 'sub', 1100, tl.next(), {order_key: '0.5'});
+        fx.ww.applyTransaction([s], {quiet: true});
+        fx.ww.applyTransaction([mkChild(s, 'cat', 1200, tl.next(),
+            {attr1: 'water', order_key: '0.5'})], {quiet: true});
+        bornApprove(fx.ww);
+
+        security.runSystem(() => {
+            const now = date.currentSqliteDateTime();
+            fx.ww.userSession.insert({session_token: 'tok-3', user_id: fx.userIds['djz'],
+                start_time: now, last_resume_time: now, last_ip: ''});
+            fx.ww.userSession.setOrthographyOverride('tok-3', 'mm-sf');
+        });
+        const h = await withSession(fx, 'djz', 'tok-3', async () =>
+            markupToString(await renderRoute(fx.ww, 'wordwiki.editorReports.categoriesDirectory()')));
+        assert(!h.includes('water'), 'the mm-sf view: nothing public there');
+        assert(h.includes('mm-sf'), 'the report names the working orthography');
     });
 });

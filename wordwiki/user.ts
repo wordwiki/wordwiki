@@ -460,6 +460,13 @@ export interface UserSession {
     // stamped only when this session opts in as a test client.
     last_test_client_opt_in?: string;
     last_test_client_heartbeat?: string;
+
+    // The TRANSIENT working-orthography override (dz 2026-07-09): when set,
+    // it beats the user record's primary_orthography for EVERYTHING keyed
+    // off currentWorkingOrthography (new-tuple variant defaults, the
+    // working-site reports).  Session-lifetime; the site chrome announces
+    // it prominently while active.
+    orthography_override?: string;
 }
 
 export class UserSessionTable extends Table<UserSession> {
@@ -474,6 +481,7 @@ export class UserSessionTable extends Table<UserSession> {
             new StringField('last_ip', {default: ''}),
             new DateTimeField('last_test_client_opt_in', {nullable: true}),
             new DateTimeField('last_test_client_heartbeat', {nullable: true}),
+            new StringField('orthography_override', {nullable: true}),
         ]);
     }
 
@@ -483,6 +491,15 @@ export class UserSessionTable extends Table<UserSession> {
 /**/   SELECT ${this.allFields}
 /**/          FROM user_session
 /**/          WHERE session_token = :session_token`);
+    }
+
+    /** Set ('' clears) the session's transient working-orthography
+     *  override.  Caller validates the slug. */
+    setOrthographyOverride(session_token: string, orthography: string): void {
+        const s = this.getBySessionToken.first({session_token});
+        if(!s) throw new Error('no such session');
+        this.updateNamedFields(s.session_id, ['orthography_override'],
+                               {orthography_override: orthography || null} as any);
     }
 
     @path

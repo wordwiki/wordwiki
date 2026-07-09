@@ -27,3 +27,17 @@ Sequencing: staged code, ONE data-migration event (variants+status already dev-m
 
 **Why:** the pending auto-transliteration to Smith-Francis (the majority orthography) is THE motivation — settled design in the doc's Auto-transliteration section (2026-07-07): editor button, `auto-transliterate` system user authors unapproved mm-sf siblings, per-word-at-edit-time never bulk, approve-all EXCLUDES auto facts, review row shows the li source, corrections harvested from history as the regression corpus, transliterator version in change_arg. Status remodel (sta lifecycle + pub gate) CONFIRMED incl. Complete rename / archive-keeps-gate / PDMOnly-no-gate.
 **How to apply:** read the doc before touching variant-related code; [[route-undeclared-bug-pattern]] and [[spelling-duplicates]] interact. TRANSLITERATION HANDOFF: wordwiki/transliteration-findings.md is the two-audience summary (expert questions w/ evidence; future-Claude loop recipe, score history, methodology, watch-outs) — START THERE when resuming rules work after expert feedback.
+
+**Session working-orthography override BUILT (2026-07-09):**
+user_session.orthography_override (transient, session-lifetime; navbar
+switcher, publishable orthographies only). currentWorkingOrthography() =
+override ?? primary_orthography — every consumer (new-tuple variant
+defaults, workingSite() reports, editor lane treatment) follows. TWO
+display levels (dz design): brand suffix "MMO Editor · Li/SF" whenever a
+working lane is set; a PROMINENT amber banner on every page while the
+OVERRIDE is active (changes write behavior → modality must be
+un-missable), with inline Clear. liminal SecurityContext gained
+sessionToken (resolveSecurityContext stashes it). templates.ts gets the
+status via setOrthographyStatusProvider (injected in WordWiki ctor — no
+import cycle). The one-word wordView lens (wordView(id, orthography))
+remains the explicit per-page override.
