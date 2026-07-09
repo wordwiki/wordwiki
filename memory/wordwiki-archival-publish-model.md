@@ -16,6 +16,23 @@ DATA FILES convertible to any future medium (unbounded) — both simplified
 (no history) and full versions, linked FROM the site, cleanly licensed, so
 they get archived, 4) paper via .pdf (survives computing, loses audio).
 
+**STAGE 6 BUILT (2026-07-09): multi-orthography publish** (doc of record:
+repo-root multi-ortho-publish.md, status section). One run, all
+publishable orthographies: /li + /sf full trees sharing root
+content/derived/resources via ../ (Publish options.treePrefix + sharedUp;
+'' = historical single-tree, byte-compatible); segments = orthography
+table abbreviations riding in the bundle (orthographySegment/Name).
+publishMultiTree: peer navbar links w/ existence rule + per-tree public
+ids; ONE union-manifest prune; root static orthography CHOOSER
+index.html (file:// works); GENERATED data/caddy-redirects.conf (301 /
+and legacy paths → /li/); /servlet forwarders stay at ROOT (primary
+tree, /li targets, rendered as tree-pages-at-root). ACCEPTANCE = link
+checker: 1.81M relative refs all resolve (file:// operable); caught a
+pre-existing book-page ../ overshoot (web-clamped, file-broken).
+CAUTION for future me: publish.ts got truncated to 0 bytes by a
+self-truncating python line (open-for-write before read) and deno check
+of an EMPTY file passes - always wc -l after scripted edits.
+
 **STAGE 5 BUILT (2026-07-08): the site carries its own seed.** Every
 publish writes data/publish-source.json (the EXACT bundle used; no
 timestamp on live builds so unchanged republish rewrites nothing; --from
