@@ -58,13 +58,17 @@ export interface Orthography {
     /** May a word be made public in this orthography?  (The Public row and
      *  makePublic consult this - archaic source orthographies say no.) */
     publishable: number;
-    /** May the PUBLIC site offer search in this orthography?  An editorial
-     *  judgment (dz 2026-07-09): until an edition is complete enough,
-     *  search is a dead-end machine for outsiders - the young edition's
-     *  home elides the search box (browse links remain) until the staff
-     *  flip this on.  Defaults FALSE: a new orthography is by definition
-     *  young. */
-    public_search: number;
+    /** The published EDITION's maturity: 'full' or 'preview'.  ONE
+     *  editorial judgment that drives every public-site consequence of an
+     *  edition being young (multi-ortho-publish.md: no per-feature flags):
+     *  a 'preview' edition carries the preview banner, elides home search
+     *  (a dead-end machine until there are enough words), and cross-links
+     *  the primary edition's book sections instead of publishing its own
+     *  (its lane has almost no public words for the scan links to land
+     *  on).  Defaults 'preview': a new orthography is by definition
+     *  young; the staff flip it to 'full' when the edition is complete
+     *  enough. */
+    edition: string;
     /** Not offered for new content (existing values keep displaying). */
     retired: number;
     order_key: string;
@@ -82,8 +86,9 @@ export class OrthographyTable extends Table<Orthography> {
             new StringField('name', {prompt: 'Display name'}),
             new StringField('abbreviation', {nullable: true,
                                              prompt: 'Abbreviation (the tiny marker beside texts, e.g. Li)'}),
-            new BooleanField('public_search', {default: 0,
-                prompt: 'Enable public search (elided on the public site until the edition is complete enough)'}),
+            new StringField('edition', {default: 'preview',
+                prompt: "Edition maturity: 'full' or 'preview' (a preview edition gets the banner, " +
+                        "no public search, and books cross-linked to the primary edition)"}),
             new BooleanField('publishable', {default: 0,
                                              prompt: 'Publishable (words can be made public in this orthography)'}),
             new BooleanField('retired', {default: 0,
@@ -238,14 +243,14 @@ export class OrthographyTable extends Table<Orthography> {
  *  flags): the two living orthographies are publish targets; the two archaic
  *  Pacifique source orthographies are not. */
 export const SEED_ORTHOGRAPHIES: Array<{slug: string, name: string, abbreviation: string,
-                                        publishable: number, public_search: number}> = [
-    // public_search: Listuguj's edition is complete enough to search; the
-    // young Smith-Francis edition elides its public search box until the
-    // staff flip it on (dz 2026-07-09).
-    { slug: 'mm-li', name: 'Listuguj',             abbreviation: 'Li', publishable: 1, public_search: 1 },
-    { slug: 'mm-sf', name: 'Smith-Francis',        abbreviation: 'SF', publishable: 1, public_search: 0 },
-    { slug: 'mm-mp', name: 'Modified Pacifique',   abbreviation: 'MP', publishable: 0, public_search: 0 },
-    { slug: 'mm-pm', name: 'Pacifique Manuscript', abbreviation: 'PM', publishable: 0, public_search: 0 },
+                                        publishable: number, edition: string}> = [
+    // edition: Listuguj is the mature full edition; the young Smith-Francis
+    // edition publishes as a 'preview' (banner, no public search, books
+    // cross-linked to the primary) until the staff flip it (dz 2026-07-09).
+    { slug: 'mm-li', name: 'Listuguj',             abbreviation: 'Li', publishable: 1, edition: 'full' },
+    { slug: 'mm-sf', name: 'Smith-Francis',        abbreviation: 'SF', publishable: 1, edition: 'preview' },
+    { slug: 'mm-mp', name: 'Modified Pacifique',   abbreviation: 'MP', publishable: 0, edition: 'preview' },
+    { slug: 'mm-pm', name: 'Pacifique Manuscript', abbreviation: 'PM', publishable: 0, edition: 'preview' },
 ];
 
 /** Idempotent seed (insert-if-missing; never overwrites an edited row - but

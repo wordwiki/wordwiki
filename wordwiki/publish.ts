@@ -281,13 +281,20 @@ interface PublishOptions {
      *  forwarders (the internet's old links land on the primary).
      *  Default true (single-tree compatibility). */
     writeForwarders?: boolean;
-    /** Set on NON-PRIMARY trees: every page carries a preview banner
-     *  naming the (much larger, linked) primary edition - dz 2026-07-09:
-     *  a reader landing on the young sf tree must know what they are
-     *  looking at, like the editor's override bar. */
-    previewBanner?: {ownName: string, ownCount: number,
-                     primaryName: string, primaryCount: number,
-                     primarySegment: string};
+    /** The PRIMARY tree, as this (non-primary) tree's cross-links see it -
+     *  set by publishMultiTree on every tree but the first.  Everything a
+     *  'preview' edition needs to point at the full edition reads from
+     *  here (banner, home browse link, cross-tree book links) - ONE
+     *  struct, no per-feature plumbing (multi-ortho-publish.md). */
+    primary?: PrimaryRef;
+}
+
+/** The primary orthography tree, as a non-primary tree's cross-links see
+ *  it. */
+export interface PrimaryRef {
+    segment: string;                       // 'li'
+    name: string;                          // 'Listuguj'
+    entryCount: number;
 }
 
 /** A peer orthography tree, as the cross-links see it. */
@@ -297,6 +304,10 @@ export interface PeerTree {
     hasEntry(entry_id: number): boolean;
     entryPath(entry_id: number): string | undefined;   // site-relative WITHIN the peer tree
     hasCategory(slug: string): boolean;
+    /** Does the peer publish the book sections?  (A 'preview' edition
+     *  doesn't - its book links cross into the primary tree, and OUR book
+     *  pages' peer links fall back to the peer's home.) */
+    hasBooks: boolean;
 }
 
 /**
@@ -403,12 +414,10 @@ export async function publishMultiTree(status: PublishStatus,
         treePrefix: `${source.orthographySegment}/`,
         suppressPrune: true,
         writeForwarders: i === 0,   // the internet's old links land on the PRIMARY
-        previewBanner: i === 0 ? undefined : {
-            ownName: source.orthographyName,
-            ownCount: source.entries.length,
-            primaryName: sources[0].orthographyName,
-            primaryCount: sources[0].entries.length,
-            primarySegment: sources[0].orthographySegment,
+        primary: i === 0 ? undefined : {
+            segment: sources[0].orthographySegment,
+            name: sources[0].orthographyName,
+            entryCount: sources[0].entries.length,
         },
     }));
     for(const tree of trees) {
@@ -424,6 +433,7 @@ export async function publishMultiTree(status: PublishStatus,
                 hasEntry: (id: number) => pathById.has(id),
                 entryPath: (id: number) => pathById.get(id),
                 hasCategory: (slug: string) => cats.has(slug),
+                hasBooks: peer.booksLocal,
             };
         });
     }
@@ -570,6 +580,35 @@ export class Publish {
      *  the shared stores (content/derived/resources/scripts) live. */
     get sharedUp(): string { return this.treePrefix ? '../' : ''; }
 
+    /** The bundle's edition maturity - ONE editorial judgment (the
+     *  orthography table's `edition`) drives every young-edition
+     *  consequence: preview banner, home search elided, books
+     *  cross-linked.  (multi-ortho-publish.md: no per-feature flags.) */
+    get edition(): 'full' | 'preview' {
+        return this.source.edition === 'preview' ? 'preview' : 'full';
+    }
+
+    /** Does THIS tree publish the book sections (Pacifique Manuscript,
+     *  Reference Books)?  A 'preview' edition doesn't - its lane has
+     *  almost no public words for the scan links to land on, so all book
+     *  links cross into the primary tree instead (bookHref).  Without a
+     *  primary to point at (a single-tree publish), books stay local:
+     *  the links must land somewhere. */
+    get booksLocal(): boolean {
+        return this.edition !== 'preview' || !this.options.primary;
+    }
+
+    /** An href to a book site-path ('books/PDM/page-0307/index.html'),
+     *  local when this tree publishes books, into the PRIMARY tree when it
+     *  doesn't.  Same rootPath discipline as the peer links: rootPath
+     *  climbs out of the current page's directory, sharedUp climbs out of
+     *  the tree. */
+    bookHref(rootPath: string, sitePath: string): string {
+        return this.booksLocal
+            ? rootPath + sitePath
+            : `${rootPath}${this.sharedUp}${this.options.primary!.segment}/${sitePath}`;
+    }
+
     // Path discipline: every `*Path`/`pathFor*` helper returns a
     // TREE-RELATIVE path (they double as href sources, so they must never
     // contain publishRoot or the tree prefix); every filesystem write/mkdir
@@ -706,10 +745,17 @@ export class Publish {
         await this.publishItem('About Us', ()=>this.publishAboutUsPage());
         await this.publishItem('Data Downloads', ()=>this.publishDataDownloads());
 
-        // --- Publish books
+        // --- Publish books (a preview edition doesn't - its book links
+        //     cross into the primary tree; see booksLocal)
         if(!this.options.suppressPublishBooks) {
-            for(const book of this.source.books)
-                await this.publishBook(book.document.friendly_document_id);
+            if(this.booksLocal) {
+                for(const book of this.source.books)
+                    await this.publishBook(book.document.friendly_document_id);
+            } else {
+                this.status.log.push(
+                    `Book sections not published in this preview edition - book links ` +
+                    `cross into the /${this.options.primary!.segment}/ tree.`);
+            }
         }
 
         // --- Publish categories (and the Top Words listing, same curation)
@@ -807,6 +853,12 @@ export class Publish {
         const dirs: string[] = [];
         if(!this.options.suppressPublishCategories)
             dirs.push(...PRUNE_CATEGORY_DIRS.map(d => this.treePrefix + d));
+        // A local books section is never pruned (book pages are stable and
+        // expensive) - but a PREVIEW edition's elided books section is a
+        // statement that the dir must be EMPTY, so stale pages from before
+        // the edition model go.
+        if(!this.options.suppressPublishBooks && !this.booksLocal)
+            dirs.push(this.treePrefix + 'books');
         if(!this.options.suppressPublishEntries) {
             dirs.push(this.treePrefix + 'entries');
             if(this.options.writeForwarders ?? true) dirs.push('servlet/words');
@@ -875,17 +927,25 @@ export class Publish {
                     await this.publishItem('Top Words', ()=>this.publishTopWords());
                     break;
                 case 'books-all':
-                    for(const book of this.source.books)
-                        await this.publishBook(book.document.friendly_document_id);
-                    break;
                 case 'book':
-                    await this.publishBook(t.book);
-                    break;
                 case 'book-page': {
-                    const pagesInDocument = this.bookByFriendlyId(t.book).totalPages;
-                    const tt = t;
-                    await this.publishItem(`Book ${tt.book} page ${tt.page}`,
-                                           ()=>this.publishBookPage(tt.book, tt.page, pagesInDocument));
+                    if(!this.booksLocal) {
+                        this.status.log.push(
+                            `Book target skipped: this preview edition publishes no book ` +
+                            `sections (links cross into /${this.options.primary!.segment}/).`);
+                        break;
+                    }
+                    if(t.kind === 'books-all') {
+                        for(const book of this.source.books)
+                            await this.publishBook(book.document.friendly_document_id);
+                    } else if(t.kind === 'book') {
+                        await this.publishBook(t.book);
+                    } else {
+                        const pagesInDocument = this.bookByFriendlyId(t.book).totalPages;
+                        const tt = t;
+                        await this.publishItem(`Book ${tt.book} page ${tt.page}`,
+                                               ()=>this.publishBookPage(tt.book, tt.page, pagesInDocument));
+                    }
                     break;
                 }
                 case 'entries-all':
@@ -955,7 +1015,7 @@ export class Publish {
     }
     
     async publishHomePage(): Promise<void> {
-        const searchEnabled = this.source.publicSearchEnabled;
+        const searchEnabled = this.edition === 'full';
 
         // The home page IS the in-page search engine (the term index + the
         // hidden entry list) - when search is elided, that whole payload
@@ -978,19 +1038,20 @@ export class Publish {
         // With search enabled it lives INSIDE the searchInstructions
         // container, below the instructions - part of the idle home content,
         // hidden (with the rest) once the user starts a search.
-        const pb = this.options.previewBanner;
+        const primary = this.options.primary;
         const browse = [
             ['h2', {}, 'Browse the Dictionary'],
             ['ul', {},
              ['li', {}, ['a', {href: this.categoriesDirectoryPath}, 'Words by Category']],
              ['li', {}, ['a', {href: this.allWordsPath}, 'All Words']],
-             // Non-primary editions also point at the full dictionary (the
+             // A preview edition also points at the full dictionary (the
              // preview banner links it too; the home page earns the
              // redundancy).
-             pb ? ['li', {}, ['a', {href: `${this.sharedUp}${pb.primarySegment}/index.html`},
-                              `The full dictionary in ${pb.primaryName} spelling ` +
-                              `(${pb.primaryCount} words)`]]
-                : undefined],
+             this.edition === 'preview' && primary
+                 ? ['li', {}, ['a', {href: `${this.sharedUp}${primary.segment}/index.html`},
+                               `The full dictionary in ${primary.name} spelling ` +
+                               `(${primary.entryCount} words)`]]
+                 : undefined],
         ];
 
         const searchSection = searchEnabled ? [
@@ -1013,7 +1074,7 @@ export class Publish {
              ['h1', {}, title],
 
              ['p', {}, `Pjilasi & Welcome to Mi’gmaq-Mikmaq Online & current undertaking, the `,
-              ['a', {href:'./books/PDM/page-0307/index.html'},
+              ['a', {href: this.bookHref('', 'books/PDM/page-0307/index.html')},
                'Pacifique Dictionary Manuscripts project']],
              
              // --- Bead image
@@ -1238,7 +1299,9 @@ including remixing, transforming, and building upon the material, for any non-co
             ['img', {class: 'img-fluid', src: `${this.sharedUp}resources/pdm-sample.png`}],
             
             ['p', {}, `The `,
-             ['a', {href:'./books/PDM/page-0307/index.html'},
+             // (renderAboutUsBody renders only on top-level pages - home and
+             // about-us - so rootPath is ''.)
+             ['a', {href: this.bookHref('', 'books/PDM/page-0307/index.html')},
              'Pacifique Dictionary Manuscripts project'],
              ` is the current source of words for the Mi’gmaq Online Talking Dictionary (MMO).`],
 
@@ -1528,7 +1591,9 @@ including remixing, transforming, and building upon the material, for any non-co
     }
     scanBookPageUrl(rootPath: string, id: number): string {
         const path = this.scanById.get(id)?.book_page_path ?? '';
-        return path ? `${rootPath}${path}` : '';
+        // A preview edition's entry pages reference scans too - those book
+        // pages live in the primary tree (booksLocal).
+        return path ? this.bookHref(rootPath, path) : '';
     }
     scanDescription(id: number): string {
         return this.scanById.get(id)?.description ?? '';
@@ -1932,7 +1997,11 @@ including remixing, transforming, and building upon the material, for any non-co
 
         await this.writePage(this.pathForBookPage(publicBookId, page_number),
                              this.publicPageTemplate(rootPath, {head, body},
-                                 {peerPath: () => this.pathForBookPage(publicBookId, page_number)}));
+                                 // A preview peer publishes no book pages -
+                                 // fall back to its home (the existence rule).
+                                 {peerPath: peer => peer.hasBooks
+                                     ? this.pathForBookPage(publicBookId, page_number)
+                                     : undefined}));
     }
 
     async renderBookPageTopNote(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
@@ -2024,18 +2093,18 @@ including remixing, transforming, and building upon the material, for any non-co
                   href: `${rootPath}${this.sharedUp}${peer.segment}/` +
                         ((opts.peerPath?.(peer)) ?? 'index.html')}))
             : [];
-        // The non-primary-tree PREVIEW banner: what this edition is, how
-        // big, and where the full one lives - the primary link goes to the
-        // SAME page over there when it exists (the peer machinery).
-        const pb = this.options.previewBanner;
-        const primaryPeer = pb ? peerLinks.find(pl => pl.segment === pb.primarySegment) : undefined;
-        const previewBanner = pb
+        // The preview-edition banner: what this edition is, how big, and
+        // where the full one lives - the primary link goes to the SAME page
+        // over there when it exists (the peer machinery).
+        const primary = this.edition === 'preview' ? this.options.primary : undefined;
+        const primaryPeer = primary ? peerLinks.find(pl => pl.segment === primary.segment) : undefined;
+        const previewBanner = primary
             ? ['div', {class: 'alert alert-warning rounded-0 border-0 py-2 mb-0 text-center'},
-               `This ${pb.ownName} edition of the dictionary is a preview — ` +
-               `${pb.ownCount} words so far.  The `,
-               primaryPeer ? ['a', {href: primaryPeer.href}, pb.primaryName]
-                           : pb.primaryName,
-               ` edition is much larger (${pb.primaryCount} words).`]
+               `This ${this.source.orthographyName} edition of the dictionary is a preview — ` +
+               `${this.source.entries.length} words so far.  The `,
+               primaryPeer ? ['a', {href: primaryPeer.href}, primary.name]
+                           : primary.name,
+               ` edition is much larger (${primary.entryCount} words).`]
             : undefined;
         return (
             ['html', {},
@@ -2107,6 +2176,10 @@ including remixing, transforming, and building upon the material, for any non-co
 
     publicNavBar(rootPath: string,
                  peerLinks: {label: string, href: string}[] = []): any {
+        // A preview edition's book links cross into the primary tree
+        // (booksLocal) - say so quietly on hover.
+        const bookTitle = this.booksLocal ? {}
+            : {title: `In the ${this.options.primary!.name} edition`};
         return [
             ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
              ['div', {class:"container-fluid"},
@@ -2136,7 +2209,8 @@ including remixing, transforming, and building upon the material, for any non-co
 
                 ['li', {class:"nav-item"},
                  // XXX hack - starting at P307 for reasons ...
-                 ['a', {class:"nav-link", href:rootPath+'books/PDM/page-0307/index.html'}, 'Pacifique Manuscript'],
+                 ['a', {class:"nav-link", ...bookTitle,
+                        href:this.bookHref(rootPath, 'books/PDM/page-0307/index.html')}, 'Pacifique Manuscript'],
                 ], //li
 
                 // The peer-orthography trees (multi-ortho-publish.md): the
@@ -2154,11 +2228,14 @@ including remixing, transforming, and building upon the material, for any non-co
                   'Reference Books'
                  ], //a
                  ['ul', {class:"dropdown-menu"},
-                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/PDM/page-0001/index.html'}, 'Pacifique Manuscript']],
-                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/Rand/page-0001/index.html'}, "Rand's Dictionary"]],
-                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/Clark/page-0001/index.html'}, "Clark's Dictionary"]],
-                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/PacifiquesGeography/page-0001/index.html'}, "Pacifique's Geography"]],
-                  ['li', {}, ['a', {class:"dropdown-item", href:rootPath+'books/RandFirstReadingBook/page-0001/index.html'}, "Rand's First Reading Book"]],
+                  this.booksLocal ? undefined
+                      : ['li', {}, ['h6', {class:"dropdown-header"},
+                                    `In the ${this.options.primary!.name} edition`]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:this.bookHref(rootPath, 'books/PDM/page-0001/index.html')}, 'Pacifique Manuscript']],
+                  ['li', {}, ['a', {class:"dropdown-item", href:this.bookHref(rootPath, 'books/Rand/page-0001/index.html')}, "Rand's Dictionary"]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:this.bookHref(rootPath, 'books/Clark/page-0001/index.html')}, "Clark's Dictionary"]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:this.bookHref(rootPath, 'books/PacifiquesGeography/page-0001/index.html')}, "Pacifique's Geography"]],
+                  ['li', {}, ['a', {class:"dropdown-item", href:this.bookHref(rootPath, 'books/RandFirstReadingBook/page-0001/index.html')}, "Rand's First Reading Book"]],
                   //['li', {}, ['hr', {class:"dropdown-divider"}]],
                   //['li', {}, ['a', {class:"dropdown-item", href:"#"}, 'Something else here']],
                  ], //ul

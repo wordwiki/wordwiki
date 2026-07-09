@@ -80,12 +80,32 @@ One run, all publishable orthographies (`./wordwiki.sh publish`):
 - Each tree carries its own `data/publish-source.json`; the
   orthography-neutral `full-history.json` lives once at the root
   `data/`, linked from every tree's data page.
-- Public SEARCH is per-orthography editorial opt-in: `public_search` on
-  the orthography table (seed: li on, sf off; rides the bundle as
-  `publicSearchEnabled`, old dumps default true).  Disabled editions
-  elide the whole search payload from home (form, search.js, in-page
-  term index) and keep the permanent Browse section (Words by
-  Category / All Words - on EVERY edition's home) plus a link to the
-  full primary-spelling dictionary.  Future re-enable story: a smart
-  search empty-state ("no SF results - N matches in Listuguj") instead
-  of the flag, once the SF edition is big enough to search.
+- THE EDITION MODEL (2026-07-09): `orthography.edition` ('full' |
+  'preview'; seed li full, sf/mp/pm preview; rides the bundle as
+  `edition`, old dumps default 'full') is ONE editorial judgment that
+  drives every public consequence of an edition being young.  A
+  'preview' edition:
+    - carries the preview banner naming/linking the primary edition;
+    - elides the whole home search payload (form, search.js, in-page
+      term index) - the permanent Browse section (Words by Category /
+      All Words, on EVERY edition's home) plus a "full dictionary in
+      ⟨primary⟩ spelling" link remain.  Future re-enable story: a
+      smart search empty-state ("no SF results - N matches in
+      Listuguj") once the edition is big enough to search;
+    - publishes NO book sections (Pacifique Manuscript, Reference
+      Books): its lane has almost no public words for the scan links
+      to land on.  Every book link (navbar + dropdown, home welcome,
+      about body, entry-page scan references) crosses into the
+      primary tree instead, marked quietly ("In the ⟨primary⟩
+      edition"); the primary's book pages' peer links fall back to
+      the preview home; prune treats the preview tree's books dir as
+      must-be-empty (stale pages from before the model go).
+  Mechanism: `PublishOptions.primary` (PrimaryRef {segment, name,
+  entryCount}, set on non-primary trees) is the ONE struct every
+  cross-into-the-primary feature reads.
+
+  THE RULE AGAINST RE-ACCRETION: no new per-feature orthography
+  flags.  A public-site behavior either works at any edition size
+  (make it presence-filtered, like categories), or it keys off
+  `edition` and cross-links via `primary`.  Anything that fits
+  neither bucket is a design smell - take it back to dz.

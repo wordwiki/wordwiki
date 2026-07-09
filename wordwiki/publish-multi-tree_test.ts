@@ -92,11 +92,12 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
         assertStringIncludes(sfB, '../../../../li/entries/w/waqami/waqami.html');
         assert(!liHome.includes('is a preview'), 'the primary tree carries no banner');
 
-        // Public search rides the orthography table's public_search flag
-        // (seed: li on, sf off).  Search elided means NO search machinery at
-        // all (the form AND the in-page term index); the Browse section is on
-        // EVERY edition's home; a disabled non-primary home also links the
-        // full primary dictionary.
+        // The EDITION model (multi-ortho-publish.md): ONE editorial judgment
+        // on the orthography table (seed: li 'full', sf 'preview') drives
+        // every young-edition consequence.  A preview edition elides ALL the
+        // home search machinery (the form AND the in-page term index); the
+        // Browse section is on EVERY edition's home; a preview home also
+        // links the full primary dictionary.
         assertStringIncludes(liHome, 'Dictionary Search');
         assertStringIncludes(liHome, 'updateCurrentSearchFromInput');
         assertStringIncludes(liHome, 'Browse the Dictionary');
@@ -109,6 +110,17 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
         assertStringIncludes(sfHome, 'All Words');
         assertStringIncludes(sfHome, 'The full dictionary in Listuguj spelling (2 words)');
         assertStringIncludes(sfHome, '../li/index.html');
+
+        // A preview edition publishes NO book sections - every book link
+        // (navbar, home welcome, about body, entry scan references) crosses
+        // into the primary tree; the full edition's stay local.
+        assertStringIncludes(sfHome, '../li/books/PDM/page-0307/index.html');
+        assert(!sfHome.includes('"books/PDM'), 'no tree-local book links on the sf home');
+        assertStringIncludes(sfHome, 'In the Listuguj edition');   // the quiet cross-link marker
+        assertStringIncludes(liHome, '"books/PDM/page-0307/index.html"');
+        assert(!liHome.includes('../sf/books'), 'li books stay local');
+        const sfEntry = read('sf/entries/w/waqamik/waqamik.html');
+        assertStringIncludes(sfEntry, '../../../../li/books/PDM/page-0001/index.html');  // navbar, 3 dirs deep
 
         // Legacy forwarders: at the ROOT, targeting the PRIMARY tree.
         const fwd = read('servlet/words/samqwan.html');

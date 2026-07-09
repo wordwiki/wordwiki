@@ -33,6 +33,25 @@ CAUTION for future me: publish.ts got truncated to 0 bytes by a
 self-truncating python line (open-for-write before read) and deno check
 of an EMPTY file passes - always wc -l after scripted edits.
 
+**THE EDITION MODEL (2026-07-09, dz-approved):** `orthography.edition`
+('full'|'preview', seed li full / others preview; bundle field
+`edition`, old dumps default 'full') is the ONE editorial judgment for
+young editions - it replaced the one-day `public_search` boolean. A
+'preview' edition: preview banner; home search payload elided (Browse +
+"full dictionary in ⟨primary⟩" remain; Browse is on EVERY home, inside
+searchInstructions when search is on); NO book sections published -
+every book link (navbar/dropdown w/ "In the ⟨primary⟩ edition" marker,
+home welcome, about body, entry scan references via bookHref()) crosses
+into the primary tree; primary's book-page peer links fall back to
+preview home (PeerTree.hasBooks); prune treats the preview books dir as
+must-be-empty. Mechanism: PublishOptions.primary (PrimaryRef {segment,
+name, entryCount}) is the ONE struct (replaced previewBanner). RULE
+AGAINST RE-ACCRETION (in multi-ortho-publish.md): NO new per-feature
+orthography flags - behaviors either work at any edition size
+(presence-filtered) or key off `edition` + cross-link via `primary`;
+anything else goes back to dz. Root index.html now meta-refreshes to
+the primary tree (chooser = fallback body).
+
 **STAGE 5 BUILT (2026-07-08): the site carries its own seed.** Every
 publish writes data/publish-source.json (the EXACT bundle used; no
 timestamp on live builds so unchanged republish rewrites nothing; --from
