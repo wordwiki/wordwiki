@@ -1265,6 +1265,11 @@ function initPageWordSidebar() {
     page.addEventListener('mouseover', pageBoxHoverEnter);
     page.addEventListener('mouseout', pageBoxHoverLeave);
     page.addEventListener('mousemove', positionPageHoverTip);
+    // o/e open/edit the hovered word; right-click menus the region.
+    document.addEventListener('keydown', pageWordKeydown);
+    page.addEventListener('contextmenu', pageContextMenu);
+    document.addEventListener('click', hidePageContextMenu);
+    window.addEventListener('scroll', hidePageContextMenu, {passive: true});
 }
 
 /** The TAGGED (non-reference-layer) group enclosing an event target, if
@@ -1275,11 +1280,15 @@ function hoveredTaggedGroup(target: EventTarget|null): Element|null {
     return (group && !group.classList.contains('ref')) ? group : null;
 }
 
+// The tagged group currently under the pointer - the o/e keybinds act on it.
+let peHoveredGroupId: string|undefined = undefined;
+
 function pageBoxHoverEnter(event: MouseEvent) {
     if(document.getElementById('annotatedPage')?.classList.contains('drag-in-progress')) return;
     const group = hoveredTaggedGroup(event.target);
     if(!group) return;
     const groupId = group.id.replace(/^bg_/, '');
+    peHoveredGroupId = groupId;
     clearSidebarRowHighlights();
     // A group referenced by two words lights BOTH rows - that is the honest
     // answer, and the sidebar is where the ambiguity reads clearly.
@@ -1294,8 +1303,90 @@ function pageBoxHoverLeave(event: MouseEvent) {
     if(!group) return;
     // Moving between boxes WITHIN the group is not a leave.
     if(event.relatedTarget instanceof Element && group.contains(event.relatedTarget)) return;
+    peHoveredGroupId = undefined;
     clearSidebarRowHighlights();
     hidePageHoverTip();
+}
+
+/** o = open the hovered word's view, e = its editor (both in a new tab,
+ *  via the sidebar row's own anchors - one source of truth for the URLs).
+ *  See renderPageEditorHelp - keep the docs table in sync. */
+function pageWordKeydown(event: KeyboardEvent) {
+    if(event.key === 'Escape') { hidePageContextMenu(); return; }
+    if(event.ctrlKey || event.altKey || event.metaKey) return;
+    const t = event.target;
+    if(t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement ||
+       (t instanceof HTMLElement && t.isContentEditable)) return;
+    if(event.key !== 'o' && event.key !== 'e') return;
+    if(!peHoveredGroupId) return;
+    const row = sidebarRowsForGroup(peHoveredGroupId)
+        .filter(r=>!r.classList.contains('pe-untagged'))[0];
+    if(!row) return;
+    const anchor = row.querySelector<HTMLAnchorElement>(
+        event.key === 'o' ? 'a.lm-lexeme-view' : 'a.lm-edit-pencil');
+    if(anchor) { event.preventDefault(); anchor.click(); }
+}
+
+// --- Right-click menu on a tagged region: the hover/keybind operations,
+//     discoverable (dz).  Hand-rolled against the shared .ContextMenu CSS -
+//     this page loads as a classic script, so the liminal context-menu
+//     MODULE is out of reach.
+
+let peContextMenu: HTMLElement|undefined = undefined;
+
+function hidePageContextMenu() {
+    peContextMenu?.remove();
+    peContextMenu = undefined;
+}
+
+function pageContextMenu(event: MouseEvent) {
+    const group = hoveredTaggedGroup(event.target);
+    if(!group) return;   // elsewhere: the browser's own menu
+    event.preventDefault();
+    hidePageContextMenu();
+    hidePageHoverTip();
+
+    const menu = document.createElement('ul');
+    menu.className = 'ContextMenu ContextMenu--theme-default is-open pe-context-menu';
+    const addItem = (label: string, fn?: () => void) => {
+        const li = document.createElement('li');
+        li.className = 'ContextMenu-item' + (fn ? '' : ' pe-menu-disabled');
+        li.textContent = label;
+        if(fn) li.addEventListener('click', () => { hidePageContextMenu(); fn(); });
+        menu.appendChild(li);
+    };
+
+    const groupId = group.id.replace(/^bg_/, '');
+    const wordRows = sidebarRowsForGroup(groupId)
+        .filter(r=>!r.classList.contains('pe-untagged'));
+    if(wordRows.length === 0) addItem('Not yet linked to a word');
+    for(const row of wordRows) {
+        const view = row.querySelector<HTMLAnchorElement>('a.lm-lexeme-view');
+        const edit = row.querySelector<HTMLAnchorElement>('a.lm-edit-pencil');
+        const label = (view?.textContent ?? 'word').trim().replace(/\s+/g, ' ');
+        const short = label.length > 32 ? label.slice(0, 32) + '…' : label;
+        if(view) addItem(`Open “${short}”`, () => view.click());
+        if(edit) addItem(`Edit “${short}”`, () => edit.click());
+    }
+
+    // The clicked box itself (not the whole group) is removable - the same
+    // operation as ctrl+click-in-selected-group, made discoverable.
+    const box = (event.target instanceof Element)
+        ? event.target.closest('svg.box:not(.ref)') : null;
+    if(box && getGroupForBox(box) === group) {
+        const divider = document.createElement('li');
+        divider.className = 'ContextMenu-divider';
+        menu.appendChild(divider);
+        addItem('Remove this box from its group', () => removeBoxFromGroup(group, box));
+    }
+
+    document.body.appendChild(menu);
+    peContextMenu = menu;
+    menu.style.left = `${event.pageX}px`;
+    menu.style.top = `${event.pageY}px`;
+    const r = menu.getBoundingClientRect();
+    if(r.right > window.innerWidth - 4)
+        menu.style.left = `${event.pageX - r.width}px`;
 }
 
 function sidebarRowsForGroup(groupId: string): Element[] {

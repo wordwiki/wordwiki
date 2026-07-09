@@ -155,12 +155,15 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
         // workflow, noise when editing one reference.
         (cfg.locked_bounding_group_id || cfg.is_popup_editor)
             ? annotatedPage
-            : ['div', {class: 'pe-layout'},
-               ['div', {class: 'pe-main'}, annotatedPage],
-               renderPageWordSidebar(page_id, cfg.layer_id),
-               // The cursor-following word-summary tooltip (filled by the
-               // client from the sidebar rows).
-               ['div', {id: 'peHoverTip', class: 'pe-hover-tip', style: 'display:none;'}]],
+            : [['div', {class: 'pe-layout'},
+                ['div', {class: 'pe-main'}, annotatedPage],
+                renderPageWordSidebar(page_id, cfg.layer_id),
+                // The cursor-following word-summary tooltip (filled by the
+                // client from the sidebar rows).
+                ['div', {id: 'peHoverTip', class: 'pe-hover-tip', style: 'display:none;'}]],
+               // The gesture/key reference (dz: the bindings were
+               // undiscoverable - document them on the page itself).
+               renderPageEditorHelp()],
 
         // Array.from(boxesByGroup.keys()).map(bounding_group_id =>
         //     ['p', {},
@@ -211,6 +214,31 @@ function pageWordRows(page_id: number): PageWordRow[] {
         if(!row.groupIds.includes(r.bounding_group_id)) row.groupIds.push(r.bounding_group_id);
     }
     return [...byEntry.values()];
+}
+
+/** The gesture/key reference at the bottom of the page editor (dz
+ *  2026-07-09: the bindings were completely undiscoverable).  KEEP IN SYNC
+ *  with scannedPageMouseDown / pageWordKeydown / pageContextMenu in
+ *  page-editor.ts - this table IS their documentation. */
+function renderPageEditorHelp(): any {
+    const row = (gesture: string, what: string) =>
+        ['tr', {}, ['th', {}, gesture], ['td', {}, what]];
+    return ['div', {class: 'pe-help'},
+        ['h5', {}, 'Mouse & keys'],
+        ['table', {},
+         ['tbody', {},
+          row('drag on the page', 'draw a box, starting a NEW word group'),
+          row('Ctrl+drag', 'draw a box into the currently selected group'),
+          row('Shift', 'hold to force box-drawing even on top of existing boxes (add Ctrl to target the selected group)'),
+          row('click a grey text box', 'copy it into a NEW word group'),
+          row('Ctrl+click a grey text box', 'copy it into the selected group'),
+          row('click a colored box', 'select its group (click again to cycle overlapping boxes)'),
+          row('Ctrl+click a box in the selected group', 'remove it (a hand-drawn box is deleted; an imported text box reverts to grey)'),
+          row('drag a box / its corner circles', 'move / resize it'),
+          row('hover a tagged region', 'see the word (tooltip + sidebar highlight)'),
+          row('o / e while hovering', 'open / edit the hovered word'),
+          row('right-click a tagged region', 'menu: open or edit its word(s), remove the clicked box'),
+         ]]];
 }
 
 /** The sidebar panel.  Also a ROUTE (PageRoutes) so the client can re-fetch

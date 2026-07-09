@@ -446,6 +446,8 @@ export function pageTemplate(content: PageContent): any {
           // `.lm-edit-pencil svg` here - without it the pencil collapses to 0.
           ['link', {href: assetUrl('/resources/liminal.css'), rel:'stylesheet', type:'text/css'}],
           ['link', {href: assetUrl('/resources/page-editor.css'), rel:'stylesheet', type:'text/css'}],
+          // The page editor's right-click menu reuses the shared menu look.
+          ['link', {href: assetUrl('/resources/context-menu.css'), rel:'stylesheet', type:'text/css'}],
           ['script', {}, block`
 /**/           function playAudio(src) {
 /**/             const audioPlayer = document.getElementById("audioPlayer");

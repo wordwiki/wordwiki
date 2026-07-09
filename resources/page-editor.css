@@ -222,6 +222,17 @@ li.pe-untagged { color: #888; }
 .pe-hover-tip .lm-edit-pencil { display: none; } /* row clone: pencil is noise here */
 .pe-layout:has(.drag-in-progress) .pe-hover-tip { display: none !important; }
 
+/* the right-click menu (shared .ContextMenu look; above the tooltip) */
+.pe-context-menu { z-index: 1100; }
+.pe-context-menu .pe-menu-disabled { color: #999; cursor: default; }
+
+/* the gesture/key reference at the bottom of the editor */
+.pe-help { margin: 1.5rem 0; max-width: 46rem; font-size: .9rem; color: #444; }
+.pe-help h5 { margin-bottom: .5rem; }
+.pe-help th { text-align: left; font-weight: 600; padding: .1rem 1rem .1rem 0;
+              white-space: nowrap; vertical-align: top; }
+.pe-help td { padding: .1rem 0; }
+
 /* ------------------------------------------------------------------ */
 /* --- Page Jump Feature -------------------------------------------- */
 /* ------------------------------------------------------------------ */
