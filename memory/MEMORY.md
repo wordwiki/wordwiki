@@ -7,6 +7,7 @@
 - [Liminal mail feature](liminal-mail-feature.md) — shared outbound email (liminal/mail.ts); transport-agnostic Mailer, SMTP+Google app-password, LogMailer default; wired into rabid reset links; provision via <app>-mail-credential.json
 - [Route undeclared bug pattern](route-undeclared-bug-pattern.md) — method reached via url/rpc/hx-post but missing @route → strict routeterp 404s "not found"; direct-call tests miss it; verify via dispatch (bitten: photo, resetLinkView)
 - [Puppeteer session reuse](puppeteer-session-reuse.md) — only pass launchOptions on the FIRST navigate; reuse the running browser to stay logged in
+- [pj land is punctuation](pj-land-punctuation.md) — ALWAYS run "pj land" when dz asks, even with a clean tree; it syncs + mints a fresh anon branch (name later with pj branch)
 - [Server restart protocol](server-restart-protocol.md) — just re-run ./rabid.sh (or wordwiki.sh); it cleanly shuts down the running server itself — never pkill
 - [Audio trim tuning](audio-trim-tuning.md) — silence/click trim pipeline (derived stores) + throwaway staff page to pick the threshold by ear; rebuild recipe in wordwiki/audio-trim-tuning.md
 - [Field security model](field-security-model.md) — open-books org; per-field view/edit perms enforced at query/render/save; phone opt-in, email opt-out, redacted to '***'
