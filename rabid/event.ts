@@ -476,13 +476,6 @@ export class EventTable extends Table<Event> {
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
-            // Service Record Sheets: a SECOND gallery on the event (scope) holding
-            // photos of the paper service-record clipboard sheets - the durable
-            // capture that a later scan/extract turns into service rows (scan-extract.md).
-            // Sits right below the service records it stands in for; its ☰ is where
-            // the future "Import scanned records" action lands.
-            e.is_catch_all ? undefined
-                : rabid.gallery_photo.renderGallery('event', event_id, 'service-sheets', 'Service Record Sheets'),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
             // heading like the checklists below.  Wrapped in a stable #tasks anchor.
@@ -493,6 +486,12 @@ export class EventTable extends Table<Event> {
              rabid.task.renderOwnerChecklists('event', event_id)],
             // Photos: the generic gallery (gallery.ts), attached to this event.
             rabid.gallery_photo.renderGallery('event', event_id),
+            // Service Record Sheets: a SECOND gallery on the event (scope) holding
+            // photos of the paper service-record clipboard sheets - the durable
+            // capture that a later scan/extract turns into service rows (scan-extract.md).
+            // Its ☰ is where the future "Import scanned records" action lands.
+            e.is_catch_all ? undefined
+                : rabid.gallery_photo.renderGallery('event', event_id, 'service-sheets', 'Service Record Sheets'),
             // Retrospectives: volunteer feedback on how the event went (markdown,
             // optionally anonymous) - the last section, below everything.
             this.renderEventRetrospectives(event_id),
