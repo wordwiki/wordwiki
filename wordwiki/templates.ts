@@ -103,8 +103,15 @@ function wordEditorUrl(entry_id: number, editAnchor?: number): string {
  *  click away.  `newTab` for the change feed (no-store, must not navigate). */
 export function lexemeLink(entry_id: number, content: any,
                            opts: {pencil?: boolean, newTab?: boolean,
-                                  editAnchor?: number, linkClass?: string} = {}): any {
-    const viewUrl = `/ww/wordwiki.wordView(${entry_id})`;
+                                  editAnchor?: number, linkClass?: string,
+                                  // The word view's ONE-WORD orthography
+                                  // lens (see wordwiki.wordView): reports
+                                  // presenting a word in a non-default
+                                  // orthography link the matching view.
+                                  viewOrthography?: string} = {}): any {
+    const viewUrl = opts.viewOrthography
+        ? `/ww/wordwiki.wordView(${entry_id}, ${JSON.stringify(opts.viewOrthography)})`
+        : `/ww/wordwiki.wordView(${entry_id})`;
     const viewNav = opts.newTab ? {href: viewUrl, target: '_blank'} : pageLinkProps(viewUrl);
     const viewCls = opts.linkClass ? `lm-lexeme-view ${opts.linkClass}` : 'lm-lexeme-view';
     const pencil = (opts.pencil ?? true) && mayEditLexemes();

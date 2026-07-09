@@ -37,6 +37,7 @@ import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import {DictionaryStore} from './dictionary-store.ts';
 import {siteConfig} from './site-config.ts';
+import {filterEntryVariants} from './publish-source.ts';
 import {SiteView} from './site-view.ts';
 import { VariantReports } from './variant-scan.ts';
 import { TransliterationReports } from './auto-transliterate.ts';
@@ -359,10 +360,28 @@ export class WordWiki extends LiminalApp {
     // link (researchers are usually just looking); a top Edit bar and the
     // per-link pencils reach the editor.  Grows later (a simplified history,
     // etc.) away from the public renderer.
+    // `orthography` is the ONE-WORD LENS (dz 2026-07-08): an explicit
+    // per-page override that shows THIS word as that orthography's site
+    // would (variant-tagged content filtered to the lane via the same
+    // provenance-aware filter the publish bundle uses; $sourceOrthography
+    // reference fields always pass).  Deliberately NOT a site-wide switch -
+    // the session-level working-orthography selector is coming separately -
+    // but reports like SF-Ready Words link here so an li-primary researcher
+    // gets a meaningful target page.  The lens is announced PROMINENTLY.
     @route(authenticated)
-    wordView(entry_id: number): templates.Page {
-        const e = this.entriesById.get(entry_id);
-        const title = e ? entry.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+    wordView(entry_id: number, orthography: string = ''): templates.Page {
+        const raw = this.entriesById.get(entry_id);
+        const e = raw && orthography
+            ? filterEntryVariants(raw, [orthography]) : raw;
+        const title = e ? entry.renderEntrySpellingsSummary(e, orthography || undefined)
+                        || `Entry ${entry_id}` : `Entry ${entry_id}`;
+        const lensBanner = e && orthography
+            ? ['div', {class: 'alert alert-info py-2 mb-3'},
+               'Viewing this word through the ',
+               ['b', {}, this.orthographyDisplayName(orthography)],
+               ' orthography lens — content in other orthographies is hidden. ',
+               ['a', {href: `/ww/wordwiki.wordView(${entry_id})`}, 'View normally']]
+            : undefined;
         const rendered: any = e
             ? entryMeta.renderEntryMeta(
                   {rootPath: '/', audience: 'internal', publicKeys: ['borrowed-word'],
@@ -372,7 +391,18 @@ export class WordWiki extends LiminalApp {
             : ['p', {class: 'text-muted'}, 'Word not found.'];
         return templates.page(title,
             ['div', {class: 'container py-3'},
+             lensBanner,
              ['div', {class: 'page-content'}, rendered]]);
+    }
+
+    // The orthography's display name: the table is the authority, the seed
+    // map the fallback, the raw slug the last resort.
+    private orthographyDisplayName(slug: string): string {
+        try {
+            const row = this.orthographies.allByOrder.all({}).find(o => o.slug === slug);
+            if(row?.name) return row.name;
+        } catch { /* pre-migration db */ }
+        return entry.variants[slug] ?? slug;
     }
 
     /** The edit pencil INSIDE the headword <h1> (trailing the glosses), so it

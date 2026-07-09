@@ -981,8 +981,8 @@ export function renderEntryTitle(e: Entry): string {
     return `${spellings.join(', ')}${archived} :: ${glosses.join(' / ')} -- Mi'gmaq/Mi'kmaq Online`;
 }
 
-export function renderEntrySpellingsSummary(e: Entry): string {
-    return getSpellings(e).map(s=>s.text).join('/');
+export function renderEntrySpellingsSummary(e: Entry, orthography?: string): string {
+    return getSpellings(e, orthography).map(s=>s.text).join('/');
 }
 
 /**
