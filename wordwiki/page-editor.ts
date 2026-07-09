@@ -1367,8 +1367,20 @@ function positionPageHoverTip(event: MouseEvent) {
 
 function pageWordRowEnter(event: Event) {
     const row = event.currentTarget as Element;
-    for(const id of rowGroupIds(row))
-        document.getElementById(`bg_${id}`)?.classList.add('pe-hl');
+    let firstGroup: Element|undefined = undefined;
+    for(const id of rowGroupIds(row)) {
+        const group = document.getElementById(`bg_${id}`);
+        if(group) { group.classList.add('pe-hl'); firstGroup ??= group; }
+    }
+    // Bring the word's boxes on screen - but ONLY when entirely invisible
+    // (partial visibility scrolls nothing), so scrubbing down the list
+    // doesn't constantly nudge the page.  The sidebar is sticky, so the
+    // window scroll cannot move the hovered row out from under the cursor.
+    if(firstGroup) {
+        const r = firstGroup.getBoundingClientRect();
+        if(r.bottom < 0 || r.top > window.innerHeight)
+            firstGroup.scrollIntoView({block: 'center'});
+    }
 }
 
 function pageWordRowLeave(event: Event) {

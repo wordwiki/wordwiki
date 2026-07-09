@@ -250,7 +250,9 @@ export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_i
         return ['li', {class: 'pe-word', ...rowProps(r.groupIds)},
                 templates.lexemeLink(r.entry_id,
                     entrySchema.renderEntryCompactSummary(e, {orthography: lane}),
-                    {viewOrthography: lane, newTab: true})];
+                    // No not-public badge here (dz: not worth the clutter
+                    // in the tight sidebar).
+                    {viewOrthography: lane, newTab: true, badge: false})];
     };
 
     return ['div', {id: 'pageWordSidebar', class: 'pe-sidebar'},

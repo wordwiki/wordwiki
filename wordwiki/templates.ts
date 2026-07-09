@@ -110,7 +110,12 @@ export function lexemeLink(entry_id: number, content: any,
                                   // lens (see wordwiki.wordView): reports
                                   // presenting a word in a non-default
                                   // orthography link the matching view.
-                                  viewOrthography?: string} = {}): any {
+                                  viewOrthography?: string,
+                                  // Tight contexts (the page-editor word
+                                  // sidebar) drop the not-public badge -
+                                  // dz: not important enough for the
+                                  // clutter there.
+                                  badge?: boolean} = {}): any {
     const viewUrl = opts.viewOrthography
         ? `/ww/wordwiki.wordView(${entry_id}, ${JSON.stringify(opts.viewOrthography)})`
         : `/ww/wordwiki.wordView(${entry_id})`;
@@ -119,7 +124,7 @@ export function lexemeLink(entry_id: number, content: any,
     const pencil = (opts.pencil ?? true) && mayEditLexemes();
     return ['span', {class: 'lm-lexeme-link d-inline-flex align-items-center gap-1'},
         ['a', {...viewNav, class: viewCls}, content],
-        notPublicBadge(entry_id),
+        (opts.badge ?? true) ? notPublicBadge(entry_id) : undefined,
         pencil
             ? pencilLink(wordEditorUrl(entry_id, opts.editAnchor),
                          {newTab: opts.newTab, extraClass: opts.linkClass})
