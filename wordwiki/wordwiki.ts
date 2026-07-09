@@ -75,6 +75,9 @@ export class WordWiki extends LiminalApp {
         entry.setOrthographyAbbrHook(slug => this.orthographyAbbr(slug));
         templates.setEntryPublicnessProvider(id =>
             this.store.publicEntryIdsIn(this.currentWorkingOrthography() ?? 'mm').has(id));
+        // The page-editor word sidebar renders word summaries in the working
+        // lane - same cycle-avoiding injection as the templates providers.
+        renderPageEditor.setPageEditorAppProvider(() => this);
 
         // --- Set up our routes
         // The page-editor / audio / publish routes are NOT spread in here as

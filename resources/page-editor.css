@@ -172,6 +172,49 @@ svg.box.active:(not .ref) circle {
 }
 
 /* ------------------------------------------------------------------ */
+/* --- Page word sidebar + hover tooltip (page-editor-change.md) ---- */
+/* ------------------------------------------------------------------ */
+
+.pe-layout { display: flex; gap: .75rem; align-items: flex-start; }
+.pe-main { flex: 1 1 auto; min-width: 0; }
+
+.pe-sidebar { flex: 0 0 20rem; position: sticky; top: 0; max-height: 100vh;
+              overflow-y: auto; font-size: .9rem; padding: 0 .5rem .5rem;
+              border-left: 1px solid #ddd; }
+.pe-sidebar-head { display: flex; align-items: center; gap: .5rem;
+                   position: sticky; top: 0; background: #fff;
+                   padding: .3rem 0; }
+.pe-sidebar-title { font-weight: 600; }
+.pe-sidebar-toggle { border: 1px solid #ccc; background: #f8f8f8;
+                     border-radius: .25rem; cursor: pointer; line-height: 1.1; }
+.pe-sidebar-list { list-style: none; margin: 0; padding: 0; }
+.pe-sidebar-list > li.pe-word { padding: .15rem .25rem; border-radius: .25rem; }
+.pe-sidebar-list > li.pe-word:hover,
+.pe-sidebar-list > li.pe-word.pe-hl { background: #fff3cd; }
+.pe-sidebar-subhead { margin-top: .5rem; font-weight: 600; color: #666; }
+li.pe-untagged { color: #888; }
+
+/* collapsed to a thin rail (state remembered by the client) */
+.pe-sidebar.pe-collapsed { flex-basis: 2.4rem; }
+.pe-sidebar.pe-collapsed .pe-sidebar-title,
+.pe-sidebar.pe-collapsed .pe-sidebar-list { display: none; }
+
+/* page-side highlight, driven from sidebar-row hover: light the group's
+   MEMBER BOXES (exact even where group frames interleave), and show the
+   frame too */
+#annotatedPage svg.group.pe-hl > rect.group-frame { display: inline; stroke: orange; }
+#annotatedPage svg.group.pe-hl > svg.box > rect.frame { stroke-width: 10; visibility: visible; }
+
+/* the cursor-following word-summary tooltip; suppressed during drags */
+.pe-hover-tip { position: fixed; z-index: 1090; background: #fff;
+                border: 1px solid #aaa; border-radius: .25rem;
+                box-shadow: 0 2px 6px rgba(0,0,0,.25);
+                padding: .25rem .5rem; max-width: 26rem;
+                pointer-events: none; font-size: .9rem; }
+.pe-hover-tip .lm-edit-pencil { display: none; } /* row clone: pencil is noise here */
+.pe-layout:has(.drag-in-progress) .pe-hover-tip { display: none !important; }
+
+/* ------------------------------------------------------------------ */
 /* --- Page Jump Feature -------------------------------------------- */
 /* ------------------------------------------------------------------ */
 

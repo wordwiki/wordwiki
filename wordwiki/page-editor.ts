@@ -18,6 +18,8 @@ function onContentLoaded() {
     //     more work - remove remove REMOVE
     document.cookie = `page-for-doc-${scannedPage.getAttribute('data-document-id')}=${scannedPage.getAttribute('data-page-number')}`;
 
+    initPageWordSidebar();
+
     console.info('Done onContentLoaded');
 }
 
@@ -1222,9 +1224,172 @@ async function rpc(rpcExprSegments: ReadonlyArray<string>, ...args: any[]) {
         throw new Error(`RPC to ${rpcExpr} with args ${JSON.stringify(argsObj)} failed - ${JSON.stringify(errorJson)}`);
     }
 
+    // Every page-editor mutation flows through here - the ONE hook that
+    // keeps the page word sidebar fresh (debounced; box-drag streams).
+    schedulePageWordSidebarRefresh();
+
     return await response.json();
 }
 
 function randomInt(max: number): number {
     return Math.floor(Math.random() * max);
+}
+
+// ---------------------------------------------------------------------------
+// --- Page word sidebar + hover tooltip (page-editor-change.md) --------------
+// ---------------------------------------------------------------------------
+//
+// Two-way hover sync between the page's tagged groups (svg#bg_<id>) and the
+// sidebar's word rows (li.pe-word[data-group-ids]), plus a cursor-following
+// tooltip that answers "which word is this grey region?" without a click.
+// Direction matters for the overlap problem: page->sidebar keys off the
+// hovered BOX (unambiguous even where group FRAMES interleave), and
+// sidebar->page lights the group's member boxes, not just its frame.
+
+function initPageWordSidebar() {
+    const sidebar = document.getElementById('pageWordSidebar');
+    if(!sidebar) return;   // locked/popup editors carry no sidebar
+    if(localStorage.getItem('pe-sidebar-collapsed') === '1')
+        sidebar.classList.add('pe-collapsed');
+    const page = document.getElementById('annotatedPage');
+    if(!page) return;
+    page.addEventListener('mouseover', pageBoxHoverEnter);
+    page.addEventListener('mouseout', pageBoxHoverLeave);
+    page.addEventListener('mousemove', positionPageHoverTip);
+}
+
+/** The TAGGED (non-reference-layer) group enclosing an event target, if
+ *  any - the ref layer's grey text boxes are not word-linked. */
+function hoveredTaggedGroup(target: EventTarget|null): Element|null {
+    if(!(target instanceof Element)) return null;
+    const group = target.closest('svg.group');
+    return (group && !group.classList.contains('ref')) ? group : null;
+}
+
+function pageBoxHoverEnter(event: MouseEvent) {
+    if(document.getElementById('annotatedPage')?.classList.contains('drag-in-progress')) return;
+    const group = hoveredTaggedGroup(event.target);
+    if(!group) return;
+    const groupId = group.id.replace(/^bg_/, '');
+    clearSidebarRowHighlights();
+    // A group referenced by two words lights BOTH rows - that is the honest
+    // answer, and the sidebar is where the ambiguity reads clearly.
+    const rows = sidebarRowsForGroup(groupId);
+    rows.forEach(row=>row.classList.add('pe-hl'));
+    rows[0]?.scrollIntoView({block: 'nearest'});
+    showPageHoverTip(rows, event);
+}
+
+function pageBoxHoverLeave(event: MouseEvent) {
+    const group = hoveredTaggedGroup(event.target);
+    if(!group) return;
+    // Moving between boxes WITHIN the group is not a leave.
+    if(event.relatedTarget instanceof Element && group.contains(event.relatedTarget)) return;
+    clearSidebarRowHighlights();
+    hidePageHoverTip();
+}
+
+function sidebarRowsForGroup(groupId: string): Element[] {
+    return Array.from(document.querySelectorAll(
+        `#pageWordSidebar li.pe-word[data-group-ids~="${groupId}"]`));
+}
+
+function clearSidebarRowHighlights() {
+    document.querySelectorAll('#pageWordSidebar li.pe-word.pe-hl')
+        .forEach(row=>row.classList.remove('pe-hl'));
+}
+
+// --- The tooltip clones the sidebar rows' summary lines (one render of
+//     each summary, one source of truth - the rows exist even while the
+//     sidebar is collapsed).
+
+function showPageHoverTip(rows: Element[], event: MouseEvent) {
+    const tip = document.getElementById('peHoverTip');
+    if(!tip) return;
+    if(rows.length === 0) { hidePageHoverTip(); return; }
+    tip.replaceChildren(...rows.map(row=>{
+        const line = document.createElement('div');
+        if(row.classList.contains('pe-untagged'))
+            line.textContent = 'Not yet linked to a word';
+        else
+            line.innerHTML = row.innerHTML;
+        return line;
+    }));
+    tip.style.display = 'block';
+    positionPageHoverTip(event);
+}
+
+function hidePageHoverTip() {
+    const tip = document.getElementById('peHoverTip');
+    if(tip) tip.style.display = 'none';
+}
+
+function positionPageHoverTip(event: MouseEvent) {
+    const tip = document.getElementById('peHoverTip');
+    if(!tip || tip.style.display === 'none') return;
+    const pad = 14;
+    let x = event.clientX + pad;
+    let y = event.clientY + pad;
+    const r = tip.getBoundingClientRect();
+    if(x + r.width > window.innerWidth - 4) x = Math.max(4, event.clientX - r.width - pad);
+    if(y + r.height > window.innerHeight - 4) y = Math.max(4, event.clientY - r.height - pad);
+    tip.style.left = `${x}px`;
+    tip.style.top = `${y}px`;
+}
+
+// --- Sidebar-row hover -> page highlight (inline onmouseenter/onmouseleave
+//     on the rows).
+
+function pageWordRowEnter(event: Event) {
+    const row = event.currentTarget as Element;
+    for(const id of rowGroupIds(row))
+        document.getElementById(`bg_${id}`)?.classList.add('pe-hl');
+}
+
+function pageWordRowLeave(event: Event) {
+    const row = event.currentTarget as Element;
+    for(const id of rowGroupIds(row))
+        document.getElementById(`bg_${id}`)?.classList.remove('pe-hl');
+}
+
+function rowGroupIds(row: Element): string[] {
+    return (row.getAttribute('data-group-ids') ?? '').split(/\s+/).filter(s=>s.length>0);
+}
+
+// --- Collapse to a thin rail; state survives page jumps.
+
+function togglePageWordSidebar() {
+    const sidebar = document.getElementById('pageWordSidebar');
+    if(!sidebar) return;
+    const collapsed = sidebar.classList.toggle('pe-collapsed');
+    localStorage.setItem('pe-sidebar-collapsed', collapsed ? '1' : '0');
+}
+
+// --- Refresh after tagging mutations (hooked into rpc(); debounced).
+
+let pageWordSidebarRefreshTimer: number|undefined = undefined;
+
+function schedulePageWordSidebarRefresh() {
+    if(!document.getElementById('pageWordSidebar')) return;
+    if(pageWordSidebarRefreshTimer !== undefined) clearTimeout(pageWordSidebarRefreshTimer);
+    pageWordSidebarRefreshTimer = setTimeout(refreshPageWordSidebar, 750) as unknown as number;
+}
+
+async function refreshPageWordSidebar() {
+    pageWordSidebarRefreshTimer = undefined;
+    const sidebar = document.getElementById('pageWordSidebar');
+    const scannedPage = document.getElementById('scanned-page');
+    if(!sidebar || !scannedPage) return;
+    const pageId = scannedPage.getAttribute('data-page-id');
+    const layerId = scannedPage.getAttribute('data-layer-id');
+    if(!pageId || !layerId) return;
+    const response = await fetch(
+        `/ww/wordwiki.pages.renderPageWordSidebar(${pageId}, ${layerId})`);
+    if(!response.ok) { console.info('sidebar refresh failed', response.status); return; }
+    const container = document.createElement('div');
+    container.innerHTML = await response.text();
+    const fresh = container.querySelector('#pageWordSidebar');
+    if(!fresh) { console.info('sidebar refresh: no #pageWordSidebar in response'); return; }
+    if(sidebar.classList.contains('pe-collapsed')) fresh.classList.add('pe-collapsed');
+    sidebar.replaceWith(fresh);
 }

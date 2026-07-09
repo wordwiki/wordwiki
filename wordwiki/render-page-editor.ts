@@ -16,6 +16,23 @@ import * as templates from './templates.ts';
 import {Response, ResponseMarker, forwardResponse} from '../liminal/http-server.ts';
 import {route, authenticated, hostOrAdmin} from '../liminal/security.ts';
 import * as random from "../liminal/random.ts";
+import * as entrySchema from './entry-schema.ts';
+// Type-only: erased at runtime, so no import cycle.  The app instance
+// arrives via the provider hook below (the templates-provider pattern) -
+// a VALUE import of wordwiki.ts from here broke module initialization
+// order (three test files died with "Cannot access 'users' before
+// initialization").
+import type { WordWiki } from './wordwiki.ts';
+
+// Injected by the WordWiki ctor.
+let pageEditorAppProvider: (() => WordWiki) | undefined = undefined;
+export function setPageEditorAppProvider(p: () => WordWiki): void {
+    pageEditorAppProvider = p;
+}
+function pageEditorApp(): WordWiki {
+    return (pageEditorAppProvider
+        ?? utils.panic('page-editor app provider not set (WordWiki ctor injects it)'))();
+}
 
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
@@ -132,7 +149,18 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
             ? renderTextSearchForm(cfg.reference_layer_ids[0], cfg)
             : []),
 
-        annotatedPage,
+        // The page-at-a-time layout (page-editor-change.md): the annotated
+        // page beside the page word sidebar.  The single-group popup editor
+        // (locked mode) keeps the plain layout - the sidebar is page-level
+        // workflow, noise when editing one reference.
+        (cfg.locked_bounding_group_id || cfg.is_popup_editor)
+            ? annotatedPage
+            : ['div', {class: 'pe-layout'},
+               ['div', {class: 'pe-main'}, annotatedPage],
+               renderPageWordSidebar(page_id, cfg.layer_id),
+               // The cursor-following word-summary tooltip (filled by the
+               // client from the sidebar rows).
+               ['div', {id: 'peHoverTip', class: 'pe-hover-tip', style: 'display:none;'}]],
 
         // Array.from(boxesByGroup.keys()).map(bounding_group_id =>
         //     ['p', {},
@@ -145,6 +173,102 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
     // The scanned-page image + bounding boxes need the full viewport width.
     return {title, head, body, fullBleed: true};
+}
+
+// --------------------------------------------------------------------------------
+// --- Page word sidebar (page-editor-change.md) ------------------------------------
+// --------------------------------------------------------------------------------
+//
+// The editors transcribe the PDM one page at a time and want to interact at
+// that level: a narrow side panel of every word with scanned content on the
+// current page, in READING ORDER (the transcription/elder-review order),
+// with two-way hover sync against the page's tagged groups and a tail of
+// groups no word references yet.  The panel doubles as the data source for
+// the hover tooltip on the page's grey regions (the client clones the row's
+// summary line) - one render of each summary, one source of truth.
+
+interface PageWordRow { entry_id: number; groupIds: number[]; }
+
+/** The words with scanned content on this page: entry + the page's bounding
+ *  groups its document references point at, in reading order (same query
+ *  shape as editorReports.entriesByBookPage - dz: the sidebar is that
+ *  report as a panel). */
+function pageWordRows(page_id: number): PageWordRow[] {
+    const refs = db().all<{bounding_group_id: number, entry_id: number}, {page_id: number}>(
+        block`
+/**/     SELECT DISTINCT bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
+/**/       FROM dict AS ref
+/**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
+/**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
+/**/       WHERE ref.valid_to = 9007199254740991 AND
+/**/             ref.ty = 'ref' AND
+/**/             bb.page_id = :page_id
+/**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id});
+    const byEntry = new Map<number, PageWordRow>();
+    for(const r of refs) {
+        let row = byEntry.get(r.entry_id);
+        if(!row) byEntry.set(r.entry_id, row = {entry_id: r.entry_id, groupIds: []});
+        if(!row.groupIds.includes(r.bounding_group_id)) row.groupIds.push(r.bounding_group_id);
+    }
+    return [...byEntry.values()];
+}
+
+/** The sidebar panel.  Also a ROUTE (PageRoutes) so the client can re-fetch
+ *  it after tagging mutations.  Rows carry data-group-ids for the client's
+ *  two-way hover sync with the page's `svg#bg_<id>` groups. */
+export function renderPageWordSidebar(page_id: number, layer_id: number): any {
+    return renderPageWordSidebarCore(pageEditorApp(), page_id, layer_id);
+}
+
+/** The app-parameterized core (tests pass their fixture WordWiki - the
+ *  getWordWiki() singleton would be a SECOND instance over the test db). */
+export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_id: number): any {
+    const lane = ww.workingLane()?.orthography;
+    const rows = pageWordRows(page_id);
+    const entriesById = new Map<number, entrySchema.Entry>(
+        ww.store.entries.map((e: entrySchema.Entry)=>[e.entry_id, e]));
+
+    // Tagged groups no word references yet - exactly what page-at-a-time
+    // review should surface (orphaned tags), in page position order.
+    const referenced = new Set(rows.flatMap(r=>r.groupIds));
+    const untagged = loadBookPageScanData(page_id, layer_id).groups
+        .filter(g=>!referenced.has(g.bounding_group_id) && g.boxes.length > 0)
+        .toSorted((a, b)=>Math.min(...a.boxes.map(x=>x.y)) - Math.min(...b.boxes.map(x=>x.y)))
+        .map(g=>g.bounding_group_id);
+
+    const rowProps = (groupIds: number[]) => ({
+        'data-group-ids': groupIds.join(' '),
+        onmouseenter: 'pageWordRowEnter(event)',
+        onmouseleave: 'pageWordRowLeave(event)'});
+
+    const wordRow = (r: PageWordRow) => {
+        const e = entriesById.get(r.entry_id);
+        // A ref pointing at a deleted/unknown entry renders nothing (the
+        // group still shows in the untagged tail? no - it IS referenced;
+        // just skip the row rather than crash the editor).
+        if(!e) return undefined;
+        return ['li', {class: 'pe-word', ...rowProps(r.groupIds)},
+                templates.lexemeLink(r.entry_id,
+                    entrySchema.renderEntryCompactSummary(e, {orthography: lane}),
+                    {viewOrthography: lane, newTab: true})];
+    };
+
+    return ['div', {id: 'pageWordSidebar', class: 'pe-sidebar'},
+            ['div', {class: 'pe-sidebar-head'},
+             ['button', {id: 'pageWordSidebarToggle', class: 'pe-sidebar-toggle',
+                         onclick: 'togglePageWordSidebar()',
+                         title: 'Show/hide the page word list'}, '☰'],
+             ['span', {class: 'pe-sidebar-title'},
+              `Words on this page (${rows.length})`]],
+            ['ul', {class: 'pe-sidebar-list'},
+             rows.map(wordRow),
+             untagged.length > 0
+                 ? [['li', {class: 'pe-sidebar-subhead'},
+                     `Groups not yet linked to a word (${untagged.length})`],
+                    untagged.map(id=>
+                        ['li', {class: 'pe-word pe-untagged', ...rowProps([id])},
+                         `Group ${id}`])]
+                 : undefined]];
 }
 
 /**
@@ -1191,6 +1315,7 @@ export class PageRoutes {
     @route(authenticated) renderPageEditorByPageNumber(...a: Parameters<typeof renderPageEditorByPageNumber>) { return renderPageEditorByPageNumber(...a); }
     @route(authenticated) renderPageEditorByPageId(...a: Parameters<typeof renderPageEditorByPageId>) { return renderPageEditorByPageId(...a); }
     @route(authenticated) renderTextSearchResults(...a: Parameters<typeof renderTextSearchResults>) { return renderTextSearchResults(...a); }
+    @route(authenticated) renderPageWordSidebar(...a: Parameters<typeof renderPageWordSidebar>) { return renderPageWordSidebar(...a); }
     @route(authenticated) forwardToSingleBoundingGroupEditorURL(...a: Parameters<typeof forwardToSingleBoundingGroupEditorURL>) { return forwardToSingleBoundingGroupEditorURL(...a); }
 
     // --- mutation: host/admin, POST-only (GET-CSRF closed via mutates) ---
