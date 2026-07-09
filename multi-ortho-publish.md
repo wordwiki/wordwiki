@@ -79,3 +79,12 @@ One run, all publishable orthographies (`./wordwiki.sh publish`):
 - Each tree carries its own `data/publish-source.json`; the
   orthography-neutral `full-history.json` lives once at the root
   `data/`, linked from every tree's data page.
+- Public SEARCH is per-orthography editorial opt-in: `public_search` on
+  the orthography table (seed: li on, sf off; rides the bundle as
+  `publicSearchEnabled`, old dumps default true).  Disabled editions
+  elide the whole search payload from home (form, search.js, in-page
+  term index) and keep the permanent Browse section (Words by
+  Category / All Words - on EVERY edition's home) plus a link to the
+  full primary-spelling dictionary.  Future re-enable story: a smart
+  search empty-state ("no SF results - N matches in Listuguj") instead
+  of the flag, once the SF edition is big enough to search.

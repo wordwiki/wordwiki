@@ -90,6 +90,24 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
         assertStringIncludes(sfB, '../../../../li/entries/w/waqami/waqami.html');
         assert(!liHome.includes('is a preview'), 'the primary tree carries no banner');
 
+        // Public search rides the orthography table's public_search flag
+        // (seed: li on, sf off).  Search elided means NO search machinery at
+        // all (the form AND the in-page term index); the Browse section is on
+        // EVERY edition's home; a disabled non-primary home also links the
+        // full primary dictionary.
+        assertStringIncludes(liHome, 'Dictionary Search');
+        assertStringIncludes(liHome, 'updateCurrentSearchFromInput');
+        assertStringIncludes(liHome, 'Browse the Dictionary');
+        assertStringIncludes(liHome, 'Words by Category');
+        assert(!sfHome.includes('Dictionary Search'), 'sf search form elided');
+        assert(!sfHome.includes('updateCurrentSearchFromInput'), 'sf search js elided');
+        assert(!sfHome.includes('allSearchTerms'), 'sf term index elided');
+        assertStringIncludes(sfHome, 'Browse the Dictionary');
+        assertStringIncludes(sfHome, 'Words by Category');
+        assertStringIncludes(sfHome, 'All Words');
+        assertStringIncludes(sfHome, 'The full dictionary in Listuguj spelling (2 words)');
+        assertStringIncludes(sfHome, '../li/index.html');
+
         // Legacy forwarders: at the ROOT, targeting the PRIMARY tree.
         const fwd = read('servlet/words/samqwan.html');
         assertStringIncludes(fwd, '/li/entries/s/samqwan/samqwan.html');

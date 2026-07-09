@@ -58,6 +58,13 @@ export interface Orthography {
     /** May a word be made public in this orthography?  (The Public row and
      *  makePublic consult this - archaic source orthographies say no.) */
     publishable: number;
+    /** May the PUBLIC site offer search in this orthography?  An editorial
+     *  judgment (dz 2026-07-09): until an edition is complete enough,
+     *  search is a dead-end machine for outsiders - the young edition's
+     *  home elides the search box (browse links remain) until the staff
+     *  flip this on.  Defaults FALSE: a new orthography is by definition
+     *  young. */
+    public_search: number;
     /** Not offered for new content (existing values keep displaying). */
     retired: number;
     order_key: string;
@@ -75,6 +82,8 @@ export class OrthographyTable extends Table<Orthography> {
             new StringField('name', {prompt: 'Display name'}),
             new StringField('abbreviation', {nullable: true,
                                              prompt: 'Abbreviation (the tiny marker beside texts, e.g. Li)'}),
+            new BooleanField('public_search', {default: 0,
+                prompt: 'Enable public search (elided on the public site until the edition is complete enough)'}),
             new BooleanField('publishable', {default: 0,
                                              prompt: 'Publishable (words can be made public in this orthography)'}),
             new BooleanField('retired', {default: 0,
@@ -229,11 +238,14 @@ export class OrthographyTable extends Table<Orthography> {
  *  flags): the two living orthographies are publish targets; the two archaic
  *  Pacifique source orthographies are not. */
 export const SEED_ORTHOGRAPHIES: Array<{slug: string, name: string, abbreviation: string,
-                                        publishable: number}> = [
-    { slug: 'mm-li', name: 'Listuguj',             abbreviation: 'Li', publishable: 1 },
-    { slug: 'mm-sf', name: 'Smith-Francis',        abbreviation: 'SF', publishable: 1 },
-    { slug: 'mm-mp', name: 'Modified Pacifique',   abbreviation: 'MP', publishable: 0 },
-    { slug: 'mm-pm', name: 'Pacifique Manuscript', abbreviation: 'PM', publishable: 0 },
+                                        publishable: number, public_search: number}> = [
+    // public_search: Listuguj's edition is complete enough to search; the
+    // young Smith-Francis edition elides its public search box until the
+    // staff flip it on (dz 2026-07-09).
+    { slug: 'mm-li', name: 'Listuguj',             abbreviation: 'Li', publishable: 1, public_search: 1 },
+    { slug: 'mm-sf', name: 'Smith-Francis',        abbreviation: 'SF', publishable: 1, public_search: 0 },
+    { slug: 'mm-mp', name: 'Modified Pacifique',   abbreviation: 'MP', publishable: 0, public_search: 0 },
+    { slug: 'mm-pm', name: 'Pacifique Manuscript', abbreviation: 'PM', publishable: 0, public_search: 0 },
 ];
 
 /** Idempotent seed (insert-if-missing; never overwrites an edited row - but

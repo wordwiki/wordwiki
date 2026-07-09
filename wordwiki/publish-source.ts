@@ -109,6 +109,10 @@ export interface PublishSource {
      *  lowercased - DATA, not code (the segment lands in URLs and mirror
      *  directory names forever). */
     orthographySegment: string;
+    /** May the public site offer SEARCH in this edition?  (Editorial flag
+     *  from the orthography table: a young edition's search is a dead-end
+     *  machine, so its home elides the box - browse links remain.) */
+    publicSearchEnabled: boolean;
     /** The pub-gate selection set: entries public in ANY of these. */
     orthographies: string[];
     /** Whether each entry carries all orthographies' content or was
@@ -201,6 +205,7 @@ export async function buildPublishSource(app: PublishSourceApp,
         catch (_e) { return undefined; }
     })();
     const orthographyName = primaryRow?.name || orthographies[0];
+    const publicSearchEnabled = !!primaryRow?.public_search;
     const orthographySegment = (primaryRow?.abbreviation || orthographies[0])
         .toLowerCase().replace(/[^a-z0-9_]/g, '');
     const variantContent = opts.variantContent ?? 'all';
@@ -285,6 +290,7 @@ export async function buildPublishSource(app: PublishSourceApp,
         orthography: orthographies[0],
         orthographyName,
         orthographySegment,
+        publicSearchEnabled,
         orthographies,
         variantContent,
         collationLocale: siteConfig.collationLocale,
@@ -345,6 +351,7 @@ export function publishSourceFromJson(text: string): PublishSource {
         source.orthographyName ??= source.orthography;
         source.orthographySegment ??= String(source.orthography).toLowerCase()
             .replace(/[^a-z0-9_]/g, '');
+        source.publicSearchEnabled ??= true;   // pre-flag dumps were li
     }
     if(source?.formatVersion !== PUBLISH_SOURCE_FORMAT_VERSION)
         throw new Error(`unsupported publish-source formatVersion '${source?.formatVersion}' ` +

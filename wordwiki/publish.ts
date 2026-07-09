@@ -946,11 +946,15 @@ export class Publish {
     }
     
     async publishHomePage(): Promise<void> {
+        const searchEnabled = this.source.publicSearchEnabled;
 
-        const allSearchTerms = Array.from(new Set(
-            this.entries.flatMap(entry=>entryschema.computeNormalizedSearchTerms(entry))));
-        
-        const head = [
+        // The home page IS the in-page search engine (the term index + the
+        // hidden entry list) - when search is elided, that whole payload
+        // goes with it.
+        const allSearchTerms = searchEnabled ? Array.from(new Set(
+            this.entries.flatMap(entry=>entryschema.computeNormalizedSearchTerms(entry)))) : [];
+
+        const head = searchEnabled ? [
             ['style', {}, block`
 /**/                .def { display:none; }
 /**/                _search_ { display: list-item; }`],
@@ -958,20 +962,26 @@ export class Publish {
             ['script', {}, block`
 /**/                allSearchTerms = ${JSON.stringify(allSearchTerms)};
 /**/                `],
-        ];
+        ] : [];
         const title = "Mi'gmaq/Mi'kmaq Online Talking Dictionary";
-        const body =
-            ['div', {},
-             ['h1', {}, title],
 
-             ['p', {}, `Pjilasi & Welcome to Mi’gmaq-Mikmaq Online & current undertaking, the `,
-              ['a', {href:'./books/PDM/page-0307/index.html'},
-               'Pacifique Dictionary Manuscripts project']],
-             
-             // --- Bead image
-             ['div', {},
-              ['img', {id:'headerImage', class: 'img-fluid', src: `${this.sharedUp}resources/mmo-bead-image-1080x360.jpg`}]],
-             
+        // --- Browse: on EVERY edition's home (dz), search or no search.
+        const pb = this.options.previewBanner;
+        const browse = [
+            ['h2', {}, 'Browse the Dictionary'],
+            ['ul', {},
+             ['li', {}, ['a', {href: this.categoriesDirectoryPath}, 'Words by Category']],
+             ['li', {}, ['a', {href: this.allWordsPath}, 'All Words']],
+             // Non-primary editions also point at the full dictionary (the
+             // preview banner links it too; the home page earns the
+             // redundancy).
+             pb ? ['li', {}, ['a', {href: `${this.sharedUp}${pb.primarySegment}/index.html`},
+                              `The full dictionary in ${pb.primaryName} spelling ` +
+                              `(${pb.primaryCount} words)`]]
+                : undefined],
+        ];
+
+        const searchSection = searchEnabled ? [
              // --- Search Box
              ['h2', {}, 'Dictionary Search'],
              ['div', {class: 'public-search-box'},
@@ -984,33 +994,53 @@ export class Publish {
                           oninput:"updateCurrentSearchFromInput();"}],
               ], // /form
              ], // /div
+        ] : [];
 
-             // --- Search instructions display until user starts typing a search
-             ['div', {id:"searchInstructions"},
-              ['ul', {},
-               ['li', {}, "You can search in Mi'gmaq/Mi'kmaq or English."],
-               ['li', {}, "Search results will update as you type (after the first 3 letters)."],
-               ['li', {}, "Click on ", audio.audioPlayIcon, " to hear a recording of the word."],
-               ['li', {}, "To do an exact word search, end the word with a space."],
-               ['li', {}, "You can use a * for parts of a word you do not want to spell or are unsure of the spelling of."],
-               ['li', {}, "You can do searches that must match multiple words.  For example 'wild cat'."],
-              ],
+        const body =
+            ['div', {},
+             ['h1', {}, title],
 
-              this.renderAboutUsBody(),
-             ],
-
-             // --- If we are returning to this page - restore the search from the fragment id in the URL
-             ['script', {}, block`
-/**/              updateCurrentSearchFromDocumentHash();
-/**/         `],
+             ['p', {}, `Pjilasi & Welcome to Mi’gmaq-Mikmaq Online & current undertaking, the `,
+              ['a', {href:'./books/PDM/page-0307/index.html'},
+               'Pacifique Dictionary Manuscripts project']],
              
-             ['ul', {},
-              this.entries.map(entry=>[
-                  ['li', {class:entryschema.computeNormalizedSearchTerms(entry).map(term=>'_'+term).join(' ')+' def'},
-                   this.renderEntryPublicLink('./', entry)
-                  ]
-              ])
-             ],
+             // --- Bead image
+             ['div', {},
+              ['img', {id:'headerImage', class: 'img-fluid', src: `${this.sharedUp}resources/mmo-bead-image-1080x360.jpg`}]],
+
+             searchSection,
+             browse,
+
+             searchEnabled
+                 ? // --- Search instructions display until user starts typing a search
+                   [['div', {id:"searchInstructions"},
+                     ['ul', {},
+                      ['li', {}, "You can search in Mi'gmaq/Mi'kmaq or English."],
+                      ['li', {}, "Search results will update as you type (after the first 3 letters)."],
+                      ['li', {}, "Click on ", audio.audioPlayIcon, " to hear a recording of the word."],
+                      ['li', {}, "To do an exact word search, end the word with a space."],
+                      ['li', {}, "You can use a * for parts of a word you do not want to spell or are unsure of the spelling of."],
+                      ['li', {}, "You can do searches that must match multiple words.  For example 'wild cat'."],
+                     ],
+
+                     this.renderAboutUsBody(),
+                    ],
+
+                    // --- If we are returning to this page - restore the search from the fragment id in the URL
+                    ['script', {}, block`
+/**/                    updateCurrentSearchFromDocumentHash();
+/**/               `],
+
+                    ['ul', {},
+                     this.entries.map(entry=>[
+                         ['li', {class:entryschema.computeNormalizedSearchTerms(entry).map(term=>'_'+term).join(' ')+' def'},
+                          this.renderEntryPublicLink('./', entry)
+                         ]
+                     ])
+                    ]]
+                 : // No search: the about content renders directly (it lived
+                   // inside the search-instructions container).
+                   this.renderAboutUsBody(),
             ];
         
         await this.writePage(this.homePath, this.publicPageTemplate('', {title, head, body},
