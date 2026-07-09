@@ -46,6 +46,9 @@ export const service_kind_enum: Record<string, string> = {
     'other': 'Other',
 };
 
+// Drop-off fields appear in the service form only while service_kind is 'full'.
+const showForFull = {field: 'service_kind', in: ['full']};
+
 export interface Service {
     service_id: number;
 
@@ -132,11 +135,12 @@ export class ServiceTable extends Table<Service> {
 
             // Drop-off ("We Repair" / full) service: the bike is LEFT, so it needs a
             // small ready-call / pickup checklist.  Empty/0 for the common DIY case
-            // (client stays with the bike).  Shown in the UI only for kind 'full'.
-            new StringField('drop_off_notes', {default: ''}),
-            new DateTimeField('drop_off_scheduled_pick_up_time', {nullable: true}),
-            new BooleanField('drop_off_ready_call_done', {default: 0}),
-            new BooleanField('drop_off_pick_up_done', {default: 0}),
+            // (client stays with the bike).  showWhen -> these appear in the form only
+            // while service_kind is 'full' (progressive disclosure; FieldOptions.showWhen).
+            new StringField('drop_off_notes', {default: '', showWhen: showForFull}),
+            new DateTimeField('drop_off_scheduled_pick_up_time', {nullable: true, showWhen: showForFull}),
+            new BooleanField('drop_off_ready_call_done', {default: 0, showWhen: showForFull}),
+            new BooleanField('drop_off_pick_up_done', {default: 0, showWhen: showForFull}),
 
             new MarkdownField('notes', {default: ''}),
             new ManagedStringField('order_key', {default: ''}),
@@ -343,18 +347,13 @@ export class ServiceTable extends Table<Service> {
         return this.renderServiceRow(this.getById(id));
     }
 
-    // The service edit form.  The drop-off checklist fields appear only for a
-    // 'full' (We Repair) service - a bike that's left needs the ready-call/pickup
-    // steps; DIY etc. don't, so their form stays uncluttered (minimal ceremony).
-    // Switching a record TO 'full' reveals them the next time the form is opened.
+    // The service edit form.  All fields are rendered; the drop-off checklist ones
+    // carry showWhen (see the constructor), so the client reveals/hides them LIVE
+    // as service_kind changes - 'full' (We Repair) shows them, other kinds don't,
+    // no reopen needed (form-state mechanism, liminal.md).
     @route(hostOrAdmin)
     renderServiceForm(id: number): Markup {
-        const s = this.getById(id);
-        const core = ['service_kind', 'client_name', 'bike_description', 'service_description',
-                      'client_postal', 'client_phone', 'notes'];
-        const dropOff = ['drop_off_scheduled_pick_up_time', 'drop_off_ready_call_done',
-                         'drop_off_pick_up_done', 'drop_off_notes'];
-        return this.renderEditForm(s, s.service_kind === 'full' ? [...core, ...dropOff] : core);
+        return this.renderEditForm(this.getById(id));
     }
 
     // The Service page query: a from/to date window (page-state; liminal.md

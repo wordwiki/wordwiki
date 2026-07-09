@@ -196,8 +196,15 @@ export function renderParamForm(params: Field[], defaults: Tuple, opts: ParamFor
         Object.entries(opts.hidden ?? {}).map(([name, value]) =>
             [h.input, {type: 'hidden', name, value}]),
 
-        // One input per visible parameter (reuses the record-field widgets).
-        params.map(p => p.renderInput(defaults[p.name], opts.fieldContext)),
+        // One input per visible parameter (reuses the record-field widgets).  A
+        // field with showWhen is wrapped in a transparent (display:contents) div
+        // carrying its data-show-when tokens, so the client can hide it while the
+        // form's state classes don't match (see Field.conditionalWrapperAttrs).
+        params.map(p => {
+            const input = p.renderInput(defaults[p.name], opts.fieldContext);
+            const wrap = p.conditionalWrapperAttrs();
+            return wrap ? [h.div, wrap, input] : input;
+        }),
 
         // lm-form-actions: when the dialog scrolls (long edit forms on a phone),
         // this row sticks to the bottom of the scrollport so the submit is

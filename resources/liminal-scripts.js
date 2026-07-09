@@ -986,3 +986,69 @@ function lmBlobToBase64(blob) {
         reader.readAsDataURL(blob);
     });
 }
+
+/* ---------------------------------------------------------------------------
+   Form state classes + conditional field visibility (progressive disclosure).
+
+   Every <select> and checkbox in a form stamps the form element with a state
+   class from its current value - enum__<name>__<value> for a select,
+   checkbox__<name> for a checked box - at load and on every change (stale
+   enum__<name>__* are cleared first).  A field the server wrapped with
+   data-show-when="<token> <token> …" (Field.showWhen -> renderParamForm) is
+   shown only while the form carries AT LEAST ONE of those tokens; otherwise it
+   gets .lm-cond-hidden (display:none).
+
+   This is UX only - a hidden field is still in the DOM and still submits its
+   value, so switching the driver never loses data, and it is NOT access
+   control (that stays server-side via the field `edit` permission).  See
+   liminal.md § Conditional field visibility.
+--------------------------------------------------------------------------- */
+
+// CSS-ident-safe AND free of our '__' delimiter (single '_' is fine - 'service_kind').
+function lmStateTokenOk(s) { return /^[A-Za-z0-9_-]+$/.test(s) && !s.includes('__'); }
+
+function lmFormStateApply(form) {
+    if(!form || !form.classList) return;
+    // 1. Stamp state classes from every select / checkbox in the form.
+    for(const el of form.querySelectorAll('select, input[type="checkbox"]')) {
+        const name = el.getAttribute('name');
+        if(!name || !lmStateTokenOk(name)) continue;
+        if(el.type === 'checkbox') {
+            form.classList.toggle('checkbox__' + name, el.checked);
+        } else {
+            for(const c of [...form.classList])
+                if(c.startsWith('enum__' + name + '__')) form.classList.remove(c);
+            const v = el.value;
+            if(v && lmStateTokenOk(v)) form.classList.add('enum__' + name + '__' + v);
+        }
+    }
+    // 2. Show/hide conditional fields from the form's current state classes.
+    for(const el of form.querySelectorAll('[data-show-when]')) {
+        const anyOf = (el.getAttribute('data-show-when') || '').split(/\s+/).filter(Boolean);
+        const show = anyOf.length === 0 || anyOf.some(t => form.classList.contains(t));
+        el.classList.toggle('lm-cond-hidden', !show);
+    }
+}
+
+/* Recompute a form when one of its sources changes. */
+document.addEventListener('change', (e) => {
+    const t = e.target;
+    if(t instanceof Element && t.matches('form select, form input[type="checkbox"]'))
+        lmFormStateApply(t.closest('form'));
+});
+
+/* Initialise every form that uses conditional fields, within a freshly-arrived
+   subtree (a modal-loaded dialog, an htmx swap) and at initial page load. */
+function lmFormStateInit(root) {
+    const scope = (root instanceof Element || root === document) ? root : document;
+    const forms = new Set();
+    for(const el of scope.querySelectorAll('[data-show-when]')) {
+        const f = el.closest('form');
+        if(f) forms.add(f);
+    }
+    for(const f of forms) lmFormStateApply(f);
+}
+document.addEventListener('htmx:afterSettle', (e) =>
+    lmFormStateInit(e.target instanceof Element ? e.target : document));
+if(document.readyState !== 'loading') lmFormStateInit(document);
+else document.addEventListener('DOMContentLoaded', () => lmFormStateInit(document));

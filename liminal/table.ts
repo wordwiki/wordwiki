@@ -1005,6 +1005,15 @@ export interface FieldOptions {
     // Use for fields that may legitimately appear in a list of mixed visibility
     // (e.g. a phone a volunteer chose not to share).
     redact?: boolean,
+
+    // CONDITIONAL VISIBILITY (progressive disclosure): show this field in a form
+    // only when another enum field's current value is one of `in`.  Purely a
+    // client-side reveal driven by the form's state classes (see the form-state
+    // mechanism in liminal.md) - NOT access control (a hidden field is still in
+    // the DOM and still submits its value, so switching the driver never loses
+    // data).  `field`/`in` values must be CSS-identifier-safe ([A-Za-z0-9-], no
+    // '__'); they're the controlled enum vocabulary, so that's a non-constraint.
+    showWhen?: {field: string, in: string[]},
 }
 
 export const PublicViewable = Object.freeze({});
@@ -1138,6 +1147,28 @@ export class Field {
      */
     isInputRequired(): boolean {
         return !this.options.nullable && this.options.default === undefined;
+    }
+
+    // Conditional-visibility wrapper attrs (FieldOptions.showWhen).  A field with
+    // showWhen renders inside a display:contents wrapper carrying the form-state
+    // class token(s) it depends on; the client (liminal-scripts.js) hides it while
+    // the form lacks any of them.  display:contents keeps the wrapper transparent
+    // to the grid until it's toggled to display:none.  Returns undefined when the
+    // field is unconditional.
+    conditionalWrapperAttrs(): Record<string, string> | undefined {
+        const w = this.options.showWhen;
+        if(!w) return undefined;
+        // CSS-ident-safe AND free of our '__' delimiter (single '_' is fine, and
+        // common - e.g. 'service_kind').
+        const safe = (s: string) => /^[A-Za-z0-9_-]+$/.test(s) && !s.includes('__');
+        if(!safe(w.field))
+            throw new Error(`showWhen.field '${w.field}' is not CSS-identifier-safe`);
+        const tokens = w.in.map(v => {
+            if(!safe(v))
+                throw new Error(`showWhen value '${v}' (field ${w.field}) is not CSS-identifier-safe`);
+            return `enum__${w.field}__${v}`;
+        });
+        return {'data-show-when': tokens.join(' '), style: 'display:contents'};
     }
 
     // Set for fields that have no user-visible presentation to suppress

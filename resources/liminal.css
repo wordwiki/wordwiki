@@ -624,3 +624,7 @@ tr.lm-navigable:active > * { background-color: var(--bs-secondary-bg); }
     font-size: 0.75rem;
     pointer-events: none;
 }
+
+/* Conditional form field hidden by the form-state mechanism (liminal-scripts.js).
+   !important beats the wrapper's inline display:contents. */
+.lm-cond-hidden { display: none !important; }

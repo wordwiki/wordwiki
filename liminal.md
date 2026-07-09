@@ -481,6 +481,37 @@ change-feed_test.ts, activity-report_test.ts, rabid/page_state_test.ts.
 - Server-rendered relative times / "now"-dependent labels age in an open tab
   until a fragment reload; anchor-stamped pages avoid the worst of it.
 
+## Conditional field visibility (form-state classes)
+
+Progressive disclosure in forms — show a field only when another enum/checkbox
+has the right value (e.g. the drop-off checklist appears only when a service is
+`full`) — without custom JS per form.  A small generic mechanism
+(resources/liminal-scripts.js), HTML-primary and debuggable in the DOM:
+
+- **State classes.** Every `<select>` and checkbox in a form stamps the *form
+  element* with a class from its current value — `enum__<name>__<value>` for a
+  select, `checkbox__<name>` for a checked box — at load and on every change (a
+  select clears its stale `enum__<name>__*` first).  A general primitive: you can
+  hang bespoke CSS off these too, not just show/hide.
+- **Dependents.** `new StringField('drop_off_notes', {showWhen: {field: 'service_kind',
+  in: ['full']}})` — the field option `showWhen` makes `renderParamForm` wrap the
+  input in a transparent `display:contents` div carrying
+  `data-show-when="enum__service_kind__full …"` (one token per allowed value,
+  OR).  The client adds `.lm-cond-hidden` (display:none) whenever the form has
+  *none* of the tokens.  Re-evaluated live on every source change and on form
+  appearance (`htmx:afterSettle`) + initial load.
+
+Rules and caveats:
+- Tokens must be CSS-ident-safe and free of the `__` delimiter (single `_` is
+  fine — `service_kind`).  Enum values are controlled vocab, so this is a
+  non-constraint; an unsafe value throws at render (`Field.conditionalWrapperAttrs`).
+- **UX only, NOT access control.**  A hidden field is still in the DOM and still
+  submits its value — so switching the driver never loses data, but never rely on
+  it to keep a user from *editing* a field.  That stays server-side (`edit`
+  permission).  This also lets the server render ALL fields (no kind-specific
+  field list) and the client do the reveal live.
+- Scoped per `<form>` (via `closest('form')`), so multiple forms don't cross-talk.
+
 ## Keyboard-driven editing (opt-in per page)
 
 THE doc is repo-root **keyboard-driven-editing.md** (design + rationale);
@@ -579,6 +610,7 @@ rabid/speculative_refresh_test.ts.
 | tx/txd, reload front door, swap mechanics, speculation resolution | resources/rabid-scripts.js |
 | lmRefreshable / lm-read-only gate, debug mode, liveness poller, modal editor | resources/liminal-scripts.js |
 | keyboard-driven editing (stops, roving focus, key dispatch, focus restore) | resources/liminal-scripts.js + keyboard-driven-editing.md |
+| conditional field visibility (form-state classes, showWhen) | resources/liminal-scripts.js + liminal/table.ts (Field.showWhen) + liminal/action.ts |
 | debug mark styles | resources/liminal.css |
 | on-page view state (filters/paging in the URL, FieldSet) | this file, § On-page view state |
 | FieldSet codec (normalize/literal/parseFormValues), field types | liminal/table.ts |
