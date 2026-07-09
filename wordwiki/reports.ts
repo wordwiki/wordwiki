@@ -172,7 +172,7 @@ export class EditorReports {
     }
 
     getEntriesForTODO(restrictToUser: string|null, restrictToTask: string|null): entry.Entry[] {
-        return this.app.store.entries.filter(
+        return this.app.store.activeEntries.filter(
             entry=>
                 entry.todo.some(todo=>
                     !todo.done &&
@@ -198,7 +198,7 @@ export class EditorReports {
 
         const collator = this.app.site().collator;
         const entriesByTwitterPostStatus =
-            this.app.store.entries.toSorted((a: entry.Entry, b: entry.Entry)=> {
+            this.app.store.activeEntries.toSorted((a: entry.Entry, b: entry.Entry)=> {
                 const atwit = getTwitterPostStatusForEntry(a);
                 const btwit = getTwitterPostStatusForEntry(b);
                 if(atwit == btwit)
@@ -406,6 +406,32 @@ export class EditorReports {
             entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)])
         ];
 
+        return templates.pageTemplate({title, body});
+    }
+
+    /** THE exception to archived-words-filtered-from-everything: the one
+     *  place they are listed, so a mistaken archival is findable and one
+     *  click (the row's pencil) from being reversed. */
+    @route(authenticated)
+    archivedWords(): any {
+        const archived = this.app.store.entries
+            .filter(e => entry.isArchivedEntry(e));
+        const collator = this.app.site().collator;
+        archived.sort((a, b) => collator.compare(
+            a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
+        const title = 'Archived words';
+        const body = [
+            ['h1', {}, title],
+            ['p', {class: 'text-muted'},
+             `Archival is this dictionary's delete: these ${archived.length} words are ` +
+             'hidden from every list, report and search.  Open one (the pencil) and ' +
+             'change its lifecycle to bring it back.'],
+            archived.length === 0
+                ? ['p', {class: 'text-muted'}, 'No archived words.']
+                : ['ul', {},
+                   archived.map(e => ['li', {},
+                       templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummary(e))])],
+        ];
         return templates.pageTemplate({title, body});
     }
 

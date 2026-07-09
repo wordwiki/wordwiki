@@ -243,3 +243,40 @@ test("word links: the inverse 'not public' badge; pencils on bulk lists too", as
         });
     });
 });
+
+test("archived words: filtered from browsing, listed in the Archived Words report", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        const e = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([e], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, "spl", 1010, tl.next(),
+            {attr1: "samqwan", variant: "mm-li", order_key: "0.5"})], {quiet: true});
+        const s = mkChild(e, "sub", 1100, tl.next(), {order_key: "0.5"});
+        fx.ww.applyTransaction([s], {quiet: true});
+        fx.ww.applyTransaction([mkChild(s, "cat", 1200, tl.next(),
+            {attr1: "water", order_key: "0.5"})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(e, "sta", 1020, tl.next(),
+            {attr1: "Archived", order_key: "0.5"})], {quiet: true});
+
+        await as(fx, "djz", async () => {
+            const search = markupToString(await renderRoute(fx.ww,
+                "wordwiki.searchPage(query)", {queryArgs: {searchText: "samq"}}));
+            assertEquals(search.includes("samqwan"), false, "hidden from search");
+            const cats = markupToString(await renderRoute(fx.ww,
+                'wordwiki.editorReports.entriesForCategory("water")'));
+            assertEquals(cats.includes("samqwan"), false, "hidden from category listings");
+            const todo = markupToString(await renderRoute(fx.ww,
+                "wordwiki.editorReports.todoReport(null, null)"));
+            assertEquals(todo.includes("samqwan"), false, "hidden from the TODO report");
+
+            // THE exception: findable (with the pencil to de-archive), and
+            // still reachable by direct id.
+            const report = markupToString(await renderRoute(fx.ww,
+                "wordwiki.editorReports.archivedWords()"));
+            assertStringIncludes(report, "samqwan");
+            assertStringIncludes(report, "wordwiki.wordEditor(1000)");
+            const view = markupToString(await renderRoute(fx.ww, "wordwiki.wordView(1000)"));
+            assertStringIncludes(view, "samqwan");
+        });
+    });
+});

@@ -36,6 +36,7 @@ export class DictionaryStore {
 
     #workspace: VersionedDb|undefined = undefined;
     #entries: entry.Entry[]|undefined = undefined;
+    #activeEntries: entry.Entry[]|undefined = undefined;
     #entriesById: Map<number, entry.Entry>|undefined = undefined;
     #entriesByReferenceGroupId: Map<number, entry.Entry>|undefined = undefined;
     #publishedProjection: entry.Entry[]|undefined = undefined;
@@ -79,6 +80,7 @@ export class DictionaryStore {
 
     requestEntriesJSONReload() {
         this.#entries = undefined;
+        this.#activeEntries = undefined;
         this.#entriesById = undefined;
         this.#entriesByReferenceGroupId = undefined;
         this.#publishedProjection = undefined;
@@ -152,6 +154,18 @@ export class DictionaryStore {
     get entries(): entry.Entry[] {
         return this.#entries ??=
             new workspace.CurrentTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry;
+    }
+
+    /** The valid projection MINUS archived words (archival is our delete):
+     *  the default pool for every BROWSING surface - search, the category
+     *  and curation reports, the working lanes (dz 2026-07-09: archived
+     *  words are filtered from everything except the Archived Words
+     *  report).  Direct-by-id access (the word view, the editor) keeps
+     *  using entriesById - an archived word stays reachable to look at
+     *  and to DE-archive. */
+    get activeEntries(): entry.Entry[] {
+        return this.#activeEntries ??=
+            this.entries.filter(e => !entry.isArchivedEntry(e));
     }
 
     /**

@@ -127,9 +127,9 @@ export class WordWiki extends LiminalApp {
      *  "is it on the site" markers - stay pinned to site(). */
     workingEntries(): entry.Entry[] {
         const w = this.currentWorkingOrthography();
-        if(!w || w === 'mm') return this.store.entries;
+        if(!w || w === 'mm') return this.store.activeEntries;
         const present = this.store.entriesWithContentIn(w);
-        return this.store.entries.filter(e => present.has(e.entry_id));
+        return this.store.activeEntries.filter(e => present.has(e.entry_id));
     }
 
     /** The working lane as a display fact for report headers: the SPECIFIC
@@ -577,6 +577,7 @@ export class WordWiki extends LiminalApp {
              ['li', {}, ['a', {href:'/ww/wordwiki.variantReports.cleanupReport()'}, 'Variant Cleanup']],
              ['li', {}, ['a', {href:'/ww/wordwiki.transliterationReports.correctionsReport()'}, 'Transliteration Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.transliterationReports.sfReadyReport()'}, 'SF-Ready Words']],
+             ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.archivedWords()'}, 'Archived Words']],
              ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.todoReport(null, null)'}, 'TODO Report']],
              ['li', {}, ['a', {href:'/ww/wordwiki.editorReports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],

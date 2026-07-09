@@ -365,6 +365,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.variantReports.cleanupReport()'}, 'Variant Cleanup']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliterationReports.correctionsReport()'}, 'Transliteration Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliterationReports.sfReadyReport()'}, 'SF-Ready Words']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.archivedWords()'}, 'Archived Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.todoReport(null, null)'}, 'TODO Report']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.entriesByTwitterPostStatus()'}, 'Twitter Post Report']],
