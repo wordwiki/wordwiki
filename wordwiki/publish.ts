@@ -466,18 +466,27 @@ export async function publishMultiTree(status: PublishStatus,
  *  this page is the no-server fallback and the mirror's front door. */
 async function publishRootChooser(trees: Publish[], publishRoot: string): Promise<void> {
     const title = "Mi'gmaq/Mi'kmaq Online Talking Dictionary";
+    // For now the root page REDIRECTS to the primary tree (meta refresh -
+    // works on file:// and bare mirrors too), with the orthography chooser
+    // as the fallback body for anyone whose refresh doesn't fire.  On the
+    // web this will eventually be caddy's 301 (data/caddy-redirects.conf)
+    // and this page won't normally be reached - dz wants the behavior in
+    // the page itself while on staging.
+    const primaryHome = `${trees[0].treePrefix}index.html`;
     const markup =
         ['html', {},
          ['head', {},
           ['meta', {charset: 'utf-8'}],
           ['meta', {name: 'viewport', content: 'width=device-width, initial-scale=1'}],
+          ['meta', {'http-equiv': 'refresh', content: `0; url=${primaryHome}`}],
           ['title', {}, title],
           ['link', {href: 'resources/site-theme.css', rel: 'stylesheet', type: 'text/css'}],
           ['link', {href: 'resources/public.css', rel: 'stylesheet', type: 'text/css'}]],
          ['body', {},
           ['div', {class: 'page-content', style: 'max-width: 40rem; margin: 4rem auto; text-align: center;'},
            ['h1', {}, title],
-           ['p', {}, 'Choose your writing system — the same dictionary, in each orthography:'],
+           ['p', {}, ['a', {href: primaryHome}, 'Continue to the dictionary']],
+           ['p', {}, 'Or choose your writing system — the same dictionary, in each orthography:'],
            ['div', {},
             trees.map(t =>
                 ['p', {}, ['a', {class: 'btn btn-primary btn-lg', style: 'min-width: 18rem;',
@@ -966,6 +975,9 @@ export class Publish {
         const title = "Mi'gmaq/Mi'kmaq Online Talking Dictionary";
 
         // --- Browse: on EVERY edition's home (dz), search or no search.
+        // With search enabled it lives INSIDE the searchInstructions
+        // container, below the instructions - part of the idle home content,
+        // hidden (with the rest) once the user starts a search.
         const pb = this.options.previewBanner;
         const browse = [
             ['h2', {}, 'Browse the Dictionary'],
@@ -1009,7 +1021,6 @@ export class Publish {
               ['img', {id:'headerImage', class: 'img-fluid', src: `${this.sharedUp}resources/mmo-bead-image-1080x360.jpg`}]],
 
              searchSection,
-             browse,
 
              searchEnabled
                  ? // --- Search instructions display until user starts typing a search
@@ -1023,6 +1034,7 @@ export class Publish {
                       ['li', {}, "You can do searches that must match multiple words.  For example 'wild cat'."],
                      ],
 
+                     browse,
                      this.renderAboutUsBody(),
                     ],
 
@@ -1038,9 +1050,11 @@ export class Publish {
                          ]
                      ])
                     ]]
-                 : // No search: the about content renders directly (it lived
-                   // inside the search-instructions container).
-                   this.renderAboutUsBody(),
+                 : // No search: browse + the about content render directly
+                   // (they live inside the search-instructions container
+                   // when search is enabled).
+                   [browse,
+                    this.renderAboutUsBody()],
             ];
         
         await this.writePage(this.homePath, this.publicPageTemplate('', {title, head, body},

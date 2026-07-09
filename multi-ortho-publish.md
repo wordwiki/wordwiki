@@ -65,8 +65,9 @@ One run, all publishable orthographies (`./wordwiki.sh publish`):
   relative href/src in the output (1.81M refs) - which also caught and
   fixed a pre-existing book-page `../` overshoot that web browsers had
   been silently clamping.
-- The ROOT `index.html` is a static orthography CHOOSER (works from a USB
-  stick / bare mirror); on the web, the GENERATED
+- The ROOT `index.html` meta-refreshes straight to the primary tree
+  (works from a USB stick / bare mirror), with the static orthography
+  CHOOSER as its fallback body; on the web, the GENERATED
   `data/caddy-redirects.conf` (#include it) 301s `/` and every legacy
   top-level path to the primary tree.
 - `/servlet` forwarders stay at the ROOT (the internet's old links),

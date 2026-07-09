@@ -70,6 +70,8 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
 
         // The root chooser (no server needed) + the generated Caddy include.
         const chooser = read('index.html');
+        assertStringIncludes(chooser, 'refresh');
+        assertStringIncludes(chooser, '0; url=li/index.html');  // redirect to primary (for now - dz)
         assertStringIncludes(chooser, 'li/index.html');
         assertStringIncludes(chooser, 'sf/index.html');
         assertStringIncludes(chooser, 'Listuguj');
