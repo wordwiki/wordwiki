@@ -78,6 +78,18 @@ test("multi-tree publish: trees, shared stores, chooser, forwarders, peers", asy
         assertStringIncludes(caddy, 'redir / /li/ 301');
         assertStringIncludes(caddy, 'redir /entries/* /li{uri} 301');
 
+        // The non-primary PREVIEW banner: on every sf page, naming and
+        // linking the (larger) primary edition - and pointing at the SAME
+        // word over there when it exists.
+        const sfHome = read('sf/index.html');
+        assertStringIncludes(sfHome, 'is a preview');
+        assertStringIncludes(sfHome, '1 words so far');
+        assertStringIncludes(sfHome, '(2 words)');
+        const sfB = read('sf/entries/w/waqamik/waqamik.html');
+        assertStringIncludes(sfB, 'is a preview');
+        assertStringIncludes(sfB, '../../../../li/entries/w/waqami/waqami.html');
+        assert(!liHome.includes('is a preview'), 'the primary tree carries no banner');
+
         // Legacy forwarders: at the ROOT, targeting the PRIMARY tree.
         const fwd = read('servlet/words/samqwan.html');
         assertStringIncludes(fwd, '/li/entries/s/samqwan/samqwan.html');

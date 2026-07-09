@@ -281,6 +281,13 @@ interface PublishOptions {
      *  forwarders (the internet's old links land on the primary).
      *  Default true (single-tree compatibility). */
     writeForwarders?: boolean;
+    /** Set on NON-PRIMARY trees: every page carries a preview banner
+     *  naming the (much larger, linked) primary edition - dz 2026-07-09:
+     *  a reader landing on the young sf tree must know what they are
+     *  looking at, like the editor's override bar. */
+    previewBanner?: {ownName: string, ownCount: number,
+                     primaryName: string, primaryCount: number,
+                     primarySegment: string};
 }
 
 /** A peer orthography tree, as the cross-links see it. */
@@ -396,6 +403,13 @@ export async function publishMultiTree(status: PublishStatus,
         treePrefix: `${source.orthographySegment}/`,
         suppressPrune: true,
         writeForwarders: i === 0,   // the internet's old links land on the PRIMARY
+        previewBanner: i === 0 ? undefined : {
+            ownName: source.orthographyName,
+            ownCount: source.entries.length,
+            primaryName: sources[0].orthographyName,
+            primaryCount: sources[0].entries.length,
+            primarySegment: sources[0].orthographySegment,
+        },
     }));
     for(const tree of trees) {
         const others = trees.filter(t => t !== tree);
@@ -1961,10 +1975,24 @@ including remixing, transforming, and building upon the material, for any non-co
         // the peer tree when it exists there, the peer home otherwise.
         const peerLinks = ((this.options.peers?.length ?? 0) > 0)
             ? this.options.peers!.map(peer => ({
+                  segment: peer.segment,
                   label: peer.label,
                   href: `${rootPath}${this.sharedUp}${peer.segment}/` +
                         ((opts.peerPath?.(peer)) ?? 'index.html')}))
             : [];
+        // The non-primary-tree PREVIEW banner: what this edition is, how
+        // big, and where the full one lives - the primary link goes to the
+        // SAME page over there when it exists (the peer machinery).
+        const pb = this.options.previewBanner;
+        const primaryPeer = pb ? peerLinks.find(pl => pl.segment === pb.primarySegment) : undefined;
+        const previewBanner = pb
+            ? ['div', {class: 'alert alert-warning rounded-0 border-0 py-2 mb-0 text-center'},
+               `This ${pb.ownName} edition of the dictionary is a preview — ` +
+               `${pb.ownCount} words so far.  The `,
+               primaryPeer ? ['a', {href: primaryPeer.href}, pb.primaryName]
+                           : pb.primaryName,
+               ` edition is much larger (${pb.primaryCount} words).`]
+            : undefined;
         return (
             ['html', {},
 
@@ -2001,6 +2029,7 @@ including remixing, transforming, and building upon the material, for any non-co
              ['body', {},
 
               this.publicNavBar(rootPath, peerLinks),
+              previewBanner,
 
               // TODO probably move this somewhere else
               ['audio', {id:'audioPlayer', preload:'none'},
