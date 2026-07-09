@@ -481,7 +481,7 @@ export class WordWiki extends LiminalApp {
     // the server-only deps, and lets the public export inject its own).
     private wordViewBoundingGroup(id: number): any {
         const scan = renderPageEditor.renderStandaloneGroup('/', id);
-        let url = ''; try { url = renderPageEditor.singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
+        let url = ''; try { url = renderPageEditor.pageEditorURLForBoundingGroup(id); } catch { /**/ }
         let desc = ''; try { desc = renderPageEditor.imageRefDescription(id); } catch { /**/ }
         return ['div', {},
             ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],

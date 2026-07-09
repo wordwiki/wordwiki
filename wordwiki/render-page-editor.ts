@@ -789,6 +789,26 @@ export function singleBoundingGroupEditorURL(bounding_group_id: number, title: s
 /**
  *
  */
+/** The EDITOR's page for the page containing a bounding group (dz
+ *  2026-07-09: links inside the editor - the word view / lexeme editor
+ *  scan images and their captions - go to the editor version of the page,
+ *  not the public site's).  With the page word sidebar, landing here IS
+ *  the page-at-a-time workspace. */
+export function pageEditorURLForBoundingGroup(bounding_group_id: number): string {
+    const bounding_group = schema.selectBoundingGroup().required({bounding_group_id});
+    const document_id = bounding_group.document_id;
+    const bounding_boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
+    // Same first-page pick as the sibling URL helpers (and the same XXX:
+    // multi-page groups pick by page_id, not page number).
+    const page_id =
+        bounding_boxes.length > 0
+        ? bounding_boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0]
+        : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
+    const document = schema.selectScannedDocument().required({document_id});
+    const page = schema.selectScannedPage().required({page_id});
+    return `/ww/wordwiki.pages.pageEditor(${JSON.stringify(document.friendly_document_id)}, ${page.page_number})`;
+}
+
 export function singlePublicBoundingGroupEditorURL(rootPath: string,
                                                    bounding_group_id: number,
                                                    title: string) {

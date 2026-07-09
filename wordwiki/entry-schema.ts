@@ -13,7 +13,7 @@ import * as timestamp from '../liminal/timestamp.ts';
 //import * as render from './render.tsx';
 //import * as templates from './templates.ts';
 import ContextMenu from '../liminal/context-menu.js';
-import { renderStandaloneGroup, singleBoundingGroupEditorURL, singlePublicBoundingGroupEditorURL, imageRefDescription } from './render-page-editor.ts'; // REMOVE_FOR_WEB
+import { renderStandaloneGroup, singleBoundingGroupEditorURL, pageEditorURLForBoundingGroup, imageRefDescription } from './render-page-editor.ts'; // REMOVE_FOR_WEB
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as random from '../liminal/random.ts';
 import { variantMatches } from './variant-policy.ts';
@@ -1298,7 +1298,7 @@ export function renderDocumentReference(ctx: RenderCtx, e: Entry, ref: DocumentR
     if(ctx.scanRenderers) {
         refUrl = ctx.scanRenderers.publicBookPageUrl(ctx.rootPath, ref.bounding_group_id);
     } else try {
-        refUrl = singlePublicBoundingGroupEditorURL(ctx.rootPath, ref.bounding_group_id, title); // REMOVE_FOR_WEB
+        refUrl = pageEditorURLForBoundingGroup(ref.bounding_group_id); // REMOVE_FOR_WEB
     } catch(ex) {
         refUrl = '';
     }

@@ -76,7 +76,7 @@ import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
 import * as orthographyTable from './orthography.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
-import {renderStandaloneGroup, singlePublicBoundingGroupEditorURL, imageRefDescription} from './render-page-editor.ts';
+import {renderStandaloneGroup, pageEditorURLForBoundingGroup, imageRefDescription} from './render-page-editor.ts';
 import * as entryMeta from './render-entry-meta.ts';
 import type {WordWiki} from './wordwiki.ts';
 
@@ -1243,7 +1243,7 @@ export class LexemeEditor {
      *  inline svg, so the legacy <object data=...> sniffing can't see it). */
     private metaBoundingGroup(id: number): Markup {
         const scan = renderStandaloneGroup('/', id);
-        let url = ''; try { url = singlePublicBoundingGroupEditorURL('/', id, ''); } catch { /**/ }
+        let url = ''; try { url = pageEditorURLForBoundingGroup(id); } catch { /**/ }
         let desc = ''; try { desc = imageRefDescription(id); } catch { /**/ }
         return ['div', {'data-bounding-group': String(id)},
             ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
