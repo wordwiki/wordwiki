@@ -7,7 +7,8 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "../li
 import { withTestDb, renderRoute, invoke, asUser, asAnon, asSystem } from "./testing.ts";
 import { findAll, hasText, findByTestId } from "../liminal/testing/markup-assert.ts";
 import { PhotoService, ALLOWED_WIDTHS, CROP_FOCUS_LEVELS,
-         parsePhotoValue, formatPhotoValue, quantizeFocus } from "../liminal/photo.ts";
+         parsePhotoValue, formatPhotoValue, quantizeFocus, normalizeRotate,
+         photoCroppedSrc, photoContainedSrc } from "../liminal/photo.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { rabid, getRabid } from "./rabid.ts";
 import { navBar } from "./templates.ts";
@@ -126,14 +127,14 @@ test("sizing: derived-store resize on demand, then cached; width allowlist; path
 test("photo value: parse/format round-trip; legacy bare paths; focus quantization", () => {
     const bare = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
     // A legacy bare path parses as centred.
-    assertEquals(parsePhotoValue(bare), {path: bare, focus: 0.5});
+    assertEquals(parsePhotoValue(bare), {path: bare, focus: 0.5, rotate: 0});
     // Centred stays a bare path (minimal, back-compatible); off-centre -> JSON.
     assertEquals(formatPhotoValue(bare, 0.5), bare);
     const json = formatPhotoValue(bare, 0.25);
     assert(json.startsWith('{'));
-    assertEquals(parsePhotoValue(json), {path: bare, focus: 0.25});
+    assertEquals(parsePhotoValue(json), {path: bare, focus: 0.25, rotate: 0});
     // Garbage / missing fields fall back to centred.
-    assertEquals(parsePhotoValue('{not json'), {path: '{not json', focus: 0.5});
+    assertEquals(parsePhotoValue('{not json'), {path: '{not json', focus: 0.5, rotate: 0});
     // Focus snaps to the nearest of the five levels.
     assertEquals(quantizeFocus(0.1), 0);
     assertEquals(quantizeFocus(0.6), 0.5);
@@ -200,7 +201,7 @@ test("cropCandidates: one per focus level, current flagged, srcs cover-crop", as
             assertStringIncludes(c.src, 'rabid.photo.serveCropped');
             assertStringIncludes(c.src, '256,256');
         }
-        assertEquals(parsePhotoValue(cands[0].value), {path: photoPath, focus: 0});
+        assertEquals(parsePhotoValue(cands[0].value), {path: photoPath, focus: 0, rotate: 0});
     });
 });
 
@@ -309,7 +310,7 @@ test("photo editor: picking a framing tile reframes only that field", async () =
         await asUser(alice, () => getRabid().dispatch(
             `rabid.volunteer.setPhotoFocus(${carol},"photo",1)`, {httpMethod: 'POST'}));
         const after = asSystem(() => rabid.volunteer.getById(carol));
-        assertEquals(parsePhotoValue(after.photo!), {path, focus: 1});   // reframed
+        assertEquals(parsePhotoValue(after.photo!), {path, focus: 1, rotate: 0});   // reframed
         assertEquals(after.name, before.name);                           // untouched
     });
 });
@@ -401,4 +402,20 @@ test("sale rows and detail lead with the bike photo when present", async () => {
         const detailImgs = findAll(detail, (m: any) => Array.isArray(m) && m[0] === 'img');
         assertEquals(detailImgs.length, 1);
     });
+});
+
+test("photo value: rotation round-trips + normalizes; cropped/contained srcs carry it", () => {
+    // Round-trip + normalise to quarter turns.
+    assertEquals(parsePhotoValue(formatPhotoValue('content/x.jpg', 0.5, 90)).rotate, 90);
+    assertEquals(parsePhotoValue(formatPhotoValue('content/x.jpg', 0.5, 450)).rotate, 90);
+    assertEquals(normalizeRotate(-90), 270);
+    // A centred, unrotated photo stays a bare path (back-compatible).
+    assertEquals(formatPhotoValue('content/x.jpg', 0.5, 0), 'content/x.jpg');
+    // Rotation survives an off-centre crop, and both srcs include it as the last arg.
+    const v = formatPhotoValue('content/x.jpg', 0.25, 270);
+    assertEquals(parsePhotoValue(v).rotate, 270);
+    assertStringIncludes(photoCroppedSrc('rabid.photo', v, 512, 384), ',270)');
+    const cs = photoContainedSrc('rabid.photo', formatPhotoValue('content/x.jpg', 0.5, 90), 1024, 1024);
+    assertStringIncludes(cs, 'serveContained');
+    assertStringIncludes(cs, ',90)');
 });

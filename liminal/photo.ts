@@ -94,12 +94,29 @@ function isAllowedCropSize(w: number, h: number): boolean {
     return ALLOWED_CROP_SIZES.some(([aw, ah]) => aw === w && ah === h);
 }
 
+// Bounded set of contain-fit boxes (a whole image scaled to fit within w×h).
+// Square boxes: the image fits inside, its own aspect preserved.
+export const ALLOWED_CONTAIN_BOXES: ReadonlyArray<readonly [number, number]> = [
+    [512, 512], [1024, 1024], [1600, 1600],
+];
+function isAllowedContainBox(w: number, h: number): boolean {
+    return ALLOWED_CONTAIN_BOXES.some(([aw, ah]) => aw === w && ah === h);
+}
+
 // The serveCropped() URL for a photo VALUE at (width,height) - a free function
 // (needs only the service's mount path, not an instance) so ImageField, which
 // holds just the path string, can build crop URLs too.
 export function photoCroppedSrc(mountPath: string, value: string, width: number, height: number): string {
-    const {path, focus} = parsePhotoValue(value);
-    return `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${quantizeFocus(focus)})`;
+    const {path, focus, rotate} = parsePhotoValue(value);
+    return `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${quantizeFocus(focus)},${rotate})`;
+}
+
+// The serveContained() URL for a photo VALUE: the WHOLE image scaled to fit within
+// boxW×boxH (no crop), honouring the value's rotation.  For showing a full document
+// scan / sheet at a manageable size (scan-extract.md).
+export function photoContainedSrc(mountPath: string, value: string, boxW: number, boxH: number): string {
+    const {path, rotate} = parsePhotoValue(value);
+    return `/${mountPath}.serveContained(${JSON.stringify(path)},${boxW},${boxH},${rotate})`;
 }
 
 // The crop-picker's options for a value at (width,height): the same photo framed
@@ -107,13 +124,13 @@ export function photoCroppedSrc(mountPath: string, value: string, width: number,
 // pick.  Free function for the same reason as photoCroppedSrc.
 export function photoCropCandidates(mountPath: string, value: string, width: number, height: number):
         Array<{focus: number, selected: boolean, src: string, value: string}> {
-    const {path, focus} = parsePhotoValue(value);
+    const {path, focus, rotate} = parsePhotoValue(value);
     const current = quantizeFocus(focus);
     return CROP_FOCUS_LEVELS.map(level => ({
         focus: level,
         selected: level === current,
-        src: `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${level})`,
-        value: formatPhotoValue(path, level),
+        src: `/${mountPath}.serveCropped(${JSON.stringify(path)},${width},${height},${level},${rotate})`,
+        value: formatPhotoValue(path, level, rotate),   // preserve rotation when reframing
     }));
 }
 
@@ -125,23 +142,35 @@ export function photoCropCandidates(mountPath: string, value: string, width: num
 // trims - the overflow axis (vertical for a photo taller than the slot,
 // horizontal for a wider one).  A cover-crop only ever trims one axis, so one
 // scalar frames every case; the picker offers five positions along it.
-export interface PhotoValue { path: string; focus: number; }
+export interface PhotoValue { path: string; focus: number; rotate: number; }
+
+// A user-applied rotation (quarter turns), applied to the ORIGINAL before any
+// resize/crop.  For scans/photos with no EXIF orientation (e.g. a sideways
+// clipboard sheet).  Normalised to {0, 90, 180, 270}.
+export function normalizeRotate(v: unknown): number {
+    const n = typeof v === 'number' ? v : 0;
+    return ((Math.round(n / 90) * 90) % 360 + 360) % 360;
+}
 
 export function parsePhotoValue(value: string): PhotoValue {
     if(typeof value === 'string' && value.startsWith('{')) {
         try {
             const o = JSON.parse(value);
             if(o && typeof o.p === 'string')
-                return {path: o.p, focus: typeof o.f === 'number' ? o.f : 0.5};
+                return {path: o.p, focus: typeof o.f === 'number' ? o.f : 0.5,
+                        rotate: normalizeRotate(o.r)};
         } catch { /* fall through to bare-path */ }
     }
-    return {path: value, focus: 0.5};
+    return {path: value, focus: 0.5, rotate: 0};
 }
 
-export function formatPhotoValue(path: string, focus: number): string {
-    // Centred photos stay a bare path (minimal + back-compatible); only carry
-    // JSON once an off-centre crop is chosen.
-    return focus === 0.5 ? path : JSON.stringify({p: path, f: focus});
+export function formatPhotoValue(path: string, focus: number, rotate: number = 0): string {
+    // A centred, unrotated photo stays a bare path (minimal + back-compatible);
+    // only carry JSON once an off-centre crop or a rotation is chosen.
+    const r = normalizeRotate(rotate);
+    return (focus === 0.5 && r === 0)
+        ? path
+        : JSON.stringify({p: path, ...(focus !== 0.5 ? {f: focus} : {}), ...(r !== 0 ? {r} : {})});
 }
 
 // Decoded upload cap.  The client downscales to ≤1600px JPEG (well under
@@ -250,24 +279,64 @@ export class PhotoService {
      * cache by allowlisting the size and quantizing the focus.
      */
     @route(authenticated)
-    async serveCropped(photoPath: string, width: number, height: number, focus: number): Promise<server.Response> {
-        return server.forwardResponse('/' + await this.croppedPhotoPath(photoPath, width, height, focus));
+    async serveCropped(photoPath: string, width: number, height: number, focus: number,
+                       rotate: number = 0): Promise<server.Response> {
+        return server.forwardResponse('/' + await this.croppedPhotoPath(photoPath, width, height, focus, rotate));
     }
 
-    async croppedPhotoPath(photoPath: string, width: number, height: number, focus: number): Promise<string> {
+    async croppedPhotoPath(photoPath: string, width: number, height: number, focus: number,
+                           rotate: number = 0): Promise<string> {
         const contentRef = this.verifiedContentRef(photoPath);
         if(!isAllowedCropSize(width, height))
             throw new Error(`unsupported crop size ${width}x${height} ` +
                 `(allowed: ${ALLOWED_CROP_SIZES.map(([w, h]) => `${w}x${h}`).join(', ')})`);
         const f = quantizeFocus(focus);   // collapse onto the bounded level set
+        const r = normalizeRotate(rotate);
         const sourceFsPath = `${this.config.contentDir}/${contentRef}`;
         const derivedRef = await content.getDerived(
             `${this.config.derivedDir}/cropped-photos`,
-            {coverCrop: (target: string, _ref: string, w: number, h: number, ff: number) =>
-                this.coverCropCmd(target, sourceFsPath, w, h, ff)},
-            ['coverCrop', contentRef, width, height, f],
+            {coverCrop: (target: string, _ref: string, w: number, h: number, ff: number, rr: number) =>
+                this.coverCropCmd(target, sourceFsPath, w, h, ff, rr)},
+            ['coverCrop', contentRef, width, height, f, r],
             'jpg');
         return 'derived/' + derivedRef;
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Contain-fit presentation (whole image within a box, no crop) ---------
+    // ------------------------------------------------------------------------
+
+    // Resolve (creating on first request) the whole image scaled to fit WITHIN
+    // boxW×boxH preserving aspect (never enlarged, never cropped), honouring the
+    // rotation, and 302 to it.  For full document scans / sheets.
+    @route(authenticated)
+    async serveContained(photoPath: string, boxW: number, boxH: number,
+                         rotate: number = 0): Promise<server.Response> {
+        return server.forwardResponse('/' + await this.containedPhotoPath(photoPath, boxW, boxH, rotate));
+    }
+
+    async containedPhotoPath(photoPath: string, boxW: number, boxH: number, rotate: number = 0): Promise<string> {
+        const contentRef = this.verifiedContentRef(photoPath);
+        if(!isAllowedContainBox(boxW, boxH))
+            throw new Error(`unsupported contain box ${boxW}x${boxH} ` +
+                `(allowed: ${ALLOWED_CONTAIN_BOXES.map(([w, h]) => `${w}x${h}`).join(', ')})`);
+        const r = normalizeRotate(rotate);
+        const sourceFsPath = `${this.config.contentDir}/${contentRef}`;
+        const derivedRef = await content.getDerived(
+            `${this.config.derivedDir}/contained-photos`,
+            {containFit: (target: string, _ref: string, w: number, h: number, rr: number) =>
+                this.containFitCmd(target, sourceFsPath, w, h, rr)},
+            ['containFit', contentRef, boxW, boxH, r],
+            'jpg');
+        return 'derived/' + derivedRef;
+    }
+
+    // A contain-fit img for a photo VALUE: whole image within boxW×boxH, aspect
+    // preserved (max-width:100%; height:auto so it stays responsive + uncropped).
+    containedImg(value: string, boxW: number, boxH: number, attrs: Record<string, any> = {}): Markup {
+        const {style, ...rest} = attrs;
+        return ['img', {src: photoContainedSrc(this.mountPath, value, boxW, boxH), loading: 'lazy', alt: '',
+                        style: 'max-width:100%; height:auto; ' + (style ?? ''), ...rest}];
     }
 
     // Drop every DERIVED size (sized-photos + cropped-photos), so they
@@ -277,7 +346,7 @@ export class PhotoService {
     // until cleared).  Originals are untouched; the caller gates permission.
     async clearDerivedStore(): Promise<{cleared: string[]}> {
         const cleared: string[] = [];
-        for(const sub of ['sized-photos', 'cropped-photos']) {
+        for(const sub of ['sized-photos', 'cropped-photos', 'contained-photos']) {
             const dir = `${this.config.derivedDir}/${sub}`;
             try {
                 await Deno.remove(dir, {recursive: true});
@@ -314,23 +383,47 @@ export class PhotoService {
     // because the non-trimmed axis has zero overflow, so its offset stays 0.
     // Needs the source's post-orient dimensions; that identify runs once per
     // derivative (getDerived memoizes the result), never per request.
-    private async coverCropCmd(targetPath: string, sourceFsPath: string, w: number, h: number, focus: number) {
+    private async coverCropCmd(targetPath: string, sourceFsPath: string, w: number, h: number,
+                               focus: number, rotate: number = 0) {
         if(!await fs.exists(sourceFsPath))
             throw new Error(`expected source photo '${sourceFsPath}' to exist`);
-        const [W, H] = await this.imageDims(sourceFsPath);
+        const r = normalizeRotate(rotate);
+        const [W0, H0] = await this.imageDims(sourceFsPath);
+        // A quarter turn swaps the effective dimensions the resize/crop see.
+        const [W, H] = (r === 90 || r === 270) ? [H0, W0] : [W0, H0];
         const s = Math.max(w / W, h / H);
         const scaledW = Math.max(w, Math.round(W * s));
         const scaledH = Math.max(h, Math.round(H * s));
         const offX = Math.min(scaledW - w, Math.max(0, Math.round((scaledW - w) * focus)));
         const offY = Math.min(scaledH - h, Math.max(0, Math.round((scaledH - h) * focus)));
         const { code, stderr } = await new Deno.Command(this.magick, {
-            args: [sourceFsPath, '-auto-orient', '-strip',
+            args: [sourceFsPath, '-auto-orient',
+                   ...(r ? ['-rotate', String(r)] : []),      // user rotation BEFORE resize
+                   '-strip',
                    '-resize', `${scaledW}x${scaledH}!`,       // exact cover dims
                    '-crop', `${w}x${h}+${offX}+${offY}`, '+repage',
                    '-quality', '88', targetPath],
         }).output();
         if(code !== 0)
             throw new Error(`failed to crop ${sourceFsPath} to ${w}x${h}@focus=${focus}: ${new TextDecoder().decode(stderr)}`);
+    }
+
+    // Scale the whole (optionally rotated) image to fit WITHIN w×h, aspect kept,
+    // never enlarged (`>`) and never cropped.
+    private async containFitCmd(targetPath: string, sourceFsPath: string, w: number, h: number,
+                                rotate: number = 0) {
+        if(!await fs.exists(sourceFsPath))
+            throw new Error(`expected source photo '${sourceFsPath}' to exist`);
+        const r = normalizeRotate(rotate);
+        const { code, stderr } = await new Deno.Command(this.magick, {
+            args: [sourceFsPath, '-auto-orient',
+                   ...(r ? ['-rotate', String(r)] : []),      // rotate FIRST (full quality)
+                   '-strip',
+                   '-resize', `${w}x${h}>`,                   // fit within, aspect kept, shrink-only
+                   '-quality', '88', targetPath],
+        }).output();
+        if(code !== 0)
+            throw new Error(`failed to contain-fit ${sourceFsPath} to ${w}x${h}: ${new TextDecoder().decode(stderr)}`);
     }
 
     // Post-auto-orient pixel dimensions, so the crop math matches what

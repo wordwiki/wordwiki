@@ -60,6 +60,11 @@ function assertOwnerEdit(owner_table: string, owner_id: number): void {
         throw new Error('Not permitted to edit this gallery');
 }
 
+// Gallery scopes whose cards show the WHOLE image (contain-fit) instead of a
+// cover-crop - for full document scans (service record sheets) that must stay
+// readable, not clipped.
+const CONTAIN_SCOPES = new Set(['service-sheets']);
+
 export class GalleryPhotoTable extends Table<GalleryPhoto> {
     constructor() {
         super('gallery_photo', [
@@ -276,8 +281,12 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
         const props = liveReloadableProps([this.rowKey(id)], `rabid.gallery_photo.renderPhotoCardById(${id})`);
         const editPhotoUrl = `/rabid.gallery_photo.renderPhotoEditForm(${id},"photo")`;
         const editDetailsUrl = `/rabid.gallery_photo.renderDetailsForm(${id})`;
+        // Sheet-style scopes show the WHOLE image (contain-fit, uncropped) so a
+        // full document scan is readable; other galleries cover-crop for a tidy card.
         const img = has
-            ? rabid.photo.aspectImg(p.photo!, 'landscape', 'detail', {class: 'lm-photo-detail'})
+            ? (CONTAIN_SCOPES.has(p.scope)
+                ? rabid.photo.containedImg(p.photo!, 1024, 1024, {class: 'lm-photo-detail'})
+                : rabid.photo.aspectImg(p.photo!, 'landscape', 'detail', {class: 'lm-photo-detail'}))
             : undefined;
         // Clicking the image opens Edit photo (a convenience alongside the ☰).
         const image = (img && canEdit)

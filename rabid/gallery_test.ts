@@ -8,6 +8,7 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "../li
 import { withTestDb, renderRoute, invoke, asUser, asSystem } from "./testing.ts";
 import { hasText, findByTestId, findAll } from "../liminal/testing/markup-assert.ts";
 import { rabid } from "./rabid.ts";
+import { parsePhotoValue } from "../liminal/photo.ts";
 
 function insertEvent(): number {
     return asSystem(() => rabid.event.insert({
@@ -147,5 +148,31 @@ test("scope: two galleries on one owner are independent (event photos vs service
         assert(findByTestId(detail, `gallery-event-${id}`), 'the default gallery');
         assert(findByTestId(detail, `gallery-event-${id}-service-sheets`), 'the service-sheets gallery');
         assert(hasText(detail, 'Service Record Sheets'), 'the sheets heading');
+    });
+});
+
+test("gallery: rotatePhoto turns the photo; a service-sheets card is contain-fit (whole image)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const photoPath = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
+        const pid = asSystem(() => rabid.gallery_photo.insert(
+            {owner_table: 'event', owner_id: id, scope: 'service-sheets', photo: photoPath} as any));
+
+        // Rotate right twice -> 180 (applied before crop/resize; keeps the path).
+        await asUser(alice, () => invoke(`rabid.gallery_photo.rotatePhoto($arg0,$arg1,$arg2)`, pid, 'photo', 90));
+        await asUser(alice, () => invoke(`rabid.gallery_photo.rotatePhoto($arg0,$arg1,$arg2)`, pid, 'photo', 90));
+        const rotated = asSystem(() => rabid.gallery_photo.getById(pid)).photo!;
+        assertEquals(parsePhotoValue(rotated).rotate, 180);
+        assertEquals(parsePhotoValue(rotated).path, photoPath, 'rotation keeps the content path');
+
+        // The service-sheets card renders a contain-fit (serveContained) image, not a cover crop.
+        const card = await asUser(alice, () => renderRoute(`rabid.gallery_photo.renderPhotoCardById(${pid})`));
+        assertStringIncludes(JSON.stringify(card), 'serveContained');
+
+        // A default-scope photo still cover-crops (serveCropped).
+        const pid2 = asSystem(() => rabid.gallery_photo.insert(
+            {owner_table: 'event', owner_id: id, photo: photoPath} as any));
+        const card2 = await asUser(alice, () => renderRoute(`rabid.gallery_photo.renderPhotoCardById(${pid2})`));
+        assertStringIncludes(JSON.stringify(card2), 'serveCropped');
     });
 });

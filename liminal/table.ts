@@ -728,14 +728,24 @@ export class Table<T extends Tuple> extends FieldSet {
             // No framing choice needed: a small preview so the modal has context.
             : ['img', {src: photoCroppedSrc(field.photoServicePath, value, w, h),
                        class: 'lm-photo-preview', alt: ''}];
+        const deps = this.speculatedSaveTargets(record);
+        const fn = JSON.stringify(fieldName);
+        // Rotate (↺ / ↻): a quarter turn, applied to the original before crop/resize
+        // (photo.ts) - for a sideways scan with no EXIF orientation.
+        const rotateLeft = action.actionButton('↺',
+            {kind: 'immediate', expr: `${this}.rotatePhoto(${id},${fn},-90)`, deps},
+            'btn btn-outline-secondary btn-sm', {title: 'Rotate left', 'aria-label': 'Rotate left'});
+        const rotateRight = action.actionButton('↻',
+            {kind: 'immediate', expr: `${this}.rotatePhoto(${id},${fn},90)`, deps},
+            'btn btn-outline-secondary btn-sm', {title: 'Rotate right', 'aria-label': 'Rotate right'});
         const removeButton = action.actionButton('Remove photo',
             {kind: 'confirm', message: 'Remove this photo?',
-             expr: `${this}.removePhoto(${id},${JSON.stringify(fieldName)})`,
-             deps: this.speculatedSaveTargets(record)},
+             expr: `${this}.removePhoto(${id},${fn})`, deps},
             'btn btn-outline-danger btn-sm');
         return ['div', {'data-testid': 'photo-edit-form'},
             body,
-            ['div', {class: 'mt-3'}, removeButton]];
+            ['div', {class: 'mt-3 d-flex flex-wrap align-items-center gap-2'},
+             rotateLeft, rotateRight, ['span', {class: 'flex-grow-1'}], removeButton]];
     }
 
     /**
@@ -799,8 +809,32 @@ export class Table<T extends Tuple> extends FieldSet {
         const value = (record as any)[fieldName];
         if(typeof value !== 'string' || value === '')
             throw new Error(`No photo to reframe`);
-        const newValue = formatPhotoValue(parsePhotoValue(value).path, quantizeFocus(focus));
+        const {path, rotate} = parsePhotoValue(value);
+        const newValue = formatPhotoValue(path, quantizeFocus(focus), rotate);   // keep rotation
         this.updateNamedFields(id, [fieldName], {[fieldName]: newValue} as unknown as Partial<T>);
+        return {action: 'reload'};
+    }
+
+    /** Rotate a photo field by a quarter turn (the edit form's ↺/↻).  Applied to
+     *  the original before any crop/resize (photo.ts); keeps path + focus.  For a
+     *  sideways scan with no EXIF orientation.  Primitive args only. */
+    @routeMutation(authenticated)
+    rotatePhoto(id: number, fieldName: string, delta: number): {action: string} {
+        const record = this.getById(id);
+        if(!record) throw new Error(`No ${this.name} #${id}`);
+        if(!this.canEditRecord(record))
+            throw new Error(`Not permitted to edit this ${this.name}`);
+        const field = this.fieldsByName[fieldName];
+        if(!(field instanceof ImageField))
+            throw new Error(`'${fieldName}' is not a photo field on '${this.name}'`);
+        if(!this.canEdit(field, record))
+            throw new Error(`Not permitted to edit ${field.prompt}`);
+        const value = (record as any)[fieldName];
+        if(typeof value !== 'string' || value === '')
+            throw new Error(`No photo to rotate`);
+        const {path, focus, rotate} = parsePhotoValue(value);
+        this.updateNamedFields(id, [fieldName],
+            {[fieldName]: formatPhotoValue(path, focus, rotate + delta)} as unknown as Partial<T>);
         return {action: 'reload'};
     }
 
