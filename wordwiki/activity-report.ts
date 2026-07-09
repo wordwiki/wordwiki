@@ -510,8 +510,7 @@ export class ActivityReport {
                      ['span', {class: 'text-muted small me-2 font-monospace'},
                       c.year === 0 ? '—' : `${c.year}-${dd(c.month)}-${dd(c.day)}`],
                      templates.lexemeLink(c.entry_id,
-                         e ? entrySchema.renderEntryCompactSummaryCore(e) : `Entry ${c.entry_id}`,
-                         {pencil: false}),
+                         e ? entrySchema.renderEntryCompactSummaryCore(e) : `Entry ${c.entry_id}`),
                      c.username ? ['span', {class: 'text-muted small ms-2'},
                                    userLabel(c.username)] : []];
              }),

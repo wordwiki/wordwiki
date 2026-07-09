@@ -41,6 +41,7 @@ export class DictionaryStore {
     #publishedProjection: entry.Entry[]|undefined = undefined;
     #siteViews: Map<string, SiteView> = new Map();
     #entriesWithContentIn: Map<string, Set<number>> = new Map();
+    #publicEntryIds: Set<number>|undefined = undefined;
     #lastAllocatedTxTimestamp: number|undefined;
 
     constructor(private opts: {onDerivedInvalidated?: () => void} = {}) {
@@ -86,8 +87,23 @@ export class DictionaryStore {
         // freshness - the publish staleness check depends on this.
         this.#siteViews = new Map();
         this.#entriesWithContentIn = new Map();
+        this.#publicEntryIds = undefined;
         // Owner caches built over these projections drop in the same breath.
         this.opts.onDerivedInvalidated?.();
+    }
+
+    /** The entry ids public in AT LEAST ONE orthography - on SOME public
+     *  site: not archived, with a PUBLISHED pub gate (the published
+     *  projection's view of e.public contains only published-current
+     *  gates).  The INVERSE drives the subtle 'not public' badge on word
+     *  links: published is the common case, so the exceptional state is
+     *  the marked one (dz 2026-07-09 - an editor seeing an error on an
+     *  unpublished word must not think it is live). */
+    get publicEntryIds(): Set<number> {
+        return this.#publicEntryIds ??= new Set(
+            this.publishedProjection
+                .filter(e => (e.public ?? []).length > 0 && !entry.isArchivedEntry(e))
+                .map(e => e.entry_id));
     }
 
     /** The entry ids having ANY current fact tagged EXACTLY this

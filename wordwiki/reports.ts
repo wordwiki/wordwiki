@@ -122,7 +122,7 @@ export class EditorReports {
             return [
                 templates.lexemeLink(e.entry_id,
                     entry.renderEntryCompactSummary(e, {orthography: lane}),
-                    {pencil: false, viewOrthography: lane})
+                    {viewOrthography: lane})
             ];
         }
 
@@ -192,7 +192,7 @@ export class EditorReports {
             return [
                 (getTwitterPostStatusForEntry(e) ?? 'Not posted on twitter'),
                 ' -- ',
-                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummaryCore(e), {pencil: false})
+                templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummaryCore(e))
             ];
         }
 
@@ -275,7 +275,7 @@ export class EditorReports {
         const wordList = (entries: entry.Entry[]) =>
             ['ul', {class: 'list-unstyled ms-3 mb-4'},
              entries.map(e => ['li', {},
-                 templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummaryCore(e), {pencil: false})])];
+                 templates.lexemeLink(e.entry_id, entry.renderEntryCompactSummaryCore(e))])];
         const catSection = (slug: string, name: string) => [
             ['h4', {id: anchor(slug), class: 'mt-3'}, name, ' ',
              ['span', {class: 'text-muted fs-6'}, `(${byCat.get(slug)!.length})`]],

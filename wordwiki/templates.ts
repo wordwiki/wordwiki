@@ -96,11 +96,13 @@ function wordEditorUrl(entry_id: number, editAnchor?: number): string {
         : `/ww/wordwiki.wordEditor(${entry_id})`;
 }
 
-/** A lexeme link: the read-only word view, plus (unless suppressed, and only
- *  for editors) the standard pencil to the editor.  `pencil:false` for the
- *  bulk browse lists (the word-a-day picker, category/lexical-form word lists)
- *  where a pencil per row would be noise - the view's own title pencil is a
- *  click away.  `newTab` for the change feed (no-store, must not navigate). */
+/** A lexeme link: the read-only word view, plus (for editors) the standard
+ *  pencil to the editor - on EVERY link, bulk lists included (dz 2026-07-09:
+ *  the view-then-edit two-page hop was bugging the primary editor; a pencil
+ *  per row is one tap to edit).  A subtle 'not public' badge marks words
+ *  not yet on any public site (the inverse - published is the common case -
+ *  so an editor seeing an error on a draft knows it is not live).
+ *  `newTab` for the change feed (no-store, must not navigate). */
 export function lexemeLink(entry_id: number, content: any,
                            opts: {pencil?: boolean, newTab?: boolean,
                                   editAnchor?: number, linkClass?: string,
@@ -117,6 +119,7 @@ export function lexemeLink(entry_id: number, content: any,
     const pencil = (opts.pencil ?? true) && mayEditLexemes();
     return ['span', {class: 'lm-lexeme-link d-inline-flex align-items-center gap-1'},
         ['a', {...viewNav, class: viewCls}, content],
+        notPublicBadge(entry_id),
         pencil
             ? pencilLink(wordEditorUrl(entry_id, opts.editAnchor),
                          {newTab: opts.newTab, extraClass: opts.linkClass})
@@ -234,6 +237,23 @@ export interface OrthographyStatus {
     effective?: {slug: string, abbr: string};
     override?: {slug: string, name: string};
     choices: {slug: string, name: string}[];
+}
+
+// Is this entry on SOME public site?  Injected by the app (store-backed);
+// undefined provider (or anonymous rendering) marks nothing.  The BADGE is
+// the inverse - 'not public' - because published is the common case.
+let entryPublicnessProvider: ((entry_id: number) => boolean) | undefined;
+export function setEntryPublicnessProvider(fn: (entry_id: number) => boolean): void {
+    entryPublicnessProvider = fn;
+}
+function notPublicBadge(entry_id: number): any {
+    try {
+        if(entryPublicnessProvider && !entryPublicnessProvider(entry_id))
+            return ['span', {class: 'badge border text-muted ms-1',
+                             title: 'This word is not on the public site yet'},
+                    'not public'];
+    } catch { /* no marking beats a broken page */ }
+    return undefined;
 }
 
 let orthographyStatusProvider: (() => OrthographyStatus | undefined) | undefined;

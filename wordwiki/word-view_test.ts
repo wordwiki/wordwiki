@@ -7,7 +7,7 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
-import { withTestDb, as, renderRoute, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
+import { withTestDb, as, renderRoute, bornApprove, TestTimeline, mkEntry, mkChild, type Fixture } from "./testing.ts";
 import { lexemeLink, mayEditLexemes } from "./templates.ts";
 import { markupToString } from "../liminal/markup.ts";
 
@@ -177,5 +177,46 @@ test("word-view title follows the working lane; body keeps all lanes with badges
             renderRoute(fx.ww, "wordwiki.wordView(1000)")));
         const h1b = joined.match(/<h1[^>]*>[\s\S]*?<\/h1>/)![0];
         assertStringIncludes(h1b, "samqwan / samuqwan");
+    });
+});
+
+test("word links: the inverse 'not public' badge; pencils on bulk lists too", async () => {
+    await withTestDb(async (fx) => {
+        const tl = new TestTimeline();
+        // A: published (Completed -> blessed gate).  B: a draft - no status,
+        // no gate.
+        const a = mkEntry(1000, tl.next());
+        fx.ww.applyTransaction([a], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, "spl", 1010, tl.next(),
+            {attr1: "samqwan", variant: "mm-li", order_key: "0.5"})], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, "sta", 1020, tl.next(),
+            {attr1: "Completed", order_key: "0.5"})], {quiet: true});
+        const aSub = mkChild(a, "sub", 1100, tl.next(), {order_key: "0.5"});
+        fx.ww.applyTransaction([aSub], {quiet: true});
+        fx.ww.applyTransaction([mkChild(aSub, "cat", 1200, tl.next(),
+            {attr1: "water", order_key: "0.5"})], {quiet: true});
+        const b = mkEntry(2000, tl.next());
+        fx.ww.applyTransaction([b], {quiet: true});
+        fx.ww.applyTransaction([mkChild(b, "spl", 2010, tl.next(),
+            {attr1: "waqami", variant: "mm-li", order_key: "0.5"})], {quiet: true});
+        const bSub = mkChild(b, "sub", 2100, tl.next(), {order_key: "0.5"});
+        fx.ww.applyTransaction([bSub], {quiet: true});
+        fx.ww.applyTransaction([mkChild(bSub, "cat", 2200, tl.next(),
+            {attr1: "water", order_key: "0.5"})], {quiet: true});
+        bornApprove(fx.ww);
+
+        await as(fx, "djz", async () => {
+            const pub = markupToString(lexemeLink(1000, "samqwan"));
+            const draft = markupToString(lexemeLink(2000, "waqami"));
+            assertEquals(pub.includes("not public"), false, "published = unmarked (the common case)");
+            assertStringIncludes(draft, "not public");
+
+            // Bulk lists carry the pencil now (one tap to edit) AND the badge.
+            const listing = markupToString(
+                await renderRoute(fx.ww, 'wordwiki.editorReports.entriesForCategory("water")'));
+            assertStringIncludes(listing, "wordwiki.wordEditor(1000)");
+            assertStringIncludes(listing, "wordwiki.wordEditor(2000)");
+            assertStringIncludes(listing, "not public");
+        });
     });
 });

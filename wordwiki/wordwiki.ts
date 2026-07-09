@@ -71,6 +71,7 @@ export class WordWiki extends LiminalApp {
         // switcher, override banner) through this provider - templates.ts
         // cannot import the app (cycle), so it is injected once here.
         templates.setOrthographyStatusProvider(() => this.orthographyStatus());
+        templates.setEntryPublicnessProvider(id => this.store.publicEntryIds.has(id));
 
         // --- Set up our routes
         // The page-editor / audio / publish routes are NOT spread in here as
@@ -455,9 +456,14 @@ export class WordWiki extends LiminalApp {
     /** The edit pencil INSIDE the headword <h1> (trailing the glosses), so it
      *  reads as part of the title line and never drops to its own row. */
     private wordViewPencil(entry_id: number, e: entry.Entry): any {
-        return e && templates.mayEditLexemes()
+        const notPublic = !this.store.publicEntryIds.has(entry_id)
+            ? ['span', {class: 'badge border text-muted ms-2 align-middle fs-6',
+                        title: 'This word is not on the public site yet'}, 'not public']
+            : undefined;
+        const pencil = e && templates.mayEditLexemes()
             ? ['span', {class: 'ms-2'}, templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`)]
             : undefined;
+        return (pencil || notPublic) ? [pencil, notPublic] : undefined;
     }
 
     // The reference scan is a rich primitive: its scan + composed

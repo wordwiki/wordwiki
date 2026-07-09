@@ -479,9 +479,8 @@ export class TransliterationReports {
                            e ? templates.lexemeLink(r.entry_id,
                                    entrySchema.renderEntryCompactSummary(
                                        e, {orthography: TARGET_ORTHOGRAPHY}),
-                                   {pencil: false, viewOrthography: TARGET_ORTHOGRAPHY})
-                             : templates.lexemeLink(r.entry_id, `entry ${r.entry_id}`,
-                                                    {pencil: false})];
+                                   {viewOrthography: TARGET_ORTHOGRAPHY})
+                             : templates.lexemeLink(r.entry_id, `entry ${r.entry_id}`)];
                    })],
         ];
         return templates.pageTemplate({title, body});
