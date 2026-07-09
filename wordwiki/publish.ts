@@ -12,7 +12,7 @@ import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
 import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
-import {PublishSource, PublishSourceBook, buildPublishSource, writeFullHistoryDump} from './publish-source.ts';
+import {PublishSource, PublishSourceBook, buildPublishSource, buildAllPublishSources, writeFullHistoryDump} from './publish-source.ts';
 import type * as model from './model.ts';
 import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
@@ -206,9 +206,8 @@ export function startPublish(): any {
             try {
                 const wordWiki = getWordWiki();
                 writeFullHistoryDump(wordWiki, '.');
-                const publish = new Publish(publishStatusSingleton,
-                                            await buildPublishSource(wordWiki));
-                await publish.publish();
+                await publishMultiTree(publishStatusSingleton,
+                                       await buildAllPublishSources(wordWiki));
             } catch (e) {
                 if(e instanceof Error) {
                     publishStatusSingleton.errors.push(e.toString());
@@ -237,12 +236,11 @@ export async function publish(publishOptions: PublishOptions) {
         const wordWiki = getWordWiki();
         wordWiki.requestWorkspaceReload();
         writeFullHistoryDump(wordWiki, '.');
-        const publish = new Publish(publishStatusSingleton,
-                                    await buildPublishSource(wordWiki),
-                                    ".",
-                                    publishOptions);
-        await publish.publish();
-        if(publish.entries !== wordWiki.publishedEntries)
+        const sources = await buildAllPublishSources(wordWiki);
+        void publishOptions;   // section suppression is a single-tree affair now
+        await publishMultiTree(publishStatusSingleton, sources);
+        // The staleness identity check, against the PRIMARY tree's source.
+        if(sources[0].entries !== wordWiki.publishedEntries)
             throw new Error(`The dictionary was changed during the publish process - data may be inconsistent - please republish`);
     } catch (e) {
         if(e instanceof Error) {
@@ -266,6 +264,32 @@ interface PublishOptions {
     suppressPublishBooks?: boolean;
     suppressPublishCategories?: boolean;
     suppressPublishEntries?: boolean;
+    // --- Multi-orthography TREE mode (multi-ortho-publish.md) --------------
+    /** Publish this source's pages under a subdirectory ('li/', 'sf/');
+     *  the shared stores (content/derived/resources/scripts) stay at the
+     *  publish root, one '../' up.  '' (the default) is the historical
+     *  single-tree layout, byte-identical. */
+    treePrefix?: string;
+    /** The OTHER trees of a multi-tree publish, for the per-page
+     *  peer-orthography links (with the existence rule: a word links its
+     *  peer page only when it exists there). */
+    peers?: PeerTree[];
+    /** Multi-tree runs prune ONCE at the end over the union manifest -
+     *  each tree suppresses its own prune. */
+    suppressPrune?: boolean;
+    /** Only the PRIMARY tree writes the root-level legacy /servlet
+     *  forwarders (the internet's old links land on the primary).
+     *  Default true (single-tree compatibility). */
+    writeForwarders?: boolean;
+}
+
+/** A peer orthography tree, as the cross-links see it. */
+export interface PeerTree {
+    segment: string;                       // 'sf'
+    label: string;                         // 'Smith-Francis'
+    hasEntry(entry_id: number): boolean;
+    entryPath(entry_id: number): string | undefined;   // site-relative WITHIN the peer tree
+    hasCategory(slug: string): boolean;
 }
 
 /**
@@ -348,6 +372,133 @@ export function parsePublishTarget(raw: string): PublishTarget {
         `entries/samqwan, entry:121590 (see parsePublishTarget in publish.ts)`);
 }
 
+// --------------------------------------------------------------------------------
+// --- Multi-orthography publish (multi-ortho-publish.md) --------------------------
+// --------------------------------------------------------------------------------
+//
+// ONE RUN, ALL ORTHOGRAPHIES: each source publishes a full site under its
+// tree (/li/..., /sf/...) sharing the root content/derived/resources stores
+// via ../; the run also writes the ROOT artifacts (the orthography-chooser
+// index.html that works from a USB stick, the legacy /servlet forwarders
+// via the primary tree, the generated Caddy redirect include) and prunes
+// ONCE over the union manifest.  One run is what makes the cross-links
+// sound: every tree knows every peer's public ids and categories.
+
+export async function publishMultiTree(status: PublishStatus,
+                                       sources: PublishSource[],
+                                       publishRoot: string = '.',
+                                       opts: {targets?: string[]} = {}): Promise<void> {
+    if(sources.length === 0) throw new Error('publishMultiTree needs at least one source');
+
+    // Build every tree first (paths and public ids), then wire each tree's
+    // PEERS - the cross-links need all trees' id maps.
+    const trees = sources.map((source, i) => new Publish(status, source, publishRoot, {
+        treePrefix: `${source.orthographySegment}/`,
+        suppressPrune: true,
+        writeForwarders: i === 0,   // the internet's old links land on the PRIMARY
+    }));
+    for(const tree of trees) {
+        const others = trees.filter(t => t !== tree);
+        tree.options.peers = others.map(peer => {
+            const pathById = new Map<number, string>();
+            for(const [e, _publicId] of peer.entryToPublicId.entries())
+                pathById.set(e.entry_id, peer.pathForEntry(e));
+            const cats = new Set(peer.publicCategories().map(([slug, _n]) => slug));
+            return {
+                segment: peer.source.orthographySegment,
+                label: peer.source.orthographyName,
+                hasEntry: (id: number) => pathById.has(id),
+                entryPath: (id: number) => pathById.get(id),
+                hasCategory: (slug: string) => cats.has(slug),
+            };
+        });
+    }
+
+    for(const tree of trees) {
+        await Deno.mkdir(tree.fsPath(''), {recursive: true});
+        status.log.push(`--- publishing the ${tree.source.orthographyName} tree (/${tree.treePrefix}) ---`);
+        if(opts.targets?.length) await tree.publishTargets(opts.targets);
+        else await tree.publish();
+    }
+
+    if(!opts.targets?.length) {
+        await publishRootChooser(trees, publishRoot);
+        await publishCaddyRedirects(trees, publishRoot);
+        // ONE prune over the union manifest (each tree suppressed its own):
+        // separate per-tree prunes would see the other trees' pages as
+        // orphans.
+        const union = new Set<string>();
+        for(const tree of trees) for(const p of tree.emittedPaths) union.add(p);
+        union.add('index.html');
+        const primary = trees[0];
+        primary.emittedPaths = union;
+        primary.options.suppressPrune = false;
+        // Prune every tree's sections + the root forwarders through the
+        // primary (its options wrote the forwarders; section dirs from all).
+        for(const tree of trees.slice(1)) {
+            // fold the other trees' section dirs in by pruning through them
+            tree.emittedPaths = union;
+            tree.options.suppressPrune = false;
+            tree.options.writeForwarders = false;   // servlet pruned by primary only
+            await tree.pruneOrphanedPages();
+        }
+        await primary.pruneOrphanedPages();
+    }
+}
+
+/** The ROOT index.html: an orthography CHOOSER that works from a plain
+ *  directory or a USB stick (file://) - no server, no redirect.  On the
+ *  web, Caddy 301s '/' to the primary tree (see publishCaddyRedirects);
+ *  this page is the no-server fallback and the mirror's front door. */
+async function publishRootChooser(trees: Publish[], publishRoot: string): Promise<void> {
+    const title = "Mi'gmaq/Mi'kmaq Online Talking Dictionary";
+    const markup =
+        ['html', {},
+         ['head', {},
+          ['meta', {charset: 'utf-8'}],
+          ['meta', {name: 'viewport', content: 'width=device-width, initial-scale=1'}],
+          ['title', {}, title],
+          ['link', {href: 'resources/site-theme.css', rel: 'stylesheet', type: 'text/css'}],
+          ['link', {href: 'resources/public.css', rel: 'stylesheet', type: 'text/css'}]],
+         ['body', {},
+          ['div', {class: 'page-content', style: 'max-width: 40rem; margin: 4rem auto; text-align: center;'},
+           ['h1', {}, title],
+           ['p', {}, 'Choose your writing system — the same dictionary, in each orthography:'],
+           ['div', {},
+            trees.map(t =>
+                ['p', {}, ['a', {class: 'btn btn-primary btn-lg', style: 'min-width: 18rem;',
+                                 href: `${t.treePrefix}index.html`},
+                           t.source.orthographyName]])],
+          ]]];
+    await writePageFromMarkupIfChanged(`${publishRoot}/index.html`, markup);
+}
+
+/** The generated Caddy include (data/caddy-redirects.conf): '/' 301s to the
+ *  primary tree (way more content there for now - dz), and every legacy
+ *  top-level path 301s to its new home under the primary.  /servlet stays
+ *  at the root (the internet still has those links) - no rule needed.
+ *  GENERATED, not hand-maintained: #include it from the site's Caddyfile
+ *  and it can never drift from the tree. */
+async function publishCaddyRedirects(trees: Publish[], publishRoot: string): Promise<void> {
+    const primary = trees[0].treePrefix.replace(/\/$/, '');
+    const legacyPrefixes = ['entries', 'categories', 'top-words', 'books'];
+    const legacyPages = ['404.html', 'all-words.html', 'about-us.html',
+                         'top-words.html', 'categories.html'];
+    const lines = [
+        '# GENERATED by wordwiki publish (multi-ortho-publish.md) - do not edit.',
+        '# Include from the site Caddyfile.  / and every legacy path 301 to the',
+        `# primary orthography tree (/${primary}/); /servlet stays at the root.`,
+        '',
+        `redir / /${primary}/ 301`,
+        ...legacyPages.map(p => `redir /${p} /${primary}/${p} 301`),
+        ...legacyPrefixes.map(p => `redir /${p}/* /${primary}{uri} 301`),
+        '',
+    ];
+    await Deno.mkdir(`${publishRoot}/data`, {recursive: true});
+    await writeUTF8FileIfContentsChanged(`${publishRoot}/data/caddy-redirects.conf`,
+                                         lines.join('\n'));
+}
+
 export class Publish {
     entryToPublicId: Map<Entry, string>;
     /** The orthography being published - the source bundle's. */
@@ -389,11 +540,23 @@ export class Publish {
             ?? panic(`no reference book '${book}' in the publish source`);
     }
 
+    /** This tree's pages live under treePrefix; '' = the historical
+     *  single-tree layout. */
+    get treePrefix(): string { return this.options.treePrefix ?? ''; }
+    /** From a page's tree-relative rootPath up to the PUBLISH root, where
+     *  the shared stores (content/derived/resources/scripts) live. */
+    get sharedUp(): string { return this.treePrefix ? '../' : ''; }
+
     // Path discipline: every `*Path`/`pathFor*` helper returns a
-    // SITE-RELATIVE path (they double as href sources, so they must never
-    // contain publishRoot); every filesystem write/mkdir goes through
-    // fsPath(), the ONE place publishRoot is applied.
+    // TREE-RELATIVE path (they double as href sources, so they must never
+    // contain publishRoot or the tree prefix); every filesystem write/mkdir
+    // goes through fsPath(), the ONE place publishRoot + treePrefix are
+    // applied.  ROOT-level artifacts (the legacy /servlet forwarders, the
+    // publish marker) go through rootFsPath instead.
     fsPath(sitePath: string): string {
+        return `${this.publishRoot}/${this.treePrefix}${sitePath}`;
+    }
+    rootFsPath(sitePath: string): string {
         return `${this.publishRoot}/${sitePath}`;
     }
 
@@ -404,7 +567,7 @@ export class Publish {
     // SITE-RELATIVE path (fsPath() is applied here, the one place publishRoot is
     // joined for writes).
     async writePage(sitePath: string, pageMarkup: any): Promise<boolean> {
-        this.emittedPaths.add(sitePath);
+        this.emittedPaths.add(this.treePrefix + sitePath);
         return writePageFromMarkupIfChanged(this.fsPath(sitePath), pageMarkup);
     }
 
@@ -541,7 +704,8 @@ export class Publish {
         // --- Remove stale orphan pages left by earlier publishes (opt-in,
         //     heavily guarded - see pruneOrphanedPages).  Only meaningful after
         //     a FULL publish() like this one; never called from publishTargets.
-        await this.pruneOrphanedPages();
+        if(!this.options.suppressPrune)
+            await this.pruneOrphanedPages();
     }
 
     // Note the building instance + db_purpose in the publish log, and warn if a
@@ -584,7 +748,7 @@ export class Publish {
         // GUARD 1 - opt-in marker.  The publisher never creates it; a human
         // places it to bless a directory as a real publish root.  No marker =>
         // never delete anything (e.g. a misconfigured publishRoot).
-        if(!(await fsExists(this.fsPath(PUBLISH_MARKER_FILE)))) {
+        if(!(await fsExists(this.rootFsPath(PUBLISH_MARKER_FILE)))) {
             this.status.warnings.push(
                 `Stale-page prune SKIPPED: no '${PUBLISH_MARKER_FILE}' marker in publish root `+
                 `'${this.publishRoot}'. Create it (touch) to enable pruning of orphaned pages.`);
@@ -613,9 +777,17 @@ export class Publish {
         // Only prune directories whose section actually ran this publish - a
         // suppressed section emits nothing, so its whole tree would look
         // orphaned.
+        // Section dirs are TREE-scoped; the legacy /servlet forwarders live
+        // at the publish root and are pruned only by the tree that wrote
+        // them.  (A multi-tree run prunes ONCE over the union manifest -
+        // see publishMultiTree.)
         const dirs: string[] = [];
-        if(!this.options.suppressPublishCategories) dirs.push(...PRUNE_CATEGORY_DIRS);
-        if(!this.options.suppressPublishEntries)    dirs.push(...PRUNE_ENTRY_DIRS);
+        if(!this.options.suppressPublishCategories)
+            dirs.push(...PRUNE_CATEGORY_DIRS.map(d => this.treePrefix + d));
+        if(!this.options.suppressPublishEntries) {
+            dirs.push(this.treePrefix + 'entries');
+            if(this.options.writeForwarders ?? true) dirs.push('servlet/words');
+        }
         if(dirs.length === 0) return;
 
         // publishRoot-prefixed paths from the walk map back to site-relative
@@ -625,7 +797,7 @@ export class Publish {
         let pruned = 0;
         const removed: string[] = [];
         for(const dir of dirs) {
-            const dirFs = this.fsPath(dir);
+            const dirFs = this.rootFsPath(dir);
             if(!(await fsExists(dirFs))) continue;
             // followSymlinks:false => never traverse out of the publish tree.
             for await (const ent of fsWalk(dirFs, {includeDirs: false, followSymlinks: false})) {
@@ -768,7 +940,7 @@ export class Publish {
             ['style', {}, block`
 /**/                .def { display:none; }
 /**/                _search_ { display: list-item; }`],
-            ['script', {src:'resources/search.js'}],
+            ['script', {src:`${this.sharedUp}resources/search.js`}],
             ['script', {}, block`
 /**/                allSearchTerms = ${JSON.stringify(allSearchTerms)};
 /**/                `],
@@ -784,7 +956,7 @@ export class Publish {
              
              // --- Bead image
              ['div', {},
-              ['img', {id:'headerImage', class: 'img-fluid', src: 'resources/mmo-bead-image-1080x360.jpg'}]],
+              ['img', {id:'headerImage', class: 'img-fluid', src: `${this.sharedUp}resources/mmo-bead-image-1080x360.jpg`}]],
              
              // --- Search Box
              ['h2', {}, 'Dictionary Search'],
@@ -827,7 +999,8 @@ export class Publish {
              ],
             ];
         
-        await this.writePage(this.homePath, this.publicPageTemplate('', {title, head, body}));
+        await this.writePage(this.homePath, this.publicPageTemplate('', {title, head, body},
+            {peerPath: () => this.homePath}));
     }
 
     async publish404Page(): Promise<void> {
@@ -841,7 +1014,8 @@ export class Publish {
              ['p', {}, 'You can ', ['a', {href:`https://${this.publicSiteDomain}`},  'start again at our home page.']],
             ];
         
-        await this.writePage(this.fourOhFourPath, this.publicPageTemplate('', {title, body}));
+        await this.writePage(this.fourOhFourPath, this.publicPageTemplate('', {title, body},
+            {peerPath: () => this.fourOhFourPath}));
     }
     
     get allWordsPath(): string {
@@ -865,7 +1039,8 @@ export class Publish {
             ];
         
         await this.writePage(this.allWordsPath,
-                             this.publicPageTemplate('', {title, body}));
+                             this.publicPageTemplate('', {title, body},
+                                 {peerPath: () => this.allWordsPath}));
     }
 
     get aboutUsPath(): string {
@@ -882,7 +1057,7 @@ export class Publish {
     }
 
     haveFullHistoryDump(): boolean {
-        try { Deno.statSync(this.fsPath('data/full-history.json')); return true; }
+        try { Deno.statSync(this.rootFsPath('data/full-history.json')); return true; }
         catch { return false; }
     }
 
@@ -934,7 +1109,9 @@ current: the site existing is the proof.`,
                ' — documentation of the file format, so the data can be read without this project\'s source code.'],
               this.haveFullHistoryDump()
                   ? ['li', {},
-                     ['a', {href: 'full-history.json'}, 'full-history.json'],
+                     // At the PUBLISH root (orthography-neutral), shared by
+                     // every tree's data page.
+                     ['a', {href: `../${this.sharedUp}data/full-history.json`}, 'full-history.json'],
                      ` — the COMPLETE versioned data: every fact with its whole
 editorial history (who, when, every superseded version).  Larger and
 requiring more sophistication to interpret; the file above is the
@@ -976,7 +1153,8 @@ including remixing, transforming, and building upon the material, for any non-co
             ];
         
         await this.writePage(this.aboutUsPath,
-                             this.publicPageTemplate('', {title, body}));
+                             this.publicPageTemplate('', {title, body},
+                                 {peerPath: () => this.aboutUsPath}));
     }
 
     /**
@@ -999,7 +1177,7 @@ including remixing, transforming, and building upon the material, for any non-co
             
             ['h2', {}, 'Pacifique Dictionary Manuscripts project'],
 
-            ['img', {class: 'img-fluid', src: 'resources/pdm-sample.png'}],
+            ['img', {class: 'img-fluid', src: `${this.sharedUp}resources/pdm-sample.png`}],
             
             ['p', {}, `The `,
              ['a', {href:'./books/PDM/page-0307/index.html'},
@@ -1207,11 +1385,16 @@ including remixing, transforming, and building upon the material, for any non-co
                                    ()=>this.publishEntry(entry), entry.entry_id);
         }
 
-        // Generate .html files that forward our old URLS to our new ones (using meta refresh)
-        await Deno.mkdir(this.fsPath('servlet/words'), {recursive: true});
-        for(const entry of this.entries) {
-            await this.publishItem(`Entry Forwarder ${this.getPublicIdForEntry(entry)}`,
-                                   ()=>this.publishEntryForwarder(entry), entry.entry_id);
+        // Generate .html files that forward our old URLS to our new ones
+        // (using meta refresh).  These live at the PUBLISH ROOT - the
+        // internet's old links point there - and only the PRIMARY tree of a
+        // multi-tree publish writes them (targets carry its tree prefix).
+        if(this.options.writeForwarders ?? true) {
+            await Deno.mkdir(this.rootFsPath('servlet/words'), {recursive: true});
+            for(const entry of this.entries) {
+                await this.publishItem(`Entry Forwarder ${this.getPublicIdForEntry(entry)}`,
+                                       ()=>this.publishEntryForwarder(entry), entry.entry_id);
+            }
         }
     }
     
@@ -1260,7 +1443,8 @@ including remixing, transforming, and building upon the material, for any non-co
             relatedCategoryMarkup,
         ];
                                 
-        await this.writePage(entryPath, this.publicPageTemplate(rootPath, {title, body}));
+        await this.writePage(entryPath, this.publicPageTemplate(rootPath, {title, body},
+            {peerPath: peer => peer.entryPath(entry.entry_id)}));
     }
 
     /** The public reference presentation for the metadata renderer: the scan
@@ -1268,7 +1452,11 @@ including remixing, transforming, and building upon the material, for any non-co
      *  page (the same shape the hand renderer's public reference block had). */
     #scanById: Map<number, GroupScanData>|undefined;
     get scanById(): Map<number, GroupScanData> {
-        return this.#scanById ??= new Map(this.source.scans.map(s => [s.bounding_group_id, s]));
+        return this.#scanById ??= new Map(this.source.scans.map(s =>
+            [s.bounding_group_id,
+             // Tree mode: the shared tile stores are one up from the pages.
+             {...s, parts: s.parts.map(part =>
+                 ({...part, tiles_url: this.sharedUp + part.tiles_url}))}]));
     }
 
     // The bundle-backed twins of the db scan-render trio, shared by the
@@ -1313,7 +1501,10 @@ including remixing, transforming, and building upon the material, for any non-co
     #mediaBySource: Map<string, {served?: string, error?: string}>|undefined;
     resolveAudioUrl: audio.AudioUrlResolver = (source: string) => {
         this.#mediaBySource ??= new Map(this.source.media.map(m =>
-            [m.source, {served: m.served, error: m.error}]));
+            [m.source, {served: m.served !== undefined
+                            // Tree mode: the shared stores are one up.
+                            ? this.sharedUp + m.served : undefined,
+                        error: m.error}]));
         return this.#mediaBySource.get(source);
     };
 
@@ -1341,7 +1532,7 @@ including remixing, transforming, and building upon the material, for any non-co
         
         const siteUrl = `https://${this.publicSiteDomain}`;
         const entryPath = this.pathForEntry(entry);
-        const newEntryUrl = `${siteUrl}/${strings.stripOptionalPrefix(entryPath, './')}`;
+        const newEntryUrl = `${siteUrl}/${this.treePrefix}${strings.stripOptionalPrefix(entryPath, './')}`;
         
         const head = ['meta', {'http-equiv': 'refresh',
                                'content': `0;url=${newEntryUrl}`}];
@@ -1361,7 +1552,14 @@ including remixing, transforming, and building upon the material, for any non-co
              ['a', {href: siteUrl}, siteUrl]]
         ];
                                 
-        await this.writePage(entryForwarderPath, this.publicPageTemplate('../../', {title, head, body}));
+        // ROOT-level write (not under the tree prefix): the old URLs are at
+        // the site root forever.  The page renders as a TREE page that sits
+        // at the root: rootPath reaches into the tree (nav links land
+        // there), and sharedUp cancels back out for the shared stores.
+        this.emittedPaths.add(entryForwarderPath);
+        await writePageFromMarkupIfChanged(this.rootFsPath(entryForwarderPath),
+            this.publicPageTemplate(`../../${this.treePrefix}`, {title, head, body},
+                {peerPath: peer => peer.entryPath(entry.entry_id)}));
     }
 
     get categoriesDir(): string {
@@ -1416,7 +1614,8 @@ including remixing, transforming, and building upon the material, for any non-co
                                  c.name, ` (${c.count} entries)`]])],
             ]),
         ];
-        await this.writePage(opts.directoryPath, this.publicPageTemplate('', {title: opts.title, body}));
+        await this.writePage(opts.directoryPath, this.publicPageTemplate('', {title: opts.title, body},
+            {peerPath: () => opts.directoryPath}));
     }
 
     /** Render & write ONE bucket's entry-list page (its pages live one level
@@ -1430,7 +1629,11 @@ including remixing, transforming, and building upon the material, for any non-co
              ] // ul
             ] // div
         ];
-        await this.writePage(this.pathForListingPage(dir, slug), this.publicPageTemplate('../', {title, body}));
+        await this.writePage(this.pathForListingPage(dir, slug),
+            this.publicPageTemplate('../', {title, body},
+                // A category may have no public words in the peer tree.
+                {peerPath: peer => dir === this.categoriesDir && !peer.hasCategory(slug)
+                    ? undefined : this.pathForListingPage(dir, slug)}));
     }
 
     /**
@@ -1610,7 +1813,10 @@ including remixing, transforming, and building upon the material, for any non-co
      *
      */
     async publishBookPage(publicBookId: string, page_number: number, total_pages_in_document: number) {
-        const rootPath = '../../../../';
+        // books/X/page-NNNN/index.html is THREE dirs deep.  (The old
+        // 4-up value only worked because web browsers clamp above the
+        // host root; file:// does not - the USB model caught it.)
+        const rootPath = '../../../';
 
         // Everything from the bundle: book metadata, the Tagging layer id
         // (resolved at BUILD time - publishing is read-only), and the page's
@@ -1626,7 +1832,10 @@ including remixing, transforming, and building upon the material, for any non-co
             total_pages_in_document,
         };
 
-        const {markup, groupIds} = renderPageEditor.renderAnnotatedPageFromData(cfg, pageScan);
+        const {markup, groupIds} = renderPageEditor.renderAnnotatedPageFromData(
+            cfg, pageScan,
+            // Tree mode: the page image lives in the shared store, one up.
+            {imageHref: `${rootPath}${this.sharedUp}${pageScan.image_url}`});
 
         const infoBoxesById: Record<string, string> = {};
         for(const groupId of groupIds) {
@@ -1634,8 +1843,7 @@ including remixing, transforming, and building upon the material, for any non-co
         }
                 
         const head = [
-            //['link', {href: '/resources/page-viewer.css', rel:'stylesheet', type:'text/css'}],
-            ['script', {src:'/scripts/wordwiki/page-viewer.js'}],
+            ['script', {src:`${rootPath}${this.sharedUp}scripts/wordwiki/page-viewer.js`}],
         ];
 
         const body = [
@@ -1665,11 +1873,15 @@ including remixing, transforming, and building upon the material, for any non-co
         await Deno.mkdir(this.fsPath(this.dirForBookPage(publicBookId, page_number)), {recursive: true});
 
         await this.writePage(this.pathForBookPage(publicBookId, page_number),
-                             this.publicPageTemplate(rootPath, {head, body}));
+                             this.publicPageTemplate(rootPath, {head, body},
+                                 {peerPath: () => this.pathForBookPage(publicBookId, page_number)}));
     }
 
     async renderBookPageTopNote(publicBookId: string, document: schema.ScannedDocument): Promise<any> {
-        const rootPath = '../../../../';
+        // books/X/page-NNNN/index.html is THREE dirs deep.  (The old
+        // 4-up value only worked because web browsers clamp above the
+        // host root; file:// does not - the USB model caught it.)
+        const rootPath = '../../../';
         switch(publicBookId) {
             case 'PDM':
                 return [
@@ -1739,7 +1951,20 @@ including remixing, transforming, and building upon the material, for any non-co
     /**
      *
      */
-    publicPageTemplate(rootPath: string, content: PublicPageContent): any {
+    publicPageTemplate(rootPath: string, content: PublicPageContent,
+                       opts: {peerPath?: (peer: PeerTree) => string | undefined} = {}): any {
+        // (The legacy root-level /servlet forwarders render as tree pages
+        // that happen to sit at the root: their rootPath carries the tree
+        // prefix, and sharedUp cancels it back out for the shared stores.)
+        const sharedUp = this.sharedUp;
+        // The peer-orthography links (multi-ortho-publish.md): same page in
+        // the peer tree when it exists there, the peer home otherwise.
+        const peerLinks = ((this.options.peers?.length ?? 0) > 0)
+            ? this.options.peers!.map(peer => ({
+                  label: peer.label,
+                  href: `${rootPath}${this.sharedUp}${peer.segment}/` +
+                        ((opts.peerPath?.(peer)) ?? 'index.html')}))
+            : [];
         return (
             ['html', {},
 
@@ -1750,12 +1975,12 @@ including remixing, transforming, and building upon the material, for any non-co
               config.bootstrapCssLink,
               // Shared theme (accent + link treatment + type) - same file the
               // editor loads, so the two sites match; then public-only layout.
-              ['link', {href: `${rootPath}resources/site-theme.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}${sharedUp}resources/site-theme.css`, rel:'stylesheet', type:'text/css'}],
               // TODO remove most of these css for the public side
-              ['link', {href: `${rootPath}resources/public.css`, rel:'stylesheet', type:'text/css'}],
-              ['link', {href: `${rootPath}resources/instance.css`, rel:'stylesheet', type:'text/css'}],
-              ['link', {href: `${rootPath}resources/page-editor.css`, rel:'stylesheet', type:'text/css'}],
-              ['link', {href: `${rootPath}resources/context-menu.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}${sharedUp}resources/public.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}${sharedUp}resources/instance.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}${sharedUp}resources/page-editor.css`, rel:'stylesheet', type:'text/css'}],
+              ['link', {href: `${rootPath}${sharedUp}resources/context-menu.css`, rel:'stylesheet', type:'text/css'}],
               ['script', {}, block`
     /**/           let imports = {};
     /**/           let activeViews = undefined`],
@@ -1775,7 +2000,7 @@ including remixing, transforming, and building upon the material, for any non-co
 
              ['body', {},
 
-              this.publicNavBar(rootPath),
+              this.publicNavBar(rootPath, peerLinks),
 
               // TODO probably move this somewhere else
               ['audio', {id:'audioPlayer', preload:'none'},
@@ -1807,7 +2032,8 @@ including remixing, transforming, and building upon the material, for any non-co
         ] : [];
     }
 
-    publicNavBar(rootPath: string): any {
+    publicNavBar(rootPath: string,
+                 peerLinks: {label: string, href: string}[] = []): any {
         return [
             ['nav', {class:"navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body", 'data-bs-theme':"dark"},
              ['div', {class:"container-fluid"},
@@ -1839,6 +2065,15 @@ including remixing, transforming, and building upon the material, for any non-co
                  // XXX hack - starting at P307 for reasons ...
                  ['a', {class:"nav-link", href:rootPath+'books/PDM/page-0307/index.html'}, 'Pacifique Manuscript'],
                 ], //li
+
+                // The peer-orthography trees (multi-ortho-publish.md): the
+                // same page in the other writing system, when it exists
+                // there (else the peer's home).
+                peerLinks.map(pl =>
+                    ['li', {class:"nav-item"},
+                     ['a', {class:"nav-link text-nowrap", href: pl.href,
+                            title: `This dictionary in the ${pl.label} orthography`},
+                      pl.label]]),
 
                 // --- Reference Books
                 ['li', {class:"nav-item dropdown"},

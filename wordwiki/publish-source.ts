@@ -25,6 +25,7 @@ import * as model from './model.ts';
 import {variantMatches} from './variant-policy.ts';
 import * as category from './category.ts';
 import * as user from './user.ts';
+import * as orthographyModule from './orthography.ts';
 import {ScannedDocument, selectAllScannedDocuments, maxPageNumberForDocument,
         selectScannedPageByPageNumber, getOrCreateNamedLayer} from './scanned-document.ts';
 import {GroupScanData, BookPageScanData,
@@ -100,6 +101,14 @@ export interface PublishSource {
     /** The PRIMARY orthography (= orthographies[0]): drives the entry-page
      *  public ids and the publisher's defaultVariant. */
     orthography: string;
+    /** The primary orthography's display name (multi-tree publishes label
+     *  the peer-orthography links and the root chooser with it). */
+    orthographyName: string;
+    /** The primary orthography's URL PATH SEGMENT for multi-tree publishes
+     *  (/li/..., /sf/...): the orthography table's abbreviation,
+     *  lowercased - DATA, not code (the segment lands in URLs and mirror
+     *  directory names forever). */
+    orthographySegment: string;
     /** The pub-gate selection set: entries public in ANY of these. */
     orthographies: string[];
     /** Whether each entry carries all orthographies' content or was
@@ -139,7 +148,18 @@ export interface PublishSourceApp {
     getDbPurpose(): string | undefined;
     readonly categories: category.CategoryTable;
     readonly users: user.UserTable;
+    readonly orthographies: orthographyModule.OrthographyTable;
     entryCountByPage(book: string): Array<[number, number]>;
+}
+
+/** One source per PUBLISHABLE orthography (table order - the FIRST is the
+ *  primary tree, today's li), for the multi-tree publish. */
+export async function buildAllPublishSources(app: PublishSourceApp): Promise<PublishSource[]> {
+    const rows = app.orthographies.publishableByOrder.all({});
+    const out: PublishSource[] = [];
+    for(const o of rows)
+        out.push(await buildPublishSource(app, {orthographies: [o.slug]}));
+    return out;
 }
 
 /** Filter one entry's variant-tagged tuples to the selected orthographies
@@ -174,6 +194,15 @@ export function filterEntryVariants(entry: Entry, orthographies: string[]): Entr
 export async function buildPublishSource(app: PublishSourceApp,
                                          opts: PublishSourceOpts = {}): Promise<PublishSource> {
     const orthographies = opts.orthographies ?? [siteConfig.publicSiteOrthography];
+    // The primary orthography's display name + URL path segment come from
+    // the TABLE (data, not code - the segment lands in URLs forever).
+    const primaryRow = (() => {
+        try { return app.orthographies.allByOrder.all({}).find(o => o.slug === orthographies[0]); }
+        catch (_e) { return undefined; }
+    })();
+    const orthographyName = primaryRow?.name || orthographies[0];
+    const orthographySegment = (primaryRow?.abbreviation || orthographies[0])
+        .toLowerCase().replace(/[^a-z0-9_]/g, '');
     const variantContent = opts.variantContent ?? 'all';
     if(orthographies.length === 0)
         throw new Error('publish source needs at least one orthography');
@@ -254,6 +283,8 @@ export async function buildPublishSource(app: PublishSourceApp,
     return {
         formatVersion: PUBLISH_SOURCE_FORMAT_VERSION,
         orthography: orthographies[0],
+        orthographyName,
+        orthographySegment,
         orthographies,
         variantContent,
         collationLocale: siteConfig.collationLocale,
@@ -309,6 +340,12 @@ export function writeFullHistoryDump(app: PublishSourceApp, publishRoot: string)
  *  check - from-dump publishing is for standalone generation.) */
 export function publishSourceFromJson(text: string): PublishSource {
     const source = JSON.parse(text);
+    // Older dumps predate the name/segment fields - default them.
+    if(source && source.orthography) {
+        source.orthographyName ??= source.orthography;
+        source.orthographySegment ??= String(source.orthography).toLowerCase()
+            .replace(/[^a-z0-9_]/g, '');
+    }
     if(source?.formatVersion !== PUBLISH_SOURCE_FORMAT_VERSION)
         throw new Error(`unsupported publish-source formatVersion '${source?.formatVersion}' ` +
                         `(this reader understands ${PUBLISH_SOURCE_FORMAT_VERSION})`);

@@ -33,7 +33,7 @@ import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
-import { buildPublishSource, publishSourceFromJson, writeFullHistoryDump } from './publish-source.ts';
+import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
     const command = args[0];
@@ -771,25 +771,24 @@ export async function cliMain(args: string[]): Promise<void> {
             const exitCode = await security.runSystem(async () => {
                 // From a dump, the publish NEEDS NO DB - don't touch it
                 // (this is what lets a bare dir with only the resource
-                // files publish the site).
+                // files publish the site).  --from may repeat (or take a
+                // comma list): one tree per dump.
                 if(!fromPath) ww.ensureNewStyleTables();
-                const source = fromPath
-                    ? publishSourceFromJson(Deno.readTextFileSync(fromPath))
-                    : await buildPublishSource(ww);
+                const sources = fromPath
+                    ? fromPath.split(',').map(f =>
+                        publishSourceFromJson(Deno.readTextFileSync(f.trim())))
+                    : await buildAllPublishSources(ww);
                 // A LIVE publish refreshes the full-history dump beside the
-                // reduced bundle (the data page lists it when present); a
+                // reduced bundles (the data pages list it when present); a
                 // from-dump publish has no db and keeps whatever is there.
                 if(!fromPath) writeFullHistoryDump(ww, root);
                 const status = new publish.PublishStatus();
                 status.start();
-                const pub = new publish.Publish(status, source, root);
                 if(root !== '.')
                     await Deno.mkdir(root, {recursive: true});
                 try {
-                    if(targets.length === 0)
-                        await pub.publish();
-                    else
-                        await pub.publishTargets(targets);
+                    await publish.publishMultiTree(status, sources, root,
+                        {targets: targets.length ? targets : undefined});
                 } catch(e) {
                     status.errors.push(String(e instanceof Error ? (e.stack ?? e.message) : e));
                 }

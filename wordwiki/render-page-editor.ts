@@ -328,8 +328,9 @@ export function renderAnnotatedPage(cfg: PageRenderConfig, page_id: number): { m
  *  renderAnnotatedPage above loads the same struct and adds the
  *  live-editor-only reference-layer svg via `extra`). */
 export function renderAnnotatedPageFromData(cfg: PageRenderConfig, data: BookPageScanData,
-                                            extra: {refBlocksSvg?: any} = {}): { markup: Markup, groupIds: number[] } {
-    const pageImageUrl = '/'+data.image_url;
+                                            extra: {refBlocksSvg?: any,
+                                                    imageHref?: string} = {}): { markup: Markup, groupIds: number[] } {
+    const pageImageUrl = extra.imageHref ?? '/'+data.image_url;
     const pageDims = {width: data.width, height: data.height};
 
     const blocksSvg = data.groups.map(g=>renderGroup(
