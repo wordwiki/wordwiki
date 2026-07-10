@@ -133,6 +133,12 @@ export interface EntryNode {
     // internal annotation (editor audience only - the JSON projection never
     // carries it, so JsonNode naturally yields undefined for it).
     annotation?(name: 'aside' | 'note'): string | undefined;
+    // The tuple's "author (when)" line for $view.byline relations (the
+    // session log) - from the FIRST version's assertion columns (the
+    // post; later touch-ups don't re-date it).  Markup: the feed-style
+    // relative time ("1 day ago") carries the absolute time as a hover
+    // title.  Version-less backends (JSON) yield undefined.
+    byline?(): Markup | undefined;
 }
 
 /** Backend over the projected Entry JSON (relations are arrays keyed by field
@@ -266,6 +272,16 @@ export class EntryRenderer {
      *  (the editor).  They ride INSIDE the surface, so an annotation edit
      *  refreshes with the fact fragment like any value change. */
     protected annotate(rf: model.RelationField, tuple: EntryNode, body: Markup): Markup {
+        // The byline PREFIXES the value (the log's "author (date): text").
+        if (view(rf).byline) {
+            const byline = tuple.byline?.();
+            if (byline) {
+                const b: Markup = ['span', {class: 'lm-me-byline text-muted'}, byline, ': '];   // byline is markup
+                body = Array.isArray(body) && body.length >= 2 && !Array.isArray(body[0])
+                    ? [body[0], body[1], b, ...body.slice(2)]
+                    : [b, body];
+            }
+        }
         const aside = tuple.annotation?.('aside');
         const note = this.audience === 'internal' ? tuple.annotation?.('note') : undefined;
         // The orthography badge: which writing system this row's text is in

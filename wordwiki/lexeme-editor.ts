@@ -122,6 +122,19 @@ export class WorkspaceNode implements entryMeta.EntryNode {
         const a = this.tq.mostRecentTupleVersion?.assertion;
         return (name === 'aside' ? a?.aside : a?.note) || undefined;
     }
+
+    /** "author (when)" from the FIRST version - the post, not the latest
+     *  touch-up ($view.byline relations: the session log).  The when is the
+     *  change feed's relative form ("1 day ago"), absolute time on hover. */
+    byline(): Markup | undefined {
+        const first = this.tq.src.tupleVersions[0]?.assertion;
+        if(!first) return undefined;
+        const who = first.change_by_username || '?';
+        return [who, ' (',
+                ['span', {title: timestamp.formatTimestampAsLocalTime(first.valid_from)},
+                 timestamp.formatTimestampRelative(first.valid_from)],
+                ')'];
+    }
 }
 
 // ---------------------------------------------------------------------------

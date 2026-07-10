@@ -165,6 +165,14 @@ Everything an edit does is still a **button** (immediate / confirm /
 modal-of-arguments) returning a mutation the refresh model resolves — the
 mutation model is unchanged; this doc is only about how quiet it looks.
 
+One sanctioned NON-MODAL exception (dz 2026-07-09): the wordwiki session-log
+pane (lexeme-log.md) is a direct-entry box + Post button inline on the word
+view.  The reason it's an exception and not an erosion: **modals are for
+mutations where the page is the context you're leaving; the log is a mutation
+where the page is the context you're keeping** — the speakers group reads the
+word while the note is typed.  Anything that doesn't meet that sentence still
+gets a button/modal.
+
 ## Where the mechanism lives (liminal vs the app)
 
 The design language is a **liminal** thing, so every app on it (rabid, wordwiki)

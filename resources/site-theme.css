@@ -284,3 +284,13 @@ body {
 /* Click-to-pick transliteration candidate chips (pickTransliteration): quiet
    until hovered - alternates, not calls to action. */
 .lm-tr-pick { font-size: .78em; line-height: 1.1; }
+
+/* ------------------------------------------------------------------ */
+/* --- The word view's session-log pane (editor only) ---------------- */
+/* ------------------------------------------------------------------ */
+
+.ww-log-pane textarea { max-width: 46rem; }
+.ww-log-list { max-width: 46rem; }
+.ww-log-entry > .lm-markdown { display: inline-block; vertical-align: top; }
+.ww-log-entry > .lm-markdown > p:first-child { margin-top: 0; }
+.ww-log-entry > .lm-markdown > p:last-child { margin-bottom: 0; }

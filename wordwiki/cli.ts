@@ -33,7 +33,7 @@ import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
-import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, writeFullHistoryDump } from './publish-source.ts';
+import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
     const command = args[0];
@@ -607,8 +607,8 @@ export async function cliMain(args: string[]): Promise<void> {
                     orthographies: orthographiesArg?.split(',').map(s => s.trim()).filter(Boolean),
                     variantContent: variantContentArg as 'all'|'selected'|undefined,
                 });
-                Deno.writeTextFileSync(path, JSON.stringify(
-                    {...source, generatedAt: new Date().toISOString()}, null, 1));
+                Deno.writeTextFileSync(path, publishSourceToPublicJson(
+                    {...source, generatedAt: new Date().toISOString()}));
                 console.info(`wrote publish source to ${path}: ` +
                              `${source.entries.length} entries, ` +
                              `${source.categories.length} categories, ` +

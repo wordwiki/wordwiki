@@ -77,6 +77,10 @@ export interface ViewStyle {
     // editorial `note` (vs its `public_note`) is the exemplar - this
     // generalizes the hand renderer's renderInternalNotes flag.
     audience?: 'internal',
+    // Prefix each tuple with WHO wrote it and WHEN, from the versioned
+    // backend's assertion columns (the session log's "name (date):" line).
+    // Backends without version data (the JSON projection) render nothing.
+    byline?: boolean,
     // COMPOSE a tuple's several parts into one phrase (on a relation): the
     // ordered field names (scalars and/or child relations of this relation) to
     // lay out, joined by `sep`.  e.g. an alternate form composes

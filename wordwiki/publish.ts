@@ -12,7 +12,7 @@ import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
 import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
-import {PublishSource, PublishSourceBook, buildPublishSource, buildAllPublishSources, writeFullHistoryDump} from './publish-source.ts';
+import {PublishSource, PublishSourceBook, buildPublishSource, buildAllPublishSources, publishSourceToPublicJson, writeFullHistoryDump} from './publish-source.ts';
 import type * as model from './model.ts';
 import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
@@ -1280,7 +1280,9 @@ export class Publish {
         // passes its dump's generatedAt through as provenance.
         await writeUTF8FileIfContentsChanged(
             this.fsPath('data/publish-source.json'),
-            JSON.stringify(this.source, null, 1));
+            // Public serialization: internal-audience relations (notes,
+            // todos, the session log) stripped.
+            publishSourceToPublicJson(this.source));
 
         // The format documentation rides along, so a future reader of the
         // file never needs this project's repository.

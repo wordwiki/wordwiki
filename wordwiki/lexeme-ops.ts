@@ -29,6 +29,7 @@ import {db} from '../liminal/db.ts';
 import * as security from '../liminal/security.ts';
 import * as publicationOps from './publication-ops.ts';
 import {latestContentVersion} from './versioned-model.ts';
+import * as orderkey from '../liminal/orderkey.ts';
 import type {WordWiki} from './wordwiki.ts';
 
 // New fact/assertion ids use the same scheme as the rest of the system (see
@@ -394,6 +395,85 @@ export class LexemeOps {
         return this.publicGateTuples(entry_id)
             .map(t => t.tupleVersions.find(v => v.isPublished)?.assertion)
             .filter((a): a is Assertion => a !== undefined);
+    }
+
+    /** POST A SESSION-LOG ENTRY (the log pane - dz 2026-07-09): quick
+     *  capture of group-sitting feedback on a word.  One post = one new
+     *  TOP-POSTED `log` fact (order_key before the current first - the raw
+     *  data reads in presentation order; true chronology stays on
+     *  valid_from).  Any editor may post; approval is BYPASSED - the log
+     *  is internal-audience (never publicly rendered, stripped from the
+     *  public bundle), so review ceremony would be pure noise.
+     *  Mechanically the makePublic shape: insert a normal pending fact,
+     *  then approve it through the standard op (self-approve: the
+     *  bounded-act precedent) - EXCEPT under a still-unapproved entry,
+     *  where born-approving would violate the published-tree invariant
+     *  (validator: published-child-of-unpublished-parent); there the post
+     *  stays a normal pending fact and simply rides the entry's eventual
+     *  approval. */
+    postLog(entry_id: number, text: string): {fact_id: number} {
+        const trimmed = String(text ?? '').trim();
+        if(!trimmed) throw new Error('an empty log entry is not posted');
+        // Top-posted: order_key before the current first (the raw data
+        // reads in presentation order).
+        return this.postEntryFact(entry_id, entrySchema.LogTag,
+                                  {attr1: trimmed}, {topPost: true});
+    }
+
+    /** QUICK-FILE A TODO from the same pane (dz: as important as the log -
+     *  tagging things as errors are noticed, but ACTIONABLE - the todo
+     *  report is the queue).  Same capture, structured landing: a generic
+     *  'Todo' with the text as details, unassigned, refinable later in the
+     *  editor.  Same approval bypass as postLog. */
+    postTodo(entry_id: number, text: string): {fact_id: number} {
+        const trimmed = String(text ?? '').trim();
+        if(!trimmed) throw new Error('an empty todo is not posted');
+        return this.postEntryFact(entry_id, entrySchema.TodoTag,
+                                  {attr1: 'Todo', attr2: trimmed, attr3: '___',
+                                   attr4: 0, variant: 'mm'} as Partial<Assertion>);
+    }
+
+    /** The shared quick-post primitive: one new entry-level fact,
+     *  born-approved when the entry root is published (insert + approve
+     *  through the standard op, self-approve as a bounded act), a normal
+     *  pending fact otherwise (the published-tree invariant - see
+     *  postLog's doc). */
+    private postEntryFact(entry_id: number, ty: string, fields: Partial<Assertion>,
+                          opts: {topPost?: boolean} = {}): {fact_id: number} {
+        const author = this.requireUsername();
+        const entryTuple = this.entryTuple(entry_id);
+
+        const rel = entryTuple.childRelations[ty];
+        const keys = rel
+            ? [...rel.tuples.values()]
+                .filter(t => t.mostRecentTuple?.isCurrent)
+                .map(t => t.mostRecentTuple!.assertion.order_key ?? '')
+                .filter(k => k !== '')
+                .toSorted()
+            : [];
+        const order_key = opts.topPost
+            ? orderkey.between(undefined, keys[0])
+            : orderkey.between(keys[keys.length-1], undefined);
+
+        const id = newId();
+        const a: Assertion = {
+            ...assertionPathToFields([[entrySchema.DictTag, 0],
+                                      [entrySchema.EntryTag, entry_id],
+                                      [ty, id]]),
+            assertion_id: id, id, ty,
+            valid_from: placeholderTxTime(), valid_to: timestamp.END_OF_TIME,
+            order_key,
+            ...fields,
+            ...this.changeStamp(),
+        } as Assertion;
+        this.app.applyTransaction([a], {quiet: true});
+
+        if(entryTuple.tupleVersions.some(v => v.isPublished)) {
+            this.runPublicationOp((now, aid) =>
+                publicationOps.approve(this.app.workspace, id, author, now, aid,
+                                       {allowSelfApprove: true}));
+        }
+        return {fact_id: id};
     }
 
     /** Make the entry public in `orthography` - approver sugar over the

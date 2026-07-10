@@ -23,6 +23,7 @@ import {LiminalApp, type TestClientSession, type TestCase} from '../liminal/limi
 import * as security from '../liminal/security.ts';
 import * as passwordUtils from '../liminal/password.ts';
 import * as date from '../liminal/date.ts';
+import * as markdown from '../liminal/markdown.ts';
 import {serialize, path} from '../liminal/serializable.ts';
 import {route, routeMutation, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
@@ -425,7 +426,123 @@ export class WordWiki extends LiminalApp {
         return templates.page(title,
             ['div', {class: 'container py-3'},
              lensBanner,
-             ['div', {class: 'page-content'}, rendered]]);
+             ['div', {class: 'page-content'}, rendered],
+             // The session-log pane (dz 2026-07-09): the word view is
+             // where the speakers group sits, so feedback capture lives
+             // HERE - inline and non-modal, the page stays readable while
+             // the note is typed.
+             e ? this.renderLexemeLogPane(entry_id, orthography) : undefined]);
+    }
+
+    /** The word view's LOG pane: the entry's session-log facts (top-posted
+     *  - the order_key IS the presentation order) with feed-style bylines,
+     *  and the quick Post box.  One post = one fact via lexemeOps.postLog
+     *  (born-approved under a published entry; see the verb). */
+    private renderLexemeLogPane(entry_id: number, orthography: string = ''): any {
+        // The byline comes from each fact's FIRST version (the post; later
+        // touch-ups don't re-date it); the text from the current one.
+        const versions = db().all<{id: number, attr1: string, order_key: string,
+                                   valid_from: number, valid_to: number,
+                                   change_by_username: string|null}, {entry_id: number}>(
+            block`
+/**/     SELECT id, attr1, order_key, valid_from, valid_to, change_by_username
+/**/       FROM dict
+/**/       WHERE ty = :ty AND id1 = :entry_id
+/**/       ORDER BY id, valid_from`, {ty: entry.LogTag, entry_id} as any);
+        const byId = new Map<number, {first: typeof versions[0], current?: typeof versions[0]}>();
+        for(const v of versions) {
+            const g = byId.get(v.id) ?? (() => {
+                const g = {first: v, current: undefined as typeof versions[0]|undefined};
+                byId.set(v.id, g); return g;
+            })();
+            if(v.valid_to === timestamp.END_OF_TIME && v.valid_from !== v.valid_to)
+                g.current = v;
+        }
+        const rows = [...byId.values()]
+            .filter(g => g.current !== undefined)
+            .toSorted((a, b) => (a.current!.order_key < b.current!.order_key ? -1 : 1));
+
+        // Open todos: the ACTIONABLE peer of the log (dz: tag errors as
+        // they are noticed) - visible right where the sitting works.
+        const openTodos = (this.entriesById.get(entry_id)?.todo ?? [])
+            .filter(t => !t.done);
+        const todoLabel = (t: entry.Todo) =>
+            [t.details || undefined,
+             entry.todos[t.todo] && t.todo !== 'Todo' ? `[${entry.todos[t.todo]}]` : undefined,
+             t.assigned_to && t.assigned_to !== '___' ? `→ ${t.assigned_to}` : undefined]
+            .filter(s => s).join('  ') || entry.todos[t.todo] || t.todo;
+
+        const returnTo = orthography
+            ? `/ww/wordwiki.wordView(${entry_id}, ${JSON.stringify(orthography)})`
+            : `/ww/wordwiki.wordView(${entry_id})`;
+        const postBox = templates.mayEditLexemes()
+            ? [['form', {method: 'post', action: 'wordwiki.postLexemeLog(bodyArgs)',
+                         class: 'ww-log-post', id: 'wwLogForm'},
+                ['input', {type: 'hidden', name: 'entry_id', value: String(entry_id)}],
+                ['input', {type: 'hidden', name: 'returnTo', value: returnTo}],
+                ['textarea', {name: 'text', id: 'wwLogText', rows: '3',
+                              class: 'form-control',
+                              placeholder: 'Log a note on this word — posted under your name, no approval step…'}],
+                ['div', {class: 'mt-1 d-flex gap-2'},
+                 ['button', {type: 'submit', name: 'kind', value: 'log',
+                             class: 'btn btn-sm btn-primary'}, 'Post'],
+                 // Same capture, ACTIONABLE landing: a generic unassigned
+                 // todo with this text as details (refine in the editor;
+                 // the todo report is the queue).
+                 ['button', {type: 'submit', name: 'kind', value: 'todo',
+                             class: 'btn btn-sm btn-outline-primary',
+                             title: 'File this text as a todo on this word (actionable - shows in the todo report)'},
+                  'Post as todo']]],
+               // Guard a typed-but-unposted note against navigation (the
+               // ONLY way a draft is lost - posting is explicit).
+               ['script', {}, block`
+/**/            (function() {
+/**/                const form = document.getElementById('wwLogForm');
+/**/                let posting = false;
+/**/                form.addEventListener('submit', () => { posting = true; });
+/**/                addEventListener('beforeunload', (e) => {
+/**/                    const t = document.getElementById('wwLogText');
+/**/                    if(!posting && t && t.value.trim() !== '') {
+/**/                        e.preventDefault();
+/**/                        e.returnValue = '';
+/**/                    }
+/**/                });
+/**/            })();`]]
+            : undefined;
+
+        return ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
+            ['h2', {class: 'fs-5'}, 'Log'],
+            postBox,
+            openTodos.length > 0
+                ? ['div', {class: 'ww-log-todos mt-2'},
+                   ['div', {class: 'fw-semibold'}, `Open todos (${openTodos.length})`],
+                   ['ul', {class: 'mb-1'},
+                    openTodos.map(t => ['li', {}, todoLabel(t)])]]
+                : undefined,
+            rows.length === 0 && !postBox
+                ? undefined
+                : ['div', {class: 'ww-log-list mt-2'},
+                   rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
+                       ['span', {class: 'ww-log-byline text-muted'},
+                        g.first.change_by_username || '?', ' (',
+                        ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
+                         timestamp.formatTimestampRelative(g.first.valid_from)],
+                        '): '],
+                       markdown.markdownToMarkup(g.current!.attr1 ?? '')])]];
+    }
+
+    /** Post a session-log entry (the log pane's form) and bounce back to
+     *  the page it was posted FROM (site-relative only). */
+    @routeMutation(authenticated)
+    postLexemeLog(args: {entry_id?: string|number, text?: string,
+                         kind?: string, returnTo?: string}): server.Response {
+        const entry_id = Number(args.entry_id);
+        if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
+        if(args.kind === 'todo') this.lexemeOps.postTodo(entry_id, String(args.text ?? ''));
+        else this.lexemeOps.postLog(entry_id, String(args.text ?? ''));
+        const returnTo = args.returnTo ?? '';
+        const safe = returnTo.startsWith('/') && !returnTo.startsWith('//');
+        return server.forwardResponse(safe ? returnTo : `/ww/wordwiki.wordView(${entry_id})`);
     }
 
     // The speaker's display label beside a recording - "Name (Region)" -

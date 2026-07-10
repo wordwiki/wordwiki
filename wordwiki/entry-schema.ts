@@ -26,6 +26,7 @@ export const SpellingTag = 'spl'       // spel
 export const SubentryTag = 'sub';      // sub
 export const TodoTag = 'tdo';          // todo
 export const NoteTag = 'nte';          // note
+export const LogTag = 'log';           // log
 export const TranslationTag = 'tra';   // tran
 export const DefinitionTag = 'def';    // def
 export const GlossTag = 'gls';         // glos
@@ -313,8 +314,10 @@ export const dictSchemaJson = {
             assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
             done: {$type: 'boolean', $bind: 'attr4'},
             variant: {$type: 'variant', $metaVariant: true, $allowAll: true, $defaultAll: true},
+            // audience internal: editorial workflow - stripped from the
+            // public bundle (publish-source stripInternalRelations).
             $style: { $shape: 'compactInlineListRelation',
-                      $view: { hidden: true, label: 'inline' } },
+                      $view: { hidden: true, label: 'inline', audience: 'internal' } },
         },
 
         note: {
@@ -322,8 +325,10 @@ export const dictSchemaJson = {
             $tag: NoteTag,
             note_id: {$type: 'primary_key'},
             note: {$type: 'string', $bind: 'attr1', $style: { $width: 80, $height: 5, $markdown: true }},
+            // The EDITORIAL note ("not the public one" - dz); audience
+            // internal keeps it out of the public bundle too.
             $style: { $shape: 'compactInlineListRelation',
-                      $view: { hidden: true, label: 'inline' } },
+                      $view: { hidden: true, label: 'inline', audience: 'internal' } },
         },
 
         subentry: {
@@ -697,6 +702,30 @@ export const dictSchemaJson = {
             $style: { $shape: 'inlineListRelation',
                       $view: { order: 2, label: 'heading', empty: 'elide' } },
         },
+
+        // The session LOG (dz 2026-07-09, converged in discussion): quick
+        // capture of group-sitting feedback on a word - "better
+        // unstructured collection IN the system than out of it".
+        // TOP-POSTED: postLog gives each new fact an order_key before the
+        // current first, so the raw data reads in its intended
+        // interpretation order everywhere (the model's user-specified
+        // order, not a display filter); true chronology stays on
+        // valid_from.  Author/date come free from the assertion columns.
+        // LAST in the model so internal views put it at the bottom.
+        // audience internal: never publicly rendered, stripped from the
+        // public bundle.  hidden: the word view renders its own Log pane
+        // (with the quick Post box - see wordwiki.postLexemeLog); the
+        // lexeme editor's generic machinery gives editing/reordering.
+        log: {
+            $type: 'relation',
+            $tag: LogTag,
+            log_id: {$type: 'primary_key'},
+            log: {$type: 'string', $bind: 'attr1',
+                  $style: { $width: 80, $height: 3, $markdown: true }},
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { hidden: true, label: 'inline', audience: 'internal',
+                               byline: true } },
+        },
     },
 };
 
@@ -711,6 +740,13 @@ export interface Entry {
     todo: Todo[],
     subentry: Subentry[],
     recording: Recording[],
+    log: Log[],
+}
+
+/** A session-log entry (author/date live on the assertion columns). */
+export interface Log {
+    log_id: number,
+    log: string,
 }
 
 export interface Status {

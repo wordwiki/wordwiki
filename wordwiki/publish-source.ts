@@ -197,6 +197,44 @@ export function filterEntryVariants(entry: Entry, orthographies: string[]): Entr
     return filterChildren(root, entry) as Entry;
 }
 
+/** Strip INTERNAL-audience relations from an entry (schema-driven: any
+ *  relation whose $view.audience is 'internal' - the editorial note, todo,
+ *  the session log, the reference's editorial note).  The bundle is the
+ *  PUBLIC projection and is publicly downloadable (data/) - internal
+ *  editorial content must not ride along.  (Found leaking 2026-07-09:
+ *  2,389 entry notes + 393 ref notes were in the live bundle; the session
+ *  log made fixing it urgent.)  The publisher itself never reads these
+ *  relations (it renders audience 'public'), so the published site is
+ *  byte-identical either way - verified by test. */
+/** Serialize a bundle for the PUBLIC (data/ downloads, dump files):
+ *  internal-audience relations stripped from every entry.  Stripping at
+ *  SERIALIZATION (not in buildPublishSource) keeps the in-memory
+ *  entries' array identity, which the publish staleness check depends
+ *  on - and the renderer never reads internal relations, so live and
+ *  from-dump publishes stay byte-identical. */
+export function publishSourceToPublicJson(source: PublishSource): string {
+    return JSON.stringify(
+        {...source, entries: source.entries.map(stripInternalRelations)}, null, 1);
+}
+
+export function stripInternalRelations(entry: Entry): Entry {
+    const root = parsedDictSchema().relationsByTag[EntryTag];
+    const strip = (rel: model.RelationField, tuple: any): any => {
+        const out = {...tuple};
+        for(const child of rel.relationFields) {
+            if(child.style.$view?.audience === 'internal') {
+                delete out[child.name];
+                continue;
+            }
+            const arr = (tuple as any)[child.name];
+            if(Array.isArray(arr))
+                out[child.name] = arr.map((t: any) => strip(child, t));
+        }
+        return out;
+    };
+    return strip(root, entry) as Entry;
+}
+
 export async function buildPublishSource(app: PublishSourceApp,
                                          opts: PublishSourceOpts = {}): Promise<PublishSource> {
     const orthographies = opts.orthographies ?? [siteConfig.publicSiteOrthography];

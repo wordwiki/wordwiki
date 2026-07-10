@@ -25,6 +25,12 @@ properly, waits ~10s, and only SIGKILLs a wedged server that ignored the request
 Single fixed port + single-writer SQLite means only one may run at a time, so
 "just run the script again" IS the reliable restart.
 
+**To STOP (not restart): `./wordwiki.sh stop`** — the same clean stop-dance
+without starting a new server. Don't hand-roll the shutdown-route curl
+(fumbled 2026-07-09: wrong password-file path + a bad liveness check that
+deleted the pidfile while the server still ran); the passwords live in the
+INSTANCE dir (`mmo/wordwiki-shutdown-password.txt`), not the repo root.
+
 **Do NOT `pkill`/`kill` the server by hand.** It races the script's own clean
 shutdown, can kill the instance the script is managing (or the one you just
 launched), and skips the graceful SQLite close. Manual killing is what produced
