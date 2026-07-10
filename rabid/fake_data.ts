@@ -1285,6 +1285,7 @@ export function seedActivity(rabid: Rabid, opts: { baseSeed?: number } = {}): vo
             service_kind: kind, bike_description: bikeDesc(), service_description: repair(),
             ...(full ? {
                 client_phone: faker.phone.number(),
+                drop_off_repair_done: (rand() < 0.7 ? 1 : 0) as boolnum,
                 drop_off_ready_call_done: (rand() < 0.5 ? 1 : 0) as boolnum,
                 drop_off_pick_up_done: (rand() < 0.4 ? 1 : 0) as boolnum,
             } : {}),

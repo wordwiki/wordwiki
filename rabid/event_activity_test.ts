@@ -74,6 +74,35 @@ test("compact service row: numbered, DIY badge suppressed, We-Repair due + posta
     });
 });
 
+test("we-repair lifecycle badge: awaiting repair -> awaiting pickup -> none (driven by repair/pickup done)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        const id = asSystem(() => rabid.service.insert(
+            {event_id: eid, client_name: 'Sam', service_kind: 'full'} as any));
+        // serviceBadges (the detail header) in isolation - the Pickup *row* also contains
+        // the words "Awaiting pickup", so we check the badge markup directly.
+        const badge = () => asUser(alice, () => rabid.service.serviceBadges(
+            asSystem(() => rabid.service.getById(id))));
+
+        const b1 = badge();
+        assert(hasText(b1, 'Awaiting repair'), 'not repaired -> awaiting repair');
+        assert(!hasText(b1, 'Awaiting pickup'), 'not stuck on awaiting pickup before repair');
+
+        asSystem(() => rabid.service.update(id, {drop_off_repair_done: 1} as any));
+        const b2 = badge();
+        assert(hasText(b2, 'Awaiting pickup') && !hasText(b2, 'Awaiting repair'), 'repaired, not collected -> awaiting pickup');
+
+        asSystem(() => rabid.service.update(id, {drop_off_pick_up_done: 1} as any));
+        const b3 = badge();
+        assert(!hasText(b3, 'Awaiting pickup') && !hasText(b3, 'Awaiting repair'), 'collected -> no lifecycle badge');
+
+        // A DIY service never carries a lifecycle badge.
+        const diy = asSystem(() => rabid.service.insert({event_id: eid, client_name: 'Di', service_kind: 'diy'} as any));
+        assert(!hasText(asUser(alice, () => rabid.service.serviceBadges(asSystem(() => rabid.service.getById(diy)))),
+            'Awaiting'), 'no lifecycle badge for DIY');
+    });
+});
+
 test("addSaleForEvent binds the sale + stamps time/recorder; renders under Sales", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const eid = insertEvent();

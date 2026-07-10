@@ -66,7 +66,8 @@ function shortDueTime(dt?: string): string {
 const SERVICE_FORM_FIELDS = [
     'client_name', 'bike_description', 'service_description', 'client_postal', 'client_phone',
     'service_kind',
-    'drop_off_notes', 'drop_off_scheduled_pick_up_time', 'drop_off_ready_call_done', 'drop_off_pick_up_done',
+    'drop_off_notes', 'drop_off_scheduled_pick_up_time',
+    'drop_off_repair_done', 'drop_off_ready_call_done', 'drop_off_pick_up_done',
     'notes',
 ];
 
@@ -76,7 +77,7 @@ interface ServiceFormArgs {
     client_name?: string; bike_description?: string; service_description?: string;
     client_postal?: string; client_phone?: string; service_kind?: string;
     drop_off_notes?: string; drop_off_scheduled_pick_up_time?: string;
-    drop_off_ready_call_done?: string; drop_off_pick_up_done?: string; notes?: string;
+    drop_off_repair_done?: string; drop_off_ready_call_done?: string; drop_off_pick_up_done?: string; notes?: string;
 }
 
 export interface Service {
@@ -116,6 +117,7 @@ export interface Service {
     // Ideally, would only show in the UI when service_kind == 'full'
     drop_off_notes: string;
     drop_off_scheduled_pick_up_time?: string;
+    drop_off_repair_done: boolnum;
     drop_off_ready_call_done: boolnum;
     //drop_off_pick_up_call_done: boolnum;
     drop_off_pick_up_done: boolnum;
@@ -176,6 +178,9 @@ export class ServiceTable extends Table<Service> {
             // while service_kind is 'full' (progressive disclosure; FieldOptions.showWhen).
             new StringField('drop_off_notes', {default: '', showWhen: showForFull}),
             new DateTimeField('drop_off_scheduled_pick_up_time', {nullable: true, showWhen: showForFull}),
+            // The drop-off lifecycle, in order: repair the bike -> call the client ->
+            // they collect it.  "Awaiting pickup" only makes sense once repaired.
+            new BooleanField('drop_off_repair_done', {default: 0, showWhen: showForFull}),
             new BooleanField('drop_off_ready_call_done', {default: 0, showWhen: showForFull}),
             new BooleanField('drop_off_pick_up_done', {default: 0, showWhen: showForFull}),
 
@@ -251,6 +256,7 @@ export class ServiceTable extends Table<Service> {
             drop_off_notes: (args.drop_off_notes ?? '').trim(),
             drop_off_scheduled_pick_up_time: dt
                 ? this.fieldsByName.drop_off_scheduled_pick_up_time.parseSimpleInput(dt) : undefined,
+            drop_off_repair_done: args.drop_off_repair_done ? 1 : 0,
             drop_off_ready_call_done: args.drop_off_ready_call_done ? 1 : 0,
             drop_off_pick_up_done: args.drop_off_pick_up_done ? 1 : 0,
             notes: (args.notes ?? '').trim(),
@@ -378,11 +384,19 @@ export class ServiceTable extends Table<Service> {
     serviceBadges(s: Service): Markup {
         return [
             [h.span, {class: 'badge text-bg-light border ms-2'}, service_kind_enum[s.service_kind] ?? s.service_kind],
-            // Drop-off ('full') bikes are the only ones with a lifecycle: flag one
-            // that's still waiting to be collected.
-            (s.service_kind === 'full' && !s.drop_off_pick_up_done)
-                ? [h.span, {class: 'badge text-bg-warning ms-1'}, 'Awaiting pickup'] : undefined,
+            // Drop-off ('full') bikes have a lifecycle: repaired -> picked up.  Show the
+            // CURRENT stage - "Awaiting pickup" only once the repair is done (before that
+            // it's awaiting repair, not pickup); nothing once collected.
+            this.dropOffStatusBadge(s),
         ];
+    }
+
+    // The current drop-off stage as a badge (or undefined - not a drop-off, or done).
+    private dropOffStatusBadge(s: Service): Markup {
+        if(s.service_kind !== 'full' || s.drop_off_pick_up_done) return undefined;
+        return s.drop_off_repair_done
+            ? [h.span, {class: 'badge text-bg-warning ms-1'}, 'Awaiting pickup']
+            : [h.span, {class: 'badge text-bg-secondary ms-1'}, 'Awaiting repair'];
     }
 
     // The compact list badge.  SUPPRESSED for DIY (the common case), so a badge stands
@@ -526,11 +540,13 @@ export class ServiceTable extends Table<Service> {
              row('Client phone', renderFieldValue(f.client_phone, s.client_phone) || '—'),
              // The drop-off checklist, only for a "full" service (a left bike).
              ...(dropOff ? [
+                 // Lifecycle order: repaired -> ready call -> picked up.
+                 row('Repaired', s.drop_off_repair_done ? 'Done' : 'Not yet'),
+                 row('Ready call', s.drop_off_ready_call_done ? 'Made' : 'Not yet'),
                  row('Pickup', s.drop_off_pick_up_done ? 'Picked up'
                      : (s.drop_off_scheduled_pick_up_time
                          ? 'Scheduled ' + date.sqliteDateTimeToString(s.drop_off_scheduled_pick_up_time)
                          : 'Awaiting pickup')),
-                 row('Ready call', s.drop_off_ready_call_done ? 'Made' : 'Not yet'),
                  row('Drop-off notes', s.drop_off_notes || '—'),
              ] : []),
              row('Notes', s.notes ? this.fieldsByName.notes.render(s.notes) : '—'),
