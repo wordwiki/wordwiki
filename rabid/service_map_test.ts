@@ -73,6 +73,5 @@ test("per-event footer map: shows once a postal is captured, absent before; manu
                'a Refresh button that re-fetches this fragment');
         assert(html.includes(`hx-target='#services-map'`) || html.includes('services-map'),
                'refresh targets the map region');
-        assert(hasText(after, 'Not live'), 'tells the user it is not auto-refreshing');
     });
 });

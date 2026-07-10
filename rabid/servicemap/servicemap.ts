@@ -19,12 +19,14 @@ export interface ServiceMapOptions {
     title?: string;
 }
 
-// ColorBrewer "Blues" (5-class) - a clean sequential ramp that prints well and
-// reads as reach/coverage.  Index 0 is the lightest non-zero class.
-const BLUES = ['#eff3ff', '#bdd7e7', '#6baed6', '#3182bd', '#08519c'];
-const NO_SERVICE_FILL = '#f4f4f4';   // an FSA with zero services
-const AREA_STROKE = '#ffffff';       // the hairline between areas
+// ColorBrewer "Blues" (5-class), but starting at a CLEARLY blue lightest class
+// (not near-white) so the lowest non-zero bin is distinct from a zero-service
+// area - important on sparse per-event maps where most areas are empty.
+const BLUES = ['#c6dbef', '#9ecae1', '#6baed6', '#3182bd', '#08519c'];
+const NO_SERVICE_FILL = '#ececec';   // a zero-service area: a neutral grey, not a pale blue
+const AREA_STROKE = '#7f8790';       // a visible grey boundary (white blurred light areas together)
 const OUTER_TEXT = '#1a1a1a';
+const ZERO_TEXT = '#9298a0';         // the muted FSA code on an empty area
 
 // --- Projection ------------------------------------------------------------
 
@@ -162,9 +164,13 @@ export function renderServiceMap(tally: ServiceMapTally, opts: ServiceMapOptions
     const size = opts.size ?? 'large';
     const small = size === 'small';
     const shapes = kwFsaShapes();
-    const width = small ? 280 : 620;
-    const { shapes: projected, height } = projectShapes(shapes, width, small ? 6 : 14);
+    // Both sizes carry the FSA code + count now; 'small' is just narrower.  (It's
+    // at the bottom of the event page, so it can afford to be reasonably wide.)
+    const width = small ? 480 : 620;
+    const { shapes: projected, height } = projectShapes(shapes, width, small ? 10 : 14);
     const scale = quantileScale(shapes.map(s => tally.mapCounts[s.id] ?? 0));
+    // A count sits in a "dark" fill (white text) once it's in the top-two classes.
+    const darkAt = scale.breaks[Math.max(0, scale.breaks.length - 2)] ?? Infinity;
 
     const svg = ['svg',
         { xmlns: 'http://www.w3.org/2000/svg', viewBox: `0 0 ${width} ${height}`,
@@ -174,22 +180,30 @@ export function renderServiceMap(tally: ServiceMapTally, opts: ServiceMapOptions
         ...projected.map(p => {
             const count = tally.mapCounts[p.id] ?? 0;
             return ['path', { d: p.d, fill: scale.fill(count), stroke: AREA_STROKE,
-                              'stroke-width': small ? '0.6' : '1', 'stroke-linejoin': 'round' }];
+                              'stroke-width': '0.8', 'stroke-linejoin': 'round' }];
         }),
-        // Per-FSA numbers only on the large map (they'd be illegible when small).
-        ...(small ? [] : projected.flatMap(p => {
+        // Every area is labelled with its FSA code (so even empty areas are
+        // identifiable); the service count sits below it only where there ARE
+        // services (a "0" on every empty area would just be noise).
+        ...projected.flatMap(p => {
             const count = tally.mapCounts[p.id] ?? 0;
-            const dark = count > (scale.breaks[Math.max(0, scale.breaks.length - 2)] ?? Infinity);
-            const textColor = dark ? '#ffffff' : OUTER_TEXT;
+            if(count > 0) {
+                const textColor = count > darkAt ? '#ffffff' : OUTER_TEXT;
+                return [
+                    ['text', { x: String(p.cx), y: String(p.cy - 1), 'text-anchor': 'middle',
+                               'font-size': '8.5', 'font-weight': '600', fill: textColor,
+                               'font-family': 'system-ui, sans-serif' }, p.id],
+                    ['text', { x: String(p.cx), y: String(p.cy + 9), 'text-anchor': 'middle',
+                               'font-size': '9.5', 'font-weight': '600', fill: textColor,
+                               'font-family': 'system-ui, sans-serif' }, String(count)],
+                ];
+            }
             return [
-                ['text', { x: String(p.cx), y: String(p.cy - 1), 'text-anchor': 'middle',
-                           'font-size': '9', 'font-weight': '600', fill: textColor,
+                ['text', { x: String(p.cx), y: String(p.cy + 3), 'text-anchor': 'middle',
+                           'font-size': '7.5', fill: ZERO_TEXT,
                            'font-family': 'system-ui, sans-serif' }, p.id],
-                ['text', { x: String(p.cx), y: String(p.cy + 9), 'text-anchor': 'middle',
-                           'font-size': '10', fill: textColor,
-                           'font-family': 'system-ui, sans-serif' }, String(count)],
             ];
-        })),
+        }),
     ];
 
     if(small) return renderSmall(svg, scale, tally, opts.title);
@@ -255,7 +269,7 @@ function renderSmall(svg: Markup, scale: Scale, t: ServiceMapTally, title?: stri
     const outsideish = t.outsideTotal + t.edge.reduce((s, o) => s + o.count, 0);
     if(outsideish > 0) bits.push(`${outsideish} outside the region`);
     if(t.missing > 0) bits.push(`${t.missing} no postal code`);
-    return ['div', { class: 'lm-servicemap lm-servicemap-small', style: 'max-width:300px;' },
+    return ['div', { class: 'lm-servicemap lm-servicemap-small', style: 'max-width:500px;' },
         title ? ['div', { style: 'font-size:0.85rem; font-weight:600; margin-bottom:0.2rem;' }, title] : undefined,
         svg,
         ['div', { style: 'display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem;' },

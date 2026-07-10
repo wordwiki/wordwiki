@@ -566,9 +566,12 @@ export class ServiceTable extends Table<Service> {
         const tally = tallyPostals(services.map(s => s.client_postal));
         const located = tally.inRegionTotal + tally.outsideTotal
                         + tally.edge.reduce((s, e) => s + e.count, 0) > 0;
-        return [h.div, {id: 'services-map', class: 'lm-doc-section'},
-            [h.div, {class: 'd-flex align-items-center gap-2 mb-1'},
-                [h.h4, {class: 'lm-doc-section-label mb-0'}, 'Where clients came from'],
+        return [h.div, {id: 'services-map'},
+            // Same section-head pattern as every other section (Services, Sales,
+            // Retrospectives), so the inter-section spacing matches; the Refresh
+            // button rides in the flex head beside the label.
+            [h.div, {class: 'lm-doc-section-head'},
+                [h.h4, {class: 'lm-doc-section-label'}, 'Where clients came from'],
                 // Manual refresh: re-fetch just this fragment and swap it in place.
                 ['button', {type: 'button', class: 'btn btn-sm btn-outline-secondary py-0',
                             'hx-get': `/rabid.service.renderEventServiceMap(${event_id})`,
@@ -578,8 +581,6 @@ export class ServiceTable extends Table<Service> {
             located
                 ? renderServiceMap(tally, {size: 'small'})
                 : [h.p, {class: 'text-muted small mb-1'}, 'No client postal codes captured yet.'],
-            [h.div, {class: 'text-muted', style: 'font-size:0.7rem;'},
-                'Not live — use Refresh after adding services.'],
         ];
     }
 

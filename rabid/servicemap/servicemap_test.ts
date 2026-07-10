@@ -75,13 +75,15 @@ test("renderServiceMap large: one path per drawn FSA + the summary numbers", () 
     assert(html.includes("Statistics Canada"), "carries the licence attribution");
 });
 
-test("renderServiceMap small: an svg + a compact caption, no per-FSA numbers", () => {
+test("renderServiceMap small: an svg + FSA labels + a compact caption", () => {
     const t = tallyPostals(["N2G", "K1A", "K1A", "", ""]);
     const html = markupToString(renderServiceMap(t, { size: "small" }));
     assert(html.includes("<svg"));
     assert(html.includes("in-region"));
     assert(html.includes("outside the region"));
     assert(html.includes("no postal code"));
-    // The small map omits the per-area <text> labels (illegible at that size).
-    assert(!html.includes("<text"), "no per-FSA text labels on the small map");
+    // The small map now carries per-area FSA codes (it's widened for the page
+    // bottom), and the count where there are services.
+    assert(html.includes("<text"), "the small map carries FSA labels");
+    assert(html.includes("N2G"), "the FSA code is labelled");
 });
