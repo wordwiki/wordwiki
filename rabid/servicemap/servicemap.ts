@@ -66,10 +66,11 @@ function projectShapes(shapes: FsaShape[], width: number, pad: number):
     const py = (y: number) => pad + (maxY - y) * scale;
     const r = (n: number) => Math.round(n * 10) / 10;
 
-    const out: Projected[] = shapes.map(s => {
+    // First pass: build each FSA's path and the centroid of every piece (outer
+    // ring), so multi-piece FSAs (N2J, N2L) can choose WHICH piece to label.
+    const built = shapes.map(s => {
         let d = '';
-        // Area-weighted centroid of the largest outer ring, for the label.
-        let bestArea = -1, cx = 0, cy = 0;
+        const pieces: { x: number; y: number; area: number }[] = [];
         for(const poly of s.polygons) {
             for(let ri = 0; ri < poly.length; ri++) {
                 const ring = poly[ri];
@@ -77,13 +78,28 @@ function projectShapes(shapes: FsaShape[], width: number, pad: number):
                     const [x, y] = mercator(lon, lat);
                     return `${r(px(x))} ${r(py(y))}`;
                 }).join('L') + 'Z';
-                if(ri === 0) {
-                    const c = ringCentroid(ring, px, py);
-                    if(c.area > bestArea) { bestArea = c.area; cx = c.x; cy = c.y; }
-                }
+                if(ri === 0) pieces.push(ringCentroid(ring, px, py));
             }
         }
-        return { id: s.id, d, cx: r(cx), cy: r(cy) };
+        return { id: s.id, d, pieces };
+    });
+    // The map's dense "core": the mean of each FSA's largest piece.  Most FSAs
+    // are compact and central, so this lands on the KW urban core.
+    const anchors = built.map(b => b.pieces.reduce((m, p) => p.area > m.area ? p : m, b.pieces[0]));
+    const coreX = anchors.reduce((s, a) => s + a.x, 0) / (anchors.length || 1);
+    const coreY = anchors.reduce((s, a) => s + a.y, 0) / (anchors.length || 1);
+
+    // Label each FSA on the piece NEAREST the core (among pieces >=10% of the
+    // FSA's area, so tiny detached slivers can't win) - NOT the largest piece.
+    // So a split FSA like N2J is labelled on its central urban part, not the big
+    // rural pocket that happens to have more area.
+    const out: Projected[] = built.map(b => {
+        const total = b.pieces.reduce((s, p) => s + p.area, 0) || 1;
+        const pool = b.pieces.filter(p => p.area >= 0.10 * total);
+        const cands = pool.length ? pool : b.pieces;
+        const d2 = (p: { x: number; y: number }) => (p.x - coreX) ** 2 + (p.y - coreY) ** 2;
+        const best = cands.reduce((m, p) => d2(p) < d2(m) ? p : m, cands[0]);
+        return { id: b.id, d: b.d, cx: r(best.x), cy: r(best.y) };
     });
     return { shapes: out, height: Math.round(height) };
 }
