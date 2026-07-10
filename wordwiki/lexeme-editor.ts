@@ -3038,6 +3038,12 @@ export class LexemeEditor {
         // The pending count (the meta page's changes bar/hint) moves on every
         // mutation.
         keys.push(`.-entry-${entry_id}-activity-`);
+        // Tag + Log render as the custom Tags/Log SECTIONS (not the generic
+        // rows - hideRelationTags), so a generic edit/insert/delete of one
+        // must refresh THAT fragment, on read view or editor alike.  The
+        // generic `-fact-`/`-rel-` keys above match nothing for these tags.
+        if(tag === entrySchema.TagTag) keys.push(`.-lexeme-tags-${entry_id}-`);
+        if(tag === entrySchema.LogTag) keys.push(`.-lexeme-log-${entry_id}-`);
         return keys;
     }
 

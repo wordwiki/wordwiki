@@ -155,8 +155,9 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         // in place - no page reload), each with its OWN title now.
         assertStringIncludes(html, '-lexeme-log-1000-');
         assertStringIncludes(html, 'wordwiki.renderLexemeLogSection(1000)');
-        assertStringIncludes(html, '>Log<');              // the log's own title
-        assertStringIncludes(html, 'Post as todo');
+        assertStringIncludes(html, '>Discussion<');       // the log section's own title
+        assert(!html.includes('Post as todo'),
+               'the dock is discussion-only now (Tags ☰ replaced the free-text todo)');
     });
 });
 

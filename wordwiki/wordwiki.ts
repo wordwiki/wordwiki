@@ -511,31 +511,41 @@ export class WordWiki extends LiminalApp {
             return action.actionMenu(items, {ariaLabel: 'Add a tag'});
         })() : undefined;
 
+        // The edit-dialog wiring, shared by the click-to-edit text and the \u270e.
+        const editAttrs = (fact_id: number) => ({
+            'hx-get': `${R}.editDialog(${entry_id}, ${fact_id})`,
+            'hx-target': '#modalEditorBody', 'hx-swap': 'innerHTML',
+            'hx-on::after-request': 'showModalEditor()'});
+
         const tagLine = (t: entry.Tag) => {
             const isTodo = todoSlugs.has(t.tag);
             const done = !!t.done;
-            const label = [
+            // Clicking the tag TEXT edits it (dz) - the same dialog as \u270e.
+            const label = ['span',
+                mayEdit ? {class: 'ww-tag-label lm-clickedit', role: 'button',
+                           title: 'Edit', ...editAttrs(t.tag_id)}
+                        : {class: 'ww-tag-label'},
                 ['span', {class: 'ww-tag-name'}, tagName(t.tag)],
                 t.value ? ['span', {}, ' \u2014 ', t.value] : undefined,
                 t.assigned_to && t.assigned_to !== '___'
                     ? ['span', {class: 'text-muted'}, ` \u2192 ${entry.displayUsername(t.assigned_to)}`]
                     : undefined,
             ];
+            // Order (dz): \u270e leads - next to the click-to-edit text, the two
+            // edit affordances together - then done, then remove.
             const acts = mayEdit ? ['span', {class: 'ww-tag-acts ms-2'},
+                ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ww-tag-edit',
+                            ...editAttrs(t.tag_id), title: 'Edit'}, '\u270e'],
                 isTodo
-                    ? ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ww-tag-done',
+                    ? ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 ww-tag-done',
                                   title: done ? 'Mark not done' : 'Mark done',
                                   onclick: `txd(${deps})\`wordwiki.setTagDone(${entry_id}, ${t.tag_id}, ${done ? 'false' : 'true'})\``},
                        done ? '\u21ba' : '\u2713']
                     : undefined,
-                ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 ww-tag-edit',
-                            'hx-get': `${R}.editDialog(${entry_id}, ${t.tag_id})`,
-                            'hx-target': '#modalEditorBody', 'hx-swap': 'innerHTML',
-                            'hx-on::after-request': 'showModalEditor()',
-                            title: 'Edit'}, '\u270e'],
+                // Removal is a tombstone - confirm it (dz).
                 ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger ww-tag-remove',
                             title: 'Remove',
-                            onclick: `txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id})\``}, '\u00d7'],
+                            onclick: `lmConfirm('Remove this tag?').then(ok => { if(ok) txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id})\`; })`}, '\u00d7'],
             ] : undefined;
             return ['li', {class: 'ww-tag' + (done ? ' ww-tag-is-done' : '')}, label, acts];
         };
@@ -587,7 +597,7 @@ export class WordWiki extends LiminalApp {
                         id: 'wwLogSection'},
             rows.length > 0
                 ? ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
-                   ['h2', {class: 'fs-5'}, 'Log'],
+                   ['h2', {class: 'fs-5'}, 'Discussion'],
                    ['div', {class: 'ww-log-list mt-2'},
                     rows.map(g => {
                         const byline =
@@ -628,16 +638,15 @@ export class WordWiki extends LiminalApp {
                  '\u{1F4DD}',
                  ['span', {id: 'wwLogFabDot', class: 'ww-log-fab-dot', style: 'display:none'}]],
                 ['div', {id: 'wwLogDrawer', class: 'ww-log-drawer', style: 'display:none'},
-                 ['textarea', {name: 'text', id: 'wwLogText', rows: '3',
+                 ['textarea', {name: 'text', id: 'wwLogText', rows: '6',
                                class: 'form-control',
                                placeholder: 'Log a note on this word — posted under your name, no approval step…'}],
+                 // The dock is log/DISCUSSION only now: the free-text "Post
+                 // as todo" lost its meaning once the Tags ☰ quick-pick
+                 // existed (dz 2026-07-10).
                  ['div', {class: 'mt-1 d-flex gap-2 align-items-center'},
                   ['button', {type: 'button', class: 'btn btn-sm btn-primary',
                               onclick: "wwLogPost('log')"}, 'Post'],
-                  ['button', {type: 'button', class: 'btn btn-sm btn-outline-primary',
-                              onclick: "wwLogPost('todo')",
-                              title: 'File this text as a todo on this word (actionable - shows in the todo report)'},
-                   'Post as todo'],
                   ['button', {type: 'button', class: 'btn btn-sm btn-link ms-auto',
                               onclick: 'wwLogToggle()'}, 'Close']]],
                 ['script', {}, block`

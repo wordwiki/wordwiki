@@ -310,7 +310,7 @@ body {
 .ww-log-drawer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1070;
                  background: #fff; border-top: 1px solid #bbb;
                  box-shadow: 0 -2px 8px rgba(0,0,0,.15);
-                 padding: .6rem 1rem .6rem 4.5rem; max-height: 40vh;
+                 padding: .6rem 1rem .6rem 4.5rem; max-height: 60vh;
                  overflow-y: auto; }
 .ww-log-drawer textarea { max-width: 46rem; }
 
@@ -329,3 +329,8 @@ body {
 .ww-tag-is-done .ww-tag-name, .ww-tag-is-done { text-decoration: line-through; color: #888; }
 .ww-tag-acts .btn { font-size: 1rem; line-height: 1; vertical-align: baseline; text-decoration: none; }
 .ww-tag-acts .ww-tag-done { color: #198754; }
+
+/* click-to-edit tag text (the ✎ pencil sits right after) */
+.ww-tag-label.lm-clickedit { cursor: pointer; }
+.ww-tag-label.lm-clickedit:hover .ww-tag-name { text-decoration: underline; }
+.ww-log-drawer textarea, .ww-log-drawer { }

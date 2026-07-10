@@ -96,7 +96,14 @@ sections are the single representation.
   (the full tag insert dialog).  `done` is real current-state data
   (see the principle below): a done todo STAYS in the section, struck,
   until removed - removal (`×`) is the separate, deliberate act.
-- **Log**: the session posts, own title now that Tags has one.
+- **Log** (titled **Discussion** - dz 2026-07-10): the session posts.
+- The tag line's TEXT is click-to-edit (same dialog as ✎, which leads
+  the action row so the two edit affordances sit together); × confirms
+  (a tombstone).  The dock is discussion-only now - the free-text
+  "Post as todo" lost its meaning once the Tags ☰ existed.  Generic
+  edit/insert/delete of a tag/log fact refreshes the custom sections
+  (lexeme editor changeKeys pushes -lexeme-tags-/-lexeme-log- for
+  those tags, since the generic rows are suppressed).
 - Verbs: lexemeOps.addTag / setTagDone / removeTag (all
   approval-bypassed like postLog); routes wordwiki.addTag /
   setTagDone / removeTag return `{action:'reload'}` hitting
