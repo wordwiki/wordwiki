@@ -43,12 +43,25 @@ under the [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/referenc
 Attribution is rendered on the map. The FSA boundary product is Catalogue no.
 92-179-X.
 
-## Review / to-do
+## FSA → place table (data-derived)
 
-- **FSA → place table** in `fsa.ts` (Kitchener/Waterloo/Cambridge/Townships):
-  Kitchener + Waterloo are the verified N2\* map FSAs; **the Cambridge and
-  especially township FSAs (N0B/N3A/N3B/N1P) need a review against the real
-  service area** — those rural FSAs spill beyond the Region. Easy to edit.
+The Region-of-Waterloo classification in `fsa.ts` is **measured, not guessed**:
+each FSA boundary was overlaid on the Region's 7 municipal (Census Subdivision)
+boundaries from StatCan (2021) and its area-share inside each computed. Result:
+
+- Kitchener / Waterloo — the 15 N2\* map FSAs.
+- Cambridge — `N1P N1R N1S N1T N3C N3E N3H` (N1P is 100% inside Cambridge; N1R/N3C
+  are urban Cambridge FSAs whose polygons reach into rural North Dumfries).
+- Townships — `N3A` (New Hamburg / Wilmot), `N3B` (Elmira / Woolwich).
+- `N0B` — a rural FSA only ~⅓ inside the Region (Wellesley/Wilmot/Woolwich/North
+  Dumfries **and beyond**); it gets its own "partly in Region" line, counted in
+  neither the in-Region subtotal nor the outside buckets.
+
+(Regenerate/verify the overlap with `build-boundaries.sh`'s sibling query against
+StatCan MapServer layer 9 = CSD; neighbours like Guelph/Brantford come back 0%.)
+
+## To-do
+
 - **Per-resident metric** (services per 1,000 residents) is planned: add a
   committed `FSA → population` table (StatCan Census) and a metric toggle.
 - Integration (yearly Reports page + per-event footer embed) lives outside this

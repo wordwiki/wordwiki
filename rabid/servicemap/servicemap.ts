@@ -220,6 +220,7 @@ function renderLarge(svg: Markup, scale: Scale, t: ServiceMapTally, title?: stri
             ['tbody', {},
                 ...t.regionByPlace.map(r => summaryRow(r.place, r.count)),
                 summaryRow('In Region of Waterloo', t.inRegionTotal, { bold: true }),
+                ...t.edge.map(o => summaryRow(o.label, o.count, { muted: true })),
                 ...t.outside.map(o => summaryRow(o.label, o.count, { muted: true })),
                 summaryRow('No postal code given', t.missing, { muted: true }),
                 ['tr', {}, ['td', { colspan: '3', style: 'border-top:1px solid #ddd; height:0.4rem;' }]],
@@ -249,7 +250,10 @@ function renderSmall(svg: Markup, scale: Scale, t: ServiceMapTally, title?: stri
         ['span', { style: 'font-size:0.7rem; color:#777;' }, 'more'],
     ];
     const bits: string[] = [];
-    if(t.outsideTotal > 0) bits.push(`${t.outsideTotal} outside the region`);
+    // Fold the partly-in-Region rural edge (N0B) into the "outside" figure for
+    // the compact caption - it's mostly outside, and the footer is at-a-glance.
+    const outsideish = t.outsideTotal + t.edge.reduce((s, o) => s + o.count, 0);
+    if(outsideish > 0) bits.push(`${outsideish} outside the region`);
     if(t.missing > 0) bits.push(`${t.missing} no postal code`);
     return ['div', { class: 'lm-servicemap lm-servicemap-small', style: 'max-width:300px;' },
         title ? ['div', { style: 'font-size:0.85rem; font-weight:600; margin-bottom:0.2rem;' }, title] : undefined,

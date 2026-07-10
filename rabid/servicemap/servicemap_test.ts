@@ -43,6 +43,19 @@ test("tallyPostals: every input lands in exactly one bucket; parts sum to total"
     assertEquals(t.inRegionTotal + t.outsideTotal + t.missing, t.total);
 });
 
+test("tallyPostals: N1P is Cambridge; N0B is its own partly-in-Region rural bucket", () => {
+    const t = tallyPostals(["N1P", "N0B", "N0B", "N2G", "K1A"]);
+    // N1P classifies as Cambridge (data-derived: 100% inside the Cambridge CSD).
+    assertEquals(t.regionByPlace.find(r => r.place === "Cambridge")?.count, 1);
+    // N0B is NOT counted as outside-Ontario, nor folded into townships.
+    assertEquals(t.edge.find(o => o.label.includes("N0B"))?.count, 2);
+    assertEquals(t.regionByPlace.find(r => r.place === "Townships")?.count, 0);
+    assertEquals(t.outside.find(o => o.label === "Elsewhere in Ontario")?.count, 1); // just K1A
+    // Everything still adds up: region + edge + outside + missing = total.
+    const edgeTotal = t.edge.reduce((s, o) => s + o.count, 0);
+    assertEquals(t.inRegionTotal + edgeTotal + t.outsideTotal + t.missing, t.total);
+});
+
 test("tallyPostals: mapCounts covers exactly the drawn FSAs", () => {
     const t = tallyPostals([]);
     assertEquals(new Set(Object.keys(t.mapCounts)), kwFsaIds());

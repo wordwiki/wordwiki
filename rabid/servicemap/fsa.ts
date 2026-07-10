@@ -27,21 +27,36 @@ const ONTARIO_FIRST_LETTERS = new Set(['K', 'L', 'M', 'N', 'P']);
 // --- Region-of-Waterloo place classification -------------------------------
 //
 // The single source of truth for which FSA belongs to which place.  KITCHENER +
-// WATERLOO are exactly the 15 N2* FSAs the MAP draws (verified against the
-// boundary file); CAMBRIDGE and TOWNSHIPS are summarized numerically only (the
-// map stays zoomed on KW).
+// WATERLOO are exactly the 15 N2* FSAs the MAP draws; CAMBRIDGE and TOWNSHIPS
+// are summarized numerically only (the map stays zoomed on KW).
 //
-// REVIEW NEEDED against the real service area, especially the townships: N0B,
-// N3A and N3B are large rural FSAs that spill beyond the Region of Waterloo, so
-// only the ones your clients actually come from should live here.  This table
-// is deliberately easy to edit.
+// This is DATA-DERIVED, not guessed: computed by overlaying each FSA's boundary
+// on the Region of Waterloo's 7 Census-Subdivision (municipal) boundaries from
+// Statistics Canada (2021) and measuring the area-share inside each.  Every FSA
+// here is >=76% inside the Region except N3C (Hespeler, a dense-urban Cambridge
+// FSA whose polygon sprawls into rural land - Canada Post urban FSAs, non-zero
+// middle digit, belong to their city even when the polygon spills over empty
+// countryside; that's also why Waterloo's N2J/N2K are Waterloo though their
+// polygons reach into rural townships).  Neighbours (Guelph N1C/E/G/H, Brantford
+// N3R/T, Woodstock ...) came back 0% inside and are deliberately absent.
+//
+// The lone genuine straddler, N0B, is handled separately (RURAL_EDGE_FSAS below).
 
 const KITCHENER = ['N2A', 'N2B', 'N2C', 'N2E', 'N2G', 'N2H', 'N2M', 'N2N', 'N2P', 'N2R'];
 const WATERLOO  = ['N2J', 'N2K', 'N2L', 'N2T', 'N2V'];
-const CAMBRIDGE = ['N1R', 'N1S', 'N1T', 'N3C', 'N3E', 'N3H'];
-// Region townships (Woolwich, Wilmot, Wellesley, North Dumfries).  Best-guess -
-// see the REVIEW note above.
-const TOWNSHIPS = ['N3A', 'N3B', 'N0B', 'N1P'];
+// N1P is 100% inside the Cambridge municipal boundary; N1R/N3C are urban
+// Cambridge (Galt/Hespeler) FSAs whose polygons extend into rural North Dumfries.
+const CAMBRIDGE = ['N1P', 'N1R', 'N1S', 'N1T', 'N3C', 'N3E', 'N3H'];
+// The two urban township FSAs: N3A = New Hamburg (Wilmot), N3B = Elmira
+// (Woolwich).  Wellesley + North Dumfries have no dedicated urban FSA - their
+// rural residents fall into N0B (RURAL_EDGE_FSAS).
+const TOWNSHIPS = ['N3A', 'N3B'];
+
+// N0B is a large RURAL FSA (middle digit 0) only ~1/3 inside the Region, spread
+// across Wellesley/Wilmot/Woolwich/North Dumfries AND beyond it.  It can't be
+// cleanly assigned, so it gets its own "partly in Region" summary line rather
+// than being folded into the townships (over-count) or Ontario (under-count).
+const RURAL_EDGE_FSAS = new Set(['N0B']);
 
 // The rollup buckets shown in the city summary, in fundraising order (the three
 // cities, then the townships as one line).
@@ -71,6 +86,9 @@ export interface ServiceMapTally {
     // townships last).  Kitchener + Waterloo equal the map areas; Cambridge +
     // Townships are the extra numeric context.
     regionByPlace: { place: RegionPlace; count: number }[];
+    // Partly-in-Region rural FSAs (N0B) - shown on their own line, counted in
+    // neither the strict in-Region subtotal nor the outside buckets.
+    edge: OutsideBucket[];
     // Valid FSAs outside the Region, split Ontario / rest-of-Canada.
     outside: OutsideBucket[];
     // Blank or unparseable postal codes ("not given").
@@ -91,7 +109,7 @@ export function tallyPostals(rawPostals: Iterable<string | null | undefined>): S
     for(const id of mapIds) mapCounts[id] = 0;
 
     const placeCounts = new Map<RegionPlace, number>(REGION_PLACES.map(p => [p, 0]));
-    let ontarioOutside = 0, restOfCanada = 0, missing = 0, total = 0;
+    let ruralEdge = 0, ontarioOutside = 0, restOfCanada = 0, missing = 0, total = 0;
 
     for(const raw of rawPostals) {
         total++;
@@ -101,6 +119,8 @@ export function tallyPostals(rawPostals: Iterable<string | null | undefined>): S
         const place = regionPlaceOfFsa(fsa);
         if(place != null) {
             placeCounts.set(place, placeCounts.get(place)! + 1);
+        } else if(RURAL_EDGE_FSAS.has(fsa)) {
+            ruralEdge++;
         } else if(ONTARIO_FIRST_LETTERS.has(fsa[0])) {
             ontarioOutside++;
         } else {
@@ -110,10 +130,12 @@ export function tallyPostals(rawPostals: Iterable<string | null | undefined>): S
 
     const regionByPlace = REGION_PLACES.map(place => ({ place, count: placeCounts.get(place)! }));
     const inRegionTotal = regionByPlace.reduce((s, r) => s + r.count, 0);
+    const edge: OutsideBucket[] = [];
+    if(ruralEdge > 0) edge.push({ label: 'Rural — N0B (partly in Region)', count: ruralEdge });
     const outside: OutsideBucket[] = [];
     if(ontarioOutside > 0) outside.push({ label: 'Elsewhere in Ontario', count: ontarioOutside });
     if(restOfCanada > 0)   outside.push({ label: 'Rest of Canada', count: restOfCanada });
     const outsideTotal = ontarioOutside + restOfCanada;
 
-    return { mapCounts, regionByPlace, outside, missing, total, inRegionTotal, outsideTotal };
+    return { mapCounts, regionByPlace, edge, outside, missing, total, inRegionTotal, outsideTotal };
 }
