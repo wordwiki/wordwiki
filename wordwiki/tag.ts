@@ -57,6 +57,10 @@ export interface Tag {
     description?: string;
     /** Does this tag DRIVE THE TODO SYSTEM (todo report, open-todos list)? */
     is_todo: number;
+    /** Offered directly in the word's Tags ☰ quick-pick (the common tags),
+     *  vs living behind "More…"'s full insert dialog.  Lets the vocabulary
+     *  grow without a long menu. */
+    quick: number;
     /** Not offered for new tagging (existing values keep displaying). */
     retired: number;
     order_key: string;
@@ -84,6 +88,8 @@ export class TagTable extends Table<Tag> {
                                               prompt: 'Description (what this tag means / when to apply it)'}),
             new BooleanField('is_todo', {default: 0,
                                          prompt: 'Todo tag (drives the todo report and the open-todos list)'}),
+            new BooleanField('quick', {default: 0,
+                                       prompt: 'Quick-pick (offered directly in the word’s Tags menu)'}),
             new BooleanField('retired', {default: 0,
                                          prompt: 'Retired (not offered in pickers)'}),
             new ManagedStringField('order_key', {default: ''}),
@@ -124,6 +130,16 @@ export class TagTable extends Table<Tag> {
         return this.prepare<Tag, {}>(block`
 /**/   SELECT ${this.allFields}
 /**/          FROM tag
+/**/          ORDER BY order_key, slug`);
+    }
+
+    /** The word Tags ☰ quick-pick set: non-retired, quick-flagged. */
+    @path
+    get quickByOrder() {
+        return this.prepare<Tag, {}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM tag
+/**/          WHERE retired = 0 AND quick = 1
 /**/          ORDER BY order_key, slug`);
     }
 
@@ -178,7 +194,8 @@ export class TagTable extends Table<Tag> {
                ['th', {}, 'Name'],
                ['th', {}, 'Slug'],
                ['th', {}, 'Theme'],
-               ['th', {}, 'Todo']]],
+               ['th', {}, 'Todo'],
+               ['th', {}, 'Quick']]],
              ['tbody', {}, rows.map(t => this.renderTagRow(t))]]];
     }
 
@@ -195,6 +212,7 @@ export class TagTable extends Table<Tag> {
             ['td', {class: 'text-muted'}, t.slug],
             ['td', {class: 'text-muted'}, t.theme || '—'],
             ['td', {class: 'text-muted'}, t.is_todo ? 'Yes' : '—'],
+            ['td', {class: 'text-muted'}, t.quick ? 'Yes' : '—'],
         ];
     }
 
@@ -237,6 +255,7 @@ export class TagTable extends Table<Tag> {
              row('Slug', t.slug),
              row('Theme', t.theme || '—'),
              row('Todo', t.is_todo ? 'Yes - drives the todo report' : 'No'),
+             row('Quick-pick', t.quick ? 'Yes - in the word Tags menu' : 'No'),
              row('Description', t.description ? this.fieldsByName.description.render(t.description) : '—'),
             ],
             this.renderTagEntries(t),
@@ -302,12 +321,12 @@ const TAG_ENTRY_COLLATOR = new Intl.Collator('en', {sensitivity: 'base', numeric
 /** The seed rows: the old fixed TODO kinds, slugs = the enum codes already
  *  stored in assertions (ZERO data migration - reinterpretation).  All
  *  todo-marked: the old model only had todos. */
-export const SEED_TAGS: Array<{slug: string, name: string, is_todo: number}> = [
-    { slug: 'Todo',                     name: 'Todo',                        is_todo: 1 },
-    { slug: 'NeedsResearchGroupReview', name: 'Needs Research Group Review', is_todo: 1 },
-    { slug: 'NeedsSpeakerGroupReview',  name: 'Needs Speaker Group Review',  is_todo: 1 },
-    { slug: 'NeedsRecording',           name: 'Needs Recording',             is_todo: 1 },
-    { slug: 'NeedsApproval',            name: 'Needs Approval',              is_todo: 1 },
+export const SEED_TAGS: Array<{slug: string, name: string, is_todo: number, quick: number}> = [
+    { slug: 'Todo',                     name: 'Todo',                        is_todo: 1, quick: 1 },
+    { slug: 'NeedsResearchGroupReview', name: 'Needs Research Group Review', is_todo: 1, quick: 1 },
+    { slug: 'NeedsSpeakerGroupReview',  name: 'Needs Speaker Group Review',  is_todo: 1, quick: 1 },
+    { slug: 'NeedsRecording',           name: 'Needs Recording',             is_todo: 1, quick: 1 },
+    { slug: 'NeedsApproval',            name: 'Needs Approval',              is_todo: 1, quick: 1 },
 ];
 
 /** Idempotent seed (insert-if-missing; never overwrites an edited row).

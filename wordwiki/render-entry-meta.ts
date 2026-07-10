@@ -79,6 +79,11 @@ export interface EntryRenderConfig {
     // each tuple / relation.  The affordance markup is BUILT BY THE EDITOR (it
     // owns the action + workspace machinery); the renderer only places it.
     editing?: EditingHooks;
+    // Relation tags NEVER rendered by this pass, even in edit mode - the app
+    // renders them itself (the word's Tags + Log sections, which get their
+    // own affordances on both read and edit pages; the generic rows would
+    // be a second way to do the same thing).
+    hideRelationTags?: string[];
 }
 
 /** Identity of a tuple in the versioned workspace - enough for the editor to
@@ -226,6 +231,7 @@ export class EntryRenderer {
     readonly resolveAudioUrl?: audio.AudioUrlResolver;
     readonly titleAffordance?: Markup;
     readonly editing?: EditingHooks;
+    readonly hideRelationTags: Set<string>;
     readonly valueLabel?: (f: model.ScalarField, value: any) => string | undefined;
     readonly titleOrthography?: string;
     readonly orthographyBadge?: (variantSlug: string) => string | undefined;
@@ -239,6 +245,7 @@ export class EntryRenderer {
         this.resolveAudioUrl = cfg.resolveAudioUrl;
         this.titleAffordance = cfg.titleAffordance;
         this.editing = cfg.editing;
+        this.hideRelationTags = new Set(cfg.hideRelationTags ?? []);
         this.valueLabel = cfg.valueLabel;
         this.titleOrthography = cfg.titleOrthography;
         this.orthographyBadge = cfg.orthographyBadge;
@@ -252,6 +259,7 @@ export class EntryRenderer {
      *  the public one). */
     protected childRelations(rf: model.RelationField): model.RelationField[] {
         return orderedChildRelations(rf).filter(cr => {
+            if (this.hideRelationTags.has(cr.tag)) return false;
             if (this.editing) return true;
             const v = view(cr);
             if (v.hidden) return false;

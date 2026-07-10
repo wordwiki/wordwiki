@@ -37,6 +37,7 @@ import {reloadableProps} from '../liminal/table.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
 import * as tag from './tag.ts';
+import * as action from '../liminal/action.ts';
 import * as lexicalForm from './lexical-form.ts';
 import {DictionaryStore} from './dictionary-store.ts';
 import {siteConfig} from './site-config.ts';
@@ -462,12 +463,100 @@ export class WordWiki extends LiminalApp {
      *  either page through the normal liminal reload machinery (no page
      *  reload; dz: a full refresh would be unacceptable on the editor). */
     private renderLexemeLogPane(entry_id: number): any {
+        return this.renderLexemeWorkflow(entry_id);
+    }
+
+    /** The word's editorial WORKFLOW surface, on BOTH the read view and the
+     *  lexeme editor (dz: one way to add a note / tag everywhere - no
+     *  learning two flows).  The floating log dock + the Tags section + the
+     *  Log section; the editor suppresses the generic tag/log rows
+     *  (hideRelationTags) so these are the single representation. */
+    renderLexemeWorkflow(entry_id: number): any {
         return [this.renderLexemeLogDock(entry_id),
+                this.renderLexemeTagsSection(entry_id),
                 this.renderLexemeLogSection(entry_id)];
     }
 
-    /** The log's READING presentation: a standard reloadable fragment
-     *  (key `-lexeme-log-<id>-`), refreshed in place when the dock posts. */
+    /** The TAGS section (reloadable fragment `-lexeme-tags-<id>-`): every
+     *  current tag on the word with inline \u2713 (done, todo tags) / \u270f (full
+     *  edit dialog) / \u00d7 (remove), and a \u2630 on the heading offering the
+     *  quick-pick tags + "More\u2026".  `done` is real current-state data (dz):
+     *  a done todo stays here, struck, until removed. */
+    @route(authenticated)
+    renderLexemeTagsSection(entry_id: number): any {
+        const mayEdit = templates.mayEditLexemes();
+        const todoSlugs = tag.todoTagSlugs(this.tags);
+        const tagNames = new Map(this.tags.allByOrder.all({}).map(t => [t.slug, t.name]));
+        const tagName = (slug: string) => tagNames.get(slug) ?? entry.todos[slug] ?? slug;
+        const tags = this.entriesById.get(entry_id)?.tag ?? [];
+
+        const R = '/ww/wordwiki.lexeme';
+        const targets = [`.-lexeme-tags-${entry_id}-`, `.-entry-${entry_id}-activity-`];
+        const deps = JSON.stringify(targets);
+
+        // The \u2630 quick-pick: the quick-flagged tags (immediate add), then
+        // "More\u2026" for the full tag-insert dialog (any tag + value +
+        // assignee).  Only for editors.
+        const menu = mayEdit ? (() => {
+            const quick = this.tags.quickByOrder.all({});
+            const items: action.ActionMenuItem[] = quick.map(q => ({
+                label: q.name,
+                mode: {kind: 'immediate' as const,
+                       expr: `wordwiki.addTag(${entry_id}, ${JSON.stringify(q.slug)})`,
+                       deps: targets}}));
+            items.push('divider');
+            items.push({label: 'More\u2026',
+                        mode: {kind: 'modal',
+                               dialogUrl: `${R}.insertDialog(${entry_id}, ${entry_id}, 'tdo')`}});
+            return action.actionMenu(items, {ariaLabel: 'Add a tag'});
+        })() : undefined;
+
+        const tagLine = (t: entry.Tag) => {
+            const isTodo = todoSlugs.has(t.tag);
+            const done = !!t.done;
+            const label = [
+                ['span', {class: 'ww-tag-name'}, tagName(t.tag)],
+                t.value ? ['span', {}, ' \u2014 ', t.value] : undefined,
+                t.assigned_to && t.assigned_to !== '___'
+                    ? ['span', {class: 'text-muted'}, ` \u2192 ${entry.displayUsername(t.assigned_to)}`]
+                    : undefined,
+            ];
+            const acts = mayEdit ? ['span', {class: 'ww-tag-acts ms-2'},
+                isTodo
+                    ? ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ww-tag-done',
+                                  title: done ? 'Mark not done' : 'Mark done',
+                                  onclick: `txd(${deps})\`wordwiki.setTagDone(${entry_id}, ${t.tag_id}, ${done ? 'false' : 'true'})\``},
+                       done ? '\u21ba' : '\u2713']
+                    : undefined,
+                ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 ww-tag-edit',
+                            'hx-get': `${R}.editDialog(${entry_id}, ${t.tag_id})`,
+                            'hx-target': '#modalEditorBody', 'hx-swap': 'innerHTML',
+                            'hx-on::after-request': 'showModalEditor()',
+                            title: 'Edit'}, '\u270e'],
+                ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger ww-tag-remove',
+                            title: 'Remove',
+                            onclick: `txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id})\``}, '\u00d7'],
+            ] : undefined;
+            return ['li', {class: 'ww-tag' + (done ? ' ww-tag-is-done' : '')}, label, acts];
+        };
+
+        return ['div', {...reloadableProps([`-lexeme-tags-${entry_id}-`],
+                                           `/ww/wordwiki.renderLexemeTagsSection(${entry_id})`),
+                        id: 'wwTagsSection'},
+            (tags.length > 0 || menu)
+                ? ['div', {class: 'container ww-tags-pane mt-4 pt-3 border-top'},
+                   ['div', {class: 'd-flex align-items-center gap-2'},
+                    ['h2', {class: 'fs-5 mb-0'}, 'Tags'],
+                    menu],
+                   tags.length === 0
+                       ? ['p', {class: 'text-muted small mb-0 mt-1'}, 'No tags yet.']
+                       : ['ul', {class: 'ww-tag-list mt-1 mb-0'}, tags.map(tagLine)]]
+                : undefined];
+    }
+
+    /** The LOG section (reloadable fragment `-lexeme-log-<id>-`): the word's
+     *  session-log posts, top-posted, with feed-style bylines.  Titled
+     *  "Log" (its own title now that Tags has its own - dz). */
     @route(authenticated)
     renderLexemeLogSection(entry_id: number): any {
         // The byline comes from each fact's FIRST version (the post; later
@@ -493,58 +582,31 @@ export class WordWiki extends LiminalApp {
             .filter(g => g.current !== undefined)
             .toSorted((a, b) => (a.current!.order_key < b.current!.order_key ? -1 : 1));
 
-        // Open todos: TODO-marked tags (the tag table's is_todo set), not
-        // done - the ACTIONABLE peer of the log, visible right where the
-        // sitting works.  Plain (non-todo) tags show in the editor, not
-        // here.
-        const todoSlugs = tag.todoTagSlugs(this.tags);
-        const tagNames = new Map(this.tags.allByOrder.all({}).map(t => [t.slug, t.name]));
-        const openTodos = (this.entriesById.get(entry_id)?.tag ?? [])
-            .filter(t => !t.done && todoSlugs.has(t.tag));
-        const tagName = (slug: string) => tagNames.get(slug) ?? entry.todos[slug] ?? slug;
-        const todoLabel = (t: entry.Tag) =>
-            [t.value || undefined,
-             t.tag !== 'Todo' ? `[${tagName(t.tag)}]` : undefined,
-             t.assigned_to && t.assigned_to !== '___' ? `\u2192 ${entry.displayUsername(t.assigned_to)}` : undefined]
-            .filter(s => s).join('  ') || tagName(t.tag);
-
-        // Layout (dz 2026-07-10): Todos FIRST under their own title (only
-        // when there are any), then the log entries with NO title (the
-        // bylines make them self-evident; the old 'Log' heading + its
-        // instruction line were part of the confusion).
         return ['div', {...reloadableProps([`-lexeme-log-${entry_id}-`],
                                            `/ww/wordwiki.renderLexemeLogSection(${entry_id})`),
                         id: 'wwLogSection'},
-            (openTodos.length > 0 || rows.length > 0)
+            rows.length > 0
                 ? ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
-                   openTodos.length > 0
-                       ? ['div', {class: 'ww-log-todos'},
-                          ['h2', {class: 'fs-5'}, 'Todos'],
-                          ['ul', {class: 'mb-1'},
-                           openTodos.map(t => ['li', {}, todoLabel(t)])]]
-                       : undefined,
-                   rows.length === 0
-                       ? undefined
-                       : ['div', {class: 'ww-log-list mt-2'},
-                          rows.map(g => {
-                              const byline =
-                                  ['span', {class: 'ww-log-byline text-muted'},
-                                   entry.displayUsername(g.first.change_by_username || '?'), ' (',
-                                   ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
-                                    timestamp.formatTimestampRelative(g.first.valid_from)],
-                                   '): '];
-                              // Single-paragraph markdown rides the byline's
-                              // line; real block markdown (lists...) sits
-                              // INDENTED under it (inline rendering made
-                              // blocks ragged and way in - dz).
-                              const md = markdown.markdownToMarkup(g.current!.attr1 ?? '');
-                              const inline = entryMeta.markdownInline(md);
-                              return inline !== undefined
-                                  ? ['div', {class: 'ww-log-entry mb-1'}, byline, inline]
-                                  : ['div', {class: 'ww-log-entry mb-1'},
-                                     ['div', {}, byline],
-                                     ['div', {class: 'ww-log-body'}, md]];
-                          })]]
+                   ['h2', {class: 'fs-5'}, 'Log'],
+                   ['div', {class: 'ww-log-list mt-2'},
+                    rows.map(g => {
+                        const byline =
+                            ['span', {class: 'ww-log-byline text-muted'},
+                             entry.displayUsername(g.first.change_by_username || '?'), ' (',
+                             ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
+                              timestamp.formatTimestampRelative(g.first.valid_from)],
+                             '): '];
+                        // Single-paragraph markdown rides the byline's line;
+                        // real block markdown (lists...) sits INDENTED under
+                        // it (inline rendering made blocks ragged - dz).
+                        const md = markdown.markdownToMarkup(g.current!.attr1 ?? '');
+                        const inline = entryMeta.markdownInline(md);
+                        return inline !== undefined
+                            ? ['div', {class: 'ww-log-entry mb-1'}, byline, inline]
+                            : ['div', {class: 'ww-log-entry mb-1'},
+                               ['div', {}, byline],
+                               ['div', {class: 'ww-log-body'}, md]];
+                    })]]
                 : undefined];
     }
 
@@ -637,15 +699,41 @@ export class WordWiki extends LiminalApp {
         if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
         if(kind === 'todo') this.lexemeOps.postTag(entry_id, String(text ?? ''));
         else this.lexemeOps.postLog(entry_id, String(text ?? ''));
-        const relTag = kind === 'todo' ? 'tdo' : 'log';
-        return {action: 'reload', targets: [
-            `.-lexeme-log-${entry_id}-`,
-            // the lexeme editor's generic relation fragments + the
-            // pending-count bar (changeKeys' scope:'parent' shape)
-            `.-rel-${entry_id}-${relTag}-`,
-            `.-rel-${entry_id}-${relTag}-shape-`,
-            `.-entry-${entry_id}-activity-`,
-        ]};
+        return {action: 'reload', targets: this.workflowTargets(entry_id,
+            kind === 'todo' ? 'tags' : 'log')};
+    }
+
+    /** The reload targets for a workflow mutation: the affected custom
+     *  section fragment on whichever page(s) it is showing, plus the
+     *  pending-count bar.  A target matching nothing on a page is inert. */
+    private workflowTargets(entry_id: number, which: 'tags' | 'log'): string[] {
+        return [`.-lexeme-${which}-${entry_id}-`, `.-entry-${entry_id}-activity-`];
+    }
+
+    /** Add a quick-pick tag (the word Tags ☰). */
+    @routeMutation(authenticated)
+    addTag(entry_id: number, slug: string): any {
+        if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
+        this.lexemeOps.addTag(entry_id, String(slug));
+        return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
+    }
+
+    /** Toggle a tag's done state (the ✓ on a todo tag line). */
+    @routeMutation(authenticated)
+    setTagDone(entry_id: number, fact_id: number, done: boolean): any {
+        if(!Number.isSafeInteger(entry_id) || !Number.isSafeInteger(fact_id))
+            throw new Error('bad id');
+        this.lexemeOps.setTagDone(entry_id, fact_id, !!done);
+        return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
+    }
+
+    /** Remove a tag (the × on a tag line - a tombstone, distinct from done). */
+    @routeMutation(authenticated)
+    removeTag(entry_id: number, fact_id: number): any {
+        if(!Number.isSafeInteger(entry_id) || !Number.isSafeInteger(fact_id))
+            throw new Error('bad id');
+        this.lexemeOps.removeTag(entry_id, fact_id);
+        return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
     }
 
     // The speaker's display label beside a recording - "Name (Region)" -

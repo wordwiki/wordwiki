@@ -434,6 +434,51 @@ export class LexemeOps {
                                    attr4: 0, variant: 'mm'} as Partial<Assertion>);
     }
 
+    /** Add a tag from the word's Tags ☰ quick-pick: the chosen tag, no value
+     *  text, unassigned, not done (refine in the editor via the ✏ dialog).
+     *  Same approval bypass as postTag. */
+    addTag(entry_id: number, slug: string): {fact_id: number} {
+        if(!String(slug ?? '').trim()) throw new Error('addTag needs a tag');
+        return this.postEntryFact(entry_id, entrySchema.TagTag,
+                                  {attr1: slug, attr2: '', attr3: '___',
+                                   attr4: 0, variant: 'mm'} as Partial<Assertion>);
+    }
+
+    /** Toggle a tag's DONE state (dz: `done` is real current-state data, not
+     *  reconstructed from history - a done todo stays visible, struck, until
+     *  removed).  A normal in-place edit through supersedeFields, then
+     *  approve-through-the-op when the entry is published. */
+    setTagDone(entry_id: number, fact_id: number, done: boolean): {outcome: string} {
+        const r = this.supersedeFields(entry_id, fact_id, {attr4: done ? 1 : 0});
+        if(r.outcome === 'updated' &&
+           this.entryTuple(entry_id).tupleVersions.some(v => v.isPublished)) {
+            const author = this.requireUsername();
+            this.runPublicationOp((now, aid) =>
+                publicationOps.approve(this.app.workspace, fact_id, author, now, aid,
+                                       {allowSelfApprove: true}));
+        }
+        return {outcome: r.outcome};
+    }
+
+    /** Remove a tag (× - a deliberate act distinct from `done`): a tombstone,
+     *  approved so it settles out of review.  A never-published tag's
+     *  tombstone is already settled. */
+    removeTag(entry_id: number, fact_id: number): {outcome: string} {
+        const wasPublished = (() => {
+            try { return this.findTupleInEntry(entry_id, fact_id)
+                .tupleVersions.some(v => v.isPublished); }
+            catch { return false; }
+        })();
+        const r = this.tombstoneFact(entry_id, fact_id);
+        if(r.outcome === 'removed' && wasPublished) {
+            const author = this.requireUsername();
+            this.runPublicationOp((now, aid) =>
+                publicationOps.approve(this.app.workspace, fact_id, author, now, aid,
+                                       {allowSelfApprove: true}));
+        }
+        return {outcome: r.outcome};
+    }
+
     /** The shared quick-post primitive: one new entry-level fact,
      *  born-approved when the entry root is published (insert + approve
      *  through the standard op, self-approve as a bounded act), a normal

@@ -860,11 +860,13 @@ export class LexemeEditor {
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
         return templates.page(title, [this.renderMetaEntry(entry_id, changes),
                                       this.keyboardHint(),
-                                      // The session-log capture dock (lexeme-log.md):
-                                      // posting refreshes THIS page's log-relation
-                                      // fragments through the normal reload targets -
-                                      // no page reload.
-                                      e ? this.app.renderLexemeLogDock(entry_id) : undefined]);
+                                      // The Tags + Log sections + the capture
+                                      // dock, same as the read view (dz: one
+                                      // way everywhere).  The generic tag/log
+                                      // rows are suppressed in metaRenderer
+                                      // (hideRelationTags), so these custom
+                                      // sections are the single representation.
+                                      e ? this.app.renderLexemeWorkflow(entry_id) : undefined]);
     }
 
     /** A discreet pointer to the keyboard editing model (keyboard-driven-
@@ -923,6 +925,10 @@ export class LexemeEditor {
             valueLabel: this.vocabValueLabel(),
             orthographyBadge: this.orthographyBadge(),
             titleOrthography: this.app.currentWorkingOrthography(),
+            // Tag + Log get their own custom sections (renderLexemeWorkflow)
+            // on both read and edit - suppress the generic rows here so there
+            // is one representation, not two (dz).
+            hideRelationTags: [entrySchema.TagTag, entrySchema.LogTag],
         });
     }
 

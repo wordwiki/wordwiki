@@ -55,6 +55,18 @@ entries array identity = the publish staleness check). Full-history
 dump still carries everything (founding licensing decision) - dz has
 not ruled on excluding the log there.
 
+Round 4 (2026-07-10): the word workflow is TWO titled sections - Tags +
+Log - via renderLexemeWorkflow(entry_id) on BOTH read view and lexeme
+editor (dz: one way everywhere); editor suppresses generic tag/log rows
+(meta renderer hideRelationTags). Tags: line per tag w/ inline
+✓done/✎edit/×remove + a ☰ quick-pick (tag table `quick` flag) →
+"More…" (insertDialog). done is CURRENT-STATE data - a done todo stays
+struck until removed (dz's principle: current views complete on current
+data, never reach into history; the future feed IS the time dimension).
+Verbs lexemeOps.addTag/setTagDone/removeTag; routes return reload
+targets -lexeme-tags-<id>- / -lexeme-log-<id>-. tag.quick column +
+quickByOrder.
+
 Deferred: page-editor docked capture ('l' keybind, right-click "Log
 on…"); todo refinement in the pane; feed collapsing of consecutive
 posts. Tests: wordwiki/lexeme-log_test.ts. Relates to

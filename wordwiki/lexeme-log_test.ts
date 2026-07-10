@@ -151,17 +151,57 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         assertStringIncludes(html, '<strong>recheck</strong>');  // markdown rendered
         assert(!html.includes('ww-log-body'),
                'single-paragraph entry rides the byline line (no block body)');
-        // The reading section is a standard reloadable fragment (posting
-        // refreshes it in place - no page reload).
+        // Both sections are standard reloadable fragments (a post refreshes
+        // in place - no page reload), each with its OWN title now.
         assertStringIncludes(html, '-lexeme-log-1000-');
         assertStringIncludes(html, 'wordwiki.renderLexemeLogSection(1000)');
-        // The actionable peer, re-enabled (dz 2026-07-10): the todo button
-        // in the drawer, the open todos in the section (assignee shown by
-        // NAME when set).
+        assertStringIncludes(html, '>Log<');              // the log's own title
         assertStringIncludes(html, 'Post as todo');
-        assertStringIncludes(html, '>Todos<');            // todos first, own title
+    });
+});
+
+test("word view: Tags section - lines with ✓/✎/×, quick-pick ☰, the tag stays after done", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);   // word 1000 carries a NeedsSpeakerGroupReview tag ('check with elders')
+        // Seed the vocabulary table (tests don't auto-seed it): the word's
+        // own tag as a todo (so its ✓ shows) + a quick-pick tag for the ☰.
+        as(fx, 'system', () => {
+            fx.ww.tags.insert({slug: 'NeedsSpeakerGroupReview', name: 'Needs Speaker Group Review',
+                               is_todo: 1, quick: 0, retired: 0});
+            fx.ww.tags.insert({slug: 'NeedsRecording', name: 'Needs Recording',
+                               is_todo: 1, quick: 1, retired: 0});
+        });
+        const html = renderToStringViaLinkeDOM(await as(fx, 'test', () =>
+            renderRoute(fx.ww, `wordwiki.wordView(1000)`)));
+        // Its own titled Tags section (reloadable fragment), tag line + name.
+        assertStringIncludes(html, '-lexeme-tags-1000-');
+        assertStringIncludes(html, '>Tags<');
         assertStringIncludes(html, 'check with elders');
-        assert(!html.includes('>Log<'), "no 'Log' heading (dz: part of the confusion)");
-        assert(!html.includes('Add to the log with'), 'instruction line gone');
+        assertStringIncludes(html, 'Needs Speaker Group Review');
+        // Inline affordances + the quick-pick add menu.
+        assertStringIncludes(html, 'wordwiki.setTagDone(1000');
+        assertStringIncludes(html, 'wordwiki.removeTag(1000');
+        assertStringIncludes(html, 'wordwiki.addTag(1000');   // quick-pick items
+        assertStringIncludes(html, 'Add a tag');              // the ☰ aria-label
+
+        // Marking done keeps the tag in the section (dz: done is current
+        // state, stays struck; removal is the separate act).
+        const t = fx.ww.entriesById.get(1000)!.tag.find(x => x.value === 'check with elders')!;
+        as(fx, 'test', () => fx.ww.lexemeOps.setTagDone(1000, t.tag_id, true));
+        const after = renderToStringViaLinkeDOM(await as(fx, 'test', () =>
+            renderRoute(fx.ww, `wordwiki.renderLexemeTagsSection(1000)`)));
+        assertStringIncludes(after, 'check with elders');     // still present
+        assertStringIncludes(after, 'ww-tag-is-done');        // rendered struck
+    });
+});
+
+test("Tags/Log workflow renders on the LEXEME EDITOR too (one way everywhere)", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        const html = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.wordEditor(1000)`)));
+        assertStringIncludes(html, '-lexeme-tags-1000-');   // the same custom sections
+        assertStringIncludes(html, '-lexeme-log-1000-');
+        assertStringIncludes(html, 'ww-log-fab');           // the dock
     });
 });

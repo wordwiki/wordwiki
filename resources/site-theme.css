@@ -320,3 +320,12 @@ body {
 .ww-log-entry .ww-log-body > .lm-markdown > :first-child { margin-top: 0; }
 .ww-log-entry .ww-log-body > .lm-markdown > :last-child { margin-bottom: 0; }
 .ww-log-entry .ww-log-body ul, .ww-log-entry .ww-log-body ol { padding-left: 1.25rem; margin-bottom: .25rem; }
+
+/* The word's Tags section (both read + edit): one line per tag with inline
+   ✓ / ✎ / × affordances; a done tag stays, struck-through. */
+.ww-tag-list { list-style: none; padding-left: 0; }
+.ww-tag { padding: .1rem 0; }
+.ww-tag-name { font-weight: 600; }
+.ww-tag-is-done .ww-tag-name, .ww-tag-is-done { text-decoration: line-through; color: #888; }
+.ww-tag-acts .btn { font-size: 1rem; line-height: 1; vertical-align: baseline; text-decoration: none; }
+.ww-tag-acts .ww-tag-done { color: #198754; }

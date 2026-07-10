@@ -80,6 +80,36 @@ site is unchanged.  The FULL-HISTORY dump still carries everything, per
 the founding complete-db licensing decision - flag to dz if the log
 should be excluded there too.
 
+## Tags + Log sections (2026-07-10, both pages)
+
+The word's editorial workflow is TWO titled sections - **Tags** and
+**Log** - rendered by `renderLexemeWorkflow(entry_id)` on BOTH the read
+view and the lexeme editor (dz: one way to add a note/tag everywhere,
+no learning two flows).  The editor suppresses the generic tag/log
+relation rows (meta renderer `hideRelationTags`) so these custom
+sections are the single representation.
+
+- **Tags**: one line per current tag - name, value, assignee - with
+  inline `✓` (done toggle, todo tags only), `✎` (full edit dialog:
+  wordwiki.lexeme.editDialog), `×` (remove).  A `☰` on the heading
+  offers the quick-pick tags (tag table `quick` flag) then "More…"
+  (the full tag insert dialog).  `done` is real current-state data
+  (see the principle below): a done todo STAYS in the section, struck,
+  until removed - removal (`×`) is the separate, deliberate act.
+- **Log**: the session posts, own title now that Tags has one.
+- Verbs: lexemeOps.addTag / setTagDone / removeTag (all
+  approval-bypassed like postLog); routes wordwiki.addTag /
+  setTagDone / removeTag return `{action:'reload'}` hitting
+  `-lexeme-tags-<id>-` (and the log's `-lexeme-log-<id>-`) - one route
+  serves both pages, inert where a fragment is absent.
+
+THE PRINCIPLE (dz): the current-state document and its queries must be
+complete on current data ALONE - the version/time dimension is a
+separate view you opt into, never a backdoor present-state views reach
+through.  So `done` is a column (not done-as-tombstone-read-from-
+history); the future feed IS the time dimension and may read version
+metadata legitimately.
+
 ## Deferred
 
 - The docked capture panel in the page editor (right-click "Log on…",
