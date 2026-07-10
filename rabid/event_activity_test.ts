@@ -74,6 +74,25 @@ test("compact service row: numbered, DIY badge suppressed, We-Repair due + posta
     });
 });
 
+test("new we-repair service: No drop-off selects stay No on create (the '0'-is-truthy bug)", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        // The Yes/No <select>s submit '0' for No; the add path must parse, not truthy-test.
+        await asUser(alice, () => invoke(`rabid.service.addServiceForEvent($arg0)`, {
+            event_id: eid, client_name: 'Newbie', service_kind: 'full',
+            drop_off_repair_done: '0', drop_off_ready_call_done: '0', drop_off_pick_up_done: '0'}));
+        const s = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid})[0]);
+        assertEquals([s.drop_off_repair_done, s.drop_off_ready_call_done, s.drop_off_pick_up_done], [0, 0, 0],
+            'all three stay No');
+
+        // A Yes ('1') still lands as Yes.
+        await asUser(alice, () => invoke(`rabid.service.addServiceForEvent($arg0)`, {
+            event_id: eid, client_name: 'Repaired', service_kind: 'full', drop_off_repair_done: '1'}));
+        const s2 = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid}).find(x => x.client_name === 'Repaired'))!;
+        assertEquals([s2.drop_off_repair_done, s2.drop_off_pick_up_done], [1, 0], 'Yes stays Yes, unset stays No');
+    });
+});
+
 test("we-repair lifecycle badge: awaiting repair -> awaiting pickup -> none (driven by repair/pickup done)", async () => {
     await withTestDb(async ({ alice }) => {
         const eid = insertEvent();

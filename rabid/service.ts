@@ -245,10 +245,13 @@ export class ServiceTable extends Table<Service> {
     }
 
     // Coerce the intake/edit form's extra (beyond name) fields for an insert -
-    // reusing each field's own parser for the datetime; checkboxes are present-when-
-    // checked.  Client_name is handled by the caller (it's the one required field).
+    // reusing each field's own parser.  Booleans render as a Yes/No <select> that
+    // ALWAYS submits '0' or '1' (never absent), so parse with the field's parser - a
+    // bare `arg ? 1 : 0` treats the string '0' as truthy and turns every No into Yes.
+    // Client_name is handled by the caller (it's the one required field).
     private serviceValuesFromArgs(args: ServiceFormArgs): Partial<Service> {
         const dt = args.drop_off_scheduled_pick_up_time;
+        const yesNo = (v: unknown): boolnum => (v === '1' || v === 1 || v === 'true' || v === true) ? 1 : 0;
         return {
             bike_description: (args.bike_description ?? '').trim(),
             service_description: (args.service_description ?? '').trim(),
@@ -258,9 +261,9 @@ export class ServiceTable extends Table<Service> {
             drop_off_notes: (args.drop_off_notes ?? '').trim(),
             drop_off_scheduled_pick_up_time: dt
                 ? this.fieldsByName.drop_off_scheduled_pick_up_time.parseSimpleInput(dt) : undefined,
-            drop_off_repair_done: args.drop_off_repair_done ? 1 : 0,
-            drop_off_ready_call_done: args.drop_off_ready_call_done ? 1 : 0,
-            drop_off_pick_up_done: args.drop_off_pick_up_done ? 1 : 0,
+            drop_off_repair_done: yesNo(args.drop_off_repair_done),
+            drop_off_ready_call_done: yesNo(args.drop_off_ready_call_done),
+            drop_off_pick_up_done: yesNo(args.drop_off_pick_up_done),
             notes: (args.notes ?? '').trim(),
         } as Partial<Service>;
     }
