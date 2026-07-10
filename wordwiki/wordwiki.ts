@@ -584,6 +584,12 @@ export class WordWiki extends LiminalApp {
 /**/                const drawer = document.getElementById('wwLogDrawer');
 /**/                const open = drawer.style.display === 'none';
 /**/                drawer.style.display = open ? 'block' : 'none';
+/**/                // The drawer is fixed to the bottom, so it covers the
+/**/                // last stretch of content (invisible when already
+/**/                // scrolled down).  Reserve exactly its height at the page
+/**/                // foot while it is open, so that content can scroll clear.
+/**/                document.body.style.paddingBottom =
+/**/                    open ? (drawer.offsetHeight + 'px') : '';
 /**/                if(open) document.getElementById('wwLogText').focus();
 /**/            }
 /**/            function wwLogSync() {
