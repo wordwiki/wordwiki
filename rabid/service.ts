@@ -51,6 +51,15 @@ export const service_kind_enum: Record<string, string> = {
 // Drop-off fields appear in the service form only while service_kind is 'full'.
 const showForFull = {field: 'service_kind', in: ['full']};
 
+// A drop-off's needed-by time as a short 12h clock ("2:30 PM") for the We-Repair
+// badge; '' when unset.  The stored value is org-local wall time (as entered).
+function shortDueTime(dt?: string): string {
+    const t = date.sqliteDateTimeToTemporalOrNull(dt ?? null);
+    if(!t) return '';
+    const h = t.hour % 12 || 12;
+    return `${h}:${String(t.minute).padStart(2, '0')} ${t.hour >= 12 ? 'PM' : 'AM'}`;
+}
+
 // ONE field order for BOTH the add dialog and the edit form: client fields, then
 // service_kind sitting directly before the drop-off block it reveals (showWhen),
 // then notes.  So add and edit are the same dialog and the show/hide works in both.
@@ -358,9 +367,11 @@ export class ServiceTable extends Table<Service> {
         if(services.length === 0)
             return [h.p, {class: 'text-muted'}, 'No service records yet.'];
         return [h.div, {class: 'list-group lm-list'},
-                services.map(s => this.renderServiceRow(s))];
+                services.map((s, i) => this.renderServiceRow(s, i + 1))];
     }
 
+    // The full kind badge, always shown (DIY included) - for the DETAIL PAGE header,
+    // where the kind is a headline fact.  The compact list uses serviceLineBadge.
     serviceBadges(s: Service): Markup {
         return [
             [h.span, {class: 'badge text-bg-light border ms-2'}, service_kind_enum[s.service_kind] ?? s.service_kind],
@@ -371,16 +382,42 @@ export class ServiceTable extends Table<Service> {
         ];
     }
 
-    renderServiceRow(s: Service): Markup {
-        const id = s.service_id;
-        const secondary = [s.bike_description, s.service_description].filter(Boolean).join(' · ');
+    // The compact list badge.  SUPPRESSED for DIY (the common case - most rows carry
+    // no badge, so the eye is drawn only to the exceptions).  A We-Repair drop-off
+    // surfaces its needed-by time (the one time-critical fact for QC); once collected
+    // it goes muted.  'Other' shows a plain tag.
+    serviceLineBadge(s: Service): Markup {
+        if(s.service_kind === 'diy') return undefined;
+        const label = (service_kind_enum[s.service_kind] ?? s.service_kind).toUpperCase();
+        if(s.service_kind === 'full') {
+            if(s.drop_off_pick_up_done)
+                return [h.span, {class: 'badge text-bg-light border ms-2'}, label];
+            const due = shortDueTime(s.drop_off_scheduled_pick_up_time);
+            return [h.span, {class: 'badge text-bg-warning ms-2'}, due ? `${label} · ${due}` : label];
+        }
+        return [h.span, {class: 'badge text-bg-light border ms-2'}, label];
+    }
 
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link name).  Editors get BOTH a
-        // pencil (the natural, obvious "edit this" - opens the same conditional
-        // form) AND a ☰ menu (reorder + insert before/after + delete, mostly for
-        // fixing up scanned intake).  A <button> click never triggers the row's
-        // navigation (lmNavigableClick bails on buttons).
+    // 1-based position within the event (the number written on tape on the bike).
+    // Computed from order_key, so a single-row live reload keeps the same number; an
+    // insert/delete/move renumbers (the whole list re-renders on those - shape key).
+    private serviceNumber(s: Service): number {
+        const row = db().first<{n: number}>(
+            'SELECT COUNT(*) AS n FROM service WHERE event_id = :e AND order_key < :ok',
+            {e: s.event_id, ok: s.order_key});
+        return (row?.n ?? 0) + 1;
+    }
+
+    // A compact, scannable line: "1) NAME [WE REPAIR · 2:30] bike · work   POSTAL  ✎ ⋮".
+    // Number (tape), name in the blue nav style, and (for QC) the kind/needed-by badge
+    // and postal pinned as columns; the bike/work description flows in the middle and
+    // wraps under the name on a narrow screen (only it wraps - the rest stays put).
+    renderServiceRow(s: Service, n?: number): Markup {
+        const id = s.service_id;
+        const num = n ?? this.serviceNumber(s);
+        const secondary = [s.bike_description, s.service_description].filter(Boolean).join(' · ');
+        // One navigable row for every viewer (tap the name drills in); editors also get
+        // a pencil (edit) and a ☰ (reorder / insert / delete, mostly for scanned intake).
         const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`, {}, /*live*/ true);
         const pencil = this.canEditRecord(s)
             ? [h.button, {...editButtonProps(`rabid.service.renderServiceForm(${id})`),
@@ -396,15 +433,19 @@ export class ServiceTable extends Table<Service> {
             {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this service record?', expr: `rabid.service.remove(${id})`}},
         ], {ariaLabel: 'Service actions'}) : undefined;
         return [h.div, {...item, 'data-testid': `service-row-${id}`},
-            [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
+            [h.div, {class: 'd-flex align-items-baseline gap-2'},
+             [h.span, {class: 'text-muted small flex-shrink-0',
+                       style: 'min-width: 1.9rem; text-align: right; font-variant-numeric: tabular-nums;'}, `${num})`],
+             // Name + badge + description flow inline here; only this column wraps.
+             [h.div, {class: 'flex-grow-1', style: 'min-width: 0;'},
               [h.a, {...templates.pageLinkProps(`/rabid.service.detailPage(${id})`),
-                     class: 'lm-nav-link'}, s.client_name || 'Unnamed client'],
-              this.serviceBadges(s)],
-             [h.div, {class: 'lm-item-secondary'}, secondary]],
-            pencil,
-            menu,
-            navChevron(),
+                     class: 'lm-nav-link fw-semibold'}, s.client_name || 'Unnamed client'],
+              this.serviceLineBadge(s),
+              secondary ? [h.span, {class: 'text-muted ms-2'}, secondary] : undefined],
+             // Postal pinned right (a QC column); always rendered so postals line up.
+             [h.span, {class: 'text-muted small flex-shrink-0',
+                       style: 'min-width: 3ch; text-align: right;'}, s.client_postal || ''],
+             [h.div, {class: 'd-flex align-items-center gap-1 flex-shrink-0'}, pencil, menu]],
         ];
     }
 

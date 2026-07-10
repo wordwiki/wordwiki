@@ -45,6 +45,28 @@ test("addServiceForEvent binds the service to the event; it renders in Activity"
     });
 });
 
+test("compact service row: numbered, DIY badge suppressed, We-Repair due + postal surfaced", async () => {
+    await withTestDb(async ({ alice }) => {
+        const eid = insertEvent();
+        const s1 = asSystem(() => rabid.service.insert({event_id: eid, client_name: 'Ada',
+            service_kind: 'diy', bike_description: 'Red mtb', service_description: 'flat tire',
+            client_postal: 'B3H'} as any));
+        const s2 = asSystem(() => rabid.service.insert({event_id: eid, client_name: 'Alan',
+            service_kind: 'full', bike_description: 'Blue road', service_description: 'tune-up',
+            drop_off_scheduled_pick_up_time: '2026-06-20 14:30:00'} as any));
+
+        const row1 = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${s1})`));
+        assert(hasText(row1, '1)'), 'numbered 1)');
+        assert(hasText(row1, 'Ada') && hasText(row1, 'B3H'), 'name + postal (QC column)');
+        assert(!JSON.stringify(row1).includes('DIY'), 'no badge for the common DIY case');
+
+        const row2 = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${s2})`));
+        assert(hasText(row2, '2)'), 'numbered 2) by position (computed on a single-row reload)');
+        assert(hasText(row2, 'WE REPAIR'), 'We-Repair badge shown');
+        assert(hasText(row2, '2:30 PM'), 'needed-by time surfaced in the badge');
+    });
+});
+
 test("addSaleForEvent binds the sale + stamps time/recorder; renders under Sales", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const eid = insertEvent();
