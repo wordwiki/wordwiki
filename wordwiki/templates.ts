@@ -385,6 +385,7 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.publish.startPublish()'}, 'Publish']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.usersPage()'}, 'Users']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.categoriesPage()'}, 'Category Table']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.tagsPage()'}, 'Tag Table']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.lexicalFormsPage()'}, 'Lexical Form Table']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.orthographiesPage()'}, 'Orthography Table']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.audio.trimTuningPage()'}, 'Audio Trim Tuning']],

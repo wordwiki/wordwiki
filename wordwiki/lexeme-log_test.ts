@@ -16,7 +16,7 @@ import { buildPublishSource, publishSourceToPublicJson } from "./publish-source.
 import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 
 // One li-public word (approved via bornApprove) with an internal note and a
-// todo, and one word left entirely unapproved.
+// todo-tag, and one word left entirely unapproved.
 function seed(fx: Fixture): void {
     const tl = new TestTimeline();
     const a = mkEntry(1000, tl.next());
@@ -28,7 +28,7 @@ function seed(fx: Fixture): void {
     fx.ww.applyTransaction([mkChild(a, 'nte', 1030, tl.next(),
         {attr1: 'internal editorial note', order_key: '0.5'})], {quiet: true});
     fx.ww.applyTransaction([mkChild(a, 'tdo', 1040, tl.next(),
-        {attr1: 'other', attr2: 'check with elders', order_key: '0.5'})], {quiet: true});
+        {attr1: 'NeedsSpeakerGroupReview', attr2: 'check with elders', order_key: '0.5'})], {quiet: true});
     bornApprove(fx.ww);   // word 1000 is now approved+public in li
 
     const b = mkEntry(2000, fx.ww.allocTxTimestamps(1, {quiet: true}));
@@ -98,24 +98,24 @@ test("public bundle serialization strips internal relations (note/todo/log)", as
         const json = publishSourceToPublicJson(source);
         assert(!json.includes('NOT for the public dump'), 'log stripped');
         assert(!json.includes('internal editorial note'), 'note stripped');
-        assert(!json.includes('check with elders'), 'todo stripped');
+        assert(!json.includes('check with elders'), 'tag stripped');
         assertStringIncludes(json, 'samqwan');   // real content intact
         const parsed = JSON.parse(json);
         const pe = parsed.entries.find((e: any) => e.entry_id === 1000);
         assertEquals(pe.log, undefined);
         assertEquals(pe.note, undefined);
-        assertEquals(pe.todo, undefined);
+        assertEquals(pe.tag, undefined);
     });
 });
 
-test("postTodo: quick-filed as a generic unassigned todo, done=0", async () => {
+test("postTag: quick-filed as a generic unassigned todo-tag, done=0", async () => {
     await withTestDb(async (fx: Fixture) => {
         seed(fx);
-        as(fx, 'test', () => fx.ww.lexemeOps.postTodo(1000, 'spelling looks wrong'));
+        as(fx, 'test', () => fx.ww.lexemeOps.postTag(1000, 'spelling looks wrong'));
         const e = fx.ww.entriesById.get(1000)!;
-        const t = e.todo.find(t => t.details === 'spelling looks wrong');
-        assert(t, 'todo present on the entry');
-        assertEquals(t!.todo, 'Todo');
+        const t = e.tag.find(t => t.value === 'spelling looks wrong');
+        assert(t, 'tag present on the entry');
+        assertEquals(t!.tag, 'Todo');
         assertEquals(t!.done, 0);
         const problems = validateVersionedDb(fx.ww.workspace);
         assertEquals(problems.length, 0, JSON.stringify(problems));

@@ -420,16 +420,17 @@ export class LexemeOps {
                                   {attr1: trimmed}, {topPost: true});
     }
 
-    /** QUICK-FILE A TODO from the same pane (dz: as important as the log -
+    /** QUICK-FILE A TAG from the same pane (dz: as important as the log -
      *  tagging things as errors are noticed, but ACTIONABLE - the todo
-     *  report is the queue).  Same capture, structured landing: a generic
-     *  'Todo' with the text as details, unassigned, refinable later in the
-     *  editor.  Same approval bypass as postLog. */
-    postTodo(entry_id: number, text: string): {fact_id: number} {
+     *  report is the queue).  Same capture, structured landing: the given
+     *  tag (default the generic todo-marked 'Todo') with the text as its
+     *  value, unassigned, refinable later in the editor.  Same approval
+     *  bypass as postLog. */
+    postTag(entry_id: number, text: string, slug: string = 'Todo'): {fact_id: number} {
         const trimmed = String(text ?? '').trim();
-        if(!trimmed) throw new Error('an empty todo is not posted');
-        return this.postEntryFact(entry_id, entrySchema.TodoTag,
-                                  {attr1: 'Todo', attr2: trimmed, attr3: '___',
+        if(!trimmed) throw new Error('an empty tag is not posted');
+        return this.postEntryFact(entry_id, entrySchema.TagTag,
+                                  {attr1: slug, attr2: trimmed, attr3: '___',
                                    attr4: 0, variant: 'mm'} as Partial<Assertion>);
     }
 

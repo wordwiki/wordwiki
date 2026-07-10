@@ -36,6 +36,7 @@ import {LexemeOps} from './lexeme-ops.ts';
 import {reloadableProps} from '../liminal/table.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
+import * as tag from './tag.ts';
 import * as lexicalForm from './lexical-form.ts';
 import {DictionaryStore} from './dictionary-store.ts';
 import {siteConfig} from './site-config.ts';
@@ -173,6 +174,7 @@ export class WordWiki extends LiminalApp {
     @path get passwordHash() { return new user.PasswordHashTable(); }
     @path get userSession() { return new user.UserSessionTable(); }
     @route(authenticated) @path get categories() { return new category.CategoryTable(this); }
+    @route(authenticated) @path get tags() { return new tag.TagTable(this); }
     @route(authenticated) @path get lexicalForms() { return new lexicalForm.LexicalFormTable(this); }
     @route(authenticated) @path get orthographies() { return new orthography.OrthographyTable(this); }
 
@@ -181,7 +183,8 @@ export class WordWiki extends LiminalApp {
     // schema.ts).  More rabid-style tables will be added here over time.
     @lazy get tables() {
         return [this.config, this.users, this.passwordHash, this.userSession,
-                this.categories, this.lexicalForms, this.orthographies];
+                this.categories, this.lexicalForms, this.orthographies,
+                this.tags];
     }
 
     // Create the new-style tables if missing (idempotent CREATE IF NOT EXISTS).
@@ -197,6 +200,7 @@ export class WordWiki extends LiminalApp {
             db().executeStatements(t.createDMLString());
         ensureAssertionColumns('dict');
         orthography.seedOrthographies(this.orthographies);
+        tag.seedTags(this.tags);
     }
 
     // ----- Route namespaces ---------------------------------------------------
@@ -316,6 +320,12 @@ export class WordWiki extends LiminalApp {
     @route(authenticated)
     categoriesPage(): templates.Page {
         return templates.page('Category Table', this.categories.renderCategoriesPage());
+    }
+
+    // The tag vocabulary admin page (the editorial tagging model - tag.ts).
+    @route(authenticated)
+    tagsPage(): templates.Page {
+        return templates.page('Tag Table', this.tags.renderTagsPage());
     }
 
     // The lexical form (part of speech) vocabulary admin page.
@@ -483,15 +493,20 @@ export class WordWiki extends LiminalApp {
             .filter(g => g.current !== undefined)
             .toSorted((a, b) => (a.current!.order_key < b.current!.order_key ? -1 : 1));
 
-        // Open todos: the ACTIONABLE peer of the log, visible right where
-        // the sitting works.
-        const openTodos = (this.entriesById.get(entry_id)?.todo ?? [])
-            .filter(t => !t.done);
-        const todoLabel = (t: entry.Todo) =>
-            [t.details || undefined,
-             entry.todos[t.todo] && t.todo !== 'Todo' ? `[${entry.todos[t.todo]}]` : undefined,
+        // Open todos: TODO-marked tags (the tag table's is_todo set), not
+        // done - the ACTIONABLE peer of the log, visible right where the
+        // sitting works.  Plain (non-todo) tags show in the editor, not
+        // here.
+        const todoSlugs = tag.todoTagSlugs(this.tags);
+        const tagNames = new Map(this.tags.allByOrder.all({}).map(t => [t.slug, t.name]));
+        const openTodos = (this.entriesById.get(entry_id)?.tag ?? [])
+            .filter(t => !t.done && todoSlugs.has(t.tag));
+        const tagName = (slug: string) => tagNames.get(slug) ?? entry.todos[slug] ?? slug;
+        const todoLabel = (t: entry.Tag) =>
+            [t.value || undefined,
+             t.tag !== 'Todo' ? `[${tagName(t.tag)}]` : undefined,
              t.assigned_to && t.assigned_to !== '___' ? `\u2192 ${entry.displayUsername(t.assigned_to)}` : undefined]
-            .filter(s => s).join('  ') || entry.todos[t.todo] || t.todo;
+            .filter(s => s).join('  ') || tagName(t.tag);
 
         // Layout (dz 2026-07-10): Todos FIRST under their own title (only
         // when there are any), then the log entries with NO title (the
@@ -614,7 +629,7 @@ export class WordWiki extends LiminalApp {
     @routeMutation(authenticated)
     postLexemeLog(entry_id: number, text: string, kind: string = 'log'): any {
         if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
-        if(kind === 'todo') this.lexemeOps.postTodo(entry_id, String(text ?? ''));
+        if(kind === 'todo') this.lexemeOps.postTag(entry_id, String(text ?? ''));
         else this.lexemeOps.postLog(entry_id, String(text ?? ''));
         const relTag = kind === 'todo' ? 'tdo' : 'log';
         return {action: 'reload', targets: [

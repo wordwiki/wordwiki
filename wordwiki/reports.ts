@@ -23,6 +23,7 @@ import * as markdown from '../liminal/markdown.ts';
 import * as templates from './templates.ts';
 import * as entry from './entry-schema.ts';
 import * as category from './category.ts';
+import * as tagModule from './tag.ts';
 import * as findings from './findings.ts';
 import {selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber} from './scanned-document.ts';
 import {renderStandaloneGroup} from './render-page-editor.ts';
@@ -41,6 +42,7 @@ export interface ReportsApp {
     workingEntries(): entry.Entry[];
     workingLane(): {orthography: string, name: string} | undefined;
     readonly categories: category.CategoryTable;
+    readonly tags: tagModule.TagTable;
     entryCountByPage(book: string): Array<[number, number]>;
 }
 
@@ -142,8 +144,19 @@ export class EditorReports {
 
     @route(authenticated)
     todoReport(restrictToUser: string|null, restrictToTask: string|null): any {
+        // The task vocabulary: the tag table's TODO-marked rows (the old
+        // fixed enum is the unseeded fallback).
+        const todoKinds: Record<string, string> = (() => {
+            try {
+                const rows = this.app.tags.allByOrder.all({})
+                    .filter((t: tagModule.Tag) => t.is_todo);
+                if(rows.length > 0) return Object.fromEntries(
+                    rows.map((t: tagModule.Tag) => [t.slug, t.name]));
+            } catch { /* unseeded */ }
+            return entry.todos;
+        })();
         const userSummary = restrictToUser ? `for user "${entry.users[restrictToUser] ?? restrictToUser}"` : 'for all users';
-        const taskSummary = restrictToTask ? `for task "${entry.todos[restrictToTask] ?? restrictToTask}"` : 'for all tasks';
+        const taskSummary = restrictToTask ? `for task "${todoKinds[restrictToTask] ?? restrictToTask}"` : 'for all tasks';
         const title = `TODO report ${userSummary} ${taskSummary}`;
 
         const userPicker = ['div', {}, ['b', {}, 'Assigned To: '],
@@ -152,7 +165,7 @@ export class EditorReports {
                             ['a', {href:`/ww/wordwiki.editorReports.todoReport(null, ${JSON.stringify(restrictToTask)})`}, 'ALL USERS']];
 
         const taskPicker = ['div', {}, ['b', {}, 'Task Kind: '],
-                            Object.entries(entry.todos).map(([todo_id, todo_name])=>
+                            Object.entries(todoKinds).map(([todo_id, todo_name])=>
                                 [['a', {href:`/ww/wordwiki.editorReports.todoReport(${JSON.stringify(restrictToUser)}, ${JSON.stringify(todo_id)})`}, todo_name], ' / ']),
                             ['a', {href:`/ww/wordwiki.editorReports.todoReport(${JSON.stringify(restrictToUser)}, null)`}, 'ALL TASKS']];
 
@@ -172,12 +185,19 @@ export class EditorReports {
     }
 
     getEntriesForTODO(restrictToUser: string|null, restrictToTask: string|null): entry.Entry[] {
+        // Only TODO-marked tags are the todo system's business - plain
+        // classification tags never appear here (tag.ts charter).
+        const todoSlugs = (() => {
+            try { return tagModule.todoTagSlugs(this.app.tags); }
+            catch { return new Set(Object.keys(entry.todos)); }
+        })();
         return this.app.store.activeEntries.filter(
-            entry=>
-                entry.todo.some(todo=>
-                    !todo.done &&
-                    (restrictToTask == null || todo.todo === restrictToTask) &&
-                    (restrictToUser == null || todo.assigned_to === restrictToUser)));
+            e=>
+                e.tag.some(t=>
+                    !t.done &&
+                    todoSlugs.has(t.tag) &&
+                    (restrictToTask == null || t.tag === restrictToTask) &&
+                    (restrictToUser == null || t.assigned_to === restrictToUser)));
     }
 
     @route(authenticated)

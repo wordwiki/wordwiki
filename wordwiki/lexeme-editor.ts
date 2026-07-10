@@ -75,6 +75,7 @@ import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
 import * as orthographyTable from './orthography.ts';
+import * as tagTable from './tag.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
 import {renderStandaloneGroup, pageEditorURLForBoundingGroup, imageRefDescription} from './render-page-editor.ts';
 import * as entryMeta from './render-entry-meta.ts';
@@ -303,6 +304,13 @@ function widgetFor(f: model.ScalarField, rel: model.RelationField,
                 {what: 'category', adminPage: 'Category Table'},
                 {nullable: true, prompt: f.prompt});
     }
+    if(rel.tag === entrySchema.TagTag && f.name === 'tag') {
+        const tags = vocabs.tags();
+        if(tags.some(t => !t.retired))
+            return new VocabSelectField(f.name, tags,
+                {what: 'tag', adminPage: 'Tag Table'},
+                {nullable: true, prompt: f.prompt});
+    }
     if(rel.tag === entrySchema.SubentryTag && f.name === 'part_of_speech') {
         const forms = vocabs.lexicalForms();
         if(forms.some(c => !c.retired))
@@ -361,6 +369,7 @@ interface VocabProviders {
     categories: () => category.Category[];
     lexicalForms: () => lexicalForm.LexicalForm[];
     orthographies: () => orthographyTable.Orthography[];
+    tags: () => tagTable.Tag[];
 }
 
 function parseDialogFields(rel: model.RelationField, form: Record<string, any>,
@@ -647,6 +656,7 @@ export class LexemeEditor {
         categories: () => this.app.categories.allByOrder.all({}),
         lexicalForms: () => this.app.lexicalForms.allByOrder.all({}),
         orthographies: () => this.app.orthographies.allByOrder.all({}),
+        tags: () => this.app.tags.allByOrder.all({}),
     };
 
     // ------------------------------------------------------------------------
@@ -940,6 +950,7 @@ export class LexemeEditor {
     private vocabValueLabel(): (f: model.ScalarField, value: unknown) => string|undefined {
         let cats: Map<string, string>|undefined;
         let forms: Map<string, string>|undefined;
+        let tags: Map<string, string>|undefined;
         return (f, value) => {
             if(f.name === 'category') {
                 cats ??= new Map(this.vocabs.categories().map(c => [c.slug, c.name]));
@@ -948,6 +959,10 @@ export class LexemeEditor {
             if(f.name === 'part_of_speech') {
                 forms ??= new Map(this.vocabs.lexicalForms().map(x => [x.slug, x.name]));
                 return forms.get(String(value));
+            }
+            if(f.name === 'tag') {
+                tags ??= new Map(this.vocabs.tags().map(x => [x.slug, x.name]));
+                return tags.get(String(value));
             }
             return undefined;
         };

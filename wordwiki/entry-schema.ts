@@ -24,7 +24,7 @@ export const EntryTag = 'ent';         // entr
 export const StatusTag = 'sta';        // stat
 export const SpellingTag = 'spl'       // spel
 export const SubentryTag = 'sub';      // sub
-export const TodoTag = 'tdo';          // todo
+export const TagTag = 'tdo';           // tag (né todo - storage code unchanged, zero migration)
 export const NoteTag = 'nte';          // note
 export const LogTag = 'log';           // log
 export const TranslationTag = 'tra';   // tran
@@ -65,7 +65,7 @@ export const relationDisplayNameByTag: Record<string, string> = {
     [StatusTag]: 'Status',
     [SpellingTag]: 'Spelling',
     [SubentryTag]: 'Subentry',
-    [TodoTag]: 'Todo',
+    [TagTag]: 'Tag',
     [NoteTag]: 'Note',
     [TranslationTag]: 'Translation',
     [DefinitionTag]: 'Definition',
@@ -180,6 +180,8 @@ export function isArchivedEntry(e: Entry): boolean {
     return e.status.some(s => isArchivedStatus(s.status));
 }
 
+// The OLD fixed todo kinds: now the tag table's seed + unseeded fallback
+// (tag.ts SEED_TAGS; slugs = these codes, so no data migration).
 export const todos: Record<string, string> = {
     'Todo': 'Todo',
     'NeedsResearchGroupReview': 'Needs Research Group Review',
@@ -315,13 +317,21 @@ export const dictSchemaJson = {
                       $view: { hidden: true, label: 'inline' } },
         },
 
-        todo: {
+        // The TAG relation (dz 2026-07-10: the old fixed TODO enum,
+        // generalized to the editorial tagging model - see tag.ts for the
+        // vocabulary table and THE CHARTER of the label mechanisms).  The
+        // STORAGE tag stays 'tdo' and the seed slugs are the old enum
+        // codes: existing assertions are reinterpreted, never rewritten.
+        // Tags marked is_todo in the table drive the todo system (report,
+        // open-todos list); `done`/`assigned_to` are meaningful for those
+        // and simply idle for plain tags.
+        tag: {
             $type: 'relation',
-            $tag: TodoTag,
-            todo_id: {$type: 'primary_key'},
-            todo: {$type: 'enum', $bind: 'attr1',
-                   $style: { $options: todos}},
-            details: {$type: 'string', $bind: 'attr2', $style: { $width: 30 }},
+            $tag: TagTag,
+            tag_id: {$type: 'primary_key'},
+            tag: {$type: 'enum', $bind: 'attr1',
+                  $style: { $options: todos}},   // table-driven select in the editor; static map = unseeded fallback
+            value: {$type: 'string', $bind: 'attr2', $style: { $width: 30 }},
             assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
             done: {$type: 'boolean', $bind: 'attr4'},
             variant: {$type: 'variant', $metaVariant: true, $allowAll: true, $defaultAll: true},
@@ -748,7 +758,7 @@ export interface Entry {
     spelling: Spelling[],
     status: Status[],
     public: Public[],
-    todo: Todo[],
+    tag: Tag[],
     subentry: Subentry[],
     recording: Recording[],
     log: Log[],
@@ -771,10 +781,10 @@ export interface Public {
     variant: string,
 }
 
-export interface Todo {
-    todo_id: number,
-    todo: string,
-    details: string,
+export interface Tag {
+    tag_id: number,
+    tag: string,
+    value: string,
     assigned_to: string,
     done: number,
     variant: string,
