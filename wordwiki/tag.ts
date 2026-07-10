@@ -203,12 +203,23 @@ export class TagTable extends Table<Tag> {
         return this.renderTagRow(this.getById(id));
     }
 
+    // The create dialog: the record form over an empty record (renderForm
+    // gates on recordEdit server-side too).  Was MISSING (the 'New tag…'
+    // menu 404'd) - the category/orthography tables each have this and it
+    // is NOT inherited (routeterp only exposes declared members).
+    @route(editTags)
+    newDialog(): Markup {
+        return this.renderForm({} as Tag);
+    }
+
     @route(authenticated)
     detailPage(tag_id: number): templates.Page {
         const t = this.getById(tag_id);
         return templates.page(`${t.name || t.slug} — Tag`, this.renderDetail(tag_id));
     }
 
+    // A reloadable fragment (an edit save re-renders it - the same
+    // -tag-<id>- key the list row carries).
     @route(authenticated)
     renderDetail(tag_id: number): Markup {
         const t = this.getById(tag_id);
@@ -219,16 +230,70 @@ export class TagTable extends Table<Tag> {
         return ['div', props,
             ['div', {class: 'd-flex align-items-center gap-2 mb-3'},
              ['h2', {class: 'mb-0'}, t.name || t.slug],
+             t.is_todo ? ['span', {class: 'badge text-bg-primary'}, 'todo'] : undefined,
              t.retired ? ['span', {class: 'badge text-bg-secondary'}, 'Retired'] : undefined,
              this.canEditRecord(t) ? this.editPencil(tag_id) : undefined],
             ['dl', {class: 'row mb-0'},
              row('Slug', t.slug),
              row('Theme', t.theme || '—'),
              row('Todo', t.is_todo ? 'Yes - drives the todo report' : 'No'),
-             row('Description', t.description || '—'),
-            ]];
+             row('Description', t.description ? this.fieldsByName.description.render(t.description) : '—'),
+            ],
+            this.renderTagEntries(t),
+        ];
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Entries carrying this tag (the assertion world) ---------------------
+    // ------------------------------------------------------------------------
+
+    // ALL entries carrying this tag - unpublished included (a curation
+    // page).  The value/assignee/done are shown so a todo tag reads as its
+    // worklist.  Sorted by spelling.
+    private entriesForSlug(slug: string): Array<{e: entrySchema.Entry, tags: entrySchema.Tag[]}> {
+        if(!this.app) return [];
+        const out: Array<{e: entrySchema.Entry, tags: entrySchema.Tag[]}> = [];
+        for(const e of this.app.entriesById.values()) {
+            const tags = e.tag.filter(t => t.tag === slug);
+            if(tags.length > 0) out.push({e, tags});
+        }
+        return out.sort((a, b) => TAG_ENTRY_COLLATOR.compare(
+            entrySchema.renderEntrySpellingsSummary(a.e),
+            entrySchema.renderEntrySpellingsSummary(b.e)));
+    }
+
+    private renderTagEntries(t: Tag): Markup {
+        if(!this.app) return undefined;
+        const rows = this.entriesForSlug(t.slug);
+        return [
+            ['h4', {class: 'mt-4 mb-2'}, `Entries (${rows.length})`],
+            rows.length === 0
+                ? ['p', {class: 'text-muted'}, 'No entries carry this tag.']
+                : ['div', {class: 'list-group lm-list'},
+                   rows.map(({e, tags}) => {
+                       const spelling = entrySchema.renderEntrySpellingsSummary(e);
+                       const glosses = e.subentry.flatMap(s => s.gloss.map(g => g.gloss))
+                           .filter(Boolean).join(' / ');
+                       // The tag's own facts on this word (value / assignee /
+                       // done) - what makes a todo tag read as a worklist.
+                       const detail = tags.map(tag => [
+                           tag.value || undefined,
+                           tag.assigned_to && tag.assigned_to !== '___'
+                               ? `→ ${entrySchema.displayUsername(tag.assigned_to)}` : undefined,
+                           tag.done ? '✓ done' : undefined,
+                       ].filter(Boolean).join('  ')).filter(Boolean).join(' ; ');
+                       return ['div', {class: 'list-group-item lm-item'},
+                           ['div', {class: 'lm-item-body'},
+                            ['div', {class: 'lm-item-primary'},
+                             ['a', {...templates.pageLinkProps(`/ww/wordwiki.wordView(${e.entry_id})`),
+                                    class: 'lm-nav-link'}, spelling],
+                             glosses ? ['span', {class: 'text-muted'}, ' — ', glosses] : undefined],
+                            detail ? ['div', {class: 'lm-item-secondary text-muted'}, detail] : undefined]];
+                   })]];
     }
 }
+
+const TAG_ENTRY_COLLATOR = new Intl.Collator('en', {sensitivity: 'base', numeric: true});
 
 // --------------------------------------------------------------------------
 // --- Seed -------------------------------------------------------------------
