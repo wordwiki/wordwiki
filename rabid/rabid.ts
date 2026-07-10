@@ -158,6 +158,8 @@ export class Rabid extends LiminalApp {
             // ('service' the page vs this.service the table: the page binding
             // name is what appears in the URL, the method avoids the collision.)
             service:(q?: any)=>this.servicePage(q),
+            // The yearly services-by-area map (Reports); windowed like /service.
+            serviceMap:(q?: any)=>templates.page('Services by area', this.service.renderServiceMapPage(q)),
             timesheets:(q?: any)=>this.timesheets(q),
             committees:(q?: any)=>this.committees(q),
             projects:(q?: any)=>this.projects(q),

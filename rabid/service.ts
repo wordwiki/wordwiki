@@ -5,7 +5,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon, editButtonProps, liveReloadableProps } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon, editButtonProps, reloadableProps, liveReloadableProps } from "../liminal/table.ts";
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
@@ -20,6 +20,8 @@ import * as action from "../liminal/action.ts";
 import * as templates from './templates.ts';
 import * as pageQueries from './page-queries.ts';
 import {rabid} from './rabid.ts';
+import {tallyPostals} from './servicemap/fsa.ts';
+import {renderServiceMap} from './servicemap/servicemap.ts';
 
 export const routes = ()=> ({
 });
@@ -502,6 +504,69 @@ export class ServiceTable extends Table<Service> {
     @route(authenticated)
     applyServiceFilter(form: Record<string, any>): any {
         return pageQueries.applyFilterNavigate(ServiceTable.pageQuery, form, 'service');
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Services-by-area map (servicemap/) ----------------------------------
+    // ------------------------------------------------------------------------
+
+    // Its own from/to window, defaulting (below) to the current CALENDAR YEAR -
+    // the map is a yearly fundraising artifact, not a rolling recent-activity list.
+    static readonly mapRangeQuery = pageQueries.windowQuery('service_map_range');
+
+    // The yearly "Services by area" page (Reports): a self-contained SVG
+    // choropleth of where our clients came from, by postal-code area, over the
+    // window.  Reads client_postal off the windowed services and hands it to the
+    // pure renderer (servicemap/); no PII (the FSA is a coarse area only).
+    renderServiceMapPage(q?: Record<string, any>): Markup {
+        const query = ServiceTable.mapRangeQuery.normalize(q) as pageQueries.WindowQuery;
+        // Calendar-year default (Jan 1 .. today), not the generic rolling window.
+        const year = date.orgNow().year;
+        if(!query.from) query.from = `${year}-01-01`;
+        if(!query.to)   query.to = date.temporalToSqliteDate(date.orgToday());
+        const w = pageQueries.resolveWindow(query);
+        const services = this.servicesInWindow.all(w);
+        const tally = tallyPostals(services.map(s => s.client_postal));
+        const sameYear = w.from.slice(0, 4) === w.to.slice(0, 4);
+        return [h.div, {class: 'container py-3'},
+            [h.h2, {}, 'Services by area'],
+            pageQueries.renderWindowBar({
+                fieldSet: ServiceTable.mapRangeQuery, pageRoute: 'serviceMap',
+                filterDialogRoute: 'rabid.service.serviceMapFilterDialog',
+                q: query, count: services.length, noun: 'service'}),
+            renderServiceMap(tally, {size: 'large',
+                title: sameYear ? `Services in ${w.from.slice(0, 4)}` : `Services ${w.from} – ${w.to}`}),
+        ];
+    }
+
+    @route(authenticated)
+    serviceMapFilterDialog(q?: Record<string, any>): Markup {
+        return pageQueries.renderFilterDialog(
+            ServiceTable.mapRangeQuery, ServiceTable.mapRangeQuery.normalize(q),
+            'rabid.service.applyServiceMapFilter', {title: 'Service map date range'});
+    }
+    @route(authenticated)
+    applyServiceMapFilter(form: Record<string, any>): any {
+        return pageQueries.applyFilterNavigate(ServiceTable.mapRangeQuery, form, 'serviceMap');
+    }
+
+    // The compact per-event map (embedded at the bottom of the event detail page):
+    // where THIS event's clients came from.  A reloadable fragment keyed on the
+    // service event fk key, so adding/editing a service refreshes it.  Renders
+    // nothing until at least one client postal has been located to an FSA.
+    @route(authenticated)
+    renderEventServiceMap(event_id: number): Markup {
+        const services = security.runSystem(() => this.servicesForEvent.all({event_id}));
+        const tally = tallyPostals(services.map(s => s.client_postal));
+        const props = reloadableProps([this.fkKey('event_id', event_id)],
+            `rabid.service.renderEventServiceMap(${event_id})`, {id: 'services-map'});
+        const located = tally.inRegionTotal + tally.outsideTotal > 0;
+        return [h.div, props,
+            located
+                ? [h.div, {class: 'lm-doc-section'},
+                    [h.h4, {class: 'lm-doc-section-label'}, 'Where clients came from'],
+                    renderServiceMap(tally, {size: 'small'})]
+                : undefined];
     }
 
     // ------------------------------------------------------------------------

@@ -482,6 +482,10 @@ export class EventTable extends Table<Event> {
             // The log: services + sales recorded at this event (the heart of the
             // event-centric model; on a catch-all it is essentially the whole page).
             this.renderEventActivity(event_id),
+            // A compact "where clients came from" map for this event's services,
+            // by postal area (servicemap/).  Renders nothing until a client
+            // postal has been captured.
+            rabid.service.renderEventServiceMap(event_id),
             // The event's own 1-1 project: tasks to do for this event, created
             // lazily on the first add.  docHeading -> a peer document-section
             // heading like the checklists below.  Wrapped in a stable #tasks anchor.

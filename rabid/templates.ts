@@ -220,6 +220,7 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
               // Cross-event activity: the windowed lists of every service / sale,
               // across all events (access to an individual record is via its event).
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/service'}, 'Services']],
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/serviceMap'}, 'Services by area (map)']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/sales'}, 'Sales']],
              ], //ul
             ], //li
