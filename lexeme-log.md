@@ -46,11 +46,20 @@ it."
   history / the change feed / the activity report as ordinary
   attributed changes.
 - **Todos are the actionable peer** (dz: as important as the log -
-  "tagging things as errors are noticed").  The same box has a second
-  button, "Post as todo": a generic unassigned `Todo` with the text as
-  details, refinable in the editor, queued in the todo report.  The
-  pane also lists the entry's OPEN todos.  (This replaced an earlier
+  "tagging things as errors are noticed").  postTodo files a generic
+  unassigned `Todo` with the text as details, refinable in the editor,
+  queued in the todo report.  (This replaced an earlier
   #tags-in-the-text idea - the todo model IS the work queue.)
+  **HIDDEN for now** (dz round 3: liked but confusing) - the verb,
+  route kind, and tests stay; only the UI (the second button + the
+  open-todos list) is withheld.
+- **Targeted refresh, both surfaces** (dz round 3): posting goes
+  through `tx` (the standard mutation client) returning the normal
+  `{action:'reload', targets}` - the word view's log section is a
+  reloadable fragment, and the same targets hit the LEXEME EDITOR's
+  generic log-relation fragments, so the dock sits on the editor page
+  too with no page reload.  Bylines show the user's NAME (users-table
+  hook), not the login.
 
 ## The bundle-leak fix (found during this work)
 

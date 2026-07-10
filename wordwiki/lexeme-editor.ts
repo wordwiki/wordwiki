@@ -129,7 +129,7 @@ export class WorkspaceNode implements entryMeta.EntryNode {
     byline(): Markup | undefined {
         const first = this.tq.src.tupleVersions[0]?.assertion;
         if(!first) return undefined;
-        const who = first.change_by_username || '?';
+        const who = entrySchema.displayUsername(first.change_by_username || '?');
         return [who, ' (',
                 ['span', {title: timestamp.formatTimestampAsLocalTime(first.valid_from)},
                  timestamp.formatTimestampRelative(first.valid_from)],
@@ -849,7 +849,12 @@ export class LexemeEditor {
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
         return templates.page(title, [this.renderMetaEntry(entry_id, changes),
-                                      this.keyboardHint()]);
+                                      this.keyboardHint(),
+                                      // The session-log capture dock (lexeme-log.md):
+                                      // posting refreshes THIS page's log-relation
+                                      // fragments through the normal reload targets -
+                                      // no page reload.
+                                      e ? this.app.renderLexemeLogDock(entry_id) : undefined]);
     }
 
     /** A discreet pointer to the keyboard editing model (keyboard-driven-

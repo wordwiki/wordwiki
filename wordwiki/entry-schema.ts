@@ -103,6 +103,17 @@ export function relationDisplayName(tag: string): string {
 }
 
 // XXX HACK HACK
+// The username -> DISPLAY NAME hook: the users TABLE is the authority
+// (injected by the WordWiki ctor, like setOrthographyAbbrHook); the static
+// map below is the fallback for early migrations/minimal tests.
+let usernameDisplayHook: ((username: string) => string | undefined) | undefined = undefined;
+export function setUsernameDisplayHook(h: (username: string) => string | undefined): void {
+    usernameDisplayHook = h;
+}
+export function displayUsername(username: string): string {
+    return usernameDisplayHook?.(username) ?? users[username] ?? username;
+}
+
 export const users: Record<string, string> = {
     '___': 'No User Selected',
     'djb': 'Dolly Barnaby',

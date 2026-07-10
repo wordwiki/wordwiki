@@ -33,6 +33,7 @@ import {ActivityReport} from './activity-report.ts';
 import {SpellingReports} from './spelling-duplicates.ts';
 import {RecentWords} from './recent-words.ts';
 import {LexemeOps} from './lexeme-ops.ts';
+import {reloadableProps} from '../liminal/table.ts';
 import * as user from './user.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
@@ -79,6 +80,13 @@ export class WordWiki extends LiminalApp {
         // The page-editor word sidebar renders word summaries in the working
         // lane - same cycle-avoiding injection as the templates providers.
         renderPageEditor.setPageEditorAppProvider(() => this);
+        // Bylines (the session log) show the user's NAME, not the login.
+        entry.setUsernameDisplayHook(username => {
+            try {
+                return security.runSystem(() =>
+                    this.users.byUsername.first({username}))?.name || undefined;
+            } catch { return undefined; }   // pre-migration db
+        });
 
         // --- Set up our routes
         // The page-editor / audio / publish routes are NOT spread in here as
@@ -429,16 +437,29 @@ export class WordWiki extends LiminalApp {
              ['div', {class: 'page-content'}, rendered],
              // The session-log pane (dz 2026-07-09): the word view is
              // where the speakers group sits, so feedback capture lives
-             // HERE - inline and non-modal, the page stays readable while
-             // the note is typed.
-             e ? this.renderLexemeLogPane(entry_id, orthography) : undefined]);
+             // HERE - non-modal (the floating dock), the page stays
+             // readable while the note is typed.
+             e ? this.renderLexemeLogPane(entry_id) : undefined]);
     }
 
     /** The word view's LOG pane: the entry's session-log facts (top-posted
      *  - the order_key IS the presentation order) with feed-style bylines,
      *  and the quick Post box.  One post = one fact via lexemeOps.postLog
      *  (born-approved under a published entry; see the verb). */
-    private renderLexemeLogPane(entry_id: number, orthography: string = ''): any {
+    /** The word view's Log presence: the floating capture DOCK + the
+     *  reading section (a reloadable fragment).  Also appended to the
+     *  LEXEME EDITOR page - posting refreshes registered fragments on
+     *  either page through the normal liminal reload machinery (no page
+     *  reload; dz: a full refresh would be unacceptable on the editor). */
+    private renderLexemeLogPane(entry_id: number): any {
+        return [this.renderLexemeLogDock(entry_id),
+                this.renderLexemeLogSection(entry_id)];
+    }
+
+    /** The log's READING presentation: a standard reloadable fragment
+     *  (key `-lexeme-log-<id>-`), refreshed in place when the dock posts. */
+    @route(authenticated)
+    renderLexemeLogSection(entry_id: number): any {
         // The byline comes from each fact's FIRST version (the post; later
         // touch-ups don't re-date it); the text from the current one.
         const versions = db().all<{id: number, attr1: string, order_key: string,
@@ -462,54 +483,53 @@ export class WordWiki extends LiminalApp {
             .filter(g => g.current !== undefined)
             .toSorted((a, b) => (a.current!.order_key < b.current!.order_key ? -1 : 1));
 
-        // Open todos: the ACTIONABLE peer of the log (dz: tag errors as
-        // they are noticed) - visible right where the sitting works.
-        const openTodos = (this.entriesById.get(entry_id)?.todo ?? [])
-            .filter(t => !t.done);
-        const todoLabel = (t: entry.Todo) =>
-            [t.details || undefined,
-             entry.todos[t.todo] && t.todo !== 'Todo' ? `[${entry.todos[t.todo]}]` : undefined,
-             t.assigned_to && t.assigned_to !== '___' ? `→ ${t.assigned_to}` : undefined]
-            .filter(s => s).join('  ') || entry.todos[t.todo] || t.todo;
+        return ['div', {...reloadableProps([`-lexeme-log-${entry_id}-`],
+                                           `/ww/wordwiki.renderLexemeLogSection(${entry_id})`),
+                        id: 'wwLogSection'},
+            ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
+             ['h2', {class: 'fs-5'}, 'Log'],
+             templates.mayEditLexemes()
+                 ? ['div', {class: 'text-muted small'},
+                    'Add to the log with the \u{1F4DD} button (lower left).']
+                 : undefined,
+             rows.length === 0
+                 ? undefined
+                 : ['div', {class: 'ww-log-list mt-2'},
+                    rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
+                        ['span', {class: 'ww-log-byline text-muted'},
+                         entry.displayUsername(g.first.change_by_username || '?'), ' (',
+                         ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
+                          timestamp.formatTimestampRelative(g.first.valid_from)],
+                         '): '],
+                        markdown.markdownToMarkup(g.current!.attr1 ?? '')])]]];
+    }
 
-        const returnTo = orthography
-            ? `/ww/wordwiki.wordView(${entry_id}, ${JSON.stringify(orthography)})`
-            : `/ww/wordwiki.wordView(${entry_id})`;
-        // The CAPTURE lives in a floating dock (dz: notes are taken WHILE
-        // reviewing the word - the box must be one click away at any
-        // scroll position, not down at the page bottom): a small fab in
-        // the lower-left toggles a drawer fixed to the bottom edge.  ONE
-        // draft box; the in-flow pane below is the log's READING
-        // presentation.  The draft survives toggling, navigation-and-back
-        // (sessionStorage, per word) and gets a beforeunload guard; a dot
-        // on the fab marks an unposted draft.
-        const dock = templates.mayEditLexemes()
-            ? [['button', {type: 'button', id: 'wwLogFab', class: 'ww-log-fab',
-                           onclick: 'wwLogToggle()',
-                           title: 'Log a note on this word (notes & todos)'},
-                '\u{1F4DD}',
-                ['span', {id: 'wwLogFabDot', class: 'ww-log-fab-dot', style: 'display:none'}]],
-               ['div', {id: 'wwLogDrawer', class: 'ww-log-drawer', style: 'display:none'},
-                ['form', {method: 'post', action: 'wordwiki.postLexemeLog(bodyArgs)',
-                          class: 'ww-log-post', id: 'wwLogForm'},
-                 ['input', {type: 'hidden', name: 'entry_id', value: String(entry_id)}],
-                 ['input', {type: 'hidden', name: 'returnTo', value: returnTo}],
+    /** The floating capture dock (dz: notes are taken WHILE reviewing the
+     *  word - one click away at any scroll position): a fab lower-left
+     *  toggling a drawer fixed to the bottom edge.  ONE draft box; the
+     *  draft survives toggling and navigate-away-and-back (sessionStorage,
+     *  per word); a red dot on the fab marks an unposted draft.  Posting
+     *  goes through tx (the standard mutation client) so ONLY the
+     *  registered fragments refresh - usable on the editor page too.
+     *  (The "Post as todo" peer is BUILT but hidden for now - dz likes it
+     *  but found it confusing; wwLogPost already takes the kind.) */
+    renderLexemeLogDock(entry_id: number): any {
+        if(!templates.mayEditLexemes()) return undefined;
+        return [['button', {type: 'button', id: 'wwLogFab', class: 'ww-log-fab',
+                            onclick: 'wwLogToggle()',
+                            title: 'Log a note on this word'},
+                 '\u{1F4DD}',
+                 ['span', {id: 'wwLogFabDot', class: 'ww-log-fab-dot', style: 'display:none'}]],
+                ['div', {id: 'wwLogDrawer', class: 'ww-log-drawer', style: 'display:none'},
                  ['textarea', {name: 'text', id: 'wwLogText', rows: '3',
                                class: 'form-control',
                                placeholder: 'Log a note on this word — posted under your name, no approval step…'}],
                  ['div', {class: 'mt-1 d-flex gap-2 align-items-center'},
-                  ['button', {type: 'submit', name: 'kind', value: 'log',
-                              class: 'btn btn-sm btn-primary'}, 'Post'],
-                  // Same capture, ACTIONABLE landing: a generic unassigned
-                  // todo with this text as details (refine in the editor;
-                  // the todo report is the queue).
-                  ['button', {type: 'submit', name: 'kind', value: 'todo',
-                              class: 'btn btn-sm btn-outline-primary',
-                              title: 'File this text as a todo on this word (actionable - shows in the todo report)'},
-                   'Post as todo'],
+                  ['button', {type: 'button', class: 'btn btn-sm btn-primary',
+                              onclick: "wwLogPost('log')"}, 'Post'],
                   ['button', {type: 'button', class: 'btn btn-sm btn-link ms-auto',
-                              onclick: 'wwLogToggle()'}, 'Close']]]],
-               ['script', {}, block`
+                              onclick: 'wwLogToggle()'}, 'Close']]],
+                ['script', {}, block`
 /**/            const wwLogDraftKey = 'ww-log-draft-${entry_id}';
 /**/            function wwLogToggle() {
 /**/                const drawer = document.getElementById('wwLogDrawer');
@@ -517,24 +537,26 @@ export class WordWiki extends LiminalApp {
 /**/                drawer.style.display = open ? 'block' : 'none';
 /**/                if(open) document.getElementById('wwLogText').focus();
 /**/            }
-/**/            (function() {
-/**/                const form = document.getElementById('wwLogForm');
+/**/            function wwLogSync() {
 /**/                const text = document.getElementById('wwLogText');
 /**/                const dot = document.getElementById('wwLogFabDot');
-/**/                let posting = false;
-/**/                // The draft survives toggling AND navigate-away-and-back
-/**/                // (per word, this browser tab).
+/**/                try { sessionStorage.setItem(wwLogDraftKey, text.value); } catch {}
+/**/                dot.style.display = text.value.trim() !== '' ? 'block' : 'none';
+/**/            }
+/**/            async function wwLogPost(kind) {
+/**/                const text = document.getElementById('wwLogText');
+/**/                const value = text.value.trim();
+/**/                if(value === '') return;
+/**/                await tx\`wordwiki.postLexemeLog(\${${entry_id}}, \${value}, \${kind})\`;
+/**/                text.value = '';
+/**/                try { sessionStorage.removeItem(wwLogDraftKey); } catch {}
+/**/                wwLogSync();
+/**/            }
+/**/            (function() {
+/**/                const text = document.getElementById('wwLogText');
 /**/                try { text.value = sessionStorage.getItem(wwLogDraftKey) || ''; } catch {}
-/**/                const sync = () => {
-/**/                    try { sessionStorage.setItem(wwLogDraftKey, text.value); } catch {}
-/**/                    dot.style.display = text.value.trim() !== '' ? 'block' : 'none';
-/**/                };
-/**/                sync();
-/**/                text.addEventListener('input', sync);
-/**/                form.addEventListener('submit', () => {
-/**/                    posting = true;
-/**/                    try { sessionStorage.removeItem(wwLogDraftKey); } catch {}
-/**/                });
+/**/                wwLogSync();
+/**/                text.addEventListener('input', wwLogSync);
 /**/                addEventListener('keydown', (e) => {
 /**/                    if(e.key === 'Escape') {
 /**/                        const drawer = document.getElementById('wwLogDrawer');
@@ -542,49 +564,32 @@ export class WordWiki extends LiminalApp {
 /**/                    }
 /**/                });
 /**/                addEventListener('beforeunload', (e) => {
-/**/                    if(!posting && text.value.trim() !== '') {
+/**/                    if(text.value.trim() !== '') {
 /**/                        e.preventDefault();
 /**/                        e.returnValue = '';
 /**/                    }
 /**/                });
-/**/            })();`]]
-            : undefined;
-
-        return [dock,
-            ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
-             ['h2', {class: 'fs-5'}, 'Log'],
-             dock ? ['div', {class: 'text-muted small'},
-                     'Add to the log with the \u{1F4DD} button (lower left).'] : undefined,
-             openTodos.length > 0
-                 ? ['div', {class: 'ww-log-todos mt-2'},
-                    ['div', {class: 'fw-semibold'}, `Open todos (${openTodos.length})`],
-                    ['ul', {class: 'mb-1'},
-                     openTodos.map(t => ['li', {}, todoLabel(t)])]]
-                 : undefined,
-             rows.length === 0
-                 ? undefined
-                 : ['div', {class: 'ww-log-list mt-2'},
-                    rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
-                        ['span', {class: 'ww-log-byline text-muted'},
-                         g.first.change_by_username || '?', ' (',
-                         ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
-                          timestamp.formatTimestampRelative(g.first.valid_from)],
-                         '): '],
-                        markdown.markdownToMarkup(g.current!.attr1 ?? '')])]]];
+/**/            })();`]];
     }
 
-    /** Post a session-log entry (the log pane's form) and bounce back to
-     *  the page it was posted FROM (site-relative only). */
+    /** Post a session-log entry (kind 'log' | 'todo') and return the
+     *  standard reload directive: the word view's log section, and - when
+     *  the dock sits on the LEXEME EDITOR page - the editor's own log
+     *  relation fragments (targets that match nothing on a page are
+     *  simply inert). */
     @routeMutation(authenticated)
-    postLexemeLog(args: {entry_id?: string|number, text?: string,
-                         kind?: string, returnTo?: string}): server.Response {
-        const entry_id = Number(args.entry_id);
+    postLexemeLog(entry_id: number, text: string, kind: string = 'log'): any {
         if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
-        if(args.kind === 'todo') this.lexemeOps.postTodo(entry_id, String(args.text ?? ''));
-        else this.lexemeOps.postLog(entry_id, String(args.text ?? ''));
-        const returnTo = args.returnTo ?? '';
-        const safe = returnTo.startsWith('/') && !returnTo.startsWith('//');
-        return server.forwardResponse(safe ? returnTo : `/ww/wordwiki.wordView(${entry_id})`);
+        if(kind === 'todo') this.lexemeOps.postTodo(entry_id, String(text ?? ''));
+        else this.lexemeOps.postLog(entry_id, String(text ?? ''));
+        return {action: 'reload', targets: [
+            `.-lexeme-log-${entry_id}-`,
+            // the lexeme editor's generic log-relation fragments + the
+            // pending-count bar (changeKeys' scope:'parent' shape)
+            `.-rel-${entry_id}-log-`,
+            `.-rel-${entry_id}-log-shape-`,
+            `.-entry-${entry_id}-activity-`,
+        ]};
     }
 
     // The speaker's display label beside a recording - "Name (Region)" -

@@ -131,15 +131,19 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         const html = renderToStringViaLinkeDOM(markup);
         assertStringIncludes(html, 'ww-log-pane');
         assertStringIncludes(html, 'recheck');
-        assertStringIncludes(html, 'test (');            // byline: author (when)
-        assertStringIncludes(html, 'wwLogText');         // the Post box (in the drawer)
+        assertStringIncludes(html, 'ww-log-byline');     // author (when) prefix
+        assertStringIncludes(html, 'wwLogText');         // the draft box (in the drawer)
         assertStringIncludes(html, 'ww-log-fab');        // the floating dock toggle
         assertStringIncludes(html, 'ww-log-drawer');     // the fixed bottom drawer
-        assertStringIncludes(html, 'postLexemeLog');     // posts through the route
+        assertStringIncludes(html, 'postLexemeLog');     // posts through the tx route
         assertStringIncludes(html, '<strong>recheck</strong>');  // markdown rendered
-        // The actionable peer: open todos listed, the todo button present.
-        assertStringIncludes(html, 'Open todos (1)');
-        assertStringIncludes(html, 'check with elders');
-        assertStringIncludes(html, 'Post as todo');
+        // The reading section is a standard reloadable fragment (posting
+        // refreshes it in place - no page reload).
+        assertStringIncludes(html, '-lexeme-log-1000-');
+        assertStringIncludes(html, 'wordwiki.renderLexemeLogSection(1000)');
+        // The todo peer is BUILT but HIDDEN for now (dz: confusing) - the
+        // verb works (see postTodo test); the pane shows no todo UI.
+        assert(!html.includes('Post as todo'), 'todo button hidden for now');
+        assert(!html.includes('Open todos'), 'todo list hidden for now');
     });
 });

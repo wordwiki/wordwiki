@@ -32,8 +32,14 @@ Key decisions (dz's, after pushing back on my earlier shapes):
   (allowSelfApprove bounded-act precedent); under an UNAPPROVED entry
   the post stays pending (published-tree invariant). Route:
   wordwiki.postLexemeLog (form POST, kind=log|todo, returnTo bounce).
-- Todos = the actionable peer (replaced #tags): "Post as todo" files
-  a generic unassigned Todo w/ text as details; pane lists OPEN todos.
+- Todos = the actionable peer (replaced #tags): postTodo files a
+  generic unassigned Todo w/ text as details.  UI HIDDEN for now (dz:
+  confusing) - verb/route kind/tests stay; re-show later.
+- Round 3 (same day): posting via tx -> {action:'reload', targets}
+  (word view log section = reloadable fragment `-lexeme-log-<id>-`;
+  same targets hit the editor's `-rel-<id>-log-*` fragments) so the
+  dock is on the LEXEME EDITOR page too, no page reload.  Bylines show
+  user NAMES (entry-schema setUsernameDisplayHook <- users table).
 - Design-language: the ONE sanctioned non-modal entry surface -
   "modals are for mutations where the page is the context you're
   LEAVING; the log is one where the page is the context you're
