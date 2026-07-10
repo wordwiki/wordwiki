@@ -16,218 +16,452 @@ generic layer owns only the **mechanism**; everything domain-specific (prompts,
 schema, stage graph, review UI, how rows get written) is a per-consumer **recipe**.
 This mirrors how gallery/tasks stay generic via `tableByName`/owner descriptors.
 
+> **Status of this doc.** This is now a build spec, grounded in the existing code
+> (file:line refs throughout).  The build order at the end is what we execute.
+> The anchor case (ongoing service sheets) is the first Layer-2 vertical and most
+> of its substrate — the scoped gallery, contain-fit rendering, rotation — is
+> **already shipped**.
+
 ## Anchor case: ongoing paper service records (rides existing machinery)
 
 The **primary, ongoing** use is not a special scan pipeline — it's the piece we
 already shipped.  Volunteers keep collecting service records **on paper** (the
 clipboard clients and volunteers are comfortable with), and at the end of a shift
-they **photograph the sheets into the event's photo gallery** (`gallery_photo`
-attached to the event — done).  A deferred, batch **extract** then turns those
-photos into `service` rows on the same event — so no one retypes a season of data
-for reports.
+they **photograph the sheets into the event's photo gallery** — the `service-sheets`
+scoped `gallery_photo` gallery on the event (`rabid/gallery.ts`, `scope='service-sheets'`,
+`renderGallery('event', id, 'service-sheets', 'Service Record Sheets')`; **done**).
+A deferred, batch **extract** then turns those photos into `service` rows on the same
+event — so no one retypes a season of data for reports.
 
 This means, for the anchor case:
-- **Ingestion is already built** — the source images are the event's gallery photos.
-  No upload/normalise UI to add for this case.
+- **Ingestion is already built** — the source images are the event's `service-sheets`
+  gallery photos.  No upload/normalise UI, and **no `source_page`/`page_region`
+  tables**, for this case.
 - **Target + context are trivial** — `target_kind='service'`, `target_context={event_id}`
   (the event that owns the photos); it lands exactly the `service.event_id` we have.
-- **Provenance is a `gallery_photo`** — a landed `service` points back at the photo it
-  came from; retract-a-sheet = delete its services.
-- **Capture and extract are decoupled in time** — this is a feature.  The photo is the
-  durable record: teams can **start photographing sheets into event galleries this
-  season immediately** (works today), and extraction can come later and be **re-run**
-  as the prompt improves.  You're never worse off than "we have the sheets."
-- **You control the paper form** — so design the record sheet to be extraction-
-  friendly (boxed fields, consistent layout, maybe the event on it) and co-design it
-  with the prompt.  This is a big accuracy lever the messy *historical* records don't
-  have; keep the two cases separate in your head (clean ongoing sheets vs loose old
-  records — same substrate, very different recipes/quality).
+- **Provenance is a `gallery_photo`** — a landed `service` points back (`extraction_job_id`
+  + `source_gallery_photo_id`) at the photo it came from; retract-a-sheet = delete its
+  services.
+- **Capture and extract are decoupled in time** — a feature.  The photo is the durable
+  record: teams can **start photographing sheets into event galleries this season
+  immediately** (works today), and extraction can come later and be **re-run** as the
+  prompt improves.  You're never worse off than "we have the sheets."
+- **You control the paper form** — so design the record sheet to be extraction-friendly
+  (boxed fields, consistent layout, the event pre-printed).  A big accuracy lever the
+  messy *historical* records don't have; keep the two cases separate (clean ongoing
+  sheets vs loose old records — same substrate, very different recipes/quality).
 
 ## Two layers (the load-bearing split)
 
 **Layer 1 — the cached extraction derivation (the primitive).**  A pure,
 content-addressed function `(image-region, stage, prompt_version, model) → result`,
 memoised in the derived content store — exactly like the derived crop store.  It
-**owns no images**: it takes a *reference* (content hash + rect(s)).  No job, no UI,
-no tables of its own.  A consumer that already owns its images (PDM: the dict's page
-scans + hand-drawn bounding groups) uses Layer 1 **directly** as a read-through
-derived attribute — `transliterate(transcribe(region))`, each stage cached.
+**owns no images and no tables**: it takes a *reference* (content hash + optional
+rect(s)).  A consumer that already owns its images (PDM: the dict's page scans +
+hand-drawn bounding groups) uses Layer 1 **directly** as a read-through derived
+attribute — `transliterate(transcribe(region))`, each stage cached.
 
 **Layer 2 — the flow (ingestion + job + review + filing).**  Everything Layer 1
-deliberately isn't: the **image lifecycle** (upload, normalise/rotate/deskew via
-`convert` in a derived store, retract), the **extraction job** (orchestration,
-per-stage status, liveness), **review + commit**, and **filing rows into a target
-table with provenance + retract**.
+deliberately isn't: the **image lifecycle** (upload, normalise/rotate via `convert`
+in a derived store, retract), the **extraction job** (orchestration, per-stage status,
+liveness), **review + commit**, and **filing rows into a target table with provenance
++ retract**.
 
 **Batch vs single is a Layer-2 property, not the layer boundary.**  A job may drive
 one image (a required form) or a thousand pages; either way it's Layer 2 if it needs
-ingest/review/commit.  The boundary is *"do you own the image and just want the
-cached extraction" (L1)* vs *"do you need the flow" (L2)* — not the count.
+ingest/review/commit.  The boundary is *"do you own the image and just want the cached
+extraction" (L1)* vs *"do you need the flow" (L2)* — not the count.
 
 ```
                  ┌───────────────── Layer 2: the flow ─────────────────┐
-  upload/rotate ─┤ source_page → page_region → extraction_job(+stages) │→ land → target table
+  upload/rotate ─┤ source images → extraction_job(+stages) → staged     │→ land → target table
    (derived)     │            review · commit · retract · provenance    │      (+ provenance FK)
                  └───────────────────────────┬─────────────────────────┘
-                                             │ calls, per stage
+                                             │ calls, per stage (cached)
                  ┌───────────────────────────┴─────────────────────────┐
   PDM uses this ─┤ Layer 1: cache  (image-ref, stage, prompt_version)   │
    directly      │   → derived content store (memoised, per stage)      │
                  └──────────────────────────────────────────────────────┘
 ```
 
-## Layer 1 — the cache
+## Grounded in existing infrastructure
 
-- **Key = `hash(region-image) + model + prompt_version + stage`.**  Per-stage keys
-  are essential: re-running the transliterate prompt must reuse every cached
-  transcription.  `prompt_version` is the explicit invalidation knob (bump to
-  re-run/re-grade); the prompt template lives in the closure.  Caller-supplied prompt
-  bits are allowed **only if output-irrelevant** — anything that changes the output
-  belongs in the versioned/keyed part, or you silently serve stale extractions.
-- **Region image** is produced by cropping the (optionally normalised) source image
-  to the rect(s) via the existing content-addressed crop store — so the cropped
-  input is itself cached and content-addressed.
-- **A stage recipe** is `{name, model, prompt_template (versioned), output_schema}`.
-  A consumer's Layer-1 recipe is just an ordered list of stages; the runner feeds
-  each stage's output as the next stage's input.
-- **Output** is validated JSON (the stage's `output_schema`).  A stage may also
-  return **regions** (sub-boxes it used), which Layer 2 stores for per-row review
-  crops.
-- **Standalone use (PDM):** no job, no generic tables — the consumer holds its own
-  image refs and reads the cached derivation like any derived value.  This is the
-  Layer-1 reference consumer and the first thing to build.
+Everything below rides code that already exists.  Key anchors:
+
+| need | existing mechanism | ref |
+|---|---|---|
+| memoised, content-addressed derivation | `content.getDerived(store, {fn}, closureKey[], ext)` — fn may **return a string/Uint8Array** that's written to the `ext` file | `liminal/content-store.ts:156` |
+| content hash | SHA-256 of `JSON.stringify(closureKey)`; fs paths kept out of the key | `content-store.ts:165` |
+| the original photo bytes | `parsePhotoValue(value).path` → `content/photos/…`; fs path `${contentDir}/${contentRef}` | `liminal/photo.ts:155,446` |
+| a rotated, size-bounded JPEG for the model | `containedPhotoPath(path, 1600, 1600, rotate)` (derived, cached) | `photo.ts:318` |
+| credential loading (degrade, never crash) | `loadMailer(appName)` reads `${appName}-mail-credential.json` | `liminal/mail.ts:155` |
+| new table = interface + `class extends Table` + `createDMLString()` + register in `rabid.tables` | `GalleryPhotoTable` | `rabid/gallery.ts:40,68,339`; `rabid/rabid.ts:70,106` |
+| nullable FK-to-source (provenance) | `ManagedForeignKeyField(name, table, col, {nullable,indexed}, label)` | `rabid/task.ts:107,999` |
+| retract by FK | `DELETE FROM t WHERE fk = :id` | `rabid/group.ts:210` |
+| a fragment that re-renders on cross-actor activity | `liveReloadableProps(keys[], url)` + emit matching key | `liminal/table.ts:2091`; `gallery.ts:157` |
+| the service row to write | `service.insert({event_id, client_name, …})` — only those two required | `rabid/service.ts:125,168` |
+
+Two facts that shape the design:
+
+1. **The derived store already reads/writes JSON.**  `getDerived`'s fn can `return`
+   a JSON string, written under a `.json` extension, keyed by the closure hash.  So a
+   cached extraction is a file, and Layer 1 needs **no tables**.  (There is no built-in
+   *reader* — we add a 3-line `readDerived` helper.)
+2. **`dirty.record` is a no-op outside a request.**  A background job that updates
+   status over time has no ambient dirty collector, so it must append the liveness key
+   **directly to the shared `app.liveLog`** (`liminal.ts:742`, `live.ts:76`).  This is
+   the single non-obvious wiring in the runner.
+
+## Layer 1 — the cache (`liminal/extract.ts`, new; no tables)
+
+A **stage recipe** and the cached primitive:
+
+```ts
+// A single extraction stage.  Ordered lists of these are a recipe; stage k's
+// output feeds stage k+1's input.  prompt_version is the explicit invalidation knob.
+export interface ExtractStage {
+    name: string;               // 'transcribe' | 'extract' | 'transliterate'
+    model: string;              // 'claude-opus-4-8'  (participates in the cache key)
+    promptVersion: number;      // bump to re-run / re-grade  (in the cache key)
+    imageBox: number;           // longest edge fed to the model (default 1600); a GRADEABLE
+                                // knob — in the cache key, so sizes cache side-by-side.
+    schema: JsonSchema;         // output_schema; the result is validated against it
+    // Build the prompt from the prior stage's output.  MUST only use output-relevant
+    // bits — anything that changes the output but isn't in (name, model, promptVersion,
+    // imageBox, input) silently serves stale extractions.
+    prompt(input: unknown): string;
+}
+export type ExtractRecipe = ExtractStage[];
+
+// The primitive.  Key = hash([ 'extract', imageContentRef, model, promptVersion,
+// imageBox, stageName, inputHash ]).  The IMAGE is referenced by content hash (never
+// bytes in the key); the prior stage's output participates via its own hash, so
+// re-running a later stage reuses every earlier cached stage.
+export async function extractStage(
+    cfg: ExtractConfig, imageContentRef: string, rotate: number,
+    stage: ExtractStage, input: unknown): Promise<unknown>
+{
+    const box = stage.imageBox || 1600;
+    const inputHash = await digestString(JSON.stringify(input ?? null));
+    const ref = await content.getDerived(
+        `${cfg.derivedDir}/extractions`,
+        { extract: async (_target: string) => {
+            // rotate-FIRST, then contain to `box` (never crop for the LLM) — both via the
+            // existing contained-photo derivation, itself cached & content-addressed.  box
+            // may exceed 1600 iff sheet originals are kept full-res (capture exception).
+            const jpeg = await cfg.photo.containedBytes(imageContentRef, box, box, rotate);
+            const raw  = await cfg.llm.extract(stage.model, stage.prompt(input),
+                                               {bytes: jpeg, mediaType: 'image/jpeg'});
+            return JSON.stringify(validateJson(stage.schema, raw));   // string → written .json
+        }},
+        ['extract', imageContentRef, stage.model, stage.promptVersion, box, stage.name, inputHash],
+        'json');
+    return JSON.parse(await readDerived(cfg.derivedDir, ref));
+}
+
+// Run a whole recipe over one image, each stage cached independently.
+export async function extractAll(
+    cfg: ExtractConfig, imageContentRef: string, rotate: number,
+    recipe: ExtractRecipe): Promise<unknown>
+{
+    let out: unknown = null;
+    for (const stage of recipe) out = await extractStage(cfg, imageContentRef, rotate, stage, out);
+    return out;
+}
+
+// getDerived returns only a contentId; add the missing reader.
+async function readDerived(derivedDir: string, contentId: string): Promise<string> {
+    return Deno.readTextFile(posix.join(derivedDir, contentId));
+}
+```
+
+- **Per-stage keys are essential**: re-running the transliterate prompt must reuse
+  every cached transcription.  `promptVersion` is the invalidation knob; the prompt
+  template lives in `prompt()`.
+- **Region image** (PDM): the same primitive, but `imageContentRef` is first cropped
+  to the rect(s) via the existing crop store, so the cropped input is itself cached.
+  For the anchor case there are **no regions** — the whole sheet is the input.
+- **Standalone use (PDM):** no job, no tables — hold your own image refs and read the
+  cached derivation like any derived value.  This is the Layer-1 reference consumer.
+
+### The LLM client (`liminal/llm.ts`, new — nothing exists today)
+
+There is **no** LLM/Anthropic client, SDK, or API-key handling anywhere in the repo.
+Build a minimal one, mirroring `loadMailer`'s degrade-don't-crash credential pattern:
+
+```ts
+export interface LlmImage { bytes: Uint8Array; mediaType: 'image/jpeg' | 'image/png'; }
+
+export interface Llm {
+    // Returns validated JSON (via the model's tool-use / structured-output mode).
+    extract(model: string, prompt: string, image: LlmImage): Promise<unknown>;
+}
+
+// Reads `${appName}-anthropic-credential.json`  ({ apiKey, defaultModel? }).
+// Missing/broken → a DisabledLlm whose extract() throws a clear error, so a JOB fails
+// visibly (status 'failed', error surfaced) rather than the server crashing.
+export function loadLlm(appName: string): Llm;
+
+// AnthropicLlm.extract: POST https://api.anthropic.com/v1/messages
+//   headers: x-api-key, anthropic-version
+//   content: [ {type:'image', source:{type:'base64', media_type, data}}, {type:'text', text: prompt} ]
+//   structured output via a single output tool whose input_schema = stage.schema.
+```
+
+Credential file (git-ignored, one per app, mirrors the mail credential):
+`rabid-anthropic-credential.json` = `{ "apiKey": "sk-ant-…", "defaultModel": "claude-opus-4-8" }`.
+
+**Image sizing note.**  Photo originals are already capped at ~1600px on the long edge
+(`LM_PHOTO_MAX_DIM`, `photo.ts`), and `ALLOWED_CONTAIN_BOXES` already includes 1600².
+So `containedBytes(ref, 1600, 1600, rotate)` is "the whole sheet, oriented, ≤1600, JPEG"
+— exactly the LLM input we want, and cached.  *Open lever:* dense handwriting may want
+more than 1600px; that means raising the **capture** cap, not just the box — flagged
+below.
 
 ## Layer 2 — the flow
 
-- **Image ingestion / normalisation.**  Upload → a `source_page` (content-addressed
-  original) → derivations, whose params are part of the Layer-1 cache key.  Retraction
-  removes the page + its landed rows.  (Only here — Layer 1 never ingests.)  **Pipeline
-  order matters:**
-  - **Rotate/deskew the full-res original FIRST** (`convert`) → a `rotated` derivation.
-    Rotating a downscaled image loses quality irrecoverably, and correct orientation is
-    what both the LLM and the human viewer want, so this is the shared first step.
-  - **LLM path:** `rotated` → **only if it exceeds the model's size limits**, a
-    `downscale` derived step → LLM.  **Never crop for the LLM** — it needs the whole
-    sheet.  The only crops are the *post-extraction* per-line review crops (bboxes),
-    which are display, not input.
-  - **Display path** (the gallery card) branches off the same `rotated`: a **contain-
-    fit** to a manageable box (not the current cover-crop, which clips a portrait sheet
-    into an unreadable strip).  ⇒ needs a new PhotoService "contain" mode.
-- **`page_region`** — regions on a page, each a **bbox = a *set* of rects** (margin
-  notes ⇒ non-contiguous), with the region's own provenance (hand-drawn / model-
-  detected / table-line-split).  Region *producers* are pluggable; reconcile with the
-  bbox tooling wordwiki already has for PDM.
-- **`extraction_job`** — the orchestration + progress record: the source page(s), the
-  `target_kind`, the `target_context` (below), per-stage status, the **staged output
-  JSON** (extracted-but-not-yet-committed rows), and errors.  It carries **liveness**
-  (shape/row key) so status updates and placeholder rows render live, and concurrent
-  jobs are just concurrent rows.  Batch concerns (concurrency cap, retry, resumable,
-  rate-limit) live in the job runner.
-- **Review** is per-shape and thin (a keyboard grid for tabular targets; a per-entry
-  form for dict).  Don't over-generalise it — generalise the *data* (staged rows) and
-  the per-row **review crop** (`region.bbox` → cached crop), not the screen.
+### `extraction_job` (`rabid/extraction_job.ts`, new)
 
-### Filing against a target table (the part that was unclear) — proposal
+The orchestration + progress record.  Follows the standard table conventions
+(`gallery.ts` shape; register in `rabid.tables`).  JSON columns are plain `TEXT`
+(`StringField`) serialized/parsed at the call sites — there is no framework JSON field
+type; a thin `JsonField extends StringField` marks intent and carries `parse`/`format`
+static helpers (model on `MarkdownField extends StringField`, `table.ts:1371`).
 
-Two filing shapes, both supported:
+```ts
+export interface ExtractionJob {
+    extraction_job_id: number;
+    target_kind:    string;   // recipe-registry key: 'service' | 'attendance' | …
+    target_context: string;   // JSON domain anchors, e.g. {"event_id":42}
+    status:         string;   // job_status_enum (below)
+    stage_status:   string;   // JSON: per-source progress   {"<gallery_photo_id>":{stage,status,error}}
+    staged_output:  string;   // JSON: extracted-but-not-committed rows, per source, editable in review
+    error:          string;   // top-level failure message (default '')
+    created_by:     number;   // ManagedForeignKeyField → volunteer
+    created_time:   string;   // ManagedDateTimeField
+}
 
-- **Create-new-rows** (service / attendance / new-dict): the extraction produces new
-  domain rows filed into a target table, with provenance + retract.
-- **Annotate-existing** (PDM): the extraction is a derived value of an existing
-  record that owns the region — usually read-through from Layer 1, optionally
-  committed onto the record after review.
-
-Make filing generic with **three pieces**:
-
-1. **`target_kind` + `target_context` on the job.**  `target_kind` selects the recipe
-   (stages + landing).  `target_context` is domain anchors set when the import is
-   created — e.g. service `{event_id}`, attendance `{date}`, new-dict `{orthography,
-   dictionary_id}`.  The "start an import" UI collects these.  This is how the
-   generic layer supplies the fixed fields a domain row needs without knowing the
-   schema.
-2. **A per-`target_kind` `land(rows, context, provenance) → landedKeys` recipe.**
-   Resolved like `tableByName`; it does the domain write (plain insert / versioned
-   assertion / dedup / required-fields-from-context) and stamps provenance.  A
-   **default adapter** covers the plain tabular case (map extracted fields → columns,
-   merge `target_context`, insert); targets override with a function when they need
-   versioning or dedup (dict).  The generic layer never sees a domain schema.
-3. **A provenance-column convention** so *retract* is generic even though *land* is
-   not: landable tables carry a nullable `extraction_job_id` (and optionally
-   `page_region_id`) FK.  `land` sets it; generic retract = delete/void where
-   `extraction_job_id = :job`.  Also gives the per-row "which scan / which page" badge
-   and the review crop for free.
-
-So: **land is a recipe (domain-specific), retract + provenance are a convention
-(generic).**  PDM's "annotate-existing" recipe writes the transcription/
-transliteration onto its dict entry (or is pure read-through and lands nothing).
-
-## Generic schema sketch
-
-Layer 1 has **no tables** (it's the derived store keyed by content).  Layer 2:
-
-```
-source_page:     page_id, image (content path), normalize_params, uploaded_by, kind, ...
-page_region:     region_id, page_id, rects (json: [{x,y,w,h}...]), origin ('drawn'|'model'|'lines')
-extraction_job:  job_id, target_kind, target_context (json), page_id|region_set,
-                 recipe_version, status, stage_status (json), staged_output (json),
-                 error, created_by, created_time                         -- carries liveness
--- convention on landable domain tables:
-service:  ... , extraction_job_id? (fk), page_region_id?      -- provenance; NULL for manual rows
-dict:     ... , extraction_job_id?, page_region_id?
+export const job_status_enum: Record<string, string> = {
+    pending:   'Pending',       // created, queued
+    running:   'Running',       // LLM in flight
+    review:    'Needs review',  // extracted; staged_output awaiting a human
+    landed:    'Landed',        // rows written to the target table
+    failed:    'Failed',        // see error / stage_status
+    retracted: 'Retracted',     // landed rows deleted; job kept for history
+};
 ```
 
-A **recipe registry** keyed by `target_kind` supplies `{stages[], land, retract?}`.
+Table:
+
+```ts
+super('extraction_job', [
+    new PrimaryKeyField('extraction_job_id', {}),
+    new StringField('target_kind', {edit: security.never}),
+    new JsonField('target_context', {default: '{}', edit: security.never}),
+    new EnumField('status', job_status_enum, {default: 'pending'}),
+    new JsonField('stage_status', {default: '{}'}),
+    new JsonField('staged_output', {default: '{}'}),
+    new StringField('error', {default: ''}),
+    new ManagedForeignKeyField('created_by', 'volunteer', 'volunteer_id', {nullable: true}),
+    new ManagedDateTimeField('created_time', {}),
+]);
+```
+
+The job carries **liveness** on its `rowKey` so status/staged-rows render live; concurrent
+jobs are just concurrent rows.  Its source set is **not a column** for the anchor case —
+the runner selects the event's `service-sheets` gallery photos from `target_context.event_id`
+at run time.  (Ingestion tables `source_page`/`page_region` arrive with the later
+upload/drawn-region consumers, per build order.)
+
+### Provenance convention on landable tables
+
+`land` is domain-specific; **retract + "which scan" are generic** via a nullable FK
+convention.  For the anchor case, add to `service` (mirrors `from_template_task_id`):
+
+```ts
+new ManagedForeignKeyField('extraction_job_id',      'extraction_job', 'extraction_job_id', {nullable: true, indexed: true}),
+new ManagedForeignKeyField('source_gallery_photo_id','gallery_photo',  'gallery_photo_id',  {nullable: true}),
+```
+
+- `land` stamps both; manual rows leave them NULL.
+- Generic retract: `DELETE FROM service WHERE extraction_job_id = :job` (`group.ts:210`
+  pattern).
+- Free per-row badge ("from Sheet 3 · scan #7") and the review crop (from the source
+  photo) fall out of `source_gallery_photo_id`.
+
+### The recipe registry (`target_kind` → recipe)
+
+Resolved like `tableByName`.  `land` is the only domain-specific piece; the generic layer
+never sees a domain schema.
+
+```ts
+export interface ExtractionTarget {
+    kind: string;                     // 'service'
+    label: string;                    // 'Service records'
+    // What "start an import" collects into target_context (e.g. the event_id).
+    contextFields: ContextFieldSpec[];
+    stages: ExtractRecipe;            // Layer-1 stages; final stage outputs an array of rows
+    // Write extracted rows to the domain table; stamp provenance; return landed keys.
+    // Plain-tabular targets can use the default adapter (map fields → columns, merge
+    // context, insert); versioned/dedup targets (dict) supply their own.
+    land(rows: unknown[], context: Record<string, unknown>,
+         prov: {extraction_job_id: number; source_gallery_photo_id: number}): number[];
+    retract?(jobId: number): void;    // default: DELETE WHERE extraction_job_id = job
+    reviewShape: 'grid' | 'form';     // hint for the thin review UI
+}
+export const extractionTargets: Record<string, ExtractionTarget>;   // registry
+```
+
+**The `service` target** (anchor case):
+
+```ts
+extractionTargets['service'] = {
+    kind: 'service', label: 'Service records', reviewShape: 'grid',
+    contextFields: [{name: 'event_id', kind: 'event'}],   // set when the import is created
+    stages: [{
+        name: 'extract', model: 'claude-opus-4-8', promptVersion: 1,
+        schema: serviceSheetSchema,      // array of {client_name, service_kind, bike_description,
+                                         //           service_description, client_postal, client_phone}
+        prompt: () => SERVICE_SHEET_PROMPT,   // "here is a photographed paper service-record sheet…"
+    }],
+    land(rows, {event_id}, prov) {
+        return rows.map(r => rabid.service.insert({
+            event_id,
+            client_name: r.client_name || '(from scan)',
+            service_kind: normalizeServiceKind(r.service_kind),   // → diy | full | other
+            bike_description: r.bike_description ?? '',
+            service_description: r.service_description ?? '',
+            client_postal: r.client_postal ?? '',
+            client_phone: r.client_phone ?? '',
+            extraction_job_id: prov.extraction_job_id,
+            source_gallery_photo_id: prov.source_gallery_photo_id,
+        } as service.ServiceOpt));
+    },
+};
+```
+
+Only `event_id` + `client_name` are strictly required by `service.insert`; everything
+else defaults (`service.ts:141`), so a sparse extraction still lands.
+
+### The job runner (`rabid/extraction_job.ts` methods + a background worker)
+
+Generic orchestration; batch concerns live here.
+
+- **Resolve** the recipe from `target_kind`; **gather sources** (anchor: the event's
+  `service-sheets` photos via `gallery_photo.forOwner`).
+- **Per source, per stage** call Layer 1 (`extractAll`) — **cached**, so the derived
+  store IS the resumability + re-run mechanism: a killed job re-runs and every already
+  computed stage is a cache hit; improving the prompt (bump `promptVersion`) re-extracts
+  only what changed.
+- **Concurrency + retry**: cap concurrent LLM calls (propose 3), retry transient errors
+  (propose 2× with backoff).  Rate-limit against the key.
+- **Write staged_output** (not the domain table) and set `status='review'`.
+- **Liveness (the one non-obvious bit):** the worker runs outside a request, so after
+  each stage/status write it must
+  `app.liveLog.append([sel(rabid.extraction_job.rowKey(jobId))])` directly — a bare
+  `dirty.record` would be dropped (`live.ts:76`, `liminal.ts:742`).  The event page's job
+  section registers that exact `rowKey` via `liveReloadableProps`, so progress ticks live.
+- **Land** (a `@routeMutation`, in-request → normal dirty flow): for each reviewed staged
+  row call `target.land(...)`, stamping provenance; set `status='landed'`.  Landed
+  services now appear in the event's Services/activity, each with a "from scan · Sheet N"
+  badge linking back to the source photo.
+- **Retract** (`@routeMutation`): `DELETE FROM service WHERE extraction_job_id = :job`;
+  set `status='retracted'`.
+
+### Review — per-shape and thin
+
+Don't over-generalise the *screen*; generalise the *data* (staged rows) and the per-row
+**review crop** (source photo, or `region.bbox` when regions exist).  The `service`
+target's `reviewShape:'grid'` is a keyboard grid of staged rows (edit/accept/drop) beside
+the source sheet; the dict target will be a per-entry form.  Generalise the review
+interface only once **two** L2 consumers exist (grid vs form), so the abstraction is
+drawn from real difference.
+
+## Anchor-case UI wiring (rabid/event + gallery)
+
+The `service-sheets` gallery header is **already a ☰ menu** built to host this
+(`gallery.ts:renderGalleryAdd`, item "Add photo…").  Add:
+
+- **"Import scanned records…"** menu item → creates an `extraction_job`
+  `{target_kind:'service', target_context:{event_id}}` and kicks the runner.
+- A **job section** on the event page (below the sheets gallery), `liveReloadableProps`
+  on the job `rowKey`: shows per-sheet progress while running, then the review grid, then
+  **Land** / **Retract**.
+- Landed `service` rows render in the existing Services/activity section with a scan badge
+  (`source_gallery_photo_id` → sheet thumbnail + link).
+
+## Generic schema sketch (recap)
+
+Layer 1: **no tables** (the derived store, keyed by content).  Layer 2:
+
+```
+extraction_job:  extraction_job_id, target_kind, target_context(json), status,
+                 stage_status(json), staged_output(json), error, created_by, created_time
+-- provenance convention on landable domain tables (nullable; NULL for manual rows):
+service:  … , extraction_job_id? (fk), source_gallery_photo_id? (fk)
+dict:     … , extraction_job_id?, page_region_id?
+-- deferred, arrive with upload/drawn-region consumers (NOT the anchor case):
+source_page:  page_id, image, normalize_params, uploaded_by, kind, …
+page_region:  region_id, page_id, rects(json), origin('drawn'|'model'|'lines')
+```
 
 ## PDM as the Layer-1 reference consumer
 
-PDM is the ideal first vertical because it **isolates Layer 1**: it owns its images
-and bounding groups (no ingestion), needs the two-stage cache (transcribe →
-transliterate), and — crucially — you have **hand-done answers** to grade against.
-Build Layer 1 + a **grading harness** (per-stage extracted-vs-hand, scored) here, so
-the model / phone-vs-scanner / rotation experiments produce numbers, not vibes.
+PDM isolates Layer 1: it owns its images + bounding groups (no ingestion), needs the
+two-stage cache (transcribe → transliterate), and — crucially — has **hand-done answers**
+to grade against.  Build Layer 1 + a **grading harness** (per-stage extracted-vs-hand,
+scored) here, so model / phone-vs-scanner / rotation experiments produce numbers, not
+vibes.  The **service sheets are the cleanest input** (you design the form) and the
+primary value, and are also gradeable — reasonable to prove L1 on service sheets first
+and keep PDM as the harder handwritten/multi-stage validation; they share the cache.
 
 ## Build order
 
-1. **Layer 1** — content-addressed, per-stage, `prompt_version`ed derivation cache on
-   the derived store; recipe = ordered stages.  Prove on **PDM** with the grading
-   harness.  No job, no generic tables, no UI.
-2. **Layer 2** — the `extraction_job` + `target_kind`/`target_context`/`land`/
-   provenance filing + a thin review grid + the job runner (batch: concurrency/retry).
-   First L2 consumer: the **anchor case** (ongoing service sheets) — and note it
-   needs **no ingestion tables** (`source_page`/`page_region` upload/normalise), since
-   its images are already event `gallery_photo`s.  Ingestion + drawn regions come with
-   the *later*, harder consumers (historical records, PDM's own tooling).
-3. Generalise the recipe interface + review shapes only once **two** L2 consumers
-   exist (grid vs per-entry), so the abstraction is drawn from real difference.
+1. **LLM client** (`liminal/llm.ts`) + credential loader — net-new, mirrors `loadMailer`;
+   a `DisabledLlm` default so no-key installs degrade cleanly.
+2. **Layer 1** (`liminal/extract.ts`) — `extractStage`/`extractAll` + `readDerived` on the
+   derived store; stage recipe type; JSON-schema validation.  Prove on the **service
+   sheets** (sheet-image → rows JSON, hand-graded) — no job, no tables, no UI.  Add the
+   PDM grading harness in parallel/after.
+3. **Layer 2 — anchor case only**: `extraction_job` table (+ register in `rabid.tables`);
+   `JsonField`; `service` provenance columns; the `service` recipe + registry; the job
+   runner (concurrency/retry/liveLog) ; the thin review grid; the event-page wiring +
+   the "Import scanned records…" menu item.  **No** ingestion tables.
+4. **Generalise** the recipe interface + review shapes only once a **second** L2 consumer
+   exists (grid vs per-entry form), so the abstraction is drawn from real difference.
+   Ingestion (`source_page`/`page_region`, upload/normalise/drawn regions) arrives with
+   the later, harder consumers (historical records, PDM tooling).
 
-Note on the L1 vertical: PDM is the cleanest *layer-isolation* test (L1 only, big
-hand-graded corpus, multi-stage) — but the **service sheets are the cleanest input**
-(you design the form) and the **primary value**, and are also gradeable (photograph N
-sheets, hand-key the answers).  Reasonable to prove L1 on the service sheets first
-(sheet-image → JSON, graded) and keep PDM as the harder handwritten/multi-stage
-validation — or do both; they share the cache.
+## Resolved / open questions
 
-## Open questions (for dz)
+**Resolved by the survey:**
+- *Which gallery photos are record sheets?* → the separate **`service-sheets` gallery
+  scope** (built).  Extractor inputs are unambiguous.
+- *Extract the original, not the display crop?* → yes; the LLM input is
+  `containedBytes(original, 1600, 1600, rotate)` (whole sheet, oriented, ≤1600), a cached
+  derivation of the **content-addressed original**, never the landscape card crop.
+- *Landing = `land(rows, context, provenance) → keys`?* → yes, single-phase; the
+  "validate → commit" two-phase is provided naturally by `staged_output` (extract → edit
+  staged rows in review → `land`).  No separate validate hook.
+- *Review-crop source of truth?* → the **rotated, contained** image — the same pixels the
+  LLM sees.
 
-- **Landing interface exactly:** is `land(rows, context, provenance)` returning keys
-  enough, or do some targets need a two-phase (validate → commit) hook?
-- **PDM commit vs read-through:** does the transliteration get *stored* onto the dict
-  entry (a new assertion) after review, or stay a live derived value?  (Affects
-  whether PDM ever touches Layer 2's filing at all.)
-- **Region tables for PDM:** does PDM map its existing bounding groups into
-  `page_region`, or keep its own and only borrow Layer 1?  (Leaning: keep its own;
-  Layer 1 needs only image-ref + rects.)
-- **Review-crop source of truth:** `page_region.rects` on the *normalised* image vs
-  the original — pick one so crops and the LLM see the same pixels.
-- **Batch policy:** desired concurrency + rate-limit against the Anthropic key, and
-  resumability granularity (per page? per stage?).
-- **Which gallery photos are record sheets?** (anchor case)  We dropped `photo_kind`
-  when genericising the gallery, so an event's photos mix action shots with record
-  sheets.  Options: a lightweight per-photo "record sheet" marker, a **separate
-  gallery scope** on the event (e.g. `renderGallery('event-service-sheets', id)` — a
-  second generic gallery instance), or the extraction job just selects photos.
-  Leaning: a separate gallery scope, so sheets don't mix with action photos and the
-  extractor's inputs are unambiguous.
-- **Extract the ORIGINAL, not the display crop:** the gallery keeps the full-res
-  content-addressed original (the "Original photo" link); the extractor must read that,
-  not the landscape thumbnail/crop.
+**Resolved by dz:**
+- **Batch policy** → concurrency **3**, retry 2× backoff.  Resumability is
+  per-stage-for-free via the cache.
+- **Capture / image resolution** → storage is a non-issue (few sheet images), so the
+  real question is *LLM cost vs accuracy at larger sizes* — **unknown, so make it a
+  gradeable knob.**  Consequences baked into the design:
+  - The **image box size is a stage/recipe parameter** (default 1600), and — because it's
+    in the Layer-1 cache key — different sizes are cached side-by-side and graded against
+    the hand answers.  Don't hardcode 1600 in the primitive.
+  - To let the knob range **above 1600**, sheet captures must not be pre-downscaled to
+    `LM_PHOTO_MAX_DIM`.  Keep `service-sheets` originals at full resolution (a per-scope
+    capture exception / higher cap), so the extractor can request a larger box when
+    grading says it helps.  Display still uses the contained-1024 card.
+- **PDM commit vs read-through** → **experiment first.**  Near-term PDM deliverable is
+  Layer 1 + the **grading harness only**: batch-scan a whack of already-hand-transcribed
+  entries and measure how it does.  Nothing lands; no commit UI.  Design the UI *after*
+  the result proves useful.
+- **Region tables for PDM** → undecided, so **defer.**  PDM keeps its own bounding groups
+  and borrows only Layer 1 (image-ref + rects); no generic `page_region` yet.
