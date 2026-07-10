@@ -16,11 +16,15 @@ generic layer owns only the **mechanism**; everything domain-specific (prompts,
 schema, stage graph, review UI, how rows get written) is a per-consumer **recipe**.
 This mirrors how gallery/tasks stay generic via `tableByName`/owner descriptors.
 
-> **Status of this doc.** This is now a build spec, grounded in the existing code
-> (file:line refs throughout).  The build order at the end is what we execute.
-> The anchor case (ongoing service sheets) is the first Layer-2 vertical and most
-> of its substrate — the scoped gallery, contain-fit rendering, rotation — is
-> **already shipped**.
+> **Status of this doc.** A build spec, grounded in the existing code (file:line refs
+> throughout).  **BUILT (2026-07-09):** the LLM client (`liminal/llm.ts`), Layer 1
+> (`liminal/extract.ts`), and the Layer-2 anchor case end-to-end — `extraction_job`
+> table + `JsonField` + `service` provenance, the recipe registry + `service` recipe
+> (`rabid/extraction_targets.ts`), the job runner + live review UI
+> (`rabid/extraction_job.ts`), and the "Import scanned records…" menu item.  Proven on a
+> real sheet against the live API (4 rows, correct `service_kind` mapping).  Deferred:
+> editable staged rows, PDM Layer-1 grading harness, ingestion tables (`source_page`/
+> `page_region`) — those come with the later, harder consumers.
 
 ## Anchor case: ongoing paper service records (rides existing machinery)
 
