@@ -6,6 +6,7 @@ import { test } from "../liminal/testing/test.ts";
 import { assert } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, asUser, asSystem } from "./testing.ts";
 import { find, tagOf, hasText } from "../liminal/testing/markup-assert.ts";
+import { markupToString } from "../liminal/markup.ts";
 import { rabid } from "./rabid.ts";
 import * as date from "../liminal/date.ts";
 
@@ -46,19 +47,32 @@ test("services-by-area page renders the map + summary, and routes", async () => 
     });
 });
 
-test("per-event footer map: shows once a postal is captured, absent before", async () => {
+test("per-event footer map: shows once a postal is captured, absent before; manual refresh, not auto-reloading", async () => {
     await withTestDb(async ({ alice }) => {
-        // No services yet -> the fragment routes but draws no map.
+        // No services yet -> the fragment routes, shows its header + Refresh, no map.
         const empty = eventThisYear('Empty');
         const before = await asUser(alice, () => renderRoute(`rabid.service.renderEventServiceMap(${empty})`));
         assert(!find(before, n => tagOf(n) === 'svg'), 'no map before any postal is captured');
+        assert(hasText(before, 'No client postal codes captured yet'));
 
         // A service with a real FSA -> the compact map appears.
         const e = eventThisYear('Busy');
         addService(e, 'N2G');
         addService(e, '');   // a blank one doesn't count as "located"
         const after = await asUser(alice, () => renderRoute(`rabid.service.renderEventServiceMap(${e})`));
+        const html = markupToString(after);
         assert(!!find(after, n => tagOf(n) === 'svg'), 'the small map renders');
         assert(hasText(after, 'Where clients came from'));
+
+        // It is NOT a live/auto-reloading fragment: no service dependency key, so
+        // a service edit won't recompute it.  Instead it carries a manual Refresh
+        // that re-fetches this same fragment, and says it isn't live.
+        assert(!html.includes('-service-event_id-'), 'no service dep key (would auto-reload)');
+        assert(!html.includes('lm-live'), 'not a live fragment');
+        assert(html.includes('Refresh') && html.includes('renderEventServiceMap'),
+               'a Refresh button that re-fetches this fragment');
+        assert(html.includes(`hx-target='#services-map'`) || html.includes('services-map'),
+               'refresh targets the map region');
+        assert(hasText(after, 'Not live'), 'tells the user it is not auto-refreshing');
     });
 });

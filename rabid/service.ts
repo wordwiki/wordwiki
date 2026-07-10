@@ -553,23 +553,34 @@ export class ServiceTable extends Table<Service> {
         return pageQueries.applyFilterNavigate(ServiceTable.mapRangeQuery, form, 'serviceMap');
     }
 
-    // The compact per-event map (embedded at the bottom of the event detail page):
-    // where THIS event's clients came from.  A reloadable fragment keyed on the
-    // service event fk key, so adding/editing a service refreshes it.  Renders
-    // nothing until at least one client postal has been located to an FSA.
+    // The compact per-event map (bottom of the event detail page): where THIS
+    // event's clients came from.  DELIBERATELY NOT a live/dep-key fragment - it
+    // registers no service dependency key, so editing services does NOT recompute
+    // it (the projection + tally is a bit costly and rarely needs to be live
+    // mid-shift).  Instead it carries a Refresh button that re-fetches just this
+    // region on demand (htmx hx-get -> outerHTML swap of #services-map), and a
+    // note that it is not live.
     @route(authenticated)
     renderEventServiceMap(event_id: number): Markup {
         const services = security.runSystem(() => this.servicesForEvent.all({event_id}));
         const tally = tallyPostals(services.map(s => s.client_postal));
-        const props = reloadableProps([this.fkKey('event_id', event_id)],
-            `rabid.service.renderEventServiceMap(${event_id})`, {id: 'services-map'});
-        const located = tally.inRegionTotal + tally.outsideTotal > 0;
-        return [h.div, props,
+        const located = tally.inRegionTotal + tally.outsideTotal
+                        + tally.edge.reduce((s, e) => s + e.count, 0) > 0;
+        return [h.div, {id: 'services-map', class: 'lm-doc-section'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-1'},
+                [h.h4, {class: 'lm-doc-section-label mb-0'}, 'Where clients came from'],
+                // Manual refresh: re-fetch just this fragment and swap it in place.
+                ['button', {type: 'button', class: 'btn btn-sm btn-outline-secondary py-0',
+                            'hx-get': `/rabid.service.renderEventServiceMap(${event_id})`,
+                            'hx-target': '#services-map', 'hx-swap': 'outerHTML',
+                            title: 'This map is not live — click to refresh after adding or editing services'},
+                    '↻ Refresh']],
             located
-                ? [h.div, {class: 'lm-doc-section'},
-                    [h.h4, {class: 'lm-doc-section-label'}, 'Where clients came from'],
-                    renderServiceMap(tally, {size: 'small'})]
-                : undefined];
+                ? renderServiceMap(tally, {size: 'small'})
+                : [h.p, {class: 'text-muted small mb-1'}, 'No client postal codes captured yet.'],
+            [h.div, {class: 'text-muted', style: 'font-size:0.7rem;'},
+                'Not live — use Refresh after adding services.'],
+        ];
     }
 
     // ------------------------------------------------------------------------
