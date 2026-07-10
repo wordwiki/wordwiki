@@ -59,3 +59,36 @@ test("tag detail: lists matching lexemes with the tag's value/assignee", async (
         assertStringIncludes(html, 'wordwiki.wordView(1000)');
     });
 });
+
+test("Tags ☰: prompt_on_add tag opens the dialog pre-filled; self-contained adds immediately", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);   // seeds a plain 'Todo' (prompt_on_add default 0) + word 1000
+        as(fx, 'system', () => {
+            // A value-is-the-point tag (prompt on add) + a self-contained one.
+            fx.ww.tags.insert({slug: 'FollowUp', name: 'Follow up',
+                               is_todo: 1, quick: 1, prompt_on_add: 1, retired: 0});
+            fx.ww.tags.insert({slug: 'NeedsRecording', name: 'Needs Recording',
+                               is_todo: 1, quick: 1, prompt_on_add: 0, retired: 0});
+        });
+        const html = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.renderLexemeTagsSection(1000)`)));
+        // Prompt-on-add: a MODAL insertDialog pre-filled with the tag.
+        assertStringIncludes(html,
+            "wordwiki.lexeme.insertDialog(1000, 1000, 'tdo', null, null, 'edit', &quot;FollowUp&quot;)");
+        // Self-contained: an immediate add (no dialog).
+        assertStringIncludes(html, 'wordwiki.addTag(1000, &quot;NeedsRecording&quot;)');
+        assert(!html.includes("insertDialog(1000, 1000, 'tdo', null, null, 'edit', &quot;NeedsRecording&quot;)"),
+               'self-contained tag does not open the dialog');
+    });
+});
+
+test("insertDialog preset pre-fills the tag field", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        const html = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.lexeme.insertDialog(1000, 1000, 'tdo', null, null, 'edit', 'Todo')`)));
+        // The tag select lands on the preset value.
+        assertStringIncludes(html, 'Todo');
+        assertStringIncludes(html, 'name="tag"');
+    });
+});

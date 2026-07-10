@@ -2330,7 +2330,7 @@ export class LexemeEditor {
     @route(authenticated)
     insertDialog(entry_id: number, parent_fact_id: number, child_tag: string,
                  anchor_fact_id?: number|null, where?: 'before'|'after'|null,
-                 mode: EditMode = 'edit'): Markup {
+                 mode: EditMode = 'edit', presetTag?: string|null): Markup {
         const parent = this.findTupleInEntry(entry_id, parent_fact_id);
         const rel = parent.childRelations[child_tag]?.schema
             ?? panic('no child relation', `${child_tag} on ${parent.schema.tag}`);
@@ -2356,6 +2356,11 @@ export class LexemeEditor {
         // dialog shows the stored value.  The before- snapshot stays '', so
         // an untouched default still submits as a change and is saved.
         const defaults: Record<string, any> = {change_note: ''};
+        // A prompt-on-add tag opens this dialog PRE-FILLED with the tag (the
+        // word Tags ☰): the value is the point, so land the user on the
+        // value field with the tag already chosen.  before- stays '', so the
+        // preset submits as a change.
+        if(presetTag && fields.some(f => f.name === 'tag')) defaults['tag'] = presetTag;
         const me = this.app.currentUsername();
         if(me) for(const f of fields)
             if(f.name === 'speaker' && f instanceof model.EnumField

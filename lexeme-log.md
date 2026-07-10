@@ -93,7 +93,10 @@ sections are the single representation.
   inline `✓` (done toggle, todo tags only), `✎` (full edit dialog:
   wordwiki.lexeme.editDialog), `×` (remove).  A `☰` on the heading
   offers the quick-pick tags (tag table `quick` flag) then "More…"
-  (the full tag insert dialog).  `done` is real current-state data
+  (the full tag insert dialog).  A tag flagged `prompt_on_add` (its
+  value is the point, e.g. Todo) opens the insert dialog PRE-FILLED
+  with the tag instead of adding immediately; self-contained tags
+  (Needs Recording) add in one tap.  `done` is real current-state data
   (see the principle below): a done todo STAYS in the section, struck,
   until removed - removal (`×`) is the separate, deliberate act.
 - **Log** (titled **Discussion** - dz 2026-07-10): the session posts.

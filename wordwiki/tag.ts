@@ -61,6 +61,12 @@ export interface Tag {
      *  vs living behind "More…"'s full insert dialog.  Lets the vocabulary
      *  grow without a long menu. */
     quick: number;
+    /** This tag has no meaning without its value filled in (the generic
+     *  'Todo' - the value IS the content).  When set, the ☰ quick-pick
+     *  LAUNCHES the insert dialog pre-filled with the tag instead of
+     *  adding it immediately.  Self-contained tags (Needs Recording)
+     *  leave this off: one tap, done. */
+    prompt_on_add: number;
     /** Not offered for new tagging (existing values keep displaying). */
     retired: number;
     order_key: string;
@@ -90,6 +96,8 @@ export class TagTable extends Table<Tag> {
                                          prompt: 'Todo tag (drives the todo report and the open-todos list)'}),
             new BooleanField('quick', {default: 0,
                                        prompt: 'Quick-pick (offered directly in the word’s Tags menu)'}),
+            new BooleanField('prompt_on_add', {default: 0,
+                                               prompt: 'Prompt on add (open the edit dialog when quick-picked - for tags whose value is the point)'}),
             new BooleanField('retired', {default: 0,
                                          prompt: 'Retired (not offered in pickers)'}),
             new ManagedStringField('order_key', {default: ''}),
@@ -256,6 +264,7 @@ export class TagTable extends Table<Tag> {
              row('Theme', t.theme || '—'),
              row('Todo', t.is_todo ? 'Yes - drives the todo report' : 'No'),
              row('Quick-pick', t.quick ? 'Yes - in the word Tags menu' : 'No'),
+             row('Prompt on add', t.prompt_on_add ? 'Yes - opens the edit dialog' : 'No'),
              row('Description', t.description ? this.fieldsByName.description.render(t.description) : '—'),
             ],
             this.renderTagEntries(t),
@@ -321,12 +330,15 @@ const TAG_ENTRY_COLLATOR = new Intl.Collator('en', {sensitivity: 'base', numeric
 /** The seed rows: the old fixed TODO kinds, slugs = the enum codes already
  *  stored in assertions (ZERO data migration - reinterpretation).  All
  *  todo-marked: the old model only had todos. */
-export const SEED_TAGS: Array<{slug: string, name: string, is_todo: number, quick: number}> = [
-    { slug: 'Todo',                     name: 'Todo',                        is_todo: 1, quick: 1 },
-    { slug: 'NeedsResearchGroupReview', name: 'Needs Research Group Review', is_todo: 1, quick: 1 },
-    { slug: 'NeedsSpeakerGroupReview',  name: 'Needs Speaker Group Review',  is_todo: 1, quick: 1 },
-    { slug: 'NeedsRecording',           name: 'Needs Recording',             is_todo: 1, quick: 1 },
-    { slug: 'NeedsApproval',            name: 'Needs Approval',              is_todo: 1, quick: 1 },
+export const SEED_TAGS: Array<{slug: string, name: string, is_todo: number,
+                               quick: number, prompt_on_add: number}> = [
+    // 'Todo' is a container - its value is the point, so quick-picking it
+    // opens the dialog; the Needs* tags are self-contained (one tap).
+    { slug: 'Todo',                     name: 'Todo',                        is_todo: 1, quick: 1, prompt_on_add: 1 },
+    { slug: 'NeedsResearchGroupReview', name: 'Needs Research Group Review', is_todo: 1, quick: 1, prompt_on_add: 0 },
+    { slug: 'NeedsSpeakerGroupReview',  name: 'Needs Speaker Group Review',  is_todo: 1, quick: 1, prompt_on_add: 0 },
+    { slug: 'NeedsRecording',           name: 'Needs Recording',             is_todo: 1, quick: 1, prompt_on_add: 0 },
+    { slug: 'NeedsApproval',            name: 'Needs Approval',              is_todo: 1, quick: 1, prompt_on_add: 0 },
 ];
 
 /** Idempotent seed (insert-if-missing; never overwrites an edited row).

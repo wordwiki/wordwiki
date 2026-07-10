@@ -499,11 +499,16 @@ export class WordWiki extends LiminalApp {
         // assignee).  Only for editors.
         const menu = mayEdit ? (() => {
             const quick = this.tags.quickByOrder.all({});
-            const items: action.ActionMenuItem[] = quick.map(q => ({
-                label: q.name,
-                mode: {kind: 'immediate' as const,
-                       expr: `wordwiki.addTag(${entry_id}, ${JSON.stringify(q.slug)})`,
-                       deps: targets}}));
+            const items: action.ActionMenuItem[] = quick.map(q => q.prompt_on_add
+                // Value-is-the-point tags open the dialog pre-filled (dz).
+                ? {label: q.name,
+                   mode: {kind: 'modal' as const,
+                          dialogUrl: `${R}.insertDialog(${entry_id}, ${entry_id}, 'tdo', null, null, 'edit', ${JSON.stringify(q.slug)})`}}
+                // Self-contained tags add immediately (one tap).
+                : {label: q.name,
+                   mode: {kind: 'immediate' as const,
+                          expr: `wordwiki.addTag(${entry_id}, ${JSON.stringify(q.slug)})`,
+                          deps: targets}});
             items.push('divider');
             items.push({label: 'More\u2026',
                         mode: {kind: 'modal',
