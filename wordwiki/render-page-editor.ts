@@ -293,8 +293,14 @@ export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_i
             ['ul', {class: 'pe-sidebar-list'},
              rows.map(wordRow),
              untagged.length > 0
-                 ? [['li', {class: 'pe-sidebar-subhead'},
-                     `Groups not yet linked to a word (${untagged.length})`],
+                 ? [['li', {class: 'pe-sidebar-subhead d-flex align-items-center'},
+                     ['span', {class: 'flex-grow-1'},
+                      `Groups not yet linked to a word (${untagged.length})`],
+                     // Delete ALL unlinked groups on the page (confirmed - it
+                     // is a bulk destructive act, unlike the per-row ×).
+                     ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger pe-group-delete-all',
+                                 title: 'Delete all unlinked groups on this page',
+                                 onclick: 'deleteAllUnlinkedPageGroups()'}, '×']],
                     untagged.map(id=>
                         ['li', {class: 'pe-word pe-untagged d-flex align-items-center', ...rowProps([id])},
                          ['span', {class: 'flex-grow-1'}, `Group ${id}`],
@@ -803,6 +809,21 @@ export function deleteBoundingGroup(bounding_group_id: number): {deleted: boolea
                      {bounding_group_id});
         return {deleted: true};
     });
+}
+
+/** Delete ALL unlinked groups on a page (the × on the "Groups not yet
+ *  linked to a word" section header - dz).  Same set the sidebar lists:
+ *  groups with boxes that no current word references.  Each delete is
+ *  guarded (deleteBoundingGroup), so a word-linked group can never be
+ *  caught up in this. */
+export function deleteUnlinkedGroupsForPage(page_id: number, layer_id: number): {deleted: number} {
+    const referenced = new Set(pageWordRows(page_id).flatMap(r=>r.groupIds));
+    const unlinked = loadBookPageScanData(page_id, layer_id).groups
+        .filter(g=>!referenced.has(g.bounding_group_id) && g.boxes.length > 0)
+        .map(g=>g.bounding_group_id);
+    let deleted = 0;
+    for(const id of unlinked) { deleteBoundingGroup(id); deleted++; }
+    return {deleted};
 }
 
 export function migrateBoxToGroup(bounding_group_id: number, bounding_box_id: number): {} {
@@ -1408,6 +1429,7 @@ export class PageRoutes {
     @route(hostOrAdmin, {mutates: true}) copyBoxToExistingGroup(...a: Parameters<typeof copyBoxToExistingGroup>) { return copyBoxToExistingGroup(...a); }
     @route(hostOrAdmin, {mutates: true}) removeBoxFromGroup(...a: Parameters<typeof removeBoxFromGroup>) { return removeBoxFromGroup(...a); }
     @route(hostOrAdmin, {mutates: true}) deleteBoundingGroup(...a: Parameters<typeof deleteBoundingGroup>) { return deleteBoundingGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) deleteUnlinkedGroupsForPage(...a: Parameters<typeof deleteUnlinkedGroupsForPage>) { return deleteUnlinkedGroupsForPage(...a); }
     @route(hostOrAdmin, {mutates: true}) migrateBoxToGroup(...a: Parameters<typeof migrateBoxToGroup>) { return migrateBoxToGroup(...a); }
 }
 

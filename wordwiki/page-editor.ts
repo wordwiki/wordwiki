@@ -1498,6 +1498,27 @@ async function deletePageGroup(groupId: number) {
     }
 }
 
+/** Delete ALL unlinked groups on the page (the × on the section header).
+ *  Confirmed - unlike the per-row ×, this is a bulk destructive act. */
+async function deleteAllUnlinkedPageGroups() {
+    const rows = Array.from(document.querySelectorAll('#pageWordSidebar li.pe-untagged'));
+    if(rows.length === 0) return;
+    if(!confirm(`Delete all ${rows.length} unlinked group(s) on this page?`)) return;
+    const scannedPage = document.getElementById('scanned-page');
+    const pageId = scannedPage?.getAttribute('data-page-id');
+    const layerId = scannedPage?.getAttribute('data-layer-id');
+    if(!pageId || !layerId) return;
+    // Optimistic: drop each unlinked group's SVG from the page.
+    for(const row of rows)
+        for(const id of rowGroupIds(row)) document.getElementById(`bg_${id}`)?.remove();
+    try {
+        await rpc`wordwiki.pages.deleteUnlinkedGroupsForPage(${Number(pageId)}, ${Number(layerId)})`;
+    } catch (e) {
+        alert(`Failed to delete groups: ${e}`);
+        throw e;   // the sidebar refresh restores the true state
+    }
+}
+
 // --- Collapse to a thin rail; state survives page jumps.
 
 function togglePageWordSidebar() {

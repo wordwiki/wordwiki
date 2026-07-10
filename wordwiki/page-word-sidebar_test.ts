@@ -7,11 +7,11 @@
  * references yet.
  */
 import { test } from "../liminal/testing/test.ts";
-import { assert, assertStringIncludes } from "../liminal/testing/assert.ts";
+import { assert, assertEquals, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { db } from "../liminal/db.ts";
 import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { withTestDb, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
-import { renderPageWordSidebarCore, deleteBoundingGroup } from "./render-page-editor.ts";
+import { renderPageWordSidebarCore, deleteBoundingGroup, deleteUnlinkedGroupsForPage } from "./render-page-editor.ts";
 import { as } from "./testing.ts";
 
 // A scanned page with three tagged groups: two referenced by words (seeded
@@ -81,8 +81,26 @@ test("page word sidebar: reading order, data-group-ids, untagged tail", async ()
         assertStringIncludes(html, 'pageWordRowEnter(event)');
         assertStringIncludes(html, 'togglePageWordSidebar()');
 
-        // Each untagged group has a delete × (dz).
+        // Each untagged group has a delete × (dz), and the section header
+        // has a bulk delete-all ×.
         assertStringIncludes(html, `deletePageGroup(${orphanGroup})`);
+        assertStringIncludes(html, 'deleteAllUnlinkedPageGroups()');
+    });
+});
+
+test("deleteUnlinkedGroupsForPage: deletes only the unlinked groups", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        const {page_id, layer_id, topGroup, bottomGroup, orphanGroup} = seed(fx);
+        const r = as(fx, 'djz', () => deleteUnlinkedGroupsForPage(page_id, layer_id));
+        assertEquals(r.deleted, 1);   // just the one orphan
+        assert(db().all<any, any>(
+            'SELECT 1 FROM bounding_group WHERE bounding_group_id = :g', {g: orphanGroup}).length === 0,
+            'orphan deleted');
+        // The word-linked groups survive.
+        for(const g of [topGroup, bottomGroup])
+            assert(db().all<any, any>(
+                'SELECT 1 FROM bounding_group WHERE bounding_group_id = :g', {g}).length === 1,
+                'linked group survives');
     });
 });
 
