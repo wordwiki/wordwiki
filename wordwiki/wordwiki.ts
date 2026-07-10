@@ -483,6 +483,16 @@ export class WordWiki extends LiminalApp {
             .filter(g => g.current !== undefined)
             .toSorted((a, b) => (a.current!.order_key < b.current!.order_key ? -1 : 1));
 
+        // Open todos: the ACTIONABLE peer of the log, visible right where
+        // the sitting works.
+        const openTodos = (this.entriesById.get(entry_id)?.todo ?? [])
+            .filter(t => !t.done);
+        const todoLabel = (t: entry.Todo) =>
+            [t.details || undefined,
+             entry.todos[t.todo] && t.todo !== 'Todo' ? `[${entry.todos[t.todo]}]` : undefined,
+             t.assigned_to && t.assigned_to !== '___' ? `\u2192 ${entry.displayUsername(t.assigned_to)}` : undefined]
+            .filter(s => s).join('  ') || entry.todos[t.todo] || t.todo;
+
         return ['div', {...reloadableProps([`-lexeme-log-${entry_id}-`],
                                            `/ww/wordwiki.renderLexemeLogSection(${entry_id})`),
                         id: 'wwLogSection'},
@@ -491,6 +501,12 @@ export class WordWiki extends LiminalApp {
              templates.mayEditLexemes()
                  ? ['div', {class: 'text-muted small'},
                     'Add to the log with the \u{1F4DD} button (lower left).']
+                 : undefined,
+             openTodos.length > 0
+                 ? ['div', {class: 'ww-log-todos mt-2'},
+                    ['div', {class: 'fw-semibold'}, `Open todos (${openTodos.length})`],
+                    ['ul', {class: 'mb-1'},
+                     openTodos.map(t => ['li', {}, todoLabel(t)])]]
                  : undefined,
              rows.length === 0
                  ? undefined
@@ -511,8 +527,9 @@ export class WordWiki extends LiminalApp {
      *  per word); a red dot on the fab marks an unposted draft.  Posting
      *  goes through tx (the standard mutation client) so ONLY the
      *  registered fragments refresh - usable on the editor page too.
-     *  (The "Post as todo" peer is BUILT but hidden for now - dz likes it
-     *  but found it confusing; wwLogPost already takes the kind.) */
+     *  "Post as todo" is the ACTIONABLE peer (dz: tag errors as they are
+     *  noticed): same capture, structured landing - a generic unassigned
+     *  todo with the text as details, queued in the todo report. */
     renderLexemeLogDock(entry_id: number): any {
         if(!templates.mayEditLexemes()) return undefined;
         return [['button', {type: 'button', id: 'wwLogFab', class: 'ww-log-fab',
@@ -527,6 +544,10 @@ export class WordWiki extends LiminalApp {
                  ['div', {class: 'mt-1 d-flex gap-2 align-items-center'},
                   ['button', {type: 'button', class: 'btn btn-sm btn-primary',
                               onclick: "wwLogPost('log')"}, 'Post'],
+                  ['button', {type: 'button', class: 'btn btn-sm btn-outline-primary',
+                              onclick: "wwLogPost('todo')",
+                              title: 'File this text as a todo on this word (actionable - shows in the todo report)'},
+                   'Post as todo'],
                   ['button', {type: 'button', class: 'btn btn-sm btn-link ms-auto',
                               onclick: 'wwLogToggle()'}, 'Close']]],
                 ['script', {}, block`
@@ -582,12 +603,13 @@ export class WordWiki extends LiminalApp {
         if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
         if(kind === 'todo') this.lexemeOps.postTodo(entry_id, String(text ?? ''));
         else this.lexemeOps.postLog(entry_id, String(text ?? ''));
+        const relTag = kind === 'todo' ? 'tdo' : 'log';
         return {action: 'reload', targets: [
             `.-lexeme-log-${entry_id}-`,
-            // the lexeme editor's generic log-relation fragments + the
+            // the lexeme editor's generic relation fragments + the
             // pending-count bar (changeKeys' scope:'parent' shape)
-            `.-rel-${entry_id}-log-`,
-            `.-rel-${entry_id}-log-shape-`,
+            `.-rel-${entry_id}-${relTag}-`,
+            `.-rel-${entry_id}-${relTag}-shape-`,
             `.-entry-${entry_id}-activity-`,
         ]};
     }

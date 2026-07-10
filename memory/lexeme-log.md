@@ -33,8 +33,10 @@ Key decisions (dz's, after pushing back on my earlier shapes):
   the post stays pending (published-tree invariant). Route:
   wordwiki.postLexemeLog (form POST, kind=log|todo, returnTo bounce).
 - Todos = the actionable peer (replaced #tags): postTodo files a
-  generic unassigned Todo w/ text as details.  UI HIDDEN for now (dz:
-  confusing) - verb/route kind/tests stay; re-show later.
+  generic unassigned Todo w/ text as details.  UI re-enabled
+  2026-07-10 (dz: "work towards a pretty and simple implementation" -
+  expect iteration here); reload targets are kind-aware
+  (-rel-<id>-tdo-* for todo posts).
 - Round 3 (same day): posting via tx -> {action:'reload', targets}
   (word view log section = reloadable fragment `-lexeme-log-<id>-`;
   same targets hit the editor's `-rel-<id>-log-*` fragments) so the

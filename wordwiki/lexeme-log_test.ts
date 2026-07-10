@@ -141,9 +141,11 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         // refreshes it in place - no page reload).
         assertStringIncludes(html, '-lexeme-log-1000-');
         assertStringIncludes(html, 'wordwiki.renderLexemeLogSection(1000)');
-        // The todo peer is BUILT but HIDDEN for now (dz: confusing) - the
-        // verb works (see postTodo test); the pane shows no todo UI.
-        assert(!html.includes('Post as todo'), 'todo button hidden for now');
-        assert(!html.includes('Open todos'), 'todo list hidden for now');
+        // The actionable peer, re-enabled (dz 2026-07-10): the todo button
+        // in the drawer, the open todos in the section (assignee shown by
+        // NAME when set).
+        assertStringIncludes(html, 'Post as todo');
+        assertStringIncludes(html, 'Open todos (1)');
+        assertStringIncludes(html, 'check with elders');
     });
 });
