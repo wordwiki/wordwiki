@@ -179,7 +179,11 @@ test("word view: Tags section - lines with ✓/✎/×, quick-pick ☰, the tag s
         assertStringIncludes(html, '>Tags<');
         assertStringIncludes(html, 'check with elders');
         assertStringIncludes(html, 'Needs Speaker Group Review');
-        // Inline affordances + the quick-pick add menu.
+        // Each tag line is its OWN reloadable fragment (edit/done/remove
+        // refresh just that line - dz), with per-line targets.
+        const t0 = fx.ww.entriesById.get(1000)!.tag.find(x => x.value === 'check with elders')!;
+        assertStringIncludes(html, `-lexeme-tag-${t0.tag_id}-`);
+        assertStringIncludes(html, `.-lexeme-tag-${t0.tag_id}-`);   // in the txd deps
         assertStringIncludes(html, 'wordwiki.setTagDone(1000');
         assertStringIncludes(html, 'wordwiki.removeTag(1000');
         assertStringIncludes(html, 'wordwiki.addTag(1000');   // quick-pick items
@@ -190,7 +194,7 @@ test("word view: Tags section - lines with ✓/✎/×, quick-pick ☰, the tag s
         const t = fx.ww.entriesById.get(1000)!.tag.find(x => x.value === 'check with elders')!;
         as(fx, 'test', () => fx.ww.lexemeOps.setTagDone(1000, t.tag_id, true));
         const after = renderToStringViaLinkeDOM(await as(fx, 'test', () =>
-            renderRoute(fx.ww, `wordwiki.renderLexemeTagsSection(1000)`)));
+            renderRoute(fx.ww, `wordwiki.renderLexemeTagLine(1000, ${t.tag_id})`)));
         assertStringIncludes(after, 'check with elders');     // still present
         assertStringIncludes(after, 'ww-tag-is-done');        // rendered struck
     });
@@ -204,5 +208,16 @@ test("Tags/Log workflow renders on the LEXEME EDITOR too (one way everywhere)", 
         assertStringIncludes(html, '-lexeme-tags-1000-');   // the same custom sections
         assertStringIncludes(html, '-lexeme-log-1000-');
         assertStringIncludes(html, 'ww-log-fab');           // the dock
+    });
+});
+
+test("tag line: a removed tag's per-line fragment renders nothing (swaps itself out)", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        const t = fx.ww.entriesById.get(1000)!.tag.find(x => x.value === 'check with elders')!;
+        as(fx, 'test', () => fx.ww.lexemeOps.removeTag(1000, t.tag_id));
+        const line = renderToStringViaLinkeDOM(await as(fx, 'test', () =>
+            renderRoute(fx.ww, `wordwiki.renderLexemeTagLine(1000, ${t.tag_id})`)));
+        assert(!line.includes('check with elders'), 'removed line renders empty');
     });
 });

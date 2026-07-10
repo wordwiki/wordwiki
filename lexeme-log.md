@@ -106,7 +106,11 @@ sections are the single representation.
   "Post as todo" lost its meaning once the Tags ☰ existed.  Generic
   edit/insert/delete of a tag/log fact refreshes the custom sections
   (lexeme editor changeKeys pushes -lexeme-tags-/-lexeme-log- for
-  those tags, since the generic rows are suppressed).
+  those tags, since the generic rows are suppressed).  Editing/doning
+  ONE tag refreshes just its LINE (each tag line is its own reloadable
+  fragment `-lexeme-tag-<fact>-` via wordwiki.renderLexemeTagLine; a
+  removed line renders empty and swaps itself out); only add (line
+  count changes) refreshes the whole section.
 - Verbs: lexemeOps.addTag / setTagDone / removeTag (all
   approval-bypassed like postLog); routes wordwiki.addTag /
   setTagDone / removeTag return `{action:'reload'}` hitting

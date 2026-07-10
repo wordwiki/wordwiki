@@ -859,14 +859,16 @@ export class LexemeEditor {
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
         return templates.page(title, [this.renderMetaEntry(entry_id, changes),
-                                      this.keyboardHint(),
                                       // The Tags + Log sections + the capture
                                       // dock, same as the read view (dz: one
                                       // way everywhere).  The generic tag/log
                                       // rows are suppressed in metaRenderer
                                       // (hideRelationTags), so these custom
                                       // sections are the single representation.
-                                      e ? this.app.renderLexemeWorkflow(entry_id) : undefined]);
+                                      e ? this.app.renderLexemeWorkflow(entry_id) : undefined,
+                                      // The keyboard hint sits BELOW the
+                                      // Discussion (dz) - page chrome at the foot.
+                                      this.keyboardHint()]);
     }
 
     /** A discreet pointer to the keyboard editing model (keyboard-driven-
@@ -3045,9 +3047,14 @@ export class LexemeEditor {
         keys.push(`.-entry-${entry_id}-activity-`);
         // Tag + Log render as the custom Tags/Log SECTIONS (not the generic
         // rows - hideRelationTags), so a generic edit/insert/delete of one
-        // must refresh THAT fragment, on read view or editor alike.  The
+        // must refresh THOSE fragments, on read view or editor alike.  The
         // generic `-fact-`/`-rel-` keys above match nothing for these tags.
-        if(tag === entrySchema.TagTag) keys.push(`.-lexeme-tags-${entry_id}-`);
+        // An EDIT of one tag (scope 'self') refreshes just that tag's LINE
+        // fragment; an insert/delete (scope 'parent', line count changes)
+        // refreshes the whole Tags section (dz).
+        if(tag === entrySchema.TagTag)
+            keys.push(scope === 'self' ? `.-lexeme-tag-${fact_id}-`
+                                       : `.-lexeme-tags-${entry_id}-`);
         if(tag === entrySchema.LogTag) keys.push(`.-lexeme-log-${entry_id}-`);
         return keys;
     }

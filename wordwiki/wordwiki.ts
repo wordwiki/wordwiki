@@ -491,8 +491,10 @@ export class WordWiki extends LiminalApp {
         const tags = this.entriesById.get(entry_id)?.tag ?? [];
 
         const R = '/ww/wordwiki.lexeme';
-        const targets = [`.-lexeme-tags-${entry_id}-`, `.-entry-${entry_id}-activity-`];
-        const deps = JSON.stringify(targets);
+        // The SECTION key: adding/removing a tag (line count changes) refreshes
+        // the whole section; editing/doning ONE tag refreshes just its line
+        // (its own -lexeme-tag-<fact>- fragment - dz).
+        const addTargets = [`.-lexeme-tags-${entry_id}-`, `.-entry-${entry_id}-activity-`];
 
         // The \u2630 quick-pick: the quick-flagged tags (immediate add), then
         // "More\u2026" for the full tag-insert dialog (any tag + value +
@@ -508,52 +510,13 @@ export class WordWiki extends LiminalApp {
                 : {label: q.name,
                    mode: {kind: 'immediate' as const,
                           expr: `wordwiki.addTag(${entry_id}, ${JSON.stringify(q.slug)})`,
-                          deps: targets}});
+                          deps: addTargets}});
             items.push('divider');
             items.push({label: 'More\u2026',
                         mode: {kind: 'modal',
                                dialogUrl: `${R}.insertDialog(${entry_id}, ${entry_id}, 'tdo')`}});
             return action.actionMenu(items, {ariaLabel: 'Add a tag'});
         })() : undefined;
-
-        // The edit-dialog wiring, shared by the click-to-edit text and the \u270e.
-        const editAttrs = (fact_id: number) => ({
-            'hx-get': `${R}.editDialog(${entry_id}, ${fact_id})`,
-            'hx-target': '#modalEditorBody', 'hx-swap': 'innerHTML',
-            'hx-on::after-request': 'showModalEditor()'});
-
-        const tagLine = (t: entry.Tag) => {
-            const isTodo = todoSlugs.has(t.tag);
-            const done = !!t.done;
-            // Clicking the tag TEXT edits it (dz) - the same dialog as \u270e.
-            const label = ['span',
-                mayEdit ? {class: 'ww-tag-label lm-clickedit', role: 'button',
-                           title: 'Edit', ...editAttrs(t.tag_id)}
-                        : {class: 'ww-tag-label'},
-                ['span', {class: 'ww-tag-name'}, tagName(t.tag)],
-                t.value ? ['span', {}, ' \u2014 ', t.value] : undefined,
-                t.assigned_to && t.assigned_to !== '___'
-                    ? ['span', {class: 'text-muted'}, ` \u2192 ${entry.displayUsername(t.assigned_to)}`]
-                    : undefined,
-            ];
-            // Order (dz): \u270e leads - next to the click-to-edit text, the two
-            // edit affordances together - then done, then remove.
-            const acts = mayEdit ? ['span', {class: 'ww-tag-acts ms-2'},
-                ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ww-tag-edit',
-                            ...editAttrs(t.tag_id), title: 'Edit'}, '\u270e'],
-                isTodo
-                    ? ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 ww-tag-done',
-                                  title: done ? 'Mark not done' : 'Mark done',
-                                  onclick: `txd(${deps})\`wordwiki.setTagDone(${entry_id}, ${t.tag_id}, ${done ? 'false' : 'true'})\``},
-                       done ? '\u21ba' : '\u2713']
-                    : undefined,
-                // Removal is a tombstone - confirm it (dz).
-                ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger ww-tag-remove',
-                            title: 'Remove',
-                            onclick: `lmConfirm('Remove this tag?').then(ok => { if(ok) txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id})\`; })`}, '\u00d7'],
-            ] : undefined;
-            return ['li', {class: 'ww-tag' + (done ? ' ww-tag-is-done' : '')}, label, acts];
-        };
 
         return ['div', {...reloadableProps([`-lexeme-tags-${entry_id}-`],
                                            `/ww/wordwiki.renderLexemeTagsSection(${entry_id})`),
@@ -565,8 +528,71 @@ export class WordWiki extends LiminalApp {
                     menu],
                    tags.length === 0
                        ? ['p', {class: 'text-muted small mb-0 mt-1'}, 'No tags yet.']
-                       : ['ul', {class: 'ww-tag-list mt-1 mb-0'}, tags.map(tagLine)]]
+                       : ['ul', {class: 'ww-tag-list mt-1 mb-0'},
+                          tags.map(t => this.renderTagLineMarkup(entry_id, t,
+                                                                 {mayEdit, todoSlugs, tagName}))]]
                 : undefined];
+    }
+
+    /** ONE tag line as its own reloadable fragment (`-lexeme-tag-<fact>-`):
+     *  editing/doning that tag refreshes just this line, not the whole
+     *  section (dz).  A removed tag renders NOTHING - the fragment swaps
+     *  itself out (delete-as-empty-render). */
+    @route(authenticated)
+    renderLexemeTagLine(entry_id: number, fact_id: number): any {
+        const t = (this.entriesById.get(entry_id)?.tag ?? []).find(x => x.tag_id === fact_id);
+        if(!t) return '';
+        const todoSlugs = tag.todoTagSlugs(this.tags);
+        const tagNames = new Map(this.tags.allByOrder.all({}).map(r => [r.slug, r.name]));
+        const tagName = (slug: string) => tagNames.get(slug) ?? entry.todos[slug] ?? slug;
+        return this.renderTagLineMarkup(entry_id, t,
+            {mayEdit: templates.mayEditLexemes(), todoSlugs, tagName});
+    }
+
+    private renderTagLineMarkup(entry_id: number, t: entry.Tag,
+                                ctx: {mayEdit: boolean, todoSlugs: Set<string>,
+                                      tagName: (slug: string) => string}): any {
+        const {mayEdit, todoSlugs, tagName} = ctx;
+        const R = '/ww/wordwiki.lexeme';
+        const isTodo = todoSlugs.has(t.tag);
+        const done = !!t.done;
+        // Per-line reload targets - an edit/done/remove touches only THIS line.
+        const deps = JSON.stringify([`.-lexeme-tag-${t.tag_id}-`, `.-entry-${entry_id}-activity-`]);
+        const editAttrs = {
+            'hx-get': `${R}.editDialog(${entry_id}, ${t.tag_id})`,
+            'hx-target': '#modalEditorBody', 'hx-swap': 'innerHTML',
+            'hx-on::after-request': 'showModalEditor()'};
+        // Clicking the tag TEXT edits it (dz) - the same dialog as \u270e.
+        const label = ['span',
+            mayEdit ? {class: 'ww-tag-label lm-clickedit', role: 'button',
+                       title: 'Edit', ...editAttrs}
+                    : {class: 'ww-tag-label'},
+            ['span', {class: 'ww-tag-name'}, tagName(t.tag)],
+            t.value ? ['span', {}, ' \u2014 ', t.value] : undefined,
+            t.assigned_to && t.assigned_to !== '___'
+                ? ['span', {class: 'text-muted'}, ` \u2192 ${entry.displayUsername(t.assigned_to)}`]
+                : undefined,
+        ];
+        // Order (dz): \u270e leads - next to the click-to-edit text, the two
+        // edit affordances together - then done, then remove.
+        const acts = mayEdit ? ['span', {class: 'ww-tag-acts ms-2'},
+            ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ww-tag-edit',
+                        ...editAttrs, title: 'Edit'}, '\u270e'],
+            isTodo
+                ? ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 ww-tag-done',
+                              title: done ? 'Mark not done' : 'Mark done',
+                              onclick: `txd(${deps})\`wordwiki.setTagDone(${entry_id}, ${t.tag_id}, ${done ? 'false' : 'true'})\``},
+                   done ? '\u21ba' : '\u2713']
+                : undefined,
+            // Removal is a tombstone - confirm it (dz).
+            ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger ww-tag-remove',
+                        title: 'Remove',
+                        onclick: `lmConfirm('Remove this tag?').then(ok => { if(ok) txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id})\`; })`}, '\u00d7'],
+        ] : undefined;
+        const props = reloadableProps([`-lexeme-tag-${t.tag_id}-`],
+                                      `/ww/wordwiki.renderLexemeTagLine(${entry_id}, ${t.tag_id})`);
+        props.class = 'ww-tag' + (done ? ' ww-tag-is-done' : '') + ' ' + props.class;
+        return ['li', props, label, acts];
     }
 
     /** The LOG section (reloadable fragment `-lexeme-log-<id>-`): the word's
@@ -732,22 +758,29 @@ export class WordWiki extends LiminalApp {
         return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
     }
 
-    /** Toggle a tag's done state (the ✓ on a todo tag line). */
+    /** The reload targets for a single tag LINE (edit/done/remove touch
+     *  only that line - dz), plus the pending-count bar. */
+    private tagLineTargets(entry_id: number, fact_id: number): string[] {
+        return [`.-lexeme-tag-${fact_id}-`, `.-entry-${entry_id}-activity-`];
+    }
+
+    /** Toggle a tag's done state (the ✓ on a todo tag line) - just its line. */
     @routeMutation(authenticated)
     setTagDone(entry_id: number, fact_id: number, done: boolean): any {
         if(!Number.isSafeInteger(entry_id) || !Number.isSafeInteger(fact_id))
             throw new Error('bad id');
         this.lexemeOps.setTagDone(entry_id, fact_id, !!done);
-        return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
+        return {action: 'reload', targets: this.tagLineTargets(entry_id, fact_id)};
     }
 
-    /** Remove a tag (the × on a tag line - a tombstone, distinct from done). */
+    /** Remove a tag (the × - a tombstone, distinct from done): the line's
+     *  fragment re-renders to nothing and swaps itself out. */
     @routeMutation(authenticated)
     removeTag(entry_id: number, fact_id: number): any {
         if(!Number.isSafeInteger(entry_id) || !Number.isSafeInteger(fact_id))
             throw new Error('bad id');
         this.lexemeOps.removeTag(entry_id, fact_id);
-        return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
+        return {action: 'reload', targets: this.tagLineTargets(entry_id, fact_id)};
     }
 
     // The speaker's display label beside a recording - "Name (Region)" -
