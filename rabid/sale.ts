@@ -4,7 +4,7 @@ import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
 import * as date from "../liminal/date.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, ImageField, navChevron, liveReloadableProps } from "../liminal/table.ts";
 import { VolunteerForeignKeyField } from "./volunteer-activity.ts";
 import { shortName } from "./volunteer.ts";
 import {block} from "../liminal/strings.ts";
@@ -39,6 +39,15 @@ export const sale_kind_enum: Record<string, string> = {
 // the "Add ..." menu wording and which fields the add dialog shows.
 export function isFreeSaleKind(kind: string): boolean {
     return kind.startsWith('free-') || kind === 'balance-bike-loan';
+}
+
+// A sale's time as a short 12h clock ("2:30 PM") for the compact list line; '' if
+// unset.  (Sales are grouped under a single-day event, so the date is redundant.)
+function shortClock(dt?: string): string {
+    const t = date.sqliteDateTimeToTemporalOrNull(dt ?? null);
+    if(!t) return '';
+    const h = t.hour % 12 || 12;
+    return `${h}:${String(t.minute).padStart(2, '0')} ${t.hour >= 12 ? 'PM' : 'AM'}`;
 }
 // The menu/dialog label for adding a sale of a given kind: a paid kind reads
 // "<Kind> Sale" (e.g. "Bike Sale"), a giveaway/loan by its own label (already
@@ -231,40 +240,37 @@ export class SaleTable extends Table<Sale> {
     renderSaleList(sales: Sale[]): Markup {
         if(sales.length === 0)
             return [h.p, {class: 'text-muted'}, 'No sales recorded yet.'];
-        return [h.div, {class: 'list-group lm-list'},
+        // Same flat numbered document list as the Services list (rabid.css lm-doc-list).
+        return [h.ol, {class: 'lm-list lm-doc-list'},
                 sales.map(s => this.renderSaleRow(s))];
     }
 
+    // A compact, scannable line ported from the Services list: "1) ITEM [KIND] client ·
+    // time                 $AMOUNT  ✎".  Title (the item) in the blue nav style; a quiet
+    // KIND tag (dropped when the title already IS the kind); the money pinned right as
+    // the report column (blank for a free giveaway / loan).  The <li> is the flat flex
+    // row + live/navigable fragment - no list-group box (design-language.md).
     renderSaleRow(s: Sale): Markup {
         const id = s.sale_id;
-        const primaryText = s.description || sale_kind_enum[s.sale_kind] || 'Sale';
-        // A giveaway/loan (amount 0) carries no money: drop the payment badge and
-        // the $ figure - just the kind + time.
         const paid = (s.amount ?? 0) !== 0;
-        const badges = [
-            [h.span, {class: 'badge text-bg-light border ms-2'}, sale_kind_enum[s.sale_kind] ?? s.sale_kind],
-            paid ? [h.span, {class: 'badge text-bg-light border ms-1'}, payment_method_enum[s.payment_method] ?? s.payment_method] : undefined,
-        ];
-        const secondary = [date.sqliteDateTimeToString(s.sale_time), s.client_name || undefined,
-                           paid ? `$${(s.amount ?? 0).toFixed(2)}` : undefined]
-            .filter(Boolean).join(' · ');
+        const kindLabel = sale_kind_enum[s.sale_kind] ?? s.sale_kind;
+        const title = s.description || kindLabel;
+        // Show the kind tag unless the title already IS the kind (empty description).
+        const badge = s.description ? [h.span, {class: 'lm-line-badge'}, kindLabel.toUpperCase()] : undefined;
+        const sub = [s.client_name || undefined, shortClock(s.sale_time)].filter(Boolean).join(' · ');
+        const amount = paid ? `$${(s.amount ?? 0).toFixed(2)}` : '';
 
-        // A bike sale with a photo leads with a small thumbnail.
-        const thumb = s.photo ? rabid.photo.aspectImg(s.photo, 'landscape', 'thumb', {class: 'lm-row-thumb'}) : undefined;
-
-        // One navigable row species for every viewer (Table.detailItemProps:
-        // tap anywhere drills in via the lm-nav-link title); the pencil - shown
-        // only to viewers with recordEdit - is the only edit affordance.
-        const item = this.detailItemProps(id, `rabid.sale.renderSaleRowById(${id})`, {}, /*live*/ true);
-        return [h.div, {...item, 'data-testid': `sale-row-${id}`},
-            thumb,
-            [h.div, {class: 'lm-item-body'},
-             [h.div, {class: 'lm-item-primary'},
-              [h.a, {...templates.pageLinkProps(`/rabid.sale.detailPage(${id})`),
-                     class: 'lm-nav-link'}, primaryText], badges],
-             [h.div, {class: 'lm-item-secondary'}, secondary]],
+        const props = liveReloadableProps([this.rowKey(id)], `rabid.sale.renderSaleRowById(${id})`);
+        props.class = `${props.class} lm-doc-row lm-navigable`;
+        (props as Record<string, string>).onclick = 'lmNavigableClick(event)';
+        return [h.li, {...props, 'data-testid': `sale-row-${id}`},
+            [h.span, {class: 'lm-doc-num'}],
+            [h.div, {class: 'lm-doc-main'},
+             [h.a, {...templates.pageLinkProps(`/rabid.sale.detailPage(${id})`), class: 'lm-nav-link'}, title],
+             badge,
+             sub ? [h.span, {class: 'lm-doc-sub'}, sub] : undefined],
+            [h.span, {class: 'lm-doc-right'}, amount],
             this.canEditRecord(s) ? this.editPencil(id) : undefined,
-            navChevron(),
         ];
     }
 

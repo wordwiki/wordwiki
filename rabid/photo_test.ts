@@ -376,7 +376,7 @@ test("the photo-cache rebuild menu item shows only to admins", () => {
     assert(!hasText(navBar(false, /*isAdmin*/ false), 'Rebuild photo sizes'));
 });
 
-test("sale rows and detail lead with the bike photo when present", async () => {
+test("sale detail leads with the bike photo; the compact row stays image-free (document line)", async () => {
     await withTestDb(async ({ alice, bob }) => {
         const fakePath = `content/photos/3ab/3ab${'1'.repeat(61)}.jpg`;
         const id = asSystem(() => {
@@ -392,10 +392,12 @@ test("sale rows and detail lead with the bike photo when present", async () => {
                 amount: 80, payment_method: 'cash', notes: undefined,
             });
         });
+        // The compact document row carries no inline thumbnail (a 3rem image would break
+        // the document line rhythm); the photo shows on the detail page.
         const row = await asUser(bob, () => renderRoute(`rabid.sale.renderSaleRowById(${id})`));
         const rowImgs = findAll(row, (m: any) => Array.isArray(m) && m[0] === 'img');
-        assertEquals(rowImgs.length, 1);
-        assertStringIncludes((rowImgs[0] as any[])[1].src, 'rabid.photo.serve');
+        assertEquals(rowImgs.length, 0);
+        assert(hasText(row, 'Blue commuter'));
 
         const detail = await asUser(bob, () => renderRoute(`rabid.sale.detailPage(${id})`));
         assert(hasText(detail, 'Blue commuter'));

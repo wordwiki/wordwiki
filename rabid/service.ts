@@ -369,7 +369,7 @@ export class ServiceTable extends Table<Service> {
         // A flat NUMBERED list (design-language.md: flat, not framed): an <ol> so the
         // browser owns the number (correct under a single-row live reload AND a full
         // re-render, nothing computed server-side).  Each <li> is one scannable line.
-        return [h.ol, {class: 'lm-list lm-svc-list'},
+        return [h.ol, {class: 'lm-list lm-doc-list'},
                 services.map(s => this.renderServiceRow(s))];
     }
 
@@ -396,7 +396,7 @@ export class ServiceTable extends Table<Service> {
             const due = shortDueTime(s.drop_off_scheduled_pick_up_time);
             if(due) text = `${text} · ${due}`;
         }
-        return [h.span, {class: 'lm-svc-badge'}, text];
+        return [h.span, {class: 'lm-line-badge'}, text];
     }
 
     // A compact, scannable line: "1) NAME [WE REPAIR · 2:30] bike · work   POSTAL  ✎ ⋮".
@@ -411,7 +411,7 @@ export class ServiceTable extends Table<Service> {
         const secondary = [s.bike_description, s.service_description].filter(Boolean).join(' · ');
         // The row is its own live fragment + a navigable stop; no boxed list-group item.
         const props = liveReloadableProps([this.rowKey(id)], `rabid.service.renderServiceRowById(${id})`);
-        props.class = `${props.class} lm-svc-row lm-navigable`;
+        props.class = `${props.class} lm-doc-row lm-navigable`;
         (props as Record<string, string>).onclick = 'lmNavigableClick(event)';
         // Editors get a pencil (edit) + a ☰ (reorder / insert / delete, mostly for
         // fixing up scanned intake).  A <button> click never triggers row navigation.
@@ -429,15 +429,15 @@ export class ServiceTable extends Table<Service> {
             {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this service record?', expr: `rabid.service.remove(${id})`}},
         ], {ariaLabel: 'Service actions'}) : undefined;
         return [h.li, {...props, 'data-testid': `service-row-${id}`},
-            [h.span, {class: 'lm-svc-num'}],   // the "N)" is the <ol> counter (CSS ::before)
+            [h.span, {class: 'lm-doc-num'}],   // the "N)" is the <ol> counter (CSS ::before)
             // Name + badge + description flow inline here; only this column wraps.
-            [h.div, {class: 'lm-svc-main'},
+            [h.div, {class: 'lm-doc-main'},
              [h.a, {...templates.pageLinkProps(`/rabid.service.detailPage(${id})`),
                     class: 'lm-nav-link'}, s.client_name || 'Unnamed client'],
              this.serviceLineBadge(s),
-             secondary ? [h.span, {class: 'lm-svc-desc'}, secondary] : undefined],
+             secondary ? [h.span, {class: 'lm-doc-sub'}, secondary] : undefined],
             // Postal pinned right (a QC column); always present so postals line up.
-            [h.span, {class: 'lm-svc-postal'}, s.client_postal || ''],
+            [h.span, {class: 'lm-doc-right'}, s.client_postal || ''],
             pencil,
             menu,
         ];

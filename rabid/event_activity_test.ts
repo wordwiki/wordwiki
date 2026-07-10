@@ -59,8 +59,8 @@ test("compact service row: numbered, DIY badge suppressed, We-Repair due + posta
         const services = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid}));
         const list = asUser(alice, () => rabid.service.renderServiceList(services));
         const listStr = JSON.stringify(list);
-        assert(listStr.includes('"ol"') && listStr.includes('lm-svc-list'), 'flat numbered <ol>');
-        assert(listStr.includes('lm-svc-num'), 'each row has the counter slot');
+        assert(listStr.includes('"ol"') && listStr.includes('lm-doc-list'), 'flat numbered <ol>');
+        assert(listStr.includes('lm-doc-num'), 'each row has the counter slot');
 
         const row1 = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${s1})`));
         const r1 = JSON.stringify(row1);

@@ -51,8 +51,7 @@ test("sale rows: pencil for hosts only; saveForm host-gated", async () => {
         const id = insertSale(alice);
 
         const bobRow = await asUser(bob, () => renderRoute(`rabid.sale.renderSaleRowById(${id})`));
-        assertEquals(tagOf(bobRow as any), "div");                 // navigable species
-        assert(!!find(bobRow, byClass("lm-nav-chevron")));
+        assertEquals(tagOf(bobRow as any), "li");                  // a flat numbered <ol>/<li> row
         assert(!find(bobRow, byClass("lm-edit-pencil")));
         assert(hasText(bobRow, "Blue commuter"));
         assert(hasText(bobRow, "$80.00"));
