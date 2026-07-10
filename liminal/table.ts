@@ -1389,6 +1389,24 @@ export class MarkdownField extends StringField {
 }
 
 /**
+ * A JSON blob stored as TEXT.  For MACHINE-written structured columns (a job's state,
+ * its extracted-but-not-committed rows) - never edited in a form, so it's hidden from
+ * the schema layer (isVisible=false) and read/written in table methods via the static
+ * parse/format helpers.  Give it {default: '{}'} or {nullable: true} - NOT an object
+ * default (the DDL JSON.stringifies options.default, so an object would emit garbage).
+ */
+export class JsonField extends StringField {
+    override isVisible(): boolean { return false; }
+    // Parse a stored value, falling back (missing / '' / corrupt) rather than throwing -
+    // a machine column should degrade, not crash a render.
+    static parse<T = unknown>(value: unknown, fallback: T): T {
+        if(typeof value !== 'string' || value === '') return fallback;
+        try { return JSON.parse(value) as T; } catch { return fallback; }
+    }
+    static format(value: unknown): string { return JSON.stringify(value ?? null); }
+}
+
+/**
  *
  */
 export class PhoneField extends StringField {

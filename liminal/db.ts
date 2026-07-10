@@ -107,6 +107,14 @@ export class Db {
         // case-folds ASCII - 'dav%' will not match 'Dávid' - full Unicode
         // folding would need ICU or a normalized shadow column.
         this.db.execute('PRAGMA case_sensitive_like=OFF;');
+        // Rollback journal: TRUNCATE, not the default DELETE.  On this deployment's
+        // filesystem, deleting the `-journal` after each commit races (the denoSqlite
+        // wasm VFS's js_delete does a bare Deno.removeSync and throws NotFound when the
+        // file is already gone - crashing bulk work like a fake-data regen at a random
+        // point).  TRUNCATE zeroes the journal instead of unlinking it, so xDelete is
+        // never called on it - same crash-safety, no delete race.  (A known workaround
+        // for filesystems where journal deletion is slow/racy.)
+        this.db.execute('PRAGMA journal_mode=TRUNCATE;');
     }
 
     /**

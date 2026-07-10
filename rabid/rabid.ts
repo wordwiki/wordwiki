@@ -19,6 +19,7 @@ import * as group from './group.ts';
 import * as committee from './committee.ts';
 import * as task from './task.ts';
 import * as gallery from './gallery.ts';
+import * as extractionJob from './extraction_job.ts';
 import * as photo from '../liminal/photo.ts';
 import {ensureDir} from "std/fs/mod.ts";
 import * as table from '../liminal/table.ts';
@@ -68,6 +69,7 @@ export class Rabid extends LiminalApp {
     @route(authenticated) @path get event_commitment() { return new event.EventCommitmentTable(); }
     @route(authenticated) @path get event_checkin() { return new event.EventCheckinTable(); }
     @route(authenticated) @path get gallery_photo() { return new gallery.GalleryPhotoTable(); }
+    @route(authenticated) @path get extraction_job() { return new extractionJob.ExtractionJobTable(); }
     @route(authenticated) @path get event_retrospective() { return new event.EventRetrospectiveTable(); }
     // A view-service (not a table): the reconciled per-volunteer time view.
     @route(authenticated) @path get volunteer_time() { return new volunteer_time.VolunteerTimeService(); }
@@ -105,7 +107,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.event_retrospective, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask, this.gallery_photo];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.event_retrospective, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask, this.gallery_photo, this.extraction_job];
     }
 
     // Pages that carry route-borne view state (page-state; liminal.md § On-page

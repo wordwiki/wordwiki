@@ -33,6 +33,11 @@ class ManagedStringField extends StringField {
     override isVisible(): boolean { return false; }
 }
 
+// A hidden FK column, machine-set (scan provenance) - never in the edit form.
+class ManagedForeignKeyField extends ForeignKeyField {
+    override isVisible(): boolean { return false; }
+}
+
 // --------------------------------------------------------------------------------
 // --- Service --------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -113,6 +118,13 @@ export interface Service {
 
     notes?: string;
 
+    // Provenance for rows created by the scan -> extract flow (scan-extract.md); NULL
+    // for manually-entered services.  extraction_job_id makes retract generic (delete
+    // where extraction_job_id = :job); source_gallery_photo_id points at the
+    // photographed sheet the row came from (its "from scan" badge + review crop).
+    extraction_job_id?: number;
+    source_gallery_photo_id?: number;
+
     // Sibling order within the event (orderkey.ts) - drives the event log's order
     // and lets scanned rows be reordered / inserted between.  Managed.
     order_key: string;
@@ -159,6 +171,13 @@ export class ServiceTable extends Table<Service> {
             new BooleanField('drop_off_pick_up_done', {default: 0, showWhen: showForFull}),
 
             new MarkdownField('notes', {default: ''}),
+
+            // Scan -> extract provenance (nullable; NULL for manual rows).  Indexed so
+            // generic retract (DELETE WHERE extraction_job_id = :job) and "rows from this
+            // scan" queries are cheap.
+            new ManagedForeignKeyField('extraction_job_id', 'extraction_job', 'extraction_job_id', {nullable: true, indexed: true}),
+            new ManagedForeignKeyField('source_gallery_photo_id', 'gallery_photo', 'gallery_photo_id', {nullable: true}),
+
             new ManagedStringField('order_key', {default: ''}),
         ])
     };
