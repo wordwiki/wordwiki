@@ -1484,6 +1484,20 @@ function rowGroupIds(row: Element): string[] {
     return (row.getAttribute('data-group-ids') ?? '').split(/\s+/).filter(s=>s.length>0);
 }
 
+/** Delete an orphaned (unlinked) bounding group from the sidebar's ×
+ *  (no confirm - dz).  Removes its SVG from the page optimistically; the
+ *  rpc() helper schedules the sidebar refresh. */
+async function deletePageGroup(groupId: number) {
+    const groupEl = document.getElementById(`bg_${groupId}`);
+    groupEl?.remove();   // optimistic
+    try {
+        await rpc`wordwiki.pages.deleteBoundingGroup(${groupId})`;
+    } catch (e) {
+        alert(`Failed to delete group: ${e}`);
+        throw e;   // the sidebar refresh will restore the true state
+    }
+}
+
 // --- Collapse to a thin rail; state survives page jumps.
 
 function togglePageWordSidebar() {

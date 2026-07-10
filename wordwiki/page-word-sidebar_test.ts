@@ -11,7 +11,8 @@ import { assert, assertStringIncludes } from "../liminal/testing/assert.ts";
 import { db } from "../liminal/db.ts";
 import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { withTestDb, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
-import { renderPageWordSidebarCore } from "./render-page-editor.ts";
+import { renderPageWordSidebarCore, deleteBoundingGroup } from "./render-page-editor.ts";
+import { as } from "./testing.ts";
 
 // A scanned page with three tagged groups: two referenced by words (seeded
 // LOWER on the page first, to prove reading order re-sorts them), one
@@ -79,5 +80,29 @@ test("page word sidebar: reading order, data-group-ids, untagged tail", async ()
         // Rows carry the hover-sync hooks.
         assertStringIncludes(html, 'pageWordRowEnter(event)');
         assertStringIncludes(html, 'togglePageWordSidebar()');
+
+        // Each untagged group has a delete × (dz).
+        assertStringIncludes(html, `deletePageGroup(${orphanGroup})`);
+    });
+});
+
+test("deleteBoundingGroup: removes an orphaned group; refuses a word-linked one", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        const {orphanGroup, topGroup} = seed(fx);
+        // The orphan (no word references it) deletes cleanly.
+        as(fx, 'djz', () => deleteBoundingGroup(orphanGroup));
+        assert(db().all<any, any>(
+            'SELECT 1 FROM bounding_group WHERE bounding_group_id = :g', {g: orphanGroup}).length === 0,
+            'orphan group row deleted');
+        assert(db().all<any, any>(
+            'SELECT 1 FROM bounding_box WHERE bounding_group_id = :g', {g: orphanGroup}).length === 0,
+            'its boxes deleted');
+        // A word-linked group is refused (topGroup is referenced by 'samqwan').
+        let threw = false;
+        try { as(fx, 'djz', () => deleteBoundingGroup(topGroup)); } catch { threw = true; }
+        assert(threw, 'refuses a group a word still references');
+        assert(db().all<any, any>(
+            'SELECT 1 FROM bounding_group WHERE bounding_group_id = :g', {g: topGroup}).length === 1,
+            'linked group survives');
     });
 });

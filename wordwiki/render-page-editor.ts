@@ -296,8 +296,12 @@ export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_i
                  ? [['li', {class: 'pe-sidebar-subhead'},
                      `Groups not yet linked to a word (${untagged.length})`],
                     untagged.map(id=>
-                        ['li', {class: 'pe-word pe-untagged', ...rowProps([id])},
-                         `Group ${id}`])]
+                        ['li', {class: 'pe-word pe-untagged d-flex align-items-center', ...rowProps([id])},
+                         ['span', {class: 'flex-grow-1'}, `Group ${id}`],
+                         // Delete this orphaned group (no confirm - dz).
+                         ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger pe-group-delete',
+                                     title: 'Delete this group',
+                                     onclick: `deletePageGroup(${id})`}, '×']])]
                  : undefined]];
 }
 
@@ -772,6 +776,32 @@ export function removeBoxFromGroup(bounding_box_id: number) {
 
         db().execute('DELETE FROM bounding_box WHERE bounding_box_id=:bounding_box_id',
                      {bounding_box_id});
+    });
+}
+
+/** Delete a whole bounding GROUP - its boxes and the group row (the ×
+ *  beside an unlinked group in the page word sidebar).  Guarded: refuses
+ *  if any current dict reference still points at the group, so a
+ *  word-linked group can never be silently orphaned (the sidebar only
+ *  offers this on UNLINKED groups, but the guard makes the verb safe on
+ *  its own). */
+export function deleteBoundingGroup(bounding_group_id: number): {deleted: boolean} {
+    return db().transaction(()=>{
+        if(typeof bounding_group_id !== 'number')
+            throw new Error('invalid bounding_group_id in call to deleteBoundingGroup');
+        const referenced = db().first<{n: number}>(
+            block`
+/**/       SELECT COUNT(*) AS n FROM dict
+/**/         WHERE ty = 'ref' AND valid_to = 9007199254740991
+/**/               AND attr1 = :bounding_group_id`, {bounding_group_id})?.n ?? 0;
+        if(referenced > 0)
+            throw new Error(`bounding group ${bounding_group_id} is referenced by a word - `+
+                            `remove the reference before deleting the group`);
+        db().execute('DELETE FROM bounding_box WHERE bounding_group_id=:bounding_group_id',
+                     {bounding_group_id});
+        db().execute('DELETE FROM bounding_group WHERE bounding_group_id=:bounding_group_id',
+                     {bounding_group_id});
+        return {deleted: true};
     });
 }
 
@@ -1377,6 +1407,7 @@ export class PageRoutes {
     @route(hostOrAdmin, {mutates: true}) copyRefBoxToExistingGroup(...a: Parameters<typeof copyRefBoxToExistingGroup>) { return copyRefBoxToExistingGroup(...a); }
     @route(hostOrAdmin, {mutates: true}) copyBoxToExistingGroup(...a: Parameters<typeof copyBoxToExistingGroup>) { return copyBoxToExistingGroup(...a); }
     @route(hostOrAdmin, {mutates: true}) removeBoxFromGroup(...a: Parameters<typeof removeBoxFromGroup>) { return removeBoxFromGroup(...a); }
+    @route(hostOrAdmin, {mutates: true}) deleteBoundingGroup(...a: Parameters<typeof deleteBoundingGroup>) { return deleteBoundingGroup(...a); }
     @route(hostOrAdmin, {mutates: true}) migrateBoxToGroup(...a: Parameters<typeof migrateBoxToGroup>) { return migrateBoxToGroup(...a); }
 }
 
