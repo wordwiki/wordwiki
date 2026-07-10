@@ -75,7 +75,7 @@ test("service rows: edit ☰ for hosts only; client phone redacted for regulars"
         const id = insertService();
 
         const bobRow = await asUser(bob, () => renderRoute(`rabid.service.renderServiceRowById(${id})`));
-        assertEquals(tagOf(bobRow as any), "div");                 // navigable species
+        assertEquals(tagOf(bobRow as any), "li");                  // a flat numbered <ol>/<li> row
         assert(!hasText(bobRow, "Add before"), "a regular gets no edit menu");
         assert(!find(bobRow, byClass("lm-edit-pencil")), "a regular gets no pencil");
         assert(hasText(bobRow, "Jo Client"));

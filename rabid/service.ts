@@ -5,7 +5,7 @@ import * as fs from "https://deno.land/std@0.195.0/fs/mod.ts";
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, defaultDbPath } from "../liminal/db.ts";
-import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon, editButtonProps } from "../liminal/table.ts";
+import { Table, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, MarkdownField, EnumField, IntegerField, FloatingPointField, DateTimeField, navChevron, renderFieldValue, pencilIcon, editButtonProps, liveReloadableProps } from "../liminal/table.ts";
 import * as content from "../liminal/content-store.ts";
 import {exists as fileExists} from "std/fs/mod.ts"
 import {block} from "../liminal/strings.ts";
@@ -366,8 +366,11 @@ export class ServiceTable extends Table<Service> {
     renderServiceList(services: Service[]): Markup {
         if(services.length === 0)
             return [h.p, {class: 'text-muted'}, 'No service records yet.'];
-        return [h.div, {class: 'list-group lm-list'},
-                services.map((s, i) => this.renderServiceRow(s, i + 1))];
+        // A flat NUMBERED list (design-language.md: flat, not framed): an <ol> so the
+        // browser owns the number (correct under a single-row live reload AND a full
+        // re-render, nothing computed server-side).  Each <li> is one scannable line.
+        return [h.ol, {class: 'lm-list lm-svc-list'},
+                services.map(s => this.renderServiceRow(s))];
     }
 
     // The full kind badge, always shown (DIY included) - for the DETAIL PAGE header,
@@ -398,27 +401,22 @@ export class ServiceTable extends Table<Service> {
         return [h.span, {class: 'badge text-bg-light border ms-2'}, label];
     }
 
-    // 1-based position within the event (the number written on tape on the bike).
-    // Computed from order_key, so a single-row live reload keeps the same number; an
-    // insert/delete/move renumbers (the whole list re-renders on those - shape key).
-    private serviceNumber(s: Service): number {
-        const row = db().first<{n: number}>(
-            'SELECT COUNT(*) AS n FROM service WHERE event_id = :e AND order_key < :ok',
-            {e: s.event_id, ok: s.order_key});
-        return (row?.n ?? 0) + 1;
-    }
-
     // A compact, scannable line: "1) NAME [WE REPAIR · 2:30] bike · work   POSTAL  ✎ ⋮".
-    // Number (tape), name in the blue nav style, and (for QC) the kind/needed-by badge
-    // and postal pinned as columns; the bike/work description flows in the middle and
-    // wraps under the name on a narrow screen (only it wraps - the rest stays put).
-    renderServiceRow(s: Service, n?: number): Markup {
+    // The <li> itself is the flex row (so the actions dock at the far right) AND the
+    // live/navigable fragment - flat, no list-group box (design-language.md).  The "1)"
+    // is an <ol> counter (CSS ::before), not markup, so it can't drift.  Name in the
+    // blue nav style; QC-critical badge (kind + needed-by) and postal are fixed columns;
+    // only the bike/work description flows and wraps under the name on a narrow screen.
+    // (Structured as one element per row - a natural future keyboard stop, keyboard-driven-editing.md.)
+    renderServiceRow(s: Service): Markup {
         const id = s.service_id;
-        const num = n ?? this.serviceNumber(s);
         const secondary = [s.bike_description, s.service_description].filter(Boolean).join(' · ');
-        // One navigable row for every viewer (tap the name drills in); editors also get
-        // a pencil (edit) and a ☰ (reorder / insert / delete, mostly for scanned intake).
-        const item = this.detailItemProps(id, `rabid.service.renderServiceRowById(${id})`, {}, /*live*/ true);
+        // The row is its own live fragment + a navigable stop; no boxed list-group item.
+        const props = liveReloadableProps([this.rowKey(id)], `rabid.service.renderServiceRowById(${id})`);
+        props.class = `${props.class} lm-svc-row lm-navigable`;
+        (props as Record<string, string>).onclick = 'lmNavigableClick(event)';
+        // Editors get a pencil (edit) + a ☰ (reorder / insert / delete, mostly for
+        // fixing up scanned intake).  A <button> click never triggers row navigation.
         const pencil = this.canEditRecord(s)
             ? [h.button, {...editButtonProps(`rabid.service.renderServiceForm(${id})`),
                           class: 'edit lm-edit-pencil', type: 'button', 'aria-label': 'Edit service'},
@@ -432,20 +430,18 @@ export class ServiceTable extends Table<Service> {
             {label: 'Move down', mode: {kind: 'immediate', expr: `rabid.service.moveDown(${id})`}},
             {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this service record?', expr: `rabid.service.remove(${id})`}},
         ], {ariaLabel: 'Service actions'}) : undefined;
-        return [h.div, {...item, 'data-testid': `service-row-${id}`},
-            [h.div, {class: 'd-flex align-items-baseline gap-2'},
-             [h.span, {class: 'text-muted small flex-shrink-0',
-                       style: 'min-width: 1.9rem; text-align: right; font-variant-numeric: tabular-nums;'}, `${num})`],
-             // Name + badge + description flow inline here; only this column wraps.
-             [h.div, {class: 'flex-grow-1', style: 'min-width: 0;'},
-              [h.a, {...templates.pageLinkProps(`/rabid.service.detailPage(${id})`),
-                     class: 'lm-nav-link fw-semibold'}, s.client_name || 'Unnamed client'],
-              this.serviceLineBadge(s),
-              secondary ? [h.span, {class: 'text-muted ms-2'}, secondary] : undefined],
-             // Postal pinned right (a QC column); always rendered so postals line up.
-             [h.span, {class: 'text-muted small flex-shrink-0',
-                       style: 'min-width: 3ch; text-align: right;'}, s.client_postal || ''],
-             [h.div, {class: 'd-flex align-items-center gap-1 flex-shrink-0'}, pencil, menu]],
+        return [h.li, {...props, 'data-testid': `service-row-${id}`},
+            [h.span, {class: 'lm-svc-num'}],   // the "N)" is the <ol> counter (CSS ::before)
+            // Name + badge + description flow inline here; only this column wraps.
+            [h.div, {class: 'lm-svc-main'},
+             [h.a, {...templates.pageLinkProps(`/rabid.service.detailPage(${id})`),
+                    class: 'lm-nav-link'}, s.client_name || 'Unnamed client'],
+             this.serviceLineBadge(s),
+             secondary ? [h.span, {class: 'lm-svc-desc'}, secondary] : undefined],
+            // Postal pinned right (a QC column); always present so postals line up.
+            [h.span, {class: 'lm-svc-postal'}, s.client_postal || ''],
+            pencil,
+            menu,
         ];
     }
 

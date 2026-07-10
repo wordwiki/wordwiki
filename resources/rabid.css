@@ -364,3 +364,46 @@ body .ts-dropdown {
    adopted the accent link.)  Hidden rather than removed from ~10 call sites so
    it's one reversible knob. */
 .lm-nav-chevron { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Service activity list: a flat NUMBERED list (the number = the tape # on the
+   bike).  One scannable line per service; NO per-row box (design-language.md:
+   flat, not framed - the boxes read as busy for a dense QC list).  The number
+   is an <ol> counter, so the browser owns it: correct under both a single-row
+   live reload and a full re-render, with nothing computed server-side.
+--------------------------------------------------------------------------- */
+ol.lm-svc-list {
+    list-style: none;
+    counter-reset: svc;
+    margin: 0;
+    padding: 0;
+}
+ol.lm-svc-list > li.lm-svc-row {
+    counter-increment: svc;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.3rem 0.25rem;
+    border-radius: 0.375rem;      /* only shows under the hover/active tint */
+}
+/* The ordinal: a solid anchor beside the accent name (was underweight when muted
+   + small).  Body colour + semibold so it reads as the index, not chrome. */
+.lm-svc-num {
+    flex: 0 0 auto;
+    min-width: 1.9rem;
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.lm-svc-num::before { content: counter(svc) ")"; }
+/* Only this column flows + wraps (bike · work drops under the name when long). */
+.lm-svc-main { flex: 1 1 auto; min-width: 0; }
+.lm-svc-desc { color: var(--bs-secondary-color); margin-left: 0.4rem; }
+/* Postal pinned right as a QC column (fixed width so postals line up). */
+.lm-svc-postal {
+    flex: 0 0 auto;
+    min-width: 3.2ch;
+    text-align: right;
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
+}

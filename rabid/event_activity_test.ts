@@ -55,13 +55,20 @@ test("compact service row: numbered, DIY badge suppressed, We-Repair due + posta
             service_kind: 'full', bike_description: 'Blue road', service_description: 'tune-up',
             drop_off_scheduled_pick_up_time: '2026-06-20 14:30:00'} as any));
 
+        // The whole list is a numbered <ol> (the "N)" is a CSS counter, browser-owned).
+        const services = asSystem(() => rabid.service.servicesForEvent.all({event_id: eid}));
+        const list = asUser(alice, () => rabid.service.renderServiceList(services));
+        const listStr = JSON.stringify(list);
+        assert(listStr.includes('"ol"') && listStr.includes('lm-svc-list'), 'flat numbered <ol>');
+        assert(listStr.includes('lm-svc-num'), 'each row has the counter slot');
+
         const row1 = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${s1})`));
-        assert(hasText(row1, '1)'), 'numbered 1)');
+        const r1 = JSON.stringify(row1);
+        assert(r1.includes('"li"'), 'a row is an <li> (a natural keyboard stop)');
         assert(hasText(row1, 'Ada') && hasText(row1, 'B3H'), 'name + postal (QC column)');
-        assert(!JSON.stringify(row1).includes('DIY'), 'no badge for the common DIY case');
+        assert(!r1.includes('DIY'), 'no badge for the common DIY case');
 
         const row2 = await asUser(alice, () => renderRoute(`rabid.service.renderServiceRowById(${s2})`));
-        assert(hasText(row2, '2)'), 'numbered 2) by position (computed on a single-row reload)');
         assert(hasText(row2, 'WE REPAIR'), 'We-Repair badge shown');
         assert(hasText(row2, '2:30 PM'), 'needed-by time surfaced in the badge');
     });
