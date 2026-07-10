@@ -1042,7 +1042,9 @@ export function renderEntryCompactSummaryCore(e: Entry, opts: {orthography?: str
             // internal searches/lists - so their presentation line says so.
             isArchivedEntry(e)
                 ? ['span', {class: 'badge text-bg-secondary ms-1 me-1'}, 'ARCHIVED'] : undefined,
-            ' : ', glosses.join(' / ')];
+            // Elide the ' : ' when there are no glosses (dz) - a bare
+            // headword shouldn't trail a colon.
+            glosses.length > 0 ? [' : ', glosses.join(' / ')] : undefined];
 }
 
 /**

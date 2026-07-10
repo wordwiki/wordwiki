@@ -236,3 +236,20 @@ test("editor title has the view eye (reverse of the view's pencil)", async () =>
         assertStringIncludes(viewHtml, 'wordwiki.wordEditor(1000)');
     });
 });
+
+test("compact summary elides the ' : ' when there are no glosses", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        const { TestTimeline, mkEntry, mkChild } = await import("./testing.ts");
+        const { renderEntryCompactSummary } = await import("./entry-schema.ts");
+        const tl = new TestTimeline();
+        // A word with a spelling but NO glosses.
+        const a = mkEntry(3000, tl.next());
+        fx.ww.applyTransaction([a], {quiet: true});
+        fx.ww.applyTransaction([mkChild(a, 'spl', 3010, tl.next(),
+            {attr1: 'nemitu', variant: 'mm-li', order_key: '0.5'})], {quiet: true});
+        const e = fx.ww.entriesById.get(3000)!;
+        const html = renderToStringViaLinkeDOM(renderEntryCompactSummary(e));
+        assertStringIncludes(html, 'nemitu');
+        assert(!html.includes(' : '), 'no trailing colon without glosses');
+    });
+});
