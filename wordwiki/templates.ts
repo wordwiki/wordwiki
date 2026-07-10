@@ -88,6 +88,25 @@ export function pencilLink(editUrl: string,
     return ['a', {...nav, class: cls, 'aria-label': 'Edit', title: 'Edit'}, pencilIcon()];
 }
 
+/** The eye (view) icon - the pencil's REVERSE (dz): from the editor, jump
+ *  to the read-only word view to preview it.  Bootstrap Icons "eye" (MIT),
+ *  inlined like pencilIcon; sized by `.lm-view-eye svg` (see the template
+ *  CSS). */
+export function eyeIcon(): any {
+    return ['svg', {viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': 'true'},
+        ['path', {d: 'M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z'}],
+        ['path', {d: 'M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0'}]];
+}
+
+/** A view (read-only) link - the reverse of pencilLink: from the editor to
+ *  the word view (preview).  Same quiet treatment. */
+export function viewLink(viewUrl: string,
+                         opts: {newTab?: boolean, extraClass?: string} = {}): any {
+    const nav = opts.newTab ? {href: viewUrl, target: '_blank'} : pageLinkProps(viewUrl);
+    const cls = 'lm-view-eye' + (opts.extraClass ? ` ${opts.extraClass}` : '');
+    return ['a', {...nav, class: cls, 'aria-label': 'View', title: 'View (read-only)'}, eyeIcon()];
+}
+
 /** The word editor URL, carrying a review-sitting anchor when given (the feed),
  *  so a pencil -> edit -> review still shows this sitting's receipts. */
 function wordEditorUrl(entry_id: number, editAnchor?: number): string {

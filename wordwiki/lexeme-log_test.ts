@@ -221,3 +221,18 @@ test("tag line: a removed tag's per-line fragment renders nothing (swaps itself 
         assert(!line.includes('check with elders'), 'removed line renders empty');
     });
 });
+
+test("editor title has the view eye (reverse of the view's pencil)", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        const editorHtml = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.wordEditor(1000)`)));
+        assertStringIncludes(editorHtml, 'lm-view-eye');                 // the eye
+        assertStringIncludes(editorHtml, 'wordwiki.wordView(1000)');     // -> read view
+        // Symmetry: the read view still has the pencil -> editor.
+        const viewHtml = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.wordView(1000)`)));
+        assertStringIncludes(viewHtml, 'lm-edit-pencil');
+        assertStringIncludes(viewHtml, 'wordwiki.wordEditor(1000)');
+    });
+});

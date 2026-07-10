@@ -72,6 +72,7 @@
    than text buttons, but still the accessible/backstop path).  Padded out to
    a finger-sized (~44px) tap target. */
 .lm-edit-pencil,
+.lm-view-eye,
 .lm-menu-button {
     flex: 0 0 auto;
     border: 0;
@@ -85,12 +86,15 @@
 }
 .lm-edit-pencil:hover,
 .lm-edit-pencil:focus-visible,
+.lm-view-eye:hover,
+.lm-view-eye:focus-visible,
 .lm-menu-button:hover,
 .lm-menu-button:focus-visible {
     color: var(--bs-body-color);
     background-color: var(--bs-secondary-bg);
 }
 .lm-edit-pencil svg,
+.lm-view-eye svg,
 .lm-menu-button svg {
     width: 1.1rem;
     height: 1.1rem;

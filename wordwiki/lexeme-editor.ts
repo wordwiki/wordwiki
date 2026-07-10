@@ -926,6 +926,10 @@ export class LexemeEditor {
             editing: this.metaEditingHooks(entry_id, changes),
             valueLabel: this.vocabValueLabel(),
             orthographyBadge: this.orthographyBadge(),
+            // The reverse of the view's pencil (dz): an eye in the editor's
+            // title jumps to the read-only word view (preview).
+            titleAffordance: ['span', {class: 'ms-2'},
+                templates.viewLink(`/ww/wordwiki.wordView(${entry_id})`)],
             titleOrthography: this.app.currentWorkingOrthography(),
             // Tag + Log get their own custom sections (renderLexemeWorkflow)
             // on both read and edit - suppress the generic rows here so there
