@@ -385,20 +385,18 @@ export class ServiceTable extends Table<Service> {
         ];
     }
 
-    // The compact list badge.  SUPPRESSED for DIY (the common case - most rows carry
-    // no badge, so the eye is drawn only to the exceptions).  A We-Repair drop-off
-    // surfaces its needed-by time (the one time-critical fact for QC); once collected
-    // it goes muted.  'Other' shows a plain tag.
+    // The compact list badge.  SUPPRESSED for DIY (the common case), so a badge stands
+    // out simply by BEING there - it needs no loud colour (a filled warning pill read
+    // as an error and dominated the page).  A quiet grey tag; an OPEN We-Repair carries
+    // its needed-by time, the one time-critical fact for QC.
     serviceLineBadge(s: Service): Markup {
         if(s.service_kind === 'diy') return undefined;
-        const label = (service_kind_enum[s.service_kind] ?? s.service_kind).toUpperCase();
-        if(s.service_kind === 'full') {
-            if(s.drop_off_pick_up_done)
-                return [h.span, {class: 'badge text-bg-light border ms-2'}, label];
+        let text = (service_kind_enum[s.service_kind] ?? s.service_kind).toUpperCase();
+        if(s.service_kind === 'full' && !s.drop_off_pick_up_done) {
             const due = shortDueTime(s.drop_off_scheduled_pick_up_time);
-            return [h.span, {class: 'badge text-bg-warning ms-2'}, due ? `${label} · ${due}` : label];
+            if(due) text = `${text} · ${due}`;
         }
-        return [h.span, {class: 'badge text-bg-light border ms-2'}, label];
+        return [h.span, {class: 'lm-svc-badge'}, text];
     }
 
     // A compact, scannable line: "1) NAME [WE REPAIR · 2:30] bike · work   POSTAL  ✎ ⋮".

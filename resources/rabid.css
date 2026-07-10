@@ -407,3 +407,18 @@ ol.lm-svc-list > li.lm-svc-row {
     color: var(--bs-secondary-color);
     font-size: 0.875rem;
 }
+/* The service line's kind/needed-by tag.  Quiet by design: DIY (the majority) has NO
+   badge, so its mere presence draws the eye - a loud filled colour read as a warning
+   and dominated the page.  Grey, normal weight, small (NOT Bootstrap's bold .badge). */
+.lm-svc-badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 0.375rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.45;
+    white-space: nowrap;
+    color: var(--bs-secondary-color);
+    background-color: var(--bs-secondary-bg);
+}
