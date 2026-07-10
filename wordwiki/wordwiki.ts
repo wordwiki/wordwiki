@@ -475,34 +475,74 @@ export class WordWiki extends LiminalApp {
         const returnTo = orthography
             ? `/ww/wordwiki.wordView(${entry_id}, ${JSON.stringify(orthography)})`
             : `/ww/wordwiki.wordView(${entry_id})`;
-        const postBox = templates.mayEditLexemes()
-            ? [['form', {method: 'post', action: 'wordwiki.postLexemeLog(bodyArgs)',
-                         class: 'ww-log-post', id: 'wwLogForm'},
-                ['input', {type: 'hidden', name: 'entry_id', value: String(entry_id)}],
-                ['input', {type: 'hidden', name: 'returnTo', value: returnTo}],
-                ['textarea', {name: 'text', id: 'wwLogText', rows: '3',
-                              class: 'form-control',
-                              placeholder: 'Log a note on this word — posted under your name, no approval step…'}],
-                ['div', {class: 'mt-1 d-flex gap-2'},
-                 ['button', {type: 'submit', name: 'kind', value: 'log',
-                             class: 'btn btn-sm btn-primary'}, 'Post'],
-                 // Same capture, ACTIONABLE landing: a generic unassigned
-                 // todo with this text as details (refine in the editor;
-                 // the todo report is the queue).
-                 ['button', {type: 'submit', name: 'kind', value: 'todo',
-                             class: 'btn btn-sm btn-outline-primary',
-                             title: 'File this text as a todo on this word (actionable - shows in the todo report)'},
-                  'Post as todo']]],
-               // Guard a typed-but-unposted note against navigation (the
-               // ONLY way a draft is lost - posting is explicit).
+        // The CAPTURE lives in a floating dock (dz: notes are taken WHILE
+        // reviewing the word - the box must be one click away at any
+        // scroll position, not down at the page bottom): a small fab in
+        // the lower-left toggles a drawer fixed to the bottom edge.  ONE
+        // draft box; the in-flow pane below is the log's READING
+        // presentation.  The draft survives toggling, navigation-and-back
+        // (sessionStorage, per word) and gets a beforeunload guard; a dot
+        // on the fab marks an unposted draft.
+        const dock = templates.mayEditLexemes()
+            ? [['button', {type: 'button', id: 'wwLogFab', class: 'ww-log-fab',
+                           onclick: 'wwLogToggle()',
+                           title: 'Log a note on this word (notes & todos)'},
+                '\u{1F4DD}',
+                ['span', {id: 'wwLogFabDot', class: 'ww-log-fab-dot', style: 'display:none'}]],
+               ['div', {id: 'wwLogDrawer', class: 'ww-log-drawer', style: 'display:none'},
+                ['form', {method: 'post', action: 'wordwiki.postLexemeLog(bodyArgs)',
+                          class: 'ww-log-post', id: 'wwLogForm'},
+                 ['input', {type: 'hidden', name: 'entry_id', value: String(entry_id)}],
+                 ['input', {type: 'hidden', name: 'returnTo', value: returnTo}],
+                 ['textarea', {name: 'text', id: 'wwLogText', rows: '3',
+                               class: 'form-control',
+                               placeholder: 'Log a note on this word — posted under your name, no approval step…'}],
+                 ['div', {class: 'mt-1 d-flex gap-2 align-items-center'},
+                  ['button', {type: 'submit', name: 'kind', value: 'log',
+                              class: 'btn btn-sm btn-primary'}, 'Post'],
+                  // Same capture, ACTIONABLE landing: a generic unassigned
+                  // todo with this text as details (refine in the editor;
+                  // the todo report is the queue).
+                  ['button', {type: 'submit', name: 'kind', value: 'todo',
+                              class: 'btn btn-sm btn-outline-primary',
+                              title: 'File this text as a todo on this word (actionable - shows in the todo report)'},
+                   'Post as todo'],
+                  ['button', {type: 'button', class: 'btn btn-sm btn-link ms-auto',
+                              onclick: 'wwLogToggle()'}, 'Close']]]],
                ['script', {}, block`
+/**/            const wwLogDraftKey = 'ww-log-draft-${entry_id}';
+/**/            function wwLogToggle() {
+/**/                const drawer = document.getElementById('wwLogDrawer');
+/**/                const open = drawer.style.display === 'none';
+/**/                drawer.style.display = open ? 'block' : 'none';
+/**/                if(open) document.getElementById('wwLogText').focus();
+/**/            }
 /**/            (function() {
 /**/                const form = document.getElementById('wwLogForm');
+/**/                const text = document.getElementById('wwLogText');
+/**/                const dot = document.getElementById('wwLogFabDot');
 /**/                let posting = false;
-/**/                form.addEventListener('submit', () => { posting = true; });
+/**/                // The draft survives toggling AND navigate-away-and-back
+/**/                // (per word, this browser tab).
+/**/                try { text.value = sessionStorage.getItem(wwLogDraftKey) || ''; } catch {}
+/**/                const sync = () => {
+/**/                    try { sessionStorage.setItem(wwLogDraftKey, text.value); } catch {}
+/**/                    dot.style.display = text.value.trim() !== '' ? 'block' : 'none';
+/**/                };
+/**/                sync();
+/**/                text.addEventListener('input', sync);
+/**/                form.addEventListener('submit', () => {
+/**/                    posting = true;
+/**/                    try { sessionStorage.removeItem(wwLogDraftKey); } catch {}
+/**/                });
+/**/                addEventListener('keydown', (e) => {
+/**/                    if(e.key === 'Escape') {
+/**/                        const drawer = document.getElementById('wwLogDrawer');
+/**/                        if(drawer.style.display !== 'none') wwLogToggle();
+/**/                    }
+/**/                });
 /**/                addEventListener('beforeunload', (e) => {
-/**/                    const t = document.getElementById('wwLogText');
-/**/                    if(!posting && t && t.value.trim() !== '') {
+/**/                    if(!posting && text.value.trim() !== '') {
 /**/                        e.preventDefault();
 /**/                        e.returnValue = '';
 /**/                    }
@@ -510,25 +550,27 @@ export class WordWiki extends LiminalApp {
 /**/            })();`]]
             : undefined;
 
-        return ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
-            ['h2', {class: 'fs-5'}, 'Log'],
-            postBox,
-            openTodos.length > 0
-                ? ['div', {class: 'ww-log-todos mt-2'},
-                   ['div', {class: 'fw-semibold'}, `Open todos (${openTodos.length})`],
-                   ['ul', {class: 'mb-1'},
-                    openTodos.map(t => ['li', {}, todoLabel(t)])]]
-                : undefined,
-            rows.length === 0 && !postBox
-                ? undefined
-                : ['div', {class: 'ww-log-list mt-2'},
-                   rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
-                       ['span', {class: 'ww-log-byline text-muted'},
-                        g.first.change_by_username || '?', ' (',
-                        ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
-                         timestamp.formatTimestampRelative(g.first.valid_from)],
-                        '): '],
-                       markdown.markdownToMarkup(g.current!.attr1 ?? '')])]];
+        return [dock,
+            ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
+             ['h2', {class: 'fs-5'}, 'Log'],
+             dock ? ['div', {class: 'text-muted small'},
+                     'Add to the log with the \u{1F4DD} button (lower left).'] : undefined,
+             openTodos.length > 0
+                 ? ['div', {class: 'ww-log-todos mt-2'},
+                    ['div', {class: 'fw-semibold'}, `Open todos (${openTodos.length})`],
+                    ['ul', {class: 'mb-1'},
+                     openTodos.map(t => ['li', {}, todoLabel(t)])]]
+                 : undefined,
+             rows.length === 0
+                 ? undefined
+                 : ['div', {class: 'ww-log-list mt-2'},
+                    rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
+                        ['span', {class: 'ww-log-byline text-muted'},
+                         g.first.change_by_username || '?', ' (',
+                         ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
+                          timestamp.formatTimestampRelative(g.first.valid_from)],
+                         '): '],
+                        markdown.markdownToMarkup(g.current!.attr1 ?? '')])]]];
     }
 
     /** Post a session-log entry (the log pane's form) and bounce back to

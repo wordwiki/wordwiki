@@ -10,8 +10,11 @@ metadata:
 BUILT 2026-07-09 (converged over several design rounds - doc of record:
 repo-root lexeme-log.md). The speakers group discusses words over the
 WORD VIEW (nicest rendering); feedback was going into Word docs. Now: a
-non-modal Log pane at the bottom of the word view - textarea + Post +
-"Post as todo" - the page stays readable while typing.
+floating DOCK - a fab lower-left toggles a bottom-fixed drawer with
+textarea + Post + "Post as todo" (one click away at ANY scroll
+position; draft in sessionStorage per word survives navigation, red
+dot on the fab = unposted draft); the in-flow pane at the page bottom
+is the log's READING presentation.
 
 Key decisions (dz's, after pushing back on my earlier shapes):
 - `log` relation LAST in the schema, internal audience, markdown,

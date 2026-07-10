@@ -25,8 +25,13 @@ it."
   quicker way to do an edit you can already do" - type while the page
   stays active, click Post.  One post = one fact.  Nothing is written
   until the author says so; a dirty box gets a beforeunload guard.
-- **Non-modal, on the word view**: the pane sits inline at the bottom -
-  the page remains readable and interactive while feedback is typed.
+- **Non-modal, via a floating DOCK** (dz round 2: notes are taken WHILE
+  reviewing the word, so the box must be one click away at any scroll
+  position): a small fab in the lower left toggles a drawer fixed to
+  the bottom edge; the in-flow pane at the page bottom is the log's
+  READING presentation.  ONE draft box: it survives toggling and
+  navigate-away-and-back (sessionStorage per word), a red dot on the
+  fab marks an unposted draft, Escape closes, beforeunload guards.
   (The sanctioned exception to the buttons/modals mutation model:
   modals are for mutations where the page is the context you're
   LEAVING; the log is a mutation where the page is the context you're

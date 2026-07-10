@@ -132,7 +132,9 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         assertStringIncludes(html, 'ww-log-pane');
         assertStringIncludes(html, 'recheck');
         assertStringIncludes(html, 'test (');            // byline: author (when)
-        assertStringIncludes(html, 'wwLogText');         // the Post box
+        assertStringIncludes(html, 'wwLogText');         // the Post box (in the drawer)
+        assertStringIncludes(html, 'ww-log-fab');        // the floating dock toggle
+        assertStringIncludes(html, 'ww-log-drawer');     // the fixed bottom drawer
         assertStringIncludes(html, 'postLexemeLog');     // posts through the route
         assertStringIncludes(html, '<strong>recheck</strong>');  // markdown rendered
         // The actionable peer: open todos listed, the todo button present.
