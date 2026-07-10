@@ -331,6 +331,18 @@ export class PhotoService {
         return 'derived/' + derivedRef;
     }
 
+    // The contain-fit JPEG BYTES (whole image, oriented, scaled within boxW×boxH,
+    // never cropped) - for feeding a full document scan to an LLM (scan-extract.md).
+    // Resolves (creating on first request) the same cached derivation serveContained
+    // 302s to, then reads it off disk.  Takes a bare content path (the caller parses
+    // the rotation out of the stored photo value and passes it explicitly).
+    async containedBytes(photoPath: string, boxW: number, boxH: number,
+                         rotate: number = 0): Promise<Uint8Array> {
+        const derived = await this.containedPhotoPath(photoPath, boxW, boxH, rotate); // 'derived/contained-photos/…'
+        const derivedRef = derived.slice('derived/'.length);
+        return Deno.readFile(`${this.config.derivedDir}/${derivedRef}`);
+    }
+
     // A contain-fit img for a photo VALUE: whole image within boxW×boxH, aspect
     // preserved (max-width:100%; height:auto so it stays responsive + uncropped).
     containedImg(value: string, boxW: number, boxH: number, attrs: Record<string, any> = {}): Markup {
