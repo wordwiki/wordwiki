@@ -418,7 +418,7 @@ export function seedEvents(rabid: Rabid, opts: { baseSeed?: number } = {}) {
         const done = new Date(Date.now() + 2 * 60 * 60 * 1000);
         rabid.event.insert({
             event_kind: 'public',
-            description: 'Pop-up Repair (happening now)',
+            description: 'Pop-up Repair',
             location_description: 'Riverside Community Centre', location_url: '',
             is_remote_event: 1, volunteer_only: 0,
             shop_load_time: undefined, setup_time: undefined,
