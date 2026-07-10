@@ -117,6 +117,12 @@ export interface Event {
 
 export type EventOpt = Partial<Event>;
 
+// A person attached to a schedule row (a sign-up or a check-in).  endTime is the
+// check-in's departure (NULL = still present / open-ended; always NULL for a
+// commitment) - the schedule row uses it to show only who is HERE NOW on a
+// running event vs everyone who ATTENDED a past one.
+type SchedulePerson = {id: number, name: string, endTime: string|null};
+
 export class EventTable extends Table<Event> {
     
     constructor() {
@@ -771,17 +777,21 @@ export class EventTable extends Table<Event> {
     // event_id -> [{id, name}], alpha by full name.  The table name is a trusted
     // literal (the union type), so interpolating it is safe.
     private peopleByEvents(table: 'event_commitment' | 'event_checkin',
-                           eventIds: number[]): Map<number, Array<{id: number, name: string}>> {
-        const out = new Map<number, Array<{id: number, name: string}>>();
+                           eventIds: number[]): Map<number, Array<SchedulePerson>> {
+        const out = new Map<number, Array<SchedulePerson>>();
         if (eventIds.length === 0) return out;
-        const rows = db().all<{event_id: number, volunteer_id: number, name: string, short_name: string|null}, {}>(`
-            SELECT t.event_id, v.volunteer_id, v.name, v.short_name
+        // end_time only exists on event_checkin; for commitments select NULL so
+        // the shape is uniform (the table name is a trusted union-type literal).
+        const endCol = table === 'event_checkin' ? 't.end_time' : 'NULL';
+        const rows = db().all<{event_id: number, volunteer_id: number, name: string,
+                               short_name: string|null, end_time: string|null}, {}>(`
+            SELECT t.event_id, v.volunteer_id, v.name, v.short_name, ${endCol} AS end_time
               FROM ${table} t JOIN volunteer v USING (volunteer_id)
              WHERE v.deleted = 0 AND t.event_id IN (${eventIds.map(Number).join(',')})
              ORDER BY v.name`, {});
         for (const r of rows) {
             if (!out.has(r.event_id)) out.set(r.event_id, []);
-            out.get(r.event_id)!.push({id: r.volunteer_id, name: shortName(r)});
+            out.get(r.event_id)!.push({id: r.volunteer_id, name: shortName(r), endTime: r.end_time});
         }
         return out;
     }
@@ -806,8 +816,8 @@ export class EventTable extends Table<Event> {
 
     // One week of the schedule table: a section header, then a row per event.
     private renderUpcomingWeek(weekKey: string, events: Event[],
-                               commitments: Map<number, Array<{id: number, name: string}>>,
-                               checkins: Map<number, Array<{id: number, name: string}>>,
+                               commitments: Map<number, Array<SchedulePerson>>,
+                               checkins: Map<number, Array<SchedulePerson>>,
                                actorId: number|undefined, isFirst: boolean): Markup[] {
         const weekStart = date.sqliteDateToTemporal(weekKey);
         const weekEnd = weekStart.add({days: 6});
@@ -845,8 +855,8 @@ export class EventTable extends Table<Event> {
     // pencil - editing lives there.  No "N" count column: the full roster is
     // shown (volunteers gauge who'll be there by name) and dropping a column buys
     // real width on narrow/mobile screens.
-    renderEventScheduleRow(e: Event, commitments: Array<{id: number, name: string}>,
-                           checkins: Array<{id: number, name: string}>,
+    renderEventScheduleRow(e: Event, commitments: Array<SchedulePerson>,
+                           checkins: Array<SchedulePerson>,
                            actorId: number|undefined, nowMode: boolean = false): Markup {
         const id = e.event_id;
         const phase = this.eventPhase(e);
@@ -866,8 +876,16 @@ export class EventTable extends Table<Event> {
         // now mode a not-yet-started event is treated as attendance too - you're
         // checking IN, not signing up.
         const future = phase === 'future' && !nowMode;
-        const attending = future ? commitments : checkins;
+        // Running/now: "here" means still present (open check-in); a checked-out
+        // person keeps their attendance record but drops off the live "Here now"
+        // line and flips the self-toggle back to "Check in".  Past: everyone who
+        // has a check-in ATTENDED, departed or not.
+        const running = nowMode || phase === 'running';
+        const attending = future ? commitments
+            : (running ? checkins.filter(c => c.endTime == null) : checkins);
         const selfAttending = actorId !== undefined && attending.some(p => p.id === actorId);
+        // Ghost = committed but never checked in; a departed attendee is not a
+        // ghost, so this set is ALL check-ins regardless of departure.
         const checkedInIds = new Set(checkins.map(p => p.id));
         const ghosts = future ? [] : commitments.filter(c => !checkedInIds.has(c.id));
         const line = nowMode
@@ -929,6 +947,7 @@ export class EventTable extends Table<Event> {
     private renderPeopleLine(label: string, people: Array<{id: number, name: string}>,
                              actorId: number|undefined, emptyText: string|undefined,
                              opts: {ghost?: boolean} = {}): Markup {
+        // (people may be SchedulePerson - only id/name are read here.)
         if (people.length === 0)
             return emptyText ? [h.div, {class: 'text-muted small fst-italic'}, emptyText] : undefined;
         const selfIn = actorId !== undefined && people.some(p => p.id === actorId);
@@ -964,10 +983,19 @@ export class EventTable extends Table<Event> {
         const offLabel = nowMode ? 'I am Here' : (phase === 'running' ? 'Check in' : 'I was there');
         const offTitle = nowMode ? "Check yourself in - you're here"
             : (phase === 'running' ? 'Check yourself in' : 'Record that you were there');
+        // Toggling OFF differs by phase.  Running/now: check OUT (stamp
+        // departure, keep the attendance record).  Past: there's no departure to
+        // record, so it's a RETRACTION (remove the record) - "actually I wasn't".
+        const running = nowMode || phase === 'running';
+        const offAction = running
+            ? {expr: `rabid.event_checkin.checkOut(${event_id},${actorId})`,
+               title: "You're checked in — click to check out"}
+            : {expr: `rabid.event_checkin.removeCheckin(${event_id},${actorId})`,
+               title: "Marked as attended — click to remove"};
         return selfAttending
             ? action.actionButton(onLabel,
-                {kind: 'immediate', expr: `rabid.event_checkin.checkOut(${event_id},${actorId})`},
-                'btn btn-success lm-row-action', {title: "You're checked in — click to undo"})
+                {kind: 'immediate', expr: offAction.expr},
+                'btn btn-success lm-row-action', {title: offAction.title})
             : action.actionButton(offLabel,
                 {kind: 'immediate', expr: `rabid.event_checkin.checkSelfIn(${event_id})`},
                 'btn btn-outline-primary lm-row-action', {title: offTitle});
@@ -1821,12 +1849,6 @@ export class EventCheckinTable extends Table<EventCheckin> {
         return hostOrAdmin({ctx});
     }
 
-    private hasCheckin(event_id: number, volunteer_id: number): boolean {
-        return !!db().prepare<{n: number}, {event_id: number, volunteer_id: number}>(
-            'SELECT 1 AS n FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id')
-            .first({event_id, volunteer_id});
-    }
-
     // The check-in fragments register this table's event fk key, and the
     // volunteer's reconciled Time view registers its volunteer fk key
     // (volunteer_time.ts) - inserts/updates notify both via the automatic
@@ -1835,29 +1857,59 @@ export class EventCheckinTable extends Table<EventCheckin> {
         return {action: 'reload'} as unknown as Markup;
     }
 
-    // "Check me in": sign the CURRENT actor in.  Ungated (self-signup is always
-    // allowed); idempotent (no-op if already checked in).  insert() snapshots
-    // was_staff from the volunteer's current is_staff.
+    // The current check-in row for a (event, volunteer), or undefined.  Read
+    // unguarded (system) - callers only need identity/end_time to branch.
+    private checkinRow(event_id: number, volunteer_id: number): EventCheckin | undefined {
+        return security.runSystem(() =>
+            db().prepare<EventCheckin, {event_id: number, volunteer_id: number}>(
+                'SELECT * FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id')
+                .first({event_id, volunteer_id}));
+    }
+
+    // Has this event ended (so "check out" is meaningless - only retraction is)?
+    // No end_time (open-ended event) counts as not-ended.
+    private eventEnded(event_id: number): boolean {
+        const e = security.runSystem(() =>
+            db().prepare<{end_time: string|null}, {event_id: number}>(
+                'SELECT end_time FROM event WHERE event_id = :event_id').first({event_id}));
+        return !!(e?.end_time) && e.end_time < date.currentSqliteDateTime();
+    }
+
+    // "Arrive": make the volunteer present.  No row -> insert an OPEN check-in
+    // (end_time NULL, the normal open-ended state that reporting handles).  A
+    // row that had been checked OUT -> clear its end_time (re-arrival), keeping
+    // the original start_time and everything else.  An already-open row -> no-op.
+    private arrive(event_id: number, volunteer_id: number): void {
+        const existing = this.checkinRow(event_id, volunteer_id);
+        if(!existing)
+            this.insert({event_id, volunteer_id, notes: ''});
+        else if(existing.end_time != null)
+            this.updateNamedFields(existing.event_checkin_id, ['end_time'],
+                                   {end_time: null} as unknown as Partial<EventCheckin>);
+    }
+
+    // "Check me in": make the CURRENT actor present.  Ungated (self-signup is
+    // always allowed); idempotent.  A fresh check-in snapshots was_staff via
+    // insert(); a re-check-in after a check-out just clears the departure.
     @routeMutation(authenticated)   // self-signup: any logged-in volunteer checks themselves in
     checkSelfIn(event_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(actorId === undefined) throw new Error('Not logged in as a volunteer');
-        if(!this.hasCheckin(event_id, actorId))
-            this.insert({event_id, volunteer_id: actorId, notes: ''});
+        this.arrive(event_id, actorId);
         return this.reloadEditor(event_id, [actorId]);
     }
 
     // Quick-add: host/admin checks one named volunteer in (the recent-volunteer
-    // menu shortcuts; the dialog's checkIn() funnels here too).  Positional, so it
-    // can be an immediate menu action like checkOut.
+    // menu shortcuts; the dialog's checkIn() funnels here too).  Also the
+    // "check back in" verb for a volunteer who had checked out.  Positional, so
+    // it can be an immediate menu action like checkOut.
     @routeMutation(hostOrAdmin)
     checkInVolunteer(event_id: number, volunteer_id: number): Markup {
         if(!this.canManageCheckins())
             throw new Error('Not permitted to check volunteers into this event');
         if(!Number.isInteger(volunteer_id) || !volunteer_id)
             throw new Error('Please choose a volunteer');
-        if(!this.hasCheckin(event_id, volunteer_id))
-            this.insert({event_id, volunteer_id, notes: ''});
+        this.arrive(event_id, volunteer_id);
         return this.reloadEditor(event_id, [volunteer_id]);
     }
 
@@ -1872,27 +1924,46 @@ export class EventCheckinTable extends Table<EventCheckin> {
         return this.checkInVolunteer(event_id, volunteer_id);
     }
 
-    // Check a volunteer out (remove their check-in).  Own check-in always; anyone
-    // else's needs host/admin.  Immediate (picking the named item is deliberate).
+    // Check a volunteer OUT: stamp their departure (end_time = now), KEEPING the
+    // attendance record - the attendance fact survives, hours reflect the
+    // partial window, and a later re-check-in clears it.  Most people never
+    // check out (open-ended is the norm); this is the optional "they left" verb,
+    // meaningful only while the event is running.  No-op on an already-checked-
+    // out or missing row.  Own always; others need host/admin.
     @routeMutation(security.or(hostOrAdmin, selfArg(args => Number(args[1]))))   // own check-out, or host
     checkOut(event_id: number, volunteer_id: number): Markup {
         const actorId = security.current()?.actorId;
         if(!this.canManageCheckins() && actorId !== volunteer_id)
             throw new Error('Not permitted to check out this volunteer');
-        db().execute<{event_id: number, volunteer_id: number}>(
-            'DELETE FROM event_checkin WHERE event_id = :event_id AND volunteer_id = :volunteer_id',
-            {event_id, volunteer_id});
-        dirty.record([sel(this.tableKey()),
-                      sel(this.fkKey('event_id', event_id)),
-                      sel(this.fkKey('volunteer_id', volunteer_id))]);
+        const existing = this.checkinRow(event_id, volunteer_id);
+        if(existing && existing.end_time == null)
+            this.updateNamedFields(existing.event_checkin_id, ['end_time'],
+                                   {end_time: date.currentSqliteDateTime()} as Partial<EventCheckin>);
         return this.reloadEditor(event_id, [volunteer_id]);
     }
 
-    // Clear the whole attendance list (host/admin; confirm-gated - it's bulk).
+    // Remove a check-in entirely: RETRACTION ("they weren't here" / a mistaken
+    // check-in / a retroactive "actually I wasn't there").  This DELETES the
+    // attendance record - distinct from checkOut, which preserves it.  It is the
+    // only "undo" once an event has ended (there is no departure to record).
+    // Own always; others need host/admin.
+    @routeMutation(security.or(hostOrAdmin, selfArg(args => Number(args[1]))))   // own removal, or host
+    removeCheckin(event_id: number, volunteer_id: number): Markup {
+        const actorId = security.current()?.actorId;
+        if(!this.canManageCheckins() && actorId !== volunteer_id)
+            throw new Error('Not permitted to remove this check-in');
+        const existing = this.checkinRow(event_id, volunteer_id);
+        if(existing) this.delete(existing.event_checkin_id);
+        return this.reloadEditor(event_id, [volunteer_id]);
+    }
+
+    // Clear the whole attendance list: bulk RETRACTION (delete every check-in),
+    // not a bulk check-out.  Host/admin; confirm-gated - it's bulk and
+    // destructive.
     @routeMutation(hostOrAdmin)
-    checkOutAll(event_id: number): Markup {
+    clearAttendance(event_id: number): Markup {
         if(!this.canManageCheckins())
-            throw new Error('Not permitted to check out volunteers for this event');
+            throw new Error('Not permitted to clear attendance for this event');
         const vids = db().prepare<{volunteer_id: number}, {event_id: number}>(
             'SELECT volunteer_id FROM event_checkin WHERE event_id = :event_id')
             .all({event_id}).map(r => r.volunteer_id);
@@ -2026,15 +2097,35 @@ export class EventCheckinTable extends Table<EventCheckin> {
                         mode: {kind: 'modal', dialogUrl: `/rabid.event_checkin.checkInDialog(${event_id})`}});
         }
         // Per-person verbs (own row always; others only with host/admin), ordered
-        // ACTION-primary, not target-primary: all the check-outs, then all the
-        // detailed edits (times/notes).
+        // ACTION-primary, not target-primary: the presence verbs (check out /
+        // check back in), then the retractions (Remove), then the detailed edits.
         const manageable = checkins.filter(c => canManage || c.volunteer_id === actorId);
         if(items.length > 0 && manageable.length > 0) items.push('divider');
+        // Check out / check back in - only while the event is running (a past
+        // event has no departure to record; its only "off" is Remove, below).
+        const ended = this.eventEnded(event_id);
+        if(!ended) {
+            for(const c of manageable) {
+                const self = c.volunteer_id === actorId;
+                if(c.end_time == null)
+                    items.push({label: self ? 'Check me out' : `Check out ${memberShortName(c)}`,
+                                mode: {kind: 'immediate',
+                                       expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
+                else
+                    // Re-arrival: self uses the ungated checkSelfIn; a host
+                    // re-checks anyone in via checkInVolunteer.  Both clear end_time.
+                    items.push({label: self ? 'Check me back in' : `Check ${memberShortName(c)} back in`,
+                                mode: {kind: 'immediate',
+                                       expr: self ? `rabid.event_checkin.checkSelfIn(${event_id})`
+                                                  : `rabid.event_checkin.checkInVolunteer(${event_id},${c.volunteer_id})`}});
+            }
+        }
+        // Remove (retract the attendance record) - every phase.
         for(const c of manageable) {
             const self = c.volunteer_id === actorId;
-            items.push({label: self ? 'Check me out' : `Check out ${memberShortName(c)}`,
+            items.push({label: self ? 'Remove my check-in' : `Remove ${memberShortName(c)}`,
                         mode: {kind: 'immediate',
-                               expr: `rabid.event_checkin.checkOut(${event_id},${c.volunteer_id})`}});
+                               expr: `rabid.event_checkin.removeCheckin(${event_id},${c.volunteer_id})`}});
         }
         for(const c of manageable) {
             const self = c.volunteer_id === actorId;
@@ -2043,10 +2134,10 @@ export class EventCheckinTable extends Table<EventCheckin> {
                                dialogUrl: `/rabid.event_checkin.editCheckinDialog(${c.event_checkin_id})`}});
         }
         if(canManage && checkins.length >= 2)
-            items.push({label: 'Check everyone out…',
+            items.push({label: 'Clear attendance…',
                         mode: {kind: 'confirm',
-                               expr: `rabid.event_checkin.checkOutAll(${event_id})`,
-                               message: `Check out all ${checkins.length} volunteers?`}});
+                               expr: `rabid.event_checkin.clearAttendance(${event_id})`,
+                               message: `Remove all ${checkins.length} check-ins? This clears the attendance record.`}});
         return items;
     }
 
@@ -2068,7 +2159,11 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // the device width).  LIVE + shares the check-in ☰.
     @route(authenticated)
     renderCheckinGrid(event_id: number): Markup {
-        const checkins = security.runSystem(() => this.checkedInWithPhotos.all({event_id}));
+        const all = security.runSystem(() => this.checkedInWithPhotos.all({event_id}));
+        // Present (open) first, departed (checked-out) after - the live grid reads
+        // "who's here now", with those who left trailing quietly.
+        const checkins = [...all.filter(c => c.end_time == null),
+                          ...all.filter(c => c.end_time != null)];
         const props = liveReloadableProps([this.fkKey('event_id', event_id)],
             `rabid.event_checkin.renderCheckinGrid(${event_id})`);
         const items = this.checkinMenuItems(event_id, checkins);
@@ -2094,12 +2189,19 @@ export class EventCheckinTable extends Table<EventCheckin> {
                        style: 'width:100%; aspect-ratio:1; border-radius:8px; background:var(--bs-secondary-bg); '
                             + 'color:var(--bs-secondary-color); display:flex; align-items:center; justify-content:center;'},
                faceOutlineSvg()];
+        // Departed (checked-out): still shown - it's an attendance record - but
+        // dimmed with a "left HH:MM" caption instead of the staff badge.
+        const departed = c.end_time != null;
         return [h.a, {...templates.pageLinkProps(`/rabid.volunteer.detailPage(${c.volunteer_id})`),
                       class: 'text-decoration-none text-body text-center d-block',
+                      style: departed ? 'opacity:0.55;' : undefined,
                       'data-testid': `face-${c.volunteer_id}`},
             face,
             [h.div, {class: 'small text-truncate mt-1'}, memberShortName(c)],
-            c.was_staff ? [h.div, {class: 'badge text-bg-light border', style: 'font-size:0.65rem;'}, 'staff'] : undefined];
+            departed
+                ? [h.div, {class: 'text-muted', style: 'font-size:0.65rem;'},
+                   `left ${date.sqliteDateTimeToTimeString(c.end_time!)}`]
+                : (c.was_staff ? [h.div, {class: 'badge text-bg-light border', style: 'font-size:0.65rem;'}, 'staff'] : undefined)];
     }
 
     @route(authenticated)
@@ -2125,9 +2227,13 @@ export class EventCheckinTable extends Table<EventCheckin> {
     // One attendee as inline text: short name (quiet link to the volunteer page),
     // staff marked (attendance mixes volunteers and staff).
     renderCheckinName(c: EventCheckin & MemberName): Markup {
-        return [h.span, {class: 'lm-member', 'data-testid': `checkin-${c.volunteer_id}`},
+        return [h.span, {class: 'lm-member', 'data-testid': `checkin-${c.volunteer_id}`,
+                         style: c.end_time != null ? 'opacity:0.6;' : undefined},
             templates.pageLink(`/rabid.volunteer.detailPage(${c.volunteer_id})`, memberShortName(c)),
-            c.was_staff ? [h.span, {class: 'text-muted small'}, ' (staff)'] : undefined];
+            c.was_staff ? [h.span, {class: 'text-muted small'}, ' (staff)'] : undefined,
+            c.end_time != null
+                ? [h.span, {class: 'text-muted small'}, ` (left ${date.sqliteDateTimeToTimeString(c.end_time)})`]
+                : undefined];
     }
 }
 

@@ -20,12 +20,17 @@ function makeActive(volunteer_id: number): void {
     }));
 }
 
+// A RUNNING event (started an hour ago, ends in two) - the default fixture, so
+// the check-in/out verbs (a running-event concept) apply.  Past-specific
+// behaviour has its own fixture where needed.
 function insertEvent(): number {
+    const start = date.temporalToSqliteDateTime(date.orgNow().subtract({hours: 1}));
+    const end = date.temporalToSqliteDateTime(date.orgNow().add({hours: 2}));
     return asSystem(() => rabid.event.insert({
         event_kind: 'public', description: 'Repair Night',
         location_description: 'The shop', location_url: '',
         is_remote_event: 0, volunteer_only: 0,
-        start_time: '2026-06-20 19:00:00', end_time: '2026-06-20 21:30:00',
+        start_time: start, end_time: end,
         total_cash_collected: 0, notes: '',
     }));
 }
@@ -45,7 +50,8 @@ test("event rows: one navigable species; the pencil only for hosts", async () =>
         assert(!!find(bobRow, byClass("lm-nav-chevron")));
         assert(!find(bobRow, byClass("lm-edit-pencil")));
         assert(hasText(bobRow, "Repair Night"));
-        assert(hasText(bobRow, "Jun 20, 2026"));
+        // The row shows the event's day (fixture runs today, so just check a date renders).
+        assert(hasText(bobRow, String(date.orgNow().year)));
 
         const aliceRow = await row(alice);                   // host
         assert(!!find(aliceRow, byClass("lm-edit-pencil")));
@@ -168,8 +174,19 @@ test("check-in: self-signup is always allowed and idempotent", async () => {
         await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
         const checkins = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
         assertEquals(checkins.map(c => c.volunteer_name), ["Bob Shares"]);
-        // ...and they can check themselves back out.
+        // Check-out is a DEPARTURE, not a delete: the attendance record survives,
+        // now stamped with an end_time.
         await asUser(bob, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, bob));
+        const afterOut = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
+        assertEquals(afterOut.length, 1, 'check-out keeps the attendance record');
+        assert(afterOut[0].end_time != null, 'check-out stamps a departure time');
+        // Re-check-in clears the departure - same row, back to open-ended.
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, id));
+        const back = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
+        assertEquals(back.length, 1, 're-check-in reuses the row');
+        assertEquals(back[0].end_time ?? null, null, 're-check-in clears the departure');
+        // Remove is the retraction: it deletes the record entirely.
+        await asUser(bob, () => invoke(`rabid.event_checkin.removeCheckin($arg0,$arg1)`, id, bob));
         assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id})).length, 0);
     });
 });
@@ -194,7 +211,16 @@ test("check-in: checking OTHERS in/out needs host/admin", async () => {
         await asUser(bob, () => assertRejects(
             () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, carol),
             Error, "not permitted"));   // route layer (@route or(hostOrAdmin, selfArg)) denies first
+        await asUser(bob, () => assertRejects(
+            () => invoke(`rabid.event_checkin.removeCheckin($arg0,$arg1)`, id, carol),
+            Error, "not permitted"));   // removal is gated the same way
+        // alice (host) checks carol out - the record is KEPT, departure stamped.
         await asUser(alice, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, carol));
+        const afterOut = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
+        assertEquals(afterOut.length, 1, 'check-out keeps the record');
+        assert(afterOut[0].end_time != null);
+        // ...and only a host can then REMOVE (retract) her record entirely.
+        await asUser(alice, () => invoke(`rabid.event_checkin.removeCheckin($arg0,$arg1)`, id, carol));
         assertEquals(asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id})).length, 0);
     });
 });
@@ -337,6 +363,54 @@ test("check-in editor: per-person verbs are action-primary (all check-outs, then
         assert(labels.lastIndexOf('Check out Carol')
                < labels.indexOf("Edit Bob's check-in…"),
                'all check-outs come before all edits');
+    });
+});
+
+// A PAST event (ended yesterday) - check-out is meaningless once it's over.
+function insertPastEvent(): number {
+    const start = date.temporalToSqliteDateTime(date.orgNow().subtract({days: 1, hours: 2}));
+    const end = date.temporalToSqliteDateTime(date.orgNow().subtract({days: 1}));
+    return asSystem(() => rabid.event.insert({
+        event_kind: 'public', description: 'Last Night', location_description: '', location_url: '',
+        is_remote_event: 0, volunteer_only: 0, start_time: start, end_time: end,
+        total_cash_collected: 0, notes: '',
+    } as any));
+}
+
+test("check-in editor: after an event ends there is no check-out, only Remove (retraction)", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertPastEvent();
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, bob));
+        const view = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        // No departure to record post-event: the ☰ offers Remove, not Check out.
+        assert(!hasText(view, "Check out Bob"), 'no check-out verb once the event has ended');
+        assert(hasText(view, "Remove Bob"), 'retraction (Remove) is the only "off" post-event');
+    });
+});
+
+test("check-in: check-out then re-check-in on a running event (departure kept, then cleared); grid marks departed", async () => {
+    await withTestDb(async ({ alice, bob }) => {
+        const id = insertEvent();   // running
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, bob));
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkOut($arg0,$arg1)`, id, bob));
+
+        // The record survives with a departure time, and the face grid dims the
+        // departed volunteer with a "left" caption rather than dropping them.
+        const c = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}))[0];
+        assert(c.end_time != null, 'departure recorded');
+        const grid = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinGrid(${id})`));
+        assert(!!findByTestId(grid, `face-${bob}`), 'departed volunteer still shown');
+        assert(hasText(grid, 'left'), 'a "left HH:MM" caption marks the departure');
+        // A departed volunteer gets a "Check back in" verb, not "Check out".
+        const menu = await asUser(alice, () => renderRoute(`rabid.event_checkin.renderCheckinEditor(${id})`));
+        assert(hasText(menu, "Check Bob back in"));
+        assert(!hasText(menu, "Check out Bob"));
+
+        // Re-check-in reuses the row and clears the departure.
+        await asUser(alice, () => invoke(`rabid.event_checkin.checkInVolunteer($arg0,$arg1)`, id, bob));
+        const back = asSystem(() => rabid.event_checkin.checkinsForEvent.all({event_id: id}));
+        assertEquals(back.length, 1);
+        assertEquals(back[0].end_time ?? null, null);
     });
 });
 
