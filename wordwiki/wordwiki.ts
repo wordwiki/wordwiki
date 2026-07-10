@@ -493,31 +493,32 @@ export class WordWiki extends LiminalApp {
              t.assigned_to && t.assigned_to !== '___' ? `\u2192 ${entry.displayUsername(t.assigned_to)}` : undefined]
             .filter(s => s).join('  ') || entry.todos[t.todo] || t.todo;
 
+        // Layout (dz 2026-07-10): Todos FIRST under their own title (only
+        // when there are any), then the log entries with NO title (the
+        // bylines make them self-evident; the old 'Log' heading + its
+        // instruction line were part of the confusion).
         return ['div', {...reloadableProps([`-lexeme-log-${entry_id}-`],
                                            `/ww/wordwiki.renderLexemeLogSection(${entry_id})`),
                         id: 'wwLogSection'},
-            ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
-             ['h2', {class: 'fs-5'}, 'Log'],
-             templates.mayEditLexemes()
-                 ? ['div', {class: 'text-muted small'},
-                    'Add to the log with the \u{1F4DD} button (lower left).']
-                 : undefined,
-             openTodos.length > 0
-                 ? ['div', {class: 'ww-log-todos mt-2'},
-                    ['div', {class: 'fw-semibold'}, `Open todos (${openTodos.length})`],
-                    ['ul', {class: 'mb-1'},
-                     openTodos.map(t => ['li', {}, todoLabel(t)])]]
-                 : undefined,
-             rows.length === 0
-                 ? undefined
-                 : ['div', {class: 'ww-log-list mt-2'},
-                    rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
-                        ['span', {class: 'ww-log-byline text-muted'},
-                         entry.displayUsername(g.first.change_by_username || '?'), ' (',
-                         ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
-                          timestamp.formatTimestampRelative(g.first.valid_from)],
-                         '): '],
-                        markdown.markdownToMarkup(g.current!.attr1 ?? '')])]]];
+            (openTodos.length > 0 || rows.length > 0)
+                ? ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
+                   openTodos.length > 0
+                       ? ['div', {class: 'ww-log-todos'},
+                          ['h2', {class: 'fs-5'}, 'Todos'],
+                          ['ul', {class: 'mb-1'},
+                           openTodos.map(t => ['li', {}, todoLabel(t)])]]
+                       : undefined,
+                   rows.length === 0
+                       ? undefined
+                       : ['div', {class: 'ww-log-list mt-2'},
+                          rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
+                              ['span', {class: 'ww-log-byline text-muted'},
+                               entry.displayUsername(g.first.change_by_username || '?'), ' (',
+                               ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
+                                timestamp.formatTimestampRelative(g.first.valid_from)],
+                               '): '],
+                              markdown.markdownToMarkup(g.current!.attr1 ?? '')])]]
+                : undefined];
     }
 
     /** The floating capture dock (dz: notes are taken WHILE reviewing the

@@ -145,7 +145,9 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         // in the drawer, the open todos in the section (assignee shown by
         // NAME when set).
         assertStringIncludes(html, 'Post as todo');
-        assertStringIncludes(html, 'Open todos (1)');
+        assertStringIncludes(html, '>Todos<');            // todos first, own title
         assertStringIncludes(html, 'check with elders');
+        assert(!html.includes('>Log<'), "no 'Log' heading (dz: part of the confusion)");
+        assert(!html.includes('Add to the log with'), 'instruction line gone');
     });
 });

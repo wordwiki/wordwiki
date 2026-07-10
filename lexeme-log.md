@@ -51,9 +51,13 @@ it."
   queued in the todo report.  (This replaced an earlier
   #tags-in-the-text idea - the todo model IS the work queue.)
   (Hidden briefly on 2026-07-09, RE-ENABLED 2026-07-10 - dz: working
-  toward a pretty and simple implementation.)  Open todos list shows
-  the assignee by NAME; a todo post refreshes the editor's todo
-  relation fragments (kind-aware reload targets).
+  toward a pretty and simple implementation.)  Open todos show the
+  assignee by NAME; a todo post refreshes the editor's todo relation
+  fragments (kind-aware reload targets).  Section layout (dz): TODOS
+  FIRST under their own 'Todos' title (only when there are any), then
+  the log entries with NO heading - the bylines make them
+  self-evident; the old 'Log' title + instruction line were part of
+  the confusion.
 - **Targeted refresh, both surfaces** (dz round 3): posting goes
   through `tx` (the standard mutation client) returning the normal
   `{action:'reload', targets}` - the word view's log section is a
