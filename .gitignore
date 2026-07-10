@@ -27,6 +27,10 @@
 /rabid-mail-credential.json
 /wordwiki-mail-credential.json
 
+# Anthropic API key for liminal/llm.ts (scan -> extract) - NEVER commit.
+/rabid-anthropic-credential.json
+/wordwiki-anthropic-credential.json
+
 # The rabid dev database (rebuilt by rabid_create_fake_data.sh at the repo
 # root); throwaway fake data, never tracked.
 /database/
