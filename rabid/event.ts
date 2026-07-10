@@ -492,6 +492,10 @@ export class EventTable extends Table<Event> {
             // Its ☰ is where the future "Import scanned records" action lands.
             e.is_catch_all ? undefined
                 : rabid.gallery_photo.renderGallery('event', event_id, 'service-sheets', 'Service Record Sheets'),
+            // Scanned-record imports: the live status + review/land of scan -> extract
+            // jobs turning those sheet photos into service rows (scan-extract.md).  Empty
+            // (invisible) until the sheets ☰ "Import scanned records…" starts one.
+            e.is_catch_all ? undefined : rabid.extraction_job.renderEventImports(event_id),
             // Retrospectives: volunteer feedback on how the event went (markdown,
             // optionally anonymous) - the last section, below everything.
             this.renderEventRetrospectives(event_id),

@@ -172,10 +172,16 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
     // records…" (scan → extract) action has a home beside "Add photo…".
     private renderGalleryAdd(owner_table: string, owner_id: number, scope: string, title: string): Markup {
         const addDialog = `/rabid.gallery_photo.newPhotoDialog('${owner_table}', ${owner_id}, '${scope}')`;
-        if(CONTAIN_SCOPES.has(scope))
-            return action.actionMenu([
-                {label: 'Add photo…', mode: {kind: 'modal', dialogUrl: addDialog}},
-            ], {ariaLabel: `${title} actions`});
+        if(CONTAIN_SCOPES.has(scope)) {
+            const items: action.ActionMenuItem[] = [{label: 'Add photo…', mode: {kind: 'modal', dialogUrl: addDialog}}];
+            // Service-sheets on an event: kick a scan -> extract import of the photos
+            // into service rows (scan-extract.md).  owner_id is the event_id.
+            if(scope === 'service-sheets' && owner_table === 'event')
+                items.push({label: 'Import scanned records…',
+                    mode: {kind: 'confirm', message: 'Read service records from these sheet photos? This runs in the background.',
+                           expr: `rabid.extraction_job.startServiceImport(${owner_id})`}});
+            return action.actionMenu(items, {ariaLabel: `${title} actions`});
+        }
         return action.actionButton(action.plusIcon(), {kind: 'modal', dialogUrl: addDialog},
             'lm-menu-button', {'aria-label': `Add to ${title}`, title: `Add to ${title}`});
     }
