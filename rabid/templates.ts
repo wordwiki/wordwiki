@@ -221,6 +221,9 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
               // across all events (access to an individual record is via its event).
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/service'}, 'Services']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/serviceMap'}, 'Services by area (map)']],
+              // A standalone, self-contained analysis page (a static file in resources/);
+              // hx-boost:false forces a full page load rather than an AJAX swap of the app shell.
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/resources/rrbr-hotspots-analysis.html', 'hx-boost':"false"}, 'Hotspots analysis']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/sales'}, 'Sales']],
              ], //ul
             ], //li
