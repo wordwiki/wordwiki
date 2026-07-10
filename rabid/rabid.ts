@@ -20,6 +20,7 @@ import * as committee from './committee.ts';
 import * as task from './task.ts';
 import * as gallery from './gallery.ts';
 import * as extractionJob from './extraction_job.ts';
+import { Llm, loadLlm } from '../liminal/llm.ts';
 import * as photo from '../liminal/photo.ts';
 import {ensureDir} from "std/fs/mod.ts";
 import * as table from '../liminal/table.ts';
@@ -81,6 +82,13 @@ export class Rabid extends LiminalApp {
     @route(authenticated) @path get project() { return new task.ProjectTable(); }
     @route(authenticated) @path get task() { return new task.TaskTable(); }
     @route(authenticated) @path get subtask() { return new task.SubtaskTable(); }
+
+    // The LLM client for scan -> extract (liminal/llm.ts).  Lazy, like the mailer:
+    // reads rabid-anthropic-credential.json, degrading to a DisabledLlm when absent.
+    // The setter lets tests inject a fake (no network / no key).
+    private _llm: Llm | undefined = undefined;
+    get llm(): Llm { return this._llm ??= loadLlm('rabid'); }
+    set llm(l: Llm) { this._llm = l; }
 
     // Photo upload + on-demand presentation sizing (liminal/photo.ts).  The
     // stores live beside the db: they are data, not code.
