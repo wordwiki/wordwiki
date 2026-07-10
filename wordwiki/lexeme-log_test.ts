@@ -122,6 +122,18 @@ test("postTodo: quick-filed as a generic unassigned todo, done=0", async () => {
     });
 });
 
+test("log entries: block markdown (lists) indents under the byline", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        as(fx, 'test', () => fx.ww.lexemeOps.postLog(1000, '- first point\n- second point'));
+        const markup = await as(fx, 'test', () =>
+            renderRoute(fx.ww, `wordwiki.wordView(1000)`));
+        const html = renderToStringViaLinkeDOM(markup);
+        assertStringIncludes(html, 'ww-log-body');       // block body, indented
+        assertStringIncludes(html, '<li>first point</li>');
+    });
+});
+
 test("word view: log pane renders posts with byline and the Post box", async () => {
     await withTestDb(async (fx: Fixture) => {
         seed(fx);
@@ -137,6 +149,8 @@ test("word view: log pane renders posts with byline and the Post box", async () 
         assertStringIncludes(html, 'ww-log-drawer');     // the fixed bottom drawer
         assertStringIncludes(html, 'postLexemeLog');     // posts through the tx route
         assertStringIncludes(html, '<strong>recheck</strong>');  // markdown rendered
+        assert(!html.includes('ww-log-body'),
+               'single-paragraph entry rides the byline line (no block body)');
         // The reading section is a standard reloadable fragment (posting
         // refreshes it in place - no page reload).
         assertStringIncludes(html, '-lexeme-log-1000-');

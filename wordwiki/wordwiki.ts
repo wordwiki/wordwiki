@@ -511,13 +511,25 @@ export class WordWiki extends LiminalApp {
                    rows.length === 0
                        ? undefined
                        : ['div', {class: 'ww-log-list mt-2'},
-                          rows.map(g => ['div', {class: 'ww-log-entry mb-1'},
-                              ['span', {class: 'ww-log-byline text-muted'},
-                               entry.displayUsername(g.first.change_by_username || '?'), ' (',
-                               ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
-                                timestamp.formatTimestampRelative(g.first.valid_from)],
-                               '): '],
-                              markdown.markdownToMarkup(g.current!.attr1 ?? '')])]]
+                          rows.map(g => {
+                              const byline =
+                                  ['span', {class: 'ww-log-byline text-muted'},
+                                   entry.displayUsername(g.first.change_by_username || '?'), ' (',
+                                   ['span', {title: timestamp.formatTimestampAsLocalTime(g.first.valid_from)},
+                                    timestamp.formatTimestampRelative(g.first.valid_from)],
+                                   '): '];
+                              // Single-paragraph markdown rides the byline's
+                              // line; real block markdown (lists...) sits
+                              // INDENTED under it (inline rendering made
+                              // blocks ragged and way in - dz).
+                              const md = markdown.markdownToMarkup(g.current!.attr1 ?? '');
+                              const inline = entryMeta.markdownInline(md);
+                              return inline !== undefined
+                                  ? ['div', {class: 'ww-log-entry mb-1'}, byline, inline]
+                                  : ['div', {class: 'ww-log-entry mb-1'},
+                                     ['div', {}, byline],
+                                     ['div', {class: 'ww-log-body'}, md]];
+                          })]]
                 : undefined];
     }
 

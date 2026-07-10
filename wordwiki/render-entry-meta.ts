@@ -205,7 +205,7 @@ function humanise(key: string): string {
  *  reads on the label's line ("Note: text") instead of being bumped to the next
  *  line by the <p> block.  Genuine multi-block markdown returns undefined (the
  *  caller renders it as indented containment). */
-function markdownInline(md: Markup): Markup | undefined {
+export function markdownInline(md: Markup): Markup | undefined {
     if (!Array.isArray(md) || md[0] !== "div") return undefined;
     const blocks = (md as any)[2];
     if (!Array.isArray(blocks) || blocks.length !== 1) return undefined;

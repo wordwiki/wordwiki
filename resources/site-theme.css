@@ -313,3 +313,10 @@ body {
                  padding: .6rem 1rem .6rem 4.5rem; max-height: 40vh;
                  overflow-y: auto; }
 .ww-log-drawer textarea { max-width: 46rem; }
+
+/* Multi-block log entries: the body sits indented under the byline
+   (single-paragraph entries ride the byline's own line). */
+.ww-log-entry .ww-log-body { margin-left: 1.5rem; }
+.ww-log-entry .ww-log-body > .lm-markdown > :first-child { margin-top: 0; }
+.ww-log-entry .ww-log-body > .lm-markdown > :last-child { margin-bottom: 0; }
+.ww-log-entry .ww-log-body ul, .ww-log-entry .ww-log-body ol { padding-left: 1.25rem; margin-bottom: .25rem; }
