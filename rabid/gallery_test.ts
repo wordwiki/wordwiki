@@ -177,6 +177,25 @@ test("gallery: rotatePhoto turns the photo; a service-sheets card is contain-fit
     });
 });
 
+test("card ☰ offers rotation directly (no pencil needed); empty card does not", async () => {
+    await withTestDb(async ({ alice }) => {
+        const id = insertEvent();
+        const photoPath = `content/photos/3ab/3ab${'0'.repeat(61)}.jpg`;
+        const withPhoto = asSystem(() => rabid.gallery_photo.insert(
+            {owner_table: 'event', owner_id: id, photo: photoPath} as any));
+        const card = await asUser(alice, () => renderRoute(`rabid.gallery_photo.renderPhotoCardById(${withPhoto})`));
+        const s = JSON.stringify(card);
+        assert(s.includes('Rotate left') && s.includes('Turn upside down') && s.includes('Rotate right'),
+            'the ☰ has the three rotate actions');
+        assert(s.includes('270)') && s.includes('180)') && s.includes('90)'), 'positive-delta rotate exprs');
+
+        // An empty (photo-less) card offers no rotation.
+        const empty = asSystem(() => rabid.gallery_photo.insert({owner_table: 'event', owner_id: id} as any));
+        const emptyCard = await asUser(alice, () => renderRoute(`rabid.gallery_photo.renderPhotoCardById(${empty})`));
+        assert(!JSON.stringify(emptyCard).includes('Rotate left'), 'no rotate action without a photo');
+    });
+});
+
 test("sheets edit form: rotate incl. 180°, no bogus crop framing (contain preview)", async () => {
     await withTestDb(async ({ alice }) => {
         const id = insertEvent();

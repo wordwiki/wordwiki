@@ -324,15 +324,26 @@ export class GalleryPhotoTable extends Table<GalleryPhoto> {
                           class: 'edit lm-edit-pencil', type: 'button', 'aria-label': 'Edit photo'},
                pencilIcon()]
             : undefined;
-        const menu = canEdit ? action.actionMenu([
+        const menuItems: action.ActionMenuItem[] = [
             {label: has ? 'Edit photo…' : 'Add photo…', mode: {kind: 'modal', dialogUrl: editPhotoUrl}},
             {label: 'Edit caption…', mode: {kind: 'modal', dialogUrl: editDetailsUrl}},
+        ];
+        // Rotation straight from the ☰ (no need to open Edit photo for a sideways scan).
+        // Deltas are POSITIVE quarter-turns - the route interpreter can't parse -90; 270
+        // is a left turn.  Only when a photo is present.
+        if(has) menuItems.push(
+            {label: 'Rotate left',      mode: {kind: 'immediate', expr: `rabid.gallery_photo.rotatePhoto(${id}, 'photo', 270)`}},
+            {label: 'Turn upside down', mode: {kind: 'immediate', expr: `rabid.gallery_photo.rotatePhoto(${id}, 'photo', 180)`}},
+            {label: 'Rotate right',     mode: {kind: 'immediate', expr: `rabid.gallery_photo.rotatePhoto(${id}, 'photo', 90)`}},
+        );
+        menuItems.push(
             {label: 'Insert before', mode: {kind: 'immediate', expr: `rabid.gallery_photo.insertRelative(${id}, 'before')`}},
             {label: 'Insert after', mode: {kind: 'immediate', expr: `rabid.gallery_photo.insertRelative(${id}, 'after')`}},
             {label: 'Move up', mode: {kind: 'immediate', expr: `rabid.gallery_photo.moveUp(${id})`}},
             {label: 'Move down', mode: {kind: 'immediate', expr: `rabid.gallery_photo.moveDown(${id})`}},
             {label: 'Delete', mode: {kind: 'confirm', message: 'Delete this photo?', expr: `rabid.gallery_photo.remove(${id})`}},
-        ], {ariaLabel: 'Photo actions'}) : undefined;
+        );
+        const menu = canEdit ? action.actionMenu(menuItems, {ariaLabel: 'Photo actions'}) : undefined;
 
         return [h.div, {...props, class: props.class + ' mb-4', 'data-testid': `gallery-photo-${id}`},
             image,
