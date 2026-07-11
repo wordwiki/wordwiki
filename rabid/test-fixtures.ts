@@ -34,9 +34,6 @@ function vol(over: Record<string, any>): any {
         permissions: "",
         archived: 0,
         archived_date: undefined,
-        exit_feedback_requested: 0,
-        exit_reason: undefined,
-        exit_feedback: undefined,
         deleted: 0,
         ...over,
     };

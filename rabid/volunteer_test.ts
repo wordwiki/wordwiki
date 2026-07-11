@@ -219,29 +219,45 @@ test("a crafted edit of a field you may not edit is rejected at save", async () 
     });
 });
 
-test("archive / exit-feedback / deleted cluster is admin-only: absent from a host's edit form, present for an admin, save-gated", async () => {
+test("archive + soft-delete: edit:never (absent from every form), driven by admin-only ☰ actions", async () => {
     await withTestDb(async ({ alice, dave, bob }) => {
-        const archiveFields = ['archived', 'archived_date', 'exit_feedback_requested', 'exit_reason', 'exit_feedback', 'deleted'];
         const inForm = (form: any, name: string) =>
             !!find(form, n => (tagOf(n) === 'input' || tagOf(n) === 'select' || tagOf(n) === 'textarea')
                               && attr(n, 'name') === name);
-
-        // A host's edit form omits the whole cluster (it clutters the everyday
-        // form); an admin's includes it.
-        const hostForm = await asUser(alice, () => renderRoute(`rabid.volunteer.renderForm(rabid.volunteer.getById(${bob}))`));
-        for(const f of archiveFields) assert(!inForm(hostForm, f), `host form should omit ${f}`);
+        // Neither a host's nor an admin's edit form carries these - they're set by the
+        // detail-page menu actions, never hand-edited.  (The exit_* fields are gone.)
         const adminForm = await asUser(dave, () => renderRoute(`rabid.volunteer.renderForm(rabid.volunteer.getById(${bob}))`));
-        for(const f of archiveFields) assert(inForm(adminForm, f), `admin form should include ${f}`);
+        for(const f of ['archived', 'archived_date', 'deleted']) assert(!inForm(adminForm, f), `form omits ${f}`);
 
-        // The FIELD gate holds at save: a host cannot flip archived; an admin can.
+        // Archive: admin-only (the route gate), and it stamps archived_date automatically.
         await asUser(alice, () => assertRejects(
-            () => invoke("rabid.volunteer.saveForm($arg0)", {
-                volunteer_id: String(bob), archived: "1", "before-archived": "0"}),
-            Error, "Not permitted to edit"));
-        const res = await asUser(dave, () => invoke("rabid.volunteer.saveForm($arg0)", {
-            volunteer_id: String(bob), archived: "1", "before-archived": "0"}));
-        assertEquals(res.action, "reload");
-        assertEquals(asSystem(() => rabid.volunteer.getById(bob)).archived, 1);
+            () => invoke(`rabid.volunteer.archive($arg0)`, bob), Error, "not permitted"));
+        await asUser(dave, () => invoke(`rabid.volunteer.archive($arg0)`, bob));
+        const arch = asSystem(() => rabid.volunteer.getById(bob));
+        assertEquals(arch.archived, 1);
+        assert(arch.archived_date, 'archived_date stamped by the action');
+        await asUser(dave, () => invoke(`rabid.volunteer.unarchive($arg0)`, bob));
+        assertEquals(asSystem(() => rabid.volunteer.getById(bob)).archived, 0);
+
+        // Soft-delete: admin-only; disables (kept for history), reversible.
+        await asUser(alice, () => assertRejects(
+            () => invoke(`rabid.volunteer.softDelete($arg0)`, bob), Error, "not permitted"));
+        await asUser(dave, () => invoke(`rabid.volunteer.softDelete($arg0)`, bob));
+        assertEquals(asSystem(() => rabid.volunteer.getById(bob)).deleted, 1);
+        await asUser(dave, () => invoke(`rabid.volunteer.undelete($arg0)`, bob));
+        assertEquals(asSystem(() => rabid.volunteer.getById(bob)).deleted, 0);
+    });
+});
+
+test("volunteer detail ☰: photo + reset-password + archive/delete for an admin; a regular sees none", async () => {
+    await withTestDb(async ({ dave, bob, carol }) => {
+        const admin = await asUser(dave, () => renderRoute(`rabid.volunteer.renderDetail(${bob})`));
+        assert(hasText(admin, 'Reset password') && hasText(admin, 'Archive') && hasText(admin, 'Delete'),
+            'admin ☰ has reset/archive/delete');
+        assert(hasText(admin, 'Add photo') || hasText(admin, 'Edit photo'), 'photo action in the ☰');
+        // A regular volunteer viewing someone else gets no action menu.
+        const reg = await asUser(carol, () => renderRoute(`rabid.volunteer.renderDetail(${bob})`));
+        assert(!hasText(reg, 'Reset password') && !hasText(reg, 'Archive'), 'no admin actions for a regular');
     });
 });
 

@@ -217,9 +217,6 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         permissions: 'admin,testing',
         archived: 0,
         archived_date: undefined,
-        exit_feedback_requested: 0,
-        exit_reason: undefined,
-        exit_feedback: undefined,
         deleted: 0,
     });
     const rockySalt = password.generateSalt();
@@ -258,9 +255,7 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
         // We still draw the rolls (so the tail's stream is unperturbed), then
         // override them for profiled volunteers.
         const isArchivedRoll = statusS.datatype.boolean({ probability: 0.15 });
-        const hasExitFeedbackRoll = isArchivedRoll && statusS.datatype.boolean({ probability: 0.4 });
         const isArchived = profile ? false : isArchivedRoll;
-        const hasExitFeedback = profile ? false : hasExitFeedbackRoll;
 
         const newVolunteerId = rabid.volunteer.insert({
             join_date: statusS.helpers.maybe(() => isoDate(joinDate), { probability: 0.9 }), // 10% unknown
@@ -303,19 +298,6 @@ export function seedVolunteers(rabid: Rabid, opts: VolunteerSeedOpts = {}): { ro
             archived: isArchived ? 1 : 0,
             archived_date: isArchived
                 ? isoDate(statusS.date.between({ from: joinDate, to: new Date() }))
-                : undefined,
-            exit_feedback_requested: hasExitFeedback ? 1 : 0,
-            exit_reason: hasExitFeedback ? statusS.helpers.arrayElement(['moved', 'no-time', 'other']) : undefined,
-            exit_feedback: hasExitFeedback
-                ? statusS.helpers.arrayElement([
-                    'Moving to another city',
-                    'Work schedule changed',
-                    'Family commitments increased',
-                    'Health issues',
-                    'Found volunteering elsewhere',
-                    'No longer interested',
-                    ''
-                ])
                 : undefined,
             // Always draw (keeps the tail's stream stable), but profiled
             // volunteers are never deleted.
@@ -387,9 +369,6 @@ function seedFixedLogin(rabid: Rabid, first: string, last: string, email: string
         permissions,
         archived: 0,
         archived_date: undefined,
-        exit_feedback_requested: 0,
-        exit_reason: undefined,
-        exit_feedback: undefined,
         deleted: 0,
     });
     const salt = password.generateSalt();

@@ -3,6 +3,7 @@
 import * as utils from "../liminal/utils.ts";
 import {unwrap} from "../liminal/utils.ts";
 import { db, Db, PreparedQuery, assertDmlContainsAllFields, boolnum, sqldate, sqldatetime } from "../liminal/db.ts";
+import * as date from "../liminal/date.ts";
 import { Table, FieldSet, Field, PrimaryKeyField, ForeignKeyField, BooleanField, StringField, PhoneField, EmailField, SecretField, EnumField, IntegerField, FloatingPointField, DateTimeField, DateField, CheckboxField, ImageField, TableRenderer, TableView, reloadableItemProps, editButtonProps, renderFieldValue, navChevron, PublicViewable, type Tuple } from "../liminal/table.ts";
 import {serializeAs, setSerialized, path} from "../liminal/serializable.ts";
 
@@ -14,7 +15,7 @@ import * as templates from './templates.ts';
 import * as volunteer_time from './volunteer_time.ts';
 import {rabid} from './rabid.ts';
 import * as security from "../liminal/security.ts";
-import {route, authenticated} from "../liminal/security.ts";
+import {route, routeMutation, authenticated} from "../liminal/security.ts";
 import {activeVolunteerIdsWithin} from "./volunteer-activity.ts";
 
 // 'host' is a volunteer trusted with a bit more visibility - hosts run events
@@ -36,12 +37,6 @@ const emailViewable = security.or(selfOrHost, security.recordFlag('email_visible
 // --------------------------------------------------------------------------------
 // --- Volunteer -----------------------------------------------------------------------
 // --------------------------------------------------------------------------------
-
-export const exit_reason_enum: Record<sqldate, string> = {
-    'moved': 'Moved',
-    'no-time': 'Not enough time to volunteer',
-    'other': 'Other',
-};
 
 export interface Volunteer {
     volunteer_id: number;
@@ -97,12 +92,7 @@ export interface Volunteer {
     // convention (recently volunteered) used to order the lists.
     archived: boolnum;
     archived_date: string;
-    
-    // For volunteers with long inactivity, we may request exit feedback.
-    exit_feedback_requested: boolnum;
-    exit_reason?: string;
-    exit_feedback?: string;
-    
+
     /**
      * We disable volunteers rather than deleting them because they are
      * needed to do historical statistics queries.  Depending on policy and
@@ -176,19 +166,13 @@ export class VolunteerTable extends Table<Volunteer> {
             new StringField('emergency_contact_name', {default: '', view: selfOrHost, redact: true}),
             new StringField('emergency_contact_phone', {default: '', view: selfOrHost, redact: true}),
             new StringField('permissions', {nullable: true, edit: security.hasRole('admin')}),
-            // The archive / exit-feedback cluster is admin-only to edit: it
-            // clutters the everyday volunteer edit form, and archiving + exit
-            // notes are a deliberate administrative act, not a self/host edit.
-            new BooleanField('archived', {default: 0, edit: admin}),
-            new DateField('archived_date', {nullable: true, edit: admin}),
-
-            new BooleanField('exit_feedback_requested', {default: 0, edit: admin}),
-            new EnumField('exit_reason', exit_reason_enum, {nullable: true, edit: admin}),
-            new StringField('exit_feedback', {nullable: true, edit: admin}),
-            
-            // Set by the delete action, not hand-edited; the only reason to touch
-            // it in a form is to UNDELETE, which is an admin call.
-            new BooleanField('deleted', {default: 0, edit: admin}),
+            // Archive + soft-delete are never hand-edited in a form - they're
+            // deliberate administrative acts driven by the ☰ menu on the detail page
+            // (which also stamps archived_date), so the popup editor stays about the
+            // volunteer's own details.  The columns remain (list filtering + badges).
+            new BooleanField('archived', {default: 0, edit: security.never}),
+            new DateField('archived_date', {nullable: true, edit: security.never}),
+            new BooleanField('deleted', {default: 0, edit: security.never}),
         ], [
         ])
     };
@@ -487,6 +471,66 @@ export class VolunteerTable extends Table<Volunteer> {
     // volunteer_time.timeViewQuery); threaded through so a bookmark/refresh of
     // an expanded Time view reproduces it.  Normalized where it's consumed
     // (renderForVolunteer), so the page just passes the literal along.
+    // --- Administrative actions (the detail page's ☰ menu) --------------------
+    // Archive / soft-delete are deliberate admin acts, not form edits.  Each is a
+    // reload: updateNamedFields emits the volunteer's row key, and the detail fragment
+    // watches it, so the badges + the menu's own labels refresh in place.
+
+    @routeMutation(admin)
+    archive(volunteer_id: number): Markup {
+        // Stamp the archive date automatically (the whole reason this isn't a form edit).
+        this.updateNamedFields(volunteer_id, ['archived', 'archived_date'],
+            {archived: 1, archived_date: date.currentSqliteDate()} as Partial<Volunteer>);
+        return {action: 'reload'} as unknown as Markup;
+    }
+    @routeMutation(admin)
+    unarchive(volunteer_id: number): Markup {
+        this.updateNamedFields(volunteer_id, ['archived', 'archived_date'],
+            {archived: 0, archived_date: null} as unknown as Partial<Volunteer>);
+        return {action: 'reload'} as unknown as Markup;
+    }
+    // Soft delete: disable (kept for historical stats), never erased.  Not named
+    // `delete` - that's Table's hard-delete funnel.
+    @routeMutation(admin)
+    softDelete(volunteer_id: number): Markup {
+        this.updateNamedFields(volunteer_id, ['deleted'], {deleted: 1} as Partial<Volunteer>);
+        return {action: 'reload'} as unknown as Markup;
+    }
+    @routeMutation(admin)
+    undelete(volunteer_id: number): Markup {
+        this.updateNamedFields(volunteer_id, ['deleted'], {deleted: 0} as Partial<Volunteer>);
+        return {action: 'reload'} as unknown as Markup;
+    }
+
+    // The detail page's ☰: the less-common actions (edit stays a pencil, per the
+    // app-wide convention; photo + reset also have their own affordances but live here
+    // too).  Items appear by permission + state; undefined when the viewer has none.
+    private volunteerActionMenu(v: Volunteer, viewerIsHost: boolean, viewerIsAdmin: boolean): Markup {
+        const id = v.volunteer_id;
+        const items: action.ActionMenuItem[] = [];
+        if(this.canEditRecord(v))
+            items.push({label: v.photo ? 'Edit photo…' : 'Add photo…',
+                mode: {kind: 'modal', dialogUrl: `/rabid.volunteer.renderPhotoEditForm(${id},"photo")`}});
+        if(viewerIsHost)
+            items.push({label: 'Reset password…',
+                mode: {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${id})`}});
+        if(viewerIsAdmin) {
+            items.push(v.archived
+                ? {label: 'Unarchive', mode: {kind: 'confirm',
+                    message: `Return ${v.name} to the active roster?`, expr: `rabid.volunteer.unarchive(${id})`}}
+                : {label: 'Archive', mode: {kind: 'confirm',
+                    message: `Archive ${v.name}? They leave the current roster; their history is kept.`,
+                    expr: `rabid.volunteer.archive(${id})`}});
+            items.push(v.deleted
+                ? {label: 'Restore', mode: {kind: 'confirm',
+                    message: `Restore ${v.name} to active?`, expr: `rabid.volunteer.undelete(${id})`}}
+                : {label: 'Delete', mode: {kind: 'confirm',
+                    message: `Delete ${v.name}? They are disabled and hidden from lists - kept for history, not erased.`,
+                    expr: `rabid.volunteer.softDelete(${id})`}});
+        }
+        return items.length ? action.actionMenu(items, {ariaLabel: `${v.name} actions`}) : undefined as unknown as Markup;
+    }
+
     @route(authenticated)
     detailPage(volunteer_id: number, vt?: Record<string, any>): templates.Page {
         const v = this.getById(volunteer_id);
@@ -529,24 +573,24 @@ export class VolunteerTable extends Table<Volunteer> {
                 return combined ? dtdd('Emergency contact', combined, 'detail-emergency') : undefined;
               })();
 
-        // Host-only tools (issuing a password-reset link is a host/admin act).
+        // Viewer roles: reset-password is a host/admin act; archive/delete are admin.
         const ctx = security.current();
         const viewerIsHost = !!ctx && (ctx.system === true
             || ctx.roles.has('host') || ctx.roles.has('admin'));
+        const viewerIsAdmin = !!ctx && (ctx.system === true || ctx.roles.has('admin'));
 
         return [h.div, props,
             [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
              [h.h2, {class: 'mb-0'}, v.name],
              v.archived ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
+             v.deleted ? [h.span, {class: 'badge text-bg-danger'}, 'Deleted'] : undefined,
+             // Edit stays a pencil (the app-wide "edit this" affordance).
              this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined,
-             // One unified photo affordance: "Add Photo" / "Edit Photo" (upload,
-             // remove, crop), the generic Table.photoButton.
+             // A standalone Add/Edit Photo button, kept prominent to ENCOURAGE photos
+             // (it's also in the ☰).
              this.photoButton(volunteer_id, 'photo'),
-             viewerIsHost
-                 ? action.actionButton('Reset password',
-                     {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${volunteer_id})`},
-                     'btn btn-outline-secondary btn-sm ms-auto')
-                 : undefined],
+             // The ☰: reset password + archive/delete (and photo), pushed to the right.
+             [h.span, {class: 'ms-auto'}, this.volunteerActionMenu(v, viewerIsHost, viewerIsAdmin)]],
 
             v.photo ? rabid.photo.aspectImg(v.photo, 'portrait', 'detail', {class: 'lm-photo-detail'}) : undefined,
 
