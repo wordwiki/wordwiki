@@ -249,15 +249,23 @@ test("archive + soft-delete: edit:never (absent from every form), driven by admi
     });
 });
 
-test("volunteer detail ☰: photo + reset-password + archive/delete for an admin; a regular sees none", async () => {
+test("volunteer detail ☰: edit lives in the menu (no pencil); actions by permission + self-edit", async () => {
     await withTestDb(async ({ dave, bob, carol }) => {
         const admin = await asUser(dave, () => renderRoute(`rabid.volunteer.renderDetail(${bob})`));
+        assert(hasText(admin, 'Edit…'), 'Edit is now a ☰ item');
+        assert(hasText(admin, 'Add photo') || hasText(admin, 'Edit photo'), 'photo action in the ☰');
         assert(hasText(admin, 'Reset password') && hasText(admin, 'Archive') && hasText(admin, 'Delete'),
             'admin ☰ has reset/archive/delete');
-        assert(hasText(admin, 'Add photo') || hasText(admin, 'Edit photo'), 'photo action in the ☰');
-        // A regular volunteer viewing someone else gets no action menu.
-        const reg = await asUser(carol, () => renderRoute(`rabid.volunteer.renderDetail(${bob})`));
-        assert(!hasText(reg, 'Reset password') && !hasText(reg, 'Archive'), 'no admin actions for a regular');
+        assert(!find(admin, byClass('lm-edit-pencil')), 'the floating pencil is gone - edit is in the menu');
+
+        // A regular viewing someone else: no menu (no admin actions, no edit).
+        const other = await asUser(carol, () => renderRoute(`rabid.volunteer.renderDetail(${bob})`));
+        assert(!hasText(other, 'Reset password') && !hasText(other, 'Archive'), 'no admin actions for a regular');
+
+        // A regular viewing THEIR OWN profile can still Edit (self), but is no admin.
+        const own = await asUser(carol, () => renderRoute(`rabid.volunteer.renderDetail(${carol})`));
+        assert(hasText(own, 'Edit…'), 'self can edit via the ☰');
+        assert(!hasText(own, 'Archive') && !hasText(own, 'Delete'), 'self is not an admin');
     });
 });
 

@@ -508,9 +508,15 @@ export class VolunteerTable extends Table<Volunteer> {
     private volunteerActionMenu(v: Volunteer, viewerIsHost: boolean, viewerIsAdmin: boolean): Markup {
         const id = v.volunteer_id;
         const items: action.ActionMenuItem[] = [];
-        if(this.canEditRecord(v))
+        if(this.canEditRecord(v)) {
+            // Edit lives in the ☰ (no pencil).  Same wiring as editPencil - the generic
+            // record editor - via a modal item; btnClass 'edit' marks it as the standard
+            // edit-delegation target (future keyboard-editing resolves Enter to button.edit).
+            items.push({label: 'Edit…', btnClass: 'edit',
+                mode: {kind: 'modal', dialogUrl: `/rabid.volunteer.renderForm(rabid.volunteer.getById(${id}))`}});
             items.push({label: v.photo ? 'Edit photo…' : 'Add photo…',
                 mode: {kind: 'modal', dialogUrl: `/rabid.volunteer.renderPhotoEditForm(${id},"photo")`}});
+        }
         if(viewerIsHost)
             items.push({label: 'Reset password…',
                 mode: {kind: 'modal', dialogUrl: `/rabid.resetLinkDialog(${id})`}});
@@ -584,13 +590,12 @@ export class VolunteerTable extends Table<Volunteer> {
              [h.h2, {class: 'mb-0'}, v.name],
              v.archived ? [h.span, {class: 'badge text-bg-secondary'}, 'Archived'] : undefined,
              v.deleted ? [h.span, {class: 'badge text-bg-danger'}, 'Deleted'] : undefined,
-             // Edit stays a pencil (the app-wide "edit this" affordance).
-             this.canEditRecord(v) ? this.editPencil(volunteer_id) : undefined,
+             // The ☰ (edit / photo / reset / archive / delete) sits right by the name -
+             // a menu floating far right is hard to notice.
+             this.volunteerActionMenu(v, viewerIsHost, viewerIsAdmin),
              // A standalone Add/Edit Photo button, kept prominent to ENCOURAGE photos
              // (it's also in the ☰).
-             this.photoButton(volunteer_id, 'photo'),
-             // The ☰: reset password + archive/delete (and photo), pushed to the right.
-             [h.span, {class: 'ms-auto'}, this.volunteerActionMenu(v, viewerIsHost, viewerIsAdmin)]],
+             this.photoButton(volunteer_id, 'photo')],
 
             v.photo ? rabid.photo.aspectImg(v.photo, 'portrait', 'detail', {class: 'lm-photo-detail'}) : undefined,
 
