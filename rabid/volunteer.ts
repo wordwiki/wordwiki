@@ -181,9 +181,11 @@ export class VolunteerTable extends Table<Volunteer> {
             // notes are a deliberate administrative act, not a self/host edit.
             new BooleanField('archived', {default: 0, edit: admin}),
             new DateField('archived_date', {nullable: true, edit: admin}),
+
             new BooleanField('exit_feedback_requested', {default: 0, edit: admin}),
             new EnumField('exit_reason', exit_reason_enum, {nullable: true, edit: admin}),
             new StringField('exit_feedback', {nullable: true, edit: admin}),
+            
             // Set by the delete action, not hand-edited; the only reason to touch
             // it in a form is to UNDELETE, which is an admin call.
             new BooleanField('deleted', {default: 0, edit: admin}),
