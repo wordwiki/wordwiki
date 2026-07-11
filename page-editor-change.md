@@ -26,6 +26,17 @@ user can look at both at once.
 
 ---
 
+## Create-word-from-group (2026-07-10)
+
+The page-primary transcription flow (dz): tag the groups on a page
+first, then make the dictionary entry FROM a group.  Right-click an
+unlinked group - on the scanned page OR its row in the sidebar's
+"Groups not yet linked to a word" tail - and choose "Create word from
+this group".  lexemeOps.createLexemeFromGroup builds an entry +
+subentry + a document_reference at the group (one unapproved draft,
+edited/approved like any word) and the client opens it in the editor.
+Route: wordwiki.newLexemeFromGroup -> {entry_id}.
+
 ## Status (2026-07-09): BUILT
 
 - SIDEBAR beside the page (flex layout; the locked single-group popup

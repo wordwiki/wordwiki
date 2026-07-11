@@ -124,3 +124,28 @@ test("deleteBoundingGroup: removes an orphaned group; refuses a word-linked one"
             'linked group survives');
     });
 });
+
+test("createLexemeFromGroup: makes entry+subentry+reference; group leaves the untagged tail", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        const {page_id, layer_id, orphanGroup} = seed(fx);
+        // Before: the orphan is in the untagged tail.
+        assertStringIncludes(
+            renderToStringViaLinkeDOM(renderPageWordSidebarCore(fx.ww, page_id, layer_id)),
+            'Groups not yet linked to a word (1)');
+
+        const {entry_id} = as(fx, 'djz', () => fx.ww.lexemeOps.createLexemeFromGroup(orphanGroup));
+        const e = fx.ww.entriesById.get(entry_id);
+        assert(e, 'new entry exists');
+        assert(e!.subentry.flatMap(s => s.document_reference)
+                 .some(r => r.bounding_group_id === orphanGroup),
+               'a document_reference points at the group');
+
+        // After: the group is now word-linked - gone from the untagged tail,
+        // present as a word row.
+        const after = renderToStringViaLinkeDOM(
+            renderPageWordSidebarCore(fx.ww, page_id, layer_id));
+        assert(!after.includes('Groups not yet linked to a word'),
+               'no more untagged groups');
+        assertStringIncludes(after, `data-group-ids="${orphanGroup}"`);
+    });
+});

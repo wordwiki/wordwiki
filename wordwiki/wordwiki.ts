@@ -385,6 +385,16 @@ export class WordWiki extends LiminalApp {
         return server.forwardResponse(`/ww/wordwiki.entry(${entry_id})`);
     }
 
+    /** Create a new lexeme FROM a bounding group (the page editor's
+     *  page-primary flow - dz): entry + subentry + a document_reference at
+     *  the group, then the caller opens it in the editor.  Returns
+     *  {entry_id} (the classic page-editor client navigates there). */
+    @routeMutation(authenticated)
+    newLexemeFromGroup(bounding_group_id: number): any {
+        const {entry_id} = this.lexemeOps.createLexemeFromGroup(bounding_group_id);
+        return {entry_id};
+    }
+
     // The word EDITOR - the METADATA-DRIVEN editor is the default now (dz,
     // 2026-07-05; the classic per-relation-card look stays reachable at
     // wordwiki.lexeme.entryPage, and review mode lives there too).  `since`

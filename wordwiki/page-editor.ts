@@ -1268,6 +1268,9 @@ function initPageWordSidebar() {
     // o/e open/edit the hovered word; right-click menus the region.
     document.addEventListener('keydown', pageWordKeydown);
     page.addEventListener('contextmenu', pageContextMenu);
+    // The sidebar's unlinked-group rows get the same "create word" menu
+    // (delegated - the sidebar element is replaced on refresh).
+    document.addEventListener('contextmenu', sidebarUntaggedContextMenu);
     document.addEventListener('click', hidePageContextMenu);
     window.addEventListener('scroll', hidePageContextMenu, {passive: true});
 }
@@ -1359,7 +1362,9 @@ function pageContextMenu(event: MouseEvent) {
     const groupId = group.id.replace(/^bg_/, '');
     const wordRows = sidebarRowsForGroup(groupId)
         .filter(r=>!r.classList.contains('pe-untagged'));
-    if(wordRows.length === 0) addItem('Not yet linked to a word');
+    if(wordRows.length === 0)
+        // UNBOUND group: the page-primary flow - make a word from it (dz).
+        addItem('Create word from this group', () => createWordFromGroup(groupId));
     for(const row of wordRows) {
         const view = row.querySelector<HTMLAnchorElement>('a.lm-lexeme-view');
         const edit = row.querySelector<HTMLAnchorElement>('a.lm-edit-pencil');
@@ -1392,6 +1397,42 @@ function pageContextMenu(event: MouseEvent) {
 function sidebarRowsForGroup(groupId: string): Element[] {
     return Array.from(document.querySelectorAll(
         `#pageWordSidebar li.pe-word[data-group-ids~="${groupId}"]`));
+}
+
+/** Right-click on a sidebar UNLINKED-group row: the "create word from this
+ *  group" menu (the page-primary flow - dz). */
+function sidebarUntaggedContextMenu(event: MouseEvent) {
+    const row = (event.target instanceof Element)
+        ? event.target.closest('#pageWordSidebar li.pe-untagged') : null;
+    if(!row) return;
+    event.preventDefault();
+    hidePageContextMenu();
+    const groupId = rowGroupIds(row)[0];
+    if(!groupId) return;
+    const menu = document.createElement('ul');
+    menu.className = 'ContextMenu ContextMenu--theme-default is-open pe-context-menu';
+    const li = document.createElement('li');
+    li.className = 'ContextMenu-item';
+    li.textContent = 'Create word from this group';
+    li.addEventListener('click', () => { hidePageContextMenu(); createWordFromGroup(groupId); });
+    menu.appendChild(li);
+    document.body.appendChild(menu);
+    peContextMenu = menu;
+    menu.style.left = `${event.pageX}px`;
+    menu.style.top = `${event.pageY}px`;
+    const r = menu.getBoundingClientRect();
+    if(r.right > window.innerWidth - 4) menu.style.left = `${event.pageX - r.width}px`;
+}
+
+/** Create a new lexeme from a bounding group and open it in the editor
+ *  (the page-primary transcription flow - dz). */
+async function createWordFromGroup(groupId: string|number) {
+    try {
+        const r = await rpc`wordwiki.newLexemeFromGroup(${Number(groupId)})`;
+        if(r && r.entry_id) window.location.href = `/ww/wordwiki.wordEditor(${r.entry_id})`;
+    } catch (e) {
+        alert(`Failed to create word from group: ${e}`);
+    }
 }
 
 function clearSidebarRowHighlights() {

@@ -434,6 +434,45 @@ export class LexemeOps {
                                    attr4: 0, variant: 'mm'} as Partial<Assertion>);
     }
 
+    /** CREATE A NEW LEXEME FROM A BOUNDING GROUP (dz: the page-primary
+     *  transcription flow - tag the groups on the page first, then make the
+     *  dictionary entry from a group).  Builds an entry + subentry + a
+     *  document_reference pointing at the group, all as ONE unapproved
+     *  transaction (a new word starts as a pending draft, edited then
+     *  approved like any other).  Returns the new entry_id for the caller
+     *  to open in the editor. */
+    createLexemeFromGroup(bounding_group_id: number): {entry_id: number} {
+        if(!Number.isSafeInteger(bounding_group_id))
+            throw new Error('createLexemeFromGroup needs a bounding_group_id');
+        this.requireUsername();
+        // Parent before child: three ascending placeholder times (separate
+        // txes), like newLexemeAction - the workspace applies each once its
+        // parent exists.  applyTransactions rewrites them to server times.
+        const t0 = placeholderTxTime();
+        const t1 = timestamp.nextTime(t0);
+        const t2 = timestamp.nextTime(t1);
+        const EOT = timestamp.END_OF_TIME;
+        const ok = orderkey.new_range_start_string;
+        const entry_id = newId(), subentry_id = newId(), ref_id = newId();
+        const D = entrySchema.DictTag, E = entrySchema.EntryTag,
+              S = entrySchema.SubentryTag, Rf = entrySchema.DocumentReferenceTag;
+        const entryA: Assertion = {
+            ...assertionPathToFields([[D, 0], [E, entry_id]]),
+            assertion_id: entry_id, id: entry_id, ty: E,
+            valid_from: t0, valid_to: EOT, order_key: ok, ...this.changeStamp() } as Assertion;
+        const subA: Assertion = {
+            ...assertionPathToFields([[D, 0], [E, entry_id], [S, subentry_id]]),
+            assertion_id: subentry_id, id: subentry_id, ty: S,
+            valid_from: t1, valid_to: EOT, order_key: ok, ...this.changeStamp() } as Assertion;
+        const refA: Assertion = {
+            ...assertionPathToFields([[D, 0], [E, entry_id], [S, subentry_id], [Rf, ref_id]]),
+            assertion_id: ref_id, id: ref_id, ty: Rf,
+            valid_from: t2, valid_to: EOT, order_key: ok,
+            attr1: bounding_group_id, ...this.changeStamp() } as Assertion;
+        this.app.applyTransactions([entryA, subA, refA]);
+        return {entry_id};
+    }
+
     /** Add a tag from the word's Tags ☰ quick-pick: the chosen tag, no value
      *  text, unassigned, not done (refine in the editor via the ✏ dialog).
      *  Same approval bypass as postTag. */
