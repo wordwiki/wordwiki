@@ -27,6 +27,15 @@ export interface LlmImage {
 export interface LlmExtractOptions {
     maxTokens?: number;    // model output budget (default 8192 - sheets can be many rows)
     system?: string;       // optional system prompt
+    // Called with the API's usage block after a successful call - the
+    // caller's cost accounting (cache hits in layers above never reach the
+    // API, so a batch's tallied usage is its actual spend).
+    onUsage?: (usage: LlmUsage) => void;
+}
+
+export interface LlmUsage {
+    inputTokens: number;
+    outputTokens: number;
 }
 
 /**
@@ -110,7 +119,11 @@ export class AnthropicLlm implements Llm {
             const text = await res.text().catch(() => '');
             throw new Error(`llm: anthropic HTTP ${res.status}: ${text.slice(0, 500)}`);
         }
-        return extractToolResult(await res.json());
+        const data = await res.json();
+        const u = (data as {usage?: {input_tokens?: number, output_tokens?: number}}).usage;
+        if(u && opts.onUsage)
+            opts.onUsage({inputTokens: u.input_tokens ?? 0, outputTokens: u.output_tokens ?? 0});
+        return extractToolResult(data);
     }
 }
 

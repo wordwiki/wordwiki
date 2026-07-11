@@ -105,7 +105,19 @@ set -e
 #
 # Any command first cleanly stops a running server (SQLite single writer),
 # except the read-only commands (publish, dump-publish-source,
-# dump-full-history, backup-db), which run alongside the live server.
+# dump-full-history, backup-db, transcribe-eval), which run alongside the
+# live server.
+#
+#   ./wordwiki.sh transcribe-eval [--book=PDM] [--sample=10] [--offset=0]
+#                                 [--report=transcribe-eval.md]
+#                                      # LLM transcription EVAL (read-only;
+#                                      # wordwiki/transcribe.ts): 3-stage
+#                                      # recipe scored against the hand
+#                                      # transcriptions; derived-store cached
+#                                      # (re-runs free until a prompt-version
+#                                      # bump); prints actual API token spend.
+#                                      # Needs wordwiki-anthropic-credential.json
+#                                      # in the INSTANCE dir (mmo/; symlink).
 
 WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
 RUN_DIR="${WORDWIKI_DIR:-$WORDWIKI_SRC/mmo}"
@@ -156,7 +168,7 @@ cd "$RUN_DIR"
 # an ordinary read transaction - daily systemd snapshots must not restart
 # the site).
 case "$1" in
-    publish|dump-publish-source|dump-full-history|backup-db)
+    publish|dump-publish-source|dump-full-history|backup-db|transcribe-eval)
         SKIP_STOP=1;;
     *)  SKIP_STOP=0;;
 esac

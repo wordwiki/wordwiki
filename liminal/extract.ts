@@ -16,7 +16,7 @@
 // filing) is Layer 2 and lives in the app.
 import * as posix from "https://deno.land/std@0.195.0/path/posix.ts";
 import { getDerived } from "./content-store.ts";
-import { Llm } from "./llm.ts";
+import { Llm, LlmUsage } from "./llm.ts";
 
 // ---------------------------------------------------------------------------------
 // --- Recipe + config --------------------------------------------------------------
@@ -51,6 +51,9 @@ export interface ExtractConfig {
     derivedDir: string;           // fs path to the derived store root (PhotoServiceConfig.derivedDir)
     image: ExtractImageSource;    // usually the app's PhotoService
     llm: Llm;                     // usually loadLlm(appName)
+    // Cost accounting: called per ACTUAL API call (cache hits are free and
+    // never fire this) with the stage name and the API usage block.
+    onUsage?: (stageName: string, usage: LlmUsage) => void;
 }
 
 export const DEFAULT_IMAGE_BOX = 1600;
@@ -78,7 +81,8 @@ export async function extractStage(cfg: ExtractConfig, photoPath: string, rotate
             // existing contained-photo derivation, itself cached & content-addressed.
             const jpeg = await cfg.image.containedBytes(photoPath, box, box, rotate);
             const raw = await cfg.llm.extract(stage.model, stage.prompt(input),
-                                              {bytes: jpeg, mediaType: 'image/jpeg'}, stage.schema);
+                                              {bytes: jpeg, mediaType: 'image/jpeg'}, stage.schema,
+                                              {onUsage: u => cfg.onUsage?.(stage.name, u)});
             // A string return is written to the .json file by getDerived.
             return JSON.stringify(validateExtraction(stage.schema, raw));
         }},

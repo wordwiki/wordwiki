@@ -33,6 +33,7 @@ import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
+import * as transcribe from './transcribe.ts';
 import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
@@ -643,6 +644,29 @@ export async function cliMain(args: string[]): Promise<void> {
         // whole point: backupSite.sh calls this so daily snapshots never
         // risk a torn copy of a live db file.
         //   ./wordwiki.sh backup-db <target-path>
+        // LLM transcription EVAL (transcribe.ts; dz 2026-07-11): run the
+        // 3-stage recipe (transcribe/expand/transliterate) over a sample of
+        // refs that have HAND answers and score against them.  READ-ONLY
+        // (never writes to the dict).  Every stage is memoised in the
+        // derived store - re-runs are free until a prompt version bumps;
+        // the printed usage is the batch's actual API spend.
+        //   ./wordwiki.sh transcribe-eval [--book=PDM] [--sample=10]
+        //                 [--offset=0] [--report=transcribe-eval.md]
+        case 'transcribe-eval': {
+            const argOf = (name: string, dflt: string) =>
+                args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
+            const book = argOf('book', 'PDM');
+            const sample = Number(argOf('sample', '10'));
+            const offset = Number(argOf('offset', '0'));
+            const reportPath = argOf('report', 'transcribe-eval.md');
+            await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                await transcribe.transcribeEval({book, sample, offset, reportPath});
+            });
+            Deno.exit(0);
+            break;
+        }
+
         case 'backup-db': {
             const target = args[1];
             if(!target) throw new Error('usage: backup-db <target-path>');
