@@ -388,6 +388,12 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.spellingReports.duplicatesReport()'}, 'Duplicate Spellings']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.variantReports.cleanupReport()'}, 'Variant Cleanup']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliterationReports.correctionsReport()'}, 'Transliteration Report']],
+              // The LLM transcription eval page: a BATCH artifact
+              // (transcribe-eval writes resources/transcribe-eval.html) -
+              // linked here so reviewers can wander off through word links
+              // and find their way back (dz).  Plain href: a standalone
+              // page, not an app fragment.
+              ['li', {}, ['a', {class:'dropdown-item', href:'/resources/transcribe-eval.html'}, 'PDM LLM Transcription Eval']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliterationReports.sfReadyReport()'}, 'SF-Ready Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.archivedWords()'}, 'Archived Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],

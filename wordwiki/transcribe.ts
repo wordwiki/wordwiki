@@ -32,6 +32,8 @@ import { loadLlm, LlmUsage } from "../liminal/llm.ts";
 import { extractStage, ExtractConfig, ExtractRecipe, ExtractStage,
          ExtractImageSource } from "../liminal/extract.ts";
 import { levenshteinDistance } from "../liminal/levenshtein-distance.ts";
+import { diffValues } from './diff.ts';
+import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { selectBoundingBoxesForGroup, selectScannedPage } from './scanned-document.ts';
 
 // ---------------------------------------------------------------------------------
@@ -293,6 +295,20 @@ export function ambiguityCandidates(s: string, cap = 64): string[] {
     return candidates;
 }
 
+/** The candidate (markers resolved) that best matches the gold text - the
+ *  diff display diffs THIS against the hand answer, so an honest [a|b]
+ *  doesn't paint as an error; the raw marked text is shown alongside. */
+export function bestCandidate(llmText: string, handText: string): string {
+    const gold = norm(handText);
+    let best = norm(llmText), bestSim = -1;
+    for(const cand of ambiguityCandidates(norm(llmText))) {
+        const d = levenshteinDistance(cand, gold);
+        const s = 1 - d / Math.max(cand.length, gold.length, 1);
+        if(s > bestSim) { bestSim = s; best = cand; }
+    }
+    return best;
+}
+
 /** Normalized similarity in [0,1]: 1 - lev/maxlen, over NFC/whitespace-
  *  normalized strings; an [a|b] ambiguity scores as its BEST alternative
  *  (honest uncertainty is never penalized vs a lucky guess). */
@@ -351,7 +367,9 @@ export interface TranscribeEvalOptions {
     book: string;
     sample: number;
     offset: number;
-    reportPath?: string;
+    reportPath?: string;    // side-by-side markdown (the quick CLI artifact)
+    jsonPath?: string;      // the batch DATA (the html is a pure function of it)
+    htmlPath?: string;      // self-contained REVIEW PAGE (research-group shareable)
     log?: (m: string) => void;
 }
 
@@ -470,4 +488,218 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
         await Deno.writeTextFile(opts.reportPath, md.join('\n'));
         log(`report written to ${opts.reportPath}`);
     }
+
+    // --- The batch DATA + the self-contained REVIEW PAGE (dz: dropped in
+    //     resources/ so it is served at /resources/... and linked from the
+    //     Reports menu - reviewers wander off through word links and find
+    //     their way back; still single-file so the same page can be mailed
+    //     to the research group or archived).
+    const data: EvalData = {
+        generatedAt: new Date().toISOString(),
+        book: opts.book, sample: opts.sample, offset: opts.offset,
+        promptVersions: {transcribe: PROMPT_VERSION_TRANSCRIBE,
+                         expand: PROMPT_VERSION_EXPAND,
+                         transliterate: PROMPT_VERSION_TRANSLITERATE},
+        prompts: Object.fromEntries(recipe.map(st =>
+            [st.name, {version: st.promptVersion, text: st.prompt(EXAMPLE_PROMPT_INPUT[st.name] ?? null)}])),
+        usage: Object.fromEntries([...usage.entries()]),
+        items: results.map(r => ({
+            ref_id: r.item.ref_id,
+            bounding_group_id: r.item.bounding_group_id,
+            crop: r.crop,
+            hand: r.item.hand,
+            llm: r.stages,
+        })),
+    };
+    if(opts.jsonPath) {
+        await Deno.writeTextFile(opts.jsonPath, JSON.stringify(data, null, 1));
+        log(`data written to ${opts.jsonPath}`);
+    }
+    if(opts.htmlPath) {
+        await Deno.writeTextFile(opts.htmlPath, await renderEvalHtml(data));
+        log(`review page written to ${opts.htmlPath}`);
+    }
+}
+
+// Placeholder inputs so the RULES section can show each stage's full prompt
+// (the per-entry text is appended where the placeholder sits).
+const EXAMPLE_PROMPT_INPUT: Record<string, unknown> = {
+    expand: {runs: [{text: '⟨the transcription runs go here⟩', lang: 'mm'}]},
+    transliterate: {runs: [{text: '⟨the expanded runs go here⟩', lang: 'mm'}]},
+};
+
+// ---------------------------------------------------------------------------------
+// --- The review page (a pure function of the batch data) ---------------------------
+// ---------------------------------------------------------------------------------
+
+export interface EvalData {
+    generatedAt: string;
+    book: string; sample: number; offset: number;
+    promptVersions: Record<string, number>;
+    prompts: Record<string, {version: number, text: string}>;
+    usage: Record<string, {inputTokens: number, outputTokens: number, calls: number}>;
+    items: Array<{
+        ref_id: number; bounding_group_id: number; crop: string;
+        hand: {transcription: string, expanded?: string, transliteration?: string};
+        llm: Record<string, {text: string, tagged?: string, confidence: number, sim?: number}>;
+    }>;
+}
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const STAGES: Array<{name: string, handField: 'transcription'|'expanded'|'transliteration',
+                     label: string}> = [
+    {name: 'transcribe', handField: 'transcription', label: 'Transcription'},
+    {name: 'expand', handField: 'expanded', label: 'Expanded'},
+    {name: 'transliterate', handField: 'transliteration', label: 'Transliteration'},
+];
+
+/** Self-contained HTML: inline styles (the .lm-diff-* family copied from
+ *  liminal.css so the diff colors match the lexeme change-approval look -
+ *  dz), images embedded as data URIs.  Diffs via the changelog's own
+ *  diffValues (deletions struck on the researcher line, insertions
+ *  highlighted on the LLM line); [a|b] ambiguity resolves to its best
+ *  reading for the diff, with the raw marked text shown alongside. */
+export async function renderEvalHtml(data: EvalData): Promise<string> {
+    const imgSrc = async (crop: string): Promise<string> => {
+        try {
+            const bytes = await Deno.readFile(crop);
+            let bin = '';
+            for(const b of bytes) bin += String.fromCharCode(b);
+            return `data:image/jpeg;base64,${btoa(bin)}`;
+        } catch { return ''; }
+    };
+
+    const pct = (x: number|undefined) => x === undefined ? '—' : `${(x*100).toFixed(0)}%`;
+    const simClass = (x: number|undefined) =>
+        x === undefined ? '' : x >= 0.95 ? 'sim-great' : x >= 0.8 ? 'sim-ok' : 'sim-poor';
+
+    // Summary + calibration over the scored stages.
+    const stageStats = STAGES.map(st => {
+        const scored = data.items
+            .map(it => it.llm[st.name])
+            .filter(r => r && r.sim !== undefined) as Array<{sim: number, confidence: number}>;
+        const mean = (xs: number[]) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : undefined;
+        return {st, n: scored.length,
+                meanSim: mean(scored.map(r=>r.sim)),
+                meanConf: mean(scored.map(r=>r.confidence))};
+    });
+    const calBuckets = [[0,40],[40,60],[60,80],[80,101]];
+    const calRows = calBuckets.map(([lo,hi]) => {
+        const in_ = data.items.flatMap(it => STAGES.map(st => it.llm[st.name]))
+            .filter(r => r && r.sim !== undefined && r.confidence >= lo && r.confidence < hi);
+        const meanSim = in_.length ? in_.reduce((a,r)=>a+(r.sim ?? 0),0)/in_.length : undefined;
+        return {lo, hi: hi-1, n: in_.length, meanSim};
+    });
+
+    const entryHtml: string[] = [];
+    for(const [i, it] of data.items.entries()) {
+        const img = await imgSrc(it.crop);
+        const rows = STAGES.map(st => {
+            const llm = it.llm[st.name];
+            const hand = it.hand[st.handField];
+            if(!llm) return '';
+            const marked = /\[[^\][]*\|[^\][]*\]|⁇/.test(llm.text);
+            let handHtml: string, llmHtml: string;
+            if(hand !== undefined && hand.trim() !== '') {
+                const d = diffValues(hand, bestCandidate(llm.text, hand));
+                handHtml = renderToStringViaLinkeDOM(d.from);
+                llmHtml = renderToStringViaLinkeDOM(d.to);
+            } else {
+                handHtml = '<span class="none">(none - not yet done by hand)</span>';
+                llmHtml = esc(llm.text);
+            }
+            return `
+      <tr class="stage-head"><th colspan="2">${st.label}
+        <span class="badge ${simClass(llm.sim)}">similarity ${pct(llm.sim)}</span>
+        <span class="badge conf">confidence ${llm.confidence}</span></th></tr>
+      <tr><th>researcher</th><td>${handHtml}</td></tr>
+      <tr><th>LLM</th><td>${llmHtml}${
+          marked ? `<div class="rawmarks">with uncertainty markers: ${esc(llm.text)}</div>` : ''
+      }${llm.tagged ? `<div class="tagged">${esc(llm.tagged)}</div>` : ''}</td></tr>`;
+        }).join('');
+        entryHtml.push(`
+  <section class="entry" id="ref-${it.ref_id}">
+    <h3>${i+1}. ref ${it.ref_id} <span class="muted">(group ${it.bounding_group_id})</span></h3>
+    ${img ? `<img class="crop" src="${img}">` : ''}
+    <table class="cmp">${rows}</table>
+  </section>`);
+    }
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDM LLM transcription eval — ${esc(data.book)} sample ${data.sample}</title>
+<style>
+ body { font-family: system-ui, sans-serif; margin: 1.5rem auto; max-width: 60rem;
+        padding: 0 1rem; color: #1c1c1c; line-height: 1.45; }
+ h1 { font-size: 1.4rem; } h2 { font-size: 1.15rem; margin-top: 2rem; }
+ h3 { font-size: 1rem; margin: 0 0 .4rem; }
+ .muted, .none { color: #6c757d; }
+ img.crop { max-width: 100%; border: 1px solid #ccc; border-radius: 3px;
+            background: #fff; margin-bottom: .4rem; }
+ section.entry { margin: 1.6rem 0; padding-top: .8rem; border-top: 1px solid #ddd; }
+ table.cmp { border-collapse: collapse; width: 100%; font-size: .95rem; }
+ table.cmp th { text-align: left; vertical-align: top; padding: .15rem .6rem .15rem 0;
+                white-space: nowrap; font-weight: 600; color: #444; width: 6.5rem; }
+ table.cmp td { padding: .15rem 0; }
+ tr.stage-head th { padding-top: .6rem; color: #1c1c1c; }
+ .badge { font-size: .75rem; font-weight: 600; border-radius: .6rem;
+          padding: .05rem .5rem; margin-left: .4rem; vertical-align: middle; }
+ .sim-great { background: #d1e7dd; color: #0f5132; }
+ .sim-ok    { background: #fff3cd; color: #664d03; }
+ .sim-poor  { background: #f8d7da; color: #842029; }
+ .conf      { background: #e7f1ff; color: #084298; }
+ /* the lexeme change-approval diff family (liminal.css .lm-diff-*), inlined
+    so this page is self-contained */
+ .lm-diff-del { color: #842029; text-decoration: line-through; }
+ .lm-diff-ins { color: #0f5132; background: #d1e7dd; border-radius: 0.15rem;
+                padding: 0 0.05rem; }
+ .lm-diff-elide { color: #6c757d; }
+ .rawmarks { color: #664d03; background: #fff3cd; border-radius: .2rem;
+             padding: 0 .25rem; display: inline-block; margin-top: .15rem;
+             font-size: .85rem; }
+ .tagged { color: #6c757d; font-size: .8rem; margin-top: .1rem; }
+ pre.rule { background: #f6f6f6; border: 1px solid #e2e2e2; border-radius: 4px;
+            padding: .6rem .8rem; white-space: pre-wrap; font-size: .82rem; }
+ table.sum { border-collapse: collapse; margin: .5rem 0; }
+ table.sum th, table.sum td { border: 1px solid #ddd; padding: .25rem .7rem;
+                              font-size: .9rem; text-align: left; }
+ details.rules > summary { cursor: pointer; font-weight: 600; margin: .4rem 0; }
+</style></head><body>
+<h1>PDM LLM transcription eval</h1>
+<p class="muted">${esc(data.book)}, sample ${data.sample} (offset ${data.offset}),
+ generated ${esc(data.generatedAt)}.
+ Prompt versions: ${STAGES.map(s=>`${s.name} v${data.promptVersions[s.name] ?? '?'}`).join(', ')}.</p>
+
+<p>Each entry shows the scanned group, then the researcher's version and the
+LLM's version of each step, with <span class="lm-diff-del">what the LLM
+missed struck out</span> on the researcher line and
+<span class="lm-diff-ins">what it added or changed highlighted</span> on the
+LLM line.  Where the LLM was <span class="rawmarks">unsure it wrote
+[a|b]</span> (either reading) or ⁇ (illegible) instead of guessing — those
+count as right if either reading matches.</p>
+
+<h2>Summary</h2>
+<table class="sum">
+ <tr><th>step</th><th>scored</th><th>mean similarity</th><th>mean confidence</th></tr>
+ ${stageStats.map(s=>`<tr><td>${s.st.label}</td><td>${s.n}</td>
+   <td>${pct(s.meanSim)}</td><td>${s.meanConf === undefined ? '—' : s.meanConf.toFixed(0)}</td></tr>`).join('')}
+</table>
+<p class="muted">Confidence calibration (does the model's self-reported
+confidence predict how good the result actually is?):</p>
+<table class="sum">
+ <tr><th>confidence</th><th>results</th><th>mean similarity</th></tr>
+ ${calRows.map(r=>`<tr><td>${r.lo}–${r.hi}</td><td>${r.n}</td><td>${pct(r.meanSim)}</td></tr>`).join('')}
+</table>
+
+<h2>The rules (the instructions given to the model)</h2>
+${STAGES.map(s=>`<details class="rules">
+ <summary>${s.label} (v${data.prompts[s.name]?.version ?? '?'}) — click to expand</summary>
+ <pre class="rule">${esc(data.prompts[s.name]?.text ?? '')}</pre>
+</details>`).join('\n')}
+
+<h2>Entries</h2>
+${entryHtml.join('\n')}
+</body></html>`;
 }

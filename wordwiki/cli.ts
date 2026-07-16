@@ -659,9 +659,14 @@ export async function cliMain(args: string[]): Promise<void> {
             const sample = Number(argOf('sample', '10'));
             const offset = Number(argOf('offset', '0'));
             const reportPath = argOf('report', 'transcribe-eval.md');
+            // The REVIEW PAGE + its data land in resources/ so the server
+            // serves them at /resources/... (Reports menu links the page).
+            const jsonPath = argOf('json', 'resources/transcribe-eval.json');
+            const htmlPath = argOf('html', 'resources/transcribe-eval.html');
             await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
-                await transcribe.transcribeEval({book, sample, offset, reportPath});
+                await transcribe.transcribeEval({book, sample, offset, reportPath,
+                                                 jsonPath, htmlPath});
             });
             Deno.exit(0);
             break;
