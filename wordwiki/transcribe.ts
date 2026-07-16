@@ -566,7 +566,15 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
                                 equiv: number, equivN: number}> = {};
 
     for(const [i, item] of items.entries()) {
-        const crop = await groupCropPath(item.bounding_group_id);
+        // Data oddities (a referenced group with NO boxes) skip with a log
+        // line, not a crash - they are themselves findings.
+        let crop: string;
+        try { crop = await groupCropPath(item.bounding_group_id); }
+        catch(e) {
+            log(`  [${i+1}/${items.length}] ref ${item.ref_id} group ${item.bounding_group_id}: ` +
+                `SKIPPED (${e instanceof Error ? e.message : e})`);
+            continue;
+        }
         const stages: Record<string, {text: string, tagged?: string,
                                       confidence: number, sim?: number,
                                       lenient?: number, judge?: Judgement}> = {};
