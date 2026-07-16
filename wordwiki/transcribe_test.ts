@@ -32,3 +32,17 @@ test("similarity: exact match 1; ambiguity scores as its best alternative", () =
     assert(similarity('eoltevetsi', 'eoltjeoetji') < 1);
     assert(similarity('eoltevetsi', 'eoltjeoetji') > 0.5);
 });
+
+test("lenient similarity: punctuation/case forgiven; apostrophes count MID-WORD only", async () => {
+    const { lenientSimilarity } = await import("./transcribe.ts");
+    // Punctuation + case differences: strict dings, lenient forgives.
+    assert(similarity("aqtatpa'q, middle of the night", "Aqtatpa'q middle of the night.") < 1);
+    assertEquals(lenientSimilarity("aqtatpa'q, middle of the night",
+                                   "Aqtatpa'q middle of the night."), 1);
+    // A MID-WORD apostrophe is orthography - its absence still counts.
+    assert(lenientSimilarity("aqtatpaq", "aqtatpa'q") < 1);
+    // A boundary apostrophe is punctuation - forgiven.
+    assertEquals(lenientSimilarity("'aqtatpa'q'", "aqtatpa'q"), 1);
+    // Unicode right-single-quote unifies with the ASCII apostrophe.
+    assertEquals(lenientSimilarity("aqtatpa\u2019q", "aqtatpa'q"), 1);
+});

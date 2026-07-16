@@ -328,7 +328,10 @@ export function lenientSimilarity(llmText: string, handText: string): number {
 const lenientNorm = (s: string) => s.normalize('NFC')
     .replace(/[\u2019\u2018\u0060\u00b4]/g, "'")       // unify apostrophe-likes
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}'\[\]|⁇ ]/gu, ' ')           // drop punctuation (keep ', markers)
+    // Apostrophes count only MID-WORD (dz): between letters/digits they are
+    // Listuguj orthography; leading/trailing they are punctuation.
+    .replace(/(?<![\p{L}\p{N}])'|'(?![\p{L}\p{N}])/gu, ' ')
+    .replace(/[^\p{L}\p{N}'\[\]|⁇ ]/gu, ' ')           // drop punctuation (keep mid-word ', markers)
     .replace(/\s+/g, ' ').trim();
 
 function similarityOver(normalize: (s: string) => string,
