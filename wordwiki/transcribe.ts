@@ -276,6 +276,103 @@ export function pdmRecipe(): ExtractRecipe {
 }
 
 // ---------------------------------------------------------------------------------
+// --- The JUDGE stage (dz: string similarity can't see valid synonyms or -----------
+// --- researcher-row errors - classify each difference instead) --------------------
+// ---------------------------------------------------------------------------------
+
+export const PROMPT_VERSION_JUDGE = 1;
+
+export type DifferenceKind =
+    'punctuation' | 'valid-alternative' | 'llm-error' | 'researcher-error' | 'unclear';
+
+export interface JudgedDifference {
+    researcher: string;      // the researcher-side fragment (may be empty)
+    llm: string;             // the automated-side fragment (may be empty)
+    kind: DifferenceKind;
+    note: string;
+}
+export interface Judgement { equivalence: number; differences: JudgedDifference[]; }
+
+const JUDGE_SCHEMA = {
+    type: 'object',
+    properties: {
+        differences: {
+            type: 'array',
+            description: 'every substantive point where the two versions differ',
+            items: {
+                type: 'object',
+                properties: {
+                    researcher: {type: 'string', description: "the researcher version's fragment ('' if absent)"},
+                    llm: {type: 'string', description: "the automated version's fragment ('' if absent)"},
+                    kind: {type: 'string',
+                           enum: ['punctuation', 'valid-alternative', 'llm-error',
+                                  'researcher-error', 'unclear'],
+                           description: 'punctuation/formatting only; a valid alternative reading or translation; the automated version is wrong; the researcher version is wrong (e.g. an omitted word that IS in the source); cannot tell'},
+                    note: {type: 'string', description: 'one short sentence of reasoning'},
+                },
+                required: ['researcher', 'llm', 'kind', 'note'],
+            },
+        },
+        equivalence: {type: 'integer',
+                      description: 'how equivalent the two versions are IN SUBSTANCE, 0-100 (punctuation and valid alternatives do not reduce this)'},
+    },
+    required: ['differences', 'equivalence'],
+};
+
+/** The judge for one recipe stage: a text-comparison audit (the image rides
+ *  along - the primitive always sends it - and the prompt tells the judge
+ *  to consult the ink where the versions disagree, which is exactly how a
+ *  researcher OMISSION becomes attributable).  Framed as a third-party
+ *  audit classifying differences, not a self-grade - and the strict string
+ *  score stays on the page as the incorruptible baseline. */
+function judgeStage(stageName: string, what: string): ExtractStage {
+    return {
+        name: `judge-${stageName}`, model: '', promptVersion: PROMPT_VERSION_JUDGE,
+        imageBox: 1600,
+        schema: JUDGE_SCHEMA,
+        prompt: (input: any) => block`
+/**/You are auditing two independent versions of the same task: ${what},
+/**/for the ONE ENTRY of Father Pacifique's handwritten Mi'gmaq-French
+/**/dictionary shown in the image.
+/**/
+/**/VERSION A (a human researcher):
+/**/${String(input?.researcher ?? '')}
+/**/
+/**/VERSION B (automated):
+/**/${String(input?.llm ?? '')}
+/**/${input?.evidence ? `
+/**/Evidence from the previous step (both versions worked from this):
+/**/${String(input.evidence)}
+/**/` : ''}
+/**/Compare them and CLASSIFY every difference:
+/**/- punctuation: punctuation/spacing/case only - no content difference.
+/**/- valid-alternative: both readings/translations are defensible (e.g. a
+/**/  French or English synonym, an equally valid phrasing).
+/**/- llm-error: version B is wrong (misread letters, wrong orthography -
+/**/  in Mi'gmaq words BE STRICT: a missing or wrong apostrophe, a wrong
+/**/  letter, is an error, not a variant - a mistranslation, an invented
+/**/  word).
+/**/- researcher-error: version A is wrong - typically a word visible in
+/**/  the image (or present in the evidence) that A omitted or misrendered.
+/**/  Consult the image before using this kind.
+/**/- unclear: you cannot tell which is right.
+/**/[a|b] in version B means it offered alternatives; if any alternative
+/**/matches A, that is not a difference at all.  ⁇ means it marked a
+/**/character illegible.
+/**/
+/**/Then give "equivalence" 0-100: how equivalent the versions are IN
+/**/SUBSTANCE (punctuation and valid alternatives do not reduce it; errors
+/**/on either side do).`,
+    };
+}
+
+const JUDGE_WHAT: Record<string, string> = {
+    transcribe: 'a letter-by-letter transcription of the handwriting',
+    expand: 'the transcription with abbreviations expanded',
+    transliterate: "the entry translated (French to English) and converted to the Listuguj Mi'gmaq orthography",
+};
+
+// ---------------------------------------------------------------------------------
 // --- Ambiguity-aware similarity scoring --------------------------------------------
 // ---------------------------------------------------------------------------------
 
@@ -393,6 +490,7 @@ export interface TranscribeEvalOptions {
     reportPath?: string;    // side-by-side markdown (the quick CLI artifact)
     jsonPath?: string;      // the batch DATA (the html is a pure function of it)
     htmlPath?: string;      // self-contained REVIEW PAGE (research-group shareable)
+    judge?: boolean;        // classify differences via the judge stage (default true)
     log?: (m: string) => void;
 }
 
@@ -428,15 +526,17 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
     const results: Array<{item: EvalItem, crop: string,
                           stages: Record<string, {text: string, tagged?: string,
                                                   confidence: number, sim?: number,
-                                                  lenient?: number}>}> = [];
-    const sums: Record<string, {sim: number, lenient: number, n: number, conf: number}> = {};
+                                                  lenient?: number, judge?: Judgement}>}> = [];
+    const sums: Record<string, {sim: number, lenient: number, n: number, conf: number,
+                                equiv: number, equivN: number}> = {};
 
     for(const [i, item] of items.entries()) {
         const crop = await groupCropPath(item.bounding_group_id);
         const stages: Record<string, {text: string, tagged?: string,
                                       confidence: number, sim?: number,
-                                      lenient?: number}> = {};
+                                      lenient?: number, judge?: Judgement}> = {};
         let input: unknown = null;
+        let priorText = '';
         for(const stage of recipe) {
             const out: any = await extractStage(cfg, crop, 0, stage, input);
             input = out;
@@ -450,13 +550,27 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
             const scored = hand !== undefined && hand.trim() !== '';
             const sim = scored ? similarity(text, hand!) : undefined;
             const lenient = scored ? lenientSimilarity(text, hand!) : undefined;
-            stages[stage.name] = {text, confidence, sim, lenient,
+            // The JUDGE (dz): classify each residual difference - string
+            // similarity can't see valid alternatives or researcher errors.
+            let judge: Judgement | undefined = undefined;
+            if(scored && (opts.judge ?? true)) {
+                const j: any = await extractStage(cfg, crop, 0,
+                    judgeStage(stage.name, JUDGE_WHAT[stage.name] ?? stage.name),
+                    {researcher: hand, llm: text,
+                     evidence: priorText !== '' ? priorText : undefined});
+                judge = {equivalence: Number(j?.equivalence ?? 0),
+                         differences: Array.isArray(j?.differences) ? j.differences : []};
+            }
+            stages[stage.name] = {text, confidence, sim, lenient, judge,
                 tagged: out?.runs !== undefined ? runsToTagged(out.runs) : undefined};
             if(sim !== undefined) {
-                const s = sums[stage.name] ?? {sim: 0, lenient: 0, n: 0, conf: 0};
+                const s = sums[stage.name] ?? {sim: 0, lenient: 0, n: 0, conf: 0,
+                                               equiv: 0, equivN: 0};
                 s.sim += sim; s.lenient += (lenient ?? 0); s.n++; s.conf += confidence;
+                if(judge) { s.equiv += judge.equivalence; s.equivN++; }
                 sums[stage.name] = s;
             }
+            priorText = text;
         }
         results.push({item, crop, stages});
         log(`  [${i+1}/${items.length}] ref ${item.ref_id} group ${item.bounding_group_id}: ` +
@@ -473,8 +587,9 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
         const s = sums[stage.name];
         if(s && s.n > 0)
             log(`${stage.name}: mean similarity ${(s.sim/s.n*100).toFixed(1)}% ` +
-                `(lenient ${(s.lenient/s.n*100).toFixed(1)}%) ` +
-                `over ${s.n} refs, mean confidence ${(s.conf/s.n).toFixed(0)}`);
+                `(lenient ${(s.lenient/s.n*100).toFixed(1)}%` +
+                (s.equivN > 0 ? `, judged equivalence ${(s.equiv/s.equivN).toFixed(0)}` : '') +
+                `) over ${s.n} refs, mean confidence ${(s.conf/s.n).toFixed(0)}`);
         else
             log(`${stage.name}: no gold data to score in this sample`);
     }
@@ -569,7 +684,7 @@ export interface EvalData {
         ref_id: number; bounding_group_id: number; crop: string;
         hand: {transcription: string, expanded?: string, transliteration?: string};
         llm: Record<string, {text: string, tagged?: string, confidence: number,
-                             sim?: number, lenient?: number}>;
+                             sim?: number, lenient?: number, judge?: Judgement}>;
     }>;
 }
 
@@ -609,11 +724,28 @@ export async function renderEvalHtml(data: EvalData): Promise<string> {
             .filter(r => r && r.sim !== undefined) as Array<{sim: number, lenient?: number,
                                                              confidence: number}>;
         const mean = (xs: number[]) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : undefined;
+        const judged = data.items.map(it => it.llm[st.name])
+            .filter(r => r?.judge) as Array<{judge: Judgement}>;
         return {st, n: scored.length,
                 meanSim: mean(scored.map(r=>r.sim)),
                 meanLenient: mean(scored.map(r=>r.lenient ?? r.sim)),
+                meanEquiv: mean(judged.map(r=>r.judge.equivalence)),
                 meanConf: mean(scored.map(r=>r.confidence))};
     });
+    // Difference-kind census across all judged stages: the headline of what
+    // the residual differences actually ARE.
+    const kindCounts = new Map<string, number>();
+    for(const it of data.items)
+        for(const st of STAGES)
+            for(const d of it.llm[st.name]?.judge?.differences ?? [])
+                kindCounts.set(d.kind, (kindCounts.get(d.kind) ?? 0) + 1);
+    const KIND_LABEL: Record<string, string> = {
+        'punctuation': 'punctuation/format only',
+        'valid-alternative': 'valid alternatives',
+        'llm-error': 'LLM errors',
+        'researcher-error': 'researcher errors',
+        'unclear': 'unclear',
+    };
     const calBuckets = [[0,40],[40,60],[60,80],[80,101]];
     const calRows = calBuckets.map(([lo,hi]) => {
         const in_ = data.items.flatMap(it => STAGES.map(st => it.llm[st.name]))
@@ -639,6 +771,17 @@ export async function renderEvalHtml(data: EvalData): Promise<string> {
                 handHtml = '<span class="none">(none - not yet done by hand)</span>';
                 llmHtml = esc(llm.text);
             }
+            const judgeHtml = llm.judge ? `
+      <tr><th>judge</th><td>
+        <span class="badge ${llm.judge.equivalence >= 90 ? 'sim-great'
+                           : llm.judge.equivalence >= 70 ? 'sim-ok' : 'sim-poor'}">equivalence ${llm.judge.equivalence}</span>
+        ${llm.judge.differences.length === 0 ? '<span class="muted">no substantive differences</span>'
+          : `<ul class="judged">${llm.judge.differences.map(d => `
+           <li><span class="chip kind-${esc(d.kind)}">${esc(d.kind)}</span>
+               ${d.researcher ? `“${esc(d.researcher)}”` : '<span class="muted">(absent)</span>'}
+               vs ${d.llm ? `“${esc(d.llm)}”` : '<span class="muted">(absent)</span>'}
+               <span class="muted">— ${esc(d.note)}</span></li>`).join('')}</ul>`}
+      </td></tr>` : '';
             return `
       <tr class="stage-head"><th colspan="2">${st.label}
         <span class="badge ${simClass(llm.lenient ?? llm.sim)}">similarity ${pct(llm.sim)}${
@@ -649,7 +792,7 @@ export async function renderEvalHtml(data: EvalData): Promise<string> {
       <tr><th>researcher</th><td>${handHtml}</td></tr>
       <tr><th>LLM</th><td>${llmHtml}${
           marked ? `<div class="rawmarks">with uncertainty markers: ${esc(llm.text)}</div>` : ''
-      }${llm.tagged ? `<div class="tagged">${esc(llm.tagged)}</div>` : ''}</td></tr>`;
+      }${llm.tagged ? `<div class="tagged">${esc(llm.tagged)}</div>` : ''}</td></tr>${judgeHtml}`;
         }).join('');
         entryHtml.push(`
   <section class="entry" id="ref-${it.ref_id}">
@@ -693,6 +836,14 @@ export async function renderEvalHtml(data: EvalData): Promise<string> {
              padding: 0 .25rem; display: inline-block; margin-top: .15rem;
              font-size: .85rem; }
  .tagged { color: #6c757d; font-size: .8rem; margin-top: .1rem; }
+ ul.judged { margin: .25rem 0 0; padding-left: 1.1rem; font-size: .88rem; }
+ .chip { font-size: .72rem; font-weight: 600; border-radius: .6rem;
+         padding: .05rem .45rem; white-space: nowrap; }
+ .kind-punctuation       { background: #e9ecef; color: #495057; }
+ .kind-valid-alternative { background: #cfe2ff; color: #084298; }
+ .kind-llm-error         { background: #f8d7da; color: #842029; }
+ .kind-researcher-error  { background: #e2d9f3; color: #59359a; }
+ .kind-unclear           { background: #fff3cd; color: #664d03; }
  pre.rule { background: #f6f6f6; border: 1px solid #e2e2e2; border-radius: 4px;
             padding: .6rem .8rem; white-space: pre-wrap; font-size: .82rem; }
  table.sum { border-collapse: collapse; margin: .5rem 0; }
@@ -715,14 +866,25 @@ count as right if either reading matches.  Two scores: STRICT (every
 character) and LENIENT (punctuation and letter-case ignored - closer to
 substance; apostrophes still count, they are part of the Listuguj
 orthography).  Both are lower bounds: a different-but-valid synonym or an
-error in the researcher row still scores as a difference.</p>
+error in the researcher row still scores as a difference.  The JUDGE row
+under each step classifies every residual difference (punctuation-only /
+valid alternative / LLM error / researcher error / unclear) and gives an
+equivalence-in-substance score - the judge consults the scanned image where
+the versions disagree.  Judge classifications are themselves model output:
+treat them as pre-structured questions for review, not verdicts.</p>
 
 <h2>Summary</h2>
 <table class="sum">
- <tr><th>step</th><th>scored</th><th>strict similarity</th><th>lenient similarity</th><th>mean confidence</th></tr>
+ <tr><th>step</th><th>scored</th><th>strict similarity</th><th>lenient similarity</th><th>judged equivalence</th><th>mean confidence</th></tr>
  ${stageStats.map(s=>`<tr><td>${s.st.label}</td><td>${s.n}</td>
-   <td>${pct(s.meanSim)}</td><td>${pct(s.meanLenient)}</td><td>${s.meanConf === undefined ? '—' : s.meanConf.toFixed(0)}</td></tr>`).join('')}
+   <td>${pct(s.meanSim)}</td><td>${pct(s.meanLenient)}</td>
+   <td>${s.meanEquiv === undefined ? '—' : s.meanEquiv.toFixed(0)}</td>
+   <td>${s.meanConf === undefined ? '—' : s.meanConf.toFixed(0)}</td></tr>`).join('')}
 </table>
+${kindCounts.size > 0 ? `
+<p class="muted">What the differences actually are (every judged difference,
+all steps): ${[...kindCounts.entries()].map(([k,n]) =>
+    `<span class="chip kind-${k}">${n} ${KIND_LABEL[k] ?? k}</span>`).join(' ')}</p>` : ''}
 <p class="muted">Confidence calibration (does the model's self-reported
 confidence predict how good the result actually is?):</p>
 <table class="sum">
