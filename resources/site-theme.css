@@ -333,4 +333,10 @@ body {
 /* click-to-edit tag text (the ✎ pencil sits right after) */
 .ww-tag-label.lm-clickedit { cursor: pointer; }
 .ww-tag-label.lm-clickedit:hover .ww-tag-name { text-decoration: underline; }
+/* a tag value that is BLOCK markdown (lists...) sits indented under the
+   tag's line, exactly like a multi-paragraph log post (.ww-log-body) */
+.ww-tag .ww-tag-value-block { margin-left: 1.5rem; }
+.ww-tag .ww-tag-value-block > .lm-markdown > :first-child { margin-top: 0; }
+.ww-tag .ww-tag-value-block > .lm-markdown > :last-child { margin-bottom: 0; }
+.ww-tag .ww-tag-value-block ul, .ww-tag .ww-tag-value-block ol { padding-left: 1.25rem; margin-bottom: .25rem; }
 .ww-log-drawer textarea, .ww-log-drawer { }

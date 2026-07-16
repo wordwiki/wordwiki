@@ -86,6 +86,14 @@ import type {WordWiki} from './wordwiki.ts';
 // themselves live there.  hx-get URLs are absolute so they work from any page.
 const R = '/ww/wordwiki.lexeme';
 
+/** The word's FULL HISTORY: review mode opened at everyone+full (the title
+ *  clock's target on both the editor and the word view - always present,
+ *  where the review toggle only exists while something is pending).  An
+ *  un-anchored visit redirects to the canonical since-stamped URL. */
+export function fullHistoryUrl(entry_id: number): string {
+    return `${R}.entryPage(${entry_id},'review',0,'full')`;
+}
+
 // The reference books offered by the per-book "add document reference"
 // buttons (the same set the navbar and home page link to).
 const REFERENCE_BOOKS = ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'];
@@ -665,7 +673,7 @@ export class LexemeEditor {
 
     @route(authenticated)
     entryPage(entry_id: number, mode: EditMode = 'edit',
-              since: number = 0): templates.Page | server.Response {
+              since: number = 0, view: string = ''): templates.Page | server.Response {
         // The sitting anchor: an un-anchored visit redirects to the canonical
         // URL stamped with the db's top tx timestamp, so the anchor lives in
         // the browser URL - refresh/back keep the sitting (review receipts
@@ -676,11 +684,18 @@ export class LexemeEditor {
             // address bar (this URL is the one users see and share).
             // Self-canonical: wordwiki.entry now serves the METADATA
             // editor, so the classic look must not bounce through it.
-            return server.forwardResponse(`${R}.entryPage(${entry_id},'${mode}',${t})`);
+            return server.forwardResponse(
+                `${R}.entryPage(${entry_id},'${mode}',${t}${view ? `,'${view}'` : ''})`);
         }
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
-        return templates.page(title, this.renderEntry(entry_id, mode, '', '', since));
+        // view 'full': open review as the FULL HISTORY (everyone, from
+        // creation) - the title clock's target; a review sitting with
+        // nothing pending is otherwise an empty page.
+        const full = view === 'full';
+        return templates.page(title, this.renderEntry(
+            entry_id, full ? 'review' : mode, full ? 'everyone' : '',
+            full ? 'full' : '', since));
     }
 
     /** The root-level fragment: the whole entry (heading + all relations).  The
@@ -927,9 +942,12 @@ export class LexemeEditor {
             valueLabel: this.vocabValueLabel(),
             orthographyBadge: this.orthographyBadge(),
             // The reverse of the view's pencil (dz): an eye in the editor's
-            // title jumps to the read-only word view (preview).
+            // title jumps to the read-only word view (preview) - and the
+            // clock beside it to the FULL HISTORY (always present; the
+            // review toggle only exists while something is pending).
             titleAffordance: ['span', {class: 'ms-2'},
-                templates.viewLink(`/ww/wordwiki.wordView(${entry_id})`)],
+                templates.viewLink(`/ww/wordwiki.wordView(${entry_id})`),
+                templates.historyLink(fullHistoryUrl(entry_id))],
             titleOrthography: this.app.currentWorkingOrthography(),
             // Tag + Log get their own custom sections (renderLexemeWorkflow)
             // on both read and edit - suppress the generic rows here so there

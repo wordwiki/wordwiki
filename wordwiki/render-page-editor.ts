@@ -34,6 +34,23 @@ function pageEditorApp(): WordWiki {
         ?? utils.panic('page-editor app provider not set (WordWiki ctor injects it)'))();
 }
 
+/** App-injected per-page companion links for the page editor header (dz:
+ *  the editor is BOOK-GENERIC - it serves every reference book, so
+ *  app/book-specific companions like the PDM feed slice are injected as
+ *  label/href pairs, never imported here).  A provider returns [] for
+ *  pages it has nothing to say about.  Keyed so re-registration (a fresh
+ *  app instance per test) replaces rather than accumulates. */
+export type PageEditorLinkProvider =
+    (document: ScannedDocument, page: ScannedPage) => {label: string, href: string}[];
+const pageEditorLinkProviders = new Map<string, PageEditorLinkProvider>();
+export function addPageEditorLinkProvider(key: string, p: PageEditorLinkProvider): void {
+    pageEditorLinkProviders.set(key, p);
+}
+export function pageEditorLinks(document: ScannedDocument, page: ScannedPage):
+        {label: string, href: string}[] {
+    return [...pageEditorLinkProviders.values()].flatMap(p => p(document, page));
+}
+
 type GroupJoinPartial = Pick<BoundingGroup, 'column_number'|'heading_level'|'heading'|'color'>;
 type BoxGroupJoin = BoundingBox & GroupJoinPartial;
 
@@ -143,6 +160,14 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
          renderPageJumper(page.page_number, total_pages_in_document,
                           (page_number: number) =>
              `/ww/wordwiki.pages.renderPageEditorByPageNumber(${document_id}, ${page_number}, ${JSON.stringify(cfg)})`),
+
+         // App-injected companion links for this page (generic: the editor
+         // serves every reference book - see addPageEditorLinkProvider).
+         // The single-group popup keeps its focused layout.
+         (cfg.locked_bounding_group_id || cfg.is_popup_editor)
+             ? []
+             : pageEditorLinks(document, page).map(l =>
+                 ['a', {class: 'me-3 small', href: l.href}, l.label]),
         ], // /div
 
         (cfg.reference_layer_ids.length === 1

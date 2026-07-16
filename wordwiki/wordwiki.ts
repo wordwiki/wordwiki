@@ -27,8 +27,9 @@ import * as markdown from '../liminal/markdown.ts';
 import {serialize, path} from '../liminal/serializable.ts';
 import {route, routeMutation, authenticated, hostOrAdmin, publicRoute} from '../liminal/security.ts';
 import {lazy} from '../liminal/lazy.ts';
-import {LexemeEditor} from './lexeme-editor.ts';
+import {LexemeEditor, fullHistoryUrl} from './lexeme-editor.ts';
 import {ChangeFeed} from './change-feed.ts';
+import * as changeFeed from './change-feed.ts';
 import {ActivityReport} from './activity-report.ts';
 import {SpellingReports} from './spelling-duplicates.ts';
 import {RecentWords} from './recent-words.ts';
@@ -82,6 +83,15 @@ export class WordWiki extends LiminalApp {
         // The page-editor word sidebar renders word summaries in the working
         // lane - same cycle-avoiding injection as the templates providers.
         renderPageEditor.setPageEditorAppProvider(() => this);
+        // The page editor is BOOK-GENERIC (dz): app/book-specific companion
+        // links are injected, never imported there.  The primary source
+        // book's pages link to their page-scoped change feed (the
+        // page-shepherding view; the feed links back).
+        renderPageEditor.addPageEditorLinkProvider('primary-book-feed', (doc, page) =>
+            doc.friendly_document_id === siteConfig.primarySourceBook
+                ? [{label: `Recent changes for this page`,
+                    href: changeFeed.feedForSourcePageUrl(page.page_number)}]
+                : []);
         // Bylines (the session log) show the user's NAME, not the login.
         entry.setUsernameDisplayHook(username => {
             try {
@@ -573,16 +583,23 @@ export class WordWiki extends LiminalApp {
             'hx-target': '#modalEditorBody', 'hx-swap': 'innerHTML',
             'hx-on::after-request': 'showModalEditor()'};
         // Clicking the tag TEXT edits it (dz) - the same dialog as \u270e.
+        // The value is MARKDOWN (like log posts): a single paragraph rides
+        // the tag's own line; real block markdown (lists...) sits indented
+        // under it (the markdownInline split the log pane uses).
+        const valueMd = t.value ? markdown.markdownToMarkup(t.value) : undefined;
+        const valueInline = valueMd !== undefined ? entryMeta.markdownInline(valueMd) : undefined;
         const label = ['span',
             mayEdit ? {class: 'ww-tag-label lm-clickedit', role: 'button',
                        title: 'Edit', ...editAttrs}
                     : {class: 'ww-tag-label'},
             ['span', {class: 'ww-tag-name'}, tagName(t.tag)],
-            t.value ? ['span', {}, ' \u2014 ', t.value] : undefined,
+            valueInline !== undefined ? ['span', {}, ' \u2014 ', valueInline] : undefined,
             t.assigned_to && t.assigned_to !== '___'
                 ? ['span', {class: 'text-muted'}, ` \u2192 ${entry.displayUsername(t.assigned_to)}`]
                 : undefined,
         ];
+        const valueBlock = (valueMd !== undefined && valueInline === undefined)
+            ? ['div', {class: 'ww-tag-value-block'}, valueMd] : undefined;
         // Order (dz): \u270e leads - next to the click-to-edit text, the two
         // edit affordances together - then done, then remove.
         const acts = mayEdit ? ['span', {class: 'ww-tag-acts ms-2'},
@@ -602,7 +619,7 @@ export class WordWiki extends LiminalApp {
         const props = reloadableProps([`-lexeme-tag-${t.tag_id}-`],
                                       `/ww/wordwiki.renderLexemeTagLine(${entry_id}, ${t.tag_id})`);
         props.class = 'ww-tag' + (done ? ' ww-tag-is-done' : '') + ' ' + props.class;
-        return ['li', props, label, acts];
+        return ['li', props, label, acts, valueBlock];
     }
 
     /** The LOG section (reloadable fragment `-lexeme-log-<id>-`): the word's
@@ -825,7 +842,10 @@ export class WordWiki extends LiminalApp {
     }
 
     /** The edit pencil INSIDE the headword <h1> (trailing the glosses), so it
-     *  reads as part of the title line and never drops to its own row. */
+     *  reads as part of the title line and never drops to its own row.  The
+     *  history clock rides beside it (dz: the full change record, one click
+     *  from the heading on BOTH the view and the editor - but only on the
+     *  word's own page, never on the list-link pencils). */
     private wordViewPencil(entry_id: number, e: entry.Entry, lens?: string): any {
         // The lens orthography beats the working lane: the question on a
         // lensed page is "is it public in THE LANE I AM LOOKING THROUGH".
@@ -835,7 +855,9 @@ export class WordWiki extends LiminalApp {
                         title: 'This word is not on the public site yet'}, 'not public']
             : undefined;
         const pencil = e && templates.mayEditLexemes()
-            ? ['span', {class: 'ms-2'}, templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`)]
+            ? ['span', {class: 'ms-2'},
+               templates.pencilLink(`/ww/wordwiki.wordEditor(${entry_id})`),
+               templates.historyLink(fullHistoryUrl(entry_id))]
             : undefined;
         return (pencil || notPublic) ? [pencil, notPublic] : undefined;
     }

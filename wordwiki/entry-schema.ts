@@ -331,7 +331,10 @@ export const dictSchemaJson = {
             tag_id: {$type: 'primary_key'},
             tag: {$type: 'enum', $bind: 'attr1',
                   $style: { $options: todos}},   // table-driven select in the editor; static map = unseeded fallback
-            value: {$type: 'string', $bind: 'attr2', $style: { $width: 30 }},
+            // $markdown (dz 2026-07-16): the value is the tag's content -
+            // todo details want lists/emphasis like notes and log posts do.
+            value: {$type: 'string', $bind: 'attr2',
+                    $style: { $width: 60, $height: 3, $markdown: true }},
             assigned_to: {$type: 'enum', $bind: 'attr3', $style: {$options: users}},
             done: {$type: 'boolean', $bind: 'attr4'},
             variant: {$type: 'variant', $metaVariant: true, $allowAll: true, $defaultAll: true},

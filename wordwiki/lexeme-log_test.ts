@@ -211,6 +211,24 @@ test("Tags/Log workflow renders on the LEXEME EDITOR too (one way everywhere)", 
     });
 });
 
+test("tag value is MARKDOWN: inline rides the line, block indents under it", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        // A single-paragraph markdown value renders INLINE on the tag line.
+        const inline = as(fx, 'test', () => fx.ww.lexemeOps.postTag(1000, 'fix the *stem*'));
+        const inlineHtml = renderToStringViaLinkeDOM(await as(fx, 'test', () =>
+            renderRoute(fx.ww, `wordwiki.renderLexemeTagLine(1000, ${inline.fact_id})`)));
+        assertStringIncludes(inlineHtml, '<em>stem</em>');
+        assert(!inlineHtml.includes('ww-tag-value-block'), 'single paragraph stays inline');
+        // Block markdown (a list) sits indented under the tag's line.
+        const block = as(fx, 'test', () => fx.ww.lexemeOps.postTag(1000, '- one\n- two'));
+        const blockHtml = renderToStringViaLinkeDOM(await as(fx, 'test', () =>
+            renderRoute(fx.ww, `wordwiki.renderLexemeTagLine(1000, ${block.fact_id})`)));
+        assertStringIncludes(blockHtml, 'ww-tag-value-block');
+        assertStringIncludes(blockHtml, '<li>one</li>');
+    });
+});
+
 test("tag line: a removed tag's per-line fragment renders nothing (swaps itself out)", async () => {
     await withTestDb(async (fx: Fixture) => {
         seed(fx);
@@ -234,6 +252,31 @@ test("editor title has the view eye (reverse of the view's pencil)", async () =>
             renderRoute(fx.ww, `wordwiki.wordView(1000)`)));
         assertStringIncludes(viewHtml, 'lm-edit-pencil');
         assertStringIncludes(viewHtml, 'wordwiki.wordEditor(1000)');
+    });
+});
+
+test("title clock: full history one click from BOTH headings, even with nothing pending", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        seed(fx);
+        // The editor title: eye + clock; the view heading: pencil + clock
+        // (the clock never rides the list-link pencils - headings only).
+        const editorHtml = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.wordEditor(1000)`)));
+        assertStringIncludes(editorHtml, 'lm-history-clock');
+        assertStringIncludes(editorHtml, `entryPage(1000,'review',0,'full')`);
+        const viewHtml = renderToStringViaLinkeDOM(await as(fx, 'djz', () =>
+            renderRoute(fx.ww, `wordwiki.wordView(1000)`)));
+        assertStringIncludes(viewHtml, 'lm-history-clock');
+        assertStringIncludes(viewHtml, `entryPage(1000,'review',0,'full')`);
+        // The target opens review AT full history (everyone, from creation)
+        // - word 1000 has NO pending changes, which used to make review
+        // unreachable/empty.
+        const t = fx.ww.lastAllocatedTxTimestamp;
+        const page = as(fx, 'djz', () =>
+            fx.ww.lexeme.entryPage(1000, 'edit', t, 'full')) as any;
+        const historyHtml = renderToStringViaLinkeDOM(page.body);
+        assertStringIncludes(historyHtml, 'Reviewing');
+        assertStringIncludes(historyHtml, 'Full history ✓');
     });
 });
 

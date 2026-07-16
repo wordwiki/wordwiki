@@ -14,6 +14,7 @@ import { withTestDb, as, mkEntry, mkChild, mkEdit, bornApprove, TestTimeline,
 import { clumpFeedEvents, cutFeedSlice, feedQueryShapes, feedQuery,
          type FeedEvent, type FeedQuery } from "./change-feed.ts";
 import { createAssertionDml } from "./assertion.ts";
+import { pageEditorLinks } from "./render-page-editor.ts";
 import { Db, db, setDefaultDb } from "../liminal/db.ts";
 import { isRedirectResponse } from "../liminal/http-server.ts";
 import { isTopLevelMarkup } from "../liminal/liminal.ts";
@@ -320,6 +321,8 @@ test("feed: the source-page filter keeps only that page's entries", async () => 
                           VALUES (1, 'PDM', 'Pacifique')`, {});
             db().execute(`INSERT INTO scanned_page(page_id, document_id, page_number)
                           VALUES (50, 1, 5)`, {});
+            db().execute(`INSERT INTO scanned_page(page_id, document_id, page_number)
+                          VALUES (51, 1, 6)`, {});   // an empty page (see below)
             db().execute(`INSERT INTO bounding_group(bounding_group_id, document_id, layer_id)
                           VALUES (700, 1, 1)`, {});
             db().execute(`INSERT INTO bounding_box(bounding_box_id, bounding_group_id, document_id,
@@ -353,6 +356,20 @@ test("feed: the source-page filter keeps only that page's entries", async () => 
             assertStringIncludes(pageHtml, "entries on PDM page 5");
             assertStringIncludes(pageHtml, `entriesByBookPage("PDM", 5)`);
             assertStringIncludes(pageHtml, `pages.pageEditor("PDM", 5)`);
+            // ...and the REVERSE links: the entries-by-page report links to
+            // this feed view; the page editor gets the same link through the
+            // injected provider (book-generic - only the primary book links).
+            // The EMPTY page 6: rendering page 5's entries would fire the
+            // async tile derivation against this test's imageless scan rows.
+            const report = markupToString(fx.ww.editorReports.entriesByBookPage('PDM', 6));
+            assertStringIncludes(report, "Recent changes for PDM page 6");
+            assertStringIncludes(report, "source_page");
+            const links = pageEditorLinks({friendly_document_id: 'PDM'} as any,
+                                          {page_number: 5} as any);
+            assertEquals(links.length, 1);
+            assertStringIncludes(links[0].href, "source_page");
+            assertEquals(pageEditorLinks({friendly_document_id: 'Rand'} as any,
+                                         {page_number: 5} as any), []);
         });
     });
 });

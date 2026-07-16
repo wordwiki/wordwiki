@@ -26,6 +26,8 @@ import * as category from './category.ts';
 import * as tagModule from './tag.ts';
 import * as findings from './findings.ts';
 import {selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber} from './scanned-document.ts';
+import {feedForSourcePageUrl} from './change-feed.ts';
+import {siteConfig} from './site-config.ts';
 import {renderStandaloneGroup} from './render-page-editor.ts';
 import type {DictionaryStore} from './dictionary-store.ts';
 import type {SiteView} from './site-view.ts';
@@ -376,6 +378,14 @@ export class EditorReports {
             selectScannedPageByPageNumber()
                 .required({document_id: documentId, page_number}).page_id;
 
+        // The page-shepherding companion: this page's slice of the change
+        // feed (the feed's source_page filter is scoped to the primary
+        // source book, so only that book links).
+        const feedLink = book === siteConfig.primarySourceBook
+            ? ['p', {}, ['a', {href: feedForSourcePageUrl(page_number)},
+                         `Recent changes for ${book} page ${page_number}`]]
+            : [];
+
         console.time('entriesInDocRefOrder');
         // TODO XXX the page_number returned here is pointless now that this
         //          is locked to a single page.
@@ -423,6 +433,7 @@ export class EditorReports {
 
         const body = [
             ['h1', {}, title],
+            feedLink,
             entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)])
         ];
 

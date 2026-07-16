@@ -159,6 +159,15 @@ export function feedForUserUrl(username: string,
         {restrict_to_user: username, user_mode: mode}))})`;
 }
 
+/** The feed URL scoped to one page of the primary source book (the
+ *  page-shepherding view) - the entry point the page editor and the
+ *  entries-by-page report link to; an un-stamped visit redirects to the
+ *  canonical to_time-stamped URL. */
+export function feedForSourcePageUrl(page_number: number): string {
+    return `/ww/wordwiki.changes(${feedQuery.literal(feedQuery.normalize(
+        {source_page: page_number}))})`;
+}
+
 // ---------------------------------------------------------------------------
 // --- Clumping (pure - the unit the feed renders and pages by) ---------------
 // ---------------------------------------------------------------------------
