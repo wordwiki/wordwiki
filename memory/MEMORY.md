@@ -31,6 +31,7 @@
 - [Word-a-day picker](word-a-day-picker.md) — wordADayPicker: category tree of unposted public words for the twitter/bluesky poster; on twitter-report branch awaiting dz review
 - [Wordwiki db location](wordwiki-db-location.md) — live db is <repo>/mmo/database/db.db (~/mmo is GONE); versioned `dict` table — use dump scripts
 - [Liminal audit series](liminal-audit-series.md) — module-by-module correctness audits; the per-module recipe dz approves
+- [Page editor is book-generic](page-editor-book-generic.md) — serves ALL reference books; app/book-specific links INJECTED via addPageEditorLinkProvider, never imported (also an init-order cycle otherwise)
 - [Wordwiki transpiled resources](wordwiki-transpiled-resources.md) — wordwiki serves /resources/*.js from a transpile OUTPUT dir; stale js until transpile reruns ("works in rabid, not wordwiki" = stale output)
 - [Publish orphan prune](publish-orphan-prune.md) — stale-.html prune gated by AUTOMATIC per-dir .wordwiki-publish-tree ownership stamps (root-marker gate GONE); publish refuses existing unmarked tree dirs; staging needs a one-time bless
 - [Liminal htmx config](liminal-htmx-config.md) — shared htmx meta/script in liminal/htmx.ts; historyCacheSize:0 fix keeps navbar menus/JS alive after Back (the snapshot-restore breakage)
