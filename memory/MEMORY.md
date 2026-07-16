@@ -15,7 +15,7 @@
 - [Route security migration](route-security-migration.md) — staged routeterp permissive→strict; same Permission model for routes; rabid testbed, wordwiki stays jsterp; stage 1 done
 - [Testing approach](testing-approach.md) — render→act→render as a library (no HTTP/browser); in-memory db; generic test layer; seeded/scenario fake_data
 - [Wordwiki assertion model](wordwiki-assertion-model.md) — lexeme data as immutable assertion versions in `dict` table; full notes at /home/dziegler/wordwiki/assertion-model.md
-- [PDM LLM transcription](pdm-llm-transcription.md) — Opus reads bounding groups: 3-stage cached recipe (tagged runs, ambiguity markers, confidence) + transcribe-eval CLI vs hand answers; v2 at 83%/71%
+- [PDM LLM transcription](pdm-llm-transcription.md) — phase 1 COMPLETE+PAUSED; doc of record pdm-transcription.md; masked crops, judge stage, 25-ref eval (transcribe ~80/judged 77); vision: whole-dictionary transliteration for cherry-picking
 - [Tag model](tag-model.md) — TODO generalized to TAG: vocabulary table w/ is_todo flag, storage tag 'tdo' unchanged (zero migration); charter of the four label mechanisms
 - [Lexeme session log](lexeme-log.md) — Log pane on the word view (+ Post as todo): non-modal capture of speakers-group feedback, approval-bypassed, top-posted; bundle internal-leak fixed alongside
 - [Publication/approval model](publication-approval-model.md) — published_from/to dimension + review mode BUILT (incl. sitting receipts, global change feed + monthly activity report 2026-07-03); open-to-untrusted pending

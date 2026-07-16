@@ -1,53 +1,45 @@
 ---
 name: pdm-llm-transcription
-description: "LLM (Opus 4.8) transcription of PDM bounding groups: 3-stage cached recipe + eval CLI vs hand answers (transcribe-eval); phase 1 BUILT 2026-07-11, prompt iteration ongoing"
+description: "PDM LLM transcription: phase 1 complete + PAUSED 2026-07-16; doc of record repo-root pdm-transcription.md (vision: full-dictionary transliteration for cherry-picking)"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 61972dfd-5245-4f6c-8442-1149dcc1ee7b
 ---
 
-BUILT 2026-07-11 (wordwiki/transcribe.ts + `./wordwiki.sh
-transcribe-eval`): the page-primary flow's READING step, phase 1 =
-CLI eval only (READ-ONLY, never writes the dict; UI/queue later, only
-if quality earns it). Reuses liminal's scan->extract LAYER 1
-(extract.ts extractStage/extractAll + llm.ts loadLlm('wordwiki')) -
-NOT rabid's job/queue layer. Credential:
-wordwiki-anthropic-credential.json ({apiKey, defaultModel:
-claude-opus-4-8}), gitignored, SYMLINKED INTO mmo/ (loadLlm reads
-cwd = the run dir).
+DOC OF RECORD: repo-root pdm-transcription.md (written 2026-07-16 as
+the pause/handoff artifact - READ IT FIRST on resuming; it has the
+vision, findings, run instructions, and the road map).
 
-- 3-stage recipe mirroring document_reference's manual fields:
-  transcribe (letter-by-letter) -> expand (abbreviations, elided
-  stems) -> transliterate (fr->en + Pacifique->Listuguj). Stages 1-2
-  output LANGUAGE-TAGGED RUNS ({text, lang: mm|fr|cit} in the SCHEMA,
-  not in-band - dz's early-language-marking idea; cit = citations
-  copied verbatim); stage 3 flat text.
-- dz's LI->SF lessons carried over: [a|b] AMBIGUITY markers (scored
-  as best alternative - honesty never penalized) + global CONFIDENCE
-  0-100 per stage (report shows confidence vs similarity =
-  calibration).
-- CACHING = the budget mechanism: every stage memoised in the derived
-  store keyed [cropPath, model, promptVersion, imageBox, stage,
-  priorInputHash]; bump PROMPT_VERSION_* consts to re-run just that
-  stage + downstream; re-runs otherwise FREE. onUsage hook added to
-  liminal llm.ts/extract.ts tallies ACTUAL API tokens (cache hits
-  don't fire it).
-- Group images: groupCropPath() = derived ImageMagick crop of the
-  box-union (+12px margin) -> content-addressed jpg;
-  groupCropImageSource bounds to stage imageBox (shrink-only).
-- Gold set: ~1,520 refs w/ hand transcription (PDM the main body);
-  goldSample() is DETERMINISTIC (ref-id order) so growing the sample
-  reuses the cache.
-- Results (3-ref sample): v1 transcribe 81.5% / transliterate 54.8%;
-  v2 (tagged runs + corpus-mined correspondences in the prompt)
-  transcribe 82.8% / transliterate 71.4%. ~5k tokens/ref for the
-  whole recipe. Confidence tracks quality.
-- Future: mine more Pacifique->LI correspondences from the gold pairs
-  (the transliterate.ts LI->SF rules program is the model:
-  corpus-derived rules + oracle harness + lexical exceptions);
-  possibly a deterministic rules pass before/instead of stage 3;
-  writing results into document_reference as unapproved drafts is a
-  LATER phase gated on quality.
+PHASE 1 COMPLETE (2026-07-11..16), paused to clean up other WIP. The
+short version:
 
-Relates to [[wordwiki-transcription-oracle]], [[minimal-ceremony-principle]].
+- wordwiki/transcribe.ts + `./wordwiki.sh transcribe-eval` (read-only;
+  runs beside the live server). Credential
+  wordwiki-anthropic-credential.json at repo root, SYMLINKED into mmo/.
+- MASKED group crops (boxes pasted onto white; 16px box margin;
+  mask-aware prompts) - union crops leaked neighbors' text (16%-coverage
+  ref: 35%@c72 reading neighbors -> 94%@c80 masked). ImageMagick
+  CopyOpacity is broken on this build - use the paste approach.
+- 3-stage recipe (transcribe/expand/transliterate), language-tagged
+  runs in-schema, [a|b] ambiguity + confidence, JUDGE stage classifying
+  differences (punctuation/valid-alternative/llm-error/
+  researcher-error/unclear). THE GOLD IS IMPERFECT - judge caught real
+  researcher omissions; raw string scores UNDERSTATE quality (only
+  15/49 differences were LLM errors).
+- 25-ref numbers: transcribe 79.8% strict/judged 77; expand 77.8%
+  (n=7); transliterate 60.3%/judged 66 (THE WEAK LINK - next: mine
+  correspondences from the ~1,520 gold pairs, transliterate.ts-style).
+  Confidence well calibrated (worst refs self-report c18-42).
+- Review page: resources/transcribe-eval.{json,html}, served at
+  /resources/transcribe-eval.html, Reports menu link; self-contained
+  (mailable to the research group). Regenerating = re-run the CLI
+  (cache makes unchanged runs FREE; deterministic sample order).
+- dz's VISION (in the doc): full automated transliteration of all ~700
+  pages to enable CHERRY-PICKING (avoid the 200-of-700-pages dead end)
+  + faster construction + UI aids (hover-translate French runs).
+  Requires an LLM page-SEGMENTATION stage (gold: ~200 hand-transcribed
+  pages) + cost levers (cheaper models graded by this eval, Batch API,
+  confidence-gated escalation).
+
+Relates to [[minimal-ceremony-principle]], [[wordwiki-archival-publish-model]].
