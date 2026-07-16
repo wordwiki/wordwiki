@@ -356,14 +356,17 @@ test("feed: the source-page filter keeps only that page's entries", async () => 
             assertStringIncludes(pageHtml, "entries on PDM page 5");
             assertStringIncludes(pageHtml, `entriesByBookPage("PDM", 5)`);
             assertStringIncludes(pageHtml, `pages.pageEditor("PDM", 5)`);
-            // ...and the REVERSE links: the entries-by-page report links to
-            // this feed view; the page editor gets the same link through the
-            // injected provider (book-generic - only the primary book links).
+            // ...and the REVERSE links (dz: the three per-page views - page
+            // editor / page changes / entries-for-page - each link to the
+            // other two).  The entries report offers the editor + the feed;
+            // the page editor's feed link arrives via the injected provider
+            // (book-generic - only the primary book links to the feed).
             // The EMPTY page 6: rendering page 5's entries would fire the
             // async tile derivation against this test's imageless scan rows.
             const report = markupToString(fx.ww.editorReports.entriesByBookPage('PDM', 6));
             assertStringIncludes(report, "Recent changes for PDM page 6");
             assertStringIncludes(report, "source_page");
+            assertStringIncludes(report, `pages.pageEditor("PDM", 6)`);
             const links = pageEditorLinks({friendly_document_id: 'PDM'} as any,
                                           {page_number: 5} as any);
             assertEquals(links.length, 1);

@@ -378,13 +378,17 @@ export class EditorReports {
             selectScannedPageByPageNumber()
                 .required({document_id: documentId, page_number}).page_id;
 
-        // The page-shepherding companion: this page's slice of the change
-        // feed (the feed's source_page filter is scoped to the primary
-        // source book, so only that book links).
-        const feedLink = book === siteConfig.primarySourceBook
-            ? ['p', {}, ['a', {href: feedForSourcePageUrl(page_number)},
-                         `Recent changes for ${book} page ${page_number}`]]
-            : [];
+        // The page-shepherding companions (dz: the three per-page views -
+        // page editor / page changes / entries-for-page - each link to the
+        // other two).  The page editor works for every book; the feed's
+        // source_page filter is scoped to the primary source book.
+        const companionLinks = ['p', {},
+            ['a', {href: `/ww/wordwiki.pages.pageEditor(${JSON.stringify(book)}, ${page_number})`},
+             'Page images'],
+            book === siteConfig.primarySourceBook
+                ? [' · ', ['a', {href: feedForSourcePageUrl(page_number)},
+                           `Recent changes for ${book} page ${page_number}`]]
+                : []];
 
         console.time('entriesInDocRefOrder');
         // TODO XXX the page_number returned here is pointless now that this
@@ -433,7 +437,7 @@ export class EditorReports {
 
         const body = [
             ['h1', {}, title],
-            feedLink,
+            companionLinks,
             entriesInDocRefOrder.map(ref=>['li', {}, renderRef(ref)])
         ];
 

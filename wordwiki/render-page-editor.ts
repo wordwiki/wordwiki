@@ -161,12 +161,18 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
                           (page_number: number) =>
              `/ww/wordwiki.pages.renderPageEditorByPageNumber(${document_id}, ${page_number}, ${JSON.stringify(cfg)})`),
 
-         // App-injected companion links for this page (generic: the editor
-         // serves every reference book - see addPageEditorLinkProvider).
-         // The single-group popup keeps its focused layout.
+         // The page's companion views (dz: page editor / page changes /
+         // entries-for-page each link to the other two): the entries report
+         // works for EVERY book (a plain URL - importing reports.ts here
+         // would cycle), the rest arrive app-injected (the editor is
+         // book-generic - see addPageEditorLinkProvider).  The single-group
+         // popup keeps its focused layout.
          (cfg.locked_bounding_group_id || cfg.is_popup_editor)
              ? []
-             : pageEditorLinks(document, page).map(l =>
+             : [{label: 'Entries for this page',
+                 href: `/ww/wordwiki.editorReports.entriesByBookPage(${
+                     JSON.stringify(document.friendly_document_id)}, ${page.page_number})`},
+                ...pageEditorLinks(document, page)].map(l =>
                  ['a', {class: 'me-3 small', href: l.href}, l.label]),
         ], // /div
 
