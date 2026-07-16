@@ -313,10 +313,30 @@ export function bestCandidate(llmText: string, handText: string): string {
  *  normalized strings; an [a|b] ambiguity scores as its BEST alternative
  *  (honest uncertainty is never penalized vs a lucky guess). */
 export function similarity(llmText: string, handText: string): number {
-    const gold = norm(handText);
-    if(gold === '' && norm(llmText) === '') return 1;
+    return similarityOver(norm, llmText, handText);
+}
+
+/** LENIENT similarity (dz: the strict score dings optional punctuation and
+ *  case, which are not content): punctuation stripped, apostrophe
+ *  codepoints unified BUT KEPT (they are load-bearing in Listuguj
+ *  orthography), case-folded, whitespace collapsed.  Strict measures
+ *  drift; lenient approximates substance. */
+export function lenientSimilarity(llmText: string, handText: string): number {
+    return similarityOver(lenientNorm, llmText, handText);
+}
+
+const lenientNorm = (s: string) => s.normalize('NFC')
+    .replace(/[\u2019\u2018\u0060\u00b4]/g, "'")       // unify apostrophe-likes
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}'\[\]|⁇ ]/gu, ' ')           // drop punctuation (keep ', markers)
+    .replace(/\s+/g, ' ').trim();
+
+function similarityOver(normalize: (s: string) => string,
+                        llmText: string, handText: string): number {
+    const gold = normalize(handText);
+    if(gold === '' && normalize(llmText) === '') return 1;
     let best = 0;
-    for(const cand of ambiguityCandidates(norm(llmText))) {
+    for(const cand of ambiguityCandidates(normalize(llmText))) {
         const d = levenshteinDistance(cand, gold);
         const s = 1 - d / Math.max(cand.length, gold.length, 1);
         if(s > best) best = s;
@@ -404,13 +424,15 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
     const recipe = pdmRecipe();
     const results: Array<{item: EvalItem, crop: string,
                           stages: Record<string, {text: string, tagged?: string,
-                                                  confidence: number, sim?: number}>}> = [];
-    const sums: Record<string, {sim: number, n: number, conf: number}> = {};
+                                                  confidence: number, sim?: number,
+                                                  lenient?: number}>}> = [];
+    const sums: Record<string, {sim: number, lenient: number, n: number, conf: number}> = {};
 
     for(const [i, item] of items.entries()) {
         const crop = await groupCropPath(item.bounding_group_id);
         const stages: Record<string, {text: string, tagged?: string,
-                                      confidence: number, sim?: number}> = {};
+                                      confidence: number, sim?: number,
+                                      lenient?: number}> = {};
         let input: unknown = null;
         for(const stage of recipe) {
             const out: any = await extractStage(cfg, crop, 0, stage, input);
@@ -422,13 +444,14 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
                 : String(out?.transliteration ?? '');
             const confidence = Number(out?.confidence ?? 0);
             const hand = item.hand[field];
-            const sim = hand !== undefined && hand.trim() !== ''
-                ? similarity(text, hand) : undefined;
-            stages[stage.name] = {text, confidence, sim,
+            const scored = hand !== undefined && hand.trim() !== '';
+            const sim = scored ? similarity(text, hand!) : undefined;
+            const lenient = scored ? lenientSimilarity(text, hand!) : undefined;
+            stages[stage.name] = {text, confidence, sim, lenient,
                 tagged: out?.runs !== undefined ? runsToTagged(out.runs) : undefined};
             if(sim !== undefined) {
-                const s = sums[stage.name] ?? {sim: 0, n: 0, conf: 0};
-                s.sim += sim; s.n++; s.conf += confidence;
+                const s = sums[stage.name] ?? {sim: 0, lenient: 0, n: 0, conf: 0};
+                s.sim += sim; s.lenient += (lenient ?? 0); s.n++; s.conf += confidence;
                 sums[stage.name] = s;
             }
         }
@@ -447,6 +470,7 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
         const s = sums[stage.name];
         if(s && s.n > 0)
             log(`${stage.name}: mean similarity ${(s.sim/s.n*100).toFixed(1)}% ` +
+                `(lenient ${(s.lenient/s.n*100).toFixed(1)}%) ` +
                 `over ${s.n} refs, mean confidence ${(s.conf/s.n).toFixed(0)}`);
         else
             log(`${stage.name}: no gold data to score in this sample`);
@@ -541,7 +565,8 @@ export interface EvalData {
     items: Array<{
         ref_id: number; bounding_group_id: number; crop: string;
         hand: {transcription: string, expanded?: string, transliteration?: string};
-        llm: Record<string, {text: string, tagged?: string, confidence: number, sim?: number}>;
+        llm: Record<string, {text: string, tagged?: string, confidence: number,
+                             sim?: number, lenient?: number}>;
     }>;
 }
 
@@ -578,10 +603,12 @@ export async function renderEvalHtml(data: EvalData): Promise<string> {
     const stageStats = STAGES.map(st => {
         const scored = data.items
             .map(it => it.llm[st.name])
-            .filter(r => r && r.sim !== undefined) as Array<{sim: number, confidence: number}>;
+            .filter(r => r && r.sim !== undefined) as Array<{sim: number, lenient?: number,
+                                                             confidence: number}>;
         const mean = (xs: number[]) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : undefined;
         return {st, n: scored.length,
                 meanSim: mean(scored.map(r=>r.sim)),
+                meanLenient: mean(scored.map(r=>r.lenient ?? r.sim)),
                 meanConf: mean(scored.map(r=>r.confidence))};
     });
     const calBuckets = [[0,40],[40,60],[60,80],[80,101]];
@@ -611,7 +638,10 @@ export async function renderEvalHtml(data: EvalData): Promise<string> {
             }
             return `
       <tr class="stage-head"><th colspan="2">${st.label}
-        <span class="badge ${simClass(llm.sim)}">similarity ${pct(llm.sim)}</span>
+        <span class="badge ${simClass(llm.lenient ?? llm.sim)}">similarity ${pct(llm.sim)}${
+            llm.lenient !== undefined && llm.sim !== undefined
+                && Math.round(llm.lenient*100) !== Math.round(llm.sim*100)
+                ? ` / lenient ${pct(llm.lenient)}` : ''}</span>
         <span class="badge conf">confidence ${llm.confidence}</span></th></tr>
       <tr><th>researcher</th><td>${handHtml}</td></tr>
       <tr><th>LLM</th><td>${llmHtml}${
@@ -678,13 +708,17 @@ missed struck out</span> on the researcher line and
 <span class="lm-diff-ins">what it added or changed highlighted</span> on the
 LLM line.  Where the LLM was <span class="rawmarks">unsure it wrote
 [a|b]</span> (either reading) or ⁇ (illegible) instead of guessing — those
-count as right if either reading matches.</p>
+count as right if either reading matches.  Two scores: STRICT (every
+character) and LENIENT (punctuation and letter-case ignored - closer to
+substance; apostrophes still count, they are part of the Listuguj
+orthography).  Both are lower bounds: a different-but-valid synonym or an
+error in the researcher row still scores as a difference.</p>
 
 <h2>Summary</h2>
 <table class="sum">
- <tr><th>step</th><th>scored</th><th>mean similarity</th><th>mean confidence</th></tr>
+ <tr><th>step</th><th>scored</th><th>strict similarity</th><th>lenient similarity</th><th>mean confidence</th></tr>
  ${stageStats.map(s=>`<tr><td>${s.st.label}</td><td>${s.n}</td>
-   <td>${pct(s.meanSim)}</td><td>${s.meanConf === undefined ? '—' : s.meanConf.toFixed(0)}</td></tr>`).join('')}
+   <td>${pct(s.meanSim)}</td><td>${pct(s.meanLenient)}</td><td>${s.meanConf === undefined ? '—' : s.meanConf.toFixed(0)}</td></tr>`).join('')}
 </table>
 <p class="muted">Confidence calibration (does the model's self-reported
 confidence predict how good the result actually is?):</p>
