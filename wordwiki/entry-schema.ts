@@ -337,8 +337,12 @@ export const dictSchemaJson = {
             variant: {$type: 'variant', $metaVariant: true, $allowAll: true, $defaultAll: true},
             // audience internal: editorial workflow - stripped from the
             // public bundle (publish-source stripInternalRelations).
+            // bornApproved: the tag quick ops self-approve as one bounded
+            // act - history views fold that mechanical approval into the
+            // change line (see model.ts ViewStyle).
             $style: { $shape: 'compactInlineListRelation',
-                      $view: { hidden: true, label: 'inline', audience: 'internal' } },
+                      $view: { hidden: true, label: 'inline', audience: 'internal',
+                               bornApproved: true } },
         },
 
         note: {
@@ -745,7 +749,7 @@ export const dictSchemaJson = {
                   $style: { $width: 80, $height: 3, $markdown: true }},
             $style: { $shape: 'compactInlineListRelation',
                       $view: { hidden: true, label: 'inline', audience: 'internal',
-                               byline: true } },
+                               byline: true, bornApproved: true } },
         },
     },
 };
@@ -1083,6 +1087,18 @@ export function getStableFeaturedRecording(e: Entry): Recording|undefined {
 let _parsedDictSchema: model.Schema|undefined;
 export function parsedDictSchema(): model.Schema {
     return _parsedDictSchema ??= model.Schema.parseSchemaFromCompactJson('dict', dictSchemaJson);
+}
+
+/** The storage tags of the BORN-APPROVED relations ($view.bornApproved -
+ *  see model.ts ViewStyle): the tag/log workflow relations whose quick ops
+ *  self-approve as one bounded act.  For consumers classifying raw db rows
+ *  (the activity tallies), which have a `ty` but no schema node in hand. */
+let _bornApprovedTags: Set<string>|undefined;
+export function bornApprovedTags(): Set<string> {
+    return _bornApprovedTags ??= new Set(
+        Object.values(parsedDictSchema().relationsByTag)
+            .filter(r => r.style.$view?.bornApproved)
+            .map(r => r.tag));
 }
 
 function test() {

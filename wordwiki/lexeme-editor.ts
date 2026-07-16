@@ -61,7 +61,7 @@ import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
 import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
 import {route, routeMutation, authenticated} from '../liminal/security.ts';
-import {classifyFact, isComment, latestContentVersion, type FactReview} from './versioned-model.ts';
+import {classifyFact, isComment, isMechanicalSelfApproval, latestContentVersion, type FactReview} from './versioned-model.ts';
 import * as server from '../liminal/http-server.ts';
 import {renderGroupedChangeList, renderChangeGroup, initials,
         type ChangeEvent, type ChangeKind, type ChangeGroup} from './change-list.ts';
@@ -1953,18 +1953,38 @@ export class LexemeEditor {
             const comment = isComment(a);
             const tomb = isTombstone(a);
 
+            // A BORN-APPROVED relation's mechanical self-approval (schema
+            // $view.bornApproved - the log/tag quick ops insert-then-approve
+            // as one bounded act) is plumbing, not a review event: the change
+            // line it approved is the whole story, and rendering both shows
+            // every post twice.  In a full history the approval contributes
+            // no line at all (the change line renders); in baseline mode -
+            // where the walk STARTS at this approval - it demotes to a quiet
+            // 'baseline' (the standing value, via the !mechanical guard on
+            // the approved rung below).  A real cross-user approval never
+            // matches isMechanicalSelfApproval, so it still names itself.
+            const mechanical = (rf.style.$view?.bornApproved ?? false)
+                && isMechanicalSelfApproval(a, versions[i-1]?.assertion);
+            if(mechanical && (tomb || full || !isBaseline)) {
+                if(!tomb) prevContent = a;
+                continue;
+            }
+
             // An explicit action (comment / revert / approve) names itself even
             // when that version is the current published baseline - otherwise an
             // approval that became the baseline (the usual case) would render as
             // a quiet baseline and lose its "approved by" chip.  (tomb stays
             // ahead of approved: an approved DELETION reads as 'deleted'.)
+            // The fact's FIRST version is its creation - 'added' whether or not
+            // a baseline exists later in the chain (a full history's creation
+            // line reads "added X", not a change from nothing).
             const kind: ChangeKind =
                 comment                          ? 'commented'
               : a.change_action === 'reverted'   ? 'reverted'
               : tomb                             ? 'deleted'
-              : a.change_action === 'approved'   ? 'approved'
+              : a.change_action === 'approved' && !mechanical ? 'approved'
               : isBaseline                       ? 'baseline'
-              : (!review.baseline && i === startIdx) ? 'added'
+              : i === 0 || (!review.baseline && i === startIdx) ? 'added'
               :                                    'changed';
 
             // Structural/container facts (an entry, a subentry - no scalar value

@@ -83,12 +83,16 @@ export interface ActivityQuery extends Tuple {
 // ---------------------------------------------------------------------------
 
 /** One human change, as the light row the window fetch returns - just enough
- *  columns to classify the action taken at that moment (no chain-walking). */
+ *  columns to classify the action taken at that moment (no chain-walking).
+ *  ty + replaced_username exist to recognize a born-approved relation's
+ *  mechanical self-approval (tallied as NOTHING - see tallyRow). */
 export interface ActivityRow {
     valid_from: number;
     entry_id: number;    // id1 - the containing lexeme
     change_action: string|null;
     username: string;    // change_by_username, '' when unstamped
+    ty?: string;         // the fact's relation tag
+    replaced_username?: string|null;   // author of the version this row supersedes
 }
 
 /** What happened in one month (or one month for one editor).  newLexemes is
@@ -122,10 +126,18 @@ export function addStats(into: ActivityStats, s: ActivityStats): void {
  *  row lands in exactly one tally (approved / rejected / comment / change),
  *  so a month's tallies partition its feed events.  Only content changes
  *  mark their lexeme changed (an approval settles a lexeme, it doesn't
- *  change it). */
+ *  change it).  The one exception to the partition: a BORN-APPROVED
+ *  relation's mechanical self-approval (the log/tag quick ops - schema
+ *  $view.bornApproved, recognized by same-author-as-superseded) tallies as
+ *  NOTHING, matching the feed, which folds its line into the change it
+ *  approved (a post is one change, not one change plus one approval). */
 export function tallyRow(s: ActivityStats, r: ActivityRow): void {
     switch(r.change_action) {
-        case 'approved': s.approved++; break;
+        case 'approved':
+            if(!(r.ty !== undefined && entrySchema.bornApprovedTags().has(r.ty)
+                 && r.username !== '' && r.username === r.replaced_username))
+                s.approved++;
+            break;
         case 'reverted': s.rejected++; break;
         case COMMENT:    s.comments++; break;
         default:         s.changes++; s.changedLexemes.add(r.entry_id);
@@ -574,11 +586,17 @@ export class ActivityReport {
      *  (see renderReport).  Same predicate as the feed - a count here IS a
      *  feed page's contents. */
     private fetchActivityRows(from: number, to: number): ActivityRow[] {
+        // replaced_username: the superseded version's author - a PK lookup
+        // per row (assertion_id is the rowid), so it rides the same index
+        // range plan.  Only read by tallyRow's born-approved fold.
         const rows = db().all<{valid_from: number, entry_id: number,
-                               change_action: string|null,
-                               username: string|null}, any>(
-            `SELECT valid_from, id1 AS entry_id, change_action,
-                    change_by_username AS username
+                               change_action: string|null, ty: string,
+                               username: string|null,
+                               replaced_username: string|null}, any>(
+            `SELECT valid_from, id1 AS entry_id, change_action, ty,
+                    change_by_username AS username,
+                    (SELECT p.change_by_username FROM dict p
+                     WHERE p.assertion_id = dict.replaces_assertion_id) AS replaced_username
              FROM dict
              WHERE valid_from >= :from AND valid_from <= :to
                AND valid_from > ${timestamp.BEGINNING_OF_TIME}

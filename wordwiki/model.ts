@@ -81,6 +81,15 @@ export interface ViewStyle {
     // backend's assertion columns (the session log's "name (date):" line).
     // Backends without version data (the JSON projection) render nothing.
     byline?: boolean,
+    // Writes to this relation are BORN APPROVED: the quick ops insert a fact
+    // and immediately self-approve it as one bounded act (lexeme-ops
+    // postEntryFact / setTagDone / removeTag - the log and tag workflow
+    // relations, where review ceremony would be pure noise).  History views
+    // use this to FOLD the mechanical self-approval into the change line it
+    // approved (it is plumbing, not a review event - without the fold every
+    // post shows twice); a real cross-user approval on such a relation (a
+    // pending post under an unapproved entry, settled later) still renders.
+    bornApproved?: boolean,
     // COMPOSE a tuple's several parts into one phrase (on a relation): the
     // ordered field names (scalars and/or child relations of this relation) to
     // lay out, joined by `sep`.  e.g. an alternate form composes

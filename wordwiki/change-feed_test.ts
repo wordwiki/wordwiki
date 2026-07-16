@@ -14,7 +14,7 @@ import { withTestDb, as, mkEntry, mkChild, mkEdit, bornApprove, TestTimeline,
 import { clumpFeedEvents, cutFeedSlice, feedQueryShapes, feedQuery,
          type FeedEvent, type FeedQuery } from "./change-feed.ts";
 import { createAssertionDml } from "./assertion.ts";
-import { Db, setDefaultDb } from "../liminal/db.ts";
+import { Db, db, setDefaultDb } from "../liminal/db.ts";
 import { isRedirectResponse } from "../liminal/http-server.ts";
 import { isTopLevelMarkup } from "../liminal/liminal.ts";
 import { markupToString } from "../liminal/markup.ts";
@@ -281,6 +281,94 @@ test("feed: hide-user-approvals drops the user's OWN approvals, keeps the work u
             assertStringIncludes(hidden, "XYZZY");                     // djz's work stays
             assertEquals(hidden.includes("lm-cl-chip-approved"), false); // dmm's approval event gone
         });
+    });
+});
+
+test("feed: a born-approved post is ONE line - the mechanical self-approval folds", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => { seedFeed(fx); });
+        // The log/tag quick ops insert + self-approve as one bounded act
+        // (schema $view.bornApproved).  A whole tag lifecycle: post a log,
+        // add a tag, mark it done, remove it - each is a change line ONLY;
+        // none of the mechanical self-approvals renders a line or a badge.
+        const posted = as(fx, "test", () => fx.ww.lexemeOps.postLog(1000, "BORNTEXT"));
+        const tag = as(fx, "test", () => fx.ww.lexemeOps.addTag(1000, "Todo"));
+        as(fx, "test", () => fx.ww.lexemeOps.setTagDone(1000, tag.fact_id, true));
+        as(fx, "test", () => fx.ww.lexemeOps.removeTag(1000, tag.fact_id));
+        const html = feedHtml(fx, {to_time: fx.ww.lastAllocatedTxTimestamp});
+        assertEquals(count(html, "lm-feed-clump"), 1);        // one sitting
+        assertEquals(count(html, "BORNTEXT"), 1);             // the post, once
+        assertEquals(count(html, "lm-cl-chip-deleted"), 1);   // the removal, once
+        assertEquals(html.includes("lm-cl-chip-approved"), false);
+        assertEquals(html.includes("approved ✓"), false);     // no badge either
+        // The same fold at the event level: a full history renders just the
+        // change line; baseline mode keeps the quiet standing value.
+        const t = fx.ww.lexemeOps.findTupleInEntry(1000, posted.fact_id);
+        assertEquals(fx.ww.lexeme.factChangeEvents(t.schema, t, true, true)
+            .map((e: any) => e.kind), ["added"]);
+        assertEquals(fx.ww.lexeme.factChangeEvents(t.schema, t, false, true)
+            .map((e: any) => e.kind), ["baseline"]);
+    });
+});
+
+test("feed: the source-page filter keeps only that page's entries", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => {
+            const {tl, e} = seedFeed(fx);   // entry 1000, standing corpus
+            // The scan world: PDM page 5 holding one bounding group.
+            db().execute(`INSERT INTO scanned_document(document_id, friendly_document_id, title)
+                          VALUES (1, 'PDM', 'Pacifique')`, {});
+            db().execute(`INSERT INTO scanned_page(page_id, document_id, page_number)
+                          VALUES (50, 1, 5)`, {});
+            db().execute(`INSERT INTO bounding_group(bounding_group_id, document_id, layer_id)
+                          VALUES (700, 1, 1)`, {});
+            db().execute(`INSERT INTO bounding_box(bounding_box_id, bounding_group_id, document_id,
+                                                   layer_id, page_id, x, y, w, h)
+                          VALUES (800, 700, 1, 1, 50, 0, 0, 10, 10)`, {});
+            // Entry 1000 gains a document reference to that group; entry 3000
+            // is real work with no scanned content on the page.
+            const sbe = mkChild(e, 'sub', 1100, tl.next(), {change_by_username: 'djz'});
+            fx.ww.applyTransaction([sbe], {quiet: true});
+            fx.ww.applyTransaction([mkChild(sbe, 'ref', 1110, tl.next(),
+                {attr1: 700, change_by_username: 'djz'})], {quiet: true});
+            const b = mkEntry(3000, tl.next(), {change_by_username: 'djz'});
+            fx.ww.applyTransaction([b], {quiet: true});
+            fx.ww.applyTransaction([mkChild(b, 'spl', 3010, tl.next(),
+                {attr1: 'OFFPAGE', order_key: '0.5', change_by_username: 'djz'})], {quiet: true});
+            const anchor = fx.ww.lastAllocatedTxTimestamp;
+            // Unfiltered: both entries' clumps show...
+            assertEquals(count(feedHtml(fx, {to_time: anchor}), "lm-feed-clump"), 2);
+            // ...page-scoped: only the entry whose reference sits on PDM page 5.
+            const filtered = feedHtml(fx, {to_time: anchor, source_page: 5});
+            assertEquals(count(filtered, "lm-feed-clump"), 1);
+            assertStringIncludes(filtered, "wordwiki.wordView(1000)");
+            assertEquals(filtered.includes("OFFPAGE"), false);
+            // An unknown page number matches nothing (and does not throw).
+            assertEquals(count(feedHtml(fx, {to_time: anchor, source_page: 999}),
+                               "lm-feed-clump"), 0);
+            // The page's FULL feed view names the scope and offers the
+            // shepherding companion links (entry report + page editor).
+            const page = fx.ww.feed.changesPage({to_time: anchor, source_page: 5}) as any;
+            const pageHtml = markupToString(page.body);
+            assertStringIncludes(pageHtml, "entries on PDM page 5");
+            assertStringIncludes(pageHtml, `entriesByBookPage("PDM", 5)`);
+            assertStringIncludes(pageHtml, `pages.pageEditor("PDM", 5)`);
+        });
+    });
+});
+
+test("feed: a REAL cross-user approval on a born-approved relation still shows", async () => {
+    await withTestDb((fx) => {
+        as(fx, "djz", () => { seedFeed(fx); });
+        const posted = as(fx, "test", () => fx.ww.lexemeOps.postLog(1000, "BORNTEXT"));
+        // djz EDITS the log fact (a normal pending edit), dmm approves it -
+        // a real review act by a different user, not plumbing: it renders.
+        as(fx, "djz", () => fx.ww.lexemeOps.supersedeFields(
+            1000, posted.fact_id, {attr1: "EDITEDTEXT"}));
+        as(fx, "dmm", () => fx.ww.lexemeOps.approveFact(posted.fact_id));
+        const html = feedHtml(fx, {to_time: fx.ww.lastAllocatedTxTimestamp});
+        assertStringIncludes(html, "lm-cl-chip-approved");
+        assertStringIncludes(html, "1 approved ✓");
     });
 });
 

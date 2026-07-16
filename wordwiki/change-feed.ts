@@ -51,8 +51,10 @@ import * as action from '../liminal/action.ts';
 import {FieldSet, IntegerField, EnumField, TimestampField, CheckboxField, type Tuple} from '../liminal/table.ts';
 import * as templates from './templates.ts';
 import * as entrySchema from './entry-schema.ts';
+import {siteConfig} from './site-config.ts';
+import {selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber} from './scanned-document.ts';
 import {isAutomatedUsername} from './user.ts';
-import {classifyFact, latestContentVersion} from './versioned-model.ts';
+import {classifyFact, isMechanicalSelfApproval, latestContentVersion} from './versioned-model.ts';
 import {renderChangeGroup, type ChangeEvent, type ChangeGroup} from './change-list.ts';
 import type {WordWiki} from './wordwiki.ts';
 
@@ -68,6 +70,7 @@ const F = '/ww/wordwiki.feed';
 // the feed shows, since every count links into the feed.
 export const CHANGE_ROW =
     `(replaces_assertion_id IS NOT NULL OR published_from IS NULL OR valid_to = valid_from)`;
+
 
 // ---------------------------------------------------------------------------
 // --- The page query ----------------------------------------------------------
@@ -119,6 +122,13 @@ export const feedQuery = new FieldSet('feed_query', [
                                            prompt: 'That user\'s'}),
     new CheckboxField('hide_user_approvals', {nullable: true, default: false,
                                               prompt: 'Hide that user\'s own approvals'}),
+    // The page-shepherding filter (dz 2026-07-16): an editor is given ONE
+    // source-book page to walk through the whole process, so the feed can
+    // be scoped to the entries whose document references point at that
+    // page's bounding groups (via their boxes).  A page number in the
+    // primary source book (PDM).
+    new IntegerField('source_page', {nullable: true,
+                                     prompt: `Only entries on ${siteConfig.primarySourceBook} page`}),
     new IntegerField('max_rows', {nullable: true, default: FEED_PAGE_ROWS, prompt: 'Max rows'}),
 ]);
 
@@ -128,6 +138,7 @@ export interface FeedQuery extends Tuple {
     restrict_to_user: string|null;
     user_mode: string;
     hide_user_approvals: boolean;
+    source_page: number|null;
     max_rows: number;
 }
 
@@ -307,8 +318,25 @@ export class ChangeFeed {
             if(query.hide_user_approvals) parts.push('their approvals hidden');
         }
         if(query.from_time) parts.push(`after ${timestamp.formatTimestampAsLocalTime(query.from_time)}`);
-        return parts.length > 0
-            ? ['span', {class: 'text-muted small'}, parts.join(' · ')] : [];
+        let pageLinks: Markup = [];
+        if(query.source_page != null) {
+            const known = this.sourcePageId(query.source_page) !== undefined;
+            parts.push(`entries on ${siteConfig.primarySourceBook} page ${query.source_page}`
+                       + (known ? '' : ' (no such page)'));
+            // The shepherding companions, carrying the same page: the page's
+            // entry report and the page itself (the bounding-box editor).
+            const book = JSON.stringify(siteConfig.primarySourceBook);
+            if(known) pageLinks = [
+                ['a', {class: 'small',
+                       href: `/ww/wordwiki.editorReports.entriesByBookPage(${book}, ${query.source_page})`},
+                 'page entries'],
+                ['a', {class: 'small',
+                       href: `/ww/wordwiki.pages.pageEditor(${book}, ${query.source_page})`},
+                 'page images']];
+        }
+        return [
+            parts.length > 0 ? ['span', {class: 'text-muted small'}, parts.join(' · ')] : [],
+            pageLinks];
     }
 
     /** The filter dialog: the query's OWN fields, auto-generated - the
@@ -460,17 +488,25 @@ export class ChangeFeed {
     private clumpStatusBadges(c: FeedClump): Markup {
         let pending = 0, approved = 0, rejected = 0;
         for(const fact_id of new Set(c.events.map(ev => ev.id))) {
-            let versions;
+            let tuple;
             try {
-                versions = this.app.lexemeOps.findTupleInEntry(c.entry_id, fact_id)
-                    .tupleVersions.map(v => v.assertion);
+                tuple = this.app.lexemeOps.findTupleInEntry(c.entry_id, fact_id);
             } catch { continue; }   // fact no longer reachable in the workspace
+            const versions = tuple.tupleVersions.map(v => v.assertion);
             if(versions.length === 0) continue;
             const s = classifyFact(versions, timestamp.END_OF_TIME).state;
             if(s === 'added' || s === 'edited' || s === 'removed') { pending++; continue; }
-            const action = latestContentVersion(versions)?.change_action;
-            if(action === 'approved') approved++;
-            else if(action === 'reverted') rejected++;
+            const latest = latestContentVersion(versions);
+            if(latest?.change_action === 'approved') {
+                // A born-approved relation's mechanical self-approval is not
+                // review news: no "approved ✓" badge for it, matching the
+                // folded event line (lexeme-editor.ts factChangeEvents).
+                const idx = versions.findIndex(v => v.assertion_id === latest.assertion_id);
+                if(tuple.schema.style.$view?.bornApproved
+                   && isMechanicalSelfApproval(latest, versions[idx-1])) continue;
+                approved++;
+            }
+            else if(latest?.change_action === 'reverted') rejected++;
         }
         const badge = (n: number, label: string, cls: string): Markup =>
             n > 0 ? ['span', {class: `badge ${cls}`}, `${n} ${label}`] : [];
@@ -528,11 +564,20 @@ export class ChangeFeed {
 
     /** The window fetch: the newest human changes matching the query filters
      *  (at or below to_time; at or above from_time when set; optionally one
-     *  editor's).  `limit` null = the whole window (a closed range). */
+     *  editor's; optionally one source page's entries).  `limit` null = the
+     *  whole window (a closed range). */
     private fetchFeedEvents(query: FeedQuery, limit: number|null): FeedEvent[] {
         const params: Record<string, any> = {to_time: query.to_time};
         if(query.from_time != null) params.from_time = query.from_time;
         if(query.restrict_to_user) params.restrict_to_user = query.restrict_to_user;
+        // The page-shepherding scope: the page's entry-id set, resolved as
+        // DATA (sourcePageEntryIds) and inlined as literals.  An unknown or
+        // empty page matches nothing - the filter summary names it.
+        let sourcePageSql = '';
+        if(query.source_page != null) {
+            const ids = this.sourcePageEntryIds(query.source_page);
+            sourcePageSql = ids.length > 0 ? `AND id1 IN (${ids.join(',')})` : 'AND 1 = 0';
+        }
         const rows = db().all<{valid_from: number, id: number, entry_id: number,
                                username: string|null}, any>(
             `SELECT valid_from, id, id1 AS entry_id, change_by_username AS username
@@ -543,10 +588,47 @@ export class ChangeFeed {
                AND ${CHANGE_ROW}
                AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
                ${this.userFilterSql(query)}
+               ${sourcePageSql}
              ORDER BY valid_from DESC
              ${limit !== null ? `LIMIT ${limit}` : ''}`,
             params);
         return rows.map(r => ({...r, username: r.username ?? ''}));
+    }
+
+    /** Resolve a page number in the primary source book (PDM) to its
+     *  page_id, undefined when the book or page does not exist. */
+    private sourcePageId(page_number: number): number | undefined {
+        const doc = selectScannedDocumentByFriendlyId()
+            .first({friendly_document_id: siteConfig.primarySourceBook});
+        if(!doc) return undefined;
+        return selectScannedPageByPageNumber()
+            .first({document_id: doc.document_id, page_number})?.page_id;
+    }
+
+    /** The entries with a CURRENT document reference to a bounding group
+     *  that has a box on the given page of the primary source book (the
+     *  same reference-to-page walk as pageWordRows / entriesByBookPage).
+     *  Resolved as two indexed probes rather than one SQL join: dict.attr1
+     *  is an UNTYPED column, so joining it against the INTEGER
+     *  bounding_group_id gives the comparison numeric affinity and
+     *  disqualifies the attr1 index (the planner falls back to scanning
+     *  every current fact); literal integer probes keep attr1's
+     *  none-affinity and ride dict_attr1 (every stored ref target is an
+     *  integer).  Page-sized data (tens of groups/entries). */
+    private sourcePageEntryIds(page_number: number): number[] {
+        const page_id = this.sourcePageId(page_number);
+        if(page_id === undefined) return [];
+        const groups = db().all<{g: number}, any>(
+            `SELECT DISTINCT bounding_group_id AS g FROM bounding_box
+             WHERE page_id = :page_id AND bounding_group_id IS NOT NULL`,
+            {page_id});
+        if(groups.length === 0) return [];
+        const rows = db().all<{id1: number}, any>(
+            `SELECT DISTINCT id1 FROM dict
+             WHERE ty = '${entrySchema.DocumentReferenceTag}'
+               AND valid_to = ${timestamp.END_OF_TIME}
+               AND attr1 IN (${groups.map(r => r.g).join(',')})`, {});
+        return rows.map(r => r.id1);
     }
 
     // The user-scope clause for the clump-selection query (empty when no user
@@ -608,4 +690,20 @@ export const feedQueryShapes = (tableName: string) => [
        AND ${CHANGE_ROW}
        AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
      ORDER BY valid_from DESC`,
+    // The page-shepherding window fetch: the page's entry ids inlined as
+    // literals (fetchFeedEvents sourcePageEntryIds).  The planner may drive
+    // from the id list (dict_by_id_ty1) or the valid_from range - either is
+    // an index probe, never a scan.
+    `SELECT valid_from, id, id1, change_by_username FROM ${tableName}
+     WHERE valid_from <= 2 AND valid_from > 1
+       AND id1 IS NOT NULL
+       AND ${CHANGE_ROW}
+       AND (change_by_username IS NULL OR change_by_username NOT LIKE '~%')
+       AND id1 IN (101, 102, 103)
+     ORDER BY valid_from DESC LIMIT 100`,
+    // The page filter's reference probe (sourcePageEntryIds): by-value
+    // attr1 probes - literal integers keep the untyped column's affinity,
+    // so the attr1 index applies (a JOIN there would not - see the method).
+    `SELECT DISTINCT id1 FROM ${tableName}
+     WHERE ty = 'ref' AND valid_to = ${timestamp.END_OF_TIME} AND attr1 IN (1, 2, 3)`,
 ];

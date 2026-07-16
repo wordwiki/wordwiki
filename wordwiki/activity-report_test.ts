@@ -57,6 +57,25 @@ test("activity tally: each row lands in exactly one count", () => {
                      approved: 1, rejected: 1, comments: 1});
 });
 
+test("activity tally: a born-approved relation's mechanical self-approval counts as nothing", () => {
+    const s = emptyStats();
+    // A log post = the change row + its self-approval row ('log' is
+    // $view.bornApproved, same author as the version superseded): one
+    // change, NO approval performed - matching the feed's folded line.
+    tallyRow(s, row(0, {ty: 'log', username: 'sally'}));
+    tallyRow(s, row(0, {ty: 'log', change_action: 'approved',
+                        username: 'sally', replaced_username: 'sally'}));
+    // A REAL cross-user approval of a log fact still counts...
+    tallyRow(s, row(0, {ty: 'log', change_action: 'approved',
+                        username: 'dmm', replaced_username: 'sally'}));
+    // ...and a self-approval on a NON-born-approved relation does too (only
+    // the flagged workflow relations fold).
+    tallyRow(s, row(0, {ty: 'spl', change_action: 'approved',
+                        username: 'sally', replaced_username: 'sally'}));
+    assertEquals(s.changes, 1);
+    assertEquals(s.approved, 2);
+});
+
 test("addStats: changed-lexeme folds stay distinct, never summed", () => {
     const a = emptyStats(), b = emptyStats();
     tallyRow(a, row(0, {entry_id: 1}));

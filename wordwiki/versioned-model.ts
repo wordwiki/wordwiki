@@ -119,6 +119,24 @@ export function byPath<T extends { path: string }>(a: T, b: T): number {
     return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
 }
 
+/** The mechanical second half of a BORN-APPROVED write (schema
+ *  $view.bornApproved; lexeme-ops inserts a fact / edit / tombstone and
+ *  immediately self-approves it as one bounded act): an approval by the
+ *  same user whose version it directly supersedes.  History views fold
+ *  these into the change line they approved - plumbing, not a review
+ *  event.  A real cross-user approval never matches (different author),
+ *  so a pending post settled later by a reviewer still renders. */
+export function isMechanicalSelfApproval(
+        a: { change_action?: string | null, change_by_username?: string | null,
+             replaces_assertion_id?: number | null },
+        prev: { assertion_id: number, change_by_username?: string | null } | undefined): boolean {
+    return a.change_action === 'approved'
+        && prev !== undefined
+        && a.replaces_assertion_id === prev.assertion_id
+        && !!a.change_by_username
+        && a.change_by_username === prev.change_by_username;
+}
+
 // --- Publication classification (shared by the queries and the review UI) -------
 //
 // One definition of "which version is published-current" and "which is the
