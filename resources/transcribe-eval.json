@@ -1,0 +1,1963 @@
+{
+ "generatedAt": "2026-07-16T13:09:27.971Z",
+ "book": "PDM",
+ "sample": 25,
+ "offset": 0,
+ "promptVersions": {
+  "transcribe": 3,
+  "expand": 3,
+  "transliterate": 2
+ },
+ "prompts": {
+  "transcribe": {
+   "version": 3,
+   "text": "You are reading ONE ENTRY cropped from Father Pacifique's handwritten\nMi'gmaq-French dictionary manuscript (early 1900s).  The text mixes\nMi'gmaq words (in Pacifique's own orthography) with French glosses, and\nuses heavy abbreviation.\n\nIMPORTANT: neighbouring entries' text has been MASKED OUT (blanked to\nwhite) - only this entry's marked fragments are visible.  The visible\nfragments, read left-to-right then top-to-bottom, ARE the whole entry;\nwhite gaps between them are masking, not missing text.  Never return an\nempty result while any handwriting is visible.\n\nTranscribe the handwriting LETTER-BY-LETTER, exactly as written:\n- Keep every abbreviation, punctuation mark, diacritic (ā, ŏ, ê, ...),\n  parenthesis and reference citation (e.g. \"(Pi. Met.)\", \"(Jo. 368)\")\n  exactly as it appears.\n- Do NOT expand abbreviations, translate, or normalize spelling.\n- Preserve the reading order; keep the punctuation actually written,\n  attached to its run.\n- Return the text as an ordered list of RUNS, each tagged with its\n  language: \"mm\" for Mi'gmaq words (Pacifique's orthography), \"fr\" for\n  French, \"cit\" for citations/references/section marks (e.g.\n  \"(Pi. Met.)\", \"(Jo. 368)\").  Split runs exactly at language changes.\nIf you are genuinely unsure between readings, DO NOT silently pick one:\nwrite the alternatives in square brackets separated by | (e.g. \"pi[l|i]ei\"\nmeans the letter could be l or i).  Use ⁇ for a truly illegible character.\nUse these sparingly - only where you are actually unsure.\n\nAlso return \"confidence\": an integer 0-100, your overall confidence that\nyour text is correct (100 = certain).  Be honest - this number is used to\ndecide which results need human review.\n"
+  },
+  "expand": {
+   "version": 3,
+   "text": "The image is ONE ENTRY from Father Pacifique's handwritten Mi'gmaq-French\ndictionary manuscript (neighbouring entries are masked to white - the\nvisible fragments are the whole entry).  Below is a letter-by-letter\ntranscription of it.\nRewrite the transcription with the abbreviations EXPANDED, changing\nnothing else:\n- Expand French abbreviations in place (e.g. \"milieu d. l. n.\" ->\n  \"milieu de la nuit\", \"p.ê.\" -> \"peut être\").\n- Pacifique often writes a family of related Mi'gmaq words and elides the\n  repeated stem, giving only the changed ending (e.g. \"aptepogoei, goet\"\n  means the second word is \"aptepogoet\").  Restore the full word for each\n  elided form, taking the stem from the neighbouring full words.\n- Keep the original spelling/orthography of the Mi'gmaq words; keep\n  citations like \"(Pi. Met.)\" unchanged; do NOT translate.\n- The transcription may contain [a|b] ambiguity markers or ⁇ for\n  illegible characters.  Consult the image: where the context or the ink\n  resolves the ambiguity, write the resolved reading; where it does not,\n  keep the marker.\n- Keep the language-tagged RUN structure (\"mm\" Mi'gmaq / \"fr\" French /\n  \"cit\" citation, in reading order); correct a run's tag if the\n  transcription mis-tagged it.\nIf you are genuinely unsure between readings, DO NOT silently pick one:\nwrite the alternatives in square brackets separated by | (e.g. \"pi[l|i]ei\"\nmeans the letter could be l or i).  Use ⁇ for a truly illegible character.\nUse these sparingly - only where you are actually unsure.\n\nAlso return \"confidence\": an integer 0-100, your overall confidence that\nyour text is correct (100 = certain).  Be honest - this number is used to\ndecide which results need human review.\n\n\nTranscription (tagged runs):\n⟨the transcription runs go here⟩⟨mm⟩\n"
+  },
+  "transliterate": {
+   "version": 2,
+   "text": "Below is the expanded transcription of one entry from Father Pacifique's\nhandwritten Mi'gmaq-French dictionary, as language-tagged runs\n(word⟨mm⟩ = Mi'gmaq in Pacifique's orthography, word⟨fr⟩ = French,\nword⟨cit⟩ = citation/reference).  Produce the modern working version as\nONE flat text, keeping the order and punctuation:\n- ⟨fr⟩ runs: translate the French into English.\n- ⟨mm⟩ runs: convert from Pacifique's orthography into the Listuguj\n  orthography.  Corpus-attested correspondences (Pacifique -> Listuguj):\n    aposgigen -> apusqi'gn;  pitoigatem -> pituigatm;\n    agtatpag -> aqtatpa'q;  mosgoatem -> musgwatm;\n    mosgŏmg -> musqomg;  aptepogoei -> apt'puguei;\n    eoltjeoetji -> ewuljewe'ji;  pepgoitjetegei -> pepguijete'gei;\n    nenatoigtjemsit -> nenatuigjemsit;  nāntemigtjemg -> na'ntemigjemg.\n  Recurring patterns in those pairs: o before a consonant usually -> u;\n  tj -> j; g before t/p often -> q; ā -> a'; oe -> we/ue; word-final\n  -em -> -m (vowel dropped); an unstressed initial vowel may take an\n  apostrophe (aptepogoei -> apt'puguei).\n- ⟨cit⟩ runs: copy VERBATIM, unchanged (citations like \"(Pi. Met.)\",\n  \"(Jo. 368)\" are references, never translated).\n- If the input contains [a|b] ambiguity markers or ⁇, carry the\n  uncertainty through (resolve it only if the target orthography makes\n  one reading clearly right).\nIf you are genuinely unsure between readings, DO NOT silently pick one:\nwrite the alternatives in square brackets separated by | (e.g. \"pi[l|i]ei\"\nmeans the letter could be l or i).  Use ⁇ for a truly illegible character.\nUse these sparingly - only where you are actually unsure.\n\nAlso return \"confidence\": an integer 0-100, your overall confidence that\nyour text is correct (100 = certain).  Be honest - this number is used to\ndecide which results need human review.\n\n\nExpanded transcription (tagged runs):\n⟨the expanded runs go here⟩⟨mm⟩\n"
+  }
+ },
+ "usage": {
+  "judge-transliterate": {
+   "inputTokens": 8525,
+   "outputTokens": 1659,
+   "calls": 5
+  },
+  "transcribe": {
+   "inputTokens": 6596,
+   "outputTokens": 558,
+   "calls": 4
+  },
+  "judge-transcribe": {
+   "inputTokens": 6529,
+   "outputTokens": 1331,
+   "calls": 4
+  },
+  "expand": {
+   "inputTokens": 6799,
+   "outputTokens": 505,
+   "calls": 4
+  },
+  "judge-expand": {
+   "inputTokens": 4901,
+   "outputTokens": 979,
+   "calls": 3
+  },
+  "transliterate": {
+   "inputTokens": 6892,
+   "outputTokens": 332,
+   "calls": 4
+  }
+ },
+ "items": [
+  {
+   "ref_id": 70411755521,
+   "bounding_group_id": 221678,
+   "crop": "derived/group-crops/38c/38c37060616ee8b41b3b31379f925db5087edd81478d45d22bfc4317850a03d5.jpg",
+   "hand": {
+    "transcription": "aposgigen, (P. Met.), clef",
+    "transliteration": "apusqi'gn (P. Met.), key"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "aposgigen  (P. Mr.),  clef",
+     "confidence": 55,
+     "sim": 0.8846153846153846,
+     "lenient": 0.9,
+     "judge": {
+      "equivalence": 92,
+      "differences": [
+       {
+        "researcher": "aposgigen,",
+        "llm": "aposgigen",
+        "kind": "punctuation",
+        "note": "Version A adds a comma after the headword; punctuation only."
+       },
+       {
+        "researcher": "Met.",
+        "llm": "Mr.",
+        "kind": "unclear",
+        "note": "The abbreviation is hard to read; could be 'Met.' or 'Mr.', cannot definitively tell."
+       }
+      ]
+     },
+     "tagged": "aposgigen ⟨mm⟩ (P. Mr.), ⟨cit⟩ clef⟨fr⟩"
+    },
+    "expand": {
+     "text": "aposgigen (P. Mr.), clef",
+     "confidence": 82,
+     "tagged": "aposgigen⟨mm⟩ (P. Mr.),⟨cit⟩ clef⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "apusqi'gn (P. Mr.), key",
+     "confidence": 92,
+     "sim": 0.9166666666666666,
+     "lenient": 0.8947368421052632,
+     "judge": {
+      "equivalence": 90,
+      "differences": [
+       {
+        "researcher": "P. Met.",
+        "llm": "P. Mr.",
+        "kind": "researcher-error",
+        "note": "The image shows 'Mr.' (superscript r), matching version B; version A's 'Met.' misreads it."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 2479001625590,
+   "bounding_group_id": 219703,
+   "crop": "derived/group-crops/764/7646f686ada429faff7cf53d1e38f81014639dc04b46b0a0bc84427e97e12094.jpg",
+   "hand": {
+    "transcription": "eoltjeoetji, pauvre petit, chétif.",
+    "transliteration": "ewuljewe'ji, poor little frail one"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "eoltjeoêtji , pauvre petit, chétif.",
+     "confidence": 55,
+     "sim": 0.9428571428571428,
+     "lenient": 0.967741935483871,
+     "judge": {
+      "equivalence": 90,
+      "differences": [
+       {
+        "researcher": "eoltjeoetji",
+        "llm": "eoltjeoêtji",
+        "kind": "llm-error",
+        "note": "The handwriting shows a plain 'e', not a circumflexed 'ê', so B introduces an incorrect diacritic in the Mi'gmaq word."
+       },
+       {
+        "researcher": "eoltjeoetji,",
+        "llm": "eoltjeoêtji ,",
+        "kind": "punctuation",
+        "note": "B adds a space before the comma, a spacing-only difference."
+       }
+      ]
+     },
+     "tagged": "eoltjeoêtji⟨mm⟩ , pauvre petit, chétif.⟨fr⟩"
+    },
+    "expand": {
+     "text": "eoltjeoêtji , pauvre petit, chétif.",
+     "confidence": 82,
+     "tagged": "eoltjeoêtji⟨mm⟩ , pauvre petit, chétif.⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "ewuljewe'ji , poor little one, puny.",
+     "confidence": 88,
+     "sim": 0.7222222222222222,
+     "lenient": 0.7575757575757576,
+     "judge": {
+      "equivalence": 95,
+      "differences": [
+       {
+        "researcher": "ewuljewe'ji",
+        "llm": "ewuljewe'ji",
+        "kind": "punctuation",
+        "note": "Same Mi'gmaq word; only spacing before comma differs."
+       },
+       {
+        "researcher": "poor little frail one",
+        "llm": "poor little one, puny",
+        "kind": "valid-alternative",
+        "note": "French 'chétif' rendered as 'frail' vs 'puny'; both are defensible translations."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 2588291230184,
+   "bounding_group_id": 220132,
+   "crop": "derived/group-crops/12d/12d6ea7719e83c51d095e88b02baa7663d237bcae8ff73fe09afd9d1d3c2334e.jpg",
+   "hand": {
+    "transcription": "(7 pr 101) aolamsenoigtog",
+    "transliteration": "awlams'nuigtug"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "( )  pu 101 aŏlŏm  renŏigtŏg",
+     "confidence": 32,
+     "sim": 0.6153846153846154,
+     "lenient": 0.6086956521739131,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "(7",
+        "llm": "( )",
+        "kind": "unclear",
+        "note": "The bracketed mark is ambiguous; A reads a '7', B reads an empty paren."
+       },
+       {
+        "researcher": "pr",
+        "llm": "pu",
+        "kind": "valid-alternative",
+        "note": "Abbreviation reading pr vs pu is ambiguous in the script."
+       },
+       {
+        "researcher": "aolam",
+        "llm": "aŏlŏm",
+        "kind": "valid-alternative",
+        "note": "B uses breve diacritics over vowels, a plausible rendering of the same vowels."
+       },
+       {
+        "researcher": "senoigtog",
+        "llm": "renŏigtŏg",
+        "kind": "unclear",
+        "note": "Initial letter read as s vs r; the cursive loop is ambiguous."
+       }
+      ]
+     },
+     "tagged": "( ) ⟨cit⟩ pu 101⟨cit⟩ aŏlŏm ⟨mm⟩ renŏigtŏg⟨mm⟩"
+    },
+    "expand": {
+     "text": "( ) pu 101 aŏlŏm renŏigtŏg",
+     "confidence": 42,
+     "tagged": "( )⟨cit⟩ pu 101⟨cit⟩ aŏlŏm⟨mm⟩ renŏigtŏg⟨mm⟩"
+    },
+    "transliterate": {
+     "text": "( ) pu 101 awlum renuigtoq",
+     "confidence": 45,
+     "sim": 0.34615384615384615,
+     "lenient": 0.40909090909090906,
+     "judge": {
+      "equivalence": 30,
+      "differences": [
+       {
+        "researcher": "awlams'nuigtug",
+        "llm": "awlum",
+        "kind": "llm-error",
+        "note": "Version B splits and misrenders the word; the header 'aŏlŏm' corresponds to A's 'awlams'-' beginning, but B drops the connection to the following morpheme."
+       },
+       {
+        "researcher": "",
+        "llm": "( ) pu 101",
+        "kind": "punctuation",
+        "note": "Version B retains the reference/page marker from the evidence; not part of the translated entry, no substantive content difference."
+       },
+       {
+        "researcher": "awlams'nuigtug",
+        "llm": "renuigtoq",
+        "kind": "llm-error",
+        "note": "Evidence 'renŏigtŏg' should convert to '-nuigtug'; B reads leading 'ren' and ends in 'toq' instead of proper orthography 'tug'."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 4714485949303,
+   "bounding_group_id": 218558,
+   "crop": "derived/group-crops/5c0/5c0a232462ee56512efc7619b4144ba6ddbfc7dece7748de050d8852519c2363.jpg",
+   "hand": {
+    "transcription": "presser/passer la nuit, mètenemai;",
+    "transliteration": "spend the night (by the fire), me'te'nmai"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "presse  la nuit,  mètenemai;",
+     "confidence": 42,
+     "sim": 0.7647058823529411,
+     "lenient": 0.75,
+     "judge": {
+      "equivalence": 85,
+      "differences": [
+       {
+        "researcher": "presser/passer",
+        "llm": "presse",
+        "kind": "llm-error",
+        "note": "The image shows 'presser' (or 'passer'); version B reads 'presse' missing the final letter."
+       }
+      ]
+     },
+     "tagged": "presse⟨fr⟩  la nuit,⟨fr⟩  mètenemai;⟨mm⟩"
+    },
+    "expand": {
+     "text": "presse la nuit, mètenemai;",
+     "confidence": 72,
+     "tagged": "presse⟨fr⟩ la nuit,⟨fr⟩ mètenemai;⟨mm⟩"
+    },
+    "transliterate": {
+     "text": "hurry the night, metenemai;",
+     "confidence": 55,
+     "sim": 0.4390243902439024,
+     "lenient": 0.4736842105263158,
+     "judge": {
+      "equivalence": 55,
+      "differences": [
+       {
+        "researcher": "spend the night (by the fire)",
+        "llm": "hurry the night",
+        "kind": "valid-alternative",
+        "note": "French 'presse la nuit' is ambiguous; both are defensible translations, though A adds an interpretive gloss."
+       },
+       {
+        "researcher": "me'te'nmai",
+        "llm": "metenemai",
+        "kind": "llm-error",
+        "note": "The Listuguj orthography requires apostrophes (me'te'nmai); B omitted them and altered the vowel structure."
+       },
+       {
+        "researcher": "",
+        "llm": ";",
+        "kind": "punctuation",
+        "note": "Trailing semicolon present in the source, A dropped it."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 19091442321809,
+   "bounding_group_id": 216655,
+   "crop": "derived/group-crops/bfe/bfe8306a581646e20bc7089a6ea225ee8d4f7d225bed0ed3097015d5ec02f95b.jpg",
+   "hand": {
+    "transcription": "pepgetji, être mince, léger -(32, 1)",
+    "transliteration": "pepge'ji, to be thin, light"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "pepgetsi, être mince, léger (32,1)-",
+     "confidence": 72,
+     "sim": 0.8888888888888888,
+     "lenient": 0.9666666666666667,
+     "judge": {
+      "equivalence": 90,
+      "differences": [
+       {
+        "researcher": "pepgetji",
+        "llm": "pepgetsi",
+        "kind": "llm-error",
+        "note": "The handwriting shows 'pepgetji' with a j, not 'pepgetsi'."
+       },
+       {
+        "researcher": "-(32, 1)",
+        "llm": "(32,1)-",
+        "kind": "punctuation",
+        "note": "Placement of dash and spacing inside parentheses differ but no content change."
+       }
+      ]
+     },
+     "tagged": "pepgetsi,⟨mm⟩ être mince, léger⟨fr⟩ (32,1)-⟨cit⟩"
+    },
+    "expand": {
+     "text": "pepgetsi, être mince, léger (32,1)-",
+     "confidence": 95,
+     "tagged": "pepgetsi,⟨mm⟩ être mince, léger⟨fr⟩ (32,1)-⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "pepgetsi, to be thin, light (32,1)-",
+     "confidence": 70,
+     "sim": 0.7142857142857143,
+     "lenient": 0.7666666666666666,
+     "judge": {
+      "equivalence": 95,
+      "differences": [
+       {
+        "researcher": "pepge'ji",
+        "llm": "pepgetsi",
+        "kind": "valid-alternative",
+        "note": "The Listuguj orthography 'pepge'ji' is a valid conversion of 'pepgetsi'; A applied the orthography conversion as the task required, B kept the original spelling."
+       },
+       {
+        "researcher": "",
+        "llm": "(32,1)-",
+        "kind": "punctuation",
+        "note": "B retained the reference number/marginal notation from the source, which is metadata not content."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 25998998179493,
+   "bounding_group_id": 218910,
+   "crop": "derived/group-crops/1fc/1fceecd341fdb7d7a10ca7a6a3a1d0c531718633d82f4fab8e21cfbcb1bfc7cf.jpg",
+   "hand": {
+    "transcription": "natji losōgŏoi, aller visiter ses beaux-parents? aller y demeurer Pi. Met.",
+    "transliteration": "najilu'sugowi, to go visit your in-laws? to go live with? Pi. Met. "
+   },
+   "llm": {
+    "transcribe": {
+     "text": "natji losōgŏoi, aller visiter ses beaux-parents ?. aller y demeurer Pi. Met.",
+     "confidence": 58,
+     "sim": 0.9736842105263158,
+     "lenient": 1,
+     "judge": {
+      "equivalence": 100,
+      "differences": [
+       {
+        "researcher": "beaux-parents ?",
+        "llm": "beaux-parents ?.",
+        "kind": "punctuation",
+        "note": "Version B adds an extra period after the question mark; punctuation only."
+       }
+      ]
+     },
+     "tagged": "natji losōgŏoi,⟨mm⟩ aller visiter ses beaux-parents ?. aller y demeurer⟨fr⟩ Pi. Met.⟨cit⟩"
+    },
+    "expand": {
+     "text": "natji losōgŏoi, aller visiter ses beaux-parents ?. aller y demeurer Pi. Met.",
+     "confidence": 88,
+     "tagged": "natji losōgŏoi,⟨mm⟩ aller visiter ses beaux-parents ?. aller y demeurer⟨fr⟩ Pi. Met.⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "natji lusuqwei, to go visit his in-laws?. to go live there Pi. Met.",
+     "confidence": 62,
+     "sim": 0.7611940298507462,
+     "lenient": 0.7580645161290323,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "najilu'sugowi",
+        "llm": "natji lusuqwei",
+        "kind": "unclear",
+        "note": "The two orthographic renderings of the source 'losōgŏoi' differ substantially; hard to determine which correctly reflects Listuguj orthography from the handwriting."
+       },
+       {
+        "researcher": "to go visit your in-laws?",
+        "llm": "to go visit his in-laws?",
+        "kind": "valid-alternative",
+        "note": "French 'ses' can be rendered as his/her/your; both are defensible translations of the possessive."
+       },
+       {
+        "researcher": "?",
+        "llm": "?.",
+        "kind": "punctuation",
+        "note": "The source has '?.'; A dropped the period, B kept it - punctuation only."
+       },
+       {
+        "researcher": "to go live with?",
+        "llm": "to go live there",
+        "kind": "llm-error",
+        "note": "Source 'aller y demeurer' means 'to go live there'; B is correct and A's 'live with?' misrenders 'y' (there) as 'with'."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 28294850603427,
+   "bounding_group_id": 219128,
+   "crop": "derived/group-crops/c7d/c7d95483a01bb659f2c2648889753ef6de28f8274656fdce2aec67735387ec45.jpg",
+   "hand": {
+    "transcription": "espĕg, il est haut ",
+    "transliteration": "espe'g, he/she/it is high/tall "
+   },
+   "llm": {
+    "transcribe": {
+     "text": "espêg, il est haut",
+     "confidence": 80,
+     "sim": 0.9444444444444444,
+     "lenient": 0.9411764705882353,
+     "judge": {
+      "equivalence": 95,
+      "differences": [
+       {
+        "researcher": "espĕg",
+        "llm": "espêg",
+        "kind": "unclear",
+        "note": "The diacritic on the e differs (breve vs circumflex); the handwriting shows a mark over the e but which diacritic is intended is hard to determine."
+       }
+      ]
+     },
+     "tagged": "espêg,⟨mm⟩ il est haut⟨fr⟩"
+    },
+    "expand": {
+     "text": "espêg, il est haut",
+     "confidence": 95,
+     "tagged": "espêg,⟨mm⟩ il est haut⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "espeg, it is high",
+     "confidence": 80,
+     "sim": 0.5666666666666667,
+     "lenient": 0.5517241379310345,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "espe'g",
+        "llm": "espeg",
+        "kind": "llm-error",
+        "note": "The evidence has 'espêg' with a circumflex; the Listuguj orthography apostrophe (espe'g) reflects this, so the missing apostrophe in B is an error."
+       },
+       {
+        "researcher": "he/she/it is high/tall",
+        "llm": "it is high",
+        "kind": "valid-alternative",
+        "note": "Mi'gmaq third person can be rendered he/she/it, and 'haut' can mean high or tall; both are defensible translations."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 28403885750253,
+   "bounding_group_id": 218510,
+   "crop": "derived/group-crops/87a/87a1ac3a4d37e9d2524e6c8e984f2f107681143851af4720f5daf3039411b5a7.jpg",
+   "hand": {
+    "transcription": "gis nogoag, il prend (fièvre?);",
+    "transliteration": "gisnu’gwa’q, it/he got (to a high temperature?);"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "gis nogoay, il prend (pière?)",
+     "confidence": 55,
+     "sim": 0.8709677419354839,
+     "lenient": 0.8846153846153846,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "nogoag",
+        "llm": "nogoay",
+        "kind": "unclear",
+        "note": "The final letter of the Mi'gmaq word is ambiguous between g and y in the script."
+       },
+       {
+        "researcher": "fièvre?",
+        "llm": "pière?",
+        "kind": "llm-error",
+        "note": "The parenthetical word reads 'fièvre' (French for fever), not the nonstandard 'pière'."
+       },
+       {
+        "researcher": ";",
+        "llm": "",
+        "kind": "punctuation",
+        "note": "Trailing semicolon versus no terminal punctuation."
+       }
+      ]
+     },
+     "tagged": "gis⟨mm⟩ nogoay,⟨mm⟩ il prend (pière?)⟨fr⟩"
+    },
+    "expand": {
+     "text": "gis nogoay, il prend (pière?)",
+     "confidence": 70,
+     "tagged": "gis nogoay,⟨mm⟩ il prend (pière?)⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "gis nugway, he takes (stone?)",
+     "confidence": 55,
+     "sim": 0.39583333333333337,
+     "lenient": 0.37209302325581395,
+     "judge": {
+      "equivalence": 30,
+      "differences": [
+       {
+        "researcher": "gisnu'gwa'q",
+        "llm": "gis nugway",
+        "kind": "unclear",
+        "note": "The French evidence reads 'gis nogoay' as two words; A merges and applies Mi'gmaq orthography with apostrophes, B keeps two words closer to source spelling - hard to say which orthographic rendering is correct."
+       },
+       {
+        "researcher": "it/he got (to a high temperature?)",
+        "llm": "he takes (stone?)",
+        "kind": "llm-error",
+        "note": "French 'il prend' means 'he takes', matching B; A's 'it/he got' with 'high temperature' does not correspond to the source."
+       },
+       {
+        "researcher": "(to a high temperature?)",
+        "llm": "(stone?)",
+        "kind": "llm-error",
+        "note": "French 'pière' (pierre = stone) matches B's 'stone'; A's 'high temperature' is a mistranslation."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 35750964190593,
+   "bounding_group_id": 218920,
+   "crop": "derived/group-crops/89f/89fde59dd0d8545ba66322a8a7baf91d185f4d5a97afe16b60a2c5910f74014a.jpg",
+   "hand": {
+    "transcription": "natji togoāleg, aller le reveiller",
+    "transliteration": "najitugwa'l'g, to go wake him/her"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "natgi'toyŏŭleg ,  aller le reveiller",
+     "confidence": 45,
+     "sim": 0.8285714285714285,
+     "lenient": 0.8484848484848485,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "natji",
+        "llm": "natgi'",
+        "kind": "unclear",
+        "note": "The Mi'gmaq word's letters are hard to read; A reads 'natji' while B reads 'natgi'' with an apostrophe, and it is difficult to confirm which is correct."
+       },
+       {
+        "researcher": "togoāleg",
+        "llm": "toyŏŭleg",
+        "kind": "unclear",
+        "note": "The middle characters are ambiguous; A uses 'go' with a macron, B uses 'yŏŭ' with breves, hard to determine the correct reading."
+       },
+       {
+        "researcher": "reveiller",
+        "llm": "reveiller",
+        "kind": "punctuation",
+        "note": "Same word; the image shows a spelling that both transcribed as 'reveiller'."
+       },
+       {
+        "researcher": ",",
+        "llm": " ,  ",
+        "kind": "punctuation",
+        "note": "Only spacing around the comma differs."
+       }
+      ]
+     },
+     "tagged": "natgi'toyŏŭleg⟨mm⟩ , ⟨fr⟩ aller le reveiller⟨fr⟩"
+    },
+    "expand": {
+     "text": "natgi'toyŏŭleg , aller le reveiller",
+     "confidence": 88,
+     "tagged": "natgi'toyŏŭleg⟨mm⟩ , aller le reveiller⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "natgi'tuule[g|q] , go wake him up",
+     "confidence": 55,
+     "sim": 0.5454545454545454,
+     "lenient": 0.5625,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "najitugwa'l'g",
+        "llm": "natgi'tuule[g|q]",
+        "kind": "unclear",
+        "note": "Both attempt the Mi'gmaq form; the source reads 'natgi'toyŏŭleg' and neither matches exactly, so it's hard to say which orthographic conversion is correct."
+       },
+       {
+        "researcher": "to go wake him/her",
+        "llm": "go wake him up",
+        "kind": "valid-alternative",
+        "note": "Both render the French 'aller le reveiller' equivalently; 'him/her' vs 'him up' are minor phrasing choices."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 37295888929095,
+   "bounding_group_id": 218851,
+   "crop": "derived/group-crops/3ee/3ee68f93e73772a24268081d2a5adb917a18e4d8813f4856aa8657b4f4baf550.jpg",
+   "hand": {
+    "transcription": "lŏgsigan, log house (?? De l’anglais?) ",
+    "transliteration": "lo’qsi’gan, log house (?? De l’anglais?) "
+   },
+   "llm": {
+    "transcribe": {
+     "text": "lŏgsīgan, log house (im. de l'anglais?)",
+     "confidence": 55,
+     "sim": 0.8461538461538461,
+     "lenient": 0.8823529411764706,
+     "judge": {
+      "equivalence": 90,
+      "differences": [
+       {
+        "researcher": "lŏgsigan",
+        "llm": "lŏgsīgan",
+        "kind": "unclear",
+        "note": "The image shows a diacritic over the i; whether it is a breve or macron is ambiguous."
+       },
+       {
+        "researcher": "??",
+        "llm": "im.",
+        "kind": "researcher-error",
+        "note": "The image reads 'im.' (abbreviation), which A marked as illegible."
+       },
+       {
+        "researcher": "De",
+        "llm": "de",
+        "kind": "punctuation",
+        "note": "Capitalization difference only; image shows lowercase 'de'."
+       },
+       {
+        "researcher": "l’anglais",
+        "llm": "l'anglais",
+        "kind": "punctuation",
+        "note": "Apostrophe style difference only in French word."
+       }
+      ]
+     },
+     "tagged": "lŏgsīgan,⟨mm⟩ log house⟨fr⟩ (im. de l'anglais?)⟨fr⟩"
+    },
+    "expand": {
+     "text": "lŏgsīgan, log house (imité de l'anglais?)",
+     "confidence": 80,
+     "tagged": "lŏgsīgan,⟨mm⟩ log house⟨fr⟩ (imité de l'anglais?)⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "lugsi'gan, log house (imitated from English?)",
+     "confidence": 72,
+     "sim": 0.5777777777777777,
+     "lenient": 0.5609756097560976,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "lo’qsi’gan",
+        "llm": "lugsi'gan",
+        "kind": "valid-alternative",
+        "note": "Two defensible Listuguj renderings of lŏgsīgan; both plausible transcriptions of the same word."
+       },
+       {
+        "researcher": "?? De l’anglais?",
+        "llm": "imitated from English?",
+        "kind": "researcher-error",
+        "note": "Evidence reads 'imité de l'anglais?'; A left the first word as '??' while B correctly translated it as 'imitated from'."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 43496499262409,
+   "bounding_group_id": 218604,
+   "crop": "derived/group-crops/0d4/0d4a49a64d5c6cf73c5c61c9bda8e101f4f94c29bde4bd3656149e90a2caec76.jpg",
+   "hand": {
+    "transcription": "battre le briquet, sagtai;",
+    "transliteration": "use (strike) a flint to start a fire, to light a lamp, sagtai"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "; buetteu a buguet-tejtai;",
+     "confidence": 18,
+     "sim": 0.3846153846153846,
+     "lenient": 0.5,
+     "judge": {
+      "equivalence": 15,
+      "differences": [
+       {
+        "researcher": "battre",
+        "llm": "buetteu",
+        "kind": "llm-error",
+        "note": "Version B misreads the French word 'battre' as a nonsense word 'buetteu'."
+       },
+       {
+        "researcher": "le",
+        "llm": "a",
+        "kind": "llm-error",
+        "note": "Version B misreads the article 'le' as 'a'."
+       },
+       {
+        "researcher": "briquet",
+        "llm": "buguet",
+        "kind": "llm-error",
+        "note": "Version B misreads 'briquet' as the nonsense 'buguet'."
+       },
+       {
+        "researcher": ", ",
+        "llm": "-",
+        "kind": "punctuation",
+        "note": "Comma vs hyphen separating French phrase from Mi'gmaq word."
+       },
+       {
+        "researcher": "sagtai",
+        "llm": "tejtai",
+        "kind": "llm-error",
+        "note": "Version B misreads the Mi'gmaq word 'sagtai' as 'tejtai'."
+       },
+       {
+        "researcher": "",
+        "llm": ";",
+        "kind": "punctuation",
+        "note": "Version B adds a leading semicolon not in A."
+       }
+      ]
+     },
+     "tagged": "; buetteu a⟨fr⟩ buguet-tejtai;⟨mm⟩"
+    },
+    "expand": {
+     "text": "; buetteu a buguet-tejtai;",
+     "confidence": 32,
+     "tagged": "; buetteu a⟨mm⟩ buguet-tejtai;⟨mm⟩"
+    },
+    "transliterate": {
+     "text": "; buetteu a buguet-tejtai;",
+     "confidence": 32,
+     "sim": 0.180327868852459,
+     "lenient": 0.22807017543859653,
+     "judge": {
+      "equivalence": 10,
+      "differences": [
+       {
+        "researcher": "use (strike) a flint to start a fire, to light a lamp",
+        "llm": "buetteu a buguet-tejtai",
+        "kind": "llm-error",
+        "note": "Version B copied the Mi'gmaq/raw text instead of providing an English translation as required by the task."
+       },
+       {
+        "researcher": "sagtai",
+        "llm": "tejtai",
+        "kind": "llm-error",
+        "note": "Version B misreads the headword; the image and researcher indicate 'sagtai' not 'tejtai'."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 44075355142415,
+   "bounding_group_id": 218568,
+   "crop": "derived/group-crops/aaa/aaa40d1fa4002e47665250694ee90af7d60c0a0afd337f82aa32b64f3ff46f96.jpg",
+   "hand": {
+    "transcription": "5. oeleiatigo, attitude mutuelle (bonne)",
+    "transliteration": "5. weleiati’gw, mutual attitude (good)"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "5.  veleiatega ,  attitude mutuelle  (hom.)",
+     "confidence": 44,
+     "sim": 0.8,
+     "lenient": 0.8055555555555556,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "oeleiatigo",
+        "llm": "veleiatega",
+        "kind": "llm-error",
+        "note": "The word begins with 'oe' and ends in 'igo'; B misreads initial letter and vowels in a Mi'gmaq word."
+       },
+       {
+        "researcher": ",",
+        "llm": " , ",
+        "kind": "punctuation",
+        "note": "Only spacing around the comma differs."
+       },
+       {
+        "researcher": "(bonne)",
+        "llm": "(hom.)",
+        "kind": "llm-error",
+        "note": "The parenthetical reads 'bonne' (feminine of 'good'), not the abbreviation 'hom.'."
+       }
+      ]
+     },
+     "tagged": "5. ⟨cit⟩ veleiatega⟨mm⟩ , ⟨fr⟩ attitude mutuelle ⟨fr⟩ (hom.)⟨cit⟩"
+    },
+    "expand": {
+     "text": "5.  veleiatega ,  attitude mutuelle  (homm.)",
+     "confidence": 55,
+     "tagged": "5. ⟨cit⟩ veleiatega⟨mm⟩ , ⟨fr⟩ attitude mutuelle ⟨fr⟩ (homm.)⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "5. weleiatega , mutual attitude (homm.)",
+     "confidence": 55,
+     "sim": 0.7948717948717949,
+     "lenient": 0.8235294117647058,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "weleiati’gw",
+        "llm": "weleiatega",
+        "kind": "unclear",
+        "note": "The handwriting shows 'veleiatego'-like form; researcher applied Listuguj orthography with apostrophe while B kept raw form, hard to verify exact ending."
+       },
+       {
+        "researcher": "(good)",
+        "llm": "(homm.)",
+        "kind": "llm-error",
+        "note": "The parenthetical 'homm.' (an abbreviation) was not translated/converted by B, whereas A rendered it; but note the image reads 'homm.' so A's 'good' may itself be an interpretation."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 49592942488526,
+   "bounding_group_id": 219579,
+   "crop": "derived/group-crops/416/416836d9b1ce1eaa3f603c8a036effad9f4fad5f888972213e01e1495ccc96cd.jpg",
+   "hand": {
+    "transcription": "doubler l'intérieur, pitoigatem; p.ê. ajouter, grandir, grossir",
+    "expanded": "doubler l'intérieur, pitoigatem; peut être ajouter, grandir, grossir",
+    "transliteration": "double the interior, pituigatm; perhaps, make bigger, make heavier"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "double l'intérieur ,  pitŏigaten  ; p. ê.  ajouter, grandir, grossir",
+     "confidence": 52,
+     "sim": 0.9076923076923077,
+     "lenient": 0.9482758620689655,
+     "judge": {
+      "equivalence": 88,
+      "differences": [
+       {
+        "researcher": "doubler",
+        "llm": "double",
+        "kind": "llm-error",
+        "note": "The image shows 'doubler' with a final r; version B omitted it."
+       },
+       {
+        "researcher": "pitoigatem",
+        "llm": "pitŏigaten",
+        "kind": "llm-error",
+        "note": "The final letter reads 'm' not 'n'; the breve on o is a plausible diacritic reading but the last consonant is wrong."
+       },
+       {
+        "researcher": ";",
+        "llm": ";",
+        "kind": "punctuation",
+        "note": "Spacing around punctuation differs only."
+       }
+      ]
+     },
+     "tagged": "double⟨fr⟩ l'intérieur⟨fr⟩ , ⟨fr⟩ pitŏigaten⟨mm⟩  ; p. ê. ⟨fr⟩ ajouter, grandir, grossir⟨fr⟩"
+    },
+    "expand": {
+     "text": "double l'intérieur ,  pitŏigaten  ; peut être  ajouter, grandir, grossir",
+     "confidence": 72,
+     "sim": 0.927536231884058,
+     "lenient": 0.953125,
+     "judge": {
+      "equivalence": 90,
+      "differences": [
+       {
+        "researcher": "doubler",
+        "llm": "double",
+        "kind": "llm-error",
+        "note": "The image shows 'doubler' (infinitive), matching the other infinitives in the list; B dropped the final 'r'."
+       },
+       {
+        "researcher": "pitoigatem",
+        "llm": "pitŏigaten",
+        "kind": "llm-error",
+        "note": "The Mi'gmaq word ends in 'm' as shown in the image; B read a final 'n' incorrectly, and the breve is a formatting choice."
+       }
+      ]
+     },
+     "tagged": "double⟨fr⟩ l'intérieur⟨fr⟩ , ⟨fr⟩ pitŏigaten⟨mm⟩  ; peut être ⟨fr⟩ ajouter, grandir, grossir⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "double the interior , pituigatm ; perhaps add, grow, enlarge",
+     "confidence": 72,
+     "sim": 0.6818181818181819,
+     "lenient": 0.7258064516129032,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "perhaps",
+        "llm": "perhaps",
+        "kind": "punctuation",
+        "note": "Both render 'peut être' as 'perhaps'; identical."
+       },
+       {
+        "researcher": "make bigger",
+        "llm": "add",
+        "kind": "researcher-error",
+        "note": "Evidence lists three verbs: ajouter, grandir, grossir; B's 'add' correctly renders 'ajouter' which A omitted."
+       },
+       {
+        "researcher": "make bigger",
+        "llm": "grow",
+        "kind": "valid-alternative",
+        "note": "'make bigger' and 'grow' are both defensible renderings of 'grandir'."
+       },
+       {
+        "researcher": "make heavier",
+        "llm": "enlarge",
+        "kind": "llm-error",
+        "note": "'grossir' means to make/get bigger; 'enlarge' is closer than 'make heavier', but 'make heavier' is a weaker translation - both imperfect, though B's is more accurate here."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 51997072825681,
+   "bounding_group_id": 216564,
+   "crop": "derived/group-crops/2ac/2ac7c6fac14cb9b1aa7f15463e7a063e0c692c9ccad5cb11a89834557c13437e.jpg",
+   "hand": {
+    "transcription": "peut-être le même sens dans matamgetjoig, abrégé par les blancs en Kejwick (age) ",
+    "transliteration": "possibly in the same direction Matamgejuig. Abbreviated to Kejwick by the whites."
+   },
+   "llm": {
+    "transcribe": {
+     "text": "; peut-être  le même sens dans  matamgetsig , abrégé par les blancs en  Ketfoigk  (2ge",
+     "confidence": 45,
+     "sim": 0.8658536585365854,
+     "lenient": 0.9090909090909091,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "peut-être",
+        "llm": "; peut-être",
+        "kind": "punctuation",
+        "note": "Version B adds a leading semicolon and extra spacing, punctuation only."
+       },
+       {
+        "researcher": "matamgetjoig",
+        "llm": "matamgetsig",
+        "kind": "llm-error",
+        "note": "The image shows 'matamgetjoig'; B misreads letters (tj vs ts, missing 'o')."
+       },
+       {
+        "researcher": "Kejwick",
+        "llm": "Ketfoigk",
+        "kind": "llm-error",
+        "note": "The Mi'gmaq word is 'Kejwick'; B's 'Ketfoigk' misreads the letters."
+       },
+       {
+        "researcher": "(age)",
+        "llm": "(2ge",
+        "kind": "llm-error",
+        "note": "The image shows '(age'; B misreads the 'a' as '2' and omits closing paren."
+       }
+      ]
+     },
+     "tagged": "; peut-être⟨fr⟩  le même sens dans ⟨fr⟩ matamgetsig⟨mm⟩ , abrégé par les blancs en ⟨fr⟩ Ketfoigk⟨mm⟩  (2ge⟨cit⟩"
+    },
+    "expand": {
+     "text": "; peut-être le même sens dans matamgetsig , abrégé par les blancs en Ketfoigk (2ge",
+     "confidence": 55,
+     "tagged": "; peut-être le même sens dans⟨fr⟩ matamgetsig⟨mm⟩ , abrégé par les blancs en⟨fr⟩ Ketfoigk⟨mm⟩ (2ge⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "; perhaps the same meaning in matamgetsig, abbreviated by the whites to Ketfoigk (2ge",
+     "confidence": 55,
+     "sim": 0.43529411764705883,
+     "lenient": 0.4691358024691358,
+     "judge": {
+      "equivalence": 88,
+      "differences": [
+       {
+        "researcher": "possibly in the same direction",
+        "llm": "perhaps the same meaning",
+        "kind": "valid-alternative",
+        "note": "'sens' in French can mean 'direction' or 'meaning'; both are defensible translations."
+       },
+       {
+        "researcher": "Matamgejuig",
+        "llm": "matamgetsig",
+        "kind": "valid-alternative",
+        "note": "A converts to Listuguj orthography (ts->j) and capitalizes; both trace to the source 'matamgetsig'."
+       },
+       {
+        "researcher": "Abbreviated to Kejwick by the whites",
+        "llm": "abbreviated by the whites to Ketfoigk",
+        "kind": "valid-alternative",
+        "note": "Word order differs but meaning identical; 'Kejwick' vs 'Ketfoigk' - A applies Listuguj orthography to the placename."
+       },
+       {
+        "researcher": "",
+        "llm": "(2ge",
+        "kind": "punctuation",
+        "note": "B retained a fragment '(2ge' from the source that A dropped as incomplete/marginal."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 54452220495151,
+   "bounding_group_id": 217607,
+   "crop": "derived/group-crops/943/94358a9ba7102a81183492703d05901c1dfd350d85cb8495576c249328973ff0.jpg",
+   "hand": {
+    "transcription": "agtatpag milieu d. l. n.",
+    "expanded": "agtatpag milieu de la nuit",
+    "transliteration": "aqtatpa'q, middle of the night"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "ergtatpieg milieu d. l. n",
+     "confidence": 42,
+     "sim": 0.8,
+     "lenient": 0.8260869565217391,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "agtatpag",
+        "llm": "ergtatpieg",
+        "kind": "llm-error",
+        "note": "The Mi'gmaq headword differs in letters; version B misreads the initial and adds an 'i', giving a wrong orthography."
+       },
+       {
+        "researcher": "n.",
+        "llm": "n",
+        "kind": "punctuation",
+        "note": "Trailing abbreviation period present in A but omitted in B."
+       }
+      ]
+     },
+     "tagged": "ergtatpieg⟨mm⟩ milieu d. l.⟨fr⟩ n⟨cit⟩"
+    },
+    "expand": {
+     "text": "ergtatpieg milieu de la nuit",
+     "confidence": 55,
+     "sim": 0.8571428571428572,
+     "lenient": 0.8571428571428572,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "agtatpag",
+        "llm": "ergtatpieg",
+        "kind": "unclear",
+        "note": "The Mi'gmaq headword reading differs; the image script is ambiguous but the evidence line supports 'ergtatpieg', while A reads 'agtatpag'."
+       }
+      ]
+     },
+     "tagged": "ergtatpieg⟨mm⟩ milieu de la nuit⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "aqtatpe'g middle of the night",
+     "confidence": 70,
+     "sim": 0.9,
+     "lenient": 0.9310344827586207,
+     "judge": {
+      "equivalence": 85,
+      "differences": [
+       {
+        "researcher": "aqtatpa'q",
+        "llm": "aqtatpe'g",
+        "kind": "unclear",
+        "note": "The two versions differ in the vowel (a vs e) and final consonant (q vs g); the handwriting and evidence 'ergtatpieg' don't clearly resolve which orthographic form is correct."
+       },
+       {
+        "researcher": "aqtatpa'q,",
+        "llm": "aqtatpe'g",
+        "kind": "punctuation",
+        "note": "Researcher includes a comma separating headword and gloss; formatting only."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 62191851148884,
+   "bounding_group_id": 219587,
+   "crop": "derived/group-crops/dec/decda0d7b97adb141af017bf5e2b458aebab1f8432e3c503f8af995b04cdb8ba.jpg",
+   "hand": {
+    "transcription": "papgog?  le temps où l'on ramasse l'écorce, juin (31)",
+    "transliteration": "papgug?/papqu'g  the time when the bark is collected, June (31)"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "pŏpgŏy? le temps où l'on ramasse l'écore, juin (31)",
+     "confidence": 72,
+     "sim": 0.9230769230769231,
+     "lenient": 0.9166666666666666,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "papgog",
+        "llm": "pŏpgŏy",
+        "kind": "unclear",
+        "note": "The headword is hard to read; A reads 'papgog' while B reads 'pŏpgŏy' with breve diacritics, and it's unclear which matches the faint handwriting."
+       },
+       {
+        "researcher": "l'écorce",
+        "llm": "l'écore",
+        "kind": "llm-error",
+        "note": "The French word for bark is 'écorce'; B drops the 'c', which is a spelling error."
+       }
+      ]
+     },
+     "tagged": "pŏpgŏy?⟨mm⟩ le temps où l'on ramasse l'écore, juin⟨fr⟩ (31)⟨cit⟩"
+    },
+    "expand": {
+     "text": "pŏpgŏy? le temps où l'on ramasse l'écore, juin (31)",
+     "confidence": 88,
+     "tagged": "pŏpgŏy?⟨mm⟩ le temps où l'on ramasse l'écore, juin⟨fr⟩ (31)⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "pupguy? the time when one gathers bark, June (31)",
+     "confidence": 72,
+     "sim": 0.5806451612903225,
+     "lenient": 0.5517241379310345,
+     "judge": {
+      "equivalence": 90,
+      "differences": [
+       {
+        "researcher": "papgug?/papqu'g",
+        "llm": "pupguy?",
+        "kind": "valid-alternative",
+        "note": "Both attempt to render pŏpgŏy?; A offers a French-style and Listuguj form, B keeps closer to the evidence spelling - defensible variants."
+       },
+       {
+        "researcher": "the bark is collected",
+        "llm": "one gathers bark",
+        "kind": "valid-alternative",
+        "note": "Both faithfully translate 'l'on ramasse l'écore' with equivalent phrasings."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 62304771631303,
+   "bounding_group_id": 219974,
+   "crop": "derived/group-crops/2df/2df21fc0dc25811c34f1d3ab475233d02e3c7fcdc18e421e9cbf21e5c8baf393.jpg",
+   "hand": {
+    "transcription": "pastogǒpetjit, morse, vache marine ?",
+    "transliteration": "pastugopejit, walrus, sea cow ?"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "pastŏgŏpetsit, morse, vache marine ?",
+     "confidence": 72,
+     "sim": 0.9166666666666666,
+     "lenient": 0.90625,
+     "judge": {
+      "equivalence": 88,
+      "differences": [
+       {
+        "researcher": "pastogǒpetjit",
+        "llm": "pastŏgŏpetsit",
+        "kind": "unclear",
+        "note": "The two differ in the vowel diacritic on the first 'o' (g vs ŏ) and in 'tj' vs 'ts'; the handwriting is ambiguous and both are plausible readings."
+       },
+       {
+        "researcher": "gǒ",
+        "llm": "gŏ",
+        "kind": "unclear",
+        "note": "Version A reads plain 'g' with breve on following o, B places breve on both o's; hard to determine from script."
+       },
+       {
+        "researcher": "tj",
+        "llm": "ts",
+        "kind": "unclear",
+        "note": "The cluster before 'it' could be 'tj' or 'ts'; the handwriting does not clearly disambiguate."
+       }
+      ]
+     },
+     "tagged": "pastŏgŏpetsit,⟨mm⟩ morse,⟨fr⟩ vache marine ?⟨fr⟩"
+    },
+    "expand": {
+     "text": "pastŏgŏpetsit, morse, vache marine ?",
+     "confidence": 88,
+     "tagged": "pastŏgŏpetsit,⟨mm⟩ morse, vache marine ?⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "pastugupejit, walrus, sea cow?",
+     "confidence": 80,
+     "sim": 0.935483870967742,
+     "lenient": 0.962962962962963,
+     "judge": {
+      "equivalence": 97,
+      "differences": [
+       {
+        "researcher": "pastugopejit",
+        "llm": "pastugupejit",
+        "kind": "unclear",
+        "note": "Difference is o vs u in the fourth syllable; the evidence 'pastŏgŏpetsit' uses ŏ which could support either transliteration, so it is hard to say which is correct."
+       },
+       {
+        "researcher": "sea cow ?",
+        "llm": "sea cow?",
+        "kind": "punctuation",
+        "note": "Only spacing before the question mark differs."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 92615040038436,
+   "bounding_group_id": 221471,
+   "crop": "derived/group-crops/5e6/5e67b24be7a44b2062f638cc8993ba4bfc2f7a99a2636f64280d08ccf0e5b09b.jpg",
+   "hand": {
+    "transcription": "aptepogoei, goet (uoli for Micmacs) noyé (Pi. Met.)",
+    "expanded": "aptepogoei, aptepogoet (uoli for Micmacs) noyé (Pi. Met.)",
+    "transliteration": "apt'puguei, apt'puguet (uoli for Micmacs) drowned (Pi. Met.)"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "aptejŏgŏei, goet (note par Micmac) noyé (Pi. Met.)",
+     "confidence": 55,
+     "sim": 0.8235294117647058,
+     "lenient": 0.7954545454545454,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "aptepogoei",
+        "llm": "aptejŏgŏei",
+        "kind": "unclear",
+        "note": "The Mi'gmaq headword differs in letters (p vs j, o vs ŏ); handwriting is ambiguous but the diacritics vs plain letters are a real orthographic divergence."
+       },
+       {
+        "researcher": "uoli",
+        "llm": "note",
+        "kind": "llm-error",
+        "note": "The image reads 'uoli'/'noli'-like script, not the French 'note'; B likely normalized to a French word."
+       },
+       {
+        "researcher": "for",
+        "llm": "par",
+        "kind": "unclear",
+        "note": "The parenthetical word could be read either way from the cursive; both are plausible."
+       },
+       {
+        "researcher": "Micmacs",
+        "llm": "Micmac",
+        "kind": "llm-error",
+        "note": "The image shows a final flourish suggesting plural 'Micmacs' which B dropped."
+       }
+      ]
+     },
+     "tagged": "aptejŏgŏei,⟨mm⟩ goet (note par Micmac)⟨fr⟩ noyé⟨fr⟩ (Pi. Met.)⟨cit⟩"
+    },
+    "expand": {
+     "text": "aptejŏgŏei, aptejŏgŏet (note par Micmac) noyé (Pi. Met.)",
+     "confidence": 72,
+     "sim": 0.7894736842105263,
+     "lenient": 0.76,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "aptepogoei",
+        "llm": "aptejŏgŏei",
+        "kind": "llm-error",
+        "note": "The evidence and image show 'aptejŏgŏei' with a j; researcher's 'aptepogoei' misreads the letters, but wait—need to assess which matches image; the diacritics in B match the evidence."
+       },
+       {
+        "researcher": "aptepogoet",
+        "llm": "aptejŏgŏet",
+        "kind": "researcher-error",
+        "note": "Evidence shows the stem 'aptejŏgŏ-'; researcher's 'aptepogoet' lacks the j and diacritics found in the evidence."
+       },
+       {
+        "researcher": "uoli",
+        "llm": "note",
+        "kind": "researcher-error",
+        "note": "The evidence reads 'note'; researcher's 'uoli' misreads this word."
+       },
+       {
+        "researcher": "for",
+        "llm": "par",
+        "kind": "researcher-error",
+        "note": "Evidence reads French 'par'; researcher wrote English 'for', a misreading."
+       },
+       {
+        "researcher": "Micmacs",
+        "llm": "Micmac",
+        "kind": "unclear",
+        "note": "Evidence shows 'Micmac'; the image ending is ambiguous whether an 's' follows."
+       }
+      ]
+     },
+     "tagged": "aptejŏgŏei, aptejŏgŏet⟨mm⟩ (note par Micmac)⟨fr⟩ noyé⟨fr⟩ (Pi. Met.)⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "apt'puguei, apt'puguet (note by Micmac) drowned (Pi. Met.)",
+     "confidence": 72,
+     "sim": 0.8833333333333333,
+     "lenient": 0.8679245283018868,
+     "judge": {
+      "equivalence": 75,
+      "differences": [
+       {
+        "researcher": "uoli",
+        "llm": "note",
+        "kind": "researcher-error",
+        "note": "The evidence and image show 'note par Micmac'; version A rendered it as 'uoli for' which misreads the French word 'note'."
+       },
+       {
+        "researcher": "for",
+        "llm": "by",
+        "kind": "researcher-error",
+        "note": "The parenthetical translates French 'par' as 'by' (version B) which is correct; 'for' is wrong."
+       },
+       {
+        "researcher": "Micmacs",
+        "llm": "Micmac",
+        "kind": "valid-alternative",
+        "note": "Evidence has 'Micmac' singular; both are minor and defensible readings of the source."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 108302894874177,
+   "bounding_group_id": 216946,
+   "crop": "derived/group-crops/471/4713fe949c31f3a2f2df0c88c5d724ece581bc4194ec783d4e2f6cce404f5d42.jpg",
+   "hand": {
+    "transcription": "pepgoitjetag, tambour",
+    "transliteration": "pepgwijeta'q, drum"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "pépyoittelâg, tombow",
+     "confidence": 42,
+     "sim": 0.6190476190476191,
+     "lenient": 0.6,
+     "judge": {
+      "equivalence": 35,
+      "differences": [
+       {
+        "researcher": "pepgoitjetag",
+        "llm": "pépyoittelâg",
+        "kind": "llm-error",
+        "note": "Automated version misreads multiple letters (g→y, tj→tt, t→l) and adds diacritics not in the Mi'gmaq orthography."
+       },
+       {
+        "researcher": "tambour",
+        "llm": "tombow",
+        "kind": "llm-error",
+        "note": "The French translation 'tambour' (drum) is misread as the non-word 'tombow'."
+       }
+      ]
+     },
+     "tagged": "pépyoittelâg,⟨mm⟩ tombow⟨fr⟩"
+    },
+    "expand": {
+     "text": "pépyoittelâg, tombeau",
+     "confidence": 72,
+     "tagged": "pépyoittelâg,⟨mm⟩ tombeau⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "pepguitte'la'q, tomb",
+     "confidence": 55,
+     "sim": 0.55,
+     "lenient": 0.5263157894736843,
+     "judge": {
+      "equivalence": 30,
+      "differences": [
+       {
+        "researcher": "pepgwijeta'q",
+        "llm": "pepguitte'la'q",
+        "kind": "unclear",
+        "note": "The French source 'tombeau' (tomb/grave) suggests B's orthography; hard to verify exact Mi'gmaq spelling from the handwriting, but the two differ in letters and apostrophe placement."
+       },
+       {
+        "researcher": "drum",
+        "llm": "tomb",
+        "kind": "llm-error",
+        "note": "The French evidence is 'tombeau' meaning tomb/grave, so B's 'tomb' is correct and A's 'drum' is the mistranslation."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 112778112369284,
+   "bounding_group_id": 218713,
+   "crop": "derived/group-crops/f92/f92c15e2aad99aebaea751b1d30d5af327b0fe0bceae10cfca2eb50dec0533ff.jpg",
+   "hand": {
+    "transcription": "mosgoatem, mosgŏmg, gŏmit, léche",
+    "expanded": "mosgoatem, mosgŏmg, mosgŏmit, léche",
+    "transliteration": "musgwatm, musqomg, musqomit, lick"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "mosgoatemi, mosgŏmg, gŏmit, l'écho",
+     "confidence": 55,
+     "sim": 0.9117647058823529,
+     "lenient": 0.9032258064516129,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "mosgoatem",
+        "llm": "mosgoatemi",
+        "kind": "llm-error",
+        "note": "The image shows 'mosgoatem' with no trailing 'i'; version B added an extra letter."
+       },
+       {
+        "researcher": "léche",
+        "llm": "l'écho",
+        "kind": "unclear",
+        "note": "The handwriting reads 'léche'/'l'éche'; B's 'l'écho' differs in the final vowel and apostrophe, but the reading is ambiguous."
+       }
+      ]
+     },
+     "tagged": "mosgoatemi, mosgŏmg, gŏmit,⟨mm⟩ l'écho⟨fr⟩"
+    },
+    "expand": {
+     "text": "mosgoatemi, mosgŏmg, gŏmit, l'écho",
+     "confidence": 72,
+     "sim": 0.8285714285714285,
+     "lenient": 0.8125,
+     "judge": {
+      "equivalence": 70,
+      "differences": [
+       {
+        "researcher": "mosgoatem",
+        "llm": "mosgoatemi",
+        "kind": "researcher-error",
+        "note": "Image shows a final i on the word, matching the evidence and version B."
+       },
+       {
+        "researcher": "mosgŏmit",
+        "llm": "gŏmit",
+        "kind": "llm-error",
+        "note": "Image shows 'gŏmit'; version A appears to have added 'mos', while B matches the evidence, so B is closer though the leading char reading differs."
+       },
+       {
+        "researcher": "léche",
+        "llm": "l'écho",
+        "kind": "unclear",
+        "note": "Image reads 'l'écho'-like; A's 'léche' differs but the handwriting is ambiguous."
+       }
+      ]
+     },
+     "tagged": "mosgoatemi, mosgŏmg, gŏmit,⟨mm⟩ l'écho⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "musgwatm, musqomg, qomit, the echo",
+     "confidence": 72,
+     "sim": 0.7058823529411764,
+     "lenient": 0.6774193548387097,
+     "judge": {
+      "equivalence": 55,
+      "differences": [
+       {
+        "researcher": "musqomit",
+        "llm": "qomit",
+        "kind": "llm-error",
+        "note": "The evidence reads 'gŏmit'; version A's 'musqomit' follows the preceding 'musqomg' pattern but the source shows 'gŏmit', so B's 'qomit' is closer though missing initial; A appears to have added 'mus' not in source, yet B drops the 'mus' too - the source word is 'gŏmit' = qomit, so B is correct here."
+       },
+       {
+        "researcher": "lick",
+        "llm": "the echo",
+        "kind": "llm-error",
+        "note": "French evidence 'l'écho' means 'the echo'; version A's 'lick' is a misreading/mistranslation, so B is correct."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 113170399083509,
+   "bounding_group_id": 216765,
+   "crop": "derived/group-crops/d2d/d2d805015263e0f27c5138bc12d7e11c5bc693c512f1b4eea19919dc4e43a727.jpg",
+   "hand": {
+    "transcription": "pepgoitjetegei, tegetitjig, batter du tambou - pepgetjetegetieg (Jo. 368)",
+    "expanded": "pepgoitjetegei, pepgoitegetitjig, batter du tambou - pepgetjetegetieg (Jo. 368)",
+    "transliteration": "pepguijete'gei, pepguiteg'tijig, beat the drum - pepgejete'g'tieg (Jo. 368)"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "pepgoitetegei, tegetitjig, battre du tambour pepgettetegetieg (Jo. 368)",
+     "confidence": 61,
+     "sim": 0.9178082191780822,
+     "lenient": 0.9242424242424242,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "pepgoitjetegei",
+        "llm": "pepgoitetegei",
+        "kind": "llm-error",
+        "note": "Version B omits the 'j' letter (pepgoitjetegei vs pepgoitetegei), a missing letter in the Mi'gmaq word."
+       },
+       {
+        "researcher": "batter",
+        "llm": "battre",
+        "kind": "researcher-error",
+        "note": "The French verb is 'battre' (to beat); Version A's 'batter' is a misspelling."
+       },
+       {
+        "researcher": "tambou",
+        "llm": "tambour",
+        "kind": "researcher-error",
+        "note": "The French word is 'tambour' (drum); Version A dropped the final 'r'."
+       },
+       {
+        "researcher": "- pepgetjetegetieg",
+        "llm": "pepgettetegetieg",
+        "kind": "llm-error",
+        "note": "Version B reads 'tt' where A reads 'tj'; the Mi'gmaq form 'pepgetjetegetieg' is consistent with the headword's 'tj'."
+       }
+      ]
+     },
+     "tagged": "pepgoitetegei,⟨mm⟩ tegetitjig,⟨mm⟩ battre du tambour⟨fr⟩ pepgettetegetieg⟨mm⟩ (Jo. 368)⟨cit⟩"
+    },
+    "expand": {
+     "text": "pepgoitetegei, tegetitjig, battre du tambour pepgettetegetieg (Jo. 368)",
+     "confidence": 72,
+     "sim": 0.8481012658227848,
+     "lenient": 0.8472222222222222,
+     "judge": {
+      "equivalence": 65,
+      "differences": [
+       {
+        "researcher": "pepgoitjetegei",
+        "llm": "pepgoitetegei",
+        "kind": "researcher-error",
+        "note": "The evidence and image support 'pepgoitetegei'; A inserted an extra 'j' not in the source."
+       },
+       {
+        "researcher": "pepgoitegetitjig",
+        "llm": "tegetitjig",
+        "kind": "researcher-error",
+        "note": "Evidence shows 'tegetitjig'; A appears to have expanded/altered it to 'pepgoitegetitjig'."
+       },
+       {
+        "researcher": "batter du tambou",
+        "llm": "battre du tambour",
+        "kind": "researcher-error",
+        "note": "French 'battre du tambour' (evidence) is correct; A's 'batter du tambou' has spelling errors."
+       },
+       {
+        "researcher": "pepgetjetegetieg",
+        "llm": "pepgettetegetieg",
+        "kind": "researcher-error",
+        "note": "Evidence reads 'pepgettetegetieg'; A altered the letters."
+       }
+      ]
+     },
+     "tagged": "pepgoitetegei, tegetitjig,⟨mm⟩ battre du tambour⟨fr⟩ pepgettetegetieg⟨mm⟩ (Jo. 368)⟨cit⟩"
+    },
+    "transliterate": {
+     "text": "pepguijete'gei, tegetijig, to beat the drum pepgettete'getieg (Jo. 368)",
+     "confidence": 55,
+     "sim": 0.8,
+     "lenient": 0.8088235294117647,
+     "judge": {
+      "equivalence": 75,
+      "differences": [
+       {
+        "researcher": "pepguiteg'tijig",
+        "llm": "tegetijig",
+        "kind": "llm-error",
+        "note": "The evidence reads 'tegetitjig'; B dropped a 't' giving 'tegetijig', but A's 'pepguiteg'tijig' also does not match the source's 'tegetitjig' well."
+       },
+       {
+        "researcher": "beat the drum",
+        "llm": "to beat the drum",
+        "kind": "valid-alternative",
+        "note": "French 'battre du tambour' can be rendered with or without the infinitive 'to'."
+       },
+       {
+        "researcher": "pepgejete'g'tieg",
+        "llm": "pepgettete'getieg",
+        "kind": "unclear",
+        "note": "Source has 'pepgettetegetieg'; B's form is closer to it while A restructured the syllables, hard to judge without clearer image."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 117863942057171,
+   "bounding_group_id": 220776,
+   "crop": "derived/group-crops/ca2/ca2ff768439a42a11f715e41da4fb9b1e4ab6366b413277aacbaa7df666ee84c.jpg",
+   "hand": {
+    "transcription": " nemphae, plant aquatique; sasnogoatigen",
+    "transliteration": "nemphae, aquatic plant, sasnugwatigen"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "plante  aquatique;  neneghas,  -sasnogoategen ?)",
+     "confidence": 42,
+     "sim": 0.4444444444444444,
+     "lenient": 0.5128205128205128,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "nemphae",
+        "llm": "neneghas",
+        "kind": "llm-error",
+        "note": "The image shows 'nemghas' (or 'nemphas'); B's 'neneghas' adds an extra syllable not present."
+       },
+       {
+        "researcher": "plant",
+        "llm": "plante",
+        "kind": "llm-error",
+        "note": "The image reads 'plante' in French, so the researcher's 'plant' drops the final e."
+       },
+       {
+        "researcher": "sasnogoatigen",
+        "llm": "-sasnogoategen ?)",
+        "kind": "unclear",
+        "note": "The two differ on 'a' vs 'e' in the fourth syllable; the handwriting is ambiguous between 'atigen' and 'ategen'."
+       },
+       {
+        "researcher": "",
+        "llm": "-",
+        "kind": "punctuation",
+        "note": "B includes the leading dash and trailing ?) visible in the image, which are formatting marks."
+       }
+      ]
+     },
+     "tagged": "plante ⟨fr⟩ aquatique; ⟨fr⟩ neneghas, ⟨mm⟩ -sasnogoategen ?)⟨mm⟩"
+    },
+    "expand": {
+     "text": "plante aquatique; neneghas, sasnogoategen ?)",
+     "confidence": 58,
+     "tagged": "plante aquatique;⟨fr⟩ neneghas, sasnogoategen ?)⟨mm⟩"
+    },
+    "transliterate": {
+     "text": "aquatic plant; nenega's, sasnugwate'gn ?)",
+     "confidence": 55,
+     "sim": 0.3902439024390244,
+     "lenient": 0.4444444444444444,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "nemphae",
+        "llm": "nenega's",
+        "kind": "unclear",
+        "note": "The French evidence reads 'neneghas'; A's 'nemphae' misreads it while B's 'nenega's' is a plausible orthographic rendering, but both diverge from the source spelling."
+       },
+       {
+        "researcher": "aquatic plant, ... ",
+        "llm": "aquatic plant; ...",
+        "kind": "punctuation",
+        "note": "Order and punctuation differ but the translation 'aquatic plant' is identical in substance."
+       },
+       {
+        "researcher": "sasnugwatigen",
+        "llm": "sasnugwate'gn",
+        "kind": "valid-alternative",
+        "note": "Both are defensible orthographic conversions of 'sasnogoategen'; vowel/apostrophe placement differs but neither is clearly wrong."
+       },
+       {
+        "researcher": "",
+        "llm": "?)",
+        "kind": "punctuation",
+        "note": "B preserves the question mark and paren from the source; A omits them (punctuation only)."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 120360640585459,
+   "bounding_group_id": 221496,
+   "crop": "derived/group-crops/96b/96bba61907f5efdbca568d3d73a4a1077f57db840a87bfa3e2d394d3d34a8e11.jpg",
+   "hand": {
+    "transcription": "oaga tjeimgeoei, impuissance",
+    "expanded": "wagatjeimgeoei, impuissance",
+    "transliteration": "waqajeimgewei, helplessness/powerlessness"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "oagat Heimgeoei, impuissam",
+     "confidence": 32,
+     "sim": 0.7857142857142857,
+     "lenient": 0.7777777777777778,
+     "judge": {
+      "equivalence": 80,
+      "differences": [
+       {
+        "researcher": "oaga tjeimgeoei",
+        "llm": "oagat Heimgeoei",
+        "kind": "unclear",
+        "note": "The word split differs (oaga tj- vs oagat H-); the initial capital in the second fragment reads as a capital letter in the image, making B's 'H' plausible, but the exact split is ambiguous."
+       },
+       {
+        "researcher": "impuissance",
+        "llm": "impuissam",
+        "kind": "llm-error",
+        "note": "The French word is 'impuissance'; B's 'impuissam' is an incomplete/incorrect rendering."
+       }
+      ]
+     },
+     "tagged": "oagat⟨mm⟩ Heimgeoei, impuissam⟨fr⟩"
+    },
+    "expand": {
+     "text": "oagat Heimqeoei, impuissam",
+     "confidence": 32,
+     "sim": 0.7407407407407407,
+     "lenient": 0.7307692307692308,
+     "judge": {
+      "equivalence": 55,
+      "differences": [
+       {
+        "researcher": "wagatjeimgeoei",
+        "llm": "oagat Heimqeoei",
+        "kind": "llm-error",
+        "note": "Version B misreads the Mi'gmaq word: 'oagat Heimqeoei' vs 'wagatjeimgeoei', with wrong letters and spacing/capitalization."
+       },
+       {
+        "researcher": "impuissance",
+        "llm": "impuissam",
+        "kind": "llm-error",
+        "note": "The French translation should be 'impuissance'; version B truncates it to 'impuissam'."
+       }
+      ]
+     },
+     "tagged": "oagat⟨mm⟩ Heimqeoei, impuissam⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "wagat powerless, impotent",
+     "confidence": 42,
+     "sim": 0.31707317073170727,
+     "lenient": 0.32499999999999996,
+     "judge": {
+      "equivalence": 55,
+      "differences": [
+       {
+        "researcher": "waqajeimgewei",
+        "llm": "wagat",
+        "kind": "llm-error",
+        "note": "The evidence shows 'oagat Heimqeoei' (two elements); B only rendered the first part 'wagat' and dropped the second, plus the researcher's fuller Mi'gmaq form reflects the whole headword."
+       },
+       {
+        "researcher": "helplessness/powerlessness",
+        "llm": "powerless, impotent",
+        "kind": "valid-alternative",
+        "note": "Both translate the French 'impuissance/impuissant'; noun vs adjective phrasing is a defensible variation."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "ref_id": 120953219354961,
+   "bounding_group_id": 218961,
+   "crop": "derived/group-crops/54e/54e16cfe23661d6a243398084a05e25cf27f1245e73dcc0193f6559f624eccce.jpg",
+   "hand": {
+    "transcription": "esnagsaong, gig, grappes",
+    "expanded": "esnagsaong, esnagsaongig, grappes",
+    "transliteration": "esnaqsawng, esnaqsawngig, bunch/cluster/group/band"
+   },
+   "llm": {
+    "transcribe": {
+     "text": "esmagueoeg, ge⁇, (⁇⁇⁇) greffes.",
+     "confidence": 32,
+     "sim": 0.4838709677419355,
+     "lenient": 0.5,
+     "judge": {
+      "equivalence": 55,
+      "differences": [
+       {
+        "researcher": "esnagsaong",
+        "llm": "esmagueoeg",
+        "kind": "llm-error",
+        "note": "The Mi'gmaq headword differs in several letters; B misreads the middle consonants and ending."
+       },
+       {
+        "researcher": "gig",
+        "llm": "ge⁇",
+        "kind": "unclear",
+        "note": "The abbreviation is hard to read; both offer different letters and B marks part illegible."
+       },
+       {
+        "researcher": "",
+        "llm": "(⁇⁇⁇)",
+        "kind": "valid-alternative",
+        "note": "B notes an illegible parenthetical fragment visible at lower left that A did not transcribe."
+       },
+       {
+        "researcher": "grappes",
+        "llm": "greffes.",
+        "kind": "llm-error",
+        "note": "The circled French word reads 'grappes' (clusters/bunches), not 'greffes'."
+       }
+      ]
+     },
+     "tagged": "esmagueoeg, ge⁇,⟨mm⟩ (⁇⁇⁇)⟨cit⟩ greffes.⟨fr⟩"
+    },
+    "expand": {
+     "text": "esmagueoeg, esmagueoegi, (Pi. Met.) greffes.",
+     "confidence": 42,
+     "sim": 0.4545454545454546,
+     "lenient": 0.5135135135135135,
+     "judge": {
+      "equivalence": 45,
+      "differences": [
+       {
+        "researcher": "esnagsaong",
+        "llm": "esmagueoeg",
+        "kind": "researcher-error",
+        "note": "The image shows 'esmagueoeg' matching version B and the evidence; version A misread the letters."
+       },
+       {
+        "researcher": "esnagsaongig",
+        "llm": "esmagueoegi",
+        "kind": "unclear",
+        "note": "The headword form differs consistently with the first word; the ending (ig vs i) is hard to determine and the plural form is truncated in evidence."
+       },
+       {
+        "researcher": "",
+        "llm": "(Pi. Met.)",
+        "kind": "researcher-error",
+        "note": "A parenthetical abbreviation appears in the evidence and image which version A omitted entirely."
+       },
+       {
+        "researcher": "grappes",
+        "llm": "greffes.",
+        "kind": "llm-error",
+        "note": "The evidence reads 'greffes' matching B; version A's 'grappes' is a misreading."
+       }
+      ]
+     },
+     "tagged": "esmagueoeg, esmagueoegi,⟨mm⟩ (Pi. Met.)⟨cit⟩ greffes.⟨fr⟩"
+    },
+    "transliterate": {
+     "text": "esmaguewe'g, esmaguewe'gi, (Pi. Met.) grafts.",
+     "confidence": 60,
+     "sim": 0.31999999999999995,
+     "lenient": 0.33333333333333337,
+     "judge": {
+      "equivalence": 10,
+      "differences": [
+       {
+        "researcher": "esnaqsawng",
+        "llm": "esmaguewe'g",
+        "kind": "researcher-error",
+        "note": "Evidence reads 'esmagueoeg'; the image shows 'esmague...' so B's reading is closer to the source while A's 'esnaqsawng' departs substantially."
+       },
+       {
+        "researcher": "esnaqsawngig",
+        "llm": "esmaguewe'gi",
+        "kind": "researcher-error",
+        "note": "Evidence is 'esmagueoegi'; A's inflected form diverges from the source like the headword."
+       },
+       {
+        "researcher": "bunch/cluster/group/band",
+        "llm": "grafts.",
+        "kind": "researcher-error",
+        "note": "French 'greffes' means grafts (B correct); A's translation is unrelated."
+       },
+       {
+        "researcher": "",
+        "llm": "(Pi. Met.)",
+        "kind": "valid-alternative",
+        "note": "B retains the abbreviation notation from the source, which A omitted."
+       }
+      ]
+     }
+    }
+   }
+  }
+ ]
+}
