@@ -42,10 +42,17 @@ import { selectBoundingBoxesForGroup, selectScannedPage } from './scanned-docume
 
 const CROP_MARGIN = 12;
 
-/** The derived crop of a bounding group's box-union (+margin) from its source
- *  page image.  Returns a content path ('derived/group-crops/...jpg') - being
- *  content-addressed by [page image, rect], it stands in for the pixels in
- *  the extraction cache key (boxes move => different rect => different key). */
+/** The derived, MASKED crop of a bounding group: the union rectangle of the
+ *  group's boxes (+margin) with everything OUTSIDE the boxes whited out -
+ *  the model sees exactly the group's ink (dz's original spec: 'only the
+ *  text in the marked boxes').  A plain union crop was measurably wrong:
+ *  boxes are runs of text, and a group whose runs are interleaved with
+ *  other entries (or relocated by an arrow) can leave the union mostly
+ *  FOREIGN text - the sample's worst transcription (35% at confidence 72)
+ *  had 16% box coverage.  Returns a content path
+ *  ('derived/group-crops/...jpg') - content-addressed by [page image,
+ *  union rect, box rects], so it stands in for the pixels in the
+ *  extraction cache key (boxes move => different key). */
 export async function groupCropPath(bounding_group_id: number): Promise<string> {
     const boxes = selectBoundingBoxesForGroup().all({bounding_group_id});
     if(boxes.length === 0)
@@ -60,20 +67,40 @@ export async function groupCropPath(bounding_group_id: number): Promise<string> 
     const right = Math.min(page.width, Math.max(...pageBoxes.map(b=>b.x+b.w)) + CROP_MARGIN);
     const bottom = Math.min(page.height, Math.max(...pageBoxes.map(b=>b.y+b.h)) + CROP_MARGIN);
     const w = Math.max(1, Math.round(right - x)), h = Math.max(1, Math.round(bottom - y));
+    // Box rects RELATIVE to the union crop, each with a small keep-margin
+    // (letter edges must not clip), clamped to the crop.
+    // Generous: 6px clipped descenders (the eval lost a 'j' to it).
+    const BOX_MARGIN = 16;
+    const rects = pageBoxes.map(b => ({
+        x1: Math.max(0, Math.round(b.x - x - BOX_MARGIN)),
+        y1: Math.max(0, Math.round(b.y - y - BOX_MARGIN)),
+        x2: Math.min(w, Math.round(b.x - x + b.w + BOX_MARGIN)),
+        y2: Math.min(h, Math.round(b.y - y + b.h + BOX_MARGIN)),
+    }));
     return 'derived/' + await content.getDerived(
         'derived/group-crops', {groupCropCmd},
-        ['groupCropCmd', page.image_ref, Math.round(x), Math.round(y), w, h], 'jpg');
+        ['groupCropCmd', page.image_ref, Math.round(x), Math.round(y), w, h, rects], 'jpg');
 }
 
 async function groupCropCmd(targetResultPath: string, sourceImagePath: string,
-                            x: number, y: number, w: number, h: number) {
+                            x: number, y: number, w: number, h: number,
+                            rects: Array<{x1: number, y1: number, x2: number, y2: number}>) {
+    // A white canvas of the union size, with each BOX region pasted in at
+    // its position - everything outside the group's boxes reads as blank
+    // paper.  (Alpha-free on purpose: the CopyOpacity mask route silently
+    // produced an all-white image on this ImageMagick build.)
+    const pastes = rects.flatMap(r => [
+        '(', sourceImagePath,
+        '-crop', `${r.x2 - r.x1}x${r.y2 - r.y1}+${x + r.x1}+${y + r.y1}`, '+repage', ')',
+        '-geometry', `+${r.x1}+${r.y1}`, '-composite',
+    ]);
     const { code, stderr } = await new Deno.Command(
         utils_config.imageMagickPath, {
-            args: [sourceImagePath, '-crop', `${w}x${h}+${x}+${y}`, '+repage',
+            args: ['-size', `${w}x${h}`, 'xc:white', ...pastes,
                    '-quality', '90', `jpg:${targetResultPath}`],
         }).output();
     if(code !== 0)
-        throw new Error(`failed to crop ${sourceImagePath}: ${new TextDecoder().decode(stderr)}`);
+        throw new Error(`failed to mask-crop ${sourceImagePath}: ${new TextDecoder().decode(stderr)}`);
 }
 
 /** ExtractImageSource over the derived crops: photoPath IS a crop path;
@@ -108,8 +135,8 @@ async function containCmd(targetResultPath: string, sourceImagePath: string,
 
 // Bump a stage's version to re-run it (and everything downstream) on the
 // next eval - the ONLY cost of a prompt iteration.
-export const PROMPT_VERSION_TRANSCRIBE = 2;   // v2: language-tagged runs (dz)
-export const PROMPT_VERSION_EXPAND = 2;       // v2: language-tagged runs (dz)
+export const PROMPT_VERSION_TRANSCRIBE = 3;   // v3: explain the masked image
+export const PROMPT_VERSION_EXPAND = 3;       // v3: explain the masked image
 export const PROMPT_VERSION_TRANSLITERATE = 2; // v2: runs input + corpus-mined correspondences
 
 const AMBIGUITY_RULES = block`
@@ -185,6 +212,12 @@ function transcribeStage(): ExtractStage {
 /**/Mi'gmaq words (in Pacifique's own orthography) with French glosses, and
 /**/uses heavy abbreviation.
 /**/
+/**/IMPORTANT: neighbouring entries' text has been MASKED OUT (blanked to
+/**/white) - only this entry's marked fragments are visible.  The visible
+/**/fragments, read left-to-right then top-to-bottom, ARE the whole entry;
+/**/white gaps between them are masking, not missing text.  Never return an
+/**/empty result while any handwriting is visible.
+/**/
 /**/Transcribe the handwriting LETTER-BY-LETTER, exactly as written:
 /**/- Keep every abbreviation, punctuation mark, diacritic (ā, ŏ, ê, ...),
 /**/  parenthesis and reference citation (e.g. "(Pi. Met.)", "(Jo. 368)")
@@ -208,7 +241,9 @@ function expandStage(): ExtractStage {
         schema: runsStageSchema('the expanded transcription as language-tagged runs, in reading order'),
         prompt: (input: any) => block`
 /**/The image is ONE ENTRY from Father Pacifique's handwritten Mi'gmaq-French
-/**/dictionary manuscript.  Below is a letter-by-letter transcription of it.
+/**/dictionary manuscript (neighbouring entries are masked to white - the
+/**/visible fragments are the whole entry).  Below is a letter-by-letter
+/**/transcription of it.
 /**/Rewrite the transcription with the abbreviations EXPANDED, changing
 /**/nothing else:
 /**/- Expand French abbreviations in place (e.g. "milieu d. l. n." ->
