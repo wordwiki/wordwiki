@@ -28,10 +28,16 @@ expr — `invoke('rabid.siteView.createSite($arg0)', {..})`, NOT a bare path.
 BRAND CHROME built (2026-07-17): RabidSiteView.renderPageChrome = RRBR public presentation
 (masthead+hero+nav[published+nav_visible, active]+footer, `.rrbr-site-*` CSS); renderPublicPage =
 STANDALONE branded document (own <head>+brand css, served full-doc not app-shell), reachable via
-editor "View published →" link + renderPublicHome. NOT yet built: public/anon serving + pretty slug
-URLs (renderPublicPage is @route(authenticated) staff-preview for now), page reorder/move UI,
-image-and-text block (needs a photo-render injection hook), gallery.ts move into components, wordwiki
-wiring, static-site generator.
+editor "View published →" link + renderPublicHome. PUBLIC/SLUG SERVING built (2026-07-17): `/p/<slug>` serves PUBLISHED pages ANONYMOUSLY. Rabid
+overrides routeExprFromPath to rewrite `/p/<slug>`→`rabid.renderPublicSite("<slug>")` — the SINGLE
+audited publicRoute entry on the app object (route_security_test golden list), which delegates
+INTERNALLY to siteView.renderPublicBySlug (internal call bypasses siteView's authenticated gate). Only
+published pages resolve (drafts 404 publicly; staff preview drafts via authenticated
+renderPublicPage(id)). Empty slug=/p/=home (first published+nav_visible). Nav uses pretty /p/<slug>.
+Pattern worth reusing: expose ONE publicRoute method on the app that internally calls
+authenticated-gated objects, rather than relaxing an object getter's gate (keeps the tripwire audit
+complete). NOT yet built: page reorder/move UI, image-and-text block (needs a photo-render injection
+hook), gallery.ts move into components, wordwiki wiring, static-site generator.
 
 Lives in a NEW **`components`** package (liminal < components < app; gallery.ts moves there). Apps
 never imported by components — they push behavior IN, same as [[page-editor-book-generic]]'s
