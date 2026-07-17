@@ -15,11 +15,16 @@ BUILD STATUS (2026-07-17): foundation + render + edit BUILT & wired into rabid (
 298/0). Files: liminal/table.ts (FieldSet.hydrate/defaults/assertHydratable); components/
 {block-registry.ts, site.ts (Site/Page/Block tables), block-kinds.ts (title/divider/text/toc),
 site-view.ts (SiteView: render+edit dispatch, protected renderPageChrome + canEditSite hooks)};
-rabid/rabid-site.ts (RabidSiteView: host/admin canEditSite + `rabid-upcoming-events` app block) +
-mounted on Rabid as site/sitePage/block/siteView. Route prefix self-resolves via `this.toString()`
-(the @path stamp) — components never hardcode `rabid.`. NOT yet built: authoring UX (create
-site/page, nav, brand chrome/CSS design), image-and-text block (needs a photo-render injection hook),
-gallery.ts move into components, wordwiki wiring, static-site generator.
+rabid/rabid-site.ts (RabidSiteView: host/admin canEditSite+canAdminSites + `rabid-upcoming-events`
+app block + pageNavProps→templates.pageLinkProps) + mounted on Rabid as site/sitePage/block/siteView.
+Route prefix self-resolves via `this.toString()` (the @path stamp) — components never hardcode
+`rabid.`. AUTHORING UI built (2026-07-17): SiteView.renderAuthoringHome/renderSiteIndex/
+renderPageEditor/renderEditorHeader + createSite/createPage/deletePage/editPageSettings (settings
+reuse PageTable.renderEditForm→saveForm); reachable at rabid `/site` (index) + `/site({page:N})`
+(editor), navbar "Site" link (host/admin). Test note: invoke() needs the arg placeholder in the
+expr — `invoke('rabid.siteView.createSite($arg0)', {..})`, NOT a bare path.
+NOT yet built: brand chrome/CSS design pass, page reorder/move UI, image-and-text block (needs a
+photo-render injection hook), gallery.ts move into components, wordwiki wiring, static-site generator.
 
 Lives in a NEW **`components`** package (liminal < components < app; gallery.ts moves there). Apps
 never imported by components — they push behavior IN, same as [[page-editor-book-generic]]'s
