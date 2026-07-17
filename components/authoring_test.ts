@@ -83,15 +83,59 @@ test("renderAuthoringHome routes: ?page -> editor, else index", () => {
     assert(find(index, n => hasText(n, 'New site')));
 });
 
-test("deletePage removes it and reloads the site's page list", () => {
+test("deletePage cascades to the page's blocks and reloads the site's page list", () => {
     fresh();
     security.runSystem(() => {
         const s = site.insert({site_title: 'S'});
         const pid = page.insert({site_id: s, page_title: 'Doomed'});
+        blk.insert({page_id: pid, kind: 'divider', payload: '{}'});
+        blk.insert({page_id: pid, kind: 'divider', payload: '{}'});
         const res = admin.deletePage(pid) as any;
         assertEquals(res.targets, ['.' + page.siteShapeKey(s)]);
         assertEquals(page.forSite.all({site_id: s}).length, 0);
+        assertEquals(blk.forPage.all({page_id: pid}).length, 0);   // blocks gone too
     });
+});
+
+test("movePageUp / movePageDown reorder pages by nav_order; admin-gated", () => {
+    fresh();
+    security.runSystem(() => {
+        const s = site.insert({site_title: 'S'});
+        page.insert({site_id: s, page_title: 'Home'});
+        page.insert({site_id: s, page_title: 'About'});
+        page.insert({site_id: s, page_title: 'Contact'});
+        const order = () => page.forSite.all({site_id: s}).map(p => p.page_title);
+        assertEquals(order(), ['Home', 'About', 'Contact']);
+        const aboutId = page.forSite.all({site_id: s})[1].page_id;
+        admin.movePageUp(aboutId);
+        assertEquals(order(), ['About', 'Home', 'Contact']);
+        admin.movePageDown(aboutId);
+        assertEquals(order(), ['Home', 'About', 'Contact']);
+        // Denied for a non-admin.
+        assertThrows(() => guest.movePageUp(aboutId), Error, 'Not permitted');
+    });
+});
+
+test("page menu omits Move-up on the first page and Move-down on the last", () => {
+    fresh();
+    const s = security.runSystem(() => {
+        const s = site.insert({site_title: 'S'});
+        page.insert({site_id: s, page_title: 'First'});
+        page.insert({site_id: s, page_title: 'Middle'});
+        page.insert({site_id: s, page_title: 'Last'});
+        return s;
+    });
+    const m = security.runSystem(() => admin.renderSitePages(s));
+    const rows = ['First', 'Middle', 'Last'].map(t =>
+        findAll(m, n => hasText(n, t)).length);
+    // First row: has Move down but not Move up; Last: Move up but not Move down.
+    const firstRow = find(m, n => (attr(n, 'data-testid') ?? '') === `page-row-${page.forSite.all({site_id: s})[0].page_id}`)!;
+    assertEquals(hasText(firstRow, 'Move up'), false);
+    assert(hasText(firstRow, 'Move down'));
+    const lastRow = find(m, n => (attr(n, 'data-testid') ?? '') === `page-row-${page.forSite.all({site_id: s})[2].page_id}`)!;
+    assert(hasText(lastRow, 'Move up'));
+    assertEquals(hasText(lastRow, 'Move down'), false);
+    assert(rows.every(c => c > 0));
 });
 
 function admin_seed(site_id: number) {

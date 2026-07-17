@@ -291,10 +291,25 @@ export class SiteView {
                  'btn btn-sm btn-outline-secondary', {'aria-label': 'New page'}) : undefined],
             [h.ul, {class: 'list-unstyled ms-2'},
              pages.length
-                 ? pages.map(p => [h.li, {class: 'py-1', 'data-testid': `page-row-${p.page_id}`},
+                 ? pages.map((p, i) => [h.li, {class: 'py-1 d-flex align-items-center gap-2',
+                                              'data-testid': `page-row-${p.page_id}`},
                      [h.a, {...this.pageNavProps(this.editorHref(p.page_id))}, p.page_title || '(untitled page)'],
-                     p.published ? undefined : [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Draft']])
+                     p.published ? undefined : [h.span, {class: 'badge text-bg-secondary'}, 'Draft'],
+                     canAdmin ? this.pageActionsMenu(p.page_id, i, pages.length) : undefined])
                  : [h.li, {class: 'text-muted'}, 'No pages yet.']]];
+    }
+
+    // A page row's ☰: reorder within the site + delete.  Move items are omitted at
+    // the ends (a first page has no "up"), so the menu never offers a no-op.
+    private pageActionsMenu(page_id: number, index: number, total: number): Markup {
+        const items: action.ActionMenuItem[] = [];
+        if(index > 0)
+            items.push({label: 'Move up', mode: {kind: 'immediate', expr: `${this}.movePageUp(${page_id})`}});
+        if(index < total - 1)
+            items.push({label: 'Move down', mode: {kind: 'immediate', expr: `${this}.movePageDown(${page_id})`}});
+        items.push({label: 'Delete page…',
+            mode: {kind: 'confirm', message: 'Delete this page and all its blocks?', expr: `${this}.deletePage(${page_id})`}});
+        return action.actionMenu(items, {ariaLabel: 'Page actions'});
     }
 
     // The page editor shell: a back link, the page header (title + settings), and the
@@ -388,7 +403,32 @@ export class SiteView {
     deletePage(page_id: number): Markup {
         this.assertCanAdminSites();
         const p = this.pageTable.getById(page_id);
+        // Cascade: remove the page's blocks first, then the page itself (no orphaned
+        // block rows pointing at a gone page).
+        for(const b of this.blockTable.forPage.all({page_id}))
+            this.blockTable.delete(b.block_id);
         this.pageTable.delete(page_id);
+        return this.reloadSitePages(p.site_id);
+    }
+
+    @routeMutation(authenticated)
+    movePageUp(page_id: number): Markup { return this.movePage(page_id, -1); }
+    @routeMutation(authenticated)
+    movePageDown(page_id: number): Markup { return this.movePage(page_id, +1); }
+    // Reorder a page among its site's siblings by rewriting its nav_order (the
+    // managed order key forSite sorts by, and the public nav renders in).
+    private movePage(page_id: number, dir: -1 | 1): Markup {
+        this.assertCanAdminSites();
+        const p = this.pageTable.getById(page_id);
+        const sibs = this.pageTable.forSite.all({site_id: p.site_id});
+        const i = sibs.findIndex(s => s.page_id === page_id);
+        const j = i + dir;
+        if(i >= 0 && j >= 0 && j < sibs.length) {
+            const nav_order = dir < 0
+                ? orderkey.between(sibs[j - 1]?.nav_order, sibs[j].nav_order)
+                : orderkey.between(sibs[j].nav_order, sibs[j + 1]?.nav_order);
+            this.pageTable.update(page_id, {nav_order} as Partial<Page>);
+        }
         return this.reloadSitePages(p.site_id);
     }
 
