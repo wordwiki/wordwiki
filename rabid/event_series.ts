@@ -10,10 +10,12 @@ import * as date from '../liminal/date.ts';
 import { Table, PrimaryKeyField, StringField, EnumField, BooleanField, DateField, TimeField,
          ForeignKeyField, type Tuple } from '../liminal/table.ts';
 import { VolunteerForeignKeyField } from './volunteer-activity.ts';
-import { event_kind_enum } from './event.ts';
+import { event_kind_enum, type Event } from './event.ts';
 import * as security from '../liminal/security.ts';
+import { db } from '../liminal/db.ts';
 import { block } from '../liminal/strings.ts';
 import { path } from '../liminal/serializable.ts';
+import { rabid } from './rabid.ts';
 
 // --- Controlled vocabularies (string enums, so they use the standard EnumField
 //     picker + auto-form; see recurring-events.md) --------------------------------
@@ -173,6 +175,69 @@ export class EventSeriesTable extends Table<EventSeries> {
     get listAll() {
         return this.prepare<EventSeries, Tuple>(block`
 /**/   SELECT ${this.allFields} FROM event_series ORDER BY event_series_id DESC`);
+    }
+
+    // --- Materialization (the create path) ---------------------------------------
+
+    // The event tuple an occurrence on `day` inherits from this series' prototype.
+    private toEventValues(s: EventSeries, day: string): Partial<Event> {
+        const at = (t?: string) => (t ? `${day} ${t}:00` : undefined);
+        return {
+            event_kind: s.event_kind, description: s.description,
+            location_description: s.location_description ?? '', location_url: s.location_url ?? '',
+            is_remote_event: s.is_remote_event ?? 0, volunteer_only: s.volunteer_only ?? 0,
+            host_id: s.host_id ?? undefined,
+            shop_load_time: at(s.shop_load_time_of_day), setup_time: at(s.setup_time_of_day),
+            start_time: at(s.start_time_of_day), end_time: at(s.end_time_of_day),
+            is_catch_all: 0, total_cash_collected: 0, notes: '', series_id: s.event_series_id,
+        };
+    }
+
+    /**
+     * Create any MISSING event instances for a series within [from, to] - the
+     * occurrence dates, minus skips, minus already-materialized dates.  Idempotent
+     * and race-safe (the (series, occurrence-day) unique index closes the residual
+     * check-then-insert race).  Never modifies or deletes.  Returns the count
+     * created.  Also the bulk-import path: call over a PAST window.
+     */
+    materialize(series_id: number, from: string, to: string): number {
+        return security.runSystem(() => {
+            const s = this.getById(series_id);
+            if(s.frequency === 'none' || !s.start_time_of_day) return 0;
+            const rule: RecurrenceRule = {
+                frequency: s.frequency, weekday: s.weekday, week_of_month: s.week_of_month,
+                effective_start: s.effective_start ?? '', effective_end: s.effective_end,
+            };
+            const dates = occurrenceDates(rule, from, to);
+            if(dates.length === 0) return 0;
+            const skips = rabid.event_series_skip.skipDates(series_id);
+            const existing = new Set(db().prepare<{d: string}, {sid: number, from: string, to: string}>(
+                'SELECT date(start_time) AS d FROM event WHERE series_id = :sid AND date(start_time) BETWEEN :from AND :to')
+                .all({sid: series_id, from, to}).map(r => r.d));
+            let created = 0;
+            for(const day of dates) {
+                if(skips.has(day) || existing.has(day)) continue;
+                try { rabid.event.insert(this.toEventValues(s, day)); created++; }
+                catch { /* a concurrent run won the (series, day) unique race - fine */ }
+            }
+            return created;
+        });
+    }
+
+    /**
+     * Materialize every active recurring series from today out to the horizon
+     * (default ~5 weeks).  The self-maintaining entry point (called on startup + a
+     * once-a-day guard - see the trigger).  Returns total instances created.
+     */
+    ensureMaterialized(horizonDays = 35): number {
+        return security.runSystem(() => {
+            const today = date.temporalToSqliteDate(date.orgToday());
+            const horizon = date.temporalToSqliteDate(date.orgToday().add({days: horizonDays}));
+            let total = 0;
+            for(const s of this.activeRecurring.all({today}))
+                total += this.materialize(s.event_series_id, today, horizon);
+            return total;
+        });
     }
 
     // The active recurring series (drive the schedule + materialization): a real
