@@ -43,6 +43,18 @@ onchange calls lmPhotoFieldChange); render frames via rabid.photo.aspectImg + ma
 image_side left/right, responsive stack. Pattern: any photo/app-coupled block is app-registered, so
 components stays photo-agnostic (no injection hook needed - the block kind IS the injection).
 Page reorder/move UI also DONE (per-page ☰: move up/down by nav_order, delete cascades to blocks).
+EDIT-ON-THE-BRANDED-VIEW (2026-07-17, dz's preferred model): `/site` opens the BRANDED editor (same
+rrbr chrome as the public view, in edit mode), NOT the old ugly shell. Rendered as a CHROMELESS full
+page — `templates.page(title, renderPage(id,true), {noNavbar:true})` → new `noNavbar` flag threaded
+Page→coercePageResult→pageTemplate omits the rabid navbar — so the branded doc owns the top yet still
+gets htmx/modal-skeleton/liminal-scripts/live-poller (editing needs them; the anon /p/ published doc
+uses the minimal publicDocument instead). Edit-mode chrome: masthead + an edit toolbar (Published
+badge, Settings, Publish/Unpublish toggle=togglePublished, New page, Preview→, All pages, ←App) + nav
+TABS (link to /site({page:N}) editors, drafts marked •) — the tabs replace most page-list use. Top is
+a live fragment (renderEditTop) on siteShapeKey so publish/new/delete refresh it. Entry renderEditEntry(q):
+?page→editor, ?list→page list, else single-site→first page's editor (skip list), multi/0→list.
+Brand name = 'Red Raccoon Bike Rescue' (RabidSiteView.BRAND); RRBR has exactly ONE site. Verified in
+puppeteer: /site → branded editor, click-to-edit modal works (scripts loaded via noNavbar template).
 NOT yet built: gallery.ts move into components, wordwiki wiring, static-site generator.
 
 Lives in a NEW **`components`** package (liminal < components < app; gallery.ts moves there). Apps
