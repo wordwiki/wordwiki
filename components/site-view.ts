@@ -434,6 +434,14 @@ export class SiteView {
     }
 
     @routeMutation(authenticated)
+    togglePublished(page_id: number): Markup {
+        this.assertCanAdminSites();
+        const p = this.pageTable.getById(page_id);
+        this.pageTable.updateNamedFields(page_id, ['published'], {published: p.published ? 0 : 1} as Partial<Page>);
+        return this.reloadSitePages(p.site_id);   // reloads the site-shape key: the edit top + any list
+    }
+
+    @routeMutation(authenticated)
     movePageUp(page_id: number): Markup { return this.movePage(page_id, -1); }
     @routeMutation(authenticated)
     movePageDown(page_id: number): Markup { return this.movePage(page_id, +1); }

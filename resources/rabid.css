@@ -495,3 +495,13 @@ ol.lm-doc-list > li.lm-doc-row {
 .rrbr-site-footer { border-top: 1px solid #e4ddd2; background: #faf7f2; padding: 1.5rem 0;
     font-size: 0.9rem; color: #6b645c; }
 .rrbr-site-footer .rrbr-site-container { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+
+/* The editor's toolbar (edit mode only): a strip under the masthead. */
+.rrbr-edit-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    padding: 0.5rem 1rem; background: #f2ede4; border-top: 1px solid #e4ddd2; }
+.rrbr-edit-toolbar-spacer { flex: 1 1 auto; }
+.rrbr-edit-badge { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem; border-radius: 999px; }
+.rrbr-edit-badge.pub { background: #d8efdc; color: #1b5e2a; }
+.rrbr-edit-badge.draft { background: #e2ddd4; color: #6b645c; }
+.rrbr-nav-draft { color: rgba(255,255,255,0.75); font-size: 1.1em; line-height: 0; }

@@ -188,9 +188,10 @@ export class Rabid extends LiminalApp {
             // service/servicePage.)
             tasks:(q?: any)=>this.tasksPage(q),
             templates:()=>this.templatesPage(),
-            // The site editor's authoring UI: /site is the index, /site({page:N}) a
-            // page editor (the shared components/ SiteView renders both).
-            site:(q?: any)=>templates.page('Site', this.siteView.renderAuthoringHome(q)),
+            // The site editor: /site enters the branded editor (single-site jumps
+            // straight into the first page); /site({page:N}) edits a page; /site({list:1})
+            // is the page list (reorder/delete).  A full-page, navbar-less experience.
+            site:(q?: any)=>this.siteView.renderEditEntry(q),
             todaysLog:()=>this.todaysLog(),
             activityReport:(q?: any)=>templates.page('Activity Report', activityReport(q)),
             // The range now rides the route as a {} arg (default: last 120 days,
@@ -296,6 +297,7 @@ export class Rabid extends LiminalApp {
             return isHtmxRequest
                 ? [[h.title, {}, result.title], result.body]
                 : templates.pageTemplate({title: result.title, body: result.body,
+                                          noNavbar: result.noNavbar,
                                           showTestClientLink: this.isTestDb,
                                           isAdmin: security.current()?.roles.has('admin') ?? false,
                                           isHostOrAdmin: (security.current()?.roles.has('host')

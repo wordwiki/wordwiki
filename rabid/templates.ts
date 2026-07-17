@@ -31,6 +31,10 @@ export interface PageContent {
     // test code (evalInBrowser).  Injected outside #content so it survives boosted
     // navigations (the agent keeps polling as you move between pages).
     testAgent?: {optIn: string, poll: string, result: string};
+    // Omit the rabid navbar (and the top-of-page chrome): a full-page view that
+    // owns its own top, e.g. the branded site editor.  It still gets every script,
+    // the modal skeleton and the live poller - just not the app navbar.
+    noNavbar?: boolean;
 }
 
 // --- Page results -----------------------------------------------------------
@@ -47,10 +51,11 @@ export interface Page {
     [pageMarker]: true;
     title: any;
     body: any;
+    noNavbar?: boolean;
 }
 
-export function page(title: any, body: any): Page {
-    return {[pageMarker]: true, title, body};
+export function page(title: any, body: any, opts: {noNavbar?: boolean} = {}): Page {
+    return {[pageMarker]: true, title, body, noNavbar: opts.noNavbar};
 }
 
 export function isPage(v: any): v is Page {
@@ -126,7 +131,9 @@ export function pageTemplate(content: PageContent): any {
 
          [h.body, {},
 
-          navBar(content.showTestClientLink, content.isAdmin, content.isHostOrAdmin),
+          content.noNavbar
+              ? undefined
+              : navBar(content.showTestClientLink, content.isAdmin, content.isHostOrAdmin),
 
           // TODO probably move this somewhere else
           [h.audio, {id:'audioPlayer', preload:'none'},

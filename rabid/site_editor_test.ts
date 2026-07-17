@@ -50,8 +50,11 @@ test("authoring UI dispatches through routes (page + create mutations)", async (
         const site_id = asSystem(() => getRabid().site.listAll.all({})[0].site_id);
         await asUser(fx.alice, () => invoke('rabid.siteView.createPage($arg0)', {site_id, page_title: 'Home'}));
         const page_id = asSystem(() => getRabid().sitePage.forSite.all({site_id})[0].page_id);
+        // /site({page:N}) now opens the BRANDED editor (edit mode) for that page.
         const editor = await asUser(fx.alice, () => renderRoute(`site({page:${page_id}})`));
-        assert(find(editor, n => hasText(n, '← All pages')));
+        assert(find(editor, n => hasClass(n, 'rrbr-site-editing')));
+        assert(find(editor, n => hasClass(n, 'rrbr-edit-toolbar')));
+        assert(find(editor, n => hasText(n, 'Home')));
         // A regular volunteer is refused at the route layer too.
         await asUser(fx.bob, async () => {
             let threw = false;
@@ -224,6 +227,55 @@ test("image-and-text: the block editor form has the photo picker (file input) + 
         // The hidden path field + the text field.
         assert(find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'image'));
         assert(find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'text'));
+    });
+});
+
+test("single-site /site opens the branded editor directly; edit tabs link to page editors + mark drafts", async () => {
+    await withTestDb(async (fx) => {
+        const r = getRabid();
+        asSystem(() => {
+            const s = r.site.insert({site_title: 'RRBR'});
+            r.sitePage.insert({site_id: s, page_title: 'Home', published: 1, nav_visible: 1});
+            r.sitePage.insert({site_id: s, page_title: 'About', slug: 'about', published: 0, nav_visible: 1});
+        });
+        // One site -> straight into the branded editor (NOT the page list).
+        const entry = await asUser(fx.alice, () => renderRoute('site'));
+        assert(find(entry, n => hasClass(n, 'rrbr-site-editing')));
+        assert(find(entry, n => hasClass(n, 'rrbr-edit-toolbar')));
+        // Tabs link to sibling page EDITORS, and the draft is marked.
+        const aboutTab = find(entry, n => tagOf(n) === 'a' && hasText(n, 'About'))!;
+        assert(String(attr(aboutTab, 'href')).startsWith('/site({page:'));
+        assert(find(entry, n => hasClass(n, 'rrbr-nav-draft')));
+        // The page list stays reachable at /site({list:1}).
+        const list = await asUser(fx.alice, () => renderRoute('site({list:1})'));
+        assert(find(list, n => hasText(n, 'New page')));
+    });
+});
+
+test("renderEditPage is a chromeless (no-navbar) page so the branded editor owns the top", () => {
+    const r = getRabid();
+    return withTestDb((fx) => {
+        const pid = asSystem(() => {
+            const s = r.site.insert({site_title: 'S'});
+            return r.sitePage.insert({site_id: s, page_title: 'P'});
+        });
+        const pg = asUser(fx.alice, () => r.siteView.renderEditPage(pid));
+        assertEquals(pg.noNavbar, true);
+    });
+});
+
+test("togglePublished flips the flag (admin only)", async () => {
+    await withTestDb((fx) => {
+        const r = getRabid();
+        const pid = asSystem(() => {
+            const s = r.site.insert({site_title: 'S'});
+            return r.sitePage.insert({site_id: s, page_title: 'P', published: 0});
+        });
+        asUser(fx.alice, () => r.siteView.togglePublished(pid));
+        assertEquals(asSystem(() => r.sitePage.getById(pid).published), 1);
+        asUser(fx.alice, () => r.siteView.togglePublished(pid));
+        assertEquals(asSystem(() => r.sitePage.getById(pid).published), 0);
+        asUser(fx.bob, () => assertThrows(() => r.siteView.togglePublished(pid), Error, 'Not permitted'));
     });
 });
 

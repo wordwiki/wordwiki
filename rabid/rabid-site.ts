@@ -9,12 +9,13 @@
 import { h, type Markup } from "../liminal/markup.ts";
 import * as security from "../liminal/security.ts";
 import { route, authenticated } from "../liminal/security.ts";
+import * as action from "../liminal/action.ts";
 import * as templates from "./templates.ts";
 import * as config from "./config.ts";
 import { assetUrl } from "../liminal/assets.ts";
 import { SiteView } from "../components/site-view.ts";
 import { registerBlockKind, type BlockCtx } from "../components/block-registry.ts";
-import { FieldSet, ImageField, EnumField, StringField } from "../liminal/table.ts";
+import { FieldSet, ImageField, EnumField, StringField, liveReloadableProps } from "../liminal/table.ts";
 import { markdownToMarkup } from "../liminal/markdown.ts";
 import type { Page } from "../components/site.ts";
 import { rabid } from "./rabid.ts";
@@ -28,6 +29,8 @@ function viewerIsHostOrAdmin(): boolean {
 // the shared SiteView by override, so the 'host'/'admin' roles never leak into
 // components.
 export class RabidSiteView extends SiteView {
+    static readonly BRAND = 'Red Raccoon Bike Rescue';
+
     protected override canEditSite(_site_id: number): boolean { return viewerIsHostOrAdmin(); }
     protected override canAdminSites(): boolean { return viewerIsHostOrAdmin(); }
 
@@ -42,26 +45,40 @@ export class RabidSiteView extends SiteView {
         return `/${this}.renderPublicPage(${page_id})`;
     }
 
-    // --- Brand chrome: the public Red Raccoon site presentation --------------
+    // --- Brand chrome: the Red Raccoon site presentation (public + editor) ----
 
-    // The brand frame every published page renders inside: a masthead (brand + the
-    // page's hero image + title), the site's nav, the block flow, and a footer.  This
-    // is the app-subclass power the chrome hook exists for - it reaches rabid's photo
-    // pipeline and page table, which components can't.  Structure + `rrbr-site-*`
-    // classes only (restyleable), per the CSS goal.
-    protected override renderPageChrome(page: Page, body: Markup, _ctx: BlockCtx): Markup {
-        return [h.div, {class: 'rrbr-site'},
-            this.renderMasthead(page),
-            this.renderSiteNav(page),
+    // The brand frame a page renders inside - the SAME chrome for the published site
+    // and the editor (dz's "edit on the nice version").  Published: static masthead +
+    // nav + footer.  Editing: the top (masthead + edit toolbar + tabs) is a live
+    // fragment so publish/new/delete refresh it in place, the tabs link to sibling
+    // editors, and the block flow (body) carries its edit affordances.
+    protected override renderPageChrome(page: Page, body: Markup, ctx: BlockCtx): Markup {
+        return [h.div, {class: 'rrbr-site' + (ctx.editing ? ' rrbr-site-editing' : '')},
+            ctx.editing
+                ? this.renderEditTop(page.page_id)
+                : [h.div, {}, this.renderMasthead(page, false), this.renderSiteNav(page, false)],
             [h.main, {class: 'rrbr-site-main'},
              [h.div, {class: 'rrbr-site-container'}, body]],
             [h.footer, {class: 'rrbr-site-footer'},
              [h.div, {class: 'rrbr-site-container'},
-              [h.span, {}, 'Red Raccoon Bikes'],
+              [h.span, {}, RabidSiteView.BRAND],
               [h.span, {class: 'rrbr-site-footer-tag'}, 'A volunteer-run community bike shop']]]];
     }
 
-    private renderMasthead(page: Page): Markup {
+    // The editor's top, as a live fragment on the site's page-shape key: publishing,
+    // creating, deleting or reordering a page reloads it so the badge + tabs refresh.
+    @route(authenticated)
+    renderEditTop(page_id: number): Markup {
+        const page = this.pageTable.getById(page_id);
+        const props = liveReloadableProps([this.pageTable.siteShapeKey(page.site_id)],
+            `${this}.renderEditTop(${page_id})`);
+        return [h.div, {...props},
+            this.renderMasthead(page, true),
+            this.renderEditToolbar(page),
+            this.renderSiteNav(page, true)];
+    }
+
+    private renderMasthead(page: Page, editing: boolean): Markup {
         const hero = (page.hero_image && page.hero_image !== '')
             ? [h.div, {class: 'rrbr-site-hero'},
                rabid.photo.aspectImg(page.hero_image, 'landscape', 'detail', {class: 'rrbr-site-hero-img'})]
@@ -69,8 +86,28 @@ export class RabidSiteView extends SiteView {
         return [h.header, {class: 'rrbr-site-header' + (hero ? ' has-hero' : '')},
             hero,
             [h.div, {class: 'rrbr-site-container rrbr-site-masthead'},
-             [h.a, {href: '/p/', class: 'rrbr-site-brand', 'hx-boost': 'false'}, 'Red Raccoon Bikes'],
+             [h.a, {href: editing ? '/site' : '/p/', class: 'rrbr-site-brand', 'hx-boost': 'false'},
+              RabidSiteView.BRAND],
              page.page_title ? [h.h1, {class: 'rrbr-site-title'}, page.page_title] : undefined]];
+    }
+
+    // The editor toolbar: page settings, publish toggle, add page, preview, and the
+    // links out (the page LIST for reorder/delete; back to the app).  Host/admin only
+    // (the whole editor is authenticated; these mutations self-gate too).
+    private renderEditToolbar(page: Page): Markup {
+        const id = page.page_id;
+        const btn = 'btn btn-sm btn-outline-secondary';
+        return [h.div, {class: 'rrbr-site-container rrbr-edit-toolbar'},
+            [h.span, {class: 'rrbr-edit-badge ' + (page.published ? 'pub' : 'draft')},
+             page.published ? 'Published' : 'Draft'],
+            action.actionButton('Settings…', {kind: 'modal', dialogUrl: `/${this}.editPageSettings(${id})`}, btn, {}),
+            action.actionButton(page.published ? 'Unpublish' : 'Publish',
+                {kind: 'immediate', expr: `${this}.togglePublished(${id})`}, 'btn btn-sm btn-outline-primary', {}),
+            action.actionButton('New page…', {kind: 'modal', dialogUrl: `/${this}.newPageDialog(${page.site_id})`}, btn, {}),
+            [h.a, {href: this.publicPageUrl(id), target: '_blank', rel: 'noopener', 'hx-boost': 'false', class: btn}, 'Preview →'],
+            [h.span, {class: 'rrbr-edit-toolbar-spacer'}],
+            [h.a, {href: '/site({list:1})', class: 'btn btn-sm btn-link'}, 'All pages'],
+            [h.a, {href: '/', class: 'btn btn-sm btn-link'}, '← App']];
     }
 
     // The public URL for a page: pretty /p/<slug>, or /p/ (the home) for a
@@ -79,17 +116,48 @@ export class RabidSiteView extends SiteView {
         return '/p/' + (page.slug ? encodeURIComponent(page.slug) : '');
     }
 
-    // The nav: the site's published, nav-visible pages, current page marked.
-    private renderSiteNav(page: Page): Markup {
-        const pages = security.runSystem(() => this.pageTable.forSite.all({site_id: page.site_id}))
-            .filter(p => p.published && p.nav_visible);
-        if(pages.length === 0) return undefined as unknown as Markup;
+    // The site nav.  Published: published, nav-visible pages -> /p/<slug>.  Editing:
+    // nav-visible pages (+ the current one) -> their editors, drafts marked.
+    private renderSiteNav(page: Page, editing: boolean): Markup {
+        let pages = security.runSystem(() => this.pageTable.forSite.all({site_id: page.site_id}));
+        pages = editing
+            ? pages.filter(p => p.nav_visible || p.page_id === page.page_id)
+            : pages.filter(p => p.published && p.nav_visible);
+        if(pages.length === 0 && !editing) return undefined as unknown as Markup;
+        const href = (p: Page) => editing ? `/site({page:${p.page_id}})` : this.publicHref(p);
         return [h.nav, {class: 'rrbr-site-nav', 'aria-label': 'Site'},
             [h.ul, {class: 'rrbr-site-container rrbr-site-nav-list'},
              pages.map(p => [h.li, {class: 'rrbr-site-nav-item' + (p.page_id === page.page_id ? ' active' : '')},
-                 [h.a, {href: this.publicHref(p), 'hx-boost': 'false',
+                 [h.a, {href: href(p), 'hx-boost': 'false',
                         ...(p.page_id === page.page_id ? {'aria-current': 'page'} : {})},
-                  p.page_title || '(untitled)']])]];
+                  p.page_title || '(untitled)',
+                  editing && !p.published ? [h.span, {class: 'rrbr-nav-draft', title: 'Draft'}, ' •'] : undefined]])]];
+    }
+
+    // --- The editor entry (rabid pages-map `site`) --------------------------
+
+    // Entry: a page's branded editor when given ?page; the page LIST when ?list; else
+    // single-site jumps straight into its first page's editor (skip the list), and
+    // multi-site (or empty) shows the list.
+    renderEditEntry(q?: Record<string, any>): templates.Page {
+        const page_id = q && q.page != null ? Number(q.page) : undefined;
+        if(page_id) return this.renderEditPage(page_id);
+        if(!(q && q.list)) {
+            const sites = security.runSystem(() => this.siteTable.listAll.all({}));
+            if(sites.length === 1) {
+                const first = security.runSystem(() => this.pageTable.forSite.all({site_id: sites[0].site_id})[0]);
+                if(first) return this.renderEditPage(first.page_id);
+            }
+        }
+        return templates.page('Site pages', this.renderSiteIndex());
+    }
+
+    // The branded editor for one page: the SAME chrome as the published view, in edit
+    // mode, wrapped in a chromeless (no rabid navbar) full document so it owns the top
+    // yet still gets htmx, the modal skeleton, and the live poller.
+    renderEditPage(page_id: number): templates.Page {
+        const page = this.pageTable.getById(page_id);
+        return templates.page(page.page_title || 'Site editor', this.renderPage(page_id, true), {noNavbar: true});
     }
 
     // PUBLIC serving: a published page by pretty slug.  Called INTERNALLY by the
