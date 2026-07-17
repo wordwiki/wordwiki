@@ -147,7 +147,14 @@ export class Rabid extends LiminalApp {
     // route expression, e.g. /timesheets({from:"2025-01-01"}).
     home() { return templates.page('home', home.home()); }
     volunteers() { return templates.page('Volunteers', this.volunteer.renderVolunteersPage()); }
-    events(up?: Record<string, any>, past?: Record<string, any>) { return templates.page('Events', this.event.renderEventsPage(up, past)); }
+    events(up?: Record<string, any>, past?: Record<string, any>) {
+        // Self-maintaining recurring events: the first events-page view after startup
+        // (and the first of each new day) materializes upcoming series occurrences to
+        // the horizon.  Guarded to once/day, so it's not a write on the general read
+        // path (recurring-events.md).
+        this.event_series.maybeMaterialize();
+        return templates.page('Events', this.event.renderEventsPage(up, past));
+    }
     sales(q?: Record<string, any>) { return templates.page('Sales', this.sale.renderSalesPage(q)); }
     servicePage(q?: Record<string, any>) { return templates.page('Service', this.service.renderServicePage(q)); }
     timesheets(q?: Record<string, any>) { return templates.page('Timesheets', this.timesheet_entry.renderTimesheetsPage(q)); }

@@ -224,10 +224,59 @@ export class EventSeriesTable extends Table<EventSeries> {
         });
     }
 
+    private ruleOf(s: EventSeries): RecurrenceRule {
+        return {
+            frequency: s.frequency, weekday: s.weekday, week_of_month: s.week_of_month,
+            effective_start: s.effective_start ?? '', effective_end: s.effective_end,
+        };
+    }
+
+    // An instance is "committed" (never auto-deleted) if anyone signed up / checked
+    // in, or service/sales were logged, or cash was recorded.
+    private eventHasActivity(event_id: number): boolean {
+        const row = db().prepare<{n: number}, {id: number}>(block`
+/**/   SELECT (
+/**/            EXISTS(SELECT 1 FROM event_commitment WHERE event_id = :id)
+/**/         OR EXISTS(SELECT 1 FROM event_checkin    WHERE event_id = :id)
+/**/         OR EXISTS(SELECT 1 FROM service          WHERE event_id = :id)
+/**/         OR EXISTS(SELECT 1 FROM sale             WHERE event_id = :id)
+/**/         OR EXISTS(SELECT 1 FROM event WHERE event_id = :id AND total_cash_collected > 0)
+/**/          ) AS n`).first({id: event_id});
+        return !!(row && row.n);
+    }
+
+    /**
+     * Bring a series' FUTURE into line with its (possibly edited) rule: create
+     * missing occurrences forward, and delete future instances that no longer match
+     * (rule changed, window shortened, or now skipped) - but ONLY those with no
+     * activity, and NEVER anything today-or-past.  Forward-only: it never MODIFIES
+     * an existing instance (a rule change applies going forward).  See recurring-
+     * events.md - this create/delete-only-never-modify line is load-bearing.
+     */
+    reconcile(series_id: number, horizonDays = 35): {created: number, deleted: number} {
+        return security.runSystem(() => {
+            const s = this.getById(series_id);
+            const today = date.temporalToSqliteDate(date.orgToday());
+            const horizon = date.temporalToSqliteDate(date.orgToday().add({days: horizonDays}));
+            const created = this.materialize(series_id, today, horizon);
+
+            const rule = this.ruleOf(s);
+            const skips = rabid.event_series_skip.skipDates(series_id);
+            let deleted = 0;
+            const future = db().prepare<{event_id: number, d: string}, {sid: number, today: string}>(
+                'SELECT event_id, date(start_time) AS d FROM event WHERE series_id = :sid AND date(start_time) > :today')
+                .all({sid: series_id, today});
+            for(const {event_id, d} of future) {
+                const stillValid = !skips.has(d) && occurrenceDates(rule, d, d).length > 0;
+                if(!stillValid && !this.eventHasActivity(event_id)) { rabid.event.delete(event_id); deleted++; }
+            }
+            return {created, deleted};
+        });
+    }
+
     /**
      * Materialize every active recurring series from today out to the horizon
-     * (default ~5 weeks).  The self-maintaining entry point (called on startup + a
-     * once-a-day guard - see the trigger).  Returns total instances created.
+     * (default ~5 weeks).  The self-maintaining entry point.  Returns total created.
      */
     ensureMaterialized(horizonDays = 35): number {
         return security.runSystem(() => {
@@ -238,6 +287,20 @@ export class EventSeriesTable extends Table<EventSeries> {
                 total += this.materialize(s.event_series_id, today, horizon);
             return total;
         });
+    }
+
+    // Once-a-day guard: run ensureMaterialized at most once per org day (memoized on
+    // this singleton - the @path getter returns the same stamped instance).  Called
+    // from the events page, so the first view after startup, and the first view of
+    // each new day, self-maintain; every other request is a cheap string compare.
+    // Deliberately NOT a write on every read (recurring-events.md decision 4).
+    private lastMaterializedDay: string | undefined = undefined;
+    maybeMaterialize(): void {
+        const today = date.temporalToSqliteDate(date.orgToday());
+        if(this.lastMaterializedDay === today) return;
+        this.lastMaterializedDay = today;
+        try { this.ensureMaterialized(); }
+        catch(e) { console.warn('event series materialize failed:', e); }
     }
 
     // The active recurring series (drive the schedule + materialization): a real
