@@ -7,9 +7,14 @@ metadata:
   originSessionId: 33098663-f83f-4a3d-b467-be218996ac1e
 ---
 
-Planned feature (design approved by dz 2026-07-17, NOT built): recurring events + a public
-**schedule**, to kill the weekly hand-entry burden (~6 recurring events/week). Doc of record:
-repo-root **recurring-events.md**.
+Recurring events + a public **schedule** (kills the weekly hand-entry burden). Doc: repo-root
+**recurring-events.md**. BUILT 2026-07-17 (rabid/event_series.ts, ~35 tests, verified in browser).
+Files/API: rabid/event_series.ts — `occurrenceDates(rule,from,to)` (pure), EventSeriesTable
+(+ materialize/ensureMaterialized/reconcile/maybeMaterialize + admin renderSeriesPage/skips/bulkCreate
++ renderPublicSchedule) & EventSeriesSkipTable; liminal TimeField (HH:MM); event.series_id + unique
+index event(series_id, date(start_time)); rabid-schedule site block (rabid-site.ts); admin at
+/eventSeries (Admin menu); daily trigger = Rabid.events() calls event_series.maybeMaterialize().
+DB MIGRATED on the live dev db. Reconcile/materialize/skip all verified working end-to-end.
 
 Core design decisions (mine + dz's):
 - **Separate `event_series` table**, NOT an `is_template` flag on `event` (a flag would pollute every
