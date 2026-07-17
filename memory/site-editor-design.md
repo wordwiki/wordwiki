@@ -36,8 +36,14 @@ published pages resolve (drafts 404 publicly; staff preview drafts via authentic
 renderPublicPage(id)). Empty slug=/p/=home (first published+nav_visible). Nav uses pretty /p/<slug>.
 Pattern worth reusing: expose ONE publicRoute method on the app that internally calls
 authenticated-gated objects, rather than relaxing an object getter's gate (keeps the tripwire audit
-complete). NOT yet built: page reorder/move UI, image-and-text block (needs a photo-render injection
-hook), gallery.ts move into components, wordwiki wiring, static-site generator.
+complete). image-and-text block BUILT (2026-07-17) as an APP-REGISTERED block (rabid-site.ts, not a components
+built-in): payload ImageField('image','rabid.photo') → the block editor's file picker uploads through
+rabid's photo store via ImageField.renderInput (self-contained: hidden path field + file input whose
+onchange calls lmPhotoFieldChange); render frames via rabid.photo.aspectImg + markdownToMarkup;
+image_side left/right, responsive stack. Pattern: any photo/app-coupled block is app-registered, so
+components stays photo-agnostic (no injection hook needed - the block kind IS the injection).
+Page reorder/move UI also DONE (per-page ☰: move up/down by nav_order, delete cascades to blocks).
+NOT yet built: gallery.ts move into components, wordwiki wiring, static-site generator.
 
 Lives in a NEW **`components`** package (liminal < components < app; gallery.ts moves there). Apps
 never imported by components — they push behavior IN, same as [[page-editor-book-generic]]'s
