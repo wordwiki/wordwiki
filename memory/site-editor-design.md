@@ -7,9 +7,19 @@ metadata:
   originSessionId: 33098663-f83f-4a3d-b467-be218996ac1e
 ---
 
-Major planned feature: a simple, per-site-tailored site editor (NOT a generic Google Sites
-competitor), needed by both rabid (redraccoon.org, replacing google sites) and wordwiki (Migmaq
-authors' content pages, currently embedded in .ts). Doc of record: repo-root **site-editor.md**.
+Major feature: a simple, per-site-tailored site editor (NOT a generic Google Sites competitor),
+needed by both rabid (redraccoon.org, replacing google sites) and wordwiki (Migmaq authors' content
+pages, currently embedded in .ts). Doc of record: repo-root **site-editor.md**.
+
+BUILD STATUS (2026-07-17): foundation + render + edit BUILT & wired into rabid (26 tests, rabid suite
+298/0). Files: liminal/table.ts (FieldSet.hydrate/defaults/assertHydratable); components/
+{block-registry.ts, site.ts (Site/Page/Block tables), block-kinds.ts (title/divider/text/toc),
+site-view.ts (SiteView: render+edit dispatch, protected renderPageChrome + canEditSite hooks)};
+rabid/rabid-site.ts (RabidSiteView: host/admin canEditSite + `rabid-upcoming-events` app block) +
+mounted on Rabid as site/sitePage/block/siteView. Route prefix self-resolves via `this.toString()`
+(the @path stamp) — components never hardcode `rabid.`. NOT yet built: authoring UX (create
+site/page, nav, brand chrome/CSS design), image-and-text block (needs a photo-render injection hook),
+gallery.ts move into components, wordwiki wiring, static-site generator.
 
 Lives in a NEW **`components`** package (liminal < components < app; gallery.ts moves there). Apps
 never imported by components — they push behavior IN, same as [[page-editor-book-generic]]'s
