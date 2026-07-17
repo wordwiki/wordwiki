@@ -48,9 +48,12 @@ rrbr chrome as the public view, in edit mode), NOT the old ugly shell. Rendered 
 page — `templates.page(title, renderPage(id,true), {noNavbar:true})` → new `noNavbar` flag threaded
 Page→coercePageResult→pageTemplate omits the rabid navbar — so the branded doc owns the top yet still
 gets htmx/modal-skeleton/liminal-scripts/live-poller (editing needs them; the anon /p/ published doc
-uses the minimal publicDocument instead). Edit-mode chrome: masthead + an edit toolbar (Published
-badge, Settings, Publish/Unpublish toggle=togglePublished, New page, Preview→, All pages, ←App) + nav
-TABS (link to /site({page:N}) editors, drafts marked •) — the tabs replace most page-list use. Top is
+uses the minimal publicDocument instead). Edit-mode chrome (dz reshaped the toolbar 2026-07-17): NO toolbar bar, NO standing draft badge. The
+header IS the page's content editor — its title+hero are click-to-edit→editPageSettings (hover grey,
+like a block); a page ☰ menu (renderPageMenu, top-right) holds Page settings/Publish-Unpublish(label
+conveys state)/New page/Delete page/All pages/Preview→. A small '← App' chip floats fixed top-left
+(renderEditFloatNav). Nav TABS (link to /site({page:N}) editors, drafts marked •) replace most
+page-list use. Top is
 a live fragment (renderEditTop) on siteShapeKey so publish/new/delete refresh it. Entry renderEditEntry(q):
 ?page→editor, ?list→page list, else single-site→first page's editor (skip list), multi/0→list.
 Brand name = 'Red Raccoon Bike Rescue' (RabidSiteView.BRAND); RRBR has exactly ONE site. Verified in
