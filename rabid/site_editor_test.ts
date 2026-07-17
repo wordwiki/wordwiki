@@ -90,6 +90,27 @@ test("brand chrome: published page renders a standalone document with masthead, 
         // The public route dispatches (would catch a missing @route).
         const viaRoute = await asUser(fx.alice, () => renderRoute(`rabid.siteView.renderPublicPage(${home_id})`));
         assert(find(viaRoute, n => hasClass(n, 'rrbr-site-brand')));
+        // The standalone doc must link rabid.css (holds the .rrbr-site-*/.site-block-*
+        // rules) - else the public page renders unstyled (caught in a puppeteer run).
+        assert(find(doc, n => tagOf(n) === 'link' && String(attr(n, 'href')).includes('rabid.css')));
+    });
+});
+
+test("public home (/p/) resolves the slug-less published page even when an earlier site has none", async () => {
+    await withTestDb(async () => {
+        const r = getRabid();
+        asSystem(() => {
+            // An earlier site (lower id) with ONLY a draft page - must not shadow the
+            // real home (the /p/ bug: home resolution had picked the first site by id).
+            const draftSite = r.site.insert({site_title: 'Old Draft Site'});
+            r.sitePage.insert({site_id: draftSite, page_title: 'WIP', slug: '', published: 0, nav_visible: 1});
+            // The live site, with a published slug-less home.
+            const liveSite = r.site.insert({site_title: 'redraccoon.org'});
+            r.sitePage.insert({site_id: liveSite, page_title: 'Welcome Home', slug: '', published: 1, nav_visible: 1});
+        });
+        const home = await asAnon(() => renderRoute('rabid.renderPublicSite("")'));
+        assert(find(home, n => hasClass(n, 'rrbr-site-title') && hasText(n, 'Welcome Home')));
+        assertEquals(findAll(home, n => hasText(n, 'Page not found')).length, 0);
     });
 });
 

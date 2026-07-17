@@ -109,12 +109,18 @@ export class RabidSiteView extends SiteView {
 
     private resolvePublicPage(slug: string): Page | undefined {
         return security.runSystem(() => {
-            if(slug !== '')
-                return this.pageTable.publishedBySlug.first({slug});
-            const site = this.siteTable.listAll.all({})[0];
-            return site
-                ? this.pageTable.forSite.all({site_id: site.site_id}).find(p => p.published && p.nav_visible)
-                : undefined;
+            // A published page whose slug matches (empty slug = the home page).
+            const bySlug = this.pageTable.publishedBySlug.first({slug});
+            if(bySlug) return bySlug;
+            // A named slug that doesn't resolve is a genuine 404.  For the home
+            // (empty slug) with no slug-less page, fall back to the first published,
+            // nav-visible page of any site so `/p/` still lands somewhere.
+            if(slug !== '') return undefined;
+            for(const s of this.siteTable.listAll.all({})) {
+                const p = this.pageTable.forSite.all({site_id: s.site_id}).find(x => x.published && x.nav_visible);
+                if(p) return p;
+            }
+            return undefined;
         });
     }
 
@@ -128,13 +134,20 @@ export class RabidSiteView extends SiteView {
     }
 
     private publicDocument(title: string, content: Markup): Markup {
+        const css = (p: string) => [h.link, {href: assetUrl(p), rel: 'stylesheet', type: 'text/css'}];
         return [h.html, {lang: 'en'},
             [h.head, {},
              [h.meta, {charset: 'utf-8'}],
              [h.meta, {name: 'viewport', content: 'width=device-width, initial-scale=1'}],
              [h.title, {}, title],
+             // Match the app's stylesheet chain so blocks + the brand chrome are
+             // styled: bootstrap, then liminal (framework), then rabid.css (which
+             // holds the .site-block-* and .rrbr-site-* rules).  page-editor /
+             // context-menu sheets are editor-only, so the public doc omits them.
              config.bootstrapCssLink,
-             [h.link, {href: assetUrl('/resources/instance.css'), rel: 'stylesheet', type: 'text/css'}]],
+             css('/resources/instance.css'),
+             css('/resources/liminal.css'),
+             css('/resources/rabid.css')],
             [h.body, {}, content]];
     }
 }
