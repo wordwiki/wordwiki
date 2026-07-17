@@ -76,16 +76,30 @@ interface EventSeries {
   setup_time_of_day?: string;
   shop_load_time_of_day?: string;
 
-  // --- Recurrence ---
-  frequency: string;             // 'none' | 'weekly' | 'monthly'  (see below)
-  weekday?: number;              // 0-6 (weekly; also the weekday for monthly)
-  week_of_month?: number;        // 1-5 or 'last' (monthly only)
+  // --- Recurrence (string enums, so they use the standard EnumField picker) ---
+  frequency: string;             // frequency_enum: 'none' | 'weekly' | 'monthly'
+  weekday?: string;              // weekday_enum: 'monday'..'sunday' (weekly; also the weekday for monthly)
+  week_of_month?: string;        // week_of_month_enum: 'first'..'fourth' | 'last' (monthly only)
 
   // --- Active window ---
   effective_start: string;       // date; recurrence begins
   effective_end?: string;        // date, nullable; recurrence ends (season end).
                                  //   Null = open-ended (rare; prefer a real end).
 }
+```
+
+`weekday` / `week_of_month` are STRING enums (not ints) so they get the standard
+`EnumField` labelled `<select>` + auto-rendered edit form + controlled-vocab
+validation for free, and store human-readable values (`saturday`, not `6`).
+`'last'` is natural as a string but an ugly sentinel as an int.
+
+```ts
+export const frequency_enum      = {none:'One-off (template)', weekly:'Weekly', monthly:'Monthly'};
+export const weekday_enum        = {monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday',
+                                    thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday'};
+export const week_of_month_enum  = {first:'First', second:'Second', third:'Third', fourth:'Fourth', last:'Last'};
+// Date math maps the key to Temporal's dayOfWeek (Mon=1..Sun=7):
+const WEEKDAY_DOW = {monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6, sunday:7};
 ```
 
 `event` gains one column:
@@ -119,8 +133,8 @@ RRULE is a swamp we don't need.  The real patterns are two:
 - **weekly**: a weekday + `[effective_start, effective_end]`.
 - **monthly**: nth-weekday (1st..5th / last + weekday) + window.
 
-`frequency` + `weekday` + `week_of_month` covers both.  Add more only when a real
-event demands it (minimal-ceremony principle).
+`frequency` + `weekday` + `week_of_month` covers both (all string enums - above).
+Add more only when a real event demands it (minimal-ceremony principle).
 
 
 ## Materialization: lazy, to a horizon, race-safe - no cron
@@ -132,16 +146,23 @@ partial unique index).  Do the same for series:
 - `ensureMaterialized(horizon = today + ~5 weeks)`: for each active series
   (`frequency != 'none'` and `effective_start <= horizon` and
   `effective_end IS NULL OR effective_end >= today`), compute its occurrence dates
-  in `[max(effective_start, today), min(effective_end, horizon)]` and INSERT any
-  that don't already exist (by `series_id + date`).  Idempotent.
-- **Trigger it when a host/admin loads the internal events page.**  Sign-up happens
-  *through* that page, so instances exist just-in-time.  No new infra.
-- **The public schedule never triggers materialization** (it reads rules), so anon
-  page views do no writes.
+  in `[max(effective_start, today), min(effective_end, horizon)]`, skip any in the
+  series' skip list (below), and INSERT any that don't already exist (by
+  `series_id + date`).  Idempotent.
+
+- **Trigger (decided): on startup + a once-a-day guard, NOT on every read.**  A
+  memoized "last materialized day" var; `ensureMaterialized` runs at server start
+  and then whenever a request observes the org day has changed from that var
+  (updating it under the same race-safe insert guard).  This avoids a write on the
+  general read path (dz's "skeeze") while still being self-maintaining with no cron.
+  It won't fire on a truly idle day, but the next request/startup catches up, and
+  the horizon is weeks out - so instances are always well ahead of need.  (A cron
+  is a later optional backstop; not required.)
+
+- **The public schedule never triggers materialization** (it reads rules + skips),
+  so anon page views never write.
 - **Bulk import = the same function over a PAST window**: `materialize(series,
   from, to)`.  The series is the source of truth for "every Saturday in summer 2023".
-
-A cron can be added later as a pure backstop, but is not required.
 
 
 ## Reconciliation, not manual deletion - with an inviolable safety rule
@@ -165,6 +186,37 @@ in change-propagation hell (which instance was hand-edited? did someone sign up?
 Drift between an instance and its series (someone moves one rainy Saturday's
 location) is FINE and intended: once an occurrence exists, the instance is
 authoritative for its date; the series is authoritative only for *making new ones*.
+
+
+## Skips (holiday exceptions) - decided
+
+Occasional one-off exceptions ("no repair next Saturday, long weekend").  The nice
+property (dz): a skip is an annotation on the RULE, so the public schedule can show
+it - "No session Aug 2 (holiday)" - **driven entirely by the schedule, with no
+reference to a materialized event that got deleted.**  A deleted instance can't tell
+the schedule anything; a skip can.
+
+Model: a tiny `event_series_skip` table.
+
+```ts
+interface EventSeriesSkip {
+  event_series_skip_id: number;
+  event_series_id: number;
+  skip_date: string;   // the occurrence date to skip
+  reason: string;      // shown on the schedule ('Long weekend'); default ''
+}
+```
+
+Chosen over a single `skip_date` field on the series: it's barely more code, avoids
+the "you can only queue one, and must wait for it to pass before entering the next"
+awkwardness, and carries a reason to show publicly.  In practice there are few skips
+and they're usually the very next occurrence, so the list stays tiny.
+
+- **Materialization** skips these dates (never creates them).
+- **The schedule** renders the next N occurrences from the rule and marks/annotates
+  any that are skipped (struck through + reason), or omits them - a render choice.
+- If a date was already materialized when the skip is added, the reconcile safety
+  rule applies: delete that future instance only if it has no activity.
 
 
 ## How "turning it off" works (the worry, resolved)
@@ -197,24 +249,30 @@ authoritative for its date; the series is authoritative only for *making new one
 ## Deferred / out of scope (for now)
 
 - Full RRULE (bi-weekly, "every other", complex exceptions).  Add per real need.
-- Per-occurrence exceptions/skips ("no repair on the holiday Saturday") - v2 could
-  add a `series_skip(series_id, date)` table; for now, delete the one materialized
-  instance (it's a real event) and it won't be recreated if we record the skip, OR
-  just live with re-materialization not re-creating a manually-deleted future date
-  (needs the skip table to be correct - a v2 decision).
-- Cron backstop for materialization.
+- Cron backstop for materialization (the startup + once-a-day trigger suffices).
+- "Apply time change to N upcoming occurrences" as a bulk action can land in a
+  later pass; v1 is create/delete-only reconcile (edits apply forward-only).
 
 
-## Open decisions to confirm before building
+## Decisions (resolved with dz, 2026-07-17)
 
 1. **`frequency: none | weekly | monthly` unification** - one `event_series` table
-   for both manual prototypes and recurring series.  (Recommended.)
-2. **Series edits apply forward-only**; reconcile never modifies existing
-   instances; committed instances are never touched.  (Recommended - this is the
-   load-bearing semantic.)
-3. **Separate table + nullable `event.series_id`** vs a flag on `event`.
-   (Recommended: separate - zero existing-query changes.)
-4. **Lazy materialization on the admin events page** vs a cron.  (Recommended:
-   lazy; cron optional later.)
-5. Skip/exception handling: defer to v2 (a `series_skip` table) or handle by
-   deleting materialized instances now?
+   for both manual prototypes and recurring series.  ✅
+2. **Series edits apply forward-only**; reconcile never modifies existing instances;
+   committed instances are never touched.  ✅  (The load-bearing semantic.)
+3. **Separate `event_series` table + nullable `event.series_id`** (not a flag on
+   `event`).  ✅
+4. **Materialization trigger: on startup + a once-a-day guard** (memoized last-run
+   org day), NOT a write on the general read path, NOT (necessarily) a cron.  ✅
+5. **Skips are in**, as a tiny `event_series_skip` table (see Skips) - so the public
+   schedule reflects exceptions purely from rules, with no deleted-instance
+   dependence.  ✅
+6. **`weekday` / `week_of_month` (and `frequency`) are STRING enums**, to reuse the
+   standard `EnumField` picker + auto-form; a small key→dayOfWeek map does the date
+   math.  ✅
+
+Next: build (this is design-of-record).  Likely order: schema (`event_series` +
+`event.series_id` + `event_series_skip` + enums) → occurrence-date computation
+(pure, well-tested) → materialize/reconcile (race-safe, activity-guarded) →
+startup+daily trigger → admin series list (reuse event prototype fields) → the
+`rabid-schedule` site block → bulk-import hook.

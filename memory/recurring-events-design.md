@@ -23,10 +23,16 @@ Core design decisions (mine + dz's):
   no separate flag.
 - `frequency: none|weekly|monthly` unifies manual prototype (none = clone-to-event) and recurring
   series (weekly=weekday+window, monthly=nth-weekday). Keep it compact — NOT iCal RRULE.
-- **Materialization: lazy, to a horizon (~5 weeks), race-safe** — reuse the catch-all event pattern
-  (catchAllForDate + partial unique index). Triggered on host/admin events-page view; public schedule
-  never materializes (no writes on anon reads). Bulk import = same materialize fn over a PAST window.
-  No cron needed (optional backstop later).
+- **Materialization: to a horizon (~5 weeks), race-safe** — reuse the catch-all pattern
+  (catchAllForDate + partial unique index). Trigger DECIDED: on startup + a once-a-day guard (memoized
+  last-run org day), NOT a write on the general read path (dz's skeeze), NOT a cron. Public schedule
+  never materializes. Bulk import = same materialize fn over a PAST window.
+- **Skips IN** (dz): tiny `event_series_skip(event_series_id, skip_date, reason)` table — so the public
+  schedule shows exceptions ("No session Aug 2 — holiday") purely from rules, no deleted-instance
+  dependence. Chosen over a single skip field (barely more code, multiple, no wait-to-pass, has reason).
+- **weekday / week_of_month / frequency are STRING enums** (weekday_enum monday..sunday,
+  week_of_month_enum first..fourth|last, frequency_enum none/weekly/monthly) → reuse EnumField picker +
+  auto-form; a `{monday:1..sunday:7}` map does date math (Temporal dayOfWeek).
 - **Reconcile, not manual delete**: create-missing-future + delete-future-occurrences-that-no-longer-
   match; NEVER touch past/committed instances (sign-ups, check-ins, service/sale rows). Series edits
   apply FORWARD-ONLY (never rewrite existing instances); "apply to N upcoming" is a separate explicit
