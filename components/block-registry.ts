@@ -17,10 +17,20 @@ import type { Markup } from "../liminal/markup.ts";
  * block renders identically live in-app and inside the static-site generator.
  * A site-specific block MUST render from this ctx, never from a live request.
  */
+export interface Heading {
+    level: string;   // 'h1'..'h4'
+    text: string;
+    anchor: string;  // slug, matches the id the title block renders
+}
+
 export interface BlockCtx {
     site_id: number;
     dict: Record<string, string>;   // page-supplied specialization values (macros - deferred)
     editing: boolean;               // show edit affordances, or produce final output
+    // The page's headings in order, collected from every block whose kind defines
+    // heading() - so a table-of-contents block reads siblings via ctx, staying
+    // within the FLATNESS RULE (it never nests).  Populated by renderPage.
+    headings?: Heading[];
 }
 
 export interface BlockKind {
@@ -29,6 +39,11 @@ export interface BlockKind {
     schema: FieldSet;                   // the payload's fields - drives edit form + validation + hydrate
     render(payload: Tuple, ctx: BlockCtx): Markup;
     category?: 'content' | 'app';       // grouping in the add-block picker (default 'content')
+
+    // A block that contributes to the page's table of contents (e.g. a title)
+    // returns its heading here; renderPage collects these into ctx.headings.
+    // Returns undefined for a block with no heading this render.
+    heading?(payload: Tuple): { level: string, text: string } | undefined;
 
     // Optional payload-schema migration escape hatch (site-editor.md "Payload
     // schema migration").  hydrate() handles add/remove-a-field with no
