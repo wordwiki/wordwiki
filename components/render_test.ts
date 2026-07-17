@@ -13,7 +13,7 @@ import { SiteView } from "./site-view.ts";
 const site = setSerialized(new SiteTable(), 'site');
 const page = setSerialized(new PageTable(), 'page');
 const blk = setSerialized(new BlockTable(), 'block');
-const view = new SiteView(site, page, blk);
+const view = setSerialized(new SiteView(site, page, blk), 'siteView');
 
 // Insert a block whose payload is built from its (registered) kind's schema.
 function addBlock(page_id: number, kind: string, payload: Record<string, any>) {

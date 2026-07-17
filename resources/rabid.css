@@ -447,3 +447,34 @@ ol.lm-doc-list > li.lm-doc-row {
 .site-block-controls { position: absolute; top: 0; right: 0; opacity: 0; transition: opacity .12s; }
 .site-block-edit:hover .site-block-controls,
 .site-block-edit:focus-within .site-block-controls { opacity: 1; }
+
+/* --- Brand chrome: the public Red Raccoon site (renderPageChrome) -----------
+ * A distinct presentation from the internal volunteer app - its own masthead,
+ * nav and footer.  Structure + these classes only (RabidSiteView emits no inline
+ * style), so the whole look is restyleable here. */
+.rrbr-site { --rrbr-accent: #b5361f; --rrbr-ink: #22201e; color: var(--rrbr-ink); }
+.rrbr-site-container { max-width: 60rem; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
+
+.rrbr-site-header { background: #faf7f2; border-bottom: 3px solid var(--rrbr-accent); }
+.rrbr-site-header.has-hero { border-bottom: 0; }
+.rrbr-site-hero { max-height: 20rem; overflow: hidden; }
+.rrbr-site-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rrbr-site-masthead { padding: 1.25rem 1rem; }
+.rrbr-site-brand { display: inline-block; font-weight: 700; letter-spacing: 0.02em;
+    text-transform: uppercase; color: var(--rrbr-accent); text-decoration: none; font-size: 0.95rem; }
+.rrbr-site-title { margin: 0.25rem 0 0; font-size: 2rem; line-height: 1.1; text-wrap: balance; }
+
+.rrbr-site-nav { background: var(--rrbr-accent); }
+.rrbr-site-nav-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.25rem;
+    margin: 0; padding: 0 1rem; }
+.rrbr-site-nav-item a { display: block; padding: 0.6rem 0.9rem; color: #fff; opacity: 0.9;
+    text-decoration: none; font-size: 0.95rem; }
+.rrbr-site-nav-item a:hover { opacity: 1; background: rgba(0,0,0,0.12); }
+.rrbr-site-nav-item.active a { opacity: 1; background: rgba(0,0,0,0.22); font-weight: 600; }
+
+.rrbr-site-main { padding: 2rem 0 3rem; }
+.rrbr-site-main .site-page { gap: 1.25rem; }
+
+.rrbr-site-footer { border-top: 1px solid #e4ddd2; background: #faf7f2; padding: 1.5rem 0;
+    font-size: 0.9rem; color: #6b645c; }
+.rrbr-site-footer .rrbr-site-container { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }

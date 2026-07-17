@@ -3,7 +3,7 @@
 // own DB, and the edit policy gates by rabid role (host/admin).
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts";
-import { find, findAll, hasClass, hasText } from "../liminal/testing/markup-assert.ts";
+import { find, findAll, hasClass, hasText, attr, tagOf } from "../liminal/testing/markup-assert.ts";
 import { withTestDb, asUser, asSystem, renderRoute, invoke } from "./testing.ts";
 import { getRabid } from "./rabid.ts";
 import { blockKind } from "../components/block-registry.ts";
@@ -22,8 +22,8 @@ test("rabid mounts the site editor: a site + page + block flow renders through S
             r.siteView.addBlock(page_id, 'rabid-upcoming-events');
         });
         const m = asUser(fx.alice, () => r.siteView.renderPage(page_id, false));
-        // Rabid's chrome wraps the flow; the block flow rendered.
-        assert(find(m, n => hasClass(n, 'rabid-site-page')));
+        // Rabid's brand chrome wraps the flow; the block flow rendered.
+        assert(find(m, n => hasClass(n, 'rrbr-site')));
         assert(find(m, n => hasClass(n, 'site-page')));
         // The app-injected block rendered rabid content (NOT an unknown-block stub).
         assert(find(m, n => hasClass(n, 'site-block-rabid-events')));
@@ -58,6 +58,55 @@ test("authoring UI dispatches through routes (page + create mutations)", async (
             try { await invoke('rabid.siteView.createSite($arg0)', {site_title: 'No'}); } catch { threw = true; }
             assert(threw);
         });
+    });
+});
+
+test("brand chrome: published page renders a standalone document with masthead, nav, footer", async () => {
+    await withTestDb(async (fx) => {
+        const r = getRabid();
+        const { home_id } = asSystem(() => {
+            const site_id = r.site.insert({site_title: 'redraccoon.org'});
+            const home_id = r.sitePage.insert({site_id, page_title: 'Home', published: 1, nav_visible: 1});
+            r.sitePage.insert({site_id, page_title: 'About', slug: 'about', published: 1, nav_visible: 1});
+            r.sitePage.insert({site_id, page_title: 'Secret', published: 0, nav_visible: 1});  // draft: not in nav
+            return { home_id };
+        });
+        asUser(fx.alice, () => r.siteView.addBlock(home_id, 'title'));
+        const doc = asUser(fx.alice, () => r.siteView.renderPublicPage(home_id));
+        // A full standalone document (its own <head> with the brand stylesheet).
+        assertEquals(find(doc, n => hasClass(n, 'rrbr-site-title') && hasText(n, 'Home')) !== undefined, true);
+        assert(find(doc, n => (n[0] as any) === 'head'));
+        // Masthead brand + footer.
+        assert(find(doc, n => hasClass(n, 'rrbr-site-brand')));
+        assert(find(doc, n => hasClass(n, 'rrbr-site-footer')));
+        // Nav lists the two PUBLISHED pages (not the draft), with Home active.
+        const navItems = findAll(doc, n => hasClass(n, 'rrbr-site-nav-item'));
+        assertEquals(navItems.length, 2);
+        assertEquals(navItems.filter(n => hasClass(n, 'active')).length, 1);
+        assert(navItems.some(n => hasText(n, 'About')));
+        assertEquals(findAll(doc, n => hasText(n, 'Secret')).length, 0);
+        // The block flow rendered inside the chrome.
+        assert(find(doc, n => hasClass(n, 'site-page')));
+        // The public route dispatches (would catch a missing @route).
+        const viaRoute = await asUser(fx.alice, () => renderRoute(`rabid.siteView.renderPublicPage(${home_id})`));
+        assert(find(viaRoute, n => hasClass(n, 'rrbr-site-brand')));
+    });
+});
+
+test("editor shows a 'View published' link to the brand-chrome page", async () => {
+    await withTestDb((fx) => {
+        const r = getRabid();
+        const page_id = asSystem(() => {
+            const site_id = r.site.insert({site_title: 'S'});
+            return r.sitePage.insert({site_id, page_title: 'P'});
+        });
+        const editor = asUser(fx.alice, () => r.siteView.renderPageEditor(page_id));
+        const link = find(editor, n => tagOf(n) === 'a' && hasText(n, 'View published'))!;
+        assert(link);
+        // Emitted route exprs must self-resolve to the mounted path (regression:
+        // SiteView is not a Table, so `${this}` needs its own toString) - NOT
+        // '[object Object]'.
+        assertEquals(attr(link, 'href'), `/rabid.siteView.renderPublicPage(${page_id})`);
     });
 });
 

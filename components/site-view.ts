@@ -12,6 +12,7 @@ import * as action from "../liminal/action.ts";
 import * as dirty from "../liminal/dirty.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import { route, routeMutation, authenticated } from "../liminal/security.ts";
+import { serializeAny } from "../liminal/serializable.ts";
 import { blockKind, allBlockKinds, readPayload, writePayload,
          type BlockCtx, type Heading } from "./block-registry.ts";
 import { slugify } from "./block-kinds.ts";
@@ -24,6 +25,12 @@ export class SiteView {
         public pageTable: PageTable,
         public blockTable: BlockTable,
     ) {}
+
+    // The view's serialized route path (e.g. 'rabid.siteView'), stamped by the
+    // app's @path mount.  Every emitted route expr uses `${this}` to self-resolve
+    // its prefix, so a shared component never hardcodes the app name (SiteView is
+    // not a Table, so - unlike a table - it must supply this itself).
+    toString(): string { return serializeAny(this); }
 
     // Render a page: its block flow, wrapped in the app chrome.  `editing` selects
     // the read/output path (published site + static generator) vs the editable path
@@ -229,6 +236,10 @@ export class SiteView {
     protected authoringBaseUrl(): string { return '/site'; }
     protected pageNavProps(href: string): Record<string, string> { return {href}; }
 
+    // The published (brand-chrome) URL for a page, if the app serves one - drives the
+    // editor's "View published" link.  Default undefined (no public view wired).
+    protected publicPageUrl(_page_id: number): string | undefined { return undefined; }
+
     // Site/page creation + deletion policy (default DENY; app overrides).  Distinct
     // from canEditSite (block edits) so an app can, if it wants, let more people edit
     // a page's blocks than create/delete whole pages.
@@ -291,10 +302,15 @@ export class SiteView {
     // renderPage; the editor deliberately omits the app chrome.)
     @route(authenticated)
     renderPageEditor(page_id: number): Markup {
-        const page = this.pageTable.getById(page_id);
+        this.pageTable.getById(page_id);   // 404s a bad id
+        const publicUrl = this.publicPageUrl(page_id);
         return [h.div, {class: 'container py-3 site-editor', 'data-testid': `page-editor-${page_id}`},
-            [h.div, {class: 'mb-2'},
-             [h.a, {...this.pageNavProps(this.authoringBaseUrl()), class: 'small'}, '← All pages']],
+            [h.div, {class: 'd-flex justify-content-between align-items-center mb-2'},
+             [h.a, {...this.pageNavProps(this.authoringBaseUrl()), class: 'small'}, '← All pages'],
+             publicUrl
+                 ? [h.a, {href: publicUrl, target: '_blank', rel: 'noopener', 'hx-boost': 'false', class: 'small'},
+                    'View published →']
+                 : undefined],
             this.renderEditorHeader(page_id),
             this.renderBlockFlow(page_id, true)];
     }
