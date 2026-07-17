@@ -28,6 +28,7 @@ registerBlockKind({
         new StringField('text', {default: '', prompt: 'Heading'}),
     ]),
     heading: (p) => p.text ? {level: String(p.level ?? 'h2'), text: String(p.text)} : undefined,
+    isEmpty: (p) => !String(p.text ?? '').trim(),
     render: (p) => {
         const level = title_level[String(p.level)] ? String(p.level) : 'h2';
         return [level, {class: 'site-block-title', id: slugify(String(p.text ?? ''))}, String(p.text ?? '')];
@@ -45,6 +46,7 @@ registerBlockKind({
     schema: new FieldSet('text', [
         new StringField('text', {default: '', prompt: 'Text (markdown)'}),
     ]),
+    isEmpty: (p) => !String(p.text ?? '').trim(),
     render: (p) => [h.div, {class: 'site-block-text'}, markdownToMarkup(String(p.text ?? ''))],
 });
 

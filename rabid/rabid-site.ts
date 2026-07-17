@@ -175,6 +175,7 @@ registerBlockKind({
         new EnumField('image_side', {left: 'Left', right: 'Right'}, {default: 'left'}),
         new StringField('text', {default: '', prompt: 'Text (markdown)'}),
     ]),
+    isEmpty: (p) => !(typeof p.image === 'string' && p.image !== '') && !String(p.text ?? '').trim(),
     render: (p, _ctx): Markup => {
         const has = typeof p.image === 'string' && p.image !== '';
         const side = p.image_side === 'right' ? ' side-right' : ' side-left';

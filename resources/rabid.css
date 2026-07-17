@@ -451,11 +451,19 @@ ol.lm-doc-list > li.lm-doc-row {
 .site-block-image-text-prose { flex: 1 1 16rem; line-height: 1.5; }
 @media (max-width: 40rem) { .site-block-image-text, .site-block-image-text.side-right { flex-direction: column; } }
 
-/* Editing affordances: a block shows its ☰ on hover; the flow gets an add-menu. */
-.site-page-editing .site-block-edit { position: relative; }
-.site-block-controls { position: absolute; top: 0; right: 0; opacity: 0; transition: opacity .12s; }
+/* Editing affordances: a block shows its ☰ on hover; the flow gets an add-menu.
+ * An editable block hovers grey and is click-to-edit; the ☰ sits top-right (its
+ * own subtree, so clicking it opens the menu, not the edit dialog). */
+.site-page-editing .site-block-edit { position: relative; border-radius: 4px; padding: 0.25rem 0.5rem; }
+.site-block-controls { position: absolute; top: 0.25rem; right: 0.25rem; opacity: 0; transition: opacity .12s; z-index: 1; }
 .site-block-edit:hover .site-block-controls,
 .site-block-edit:focus-within .site-block-controls { opacity: 1; }
+/* Click-to-edit: whole editable block body opens its edit dialog; grey on hover. */
+.site-block-editable { cursor: pointer; }
+.site-block-editable:hover { background: rgba(0,0,0,0.04); }
+.site-block-edit-body:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+/* An empty content block: a muted placeholder so it stays visible + editable. */
+.site-block-empty { color: var(--bs-secondary-color); font-style: italic; padding: 0.4rem 0; }
 
 /* --- Brand chrome: the public Red Raccoon site (renderPageChrome) -----------
  * A distinct presentation from the internal volunteer app - its own masthead,

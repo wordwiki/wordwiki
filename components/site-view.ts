@@ -7,7 +7,7 @@
 // Importing this module registers the built-in block kinds (via block-kinds.ts).
 
 import { h, type Markup } from "../liminal/markup.ts";
-import { liveReloadableProps } from "../liminal/table.ts";
+import { liveReloadableProps, editButtonProps } from "../liminal/table.ts";
 import * as action from "../liminal/action.ts";
 import * as dirty from "../liminal/dirty.ts";
 import * as orderkey from "../liminal/orderkey.ts";
@@ -56,7 +56,7 @@ export class SiteView {
             headings: this.collectHeadings(blocks),
         };
         const rendered = blocks.map(b =>
-            editing ? this.wrapForEdit(b, this.renderBlock(b, ctx)) : this.renderBlock(b, ctx));
+            editing ? this.wrapForEdit(b, ctx) : this.renderBlock(b, ctx));
         if(!editing)
             return [h.div, {class: 'site-page'}, rendered];
         const props = liveReloadableProps([this.blockTable.pageShapeKey(page_id)],
@@ -114,18 +114,40 @@ export class SiteView {
     }
 
     // One editable block: a live fragment on its ROW key (an in-place payload edit
-    // refreshes just this block) carrying a ☰ of edit / move / delete.
-    private wrapForEdit(b: Block, rendered: Markup): Markup {
+    // refreshes just this block) carrying a ☰ of edit / move / delete.  A block with
+    // an editable payload is click-to-edit (its whole body opens the edit dialog, and
+    // hovers grey); an EMPTY editable block shows a "click to edit" placeholder so a
+    // freshly-added title/text doesn't collapse to zero height and become unreachable.
+    // Blocks with no editable payload (divider, toc, app blocks) get the ☰ only.
+    private wrapForEdit(b: Block, ctx: BlockCtx): Markup {
         const id = b.block_id;
+        const k = blockKind(b.kind);
+        const editable = !!k && k.schema.fields.length > 0;
+        const empty = editable && !!k!.isEmpty && k!.isEmpty(readPayload(k!, b.payload));
         const props = liveReloadableProps([this.blockTable.rowKey(id)], `${this}.renderBlockCard(${id})`);
+        const editUrl = `/${this}.renderBlockEditForm(${id})`;
+
+        const content = empty
+            ? [h.div, {class: 'site-block-empty'}, `Empty ${(k!.label).toLowerCase()} — click to edit`]
+            : this.renderBlock(b, ctx);
+        // Editable blocks: the body IS the edit trigger (click / Enter opens the
+        // dialog).  Non-editable: a plain body.
+        const body = editable
+            ? [h.div, {...editButtonProps(editUrl), class: 'site-block-edit-body', role: 'button', tabindex: '0'},
+               content]
+            : [h.div, {class: 'site-block-edit-body'}, content];
+
         const menu = action.actionMenu([
-            {label: 'Edit…',    mode: {kind: 'modal', dialogUrl: `/${this}.renderBlockEditForm(${id})`}},
+            editable ? {label: 'Edit…', mode: {kind: 'modal', dialogUrl: editUrl}} : undefined,
             {label: 'Move up',   mode: {kind: 'immediate', expr: `${this}.moveBlockUp(${id})`}},
             {label: 'Move down', mode: {kind: 'immediate', expr: `${this}.moveBlockDown(${id})`}},
             {label: 'Delete',    mode: {kind: 'confirm', message: 'Delete this block?', expr: `${this}.deleteBlock(${id})`}},
-        ], {ariaLabel: 'Block actions'});
-        return [h.div, {...props, class: props.class + ' site-block-edit', 'data-testid': `block-${id}`},
-            rendered, [h.div, {class: 'site-block-controls'}, menu]];
+        ].filter(Boolean) as action.ActionMenuItem[], {ariaLabel: 'Block actions'});
+
+        const cls = props.class + ' site-block-edit' + (editable ? ' site-block-editable' : '')
+            + (empty ? ' site-block-is-empty' : '');
+        return [h.div, {...props, class: cls, 'data-testid': `block-${id}`},
+            body, [h.div, {class: 'site-block-controls'}, menu]];
     }
 
     // The row-key reload target for a single editable block.
@@ -134,7 +156,7 @@ export class SiteView {
         const b = this.blockTable.getById(block_id);
         const ctx: BlockCtx = {site_id: this.pageTable.getById(b.page_id).site_id, dict: {}, editing: true,
             headings: this.collectHeadings(this.blockTable.forPage.all({page_id: b.page_id}))};
-        return this.wrapForEdit(b, this.renderBlock(b, ctx));
+        return this.wrapForEdit(b, ctx);
     }
 
     // The add-block picker: every registered kind, content kinds before app kinds.

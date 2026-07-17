@@ -45,6 +45,13 @@ export interface BlockKind {
     // Returns undefined for a block with no heading this render.
     heading?(payload: Tuple): { level: string, text: string } | undefined;
 
+    // Whether this payload has no user content yet (e.g. a title with no text).
+    // The editor shows a "click to edit" placeholder for an empty block, so a
+    // freshly-added content block is visible and editable rather than collapsing to
+    // zero height.  Omit for blocks that are meaningful when "empty" (divider) or
+    // have no editable payload (toc, app blocks).
+    isEmpty?(payload: Tuple): boolean;
+
     // Optional payload-schema migration escape hatch (site-editor.md "Payload
     // schema migration").  hydrate() handles add/remove-a-field with no
     // migration; only rename/retype needs this.  `payloadVersion` is the current

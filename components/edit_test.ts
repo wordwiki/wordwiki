@@ -5,7 +5,7 @@ import { assertEquals, assert, assertThrows } from "../liminal/testing/assert.ts
 import { openTestDb, clearAllData } from "../liminal/testing/db-harness.ts";
 import * as security from "../liminal/security.ts";
 import { setSerialized } from "../liminal/serializable.ts";
-import { find, findAll, hasClass, testIdOf } from "../liminal/testing/markup-assert.ts";
+import { find, findAll, hasClass, hasText, attr, testIdOf } from "../liminal/testing/markup-assert.ts";
 import { SiteTable, PageTable, BlockTable, siteEditorTables } from "./site.ts";
 import { blockKind, readPayload } from "./block-registry.ts";
 import { SiteView } from "./site-view.ts";
@@ -103,4 +103,31 @@ test("editing render adds per-block controls + an add-block menu; output view ha
     const out = security.runSystem(() => editable.renderPage(p, false));
     assertEquals(findAll(out, n => hasClass(n, 'site-block-edit')).length, 0);
     assertEquals(findAll(out, n => hasClass(n, 'site-page-editing')).length, 0);
+});
+
+test("an empty editable block shows a click-to-edit placeholder; the body opens the edit dialog", () => {
+    const p = freshPage();
+    const m = security.runSystem(() => {
+        editable.addBlock(p, 'title');            // fresh -> empty text
+        return editable.renderPage(p, true);
+    });
+    // Placeholder text so the (otherwise zero-height) block stays visible + editable.
+    assert(find(m, n => hasClass(n, 'site-block-empty') && hasText(n, 'click to edit')));
+    // Editable: the body is a click-to-edit trigger (editButtonProps -> the modal).
+    assert(find(m, n => hasClass(n, 'site-block-editable')));
+    const body = find(m, n => hasClass(n, 'site-block-edit-body'))!;
+    assert(String(attr(body, 'hx-get')).includes('renderBlockEditForm'));
+});
+
+test("a non-editable block (divider) is not click-to-edit and shows no placeholder, but keeps its ☰", () => {
+    const p = freshPage();
+    const m = security.runSystem(() => {
+        editable.addBlock(p, 'divider');
+        return editable.renderPage(p, true);
+    });
+    assertEquals(findAll(m, n => hasClass(n, 'site-block-editable')).length, 0);
+    assertEquals(findAll(m, n => hasClass(n, 'site-block-empty')).length, 0);
+    assert(find(m, n => hasClass(n, 'site-block-controls')));   // still movable/deletable
+    // A non-editable block's ☰ has no "Edit…" item.
+    assertEquals(findAll(m, n => hasText(n, 'Edit…')).length, 0);
 });
