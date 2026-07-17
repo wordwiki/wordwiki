@@ -20,6 +20,8 @@ import * as committee from './committee.ts';
 import * as task from './task.ts';
 import * as gallery from './gallery.ts';
 import * as extractionJob from './extraction_job.ts';
+import * as site from '../components/site.ts';
+import * as rabidSite from './rabid-site.ts';   // mounts RabidSiteView + registers rabid blocks
 import { Llm, loadLlm } from '../liminal/llm.ts';
 import * as photo from '../liminal/photo.ts';
 import {ensureDir} from "std/fs/mod.ts";
@@ -83,6 +85,15 @@ export class Rabid extends LiminalApp {
     @route(authenticated) @path get task() { return new task.TaskTable(); }
     @route(authenticated) @path get subtask() { return new task.SubtaskTable(); }
 
+    // The shared site editor (components/): editable content pages built from a flat
+    // flow of registry-dispatched blocks.  siteView is rabid's SiteView subclass
+    // (edit policy + chrome + rabid blocks - see rabid-site.ts); it coordinates the
+    // three schema tables, which are mounted so their query/FK routes resolve.
+    @route(authenticated) @path get site() { return new site.SiteTable(); }
+    @route(authenticated) @path get sitePage() { return new site.PageTable(); }
+    @route(authenticated) @path get block() { return new site.BlockTable(); }
+    @route(authenticated) @path get siteView() { return new rabidSite.RabidSiteView(this.site, this.sitePage, this.block); }
+
     // The LLM client for scan -> extract (liminal/llm.ts).  Lazy, like the mailer:
     // reads rabid-anthropic-credential.json, degrading to a DisabledLlm when absent.
     // The setter lets tests inject a fake (no network / no key).
@@ -115,7 +126,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.event_retrospective, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask, this.gallery_photo, this.extraction_job];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.event_retrospective, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask, this.gallery_photo, this.extraction_job, this.site, this.sitePage, this.block];
     }
 
     // Pages that carry route-borne view state (page-state; liminal.md § On-page

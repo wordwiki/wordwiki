@@ -425,3 +425,25 @@ ol.lm-doc-list > li.lm-doc-row {
     color: var(--bs-secondary-color);
     background-color: var(--bs-secondary-bg);
 }
+
+/* --- Site editor (components/) --------------------------------------------
+ * Block renderers emit structure + these semantic classes only (never inline
+ * colour/spacing) so a per-site stylesheet can restyle everything - see
+ * site-editor.md.  Kept intentionally light; a real per-site theme overrides. */
+.site-page { display: flex; flex-direction: column; gap: 1rem; }
+.site-block-title { margin: 0; }
+.site-block-divider { border: 0; border-top: 1px solid var(--bs-border-color); margin: 0.5rem 0; }
+.site-block-text { line-height: 1.5; }
+.site-block-toc { font-size: 0.95rem; }
+.site-block-toc-list { list-style: none; padding-left: 0; margin: 0; }
+.site-block-toc-item { padding: 0.1rem 0; }
+.site-block-toc-h3 { padding-left: 1rem; }
+.site-block-toc-h4 { padding-left: 2rem; }
+.site-block-toc-empty { color: var(--bs-secondary-color); font-style: italic; }
+.site-block-unknown { color: var(--bs-danger); font-size: 0.9rem; }
+
+/* Editing affordances: a block shows its ☰ on hover; the flow gets an add-menu. */
+.site-page-editing .site-block-edit { position: relative; }
+.site-block-controls { position: absolute; top: 0; right: 0; opacity: 0; transition: opacity .12s; }
+.site-block-edit:hover .site-block-controls,
+.site-block-edit:focus-within .site-block-controls { opacity: 1; }
