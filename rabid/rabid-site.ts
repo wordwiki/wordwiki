@@ -15,7 +15,7 @@ import * as config from "./config.ts";
 import { assetUrl } from "../liminal/assets.ts";
 import { SiteView } from "../components/site-view.ts";
 import { registerBlockKind, type BlockCtx } from "../components/block-registry.ts";
-import { FieldSet, ImageField, EnumField, MarkdownField, liveReloadableProps } from "../liminal/table.ts";
+import { FieldSet, ImageField, EnumField, MarkdownField, liveReloadableProps, editButtonProps } from "../liminal/table.ts";
 import { markdownToMarkup } from "../liminal/markdown.ts";
 import type { Page } from "../components/site.ts";
 import { rabid } from "./rabid.ts";
@@ -55,7 +55,7 @@ export class RabidSiteView extends SiteView {
     protected override renderPageChrome(page: Page, body: Markup, ctx: BlockCtx): Markup {
         return [h.div, {class: 'rrbr-site' + (ctx.editing ? ' rrbr-site-editing' : '')},
             ctx.editing
-                ? this.renderEditTop(page.page_id)
+                ? [h.div, {}, this.renderEditFloatNav(), this.renderEditTop(page.page_id)]
                 : [h.div, {}, this.renderMasthead(page, false), this.renderSiteNav(page, false)],
             [h.main, {class: 'rrbr-site-main'},
              [h.div, {class: 'rrbr-site-container'}, body]],
@@ -65,49 +65,78 @@ export class RabidSiteView extends SiteView {
               [h.span, {class: 'rrbr-site-footer-tag'}, 'A volunteer-run community bike shop']]]];
     }
 
-    // The editor's top, as a live fragment on the site's page-shape key: publishing,
-    // creating, deleting or reordering a page reloads it so the badge + tabs refresh.
+    // The one "leave the editor" affordance: a small chip floating in the top-left,
+    // out of the layout flow (so the editor keeps looking like the real page).
+    private renderEditFloatNav(): Markup {
+        return [h.a, {href: '/', class: 'rrbr-edit-floatnav', 'hx-boost': 'false',
+                      title: 'Back to the app'}, '← App'];
+    }
+
+    // The editor's top, as a live fragment on the page's row + the site page-shape
+    // key: a settings save, publish, create, delete or reorder reloads it so the
+    // header (title/hero) and tabs refresh in place.
     @route(authenticated)
     renderEditTop(page_id: number): Markup {
         const page = this.pageTable.getById(page_id);
-        const props = liveReloadableProps([this.pageTable.siteShapeKey(page.site_id)],
+        const props = liveReloadableProps(
+            [this.pageTable.siteShapeKey(page.site_id), this.pageTable.rowKey(page_id)],
             `${this}.renderEditTop(${page_id})`);
         return [h.div, {...props},
             this.renderMasthead(page, true),
-            this.renderEditToolbar(page),
             this.renderSiteNav(page, true)];
     }
 
     private renderMasthead(page: Page, editing: boolean): Markup {
-        const hero = (page.hero_image && page.hero_image !== '')
-            ? [h.div, {class: 'rrbr-site-hero'},
-               rabid.photo.aspectImg(page.hero_image, 'landscape', 'detail', {class: 'rrbr-site-hero-img'})]
+        const heroImg = (page.hero_image && page.hero_image !== '')
+            ? rabid.photo.aspectImg(page.hero_image, 'landscape', 'detail', {class: 'rrbr-site-hero-img'})
             : undefined;
-        return [h.header, {class: 'rrbr-site-header' + (hero ? ' has-hero' : '')},
-            hero,
+        const brand = [h.a, {href: editing ? '/site' : '/p/', class: 'rrbr-site-brand', 'hx-boost': 'false'},
+                       RabidSiteView.BRAND];
+
+        if(!editing) {
+            return [h.header, {class: 'rrbr-site-header' + (heroImg ? ' has-hero' : '')},
+                heroImg ? [h.div, {class: 'rrbr-site-hero'}, heroImg] : undefined,
+                [h.div, {class: 'rrbr-site-container rrbr-site-masthead'},
+                 brand,
+                 page.page_title ? [h.h1, {class: 'rrbr-site-title'}, page.page_title] : undefined]];
+        }
+
+        // Editing: the header IS the page's content editor.  The hero + title are
+        // click-to-edit (-> Page settings) and hover grey, exactly like a block; the
+        // brand and the page ☰ sit outside the click target.
+        const settingsUrl = `/${this}.editPageSettings(${page.page_id})`;
+        const clickEdit = (child: Markup, cls: string): Markup =>
+            [h.div, {...editButtonProps(settingsUrl), class: cls + ' rrbr-editable',
+                     role: 'button', tabindex: '0', 'aria-label': 'Edit page settings'}, child];
+        const title = page.page_title
+            ? [h.h1, {class: 'rrbr-site-title'}, page.page_title]
+            : [h.h1, {class: 'rrbr-site-title rrbr-site-title-empty'}, 'Untitled page — click to edit'];
+        return [h.header, {class: 'rrbr-site-header rrbr-site-header-editing' + (heroImg ? ' has-hero' : '')},
+            heroImg ? clickEdit([h.div, {class: 'rrbr-site-hero'}, heroImg], 'rrbr-hero-edit') : undefined,
             [h.div, {class: 'rrbr-site-container rrbr-site-masthead'},
-             [h.a, {href: editing ? '/site' : '/p/', class: 'rrbr-site-brand', 'hx-boost': 'false'},
-              RabidSiteView.BRAND],
-             page.page_title ? [h.h1, {class: 'rrbr-site-title'}, page.page_title] : undefined]];
+             brand,
+             clickEdit(title, 'rrbr-title-edit'),
+             this.renderPageMenu(page)]];
     }
 
-    // The editor toolbar: page settings, publish toggle, add page, preview, and the
-    // links out (the page LIST for reorder/delete; back to the app).  Host/admin only
-    // (the whole editor is authenticated; these mutations self-gate too).
-    private renderEditToolbar(page: Page): Markup {
+    // The page ☰ (top-right of the header): the page-level actions the old toolbar
+    // held.  Publish/Unpublish's LABEL conveys the state, so there is no standing
+    // badge (the draft state is transient - dz).
+    private renderPageMenu(page: Page): Markup {
         const id = page.page_id;
-        const btn = 'btn btn-sm btn-outline-secondary';
-        return [h.div, {class: 'rrbr-site-container rrbr-edit-toolbar'},
-            [h.span, {class: 'rrbr-edit-badge ' + (page.published ? 'pub' : 'draft')},
-             page.published ? 'Published' : 'Draft'],
-            action.actionButton('Settings…', {kind: 'modal', dialogUrl: `/${this}.editPageSettings(${id})`}, btn, {}),
-            action.actionButton(page.published ? 'Unpublish' : 'Publish',
-                {kind: 'immediate', expr: `${this}.togglePublished(${id})`}, 'btn btn-sm btn-outline-primary', {}),
-            action.actionButton('New page…', {kind: 'modal', dialogUrl: `/${this}.newPageDialog(${page.site_id})`}, btn, {}),
-            [h.a, {href: this.publicPageUrl(id), target: '_blank', rel: 'noopener', 'hx-boost': 'false', class: btn}, 'Preview →'],
-            [h.span, {class: 'rrbr-edit-toolbar-spacer'}],
-            [h.a, {href: '/site({list:1})', class: 'btn btn-sm btn-link'}, 'All pages'],
-            [h.a, {href: '/', class: 'btn btn-sm btn-link'}, '← App']];
+        return [h.div, {class: 'rrbr-page-menu'}, action.actionMenu([
+            {label: 'Page settings…', mode: {kind: 'modal', dialogUrl: `/${this}.editPageSettings(${id})`}},
+            {label: page.published ? 'Unpublish' : 'Publish',
+             mode: {kind: 'immediate', expr: `${this}.togglePublished(${id})`}},
+            'divider',
+            {label: 'New page…', mode: {kind: 'modal', dialogUrl: `/${this}.newPageDialog(${page.site_id})`}},
+            {label: 'Delete page…', mode: {kind: 'confirm',
+                message: 'Delete this page and all its blocks?', expr: `${this}.deletePage(${id})`}},
+            {label: 'All pages', link: templates.pageLinkProps('/site({list:1})')},
+            'divider',
+            {label: 'Preview →', link: {href: this.publicPageUrl(id) ?? '#', target: '_blank',
+                rel: 'noopener', 'hx-boost': 'false'}},
+        ], {ariaLabel: 'Page actions'})];
     }
 
     // The public URL for a page: pretty /p/<slug>, or /p/ (the home) for a

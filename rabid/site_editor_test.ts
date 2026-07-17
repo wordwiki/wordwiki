@@ -53,7 +53,7 @@ test("authoring UI dispatches through routes (page + create mutations)", async (
         // /site({page:N}) now opens the BRANDED editor (edit mode) for that page.
         const editor = await asUser(fx.alice, () => renderRoute(`site({page:${page_id}})`));
         assert(find(editor, n => hasClass(n, 'rrbr-site-editing')));
-        assert(find(editor, n => hasClass(n, 'rrbr-edit-toolbar')));
+        assert(find(editor, n => hasClass(n, 'rrbr-page-menu')));
         assert(find(editor, n => hasText(n, 'Home')));
         // A regular volunteer is refused at the route layer too.
         await asUser(fx.bob, async () => {
@@ -241,7 +241,7 @@ test("single-site /site opens the branded editor directly; edit tabs link to pag
         // One site -> straight into the branded editor (NOT the page list).
         const entry = await asUser(fx.alice, () => renderRoute('site'));
         assert(find(entry, n => hasClass(n, 'rrbr-site-editing')));
-        assert(find(entry, n => hasClass(n, 'rrbr-edit-toolbar')));
+        assert(find(entry, n => hasClass(n, 'rrbr-page-menu')));
         // Tabs link to sibling page EDITORS, and the draft is marked.
         const aboutTab = find(entry, n => tagOf(n) === 'a' && hasText(n, 'About'))!;
         assert(String(attr(aboutTab, 'href')).startsWith('/site({page:'));
