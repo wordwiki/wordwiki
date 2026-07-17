@@ -34,8 +34,11 @@ test("compact pane on home: lists public upcoming events, excludes volunteer-onl
         assert(hasText(page, 'Upcoming events'), 'the pane heading is present');
         assert(hasText(page, 'Community Fix-It'), 'the public event is listed');
         assert(!hasText(page, 'Members Build'), 'a volunteer-only event is excluded');
-        // A one-tap sign-up, and NO heavy detail (no full roster line).
-        assert(html.includes('Sign up'), 'offers a sign-up toggle');
+        // A quiet document-native RSVP checkbox - NOT a heavy pill, and NO full
+        // roster line (that weight belongs to the /events schedule).
+        assert(html.includes('type=checkbox'), 'offers a Going checkbox');
+        assert(html.includes('lm-data-table'), 'rendered as a typographic data table');
+        assert(!html.includes('lm-row-action'), 'no heavy pill button');
         assert(!html.includes('No one signed up yet'), 'no full roster line (that is the heavy list)');
     });
 });
@@ -51,13 +54,15 @@ test("compact row: signing up flips the toggle to Going, and the row reload rout
     await withTestDb(async ({ bob }) => {
         const e = upcomingEvent();
 
-        // Before: the row offers Sign up.
+        // Before: an unchecked Going checkbox.
         const before = await asUser(bob, () => renderRoute(`rabid.event.renderUpcomingPublicEventRowById(${e})`));
-        assert(markupToString(before).includes('Sign up'), 'offers Sign up before committing');
+        const beforeHtml = markupToString(before);
+        assert(beforeHtml.includes('type=checkbox'), 'has a Going checkbox');
+        assert(!beforeHtml.includes('checked'), 'unchecked before committing');
 
-        // Sign self up, then re-render the row: it now shows Going ✓.
+        // Sign self up, then re-render the row: the checkbox is now checked.
         await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, e));
         const after = await asUser(bob, () => renderRoute(`rabid.event.renderUpcomingPublicEventRowById(${e})`));
-        assert(markupToString(after).includes('Going'), 'shows Going after committing');
+        assert(markupToString(after).includes('checked'), 'checked after committing');
     });
 });

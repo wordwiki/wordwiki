@@ -698,13 +698,15 @@ export class EventTable extends Table<Event> {
                 : this.renderEventScheduleTable(upcomingEvents)];
     }
 
-    // A LEAN upcoming-events pane for the internal home page: one soft-tappable
-    // line per upcoming PUBLIC event (non-volunteer-only, non-catch-all) - day ·
-    // time · name · a sign-up toggle - and nothing else.  The full week-grouped
-    // schedule (rosters, ghosts, check-in menus, remote prep times) lives on the
-    // /events page; here the point is a light pane a volunteer can skim and sign
-    // up from at login, without scrolling past a wall of detail.  Rows still
-    // navigate to the detail page; the self toggle is the only in-line control.
+    // A LEAN upcoming-events pane for the internal home page: the upcoming PUBLIC
+    // events (non-volunteer-only, non-catch-all) as a TYPOGRAPHIC data table -
+    // When · Event · a quiet "Going" checkbox - and nothing else.  This is the
+    // schedule reading task (many uniform records you scan), so it uses the
+    // .lm-data-table format from design-language.md (one quiet header rule, no
+    // row separators, the whole row drills in via the accent-link name).  The
+    // full week-grouped schedule (rosters, ghosts, check-in menus, remote prep)
+    // lives on /events; here the point is a light document a volunteer can skim
+    // and RSVP from at login, not a wall of controls.
     renderUpcomingPublicEventsCompact(): Markup {
         const today = date.orgToday();
         const startDate = `${today.toString()} 00:00:00`;
@@ -726,9 +728,16 @@ export class EventTable extends Table<Event> {
         const commitments = this.peopleByEvents('event_commitment', ids);
         const checkins = this.peopleByEvents('event_checkin', ids);
         const actorId = security.current()?.actorId;
-        return [h.div, {class: 'list-group list-group-flush'},
-            ...events.map(e => this.renderCompactEventRow(
-                e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId))];
+        return [h.table, {class: 'lm-data-table'},
+            [h.thead, {},
+             [h.tr, {},
+              [h.th, {}, 'When'],
+              [h.th, {}, 'Event'],
+              // The RSVP column: only meaningful to a signed-in volunteer.
+              actorId !== undefined ? [h.th, {class: 'text-end'}, 'Going'] : undefined]],
+            [h.tbody, {},
+             ...events.map(e => this.renderCompactEventRow(
+                 e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId))]];
     }
 
     // Reload one compact row after its self sign-up / check-in toggle (it joins
@@ -742,10 +751,12 @@ export class EventTable extends Table<Event> {
         return this.renderCompactEventRow(e, commitments, checkins, security.current()?.actorId);
     }
 
-    // One compact home-pane row: WHEN (day + start time) · name (links to detail)
-    // · the phase-aware self toggle (Sign up / Going ✓ for a future event; Check
-    // in / Here ✓ for one running today) + a chevron.  No badges, roster, remote
-    // prep, or check-in menu - that detail lives on the event's own page.
+    // One compact home-pane row as a navigable data-table <tr>: WHEN (day + start
+    // time) · the event name (accent link, whole row drills in) · a quiet "Going"
+    // checkbox (the document-native RSVP toggle, like a task checkbox - no heavy
+    // pill).  No badges, roster, remote prep, or check-in menu; that lives on the
+    // event's own page.  The checkbox and the name-link both decline the row's
+    // navigation (lmNavigableClick), so tapping them never drills in.
     private renderCompactEventRow(e: Event, commitments: Array<SchedulePerson>,
                                   checkins: Array<SchedulePerson>,
                                   actorId: number|undefined): Markup {
@@ -753,10 +764,10 @@ export class EventTable extends Table<Event> {
         const phase = this.eventPhase(e);
         const day = e.start_time
             ? date.sqliteDateTimeToString(e.start_time, '', {weekday: 'short', month: 'short', day: 'numeric'})
-            : '';
+            : 'No date set';
         const time = e.start_time ? date.sqliteDateTimeToTimeString(e.start_time) : '';
         // Future shows commitments (sign-ups); an event running today shows live
-        // attendance so its toggle is a check-in, not a sign-up.
+        // attendance, so its checkbox is a check-in rather than a sign-up.
         const future = phase === 'future';
         const attending = future ? commitments : checkins.filter(c => c.endTime == null);
         const selfAttending = actorId !== undefined && attending.some(p => p.id === actorId);
@@ -770,19 +781,44 @@ export class EventTable extends Table<Event> {
         const props = reloadableProps([attendKey],
             `rabid.event.renderUpcomingPublicEventRowById(${id})`,
             {'data-testid': `compact-event-${id}`, onclick: 'lmNavigableClick(event)'});
-        props.class = 'list-group-item list-group-item-action lm-item lm-navigable '
-            + 'd-flex align-items-center gap-3 ' + props.class;
+        props.class = 'lm-navigable ' + props.class;
 
-        return [h.div, props,
-            [h.div, {class: 'text-nowrap small', style: 'flex: 0 0 auto;'},
-             [h.span, {class: 'fw-semibold'}, day],
+        return [h.tr, props,
+            [h.td, {class: 'text-nowrap'},
+             [h.span, {}, day],
              time ? [h.span, {class: 'text-muted ms-2'}, time] : undefined],
-            [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`),
-                   class: 'lm-nav-link flex-grow-1 text-truncate'},
-             e.description || 'Untitled Event'],
-            [h.div, {class: 'ms-auto d-flex align-items-center gap-2', style: 'flex: 0 0 auto;'},
-             this.renderSelfAttendToggle(id, phase, selfAttending, actorId),
-             navChevron()]];
+            [h.td, {},
+             [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`),
+                    class: 'lm-nav-link'},
+              e.description || 'Untitled Event']],
+            actorId !== undefined
+                ? [h.td, {class: 'text-end'},
+                   this.renderCompactRsvp(id, phase, future, selfAttending, actorId, attendKey)]
+                : undefined];
+    }
+
+    // The quiet "Going" RSVP: a native checkbox that fires the phase-appropriate
+    // self mutation (a future sign-up commit; a running/past check-in) and swaps
+    // just this row back (txd on the row's reload key).  The document-native
+    // mutation control - like the task checklist checkbox - instead of a heavy
+    // pill button, so the pane keeps reading as a printed event list.
+    private renderCompactRsvp(event_id: number, phase: 'future'|'running'|'past',
+                              future: boolean, selfAttending: boolean,
+                              actorId: number, attendKey: string): Markup {
+        const onExpr = future
+            ? `rabid.event_commitment.commitSelf(${event_id})`
+            : `rabid.event_checkin.checkSelfIn(${event_id})`;
+        const offExpr = future
+            ? `rabid.event_commitment.uncommit(${event_id},${actorId})`
+            : (phase === 'running'
+                ? `rabid.event_checkin.checkOut(${event_id},${actorId})`
+                : `rabid.event_checkin.removeCheckin(${event_id},${actorId})`);
+        const expr = selfAttending ? offExpr : onExpr;
+        const toggle = `txd(${JSON.stringify([sel(attendKey)])})\`${expr}\``;
+        return [h.input, {type: 'checkbox', class: 'form-check-input m-0',
+                          ...(selfAttending ? {checked: ''} : {}),
+                          onclick: toggle,
+                          'aria-label': future ? "Going to this event" : "I was at this event"}];
     }
 
     // The reusable week-grouped, phase-aware schedule table for a set of events
