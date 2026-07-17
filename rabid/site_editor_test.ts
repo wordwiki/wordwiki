@@ -166,6 +166,46 @@ test("public serving: nav links use pretty /p/<slug> URLs", async () => {
     });
 });
 
+test("image-and-text: app-registered block renders image + prose with a side class", async () => {
+    assertEquals(blockKind('image-and-text')?.category, 'content');
+    await withTestDb((fx) => {
+        const r = getRabid();
+        const page_id = asSystem(() => {
+            const site_id = r.site.insert({site_title: 'S'});
+            return r.sitePage.insert({site_id, page_title: 'P', published: 1, nav_visible: 1});
+        });
+        asUser(fx.alice, () => {
+            r.siteView.addBlock(page_id, 'image-and-text');
+            const bid = asSystem(() => r.block.forPage.all({page_id})[0].block_id);
+            r.siteView.editBlockPayload({block_id: bid, image: 'abc123.jpg', image_side: 'right', text: '**hi**'});
+        });
+        const m = asUser(fx.alice, () => r.siteView.renderPage(page_id, false));
+        assert(find(m, n => hasClass(n, 'site-block-image-text') && hasClass(n, 'side-right')));
+        assert(find(m, n => tagOf(n) === 'img' && hasClass(n, 'site-block-image-text-img')));
+        assert(find(m, n => tagOf(n) === 'strong'));   // markdown **hi** -> <strong>
+    });
+});
+
+test("image-and-text: the block editor form has the photo picker (file input) + text field", async () => {
+    await withTestDb((fx) => {
+        const r = getRabid();
+        const page_id = asSystem(() => {
+            const site_id = r.site.insert({site_title: 'S'});
+            return r.sitePage.insert({site_id, page_title: 'P'});
+        });
+        const bid = asUser(fx.alice, () => {
+            r.siteView.addBlock(page_id, 'image-and-text');
+            return asSystem(() => r.block.forPage.all({page_id})[0].block_id);
+        });
+        const form = asUser(fx.alice, () => r.siteView.renderBlockEditForm(bid));
+        // The ImageField picker: a file input that uploads through rabid's photo store.
+        assert(find(form, n => tagOf(n) === 'input' && attr(n, 'type') === 'file'));
+        // The hidden path field + the text field.
+        assert(find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'image'));
+        assert(find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'text'));
+    });
+});
+
 test("edit policy: host/admin may edit, a regular volunteer may not", async () => {
     await withTestDb((fx) => {
         const r = getRabid();

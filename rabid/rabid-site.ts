@@ -14,7 +14,8 @@ import * as config from "./config.ts";
 import { assetUrl } from "../liminal/assets.ts";
 import { SiteView } from "../components/site-view.ts";
 import { registerBlockKind, type BlockCtx } from "../components/block-registry.ts";
-import { FieldSet } from "../liminal/table.ts";
+import { FieldSet, ImageField, EnumField, StringField } from "../liminal/table.ts";
+import { markdownToMarkup } from "../liminal/markdown.ts";
 import type { Page } from "../components/site.ts";
 import { rabid } from "./rabid.ts";
 
@@ -147,4 +148,29 @@ registerBlockKind({
     schema: new FieldSet('rabid-upcoming-events', []),
     render: (_p, _ctx): Markup =>
         [h.div, {class: 'site-block-rabid-events'}, rabid.event.renderUpcomingEvents()],
+});
+
+// Image + text, side by side (stacks on mobile).  App-registered rather than a
+// components built-in because the photo pipeline is rabid's: the payload's
+// ImageField points at rabid's photo store (so the block editor's file picker
+// uploads through it), and render frames the image via rabid.photo.  components
+// stays photo-agnostic - this is the injection seam doing the photo work.
+registerBlockKind({
+    kind: 'image-and-text', label: 'Image + text', category: 'content',
+    schema: new FieldSet('image-and-text', [
+        new ImageField('image', 'rabid.photo', {aspect: 'landscape', nullable: true, prompt: 'Image'}),
+        new EnumField('image_side', {left: 'Left', right: 'Right'}, {default: 'left'}),
+        new StringField('text', {default: '', prompt: 'Text (markdown)'}),
+    ]),
+    render: (p, _ctx): Markup => {
+        const has = typeof p.image === 'string' && p.image !== '';
+        const side = p.image_side === 'right' ? ' side-right' : ' side-left';
+        return [h.div, {class: 'site-block-image-text' + side},
+            has
+                ? [h.div, {class: 'site-block-image-text-media'},
+                   rabid.photo.aspectImg(String(p.image), 'landscape', 'detail',
+                       {class: 'site-block-image-text-img'})]
+                : undefined,
+            [h.div, {class: 'site-block-image-text-prose'}, markdownToMarkup(String(p.text ?? ''))]];
+    },
 });

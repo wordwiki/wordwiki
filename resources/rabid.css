@@ -442,6 +442,15 @@ ol.lm-doc-list > li.lm-doc-row {
 .site-block-toc-empty { color: var(--bs-secondary-color); font-style: italic; }
 .site-block-unknown { color: var(--bs-danger); font-size: 0.9rem; }
 
+/* Image + text: side by side, stacking on narrow screens.  side-right flips the
+ * order so the image sits on the right. */
+.site-block-image-text { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-start; }
+.site-block-image-text.side-right { flex-direction: row-reverse; }
+.site-block-image-text-media { flex: 1 1 16rem; }
+.site-block-image-text-img { width: 100%; height: auto; display: block; border-radius: 4px; }
+.site-block-image-text-prose { flex: 1 1 16rem; line-height: 1.5; }
+@media (max-width: 40rem) { .site-block-image-text, .site-block-image-text.side-right { flex-direction: column; } }
+
 /* Editing affordances: a block shows its ☰ on hover; the flow gets an add-menu. */
 .site-page-editing .site-block-edit { position: relative; }
 .site-block-controls { position: absolute; top: 0; right: 0; opacity: 0; transition: opacity .12s; }
