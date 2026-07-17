@@ -112,6 +112,9 @@ export interface Event {
 
     notes: string;
 
+    // The recurring series this event was materialized from (NULL for standalone).
+    series_id?: number;
+
     // Photos live in the generic gallery (gallery.ts), attached to this event.
 }
 
@@ -146,6 +149,11 @@ export class EventTable extends Table<Event> {
             new DateTimeField('end_time', {nullable: true}),
             new FloatingPointField('total_cash_collected', {default: 0}),
             new MarkdownField('notes', {default: ''}),
+            // The recurring series this event was materialized from (recurring-events.md);
+            // NULL for a standalone event.  No existing query filters on it - an
+            // instance is just a normal event that happens to be linked.
+            new ForeignKeyField('series_id', 'event_series', 'event_series_id',
+                {nullable: true, indexed: true, edit: security.never}),
             // Photos live in the generic gallery (gallery.ts), not fields here.
         ],[
             'CREATE INDEX IF NOT EXISTS event_by_start_time ON event(start_time);',
@@ -153,6 +161,9 @@ export class EventTable extends Table<Event> {
             // distinct in SQLite, so normal events (catch_all_date IS NULL) are
             // unconstrained; this closes the catchAllForDate check-then-create race.
             'CREATE UNIQUE INDEX IF NOT EXISTS event_catch_all_by_date ON event(catch_all_date) WHERE catch_all_date IS NOT NULL;',
+            // At most one materialized instance per (series, occurrence day) - closes
+            // the materialization check-then-insert race (same trick as catch-all).
+            'CREATE UNIQUE INDEX IF NOT EXISTS event_series_occurrence ON event(series_id, date(start_time)) WHERE series_id IS NOT NULL;',
         ])
     };
 

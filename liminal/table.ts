@@ -1748,6 +1748,52 @@ export class DateField extends Field {
 }
 
 /**
+ * A time of day (no date), stored and edited as 'HH:MM' via a native
+ * <input type=time>.  Distinct from DateTimeField (a full instant): use this for
+ * recurring things like an event series' start/end time of day.
+ */
+export class TimeField extends Field {
+    constructor(name: string, options: FieldOptions = {}) {
+        super(name, options);
+    }
+
+    dmlType(): string { return 'TEXT'; }
+
+    render(value: any): Markup {
+        return typeof value === 'string' && value !== '' ? value : '';
+    }
+
+    // <input type=time> uses 'HH:MM' directly - same as storage.
+    override toFormValue(value: any): any {
+        return value == null ? '' : String(value);
+    }
+
+    renderInput(value: any): Markup {
+        return [
+            ['div', {'class':'col-12'},
+             ['label', {for:'input-'+this.name, class:'form-label'}, this.prompt],
+             ['input', Object.assign({type:'time', class:'form-control',
+                                      name:this.name, id:'input-'+this.name, value: this.toFormValue(value)},
+                                     this.isInputRequired() ? {required: ''} : {})]
+            ] // div
+        ];
+    }
+
+    parseSimpleInput(value: string): any {
+        if(!value) return null;
+        if(!/^\d{2}:\d{2}(:\d{2})?$/.test(value))
+            throw new Error(`Invalid time format. Expected "HH:MM", got "${value}"`);
+        return value.slice(0, 5);   // normalize to HH:MM
+    }
+
+    override fromLiteral(v: any): any {
+        if(typeof v !== 'string' || !/^\d{2}:\d{2}(:\d{2})?$/.test(v))
+            throw new Error(`${this.name}: expected an "HH:MM" time, got ${JSON.stringify(v)}`);
+        return v.slice(0, 5);
+    }
+}
+
+/**
  * A point in db time: the field VALUE is a raw hybrid-logical-clock timestamp
  * NUMBER (liminal/timestamp.ts - the versioned stores' pervasive clock), but
  * nobody should ever see or type the encoded value, so it is edited as a

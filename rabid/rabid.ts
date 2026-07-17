@@ -20,6 +20,7 @@ import * as committee from './committee.ts';
 import * as task from './task.ts';
 import * as gallery from './gallery.ts';
 import * as extractionJob from './extraction_job.ts';
+import * as eventSeries from './event_series.ts';
 import * as site from '../components/site.ts';
 import * as rabidSite from './rabid-site.ts';   // mounts RabidSiteView + registers rabid blocks
 import { Llm, loadLlm } from '../liminal/llm.ts';
@@ -69,6 +70,8 @@ export class Rabid extends LiminalApp {
     @path get volunteerLoginSession() { return new volunteer.VolunteerLoginSessionTable(); }
     @route(authenticated) @path get timesheet_entry() { return new timesheet.TimesheetEntryTable(); }
     @route(authenticated) @path get event() { return new event.EventTable(); }
+    @route(authenticated) @path get event_series() { return new eventSeries.EventSeriesTable(); }
+    @route(authenticated) @path get event_series_skip() { return new eventSeries.EventSeriesSkipTable(); }
     @route(authenticated) @path get event_commitment() { return new event.EventCommitmentTable(); }
     @route(authenticated) @path get event_checkin() { return new event.EventCheckinTable(); }
     @route(authenticated) @path get gallery_photo() { return new gallery.GalleryPhotoTable(); }
@@ -136,7 +139,7 @@ export class Rabid extends LiminalApp {
 
     @lazy
     get tables() {
-        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_commitment, this.event_checkin, this.event_retrospective, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask, this.gallery_photo, this.extraction_job, this.site, this.sitePage, this.block];
+        return [this.config, this.volunteer, this.passwordHash, this.passwordReset, this.volunteerLoginSession, this.timesheet_entry, this.event, this.event_series, this.event_series_skip, this.event_commitment, this.event_checkin, this.event_retrospective, this.sale, this.service, this.volunteer_group, this.group_member, this.committee, this.project, this.task, this.subtask, this.gallery_photo, this.extraction_job, this.site, this.sitePage, this.block];
     }
 
     // Pages that carry route-borne view state (page-state; liminal.md § On-page
