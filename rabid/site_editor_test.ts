@@ -224,9 +224,9 @@ test("image-and-text: the block editor form has the photo picker (file input) + 
         const form = asUser(fx.alice, () => r.siteView.renderBlockEditForm(bid));
         // The ImageField picker: a file input that uploads through rabid's photo store.
         assert(find(form, n => tagOf(n) === 'input' && attr(n, 'type') === 'file'));
-        // The hidden path field + the text field.
+        // The hidden path field + the markdown text field (a textarea).
         assert(find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'image'));
-        assert(find(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'text'));
+        assert(find(form, n => tagOf(n) === 'textarea' && attr(n, 'name') === 'text'));
     });
 });
 

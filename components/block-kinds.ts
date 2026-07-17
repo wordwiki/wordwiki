@@ -8,7 +8,7 @@
 // Renderers emit STRUCTURE + semantic classes only, never inline color/spacing, so a
 // per-site stylesheet can restyle everything (site-editor.md CSS goal).
 
-import { FieldSet, StringField, EnumField, type Tuple } from "../liminal/table.ts";
+import { FieldSet, StringField, EnumField, MarkdownField, type Tuple } from "../liminal/table.ts";
 import { markdownToMarkup } from "../liminal/markdown.ts";
 import { h, type Markup } from "../liminal/markup.ts";
 import { registerBlockKind, type BlockCtx } from "./block-registry.ts";
@@ -44,7 +44,7 @@ registerBlockKind({
 registerBlockKind({
     kind: 'text', label: 'Text', category: 'content',
     schema: new FieldSet('text', [
-        new StringField('text', {default: '', prompt: 'Text (markdown)'}),
+        new MarkdownField('text', {default: '', prompt: 'Text'}),
     ]),
     isEmpty: (p) => !String(p.text ?? '').trim(),
     render: (p) => [h.div, {class: 'site-block-text'}, markdownToMarkup(String(p.text ?? ''))],

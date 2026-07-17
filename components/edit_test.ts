@@ -5,7 +5,7 @@ import { assertEquals, assert, assertThrows } from "../liminal/testing/assert.ts
 import { openTestDb, clearAllData } from "../liminal/testing/db-harness.ts";
 import * as security from "../liminal/security.ts";
 import { setSerialized } from "../liminal/serializable.ts";
-import { find, findAll, hasClass, hasText, attr, testIdOf } from "../liminal/testing/markup-assert.ts";
+import { find, findAll, hasClass, hasText, attr, tagOf, testIdOf } from "../liminal/testing/markup-assert.ts";
 import { SiteTable, PageTable, BlockTable, siteEditorTables } from "./site.ts";
 import { blockKind, readPayload } from "./block-registry.ts";
 import { SiteView } from "./site-view.ts";
@@ -117,6 +117,18 @@ test("an empty editable block shows a click-to-edit placeholder; the body opens 
     assert(find(m, n => hasClass(n, 'site-block-editable')));
     const body = find(m, n => hasClass(n, 'site-block-edit-body'))!;
     assert(String(attr(body, 'hx-get')).includes('renderBlockEditForm'));
+});
+
+test("the text block edits via a markdown field (textarea + a markdown hint), not a one-line input", () => {
+    const p = freshPage();
+    const form = security.runSystem(() => {
+        editable.addBlock(p, 'text');
+        const id = blocksOf(p)[0].block_id;
+        return editable.renderBlockEditForm(id);
+    });
+    assert(find(form, n => tagOf(n) === 'textarea' && attr(n, 'name') === 'text'));
+    assertEquals(findAll(form, n => tagOf(n) === 'input' && attr(n, 'name') === 'text').length, 0);
+    assert(find(form, n => hasText(n, 'Markdown')));
 });
 
 test("a non-editable block (divider) is not click-to-edit and shows no placeholder, but keeps its ☰", () => {

@@ -15,7 +15,7 @@ import * as config from "./config.ts";
 import { assetUrl } from "../liminal/assets.ts";
 import { SiteView } from "../components/site-view.ts";
 import { registerBlockKind, type BlockCtx } from "../components/block-registry.ts";
-import { FieldSet, ImageField, EnumField, StringField, liveReloadableProps } from "../liminal/table.ts";
+import { FieldSet, ImageField, EnumField, MarkdownField, liveReloadableProps } from "../liminal/table.ts";
 import { markdownToMarkup } from "../liminal/markdown.ts";
 import type { Page } from "../components/site.ts";
 import { rabid } from "./rabid.ts";
@@ -241,7 +241,7 @@ registerBlockKind({
     schema: new FieldSet('image-and-text', [
         new ImageField('image', 'rabid.photo', {aspect: 'landscape', nullable: true, prompt: 'Image'}),
         new EnumField('image_side', {left: 'Left', right: 'Right'}, {default: 'left'}),
-        new StringField('text', {default: '', prompt: 'Text (markdown)'}),
+        new MarkdownField('text', {default: '', prompt: 'Text'}),
     ]),
     isEmpty: (p) => !(typeof p.image === 'string' && p.image !== '') && !String(p.text ?? '').trim(),
     render: (p, _ctx): Markup => {
