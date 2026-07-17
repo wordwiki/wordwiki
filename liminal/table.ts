@@ -123,6 +123,56 @@ export class FieldSet {
         }
         return `{${parts.join(',')}}`;
     }
+
+    /**
+     * Coerce a STORED value (e.g. a JSON `payload` column) into a COMPLETE tuple:
+     * every field present -> passed through unchanged; absent or null -> its
+     * default (or null); unknown keys dropped.
+     *
+     * This is the read-path for schema-over-JSON payloads (site-editor.md
+     * "Payload schema migration"), so its leniency is deliberate and differs from
+     * `normalize` in two ways: unknown keys are IGNORED, not rejected (a field
+     * removed from the schema just drops out), and present values are NOT
+     * re-validated through `fromLiteral` (which would THROW on e.g. a stale enum
+     * value after a vocabulary change).  A present-but-stale value is left intact
+     * for the renderer to handle defensively and the edit form to re-validate on
+     * save.  Net effect: adding a field (absent -> default) and removing a field
+     * (unknown -> dropped) need no migration; only rename/retype need an explicit
+     * migratePayload step upstream of this.
+     *
+     * Guaranteed to produce a value for every field only when every field is
+     * nullable or has a default - see assertHydratable().
+     */
+    hydrate(stored: Record<string, any> | undefined | null): Tuple {
+        const src = (stored && typeof stored === 'object' && !Array.isArray(stored)) ? stored : {};
+        const out: Tuple = {};
+        for(const f of this.fields) {
+            const v = src[f.name];
+            out[f.name] = (v === undefined || v === null) ? (f.options.default ?? null) : v;
+        }
+        return out;
+    }
+
+    /** The all-absent hydrate: every field at its default (or null).  The value a
+     *  freshly-created record/payload starts from. */
+    defaults(): Tuple {
+        return this.hydrate({});
+    }
+
+    /**
+     * Assert every field can safely be absent from a `hydrate` input - i.e. is
+     * nullable or has a default - so old stored blobs always hydrate to a
+     * complete value.  Registries that accept a FieldSet as a payload schema (the
+     * block-kind registry) call this at registration time; throws listing the
+     * offending fields.
+     */
+    assertHydratable(): void {
+        const bad = this.fields.filter(f => !f.options.nullable && f.options.default === undefined);
+        if(bad.length > 0)
+            throw new Error(
+                `${this.name}: payload fields must be nullable or have a default to hydrate old blobs: `+
+                bad.map(f=>f.name).join(', '));
+    }
 }
 
 /** One primitive as a route-expression literal.  JSON string quoting is a
