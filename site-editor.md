@@ -122,42 +122,40 @@ export function allBlockKinds(): BlockKind[] { return [...registry.values()]; }
 
 ## Schema (three tables)
 
+An earlier draft had a `PageFragment` that reused one page mechanism for pages, headers, footers, and
+templates.  We dropped it (see "Page chrome is app-subclassed", below): a page's header/footer/nav is
+the most site-specific, most logic-heavy part of a site and wants real programmer code, not a
+reusable user-edited fragment - and the *actual* requirement (a DIFFERENT hero image per page) fights
+the shared-fragment model.  So there are just **Pages**, plus per-page config columns the app's chrome
+reads.
+
 ```ts
-// Site level (a site contains page fragments)
+// Site level (a site contains pages)
 interface Site {
   site_id: number;
   site_title: string;
+  // Site-level chrome content the app's renderer reads (logo, footer text, ...) can
+  // live here or in a site-settings mechanism - the pressure valve for shared,
+  // author-editable header/footer content that is NOT part of any page's block flow.
 }
 
-export const page_fragment_kind: Record<string, string> = {
-    'page':     'Page',
-    'header':   'Page Header',
-    'footer':   'Page Footer',
-    'template': 'Template',
-};
-
-// PageFragment rather than Page because we reuse the full page mechanism for:
-//  - headers and footers (for now it can be an error to create more than one of each);
-//  - template fragments (a page specialized by a supplied dict - see "Deferred", below).
-// When a fragment is rendered it is handed a dict (BlockCtx.dict) that can specialize
-// templates (including a page-head template).
-interface PageFragment {
-  page_fragment_id: number;
+interface Page {
+  page_id: number;
   site_id: number;
   page_title: string;
-  fragment_kind: string;   // page_fragment_kind
-  fragment_name: string;   // hint for template binding (not yet rich enough)
-  slug: string;            // URL path
-  nav_order: string;       // order_key for header navigation
-  published: number;       // boolnum: draft vs live
+  slug: string;         // URL path
+  hero_image: string;   // per-page header image (nullable); the app chrome renders it
+  nav_order: string;    // order_key for the site nav
+  nav_visible: number;  // boolnum: show in the site nav (a landing page may hide)
+  published: number;    // boolnum: draft vs live
 }
 
-// One flat, ordered list of blocks per page fragment.  BlockFlow and every per-kind
-// block/box table from earlier drafts collapse into this single table; the block's
-// typed value lives in `payload`, shaped by blockKind(kind).schema.
+// One flat, ordered list of blocks per page (the FLATNESS RULE).  BlockFlow and every
+// per-kind block/box table from earlier drafts collapse into this single table; the
+// block's typed value lives in `payload`, shaped by blockKind(kind).schema.
 interface Block {
   block_id: number;
-  page_fragment_id: number;
+  page_id: number;
   order_key: string;
   kind: string;    // registry key: 'title', 'divider', 'rabid-hours', ...
   payload: string; // JSON
@@ -169,9 +167,9 @@ As liminal `Table` declarations:
 ```ts
 class BlockTable extends Table<Block> {
   constructor() { super('block', [
-    new ForeignKeyField('page_fragment_id', 'page_fragment', 'page_fragment_id',
-                        {edit: security.never}),
-    new OrderKeyField('order_key'),
+    new PrimaryKeyField('block_id', {}),
+    new ForeignKeyField('page_id', 'page', 'page_id', {indexed: true, edit: security.never}),
+    new ManagedStringField('order_key', {default: ''}),   // hidden, set by insert()/moves
     new StringField('kind', {edit: security.never}),
     new JsonField('payload'),
   ]); }
@@ -181,6 +179,33 @@ class BlockTable extends Table<Block> {
 The photo/text "boxes" of earlier drafts become **fields inside a payload**, not tables.  A shared
 `renderPhoto(payload.photo, ctx)` helper gives the gallery-framing reuse the box level was after -
 code reuse, no FK hop.
+
+
+## Page chrome is app-subclassed (more power than CSS)
+
+A page's **chrome** - the header (hero image + title), the site nav, the footer - is NOT authored as
+user-editable blocks.  It is a `protected renderPageChrome(page, body, ctx)` hook on the site
+renderer that the **hosting app subclasses**.  This is deliberate and is the core of "this is not a
+generic tool - it is a site editor a programmer customizes for the site it is embedded in":
+
+- Chrome is where real logic lives (per-page hero, "show the events nav only if there are upcoming
+  events", brand, responsive menu).  A subclass gives full code; CSS or a config-only fragment can't.
+  It is the same protected-render-hook seam liminal already uses (e.g. gallery's `offersCropFraming`
+  / `renderPhotoPreview`).
+- The block flow renders INSIDE the chrome's body slot.  The user owns the content flow; the
+  programmer owns the frame.
+
+**Chrome contract** (what a subclass reads / must fulfill):
+- per-page: `page_title`, `slug`, `hero_image`, `nav_visible`, `published`;
+- the site's page list (for nav), via `forSite`;
+- site-level fields (logo, footer text) from `Site` / site settings.
+
+**The author-editable line.**  With code chrome, an author can no longer edit header/footer *content*
+(a tagline, a hours banner, contact info) through the block UI.  For the target sites that is fine
+(brand/nav change rarely).  Anything an author genuinely must edit goes through the **pressure
+valve**, NOT the block flow: a site-level settings field, or an **app block the chrome renders** (e.g.
+`rabid-hours` embedded in the footer).  Name this line per site so "change the footer phone number"
+doesn't silently become a code deploy.
 
 
 ## A kind is a FieldSet + a render fn
@@ -254,26 +279,39 @@ not a page-template engine.
 
 ## Render dispatch (page render is a pure fn of rows + registry + ctx)
 
+The block flow renders into the app chrome's body slot.  `renderPageChrome` is the app-subclassed
+hook (default: title + body); components never hardcode a header.  Route expressions self-resolve
+their prefix via `this.toString()` (the `@path` mount stamps the table `rabid.site` / `wordwiki.site`)
+- a shared component can't hardcode `rabid.`.
+
 ```ts
-renderPage(page_fragment_id: number, ctx: BlockCtx): Markup {
-  const blocks = db().all<Block>(
-    `SELECT * FROM block WHERE page_fragment_id=:id ORDER BY order_key`,
-    {id: page_fragment_id});
+renderPage(page_id: number, ctx: BlockCtx): Markup {
+  const page = this.pageTable.getById(page_id);
+  const blocks = this.blockTable.forPage.all({page_id});
 
   const body = blocks.map(b => {
     const kind = blockKind(b.kind);
-    const payload = JsonField.parse(b.payload, {});
     if (!kind)   // e.g. wordwiki rendering a page that used a rabid-only block
       return ctx.editing ? ['div', {class:'site-block-unknown'}, `Unknown block: ${b.kind}`] : '';
-    const rendered = kind.render(payload, ctx);
+    const rendered = kind.render(readPayload(kind, b.payload), ctx);   // migrate -> hydrate
     return ctx.editing ? this.wrapForEdit(b, rendered) : rendered;
   });
 
-  return ctx.editing
-    ? ['div', liveReloadableProps([this.pageShapeKey(page_fragment_id)],
-                                  `components.site.renderPage(${page_fragment_id}, ...)`),
-       body, this.renderAddBlockMenu(page_fragment_id)]
+  const flow = ctx.editing
+    ? ['div', liveReloadableProps([this.blockTable.pageShapeKey(page_id)],
+                                  `${this}.renderPage(${page_id}, {editing:true})`),
+       body, this.renderAddBlockMenu(page_id)]
     : ['div', {class: 'site-page'}, body];
+
+  return this.renderPageChrome(page, flow, ctx);   // app-subclassed frame
+}
+
+// Default chrome; the hosting app overrides this to render its brand header
+// (page.hero_image + page.page_title), nav (from forSite), and footer.
+protected renderPageChrome(page: Page, body: Markup, _ctx: BlockCtx): Markup {
+  return ['div', {class: 'site-page-outer'},
+    page.page_title ? ['h1', {class: 'site-page-title'}, page.page_title] : undefined,
+    body];
 }
 ```
 
@@ -288,28 +326,33 @@ it is handed, not from a live request.
 All per-block-table CRUD collapses to a handful of mutations on `block`, and the payload editor is
 the kind's `FieldSet.renderForm` - no bespoke editor per kind.
 
+**Permission without leaking app roles into components.**  A shared component can't hardcode
+`hostOrAdmin` (a rabid-only role).  Follow gallery's pattern: decorate with the generic
+`@routeMutation(authenticated)` coarse gate, then do the fine-grained check inside the method via an
+**injected `canEditSite(site_id)` policy** the app supplies when it mounts the site editor.
+
 ```ts
-@routeMutation(hostOrAdmin)
-addBlock(page_fragment_id: number, kind: string, after_order_key: string) {
+@routeMutation(authenticated)
+addBlock(page_id: number, kind: string, after_order_key: string) {
+  this.assertCanEdit(page_id);                     // injected site-edit policy
   const k = blockKind(kind) ?? panic(`unknown kind ${kind}`);
-  this.insert({page_fragment_id, kind,
-               order_key: orderKeyAfter(after_order_key),
-               payload: JsonField.format(k.schema.defaults())});
-  return this.reloadPage(page_fragment_id);
+  this.blockTable.insert({page_id, kind, order_key: orderKeyAfter(after_order_key),
+                          payload: writePayload(k, k.schema.defaults())});
+  return this.reloadPage(page_id);
 }
 
-@routeMutation(hostOrAdmin)
+@routeMutation(authenticated)
 editBlockPayload(block_id: number, form: Record<string,string>) {
-  const b = this.getById(block_id);
+  const b = this.blockTable.getById(block_id);
+  this.assertCanEdit(b.page_id);
   const k = blockKind(b.kind) ?? panic();
-  const changes = k.schema.parseFormChanges(form);            // existing FieldSet method
-  const merged  = {...JsonField.parse(b.payload, {}), ...changes};
-  this.updateNamedFields(block_id, ['payload'], {payload: JsonField.format(merged)});
+  const merged = {...readPayload(k, b.payload), ...k.schema.parseFormChanges(form)};
+  this.blockTable.updateNamedFields(block_id, ['payload'], {payload: writePayload(k, merged)});
   return this.reloadBlock(block_id);
 }
 
-@routeMutation(hostOrAdmin) moveBlockUp(block_id) { /* reorder order_key */ return this.reloadPage(pid); }
-@routeMutation(hostOrAdmin) deleteBlock(block_id) { this.update(block_id, {deleted:1}); return this.reloadPage(pid); }
+@routeMutation(authenticated) moveBlockUp(block_id) { /* assertCanEdit; reorder order_key */ }
+@routeMutation(authenticated) deleteBlock(block_id) { /* assertCanEdit; this.delete(block_id) */ }
 ```
 
 The "edit this block" affordance is the standard modal-of-arguments: `hx-get` the kind's form into
@@ -323,8 +366,8 @@ a table's own fields.  The "add block" menu is `action.actionMenu` over `allBloc
 A block's owner is composite (page + order position) and blocks reorder, so the DML can't auto-emit -
 exactly the situation `gallery.ts` documents at its top.  Reuse its two-key scheme:
 
-- **Page shape key** `-block-page-<page_fragment_id>-shape-` on the page fragment (add / move / delete
-  rebuild the ordered list) -> `liveReloadableProps` + `dirty.record` for cross-browser liveness.
+- **Page shape key** `-block-page-<page_id>-shape-` on the page (add / move / delete rebuild the
+  ordered list) -> `liveReloadableProps` + `dirty.record` for cross-browser liveness.
 - **Block row key** `this.rowKey(block_id)` for an in-place payload edit that doesn't move anything.
 
 Since gallery.ts is moving into `components` anyway, factor the composite-owner shape-key helper out
@@ -383,20 +426,41 @@ Hydrate is essentially "repair on load" for payloads, so align it with the exist
 VersionedDb validator/repair-on-load pattern rather than inventing a parallel mechanism.
 
 
+## One-off block kinds are a first-class strategy
+
+When the user wants a layout the generic blocks can't express (a bespoke home-page hero), the answer
+is NOT to grow the generic mechanism - it is for the programmer to whip up a **one-off block kind for
+that one site**.  This is a deliberate win, not a workaround:
+
+- It turns an *open-ended generalization problem* (make the generic block express every layout - which
+  has no bottom, and whose complexity is paid by every site and user forever) into a *bounded local
+  programming task* (one render fn).  A one-off kind is O(1), isolated (can't break other blocks), as
+  bespoke as needed (full code, not config), and deletable when the page is redesigned.
+- The cheap-JSON + registry model is what makes it affordable - no table, no migration, no editor,
+  just a schema + a render fn.  So the escape hatch is the pressure valve that keeps the generic core
+  small.  Same principle as app-subclassed chrome: **bespoke-but-cheap beats generic-but-unbounded.**
+
+**Discipline:** a one-off block should still put the user-tweakable bits (headline text, chosen image)
+in its **payload schema**, keeping only the bespoke *layout* in `render`.  Bake everything into render
+and the block stops being editable content - the user needs a programmer to change a word.
+
+
 ## Deferred (kept out of v1 on purpose)
 
 These are real, but each is a separate, harder feature; folding them into the v1 schema is the
 overgeneralization the design goals warn against.
 
-- **Templates / one-per-row fragments.**  `fragment_kind:'template'` and `fragment_name` are carried
-  in the schema as a hint, but template *binding* (a page parameterized by a query row, iterated per
-  row, with per-row URLs) is not built.  The concrete need behind it (a bike-sale listing) is served
-  now by a live-DB app block (`rabid-bike-sales`), which is simpler and sufficient.
-- **`{{name}}` macros everywhere text is rendered.**  A markdown `TextBox`/`image-and-text` already
+- **Per-row detail pages / templating.**  Two different needs hide under "template page":
+  - a *listing* ("all bikes for sale") is just an app block (`rabid-bike-sales`) on a normal page -
+    already solved, no template needed;
+  - a *per-row detail page* ("one page per bike at `/bikes/<id>`", content bound to a row, per-row
+    URL) is the real template.  If needed, model it as a **programmer-owned dynamic route** reusing
+    the same block + chrome machinery bound to a row - NOT a generic "template page" type with a flag
+    (that is the door back to the parameterized-page engine).  Confirm it is even v1 scope; the
+    listing may be all redraccoon needs at first, in which case `Page` needs no flag at all.
+- **`{{name}}` macros everywhere text is rendered.**  A markdown text / image-and-text block already
   gives formatting; a second macro-expansion system is deferred.  `BlockCtx.dict` is the hook it
   would eventually use.
-- **Header/footer multiplicity.**  Reusing PageFragment for header/footer is in; the "at most one
-  header, one footer" guard is app logic for now, not a schema constraint.
 
 
 ## Design decision on file: registry vs table-per-block

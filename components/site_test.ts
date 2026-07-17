@@ -7,7 +7,7 @@ import { openTestDb, clearAllData } from "../liminal/testing/db-harness.ts";
 import * as security from "../liminal/security.ts";
 import { FieldSet, StringField, EnumField } from "../liminal/table.ts";
 import { setSerialized } from "../liminal/serializable.ts";
-import { SiteTable, PageFragmentTable, BlockTable, siteEditorTables } from "./site.ts";
+import { SiteTable, PageTable, BlockTable, siteEditorTables } from "./site.ts";
 import { registerBlockKind, unregisterBlockKind, readPayload, writePayload,
          type BlockKind } from "./block-registry.ts";
 
@@ -15,7 +15,7 @@ import { registerBlockKind, unregisterBlockKind, readPayload, writePayload,
 // route path via the `@path get block()` mount; here we stamp them by hand so the
 // `@path`-decorated query getters can serialize.
 const site = setSerialized(new SiteTable(), 'site');
-const page = setSerialized(new PageFragmentTable(), 'page_fragment');
+const page = setSerialized(new PageTable(), 'page');
 const blk = setSerialized(new BlockTable(), 'block');
 
 function fresh() {
@@ -37,17 +37,17 @@ test("page fragments append in nav order within a site", () => {
     });
 });
 
-test("blocks form a flat ordered flow per fragment (append + explicit key)", () => {
+test("blocks form a flat ordered flow per page (append + explicit key)", () => {
     fresh();
     security.runSystem(() => {
         const s = site.insert({site_title: 'S'});
         const p = page.insert({site_id: s, page_title: 'P'});
         const other = page.insert({site_id: s, page_title: 'Other'});
-        blk.insert({page_fragment_id: p, kind: 'divider', payload: '{}'});
-        blk.insert({page_fragment_id: p, kind: 'title', payload: '{}'});
-        // A block on a different fragment must not appear in p's flow.
-        blk.insert({page_fragment_id: other, kind: 'divider', payload: '{}'});
-        const flow = blk.forFragment.all({page_fragment_id: p});
+        blk.insert({page_id: p, kind: 'divider', payload: '{}'});
+        blk.insert({page_id: p, kind: 'title', payload: '{}'});
+        // A block on a different page must not appear in p's flow.
+        blk.insert({page_id: other, kind: 'divider', payload: '{}'});
+        const flow = blk.forPage.all({page_id: p});
         assertEquals(flow.map(b => b.kind), ['divider', 'title']);
         assertEquals(flow[0].order_key < flow[1].order_key, true);
     });
@@ -68,7 +68,7 @@ test("block payload round-trips through the registry read/write path", () => {
         security.runSystem(() => {
             const s = site.insert({site_title: 'S'});
             const pf = page.insert({site_id: s, page_title: 'P'});
-            const id = blk.insert({page_fragment_id: pf, kind: kind.kind,
+            const id = blk.insert({page_id: pf, kind: kind.kind,
                                    payload: writePayload(kind, {level: 'h1', text: 'Hi'})});
             const stored = blk.getById(id);
             assertEquals(stored.kind, 'test-title');

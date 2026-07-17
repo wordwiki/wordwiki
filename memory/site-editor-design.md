@@ -16,8 +16,18 @@ never imported by components — they push behavior IN, same as [[page-editor-bo
 `addPageEditorLinkProvider`.
 
 Key decision (dz + me, 2026-07-17): blocks use a **block-kind registry**, not a table per block kind.
-- ONE `block` table: `{page_fragment_id, order_key, kind, payload(JsonField)}`. Three tables total
-  (Site, PageFragment, Block); the old typed `BlockFlow`+`*Block`+`*Box` tables all collapse in.
+- ONE `block` table: `{page_id, order_key, kind, payload(JsonField)}`. Three tables total
+  (Site, Page, Block); the old typed `BlockFlow`+`*Block`+`*Box` tables all collapse in.
+- **PageFragment DROPPED** (2026-07-17): no header/footer/template fragments. Just Pages + per-page
+  config columns (page_title, slug, hero_image, nav_order, nav_visible, published). A page's CHROME
+  (header/nav/footer) is an **app-subclassed `renderPageChrome(page, body, ctx)` hook** ("more power
+  than CSS") — because the real requirement (different hero image PER page) fought the shared-fragment
+  model, and chrome is the most site-specific, logic-heavy part. Shared author-editable header/footer
+  content goes via site-settings fields or an embedded app block, NOT the block flow.
+- **One-off block kinds are a first-class strategy**: when generic blocks can't express a layout, the
+  programmer writes a bespoke block kind for that one site (cheap: schema+render, no table). This is
+  the pressure valve that keeps the generic core small — bespoke-but-cheap beats generic-but-unbounded.
+  Discipline: keep user-tweakable bits in the payload schema, only layout in render.
 - A `BlockKind = {kind, label, schema: FieldSet, render(payload, ctx)}` registered into a Map.
   Each kind still carries a real liminal FieldSet (payload validated + auto-edited via shared
   list/form machinery) — schema-first WITHOUT a physical table. Reusing FieldSet was the win over
