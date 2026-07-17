@@ -30,6 +30,10 @@ test("the public route surface is exactly the auth entry points", () => {
         "login",
         "loginRequest",
         "logout",
+        // The public site: published pages served anonymously by slug (/p/<slug>).
+        // The one audited public entry; it delegates to siteView internally, which
+        // serves only PUBLISHED pages - drafts and all editing stay authenticated.
+        "renderPublicSite",
         "resetPassword",
         "resetPasswordRequest",
     ]);

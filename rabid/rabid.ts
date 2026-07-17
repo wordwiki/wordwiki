@@ -94,6 +94,16 @@ export class Rabid extends LiminalApp {
     @route(authenticated) @path get block() { return new site.BlockTable(); }
     @route(authenticated) @path get siteView() { return new rabidSite.RabidSiteView(this.site, this.sitePage, this.block); }
 
+    // The SOLE anonymous entry to the public site: /p/<slug> rewrites here (see
+    // routeExprFromPath).  It delegates INTERNALLY to siteView (a direct getter
+    // call, not a route hop, so siteView's authenticated gate doesn't apply), which
+    // serves only PUBLISHED pages.  Keeping the one public method on the app object
+    // means the route-security tripwire audits the whole public surface.
+    @route(security.publicRoute('published site pages, served anonymously by slug'))
+    renderPublicSite(slug: string): Markup {
+        return this.siteView.renderPublicBySlug(String(slug ?? ''));
+    }
+
     // The LLM client for scan -> extract (liminal/llm.ts).  Lazy, like the mailer:
     // reads rabid-anthropic-credential.json, degrading to a DisabledLlm when absent.
     // The setter lets tests inject a fake (no network / no key).
@@ -219,6 +229,17 @@ export class Rabid extends LiminalApp {
     // ----- LiminalApp hooks --------------------------------------------------
 
     get appName(): string { return 'rabid'; }
+
+    // Public site serving: pretty /p/<slug> URLs map to the anonymous published-page
+    // route (site editor).  /p or /p/ is the site home (empty slug).  Everything
+    // else falls through to the normal route-expr dispatch.  Done here (not a page
+    // map entry) because pages are login-gated; the target route is publicRoute.
+    protected override routeExprFromPath(path: string): string {
+        const m = path.match(/^\/p(?:\/(.*))?$/);
+        if(m !== null)   // `path` is already URL-decoded (see requestHandler)
+            return `rabid.renderPublicSite(${JSON.stringify(m[1] ?? '')})`;
+        return super.routeExprFromPath(path);
+    }
 
     // Resolve the session token into the request's security context (one trusted
     // lookup of the actor's own record, before any actor context exists).

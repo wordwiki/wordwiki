@@ -4,7 +4,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts";
 import { find, findAll, hasClass, hasText, attr, tagOf } from "../liminal/testing/markup-assert.ts";
-import { withTestDb, asUser, asSystem, renderRoute, invoke } from "./testing.ts";
+import { withTestDb, asUser, asSystem, asAnon, renderRoute, invoke } from "./testing.ts";
 import { getRabid } from "./rabid.ts";
 import { blockKind } from "../components/block-registry.ts";
 
@@ -107,6 +107,62 @@ test("editor shows a 'View published' link to the brand-chrome page", async () =
         // SiteView is not a Table, so `${this}` needs its own toString) - NOT
         // '[object Object]'.
         assertEquals(attr(link, 'href'), `/rabid.siteView.renderPublicPage(${page_id})`);
+    });
+});
+
+test("public serving: /p/<slug> rewrites to the anonymous published-page route", () => {
+    const r = getRabid() as any;
+    assertEquals(r.routeExprFromPath('/p/about'), 'rabid.renderPublicSite("about")');
+    assertEquals(r.routeExprFromPath('/p/'), 'rabid.renderPublicSite("")');
+    assertEquals(r.routeExprFromPath('/p'), 'rabid.renderPublicSite("")');
+    // A normal path is untouched.
+    assertEquals(r.routeExprFromPath('/volunteers'), 'volunteers');
+});
+
+test("public serving: a published page is reachable ANONYMOUSLY by slug; drafts are not", async () => {
+    await withTestDb(async () => {
+        const r = getRabid();
+        asSystem(() => {
+            const site_id = r.site.insert({site_title: 'redraccoon.org'});
+            const home = r.sitePage.insert({site_id, page_title: 'Home', slug: '', published: 1, nav_visible: 1});
+            r.sitePage.insert({site_id, page_title: 'About', slug: 'about', published: 1, nav_visible: 1});
+            r.sitePage.insert({site_id, page_title: 'Draft', slug: 'draft', published: 0, nav_visible: 1});
+            return home;
+        });
+        // Anonymous visitor: /p/about resolves and renders the brand chrome.
+        const about = await asAnon(() => renderRoute('rabid.renderPublicSite("about")'));
+        assert(find(about, n => hasClass(n, 'rrbr-site-title') && hasText(n, 'About')));
+        assert(find(about, n => hasClass(n, 'rrbr-site-brand')));
+        // Empty slug -> the home page.
+        const home = await asAnon(() => renderRoute('rabid.renderPublicSite("")'));
+        assert(find(home, n => hasClass(n, 'rrbr-site-title') && hasText(n, 'Home')));
+        // A draft slug is NOT served publicly (published-only) -> not found.
+        const draft = await asAnon(() => renderRoute('rabid.renderPublicSite("draft")'));
+        assert(find(draft, n => hasText(n, 'Page not found')));
+        assertEquals(findAll(draft, n => hasClass(n, 'rrbr-site-title')).length, 0);
+        // The relaxed siteView OBJECT gate must not expose authoring: anon reaching
+        // an authenticated method through it is still denied at the method.
+        let denied = false;
+        try { await asAnon(() => renderRoute('rabid.siteView.renderSiteIndex()')); } catch { denied = true; }
+        assert(denied);
+    });
+});
+
+test("public serving: nav links use pretty /p/<slug> URLs", async () => {
+    await withTestDb(async () => {
+        const r = getRabid();
+        const about = asSystem(() => {
+            const site_id = r.site.insert({site_title: 'S'});
+            r.sitePage.insert({site_id, page_title: 'Home', slug: '', published: 1, nav_visible: 1});
+            return r.sitePage.insert({site_id, page_title: 'About', slug: 'about', published: 1, nav_visible: 1});
+        });
+        const doc = await asAnon(() => renderRoute(`rabid.renderPublicSite("about")`));
+        const navLink = find(doc, n => tagOf(n) === 'a' && hasText(n, 'About'))!;
+        assertEquals(attr(navLink, 'href'), '/p/about');
+        // The slug-less home links to /p/.
+        const homeLink = find(doc, n => tagOf(n) === 'a' && hasText(n, 'Home'))!;
+        assertEquals(attr(homeLink, 'href'), '/p/');
+        assert(Number.isInteger(about));
     });
 });
 

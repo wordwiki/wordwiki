@@ -110,6 +110,18 @@ export class PageTable extends Table<Page> {
 /**/          ORDER BY nav_order, page_id`);
     }
 
+    // A published page by slug (public serving resolves pretty URLs through this).
+    // Slugs are unique per site in practice; a duplicate resolves lowest page_id.
+    @path
+    get publishedBySlug() {
+        return this.prepare<Page, {slug: string}>(block`
+/**/   SELECT ${this.allFields}
+/**/          FROM page
+/**/          WHERE slug = :slug AND published = 1
+/**/          ORDER BY page_id
+/**/          LIMIT 1`);
+    }
+
     // Shape key for a site's page list (a page added/removed/moved reloads it).
     siteShapeKey(site_id: number): string { return `-page-site-${site_id}-shape-`; }
 }

@@ -68,9 +68,14 @@ export class RabidSiteView extends SiteView {
         return [h.header, {class: 'rrbr-site-header' + (hero ? ' has-hero' : '')},
             hero,
             [h.div, {class: 'rrbr-site-container rrbr-site-masthead'},
-             [h.a, {href: `/${this}.renderPublicHome()`, class: 'rrbr-site-brand', 'hx-boost': 'false'},
-              'Red Raccoon Bikes'],
+             [h.a, {href: '/p/', class: 'rrbr-site-brand', 'hx-boost': 'false'}, 'Red Raccoon Bikes'],
              page.page_title ? [h.h1, {class: 'rrbr-site-title'}, page.page_title] : undefined]];
+    }
+
+    // The public URL for a page: pretty /p/<slug>, or /p/ (the home) for a
+    // slug-less page.  Full-page navigation (this is the standalone public site).
+    private publicHref(page: Page): string {
+        return '/p/' + (page.slug ? encodeURIComponent(page.slug) : '');
     }
 
     // The nav: the site's published, nav-visible pages, current page marked.
@@ -81,32 +86,44 @@ export class RabidSiteView extends SiteView {
         return [h.nav, {class: 'rrbr-site-nav', 'aria-label': 'Site'},
             [h.ul, {class: 'rrbr-site-container rrbr-site-nav-list'},
              pages.map(p => [h.li, {class: 'rrbr-site-nav-item' + (p.page_id === page.page_id ? ' active' : '')},
-                 [h.a, {href: this.publicPageUrl(p.page_id), 'hx-boost': 'false',
+                 [h.a, {href: this.publicHref(p), 'hx-boost': 'false',
                         ...(p.page_id === page.page_id ? {'aria-current': 'page'} : {})},
                   p.page_title || '(untitled)']])]];
     }
 
-    // Serve a published page as a STANDALONE branded document (its own <head> +
-    // brand CSS), NOT inside the rabid app shell.  Only the page's author (or, once
-    // public serving lands, anyone for a published page) may view it; drafts stay
-    // host/admin.  renderPage(..false) applies the brand chrome above.
+    // PUBLIC serving: a published page by pretty slug.  Called INTERNALLY by the
+    // app's single public entry (Rabid.renderPublicSite <- /p/<slug>), so it carries
+    // no @route of its own - the public gate lives on that one audited entry.  Only
+    // PUBLISHED pages resolve, so drafts are never exposed (staff preview a draft via
+    // the authenticated renderPublicPage below).  Empty slug = the site home.
+    renderPublicBySlug(slug: string): Markup {
+        const page = this.resolvePublicPage(String(slug ?? ''));
+        if(!page)
+            return this.publicDocument('Not found',
+                [h.div, {class: 'rrbr-site'},
+                 [h.main, {class: 'rrbr-site-main'},
+                  [h.div, {class: 'rrbr-site-container'}, [h.h1, {}, 'Page not found']]]]);
+        return this.publicDocument(page.page_title || 'Red Raccoon Bikes', this.renderPage(page.page_id, false));
+    }
+
+    private resolvePublicPage(slug: string): Page | undefined {
+        return security.runSystem(() => {
+            if(slug !== '')
+                return this.pageTable.publishedBySlug.first({slug});
+            const site = this.siteTable.listAll.all({})[0];
+            return site
+                ? this.pageTable.forSite.all({site_id: site.site_id}).find(p => p.published && p.nav_visible)
+                : undefined;
+        });
+    }
+
+    // STAFF preview: a page (incl. drafts) as the branded document, from the editor's
+    // "View published" link.  Authenticated - the public route above only serves
+    // published pages.  renderPage(..false) applies the brand chrome above.
     @route(authenticated)
     renderPublicPage(page_id: number): Markup {
         const page = this.pageTable.getById(page_id);
         return this.publicDocument(page.page_title || 'Red Raccoon Bikes', this.renderPage(page_id, false));
-    }
-
-    // The public site home: the first published+nav-visible page of the first site
-    // (a convenience landing for the brand link).  404-ish empty state otherwise.
-    @route(authenticated)
-    renderPublicHome(): Markup {
-        const site = this.siteTable.listAll.all({})[0];
-        const first = site && this.pageTable.forSite.all({site_id: site.site_id})
-            .find(p => p.published && p.nav_visible);
-        if(!first)
-            return this.publicDocument('Red Raccoon Bikes',
-                [h.div, {class: 'rrbr-site container py-5'}, [h.p, {}, 'No published pages yet.']]);
-        return this.renderPublicPage(first.page_id);
     }
 
     private publicDocument(title: string, content: Markup): Markup {
