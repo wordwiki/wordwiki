@@ -8,14 +8,36 @@
 import { Temporal } from 'temporal-polyfill';
 import * as date from '../liminal/date.ts';
 import { Table, PrimaryKeyField, StringField, EnumField, BooleanField, DateField, TimeField,
-         ForeignKeyField, type Tuple } from '../liminal/table.ts';
+         ForeignKeyField, liveReloadableProps, type Tuple } from '../liminal/table.ts';
 import { VolunteerForeignKeyField } from './volunteer-activity.ts';
 import { event_kind_enum, type Event } from './event.ts';
 import * as security from '../liminal/security.ts';
+import { route, routeMutation, authenticated } from '../liminal/security.ts';
 import { db } from '../liminal/db.ts';
 import { block } from '../liminal/strings.ts';
 import { path } from '../liminal/serializable.ts';
+import * as action from '../liminal/action.ts';
+import * as templates from './templates.ts';
+import { h, type Markup } from '../liminal/markup.ts';
+import * as dirty from '../liminal/dirty.ts';
 import { rabid } from './rabid.ts';
+
+const hostOrAdmin = security.or(security.hasRole('host'), security.hasRole('admin'));
+
+// A human summary of a series' recurrence ("Every Saturday · 10:00–15:00 · Victoria Park").
+export function seriesSummary(s: EventSeries): string {
+    if(s.frequency === 'none') return 'One-off template';
+    const wd = s.weekday ? weekday_enum[s.weekday] : '?';
+    const when = s.frequency === 'monthly'
+        ? `${week_of_month_enum[s.week_of_month ?? 'first'] ?? '?'} ${wd} monthly`
+        : `Every ${wd}`;
+    const time = s.start_time_of_day
+        ? ` · ${s.start_time_of_day}${s.end_time_of_day ? '–' + s.end_time_of_day : ''}` : '';
+    const loc = s.location_description ? ` · ${s.location_description}` : '';
+    const win = s.effective_start
+        ? ` · ${s.effective_start}${s.effective_end ? ' to ' + s.effective_end : ' onward'}` : '';
+    return when + time + loc + win;
+}
 
 // --- Controlled vocabularies (string enums, so they use the standard EnumField
 //     picker + auto-form; see recurring-events.md) --------------------------------
@@ -313,6 +335,157 @@ export class EventSeriesTable extends Table<EventSeries> {
 /**/          WHERE frequency <> 'none'
 /**/            AND (effective_end IS NULL OR effective_end >= :today)
 /**/          ORDER BY event_series_id`);
+    }
+
+    // --- Admin UI (host/admin) ---------------------------------------------------
+
+    override defaultFieldEdit: security.Permission = hostOrAdmin;
+
+    private canManage(): boolean {
+        const ctx = security.current();
+        return !!(ctx?.system || ctx?.roles.has('host') || ctx?.roles.has('admin'));
+    }
+
+    // The admin list page (recurring series + one-off templates).
+    @route(authenticated)
+    renderSeriesPage(): Markup {
+        return [h.div, {class: 'container py-3', 'data-testid': 'event-series-page'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-2'},
+             [h.h2, {class: 'mb-0'}, 'Event series & templates'],
+             this.canManage() ? action.actionButton('New series',
+                 {kind: 'modal', dialogUrl: `/${this}.newDialog()`}, 'btn btn-outline-primary btn-sm') : undefined],
+            [h.p, {class: 'text-muted small'},
+             'Recurring series drive the public schedule and auto-populate the events list; ' +
+             'one-off templates are prototypes you clone into a single event.'],
+            this.renderSeriesList()];
+    }
+
+    // The list body: a live fragment on the table key, so create/delete refresh it.
+    @route(authenticated)
+    renderSeriesList(): Markup {
+        const props = liveReloadableProps([this.tableKey()], `${this}.renderSeriesList()`);
+        const list = security.runSystem(() => this.listAll.all({}));
+        return [h.div, {...props, class: props.class + ' list-group lm-list'},
+            list.length === 0
+                ? [h.div, {class: 'text-muted p-2'}, 'No series yet.']
+                : list.map(s => this.renderSeriesRow(s.event_series_id))];
+    }
+
+    @route(authenticated)
+    renderSeriesRow(event_series_id: number): Markup {
+        const s = security.runSystem(() => this.getById(event_series_id));
+        const id = s.event_series_id;
+        const props = this.reloadableItemProps(id, `${this}.renderSeriesRow(${id})`);
+        const menu = this.canManage() ? action.actionMenu([
+            {label: 'Edit…', mode: {kind: 'modal', dialogUrl: `/${this}.renderForm(${this}.getById(${id}))`}},
+            {label: 'Skips…', mode: {kind: 'modal', dialogUrl: `/${this}.renderSkipsDialog(${id})`}},
+            s.frequency !== 'none'
+                ? {label: 'Reconcile now', mode: {kind: 'immediate', expr: `${this}.reconcileNow(${id})`}}
+                : {label: 'Create an event', mode: {kind: 'immediate', expr: `${this}.createEventFrom(${id})`}},
+            'divider',
+            {label: 'Delete series…', mode: {kind: 'confirm',
+                message: 'Delete this series? Future un-attended instances are removed; past/attended ones become standalone events.',
+                expr: `${this}.deleteSeries(${id})`}},
+        ] as action.ActionMenuItem[], {ariaLabel: 'Series actions'}) : undefined;
+        return [h.div, {...props, class: (props.class ?? '') + ' lm-item d-flex align-items-center gap-2',
+                        'data-testid': `event-series-row-${id}`},
+            [h.div, {class: 'lm-item-body flex-grow-1'},
+             [h.div, {class: 'lm-item-primary'}, s.description || '(unnamed series)',
+              s.frequency === 'none' ? [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Template'] : undefined],
+             [h.div, {class: 'lm-item-secondary text-muted small'}, seriesSummary(s)]],
+            menu];
+    }
+
+    @route(hostOrAdmin)
+    newDialog(): Markup { return this.renderForm({} as EventSeries); }
+
+    @routeMutation(hostOrAdmin)
+    reconcileNow(event_series_id: number): Markup {
+        this.reconcile(event_series_id);
+        return {action: 'reload', targets: ['.' + this.rowKey(event_series_id)]} as unknown as Markup;
+    }
+
+    // Clone a one-off template into a single real event dated today.
+    @routeMutation(hostOrAdmin)
+    createEventFrom(event_series_id: number): Markup {
+        const today = date.temporalToSqliteDate(date.orgToday());
+        const id = security.runSystem(() =>
+            rabid.event.insert(this.toEventValues(this.getById(event_series_id), today)));
+        return {action: 'navigate', url: `/rabid.event.detailPage(${id})`} as unknown as Markup;
+    }
+
+    @routeMutation(hostOrAdmin)
+    deleteSeries(event_series_id: number): Markup {
+        security.runSystem(() => {
+            const today = date.temporalToSqliteDate(date.orgToday());
+            // Future, un-attended instances go; the rest become standalone events.
+            for(const row of db().prepare<{event_id: number}, {sid: number, today: string}>(
+                'SELECT event_id FROM event WHERE series_id = :sid AND date(start_time) > :today')
+                .all({sid: event_series_id, today}))
+                if(!this.eventHasActivity(row.event_id)) rabid.event.delete(row.event_id);
+            db().execute('UPDATE event SET series_id = NULL WHERE series_id = ' + Number(event_series_id));
+            for(const sk of rabid.event_series_skip.forSeries.all({event_series_id}))
+                rabid.event_series_skip.delete(sk.event_series_skip_id);
+            this.delete(event_series_id);
+        });
+        return {action: 'reload', targets: ['.' + this.tableKey()]} as unknown as Markup;
+    }
+
+    // --- Skips ------------------------------------------------------------------
+
+    private skipShapeKey(event_series_id: number): string { return `-event_series_skip-${event_series_id}-shape-`; }
+
+    @route(hostOrAdmin)
+    renderSkipsDialog(event_series_id: number): Markup {
+        const f = rabid.event_series_skip.fieldsByName;
+        return [h.div, {class: 'p-2', style: 'min-width: 22rem'},
+            [h.h5, {}, 'Skips (holiday exceptions)'],
+            [h.p, {class: 'text-muted small'}, 'A skipped date is omitted from the schedule and never materialized.'],
+            this.renderSkipsList(event_series_id),
+            [h.hr, {}],
+            action.renderParamForm([f.skip_date, f.reason], {}, {
+                title: 'Add a skip', submitLabel: 'Add', hidden: {event_series_id},
+                dispatch: {onsubmit: `event.preventDefault(); tx\`${this}.addSkip(\${getFormJSON(event.target)})\``},
+            })];
+    }
+
+    @route(hostOrAdmin)
+    renderSkipsList(event_series_id: number): Markup {
+        const props = liveReloadableProps([this.skipShapeKey(event_series_id)],
+            `${this}.renderSkipsList(${event_series_id})`);
+        const skips = security.runSystem(() => rabid.event_series_skip.forSeries.all({event_series_id}));
+        return [h.div, {...props},
+            skips.length === 0
+                ? [h.div, {class: 'text-muted small'}, 'No skips.']
+                : [h.ul, {class: 'list-unstyled mb-0'}, skips.map(sk =>
+                    [h.li, {class: 'd-flex align-items-center gap-2 py-1'},
+                     [h.span, {}, sk.skip_date, sk.reason ? [h.span, {class: 'text-muted'}, ` — ${sk.reason}`] : undefined],
+                     action.actionButton('×',
+                         {kind: 'immediate', expr: `${this}.removeSkip(${sk.event_series_skip_id})`},
+                         'btn btn-sm btn-outline-danger py-0', {'aria-label': 'Remove skip'})])]];
+    }
+
+    @routeMutation(hostOrAdmin)
+    addSkip(args: Record<string, any>): Markup {
+        const event_series_id = Number(args?.event_series_id);
+        security.runSystem(() => rabid.event_series_skip.insert({
+            event_series_id, skip_date: String(args?.skip_date ?? ''), reason: String(args?.reason ?? '').trim(),
+        }));
+        this.reconcile(event_series_id);   // drop the now-skipped future instance (if un-attended)
+        const key = this.skipShapeKey(event_series_id);
+        dirty.record([key]);
+        return {action: 'reload', targets: ['.' + key]} as unknown as Markup;
+    }
+
+    @routeMutation(hostOrAdmin)
+    removeSkip(event_series_skip_id: number): Markup {
+        const key = security.runSystem(() => {
+            const sk = rabid.event_series_skip.getById(event_series_skip_id);
+            rabid.event_series_skip.delete(event_series_skip_id);
+            return this.skipShapeKey(sk.event_series_id);
+        });
+        dirty.record([key]);
+        return {action: 'reload', targets: ['.' + key]} as unknown as Markup;
     }
 }
 

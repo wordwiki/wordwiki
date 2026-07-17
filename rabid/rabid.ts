@@ -198,6 +198,7 @@ export class Rabid extends LiminalApp {
             // service/servicePage.)
             tasks:(q?: any)=>this.tasksPage(q),
             templates:()=>this.templatesPage(),
+            eventSeries:()=>templates.page('Event series', this.event_series.renderSeriesPage()),
             // The site editor: /site enters the branded editor (single-site jumps
             // straight into the first page); /site({page:N}) edits a page; /site({list:1})
             // is the page list (reorder/delete).  A full-page, navbar-less experience.

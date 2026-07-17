@@ -256,6 +256,7 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/projects'}, 'Projects']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/tasks'}, 'Tasks']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/templates'}, 'Templates']],
+              [h.li, {}, [h.a, {class:"dropdown-item", href:'/eventSeries'}, 'Event series']],
               [h.li, {}, [h.a, {class:"dropdown-item", href:'/timesheets'}, 'Timesheets']],
               // Admin-only maintenance: rebuild the derived photo cache (after a
               // change to the crop/resize logic).  Confirm, then POST.
