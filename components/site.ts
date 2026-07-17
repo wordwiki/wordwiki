@@ -39,6 +39,16 @@ export class SiteTable extends Table<Site> {
             new StringField('site_title', {default: '', prompt: 'Site title'}),
         ]);
     }
+
+    // All sites (the authoring index lists these).
+    @path
+    get listAll() {
+        return this.prepare<Site, Record<string, never>>(block`
+/**/   SELECT ${this.allFields} FROM site ORDER BY site_id`);
+    }
+
+    // Shape key for the sites list (a site added/removed reloads the index).
+    listShapeKey(): string { return '-site-shape-'; }
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +99,8 @@ export class PageTable extends Table<Page> {
         return orderkey.between(last?.k, undefined);
     }
 
-    // A site's pages in nav order (the app chrome builds its nav from this).
+    // A site's pages in nav order (the app chrome builds its nav from this; the
+    // authoring index lists them).
     @path
     get forSite() {
         return this.prepare<Page, {site_id: number}>(block`
@@ -98,6 +109,9 @@ export class PageTable extends Table<Page> {
 /**/          WHERE site_id = :site_id
 /**/          ORDER BY nav_order, page_id`);
     }
+
+    // Shape key for a site's page list (a page added/removed/moved reloads it).
+    siteShapeKey(site_id: number): string { return `-page-site-${site_id}-shape-`; }
 }
 
 // ---------------------------------------------------------------------------

@@ -3,8 +3,8 @@
 // own DB, and the edit policy gates by rabid role (host/admin).
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals, assertThrows } from "../liminal/testing/assert.ts";
-import { find, findAll, hasClass } from "../liminal/testing/markup-assert.ts";
-import { withTestDb, asUser, asSystem } from "./testing.ts";
+import { find, findAll, hasClass, hasText } from "../liminal/testing/markup-assert.ts";
+import { withTestDb, asUser, asSystem, renderRoute, invoke } from "./testing.ts";
 import { getRabid } from "./rabid.ts";
 import { blockKind } from "../components/block-registry.ts";
 
@@ -34,6 +34,31 @@ test("rabid mounts the site editor: a site + page + block flow renders through S
 test("the rabid-upcoming-events block is registered from the app (the injection seam)", () => {
     const k = blockKind('rabid-upcoming-events');
     assert(k && k.category === 'app');
+});
+
+// Route-level dispatch (the direct-call tests above would miss a missing @route -
+// see the route-undeclared bug pattern): the /site page + the authoring mutations
+// must resolve through the interpreter, POST-gated.
+test("authoring UI dispatches through routes (page + create mutations)", async () => {
+    await withTestDb(async (fx) => {
+        // The /site index page renders.
+        const index = await asUser(fx.alice, () => renderRoute('site'));
+        assert(find(index, n => hasText(n, 'New site')));
+        // createSite -> createPage over the route layer, then the editor page renders.
+        const s = await asUser(fx.alice, () => invoke('rabid.siteView.createSite($arg0)', {site_title: 'Live'}));
+        assertEquals(s.action, 'reload');
+        const site_id = asSystem(() => getRabid().site.listAll.all({})[0].site_id);
+        await asUser(fx.alice, () => invoke('rabid.siteView.createPage($arg0)', {site_id, page_title: 'Home'}));
+        const page_id = asSystem(() => getRabid().sitePage.forSite.all({site_id})[0].page_id);
+        const editor = await asUser(fx.alice, () => renderRoute(`site({page:${page_id}})`));
+        assert(find(editor, n => hasText(n, '← All pages')));
+        // A regular volunteer is refused at the route layer too.
+        await asUser(fx.bob, async () => {
+            let threw = false;
+            try { await invoke('rabid.siteView.createSite($arg0)', {site_title: 'No'}); } catch { threw = true; }
+            assert(threw);
+        });
+    });
 });
 
 test("edit policy: host/admin may edit, a regular volunteer may not", async () => {

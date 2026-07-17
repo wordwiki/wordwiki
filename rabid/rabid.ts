@@ -178,6 +178,9 @@ export class Rabid extends LiminalApp {
             // service/servicePage.)
             tasks:(q?: any)=>this.tasksPage(q),
             templates:()=>this.templatesPage(),
+            // The site editor's authoring UI: /site is the index, /site({page:N}) a
+            // page editor (the shared components/ SiteView renders both).
+            site:(q?: any)=>templates.page('Site', this.siteView.renderAuthoringHome(q)),
             todaysLog:()=>this.todaysLog(),
             activityReport:(q?: any)=>templates.page('Activity Report', activityReport(q)),
             // The range now rides the route as a {} arg (default: last 120 days,

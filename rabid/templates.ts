@@ -210,6 +210,14 @@ export function navBar(showTestClientLink: boolean = false, isAdmin: boolean = f
              [h.a, {class:"nav-link", href:"/committees"}, 'Committees'],
             ], //li
 
+            // The site editor (content pages); authoring is host/admin-gated, but the
+            // link is shown to all - the index itself hides create affordances.
+            isHostOrAdmin
+                ? [h.li, {class:"nav-item"},
+                   [h.a, {class:"nav-link", href:"/site"}, 'Site'],
+                  ] //li
+                : undefined,
+
             // Reports
             [h.li, {class:"nav-item dropdown"},
              [h.a, {class:"nav-link dropdown-toggle", href:"#", role:"button", 'data-bs-toggle':"dropdown", 'aria-expanded':"false", 'hx-boost':"false"},

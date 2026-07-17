@@ -32,6 +32,17 @@ export class SiteView {
     @route(authenticated)
     renderPage(page_id: number, editing = false): Markup {
         const page = this.pageTable.getById(page_id);
+        const ctx: BlockCtx = {site_id: page.site_id, dict: {}, editing, headings: undefined};
+        return this.renderPageChrome(page, this.renderBlockFlow(page_id, editing), ctx);
+    }
+
+    // The block flow WITHOUT chrome: the read/output flow, or (editing) the live,
+    // page-shape-keyed flow with per-block controls and an add-block menu.  The
+    // published-page renderer wraps this in app chrome; the authoring editor wraps
+    // it in the editor shell instead.
+    @route(authenticated)
+    renderBlockFlow(page_id: number, editing = false): Markup {
+        const page = this.pageTable.getById(page_id);
         const blocks = this.blockTable.forPage.all({page_id});
         const ctx: BlockCtx = {
             site_id: page.site_id, dict: {}, editing,
@@ -39,16 +50,12 @@ export class SiteView {
         };
         const rendered = blocks.map(b =>
             editing ? this.wrapForEdit(b, this.renderBlock(b, ctx)) : this.renderBlock(b, ctx));
-        let flow: Markup;
-        if(editing) {
-            const props = liveReloadableProps([this.blockTable.pageShapeKey(page_id)],
-                `${this}.renderPage(${page_id}, true)`);
-            flow = [h.div, {...props, class: props.class + ' site-page site-page-editing'},
-                rendered, this.renderAddBlockMenu(page_id)];
-        } else {
-            flow = [h.div, {class: 'site-page'}, rendered];
-        }
-        return this.renderPageChrome(page, flow, ctx);
+        if(!editing)
+            return [h.div, {class: 'site-page'}, rendered];
+        const props = liveReloadableProps([this.blockTable.pageShapeKey(page_id)],
+            `${this}.renderBlockFlow(${page_id}, true)`);
+        return [h.div, {...props, class: props.class + ' site-page site-page-editing'},
+            rendered, this.renderAddBlockMenu(page_id)];
     }
 
     // One block: dispatch to its kind.  A kind absent from the registry (e.g. a
@@ -209,5 +216,169 @@ export class SiteView {
         this.assertCanEditPage(b.page_id);
         this.blockTable.delete(block_id);
         return this.reloadPage(b.page_id);
+    }
+
+    // ------------------------------------------------------------------------
+    // --- Authoring UI (site index + page editor) -----------------------------
+    // ------------------------------------------------------------------------
+
+    // The app page-map route this authoring UI is mounted at (so index/editor can
+    // link to each other), and the nav attrs for those links.  Defaults suit an app
+    // that mounts it at /site with a plain full-page swap; an app with an htmx
+    // content shell overrides pageNavProps to swap just its content region.
+    protected authoringBaseUrl(): string { return '/site'; }
+    protected pageNavProps(href: string): Record<string, string> { return {href}; }
+
+    // Site/page creation + deletion policy (default DENY; app overrides).  Distinct
+    // from canEditSite (block edits) so an app can, if it wants, let more people edit
+    // a page's blocks than create/delete whole pages.
+    protected canAdminSites(): boolean { return false; }
+    private assertCanAdminSites(): void {
+        if(!this.canAdminSites()) throw new Error('Not permitted to manage sites');
+    }
+
+    private editorHref(page_id: number): string { return `${this.authoringBaseUrl()}({page:${page_id}})`; }
+
+    // The authoring entry point (an app page-map route delegates here): a page's
+    // editor when given ?page, else the site index.
+    @route(authenticated)
+    renderAuthoringHome(q?: Record<string, any>): Markup {
+        const page_id = q && q.page != null ? Number(q.page) : undefined;
+        return page_id ? this.renderPageEditor(page_id) : this.renderSiteIndex();
+    }
+
+    // The index: every site and its pages, with create affordances (host/admin).
+    @route(authenticated)
+    renderSiteIndex(): Markup {
+        const sites = this.siteTable.listAll.all({});
+        const canAdmin = this.canAdminSites();
+        const props = liveReloadableProps([this.siteTable.listShapeKey()], `${this}.renderSiteIndex()`);
+        return [h.div, {...props, class: props.class + ' container py-3'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-3'},
+             [h.h2, {class: 'mb-0'}, 'Site'],
+             canAdmin ? action.actionButton('New site…',
+                 {kind: 'modal', dialogUrl: `/${this}.newSiteDialog()`},
+                 'btn btn-sm btn-outline-primary', {'aria-label': 'New site'}) : undefined],
+            sites.length
+                ? sites.map(s => this.renderSitePages(s.site_id))
+                : [h.p, {class: 'text-muted'}, 'No sites yet.']];
+    }
+
+    // One site's page list (its own reloadable fragment - a page add/delete reloads
+    // just this site's list).
+    @route(authenticated)
+    renderSitePages(site_id: number): Markup {
+        const site = this.siteTable.getById(site_id);
+        const pages = this.pageTable.forSite.all({site_id});
+        const canAdmin = this.canAdminSites();
+        const props = liveReloadableProps([this.pageTable.siteShapeKey(site_id)], `${this}.renderSitePages(${site_id})`);
+        return [h.div, {...props, class: props.class + ' mb-4'},
+            [h.div, {class: 'd-flex align-items-center gap-2 mb-1'},
+             [h.h3, {class: 'h5 mb-0'}, site.site_title || 'Untitled site'],
+             canAdmin ? action.actionButton('New page…',
+                 {kind: 'modal', dialogUrl: `/${this}.newPageDialog(${site_id})`},
+                 'btn btn-sm btn-outline-secondary', {'aria-label': 'New page'}) : undefined],
+            [h.ul, {class: 'list-unstyled ms-2'},
+             pages.length
+                 ? pages.map(p => [h.li, {class: 'py-1', 'data-testid': `page-row-${p.page_id}`},
+                     [h.a, {...this.pageNavProps(this.editorHref(p.page_id))}, p.page_title || '(untitled page)'],
+                     p.published ? undefined : [h.span, {class: 'badge text-bg-secondary ms-2'}, 'Draft']])
+                 : [h.li, {class: 'text-muted'}, 'No pages yet.']]];
+    }
+
+    // The page editor shell: a back link, the page header (title + settings), and the
+    // editable block flow.  (This is the editor - NOT the published page, which is
+    // renderPage; the editor deliberately omits the app chrome.)
+    @route(authenticated)
+    renderPageEditor(page_id: number): Markup {
+        const page = this.pageTable.getById(page_id);
+        return [h.div, {class: 'container py-3 site-editor', 'data-testid': `page-editor-${page_id}`},
+            [h.div, {class: 'mb-2'},
+             [h.a, {...this.pageNavProps(this.authoringBaseUrl()), class: 'small'}, '← All pages']],
+            this.renderEditorHeader(page_id),
+            this.renderBlockFlow(page_id, true)];
+    }
+
+    // The editor's page header: title + publish state + a settings pencil.  Its own
+    // reloadable fragment on the page row key, so a settings save refreshes it.
+    @route(authenticated)
+    renderEditorHeader(page_id: number): Markup {
+        const page = this.pageTable.getById(page_id);
+        const canAdmin = this.canAdminSites();
+        const props = liveReloadableProps([this.pageTable.rowKey(page_id)], `${this}.renderEditorHeader(${page_id})`);
+        return [h.div, {...props, class: props.class + ' d-flex align-items-center gap-2 mb-3'},
+            [h.h2, {class: 'mb-0'}, page.page_title || '(untitled page)'],
+            page.published ? [h.span, {class: 'badge text-bg-success'}, 'Published']
+                           : [h.span, {class: 'badge text-bg-secondary'}, 'Draft'],
+            canAdmin ? action.actionButton('Settings…',
+                {kind: 'modal', dialogUrl: `/${this}.editPageSettings(${page_id})`},
+                'btn btn-sm btn-outline-secondary', {'aria-label': 'Page settings'}) : undefined];
+    }
+
+    // Page settings: the standard record edit form over the page's config fields
+    // (saves via the mounted PageTable's own saveForm, which reloads this row).
+    @route(authenticated)
+    editPageSettings(page_id: number): Markup {
+        this.assertCanAdminSites();
+        const page = this.pageTable.getById(page_id);
+        return this.pageTable.renderEditForm(page,
+            ['page_title', 'slug', 'hero_image', 'nav_visible', 'published']);
+    }
+
+    // --- Create dialogs + mutations -----------------------------------------
+
+    @route(authenticated)
+    newSiteDialog(): Markup {
+        this.assertCanAdminSites();
+        return action.renderParamForm([this.siteTable.fieldsByName.site_title], {}, {
+            title: 'New site', submitLabel: 'Create',
+            dispatch: {onsubmit: `event.preventDefault(); tx\`${this}.createSite(\${getFormJSON(event.target)})\``},
+        });
+    }
+
+    @routeMutation(authenticated)
+    createSite(args: Record<string, any>): Markup {
+        this.assertCanAdminSites();
+        this.siteTable.insert({site_title: String(args?.site_title ?? '').trim()});
+        const key = this.siteTable.listShapeKey();
+        dirty.record([key]);
+        return {action: 'reload', targets: ['.' + key]} as unknown as Markup;
+    }
+
+    @route(authenticated)
+    newPageDialog(site_id: number): Markup {
+        this.assertCanAdminSites();
+        const f = this.pageTable.fieldsByName;
+        return action.renderParamForm([f.page_title, f.slug], {}, {
+            title: 'New page', submitLabel: 'Create',
+            hidden: {site_id},
+            dispatch: {onsubmit: `event.preventDefault(); tx\`${this}.createPage(\${getFormJSON(event.target)})\``},
+        });
+    }
+
+    @routeMutation(authenticated)
+    createPage(args: Record<string, any>): Markup {
+        this.assertCanAdminSites();
+        const site_id = Number(args?.site_id);
+        this.pageTable.insert({
+            site_id,
+            page_title: String(args?.page_title ?? '').trim(),
+            slug: String(args?.slug ?? '').trim(),
+        });
+        return this.reloadSitePages(site_id);
+    }
+
+    @routeMutation(authenticated)
+    deletePage(page_id: number): Markup {
+        this.assertCanAdminSites();
+        const p = this.pageTable.getById(page_id);
+        this.pageTable.delete(page_id);
+        return this.reloadSitePages(p.site_id);
+    }
+
+    private reloadSitePages(site_id: number): Markup {
+        const key = this.pageTable.siteShapeKey(site_id);
+        dirty.record([key]);
+        return {action: 'reload', targets: ['.' + key]} as unknown as Markup;
     }
 }
