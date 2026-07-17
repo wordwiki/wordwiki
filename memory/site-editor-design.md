@@ -18,13 +18,20 @@ site-view.ts (SiteView: render+edit dispatch, protected renderPageChrome + canEd
 rabid/rabid-site.ts (RabidSiteView: host/admin canEditSite+canAdminSites + `rabid-upcoming-events`
 app block + pageNavProps→templates.pageLinkProps) + mounted on Rabid as site/sitePage/block/siteView.
 Route prefix self-resolves via `this.toString()` (the @path stamp) — components never hardcode
-`rabid.`. AUTHORING UI built (2026-07-17): SiteView.renderAuthoringHome/renderSiteIndex/
+`rabid.`. GOTCHA: SiteView is NOT a Table, so it needs its OWN `toString(){return serializeAny(this)}`
+(else `${this}` in emitted route exprs = '[object Object]'); tests that construct a SiteView must
+`setSerialized(view,'siteView')` or `${this}` throws. AUTHORING UI built (2026-07-17): SiteView.renderAuthoringHome/renderSiteIndex/
 renderPageEditor/renderEditorHeader + createSite/createPage/deletePage/editPageSettings (settings
 reuse PageTable.renderEditForm→saveForm); reachable at rabid `/site` (index) + `/site({page:N})`
 (editor), navbar "Site" link (host/admin). Test note: invoke() needs the arg placeholder in the
 expr — `invoke('rabid.siteView.createSite($arg0)', {..})`, NOT a bare path.
-NOT yet built: brand chrome/CSS design pass, page reorder/move UI, image-and-text block (needs a
-photo-render injection hook), gallery.ts move into components, wordwiki wiring, static-site generator.
+BRAND CHROME built (2026-07-17): RabidSiteView.renderPageChrome = RRBR public presentation
+(masthead+hero+nav[published+nav_visible, active]+footer, `.rrbr-site-*` CSS); renderPublicPage =
+STANDALONE branded document (own <head>+brand css, served full-doc not app-shell), reachable via
+editor "View published →" link + renderPublicHome. NOT yet built: public/anon serving + pretty slug
+URLs (renderPublicPage is @route(authenticated) staff-preview for now), page reorder/move UI,
+image-and-text block (needs a photo-render injection hook), gallery.ts move into components, wordwiki
+wiring, static-site generator.
 
 Lives in a NEW **`components`** package (liminal < components < app; gallery.ts moves there). Apps
 never imported by components — they push behavior IN, same as [[page-editor-book-generic]]'s
