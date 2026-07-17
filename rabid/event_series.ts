@@ -39,6 +39,14 @@ export function seriesSummary(s: EventSeries): string {
     return when + time + loc + win;
 }
 
+// 'HH:MM' -> a friendly 12-hour time ('10:00' -> '10:00 AM').
+function fmt12(hhmm: string): string {
+    const [h, m] = hhmm.split(':').map(Number);
+    const ap = h < 12 ? 'AM' : 'PM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ap}`;
+}
+
 // --- Controlled vocabularies (string enums, so they use the standard EnumField
 //     picker + auto-form; see recurring-events.md) --------------------------------
 
@@ -337,6 +345,51 @@ export class EventSeriesTable extends Table<EventSeries> {
 /**/          ORDER BY event_series_id`);
     }
 
+    // --- Public schedule (rendered from RULES, no materialization) ---------------
+
+    // The next occurrence of a series on/after `today`, minus skips (within a 1-year
+    // look-ahead).  Pure - reads only the rule + skips.
+    private nextOccurrence(s: EventSeries, today: string): string | undefined {
+        const skips = rabid.event_series_skip.skipDates(s.event_series_id);
+        const horizon = date.temporalToSqliteDate(date.orgToday().add({days: 366}));
+        return occurrenceDates(this.ruleOf(s), today, horizon).find(d => !skips.has(d));
+    }
+
+    // The public recurring-events schedule.  Renders the ACTIVE series (the rules),
+    // each with its cadence, location, next date, and any upcoming skip - so it is
+    // correct with zero dependence on materialized instances.  Used by the
+    // `rabid-schedule` site block.
+    renderPublicSchedule(): Markup {
+        const today = date.temporalToSqliteDate(date.orgToday());
+        const series = security.runSystem(() => this.activeRecurring.all({today}));
+        if(series.length === 0) return '' as unknown as Markup;
+        return [h.div, {class: 'rrbr-schedule'},
+            series.map(s => this.scheduleRow(s, today))];
+    }
+
+    private scheduleRow(s: EventSeries, today: string): Markup {
+        const wd = s.weekday ? weekday_enum[s.weekday] : '';
+        const cadence = s.frequency === 'monthly'
+            ? `${week_of_month_enum[s.week_of_month ?? 'first'] ?? ''} ${wd} of the month`
+            : `${wd}s`;
+        const time = s.start_time_of_day
+            ? `${fmt12(s.start_time_of_day)}${s.end_time_of_day ? '–' + fmt12(s.end_time_of_day) : ''}` : '';
+        const next = this.nextOccurrence(s, today);
+        const upcomingSkips = security.runSystem(() =>
+            rabid.event_series_skip.forSeries.all({event_series_id: s.event_series_id})
+                .filter(sk => sk.skip_date >= today));
+        return [h.div, {class: 'rrbr-schedule-row'},
+            [h.div, {class: 'rrbr-schedule-name'}, s.description || 'Event'],
+            [h.div, {class: 'rrbr-schedule-when'},
+             cadence, time ? [h.span, {class: 'rrbr-schedule-time'}, ` · ${time}`] : undefined],
+            s.location_description ? [h.div, {class: 'rrbr-schedule-loc'}, s.location_description] : undefined,
+            next ? [h.div, {class: 'rrbr-schedule-next'}, `Next: ${date.sqliteDateToString(next)}`] : undefined,
+            upcomingSkips.length
+                ? [h.ul, {class: 'rrbr-schedule-skips'}, upcomingSkips.map(sk =>
+                    [h.li, {}, `No session ${date.sqliteDateToString(sk.skip_date)}${sk.reason ? ` — ${sk.reason}` : ''}`])]
+                : undefined];
+    }
+
     // --- Admin UI (host/admin) ---------------------------------------------------
 
     override defaultFieldEdit: security.Permission = hostOrAdmin;
@@ -382,11 +435,14 @@ export class EventSeriesTable extends Table<EventSeries> {
             s.frequency !== 'none'
                 ? {label: 'Reconcile now', mode: {kind: 'immediate', expr: `${this}.reconcileNow(${id})`}}
                 : {label: 'Create an event', mode: {kind: 'immediate', expr: `${this}.createEventFrom(${id})`}},
+            s.frequency !== 'none'
+                ? {label: 'Bulk-create for a range…', mode: {kind: 'modal', dialogUrl: `/${this}.renderBulkCreateDialog(${id})`}}
+                : undefined,
             'divider',
             {label: 'Delete series…', mode: {kind: 'confirm',
                 message: 'Delete this series? Future un-attended instances are removed; past/attended ones become standalone events.',
                 expr: `${this}.deleteSeries(${id})`}},
-        ] as action.ActionMenuItem[], {ariaLabel: 'Series actions'}) : undefined;
+        ].filter(Boolean) as action.ActionMenuItem[], {ariaLabel: 'Series actions'}) : undefined;
         return [h.div, {...props, class: (props.class ?? '') + ' lm-item d-flex align-items-center gap-2',
                         'data-testid': `event-series-row-${id}`},
             [h.div, {class: 'lm-item-body flex-grow-1'},
@@ -412,6 +468,26 @@ export class EventSeriesTable extends Table<EventSeries> {
         const id = security.runSystem(() =>
             rabid.event.insert(this.toEventValues(this.getById(event_series_id), today)));
         return {action: 'navigate', url: `/rabid.event.detailPage(${id})`} as unknown as Markup;
+    }
+
+    // Bulk-create instances for a past (or any) date range - the user-facing side of
+    // materialize; used when importing historical data for a period.
+    @route(hostOrAdmin)
+    renderBulkCreateDialog(event_series_id: number): Markup {
+        return action.renderParamForm(
+            [new DateField('from', {prompt: 'From'}), new DateField('to', {prompt: 'To'})], {}, {
+                title: 'Bulk-create events for a date range',
+                submitLabel: 'Create',
+                hidden: {event_series_id},
+                dispatch: {onsubmit: `event.preventDefault(); tx\`${this}.bulkCreate(\${getFormJSON(event.target)})\``},
+            });
+    }
+
+    @routeMutation(hostOrAdmin)
+    bulkCreate(args: Record<string, any>): Markup {
+        const event_series_id = Number(args?.event_series_id);
+        this.materialize(event_series_id, String(args?.from ?? ''), String(args?.to ?? ''));
+        return {action: 'reload', targets: ['.' + this.rowKey(event_series_id)]} as unknown as Markup;
     }
 
     @routeMutation(hostOrAdmin)

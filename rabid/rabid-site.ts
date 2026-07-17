@@ -260,6 +260,15 @@ registerBlockKind({
         [h.div, {class: 'site-block-rabid-events'}, rabid.event.renderUpcomingEvents()],
 });
 
+// The recurring-events schedule (recurring-events.md), rendered from the RULES -
+// so it's correct with no dependence on materialized instances.
+registerBlockKind({
+    kind: 'rabid-schedule', label: 'Recurring schedule', category: 'app',
+    schema: new FieldSet('rabid-schedule', []),
+    render: (_p, _ctx): Markup =>
+        [h.div, {class: 'site-block-rabid-schedule'}, rabid.event_series.renderPublicSchedule()],
+});
+
 // Image + text, side by side (stacks on mobile).  App-registered rather than a
 // components built-in because the photo pipeline is rabid's: the payload's
 // ImageField points at rabid's photo store (so the block editor's file picker

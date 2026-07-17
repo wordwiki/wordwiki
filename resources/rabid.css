@@ -514,3 +514,14 @@ ol.lm-doc-list > li.lm-doc-row {
     background: rgba(255,255,255,0.9); border: 1px solid #d8d0c4; border-radius: 999px;
     padding: 0.15rem 0.6rem; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 .rrbr-edit-floatnav:hover { color: var(--rrbr-accent, #b5361f); }
+
+/* The recurring-schedule site block (rabid-schedule). */
+.rrbr-schedule { display: flex; flex-direction: column; gap: 1rem; }
+.rrbr-schedule-row { padding-left: 0.75rem; border-left: 3px solid var(--rrbr-accent, #b5361f); }
+.rrbr-schedule-name { font-weight: 700; font-size: 1.1rem; }
+.rrbr-schedule-when { color: #3a3632; }
+.rrbr-schedule-time { color: #6b645c; }
+.rrbr-schedule-loc { color: #6b645c; font-size: 0.95rem; }
+.rrbr-schedule-next { color: #6b645c; font-size: 0.9rem; margin-top: 0.15rem; }
+.rrbr-schedule-skips { margin: 0.25rem 0 0; padding-left: 1rem; color: var(--rrbr-accent, #b5361f);
+    font-size: 0.9rem; }
