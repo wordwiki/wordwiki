@@ -15,8 +15,15 @@ export function home(): Markup {
 
         [h.br, {}],
 
-        //[h.h3, {}, 'Upcoming Events'],
-        rabid.event.renderUpcomingEvents(),
+        // First pane of the (restructured) home: a lean, skimmable list of
+        // upcoming public events with a one-tap sign-up - the thing a volunteer
+        // is most likely to want at login.  The full week-grouped schedule (with
+        // rosters, volunteer-only events, remote prep) lives on /events.
+        [h.section, {id: 'upcoming-events', class: 'mb-4'},
+         [h.div, {class: 'd-flex align-items-baseline justify-content-between'},
+          [h.h3, {class: 'mb-2'}, 'Upcoming events'],
+          [h.a, {...templates.pageLinkProps('/events'), class: 'small'}, 'Full schedule →']],
+         rabid.event.renderUpcomingPublicEventsCompact()],
 
         [h.h3, {}, 'Your recent activity'],
         //rabid.volunteer.timesheet_entry.renderRecentActivity(0),

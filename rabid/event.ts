@@ -698,6 +698,93 @@ export class EventTable extends Table<Event> {
                 : this.renderEventScheduleTable(upcomingEvents)];
     }
 
+    // A LEAN upcoming-events pane for the internal home page: one soft-tappable
+    // line per upcoming PUBLIC event (non-volunteer-only, non-catch-all) - day ·
+    // time · name · a sign-up toggle - and nothing else.  The full week-grouped
+    // schedule (rosters, ghosts, check-in menus, remote prep times) lives on the
+    // /events page; here the point is a light pane a volunteer can skim and sign
+    // up from at login, without scrolling past a wall of detail.  Rows still
+    // navigate to the detail page; the self toggle is the only in-line control.
+    renderUpcomingPublicEventsCompact(): Markup {
+        const today = date.orgToday();
+        const startDate = `${today.toString()} 00:00:00`;
+        const endDate = `${today.add({days: 42}).toString()} 23:59:59`; // 6 weeks
+
+        const events = db().prepare<Event, {start_date: string, end_date: string}>(block`
+            SELECT ${this.allFields}
+            FROM event
+            WHERE start_time >= :start_date
+              AND start_time <= :end_date
+              AND is_catch_all = 0
+              AND volunteer_only = 0
+            ORDER BY start_time`).all({start_date: startDate, end_date: endDate});
+
+        if (events.length === 0)
+            return [h.p, {class: 'text-muted mb-0'}, 'No upcoming public events in the next 6 weeks.'];
+
+        const ids = events.map(e => e.event_id);
+        const commitments = this.peopleByEvents('event_commitment', ids);
+        const checkins = this.peopleByEvents('event_checkin', ids);
+        const actorId = security.current()?.actorId;
+        return [h.div, {class: 'list-group list-group-flush'},
+            ...events.map(e => this.renderCompactEventRow(
+                e, commitments.get(e.event_id) ?? [], checkins.get(e.event_id) ?? [], actorId))];
+    }
+
+    // Reload one compact row after its self sign-up / check-in toggle (it joins
+    // the reload group of whichever table its phase mutates, like the full
+    // schedule row does).
+    @route(authenticated)
+    renderUpcomingPublicEventRowById(event_id: number): Markup {
+        const e = this.getById(event_id);
+        const commitments = this.peopleByEvents('event_commitment', [event_id]).get(event_id) ?? [];
+        const checkins = this.peopleByEvents('event_checkin', [event_id]).get(event_id) ?? [];
+        return this.renderCompactEventRow(e, commitments, checkins, security.current()?.actorId);
+    }
+
+    // One compact home-pane row: WHEN (day + start time) · name (links to detail)
+    // · the phase-aware self toggle (Sign up / Going ✓ for a future event; Check
+    // in / Here ✓ for one running today) + a chevron.  No badges, roster, remote
+    // prep, or check-in menu - that detail lives on the event's own page.
+    private renderCompactEventRow(e: Event, commitments: Array<SchedulePerson>,
+                                  checkins: Array<SchedulePerson>,
+                                  actorId: number|undefined): Markup {
+        const id = e.event_id;
+        const phase = this.eventPhase(e);
+        const day = e.start_time
+            ? date.sqliteDateTimeToString(e.start_time, '', {weekday: 'short', month: 'short', day: 'numeric'})
+            : '';
+        const time = e.start_time ? date.sqliteDateTimeToTimeString(e.start_time) : '';
+        // Future shows commitments (sign-ups); an event running today shows live
+        // attendance so its toggle is a check-in, not a sign-up.
+        const future = phase === 'future';
+        const attending = future ? commitments : checkins.filter(c => c.endTime == null);
+        const selfAttending = actorId !== undefined && attending.some(p => p.id === actorId);
+
+        // The toggle mutates event_commitment (future) or event_checkin
+        // (running/past); register THAT table's event fk key so its mutation
+        // re-renders just this row.
+        const attendKey = future
+            ? rabid.event_commitment.fkKey('event_id', id)
+            : rabid.event_checkin.fkKey('event_id', id);
+        const props = reloadableProps([attendKey],
+            `rabid.event.renderUpcomingPublicEventRowById(${id})`,
+            {'data-testid': `compact-event-${id}`, onclick: 'lmNavigableClick(event)'});
+        props.class = 'list-group-item list-group-item-action lm-item lm-navigable '
+            + 'd-flex align-items-center gap-3 ' + props.class;
+
+        return [h.div, props,
+            [h.div, {class: 'text-nowrap small', style: 'flex: 0 0 auto;'},
+             [h.span, {class: 'fw-semibold'}, day],
+             time ? [h.span, {class: 'text-muted ms-2'}, time] : undefined],
+            [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`),
+                   class: 'lm-nav-link flex-grow-1 text-truncate'},
+             e.description || 'Untitled Event'],
+            [h.div, {class: 'ms-auto d-flex align-items-center gap-2', style: 'flex: 0 0 auto;'},
+             this.renderSelfAttendToggle(id, phase, selfAttending, actorId),
+             navChevron()]];
+    }
+
     // The reusable week-grouped, phase-aware schedule table for a set of events
     // (the home upcoming list and the Events page both render through this).
     // Events are grouped/ordered as given - the caller chooses the window and
