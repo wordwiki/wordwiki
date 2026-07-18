@@ -355,39 +355,54 @@ export class EventSeriesTable extends Table<EventSeries> {
         return occurrenceDates(this.ruleOf(s), today, horizon).find(d => !skips.has(d));
     }
 
-    // The public recurring-events schedule.  Renders the ACTIVE series (the rules),
-    // each with its cadence, location, next date, and any upcoming skip - so it is
-    // correct with zero dependence on materialized instances.  Used by the
-    // `rabid-schedule` site block.
-    renderPublicSchedule(): Markup {
+    /**
+     * The recurring-events schedule, rendered from the RULES (correct with zero
+     * dependence on materialized instances).  Options (also the `rabid-schedule`
+     * block's parameters):
+     *  - audience: 'all' | 'public' | 'volunteer' - filter by the series' audience.
+     *  - skipDaysAhead: only show holiday exceptions within this many days (far-out
+     *    exceptions are clutter on the public site); default 14, 0 = show none.
+     */
+    renderPublicSchedule(opts: {audience?: string, skipDaysAhead?: number} = {}): Markup {
         const today = date.temporalToSqliteDate(date.orgToday());
-        const series = security.runSystem(() => this.activeRecurring.all({today}));
+        const skipDaysAhead = opts.skipDaysAhead ?? 14;
+        const skipCutoff = date.temporalToSqliteDate(date.orgToday().add({days: Math.max(0, skipDaysAhead)}));
+        const wantVol = opts.audience === 'volunteer' ? 1 : opts.audience === 'public' ? 0 : undefined;
+        let series = security.runSystem(() => this.activeRecurring.all({today}));
+        if(wantVol !== undefined) series = series.filter(s => (s.volunteer_only ?? 0) === wantVol);
         if(series.length === 0) return '' as unknown as Markup;
         return [h.div, {class: 'rrbr-schedule'},
-            series.map(s => this.scheduleRow(s, today))];
+            series.map(s => this.scheduleRow(s, today, skipCutoff, skipDaysAhead))];
     }
 
-    private scheduleRow(s: EventSeries, today: string): Markup {
+    private scheduleRow(s: EventSeries, today: string, skipCutoff: string, skipDaysAhead: number): Markup {
         const wd = s.weekday ? weekday_enum[s.weekday] : '';
+        // A compact day chip: 'SAT', or '1ST SAT' for a monthly nth-weekday.
+        const chip = s.frequency === 'monthly'
+            ? `${(week_of_month_enum[s.week_of_month ?? 'first'] ?? '').slice(0, 3)} ${wd.slice(0, 3)}`.toUpperCase()
+            : wd.slice(0, 3).toUpperCase();
         const cadence = s.frequency === 'monthly'
             ? `${week_of_month_enum[s.week_of_month ?? 'first'] ?? ''} ${wd} of the month`
             : `${wd}s`;
         const time = s.start_time_of_day
             ? `${fmt12(s.start_time_of_day)}${s.end_time_of_day ? '–' + fmt12(s.end_time_of_day) : ''}` : '';
         const next = this.nextOccurrence(s, today);
-        const upcomingSkips = security.runSystem(() =>
+        // Only skips within the horizon (and not past) - far-out ones are clutter.
+        const upcomingSkips = skipDaysAhead <= 0 ? [] : security.runSystem(() =>
             rabid.event_series_skip.forSeries.all({event_series_id: s.event_series_id})
-                .filter(sk => sk.skip_date >= today));
+                .filter(sk => sk.skip_date >= today && sk.skip_date <= skipCutoff));
         return [h.div, {class: 'rrbr-schedule-row'},
-            [h.div, {class: 'rrbr-schedule-name'}, s.description || 'Event'],
-            [h.div, {class: 'rrbr-schedule-when'},
-             cadence, time ? [h.span, {class: 'rrbr-schedule-time'}, ` · ${time}`] : undefined],
-            s.location_description ? [h.div, {class: 'rrbr-schedule-loc'}, s.location_description] : undefined,
-            next ? [h.div, {class: 'rrbr-schedule-next'}, `Next: ${date.sqliteDateToString(next)}`] : undefined,
-            upcomingSkips.length
-                ? [h.ul, {class: 'rrbr-schedule-skips'}, upcomingSkips.map(sk =>
-                    [h.li, {}, `No session ${date.sqliteDateToString(sk.skip_date)}${sk.reason ? ` — ${sk.reason}` : ''}`])]
-                : undefined];
+            [h.div, {class: 'rrbr-schedule-chip'}, chip],
+            [h.div, {class: 'rrbr-schedule-detail'},
+             [h.div, {class: 'rrbr-schedule-name'}, s.description || 'Event'],
+             [h.div, {class: 'rrbr-schedule-when'},
+              cadence, time ? [h.span, {class: 'rrbr-schedule-time'}, ` · ${time}`] : undefined],
+             s.location_description ? [h.div, {class: 'rrbr-schedule-loc'}, s.location_description] : undefined,
+             next ? [h.div, {class: 'rrbr-schedule-next'}, `Next: ${date.sqliteDateToString(next)}`] : undefined,
+             upcomingSkips.length
+                 ? [h.ul, {class: 'rrbr-schedule-skips'}, upcomingSkips.map(sk =>
+                     [h.li, {}, `No session ${date.sqliteDateToString(sk.skip_date)}${sk.reason ? ` — ${sk.reason}` : ''}`])]
+                 : undefined]];
     }
 
     // --- Admin UI (host/admin) ---------------------------------------------------

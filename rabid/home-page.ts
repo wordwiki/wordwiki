@@ -16,6 +16,7 @@ export function home(): Markup {
     const sections: [string, string][] = [];
     if (ongoing) sections.push(['ongoing', 'Happening now']);
     sections.push(['upcoming-events', 'Upcoming events']);
+    sections.push(['recurring-schedule', 'Recurring schedule']);
     sections.push(['reports', 'Reports']);
 
     return [h.div, {class: 'container py-3'},
@@ -32,7 +33,13 @@ export function home(): Markup {
           [h.a, {...templates.pageLinkProps('/events'), class: 'small'}, 'Full schedule →']],
          rabid.event.renderUpcomingPublicEventsCompact()],
 
-        // 3. Reports - a small directory of the cross-event views (the fuller set
+        // 3. Recurring schedule - the weekly/monthly pattern (from the series
+        // rules) - what runs every week, so a volunteer sees the rhythm at a glance.
+        [h.section, {id: 'recurring-schedule', class: 'mb-5'},
+         [h.h3, {class: 'mb-2'}, 'Recurring schedule'],
+         rabid.event_series.renderPublicSchedule({audience: 'all', skipDaysAhead: 30})],
+
+        // 4. Reports - a small directory of the cross-event views (the fuller set
         // lives under the navbar's Reports menu).  The links here will change; the
         // section is styled to match the others (heading + accent-link list).
         [h.section, {id: 'reports', class: 'mb-4'},

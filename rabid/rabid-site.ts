@@ -15,7 +15,7 @@ import * as config from "./config.ts";
 import { assetUrl } from "../liminal/assets.ts";
 import { SiteView } from "../components/site-view.ts";
 import { registerBlockKind, type BlockCtx } from "../components/block-registry.ts";
-import { FieldSet, ImageField, EnumField, MarkdownField, liveReloadableProps, editButtonProps } from "../liminal/table.ts";
+import { FieldSet, ImageField, EnumField, IntegerField, MarkdownField, liveReloadableProps, editButtonProps } from "../liminal/table.ts";
 import { markdownToMarkup } from "../liminal/markdown.ts";
 import type { Page } from "../components/site.ts";
 import { rabid } from "./rabid.ts";
@@ -261,12 +261,22 @@ registerBlockKind({
 });
 
 // The recurring-events schedule (recurring-events.md), rendered from the RULES -
-// so it's correct with no dependence on materialized instances.
+// so it's correct with no dependence on materialized instances.  The block's
+// payload parameters (editable in the site editor) filter the audience and cap how
+// far ahead holiday exceptions are shown.
 registerBlockKind({
     kind: 'rabid-schedule', label: 'Recurring schedule', category: 'app',
-    schema: new FieldSet('rabid-schedule', []),
-    render: (_p, _ctx): Markup =>
-        [h.div, {class: 'site-block-rabid-schedule'}, rabid.event_series.renderPublicSchedule()],
+    schema: new FieldSet('rabid-schedule', [
+        new EnumField('audience', {all: 'All events', public: 'Public only', volunteer: 'Volunteers only'},
+            {default: 'all', prompt: 'Show'}),
+        new IntegerField('skip_days_ahead', {default: 14, prompt: 'Show exceptions within (days)'}),
+    ]),
+    render: (p, _ctx): Markup =>
+        [h.div, {class: 'site-block-rabid-schedule'},
+         rabid.event_series.renderPublicSchedule({
+             audience: String(p.audience ?? 'all'),
+             skipDaysAhead: typeof p.skip_days_ahead === 'number' ? p.skip_days_ahead : 14,
+         })],
 });
 
 // Image + text, side by side (stacks on mobile).  App-registered rather than a
