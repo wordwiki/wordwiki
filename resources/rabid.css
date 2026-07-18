@@ -465,6 +465,19 @@ ol.lm-doc-list > li.lm-doc-row {
 /* An empty content block: a muted placeholder so it stays visible + editable. */
 .site-block-empty { color: var(--bs-secondary-color); font-style: italic; padding: 0.4rem 0; }
 
+/* Between-block insert points: a slim gap whose "+" appears on hover, so a block
+ * of any kind can be inserted at that position without cluttering the layout. */
+.site-insert-point { display: flex; justify-content: center; align-items: center;
+    height: 0.6rem; position: relative; }
+.site-insert-point .lm-menu-button { opacity: 0; transition: opacity .12s; width: 1.5rem; height: 1.5rem;
+    padding: 0; line-height: 1; border-radius: 999px; border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-secondary-color); }
+.site-insert-point:hover .lm-menu-button,
+.site-insert-point:focus-within .lm-menu-button { opacity: 1; }
+.site-insert-point:hover::before { content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    border-top: 1px dashed var(--bs-border-color); z-index: 0; }
+.site-insert-point .lm-action-menu { position: relative; z-index: 1; }
+
 /* --- Brand chrome: the public Red Raccoon site (renderPageChrome) -----------
  * A distinct presentation from the internal volunteer app - its own masthead,
  * nav and footer.  Structure + these classes only (RabidSiteView emits no inline

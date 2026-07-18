@@ -105,6 +105,40 @@ test("editing render adds per-block controls + an add-block menu; output view ha
     assertEquals(findAll(out, n => hasClass(n, 'site-page-editing')).length, 0);
 });
 
+test("insertBlock places a new block before/after an anchor (order preserved)", () => {
+    const p = freshPage();
+    security.runSystem(() => {
+        editable.addBlock(p, 'title');     // A
+        editable.addBlock(p, 'divider');   // B
+        const [a, b] = blocksOf(p);
+        assertEquals([a.kind, b.kind], ['title', 'divider']);
+        editable.insertBlock(b.block_id, 'before', 'text');   // A, text, B
+        assertEquals(blocksOf(p).map(x => x.kind), ['title', 'text', 'divider']);
+        editable.insertBlock(a.block_id, 'before', 'text');   // text, A, text, B
+        assertEquals(blocksOf(p).map(x => x.kind), ['text', 'title', 'text', 'divider']);
+        editable.insertBlock(b.block_id, 'after', 'divider'); // ... B, divider(at end)
+        assertEquals(blocksOf(p).map(x => x.kind)[4], 'divider');
+    });
+});
+
+test("editing flow renders hover '+' insert points around blocks; the block ☰ offers Insert text", () => {
+    const p = freshPage();
+    const m = security.runSystem(() => {
+        editable.addBlock(p, 'divider');
+        return editable.renderPage(p, true);
+    });
+    // One block => insert points before and after it (2).
+    assertEquals(findAll(m, n => hasClass(n, 'site-insert-point')).length, 2);
+    assert(find(m, n => hasText(n, 'Insert text above')));
+    assert(find(m, n => hasText(n, 'Insert text below')));
+});
+
+test("an empty page shows a single appending insert point", () => {
+    const p = freshPage();
+    const m = security.runSystem(() => editable.renderPage(p, true));
+    assertEquals(findAll(m, n => hasClass(n, 'site-insert-point')).length, 1);
+});
+
 test("an empty editable block shows a click-to-edit placeholder; the body opens the edit dialog", () => {
     const p = freshPage();
     const m = security.runSystem(() => {

@@ -110,12 +110,12 @@ export type ActionMenuItem =
   | 'divider';
 
 export function actionMenu(items: ActionMenuItem[],
-                           opts: {ariaLabel?: string} = {}): Markup {
-    return [h.div, {class: 'dropdown lm-action-menu'},
+                           opts: {ariaLabel?: string, icon?: Markup, menuClass?: string} = {}): Markup {
+    return [h.div, {class: 'dropdown lm-action-menu' + (opts.menuClass ? ' ' + opts.menuClass : '')},
         [h.button, {type: 'button', class: 'lm-menu-button',
                     'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
                     'aria-label': opts.ariaLabel ?? 'More actions'},
-         menuIcon()],
+         opts.icon ?? menuIcon()],
         [h.ul, {class: 'dropdown-menu'},
          items.map(it => it === 'divider'
              ? [h.li, {}, [h.hr, {class: 'dropdown-divider'}]]

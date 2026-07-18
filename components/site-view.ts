@@ -55,14 +55,41 @@ export class SiteView {
             site_id: page.site_id, dict: {}, editing,
             headings: this.collectHeadings(blocks),
         };
-        const rendered = blocks.map(b =>
-            editing ? this.wrapForEdit(b, ctx) : this.renderBlock(b, ctx));
         if(!editing)
-            return [h.div, {class: 'site-page'}, rendered];
+            return [h.div, {class: 'site-page'}, blocks.map(b => this.renderBlock(b, ctx))];
+
+        // Editing: interleave hover-revealed "+" insert points around every block
+        // (and at the top) so a block of ANY kind can be inserted at any position.
+        const flow: Markup[] = [];
+        if(blocks.length === 0)
+            flow.push(this.renderInsertPoint({page_id}));      // empty page -> one appending "+"
+        else {
+            flow.push(this.renderInsertPoint({anchor: blocks[0].block_id, position: 'before'}));
+            for(const b of blocks) {
+                flow.push(this.wrapForEdit(b, ctx));
+                flow.push(this.renderInsertPoint({anchor: b.block_id, position: 'after'}));
+            }
+        }
         const props = liveReloadableProps([this.blockTable.pageShapeKey(page_id)],
             `${this}.renderBlockFlow(${page_id}, true)`);
-        return [h.div, {...props, class: props.class + ' site-page site-page-editing'},
-            rendered, this.renderAddBlockMenu(page_id)];
+        return [h.div, {...props, class: props.class + ' site-page site-page-editing'}, flow];
+    }
+
+    // A hover-revealed "+" that opens a kind picker inserting at one gap: either
+    // appending to a page, or before/after an anchor block.  Every registered kind
+    // is offered, so the menus never grow per position.
+    private renderInsertPoint(
+        target: {page_id: number} | {anchor: number, position: 'before' | 'after'}): Markup {
+        const exprFor = 'page_id' in target
+            ? (kind: string) => `${this}.addBlock(${target.page_id}, '${kind}')`
+            : (kind: string) => `${this}.insertBlock(${target.anchor}, '${target.position}', '${kind}')`;
+        const kinds = allBlockKinds().slice().sort((a, b) =>
+            (a.category === 'app' ? 1 : 0) - (b.category === 'app' ? 1 : 0));
+        const items: action.ActionMenuItem[] = kinds.map(k =>
+            ({label: k.label, mode: {kind: 'immediate', expr: exprFor(k.kind)}}));
+        return [h.div, {class: 'site-insert-point'},
+            action.actionMenu(items, {ariaLabel: 'Insert a block', icon: action.plusIcon(),
+                menuClass: 'site-insert-menu'})];
     }
 
     // One block: dispatch to its kind.  A kind absent from the registry (e.g. a
@@ -139,6 +166,10 @@ export class SiteView {
 
         const menu = action.actionMenu([
             editable ? {label: 'Edit…', mode: {kind: 'modal', dialogUrl: editUrl}} : undefined,
+            // Text is the common insert; the "+" between blocks covers every other kind.
+            {label: 'Insert text above', mode: {kind: 'immediate', expr: `${this}.insertBlock(${id}, 'before', 'text')`}},
+            {label: 'Insert text below', mode: {kind: 'immediate', expr: `${this}.insertBlock(${id}, 'after', 'text')`}},
+            'divider',
             {label: 'Move up',   mode: {kind: 'immediate', expr: `${this}.moveBlockUp(${id})`}},
             {label: 'Move down', mode: {kind: 'immediate', expr: `${this}.moveBlockDown(${id})`}},
             {label: 'Delete',    mode: {kind: 'confirm', message: 'Delete this block?', expr: `${this}.deleteBlock(${id})`}},
@@ -157,15 +188,6 @@ export class SiteView {
         const ctx: BlockCtx = {site_id: this.pageTable.getById(b.page_id).site_id, dict: {}, editing: true,
             headings: this.collectHeadings(this.blockTable.forPage.all({page_id: b.page_id}))};
         return this.wrapForEdit(b, ctx);
-    }
-
-    // The add-block picker: every registered kind, content kinds before app kinds.
-    private renderAddBlockMenu(page_id: number): Markup {
-        const kinds = allBlockKinds().slice().sort((a, b) =>
-            (a.category === 'app' ? 1 : 0) - (b.category === 'app' ? 1 : 0));
-        const items: action.ActionMenuItem[] = kinds.map(k =>
-            ({label: k.label, mode: {kind: 'immediate', expr: `${this}.addBlock(${page_id}, '${k.kind}')`}}));
-        return action.actionMenu(items, {ariaLabel: 'Add block'});
     }
 
     // The payload editor: a param form over the kind's schema, prefilled with the
@@ -203,6 +225,24 @@ export class SiteView {
         if(!k) throw new Error(`Unknown block kind ${kind}`);
         this.blockTable.insert({page_id, kind, payload: writePayload(k, k.schema.defaults())});
         return this.reloadPage(page_id);
+    }
+
+    // Insert a new block of `kind` immediately before/after an anchor block, minting
+    // an order_key between the anchor and its neighbour (like gallery.insertRelative).
+    @routeMutation(authenticated)
+    insertBlock(anchor_block_id: number, position: string, kind: string): Markup {
+        const anchor = this.blockTable.getById(anchor_block_id);
+        this.assertCanEditPage(anchor.page_id);
+        const k = blockKind(kind);
+        if(!k) throw new Error(`Unknown block kind ${kind}`);
+        const sibs = this.blockTable.forPage.all({page_id: anchor.page_id});
+        const i = sibs.findIndex(s => s.block_id === anchor_block_id);
+        const order_key = position === 'before'
+            ? orderkey.between(sibs[i - 1]?.order_key, sibs[i].order_key)
+            : orderkey.between(sibs[i].order_key, sibs[i + 1]?.order_key);
+        this.blockTable.insert({page_id: anchor.page_id, kind,
+            payload: writePayload(k, k.schema.defaults()), order_key});
+        return this.reloadPage(anchor.page_id);
     }
 
     @routeMutation(authenticated)
