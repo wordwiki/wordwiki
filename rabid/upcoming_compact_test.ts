@@ -5,7 +5,7 @@
 import { test } from "../liminal/testing/test.ts";
 import { assert } from "../liminal/testing/assert.ts";
 import { withTestDb, renderRoute, asUser, asSystem, invoke } from "./testing.ts";
-import { hasText } from "../liminal/testing/markup-assert.ts";
+import { find, tagOf, hasText } from "../liminal/testing/markup-assert.ts";
 import { markupToString } from "../liminal/markup.ts";
 import { rabid } from "./rabid.ts";
 import * as date from "../liminal/date.ts";
@@ -18,6 +18,19 @@ function upcomingEvent(over: Record<string, any> = {}): number {
         event_kind: 'public', description: 'Repair Night', location_description: '',
         location_url: '', is_remote_event: 0, volunteer_only: 0,
         start_time: `${d} 17:00:00`, end_time: `${d} 20:00:00`,
+        total_cash_collected: 0, notes: '', ...over,
+    }));
+}
+
+// An event whose time range contains RIGHT NOW (started 5 min ago, ends in an
+// hour), so it qualifies for the home "Happening now" section.
+function ongoingEvent(over: Record<string, any> = {}): number {
+    const now = date.orgNow();
+    return asSystem(() => rabid.event.insert({
+        event_kind: 'public', description: 'Repair Night', location_description: 'The shop',
+        location_url: '', is_remote_event: 0, volunteer_only: 0,
+        start_time: date.temporalToSqliteDateTime(now.subtract({ minutes: 5 })),
+        end_time: date.temporalToSqliteDateTime(now.add({ minutes: 60 })),
         total_cash_collected: 0, notes: '', ...over,
     }));
 }
@@ -64,5 +77,58 @@ test("compact row: signing up flips the toggle to Going, and the row reload rout
         await asUser(bob, () => invoke(`rabid.event_commitment.commitSelf($arg0)`, e));
         const after = await asUser(bob, () => renderRoute(`rabid.event.renderUpcomingPublicEventRowById(${e})`));
         assert(markupToString(after).includes('checked'), 'checked after committing');
+    });
+});
+
+// --- Home structure: jump menu + Happening now section ----------------------
+
+test("home: jump menu lists the present sections; Reports is styled as a directory", async () => {
+    await withTestDb(async ({ bob }) => {
+        const page = await asUser(bob, () => renderRoute('home'));
+        // The jump menu (event-detail section-nav style) + the reports directory.
+        assert(!!find(page, n => tagOf(n) === 'nav'), 'has a jump-menu nav');
+        assert(hasText(page, 'Reports'), 'Reports section present');
+        assert(hasText(page, 'Volunteer Activity Report'), 'a reports link is present');
+        // With nothing on, "Happening now" is absent from the page and the menu.
+        assert(!hasText(page, 'Happening now'), 'no Happening now when nothing is ongoing');
+    });
+});
+
+test("home Happening now: shows ongoing events (all kinds, incl. volunteer-only) with faces; check-in flips it", async () => {
+    await withTestDb(async ({ bob }) => {
+        ongoingEvent({ description: 'Members-only Build', volunteer_only: 1 });
+
+        // Before checking in: the section shows, with the event and the face grid.
+        const before = await asUser(bob, () => renderRoute('home'));
+        assert(hasText(before, 'Happening now'), 'the section shows while an event is on');
+        assert(hasText(before, 'Members-only Build'), 'a volunteer-only event still appears here');
+        assert(hasText(before, 'Volunteers here'), 'the detail-page face grid is reused');
+        assert(hasText(before, 'I am Here'), 'a prominent self check-in button');
+
+        // A distinct running event that is NOT within the window must not show.
+        const past = asSystem(() => rabid.event.insert({
+            event_kind: 'public', description: 'Yesterday Shop', location_description: '',
+            location_url: '', is_remote_event: 0, volunteer_only: 0,
+            start_time: date.temporalToSqliteDateTime(date.orgNow().subtract({ days: 1 })),
+            end_time: date.temporalToSqliteDateTime(date.orgNow().subtract({ days: 1 }).add({ hours: 3 })),
+            total_cash_collected: 0, notes: '',
+        }));
+        assert(!hasText(await asUser(bob, () => renderRoute('home')), 'Yesterday Shop'),
+            'an event outside the ±15-min window is not "happening now"');
+        void past;
+    });
+});
+
+test("home Happening now: self check-in puts my face in the grid (block reload route)", async () => {
+    await withTestDb(async ({ bob }) => {
+        const e = ongoingEvent();
+
+        const before = await asUser(bob, () => renderRoute(`rabid.event.renderOngoingEventBlockById(${e})`));
+        assert(!markupToString(before).includes(`face-${bob}`), 'not in the grid before checking in');
+
+        await asUser(bob, () => invoke(`rabid.event_checkin.checkSelfIn($arg0)`, e));
+        const after = await asUser(bob, () => renderRoute(`rabid.event.renderOngoingEventBlockById(${e})`));
+        assert(markupToString(after).includes(`face-${bob}`), 'my face tile appears after checking in');
+        assert(markupToString(after).includes('Here ✓'), 'the button flips to checked-in');
     });
 });

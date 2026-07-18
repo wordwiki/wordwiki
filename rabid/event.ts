@@ -719,14 +719,18 @@ export class EventTable extends Table<Event> {
     // lives on /events; here the point is a light document a volunteer can skim
     // and RSVP from at login, not a wall of controls.
     renderUpcomingPublicEventsCompact(): Markup {
-        const today = date.orgToday();
-        const startDate = `${today.toString()} 00:00:00`;
-        const endDate = `${today.add({days: 42}).toString()} 23:59:59`; // 6 weeks
+        // Start the window just PAST the "Happening now" pre-roll (now + 15 min):
+        // an event that is currently ongoing (or about to start) belongs to that
+        // section, not here, so the two panes are clean complements - no event
+        // shows in both.
+        const now = date.orgNow();
+        const startDate = date.temporalToSqliteDateTime(now.add({minutes: 15}));
+        const endDate = `${date.orgToday().add({days: 42}).toString()} 23:59:59`; // 6 weeks out
 
         const events = db().prepare<Event, {start_date: string, end_date: string}>(block`
             SELECT ${this.allFields}
             FROM event
-            WHERE start_time >= :start_date
+            WHERE start_time > :start_date
               AND start_time <= :end_date
               AND is_catch_all = 0
               AND volunteer_only = 0
@@ -830,6 +834,84 @@ export class EventTable extends Table<Event> {
                           ...(selfAttending ? {checked: ''} : {}),
                           onclick: toggle,
                           'aria-label': future ? "Going to this event" : "I was at this event"}];
+    }
+
+    // ---- Home "Happening now" section --------------------------------------
+
+    // Events ONGOING right now: any event (EVERY kind, incl. volunteer-only)
+    // whose time range - padded 15 min on each side - contains this moment.  The
+    // padding lets people check in a little before doors and a little after the
+    // scheduled end.  Catch-all buckets (no clock bounds) never qualify.  Usually
+    // zero or one.  (The Events-page "Now" section uses a wider ±30 window; this
+    // home check-in prompt is deliberately tighter.)
+    homeOngoingEvents(): Event[] {
+        const now = date.orgNow();
+        const lo = date.temporalToSqliteDateTime(now.subtract({minutes: 15})); // padded-end floor
+        const hi = date.temporalToSqliteDateTime(now.add({minutes: 15}));      // padded-start ceiling
+        return db().prepare<Event, {lo: string, hi: string}>(block`
+            SELECT ${this.allFields}
+            FROM event
+            WHERE is_catch_all = 0
+              AND start_time IS NOT NULL
+              AND start_time <= :hi
+              AND COALESCE(end_time, start_time) >= :lo
+            ORDER BY start_time`).all({lo, hi});
+    }
+
+    // The optional home "Happening now" pane: for each ongoing event, a brief
+    // heading (name · time · place) with a prominent self CHECK-IN button, then
+    // the event's "Volunteers here" face grid reused verbatim from the detail
+    // page - so a volunteer can check in in one tap (the primary thing they do
+    // here) and see who else is present, faces and names.  Returns undefined when
+    // nothing is on, so the caller can omit the section (and its jump link).
+    renderHomeOngoingEvents(): Markup {
+        const events = this.homeOngoingEvents();
+        if (events.length === 0) return undefined;
+        return [h.section, {id: 'ongoing', class: 'mb-5'},
+            [h.h3, {class: 'mb-3'}, 'Happening now'],
+            ...events.map(e => this.renderOngoingEventBlock(e))];
+    }
+
+    // Reload one ongoing block after a self check-in/out (keyed on the event's
+    // check-in fk, like the detail grid), so the CHECK-IN button flips and the
+    // face grid re-renders in one swap.
+    @route(authenticated)
+    renderOngoingEventBlockById(event_id: number): Markup {
+        return this.renderOngoingEventBlock(this.getById(event_id));
+    }
+
+    private renderOngoingEventBlock(e: Event): Markup {
+        const id = e.event_id;
+        const actorId = security.current()?.actorId;
+        const checkins = this.peopleByEvents('event_checkin', [id]).get(id) ?? [];
+        // "Here" = an OPEN check-in (checked in and not yet checked out).
+        const selfHere = actorId !== undefined && checkins.some(c => c.id === actorId && c.endTime == null);
+
+        // A brief one-line summary under the name: the time range (times only -
+        // it's happening today), the place, and the volunteers-only note.
+        const timeStr = e.start_time
+            ? (e.end_time
+                ? `${date.sqliteDateTimeToTimeString(e.start_time)} – ${date.sqliteDateTimeToTimeString(e.end_time)}`
+                : date.sqliteDateTimeToTimeString(e.start_time))
+            : '';
+        const place = e.is_remote_event ? this.remoteText(e) : e.location_description;
+        const secondary = [timeStr, place, e.volunteer_only ? 'Volunteers only' : '']
+            .filter(Boolean).join(' · ');
+
+        // The block reloads on its own check-in key (the nested face grid carries
+        // the same key but is pruned as a nested root - only this outer block
+        // swaps, re-rendering a fresh grid and button).
+        const props = reloadableProps([rabid.event_checkin.fkKey('event_id', id)],
+            `rabid.event.renderOngoingEventBlockById(${id})`,
+            {'data-testid': `ongoing-event-${id}`});
+        return [h.div, {...props, class: 'mb-4 ' + props.class},
+            [h.div, {class: 'd-flex align-items-center flex-wrap gap-2 mb-1'},
+             [h.a, {...templates.pageLinkProps(`/rabid.event.detailPage(${id})`),
+                    class: 'lm-nav-link h5 mb-0'}, e.description || 'Untitled Event'],
+             // The prominent primary action - checking in is why people come here.
+             this.renderSelfAttendToggle(id, 'running', selfHere, actorId, /*nowMode*/ true)],
+            secondary ? [h.div, {class: 'text-muted small mb-2'}, secondary] : undefined,
+            rabid.event_checkin.renderCheckinGrid(id)];
     }
 
     // The reusable week-grouped, phase-aware schedule table for a set of events
