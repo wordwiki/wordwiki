@@ -117,6 +117,18 @@ export function validateStyle(locus:string, style: any): Style {
     };
 }
 
+/**
+ * A Style as it appears in the compact-JSON schema serialization: keys with
+ * undefined values dropped (so a style that only ever held undefineds
+ * serializes the same as no style at all), undefined when empty.  The style
+ * contents are already plain data ($view/$options included) so no per-key
+ * treatment is needed.
+ */
+export function styleToCompactJson(style: Style): Record<string, unknown>|undefined {
+    const entries = Object.entries(style).filter(([_k, v]) => v !== undefined);
+    return entries.length === 0 ? undefined : Object.fromEntries(entries);
+}
+
 function validateOptionalStringProperty(locus: string, name: string, value: any): string {
     if(!(value === undefined || typeof value === 'string'))
         throw new ValidationError(locus, `invalid optional attr '${name}'- expected optional string - got ${JSON.stringify(value)} of type ${typeof value}`);
@@ -307,14 +319,14 @@ export abstract class ScalarField extends Field {
     /**
      * Factoring of the common parts of the schemaToCompactJson() method
      * to make per-type field implementations less bulky.
-     *
-     * TODO add $style
      */
     buildSchemaToCompactJson(typ: string, extraFields: any): any {
         const json = { $type: this.schemaTypename() } as any; // XXX fix typing
         this.bind && (json.$bind = this.bind);
         this.optional && (json.$optional = true);
         extraFields && Object.assign(json, extraFields);
+        const styleJson = styleToCompactJson(this.style);
+        styleJson && (json.$style = styleJson);
         return json;
     }
 
@@ -351,7 +363,7 @@ export class BooleanField extends ScalarField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): BooleanField {
         const {$type, $bind, $style, $optional, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'boolean');
-        return new BooleanField(name, $bind, !!$optional);
+        return new BooleanField(name, $bind, !!$optional, $style);
     }
 }
 
@@ -671,7 +683,7 @@ export class IdField extends ScalarField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): IdField {
         const {$type, $bind, $style, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'id');
-        return new IdField(name, $bind);
+        return new IdField(name, $bind, false, $style);
     }
 }
 
@@ -694,7 +706,7 @@ export class PrimaryKeyField extends IdField {
     static parseSchemaFromCompactJson(locus: string, name: string, schema: any): PrimaryKeyField {
         const {$type, $bind, $style, ...extra} = schema;
         ScalarField.parseSchemaValidate(locus, name, schema, $type, $bind, $style, extra, 'primary_key');
-        return new PrimaryKeyField(name, $bind);
+        return new PrimaryKeyField(name, $bind, $style);
     }
 }
 
@@ -950,12 +962,22 @@ export class RelationField extends Field {
 
     /**
      * Returns this schema node in it's JSON serialization.
+     *
+     * $prompt is emitted top-level (the authoring shortcut the parser
+     * accepts) and the rest of the style as $style, so parse->emit->parse
+     * is a fixed point.  Only Model-kind fields are emitted (synthetic
+     * order/versioning fields are an implementation detail).
      */
     schemaToCompactJson(): any {
         const json = {} as any; // fix typing
         json.$type = 'relation';
         json.$tag = this.tag;
+        const {$prompt, ...restStyle} = this.style;
+        $prompt !== undefined && (json.$prompt = $prompt);
+        const styleJson = styleToCompactJson(restStyle);
+        styleJson && (json.$style = styleJson);
         for(const field of this.fields) {
+            if(field.kind !== FieldKind.Model) continue;
             json[field.name] = field.schemaToCompactJson();
         }
         return json;
@@ -1066,6 +1088,23 @@ export class Schema extends RelationField {
                 throw new Error(`Duplicate field tags in schema ${this.tag} - ${duplicateTags}`);
             return Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.tag, r]));
         })();
+    }
+
+    /**
+     * The schema root serializes as $type 'schema' with $name (matching what
+     * parseSchemaFromCompactJson expects back) - without this override the
+     * inherited relation form is emitted, which its own parser rejects.
+     */
+    override schemaToCompactJson(): any {
+        const json = {} as any;
+        json.$type = 'schema';
+        json.$name = this.name;
+        json.$tag = this.tag;
+        for(const field of this.fields) {
+            if(field.kind !== FieldKind.Model) continue;
+            json[field.name] = field.schemaToCompactJson();
+        }
+        return json;
     }
 
     static parseSchemaFromCompactJson(locus: string, schemaJson: any): Schema {
