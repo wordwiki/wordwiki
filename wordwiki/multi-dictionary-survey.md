@@ -224,12 +224,23 @@ dictionary-peers.
 
 - Public: the home page IS the search engine — all entries rendered
   hidden with normalized-term CSS classes + an inline term array;
-  resources/search.js rewrites a stylesheet selector.  Cross-
-  dictionary public search therefore means merging peer projections
-  into that page (or replacing the mechanism).  Scale check: RAND's
-  30K entries as hidden li's would roughly 5x the home page — the
-  mechanism may need pagination/lazy-loading or a JS index instead;
-  measure before committing.
+  resources/search.js rewrites a stylesheet selector.  DECIDED (dz
+  2026-07-24): this mechanism gets REPLACED, but the offline
+  invariant stays — search must survive the application server dying
+  and work from a bare directory (the archival requirement).  The
+  CSS version's original virtues (progressive render as the page
+  parses) no longer pay for its costs: an expressiveness ceiling,
+  30K-entry scale, and recent browser CSP tightening apparently
+  breaking dynamic stylesheet manipulation on file:// URLs (i.e. it
+  is now an ARCHIVAL regression).  Replacement shape: a client-side
+  JS index — note file:// also blocks fetch(), so the index ships as
+  <script src="search-index.js"> defining a global (lazily
+  injectable on first use to keep the home page light).  A JS index
+  buys per-orthography normalization (retiring the ASCII Latin
+  assumption; becomes a schema-role concern), substring matching,
+  ranking, and the cross-dictionary merge with dictionary badges.
+  SEPARABLE: this can land as a standalone improvement BEFORE Phase
+  4; Phase 4 then extends it to merge peer projections.
 - Editor: server-side regex scan over typed spelling/gloss fields
   (wordwiki.ts:1013-1090) — becomes a role-driven scan.
 
@@ -353,9 +364,10 @@ dictionary-peers.
   parameterization; vocabulary dictionary-scoping; permissions.
   Second dictionary demo: a toy schema loaded from data, edited live.
 - **Phase 4 — publish + cross-search (M-L).**  Per-dictionary peer
-  trees; per-dictionary home/about content (mechanism TBD — see the
-  site-editor question); projection artifact + merged public search
-  (with the 30K-entry scale check); peer links + shared-store audio.
+  trees; per-dictionary home/about content via the site editor
+  (components package); projection artifact + the merged public
+  search (the JS-index search replacement of §2.7, which can also
+  land separately and earlier); peer links + shared-store audio.
 - **Phase 5 — shoebox .typ import (M).**  Port the java .typ parser;
   marker → field-kind + $bind allocation convention; LENIENT and
   LITERAL importer with an import report (real shoebox data violates
@@ -384,6 +396,7 @@ well.
 3. RAND's orthography: new orthography row (recommended) — name/slug?
 4. Published RAND: subtree of mikmaqonline.org (recommended, shared
    stores) or its own domain eventually?
-5. Public cross-search scale: is 38K hidden entries in one home page
-   acceptable to try first, or do we jump straight to a JS-index
-   search?
+5. ANSWERED (dz 2026-07-24): skip scaling the CSS mechanism — replace
+   the public search with an offline JS-index search (§2.7); still
+   static-site/file://-capable, richer matching, cross-dictionary
+   ready.
