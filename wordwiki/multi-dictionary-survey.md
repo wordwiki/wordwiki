@@ -285,7 +285,10 @@ dictionary-peers.
 1. **Registry + schema storage.**  A `dictionary` table peer to
    orthography (slug, assertion table name, display name, public
    orthography, collation, primary book, license/attribution,
-   ordering-for-search).  Where does the schema JSON live: (a) file
+   ordering-for-search).  Licensing settled for the Watson
+   dictionaries (dz 2026-07-24): same CC-share-alike as MMO, kept
+   separate, ATTRIBUTION TO WATSON — the registry's license/
+   attribution columns are load-bearing from day one.  Where does the schema JSON live: (a) file
    per dictionary in the repo, (b) blob column in the registry row.
    Recommend (b) — data end-to-end, and a .typ import just writes a
    row — WITH cli import/export-to-file so schemas stay diffable in
@@ -471,9 +474,12 @@ choice — keep literally vs drop-with-report.
 project is FOUR dictionaries, and the drop is a WORK-IN-FLIGHT
 PIPELINE, not three independent dictionaries:
 
-1. **mmolistuguj2024** (6,816 entries) — NOT in the drop yet; has
-   \ws (speaker pronounces the headword — recordings?), \lf/\lv/\le
-   example sets, \sd semantic domain.  ASK FOR IT.
+1. **mmolistuguj2024** (6,816 entries) — almost certainly a version
+   of MIGMAQONLINE ITSELF from before its wordwiki import (MMO was
+   shoebox + a java static-site generator — Sfm.java's main() reads
+   mmo.typ/mmo.txt; MMO in turn descends from Watson's dictionary of
+   ~25 years ago).  Not a new dictionary to host; at most a
+   comparison artifact.
 2. **RandMigEngDict** — the big Rand transcription, ORIGINALLY
    33,276 entries, now 29,096: entries LEAVE it as they are
    processed (shoebox Database>Move is destructive).  The drop's
