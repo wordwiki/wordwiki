@@ -425,7 +425,57 @@ regression oracles (test suite + byte-identical publish) cover it
 well.
 
 
-## 6. Open questions for dz
+## 6. The Watson drop (2026-07-24): parser + data recon
+
+dz dropped wordwiki/Sfm.java (his shoebox parser) and watson/ (the
+researcher's dictionaries + MDF.typ).
+
+**Sfm.java** (~600 lines, self-contained): SfmReader = backslash-
+marker lexer with pushback (continuation lines = content runs until
+newline+backslash; CR stripped; shoebox-identical trailing-newline
+handling); SfmSchema reads the .typ (+mkr records; mkrOverThis →
+parent; root 'lx'); applySchema is the essential algorithm — SFM has
+NO close tags, so nesting is inferred: stack-based, pop to the
+nearest ancestor per the .typ hierarchy, SYNTHESIZING missing
+intermediate levels as empty fields.  Port note (MANDATORY change):
+the Java version reads everything as ISO-8859-1 — the watson DATA
+files are UTF-8 with real multi-byte diacritics (the Java version
+would mangle them today) while MDF.typ itself is cp1252-ish; the
+port takes encoding per file.
+
+**Existing-parser scan (2026-07)**: no TS/JS SFM/.typ parser exists.
+Open alternatives are SIL::Shoe (Perl, mature, .typ-aware),
+goodmami/toolbox + clldutils.sfm + nltk.toolbox (Python, flat
+field-list parsing — the .typ hierarchy inference, the actual hard
+bit, is mostly NOT in them).  Using one would bolt a Perl/Python
+stage onto the flow — recreating the retired offline-pipeline
+pattern.  DECISION LEAN: port Sfm.java (small, battle-tested on this
+data lineage, keeps import in-process).
+
+**The data**: RAND = 29,097 records, proper `\_sh v3.0 325 MDF 4.0`
+header, ~24 distinct markers (all standard MDF; MDF.typ defines 102).
+Per-record shape: \lx transliterated headword (Listuguj-style),
+\lsf Smith-Francis (28,680 present), \ps rich paradigm-class codes
+("W5 ni ei", "T3 vai si" — hundreds of distinct values → vocabulary
+table at reshape), \ge/\de English, \xv RAND'S ORIGINAL 1888
+DIACRITIC ORTHOGRAPHY (āān, ĕnagā — a THIRD lane) + \xe, \so source
+citations (541 distinct: mostly "Rand 1888, p N" — PAGE-LEVEL
+provenance, feeding the future image↔entry document-reference
+matching directly — plus Clark 1902, place names, stray codes and
+typos like "Claek 1902" — exactly the in-system cleanup material),
+\nt notes, \dt dates Nov 2024–Jul 2026 (actively worked).  151,100
+EMPTY field lines (marker, no content — template records): importer
+choice — keep literally vs drop-with-report.
+
+**Lk20726 / Ng20726**: ~2,500 records each, the SAME dictionary as
+two DIVERGED working copies (first records byte-identical; ~32K
+diff lines; Ng has \lsf nearly everywhere + records Lk lacks; Lk has
+newer \dt stamps to 20/Jul/2026).  Neither has a \_sh header and
+both open with a BLANK TEMPLATE record (bare markers) — leniency
+cases the importer must tolerate.  OPEN: what are Lk vs Ng, and
+which is authoritative?
+
+## 7. Open questions for dz
 
 1. ANSWERED (landed 2026-07-24, same day): the site editor is the
    `components` package, built on rabid — see §2.6 update.  Phase 4
