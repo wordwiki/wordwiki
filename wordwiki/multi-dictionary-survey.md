@@ -213,7 +213,42 @@ serving), built on rabid as the testbed and designed to be shared
 with wordwiki (see memory/site-editor-design.md).  It is the natural
 Phase 4 mechanism for per-dictionary home/about content; Phase 4
 should start by wiring wordwiki onto it rather than inventing
-anything.
+anything.  Caveat (dz 2026-07-24): it is still fairly raw — "sort of
+works, needs more fiddling" — so Phase 4 budgets hardening time, and
+it brings forward two requirements of its own (§2.8).
+
+### 2.8 Requirements the site editor brings forward (dz 2026-07-24)
+
+**Dumps are THE publish interface — protect and extend this.**  That
+publish runs on the dumped json files delivers two strategic
+benefits: (1) it continuously PROVES the dumps are complete; (2) it
+is the final escape hatch for other language projects.  Other
+communities will plausibly adopt the editor, but for many it will be
+a deal-breaker not to have absolute control over the final site's
+look and feel (or a phone app, etc.).  The customization ladder:
+stylesheets → site builder → fork a SIMPLE REFERENCE IMPLEMENTATION
+— a static site generator that imports very little and renders the
+.json dumps to a site, usable as the basis for a fully custom
+generator.  (This is the "standalone generator" already parked in
+publish-source.md, with its rationale now elevated: it is a core
+adoption requirement, not an archival nicety.)  Consequence for this
+project: every publish input — including the per-dictionary bundles
+AND the cross-dictionary projection artifact — must remain simple,
+documented json; outside consumers (peer dictionaries, other
+projects' generators) live off these files, never off wordwiki
+internals.
+
+**Pages must also publish LIVE (preview).**  Today public pages are
+only rendered by the file-writing publish.  The site-editor workflow
+is awkward/broken without preview-rendering every page (and preview
+is independently good).  This is cheap by construction: the dumps
+ARE the in-process data structures (bundle build runs from the live
+projections; renderers consume bundle shapes) — so live preview is a
+route family that builds/reuses an in-memory PublishSource and
+renders ONE page to the response instead of a file.  One first-touch
+cost: bundle build resolves derived media (compressed audio, scan
+tiles) eagerly; those are content-addressed and cached, so only new
+media pays at preview time.
 
 The edition:'full'|'preview' flag is the established pattern for
 per-tree feature gating; PeerTree (hasEntry/entryPath/peerPath) is
@@ -365,9 +400,11 @@ dictionary-peers.
   Second dictionary demo: a toy schema loaded from data, edited live.
 - **Phase 4 — publish + cross-search (M-L).**  Per-dictionary peer
   trees; per-dictionary home/about content via the site editor
-  (components package); projection artifact + the merged public
-  search (the JS-index search replacement of §2.7, which can also
-  land separately and earlier); peer links + shared-store audio.
+  (components package — budget hardening, it's raw); LIVE PREVIEW
+  routes for public pages (§2.8 — separable, can land earlier since
+  the site editor wants it regardless); projection artifact + the
+  merged public search (the JS-index search replacement of §2.7,
+  also separable/earlier); peer links + shared-store audio.
 - **Phase 5 — shoebox .typ import (M).**  Port the java .typ parser;
   marker → field-kind + $bind allocation convention; LENIENT and
   LITERAL importer with an import report (real shoebox data violates
@@ -376,7 +413,9 @@ dictionary-peers.
   into its own dictionary.
 - **Then:** the dictionary→dictionary transform facility (raw-rand →
   reshaped-rand, §4), copy-with-provenance UI, batch matching,
-  starring — each its own feature project.
+  starring, and the reference-implementation static generator
+  (§2.8 — the few-imports json→site renderer other projects fork) —
+  each its own feature project.
 
 Rough total: phases 0-3 are on the order of the publication-model
 project; 4-5 together on the order of publish-source/scan-extract.
