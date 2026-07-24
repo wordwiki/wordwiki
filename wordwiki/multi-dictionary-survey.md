@@ -280,6 +280,40 @@ dictionary-peers.
   (wordwiki.ts:1013-1090) — becomes a role-driven scan.
 
 
+### 2.9 The SAAS end-state (dz 2026-07-24)
+
+The long-term goal behind the generalization arc: run this system as
+a FREE, OPEN-SOURCE SAAS — hosting is too much of a barrier for many
+language groups.  Most of the missing generalities have been tackled
+project-by-project; multi-dictionary + schema-as-data covers most of
+the rest.  Operational implications this project's choices must
+honor:
+
+- **Tenancy = instance.**  One community = one instance directory
+  (SQLite db file + content-addressed stores) — the natural unit
+  given instance-dir/wordwiki.sh.  Provisioning is mkdir + seed,
+  backup is rsync, and EXIT is a copy of the directory.  Data
+  sovereignty is a feature, not an ops detail, for indigenous
+  language data — the dump/archival model doubles as the portability
+  guarantee.  (SQLite is a SAAS advantage here, not a limitation.)
+- **Storage choices stay per-tenant portable**: no cross-tenant
+  shared stores (even at dedup cost), no external services in the
+  serving path.
+- **Hosted customization is DATA-ONLY.**  Schema documents (now
+  strictly validated), site-editor blocks, stylesheets — but NO
+  tenant-authored JS running in the hosted editor or on hosted
+  origins (a tenant's script on the shared service is an XSS
+  liability).  The absolute-control escape hatch (§2.8) lives
+  OUTSIDE the SAAS boundary: take your dumps, run/fork the reference
+  generator, host the static output anywhere — static hosting was
+  never the barrier, the editor/server is.
+- **Upgrades: one binary, N instances** — every migration must be
+  automatic at boot (the ensure/upgrade discipline, with the
+  remaining hand-run steps automated away).
+- The publication model's pending "open to untrusted" work gains
+  urgency (a hosted community will want public contributions under
+  review).
+
 ## 3. Choices to make
 
 1. **Registry + schema storage.**  A `dictionary` table peer to
