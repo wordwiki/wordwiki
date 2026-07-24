@@ -1673,10 +1673,10 @@ including remixing, transforming, and building upon the material, for any non-co
                  ({...part, tiles_url: this.sharedUp + part.tiles_url}))}]));
     }
 
-    // The bundle-backed twins of the db scan-render trio, shared by the
-    // entry pages (publicBoundingGroup below) and the book-page info boxes
-    // (renderEntry's ctx.scanRenderers).  A group id missing from the
-    // bundle renders like an empty group.
+    // The bundle-backed twins of the db scan-render trio, composed by
+    // publicBoundingGroup below for the entry pages AND the book-page info
+    // boxes.  A group id missing from the bundle renders like an empty
+    // group.
     scanStandaloneGroup(rootPath: string, id: number): any {
         const data = this.scanById.get(id);
         return data ? renderPageEditor.renderStandaloneGroupFromData(rootPath, data)
@@ -1690,13 +1690,6 @@ including remixing, transforming, and building upon the material, for any non-co
     }
     scanDescription(id: number): string {
         return this.scanById.get(id)?.description ?? '';
-    }
-    scanRenderers() {
-        return {
-            renderStandaloneGroup: (rootPath: string, id: number) => this.scanStandaloneGroup(rootPath, id),
-            publicBookPageUrl: (rootPath: string, id: number) => this.scanBookPageUrl(rootPath, id),
-            imageRefDescription: (id: number) => this.scanDescription(id),
-        };
     }
 
     // The speaker's display label - "Name (Region)" - from the bundle's
@@ -2152,20 +2145,22 @@ including remixing, transforming, and building upon the material, for any non-co
         if(!entry)
             return (`Unknown group id ${groupId}`);
         this.warnMissingRecordings(entry);
+        // The metadata-driven renderer, same config as the entry pages
+        // (publishEntry) - ONE public renderer, one look.  This was the hand
+        // renderer's (entry-schema renderEntry) last production use; the
+        // only presentation difference is that the hand version hoisted the
+        // document references first (docRefsFirst) where this renders the
+        // standard $view document order, matching the word's own page.
         const entryMarkup:any[] = [
             'div', {style: 'overflow: auto;'},
-            entryschema.renderEntry({rootPath, noTargetOnRefImages: false, docRefsFirst: true,
-                                     scanRenderers: this.scanRenderers(),
-                                     resolveAudioUrl: this.resolveAudioUrl,
-                                     speakerLabel: this.speakerLabel}, entry)];
-        const entryMarkupString = await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
-        //const entryMarkupString = renderToStringViaLinkeDOM(entryMarkup, true, entry.entry_id === 145979);
-        // if(entry.entry_id === 145979) {  // ugsuguni
-        //     console.info('SPECIAL ENTRY MARKUP STRING', entryMarkupString, 'for', JSON.stringify(entry, undefined, 2));
-        //     console.info('MARKUP IS', JSON.stringify(entryMarkup, undefined, 2));
-        // }
-        return entryMarkupString;
-        //return `<b>GROUP ${groupId} </b>`;
+            entryMeta.renderEntryMeta(
+                {rootPath, audience: 'public', publicKeys: ['borrowed-word'],
+                 renderBoundingGroup: (gid: number) => this.publicBoundingGroup(rootPath, gid),
+                 resolveAudioUrl: this.resolveAudioUrl,
+                 valueLabel: (f: model.ScalarField, v: any) =>
+                     f.name === 'speaker' ? this.speakerLabel(String(v)) : undefined},
+                entryschema.parsedDictSchema().relationsByTag[entryschema.EntryTag], entry)];
+        return await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
     }
     
     /**
