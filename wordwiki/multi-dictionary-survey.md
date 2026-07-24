@@ -204,11 +204,16 @@ All public-site prose is code constants in publish.ts: home body,
 about-us story, 404, data page, navbar (five books hard-coded),
 publicSiteDomain, the PDM page-0307 entry point, root chooser.
 publish-source.md explicitly parks these in "the standalone
-generator (the per-community artifact)".  NOTE: no site-editor /
-content-pages mechanism exists anywhere in liminal/ or rabid/ today
-(rabid's home is also code) — if one is in progress elsewhere it is
-the natural home for per-dictionary home/about content and should be
-surveyed before Phase 4 picks a mechanism.
+generator (the per-community artifact)".  UPDATE (2026-07-24, landed
+the same day as this survey): the SITE EDITOR now exists — the
+`components` package (block-kind registry, one block table with
+FieldSet-over-JSON payloads, SiteView with app-subclassed brand
+chrome, click-to-edit branded view, publish + anonymous /p/<slug>
+serving), built on rabid as the testbed and designed to be shared
+with wordwiki (see memory/site-editor-design.md).  It is the natural
+Phase 4 mechanism for per-dictionary home/about content; Phase 4
+should start by wiring wordwiki onto it rather than inventing
+anything.
 
 The edition:'full'|'preview' flag is the established pattern for
 per-tree feature gating; PeerTree (hasEntry/entryPath/peerPath) is
@@ -371,10 +376,9 @@ well.
 
 ## 6. Open questions for dz
 
-1. The site editor "we have been working on in liminal/rabid" — the
-   survey found no such mechanism in the repo (rabid home is code
-   too).  Where does it live / what state is it in?  It gates the
-   Phase 4 per-dictionary-home-content choice.
+1. ANSWERED (landed 2026-07-24, same day): the site editor is the
+   `components` package, built on rabid — see §2.6 update.  Phase 4
+   adopts it for per-dictionary home/about content.
 2. Schema storage: registry blob + file import/export (recommended)
    or file-per-dictionary as source of truth?
 3. RAND's orthography: new orthography row (recommended) — name/slug?
