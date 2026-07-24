@@ -19,9 +19,11 @@ import {db} from "../liminal/db.ts";
 import {block} from '../liminal/strings.ts';
 import {panic} from '../liminal/utils.ts';
 import {route, authenticated} from '../liminal/security.ts';
+import * as security from '../liminal/security.ts';
 import * as markdown from '../liminal/markdown.ts';
 import * as templates from './templates.ts';
 import * as entry from './entry-schema.ts';
+import * as user from './user.ts';
 import * as category from './category.ts';
 import * as tagModule from './tag.ts';
 import * as findings from './findings.ts';
@@ -157,12 +159,12 @@ export class EditorReports {
             } catch { /* unseeded */ }
             return entry.todos;
         })();
-        const userSummary = restrictToUser ? `for user "${entry.users[restrictToUser] ?? restrictToUser}"` : 'for all users';
+        const userSummary = restrictToUser ? `for user "${entry.displayUsername(restrictToUser)}"` : 'for all users';
         const taskSummary = restrictToTask ? `for task "${todoKinds[restrictToTask] ?? restrictToTask}"` : 'for all tasks';
         const title = `TODO report ${userSummary} ${taskSummary}`;
 
         const userPicker = ['div', {}, ['b', {}, 'Assigned To: '],
-                            Object.entries(entry.users).map(([user_id, user_name])=>
+                            Object.keys(security.runSystem(() => user.activeUserChoices())).map(user_id=>
                                 [['a', {href:`/ww/wordwiki.editorReports.todoReport(${JSON.stringify(user_id)}, ${JSON.stringify(restrictToTask)})`}, user_id], ' / ']),
                             ['a', {href:`/ww/wordwiki.editorReports.todoReport(null, ${JSON.stringify(restrictToTask)})`}, 'ALL USERS']];
 

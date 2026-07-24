@@ -5,8 +5,8 @@
  * gradually reduce the specific language hacks" — this system is heading
  * toward other language-preservation projects, so which orthographies exist,
  * their display names, and whether words may GO PUBLIC in them are DATA, not
- * code.  The old hard-coded `entrySchema.variants` map survives only as the
- * seed (and as a fallback while a db is unseeded).
+ * code.  SEED_ORTHOGRAPHIES below is the one seed (the old entry-schema
+ * `variants` map is RETIRED - phase 0 of multi-dictionary-survey.md).
  *
  * `publishable`: may a word be made public in this orthography?  Listuguj
  * and Smith-Francis yes; Modified Pacifique and the Pacifique Manuscript are
@@ -31,7 +31,7 @@ import { route, authenticated } from "../liminal/security.ts";
 import * as action from "../liminal/action.ts";
 import * as orderkey from "../liminal/orderkey.ts";
 import * as templates from './templates.ts';
-import * as entrySchema from './entry-schema.ts';
+import { WILD_VARIANT_NAME } from './variant-policy.ts';
 import type { WordWiki } from './wordwiki.ts';
 
 const admin = security.hasRole('admin');
@@ -274,15 +274,31 @@ export function seedOrthographies(table: OrthographyTable): {inserted: number} {
 }
 
 /** The variant-value vocabulary for the scan/validator: every table slug +
- *  the 'mm' wildcard.  Falls back to the seed map while a db is unseeded
+ *  the 'mm' wildcard.  Falls back to the SEED rows while a db is unseeded
  *  (early migrations, minimal tests). */
 export function orthographyVocabulary(table: OrthographyTable): string[] {
     const slugs = table.allByOrder.all({}).map(o => o.slug);
-    return slugs.length > 0 ? [...slugs, 'mm'] : Object.keys(entrySchema.variants);
+    return slugs.length > 0 ? [...slugs, 'mm']
+                            : [...SEED_ORTHOGRAPHIES.map(o => o.slug), 'mm'];
 }
 
-/** Display name for an orthography slug, table-first with the seed map (and
- *  the raw slug) as fallbacks - for reports and read-only rendering. */
+/** Display name for an orthography slug, table-first, the raw slug as the
+ *  last resort - for reports and read-only rendering.  'mm' is model
+ *  semantics, never a row (variant-policy owns its name). */
 export function orthographyDisplayName(table: OrthographyTable, slug: string): string {
-    return table.bySlug.first({slug})?.name ?? entrySchema.variants[slug] ?? slug;
+    return table.bySlug.first({slug})?.name
+        ?? (slug === 'mm' ? WILD_VARIANT_NAME : slug);
+}
+
+/** orthographyDisplayName over the ambient db (no table instance in hand) -
+ *  for render helpers outside a table/route context.  Tolerates a
+ *  pre-migration db (no orthography table) by falling through to the slug. */
+export function orthographyNameBySlug(slug: string): string {
+    if(slug === 'mm') return WILD_VARIANT_NAME;
+    try {
+        const row = db().first<{name: string}>(
+            `SELECT name FROM orthography WHERE slug = :slug`, {slug});
+        if(row?.name) return row.name;
+    } catch(_e) { /* pre-migration db */ }
+    return slug;
 }

@@ -51,6 +51,7 @@ import {Markup} from '../liminal/markup.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import {db} from '../liminal/db.ts';
 import {route, authenticated} from '../liminal/security.ts';
+import * as security from '../liminal/security.ts';
 import * as action from '../liminal/action.ts';
 import {FieldSet, IntegerField, type Tuple} from '../liminal/table.ts';
 import * as templates from './templates.ts';
@@ -70,7 +71,7 @@ const ACTIVITY_MAX_MONTHS = 400;   // sanity cap; deep enough for the 2000+ reco
  *  record, back to the earliest creation or change. */
 export const activityQuery = new FieldSet('activity_query', [
     new IntegerField('months', {nullable: true, prompt: 'Months (blank = all)'}),
-    new UserField('restrict_to_user', feedUsers, {nullable: true, prompt: 'Only changes by'}),
+    new UserField('restrict_to_user', {}, {nullable: true, prompt: 'Only changes by'}),
 ]);
 
 export interface ActivityQuery extends Tuple {
@@ -329,6 +330,9 @@ export class ActivityReport {
     @route(authenticated)
     filterDialog(q?: Record<string, any>): Markup {
         const query = activityQuery.normalize(q);
+        // Refresh the user dropdown from the table (see change-feed's twin).
+        (activityQuery.fields.find(f => f.name === 'restrict_to_user') as UserField)
+            .choices = security.runSystem(() => feedUsers());
         return [
             ['script', {}, 'setTimeout(showModalEditor)'],
             action.renderParamForm(activityQuery.fields, query, {

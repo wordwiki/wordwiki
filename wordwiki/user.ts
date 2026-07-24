@@ -36,6 +36,7 @@ import * as security from "../liminal/security.ts";
 import * as passwordUtils from "../liminal/password.ts";
 import * as date from "../liminal/date.ts";
 import * as entrySchema from './entry-schema.ts';
+import * as orthography from './orthography.ts';
 import * as templates from './templates.ts';
 import {route, authenticated} from "../liminal/security.ts";
 import type {WordWiki} from './wordwiki.ts';
@@ -55,7 +56,7 @@ const usernameOnCreateOnly: security.Permission = a =>
 
 // The primary_orthography select options: the orthography table's
 // non-retired rows (queried at TABLE CONSTRUCTION, which happens per
-// request), falling back to the hard-coded seed map when the table is
+// request), falling back to the SEED rows when the table is
 // missing/unseeded (early migrations, minimal tests).
 function primaryOrthographyChoices(): Record<string, string> {
     try {
@@ -64,7 +65,24 @@ function primaryOrthographyChoices(): Record<string, string> {
         if(rows.length > 0)
             return Object.fromEntries(rows.map(r => [r.slug, r.name]));
     } catch(_e) { /* table absent: fall through */ }
-    return Object.fromEntries(Object.entries(entrySchema.variants).filter(([k]) => k !== 'mm'));
+    return Object.fromEntries(orthography.SEED_ORTHOGRAPHIES.map(o => [o.slug, o.name]));
+}
+
+/** username -> display name for the ACTIVE human identities - the choices
+ *  for user filters (the change feed, the todo report).  Table-first (the
+ *  user table is the authority); an unseeded/pre-migration db yields {} and
+ *  the filter select simply offers no names.  Excludes disabled users and
+ *  the '~' batch identities (never meaningful filter targets - and a URL
+ *  can still name ANY username; choices only feed the dropdown). */
+export function activeUserChoices(): Record<string, string> {
+    try {
+        const rows = db().all<{username: string, name: string}, {}>(
+            `SELECT username, name FROM user WHERE disabled = 0 ORDER BY name`, {});
+        return Object.fromEntries(rows
+            .filter(r => !r.username.startsWith('~'))
+            .map(r => [r.username, r.name]));
+    } catch(_e) { /* pre-migration db */ }
+    return {};
 }
 
 // --------------------------------------------------------------------------------

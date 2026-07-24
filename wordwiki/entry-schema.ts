@@ -102,16 +102,17 @@ export function relationDisplayName(tag: string): string {
     return relationDisplayNameByTag[tag] ?? tag;
 }
 
-// XXX HACK HACK
 // The username -> DISPLAY NAME hook: the users TABLE is the authority
-// (injected by the WordWiki ctor, like setOrthographyAbbrHook); the static
-// map below is the fallback for early migrations/minimal tests.
+// (injected by the WordWiki ctor, like setOrthographyAbbrHook).  An unknown
+// username renders as stored - the map below is NOT consulted (it survives
+// only as the schema's $options + the user-table seed source; retiring it
+// fully is a phase-2 $vocab concern - multi-dictionary-survey.md).
 let usernameDisplayHook: ((username: string) => string | undefined) | undefined = undefined;
 export function setUsernameDisplayHook(h: (username: string) => string | undefined): void {
     usernameDisplayHook = h;
 }
 export function displayUsername(username: string): string {
-    return usernameDisplayHook?.(username) ?? users[username] ?? username;
+    return usernameDisplayHook?.(username) ?? username;
 }
 
 export const users: Record<string, string> = {
@@ -190,13 +191,10 @@ export const todos: Record<string, string> = {
     'NeedsApproval': 'Needs Approval',
 };
 
-export const variants: Record<string, string> = {
-    'mm-li': 'Listuguj',
-    'mm-sf': 'Smith-Francis',
-    'mm-mp': 'Modified Pacifique',
-    'mm-pm': 'Pacifique Manuscript',
-    'mm': "All Mig'maq-Mi'kmaq",
-};
+// (The old `variants` map is RETIRED - the orthography TABLE is the
+// authority, orthography.ts SEED_ORTHOGRAPHIES the seed, and variant-policy
+// WILD_VARIANT_NAME the 'mm' wildcard's name.  Phase 0 of
+// multi-dictionary-survey.md.)
 
 // Part-of-speech code -> display name.  Attached to the part_of_speech field as
 // $options so the metadata renderer can show the friendly name from DATA rather

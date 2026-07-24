@@ -145,7 +145,7 @@ export class RecentWords {
         const e = this.app.entriesById.get(r.entry_id);
         const word = e ? entrySchema.renderEntrySpellingsSummary(e) : `(deleted word ${r.entry_id})`;
         const gloss = e ? e.subentry.flatMap(se => se.gloss.map(gl => gl.gloss)).join(' / ') : '';
-        const who = r.username ? (entrySchema.users[r.username] ?? r.username) : '';
+        const who = r.username ? entrySchema.displayUsername(r.username) : '';
         return ['a', {...templates.pageLinkProps(
                           `/ww/wordwiki.lexeme.metaEditPage(${r.entry_id},true)`),
                       class: 'list-group-item list-group-item-action d-flex align-items-center gap-2'},

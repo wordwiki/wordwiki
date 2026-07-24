@@ -56,6 +56,12 @@ export function isWildVariant(v: string | null | undefined): boolean {
     return isBlankVariant(v) || v === 'mm';
 }
 
+/** The wildcard's display name.  'mm' is deliberately NOT an orthography
+ *  table row (model semantics, not a vocabulary value), so its name lives
+ *  here beside the predicate that defines it.  (Like the 'mm' slug itself,
+ *  a Mi'gmaq-ism to genericize for multi-language support — dz TODO.) */
+export const WILD_VARIANT_NAME = "All Mig'maq-Mi'kmaq";
+
 /**
  * THE central 'mm' predicate (fix-orthographies.md "The target model"): does
  * a stored variant value match orthography `orthography`?  Rendering, search,

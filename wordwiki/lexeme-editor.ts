@@ -75,6 +75,7 @@ import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
 import * as orthographyTable from './orthography.ts';
+import { WILD_VARIANT_NAME } from './variant-policy.ts';
 import * as tagTable from './tag.ts';
 import type {PageEditorConfig} from './render-page-editor.ts';
 import {renderStandaloneGroup, pageEditorURLForBoundingGroup, imageRefDescription} from './render-page-editor.ts';
@@ -337,12 +338,15 @@ function widgetFor(f: model.ScalarField, rel: model.RelationField,
             const rows: VocabRow[] = orths.map(o =>
                 ({slug: o.slug, name: o.name, retired: o.retired}));
             if(f.variantFlags.allowAll)
-                rows.push({slug: 'mm', name: entrySchema.variants['mm'], retired: 0});
+                rows.push({slug: 'mm', name: WILD_VARIANT_NAME, retired: 0});
             return new VocabSelectField(f.name, rows,
                 {what: 'orthography', adminPage: 'Orthography Table'},
                 {nullable: true, prompt: f.prompt});
         }
-        return new table.EnumField(f.name, entrySchema.variants, {nullable: true, prompt: f.prompt});
+        // Unseeded-table fallback (minimal tests): the SEED rows.
+        return new table.EnumField(f.name,
+            Object.fromEntries(orthographyTable.SEED_ORTHOGRAPHIES.map(o => [o.slug, o.name])),
+            {nullable: true, prompt: f.prompt});
     }
     if(f instanceof model.EnumField)
         return new table.EnumField(f.name, (f.style as any).$options ?? {},
@@ -450,7 +454,7 @@ export function renderFieldValue(f: model.ScalarField, v: any): Markup|undefined
     if(f instanceof model.ImageField)
         return ['img', {src: '/'+String(v), style: 'max-width: 10em; max-height: 10em;'}];
     if(f instanceof model.VariantField)
-        return ['span', {class:'badge text-bg-light'}, entrySchema.variants[v] ?? String(v)];
+        return ['span', {class:'badge text-bg-light'}, orthographyTable.orthographyNameBySlug(String(v))];
     if(f instanceof model.EnumField) {
         const options = (f.style as any).$options as Record<string,string>|undefined;
         return ['span', {}, options?.[v] ?? String(v)];
@@ -481,7 +485,7 @@ function formMode(form: Record<string, any>): EditMode {
 /** A user's display name for the history grid (the friendly name when known,
  *  else the bare username; 'unknown' for an unstamped row). */
 function userLabel(username: string | null | undefined): string {
-    return username ? (entrySchema.users[username] ?? username) : 'unknown';
+    return username ? entrySchema.displayUsername(username) : 'unknown';
 }
 
 /** The "imported base set": the predecessor-system dictionary (loaded at
@@ -2010,9 +2014,12 @@ export class LexemeEditor {
             if(kind === 'baseline' && !hasContent(a)) { prevContent = a; continue; }
 
             const u = a.change_by_username;
+            // (displayUsername yields the username itself when unknown -
+            // initials wants undefined then, so it initials the login code.)
+            const uName = u ? entrySchema.displayUsername(u) : undefined;
             const ev: ChangeEvent = {
                 when: a.valid_from,
-                whoInitials: initials(u, u ? entrySchema.users[u] : undefined),
+                whoInitials: initials(u, uName === u ? undefined : uName),
                 whoName: userLabel(u),
                 authorUsername: u ?? undefined,
                 automated: isAutomatedUsername(u),
@@ -2482,7 +2489,7 @@ export class LexemeEditor {
                          ['div', {class:'flex-grow-1'},
                           ['div', {class:'small text-muted'},
                            timestamp.formatTimestampAsLocalTime(a.valid_from),
-                           a.change_by_username ? ` — ${entrySchema.users[a.change_by_username] ?? a.change_by_username}` : '',
+                           a.change_by_username ? ` — ${entrySchema.displayUsername(a.change_by_username)}` : '',
                            isAutomatedUsername(a.change_by_username)
                               ? ['span', {class:'badge text-bg-secondary ms-1'}, 'automated'] : ''],
                           isTombstone(a)

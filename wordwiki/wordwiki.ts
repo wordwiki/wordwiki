@@ -818,7 +818,7 @@ export class WordWiki extends LiminalApp {
             const u = security.runSystem(() => this.users.byUsername.first({username}));
             if(u) return u.region ? `${u.name} (${u.region})` : u.name;
         } catch { /* pre-migration db */ }
-        return entry.users[username] ?? username;
+        return username;
     }
 
     // The tiny lane marker (the editor's Li/SF badge vocabulary).
@@ -831,14 +831,14 @@ export class WordWiki extends LiminalApp {
         return slug;
     }
 
-    // The orthography's display name: the table is the authority, the seed
-    // map the fallback, the raw slug the last resort.
+    // The orthography's display name: the table is the authority, the raw
+    // slug the last resort.
     private orthographyDisplayName(slug: string): string {
         try {
             const row = this.orthographies.allByOrder.all({}).find(o => o.slug === slug);
             if(row?.name) return row.name;
         } catch { /* pre-migration db */ }
-        return entry.variants[slug] ?? slug;
+        return slug;
     }
 
     /** The edit pencil INSIDE the headword <h1> (trailing the glosses), so it
@@ -1266,7 +1266,7 @@ export class WordWiki extends LiminalApp {
                 if(slug === 'mm') return {abbr: 'All', name: 'All orthographies'};
                 const row = rows.find(o => o.slug === slug);
                 return {abbr: row?.abbreviation || row?.name || slug,
-                        name: row?.name || entry.variants[slug] || slug};
+                        name: row?.name || slug};
             };
             const override = this.sessionOrthographyOverride();
             const effective = this.currentWorkingOrthography();

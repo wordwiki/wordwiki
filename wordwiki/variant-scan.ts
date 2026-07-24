@@ -16,10 +16,12 @@ import { db } from '../liminal/db.ts';
 import { block } from '../liminal/strings.ts';
 import { Markup } from '../liminal/markup.ts';
 import { route, authenticated } from '../liminal/security.ts';
+import * as security from '../liminal/security.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as model from './model.ts';
 import * as templates from './templates.ts';
 import * as entrySchema from './entry-schema.ts';
+import * as orthography from './orthography.ts';
 import type { WordWiki } from './wordwiki.ts';
 import { FindingsReport, renderFindingsMarkup } from './findings.ts';
 import { variantPolicyByTag, allowedVariantValues, isBlankVariant,
@@ -185,7 +187,8 @@ export class VariantReports {
     @route(authenticated)
     cleanupReport(): Markup {
         const report = new FindingsReport('Variant (orthography) cleanup', {quiet: true});
-        scanVariants(report, this.app.dictSchema, Object.keys(entrySchema.variants));
+        scanVariants(report, this.app.dictSchema,
+            security.runSystem(() => orthography.orthographyVocabulary(this.app.orthographies)));
         const title = 'Variant (orthography) cleanup';
         const body: Markup = [
             ['h1', {}, title],

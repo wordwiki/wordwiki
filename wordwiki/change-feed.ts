@@ -47,6 +47,7 @@ import * as timestamp from '../liminal/timestamp.ts';
 import * as server from '../liminal/http-server.ts';
 import {db} from '../liminal/db.ts';
 import {route, authenticated} from '../liminal/security.ts';
+import * as security from '../liminal/security.ts';
 import * as action from '../liminal/action.ts';
 import {FieldSet, IntegerField, EnumField, TimestampField, CheckboxField, type Tuple} from '../liminal/table.ts';
 import * as templates from './templates.ts';
@@ -54,6 +55,7 @@ import * as entrySchema from './entry-schema.ts';
 import {siteConfig} from './site-config.ts';
 import {selectScannedDocumentByFriendlyId, selectScannedPageByPageNumber} from './scanned-document.ts';
 import {isAutomatedUsername} from './user.ts';
+import * as user from './user.ts';
 import {classifyFact, isMechanicalSelfApproval, latestContentVersion} from './versioned-model.ts';
 import {renderChangeGroup, type ChangeEvent, type ChangeGroup} from './change-list.ts';
 import type {WordWiki} from './wordwiki.ts';
@@ -93,9 +95,14 @@ export class UserField extends EnumField {
         return v;
     }
 }
-export const feedUsers: Record<string, string> = Object.fromEntries(
-    Object.entries(entrySchema.users)
-        .filter(([u, _]) => !isAutomatedUsername(u) && u !== '___'));
+// The user-filter dropdown's choices, from the user TABLE (refreshed onto
+// the module-level field at each filter-dialog render - the field's choices
+// only feed the dropdown; a URL can still name any username).
+export function feedUsers(): Record<string, string> {
+    return Object.fromEntries(
+        Object.entries(user.activeUserChoices())
+            .filter(([u, _]) => !isAutomatedUsername(u)));
+}
 
 // The user-filter mode (only meaningful with restrict_to_user set):
 //   'by'          - changes that user MADE (the original filter);
@@ -117,7 +124,7 @@ const userModes: Record<string, string> = {
 export const feedQuery = new FieldSet('feed_query', [
     new TimestampField('from_time', {nullable: true, prompt: 'From'}),
     new TimestampField('to_time', {nullable: true, prompt: 'To'}),
-    new UserField('restrict_to_user', feedUsers, {nullable: true, prompt: 'Only changes by'}),
+    new UserField('restrict_to_user', {}, {nullable: true, prompt: 'Only changes by'}),
     new EnumField('user_mode', userModes, {nullable: true, default: USER_MODE_BY,
                                            prompt: 'That user\'s'}),
     new CheckboxField('hide_user_approvals', {nullable: true, default: false,
@@ -257,7 +264,7 @@ export function cutFeedSlice(clumps: FeedClump[], targetEvents: number,
 
 /** A user's display name (mirrors the lexeme editor's userLabel). */
 export function userLabel(username: string): string {
-    return username ? (entrySchema.users[username] ?? username) : 'unknown';
+    return username ? entrySchema.displayUsername(username) : 'unknown';
 }
 
 // Marks the clumps a reviewer clicked into, and reloads JUST those fragments
@@ -354,6 +361,10 @@ export class ChangeFeed {
     @route(authenticated)
     filterDialog(q?: Record<string, any>): Markup {
         const query = feedQuery.normalize(q);
+        // Refresh the user dropdown from the table (harmless module-state
+        // refresh: same values for every session).
+        (feedQuery.fields.find(f => f.name === 'restrict_to_user') as UserField)
+            .choices = security.runSystem(() => feedUsers());
         return [
             ['script', {}, 'setTimeout(showModalEditor)'],
             action.renderParamForm(feedQuery.fields, query, {
