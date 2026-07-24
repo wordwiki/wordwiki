@@ -467,13 +467,43 @@ typos like "Claek 1902" — exactly the in-system cleanup material),
 EMPTY field lines (marker, no content — template records): importer
 choice — keep literally vs drop-with-report.
 
-**Lk20726 / Ng20726**: ~2,500 records each, the SAME dictionary as
-two DIVERGED working copies (first records byte-identical; ~32K
-diff lines; Ng has \lsf nearly everywhere + records Lk lacks; Lk has
-newer \dt stamps to 20/Jul/2026).  Neither has a \_sh header and
-both open with a BLANK TEMPLATE record (bare markers) — leniency
-cases the importer must tolerate.  OPEN: what are Lk vs Ng, and
-which is authoritative?
+**Decoded by watson/watson.txt (Watson's own description)**: the
+project is FOUR dictionaries, and the drop is a WORK-IN-FLIGHT
+PIPELINE, not three independent dictionaries:
+
+1. **mmolistuguj2024** (6,816 entries) — NOT in the drop yet; has
+   \ws (speaker pronounces the headword — recordings?), \lf/\lv/\le
+   example sets, \sd semantic domain.  ASK FOR IT.
+2. **RandMigEngDict** — the big Rand transcription, ORIGINALLY
+   33,276 entries, now 29,096: entries LEAVE it as they are
+   processed (shoebox Database>Move is destructive).  The drop's
+   "Rand Mig Eng Dictt 29097" is this remaining raw queue.
+3. **RandMigmFinal2000** = drop file Ng20726 (2,498) — processed
+   entries, headword in the "Ng" g-system (Listuguj-style:
+   agnutas'g), with \lsf carrying the k-system form.
+4. **RandMikmFinal2000** = drop file Lk20726 (2,497) — THE SAME
+   ENTRIES duplicated for the "Lk" k-system community (Smith-
+   Francis-style: aknutasɨk promoted to \lx, \lsf then deleted —
+   by hand: "put the cursor before the e … hit backspace until the
+   word is in \lx").  So Ng/Lk are not diverged copies to
+   reconcile; they are a two-orthography FORK maintained manually
+   because shoebox has no orthography lanes.
+
+Implications: (a) the reshape stage REUNIFIES raw-queue + Ng + Lk
+into ONE dictionary whose entries carry both lanes — wordwiki's
+variant model dissolves Watson's entire fork-and-backspace workflow
+(one entry, li+sf lanes, per-orthography publish; the existing
+SiteView/auto-transliteration machinery is exactly this).  This is
+the adoption story for Watson himself, not just an import
+convenience.  (b) Provenance must record WHICH partition each
+imported entry came from (raw/Ng/Lk) so the reunification is
+auditable.  (c) Standard MDF markers are REPURPOSED (\lsf is
+"lexical function" in MDF but "the other system's spelling" here) —
+the schema comes from Watson's usage, never from MDF.typ's doc
+strings.  (d) Counts don't quite sum (29,097+2,498+2,497 = 34,092 vs
+33,276 original) — some growth/duplication to survey at import.
+Neither Final file has a \_sh header and both open with a BLANK
+TEMPLATE record (bare markers) — importer leniency cases.
 
 ## 7. Open questions for dz
 
