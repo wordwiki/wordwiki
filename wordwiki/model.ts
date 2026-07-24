@@ -30,6 +30,11 @@ export interface Style {
     // via liminal/markdown.ts markdownToMarkup (AST -> markup, no raw-HTML
     // channel), and the editor offers a textarea.
     $markdown?: boolean,
+    // On an enum (or free string) field: code -> friendly-name map used by
+    // the editor's select and the renderers' value labelling.  For
+    // vocabulary-table-backed fields this is the unseeded fallback; the
+    // table is the live authority.
+    $options?: Record<string, string>,
     // Presentation metadata for the metadata-driven document renderer
     // (render-entry-meta.ts).  Kept SEPARATE from $shape (which drives the
     // editor) so evolving the read-only rendering never perturbs the editor.
@@ -110,11 +115,96 @@ export interface ViewStyle {
     keyField?: string,
 }
 
+/**
+ * STRICT Style validation, applied at schema parse time: an unknown key or a
+ * wrong-typed value is a parse error with a locus, not a silently-ignored
+ * decoration.  For years the old validator checked only $prompt/$style and
+ * threw its result away, so a typo'd $view key (bornAproved) just quietly
+ * did nothing - with schemas becoming per-dictionary DATA files that class
+ * of error must fail loudly at load.  Keys with undefined values are
+ * skipped (the relation parser's {$prompt, ...$style} merge produces them).
+ */
 export function validateStyle(locus:string, style: any): Style {
-    return {
-        $prompt: validateOptionalStringProperty(locus, '$prompt', style.$prompt),
-        $style: validateOptionalStringProperty(locus, '$style', style.$style),
-    };
+    if(typeof style !== 'object' || style === null || Array.isArray(style))
+        throw new ValidationError(locus, `$style must be an object - got ${JSON.stringify(style)}`);
+    for(const [k, v] of Object.entries(style)) {
+        if(v === undefined) continue;
+        switch(k) {
+            case '$prompt': expectString(locus, k, v); break;
+            case '$style': expectString(locus, k, v); break;
+            case '$width': expectNumber(locus, k, v); break;
+            case '$height': expectNumber(locus, k, v); break;
+            case '$shape': expectString(locus, k, v); break;
+            case '$markdown': expectBoolean(locus, k, v); break;
+            case '$options': expectStringRecord(locus, k, v); break;
+            case '$view': validateViewStyle(locus+'/$view', v); break;
+            default:
+                throw new ValidationError(locus, `unknown $style key '${k}' - known keys: $prompt, $style, $width, $height, $shape, $markdown, $options, $view`);
+        }
+    }
+    return style as Style;
+}
+
+export function validateViewStyle(locus:string, view: any): ViewStyle {
+    if(typeof view !== 'object' || view === null || Array.isArray(view))
+        throw new ValidationError(locus, `$view must be an object - got ${JSON.stringify(view)}`);
+    for(const [k, v] of Object.entries(view)) {
+        if(v === undefined) continue;
+        switch(k) {
+            case 'order': expectNumber(locus, k, v); break;
+            case 'label': expectOneOf(locus, k, v, ['heading', 'inline', 'none']); break;
+            case 'join': expectString(locus, k, v); break;
+            case 'titleRole': expectOneOf(locus, k, v, ['headword', 'gloss']); break;
+            case 'empty': expectOneOf(locus, k, v, ['elide', 'keep']); break;
+            case 'emptyEdit': expectOneOf(locus, k, v, ['slot', 'menu']); break;
+            case 'singleton': expectOneOf(locus, k, v, ['collapse', 'list']); break;
+            case 'numbered': expectBoolean(locus, k, v); break;
+            case 'hidden': expectBoolean(locus, k, v); break;
+            case 'audience': expectOneOf(locus, k, v, ['internal']); break;
+            case 'byline': expectBoolean(locus, k, v); break;
+            case 'bornApproved': expectBoolean(locus, k, v); break;
+            case 'compose':
+                if(!Array.isArray(v) || v.some(e => typeof e !== 'string'))
+                    throw new ValidationError(locus, `$view key 'compose' must be an array of field names - got ${JSON.stringify(v)}`);
+                break;
+            case 'sep': expectString(locus, k, v); break;
+            case 'emphasis': expectOneOf(locus, k, v, ['italic', 'bold']); break;
+            case 'wrap':
+                if(!Array.isArray(v) || v.length !== 2 || v.some(e => typeof e !== 'string'))
+                    throw new ValidationError(locus, `$view key 'wrap' must be a [prefix, suffix] pair of strings - got ${JSON.stringify(v)}`);
+                break;
+            case 'keyField': expectString(locus, k, v); break;
+            default:
+                throw new ValidationError(locus, `unknown $view key '${k}' - known keys: order, label, join, titleRole, empty, emptyEdit, singleton, numbered, hidden, audience, byline, bornApproved, compose, sep, emphasis, wrap, keyField`);
+        }
+    }
+    return view as ViewStyle;
+}
+
+function expectString(locus:string, key:string, v:unknown): void {
+    if(typeof v !== 'string')
+        throw new ValidationError(locus, `style key '${key}' must be a string - got ${JSON.stringify(v)}`);
+}
+
+function expectNumber(locus:string, key:string, v:unknown): void {
+    if(typeof v !== 'number' || !Number.isFinite(v))
+        throw new ValidationError(locus, `style key '${key}' must be a finite number - got ${JSON.stringify(v)}`);
+}
+
+function expectBoolean(locus:string, key:string, v:unknown): void {
+    if(typeof v !== 'boolean')
+        throw new ValidationError(locus, `style key '${key}' must be a boolean - got ${JSON.stringify(v)}`);
+}
+
+function expectOneOf(locus:string, key:string, v:unknown, allowed:string[]): void {
+    if(typeof v !== 'string' || !allowed.includes(v))
+        throw new ValidationError(locus, `style key '${key}' must be one of ${allowed.map(a=>`'${a}'`).join(', ')} - got ${JSON.stringify(v)}`);
+}
+
+function expectStringRecord(locus:string, key:string, v:unknown): void {
+    if(typeof v !== 'object' || v === null || Array.isArray(v)
+        || Object.values(v).some(e => typeof e !== 'string'))
+        throw new ValidationError(locus, `style key '${key}' must be a {code: label} string map - got ${JSON.stringify(v)}`);
 }
 
 /**
@@ -127,12 +217,6 @@ export function validateStyle(locus:string, style: any): Style {
 export function styleToCompactJson(style: Style): Record<string, unknown>|undefined {
     const entries = Object.entries(style).filter(([_k, v]) => v !== undefined);
     return entries.length === 0 ? undefined : Object.fromEntries(entries);
-}
-
-function validateOptionalStringProperty(locus: string, name: string, value: any): string {
-    if(!(value === undefined || typeof value === 'string'))
-        throw new ValidationError(locus, `invalid optional attr '${name}'- expected optional string - got ${JSON.stringify(value)} of type ${typeof value}`);
-    return value;
 }
 
 /**
@@ -339,7 +423,7 @@ export abstract class ScalarField extends Field {
         if($type !== expect_type)
             throw new ValidationError(locus, `Expected schema field type ${expect_type} got field type ${$type}`);
         if($style)
-            validateStyle(locus, $style);
+            validateStyle(`${locus}/${name}`, $style);
         if(Object.getOwnPropertyNames(extra).length !== 0)
             throw new ValidationError(locus, `Unexpected properties in schema node of type ${$type}: ${Object.getOwnPropertyNames(extra)}`);
     }
@@ -992,11 +1076,27 @@ export class RelationField extends Field {
 
         // We are presently allowing $prompt to be specified as top level instead
         // of in $style - not sure we should have this shortcut?
-        const style = { $prompt, ...$style };
+        const style = validateStyle(`${locus}/${name}`, { $prompt, ...$style });
 
         // TODO: locus needs asjusting here
         const fields = Object.entries(field_schema).map(([field_name, field_body]) =>
             parse_field(locus, field_name, field_body));
+
+        // $view.compose / $view.keyField reference this relation's fields BY
+        // NAME - a dangling name is an authoring error, caught here where
+        // the fields are in hand rather than surfacing as a silently-skipped
+        // part at render time.
+        const view = style.$view;
+        if(view) {
+            const fieldNames = new Set(fields.map(f => f.name));
+            for(const part of view.compose ?? [])
+                if(!fieldNames.has(part))
+                    throw new ValidationError(locus,
+                        `relation '${name}' $view.compose names unknown field '${part}'`);
+            if(view.keyField !== undefined && !fieldNames.has(view.keyField))
+                throw new ValidationError(locus,
+                    `relation '${name}' $view.keyField names unknown field '${view.keyField}'`);
+        }
 
         // Variant fields must be LEAVES (fix-orthographies.md "Rendering in
         // an orthography"): rendering in orthography O prunes whole subtrees
