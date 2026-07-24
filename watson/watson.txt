@@ -1,0 +1,71 @@
+My dictionary project consists of four dictionaries.
+
+1 The mmolistuguj2024 consists of 6,816 entries.
+It has the following fields: \lx, the lexeme spelling in the Ng system \lsf, the entry in the
+Lk system spelling \ws occurs four times where some entries have a Mi’gmaw
+pronounces the head word, \ph (pronunciation help with the word divided into syllables),
+\ps the part of speech in Mi’gmewi’suti system, \pn part of speech in the English system,
+\ge the gloss gives an English translation of the head word, \de a literal translation of the
+head word in English, \xv a sentence in Mi’gmewi’suti, \xe the translation of that
+sentence, \lf a code for an example, \lv that example in the vernacular, \le the translation
+of the vernacular word, \sd semantic domain and \dt the date the entry was last
+adjusted.
+
+2 RandMigEngDict33276
+This is the Rand dictionary with the original number of entries as 33,276.
+This one has the following fields, \lx the tentative spelling of Rand’s Mi’gmewei word, (all
+33,276 words) this involved a tremendous amount of work, but it is done.
+The other fields consist of: \lsf the Nk spelling, \ph a pronunciation help, \ps the part of
+speech in Mi’gmewi’suti, \pn the part of speech in the English system, \ge the gloss in
+English, \xv an example of the word in the vernacular, \xe the translation of the
+example, \so contains Rand 1888 p and the page number where the entry is found in
+Rand’s dictionary, \nt any notes and \dt the date it was last adjusted.
+This dictionary is being converted to the Ng dictionary for the Source dialect people, and
+secondly the Lk dictionary for the Goal dialect people. Currently this dictionary on July
+20, 2026, has 29,096 entries.
+
+3 RandMigmFinal2000.
+This is the Ng version. Currently there are 2,498 entries.
+The fields are: \lx, \lsf, \ph, \ps, \pn. \ge, \xv, \so. \nt.
+Here is an example:
+\lx agnutas’g
+\lsf aknutasɨk
+\ph a g` nu da s`k
+\ps T5
+\pn vii
+\ge it is told
+
+\xv ăgŭnoodăsik
+\xe it is told
+\xv kākwāāk ăgŭnoodăsik
+\so Rand 1888 p 2
+
+4 RandMikmFinal2000.
+This is the Lk version. Currently there are 2,487 entries.
+The fields are: \lx, \ph, \ps, \pn. \ge, \xv, \so. \nt.
+Here is the same example:
+\lx aknutasɨk
+\ph a g` nu da s`k
+\ps T5
+\pn vii
+\ge it is told
+\xv ăgŭnoodăsik
+\xe it is told
+\xv kākwāāk ăgŭnoodăsik
+\so Rand 1888 p 2
+
+To move a record from RandMi’gmEngDict33278.
+1 Select a word in that database. I selected enaqatg.
+2 Choose Database&gt;Move.
+3 Select RandMi’gmFinal2000.
+4 Press OK. This moves the entry to RandMi’gmFinal2000.
+5 Then enter the appropriate data in the fields of that entry.
+6 Select Database&gt;Copy.
+7 Select RandMi’kmFinal2000.
+8 Press OK. This puts the entry in RandMi’kmFinal2000.
+
+9 Put the cursor before the e in enaqatk in \lsf.
+10 Hit backspace until the word enaqatk is in \lx.
+Following these steps makes two copies of the entry. One for the Ng database and the
+other for the Lk database.
+This is how I make two new dictionaries. One for the Ng area and one for the Lk area.
