@@ -270,6 +270,10 @@ export const dictSchemaJson = {
         $tag: EntryTag,
         $prompt: 'Entry',
         entry_id: {$type: 'primary_key'},
+        // dictionary_id is using new $immutable flag.  Moving entries between dictionarys is not allowed.
+        // (This means that the mutation date on the (sole) entry tuple remains the creation date of the entry)
+        // BAD IDEA: I think separate tables is better.
+        //dictionary_id: {$type: 'string', $bind: 'attr1', $immutable: true },  // using new $immutable flag.
         $style: { $shape: 'containerRelation' },
         spelling: {
             $type: 'relation',

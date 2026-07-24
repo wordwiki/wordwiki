@@ -1,0 +1,16 @@
+---
+name: multi-dictionary-project
+description: "APPROVED direction — N dictionaries (separate tables), per-dictionary soft schema loaded as data, shoebox .typ import; survey doc is wordwiki/multi-dictionary-survey.md"
+metadata: 
+  node_type: memory
+  type: project
+  originSessionId: 61972dfd-5245-4f6c-8442-1149dcc1ee7b
+---
+
+Direction set 2026-07-24: a researcher offered several dictionaries — the gold one a ~30K-entry transcription of RAND into Listuguj (+ some SF). NOT merged into MMO: separate dictionaries, one app server, entries copyable with provenance links. Each dictionary: its OWN assertion table (separate-tables decision is FINAL — dz; wordwiki/multi-dictionary-support.md predates the discussion and is mostly superseded, incl. its dictionary_id sketch), its OWN soft schema loaded as DATA, its own published static site + home content, with cross-dictionary public search (primary first, foreign hits badged + linked over) and cross-site audio via the shared content-addressed stores. End goal: port dz's Java shoebox .typ parser → load an external dictionary and edit it directly (shoebox/toolbox replacement). Import model (dz): .typ import is LITERAL/lenient (raw-rand as-is); cleanup happens IN-SYSTEM via a rand→reshaped-rand dictionary transform (so dictionary creation must be cheap ceremony) — the offline java→python→import-mmo pipeline pattern is retired (import-mmo.ts = completed one-shot, never runs again).
+
+Doc of record: **wordwiki/multi-dictionary-survey.md** (2026-07-24 four-agent survey) — what's already generic, the hard-coding inventory, choices, and the 6-phase staged plan (0 grout → 1 schema roles → 2 schema-as-data+registry → 3 multi-store+routes → 4 publish+cross-search → 5 .typ import). Key survey facts: schema literal already 100% JSON-serializable; assertion SQL layer fully table-parameterized; DictionaryStore one ctor-arg from multi-instance (assertionTable='dict' at :35); render-entry-meta is already THE public renderer; real work = typed Entry world (choke point: dictionary-store entries/publishedProjection casts), ~11 semantic roles hardwired to MMO relation names, ~14 raw-dict-SQL files, ~163 routes/~150 URL literals, publish content constants. Regression oracle: publish --from=dump byte-identical tree diff.
+
+**Why:** RAND is a historical source; keeping it a unit preserves provenance/scholarly integrity; MMO stays the voiced/vetted primary. Multi-schema makes the tool reusable for other language-preservation projects.
+
+**How to apply:** read the survey doc before touching this; peers consume PROJECTION artifacts, never each other's schemas; leaf MMO reports may stay typed — core (editor/versioning/publication/feeds/search/publish traversal) must be role/schema-driven. Open questions in doc §6 (site editor dz mentioned — not found in repo; schema storage; RAND orthography row; scale of the inline home-page search index). Related: [[fix-orthographies]] (finish production migration first), [[wordwiki-archival-publish-model]], [[pdm-llm-transcription]] (same cherry-picking shape), [[wordwiki-data-licensing]] (per-dictionary license/attribution in the registry).
