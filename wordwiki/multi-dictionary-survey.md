@@ -534,11 +534,20 @@ honor:
   Renderer convention noted: title roles live on DESCENDANT
   relations of the entry root (the root-level \lx shape is a
   phase-5 .typ-mapping decision).
-  REMAINING in phase 3: the full per-dictionary EDITOR (narrow
-  LexemeEditor's app surface to an interface a facade can satisfy),
-  vocabulary scoping + per-dictionary permissions as needed, and the
-  deferred phase-2 residuals (cosmetic primarySourceBook prompt
-  reads, typed-helper default lane).
+  STEP 4 DONE (2026-07-25): the PER-DICTIONARY EDITOR — LexemeOps/
+  LexemeEditor take narrow app interfaces (LexemeApp /
+  LexemeEditorApp; WordWiki satisfies structurally, editorAppFor
+  satisfies over any store); the editor's route base R is instance
+  state so facade editors emit URLs inside their own dictionary;
+  wordwiki.dict('x').lexeme.* dispatches the REAL editor (proved:
+  metaEditPage renders + supersedeFields mutates the toy table
+  through full dispatch).  Generic fixes surfaced: editor entry root
+  from schema structure; no publicGate role = no Public row.
+  REMAINING in phase 3: per-dictionary workflow sections when a
+  facade dictionary declares tag/log roles; vocabulary scoping +
+  per-dictionary permissions as needed; the deferred phase-2
+  residuals (cosmetic primarySourceBook prompt reads, typed-helper
+  default lane).
 - **Phase 4 — publish + cross-search (M-L).**  Per-dictionary peer
   trees; per-dictionary home/about content via the site editor
   (components package — budget hardening, it's raw); LIVE PREVIEW
