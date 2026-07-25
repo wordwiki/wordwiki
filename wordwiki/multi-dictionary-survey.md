@@ -445,6 +445,18 @@ honor:
   derivations, editor search, lexeme-editor special cases,
   lexeme-ops tag descriptor).  Behavior-identical: locked by the
   suite AND by publish-tree byte-comparison via publish --from=dump.
+  STATUS (2026-07-24): CORE DONE — $role in model.ts (7 roles,
+  strict parse, round trip, relationsByRole) + declared in the MMO
+  literal; schema-roles.ts is the generic access layer; entry-schema
+  helpers delegate; site-view derivations, editor search, $vocab
+  field bindings (new $style key), hideRelationTags/refresh keys,
+  and ALL of LexemeOps are role/schema-driven.  Locked twice: suite
+  green + publish --from=dump byte-identical (16,341 pages) at every
+  step.  REMAINING (small): publish.ts's direct typed walks
+  (warnMissingRecordings, publicEntryCategories,
+  renderEntryPublicLink, public ids' spelling access, top-words'
+  hard-coded ~tier-* slugs), category.ts/tag.ts entry scans, the
+  literal 'dct' defaults in publication-ops/versioned-model.
 - **Phase 2 — schema-as-data (M).**  dictionary registry table with
   one row (mmo); DictionaryStore(tableName, schemaJson, config);
   entry-schema.ts shrinks to the MMO schema document + leaf helpers;
