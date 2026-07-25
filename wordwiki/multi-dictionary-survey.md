@@ -459,10 +459,22 @@ honor:
   ~tier-* Top Words slugs (instance content), the typed Entry
   interfaces themselves (leaf reports keep them; core no longer
   needs them - the phase-2/3 store work decides their fate).
-- **Phase 2 — schema-as-data (M).**  dictionary registry table with
-  one row (mmo); DictionaryStore(tableName, schemaJson, config);
-  entry-schema.ts shrinks to the MMO schema document + leaf helpers;
-  per-dictionary singletons die; site-config splits.
+- **Phase 2 — schema-as-data (M).**  The config table pair (§3.1);
+  DictionaryStore reads its schema from it; entry-schema.ts shrinks
+  to the MMO schema document + leaf helpers; per-dictionary
+  singletons die; site-config splits.
+  STATUS (2026-07-24): FOUNDATION DONE — dictionary-config.ts (the
+  X + X_config pair; ensure creates + syncs the schema row from the
+  literal transitional, seeds metadata once; read/write; discovery
+  by convention, FTS shadow tables correctly rejected);
+  DictionaryStore.dictSchema is lazy from the stored row (literal
+  fallback), dropped on reload; checkProposedSchema is the
+  compatibility gate (strict parse + attr-usage-vs-binds scan + full
+  workspace load under the proposal) with dump-schema / load-schema
+  [--apply] CLI.  REMAINING: retire the per-dictionary module
+  singletons (parsedDictSchema consumers -> the store's schema;
+  PUBLIC_SITE_ORTHOGRAPHY/defaultVariant -> config pairs), split
+  site-config, shrink entry-schema.ts.
 - **Phase 3 — multi-store + routes (L, widest churn).**  Store map +
   lazy loading; DDL loop over the registry; thread the table name
   through the ~14 raw-SQL files; dict() route facade + lexemeLink
