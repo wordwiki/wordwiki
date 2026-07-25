@@ -17,6 +17,7 @@ import { renderStandaloneGroup, singleBoundingGroupEditorURL, pageEditorURLForBo
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
 import * as random from '../liminal/random.ts';
 import { variantMatches } from './variant-policy.ts';
+import * as schemaRoles from './schema-roles.ts';
 import { siteConfig } from './site-config.ts';
 
 export const DictTag = 'dct';          // dict
@@ -172,13 +173,13 @@ export const states: Record<string, string> = {
  * accordingly (and don't name a non-archival status 'Archived*').
  */
 export function isArchivedStatus(statusSlug: string): boolean {
-    return statusSlug.startsWith('Archived');
+    return schemaRoles.isArchivedSlug(parsedDictSchema(), statusSlug);
 }
 
 /** Whether the entry carries ANY current archived status (an entry oddly
  *  holding both an archived and a live status row counts as archived). */
 export function isArchivedEntry(e: Entry): boolean {
-    return e.status.some(s => isArchivedStatus(s.status));
+    return schemaRoles.entryIsArchived(parsedDictSchema(), e);
 }
 
 // The OLD fixed todo kinds: now the tag table's seed + unseeded fallback
@@ -998,20 +999,15 @@ export const PUBLIC_SITE_ORTHOGRAPHY = siteConfig.publicSiteOrthography;
  * check: lifecycle no longer implies publicness.
  */
 export function entryIsPublicIn(e: Entry, orthography: string): boolean {
-    return !isArchivedEntry(e)
-        && (e.public ?? []).some(p => variantMatches(p.variant, orthography));
+    return schemaRoles.entryIsPublicIn(parsedDictSchema(), e, orthography);
 }
 
 /**
- *
+ * (Normalization is the old ASCII rule verbatim; per-orthography
+ * normalization belongs to the search replacement - survey §2.7.)
  */
 export function computeNormalizedSearchTerms(e: Entry): string[] {
-    // XXX crap - fix, think harder etc.
-    const spellings = e.spelling.map(s=>s.text).map(s=>s.replaceAll(/[^A-Za-z0-9_]/g, "_"));
-    const glosses = e.subentry.flatMap(se=>se.gloss.flatMap(gl=>gl.gloss.split(' ').map(word=>word.replaceAll(/[^A-Za-z0-9_]/g, "_"))));
-    const allTermsAsAString = (spellings.join(' ')+' '+glosses.join(' ')).toLowerCase();
-    const allTerms = allTermsAsAString.split(' ');
-    return allTerms;
+    return schemaRoles.normalizedSearchTerms(parsedDictSchema(), e);
 }
 
 // XXX DO THIS PROPERLY!!!!
@@ -1022,7 +1018,7 @@ const defaultVariant = siteConfig.publicSiteOrthography;
  *  present the entry in that lane (e.g. the SF-ready report forces mm-sf
  *  so users see the word as the SF site would show it). */
 export function getSpellings(e: Entry, orthography: string = defaultVariant): Spelling[] {
-    return e.spelling.filter(s=>s.variant == orthography || !s.variant);
+    return schemaRoles.headwordTuplesIn(parsedDictSchema(), e, orthography) as Spelling[];
 }
 
 /**
@@ -1049,13 +1045,14 @@ export function renderEntryCompactSummaryCore(e: Entry, opts: {orthography?: str
     // lane, greyed with its lane superscript (dz: wrong-orthography text
     // is still somewhat readable cross-ortho, and beats a blank headword;
     // no per-lane fallback chains for now).
-    const fallback = spellings.length === 0 ? e.spelling[0] : undefined;
+    const fallback = spellings.length === 0
+        ? schemaRoles.headwordFallback(parsedDictSchema(), e) : undefined;
     const headword = fallback
         ? ['strong', {}, ['span', {class: 'text-muted'}, fallback.text],
            ['span', {class: 'lm-me-orth'},
             orthographyAbbrHook?.(fallback.variant ?? '') ?? (fallback.variant ?? '')]]
         : ['strong', {}, spellings.join(', ')];
-    const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+    const glosses = schemaRoles.glossTexts(parsedDictSchema(), e);
     return [headword,
             // Archival is our delete, but archived words still appear in
             // internal searches/lists - so their presentation line says so.
@@ -1072,7 +1069,7 @@ export function renderEntryCompactSummaryCore(e: Entry, opts: {orthography?: str
 export function renderEntryTitle(e: Entry): string {
     // TODO handle dialects here.
     const spellings = getSpellings(e).map(s=>s.text);
-    const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+    const glosses = schemaRoles.glossTexts(parsedDictSchema(), e);
     const archived = isArchivedEntry(e) ? ' [ARCHIVED]' : '';
     // TODO mikmaq online text here should come from config XXXX
     return `${spellings.join(', ')}${archived} :: ${glosses.join(' / ')} -- Mi'gmaq/Mi'kmaq Online`;
@@ -1091,9 +1088,7 @@ export function renderEntrySpellingsSummary(e: Entry, orthography?: string): str
  * Currently ignoring variant + should have other controls.  XXX TODO
  */
 export function getStableFeaturedRecording(e: Entry): Recording|undefined {
-    return e.recording.length === 0
-        ? undefined
-        : e.recording[e.entry_id % e.recording.length];
+    return schemaRoles.stableFeaturedRecording(parsedDictSchema(), e) as Recording|undefined;
 }
 
 // The parsed dict schema as a module-level lazy singleton, for consumers
