@@ -76,4 +76,13 @@ test("schema round trip: known $-metadata survives (spot checks)", () => {
     const groupField = refFields.scalarFields.find(
         f => f.style.$shape === 'boundingGroup');
     assertEquals(groupField !== undefined, true);
+    // $role declarations survive (phase 1): lifecycle params + gate + refs
+    assertEquals(s2.relationsByRole.lifecycle?.tag, 'sta');
+    assertEquals(s2.relationsByRole.lifecycle?.role?.archivedPrefix, 'Archived');
+    assertEquals(s2.relationsByRole.publicGate?.tag, 'pub');
+    assertEquals(s2.relationsByRole.documentReference?.tag, 'ref');
+    assertEquals(s2.relationsByRole.log?.tag, 'log');
+    assertEquals(s2.relationsByRole.workflowTag?.tag, 'tdo');
+    assertEquals(s2.relationsByRole.category?.tag, 'cat');
+    assertEquals(s2.relationsByRole.recording?.tag, 'rec');
 });

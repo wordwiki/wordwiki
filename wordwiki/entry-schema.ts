@@ -291,7 +291,11 @@ export const dictSchemaJson = {
         status: {
             $type: 'relation',
             $tag: StatusTag,
-            //$style: { $prompt: 'SPELLING!' },
+            // The whole-entry editorial LIFECYCLE ($role: core code asks the
+            // schema for this relation instead of hard-coding 'sta'); slugs
+            // prefixed 'Archived' mean deleted-but-kept - now declared data
+            // rather than a code convention.
+            $role: {name: 'lifecycle', field: 'status', archivedPrefix: 'Archived'},
             status_id: {$type: 'primary_key'},
             status: {$type: 'enum', $bind: 'attr1', $style: { $options: states} },
             details: {$type: 'string', $bind: 'attr2' },
@@ -313,6 +317,7 @@ export const dictSchemaJson = {
             $type: 'relation',
             $tag: PublicTag,
             $prompt: 'Public',
+            $role: 'publicGate',
             public_id: {$type: 'primary_key'},
             variant: {$type: 'variant', $metaVariant: true},
             $style: { $shape: 'compactInlineListRelation',
@@ -330,6 +335,7 @@ export const dictSchemaJson = {
         tag: {
             $type: 'relation',
             $tag: TagTag,
+            $role: {name: 'workflowTag', field: 'tag'},
             tag_id: {$type: 'primary_key'},
             tag: {$type: 'enum', $bind: 'attr1',
                   $style: { $options: todos}},   // table-driven select in the editor; static map = unseeded fallback
@@ -515,6 +521,7 @@ export const dictSchemaJson = {
             category: {
                 $type: 'relation',
                 $tag: CategoryTag,
+                $role: {name: 'category', field: 'category'},
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
                 category: {$type: 'string', $bind: 'attr1'},
@@ -603,6 +610,7 @@ export const dictSchemaJson = {
             document_reference: {
                 $type: 'relation',
                 $tag: DocumentReferenceTag,
+                $role: 'documentReference',
                 document_reference_id: {$type: 'primary_key'},
                 bounding_group_id: {$type: 'integer', $bind: 'attr1',
                                     $style: { $shape: 'boundingGroup'}},
@@ -724,6 +732,7 @@ export const dictSchemaJson = {
             $type: 'relation',
             $tag: RecordingTag,
             $prompt: 'Recordings',
+            $role: 'recording',
             recording_id: {$type: 'primary_key'},
             recording: {$type: 'audio', $bind: 'attr1'},
             speaker: {$type: 'enum', $bind: 'attr2', $style: {$options: users}},
@@ -749,6 +758,7 @@ export const dictSchemaJson = {
         log: {
             $type: 'relation',
             $tag: LogTag,
+            $role: 'log',
             log_id: {$type: 'primary_key'},
             log: {$type: 'string', $bind: 'attr1',
                   $style: { $width: 80, $height: 3, $markdown: true }},

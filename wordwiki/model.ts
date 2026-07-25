@@ -207,6 +207,78 @@ function expectStringRecord(locus:string, key:string, v:unknown): void {
         throw new ValidationError(locus, `style key '${key}' must be a {code: label} string map - got ${JSON.stringify(v)}`);
 }
 
+// --- Semantic ROLES ------------------------------------------------------------
+//
+// A relation may declare the SEMANTIC role it plays for the dictionary
+// (multi-dictionary-survey.md phase 1): core behaviors that used to find
+// their relation by hard-coded tag/name (the publish gate, the archival
+// lifecycle, the featured recording, ...) instead ask the schema "which
+// relation is the publicGate?".  Presentation intent stays in $view
+// (titleRole 'headword'/'gloss' already carries the title roles); $role is
+// for BEHAVIORAL contracts.  Each role names AT MOST ONE relation per
+// schema (validated at parse).
+
+export type RoleName =
+    | 'lifecycle'          // whole-entry editorial lifecycle (status);
+                           //   archivedPrefix marks the archived-slug family
+    | 'publicGate'         // per-orthography publish gate (fact presence = gate)
+    | 'workflowTag'        // the editorial tag/todo relation
+    | 'log'                // the session-log relation
+    | 'category'           // categorization (site categories, word-a-day)
+    | 'recording'          // entry-level recordings (featured-recording pool)
+    | 'documentReference'; // reference-book citations (bounding groups)
+
+const ROLE_NAMES: RoleName[] = [
+    'lifecycle', 'publicGate', 'workflowTag', 'log', 'category', 'recording',
+    'documentReference'];
+
+export interface RoleDeclaration {
+    name: RoleName;
+    /** The relation's VALUE field for roles that read one (lifecycle's
+     *  status slug, category's slug) - explicit, not guessed. */
+    field?: string;
+    /** lifecycle only: status slugs with this prefix mean ARCHIVED (the
+     *  entry is deleted-but-kept; excluded from publish and dup-detection).
+     *  Was a code convention ("Archived*"); now declared data. */
+    archivedPrefix?: string;
+}
+
+/** Parse/validate a $role value: the role name as a string shorthand, or a
+ *  {name, ...params} object.  Unknown names/keys and wrong-typed params are
+ *  parse errors; `field` references are checked against the relation's
+ *  fields by the caller (which has them in hand). */
+export function parseRoleDeclaration(locus: string, role: any): RoleDeclaration {
+    const decl: any = typeof role === 'string' ? {name: role} : role;
+    if(typeof decl !== 'object' || decl === null || Array.isArray(decl))
+        throw new ValidationError(locus, `$role must be a role name or a {name, ...} object - got ${JSON.stringify(role)}`);
+    for(const [k, v] of Object.entries(decl)) {
+        if(v === undefined) continue;
+        switch(k) {
+            case 'name':
+                if(typeof v !== 'string' || !ROLE_NAMES.includes(v as RoleName))
+                    throw new ValidationError(locus, `unknown $role name ${JSON.stringify(v)} - known roles: ${ROLE_NAMES.join(', ')}`);
+                break;
+            case 'field': expectString(locus, '$role.field', v); break;
+            case 'archivedPrefix':
+                expectString(locus, '$role.archivedPrefix', v);
+                if(decl.name !== 'lifecycle')
+                    throw new ValidationError(locus, `$role.archivedPrefix is only meaningful on the 'lifecycle' role`);
+                break;
+            default:
+                throw new ValidationError(locus, `unknown $role key '${k}' - known keys: name, field, archivedPrefix`);
+        }
+    }
+    if(decl.name === undefined)
+        throw new ValidationError(locus, `$role object requires a 'name'`);
+    return decl as RoleDeclaration;
+}
+
+/** The compact-JSON form: the string shorthand when only the name is set. */
+export function roleToCompactJson(role: RoleDeclaration): any {
+    return (role.field === undefined && role.archivedPrefix === undefined)
+        ? role.name : {...role};
+}
+
 /**
  * A Style as it appears in the compact-JSON schema serialization: keys with
  * undefined values dropped (so a style that only ever held undefineds
@@ -814,7 +886,8 @@ export class RelationField extends Field {
     #syntheticFieldsColIndex_: number|undefined;
     #parentFieldsColIndex_: number|undefined;
 
-    constructor(name: string, public tag: string, public modelFields: Field[], style: Style={}) {
+    constructor(name: string, public tag: string, public modelFields: Field[], style: Style={},
+                public role: RoleDeclaration|undefined = undefined) {
         super(name, style);
     }
 
@@ -1056,6 +1129,7 @@ export class RelationField extends Field {
         const json = {} as any; // fix typing
         json.$type = 'relation';
         json.$tag = this.tag;
+        this.role && (json.$role = roleToCompactJson(this.role));
         const {$prompt, ...restStyle} = this.style;
         $prompt !== undefined && (json.$prompt = $prompt);
         const styleJson = styleToCompactJson(restStyle);
@@ -1068,11 +1142,13 @@ export class RelationField extends Field {
     }
 
     static parseSchemaFromCompactJson(locus: string, name: string, schemaJson: any): RelationField {
-        const {$type, $tag, $prompt, $style, ...field_schema} = schemaJson;
+        const {$type, $tag, $prompt, $style, $role, ...field_schema} = schemaJson;
         if($type !== 'relation')
             throw new ValidationError(locus, `expected relation type got $type ${$type}`);
         if(typeof $tag !== 'string')
             throw new ValidationError(locus, `missing required $tag on relation ${name}`);
+        const role = $role !== undefined
+            ? parseRoleDeclaration(`${locus}/${name}`, $role) : undefined;
 
         // We are presently allowing $prompt to be specified as top level instead
         // of in $style - not sure we should have this shortcut?
@@ -1098,6 +1174,11 @@ export class RelationField extends Field {
                     `relation '${name}' $view.keyField names unknown field '${view.keyField}'`);
         }
 
+        // A $role's `field` names one of this relation's fields.
+        if(role?.field !== undefined && !fields.some(f => f.name === role.field))
+            throw new ValidationError(locus,
+                `relation '${name}' $role.field names unknown field '${role.field}'`);
+
         // Variant fields must be LEAVES (fix-orthographies.md "Rendering in
         // an orthography"): rendering in orthography O prunes whole subtrees
         // by variant, so an interior variant node could silently make a
@@ -1109,7 +1190,7 @@ export class RelationField extends Field {
             throw new ValidationError(locus,
                 `relation '${name}' has both a variant field ('${variantField.name}') and a child relation ('${childRelation.name}') - variant fields are only allowed on leaf relations`);
 
-        const schema = new RelationField(name, $tag, fields, style);
+        const schema = new RelationField(name, $tag, fields, style, role);
 
         return schema;
     }
@@ -1158,6 +1239,7 @@ export function parse_field(locus: string, name: string, schema: any): Field {
 export class Schema extends RelationField {
     #relationsByName: Record<string,RelationField>|undefined = undefined;
     #relationsByTag: Record<string,RelationField>|undefined = undefined;
+    #relationsByRole: Partial<Record<RoleName, RelationField>>|undefined = undefined;
 
     constructor(name: string, tag: string, public rootRelations: RelationField[]) {
         super(name, tag, rootRelations, {});
@@ -1168,6 +1250,7 @@ export class Schema extends RelationField {
     resolveAndValidate(locus: string) {
         this.resolve();
         this.validateSchema(locus);
+        void this.relationsByRole;   // force the one-relation-per-role check at parse
     }
 
     get relationsByName(): Record<string,RelationField> {
@@ -1187,6 +1270,24 @@ export class Schema extends RelationField {
             if(duplicateTags.size > 0)
                 throw new Error(`Duplicate field tags in schema ${this.tag} - ${duplicateTags}`);
             return Object.fromEntries(this.descendantAndSelfRelations.map(r=>[r.tag, r]));
+        })();
+    }
+
+    /** Which relation plays each declared semantic role (see RoleName).
+     *  Each role names at most one relation - duplicates are a schema
+     *  error.  Roles are OPTIONAL: a schema with no publish gate simply
+     *  has no publicGate entry (consumers treat that as "no gating"). */
+    get relationsByRole(): Partial<Record<RoleName, RelationField>> {
+        return this.#relationsByRole??=(()=>{
+            const out: Partial<Record<RoleName, RelationField>> = {};
+            for(const r of this.descendantAndSelfRelations) {
+                if(!r.role) continue;
+                const existing = out[r.role.name];
+                if(existing)
+                    throw new Error(`schema ${this.name}: role '${r.role.name}' is declared on both '${existing.name}' and '${r.name}' - each role names at most one relation`);
+                out[r.role.name] = r;
+            }
+            return out;
         })();
     }
 
