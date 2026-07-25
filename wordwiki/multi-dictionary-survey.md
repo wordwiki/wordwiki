@@ -471,10 +471,23 @@ honor:
   fallback), dropped on reload; checkProposedSchema is the
   compatibility gate (strict parse + attr-usage-vs-binds scan + full
   workspace load under the proposal) with dump-schema / load-schema
-  [--apply] CLI.  REMAINING: retire the per-dictionary module
-  singletons (parsedDictSchema consumers -> the store's schema;
-  PUBLIC_SITE_ORTHOGRAPHY/defaultVariant -> config pairs), split
-  site-config, shrink entry-schema.ts.
+  [--apply] CLI; explicit ensure-dict-config pass (step 4/16) in
+  importWordWikiV1Db.sh.  PHASE 2 COMPLETE (2026-07-24 late):
+  PublishSource formatVersion 2 EMBEDS the schema (v1 readable,
+  literal fallback) - Publish renders everything from the bundle's
+  own schema (verified: v2 bundle publishes byte-identical except
+  the data/publish-source.json artifacts themselves); the pure site
+  derivations take the schema explicitly (SiteView = the store's,
+  Publish = the bundle's); per-dictionary site config
+  (public_site_orthography/collation_locale/primary_source_book) as
+  seeded CONFIG PAIRS with WordWiki accessors.
+  Deliberately deferred to phase 3: the remaining
+  siteConfig.primarySourceBook reads in editor-report/template
+  prompts (cosmetic, app-reachable), entry-schema's typed-helper
+  default lane (PUBLIC_SITE_ORTHOGRAPHY/defaultVariant - the typed
+  MMO helpers keep the literal default; core paths pass the lane
+  explicitly), and the entry-schema.ts file split (cosmetic re-org,
+  zero-churn via re-exports whenever wanted).
 - **Phase 3 — multi-store + routes (L, widest churn).**  Store map +
   lazy loading; DDL loop over the registry; thread the table name
   through the ~14 raw-SQL files; dict() route facade + lexemeLink
