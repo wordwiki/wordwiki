@@ -316,20 +316,39 @@ honor:
 
 ## 3. Choices to make
 
-1. **Registry + schema storage.**  A `dictionary` table peer to
-   orthography (slug, assertion table name, display name, public
-   orthography, collation, primary book, license/attribution,
-   ordering-for-search).  Licensing settled for the Watson
-   dictionaries (dz 2026-07-24): same CC-share-alike as MMO, kept
-   separate, ATTRIBUTION TO WATSON — the registry's license/
-   attribution columns are load-bearing from day one.  Where does the schema JSON live: (a) file
-   per dictionary in the repo, (b) blob column in the registry row.
-   Recommend (b) — data end-to-end, and a .typ import just writes a
-   row — WITH cli import/export-to-file so schemas stay diffable in
-   git.  Requires finishing the schemaToCompactJson round-trip
-   ($style/$view are currently dropped on emit, model.ts:311 TODO)
-   and a strict Style/$view validator (validateStyle is vestigial;
-   typos ride through silently today).
+1. **Registry + schema storage — CONVERGED (dz + review 2026-07-24).**
+   The schema lives IN the db: each dictionary is a TABLE PAIR —
+   `mmo` (assertions) + `mmo_config` (name/value pairs, one of which
+   is the schema JSON).  Rationale (dz): SQLite's virtue is the
+   self-contained file; schema in external files must move/stay in
+   sync with the db file — a recipe for sadness; schema-as-SQL-rows
+   is possible (the entry-schema style would even suit the editor)
+   but overkill now.  Per-table config (vs one global) makes
+   dictionaries SEPARABLE, at some editor ugliness cost.
+   Refinements: (a) NO registry table — discovery by convention
+   (tables with an `X_config` peer holding a `schema` key); ALL
+   per-dictionary metadata (slug, display name, LICENSE/ATTRIBUTION,
+   default orthography) as more config pairs, so a dictionary is
+   fully contained in its pair (drop the two tables into a db =
+   it appears); instance-level concerns (primary dictionary, search
+   order) in the global `config` table.  (b) Schema edits: edit the
+   JSON (or .typ); the load gate = the phase-0 strict style
+   validator + the workspace validator run over the data AT REST
+   under the proposed schema (add-field passes; remove/rename with
+   data fails with findings); phase-0's completed round trip makes
+   dump→edit→reload lossless.  (c) Imported dictionaries stash the
+   original .typ as a `source_typ` config pair (provenance).
+   (d) MMO needs no table rename: `dict` + `dict_config`, slug
+   'mmo' as a config value.  Licensing settled for the Watson
+   dictionaries: same CC-share-alike as MMO, kept separate,
+   ATTRIBUTION TO WATSON — the license/attribution config pairs are
+   load-bearing from day one.
+   Vocab tables (categories, tags, orthographies, lexical forms,
+   users) stay SHARED across an instance's dictionaries (dz) — for
+   RAND↔MMO shared categorization is a feature; if tag/todo
+   vocabularies ever want separation, that's a nullable dictionary
+   column later.  How .typ markers acquire TYPES stays open (manual
+   for RAND).
 2. **Role declarations** — the §2.2 list; probably $view-style keys
    on relations/fields (titleRole is the precedent) plus an archival
    flag in the status vocabulary.  Also new parser needs: $immutable
