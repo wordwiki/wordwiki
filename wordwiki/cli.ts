@@ -638,6 +638,49 @@ export async function cliMain(args: string[]): Promise<void> {
         // picks it up at the next workspace reload).
         //   ./wordwiki.sh dump-schema [schema.json]
         //   ./wordwiki.sh load-schema <schema.json> [--apply]
+        // The CONFIG PAIR pass for the migration pipeline
+        // (importWordWikiV1Db.sh): create <table>_dict_config and load the
+        // schema into it - EXPLICIT and reported, though every subcommand's
+        // ensure hook also does it implicitly.  --expect-no-changes is the
+        // idempotency proof (a second run must find everything in place).
+        //   ./wordwiki.sh ensure-dict-config [--expect-no-changes] [--report=path]
+        case 'ensure-dict-config': {
+            const exitCode = security.runSystem(() => {
+                const reportPath = args.find(a => a.startsWith('--report='))
+                    ?.slice('--report='.length);
+                const expectNoChanges = args.includes('--expect-no-changes');
+                const cfgTable = dictionaryConfig.configTableName('dict');
+                const tableExisted = db().first<{name: string}>(
+                    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = :n`,
+                    {n: cfgTable}) !== undefined;
+                const schemaBefore = dictionaryConfig.readConfigValue('dict', 'schema');
+                ww.ensureNewStyleTables();
+                const schemaAfter = dictionaryConfig.readConfigValue('dict', 'schema');
+                const changed = !tableExisted || schemaBefore !== schemaAfter;
+                const lines = [
+                    `# Dictionary config pair (dict + ${cfgTable})`,
+                    ``,
+                    tableExisted ? `- config table: already present`
+                                 : `- config table: CREATED`,
+                    schemaBefore === schemaAfter
+                        ? `- schema row: already canonical (${schemaAfter?.length ?? 0} chars)`
+                        : `- schema row: ${schemaBefore === undefined ? 'LOADED' : 'RE-SYNCED'} from the entry-schema literal (${schemaAfter?.length ?? 0} chars)`,
+                    `- slug: ${dictionaryConfig.readConfigValue('dict', 'slug')}`,
+                    `- dictionaries discovered: ${dictionaryConfig.discoverDictionaries().join(', ')}`,
+                ];
+                const text = lines.join('\n') + '\n';
+                console.info(text);
+                if(reportPath) Deno.writeTextFileSync(reportPath, text);
+                if(expectNoChanges && changed) {
+                    console.error('ensure-dict-config: --expect-no-changes but changes were made');
+                    return 1;
+                }
+                return 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
         case 'dump-schema': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
