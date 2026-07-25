@@ -129,19 +129,30 @@ test("schema gate: add-field passes; removals with data at rest fail", async () 
 // it needs rides in its own declarations.
 const TOY_SCHEMA = {
     $type: 'schema', $name: 'toy', $tag: 'toy',
-    word: {
-        $type: 'relation', $tag: 'twd',
-        $style: {$view: {titleRole: 'headword', label: 'inline'}},
-        word_id: {$type: 'primary_key'},
-        text: {$type: 'string', $bind: 'attr1'},
+    // Two-level (entry container + headword child): the meta renderer's
+    // structural convention - title roles live on DESCENDANT relations of
+    // the entry root.  (A root-level headword FIELD - the shoebox \lx
+    // shape - is a .typ-mapping decision for phase 5.)
+    entry: {
+        $type: 'relation', $tag: 'ten',
+        $style: {$shape: 'containerRelation'},
+        entry_id: {$type: 'primary_key'},
+        word: {
+            $type: 'relation', $tag: 'twd',
+            $style: {$view: {titleRole: 'headword', label: 'inline'}},
+            word_id: {$type: 'primary_key'},
+            text: {$type: 'string', $bind: 'attr1'},
+        },
     },
 };
 
 test("two dictionaries coexist: a toy store edits beside MMO", async () => {
-    const { mkEntry, TestTimeline } = await import("./testing.ts");
+    const { mkEntry, TestTimeline, as, renderRoute } = await import("./testing.ts");
     const schemaRoles = await import("./schema-roles.ts");
-    await withTestDb(({ww}) => security.runSystem(() => {
+    await withTestDb(async (fx) => {
+      const {ww} = fx;
       try {
+        security.runSystem(() => {
         ensure();
         dictionaryConfig.createDictionary('toy', TOY_SCHEMA, {slug: 'toy'});
         assertEquals(ww.dictionaries(), ['dict', 'toy']);
@@ -151,20 +162,27 @@ test("two dictionaries coexist: a toy store edits beside MMO", async () => {
         assertEquals(toy.assertionTable, 'toy');
         assertEquals(toy.dictSchema.tag, 'toy');
         // (descendantAndSelfRelations includes the schema root itself)
-        assertEquals(Object.keys(toy.dictSchema.relationsByTag).sort(), ['toy', 'twd']);
+        assertEquals(Object.keys(toy.dictSchema.relationsByTag).sort(),
+                     ['ten', 'toy', 'twd']);
 
         // Edit the toy dictionary THROUGH ITS OWN STORE...
         const tl = new TestTimeline();
         toy.applyTransaction([{
-            assertion_id: 5000, id: 5000, ty: 'twd',
-            ty0: 'toy', ty1: 'twd', id1: 5000,
+            assertion_id: 5000, id: 5000, ty: 'ten',
+            ty0: 'toy', ty1: 'ten', id1: 5000,
+            valid_from: tl.next(),
+            valid_to: timestamp.END_OF_TIME, order_key: '0.5',
+            change_by_username: 'djz'} as any], {quiet: true});
+        toy.applyTransaction([{
+            assertion_id: 5100, id: 5100, ty: 'twd',
+            ty0: 'toy', ty1: 'ten', id1: 5000, ty2: 'twd', id2: 5100,
             attr1: 'hello', valid_from: tl.next(),
             valid_to: timestamp.END_OF_TIME, order_key: '0.5',
             change_by_username: 'djz'} as any], {quiet: true});
-        // ...and the projection keys off ITS schema (root relation 'word').
+        // ...and the projection keys off ITS schema (root relation 'entry').
         const words = toy.entries as any[];
         assertEquals(words.length, 1);
-        assertEquals(words[0].text, 'hello');
+        assertEquals(words[0].word[0].text, 'hello');
         // Role-driven access works from the toy's own declarations.
         assertEquals(schemaRoles.headwordTextsIn(toy.dictSchema, words[0], ''), ['hello']);
 
@@ -175,12 +193,29 @@ test("two dictionaries coexist: a toy store edits beside MMO", async () => {
         ww.applyTransaction([e], {quiet: true});
         assertEquals(ww.store.entries.length, 1);
         assertEquals((toy.entries as any[]).length, 1);
+        });
+
+        // THE FACADE: the toy dictionary's pages dispatch through routeterp
+        // (dict() authorized on WordWiki, home/word on the fresh handle).
+        const home = JSON.stringify(await as(fx, 'djz',
+            () => renderRoute(ww, `wordwiki.dict('toy').home()`)));
+        assertEquals(home.includes('hello'), true);
+        assertEquals(home.includes('.word(5000)'), true);
+        const word = JSON.stringify(await as(fx, 'djz',
+            () => renderRoute(ww, `wordwiki.dict('toy').word(5000)`)));
+        assertEquals(word.includes('hello'), true);
+        // An UNKNOWN dictionary refuses (dispatch wraps the throw into an
+        // error response; the refusal semantics live in storeFor).
+        let refused = false;
+        try { ww.storeFor('nope'); } catch(_e) { refused = true; }
+        assertEquals(refused, true);
 
       } finally {
         // Cleanup so later tests' discovery sees only the default pair.
-        db().executeStatements('DROP TABLE IF EXISTS toy; DROP TABLE IF EXISTS toy_dict_config;');
+        security.runSystem(() =>
+            db().executeStatements('DROP TABLE IF EXISTS toy; DROP TABLE IF EXISTS toy_dict_config;'));
       }
-    }));
+    });
 });
 
 test("dict_config: discovery by the config-pair convention", async () => {

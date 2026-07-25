@@ -27,6 +27,7 @@ import * as utils from '../liminal/utils.ts';
 import {db} from '../liminal/db.ts';
 import {Assertion, updateAssertion, highestTimestamp, selectAllAssertions} from './assertion.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
+import * as schemaRoles from './schema-roles.ts';
 import {assertVersionedDbValid} from './versioned-db-validate.ts';
 import {SiteView, entriesByReferenceGroupIdOf} from './site-view.ts';
 
@@ -186,7 +187,7 @@ export class DictionaryStore {
      *  and to DE-archive. */
     get activeEntries(): entry.Entry[] {
         return this.#activeEntries ??=
-            this.entries.filter(e => !entry.isArchivedEntry(e));
+            this.entries.filter(e => !schemaRoles.entryIsArchived(this.dictSchema, e));
     }
 
     /**
@@ -203,8 +204,11 @@ export class DictionaryStore {
     }
 
     get entriesById(): Map<number, entry.Entry> {
+        // Keyed by the schema's OWN primary key (entry_id for MMO, whatever
+        // a second dictionary declares).
+        const pk = this.dictSchema.relationFields[0].primaryKeyField.name;
         return this.#entriesById ??=
-            new Map(this.entries.map(e=>[e.entry_id, e]));
+            new Map(this.entries.map(e=>[(e as any)[pk] as number, e]));
     }
 
     get entriesByReferenceGroupId(): Map<number, entry.Entry> {
