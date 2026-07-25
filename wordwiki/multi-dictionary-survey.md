@@ -570,6 +570,19 @@ honor:
   its own .typ: undeclared/repeated/out-of-order markers, legacy
   encodings) — no reshaping in the importer; raw RAND loaded as-is
   into its own dictionary.
+  STEP 1 DONE (2026-07-25): wordwiki/sfm.ts — the Sfm.java port
+  (exact lexer/record semantics incl. the shoebox trailing-newline
+  behavior and the first-chunk-in-the-header-slot quirk; \mkrRecord
+  read from the .typ header; stack tree recovery with synthesized
+  levels; per-file decoding; lenient problem collection).  The
+  committed watson/ files are PERMANENT test pins: 103-marker
+  MDF.typ + all 34,092 records across the three dictionaries
+  recover trees with ZERO problems.
+  NEXT: the .typ→wordwiki-schema mapping (markers → relations/
+  field kinds + $bind allocation, toJavascriptIdentifier for
+  digit-initial markers like 1d, the root-level \lx headword
+  decision) and the record-tree→assertions loader into a
+  new-dictionary pair.
 - **Then:** the dictionary→dictionary transform facility (raw-rand →
   reshaped-rand, §4), copy-with-provenance UI, batch matching,
   starring, and the reference-implementation static generator
