@@ -681,6 +681,36 @@ export async function cliMain(args: string[]): Promise<void> {
             break;
         }
 
+        // Create a BRAND-NEW dictionary: the table pair + the (strictly
+        // parsed) schema + metadata seeds.  The dictionary appears at once
+        // (discovery is by the pair convention).
+        //   ./wordwiki.sh new-dictionary <table> --schema=<file> [--slug=<slug>]
+        case 'new-dictionary': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const table = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: new-dictionary <table> --schema=<file> [--slug=<slug>]');
+                const schemaPath = args.find(a => a.startsWith('--schema='))
+                    ?.slice('--schema='.length)
+                    ?? panic('new-dictionary needs --schema=<file>');
+                const slug = args.find(a => a.startsWith('--slug='))
+                    ?.slice('--slug='.length) ?? table;
+                let schemaJson: unknown;
+                try { schemaJson = JSON.parse(Deno.readTextFileSync(schemaPath)); }
+                catch(e) {
+                    console.error(`cannot read ${schemaPath} as JSON: ${e instanceof Error ? e.message : e}`);
+                    return 1;
+                }
+                dictionaryConfig.createDictionary(table, schemaJson, {slug});
+                console.info(`created dictionary '${slug}' (tables ${table} + ` +
+                             `${dictionaryConfig.configTableName(table)})`);
+                console.info(`dictionaries now: ${dictionaryConfig.discoverDictionaries().join(', ')}`);
+                return 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
         case 'dump-schema': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();

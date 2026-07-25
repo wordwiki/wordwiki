@@ -24,6 +24,7 @@
  */
 import { db } from '../liminal/db.ts';
 import * as model from './model.ts';
+import { createAssertionDml, ensureAssertionColumns } from './assertion.ts';
 
 export function configTableName(assertionTable: string): string {
     return `${assertionTable}_dict_config`;
@@ -154,6 +155,29 @@ export function checkProposedSchema(assertionTable: string, proposedJson: any,
         catch(e) { problems.push(`workspace load under the proposed schema failed: ${String(e instanceof Error ? e.message : e)}`); }
     }
     return {schema, problems};
+}
+
+/** CREATE a brand-new dictionary: the table pair + the gated schema +
+ *  metadata seeds, in one act.  The schema goes through the strict parse
+ *  (canonicalization) - there is no data at rest to check yet. */
+export function createDictionary(assertionTable: string, schemaJson: any,
+                                 seeds: Record<string, string> = {}): void {
+    if(!/^[a-z][a-z0-9_]*$/.test(assertionTable))
+        throw new Error(`dictionary table name '${assertionTable}' must be bare lowercase [a-z0-9_], starting with a letter`);
+    if(assertionTable.endsWith('_dict_config'))
+        throw new Error(`dictionary table name may not use the config-peer suffix`);
+    const taken = db().first<{name: string}>(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (:a, :b)`,
+        {a: assertionTable, b: configTableName(assertionTable)});
+    if(taken)
+        throw new Error(`table '${taken.name}' already exists in this db`);
+    const canonical = canonicalSchemaJsonText(assertionTable, schemaJson);
+    db().executeStatements(createAssertionDml(assertionTable));
+    ensureAssertionColumns(assertionTable);
+    db().executeStatements(createConfigDml(assertionTable));
+    writeConfigValue(assertionTable, 'schema', canonical);
+    for(const [name, value] of Object.entries(seeds))
+        writeConfigValue(assertionTable, name, value);
 }
 
 /** DISCOVERY BY CONVENTION: every assertion table in this db that has a

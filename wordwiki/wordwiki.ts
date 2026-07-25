@@ -56,9 +56,40 @@ import { EditorReports } from './reports.ts';
 export class WordWiki extends LiminalApp {
     routes: Record<string, any>;
 
-    /** The versioned model layer (workspace + tx machinery + the
-     *  orthography-agnostic projections) - see dictionary-store.ts. */
-    readonly store: DictionaryStore;
+    // THE STORE MAP (phase 3): one DictionaryStore per dictionary table
+    // pair, created lazily on first touch (the app is constructed before
+    // the db is even open in tests).  `store` is the DEFAULT ('dict' - the
+    // MMO dictionary) - the whole existing API delegates to it unchanged;
+    // storeFor() reaches the others.
+    #stores: Map<string, DictionaryStore> = new Map();
+
+    /** The DEFAULT dictionary's versioned model layer (workspace + tx
+     *  machinery + the orthography-agnostic projections) - see
+     *  dictionary-store.ts. */
+    get store(): DictionaryStore { return this.storeFor('dict'); }
+
+    /** The store for any DISCOVERED dictionary's table (or the default).
+     *  Throws on an unknown table - callers route through dictionaries(). */
+    storeFor(assertionTable: string): DictionaryStore {
+        let s = this.#stores.get(assertionTable);
+        if(s === undefined) {
+            if(assertionTable !== 'dict'
+                && !dictionaryConfig.discoverDictionaries().includes(assertionTable))
+                throw new Error(`no dictionary table pair '${assertionTable}' in this db`);
+            s = new DictionaryStore({assertionTable, onDerivedInvalidated: () => {
+                this.#entryCountByPage = new Map();
+            }});
+            this.#stores.set(assertionTable, s);
+        }
+        return s;
+    }
+
+    /** Every dictionary in this db (discovery by the config-pair
+     *  convention), the default first. */
+    dictionaries(): string[] {
+        const found = dictionaryConfig.discoverDictionaries();
+        return ['dict', ...found.filter(t => t !== 'dict')];
+    }
 
     // Report-world cache: a db query, not a projection, but derived from the
     // same data - dropped on every store invalidation like the projections.
@@ -69,10 +100,6 @@ export class WordWiki extends LiminalApp {
      */
     constructor() {
         super();
-
-        this.store = new DictionaryStore({onDerivedInvalidated: () => {
-            this.#entryCountByPage = new Map();
-        }});
 
         // The navbar renders the working-orthography status (brand suffix,
         // switcher, override banner) through this provider - templates.ts

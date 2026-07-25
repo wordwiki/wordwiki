@@ -169,8 +169,12 @@ export class DictionaryStore {
      *  facts, pending edits and all orthographies included.  This is the
      *  editor world's view of the data. */
     get entries(): entry.Entry[] {
+        // The projection's root key is the schema's entry relation NAME
+        // (schema-driven - 'entry' for MMO, whatever a second dictionary
+        // declares).  An empty dictionary projects no key at all.
         return this.#entries ??=
-            new workspace.CurrentTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry;
+            new workspace.CurrentTupleQuery(this.workspace.getTableByTag(this.dictSchema.tag))
+                .toJSON()[this.dictSchema.relationFields[0].name] ?? [];
     }
 
     /** The valid projection MINUS archived words (archival is our delete):
@@ -194,7 +198,8 @@ export class DictionaryStore {
      */
     get publishedProjection(): entry.Entry[] {
         return this.#publishedProjection ??=
-            new workspace.PublishedTupleQuery(this.workspace.getTableByTag('dct')).toJSON().entry ?? [];
+            new workspace.PublishedTupleQuery(this.workspace.getTableByTag(this.dictSchema.tag))
+                .toJSON()[this.dictSchema.relationFields[0].name] ?? [];
     }
 
     get entriesById(): Map<number, entry.Entry> {

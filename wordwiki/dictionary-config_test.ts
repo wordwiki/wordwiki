@@ -12,6 +12,7 @@ import * as model from "./model.ts";
 import * as entrySchema from "./entry-schema.ts";
 import * as dictionaryConfig from "./dictionary-config.ts";
 import { withTestDb } from "./testing.ts";
+import * as timestamp from "../liminal/timestamp.ts";
 
 const ensure = () => dictionaryConfig.ensureDictionaryConfig(
     'dict', entrySchema.dictSchemaJson, {slug: 'mmo'});
@@ -121,6 +122,65 @@ test("schema gate: add-field passes; removals with data at rest fail", async () 
             assertEquals(r3.problems[0].includes("unknown $view key"), true);
         });
     });
+});
+
+// A minimal second dictionary: one relation, one text field.  No variant,
+// no roles beyond the headword title role - the point is that EVERYTHING
+// it needs rides in its own declarations.
+const TOY_SCHEMA = {
+    $type: 'schema', $name: 'toy', $tag: 'toy',
+    word: {
+        $type: 'relation', $tag: 'twd',
+        $style: {$view: {titleRole: 'headword', label: 'inline'}},
+        word_id: {$type: 'primary_key'},
+        text: {$type: 'string', $bind: 'attr1'},
+    },
+};
+
+test("two dictionaries coexist: a toy store edits beside MMO", async () => {
+    const { mkEntry, TestTimeline } = await import("./testing.ts");
+    const schemaRoles = await import("./schema-roles.ts");
+    await withTestDb(({ww}) => security.runSystem(() => {
+      try {
+        ensure();
+        dictionaryConfig.createDictionary('toy', TOY_SCHEMA, {slug: 'toy'});
+        assertEquals(ww.dictionaries(), ['dict', 'toy']);
+
+        // The toy store loads ITS schema from ITS config pair.
+        const toy = ww.storeFor('toy');
+        assertEquals(toy.assertionTable, 'toy');
+        assertEquals(toy.dictSchema.tag, 'toy');
+        // (descendantAndSelfRelations includes the schema root itself)
+        assertEquals(Object.keys(toy.dictSchema.relationsByTag).sort(), ['toy', 'twd']);
+
+        // Edit the toy dictionary THROUGH ITS OWN STORE...
+        const tl = new TestTimeline();
+        toy.applyTransaction([{
+            assertion_id: 5000, id: 5000, ty: 'twd',
+            ty0: 'toy', ty1: 'twd', id1: 5000,
+            attr1: 'hello', valid_from: tl.next(),
+            valid_to: timestamp.END_OF_TIME, order_key: '0.5',
+            change_by_username: 'djz'} as any], {quiet: true});
+        // ...and the projection keys off ITS schema (root relation 'word').
+        const words = toy.entries as any[];
+        assertEquals(words.length, 1);
+        assertEquals(words[0].text, 'hello');
+        // Role-driven access works from the toy's own declarations.
+        assertEquals(schemaRoles.headwordTextsIn(toy.dictSchema, words[0], ''), ['hello']);
+
+        // ...while MMO's store is a different, unaffected world.
+        assertEquals(ww.store.assertionTable, 'dict');
+        assertEquals(ww.store.entries.length, 0);
+        const e = mkEntry(1000, tl.next(), {change_by_username: 'djz'});
+        ww.applyTransaction([e], {quiet: true});
+        assertEquals(ww.store.entries.length, 1);
+        assertEquals((toy.entries as any[]).length, 1);
+
+      } finally {
+        // Cleanup so later tests' discovery sees only the default pair.
+        db().executeStatements('DROP TABLE IF EXISTS toy; DROP TABLE IF EXISTS toy_dict_config;');
+      }
+    }));
 });
 
 test("dict_config: discovery by the config-pair convention", async () => {
