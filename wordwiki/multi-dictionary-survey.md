@@ -414,6 +414,25 @@ honor:
 - **RAND images → document references** — the scanned-book world is
   already book-generic and shared across dictionaries; RAND scans are
   just another scanned_document.
+- **Offline fork + history merge (dz 2026-07-25, future).**  A
+  long-missed promise of the versioned scheme that multi-db makes
+  much easier: a researcher FORKS the db onto a laptop (wordwiki
+  runs locally - deno's new electron-alternative would do), works
+  offline for months, and on return the fork MERGES back - driven by
+  the two databases' HISTORIES, so mostly safely automatic; the
+  merge points that need a human land as ASSERTIONS in the receiving
+  db, to be dealt with in the change approver (the REVIEW UI is the
+  merge UI - no separate conflict tool).  What multi-db contributes:
+  the fork is a self-contained SQLite file going out, and coming
+  back its dictionary can sit BESIDE the canonical one as another
+  table pair while the merge reads both histories in one process.
+  Favorable substrate already in place: immutable version chains
+  (replaces_assertion_id) to interleave per fact, random 53-bit
+  fact/assertion ids (cross-fork collisions negligible, still worth
+  a merge-time check), and the publication dimension - fork changes
+  arrive PENDING, so approval gates the merge exactly as it gates
+  everything else.  Also a SAAS story: hosted communities keep
+  offline capability (resilience + sovereignty).
 - **Raw import, then IN-SYSTEM reshape (dz 2026-07-24).**  Unlike the
   MMO import (java dump → python surveys/cleanups/reshaping → the
   one-shot import-mmo), RAND cleanup happens INSIDE this system:
