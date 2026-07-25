@@ -2,13 +2,16 @@
 /**
  * The DICTIONARY CONFIG table pair (multi-dictionary-survey.md §3.1,
  * converged with dz 2026-07-24): a dictionary is fully contained in TWO
- * tables - `<name>` (the assertions) and `<name>_config` (name/value
+ * tables - `<name>` (the assertions, base name NAKED) and
+ * `<name>_dict_config` (name/value
  * pairs, one of which is the soft SCHEMA as compact JSON).  The schema
  * travels INSIDE the SQLite file (external schema files would have to move
  * in sync with the db - a recipe for sadness), and dictionaries are
  * SEPARABLE: dump/drop the pair and the dictionary moves with everything
  * it means.  There is deliberately NO registry table - DISCOVERY is by
- * convention (a `X_config` table holding a `schema` row); per-dictionary
+ * convention (a `X_dict_config` table holding a `schema` row - the suffix
+ * is deliberately distinctive: bare `_config` collides with SQLite's own
+ * FTS shadow tables, dz 2026-07-24); per-dictionary
  * metadata (slug, display name, license/attribution, ...) is just more
  * pairs; instance-level concerns stay in the global `config` table.
  *
@@ -23,7 +26,7 @@ import { db } from '../liminal/db.ts';
 import * as model from './model.ts';
 
 export function configTableName(assertionTable: string): string {
-    return `${assertionTable}_config`;
+    return `${assertionTable}_dict_config`;
 }
 
 export const createConfigDml = (assertionTable: string): string => `
@@ -61,6 +64,19 @@ export function writeConfigValue(assertionTable: string, name: string, value: st
  *  every ensure (a fully synced db sees one read, no writes). */
 export function ensureDictionaryConfig(assertionTable: string, literalSchemaJson: any,
                                        seeds: Record<string, string> = {}): void {
+    // One-day-old-name courtesy rename (the pair briefly shipped as
+    // `X_config` before the suffix was made distinctive; only dev dbs
+    // ever saw it).
+    try {
+        const oldName = `${assertionTable}_config`;
+        const hasOld = db().first<{name: string}>(
+            `SELECT name FROM sqlite_master WHERE type = 'table' AND name = :n`, {n: oldName});
+        const hasNew = db().first<{name: string}>(
+            `SELECT name FROM sqlite_master WHERE type = 'table' AND name = :n`,
+            {n: configTableName(assertionTable)});
+        if(hasOld && !hasNew)
+            db().executeStatements(`ALTER TABLE ${oldName} RENAME TO ${configTableName(assertionTable)};`);
+    } catch(_e) { /* fresh db */ }
     db().executeStatements(createConfigDml(assertionTable));
     // The schema row: TRANSITIONAL literal->config sync (see module note).
     const canonical = canonicalSchemaJsonText(assertionTable, literalSchemaJson);
@@ -147,7 +163,7 @@ export function discoverDictionaries(): string[] {
     try {
         const configTables = db().all<{name: string}, {}>(
             `SELECT name FROM sqlite_master
-              WHERE type = 'table' AND name LIKE '%\\_config' ESCAPE '\\'`, {})
+              WHERE type = 'table' AND name LIKE '%\\_dict\\_config' ESCAPE '\\'`, {})
             .map(r => r.name);
         return configTables
             .filter(t => {
@@ -156,6 +172,6 @@ export function discoverDictionaries(): string[] {
                         `SELECT value FROM ${t} WHERE name = 'schema'`, {}) !== undefined;
                 } catch(_e) { return false; }
             })
-            .map(t => t.slice(0, -'_config'.length));
+            .map(t => t.slice(0, -'_dict_config'.length));
     } catch(_e) { return []; }
 }

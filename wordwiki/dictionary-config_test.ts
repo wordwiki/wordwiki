@@ -134,6 +134,6 @@ test("dict_config: discovery by the config-pair convention", async () => {
         dictionaryConfig.writeConfigValue('rand', 'schema',
             dictionaryConfig.readConfigValue('dict', 'schema')!);
         assertEquals(dictionaryConfig.discoverDictionaries().sort(), ['dict', 'rand']);
-        db().executeStatements('DROP TABLE rand_config;');
+        db().executeStatements('DROP TABLE rand_dict_config;');
     }));
 });

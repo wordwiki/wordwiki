@@ -40,7 +40,7 @@ setRoutePolicy('strict');
 // by name - they are not liminal Tables).
 const LEGACY_TABLES = ['scanned_document', 'scanned_page', 'layer',
                        'bounding_group', 'bounding_box', 'change_log', 'dict',
-                       'dict_config'];
+                       'dict_dict_config'];
 
 let legacySchemaCreated = false;
 
