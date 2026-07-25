@@ -302,29 +302,36 @@ function dialogFields(rel: model.RelationField): model.ScalarField[] {
         !(f instanceof model.PrimaryKeyField) && !isDialogReadOnly(f));
 }
 
+/** The relation tags of the workflow ROLES (tag + log) - the relations the
+ *  word view/editor renders as custom sections instead of generic rows. */
+export function workflowRelationTags(schema: model.Schema): string[] {
+    return [schema.relationsByRole.workflowTag?.tag,
+            schema.relationsByRole.log?.tag]
+        .filter((t): t is string => t !== undefined);
+}
+
 function widgetFor(f: model.ScalarField, rel: model.RelationField,
                    vocabs: VocabProviders): table.Field {
     // Controlled-vocabulary values get selects over their tables (falling
-    // back to the free-text widget while a table is unseeded).
-    if(rel.tag === entrySchema.CategoryTag && f.name === 'category') {
-        const cats = vocabs.categories();
-        if(cats.some(c => !c.retired))
-            return new VocabSelectField(f.name, cats,
-                {what: 'category', adminPage: 'Category Table'},
-                {nullable: true, prompt: f.prompt});
-    }
-    if(rel.tag === entrySchema.TagTag && f.name === 'tag') {
-        const tags = vocabs.tags();
-        if(tags.some(t => !t.retired))
-            return new VocabSelectField(f.name, tags,
-                {what: 'tag', adminPage: 'Tag Table'},
-                {nullable: true, prompt: f.prompt});
-    }
-    if(rel.tag === entrySchema.SubentryTag && f.name === 'part_of_speech') {
-        const forms = vocabs.lexicalForms();
-        if(forms.some(c => !c.retired))
-            return new VocabSelectField(f.name, forms,
-                {what: 'lexical form', adminPage: 'Lexical Form Table'},
+    // back to the free-text widget while a table is unseeded).  The BINDING
+    // is the field's $vocab declaration (phase 1) - the old hard-coded
+    // tag+fieldname matches are gone.
+    if(f.style.$vocab !== undefined) {
+        const src = ({
+            category:     {rows: () => vocabs.categories() as VocabRow[],
+                           what: 'category',     adminPage: 'Category Table'},
+            tag:          {rows: () => vocabs.tags() as VocabRow[],
+                           what: 'tag',          adminPage: 'Tag Table'},
+            lexical_form: {rows: () => vocabs.lexicalForms() as VocabRow[],
+                           what: 'lexical form', adminPage: 'Lexical Form Table'},
+        } as Record<string, {rows: () => VocabRow[], what: string, adminPage: string}>)
+            [f.style.$vocab];
+        if(src === undefined)
+            throw new Error(`field '${f.name}' declares unknown $vocab '${f.style.$vocab}'`);
+        const rows = src.rows();
+        if(rows.some(r => !r.retired))
+            return new VocabSelectField(f.name, rows,
+                {what: src.what, adminPage: src.adminPage},
                 {nullable: true, prompt: f.prompt});
     }
     // NOTE: instanceof order matters - the soft schema's field classes form
@@ -953,10 +960,11 @@ export class LexemeEditor {
                 templates.viewLink(`/ww/wordwiki.wordView(${entry_id})`),
                 templates.historyLink(fullHistoryUrl(entry_id))],
             titleOrthography: this.app.currentWorkingOrthography(),
-            // Tag + Log get their own custom sections (renderLexemeWorkflow)
-            // on both read and edit - suppress the generic rows here so there
-            // is one representation, not two (dz).
-            hideRelationTags: [entrySchema.TagTag, entrySchema.LogTag],
+            // Tag + Log (the workflowTag/log ROLES) get their own custom
+            // sections (renderLexemeWorkflow) on both read and edit -
+            // suppress the generic rows here so there is one
+            // representation, not two (dz).
+            hideRelationTags: workflowRelationTags(this.app.dictSchema),
         });
     }
 
@@ -3101,10 +3109,11 @@ export class LexemeEditor {
         // An EDIT of one tag (scope 'self') refreshes just that tag's LINE
         // fragment; an insert/delete (scope 'parent', line count changes)
         // refreshes the whole Tags section (dz).
-        if(tag === entrySchema.TagTag)
+        if(tag === this.app.dictSchema.relationsByRole.workflowTag?.tag)
             keys.push(scope === 'self' ? `.-lexeme-tag-${fact_id}-`
                                        : `.-lexeme-tags-${entry_id}-`);
-        if(tag === entrySchema.LogTag) keys.push(`.-lexeme-log-${entry_id}-`);
+        if(tag === this.app.dictSchema.relationsByRole.log?.tag)
+            keys.push(`.-lexeme-log-${entry_id}-`);
         return keys;
     }
 

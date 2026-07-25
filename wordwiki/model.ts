@@ -35,6 +35,12 @@ export interface Style {
     // vocabulary-table-backed fields this is the unseeded fallback; the
     // table is the live authority.
     $options?: Record<string, string>,
+    // The VOCABULARY TABLE backing this field's values ('category', 'tag',
+    // 'lexical_form') - the editor binds its select to that table.  A
+    // DECLARATION, replacing the editor's old hard-coded tag+fieldname
+    // matches; the app resolves the name to a provider (an unknown name is
+    // an app-time error - the model stays app-agnostic).
+    $vocab?: string,
     // Presentation metadata for the metadata-driven document renderer
     // (render-entry-meta.ts).  Kept SEPARATE from $shape (which drives the
     // editor) so evolving the read-only rendering never perturbs the editor.
@@ -137,9 +143,10 @@ export function validateStyle(locus:string, style: any): Style {
             case '$shape': expectString(locus, k, v); break;
             case '$markdown': expectBoolean(locus, k, v); break;
             case '$options': expectStringRecord(locus, k, v); break;
+            case '$vocab': expectString(locus, k, v); break;
             case '$view': validateViewStyle(locus+'/$view', v); break;
             default:
-                throw new ValidationError(locus, `unknown $style key '${k}' - known keys: $prompt, $style, $width, $height, $shape, $markdown, $options, $view`);
+                throw new ValidationError(locus, `unknown $style key '${k}' - known keys: $prompt, $style, $width, $height, $shape, $markdown, $options, $vocab, $view`);
         }
     }
     return style as Style;

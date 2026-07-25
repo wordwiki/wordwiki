@@ -339,7 +339,10 @@ export const dictSchemaJson = {
             $role: {name: 'workflowTag', field: 'tag'},
             tag_id: {$type: 'primary_key'},
             tag: {$type: 'enum', $bind: 'attr1',
-                  $style: { $options: todos}},   // table-driven select in the editor; static map = unseeded fallback
+                  // $vocab: the editor's select binds to the tag TABLE
+                  // (declared, not tag-matched in code); static $options
+                  // map = unseeded fallback for display.
+                  $style: { $options: todos, $vocab: 'tag'}},
             // $markdown (dz 2026-07-16): the value is the tag's content -
             // todo details want lists/emphasis like notes and log posts do.
             value: {$type: 'string', $bind: 'attr2',
@@ -376,7 +379,7 @@ export const dictSchemaJson = {
             // renderer the code -> display name, so the friendly text comes
             // from DATA, not a hand-coded lookup.
             part_of_speech: {$type: 'string', $bind: 'attr1',
-                             $style: { $options: partsOfSpeech,
+                             $style: { $options: partsOfSpeech, $vocab: 'lexical_form',
                                        $view: { order: 2, label: 'inline' } }},
             // Only a small % of words have >1 sense: for one, drop the "1." level
             // entirely (read); the editor keeps it.  Numbered when there are
@@ -525,7 +528,7 @@ export const dictSchemaJson = {
                 $role: {name: 'category', field: 'category'},
                 category_id: {$type: 'primary_key'},
                 // TODO later convert to ref.
-                category: {$type: 'string', $bind: 'attr1'},
+                category: {$type: 'string', $bind: 'attr1', $style: { $vocab: 'category' }},
                 // Navigation/editorial metadata, not part of the word display.
                 $style: { $shape: 'compactInlineListRelation',
                           $view: { hidden: true, label: 'inline' } },

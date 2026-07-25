@@ -95,9 +95,19 @@ export class LexemeOps {
     // --- Tuple addressing -----------------------------------------------------
     // ------------------------------------------------------------------------
 
+    // Schema-driven addressing (phase 1): the root/entry tags are the
+    // schema's structure, the workflow/gate/reference relations come from
+    // their $role declarations - no hard-coded storage tags.
+    private get rootTag(): string { return this.app.dictSchema.tag; }
+    private get entryTag(): string { return this.app.dictSchema.relationFields[0].tag; }
+    private roleTag(role: 'publicGate'|'workflowTag'|'log'|'documentReference'): string {
+        return this.app.dictSchema.relationsByRole[role]?.tag
+            ?? panic(`the schema declares no '${role}' role relation`);
+    }
+
     entryTuple(entry_id: number): VersionedTuple {
-        const dict = this.app.workspace.getTableByTag(entrySchema.DictTag);
-        return dict.childRelations[entrySchema.EntryTag]?.tuples.get(entry_id)
+        const dict = this.app.workspace.getTableByTag(this.rootTag);
+        return dict.childRelations[this.entryTag]?.tuples.get(entry_id)
             ?? panic('entry not found', entry_id);
     }
 
@@ -314,7 +324,7 @@ export class LexemeOps {
         // its parent must already be published (top-down); approving a
         // DELETION unpublishes, so it must have no still-published descendants
         // (bottom-up - approve the contents' deletions first).
-        const tuple = this.app.workspace.getTableByTag(entrySchema.DictTag)
+        const tuple = this.app.workspace.getTableByTag(this.rootTag)
             .getTupleById(fact_id) ?? panic('no fact', fact_id);
         const content = latestContentVersion(tuple.tupleVersions.map(v => v.assertion));
         const isDeletion = !!content && content.valid_from === content.valid_to;
@@ -378,7 +388,7 @@ export class LexemeOps {
     /** The entry's pub-gate fact tuples (every state: published, pending
      *  proposal, pending withdrawal, withdrawn). */
     publicGateTuples(entry_id: number): VersionedTuple[] {
-        const rel = this.entryTuple(entry_id).childRelations[entrySchema.PublicTag];
+        const rel = this.entryTuple(entry_id).childRelations[this.roleTag('publicGate')];
         return rel ? [...rel.tuples.values()] : [];
     }
 
@@ -416,7 +426,7 @@ export class LexemeOps {
         if(!trimmed) throw new Error('an empty log entry is not posted');
         // Top-posted: order_key before the current first (the raw data
         // reads in presentation order).
-        return this.postEntryFact(entry_id, entrySchema.LogTag,
+        return this.postEntryFact(entry_id, this.roleTag('log'),
                                   {attr1: trimmed}, {topPost: true});
     }
 
@@ -429,7 +439,7 @@ export class LexemeOps {
     postTag(entry_id: number, text: string, slug: string = 'Todo'): {fact_id: number} {
         const trimmed = String(text ?? '').trim();
         if(!trimmed) throw new Error('an empty tag is not posted');
-        return this.postEntryFact(entry_id, entrySchema.TagTag,
+        return this.postEntryFact(entry_id, this.roleTag('workflowTag'),
                                   {attr1: slug, attr2: trimmed, attr3: '___',
                                    attr4: 0, variant: 'mm'} as Partial<Assertion>);
     }
@@ -454,8 +464,11 @@ export class LexemeOps {
         const EOT = timestamp.END_OF_TIME;
         const ok = orderkey.new_range_start_string;
         const entry_id = newId(), subentry_id = newId(), ref_id = newId();
-        const D = entrySchema.DictTag, E = entrySchema.EntryTag,
-              S = entrySchema.SubentryTag, Rf = entrySchema.DocumentReferenceTag;
+        const refRel = this.app.dictSchema.relationsByRole.documentReference
+              ?? panic('the schema declares no documentReference role relation');
+        const D = this.rootTag, E = this.entryTag,
+              S = (refRel.parentRelation ?? panic('documentReference has no parent')).tag,
+              Rf = refRel.tag;
         const entryA: Assertion = {
             ...assertionPathToFields([[D, 0], [E, entry_id]]),
             assertion_id: entry_id, id: entry_id, ty: E,
@@ -478,7 +491,7 @@ export class LexemeOps {
      *  Same approval bypass as postTag. */
     addTag(entry_id: number, slug: string): {fact_id: number} {
         if(!String(slug ?? '').trim()) throw new Error('addTag needs a tag');
-        return this.postEntryFact(entry_id, entrySchema.TagTag,
+        return this.postEntryFact(entry_id, this.roleTag('workflowTag'),
                                   {attr1: slug, attr2: '', attr3: '___',
                                    attr4: 0, variant: 'mm'} as Partial<Assertion>);
     }
@@ -542,8 +555,8 @@ export class LexemeOps {
 
         const id = newId();
         const a: Assertion = {
-            ...assertionPathToFields([[entrySchema.DictTag, 0],
-                                      [entrySchema.EntryTag, entry_id],
+            ...assertionPathToFields([[this.rootTag, 0],
+                                      [this.entryTag, entry_id],
                                       [ty, id]]),
             assertion_id: id, id, ty,
             valid_from: placeholderTxTime(), valid_to: timestamp.END_OF_TIME,
@@ -589,10 +602,10 @@ export class LexemeOps {
             // Insert a NORMAL pending proposal (no publication stamps).
             const id = newId();
             const a: Assertion = {
-                ...assertionPathToFields([[entrySchema.DictTag, 0],
-                                          [entrySchema.EntryTag, entry_id],
-                                          [entrySchema.PublicTag, id]]),
-                assertion_id: id, id, ty: entrySchema.PublicTag,
+                ...assertionPathToFields([[this.rootTag, 0],
+                                          [this.entryTag, entry_id],
+                                          [this.roleTag('publicGate'), id]]),
+                assertion_id: id, id, ty: this.roleTag('publicGate'),
                 valid_from: placeholderTxTime(), valid_to: timestamp.END_OF_TIME,
                 order_key: '0.5',
                 variant: orthography,
