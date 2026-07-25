@@ -26,14 +26,15 @@ import * as timestamp from '../liminal/timestamp.ts';
 import * as utils from '../liminal/utils.ts';
 import {db} from '../liminal/db.ts';
 import {Assertion, updateAssertion, highestTimestamp, selectAllAssertions} from './assertion.ts';
+import * as dictionaryConfig from './dictionary-config.ts';
 import {assertVersionedDbValid} from './versioned-db-validate.ts';
 import {SiteView, entriesByReferenceGroupIdOf} from './site-view.ts';
 
 export class DictionaryStore {
-    readonly dictSchema: model.Schema;
     /** The one place the assertion table's name is known. */
     readonly assertionTable = 'dict';
 
+    #dictSchema: model.Schema|undefined = undefined;
     #workspace: VersionedDb|undefined = undefined;
     #entries: entry.Entry[]|undefined = undefined;
     #activeEntries: entry.Entry[]|undefined = undefined;
@@ -46,8 +47,18 @@ export class DictionaryStore {
     #lastAllocatedTxTimestamp: number|undefined;
 
     constructor(private opts: {onDerivedInvalidated?: () => void} = {}) {
-        this.dictSchema = model.Schema.parseSchemaFromCompactJson(
-            this.assertionTable, dictSchemaJson);
+    }
+
+    /** The dictionary's SOFT SCHEMA - read from the config pair
+     *  (`<table>_config`.schema, the authority - dictionary-config.ts),
+     *  falling back to the entry-schema literal for a db whose pair isn't
+     *  set up yet (pre-migration, minimal tests).  Lazy: the store is
+     *  constructed before ensure runs at serve startup.  Dropped with the
+     *  workspace (a schema edit takes effect via reload). */
+    get dictSchema(): model.Schema {
+        return this.#dictSchema ??=
+            dictionaryConfig.readStoredDictionarySchema(this.assertionTable)
+            ?? model.Schema.parseSchemaFromCompactJson(this.assertionTable, dictSchemaJson);
     }
 
     get workspace(): VersionedDb {
@@ -75,6 +86,7 @@ export class DictionaryStore {
 
     requestWorkspaceReload() {
         this.#workspace = undefined;
+        this.#dictSchema = undefined;   // a schema edit lands via reload
         this.requestEntriesJSONReload();
     }
 

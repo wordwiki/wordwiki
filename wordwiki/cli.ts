@@ -22,7 +22,10 @@ import * as migrationVerify from './migration-verify.ts';
 import * as instanceDir_ from './instance-dir.ts';
 import * as publish from './publish.ts';
 import { validateVersionedDb, validateVariantInvariants,
-         factViewsFromVersionedDb } from './versioned-db-validate.ts';
+         factViewsFromVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
+import * as dictionaryConfig from './dictionary-config.ts';
+import * as workspace from './workspace.ts';
+import { selectAllAssertions, type Assertion } from './assertion.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
 import { FindingsReport, assembleImportReport } from './findings.ts';
 import { scanVariants } from './variant-scan.ts';
@@ -627,6 +630,65 @@ export async function cliMain(args: string[]): Promise<void> {
         // dump-publish-source's reduced bundle.  Live publishes refresh it
         // onto the site's data/ automatically; this command is for backups.
         //   ./wordwiki.sh dump-full-history [path.json]
+        // The dictionary's SOFT SCHEMA as data (the config table pair -
+        // dictionary-config.ts).  dump-schema writes the stored schema as
+        // diffable JSON; load-schema runs the COMPATIBILITY GATE (strict
+        // parse + attr-usage-vs-binds + a full workspace load under the
+        // proposal) and --apply writes the config row (a running server
+        // picks it up at the next workspace reload).
+        //   ./wordwiki.sh dump-schema [schema.json]
+        //   ./wordwiki.sh load-schema <schema.json> [--apply]
+        case 'dump-schema': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const path = args[1] && !args[1].startsWith('--') ? args[1] : 'schema.json';
+                const text = dictionaryConfig.readConfigValue('dict', 'schema')
+                    ?? panic('no stored schema (ensure did not run?)');
+                Deno.writeTextFileSync(path, text + '\n');
+                console.info(`wrote the stored schema to ${path}`);
+            });
+            Deno.exit(0);
+            break;
+        }
+        case 'load-schema': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const path = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: load-schema <schema.json> [--apply]');
+                const apply = args.includes('--apply');
+                let proposedJson: unknown;
+                try { proposedJson = JSON.parse(Deno.readTextFileSync(path)); }
+                catch(e) {
+                    console.error(`cannot read ${path} as JSON: ${e instanceof Error ? e.message : e}`);
+                    return 1;
+                }
+                const {problems} = dictionaryConfig.checkProposedSchema(
+                    'dict', proposedJson, {loadWorkspace: (schema) => {
+                        const ws = new workspace.VersionedDb([schema]);
+                        selectAllAssertions('dict').all().forEach(
+                            (a: Assertion) => ws.untrackedApplyAssertion(a));
+                        assertVersionedDbValid(ws);
+                    }});
+                if(problems.length > 0) {
+                    console.error(`the proposed schema is NOT compatible with the data at rest:`);
+                    for(const p of problems) console.error(`  - ${p}`);
+                    return 1;
+                }
+                console.info('the proposed schema is compatible with the data at rest');
+                if(apply) {
+                    dictionaryConfig.writeConfigValue('dict', 'schema',
+                        dictionaryConfig.canonicalSchemaJsonText('dict', proposedJson));
+                    console.info('APPLIED - the config row is updated; a running ' +
+                                 'server picks it up at the next workspace reload');
+                } else {
+                    console.info('(dry run - pass --apply to write it)');
+                }
+                return 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
         case 'dump-full-history': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();

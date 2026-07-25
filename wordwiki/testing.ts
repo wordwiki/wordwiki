@@ -39,7 +39,8 @@ setRoutePolicy('strict');
 // The legacy raw-DML tables (created by createAllTables, cleared here
 // by name - they are not liminal Tables).
 const LEGACY_TABLES = ['scanned_document', 'scanned_page', 'layer',
-                       'bounding_group', 'bounding_box', 'change_log', 'dict'];
+                       'bounding_group', 'bounding_box', 'change_log', 'dict',
+                       'dict_config'];
 
 let legacySchemaCreated = false;
 

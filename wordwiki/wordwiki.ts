@@ -5,6 +5,7 @@ import * as server from '../liminal/http-server.ts';
 import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
+import * as dictionaryConfig from './dictionary-config.ts';
 import * as orthography from './orthography.ts';
 import * as entryMeta from './render-entry-meta.ts';
 import * as schemaRoles from './schema-roles.ts';
@@ -211,6 +212,11 @@ export class WordWiki extends LiminalApp {
         for(const t of this.tables)
             db().executeStatements(t.createDMLString());
         ensureAssertionColumns('dict');
+        // The dictionary's config PEER (the table pair - see
+        // dictionary-config.ts): the schema row synced from the literal
+        // (transitional), the metadata pairs seeded once.
+        dictionaryConfig.ensureDictionaryConfig('dict', entry.dictSchemaJson,
+            {slug: 'mmo'});
         orthography.seedOrthographies(this.orthographies);
         tag.seedTags(this.tags);
     }
@@ -1479,7 +1485,8 @@ export class WordWiki extends LiminalApp {
 // ensureAssertionColumns applies LATE COLUMNS to an existing dict table
 // (CREATE TABLE IF NOT EXISTS adds new index lines but never new columns).
 export function createAllTables() {
-    db().executeStatements(allScannedDocumentSchemaDml + createAssertionDml('dict'));
+    db().executeStatements(allScannedDocumentSchemaDml + createAssertionDml('dict')
+        + dictionaryConfig.createConfigDml('dict'));
     ensureAssertionColumns('dict');
 }
 
