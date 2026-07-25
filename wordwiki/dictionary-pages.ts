@@ -22,11 +22,61 @@ import * as entryMeta from './render-entry-meta.ts';
 import * as schemaRoles from './schema-roles.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
 import { route, authenticated } from '../liminal/security.ts';
+import { path, serialize } from '../liminal/serializable.ts';
 import type { Markup } from '../liminal/markup.ts';
 import type { DictionaryStore } from './dictionary-store.ts';
+import { LexemeOps } from './lexeme-ops.ts';
+import { LexemeEditor, type LexemeEditorApp } from './lexeme-editor.ts';
+import type { WordWiki } from './wordwiki.ts';
+
+/** The per-dictionary EDITOR APP: the LexemeEditorApp surface satisfied
+ *  over an arbitrary store - store-scoped members bind the dictionary,
+ *  app-global services delegate to the base WordWiki.  The vocab tables
+ *  are instance-GLOBAL by design (survey §3.1). */
+export function editorAppFor(base: WordWiki, store: DictionaryStore): LexemeEditorApp {
+    let ops: LexemeOps | undefined;
+    const facade: LexemeEditorApp = {
+        get dictSchema() { return store.dictSchema; },
+        get workspace() { return store.workspace; },
+        get assertionTable() { return store.assertionTable; },
+        get entriesById() { return store.entriesById; },
+        get lastAllocatedTxTimestamp() { return store.lastAllocatedTxTimestamp; },
+        applyTransaction: (a, o) => store.applyTransaction(a, o ?? {}),
+        applyTransactions: (a) => store.applyTransactions(a),
+        allocTxTimestamps: (c, o) => store.allocTxTimestamps(c, o),
+        requestWorkspaceReload: () => store.requestWorkspaceReload(),
+        requestEntriesJSONReload: () => store.requestEntriesJSONReload(),
+        currentUsername: () => base.currentUsername(),
+        currentWorkingOrthography: () => base.currentWorkingOrthography(),
+        newContentOrthography: () => base.newContentOrthography(),
+        get orthographies() { return base.orthographies; },
+        get tags() { return base.tags; },
+        get lexicalForms() { return base.lexicalForms; },
+        get categories() { return base.categories; },
+        get lexemeOps() { return ops ??= new LexemeOps(facade); },
+        // The custom Tags/Log sections are the DEFAULT dictionary's feature
+        // (wordwiki.renderLexemeWorkflow reads the default store); a facade
+        // dictionary renders none - its generic rows are suppressed only
+        // when its schema declares the workflow roles, which then deserve
+        // the real sections (a listed residual).
+        renderLexemeWorkflow: (_entry_id: number) => [],
+    };
+    return facade;
+}
 
 export class DictionaryPages {
-    constructor(readonly store: DictionaryStore) {}
+    constructor(readonly base: WordWiki, readonly store: DictionaryStore) {}
+
+    /** Route-path identity: this handle IS the expression that reaches it,
+     *  so @path children (the lexeme editor) serialize under it. */
+    [serialize](): string { return `wordwiki.dict(${JSON.stringify(this.table)})`; }
+
+    /** The per-dictionary LEXEME EDITOR: the standard editor over this
+     *  dictionary's store, emitting URLs inside its own route base. */
+    @route(authenticated) @path get lexeme(): LexemeEditor {
+        return new LexemeEditor(editorAppFor(this.base, this.store),
+                                `/ww/wordwiki.dict(${JSON.stringify(this.table)}).lexeme`);
+    }
 
     get table(): string { return this.store.assertionTable; }
     get slug(): string {

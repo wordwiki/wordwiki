@@ -30,7 +30,9 @@ import * as security from '../liminal/security.ts';
 import * as publicationOps from './publication-ops.ts';
 import {latestContentVersion} from './versioned-model.ts';
 import * as orderkey from '../liminal/orderkey.ts';
-import type {WordWiki} from './wordwiki.ts';
+import type {VersionedDb} from './workspace.ts';
+import type * as model from './model.ts';
+import type * as orthographyModule from './orthography.ts';
 
 // New fact/assertion ids use the same scheme as the rest of the system (see
 // the id-allocation TODOs in assertion-model.md) - allocated in one place,
@@ -86,9 +88,28 @@ export type TombstoneOutcome =
     // The fact still has non-deleted children (children-first rule).
     | {outcome: 'has-children'};
 
+/** The app surface the LEXEME MUTATION CORE consumes - WordWiki satisfies
+ *  it structurally (the ReportsApp/PublishSourceApp pattern), and the
+ *  per-dictionary editor facade (dictionary-pages.ts) satisfies it over
+ *  any store.  Store-scoped members bind THE dictionary being edited;
+ *  the rest are app-global services. */
+export interface LexemeApp {
+    readonly dictSchema: model.Schema;
+    readonly workspace: VersionedDb;
+    readonly assertionTable: string;
+    readonly entriesById: Map<number, entrySchema.Entry>;
+    applyTransaction(assertions: Assertion[], opts?: {quiet?: boolean}): void;
+    applyTransactions(assertions: Assertion[]): void;
+    allocTxTimestamps(count?: number, opts?: {quiet?: boolean}): number;
+    requestWorkspaceReload(): void;
+    requestEntriesJSONReload(): void;
+    currentUsername(): string | undefined;
+    readonly orthographies: orthographyModule.OrthographyTable;
+}
+
 export class LexemeOps {
 
-    constructor(public app: WordWiki) {
+    constructor(public app: LexemeApp) {
     }
 
     // ------------------------------------------------------------------------

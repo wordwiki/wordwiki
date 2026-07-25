@@ -210,6 +210,23 @@ test("two dictionaries coexist: a toy store edits beside MMO", async () => {
         try { ww.storeFor('nope'); } catch(_e) { refused = true; }
         assertEquals(refused, true);
 
+        // THE PER-DICTIONARY EDITOR (phase 3.4): the standard lexeme
+        // editor over the toy store, every URL inside its own route base.
+        const { editorAppFor } = await import("./dictionary-pages.ts");
+        const toy = ww.storeFor('toy');   // (memoized - the same store as above)
+        const edit = JSON.stringify(await as(fx, 'djz',
+            () => renderRoute(ww, `wordwiki.dict('toy').lexeme.metaEditPage(5000)`)));
+        assertEquals(edit.includes('hello'), true);
+        assertEquals(edit.includes('wordwiki.dict(\\"toy\\").lexeme'), true);
+        // ...and a real MUTATION through the facade's ops lands in the toy
+        // table: the word's text edited in place.
+        const facade = editorAppFor(ww, toy);
+        const outcome = as(fx, 'djz',
+            () => facade.lexemeOps.supersedeFields(5000, 5100, {attr1: 'world'}));
+        assertEquals((outcome as any).outcome, 'updated');
+        assertEquals((toy.entries as any[])[0].word[0].text, 'world');
+        assertEquals(ww.store.entries.length, 1);   // MMO still its own world
+
       } finally {
         // Cleanup so later tests' discovery sees only the default pair.
         security.runSystem(() =>

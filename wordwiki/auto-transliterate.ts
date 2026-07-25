@@ -46,6 +46,7 @@ import { transliterateLiToSf, transliterateLiToSfScored, TRANSLITERATOR_VERSION,
          CANDIDATE_TRANSLITERATORS } from './transliterate.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
 import type { WordWiki } from './wordwiki.ts';
+import type { LexemeApp, LexemeOps } from './lexeme-ops.ts';
 
 export const AUTO_TRANSLITERATE_USERNAME = '~auto-transliterate';
 
@@ -120,7 +121,12 @@ export interface ProposalStats {
  *  entry shares it (97% of entries).  Multi-subentry entries: undefined.
  *  THE one lookup shared by the proposal op, the pick verb and the chips -
  *  their candidate INDEXES must agree. */
-export function singleSubentryPos(app: WordWiki, entry_id: number): string | undefined {
+// The two editor-called helpers take the NARROW ops surface (LexemeApp +
+// the ops instance) so the per-dictionary facade editor can call them; the
+// batch/report members below keep the full app.
+type OpsApp = LexemeApp & { readonly lexemeOps: LexemeOps };
+
+export function singleSubentryPos(app: OpsApp, entry_id: number): string | undefined {
     const entryTuple = app.lexemeOps.entryTuple(entry_id);
     const subs = Object.values(entryTuple.childRelations)
         .filter(rel => (rel as VersionedRelation).schema.tag === 'sub')
@@ -131,7 +137,7 @@ export function singleSubentryPos(app: WordWiki, entry_id: number): string | und
     return (subs[0]!.assertion.attr1 as string | null) ?? undefined;
 }
 
-export function proposeTransliterations(app: WordWiki, entry_id: number): ProposalStats {
+export function proposeTransliterations(app: OpsApp, entry_id: number): ProposalStats {
     const stats: ProposalStats = { proposed: 0, filledAlready: 0, rejectedBefore: 0 };
     const pure = pureTextRelations(app.dictSchema);
     const entryTuple = app.lexemeOps.entryTuple(entry_id);

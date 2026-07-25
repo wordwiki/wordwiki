@@ -90,7 +90,7 @@ export class WordWiki extends LiminalApp {
      *  dispatch; unknown tables refuse via storeFor. */
     @route(authenticated)
     dict(assertionTable: string): DictionaryPages {
-        return new DictionaryPages(this.storeFor(assertionTable));
+        return new DictionaryPages(this, this.storeFor(assertionTable));
     }
 
     /** Every dictionary in this db (discovery by the config-pair

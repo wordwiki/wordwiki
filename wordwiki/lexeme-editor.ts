@@ -59,7 +59,8 @@ import * as utils from '../liminal/utils.ts';
 import * as random from '../liminal/random.ts';
 import {db} from '../liminal/db.ts';
 import * as audio from './audio.ts';
-import {newId, placeholderTxTime, isTombstone, unapprovedDimension} from './lexeme-ops.ts';
+import {newId, placeholderTxTime, isTombstone, unapprovedDimension,
+        LexemeOps, type LexemeApp} from './lexeme-ops.ts';
 import {route, routeMutation, authenticated} from '../liminal/security.ts';
 import {classifyFact, isComment, isMechanicalSelfApproval, latestContentVersion, type FactReview} from './versioned-model.ts';
 import * as server from '../liminal/http-server.ts';
@@ -86,6 +87,7 @@ import type {WordWiki} from './wordwiki.ts';
 // page-relative exprs, which resolve under /ww/ because the editor pages
 // themselves live there.  hx-get URLs are absolute so they work from any page.
 const R = '/ww/wordwiki.lexeme';
+const DEFAULT_LEXEME_ROUTE = R;   // (the ctor default can't say `= R` - parameter TDZ)
 
 /** The word's FULL HISTORY: review mode opened at everyone+full (the title
  *  clock's target on both the editor and the word view - always present,
@@ -662,9 +664,28 @@ function renderAssertionValues(rf: model.RelationField, a: Assertion): Markup {
 // --- The editor --------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+/** The app surface the editor consumes beyond the mutation core's
+ *  (lexeme-ops LexemeApp): the working-orthography services, the vocab
+ *  tables (instance-GLOBAL - shared across dictionaries by design), the
+ *  ops instance, and the custom workflow sections. */
+export interface LexemeEditorApp extends LexemeApp {
+    readonly lastAllocatedTxTimestamp: number|undefined;
+    currentWorkingOrthography(): string|undefined;
+    newContentOrthography(): string|undefined;
+    readonly lexemeOps: LexemeOps;
+    renderLexemeWorkflow(entry_id: number): any;
+    readonly tags: tagTable.TagTable;
+    readonly lexicalForms: lexicalForm.LexicalFormTable;
+    readonly categories: category.CategoryTable;
+}
+
 export class LexemeEditor {
 
-    constructor(public app: WordWiki) {
+    /** `R` is this editor's ROUTE BASE - '/ww/wordwiki.lexeme' for the
+     *  default dictionary, '/ww/wordwiki.dict("x").lexeme' for a facade
+     *  editor - so every hx/dialog/link URL the editor emits stays inside
+     *  its own dictionary. */
+    constructor(public app: LexemeEditorApp, public R: string = DEFAULT_LEXEME_ROUTE) {
     }
 
     // The select options for the controlled-vocabulary fields (an arrow
@@ -696,7 +717,7 @@ export class LexemeEditor {
             // Self-canonical: wordwiki.entry now serves the METADATA
             // editor, so the classic look must not bounce through it.
             return server.forwardResponse(
-                `${R}.entryPage(${entry_id},'${mode}',${t}${view ? `,'${view}'` : ''})`);
+                `${this.R}.entryPage(${entry_id},'${mode}',${t}${view ? `,'${view}'` : ''})`);
         }
         const e = this.app.entriesById.get(entry_id);
         const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
@@ -723,8 +744,8 @@ export class LexemeEditor {
 
         const opts = this.reviewOpts(participant, full, since);
         const hxGet = mode === 'review'
-            ? `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${opts.full ? 'full' : ''}', ${opts.since})`
-            : `${R}.renderEntry(${entry_id}, 'edit', '', '', ${opts.since})`;
+            ? `${this.R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${opts.full ? 'full' : ''}', ${opts.since})`
+            : `${this.R}.renderEntry(${entry_id}, 'edit', '', '', ${opts.since})`;
 
         return (
             ['div', {class: `-entry-${entry_id}- container py-3`,
@@ -775,8 +796,8 @@ export class LexemeEditor {
     private modeSwapButton(entry_id: number, to: EditMode, label: Markup, cls: string,
                            since: number): Markup {
         const url = to === 'review'
-            ? `${R}.renderEntry(${entry_id}, 'review', '', '', ${since})`
-            : `${R}.renderEntry(${entry_id}, 'edit', '', '', ${since})`;
+            ? `${this.R}.renderEntry(${entry_id}, 'review', '', '', ${since})`
+            : `${this.R}.renderEntry(${entry_id}, 'edit', '', '', ${since})`;
         return ['button', {type: 'button', class: cls,
                            'hx-get': url, 'hx-target': `.-entry-${entry_id}-`,
                            'hx-swap': 'outerHTML'}, label];
@@ -790,7 +811,7 @@ export class LexemeEditor {
         const me = this.app.currentUsername();
         if(me && !people.includes(me)) people.unshift(me);
         const reviewUrl = (p: string) =>
-            `${R}.renderEntry(${entry_id}, 'review', '${p}', '${opts.full ? 'full' : ''}', ${opts.since})`;
+            `${this.R}.renderEntry(${entry_id}, 'review', '${p}', '${opts.full ? 'full' : ''}', ${opts.since})`;
         const item = (value: string, text: string) =>
             ['li', {}, ['button', {type: 'button',
                 class: `dropdown-item ${value === opts.participant ? 'active' : ''}`,
@@ -811,7 +832,7 @@ export class LexemeEditor {
         const to = opts.full ? '' : 'full';
         return ['button', {type: 'button',
             class: `btn btn-sm ${opts.full ? 'btn-secondary' : 'btn-outline-secondary'}`,
-            'hx-get': `${R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${to}', ${opts.since})`,
+            'hx-get': `${this.R}.renderEntry(${entry_id}, 'review', '${opts.participant}', '${to}', ${opts.since})`,
             'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'},
             opts.full ? 'Full history ✓' : 'Full history'];
     }
@@ -916,10 +937,10 @@ export class LexemeEditor {
     renderMetaEntry(entry_id: number, changes: boolean = false): Markup {
         const q = new CurrentTupleQuery(this.entryTuple(entry_id));
         const root = new WorkspaceNode(q, entry_id, q.src.id);
-        const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
+        const entryRel = this.app.dictSchema.relationFields[0];
         return ['div', {class: `-entry-${entry_id}- container py-3`,
                         'data-lens': '',
-                        'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
+                        'hx-get': `${this.R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 ['div', {class: 'page-content'},
                  // Inside the root fragment on purpose: every spelling
@@ -1045,7 +1066,7 @@ export class LexemeEditor {
     renderMetaTitle(entry_id: number, changes: boolean = false): Markup {
         const q = new CurrentTupleQuery(this.entryTuple(entry_id));
         const root = new WorkspaceNode(q, entry_id, q.src.id);
-        const entryRel = this.app.dictSchema.relationsByTag[entrySchema.EntryTag];
+        const entryRel = this.app.dictSchema.relationFields[0];
         return this.metaRenderer(entry_id, changes).renderTitle(entryRel, root);
     }
 
@@ -1056,7 +1077,7 @@ export class LexemeEditor {
     @route(authenticated)
     metaChangesBarFragment(entry_id: number, changes: boolean = false): Markup {
         return ['div', {class: `-entry-${entry_id}-activity-`,
-                        'hx-get': `${R}.metaChangesBarFragment(${entry_id}${changes ? ', true' : ''})`,
+                        'hx-get': `${this.R}.metaChangesBarFragment(${entry_id}${changes ? ', true' : ''})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 this.metaChangesBar(entry_id, changes)];
     }
@@ -1066,7 +1087,7 @@ export class LexemeEditor {
     @route(authenticated)
     metaPublicRowFragment(entry_id: number): Markup {
         return ['div', {class: `-entry-${entry_id}-public-`,
-                        'hx-get': `${R}.metaPublicRowFragment(${entry_id})`,
+                        'hx-get': `${this.R}.metaPublicRowFragment(${entry_id})`,
                         'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 this.metaPublicRow(entry_id)];
     }
@@ -1080,6 +1101,8 @@ export class LexemeEditor {
      *  withdrawal pending / not public); the ☰ carries the approver SUGAR
      *  verbs (insert+approve / tombstone+approve through the normal ops). */
     private metaPublicRow(entry_id: number): Markup {
+        // A schema with NO publicGate role has no publish gating - no row.
+        if(!this.app.dictSchema.relationsByRole.publicGate) return [];
         interface GateState { published?: Assertion; pendingProposal?: Assertion;
                               pendingWithdrawal: boolean; }
         const states = new Map<string, GateState>();
@@ -1428,7 +1451,7 @@ export class LexemeEditor {
                                 + `lm-kbd-stop lm-me-editable d-flex align-items-start gap-1`,
                                 ...(rowOrth ? {'data-orth': rowOrth} : {}),
                                 tabindex: '-1', 'data-kbd': `fact-${id.factId}`,
-                                'hx-get': `${R}.renderMetaTupleFragment(${id.entryId}, ${id.factId}${chg})`,
+                                'hx-get': `${this.R}.renderMetaTupleFragment(${id.entryId}, ${id.factId}${chg})`,
                                 'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
                                 ...(editable ? {onclick: 'lmEditableClick(event)'} : {})},
                         pending ? ['span', {class: 'lm-pending-dot', title: 'unapproved change'}, ''] : [],
@@ -1478,7 +1501,7 @@ export class LexemeEditor {
                        deps: this.changeKeys(parentId.entryId, 0, parentId.factId, rf.tag, 'parent'),
                        expr: `wordwiki.lexeme.insertEmptyTuple(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`}
                     : {kind: 'modal',
-                       dialogUrl: `${R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`};
+                       dialogUrl: `${this.R}.insertDialog(${parentId.entryId}, ${parentId.factId}, '${rf.tag}')`};
                 // A bare + rather than a ☰-of-one-item: "+ adds one of these"
                 // is the single rule the row teaches (the filled rows' + means
                 // the same thing), and the whole row is tappable anyway.  The
@@ -1515,7 +1538,7 @@ export class LexemeEditor {
                 return ['div', {class: `-rel-${parentId.factId}-${rf.tag}-shape- lm-me-rel `
                                 + (sectionish ? 'lm-me-rel-section' : 'lm-me-rel-line')
                                 + (empty ? ' d-none' : ''),
-                                'hx-get': `${R}.renderMetaRelationFragment(${parentId.entryId}, ${parentId.factId}, '${rf.tag}'${chg})`,
+                                'hx-get': `${this.R}.renderMetaRelationFragment(${parentId.entryId}, ${parentId.factId}, '${rf.tag}'${chg})`,
                                 'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                         body];
             },
@@ -1523,7 +1546,7 @@ export class LexemeEditor {
                 // The <h1> collects headword/gloss values from the whole tree;
                 // titleRole edits emit this key (mutationTargets).
                 ['div', {class: `-entry-${entry_id}-title-`,
-                         'hx-get': `${R}.renderMetaTitle(${entry_id}${chg})`,
+                         'hx-get': `${this.R}.renderMetaTitle(${entry_id}${chg})`,
                          'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                  body],
         };
@@ -1544,7 +1567,7 @@ export class LexemeEditor {
                deps: this.changeKeys(id.entryId, 0, id.parentFactId, rf.tag, 'parent'),
                expr: `wordwiki.lexeme.insertEmptyTuple(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`}
             : {kind: 'modal',
-               dialogUrl: `${R}.insertDialog(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`};
+               dialogUrl: `${this.R}.insertDialog(${id.entryId}, ${id.parentFactId}, '${rf.tag}', ${id.factId}, 'after')`};
         return action.actionButton(action.plusIcon(), mode, 'lm-menu-button',
             {'aria-label': `Insert ${rf.prompt} after`, title: `Insert ${rf.prompt} after`});
     }
@@ -1559,7 +1582,7 @@ export class LexemeEditor {
             .filter(cr => !((q.childRelations[cr.tag]?.tuples as CurrentTupleQuery[]) ?? [])
                     .some(t => t.mostRecentTupleVersion))
             .map(cr => ({label: `Add ${cr.prompt}…`, mode: {kind: 'modal' as const,
-                dialogUrl: `${R}.insertDialog(${entry_id}, ${fact_id}, '${cr.tag}')`}}));
+                dialogUrl: `${this.R}.insertDialog(${entry_id}, ${fact_id}, '${cr.tag}')`}}));
     }
 
     // --- View-changes mode (meta-editor-changes-mode.md) ---------------------
@@ -1708,7 +1731,7 @@ export class LexemeEditor {
                 ['span', {}, count],
                 approve,
                 this.metaModeButton(entry_id, false, 'Hide changes'),
-                ['a', {href: `${R}.entryPage(${entry_id}, 'review')`,
+                ['a', {href: `${this.R}.entryPage(${entry_id}, 'review')`,
                        class: 'btn btn-sm btn-outline-secondary'}, 'Full review…'],
                 deletions];
     }
@@ -1716,7 +1739,7 @@ export class LexemeEditor {
     /** Swap the entry fragment in place between the normal and changes looks. */
     private metaModeButton(entry_id: number, changes: boolean, label: string): Markup {
         return ['button', {type: 'button', class: 'btn btn-sm btn-outline-secondary',
-                           'hx-get': `${R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
+                           'hx-get': `${this.R}.renderMetaEntry(${entry_id}${changes ? ', true' : ''})`,
                            'hx-target': `.-entry-${entry_id}-`, 'hx-swap': 'outerHTML'}, label];
     }
 
@@ -1741,7 +1764,7 @@ export class LexemeEditor {
             // are self-refreshing fragments, so this registers the SHAPE key
             // only - member-content edits no longer re-render the list.
             class: `lex-relation mt-2 -rel-${parent_fact_id}-${rf.tag}-shape-`,
-            'hx-get': `${R}.renderRelationFragment(${entry_id}, ${parent_fact_id}, '${rf.tag}')`,
+            'hx-get': `${this.R}.renderRelationFragment(${entry_id}, ${parent_fact_id}, '${rf.tag}')`,
             'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
         };
         const header =
@@ -1794,7 +1817,7 @@ export class LexemeEditor {
         return (
             ['div', {class: `-fact-${fact_id}- lm-editable d-flex align-items-start `
                             + `${pending ? 'lm-pending-fact ' : ''}${extraClasses}`,
-                     'hx-get': `${R}.renderTupleFragment(${entry_id}, ${fact_id})`,
+                     'hx-get': `${this.R}.renderTupleFragment(${entry_id}, ${fact_id})`,
                      'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
                      onclick: 'lmEditableClick(event)'},
              pending ? ['span', {class:'lm-pending-dot', title:'unapproved change'}, ''] : [],
@@ -1846,7 +1869,7 @@ export class LexemeEditor {
         return [
             ...(fieldless ? [] : [
                 {label: 'Edit', btnClass: 'edit', mode: {kind: 'modal' as const,
-                    dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`}}]),
+                    dialogUrl: `${this.R}.editDialog(${entry_id}, ${fact_id}${m})`}}]),
             ...(insertable ? (fieldless ? [
                 {label: `Insert ${rf.prompt} before`, btnClass: 'lm-act-insert-before',
                  mode: {kind: 'immediate' as const, deps: shapeDeps,
@@ -1857,17 +1880,17 @@ export class LexemeEditor {
             ] : [
                 {label: `Insert ${rf.prompt} before`, btnClass: 'lm-act-insert-before',
                  mode: {kind: 'modal' as const,
-                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
+                    dialogUrl: `${this.R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'before'${m})`}},
                 {label: `Insert ${rf.prompt} after`, btnClass: 'lm-act-insert-after',
                  mode: {kind: 'modal' as const,
-                    dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
+                    dialogUrl: `${this.R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}', ${fact_id}, 'after'${m})`}},
             ]) : []),
             {label: 'Move up', btnClass: 'lm-act-move-up', mode: {kind: 'immediate', deps: shapeDeps,
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'up'${m})`}},
             {label: 'Move down', btnClass: 'lm-act-move-down', mode: {kind: 'immediate', deps: shapeDeps,
                 expr: `wordwiki.lexeme.move(${entry_id}, ${fact_id}, 'down'${m})`}},
             {label: 'History', btnClass: 'lm-act-history', mode: {kind: 'modal',
-                dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id}${m})`}},
+                dialogUrl: `${this.R}.historyDialog(${entry_id}, ${fact_id}${m})`}},
             {label: 'Delete', btnClass: 'lm-act-delete', mode: {kind: 'confirm', deps: shapeDeps,
                 expr: `wordwiki.lexeme.deleteTuple(${entry_id}, ${fact_id}${m})`,
                 message: `Delete this ${rf.prompt}?`}},
@@ -1916,7 +1939,7 @@ export class LexemeEditor {
         if(rf.scalarFields.some(isDialogReadOnly))
             return [];
         return action.actionButton(action.plusIcon(),
-            {kind: 'modal', dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`},
+            {kind: 'modal', dialogUrl: `${this.R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`},
             'lm-menu-button', {'aria-label': `New ${rf.prompt}`, title: `New ${rf.prompt}`});
     }
 
@@ -1928,11 +1951,11 @@ export class LexemeEditor {
         const items: Array<{label: string, mode: action.ActionMode}> = [];
         if(!rf.scalarFields.some(isBoundingGroupField) && !rf.scalarFields.some(isDialogReadOnly))
             items.push({label: `Add ${rf.prompt}…`, mode: {kind: 'modal',
-                dialogUrl: `${R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`}});
+                dialogUrl: `${this.R}.insertDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`}});
         const deletedCount = this.deletedTuples(rq).length;
         if(deletedCount > 0)
             items.push({label: `Deleted items (${deletedCount})…`, mode: {kind: 'modal',
-                dialogUrl: `${R}.deletedDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`}});
+                dialogUrl: `${this.R}.deletedDialog(${entry_id}, ${parent_fact_id}, '${rf.tag}')`}});
         if(items.length === 0) return [];
         return action.actionMenu(items, {ariaLabel: `${rf.prompt} list actions`});
     }
@@ -2159,7 +2182,7 @@ export class LexemeEditor {
         return {
             attrs: {
                 class: `-review-group-${t.id}- lm-cl-group`,
-                'hx-get': `${R}.renderReviewGroupFragment(${entry_id}, ${t.id}, `
+                'hx-get': `${this.R}.renderReviewGroupFragment(${entry_id}, ${t.id}, `
                         + `'${opts.participant}', '${opts.full ? 'full' : ''}', ${opts.since})`,
                 'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML',
             },
@@ -2201,7 +2224,7 @@ export class LexemeEditor {
         const p = this.reviewOpts(participant, '').participant;
         const n = this.entryPendingCount(this.entryTuple(entry_id), p);
         return ['span', {class: `-review-pending-${entry_id}- text-muted small`,
-                         'hx-get': `${R}.renderReviewPending(${entry_id}, '${p}')`,
+                         'hx-get': `${this.R}.renderReviewPending(${entry_id}, '${p}')`,
                          'hx-trigger': 'reload consume', 'hx-swap': 'outerHTML'},
                 n === 0 ? 'nothing pending' : `${n} change${n===1?'':'s'} pending approval`];
     }
@@ -2238,7 +2261,7 @@ export class LexemeEditor {
                     'btn btn-sm btn-success py-0'));
             if(this.app.lexemeOps.hasApprovePermission())
                 parts.push(action.actionButton('Reject…',
-                    {kind: 'modal', dialogUrl: `${R}.revertDialog(${entry_id}, ${fact_id})`},
+                    {kind: 'modal', dialogUrl: `${this.R}.revertDialog(${entry_id}, ${fact_id})`},
                     'btn btn-sm btn-outline-danger py-0'));
         }
         parts.push(this.groupMenu(entry_id, fact_id, rf, review));
@@ -2253,13 +2276,13 @@ export class LexemeEditor {
                       review: FactReview<Assertion>): Markup {
         const items: action.ActionMenuItem[] = [
             {label: 'Comment…',
-             mode: {kind: 'modal', dialogUrl: `${R}.commentDialog(${entry_id}, ${fact_id})`}},
+             mode: {kind: 'modal', dialogUrl: `${this.R}.commentDialog(${entry_id}, ${fact_id})`}},
         ];
         if(review.state !== 'removed')
             items.push({label: 'Edit…',
-                mode: {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}, 'review')`}});
+                mode: {kind: 'modal', dialogUrl: `${this.R}.editDialog(${entry_id}, ${fact_id}, 'review')`}});
         items.push({label: 'Revert to a past value…',
-            mode: {kind: 'modal', dialogUrl: `${R}.historyDialog(${entry_id}, ${fact_id}, 'review')`}});
+            mode: {kind: 'modal', dialogUrl: `${this.R}.historyDialog(${entry_id}, ${fact_id}, 'review')`}});
         return action.actionMenu(items, {ariaLabel: `More actions for this ${rf.prompt}`});
     }
 
@@ -2278,12 +2301,12 @@ export class LexemeEditor {
                        expr: `wordwiki.lexeme.reviewApprove(${entry_id}, ${fact_id})`}});
         if(this.app.lexemeOps.hasApprovePermission())
             items.push({label: 'Reject…',
-                mode: {kind: 'modal', dialogUrl: `${R}.revertDialog(${entry_id}, ${fact_id})`}});
+                mode: {kind: 'modal', dialogUrl: `${this.R}.revertDialog(${entry_id}, ${fact_id})`}});
         items.push({label: 'Comment…',
-            mode: {kind: 'modal', dialogUrl: `${R}.commentDialog(${entry_id}, ${fact_id})`}});
+            mode: {kind: 'modal', dialogUrl: `${this.R}.commentDialog(${entry_id}, ${fact_id})`}});
         if(review.state !== 'removed')
             items.push({label: 'Edit…', mode: {kind: 'modal',
-                dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}, 'review')`}});
+                dialogUrl: `${this.R}.editDialog(${entry_id}, ${fact_id}, 'review')`}});
         return action.actionMenu(items, {ariaLabel: `Actions for this ${rf.prompt}`});
     }
 
@@ -2487,7 +2510,7 @@ export class LexemeEditor {
             // The way back to the assertion this is the history OF.
             ['div', {class: 'mb-2'},
              action.actionButton('← Edit',
-                 {kind: 'modal', dialogUrl: `${R}.editDialog(${entry_id}, ${fact_id}${m})`},
+                 {kind: 'modal', dialogUrl: `${this.R}.editDialog(${entry_id}, ${fact_id}${m})`},
                  'btn btn-sm btn-outline-secondary')],
             ['div', {class:'list-group lm-list'},
              this.collapseAutomatedRuns(versions.map(v => {
