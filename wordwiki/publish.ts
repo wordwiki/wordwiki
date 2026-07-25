@@ -12,7 +12,7 @@ import * as server from '../liminal/http-server.ts';
 import {route, hostOrAdmin} from '../liminal/security.ts';
 import {getWordWiki} from './wordwiki.ts';
 import {entriesByCategoryOf, categoryCountsOf, entriesByReferenceGroupIdOf} from './site-view.ts';
-import {PublishSource, PublishSourceBook, buildPublishSource, buildAllPublishSources, publishSourceToPublicJson, writeFullHistoryDump} from './publish-source.ts';
+import {PublishSource, PublishSourceBook, buildPublishSource, buildAllPublishSources, publishSourceToPublicJson, publishSourceSchema, writeFullHistoryDump} from './publish-source.ts';
 import type * as model from './model.ts';
 import type {GroupScanData} from './render-page-editor.ts';
 import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
@@ -572,6 +572,11 @@ export class Publish {
     // - pruneOrphanedPages() deletes only *.html files NOT in this set.
     emittedPaths: Set<string> = new Set();
 
+    /** The bundle's schema (embedded, formatVersion 2+; the code literal
+     *  for a v1 dump) - THE render authority for this publish. */
+    #schema: model.Schema|undefined;
+    get schema(): model.Schema { return this.#schema ??= publishSourceSchema(this.source); }
+
     constructor(public status: PublishStatus, public source: PublishSource,
                 public publishRoot: string = '.',
                 public options: PublishOptions = {}) {
@@ -585,14 +590,14 @@ export class Publish {
     // site views use (site-view.ts) - a dump-driven publish cannot drift.
     #entriesByCategory: Map<string, Entry[]>|undefined;
     get entriesByCategory(): Map<string, Entry[]> {
-        return this.#entriesByCategory ??= entriesByCategoryOf(this.entries, this.collator);
+        return this.#entriesByCategory ??= entriesByCategoryOf(this.schema, this.entries, this.collator);
     }
     #entriesByReferenceGroupId: Map<number, Entry>|undefined;
     get entriesByReferenceGroupId(): Map<number, Entry> {
-        return this.#entriesByReferenceGroupId ??= entriesByReferenceGroupIdOf(this.entries);
+        return this.#entriesByReferenceGroupId ??= entriesByReferenceGroupIdOf(this.schema, this.entries);
     }
     categoryCounts(): Map<string, number> {
-        return categoryCountsOf(this.entries, this.collator);
+        return categoryCountsOf(this.schema, this.entries, this.collator);
     }
     bookByFriendlyId(book: string): PublishSourceBook {
         return this.source.books.find(b => b.document.friendly_document_id === book)
@@ -692,7 +697,7 @@ export class Publish {
     warnMissingRecordings(entry: Entry): void {
         if(this.#recordingWarnedEntries.has(entry.entry_id)) return;
         this.#recordingWarnedEntries.add(entry.entry_id);
-        const schema = entryschema.parsedDictSchema();
+        const schema = this.schema;
         const name = schemaRoles.headwordFallback(schema, entry)?.text
             || `entry ${entry.entry_id}`;
         const missing = (recording: string|null|undefined) => recording == null || recording === '';
@@ -719,7 +724,7 @@ export class Publish {
 
     /** An entry's categories as shown on the public site (internal filtered). */
     publicEntryCategories(entry: Entry): string[] {
-        return schemaRoles.categoryValues(entryschema.parsedDictSchema(), entry)
+        return schemaRoles.categoryValues(this.schema, entry)
             .filter(c => c != null && c !== '' && !category.isInternalCategorySlug(c));
     }
 
@@ -1589,7 +1594,7 @@ including remixing, transforming, and building upon the material, for any non-co
     renderEntryPublicLink(rootPath: string, e: Entry, includeAudioLink: boolean=true): any {
         // TODO handle dialects here.
         const spellings = entryschema.getSpellings(e).map(s=>s.text);
-        const glosses = schemaRoles.glossTexts(entryschema.parsedDictSchema(), e);
+        const glosses = schemaRoles.glossTexts(this.schema, e);
         const sampleRecording = entryschema.getStableFeaturedRecording(e);
         //console.info('SAMPLE RECORDING IS', spellings, sampleRecording);
         return [
@@ -1644,7 +1649,7 @@ including remixing, transforming, and building upon the material, for any non-co
              resolveAudioUrl: this.resolveAudioUrl,
              valueLabel: (f: model.ScalarField, v: any) =>
                  f.name === 'speaker' ? this.speakerLabel(String(v)) : undefined},
-            entryschema.parsedDictSchema().relationsByTag[entryschema.EntryTag], entry);
+            this.schema.relationFields[0], entry);
         // renderCategoriesForEntry here.
 
         const entryCategories = this.publicEntryCategories(entry);
@@ -1913,7 +1918,7 @@ including remixing, transforming, and building upon the material, for any non-co
         for(const slug of tierSlugs)
             for(const e of this.entriesByCategory.get(slug) ?? [])
                 if(!seen.has(e.entry_id)) { seen.add(e.entry_id); out.push(e); }
-        const schema = entryschema.parsedDictSchema();
+        const schema = this.schema;
         return out.toSorted((a, b) =>
             this.collator.compare(schemaRoles.headwordSortKey(schema, a),
                                   schemaRoles.headwordSortKey(schema, b)));
@@ -1991,7 +1996,7 @@ including remixing, transforming, and building upon the material, for any non-co
     }
     
     getDefaultPublicIdBase_(entry: Entry, defaultVariant: string): string {
-        const schema = entryschema.parsedDictSchema();
+        const schema = this.schema;
 
         // --- If the entry has headwords EXACTLY in the default variant
         //     (strict - no blank pass-through, no wildcard), use the first.
@@ -2170,7 +2175,7 @@ including remixing, transforming, and building upon the material, for any non-co
                  resolveAudioUrl: this.resolveAudioUrl,
                  valueLabel: (f: model.ScalarField, v: any) =>
                      f.name === 'speaker' ? this.speakerLabel(String(v)) : undefined},
-                entryschema.parsedDictSchema().relationsByTag[entryschema.EntryTag], entry)];
+                this.schema.relationFields[0], entry)];
         return await asyncRenderToStringViaLinkeDOM(entryMarkup, false);
     }
     

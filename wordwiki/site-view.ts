@@ -17,6 +17,7 @@
  */
 
 import * as entry from './entry-schema.ts';
+import * as model from './model.ts';
 import * as schemaRoles from './schema-roles.ts';
 import type {DictionaryStore} from './dictionary-store.ts';
 import {siteConfig} from './site-config.ts';
@@ -28,9 +29,8 @@ import {siteConfig} from './site-config.ts';
 // and the headword sort key come from the schema's declarations, not
 // hard-coded field names.
 
-export function entriesByCategoryOf(entries: entry.Entry[],
+export function entriesByCategoryOf(schema: model.Schema, entries: entry.Entry[],
                                     collator: Intl.Collator): Map<string, entry.Entry[]> {
-    const schema = entry.parsedDictSchema();
     const entriesByCategoryArray: [string, entry.Entry][] =
         entries.flatMap(e=>schemaRoles.categoryValues(schema, e)
             .map(category=>[category, e] as [string, entry.Entry]));
@@ -48,9 +48,8 @@ export function entriesByCategoryOf(entries: entry.Entry[],
 }
 
 /** Every category value in use, with its entry count, in collation order. */
-export function categoryCountsOf(entries: entry.Entry[],
+export function categoryCountsOf(schema: model.Schema, entries: entry.Entry[],
                                  collator: Intl.Collator): Map<string, number> {
-    const schema = entry.parsedDictSchema();
     return new Map(Array.from(Map.groupBy(entries.
         flatMap(e=>schemaRoles.categoryValues(schema, e)), category=>category)
         .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
@@ -58,14 +57,14 @@ export function categoryCountsOf(entries: entry.Entry[],
             collator.compare(a[0]??'', b[0]??'')));
 }
 
-export function entriesForCategoryOf(entries: entry.Entry[], category: string): entry.Entry[] {
-    const schema = entry.parsedDictSchema();
+export function entriesForCategoryOf(schema: model.Schema, entries: entry.Entry[],
+                                     category: string): entry.Entry[] {
     return category === '' ? [] :
         entries.filter(e=>schemaRoles.entryHasCategory(schema, e, category));
 }
 
-export function entriesByReferenceGroupIdOf(entries: entry.Entry[]): Map<number, entry.Entry> {
-    const schema = entry.parsedDictSchema();
+export function entriesByReferenceGroupIdOf(schema: model.Schema,
+                                             entries: entry.Entry[]): Map<number, entry.Entry> {
     return new Map(entries.flatMap(e=>
         schemaRoles.referenceGroupIds(schema, e).map(id=>[id, e] as [number, entry.Entry])));
 }
@@ -94,21 +93,21 @@ export class SiteView {
     get publicEntries(): entry.Entry[] {
         return this.#publicEntries ??=
             Array.from(this.store.publishedProjection.filter(
-                e => entry.entryIsPublicIn(e, this.orthography)));
+                e => schemaRoles.entryIsPublicIn(this.store.dictSchema, e, this.orthography)));
     }
 
     get entriesByCategory(): Map<string, entry.Entry[]> {
         return this.#entriesByCategory ??=
-            entriesByCategoryOf(this.publicEntries, this.collator);
+            entriesByCategoryOf(this.store.dictSchema, this.publicEntries, this.collator);
     }
 
     /** Every category value in use, with its public-entry count, in
      *  collation order. */
     categoryCounts(): Map<string, number> {
-        return categoryCountsOf(this.publicEntries, this.collator);
+        return categoryCountsOf(this.store.dictSchema, this.publicEntries, this.collator);
     }
 
     entriesForCategory(category: string): entry.Entry[] {
-        return entriesForCategoryOf(this.publicEntries, category);
+        return entriesForCategoryOf(this.store.dictSchema, this.publicEntries, category);
     }
 }

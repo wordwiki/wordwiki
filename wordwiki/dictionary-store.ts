@@ -199,7 +199,7 @@ export class DictionaryStore {
 
     get entriesByReferenceGroupId(): Map<number, entry.Entry> {
         return this.#entriesByReferenceGroupId ??=
-            entriesByReferenceGroupIdOf(this.entries);
+            entriesByReferenceGroupIdOf(this.dictSchema, this.entries);
     }
 
     get lastAllocatedTxTimestamp() {

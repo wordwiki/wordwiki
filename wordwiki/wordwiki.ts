@@ -140,8 +140,25 @@ export class WordWiki extends LiminalApp {
     // public dictionary" goes through here; for now everything renders THE
     // public site's orthography - render-time selection by the user's
     // working orthography is the next step of the multi-orthography work.
-    site(orthography: string = entry.PUBLIC_SITE_ORTHOGRAPHY): SiteView {
+    site(orthography: string = this.publicSiteOrthography): SiteView {
         return this.store.site(orthography);
+    }
+
+    // ----- Per-dictionary site config (the config PAIRS - survey §3.1) --------
+    // Seeded from the instance literal (siteConfig) at ensure; the pairs are
+    // then the authority (an admin edit in the db wins).  The literal stays
+    // the fallback for a pre-migration db.
+    dictConfigValue(name: string): string|undefined {
+        return dictionaryConfig.readConfigValue('dict', name);
+    }
+    get publicSiteOrthography(): string {
+        return this.dictConfigValue('public_site_orthography') ?? siteConfig.publicSiteOrthography;
+    }
+    get collationLocale(): string {
+        return this.dictConfigValue('collation_locale') ?? siteConfig.collationLocale;
+    }
+    get primarySourceBook(): string {
+        return this.dictConfigValue('primary_source_book') ?? siteConfig.primarySourceBook;
     }
     /** The EDITOR's working-lane entry pool (dz 2026-07-09): the CURRENT
      *  projection (work in progress included) filtered by editorial
@@ -216,7 +233,12 @@ export class WordWiki extends LiminalApp {
         // dictionary-config.ts): the schema row synced from the literal
         // (transitional), the metadata pairs seeded once.
         dictionaryConfig.ensureDictionaryConfig('dict', entry.dictSchemaJson,
-            {slug: 'mmo'});
+            {slug: 'mmo',
+             // Per-DICTIONARY site config (survey §3.1): seeded from the
+             // instance literal once; the pairs are then the authority.
+             public_site_orthography: siteConfig.publicSiteOrthography,
+             collation_locale: siteConfig.collationLocale,
+             primary_source_book: siteConfig.primarySourceBook});
         orthography.seedOrthographies(this.orthographies);
         tag.seedTags(this.tags);
     }
@@ -445,7 +467,7 @@ export class WordWiki extends LiminalApp {
     wordView(entry_id: number, orthography: string = ''): templates.Page {
         const raw = this.entriesById.get(entry_id);
         const e = raw && orthography
-            ? filterEntryVariants(raw, [orthography]) : raw;
+            ? filterEntryVariants(raw, [orthography], this.dictSchema) : raw;
         const title = e ? entry.renderEntrySpellingsSummary(e, orthography || undefined)
                         || `Entry ${entry_id}` : `Entry ${entry_id}`;
         const lensBanner = e && orthography

@@ -78,7 +78,7 @@ export class EditorReports {
         // incorrect for the editor).
         const entries = this.app.workingEntries();
         const collator = this.app.site().collator;
-        const counts = categoryCountsOf(entries, collator);
+        const counts = categoryCountsOf(this.app.store.dictSchema, entries, collator);
         const tabled = this.app.categories.allByOrder.all({}).filter(c => counts.has(c.slug));
         const tabledSlugs = new Set(tabled.map(c => c.slug));
         const untabled = Array.from(counts.keys())
@@ -117,7 +117,7 @@ export class EditorReports {
     entriesForCategory(category?: string): any {
         category = String(category ?? '');
 
-        const entriesForCategory = entriesForCategoryOf(this.app.workingEntries(), category);
+        const entriesForCategory = entriesForCategoryOf(this.app.store.dictSchema, this.app.workingEntries(), category);
         const title = ['Entries for category ', category];
 
         // Present each word in the WORKING lane (the lane the pool was

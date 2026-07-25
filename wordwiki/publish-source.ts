@@ -34,7 +34,10 @@ import {getCompressedRecordingPath} from './audio.ts';
 import {siteConfig} from './site-config.ts';
 import type {SiteView} from './site-view.ts';
 
-export const PUBLISH_SOURCE_FORMAT_VERSION = 1;
+export const PUBLISH_SOURCE_FORMAT_VERSION = 2;
+// v1 dumps (no embedded schema) remain readable: their consumers fall back
+// to the code literal via publishSourceSchema().
+const ACCEPTED_FORMAT_VERSIONS = [1, 2];
 
 /** A user record REFERENCED from the data (recording speakers, todo
  *  assignees, ...), so every in-data username resolves WITHIN the file.
@@ -95,6 +98,12 @@ export interface PublishSourceOpts {
 
 export interface PublishSource {
     formatVersion: number;
+    /** The dictionary's SOFT SCHEMA (compact JSON - model.ts), embedded so
+     *  everything a renderer needs to interpret `entries` rides IN the
+     *  file (schema-as-data; the reference-generator story).  formatVersion
+     *  2+; a v1 dump's consumers fall back to the code literal.  Parse via
+     *  publishSourceSchema(). */
+    schema?: any;
     /** Stamped by dump-publish-source only; absent on in-memory builds
      *  (keeps the bundle itself deterministic for diffing). */
     generatedAt?: string;
@@ -150,6 +159,9 @@ export interface PublishSource {
 /** What building a PublishSource needs from the app - WordWiki satisfies
  *  this structurally. */
 export interface PublishSourceApp {
+    readonly dictSchema: model.Schema;
+    readonly publicSiteOrthography: string;
+    readonly collationLocale: string;
     site(orthography?: string): SiteView;
     getDbPurpose(): string | undefined;
     readonly categories: category.CategoryTable;
@@ -171,8 +183,9 @@ export async function buildAllPublishSources(app: PublishSourceApp): Promise<Pub
 /** Filter one entry's variant-tagged tuples to the selected orthographies
  *  (schema-driven; see PublishSourceOpts.variantContent).  Returns a NEW
  *  object tree - the live projection is never mutated. */
-export function filterEntryVariants(entry: Entry, orthographies: string[]): Entry {
-    const root = parsedDictSchema().relationsByTag[EntryTag];
+export function filterEntryVariants(entry: Entry, orthographies: string[],
+                                    schema: model.Schema = parsedDictSchema()): Entry {
+    const root = schema.relationFields[0];
     const keepTuple = (rel: model.RelationField, tuple: any): boolean => {
         const vf = rel.scalarFields.find(f => f instanceof model.VariantField) as
             model.VariantField | undefined;
@@ -213,12 +226,28 @@ export function filterEntryVariants(entry: Entry, orthographies: string[]): Entr
  *  on - and the renderer never reads internal relations, so live and
  *  from-dump publishes stay byte-identical. */
 export function publishSourceToPublicJson(source: PublishSource): string {
+    const schema = publishSourceSchema(source);
     return JSON.stringify(
-        {...source, entries: source.entries.map(stripInternalRelations)}, null, 1);
+        {...source, entries: source.entries.map(e => stripInternalRelations(e, schema))}, null, 1);
 }
 
-export function stripInternalRelations(entry: Entry): Entry {
-    const root = parsedDictSchema().relationsByTag[EntryTag];
+/** The bundle's parsed schema (formatVersion 2+); the code literal for a
+ *  v1 dump.  Memoized per source object. */
+const sourceSchemas = new WeakMap<object, model.Schema>();
+export function publishSourceSchema(source: PublishSource): model.Schema {
+    let s = sourceSchemas.get(source);
+    if(!s) {
+        s = source.schema !== undefined
+            ? model.Schema.parseSchemaFromCompactJson('publish-source.schema', source.schema)
+            : parsedDictSchema();
+        sourceSchemas.set(source, s);
+    }
+    return s;
+}
+
+export function stripInternalRelations(entry: Entry,
+                                       schema: model.Schema = parsedDictSchema()): Entry {
+    const root = schema.relationFields[0];
     const strip = (rel: model.RelationField, tuple: any): any => {
         const out = {...tuple};
         for(const child of rel.relationFields) {
@@ -237,7 +266,7 @@ export function stripInternalRelations(entry: Entry): Entry {
 
 export async function buildPublishSource(app: PublishSourceApp,
                                          opts: PublishSourceOpts = {}): Promise<PublishSource> {
-    const orthographies = opts.orthographies ?? [siteConfig.publicSiteOrthography];
+    const orthographies = opts.orthographies ?? [app.publicSiteOrthography];
     // The primary orthography's display name + URL path segment come from
     // the TABLE (data, not code - the segment lands in URLs forever).
     const primaryRow = (() => {
@@ -263,9 +292,9 @@ export async function buildPublishSource(app: PublishSourceApp,
         orthographies.length === 1
             ? site.publicEntries
             : site.store.publishedProjection.filter(e =>
-                orthographies.some(o => entryIsPublicIn(e, o)));
+                orthographies.some(o => entryIsPublicIn(e, o)));   // (delegates to the store's schema via entry-schema)
     if(variantContent === 'selected')
-        entries = entries.map(e => filterEntryVariants(e, orthographies));
+        entries = entries.map(e => filterEntryVariants(e, orthographies, app.dictSchema));
     const books: PublishSourceBook[] =
         selectAllScannedDocuments().all({}).map(document => {
             const totalPages = maxPageNumberForDocument()
@@ -328,13 +357,14 @@ export async function buildPublishSource(app: PublishSourceApp,
     })();
     return {
         formatVersion: PUBLISH_SOURCE_FORMAT_VERSION,
+        schema: app.dictSchema.schemaToCompactJson(),
         orthography: orthographies[0],
         orthographyName,
         orthographySegment,
         edition,
         orthographies,
         variantContent,
-        collationLocale: siteConfig.collationLocale,
+        collationLocale: app.collationLocale,
         dbPurpose: app.getDbPurpose() ?? 'unmarked',
         // In the default single-orthography/'all' shape this is the live
         // view's entries array ITSELF, not a copy: the publish staleness
@@ -350,8 +380,9 @@ export async function buildPublishSource(app: PublishSourceApp,
 
 /** Every distinct non-empty AudioField value in the entries, schema-driven
  *  (recordings, example recordings, and any future audio field), sorted. */
-export function collectAudioSources(entries: Entry[]): string[] {
-    const root = parsedDictSchema().relationsByTag[EntryTag];
+export function collectAudioSources(entries: Entry[],
+                                    schema: model.Schema = parsedDictSchema()): string[] {
+    const root = schema.relationFields[0];
     const out = new Set<string>();
     const walk = (rel: model.RelationField, tuple: any): void => {
         for(const f of rel.scalarFields)
@@ -397,8 +428,8 @@ export function publishSourceFromJson(text: string): PublishSource {
         source.edition ??= (source.publicSearchEnabled === false ? 'preview' : 'full');
         delete source.publicSearchEnabled;
     }
-    if(source?.formatVersion !== PUBLISH_SOURCE_FORMAT_VERSION)
+    if(!ACCEPTED_FORMAT_VERSIONS.includes(source?.formatVersion))
         throw new Error(`unsupported publish-source formatVersion '${source?.formatVersion}' ` +
-                        `(this reader understands ${PUBLISH_SOURCE_FORMAT_VERSION})`);
+                        `(this reader understands ${ACCEPTED_FORMAT_VERSIONS.join(', ')})`);
     return source as PublishSource;
 }
