@@ -499,9 +499,15 @@ honor:
   memoizes by SQL text, one statement per query x table),
   newLexemeAction schema-driven, ensure DDL-loops the discovered
   dictionaries.  One-shot V1 migration tools stay 'dict' by design.
-  NEXT: the store map (Map<table, DictionaryStore> from discovery,
-  default-delegating), then the dict() facade + new-dictionary CLI +
-  the toy-second-dictionary live-edit demo.
+  STEP 2 DONE (2026-07-24): the store map (lazy Map<table,
+  DictionaryStore>; `store` = the default via an API-identical
+  getter; storeFor()/dictionaries(); the projection getters shed the
+  last 'dct'/'.entry' literals - table from schema tag, key from the
+  entry relation's name); createDictionary + the new-dictionary CLI;
+  and the COEXISTENCE TEST - a pure-data toy dictionary created,
+  loaded, and edited through its own store beside MMO in one db.
+  NEXT: the dict() route facade (per-dictionary editor URLs), then
+  vocabulary scoping/permissions as needed.
 - **Phase 4 — publish + cross-search (M-L).**  Per-dictionary peer
   trees; per-dictionary home/about content via the site editor
   (components package — budget hardening, it's raw); LIVE PREVIEW
