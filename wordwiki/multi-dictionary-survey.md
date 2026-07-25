@@ -578,11 +578,45 @@ honor:
   committed watson/ files are PERMANENT test pins: 103-marker
   MDF.typ + all 34,092 records across the three dictionaries
   recover trees with ZERO problems.
-  NEXT: the .typ→wordwiki-schema mapping (markers → relations/
-  field kinds + $bind allocation, toJavascriptIdentifier for
-  digit-initial markers like 1d, the root-level \lx headword
-  decision) and the record-tree→assertions loader into a
-  new-dictionary pair.
+  THE TWO-STEP IMPORT DESIGN (converged dz + review 2026-07-25):
+  STEP 1 - auto-import (no user intervention; encoding is the one
+  CLI flag): the schema is a PURE FUNCTION OF THE .TYP (stable per
+  .typ, no data sniffing) - every marker = a RELATION with one
+  string content field (repeated markers = tuples, naturally);
+  nesting from mkrOverThis; \nam = $prompt; storage tags = the raw
+  marker names, relation names via toJavascriptIdentifier (1d...);
+  the record marker becomes the entry root (pk only) with its
+  content in ONE synthesized child relation (satisfies the
+  titles-on-descendants renderer convention); depth validated
+  against the assertion path capacity (report-and-refuse).  Raw
+  dictionaries are IMPORT MIRRORS: stamped '~sfm-import' + an
+  import-generation config pair; a banner marks them
+  edit-elsewhere; re-import refuses if post-import assertions exist.
+  STEP 2 - transform raw → RICH (accurate typings, enums, roles,
+  render shapes, orthography LANES - lanes are a mapping concept,
+  correctly absent from raw).  The MAPPING is a document: target
+  schema + a SMALL rule vocabulary (copy/rename-path, reparent,
+  assign-orthography-lane, enum-recode, parse-source for the
+  "Rand 1888, p N" citations, drop-with-report), shaped for
+  MULTIPLE sources from day one (the real rich-rand reunifies
+  raw + Ng + Lk with partition provenance).  AUTHORITY = the
+  TARGET's own X_dict_config (key 'transform') - "fully recreate
+  the target" means the ASSERTION TABLE ONLY, the config pair is
+  the dictionary's durable identity (slug/license/schema/recipe),
+  which is what makes the import available in the SAAS (data-only
+  customization, §2.9); the FILE is an editing surface via
+  dump-mapping/load-mapping [--apply] with a gate (validated
+  against the source schema hash + target schema), exactly the
+  dump-schema pattern.  DETERMINISTIC TARGET IDS (1:1 rules reuse
+  the source fact id; fan-out derives by hash(source id, rule)) so
+  recreates look like in-place updates to everything outside -
+  copied-from links and cherry-picks survive iteration, and the
+  someday-merge (the offline-fork machinery) becomes tractable.
+  Re-run rule: edits on the target (any non-importer assertion)
+  BLOCK the transform, symmetrically with re-import; fancy merges
+  are explicitly out of scope for now.  Every run ends with the
+  completeness accounting (unmapped markers w/ counts, drops,
+  problems) + a diff against the previous run's summary.
 - **Then:** the dictionary→dictionary transform facility (raw-rand →
   reshaped-rand, §4), copy-with-provenance UI, batch matching,
   starring, and the reference-implementation static generator
