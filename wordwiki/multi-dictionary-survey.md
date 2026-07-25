@@ -493,6 +493,15 @@ honor:
   through the ~14 raw-SQL files; dict() route facade + lexemeLink
   parameterization; vocabulary dictionary-scoping; permissions.
   Second dictionary demo: a toy schema loaded from data, edited live.
+  STATUS (2026-07-24): STEP 1 DONE — DictionaryStore(assertionTable
+  option), WordWiki.assertionTable seam, every LIVE raw-SQL path
+  interpolates the table (queries stay PREPARED: the db layer
+  memoizes by SQL text, one statement per query x table),
+  newLexemeAction schema-driven, ensure DDL-loops the discovered
+  dictionaries.  One-shot V1 migration tools stay 'dict' by design.
+  NEXT: the store map (Map<table, DictionaryStore> from discovery,
+  default-delegating), then the dict() facade + new-dictionary CLI +
+  the toy-second-dictionary live-edit demo.
 - **Phase 4 — publish + cross-search (M-L).**  Per-dictionary peer
   trees; per-dictionary home/about content via the site editor
   (components package — budget hardening, it's raw); LIVE PREVIEW
