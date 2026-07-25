@@ -23,6 +23,7 @@
  */
 import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField } from "../liminal/table.ts";
 import { db } from "../liminal/db.ts";
+import * as schemaRoles from './schema-roles.ts';
 import { path } from "../liminal/serializable.ts";
 import { block, plural } from "../liminal/strings.ts";
 import { Markup } from "../liminal/markup.ts";
@@ -280,9 +281,10 @@ export class TagTable extends Table<Tag> {
     // worklist.  Sorted by spelling.
     private entriesForSlug(slug: string): Array<{e: entrySchema.Entry, tags: entrySchema.Tag[]}> {
         if(!this.app) return [];
+        const schema = entrySchema.parsedDictSchema();
         const out: Array<{e: entrySchema.Entry, tags: entrySchema.Tag[]}> = [];
         for(const e of this.app.entriesById.values()) {
-            const tags = e.tag.filter(t => t.tag === slug);
+            const tags = schemaRoles.workflowTagTuples(schema, e, slug) as entrySchema.Tag[];
             if(tags.length > 0) out.push({e, tags});
         }
         return out.sort((a, b) => TAG_ENTRY_COLLATOR.compare(
@@ -300,7 +302,7 @@ export class TagTable extends Table<Tag> {
                 : ['div', {class: 'list-group lm-list'},
                    rows.map(({e, tags}) => {
                        const spelling = entrySchema.renderEntrySpellingsSummary(e);
-                       const glosses = e.subentry.flatMap(s => s.gloss.map(g => g.gloss))
+                       const glosses = schemaRoles.glossTexts(entrySchema.parsedDictSchema(), e)
                            .filter(Boolean).join(' / ');
                        // The tag's own facts on this word (value / assignee /
                        // done) - what makes a todo tag read as a worklist.

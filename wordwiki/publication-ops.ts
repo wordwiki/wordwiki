@@ -30,8 +30,18 @@ export interface OpResult {
     updated: Assertion[];   // predecessors mutated in place to UPDATE
 }
 
+/** The workspace's ONE table.  These ops are per-dictionary by nature; a
+ *  multi-table workspace (several dictionaries in one VersionedDb) would
+ *  need the table passed explicitly - fail loudly rather than guess. */
+function rootTable(vdb: VersionedDb) {
+    const tables = [...vdb.tables.values()];
+    if(tables.length !== 1)
+        throw new Error(`publication ops need the one-table workspace - got ${tables.length} tables`);
+    return tables[0];
+}
+
 function tupleOf(vdb: VersionedDb, factId: number): VersionedTuple {
-    const t = vdb.getTableByTag("dct").getTupleById(factId);
+    const t = rootTable(vdb).getTupleById(factId);
     if (!t) throw new Error(`no fact ${factId}`);
     return t;
 }
@@ -134,7 +144,7 @@ export function comment(vdb: VersionedDb, factId: number, commenter: string, not
  *  fact with no published-current version can have no published descendants. */
 export function publishedView(vdb: VersionedDb): VisibleFact[] {
     const out: VisibleFact[] = [];
-    const root = vdb.getTableByTag("dct");
+    const root = rootTable(vdb);
     const walk = (tuple: VersionedTuple, path: string) => {
         for (const rel of Object.values(tuple.childRelations))
             for (const child of rel.tuples.values()) {
@@ -154,7 +164,7 @@ export function publishedView(vdb: VersionedDb): VisibleFact[] {
  *  every fact (pending-ness is independent of ancestors). Sorted by path. */
 export function pending(vdb: VersionedDb): string[] {
     const out: string[] = [];
-    const root = vdb.getTableByTag("dct");
+    const root = rootTable(vdb);
     const walk = (tuple: VersionedTuple, path: string) => {
         for (const rel of Object.values(tuple.childRelations))
             for (const child of rel.tuples.values()) {

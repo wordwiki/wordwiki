@@ -19,6 +19,7 @@ import { writeUTF8FileIfContentsChanged } from '../liminal/ioutils.ts';
 import { walk as fsWalk, exists as fsExists } from "std/fs/mod.ts";
 import { resolve as pathResolve } from "std/path/mod.ts";
 import * as entryschema from './entry-schema.ts';
+import * as schemaRoles from './schema-roles.ts';
 import * as category from './category.ts';
 import {Entry} from './entry-schema.ts';
 import * as audio from './audio.ts';  // REMOVE_FOR_WEB
@@ -691,25 +692,34 @@ export class Publish {
     warnMissingRecordings(entry: Entry): void {
         if(this.#recordingWarnedEntries.has(entry.entry_id)) return;
         this.#recordingWarnedEntries.add(entry.entry_id);
-        const name = entry.spelling?.[0]?.text || `entry ${entry.entry_id}`;
+        const schema = entryschema.parsedDictSchema();
+        const name = schemaRoles.headwordFallback(schema, entry)?.text
+            || `entry ${entry.entry_id}`;
         const missing = (recording: string|null|undefined) => recording == null || recording === '';
-        for(const r of entry.recording ?? [])
-            if(missing(r.recording))
-                this.status.warnings.push(
-                    {text: `Entry '${name}': recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`,
-                     entryId: entry.entry_id});
-        for(const sub of entry.subentry ?? [])
-            for(const ex of sub.example ?? [])
-                for(const r of ex.example_recording ?? [])
-                    if(missing(r.recording))
-                        this.status.warnings.push(
-                            {text: `Entry '${name}': example recording${r.speaker ? ` by ${r.speaker}` : ''} has no audio file`,
-                             entryId: entry.entry_id});
+        // EVERY audio-bearing relation the schema declares, the recording
+        // ROLE first (the old fixed order), one warning per empty
+        // recording.  'example_recording' labels as 'example recording' -
+        // the relation name is the label vocabulary.
+        const recRole = schema.relationsByRole.recording;
+        const audioRels = schemaRoles.audioRelations(schema)
+            .toSorted((a, b) => (a === recRole ? 0 : 1) - (b === recRole ? 0 : 1));
+        for(const rel of audioRels) {
+            const audioField = schemaRoles.audioFieldName(rel);
+            const speakerField = schemaRoles.speakerFieldName(rel);
+            const label = rel.name.replaceAll('_', ' ');
+            for(const r of schemaRoles.collectTuples(entry, rel)) {
+                const speaker = speakerField !== undefined ? r[speakerField] : undefined;
+                if(missing(r[audioField]))
+                    this.status.warnings.push(
+                        {text: `Entry '${name}': ${label}${speaker ? ` by ${speaker}` : ''} has no audio file`,
+                         entryId: entry.entry_id});
+            }
+        }
     }
 
     /** An entry's categories as shown on the public site (internal filtered). */
     publicEntryCategories(entry: Entry): string[] {
-        return entry.subentry.flatMap(s=>s.category.flatMap(c=>c.category))
+        return schemaRoles.categoryValues(entryschema.parsedDictSchema(), entry)
             .filter(c => c != null && c !== '' && !category.isInternalCategorySlug(c));
     }
 
@@ -1579,7 +1589,7 @@ including remixing, transforming, and building upon the material, for any non-co
     renderEntryPublicLink(rootPath: string, e: Entry, includeAudioLink: boolean=true): any {
         // TODO handle dialects here.
         const spellings = entryschema.getSpellings(e).map(s=>s.text);
-        const glosses = e.subentry.flatMap(se=>se.gloss.map(gl=>gl.gloss));
+        const glosses = schemaRoles.glossTexts(entryschema.parsedDictSchema(), e);
         const sampleRecording = entryschema.getStableFeaturedRecording(e);
         //console.info('SAMPLE RECORDING IS', spellings, sampleRecording);
         return [
@@ -1903,9 +1913,10 @@ including remixing, transforming, and building upon the material, for any non-co
         for(const slug of tierSlugs)
             for(const e of this.entriesByCategory.get(slug) ?? [])
                 if(!seen.has(e.entry_id)) { seen.add(e.entry_id); out.push(e); }
+        const schema = entryschema.parsedDictSchema();
         return out.toSorted((a, b) =>
-            this.collator.compare(
-                a.spelling[0]?.text ?? '', b.spelling[0]?.text ?? ''));
+            this.collator.compare(schemaRoles.headwordSortKey(schema, a),
+                                  schemaRoles.headwordSortKey(schema, b)));
     }
 
     async publishTopWords(): Promise<void> {
@@ -1980,19 +1991,19 @@ including remixing, transforming, and building upon the material, for any non-co
     }
     
     getDefaultPublicIdBase_(entry: Entry, defaultVariant: string): string {
+        const schema = entryschema.parsedDictSchema();
 
-        // --- If the entry has spellings in the default variant, use the first
-        //     such spelling as the base for the public id.
+        // --- If the entry has headwords EXACTLY in the default variant
+        //     (strict - no blank pass-through, no wildcard), use the first.
         const firstSpellingInDefaultVariant =
-            entry.spelling.filter(s=>s.variant === defaultVariant)[0]?.text;
+            schemaRoles.firstHeadwordTextInExactLane(schema, entry, defaultVariant);
         if(firstSpellingInDefaultVariant)
             return firstSpellingInDefaultVariant;
 
-        // --- Otherwise, if the entry has a spelling in any variant, use the first
-        //     such spelling as the base for the public id.
-        const firstSpellingInAnyVariant = entry.spelling[0];
-        if(firstSpellingInAnyVariant?.text)
-            return firstSpellingInAnyVariant.text
+        // --- Otherwise, the first headword in any lane.
+        const firstSpellingInAnyVariant = schemaRoles.headwordFallback(schema, entry)?.text;
+        if(firstSpellingInAnyVariant)
+            return firstSpellingInAnyVariant;
 
         // --- Otherwise, use the entryId converted to a string as the base for the
         //     public id.

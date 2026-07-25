@@ -31,6 +31,7 @@
  * the same longevity goal as the assertions, so they ride along in exports.
  */
 import { db, boolnum } from "../liminal/db.ts";
+import * as schemaRoles from './schema-roles.ts';
 import { Table, PrimaryKeyField, BooleanField, StringField, MarkdownField } from "../liminal/table.ts";
 import { path } from "../liminal/serializable.ts";
 import { block, plural } from "../liminal/strings.ts";
@@ -367,12 +368,12 @@ export class CategoryTable extends Table<Category> {
     // entry's tags).  Sorted by spelling.
     private entriesForSlug(slug: string): entrySchema.Entry[] {
         if(!this.app) return [];
+        const schema = entrySchema.parsedDictSchema();
         const all = Array.from(this.app.entriesById.values());
-        const has = (e: entrySchema.Entry) =>
-            e.subentry.some(s => s.category.some(c => c.category === slug));
-        return all.filter(has).sort((a, b) => nameCollator.compare(
-            entrySchema.renderEntrySpellingsSummary(a),
-            entrySchema.renderEntrySpellingsSummary(b)));
+        return all.filter(e => schemaRoles.entryHasCategory(schema, e, slug))
+            .sort((a, b) => nameCollator.compare(
+                entrySchema.renderEntrySpellingsSummary(a),
+                entrySchema.renderEntrySpellingsSummary(b)));
     }
 
     private renderCategoryEntries(c: Category): Markup {
@@ -388,7 +389,7 @@ export class CategoryTable extends Table<Category> {
 
     private renderCategoryEntryRow(c: Category, e: entrySchema.Entry): Markup {
         const spelling = entrySchema.renderEntrySpellingsSummary(e);
-        const glosses = e.subentry.flatMap(s => s.gloss.map(g => g.gloss))
+        const glosses = schemaRoles.glossTexts(entrySchema.parsedDictSchema(), e)
             .filter(Boolean).join(' / ');
         // Rows navigate (to the lexeme editor); the remove is a confirm
         // button - it mutates ASSERTION data, so it goes through the

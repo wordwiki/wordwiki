@@ -180,6 +180,52 @@ export function referenceGroupIds(schema: model.Schema, entryJson: any): number[
     return collectTuples(entryJson, rel).map(d => d[field]);
 }
 
+// --- Workflow tags ---------------------------------------------------------------
+
+/** The entry's workflowTag tuples, optionally only those whose tag value is
+ *  `slug`. */
+export function workflowTagTuples(schema: model.Schema, entryJson: any, slug?: string): any[] {
+    const rel = schema.relationsByRole.workflowTag;
+    if(!rel) return [];
+    const field = roleValueField(rel);
+    const tuples = collectTuples(entryJson, rel);
+    return slug === undefined ? tuples : tuples.filter(t => t[field] === slug);
+}
+
+// --- Audio-bearing relations ------------------------------------------------------
+
+/** Every relation carrying an audio field (entry recordings, example
+ *  recordings, whatever a schema declares) - for sweeps like the publish
+ *  missing-audio warnings. */
+export function audioRelations(schema: model.Schema): model.RelationField[] {
+    return schema.descendantAndSelfRelations.filter(r =>
+        r.scalarFields.some(f => f instanceof model.AudioField));
+}
+
+export function audioFieldName(rel: model.RelationField): string {
+    return rel.scalarFields.find(f => f instanceof model.AudioField)?.name
+        ?? panic(`relation '${rel.name}' has no audio field`);
+}
+
+/** The speaker-style label field: the first enum that is not the
+ *  orthography (speaker on the MMO recording relations). */
+export function speakerFieldName(rel: model.RelationField): string|undefined {
+    return rel.scalarFields.find(f =>
+        f instanceof model.EnumField && !(f instanceof model.VariantField))?.name;
+}
+
+/** The first headword text stored EXACTLY in `lane` (strict equality - the
+ *  public-id rule: no blank pass-through, no wildcard), undefined if none. */
+export function firstHeadwordTextInExactLane(schema: model.Schema, entryJson: any,
+                                             lane: string): string|undefined {
+    const rel = headwordRelation(schema);
+    if(!rel) return undefined;
+    const v = variantFieldName(rel);
+    const hit = collectTuples(entryJson, rel)
+        .filter(s => v !== undefined && s[v] === lane)[0];
+    return hit !== undefined ? hit[textFieldName(rel)] : undefined;
+}
+
 // --- Featured recording ---------------------------------------------------------
 
 /** One stable recording tuple to feature (choice keyed on the entry's
