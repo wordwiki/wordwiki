@@ -7,6 +7,7 @@ import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as orthography from './orthography.ts';
 import * as entryMeta from './render-entry-meta.ts';
+import * as schemaRoles from './schema-roles.ts';
 import * as timestamp from '../liminal/timestamp.ts';
 import * as templates from './templates.ts';
 import * as orderkey from '../liminal/orderkey.ts';
@@ -1043,20 +1044,17 @@ export class WordWiki extends LiminalApp {
         const pool = this.workingEntries();
         let matches: entry.Entry[] = [];
         if (search !== '') {
-            const matchesSet:Set<entry.Entry> = new Set();
-            for(const entry of pool) {
-                for(const spelling of entry.spelling) {
-                    if(searchRegex.test(spelling.text))
-                        matchesSet.add(entry);
-                }
-                for(const subentry of entry.subentry) {
-                    for(const gloss of subentry.gloss) {
-                        if(searchRegex.test(gloss.gloss))
-                            matchesSet.add(entry);
-                    }
-                }
-            }
-            matches = Array.from(matchesSet.values());
+            // Role-driven (schema-roles.ts): match against every headword
+            // lane's text and every gloss - by the schema's titleRole
+            // declarations, not hard-coded relation names.
+            const schema = this.dictSchema;
+            const hw = schemaRoles.headwordRelation(schema);
+            const gl = schemaRoles.glossRelation(schema);
+            matches = pool.filter(e =>
+                (hw && schemaRoles.collectTuples(e, hw).some(
+                    s => searchRegex.test(schemaRoles.tupleText(hw, s))))
+                || (gl && schemaRoles.collectTuples(e, gl).some(
+                    g => searchRegex.test(schemaRoles.tupleText(gl, g)))));
         } else {
             matches = pool;
         }

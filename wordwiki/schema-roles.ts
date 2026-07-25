@@ -51,6 +51,11 @@ function variantFieldName(rel: model.RelationField): string|undefined {
     return rel.scalarFields.find(f => f instanceof model.VariantField)?.name;
 }
 
+/** The tuple's text under its relation's text field (see textFieldName). */
+export function tupleText(rel: model.RelationField, tuple: any): string {
+    return tuple[textFieldName(rel)];
+}
+
 /** The relation's text-carrying field: the first non-key, non-variant
  *  string scalar (the shape every text-bearing leaf relation here has). */
 function textFieldName(rel: model.RelationField): string {
@@ -135,6 +140,44 @@ export function entryIsPublicIn(schema: model.Schema, entryJson: any, orthograph
     const v = variantFieldName(gate);
     return collectTuples(entryJson, gate)
         .some(p => variantMatches(v !== undefined ? p[v] : undefined, orthography));
+}
+
+// --- Category + document references -------------------------------------------
+
+/** The entry's category slugs (category role), in tuple order. */
+export function categoryValues(schema: model.Schema, entryJson: any): string[] {
+    const rel = schema.relationsByRole.category;
+    if(!rel) return [];
+    const field = roleValueField(rel);
+    return collectTuples(entryJson, rel).map(c => c[field]);
+}
+
+export function entryHasCategory(schema: model.Schema, entryJson: any, category: string): boolean {
+    const rel = schema.relationsByRole.category;
+    if(!rel) return false;
+    const field = roleValueField(rel);
+    return collectTuples(entryJson, rel).some(c => c[field] === category);
+}
+
+/** The headword sort key: the FIRST headword tuple's text, any lane (the
+ *  old `spelling[0]?.text ?? ''`). */
+export function headwordSortKey(schema: model.Schema, entryJson: any): string {
+    return headwordFallback(schema, entryJson)?.text ?? '';
+}
+
+/** The documentReference role's bounding-group id field: the scalar marked
+ *  $shape 'boundingGroup' (the same marker the renderers dispatch on). */
+function boundingGroupFieldName(rel: model.RelationField): string {
+    return rel.scalarFields.find(f => f.style.$shape === 'boundingGroup')?.name
+        ?? panic(`relation '${rel.name}' has no boundingGroup field`);
+}
+
+/** Every referenced bounding-group id on the entry, in tuple order. */
+export function referenceGroupIds(schema: model.Schema, entryJson: any): number[] {
+    const rel = schema.relationsByRole.documentReference;
+    if(!rel) return [];
+    const field = boundingGroupFieldName(rel);
+    return collectTuples(entryJson, rel).map(d => d[field]);
 }
 
 // --- Featured recording ---------------------------------------------------------

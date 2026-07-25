@@ -17,18 +17,23 @@
  */
 
 import * as entry from './entry-schema.ts';
+import * as schemaRoles from './schema-roles.ts';
 import type {DictionaryStore} from './dictionary-store.ts';
 import {siteConfig} from './site-config.ts';
 
 // --- The derivations, as PURE functions over (entries, collator) -----------
 // Shared by the live SiteView and the PublishSource index (publish-source.ts)
 // so the site and a publish driven from a dump can never drift.
+// Role-driven (schema-roles.ts): the category/documentReference relations
+// and the headword sort key come from the schema's declarations, not
+// hard-coded field names.
 
 export function entriesByCategoryOf(entries: entry.Entry[],
                                     collator: Intl.Collator): Map<string, entry.Entry[]> {
+    const schema = entry.parsedDictSchema();
     const entriesByCategoryArray: [string, entry.Entry][] =
-        entries.flatMap(e=>e.subentry.flatMap(s=>
-            s.category.flatMap(c=>c.category).map(category=>[category, e] as [string, entry.Entry])));
+        entries.flatMap(e=>schemaRoles.categoryValues(schema, e)
+            .map(category=>[category, e] as [string, entry.Entry]));
 
     const grouped: Map<string, [string, entry.Entry][]> =
         Map.groupBy(entriesByCategoryArray, a=>a[0])
@@ -38,34 +43,31 @@ export function entriesByCategoryOf(entries: entry.Entry[],
             [category, ent.map(e=>e[1])
                 .toSorted((a: entry.Entry, b: entry.Entry) =>
                     // TODO: pick spelling for sort better! (+locale etc)
-                    collator.compare((a.spelling[0]?.text)??'',
-                                     (b.spelling[0]?.text)??''))]));
+                    collator.compare(schemaRoles.headwordSortKey(schema, a),
+                                     schemaRoles.headwordSortKey(schema, b)))]));
 }
 
 /** Every category value in use, with its entry count, in collation order. */
 export function categoryCountsOf(entries: entry.Entry[],
                                  collator: Intl.Collator): Map<string, number> {
+    const schema = entry.parsedDictSchema();
     return new Map(Array.from(Map.groupBy(entries.
-        flatMap(e=>
-            e.subentry.flatMap(s=>
-                s.category.flatMap(c=>
-                    c.category))), category=>category)
+        flatMap(e=>schemaRoles.categoryValues(schema, e)), category=>category)
         .entries()).map(([category, insts]) => [category, insts.length] as [string, number])
         .toSorted((a: [string, number], b: [string, number])=>
             collator.compare(a[0]??'', b[0]??'')));
 }
 
 export function entriesForCategoryOf(entries: entry.Entry[], category: string): entry.Entry[] {
+    const schema = entry.parsedDictSchema();
     return category === '' ? [] :
-        entries.filter(
-            entry=>entry.subentry.some(
-                subentry=>subentry.category.some(
-                    cat=>cat.category === category)));
+        entries.filter(e=>schemaRoles.entryHasCategory(schema, e, category));
 }
 
 export function entriesByReferenceGroupIdOf(entries: entry.Entry[]): Map<number, entry.Entry> {
-    return new Map(entries.flatMap(e=>e.subentry.flatMap(s=>
-        s.document_reference.map(d=>[d.bounding_group_id, e] as [number, entry.Entry]))));
+    const schema = entry.parsedDictSchema();
+    return new Map(entries.flatMap(e=>
+        schemaRoles.referenceGroupIds(schema, e).map(id=>[id, e] as [number, entry.Entry])));
 }
 
 export class SiteView {
