@@ -543,6 +543,15 @@ honor:
   metaEditPage renders + supersedeFields mutates the toy table
   through full dispatch).  Generic fixes surfaced: editor entry root
   from schema structure; no publicGate role = no Public row.
+  STEP 5 DONE (2026-07-25): routeterp DYNAMIC route members (dz) -
+  the opt-in dynamicRouteMember symbol hook ({value, perm, mutates?}
+  per identifier name; default deny, same Permission machinery,
+  static declarations win; unit-tested at the interpreter level) -
+  and the dotted dictionaries namespace mounted on it:
+  /ww/wordwiki.dicts.toy.lexeme.entryPage(...) is the canonical URL
+  form (dict('toy') stays a call-form alias).  NOTE for the ortho
+  application of the same idea: orthography slugs contain '-' (not
+  identifier-shaped) - needs a naming decision first.
   REMAINING in phase 3: per-dictionary workflow sections when a
   facade dictionary declares tag/log roles; vocabulary scoping +
   per-dictionary permissions as needed; the deferred phase-2
