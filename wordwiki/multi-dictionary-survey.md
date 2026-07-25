@@ -506,8 +506,20 @@ honor:
   entry relation's name); createDictionary + the new-dictionary CLI;
   and the COEXISTENCE TEST - a pure-data toy dictionary created,
   loaded, and edited through its own store beside MMO in one db.
-  NEXT: the dict() route facade (per-dictionary editor URLs), then
-  vocabulary scoping/permissions as needed.
+  STEP 3 DONE (2026-07-24): the dict() route facade -
+  wordwiki.dict('toy').home()/.word(id) dispatch through routeterp
+  (intermediate calls evaluate; a fresh stateless DictionaryPages
+  handle per dispatch); the browsable per-dictionary face (word list
+  + read-only word view) renders GENERICALLY from the dictionary's
+  own schema; entriesById/activeEntries shed their last literals.
+  Renderer convention noted: title roles live on DESCENDANT
+  relations of the entry root (the root-level \lx shape is a
+  phase-5 .typ-mapping decision).
+  REMAINING in phase 3: the full per-dictionary EDITOR (narrow
+  LexemeEditor's app surface to an interface a facade can satisfy),
+  vocabulary scoping + per-dictionary permissions as needed, and the
+  deferred phase-2 residuals (cosmetic primarySourceBook prompt
+  reads, typed-helper default lane).
 - **Phase 4 — publish + cross-search (M-L).**  Per-dictionary peer
   trees; per-dictionary home/about content via the site editor
   (components package — budget hardening, it's raw); LIVE PREVIEW
