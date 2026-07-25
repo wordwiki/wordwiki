@@ -51,6 +51,7 @@ import {Node, Identifier, Literal, ArrayExpression, ObjectExpression,
         MemberExpression, CallExpression, NewExpression, Property,
         Expression, SpreadElement, PrivateIdentifier} from "npm:acorn@8.11.3";
 import {routePermissionOf, routeIsMutation, current as currentCtx, type SecurityContext,
+        type Permission,
         route, routeMutation, authenticated, publicRoute, selfArg, run as runAs} from "./security.ts";
 
 export type JsNode = Node;
@@ -118,6 +119,29 @@ export class RouteMethodError extends Error {
 }
 
 const ANON: SecurityContext = {actorId: undefined, roles: new Set()};
+
+// --- DYNAMIC route members (dz 2026-07-25) -----------------------------------
+//
+// Some route namespaces' member NAMES are runtime data - the dictionaries
+// (wordwiki.dicts.toy.lexeme...), one day the orthographies.  An object
+// opts in by implementing this well-known symbol: given an identifier name
+// from the route expression, return the member's value + the Permission
+// gating it (and whether it mutates), or undefined for the ordinary
+// undeclared error.  THE TRUST MODEL IS UNCHANGED: reaching a member still
+// bottoms out in an explicit declaration - here a programmatic one made by
+// the class author, default-deny, enforced through the same Permission
+// machinery.  The symbol itself is unreachable from a route expression
+// (member names are Identifiers), and STATIC @route declarations take
+// precedence (mount dynamic namespaces on dedicated objects for collision
+// hygiene).  The hook may be called twice per access (authorize +
+// resolve): it must be cheap, idempotent and side-effect-free (return a
+// fresh stateless handle).
+export const dynamicRouteMember = Symbol('dynamicRouteMember');
+export interface DynamicRouteResolution {
+    value: any;
+    perm: Permission;
+    mutates?: boolean;
+}
 
 export class RouteEval {
     ticksUsed = 0;
@@ -192,7 +216,22 @@ export class RouteEval {
     // Capability check + value resolution, NO permission run - that is
     // authorize()'s job (deferred to the call site so a route perm can see the
     // call args).
+    /** The dynamic resolution for (obj, name), if the object opts in and
+     *  claims the name - static declarations always win. */
+    private dynamicResolution(obj: any, name: PropertyKey): DynamicRouteResolution|undefined {
+        if(typeof name !== 'string') return undefined;
+        if(routePermissionOf(obj, name) !== undefined) return undefined;   // static wins
+        const hook = obj?.[dynamicRouteMember];
+        if(!(hook instanceof Function)) return undefined;
+        return hook.call(obj, name) ?? undefined;
+    }
+
     resolveMember(obj: any, name: PropertyKey): any {
+        const dyn = this.dynamicResolution(obj, name);
+        if(dyn !== undefined) {
+            const v = dyn.value;
+            return (v instanceof Function) ? v.bind(obj) : v;
+        }
         const declared = routePermissionOf(obj, name) !== undefined;
         if(!declared) {
             if(this.policy === 'strict')
@@ -212,12 +251,14 @@ export class RouteEval {
     // call args when authorizing a call (undefined for plain navigation).
     authorize(obj: any, name: PropertyKey, args: any[] | undefined): void {
         if(this.policy !== 'strict') return;
+        const dyn = this.dynamicResolution(obj, name);
         // A state-changing route must be POSTed - reject a GET (closes GET-CSRF).
         // Checked before auth, and not bypassed by the system ctx (it's about the
         // HTTP method, not the actor; internal callers default to POST anyway).
-        if(this.httpMethod === 'GET' && routeIsMutation(obj, name))
+        if(this.httpMethod === 'GET'
+            && (dyn !== undefined ? !!dyn.mutates : routeIsMutation(obj, name)))
             throw new RouteMethodError(memberKey(obj, name));
-        const perm = routePermissionOf(obj, name);
+        const perm = dyn !== undefined ? dyn.perm : routePermissionOf(obj, name);
         if(!perm) return;
         const ctx = currentCtx() ?? ANON;
         if(ctx.system) return;

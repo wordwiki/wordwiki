@@ -6,7 +6,7 @@ import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
-import { DictionaryPages } from './dictionary-pages.ts';
+import { DictionaryPages, DictionariesRoutes } from './dictionary-pages.ts';
 import * as orthography from './orthography.ts';
 import * as entryMeta from './render-entry-meta.ts';
 import * as schemaRoles from './schema-roles.ts';
@@ -87,10 +87,19 @@ export class WordWiki extends LiminalApp {
 
     /** The per-dictionary page facade (dictionary-pages.ts):
      *  /ww/wordwiki.dict('toy').home() etc.  A fresh, stateless handle per
-     *  dispatch; unknown tables refuse via storeFor. */
+     *  dispatch; unknown tables refuse via storeFor.  (Alias - the
+     *  canonical form is the dotted dicts namespace below.) */
     @route(authenticated)
     dict(assertionTable: string): DictionaryPages {
         return new DictionaryPages(this, this.storeFor(assertionTable));
+    }
+
+    /** The DYNAMIC dictionaries namespace: /ww/wordwiki.dicts.toy.home(),
+     *  .dicts.toy.lexeme.entryPage(...) - member names are the discovered
+     *  dictionaries (routeterp dynamicRouteMember). */
+    #dicts: DictionariesRoutes|undefined = undefined;
+    @route(authenticated) @path get dicts(): DictionariesRoutes {
+        return this.#dicts ??= new DictionariesRoutes(this);
     }
 
     /** Every dictionary in this db (discovery by the config-pair

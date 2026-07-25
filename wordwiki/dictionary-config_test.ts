@@ -197,13 +197,24 @@ test("two dictionaries coexist: a toy store edits beside MMO", async () => {
 
         // THE FACADE: the toy dictionary's pages dispatch through routeterp
         // (dict() authorized on WordWiki, home/word on the fresh handle).
+        // ... via the canonical DYNAMIC namespace (routeterp
+        // dynamicRouteMember: the member name IS the dictionary) ...
         const home = JSON.stringify(await as(fx, 'djz',
-            () => renderRoute(ww, `wordwiki.dict('toy').home()`)));
+            () => renderRoute(ww, `wordwiki.dicts.toy.home()`)));
         assertEquals(home.includes('hello'), true);
-        assertEquals(home.includes('.word(5000)'), true);
+        assertEquals(home.includes('wordwiki.dicts.toy.word(5000)'), true);
         const word = JSON.stringify(await as(fx, 'djz',
-            () => renderRoute(ww, `wordwiki.dict('toy').word(5000)`)));
+            () => renderRoute(ww, `wordwiki.dicts.toy.word(5000)`)));
         assertEquals(word.includes('hello'), true);
+        // ... and the dict('toy') CALL form stays a working alias.
+        const homeAlias = JSON.stringify(await as(fx, 'djz',
+            () => renderRoute(ww, `wordwiki.dict('toy').home()`)));
+        assertEquals(homeAlias.includes('hello'), true);
+        // A dynamic name that is NOT a dictionary stays undeclared.
+        let dynRefused = false;
+        try { await as(fx, 'djz', () => renderRoute(ww, `wordwiki.dicts.user.home()`)); }
+        catch(_e) { dynRefused = true; }
+        assertEquals(dynRefused, true);
         // An UNKNOWN dictionary refuses (dispatch wraps the throw into an
         // error response; the refusal semantics live in storeFor).
         let refused = false;
@@ -215,9 +226,9 @@ test("two dictionaries coexist: a toy store edits beside MMO", async () => {
         const { editorAppFor } = await import("./dictionary-pages.ts");
         const toy = ww.storeFor('toy');   // (memoized - the same store as above)
         const edit = JSON.stringify(await as(fx, 'djz',
-            () => renderRoute(ww, `wordwiki.dict('toy').lexeme.metaEditPage(5000)`)));
+            () => renderRoute(ww, `wordwiki.dicts.toy.lexeme.metaEditPage(5000)`)));
         assertEquals(edit.includes('hello'), true);
-        assertEquals(edit.includes('wordwiki.dict(\\"toy\\").lexeme'), true);
+        assertEquals(edit.includes('wordwiki.dicts.toy.lexeme'), true);
         // ...and a real MUTATION through the facade's ops lands in the toy
         // table: the word's text edited in place.
         const facade = editorAppFor(ww, toy);

@@ -22,6 +22,7 @@ import * as entryMeta from './render-entry-meta.ts';
 import * as schemaRoles from './schema-roles.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
 import { route, authenticated } from '../liminal/security.ts';
+import { dynamicRouteMember, type DynamicRouteResolution } from '../liminal/routeterp.ts';
 import { path, serialize } from '../liminal/serializable.ts';
 import type { Markup } from '../liminal/markup.ts';
 import type { DictionaryStore } from './dictionary-store.ts';
@@ -64,18 +65,38 @@ export function editorAppFor(base: WordWiki, store: DictionaryStore): LexemeEdit
     return facade;
 }
 
+/** The DYNAMIC dictionaries namespace (routeterp dynamicRouteMember):
+ *  wordwiki.dicts.<table>.* - the member names ARE the discovered
+ *  dictionaries, resolved per dispatch (drop a table pair into the db and
+ *  its routes exist).  Mounted on its own object so dynamic names can
+ *  never collide with static route members. */
+export class DictionariesRoutes {
+    constructor(readonly app: WordWiki) {}
+
+    [serialize](): string { return 'wordwiki.dicts'; }
+
+    [dynamicRouteMember](name: string): DynamicRouteResolution|undefined {
+        if(!this.app.dictionaries().includes(name)) return undefined;
+        return {value: new DictionaryPages(this.app, this.app.storeFor(name)),
+                perm: authenticated};
+    }
+}
+
 export class DictionaryPages {
     constructor(readonly base: WordWiki, readonly store: DictionaryStore) {}
 
-    /** Route-path identity: this handle IS the expression that reaches it,
-     *  so @path children (the lexeme editor) serialize under it. */
-    [serialize](): string { return `wordwiki.dict(${JSON.stringify(this.table)})`; }
+    /** Route-path identity: the CANONICAL dotted form (table names are
+     *  identifier-shaped by construction), so @path children (the lexeme
+     *  editor) serialize under it and every emitted URL reads
+     *  wordwiki.dicts.toy.... - the dict('toy') call form remains a valid
+     *  alias whose handle emits the same canonical URLs. */
+    [serialize](): string { return `wordwiki.dicts.${this.table}`; }
 
     /** The per-dictionary LEXEME EDITOR: the standard editor over this
      *  dictionary's store, emitting URLs inside its own route base. */
     @route(authenticated) @path get lexeme(): LexemeEditor {
         return new LexemeEditor(editorAppFor(this.base, this.store),
-                                `/ww/wordwiki.dict(${JSON.stringify(this.table)}).lexeme`);
+                                `/ww/wordwiki.dicts.${this.table}.lexeme`);
     }
 
     get table(): string { return this.store.assertionTable; }
@@ -87,7 +108,7 @@ export class DictionaryPages {
     }
 
     private wordUrl(id: number): string {
-        return `/ww/wordwiki.dict(${JSON.stringify(this.table)}).word(${id})`;
+        return `/ww/wordwiki.dicts.${this.table}.word(${id})`;
     }
 
     /** The dictionary's browsable word list: every current entry, sorted by
@@ -134,7 +155,7 @@ export class DictionaryPages {
                        schema.relationFields[0], e)],
             ['p', {class: 'mt-3'},
              ['a', {...templates.pageLinkProps(
-                 `/ww/wordwiki.dict(${JSON.stringify(this.table)}).home()`)},
+                 `/ww/wordwiki.dicts.${this.table}.home()`)},
               `← All ${this.displayName} words`]]];
         return templates.page(title, body);
     }
