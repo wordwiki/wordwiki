@@ -280,14 +280,14 @@ export function autoPublishSf(app: WordWiki, opts: {log?: (m: string) => void} =
         for(const r of scan) {
             if(!isSfReady(r)) { notReady++; continue; }
             const gates = db().all<{n: number}, any>(
-                `SELECT COUNT(*) AS n FROM dict
+                `SELECT COUNT(*) AS n FROM ${app.assertionTable}
                  WHERE valid_to = :eot AND ty = '${entrySchema.PublicTag}'
                    AND id1 = :e AND variant = :v`,
                 {eot: EOT, e: r.entry_id, v: TARGET_ORTHOGRAPHY})[0].n;
             if(gates > 0) { alreadyGated++; continue; }
             const ts = app.allocTxTimestamps(1, {quiet: true});
             const id = newId();
-            db().insert<Assertion, 'assertion_id'>('dict', {
+            db().insert<Assertion, 'assertion_id'>(app.assertionTable, {
                 ty0: entrySchema.DictTag, ty1: entrySchema.EntryTag, id1: r.entry_id,
                 ty2: entrySchema.PublicTag, id2: id,
                 assertion_id: id, id, ty: entrySchema.PublicTag,
@@ -325,7 +325,7 @@ export class TransliterationReports {
      *  still pending. */
     corrections(): CorrectionRow[] {
         const autos = db().all<any, any>(block`
-/**/       SELECT * FROM dict
+/**/       SELECT * FROM ${this.app.assertionTable}
 /**/       WHERE change_by_username = '${AUTO_TRANSLITERATE_USERNAME}'
 /**/       ORDER BY valid_from`, {});
         const rows: CorrectionRow[] = [];
@@ -335,7 +335,7 @@ export class TransliterationReports {
             if(seen.has(key)) continue;
             seen.add(key);
             const versions = db().all<any, any>(
-                `SELECT * FROM dict WHERE ty = :ty AND id = :id ORDER BY valid_from, assertion_id`,
+                `SELECT * FROM ${this.app.assertionTable} WHERE ty = :ty AND id = :id ORDER BY valid_from, assertion_id`,
                 {ty: auto.ty, id: auto.id});
             const last = versions[versions.length - 1];
             const autoText = String(auto.attr1 ?? '');
@@ -377,7 +377,7 @@ export class TransliterationReports {
         const parentId = ids.length >= 2 ? ids[ids.length - 2][1] : 0;
         const parentCol = `id${ids.length - 1}`;
         return db().first<{attr1: string}>(block`
-/**/       SELECT attr1 FROM dict
+/**/       SELECT attr1 FROM ${this.app.assertionTable}
 /**/       WHERE valid_to = ${EOT} AND ty = :ty AND variant = '${SOURCE_ORTHOGRAPHY}'
 /**/             AND ${parentCol} = :pid AND attr1 IS NOT NULL LIMIT 1`,
             {ty: a.ty, pid: parentId})?.attr1;
@@ -415,14 +415,14 @@ export class TransliterationReports {
         // this column.
         const posByEntry = new Map<number, string|undefined>();
         for(const r of db().all<any, any>(block`
-/**/           SELECT id1, attr1 FROM dict WHERE ty = 'sub' AND valid_to = ${EOT}`, {})) {
+/**/           SELECT id1, attr1 FROM ${this.app.assertionTable} WHERE ty = 'sub' AND valid_to = ${EOT}`, {})) {
             posByEntry.set(r.id1, posByEntry.has(r.id1) ? undefined : (r.attr1 ?? undefined));
         }
         const out: Array<{li: string, sf: string, tag: string, pos?: string}> = [];
         for(const [tag, spec] of pure) {
             const rows = db().all<any, any>(block`
 /**/           SELECT ty1,id1,ty2,id2,ty3,id3,ty4,id4,ty5,id5, variant, ${spec.contentField.bind} AS text
-/**/           FROM dict
+/**/           FROM ${this.app.assertionTable}
 /**/           WHERE ty = :ty AND valid_to = ${EOT} AND ${spec.contentField.bind} IS NOT NULL
 /**/                 AND variant IN ('${SOURCE_ORTHOGRAPHY}', '${TARGET_ORTHOGRAPHY}')`, {ty: tag});
             const groups = new Map<string, {li: string[], sf: string[], entry: number}>();

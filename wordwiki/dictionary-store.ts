@@ -31,8 +31,11 @@ import {assertVersionedDbValid} from './versioned-db-validate.ts';
 import {SiteView, entriesByReferenceGroupIdOf} from './site-view.ts';
 
 export class DictionaryStore {
-    /** The one place the assertion table's name is known. */
-    readonly assertionTable = 'dict';
+    /** The dictionary's assertion table (its config peer is
+     *  `<table>_dict_config` - dictionary-config.ts).  'dict' is the
+     *  default (MMO) dictionary; a second store is one constructor
+     *  argument away (phase 3). */
+    readonly assertionTable: string;
 
     #dictSchema: model.Schema|undefined = undefined;
     #workspace: VersionedDb|undefined = undefined;
@@ -46,7 +49,9 @@ export class DictionaryStore {
     #publicEntryIdsIn: Map<string, Set<number>> = new Map();
     #lastAllocatedTxTimestamp: number|undefined;
 
-    constructor(private opts: {onDerivedInvalidated?: () => void} = {}) {
+    constructor(private opts: {onDerivedInvalidated?: () => void,
+                               assertionTable?: string} = {}) {
+        this.assertionTable = opts.assertionTable ?? 'dict';
     }
 
     /** The dictionary's SOFT SCHEMA - read from the config pair

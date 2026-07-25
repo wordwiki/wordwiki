@@ -148,8 +148,14 @@ export class WordWiki extends LiminalApp {
     // Seeded from the instance literal (siteConfig) at ensure; the pairs are
     // then the authority (an admin edit in the db wins).  The literal stays
     // the fallback for a pre-migration db.
+    /** The dictionary's assertion-table name (the store's) - the seam the
+     *  raw-SQL consumers interpolate; each distinct table yields its own
+     *  memoized prepared statement (liminal db prepare() keys on the SQL
+     *  text). */
+    get assertionTable(): string { return this.store.assertionTable; }
+
     dictConfigValue(name: string): string|undefined {
-        return dictionaryConfig.readConfigValue('dict', name);
+        return dictionaryConfig.readConfigValue(this.store.assertionTable, name);
     }
     get publicSiteOrthography(): string {
         return this.dictConfigValue('public_site_orthography') ?? siteConfig.publicSiteOrthography;
@@ -239,6 +245,15 @@ export class WordWiki extends LiminalApp {
              public_site_orthography: siteConfig.publicSiteOrthography,
              collation_locale: siteConfig.collationLocale,
              primary_source_book: siteConfig.primarySourceBook});
+        // OTHER discovered dictionaries (their pair already exists; the
+        // config row is their authority - nothing to sync): apply the
+        // idempotent assertion DDL so new index/column lines reach every
+        // dictionary's table, not just the default one.
+        for(const t of dictionaryConfig.discoverDictionaries())
+            if(t !== 'dict') {
+                db().executeStatements(createAssertionDml(t));
+                ensureAssertionColumns(t);
+            }
         orthography.seedOrthographies(this.orthographies);
         tag.seedTags(this.tags);
     }
@@ -389,15 +404,20 @@ export class WordWiki extends LiminalApp {
     newLexemeAction(): server.Response {
         const tx_time = timestamp.nextTime(timestamp.BEGINNING_OF_TIME);  // placeholder; applyTransaction allocates
 
+        // The path tags come from the SCHEMA (phase 3): the root, its entry
+        // relation, and - when the schema has one - the 'subentry' grouping
+        // relation for the bootstrap sense.
+        const D = this.dictSchema.tag;
+        const E = this.dictSchema.relationFields[0].tag;
         const entry_id = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         const newEntryAssertion: Assertion = {
             assertion_id: entry_id,
             valid_from: tx_time,
             valid_to: timestamp.END_OF_TIME,
             id: entry_id,
-            ty: 'ent',
-            ty0: 'dct',
-            ty1: 'ent',
+            ty: E,
+            ty0: D,
+            ty1: E,
             id1: entry_id,
             order_key: orderkey.new_range_start_string,
             change_by_username: this.currentUsername(),
@@ -410,8 +430,8 @@ export class WordWiki extends LiminalApp {
             valid_to: timestamp.END_OF_TIME,
             id: subentry_id,
             ty: 'sub',
-            ty0: 'dct',
-            ty1: 'ent',
+            ty0: D,
+            ty1: E,
             id1: entry_id,
             ty2: 'sub',
             id2: subentry_id,
@@ -663,7 +683,7 @@ export class WordWiki extends LiminalApp {
                                    change_by_username: string|null}, {entry_id: number}>(
             block`
 /**/     SELECT id, attr1, order_key, valid_from, valid_to, change_by_username
-/**/       FROM dict
+/**/       FROM ${this.assertionTable}
 /**/       WHERE ty = :ty AND id1 = :entry_id
 /**/       ORDER BY id, valid_from`, {ty: entry.LogTag, entry_id} as any);
         const byId = new Map<number, {first: typeof versions[0], current?: typeof versions[0]}>();
@@ -1131,7 +1151,7 @@ export class WordWiki extends LiminalApp {
                 all<{page_number: number, entry_count: number}>(
                     block`
 /**/     SELECT pg.page_number AS page_number, COUNT(DISTINCT bg.bounding_group_id) as entry_count
-/**/       FROM dict AS ref
+/**/       FROM ${this.assertionTable} AS ref
 /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
 /**/         LEFT JOIN scanned_page AS pg ON bb.page_id = pg.page_id

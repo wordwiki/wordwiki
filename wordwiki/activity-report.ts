@@ -397,7 +397,7 @@ export class ActivityReport {
         // versions tell the story - an 'approved' version with the SAME text
         // as the proposal = approved unchanged; a text change = corrected.
         const autos = db().all<any, any>(
-            `SELECT ty, id, attr1, change_arg FROM dict
+            `SELECT ty, id, attr1, change_arg FROM ${this.app.assertionTable}
              WHERE change_by_username = '~auto-transliterate'`, {});
         if(autos.length === 0) return [];
         const byApprover = new Map<string, {unchanged: number, corrected: number}>();
@@ -407,7 +407,7 @@ export class ActivityReport {
             if(seen.has(key)) continue;
             seen.add(key);
             const versions = db().all<any, any>(
-                `SELECT * FROM dict WHERE ty = :ty AND id = :id ORDER BY valid_from, assertion_id`,
+                `SELECT * FROM ${this.app.assertionTable} WHERE ty = :ty AND id = :id ORDER BY valid_from, assertion_id`,
                 {ty: auto.ty, id: auto.id});
             const approval = versions.find(v => v.change_action === 'approved'
                                                 && v.valid_from !== v.valid_to);
@@ -599,9 +599,9 @@ export class ActivityReport {
                                replaced_username: string|null}, any>(
             `SELECT valid_from, id1 AS entry_id, change_action, ty,
                     change_by_username AS username,
-                    (SELECT p.change_by_username FROM dict p
-                     WHERE p.assertion_id = dict.replaces_assertion_id) AS replaced_username
-             FROM dict
+                    (SELECT p.change_by_username FROM ${this.app.assertionTable} p
+                     WHERE p.assertion_id = ${this.app.assertionTable}.replaces_assertion_id) AS replaced_username
+             FROM ${this.app.assertionTable}
              WHERE valid_from >= :from AND valid_from <= :to
                AND valid_from > ${timestamp.BEGINNING_OF_TIME}
                AND id1 IS NOT NULL
@@ -625,7 +625,7 @@ export class ActivityReport {
         const publicIds = new Set(this.app.publishedEntries.map((e: any) => e.entry_id));
         const shoebox = new Map<number, string>();
         for(const r of db().all<{id1: number, attr2: string|null}, any>(
-            `SELECT id1, attr2 FROM dict
+            `SELECT id1, attr2 FROM ${this.app.assertionTable}
              WHERE ty3 = 'att' AND ty = 'att' AND attr1 = :attr AND valid_to = :eot`,
             {attr: SHOEBOX_DATE_ATTR, eot: timestamp.END_OF_TIME})) {
             const iso = parseShoeboxDate(r.attr2);
@@ -635,7 +635,7 @@ export class ActivityReport {
         }
         const out: EntryCreation[] = [];
         for(const r of db().all<{valid_from: number, id1: number, username: string|null}, any>(
-            `SELECT valid_from, id1, change_by_username AS username FROM dict
+            `SELECT valid_from, id1, change_by_username AS username FROM ${this.app.assertionTable}
              WHERE ty2 IS NULL AND ty1 = 'ent' AND ty = 'ent'
                AND replaces_assertion_id IS NULL`, {})) {
             if(!publicIds.has(r.id1)) continue;

@@ -664,10 +664,10 @@ export class LexemeOps {
             const result = run(now, assertionId);
             db().transaction(() => {
                 for(const u of result.updated)
-                    updateAssertion('dict', u.assertion_id, ['valid_to', 'published_to'],
+                    updateAssertion(this.app.assertionTable, u.assertion_id, ['valid_to', 'published_to'],
                                     {valid_to: u.valid_to, published_to: u.published_to});
                 for(const a of result.applied)
-                    db().insert<Assertion, 'assertion_id'>('dict', a, 'assertion_id');
+                    db().insert<Assertion, 'assertion_id'>(this.app.assertionTable, a, 'assertion_id');
             });
             this.app.requestEntriesJSONReload();
         } catch(e) {

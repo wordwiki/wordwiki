@@ -601,7 +601,7 @@ export class ChangeFeed {
         const rows = db().all<{valid_from: number, id: number, entry_id: number,
                                username: string|null}, any>(
             `SELECT valid_from, id, id1 AS entry_id, change_by_username AS username
-             FROM dict
+             FROM ${this.app.assertionTable}
              WHERE valid_from <= :to_time AND valid_from > ${timestamp.BEGINNING_OF_TIME}
                ${query.from_time != null ? 'AND valid_from >= :from_time' : ''}
                AND id1 IS NOT NULL
@@ -644,7 +644,7 @@ export class ChangeFeed {
             {page_id});
         if(groups.length === 0) return [];
         const rows = db().all<{id1: number}, any>(
-            `SELECT DISTINCT id1 FROM dict
+            `SELECT DISTINCT id1 FROM ${this.app.assertionTable}
              WHERE ty = '${entrySchema.DocumentReferenceTag}'
                AND valid_to = ${timestamp.END_OF_TIME}
                AND attr1 IN (${groups.map(r => r.g).join(',')})`, {});
@@ -661,7 +661,7 @@ export class ChangeFeed {
     private userFilterSql(query: FeedQuery): string {
         if(!query.restrict_to_user) return '';
         const scope = query.user_mode === USER_MODE_PARTICIPATING
-            ? `AND id IN (SELECT DISTINCT id FROM dict
+            ? `AND id IN (SELECT DISTINCT id FROM ${this.app.assertionTable}
                           WHERE change_by_username = :restrict_to_user AND ${CHANGE_ROW})`
             : `AND change_by_username = :restrict_to_user`;
         const hideApprovals = query.hide_user_approvals
@@ -675,7 +675,7 @@ export class ChangeFeed {
         const rows = db().all<{valid_from: number, id: number, entry_id: number,
                                username: string|null}, any>(
             `SELECT valid_from, id, id1 AS entry_id, change_by_username AS username
-             FROM dict
+             FROM ${this.app.assertionTable}
              WHERE id1 = :entry_id
                AND valid_from >= :from AND valid_from <= :to
                AND valid_from > ${timestamp.BEGINNING_OF_TIME}

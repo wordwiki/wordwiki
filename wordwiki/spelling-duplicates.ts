@@ -77,29 +77,29 @@ export function conflictingSpellings(mine: Spelling[], theirs: Spelling[]): Spel
 
 interface SpellingRow { id1: number; attr1: string; variant: string|null; }
 
-const selectEntriesBySpellingText = () => db().prepare<SpellingRow, {text: string, entry_id: number}>(block`
-/**/   SELECT id1, attr1, variant FROM dict
+const selectEntriesBySpellingText = (table: string) => db().prepare<SpellingRow, {text: string, entry_id: number}>(block`
+/**/   SELECT id1, attr1, variant FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME} AND ty = '${entrySchema.SpellingTag}'
 /**/         AND attr1 = :text AND id1 <> :entry_id`);
 
-const selectEntrySpellings = () => db().prepare<SpellingRow, {entry_id: number}>(block`
-/**/   SELECT id1, attr1, variant FROM dict
+const selectEntrySpellings = (table: string) => db().prepare<SpellingRow, {entry_id: number}>(block`
+/**/   SELECT id1, attr1, variant FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME} AND ty = '${entrySchema.SpellingTag}'
 /**/         AND id1 = :entry_id AND attr1 IS NOT NULL`);
 
-const selectAllCurrentSpellings = () => db().prepare<SpellingRow, Record<never, never>>(block`
-/**/   SELECT id1, attr1, variant FROM dict
+const selectAllCurrentSpellings = (table: string) => db().prepare<SpellingRow, Record<never, never>>(block`
+/**/   SELECT id1, attr1, variant FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME} AND ty = '${entrySchema.SpellingTag}'
 /**/         AND attr1 IS NOT NULL
 /**/   ORDER BY attr1`);
 
-const selectEntryStatuses = () => db().prepare<{attr1: string}, {entry_id: number}>(block`
-/**/   SELECT attr1 FROM dict
+const selectEntryStatuses = (table: string) => db().prepare<{attr1: string}, {entry_id: number}>(block`
+/**/   SELECT attr1 FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME} AND ty = '${entrySchema.StatusTag}'
 /**/         AND id1 = :entry_id AND attr1 IS NOT NULL`);
 
-const selectAllCurrentStatuses = () => db().prepare<{id1: number, attr1: string}, Record<never, never>>(block`
-/**/   SELECT id1, attr1 FROM dict
+const selectAllCurrentStatuses = (table: string) => db().prepare<{id1: number, attr1: string}, Record<never, never>>(block`
+/**/   SELECT id1, attr1 FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME} AND ty = '${entrySchema.StatusTag}'
 /**/         AND attr1 IS NOT NULL`);
 
@@ -108,8 +108,8 @@ const selectAllCurrentStatuses = () => db().prepare<{id1: number, attr1: string}
 // live word never lists an archived one, and an archived word's own page
 // never warns.  (isArchivedStatus's prefix convention keeps this current as
 // archived variants are added.)
-const entryIsArchived = (entry_id: number): boolean =>
-    selectEntryStatuses().all({entry_id})
+const entryIsArchived = (entry_id: number, table: string): boolean =>
+    selectEntryStatuses(table).all({entry_id})
         .some(r => entrySchema.isArchivedStatus(r.attr1));
 
 const asSpelling = (r: SpellingRow): Spelling => ({text: r.attr1, variant: r.variant});
@@ -121,17 +121,18 @@ export interface DuplicateHit { entry_id: number; spellings: Spelling[]; conflic
 /** The incremental probe: all OTHER entries the given (in-editor, possibly
  *  unsaved-to-published but always saved-to-db) spelling set conflicts with.
  *  One indexed by-text query per distinct text, then the pair rule. */
-export function findDuplicateEntries(entry_id: number, mine: Spelling[]): DuplicateHit[] {
-    if(entryIsArchived(entry_id)) return [];
+export function findDuplicateEntries(entry_id: number, mine: Spelling[],
+                                     table: string = 'dict'): DuplicateHit[] {
+    if(entryIsArchived(entry_id, table)) return [];
     const texts = [...new Set(mine.map(s => s.text).filter(t => t !== ''))];
     const candidates = new Set<number>();
     for(const text of texts)
-        for(const row of selectEntriesBySpellingText().all({text, entry_id}))
+        for(const row of selectEntriesBySpellingText(table).all({text, entry_id}))
             candidates.add(row.id1);
     const hits: DuplicateHit[] = [];
     for(const id of candidates) {
-        if(entryIsArchived(id)) continue;
-        const spellings = selectEntrySpellings().all({entry_id: id}).map(asSpelling);
+        if(entryIsArchived(id, table)) continue;
+        const spellings = selectEntrySpellings(table).all({entry_id: id}).map(asSpelling);
         const conflicts = conflictingSpellings(mine, spellings);
         if(conflicts.length > 0)
             hits.push({entry_id: id, spellings, conflicts});
@@ -154,8 +155,9 @@ const headword = (spellings: Spelling[]): string =>
  * entry root via the headword titleRole - recomputes it for free).  [] when
  * there is nothing to say.  Advisory only: nothing is ever blocked.
  */
-export function renderDuplicateSpellingWarning(entry_id: number, mine: Spelling[]): Markup {
-    const hits = findDuplicateEntries(entry_id, mine);
+export function renderDuplicateSpellingWarning(entry_id: number, mine: Spelling[],
+                                               table: string = 'dict'): Markup {
+    const hits = findDuplicateEntries(entry_id, mine, table);
     if(hits.length === 0) return [];
     return ['div', {class: 'alert alert-warning lm-dup-spelling py-2 mb-3'},
             ['div', {class: 'fw-bold'}, '⚠ Possible duplicate word'],
@@ -178,14 +180,14 @@ export interface DuplicateGroup { text: string; entries: {entry_id: number; spel
 /** One indexed scan of all current spelling rows, grouped by text; a text's
  *  group survives only where the pair rule warns FOR THAT TEXT (so a pair
  *  distinguished by a shared orthography stays out). */
-export function findAllDuplicateGroups(): DuplicateGroup[] {
+export function findAllDuplicateGroups(table: string = 'dict'): DuplicateGroup[] {
     // Archived words are out entirely (see entryIsArchived); a group only
     // survives where at least two LIVE words still collide.
-    const archived = new Set(selectAllCurrentStatuses().all({})
+    const archived = new Set(selectAllCurrentStatuses(table).all({})
         .filter(r => entrySchema.isArchivedStatus(r.attr1)).map(r => r.id1));
     const byEntry = new Map<number, Spelling[]>();
     const byText = new Map<string, Set<number>>();
-    for(const r of selectAllCurrentSpellings().all({})) {
+    for(const r of selectAllCurrentSpellings(table).all({})) {
         if(r.attr1 === '' || archived.has(r.id1)) continue;
         let e = byEntry.get(r.id1);
         if(!e) byEntry.set(r.id1, e = []);

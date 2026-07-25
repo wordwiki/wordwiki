@@ -39,15 +39,15 @@ export interface VariantScanResult { gatePassed: boolean; }
 
 interface VariantCountRow { ty: string; variant: string|null; n: number; }
 
-const selectVariantCounts = () => db().prepare<VariantCountRow, Record<never, never>>(block`
-/**/   SELECT ty, variant, COUNT(*) AS n FROM dict
+const selectVariantCounts = (table: string) => db().prepare<VariantCountRow, Record<never, never>>(block`
+/**/   SELECT ty, variant, COUNT(*) AS n FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME}
 /**/   GROUP BY ty, variant`);
 
 interface SampleRow { id1: number; attr1: string|null; }
 
-const selectSamples = () => db().prepare<SampleRow, {ty: string, variant: string}>(block`
-/**/   SELECT id1, attr1 FROM dict
+const selectSamples = (table: string) => db().prepare<SampleRow, {ty: string, variant: string}>(block`
+/**/   SELECT id1, attr1 FROM ${table}
 /**/   WHERE valid_to = ${timestamp.END_OF_TIME} AND ty = :ty AND variant = :variant
 /**/   LIMIT 5`);
 
@@ -58,9 +58,10 @@ const selectSamples = () => db().prepare<SampleRow, {ty: string, variant: string
  * `report`.  Returns whether the $notVariant drop gate passed.
  */
 export function scanVariants(report: FindingsReport, schema: model.Schema,
-                             vocabulary: string[]): VariantScanResult {
+                             vocabulary: string[],
+                             table: string = 'dict'): VariantScanResult {
     const policy = variantPolicyByTag(schema);
-    const counts = selectVariantCounts().all({});
+    const counts = selectVariantCounts(table).all({});
     const byTag = new Map<string, VariantCountRow[]>();
     for(const row of counts) {
         if(!byTag.has(row.ty)) byTag.set(row.ty, []);
@@ -71,7 +72,7 @@ export function scanVariants(report: FindingsReport, schema: model.Schema,
     // relationDisplayName), never by the three-letter db tag.
     const nameOf = (tag: string) => entrySchema.relationDisplayName(tag);
     const samplesFor = (ty: string, variant: string): string =>
-        selectSamples().all({ty, variant})
+        selectSamples(table).all({ty, variant})
             .map(s => report.lexemeLink(s.id1, s.attr1 ? `${s.attr1}` : `entry ${s.id1}`))
             .join(', ');
 
@@ -188,7 +189,8 @@ export class VariantReports {
     cleanupReport(): Markup {
         const report = new FindingsReport('Variant (orthography) cleanup', {quiet: true});
         scanVariants(report, this.app.dictSchema,
-            security.runSystem(() => orthography.orthographyVocabulary(this.app.orthographies)));
+            security.runSystem(() => orthography.orthographyVocabulary(this.app.orthographies)),
+            this.app.assertionTable);
         const title = 'Variant (orthography) cleanup';
         const body: Markup = [
             ['h1', {}, title],

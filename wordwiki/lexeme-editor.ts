@@ -734,7 +734,7 @@ export class LexemeEditor {
              // (same free refresh: spelling changeKeys include the entry
              // root).  Shown in review mode too - "is this a duplicate?" is
              // review-relevant for a newly added word.
-             renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q)),
+             renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q), this.app.assertionTable),
              this.renderModeToggle(entry_id, entryTuple, mode, opts),
              ['h2', {}, heading || 'No spellings'],
              mode === 'review'
@@ -926,7 +926,7 @@ export class LexemeEditor {
                  // mutation's changeKeys include the entry root (headword
                  // titleRole), so the duplicate check re-runs on exactly the
                  // edits that can change its answer - no editor plumbing.
-                 renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q)),
+                 renderDuplicateSpellingWarning(entry_id, this.currentSpellings(q), this.app.assertionTable),
                  this.metaChangesBarFragment(entry_id, changes),
                  this.metaPublicRowFragment(entry_id),
                  this.metaRenderer(entry_id, changes).render(entryRel, root)]];

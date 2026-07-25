@@ -399,7 +399,7 @@ export class EditorReports {
             all<{x: number, bounding_group_id: number, entry_id: number}, {page_id: number}>(
                 block`
 /**/     SELECT DISTINCT bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
-/**/       FROM dict AS ref
+/**/       FROM ${this.app.store.assertionTable} AS ref
 /**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
 /**/       WHERE ref.valid_to = 9007199254740991 AND

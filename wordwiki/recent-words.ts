@@ -205,7 +205,7 @@ export class RecentWords {
                                username: string|null}, any>(
             `SELECT id1 AS entry_id, MAX(valid_from) AS last_change,
                     change_by_username AS username
-             FROM dict
+             FROM ${this.app.assertionTable}
              WHERE valid_from <= :to_time AND valid_from > ${timestamp.BEGINNING_OF_TIME}
                AND id1 IS NOT NULL
                AND ${changeCondition}
