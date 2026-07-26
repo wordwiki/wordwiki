@@ -283,6 +283,25 @@ page number from each page's Text-layer header boxes (a script, spot
 checked), stored as data (a config row or a tiny table beside the
 book).  Clark gets the same treatment.
 
+STATUS: BUILT + APPLIED 2026-07-26.  The mapping lives as
+`scanned_page.printed_page_number` (nullable; late-column via
+ensureScannedPageColumns).  printed-pages.ts derives it: per-page
+top-band integer candidates from the Text layer (with a
+digit-only-token OCR-confusion decode - Clark's 'I2' = 12; guide
+words can never become numbers), then a SEQUENCE FIT - runs of
+constant printed-minus-scan offset, interior interpolation,
+conflicts reported never trusted, plus a ±1 section-opener edge
+rule (a folio-less body page 1 under its section title - Rand's
+scan 13).  CLI `derive-printed-pages <book> [--apply] [--report=]`
+is dry-run-first (human spot check).  Applied: Rand scan 13-298 ->
+printed 1-286 (offset -12, 284 confirmed, 0 conflicts), Clark scan
+39-210 -> printed 1-172 (offset -38, 27 confirmed - Clark's tiny
+folios mostly missed by OCR; consistent offset + confirmed
+endpoints carry the interpolation).  Cross-validated against the
+citations: 32,114/32,115 Rand cites and 28/28 Clark cites fall
+inside the derived ranges (the outlier is a literal 'p 0' typo).
+Binder lookup: page_id by (document, printed_page_number).
+
 **The extraction stage — on the EXISTING Layer-1 substrate.**  All
 LLM/image work goes through the derived content-addressable store
 (content-store.ts `getDerived()`), exactly like the PDM transcription
@@ -370,7 +389,8 @@ eventually more) flow without cross-writes.
    sheet-scoped lookup + per-dictionary links (§3.3–3.5)~~ DONE
    2026-07-26 (see the §3.5 STATUS block).
    — hand-tagging of rand now works end to end —
-4. Printed->scan page map script (§5).
+4. ~~Printed->scan page map script (§5)~~ DONE 2026-07-26 (see the
+   §5 STATUS block; applied for Rand + Clark on the dev instance).
 5. Binder stage + the 10-page eval set (§5).
 6. Full run; worklist reports; iterate promptVersion as needed.
 7. (Own project) the pairing relation + rand↔MMO auto-pair, then

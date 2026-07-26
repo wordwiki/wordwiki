@@ -171,13 +171,22 @@ export interface ScannedPage {
      * in the presence of multiple columns.
      */
     description?: string;
+
+    /**
+     * The page number PRINTED ON the page (the number citations cite -
+     * `\so Rand 1888, p 282`), as distinct from page_number (scan order,
+     * shifted by front matter).  Derived from the OCR text layer by the
+     * derive-printed-pages CLI (rand-references-design.md §5); NULL for
+     * unnumbered/roman-numbered pages.  Arabic body pages only.
+     */
+    printed_page_number?: number;
 };
 export type ScannedPageOpt = Partial<ScannedPage>;
 export const scannedPageFieldNames: Array<keyof ScannedPage> = [
     'page_id', 'document_id', 'page_number',
     'source_url', 'import_path', 'image_ref',
     'width', 'height',
-    'description'];
+    'description', 'printed_page_number'];
 
 const createPageDml = block`
 /**/   CREATE TABLE IF NOT EXISTS scanned_page(
@@ -190,6 +199,7 @@ const createPageDml = block`
 /**/       width INTEGER,
 /**/       height INTEGER,
 /**/       description TEXT,
+/**/       printed_page_number INTEGER,
 /**/       FOREIGN KEY(document_id) REFERENCES scanned_document(document_id));
 /**/
 /**/   CREATE UNIQUE INDEX IF NOT EXISTS page_by_document_page_number ON scanned_page(document_id, page_number);
@@ -319,6 +329,16 @@ export function ensureLayerColumns() {
     db().execute(
         `UPDATE layer SET dictionary = 'dict' WHERE layer_name = 'Tagging' AND dictionary IS NULL`,
         {});
+}
+
+/** The LATE scanned_page column: printed_page_number (rand-references-
+ *  design.md §5 - filled by derive-printed-pages, not here). */
+export function ensureScannedPageColumns() {
+    const have = new Set(db().prepare<{name: string}, {tbl: string}>(
+        `SELECT name FROM pragma_table_info(:tbl)`).all({tbl: 'scanned_page'}).map(r => r.name));
+    if(have.size === 0) return;
+    if(!have.has('printed_page_number'))
+        db().executeStatements(`ALTER TABLE scanned_page ADD COLUMN printed_page_number INTEGER;`);
 }
 
 export const selectLayer = ()=>db().prepare<Layer, {layer_id: number}>(block`

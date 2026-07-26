@@ -40,7 +40,15 @@ document references like MMO's, doc of record
   returns editUrl; NEW rpc addReferenceFromGroup; delete guard
   checks all dictionaries; facade word page renders scans.
   Hand-tag rand: wordwiki.pages.pageEditor('Rand', N, 'Text',
-  'rand').  NEXT: step 4, printed->scan page map script.
+  'rand').
+- Step 4 BUILT+APPLIED 2026-07-26: scanned_page.printed_page_number
+  (late column) derived by printed-pages.ts sequence fit (offset
+  runs + interpolation + ±1 section-opener edge + OCR digit-
+  confusion decode); CLI derive-printed-pages (dry-run first).
+  Rand scan 13-298 = printed 1-286 (offset -12, 0 conflicts);
+  Clark scan 39-210 = printed 1-172 (offset -38, sparse folios,
+  endpoints confirmed).  Citations cross-validated 32,114/32,115.
+  NEXT: step 5, the Opus binder stage + 10-page eval.
 - Only three sites were position/table-bound: createLexemeFromGroup
   (fixed one-wrapper spine → generalize to parentRelation-chain
   spine), pageWordRows (hardcoded `FROM dict` → sweep discovered

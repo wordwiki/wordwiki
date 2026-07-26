@@ -27,6 +27,7 @@ import * as dictionaryConfig from './dictionary-config.ts';
 import * as sfm from './sfm.ts';
 import * as sfmImport from './sfm-import.ts';
 import * as dictionaryTransform from './dictionary-transform.ts';
+import * as printedPages from './printed-pages.ts';
 import * as workspace from './workspace.ts';
 import { selectAllAssertions, type Assertion } from './assertion.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
@@ -800,6 +801,26 @@ export async function cliMain(args: string[]): Promise<void> {
                 console.info(`transformed '${target}' (generation ${result.generation}): ` +
                              `${result.entries} entries, ${result.assertions} assertions`);
                 return result.unmappedPerTag.size > 0 ? 2 : 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
+        // Derive scanned_page.printed_page_number from the OCR Text layer
+        // (rand-references-design.md §5).  Dry-run by default; spot-check
+        // the report, then --apply.
+        //   ./wordwiki.sh derive-printed-pages Rand --apply --report=out.md
+        case 'derive-printed-pages': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const book = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: derive-printed-pages <friendlyDocId> [--apply] [--report=path]');
+                const {fit, report} = printedPages.derivePrintedPages(
+                    book, {apply: args.includes('--apply')});
+                console.info(report);
+                const reportPath = args.find(a => a.startsWith('--report='))?.slice('--report='.length);
+                if(reportPath) Deno.writeTextFileSync(reportPath, report);
+                return fit.unassigned.length > 0 || fit.conflicts.length > 0 ? 2 : 0;
             });
             Deno.exit(exitCode);
             break;

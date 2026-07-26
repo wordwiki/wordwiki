@@ -18,7 +18,7 @@ import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import {selectScannedDocumentByFriendlyId, selectAllScannedDocuments, allScannedDocumentSchemaDml, selectBoundingGroup, selectLayer, ensureLayerColumns} from './scanned-document.ts';
+import {selectScannedDocumentByFriendlyId, selectAllScannedDocuments, allScannedDocumentSchemaDml, selectBoundingGroup, selectLayer, ensureLayerColumns, ensureScannedPageColumns} from './scanned-document.ts';
 import {Assertion, createAssertionDml, ensureAssertionColumns} from './assertion.ts';
 import {pageEditor} from './render-page-editor.ts';
 
@@ -303,8 +303,10 @@ export class WordWiki extends LiminalApp {
         tag.seedTags(this.tags);
         // The sheets model's LATE layer column + the pre-sheets 'Tagging'
         // layers stamped as the default dictionary's sheets
-        // (rand-references-design.md §3.3).
+        // (rand-references-design.md §3.3); the printed-page-number column
+        // (§5 - filled by derive-printed-pages).
         ensureLayerColumns();
+        ensureScannedPageColumns();
     }
 
     // ----- Route namespaces ---------------------------------------------------
