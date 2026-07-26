@@ -51,6 +51,57 @@ test("gate: bad rule paths and fields refuse; source-hash drift warns", async ()
     }));
 });
 
+test("the MERGED corpus: lanes, partition + divergence ride as attrs", async () => {
+    // rand-merged.sfm (merge-rand-sources.ts): finals FIRST (Ng base,
+    // both lanes, \zdv drift notes), then lk-only, then the queue.
+    const merged = Deno.readTextFileSync(WATSON + 'rand-merged.sfm');
+    // Pure-parse accounting of the whole merged file.
+    const db0 = sfm.readDatabase(merged, 'lx');
+    assertEquals(db0.records.length, 31723);
+    const zpt = new Map<string, number>();
+    for(const r of db0.records) {
+        const p = r.fields.find(f => f.name === 'zpt')?.content ?? '?';
+        zpt.set(p, (zpt.get(p) ?? 0) + 1);
+    }
+    assertEquals(zpt.get('final'), 2498);
+    assertEquals(zpt.get('final-lk-only'), 128);
+    assertEquals(zpt.get('queue'), 29097);
+
+    const typText = Deno.readTextFileSync(WATSON + 'rand-structural.typ');
+    const mapping = JSON.parse(Deno.readTextFileSync(WATSON + 'rand-transform.json'));
+    await withTestDb(async (fx) => {
+        const {ww} = fx;
+        try {
+            security.runSystem(() => {
+                sfmImport.importSfm(typText, merged,
+                    {table: 'randraw', structure: 'tree', stopAfterCount: 400});
+                dictionaryConfig.createDictionary('rand', mapping.targetSchema, {slug: 'rand'});
+                dictionaryConfig.writeConfigValue('rand', 'transform', JSON.stringify(mapping));
+                dt.runTransform('rand', ww.storeFor('randraw'));
+            });
+            const entries = ww.storeFor('rand').entries as any[];
+            // Final #1 ('a') is partition-tagged; SOME sampled final has
+            // BOTH lanes on one entry - the fork, reunified.
+            const e0 = entries[0];
+            assertEquals(e0.spelling.map((s: any) => [s.text, s.variant]),
+                         [['a', 'mm-li']]);         // its \lsf is empty
+            assertEquals(e0.attr.some((a: any) =>
+                a.attr === 'import-partition' && a.value === 'final'), true);
+            assertEquals(entries.some((e: any) =>
+                (e.spelling ?? []).some((sp: any) => sp.variant === 'mm-sf')
+                && (e.spelling ?? []).some((sp: any) => sp.variant === 'mm-li')), true);
+            // The drift is in-band: some sampled entry carries a
+            // merge-divergence attr.
+            assertEquals(entries.some((e: any) => (e.attr ?? []).some(
+                (a: any) => a.attr === 'merge-divergence')), true);
+        } finally {
+            security.runSystem(() => db().executeStatements(
+                'DROP TABLE IF EXISTS randraw; DROP TABLE IF EXISTS randraw_dict_config;' +
+                'DROP TABLE IF EXISTS rand; DROP TABLE IF EXISTS rand_dict_config;'));
+        }
+    });
+});
+
 test("transform: REAL RAND -> a rich entry (deterministic; edits block)", async () => {
     const typText = Deno.readTextFileSync(WATSON + 'rand-structural.typ');
     const dataText = sfm.decodeSfmBytes(

@@ -309,8 +309,7 @@
      "$shape": "inlineListRelation",
      "$view": {
       "order": 11,
-      "keyField": "attr",
-      "hidden": true
+      "keyField": "attr"
      }
     }
    }
@@ -445,6 +444,36 @@
    "set": {
     "attr": {
      "const": "shoebox-date"
+    },
+    "value": {
+     "content": true
+    },
+    "variant": {
+     "const": "mm"
+    }
+   }
+  },
+  {
+   "from": "zpt",
+   "to": "attr",
+   "set": {
+    "attr": {
+     "const": "import-partition"
+    },
+    "value": {
+     "content": true
+    },
+    "variant": {
+     "const": "mm"
+    }
+   }
+  },
+  {
+   "from": "zdv",
+   "to": "attr",
+   "set": {
+    "attr": {
+     "const": "merge-divergence"
     },
     "value": {
      "content": true

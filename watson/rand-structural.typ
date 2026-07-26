@@ -973,3 +973,18 @@
 \-expset
 \HideFields
 \-DatabaseType
+
+
+\+mkr zpt
+\nam Merge partition
+\desc queue | final | final-lk-only - which Watson file this record came from (merge-rand-sources.ts)
+\lng English
+\mkrOverThis lx
+\-mkr
+
+\+mkr zdv
+\nam Merge divergence
+\desc A field where the Lk copy disagrees with the Ng base (the fork drifted) - "marker: Lk reading"
+\lng English
+\mkrOverThis lx
+\-mkr

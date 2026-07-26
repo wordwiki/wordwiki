@@ -31,7 +31,31 @@ import pipeline.  (Verification script: rand-final-merge-survey.py.)
    holds 7,816 duplicate-headword rows), but that is a QUESTION FOR
    WATSON, not an assumption.
 
-## The merge design
+## The merge design — REVISED 2026-07-26: PRE-IMPORT (dz)
+
+**Superseding the multi-source-transform section below**: the merge
+happens BEFORE import.  merge-rand-sources.ts reads the three
+committed files and emits ONE merged SFM file (rand-merged.sfm +
+rand-merged-report.md) - the single-source pipeline then runs
+unchanged.  Why: far less machinery (zero engine changes), and the
+merge result is itself SFM - inspectable, diffable across drops, and
+Watson-readable.  Provenance and drift ride IN-BAND as z-markers
+(declared in the structural .typ): `\zpt` = partition
+(final | final-lk-only | queue), `\zdv` = a field where the Lk copy
+disagrees with the Ng base - mapped to `attr` rows
+(import-partition / merge-divergence) by the transform, so the
+divergence worklist is browsable data in the editor.  Paired Ng
+records ARE the merged form (both lanes already); lk-only records
+emit with the k-spelling in \lsf and an empty \lx (the cross-lane
+headword fallback presents them); the queue passes through.
+Numbers from the first run: 2,498 final (2,356 paired = 2,348 exact
++ 21 mark-insensitive rescues... see rand-merged-report.md), 128
+lk-only, 29,097 queue, 198 diverged pairs (291 \zdv notes).
+The archival mirror of what Watson SENT is the committed originals
+in git + the deterministic merge script.
+
+## The multi-source-transform design (NOT built - kept as the
+## someday-generalization if a future corpus truly needs it)
 
 Three import mirrors, one transform, one rich dictionary:
 
