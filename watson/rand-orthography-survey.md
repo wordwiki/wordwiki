@@ -97,6 +97,24 @@ instead of `'` — an MMO-side cleanup candidate independent of RAND.
 (Questions 6–7, on the Final files and the Ng/Lk divergence, are in
 rand-final-merge-design.md.)
 
+### 6. The three files, merged (2026-07-26)
+
+We have now MERGED the three files into one working dictionary
+(31,723 entries): your Ng records as the base for the processed
+entries — each already carries both spellings, so the two-file
+Ng/Lk fork is represented as ONE entry with two presentation lanes —
+plus the 128 Lk-only records, plus the 29,097-record queue.  Where
+your Lk copy disagrees with the Ng copy (198 entries, mostly \de and
+\ge — the two files have drifted apart since the copies were made),
+BOTH readings are kept: the Ng reading as the entry's value and the
+Lk reading right beside it as a "merge-divergence" note, so each
+disagreement can be settled by looking at the word itself.  The full
+accounting (pairing, the unpaired lists, and the ~1,680 records that
+left the big file but are in neither Final) is in
+rand-merged-report.md.  Nothing was discarded: the merge is
+regenerated from your original files by a script, so a corrected
+drop from you simply re-merges.
+
 ## Part 2 — The auto-transliteration experiment (our notes)
 
 Method: pair RAND-li and MMO-li spellings exactly, then "near"
