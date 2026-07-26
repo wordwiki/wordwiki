@@ -578,6 +578,18 @@ honor:
   committed watson/ files are PERMANENT test pins: 103-marker
   MDF.typ + all 34,092 records across the three dictionaries
   recover trees with ZERO problems.
+  STEP 2 (of phase 5) DONE (2026-07-25): sfm-import - the step-1
+  auto-importer is BUILT and real-scale proven: all 29,097 RAND
+  records -> 366,942 assertions in 9.3s, zero problems, zero drops;
+  the suite imports a sample and browses it via
+  wordwiki.dicts.randraw.*.  Structure modes per dz: 'tree' for
+  structural typs (capacity-refusal names the markers), 'flat' + a
+  seq field for entry-template vines - which the Watson .typ IS
+  (mkrOverThis chained in record order, 14 deep; discovered here).
+  Deterministic re-imports; edited-mirror refusal; source_typ +
+  generation config pairs; the facade mirror banner.
+  NEXT: the step-2 TRANSFORM (the mapping document + engine).
+
   THE TWO-STEP IMPORT DESIGN (converged dz + review 2026-07-25):
   STEP 1 - auto-import (no user intervention; encoding is the one
   CLI flag): the schema is a PURE FUNCTION OF THE .TYP (stable per
