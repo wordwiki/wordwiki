@@ -6,7 +6,7 @@ import {VersionedDb} from  './workspace.ts';
 import * as config from './config.ts';
 import * as entry from './entry-schema.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
-import { DictionaryPages, DictionariesRoutes } from './dictionary-pages.ts';
+import { DictionaryPages, DictionariesRoutes, editorAppFor } from './dictionary-pages.ts';
 import * as orthography from './orthography.ts';
 import * as entryMeta from './render-entry-meta.ts';
 import * as schemaRoles from './schema-roles.ts';
@@ -18,7 +18,7 @@ import {block} from '../liminal/strings.ts';
 import {db} from "../liminal/db.ts";
 import * as publish from './publish.ts';
 import {asyncRenderToStringViaLinkeDOM} from '../liminal/markup.ts';
-import {selectScannedDocumentByFriendlyId, selectAllScannedDocuments, allScannedDocumentSchemaDml} from './scanned-document.ts';
+import {selectScannedDocumentByFriendlyId, selectAllScannedDocuments, allScannedDocumentSchemaDml, selectBoundingGroup, selectLayer, ensureLayerColumns} from './scanned-document.ts';
 import {Assertion, createAssertionDml, ensureAssertionColumns} from './assertion.ts';
 import {pageEditor} from './render-page-editor.ts';
 
@@ -301,6 +301,10 @@ export class WordWiki extends LiminalApp {
             }
         orthography.seedOrthographies(this.orthographies);
         tag.seedTags(this.tags);
+        // The sheets model's LATE layer column + the pre-sheets 'Tagging'
+        // layers stamped as the default dictionary's sheets
+        // (rand-references-design.md §3.3).
+        ensureLayerColumns();
     }
 
     // ----- Route namespaces ---------------------------------------------------
@@ -489,14 +493,42 @@ export class WordWiki extends LiminalApp {
         return server.forwardResponse(`/ww/wordwiki.entry(${entry_id})`);
     }
 
+    /** The dictionary that owns a bounding group = its layer's SHEET
+     *  (rand-references-design.md §3.4): the page editor's create/attach
+     *  verbs read it from the group, so there is no client-side dictionary
+     *  parameter to get wrong.  Pre-sheets groups read as the default
+     *  dictionary. */
+    private opsForGroup(bounding_group_id: number): {ops: LexemeOps, dict: string} {
+        const g = selectBoundingGroup().required({bounding_group_id});
+        const dict = selectLayer().required({layer_id: g.layer_id}).dictionary ?? 'dict';
+        return {ops: dict === 'dict' ? this.lexemeOps
+                    : editorAppFor(this, this.storeFor(dict)).lexemeOps,
+                dict};
+    }
+    private wordEditUrlFor(dict: string, entry_id: number): string {
+        return dict === 'dict' ? `/ww/wordwiki.wordEditor(${entry_id})`
+            : `/ww/wordwiki.dicts.${dict}.lexeme.metaEditPage(${entry_id})`;
+    }
+
     /** Create a new lexeme FROM a bounding group (the page editor's
-     *  page-primary flow - dz): entry + subentry + a document_reference at
-     *  the group, then the caller opens it in the editor.  Returns
-     *  {entry_id} (the classic page-editor client navigates there). */
+     *  page-primary flow - dz): entry + the schema's ref spine + a
+     *  document_reference at the group, in the dictionary whose SHEET the
+     *  group is on; the caller opens the returned editUrl. */
     @routeMutation(authenticated)
     newLexemeFromGroup(bounding_group_id: number): any {
-        const {entry_id} = this.lexemeOps.createLexemeFromGroup(bounding_group_id);
-        return {entry_id};
+        const {ops, dict} = this.opsForGroup(bounding_group_id);
+        const {entry_id} = ops.createLexemeFromGroup(bounding_group_id);
+        return {entry_id, editUrl: this.wordEditUrlFor(dict, entry_id)};
+    }
+
+    /** Attach a bounding group to an EXISTING word of its sheet's
+     *  dictionary (rand-references-design.md §3.4 - the hand-attach flow
+     *  and the auto-binder's rpc). */
+    @routeMutation(authenticated)
+    addReferenceFromGroup(entry_id: number, bounding_group_id: number): any {
+        const {ops, dict} = this.opsForGroup(bounding_group_id);
+        const {fact_id} = ops.addReferenceToEntry(entry_id, bounding_group_id);
+        return {fact_id, editUrl: this.wordEditUrlFor(dict, entry_id)};
     }
 
     // The word EDITOR - the METADATA-DRIVEN editor is the default now (dz,

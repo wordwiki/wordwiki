@@ -13,6 +13,9 @@ import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { withTestDb, TestTimeline, mkEntry, mkChild, bornApprove, type Fixture } from "./testing.ts";
 import { renderPageWordSidebarCore, deleteBoundingGroup, deleteUnlinkedGroupsForPage } from "./render-page-editor.ts";
 import { as } from "./testing.ts";
+import * as security from "../liminal/security.ts";
+import * as dictionaryConfig from "./dictionary-config.ts";
+import * as scannedDocument from "./scanned-document.ts";
 
 // A scanned page with three tagged groups: two referenced by words (seeded
 // LOWER on the page first, to prove reading order re-sorts them), one
@@ -122,6 +125,90 @@ test("deleteBoundingGroup: removes an orphaned group; refuses a word-linked one"
         assert(db().all<any, any>(
             'SELECT 1 FROM bounding_group WHERE bounding_group_id = :g', {g: topGroup}).length === 1,
             'linked group survives');
+    });
+});
+
+test("sheets: per-dictionary tagging layers stay disjoint; create/attach land in the sheet's dictionary", async () => {
+    await withTestDb(async (fx: Fixture) => {
+        const {page_id, layer_id: mmoLayer, orphanGroup} = seed(fx);
+        const document_id = db().all<any, any>(
+            `SELECT document_id FROM scanned_page WHERE page_id=:p`, {p: page_id})[0].document_id;
+        try {
+            // The seed's 'Tagging' layer predates the sheets column: the
+            // startup stamping attributes it to the default dictionary.
+            security.runSystem(() => scannedDocument.ensureLayerColumns());
+            assertEquals(db().all<any, any>(
+                `SELECT dictionary FROM layer WHERE layer_id=:l`, {l: mmoLayer})[0].dictionary,
+                'dict');
+
+            // A second dictionary (documentReference at the entry root)
+            // gets its OWN clean sheet on the same book.
+            security.runSystem(() => dictionaryConfig.createDictionary('shtgt', {
+                $type: 'schema', $name: 's', $tag: 'tsht',
+                entry: {$type: 'relation', $tag: 'ent',
+                        entry_id: {$type: 'primary_key'},
+                        document_reference: {$type: 'relation', $tag: 'ref',
+                            $role: 'documentReference',
+                            document_reference_id: {$type: 'primary_key'},
+                            bounding_group_id: {$type: 'integer', $bind: 'attr1',
+                                                $style: {$shape: 'boundingGroup'}}}},
+            }, {slug: 'shtgt'}));
+            const sheet = scannedDocument.getOrCreateTaggingSheet(document_id, 'shtgt');
+            assert(sheet !== mmoLayer, 'a fresh sheet, not the MMO layer');
+            const mkGroup = (y: number) => {
+                const g = db().insert<any, 'bounding_group_id'>('bounding_group',
+                    {document_id, layer_id: sheet, color: 'red'}, 'bounding_group_id');
+                db().insert<any, 'bounding_box_id'>('bounding_box',
+                    {bounding_group_id: g, document_id, layer_id: sheet, page_id,
+                     x: 100, y, w: 200, h: 50}, 'bounding_box_id');
+                return g;
+            };
+            const g1 = mkGroup(200), g2 = mkGroup(400);
+
+            // DISJOINT: MMO's sidebar sees its own words + its own orphan,
+            // none of the new sheet's groups; the new sheet starts clean.
+            const mmoHtml = renderToStringViaLinkeDOM(
+                renderPageWordSidebarCore(fx.ww, page_id, mmoLayer));
+            assertStringIncludes(mmoHtml, 'Words on this page (2)');
+            assertStringIncludes(mmoHtml, 'Groups not yet linked to a word (1)');
+            assert(!mmoHtml.includes(`data-group-ids="${g1}"`), 'MMO sheet omits the other sheet');
+            const freshHtml = renderToStringViaLinkeDOM(
+                renderPageWordSidebarCore(fx.ww, page_id, sheet));
+            assertStringIncludes(freshHtml, 'Words on this page (0)');
+            assertStringIncludes(freshHtml, 'Groups not yet linked to a word (2)');
+            assert(!freshHtml.includes('samqwan'), 'clean sheet shows no MMO words');
+
+            // CREATE lands in the sheet's dictionary, edit URL included.
+            const r = as(fx, 'djz', () => fx.ww.newLexemeFromGroup(g1));
+            assertStringIncludes(r.editUrl, `wordwiki.dicts.shtgt.lexeme.metaEditPage(${r.entry_id})`);
+            const e = fx.ww.storeFor('shtgt').entriesById.get(r.entry_id) as any;
+            assertEquals(e.document_reference.map((x: any) => x.bounding_group_id), [g1]);
+
+            // ATTACH the second group to the same word via the group's sheet.
+            as(fx, 'djz', () => fx.ww.addReferenceFromGroup(r.entry_id, g2));
+            const e2 = fx.ww.storeFor('shtgt').entriesById.get(r.entry_id) as any;
+            assertEquals(e2.document_reference.map((x: any) => x.bounding_group_id), [g1, g2]);
+
+            // The sheet's sidebar now shows the word (facade link), and the
+            // MMO sidebar is unchanged.
+            const after = renderToStringViaLinkeDOM(
+                renderPageWordSidebarCore(fx.ww, page_id, sheet));
+            assertStringIncludes(after, 'Words on this page (1)');
+            assertStringIncludes(after, `wordwiki.dicts.shtgt.word(${r.entry_id})`);
+            assertStringIncludes(renderToStringViaLinkeDOM(
+                renderPageWordSidebarCore(fx.ww, page_id, mmoLayer)),
+                'Words on this page (2)');
+
+            // The delete guard sees references from EVERY dictionary.
+            let threw = false;
+            try { as(fx, 'djz', () => deleteBoundingGroup(g1)); } catch { threw = true; }
+            assert(threw, 'a shtgt-referenced group refuses deletion');
+            // ... and the untouched MMO orphan still deletes cleanly.
+            as(fx, 'djz', () => deleteBoundingGroup(orphanGroup));
+        } finally {
+            security.runSystem(() => db().executeStatements(
+                'DROP TABLE IF EXISTS shtgt; DROP TABLE IF EXISTS shtgt_dict_config;'));
+        }
     });
 });
 

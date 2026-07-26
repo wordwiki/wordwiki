@@ -13,7 +13,7 @@ import { db } from "../liminal/db.ts";
 import * as security from "../liminal/security.ts";
 import * as dictionaryConfig from "./dictionary-config.ts";
 import { editorAppFor } from "./dictionary-pages.ts";
-import { withTestDb, as } from "./testing.ts";
+import { withTestDb, as, renderRoute } from "./testing.ts";
 
 test("ref spine 0: create + attach plant document_reference at the entry root", async () => {
     await withTestDb(async (fx) => {
@@ -50,6 +50,14 @@ test("ref spine 0: create + attach plant document_reference at the entry root", 
             assertEquals(e.document_reference.map((r: any) => r.bounding_group_id),
                          [4242, 5555]);
             assertEquals(e.document_reference[1].document_reference_id, fact_id);
+
+            // The facade word page renders the references (§3.5): these
+            // group ids point at no real scan, so renderStandaloneGroup's
+            // 'Empty Group' marker shows - the page itself must not crash.
+            const word = JSON.stringify(await as(fx, 'djz',
+                () => renderRoute(ww, `wordwiki.dicts.spinetgt.word(${entry_id})`)));
+            assertEquals(word.includes('lm-me-scan'), true);
+            assertEquals(word.includes('Empty Group'), true);
         } finally {
             security.runSystem(() => db().executeStatements(
                 'DROP TABLE IF EXISTS spinetgt; DROP TABLE IF EXISTS spinetgt_dict_config;'));

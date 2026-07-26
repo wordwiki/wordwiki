@@ -19,6 +19,7 @@
  */
 import * as templates from './templates.ts';
 import * as entryMeta from './render-entry-meta.ts';
+import * as renderPageEditor from './render-page-editor.ts';
 import * as schemaRoles from './schema-roles.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
 import { route, authenticated } from '../liminal/security.ts';
@@ -159,7 +160,24 @@ export class DictionaryPages {
                 ? ['p', {class: 'text-muted'}, 'Word not found.']
                 : ['div', {class: 'page-content'},
                    entryMeta.renderEntryMeta(
-                       {rootPath: '/', audience: 'internal'},
+                       {rootPath: '/', audience: 'internal',
+                        // The reference scan (a boundingGroup-shaped field):
+                        // same composition as the MMO word view - the scan
+                        // crop linking to its page-editor page.  Group-scoped,
+                        // so dictionary-agnostic; a dangling group id renders
+                        // a quiet note rather than crashing the word page.
+                        renderBoundingGroup: (gid: number) => {
+                            try {
+                                const scan = renderPageEditor.renderStandaloneGroup('/', gid);
+                                let url = ''; try { url = renderPageEditor.pageEditorURLForBoundingGroup(gid); } catch { /**/ }
+                                let desc = ''; try { desc = renderPageEditor.imageRefDescription(gid); } catch { /**/ }
+                                return ['div', {},
+                                    ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, scan] : scan],
+                                    desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
+                            } catch {
+                                return ['div', {class: 'text-muted small'}, `(scan group ${gid})`];
+                            }
+                        }},
                        schema.relationFields[0], e)],
             ['p', {class: 'mt-3'},
              ['a', {...templates.pageLinkProps(

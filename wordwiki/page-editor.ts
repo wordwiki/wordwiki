@@ -1429,7 +1429,10 @@ function sidebarUntaggedContextMenu(event: MouseEvent) {
 async function createWordFromGroup(groupId: string|number) {
     try {
         const r = await rpc`wordwiki.newLexemeFromGroup(${Number(groupId)})`;
-        if(r && r.entry_id) window.location.href = `/ww/wordwiki.wordEditor(${r.entry_id})`;
+        // The server names the editor URL: the group's SHEET decides which
+        // dictionary the word landed in (per-dictionary editors).
+        if(r && r.entry_id)
+            window.location.href = r.editUrl ?? `/ww/wordwiki.wordEditor(${r.entry_id})`;
     } catch (e) {
         alert(`Failed to create word from group: ${e}`);
     }

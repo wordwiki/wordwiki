@@ -277,10 +277,20 @@ export interface Layer {
      * construction of other layers.
      */
     is_reference_layer: boolnum;
+
+    /**
+     * The dictionary whose tagging SHEET this layer is (rand-references-
+     * design.md §2: each dictionary tags a book on its OWN layer - clean
+     * sheets, separate reference pulls).  NULL for non-sheet layers (Text,
+     * PageBox); the pre-sheets 'Tagging' layers are stamped 'dict' by
+     * ensureLayerColumns.  Uniqueness stays on (document_id, layer_name) -
+     * sheet names encode the dictionary (see getOrCreateTaggingSheet).
+     */
+    dictionary?: string;
 }
 export type LayerOpt = Partial<Layer>;
 export const layerFieldNames: Array<keyof Layer> = [
-    'layer_id', 'document_id', 'layer_name', 'is_reference_layer'];
+    'layer_id', 'document_id', 'layer_name', 'is_reference_layer', 'dictionary'];
 
 const createLayerDml = block`
 /**/   CREATE TABLE IF NOT EXISTS layer(
@@ -288,12 +298,28 @@ const createLayerDml = block`
 /**/       document_id INTEGER NOT NULL,
 /**/       layer_name TEXT,
 /**/       is_reference_layer INTEGER NOT NULL,
+/**/       dictionary TEXT,
 /**/       FOREIGN KEY(document_id) REFERENCES scanned_document(document_id));
 /**/
 /**/   CREATE INDEX IF NOT EXISTS layer_by_document_id ON layer(document_id);
 /**/   CREATE UNIQUE INDEX IF NOT EXISTS layer_by_layer_name ON layer(document_id, layer_name);
 /**/   `;
 assertDmlContainsAllFields(createLayerDml, layerFieldNames);
+
+/** The LATE layer column (the ensureAssertionColumns pattern): bring an
+ *  existing db's layer table up to the sheets model, then stamp the
+ *  pre-sheets 'Tagging' layers as the DEFAULT dictionary's sheets (MMO's
+ *  existing tagging keeps every group, just attributed). */
+export function ensureLayerColumns() {
+    const have = new Set(db().prepare<{name: string}, {tbl: string}>(
+        `SELECT name FROM pragma_table_info(:tbl)`).all({tbl: 'layer'}).map(r => r.name));
+    if(have.size === 0) return;    // no layer table yet - the DDL carries the column
+    if(!have.has('dictionary'))
+        db().executeStatements(`ALTER TABLE layer ADD COLUMN dictionary TEXT;`);
+    db().execute(
+        `UPDATE layer SET dictionary = 'dict' WHERE layer_name = 'Tagging' AND dictionary IS NULL`,
+        {});
+}
 
 export const selectLayer = ()=>db().prepare<Layer, {layer_id: number}>(block`
 /**/   SELECT ${layerFieldNames.join()}
@@ -319,6 +345,22 @@ export function getOrCreateNamedLayer(document_id: number, layer_name: string, i
         return db().insert<Layer, 'layer_id'>(
             'layer', {document_id, layer_name, is_reference_layer}, 'layer_id');
     }
+}
+
+/**
+ * The tagging SHEET for (document, dictionary), created on first use - the
+ * clean-sheet semantic of rand-references-design.md §2.  The default
+ * dictionary keeps the historical bare 'Tagging' name (every existing URL
+ * and group untouched); other dictionaries' sheets are named
+ * 'Tagging:<table>' so the (document_id, layer_name) uniqueness keeps
+ * holding with zero index DDL.
+ */
+export function getOrCreateTaggingSheet(document_id: number, dictionary: string): number {
+    const layer_name = dictionary === 'dict' ? 'Tagging' : `Tagging:${dictionary}`;
+    const existing = selectLayerByLayerName().first({document_id, layer_name});
+    if(existing) return existing.layer_id;
+    return db().insert<Layer, 'layer_id'>(
+        'layer', {document_id, layer_name, is_reference_layer: 0, dictionary}, 'layer_id');
 }
 
 export function deleteLayer(layer_id: number) {

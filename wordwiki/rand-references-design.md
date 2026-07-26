@@ -191,6 +191,29 @@ fix what reaches for MMO-specific context.  The public/publish
 renderer is OUT OF SCOPE (rand is not published; when it is, the
 bundle-ized scan renders already exist).
 
+STATUS (§3.3–3.5): BUILT 2026-07-26.  `layer.dictionary` column +
+`ensureLayerColumns()` (late-column + 'Tagging'→'dict' stamping,
+run from ensureNewStyleTables; the dev instance's five Tagging
+layers stamped); `getOrCreateTaggingSheet(document_id, dictionary)`
+— the default dictionary keeps the bare 'Tagging' name (existing
+URLs/groups untouched), other sheets are 'Tagging:<table>' so the
+(document, name) uniqueness holds with zero index DDL.
+pageEditor(...) gained a trailing `dictionary='dict'` param;
+pageWordRows/sidebar are sheet-scoped (the layer resolves the
+dictionary, its table/tag/bind come from that schema — no literals);
+facade rows use the same lm-lexeme-view/lm-edit-pencil anchor
+classes, so the context menu and o/e hover keys work unchanged;
+newLexemeFromGroup resolves the dictionary FROM THE GROUP'S SHEET
+and returns editUrl (client follows it); NEW rpc
+`wordwiki.addReferenceFromGroup(entry_id, group_id)`;
+deleteBoundingGroup's guard now checks EVERY dictionary's refs.
+The facade word page injects the scan renderer (same composition as
+the MMO word view; dangling groups degrade quietly).  Tests: the
+sheets disjointness/create/attach/guard test in
+page-word-sidebar_test.ts + the §3.5 render pin in
+reference-spine_test.ts.  Hand-tagging of rand now works end to
+end: open `wordwiki.pages.pageEditor('Rand', N, 'Text', 'rand')`.
+
 **3.6 Tests** (render->act->render, in-memory db, the generic test
 layer): create-from-group in a no-subentry dictionary (spine length
 0) + MMO regression (spine length 1); attach-to-existing on both;
@@ -343,8 +366,9 @@ eventually more) flow without cross-writes.
 2. ~~Schema vocab into rand (§3.1) + spine generalization + attach
    op (§3.2), with tests~~ DONE 2026-07-26 (see the §3.2 STATUS
    block).
-3. Sheets (layer.dictionary column + stamping migration) +
-   sheet-scoped lookup + per-dictionary links (§3.3–3.5).
+3. ~~Sheets (layer.dictionary column + stamping migration) +
+   sheet-scoped lookup + per-dictionary links (§3.3–3.5)~~ DONE
+   2026-07-26 (see the §3.5 STATUS block).
    — hand-tagging of rand now works end to end —
 4. Printed->scan page map script (§5).
 5. Binder stage + the 10-page eval set (§5).

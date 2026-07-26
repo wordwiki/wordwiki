@@ -30,8 +30,17 @@ document references like MMO's, doc of record
   transform gen 5); lexeme-ops referenceChain()/boundingGroupBind(),
   chain-driven createLexemeFromGroup + NEW addReferenceToEntry
   (reuses first live spine tuple; plain pending posture); tests in
-  reference-spine_test.ts.  NEXT: step 3, sheets + sheet-scoped
-  lookup + per-dictionary links.
+  reference-spine_test.ts.
+- Step 3 BUILT 2026-07-26 (sheets): layer.dictionary column +
+  ensureLayerColumns stamping ('Tagging'->'dict'); sheets named
+  'Tagging:<table>' (dict keeps bare 'Tagging'); sheet-scoped
+  pageWordRows/sidebar (facade rows reuse lm-lexeme-view/
+  lm-edit-pencil classes so menu + o/e keys just work);
+  newLexemeFromGroup resolves dictionary from the GROUP's sheet +
+  returns editUrl; NEW rpc addReferenceFromGroup; delete guard
+  checks all dictionaries; facade word page renders scans.
+  Hand-tag rand: wordwiki.pages.pageEditor('Rand', N, 'Text',
+  'rand').  NEXT: step 4, printed->scan page map script.
 - Only three sites were position/table-bound: createLexemeFromGroup
   (fixed one-wrapper spine → generalize to parentRelation-chain
   spine), pageWordRows (hardcoded `FROM dict` → sweep discovered

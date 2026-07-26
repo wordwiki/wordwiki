@@ -17,6 +17,7 @@ import {Response, ResponseMarker, forwardResponse} from '../liminal/http-server.
 import {route, authenticated, hostOrAdmin} from '../liminal/security.ts';
 import * as random from "../liminal/random.ts";
 import * as entrySchema from './entry-schema.ts';
+import * as schemaRoles from './schema-roles.ts';
 // Type-only: erased at runtime, so no import cycle.  The app instance
 // arrives via the provider hook below (the templates-provider pattern) -
 // a VALUE import of wordwiki.ts from here broke module initialization
@@ -96,11 +97,15 @@ export interface PageViewerConfig extends PageRenderConfig {
 
 export async function pageEditor(friendly_document_id: string,
                                  page_number: number=1,
-                                 reference_layer_name: string = 'Text'): Promise<any> {
+                                 reference_layer_name: string = 'Text',
+                                 dictionary: string = 'dict'): Promise<any> {
 
     const document = selectScannedDocumentByFriendlyId().required({friendly_document_id});
     const document_id = document.document_id;
-    const taggingLayer = getOrCreateNamedLayer(document_id, 'Tagging', 0);
+    // The (book x dictionary) tagging SHEET (rand-references-design.md §2):
+    // existing URLs (no dictionary arg) keep opening MMO's historical
+    // 'Tagging' layer; other dictionaries get their own clean sheet.
+    const taggingLayer = schema.getOrCreateTaggingSheet(document_id, dictionary);
     const referenceLayer = selectLayerByLayerName().required({document_id, layer_name: reference_layer_name});
     return renderPageEditorByPageNumber(
         document_id, page_number,
@@ -223,21 +228,41 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
 
 interface PageWordRow { entry_id: number; groupIds: number[]; }
 
-/** The words with scanned content on this page: entry + the page's bounding
- *  groups its document references point at, in reading order (same query
- *  shape as editorReports.entriesByBookPage - dz: the sidebar is that
- *  report as a panel). */
-function pageWordRows(page_id: number): PageWordRow[] {
-    const refs = db().all<{bounding_group_id: number, entry_id: number}, {page_id: number}>(
+/** The layer's dictionary - the SHEET scope (rand-references-design.md
+ *  §3.3).  Pre-sheets rows and non-sheet layers read as the default
+ *  dictionary (ensureLayerColumns stamps 'Tagging'; anything else NULL is
+ *  legacy data that only ever meant MMO). */
+function layerDictionary(layer_id: number): string {
+    return selectLayer().required({layer_id}).dictionary ?? 'dict';
+}
+
+/** The words with scanned content on this page, ON THIS SHEET: entry + the
+ *  sheet's bounding groups its document references point at, in reading
+ *  order (same query shape as editorReports.entriesByBookPage - dz: the
+ *  sidebar is that report as a panel).  The dictionary, its table, the ref
+ *  tag and the group-id bind all come from the SHEET's dictionary schema -
+ *  no 'dict'/'ref'/attr1 literals; one memoized prepared statement per
+ *  dictionary (SQL text varies by table, the db layer memoizes by text). */
+function pageWordRows(page_id: number, layer_id: number): PageWordRow[] {
+    const ww = pageEditorApp();
+    const store = ww.storeFor(layerDictionary(layer_id));
+    const schema = store.dictSchema;
+    const refRel = schema.relationsByRole.documentReference;
+    if(!refRel) return [];
+    const bind = refRel.scalarFields.find(f => f.style.$shape === 'boundingGroup')?.bind
+        ?? utils.panic(`relation '${refRel.name}' has no boundingGroup field`);
+    const refs = db().all<{bounding_group_id: number, entry_id: number},
+                          {page_id: number, layer_id: number, ty: string}>(
         block`
 /**/     SELECT DISTINCT bg.bounding_group_id AS bounding_group_id, ref.id1 AS entry_id
-/**/       FROM dict AS ref
-/**/         LEFT JOIN bounding_group AS bg ON ref.attr1 = bg.bounding_group_id
+/**/       FROM ${store.assertionTable} AS ref
+/**/         LEFT JOIN bounding_group AS bg ON ref.${bind} = bg.bounding_group_id
 /**/         LEFT JOIN bounding_box AS bb ON bb.bounding_group_id = bg.bounding_group_id
 /**/       WHERE ref.valid_to = 9007199254740991 AND
-/**/             ref.ty = 'ref' AND
-/**/             bb.page_id = :page_id
-/**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id});
+/**/             ref.ty = :ty AND
+/**/             bb.page_id = :page_id AND
+/**/             bg.layer_id = :layer_id
+/**/       ORDER BY bb.y, bb.x, ref.id1`, {page_id, layer_id, ty: refRel.tag});
     const byEntry = new Map<number, PageWordRow>();
     for(const r of refs) {
         let row = byEntry.get(r.entry_id);
@@ -283,9 +308,12 @@ export function renderPageWordSidebar(page_id: number, layer_id: number): any {
  *  getWordWiki() singleton would be a SECOND instance over the test db). */
 export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_id: number): any {
     const lane = ww.workingLane()?.orthography;
-    const rows = pageWordRows(page_id);
-    const entriesById = new Map<number, entrySchema.Entry>(
-        ww.store.entries.map((e: entrySchema.Entry)=>[e.entry_id, e]));
+    // The SHEET's dictionary scopes everything: which table the reverse
+    // lookup sweeps, whose entries render, and where the links go.
+    const dict = layerDictionary(layer_id);
+    const store = ww.storeFor(dict);
+    const rows = pageWordRows(page_id, layer_id);
+    const entriesById = store.entriesById;
 
     // Tagged groups no word references yet - exactly what page-at-a-time
     // review should surface (orphaned tags), in page position order.
@@ -300,6 +328,28 @@ export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_i
         onmouseenter: 'pageWordRowEnter(event)',
         onmouseleave: 'pageWordRowLeave(event)'});
 
+    // A facade dictionary's word link: same anchor classes as
+    // templates.lexemeLink ('lm-lexeme-view' / 'lm-edit-pencil') - the
+    // client's context menu and o/e hover keys click those anchors, so the
+    // per-dictionary URLs ride through them unchanged.
+    const facadeLexemeLink = (entry_id: number, content: any) =>
+        ['span', {class: 'lm-lexeme-link d-inline-flex align-items-center gap-1'},
+         ['a', {href: `/ww/wordwiki.dicts.${dict}.word(${entry_id})`,
+                target: '_blank', class: 'lm-lexeme-view'}, content],
+         templates.mayEditLexemes()
+             ? templates.pencilLink(
+                 `/ww/wordwiki.dicts.${dict}.lexeme.metaEditPage(${entry_id})`,
+                 {newTab: true})
+             : undefined];
+    // Facade summary: headword + glosses via the roles (the compact MMO
+    // summary reads the DEFAULT schema, so it is not usable here).
+    const facadeSummary = (e: any) => {
+        const hw = schemaRoles.headwordFallback(store.dictSchema, e)?.text;
+        const glosses = schemaRoles.glossTexts(store.dictSchema, e);
+        return ['div', {}, ['strong', {}, hw ?? '(no headword)'],
+                glosses.length > 0 ? [' : ', glosses.join(' / ')] : undefined];
+    };
+
     const wordRow = (r: PageWordRow) => {
         const e = entriesById.get(r.entry_id);
         // A ref pointing at a deleted/unknown entry renders nothing (the
@@ -307,11 +357,14 @@ export function renderPageWordSidebarCore(ww: WordWiki, page_id: number, layer_i
         // just skip the row rather than crash the editor).
         if(!e) return undefined;
         return ['li', {class: 'pe-word', ...rowProps(r.groupIds)},
-                templates.lexemeLink(r.entry_id,
-                    entrySchema.renderEntryCompactSummary(e, {orthography: lane}),
-                    // No not-public badge here (dz: not worth the clutter
-                    // in the tight sidebar).
-                    {viewOrthography: lane, newTab: true, badge: false})];
+                dict === 'dict'
+                    ? templates.lexemeLink(r.entry_id,
+                        entrySchema.renderEntryCompactSummary(e as entrySchema.Entry,
+                                                              {orthography: lane}),
+                        // No not-public badge here (dz: not worth the clutter
+                        // in the tight sidebar).
+                        {viewOrthography: lane, newTab: true, badge: false})
+                    : facadeLexemeLink(r.entry_id, facadeSummary(e))];
     };
 
     return ['div', {id: 'pageWordSidebar', class: 'pe-sidebar'},
@@ -816,22 +869,37 @@ export function removeBoxFromGroup(bounding_box_id: number) {
     });
 }
 
+/** How many current document references, across EVERY discovered
+ *  dictionary with a documentReference role, point at this group (each
+ *  dictionary's table/tag/bind read from its schema - a rand-referenced
+ *  group is just as protected as an MMO-referenced one). */
+function groupReferenceCount(bounding_group_id: number): number {
+    const ww = pageEditorApp();
+    let n = 0;
+    for(const dict of ww.dictionaries()) {
+        const s = ww.storeFor(dict).dictSchema;
+        const refRel = s.relationsByRole.documentReference;
+        const bind = refRel?.scalarFields.find(f => f.style.$shape === 'boundingGroup')?.bind;
+        if(!refRel || !bind) continue;
+        n += db().first<{n: number}, {g: number, ty: string}>(
+            `SELECT COUNT(*) AS n FROM ${ww.storeFor(dict).assertionTable} ` +
+            `WHERE ty = :ty AND valid_to = 9007199254740991 AND ${bind} = :g`,
+            {g: bounding_group_id, ty: refRel.tag})?.n ?? 0;
+    }
+    return n;
+}
+
 /** Delete a whole bounding GROUP - its boxes and the group row (the ×
  *  beside an unlinked group in the page word sidebar).  Guarded: refuses
- *  if any current dict reference still points at the group, so a
- *  word-linked group can never be silently orphaned (the sidebar only
+ *  if any current reference IN ANY DICTIONARY still points at the group,
+ *  so a word-linked group can never be silently orphaned (the sidebar only
  *  offers this on UNLINKED groups, but the guard makes the verb safe on
  *  its own). */
 export function deleteBoundingGroup(bounding_group_id: number): {deleted: boolean} {
     return db().transaction(()=>{
         if(typeof bounding_group_id !== 'number')
             throw new Error('invalid bounding_group_id in call to deleteBoundingGroup');
-        const referenced = db().first<{n: number}>(
-            block`
-/**/       SELECT COUNT(*) AS n FROM dict
-/**/         WHERE ty = 'ref' AND valid_to = 9007199254740991
-/**/               AND attr1 = :bounding_group_id`, {bounding_group_id})?.n ?? 0;
-        if(referenced > 0)
+        if(groupReferenceCount(bounding_group_id) > 0)
             throw new Error(`bounding group ${bounding_group_id} is referenced by a word - `+
                             `remove the reference before deleting the group`);
         db().execute('DELETE FROM bounding_box WHERE bounding_group_id=:bounding_group_id',
@@ -848,7 +916,7 @@ export function deleteBoundingGroup(bounding_group_id: number): {deleted: boolea
  *  guarded (deleteBoundingGroup), so a word-linked group can never be
  *  caught up in this. */
 export function deleteUnlinkedGroupsForPage(page_id: number, layer_id: number): {deleted: number} {
-    const referenced = new Set(pageWordRows(page_id).flatMap(r=>r.groupIds));
+    const referenced = new Set(pageWordRows(page_id, layer_id).flatMap(r=>r.groupIds));
     const unlinked = loadBookPageScanData(page_id, layer_id).groups
         .filter(g=>!referenced.has(g.bounding_group_id) && g.boxes.length > 0)
         .map(g=>g.bounding_group_id);
