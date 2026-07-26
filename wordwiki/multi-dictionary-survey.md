@@ -588,6 +588,16 @@ honor:
   (mkrOverThis chained in record order, 14 deep; discovered here).
   Deterministic re-imports; edited-mirror refusal; source_typ +
   generation config pairs; the facade mirror banner.
+  THE STRUCTURAL .TYP (dz, same day): rather than flat+re-treeing,
+  a REPLACEMENT .typ encodes Watson's structural intent and sfm's
+  tree recovery does the grouping - watson/make-structural-typ.ts
+  rewrites MDF.typ's mkrOverThis from an explicit override map (\ps
+  opens a sense hung on lx: REPETITION = a new group, the opener
+  must BE the parent; \xe pairs under \xv; depth exactly at
+  capacity).  Full RAND in tree mode: 10s, zero problems; e'n's two
+  senses group with the example paired - pinned in the suite.  Tree
+  mode is now RAND's import path; flat remains the strict-mirror
+  fallback for un-fixable typs.
   NEXT: the step-2 TRANSFORM (the mapping document + engine).
 
   THE TWO-STEP IMPORT DESIGN (converged dz + review 2026-07-25):
