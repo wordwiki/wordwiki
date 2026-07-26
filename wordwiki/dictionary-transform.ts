@@ -44,7 +44,13 @@
  * Source relations with NO rule are UNMAPPED: their subtrees are skipped
  * and counted per tag - the run report is the completeness accounting the
  * iterate-until-right loop converges on.  Edits on the target (any
- * assertion not authored by '~dict-transform') BLOCK re-runs.
+ * assertion not authored by '~dict-transform') BLOCK re-runs - unless
+ * `preserveForeign`, which rebuilds ONLY machine-owned facts: a fact any
+ * of whose rows has a foreign author survives whole (history + chains),
+ * computed rows never displace it, nothing is re-created under a
+ * human-tombstoned ancestor, and open preserved facts whose ancestors
+ * vanished are REPORTED as orphans (rand-references-design.md §4; the
+ * fact-granular ownership predicate of machine-contributors-design.md).
  */
 import * as model from './model.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
@@ -207,6 +213,17 @@ export interface TransformResult {
     parseMisses: number;
     recodeMisses: number;
     generation: number;
+    // preserve-foreign accounting (all zero/empty on a from-scratch run)
+    preservedFacts: number;                 // foreign-owned facts kept intact
+    preservedByAuthor: Map<string, number>; // ... per latest foreign author
+    computedSkippedPreserved: number;       // computed rows not written (the
+                                            //   preserved human version wins)
+    resurrectionsSkipped: number;           // computed rows under a human-
+                                            //   tombstoned ancestor (never
+                                            //   reassert a human retraction)
+    orphans: Array<{id: number, ty: string, entry_id: number,
+                    missingAncestor: number}>;  // OPEN preserved facts whose
+                                            //   ancestor no longer exists
 }
 
 /** Deterministic wrapper/fan-out id: hash of (source id, salt), folded
@@ -219,7 +236,8 @@ function derivedId(sourceId: number, salt: string): number {
 }
 
 export function runTransform(targetTable: string, sourceStore: DictionaryStore,
-                             opts: {stopAfterCount?: number} = {}): TransformResult {
+                             opts: {stopAfterCount?: number,
+                                    preserveForeign?: boolean} = {}): TransformResult {
     const mappingText = dictionaryConfig.readConfigValue(targetTable, 'transform');
     if(mappingText === undefined)
         throw new Error(`dictionary '${targetTable}' has no 'transform' config - load-mapping first`);
@@ -231,20 +249,54 @@ export function runTransform(targetTable: string, sourceStore: DictionaryStore,
     const mapping = gate.mapping;
     const targetSchema = gate.targetSchema;
 
-    // Refuse to destroy human work: any non-transformer assertion blocks.
-    const foreign = (() => {
+    // OWNERSHIP is FACT-granular (the machine-contributors predicate): a
+    // fact id is FOREIGN-OWNED iff ANY of its rows has a non-transformer
+    // author - a human edit is a superseding row on the same id, a human
+    // delete is a tombstone row on the same id, so both mark the whole
+    // fact (including its machine-authored history, which must survive so
+    // replaces_assertion_id chains stay intact).
+    const foreignSql =
+        `SELECT DISTINCT id FROM ${targetTable} WHERE change_by_username IS NULL ` +
+        `OR change_by_username <> :u`;
+    const foreignCount = (() => {
         try {
             return db().first<{n: number}>(
-                `SELECT COUNT(*) AS n FROM ${targetTable} WHERE change_by_username IS NULL ` +
-                `OR change_by_username <> :u`, {u: DICT_TRANSFORM_USERNAME})?.n ?? 0;
+                `SELECT COUNT(*) AS n FROM (${foreignSql})`, {u: DICT_TRANSFORM_USERNAME})?.n ?? 0;
         } catch(_e) { return 0; }
     })();
-    if(foreign > 0)
-        throw new Error(`target '${targetTable}' has ${foreign} edited assertion(s) - ` +
-                        `the transform fully recreates the target; resolve the edits first`);
+    if(foreignCount > 0 && !opts.preserveForeign)
+        throw new Error(`target '${targetTable}' has ${foreignCount} edited fact(s) - ` +
+                        `the transform fully recreates the target; resolve the edits ` +
+                        `or re-run with --preserve-foreign`);
 
     // Recreate = the ASSERTION TABLE ONLY (the config pair is identity).
-    db().execute(`DELETE FROM ${targetTable}`, {});
+    // Under preserve-foreign, delete only MACHINE-OWNED facts' rows;
+    // foreign-owned facts survive whole.
+    if(foreignCount > 0)
+        db().execute(`DELETE FROM ${targetTable} WHERE id NOT IN (${foreignSql})`,
+                     {u: DICT_TRANSFORM_USERNAME});
+    else
+        db().execute(`DELETE FROM ${targetTable}`, {});
+
+    // The preserved facts: open/dead partition drives emission (a computed
+    // row never displaces a preserved fact; nothing is emitted under a
+    // human-tombstoned ancestor), and the latest foreign author is the
+    // report's attribution.
+    interface PreservedRow { assertion_id: number; id: number; ty: string;
+        valid_from: number; valid_to: number;
+        ty0: string|null; ty1: string|null; ty2: string|null;
+        ty3: string|null; ty4: string|null; ty5: string|null;
+        id1: number|null; id2: number|null; id3: number|null;
+        id4: number|null; id5: number|null; change_by_username: string|null; }
+    const preservedRows: PreservedRow[] = foreignCount === 0 ? [] :
+        db().all<PreservedRow, Record<string, never>>(
+            `SELECT assertion_id, id, ty, valid_from, valid_to, ` +
+            `ty0, ty1, ty2, ty3, ty4, ty5, id1, id2, id3, id4, id5, ` +
+            `change_by_username FROM ${targetTable}`, {});
+    const preservedIds = new Set(preservedRows.map(r => r.id));
+    const openPreserved = new Set(
+        preservedRows.filter(r => r.valid_to === timestamp.END_OF_TIME).map(r => r.id));
+    const deadPreserved = new Set([...preservedIds].filter(id => !openPreserved.has(id)));
     dictionaryConfig.writeConfigValue(targetTable, 'schema',
         dictionaryConfig.canonicalSchemaJsonText(targetTable, mapping.targetSchema));
 
@@ -261,7 +313,14 @@ export function runTransform(targetTable: string, sourceStore: DictionaryStore,
     };
     walkTgt(tgtRoot, '');
 
-    const t = timestamp.nextTime(highestTimestamp(targetTable));
+    // Preserve runs REUSE the original stamp: rebuilt rows keep the valid_from
+    // they were born with, so preserved human versions (always later) still
+    // postdate their rebuilt parents, and a preserve re-run is byte-stable.
+    // (A from-scratch run keeps the fresh-stamp behavior.)
+    const storedStamp = dictionaryConfig.readConfigValue(targetTable, 'transform_stamp');
+    const t = opts.preserveForeign && storedStamp !== undefined
+        ? Number(storedStamp)
+        : timestamp.nextTime(highestTimestamp(targetTable));
     const rows: Assertion[] = [];
     const rowById = new Map<number, Assertion>();
     const result: TransformResult = {
@@ -269,6 +328,8 @@ export function runTransform(targetTable: string, sourceStore: DictionaryStore,
         mappedPerTag: new Map(), unmappedPerTag: new Map(),
         skippedEmpty: 0, parseMisses: 0, recodeMisses: 0,
         generation: Number(dictionaryConfig.readConfigValue(targetTable, 'transform_generation') ?? '0') + 1,
+        preservedFacts: preservedIds.size, preservedByAuthor: new Map(),
+        computedSkippedPreserved: 0, resurrectionsSkipped: 0, orphans: [],
     };
     const bump = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
 
@@ -430,8 +491,80 @@ export function runTransform(targetTable: string, sourceStore: DictionaryStore,
                 walk(tuple, child, child.tag, [entryCtx]);
     }
 
+    // Preserve-foreign emission filter: a computed row whose fact id is
+    // preserved is SKIPPED (the human version - open, edited, or
+    // tombstoned - wins); a computed row under a human-tombstoned
+    // ancestor is skipped too (re-creating a deleted sense's children
+    // would resurrect what the human removed).  Deterministic ids make
+    // both checks a set lookup.
+    const ancestorIds = (a: Assertion): number[] =>
+        [a.id1, a.id2, a.id3, a.id4, a.id5]
+            .filter((x): x is number => x != null && x !== a.id);
+    const inserted: Assertion[] = preservedIds.size === 0 ? rows : rows.filter(a => {
+        if(preservedIds.has(a.id)) { result.computedSkippedPreserved++; return false; }
+        if(ancestorIds(a).some(x => deadPreserved.has(x))) {
+            result.resurrectionsSkipped++; return false; }
+        return true;
+    });
+
+    // The preserved-facts accounting: latest-foreign-author attribution, and
+    // ORPHANS - open preserved facts whose ancestor chain no longer has an
+    // open fact (typically: the source record vanished in a re-import, so
+    // the rebuilt table lacks the entry).  Human work is never deleted, and
+    // dangling rows would fail the store's structural validation - so each
+    // missing ancestor is re-asserted as a machine SKELETON stub: the
+    // orphaned facts stay visible and editable in-band, the report is the
+    // worklist, and (being machine-owned) the stubs re-derive or vanish on
+    // the next run as the orphans are resolved.
+    if(preservedRows.length > 0) {
+        const latestByFact = new Map<number, PreservedRow>();
+        for(const r of preservedRows) {
+            const cur = latestByFact.get(r.id);
+            if(!cur || r.valid_from > cur.valid_from ||
+               (r.valid_from === cur.valid_from && r.assertion_id > cur.assertion_id))
+                latestByFact.set(r.id, r);
+        }
+        for(const r of latestByFact.values()) {
+            const author = r.change_by_username !== DICT_TRANSFORM_USERNAME
+                ? (r.change_by_username ?? '(unknown)') : '(machine history)';
+            bump(result.preservedByAuthor, author);
+        }
+        const openIds = new Set<number>(openPreserved);
+        for(const a of inserted) openIds.add(a.id);
+        for(const id of openPreserved) {
+            const r = latestByFact.get(id)!;
+            const levels: Array<[string|null, number|null]> = [
+                [r.ty1, r.id1], [r.ty2, r.id2], [r.ty3, r.id3],
+                [r.ty4, r.id4], [r.ty5, r.id5]];
+            const missing = levels
+                .filter((l): l is [string, number] => l[1] != null && l[1] !== id)
+                .filter(([_ty, aid]) => !openIds.has(aid));
+            if(missing.length === 0) continue;
+            result.orphans.push({id, ty: r.ty, entry_id: r.id1 ?? 0,
+                                 missingAncestor: missing[0][1]});
+            // Skeleton stubs, outermost first, deduped via openIds.
+            for(let k = 0; k < levels.length; k++) {
+                const [ty, aid] = levels[k];
+                if(ty == null || aid == null || aid === id || openIds.has(aid)) continue;
+                const prefix: [string, number][] = [[r.ty0 ?? targetSchema.tag, 0]];
+                for(let j = 0; j <= k; j++)
+                    prefix.push([levels[j][0]!, levels[j][1]!]);
+                inserted.push({
+                    ...assertionPathToFields(prefix),
+                    assertion_id: aid, id: aid, ty,
+                    valid_from: t, valid_to: timestamp.END_OF_TIME,
+                    order_key: orderkey.new_range_start_string,
+                    change_by_username: DICT_TRANSFORM_USERNAME,
+                    change_note: 'skeleton for orphaned edits (see the transform report)',
+                } as Assertion);
+                openIds.add(aid);
+            }
+        }
+    }
+    result.assertions = inserted.length;
+
     db().transaction(() => {
-        for(const a of rows)
+        for(const a of inserted)
             db().insert<Assertion, 'assertion_id'>(targetTable, a, 'assertion_id');
     });
     dictionaryConfig.writeConfigValue(targetTable, 'transform_generation',
@@ -453,6 +586,21 @@ export function transformReportMarkdown(table: string, r: TransformResult): stri
         `- skipped empty: ${r.skippedEmpty}`,
         `- parse misses: ${r.parseMisses}`,
         `- recode misses: ${r.recodeMisses}`,
+        ``,
+        ...(r.preservedFacts === 0 ? [] : [
+            ``,
+            `## Preserved foreign-owned facts: ${r.preservedFacts}`,
+            ...fmt(r.preservedByAuthor),
+            `- computed rows skipped (preserved version wins): ${r.computedSkippedPreserved}`,
+            `- resurrections skipped (under a human-tombstoned ancestor): ${r.resurrectionsSkipped}`,
+            ``,
+            `## ORPHANED preserved facts (ancestor gone; now under skeleton stubs - the human worklist)`,
+            ...(r.orphans.length === 0 ? ['- (none)'] :
+                r.orphans.slice(0, 40).map(o =>
+                    `- fact ${o.id} (\\${o.ty}) in entry ${o.entry_id}: ` +
+                    `ancestor ${o.missingAncestor} no longer exists`)),
+            ...(r.orphans.length > 40 ? [`- ... and ${r.orphans.length - 40} more`] : []),
+        ]),
         ``,
         `## Mapped source tuples per tag`, ...fmt(r.mappedPerTag),
         ``,

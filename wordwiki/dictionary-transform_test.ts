@@ -78,6 +78,109 @@ test("gate: bad rule paths and fields refuse; source-hash drift warns", async ()
     }));
 });
 
+test("preserve-foreign: human facts survive; tombstones stay dead; orphans report", async () => {
+    const EOT = 9007199254740991;
+    await withTestDb(({ww}) => security.runSystem(() => {
+        try {
+            sfmImport.importSfm(
+                '\\+DatabaseType T\n\\mkrRecord lx\n\\+mkr lx\n\\+mkr ge\n\\mkrOverThis lx\n' +
+                '\\+mkr nt\n\\mkrOverThis ge\n',
+                '\\_sh t\n\n\\lx w1\n\\ge g1\n\n\\lx w2\n\\ge g2\n\\nt n2\n\n\\lx w3\n\\ge g3\n',
+                {table: 'psvsrc', structure: 'tree'});
+            const target = {
+                $type: 'schema', $name: 'p', $tag: 'tpsv',
+                entry: {$type: 'relation', $tag: 'ent', entry_id: {$type: 'primary_key'},
+                        gloss: {$type: 'relation', $tag: 'gls', gloss_id: {$type: 'primary_key'},
+                                gloss: {$type: 'string', $bind: 'attr1'},
+                                note: {$type: 'relation', $tag: 'not', note_id: {$type: 'primary_key'},
+                                       note: {$type: 'string', $bind: 'attr1'}}}}};
+            const mapping = {formatVersion: 1, sources: [{table: 'psvsrc'}], targetSchema: target,
+                rules: [{from: 'ge', to: 'gloss', set: {gloss: {content: true}}},
+                        {from: 'ge/nt', to: 'gloss/note', set: {note: {content: true}}}]};
+            dictionaryConfig.createDictionary('psvtgt', target, {slug: 'psvtgt'});
+            dictionaryConfig.writeConfigValue('psvtgt', 'transform', JSON.stringify(mapping));
+            const r1 = dt.runTransform('psvtgt', ww.storeFor('psvsrc'));
+            assertEquals([r1.entries, r1.preservedFacts, r1.orphans], [3, 0, []]);
+
+            const q = (sql: string, p: any = {}): any[] => db().all<any, any>(sql, p);
+            const [g1, g2, g3] = q(
+                `SELECT * FROM psvtgt WHERE ty='gls' ORDER BY id1`);
+            const noteId = q(`SELECT id FROM psvtgt WHERE ty='not'`)[0].id;
+            const e3 = g3.id1;
+            // Human EDIT of g1: supersede (close the machine row, chain a
+            // human-authored version on the same fact id).
+            db().execute(`UPDATE psvtgt SET valid_to=:t WHERE assertion_id=:a`,
+                         {t: g1.valid_from + 1, a: g1.assertion_id});
+            db().insert('psvtgt', {...g1, assertion_id: 900001,
+                replaces_assertion_id: g1.assertion_id, valid_from: g1.valid_from + 1,
+                valid_to: EOT, attr1: 'g1 EDITED', change_by_username: 'djz'}, 'assertion_id');
+            // Human TOMBSTONE of g2 (which has a machine note child): close +
+            // empty-validity tombstone row, human-authored.
+            db().execute(`UPDATE psvtgt SET valid_to=:t WHERE assertion_id=:a`,
+                         {t: g2.valid_from + 1, a: g2.assertion_id});
+            db().insert('psvtgt', {...g2, assertion_id: 900004,
+                replaces_assertion_id: g2.assertion_id, valid_from: g2.valid_from + 1,
+                valid_to: g2.valid_from + 1, change_by_username: 'djz'}, 'assertion_id');
+            // Human-ADDED fact under entry 3 (a gloss the machine never computed).
+            db().insert('psvtgt', {...g3, assertion_id: 900002, id: 900002,
+                id2: 900002, attr1: 'hand-added', change_by_username: 'djz'}, 'assertion_id');
+
+            // Without the flag: still refuses.
+            let refused: any;
+            try { dt.runTransform('psvtgt', ww.storeFor('psvsrc')); }
+            catch(e) { refused = e; }
+            assertEquals(String(refused).includes('preserve-foreign'), true);
+
+            // With the flag: machine facts rebuild, human facts survive whole.
+            const r2 = dt.runTransform('psvtgt', ww.storeFor('psvsrc'),
+                                       {preserveForeign: true});
+            assertEquals(r2.preservedFacts, 3);            // g1, g2, hand-added
+            assertEquals(r2.computedSkippedPreserved, 2);  // g1, g2 recomputed rows
+            assertEquals(r2.resurrectionsSkipped, 1);      // n2 under dead g2
+            assertEquals(r2.orphans, []);
+            // g1: exactly its two rows; the human version is the open one.
+            assertEquals(q(`SELECT attr1 FROM psvtgt WHERE id=:id AND valid_to=:e`,
+                                {id: g1.id, e: EOT}).map(r => r.attr1), ['g1 EDITED']);
+            assertEquals(q(`SELECT COUNT(*) AS n FROM psvtgt WHERE id=:id`,
+                                {id: g1.id})[0].n, 2);
+            // g2: dead (no open row), and its note child was NOT resurrected.
+            assertEquals(q(`SELECT COUNT(*) AS n FROM psvtgt WHERE id=:id AND valid_to=:e`,
+                                {id: g2.id, e: EOT})[0].n, 0);
+            assertEquals(q(`SELECT COUNT(*) AS n FROM psvtgt WHERE id=:id`,
+                                {id: noteId})[0].n, 0);
+            // The hand-added fact survives; g3 was rebuilt as plain machine data.
+            assertEquals(q(`SELECT change_by_username FROM psvtgt WHERE id=900002`)
+                         .map(r => r.change_by_username), ['djz']);
+            assertEquals(q(`SELECT attr1 FROM psvtgt WHERE id=:id AND valid_to=:e`,
+                                {id: g3.id, e: EOT}).map(r => r.attr1), ['g3']);
+            // The stamp-reuse keeps rebuilt parents no NEWER than their
+            // preserved children - the store's structural validation passes.
+            ww.storeFor('psvtgt').requestWorkspaceReload();
+            assertEquals((ww.storeFor('psvtgt').entries as any[]).length, 3);
+
+            // A vanished source record orphans the human work UNDER it -
+            // reported + re-parented under a machine SKELETON stub, never
+            // deleted.  (sample=2 drops entry 3.)
+            const r3 = dt.runTransform('psvtgt', ww.storeFor('psvsrc'),
+                                       {preserveForeign: true, stopAfterCount: 2});
+            assertEquals(r3.orphans.map(o => [o.id, o.missingAncestor]), [[900002, e3]]);
+            assertEquals(q(`SELECT attr1 FROM psvtgt WHERE id=900002`)
+                         .map(r => r.attr1), ['hand-added']);
+            // The skeleton entry stub keeps the store LOADING (worklist,
+            // not crash): 2 rebuilt entries + the stub carrying the orphan.
+            const store = ww.storeFor('psvtgt');
+            store.requestWorkspaceReload();
+            assertEquals((store.entries as any[]).length, 3);
+            const stub = (store.entries as any[]).find(e => e.entry_id === e3);
+            assertEquals(stub.gloss.map((g: any) => g.gloss), ['hand-added']);
+        } finally {
+            db().executeStatements(
+                'DROP TABLE IF EXISTS psvsrc; DROP TABLE IF EXISTS psvsrc_dict_config;' +
+                'DROP TABLE IF EXISTS psvtgt; DROP TABLE IF EXISTS psvtgt_dict_config;');
+        }
+    }));
+});
+
 test("the MERGED corpus: lanes, partition + divergence ride as attrs", async () => {
     // rand-merged.sfm (merge-rand-sources.ts): finals FIRST (Ng base,
     // both lanes, \zdv drift notes), then lk-only, then the queue.
@@ -199,7 +302,7 @@ test("transform: REAL RAND -> a rich entry (deterministic; edits block)", async 
             let refused: any;
             try { security.runSystem(() => dt.runTransform('rand', ww.storeFor('randraw'))); }
             catch(e) { refused = e; }
-            assertEquals(String(refused).includes('edited assertion'), true);
+            assertEquals(String(refused).includes('edited fact'), true);
         } finally {
             security.runSystem(() => db().executeStatements(
                 'DROP TABLE IF EXISTS randraw; DROP TABLE IF EXISTS randraw_dict_config;' +

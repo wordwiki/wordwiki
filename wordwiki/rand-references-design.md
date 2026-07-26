@@ -177,6 +177,30 @@ feedback loop, per-feature postures — is
 machine-contributors-design.md; the binder is planned to land
 through that model's machineSync.)
 
+STATUS: BUILT 2026-07-26 (`--preserve-foreign` on the transform CLI;
+runTransform opts.preserveForeign).  Ownership is FACT-granular as
+in the machine-contributors predicate: a fact id any of whose rows
+has a foreign author survives WHOLE (histories + chains — a human
+edit/tombstone is a row on the same id, so this is one DISTINCT-id
+query).  Computed rows never displace a preserved fact; nothing is
+re-created under a human-tombstoned ancestor (no resurrecting a
+deleted sense's children).  Two design deltas the store's
+throw-on-load validation forced, both improvements:
+ 1. Preserve runs REUSE the stored transform_stamp, so rebuilt rows
+    keep their born valid_from — preserved human versions (always
+    later) still postdate their rebuilt parents, and preserve
+    re-runs are byte-stable.
+ 2. Orphans are re-parented under machine SKELETON stubs (entry/
+    spine rows authored '~dict-transform', change_note marks them)
+    rather than left dangling: the store keeps loading, the human
+    work stays visible and editable in-band, and the stubs — being
+    machine-owned — vanish or re-derive on later runs as the
+    orphans get resolved.  The report lists orphans + preserved-by-
+    author + skipped counts.
+Tested: edit survives whole / tombstone stays dead + children not
+resurrected / hand-added fact survives / refusal without the flag /
+orphan + skeleton with the store loading throughout.
+
 ## 5. Phase 2 — the Opus auto-binder
 
 **The anchor.**  Per printed page, we know (a) which rand entries

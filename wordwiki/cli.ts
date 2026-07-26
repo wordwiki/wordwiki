@@ -785,13 +785,14 @@ export async function cliMain(args: string[]): Promise<void> {
             const exitCode = security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 const target = args[1] && !args[1].startsWith('--') ? args[1]
-                    : panic('usage: transform <target> [--sample=N] [--report=path]');
+                    : panic('usage: transform <target> [--sample=N] [--report=path] [--preserve-foreign]');
                 const mappingText = dictionaryConfig.readConfigValue(target, 'transform')
                     ?? panic(`'${target}' has no transform config - load-mapping first`);
                 const sourceTable = JSON.parse(mappingText)?.sources?.[0]?.table;
                 const sampleArg = args.find(a => a.startsWith('--sample='))?.slice('--sample='.length);
                 const result = dictionaryTransform.runTransform(target, ww.storeFor(sourceTable),
-                    {stopAfterCount: sampleArg ? Number(sampleArg) : undefined});
+                    {stopAfterCount: sampleArg ? Number(sampleArg) : undefined,
+                     preserveForeign: args.includes('--preserve-foreign')});
                 const report = dictionaryTransform.transformReportMarkdown(target, result);
                 console.info(report);
                 const reportPath = args.find(a => a.startsWith('--report='))?.slice('--report='.length);
