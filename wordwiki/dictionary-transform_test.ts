@@ -83,12 +83,14 @@ test("transform: REAL RAND -> a rich entry (deterministic; edits block)", async 
             assertEquals(e0.subentry.length, 1);       // the all-empty sense vanished
             const sense = e0.subentry[0];
             assertEquals(sense.part_of_speech, 'voc');
-            assertEquals(sense.example[0].example_text[0].text, 'āān');
+            assertEquals(sense.example[0].example_text[0].example_text, 'āān');
             assertEquals(sense.example[0].example_text[0].variant, 'rand');
-            assertEquals(sense.example[0].example_translation[0].text, 'wife');
+            assertEquals(sense.example[0].example_translation[0].example_translation, 'wife');
             assertEquals(e0.source[0].book, 'Rand 1888');
             assertEquals(e0.source[0].page, 282);
-            assertEquals(e0.record_date[0].date, '02/Nov/2024');
+            // The shoebox date rides MMO's attr convention (copy-ready).
+            assertEquals(e0.attr[0].attr, 'shoebox-date');
+            assertEquals(e0.attr[0].value, '02/Nov/2024');
             // DETERMINISTIC id: the spelling reuses its source fact id, and
             // the entry keeps the raw entry's id.
             const raw0 = (ww.storeFor('randraw').entries as any[])[0];

@@ -107,10 +107,6 @@
      "literal_translation_id": {
       "$type": "primary_key"
      },
-     "text": {
-      "$type": "string",
-      "$bind": "attr1"
-     },
      "$style": {
       "$shape": "inlineListRelation",
       "$view": {
@@ -118,6 +114,10 @@
        "label": "inline",
        "empty": "elide"
       }
+     },
+     "literal_translation": {
+      "$type": "string",
+      "$bind": "attr1"
      }
     },
     "example": {
@@ -143,10 +143,6 @@
       "example_text_id": {
        "$type": "primary_key"
       },
-      "text": {
-       "$type": "string",
-       "$bind": "attr1"
-      },
       "variant": {
        "$type": "variant",
        "$mixed": true,
@@ -159,6 +155,10 @@
         "label": "inline",
         "empty": "elide"
        }
+      },
+      "example_text": {
+       "$type": "string",
+       "$bind": "attr1"
       }
      },
      "example_translation": {
@@ -168,10 +168,6 @@
       "example_translation_id": {
        "$type": "primary_key"
       },
-      "text": {
-       "$type": "string",
-       "$bind": "attr1"
-      },
       "$style": {
        "$shape": "compactInlineListRelation",
        "$view": {
@@ -180,27 +176,11 @@
         "empty": "elide",
         "emphasis": "italic"
        }
+      },
+      "example_translation": {
+       "$type": "string",
+       "$bind": "attr1"
       }
-     }
-    }
-   },
-   "pronunciation": {
-    "$type": "relation",
-    "$tag": "prn",
-    "$prompt": "Pronunciation",
-    "pronunciation_id": {
-     "$type": "primary_key"
-    },
-    "text": {
-     "$type": "string",
-     "$bind": "attr1"
-    },
-    "$style": {
-     "$shape": "compactInlineListRelation",
-     "$view": {
-      "order": 7,
-      "label": "inline",
-      "empty": "elide"
      }
     }
    },
@@ -211,10 +191,6 @@
     "variant_form_id": {
      "$type": "primary_key"
     },
-    "text": {
-     "$type": "string",
-     "$bind": "attr1"
-    },
     "$style": {
      "$shape": "inlineListRelation",
      "$view": {
@@ -222,6 +198,10 @@
       "label": "inline",
       "empty": "elide"
      }
+    },
+    "variant_form_text": {
+     "$type": "string",
+     "$bind": "attr1"
     }
    },
    "source": {
@@ -282,22 +262,55 @@
      }
     }
    },
-   "record_date": {
+   "pronunciation_guide": {
     "$type": "relation",
-    "$tag": "rdt",
-    "$prompt": "Record date",
-    "record_date_id": {
+    "$tag": "prn",
+    "pronunciation_id": {
      "$type": "primary_key"
-    },
-    "date": {
-     "$type": "string",
-     "$bind": "attr1"
     },
     "$style": {
      "$shape": "compactInlineListRelation",
      "$view": {
-      "hidden": true,
-      "label": "inline"
+      "order": 7,
+      "label": "inline",
+      "empty": "elide"
+     }
+    },
+    "pronunciation_guide": {
+     "$type": "string",
+     "$bind": "attr1"
+    }
+   },
+   "attr": {
+    "$type": "relation",
+    "$tag": "att",
+    "attr_id": {
+     "$type": "primary_key"
+    },
+    "attr": {
+     "$type": "string",
+     "$bind": "attr1"
+    },
+    "value": {
+     "$type": "string",
+     "$bind": "attr2",
+     "$optional": true,
+     "$style": {
+      "$width": 50
+     }
+    },
+    "variant": {
+     "$type": "variant",
+     "$mixed": true,
+     "$allowAll": true,
+     "$defaultAll": true
+    },
+    "$style": {
+     "$shape": "inlineListRelation",
+     "$view": {
+      "order": 11,
+      "keyField": "attr",
+      "hidden": true
      }
     }
    }
@@ -330,9 +343,9 @@
   },
   {
    "from": "ph",
-   "to": "pronunciation",
+   "to": "pronunciation_guide",
    "set": {
-    "text": {
+    "pronunciation_guide": {
      "content": true
     }
    }
@@ -366,7 +379,7 @@
    "from": "ps/de",
    "to": "subentry/literal_translation",
    "set": {
-    "text": {
+    "literal_translation": {
      "content": true
     }
    }
@@ -375,7 +388,7 @@
    "from": "ps/xv",
    "to": "subentry/example/example_text",
    "set": {
-    "text": {
+    "example_text": {
      "content": true
     },
     "variant": {
@@ -387,7 +400,7 @@
    "from": "ps/xv/xe",
    "to": "subentry/example/example_translation",
    "set": {
-    "text": {
+    "example_translation": {
      "content": true
     }
    }
@@ -421,17 +434,23 @@
    "from": "va",
    "to": "variant_form",
    "set": {
-    "text": {
+    "variant_form_text": {
      "content": true
     }
    }
   },
   {
    "from": "dt",
-   "to": "record_date",
+   "to": "attr",
    "set": {
-    "date": {
+    "attr": {
+     "const": "shoebox-date"
+    },
+    "value": {
      "content": true
+    },
+    "variant": {
+     "const": "mm"
     }
    }
   }
