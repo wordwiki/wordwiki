@@ -48,7 +48,22 @@ document references like MMO's, doc of record
   Rand scan 13-298 = printed 1-286 (offset -12, 0 conflicts);
   Clark scan 39-210 = printed 1-172 (offset -38, sparse folios,
   endpoints confirmed).  Citations cross-validated 32,114/32,115.
-  NEXT: step 5, the Opus binder stage + 10-page eval.
+
+- Step 5 BUILT 2026-07-26: reference-binder.ts on extract.ts/
+  getDerived (memoized; PROMPT_VERSION_BIND 1, imageBox 2000);
+  candidates by citation (book+page NAME probe); boxes NOT exclusive
+  (one Watson record per equivalent -> siblings share lines);
+  landing = sheet group + grey-box copies + addReferenceToEntry
+  authored '~rand-binder' (facade currentUsername); idempotent;
+  CLI bind-references, DRY-RUN default.  LIVE EVAL printed 46-55:
+  v1 (headwords+sparse gloss) 924/1067 (87%); v2 (dz's
+  expected-words insight: \xe english + \xv source_spelling as
+  PRIMARY keys, skeleton-match the Mi'kmaq, --source-lane=rand)
+  1,065/1,067 (99.8%), 0 below-threshold, 2 unmatched — report
+  watson/rand-binder-eval-v2.md AWAITING DZ REVIEW; full book est
+  ~5.4M in/1M out tokens; --model CLI knob for 5-family A/B.
+  NEXT: dz reviews v2 eval -> --apply 46-55 (free, cached) + full
+  run --printed=1-286.
 - Only three sites were position/table-bound: createLexemeFromGroup
   (fixed one-wrapper spine → generalize to parentRelation-chain
   spine), pageWordRows (hardcoded `FROM dict` → sweep discovered

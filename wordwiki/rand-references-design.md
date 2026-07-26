@@ -343,6 +343,47 @@ as a reference set, run the binder over them, measure
 precision/recall on box membership before letting it loose on 305
 pages.  The judge-stage pattern is available if precision needs it.
 
+STATUS: THE BINDER STAGE IS BUILT (2026-07-26); the full-book run
+awaits dz's review of the eval report.  reference-binder.ts: page
+input assembly (the citation relation found by book+page NAME probe;
+candidates carry both-lane headwords, glosses, full cited-page
+lists; boxes ordered left-column-then-right), the Opus stage on
+extract.ts (PROMPT_VERSION_BIND 1, imageBox 2000, full input json in
+the cache key), landing (group on the dictionary's sheet, grey-box
+copy semantic, addReferenceToEntry via a facade whose
+currentUsername IS '~<dict>-binder'), idempotence (an entry already
+referencing a group on the page is skipped - hand tags win),
+threshold gating, and driver-side reconciliation of contradictory
+model output (dupe bindings, bound-and-unmatched).  CLI
+`bind-references <book> <dict> --cited-book=... --printed=A-B
+[--apply] [--min-confidence] [--report=]`, DRY-RUN by default.
+One corpus lesson folded into the prompt: several candidate entries
+legitimately share the same printed lines (one Watson record per
+Mi'kmaq equivalent), so boxes are NOT exclusive.
+LIVE 10-PAGE EVAL, v1 vs v2 (printed 46-55, dry runs):
+ - v1 (headwords + sparse gloss as keys; watson/rand-binder-eval.md):
+   1,067 candidates -> 924 proposed (87%), 103 below-threshold + 48
+   unmatched, 0 bad box ids.
+ - v2 (PROMPT_VERSION_BIND 2, dz's expected-words insight;
+   watson/rand-binder-eval-v2.md): candidates carry the book's OWN
+   text round-tripping back - `english` (\\xe, ~100% coverage, the
+   near-verbatim printed phrase) and `source_spelling` (\\xv, the
+   book's own orthography, --source-lane=rand) - with the prompt
+   ranking them PRIMARY, skeleton-matching the Mi'kmaq side (OCR
+   loses accents; read the image when garbled), modern headword
+   demoted to corroboration.  RESULT: 1,065/1,067 proposed (99.8%),
+   0 below-threshold, 0 bad boxes, 2 genuinely-unmatched.  ~18.9k
+   in / 3.5k out tokens per page -> full book ~5.4M in / 1M out.
+   (Gloss coverage is only 14% - the \\xe/\\xv keys are what
+   carried v1 -> v2.)  Driver reconciles contradictory model output
+   (dupe bindings; bound-and-unmatched; non-candidate ids).
+   --model is a CLI knob (in the cache key) for A/B against the
+   Claude 5 family when wanted; extractions memoized - the eval
+   re-ran at 0 calls, --apply after review pays no LLM.
+Tests: reference-binder_test.ts (input assembly incl. the v2 keys,
+landing, sheet + authorship, idempotence, thresholds,
+dry-run-writes-nothing) over an injected extractor.
+
 ## 6. The cross-dictionary flow (imagery travels by PAIRING)
 
 The end-state (dz 2026-07-26): each dictionary tags books on its own
@@ -391,8 +432,11 @@ eventually more) flow without cross-writes.
    — hand-tagging of rand now works end to end —
 4. ~~Printed->scan page map script (§5)~~ DONE 2026-07-26 (see the
    §5 STATUS block; applied for Rand + Clark on the dev instance).
-5. Binder stage + the 10-page eval set (§5).
-6. Full run; worklist reports; iterate promptVersion as needed.
+5. ~~Binder stage + the 10-page eval~~ BUILT 2026-07-26; the dry-run
+   eval report (watson/rand-binder-eval.md, printed 46-55) is
+   AWAITING DZ REVIEW (see the §5 binder STATUS block).
+6. Full run (--apply, then the remaining pages); worklist reports;
+   iterate promptVersion as needed.
 7. (Own project) the pairing relation + rand↔MMO auto-pair, then
    via-pair rendering (§6); PDM→RAND matching after that.
 

@@ -28,6 +28,10 @@ import * as sfm from './sfm.ts';
 import * as sfmImport from './sfm-import.ts';
 import * as dictionaryTransform from './dictionary-transform.ts';
 import * as printedPages from './printed-pages.ts';
+import * as referenceBinder from './reference-binder.ts';
+import * as scannedDocument from './scanned-document.ts';
+import { loadLlm } from '../liminal/llm.ts';
+import type { ExtractConfig } from '../liminal/extract.ts';
 import * as workspace from './workspace.ts';
 import { selectAllAssertions, type Assertion } from './assertion.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
@@ -821,6 +825,72 @@ export async function cliMain(args: string[]): Promise<void> {
                 const reportPath = args.find(a => a.startsWith('--report='))?.slice('--report='.length);
                 if(reportPath) Deno.writeTextFileSync(reportPath, report);
                 return fit.unassigned.length > 0 || fit.conflicts.length > 0 ? 2 : 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
+        // The REFERENCE BINDER (rand-references-design.md §5): Opus binds a
+        // dictionary's entries to the scanned lines of the pages their
+        // citations name.  DRY-RUN by default - review the report (the
+        // 10-page eval surface), then --apply.  LLM calls are memoized in
+        // the derived store, so re-runs and --apply after a dry run are
+        // nearly free.
+        //   ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888'
+        //                 --printed=1-10 --source-lane=rand [--apply]
+        //                 [--min-confidence=medium] [--model=...] [--report=bind.md]
+        case 'bind-references': {
+            const exitCode = await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                const book = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: bind-references <book> <dictionary> --cited-book=... --printed=A-B');
+                const dictionary = args[2] && !args[2].startsWith('--') ? args[2]
+                    : panic('bind-references needs the target dictionary');
+                const flag = (name: string) =>
+                    args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+                const citedBook = flag('cited-book')
+                    ?? panic("bind-references needs --cited-book= (e.g. 'Rand 1888')");
+                const printedArg = flag('printed')
+                    ?? panic('bind-references needs --printed=A-B or --printed=1,5,9');
+                const printedPages = printedArg.split(',').flatMap(part => {
+                    const m = part.match(/^(\d+)-(\d+)$/);
+                    if(m) {
+                        const [a, b] = [Number(m[1]), Number(m[2])];
+                        return Array.from({length: b - a + 1}, (_x, i) => a + i);
+                    }
+                    return [Number(part)];
+                });
+                const apply = args.includes('--apply');
+                const minConfidence = (flag('min-confidence') ?? 'medium') as 'high'|'medium'|'low';
+
+                const llm = loadLlm('wordwiki');
+                if(!llm.available)
+                    panic('wordwiki-anthropic-credential.json missing/invalid - LLM unavailable');
+                const usage = {inputTokens: 0, outputTokens: 0, calls: 0};
+                const cfg: ExtractConfig = {
+                    derivedDir: 'derived', image: referenceBinder.binderImageSource(), llm,
+                    onUsage: (_stage, u) => {
+                        usage.inputTokens += u.inputTokens;
+                        usage.outputTokens += u.outputTokens; usage.calls++;
+                    },
+                };
+                const doc = scannedDocument.selectScannedDocumentByFriendlyId()
+                    .required({friendly_document_id: book});
+                const model = flag('model') ?? referenceBinder.BIND_MODEL;
+                const reports = await referenceBinder.bindPages(ww, {
+                    book, dictionary, citedBook, printedPages, apply, minConfidence,
+                    sourceLane: flag('source-lane'),
+                    extract: (input) => referenceBinder.bindPageViaLlm(cfg, input, doc.title, model),
+                });
+                const report = referenceBinder.bindReportMarkdown(
+                    {book, dictionary, citedBook, apply}, reports);
+                console.info(report);
+                console.info(`LLM: ${usage.calls} call(s), ${usage.inputTokens} in / ` +
+                             `${usage.outputTokens} out tokens (cache hits are free)`);
+                const reportPath = flag('report');
+                if(reportPath) Deno.writeTextFileSync(reportPath, report);
+                return reports.some(r => r.unmatched.length > 0 || r.belowThreshold.length > 0
+                                    || r.unclaimed.length > 0) ? 2 : 0;
             });
             Deno.exit(exitCode);
             break;

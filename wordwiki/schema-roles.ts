@@ -97,6 +97,20 @@ export function glossTexts(schema: model.Schema, entryJson: any): string[] {
     return rel ? collectTuples(entryJson, rel).map(g => g[textFieldName(rel)]) : [];
 }
 
+/** EVERY headword tuple, all lanes, normalized to {text, variant} - for
+ *  consumers that present both spelling systems together (the reference
+ *  binder's candidate lists). */
+export function headwordsAllLanes(schema: model.Schema, entryJson: any):
+        Array<{text: string, variant: string|undefined}> {
+    const rel = headwordRelation(schema);
+    if(!rel) return [];
+    const v = variantFieldName(rel);
+    return collectTuples(entryJson, rel)
+        .map(t => ({text: t[textFieldName(rel)],
+                    variant: v !== undefined ? t[v] : undefined}))
+        .filter(t => (t.text ?? '') !== '');
+}
+
 /** The FIRST headword tuple in ANY lane, keys normalized to {text, variant}
  *  - the cross-orthography fallback when the selected lane is empty (dz:
  *  wrong-orthography text beats a blank headword). */

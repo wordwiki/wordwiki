@@ -103,18 +103,25 @@ async function groupCropCmd(targetResultPath: string, sourceImagePath: string,
         throw new Error(`failed to mask-crop ${sourceImagePath}: ${new TextDecoder().decode(stderr)}`);
 }
 
-/** ExtractImageSource over the derived crops: photoPath IS a crop path;
- *  containedBytes bounds it to the stage's imageBox via a cached shrink
- *  (never enlarges). */
-export const groupCropImageSource: ExtractImageSource = {
-    async containedBytes(photoPath: string, boxW: number, boxH: number,
-                         rotate: number): Promise<Uint8Array> {
-        const contained = 'derived/' + await content.getDerived(
-            'derived/group-crops-contained', {containCmd},
-            ['containCmd', photoPath, boxW, boxH, rotate], 'jpg');
-        return Deno.readFile(contained);
-    },
-};
+/** An ExtractImageSource over ANY content-path image: containedBytes
+ *  bounds it to the stage's imageBox via a cached shrink (never enlarges),
+ *  memoized in `derivedStore`.  The crops use one namespace, whole page
+ *  scans (the reference binder) another - same derivation. */
+export function containedImageSource(derivedStore: string): ExtractImageSource {
+    return {
+        async containedBytes(photoPath: string, boxW: number, boxH: number,
+                             rotate: number): Promise<Uint8Array> {
+            const contained = 'derived/' + await content.getDerived(
+                derivedStore, {containCmd},
+                ['containCmd', photoPath, boxW, boxH, rotate], 'jpg');
+            return Deno.readFile(contained);
+        },
+    };
+}
+
+/** ExtractImageSource over the derived crops: photoPath IS a crop path. */
+export const groupCropImageSource: ExtractImageSource =
+    containedImageSource('derived/group-crops-contained');
 
 async function containCmd(targetResultPath: string, sourceImagePath: string,
                           boxW: number, boxH: number, rotate: number) {
