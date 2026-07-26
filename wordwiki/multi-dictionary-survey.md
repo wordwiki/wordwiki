@@ -598,7 +598,20 @@ honor:
   senses group with the example paired - pinned in the suite.  Tree
   mode is now RAND's import path; flat remains the strict-mirror
   fallback for un-fixable typs.
-  NEXT: the step-2 TRANSFORM (the mapping document + engine).
+  STEP 3 DONE (2026-07-25): the TRANSFORM is BUILT as converged -
+  dictionary-transform.ts (gate; deterministic ids reusing source
+  facts; intoParentField; deep-path wrappers; recode/parsers/deep
+  skipEmpty; unmapped-per-tag accounting; '~dict-transform' stamps +
+  edits-block-rerun) with load-mapping/dump-mapping/transform CLI
+  and watson/rand-transform.json as the starter mapping (MMO-
+  flavored tags, orthography lanes, parsed citations).  FULL RAND:
+  29,097 entries -> 246,112 rich assertions in 13s; 150,842 empty
+  template fields skipped; 560 citation parse-misses + a 98-tuple
+  unmapped tail = THE ITERATION WORKLIST.  e'n browses rich at
+  wordwiki.dicts.rand.word(...) - pinned in the suite end to end.
+  NEXT (iteration, with dz/Watson): the mapping worklist (sd/li/lf/
+  ra/... tail, citation parser variants), the Ng/Lk reunification
+  (multi-source), and eventually publish for rand.
 
   THE TWO-STEP IMPORT DESIGN (converged dz + review 2026-07-25):
   STEP 1 - auto-import (no user intervention; encoding is the one
