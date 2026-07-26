@@ -15,6 +15,16 @@ document references like MMO's, doc of record
   /entry/subentry/document_reference, rand plants the SAME vocab
   (tags ref/rtr/rex/... verbatim) at /entry/document_reference; code
   asks `relationsByRole.documentReference`, never a path.
+- SHEETS (dz 2026-07-26): tagging layers are per-(book x dictionary)
+  — layer.dictionary column, existing Tagging layers stamped 'dict',
+  rand starts clean sheets; the layer IS the scope (create/attach
+  target, sidebar lookup — no default-dictionary config, no sweep).
+  References = per-dictionary asset; entry PAIRINGS (rand<->MMO,
+  machine-contributors citizen) are the conduit — MMO renders own ∪
+  via-pair refs; later PDM->RAND matching flows to MMO transitively.
+- preserve-foreign BUILT + landed 2026-07-26 (order-of-work step 1):
+  fact-granular ownership, stamp reuse (byte-stable preserve
+  re-runs), orphans re-parented under machine skeleton stubs.
 - Only three sites were position/table-bound: createLexemeFromGroup
   (fixed one-wrapper spine → generalize to parentRelation-chain
   spine), pageWordRows (hardcoded `FROM dict` → sweep discovered

@@ -74,13 +74,38 @@ identical vocab is what lets the page editor, renderers and the
 future rand->MMO word-import all treat references uniformly (the
 no-gratuitous-difference principle again).
 
-**Per-BOOK default target dictionary.**  "Create word from this
-group" needs to know which dictionary to create into.  Each scanned
-book gets a default target dictionary (Rand book -> `rand`,
-Clark -> `rand`, PDM -> `dict`), configured data-side alongside the
-existing primarySourceBook convention; the context menu can offer
-the non-default dictionaries when needed.  The page editor stays
-book-generic — this is data it reads, not code it grows.
+**Per-(book × dictionary) tagging SHEETS** (dz 2026-07-26, revising
+the earlier per-book-default-dictionary idea).  Each dictionary gets
+its OWN tagging layer per book — in the image tagger, rand starts
+with a clean sheet on the Rand book even though MMO's 2,044 existing
+groups sit on the same pages (in MMO's layer); pulling references
+for MMO is separate from pulling references for rand.  The layer IS
+the scope: the page editor opens on a (book, dictionary) sheet, and
+everything that needed a "which dictionary?" answer reads it from
+the sheet — "Create word from this group" targets the sheet's
+dictionary with no config and no menu ambiguity, and the sidebar's
+reverse lookup queries exactly one dictionary's table.  Mechanically:
+the `layer` table gains a nullable `dictionary` column (NULL for
+Text/PageBox; the existing Tagging layers are stamped `'dict'`,
+which attributes MMO's current tagging with ZERO group moves; rand's
+sheets lazily create as today's Tagging layer does).  The dictionary
+tables record NOTHING about layers — `bounding_group_id` is globally
+unique, so existing `ref` facts are untouched and a group's sheet
+stays derivable.
+
+**References are a PER-DICTIONARY asset; dictionary↔dictionary
+PAIRINGS are the conduit** (dz).  MMO will not re-tag the Rand book:
+auto-pairing rand↔MMO entries lets MMO's word view show its own refs
+∪ its paired rand entry's refs (with "via Rand" provenance).  Later,
+PDM→RAND auto-matching proposes refs from RAND entries into the PDM
+book (on rand's PDM sheet) — and that imagery flows to MMO through
+the same pairing with no MMO-side writes.  Matching PDM against rand
+first is right because rand is the most complete surface (31,723
+entries vs MMO's ~9k) and PDM is textually descended from Rand, so
+the correlations are strongest; match once against the fullest set,
+let pairings distribute it.  §6 develops this flow; MMO's existing
+direct Rand-book refs are simply grandfathered (human work — pairing
+supplements, never replaces).
 
 **Transform re-runs must PRESERVE the reference layer** — see §4.
 References are post-transform edits; today the edits-block-rerun gate
@@ -118,28 +143,33 @@ for attach: reuse the entry's FIRST existing spine tuple at each
 level, creating only what's missing (rand: nothing to decide; MMO:
 first subentry — good enough until MMO needs a subentry picker).
 
-**3.3 The reverse-lookup sweep** (render-page-editor.ts
-`pageWordRows`).  Iterate the DISCOVERED dictionaries
-(dictionary-config discovery); for each whose schema declares the
-documentReference role, run the same query against ITS table with the
-role relation's actual tag and the boundingGroup field's actual bind
-(both from the schema — no 'ref'/'attr1' literals).  Table names
-interpolate into the SQL before prepare, one memoized statement per
-dictionary (the established prepared-query pattern).  Rows become
-`{dict: string, entry_id: number, groupIds: number[]}`.
+**3.3 Sheets + the sheet-scoped reverse lookup.**  The `layer`
+table gains the nullable `dictionary` column (§2); startup stamps
+the existing Tagging layers `'dict'` (same idempotent-DDL pattern as
+the dict index migration); `pageEditor(...)` resolves/creates the
+sheet for its (book, dictionary) instead of the hardcoded
+`'Tagging'` layer.  `pageWordRows(page_id, layer_id)` then queries
+ONE dictionary's table — the sheet's — with the role relation's
+actual tag and the boundingGroup field's actual bind read from that
+dictionary's schema (no 'ref'/'attr1'/'dict' literals), restricted
+to groups in the sheet.  Table names interpolate into the SQL before
+prepare, one memoized statement per dictionary (the established
+prepared-query pattern).
 
-**3.4 Sidebar + links.**  Word rows render through their OWN
-dictionary: summaries via that dictionary's store + schema-roles
-(headword/gloss are already generic — the facade browse pages use
-them today); links via the dotted facade routes
-(`wordwiki.dicts.rand.word(...)` / the per-dictionary lexeme editor
-facade); MMO rows keep their existing URLs.  The `o`/`e` hover keys
-and the context menu carry the row's dictionary.
-`newLexemeFromGroup` gains a dictionary parameter, defaulted from the
-book's target dictionary (§2); a parallel
-`addReferenceFromGroup(dict, entry_id, group_id)` rpc serves the
-attach flow (sidebar search-pick later if hand-attach wants it —
-the binder doesn't need UI for it).
+**3.4 Sidebar + links.**  Word rows render through the sheet's
+dictionary: summaries via its store + schema-roles (headword/gloss
+are already generic — the facade browse pages use them today); links
+via the dotted facade routes (`wordwiki.dicts.rand.word(...)` / the
+per-dictionary lexeme editor facade); MMO sheets keep their existing
+URLs.  The `o`/`e` hover keys and the context menu inherit the
+sheet's dictionary; `newLexemeFromGroup` reads it from the group's
+layer (no client-side dictionary parameter to get wrong); a parallel
+`addReferenceFromGroup(entry_id, group_id)` rpc serves the attach
+flow, dictionary again from the layer (sidebar search-pick later if
+hand-attach wants UI — the binder doesn't need it).  LATER, cheap:
+an "onion-skin" read-only toggle showing OTHER dictionaries' sheets
+on the page, so taggers don't blindly re-draw regions someone else
+already boxed (page scan data is already layer-parameterized).
 
 **3.5 Entry pages.**  render-entry-meta's `$shape: boundingGroup`
 dispatch should render rand references (scan crop + page-editor
@@ -151,9 +181,10 @@ bundle-ized scan renders already exist).
 **3.6 Tests** (render->act->render, in-memory db, the generic test
 layer): create-from-group in a no-subentry dictionary (spine length
 0) + MMO regression (spine length 1); attach-to-existing on both;
-the sweep returning rows from TWO dictionaries referencing one page;
-facade sidebar links.  Pin one real flow end to end on the RAND
-sample fixtures.
+two dictionaries' sheets on the SAME page staying disjoint (each
+sidebar sees only its own sheet's groups + words); the existing-
+Tagging-layer stamping migration; facade sidebar links.  Pin one
+real flow end to end on the RAND sample fixtures.
 
 ## 4. Transform re-run preserve
 
@@ -240,9 +271,9 @@ output mechanically landable; the image is still attached so Opus can
 resolve OCR garbage and column order visually.  ~305 pages x 1 call.
 
 **Landing (Layer 2, plain code).**  For each accepted match: create a
-bounding_group in the book's Tagging layer (the SAME layer the
-existing 2,044 MMO-ref groups live in — the page editor then shows
-both dictionaries' tagging together), copy the chosen Text boxes into
+bounding_group on RAND'S OWN SHEET of the Rand book (the §2
+per-dictionary layer — MMO's 2,044 existing groups stay untouched on
+MMO's sheet), copy the chosen Text boxes into
 it (the same copy semantic as the page editor's grey-box click), and
 `addReferenceToEntry` on the rand entry — authored '~rand-binder' so
 the work is identifiable, preservable (§4), and re-derivable.
@@ -257,18 +288,55 @@ as a reference set, run the binder over them, measure
 precision/recall on box membership before letting it loose on 305
 pages.  The judge-stage pattern is available if precision needs it.
 
-## 6. Order of work
+## 6. The cross-dictionary flow (imagery travels by PAIRING)
 
-1. Transform preserve-foreign + orphan report (§4 — small, unblocks
-   everything else from the mapping-lock).
+The end-state (dz 2026-07-26): each dictionary tags books on its own
+sheets; entry-level PAIRINGS between dictionaries let imagery (and
+eventually more) flow without cross-writes.
+
+- **The pairing entity.**  rand↔MMO pairs are themselves FACTS — a
+  role-marked, xref-shaped relation on the entry (its own small
+  design when the auto-pair feature starts).  That makes pairing a
+  machine-contributors citizen: '~rand-mmo-pair' proposes (the
+  mark-insensitive match keys from rand-orthography-survey.md are
+  the candidate generator), a human confirming or severing a pair
+  FREEZES it, and re-runs respect both.  The pairing relation is
+  load-bearing for everything downstream (imagery flow, batch word
+  joining, dup detection) — build it once, as data, not per-feature.
+- **Rendering through the pair.**  MMO's word view shows: its own
+  document references ∪ its paired rand entry's references, badged
+  with provenance ("via Rand").  Read-side only — no MMO facts are
+  written.  The same composition later shows PDM imagery that rand
+  acquired via PDM→RAND matching: the chain is transitive by
+  construction.
+- **PDM→RAND matching** (later): '~pdm-rand-binder' proposes refs
+  from RAND entries into the PDM book, on rand's PDM sheet, PENDING
+  posture (uncertain matches; the approval workflow is the control
+  surface per machine-contributors-design.md).  Rand-first because
+  rand is the most complete surface and PDM is textually descended
+  from Rand — match once against the fullest set, let pairings
+  distribute it.
+- **Publish**: MMO's public pages rendering via-pair imagery means
+  the publish bundle follows the chain into rand's refs (and rand's
+  sheets' scan renders).  A widening of what publish-source bundles,
+  not a redesign — noted for the pairing project.
+- MMO's existing direct Rand-book refs: grandfathered human work;
+  pairing supplements, never replaces or migrates them.
+
+## 7. Order of work
+
+1. ~~Transform preserve-foreign + orphan report (§4)~~ DONE
+   2026-07-26 (see the §4 STATUS block).
 2. Schema vocab into rand (§3.1) + spine generalization + attach op
    (§3.2), with tests.
-3. Page-editor sweep + per-dictionary links + per-book target
-   dictionary (§3.3–3.5).
+3. Sheets (layer.dictionary column + stamping migration) +
+   sheet-scoped lookup + per-dictionary links (§3.3–3.5).
    — hand-tagging of rand now works end to end —
 4. Printed->scan page map script (§5).
 5. Binder stage + the 10-page eval set (§5).
 6. Full run; worklist reports; iterate promptVersion as needed.
+7. (Own project) the pairing relation + rand↔MMO auto-pair, then
+   via-pair rendering (§6); PDM→RAND matching after that.
 
 ## Open questions (dz)
 
@@ -278,3 +346,6 @@ pages.  The judge-stage pattern is available if precision needs it.
   born-approved with the '~rand-binder' stamp as the audit handle.
 - MMO attach-to-existing picks the FIRST subentry (§3.2) — fine
   until a real multi-subentry tagging need appears?
+- Sheets for the SAME dictionary across worktrees/instances share the
+  layer row by (document, dictionary) — any need foreseen for MORE
+  than one sheet per pair (e.g. a scratch sheet)?  Design assumes no.
