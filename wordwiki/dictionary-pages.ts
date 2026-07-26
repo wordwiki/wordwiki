@@ -123,10 +123,18 @@ export class DictionaryPages {
                               ?? `(entry ${e[pk]})`}))
             .toSorted((a, b) => a.text < b.text ? -1 : a.text > b.text ? 1 : 0);
         const title = `${this.displayName} — dictionary`;
+        const mirrorSource = dictionaryConfig.readConfigValue(this.table, 'import_mirror') === 'true'
+            ? (dictionaryConfig.readConfigValue(this.table, 'import_source') ?? 'an SFM import')
+            : undefined;
         const body: Markup = ['div', {class: 'container py-3'},
             ['h1', {}, this.displayName],
             ['p', {class: 'text-muted small'},
              `${rows.length} word(s) — dictionary '${this.slug}' (table ${this.table})`],
+            // Import mirrors are re-created by re-import: edits belong in
+            // the TRANSFORMED dictionary (survey phase 5).
+            mirrorSource === undefined ? undefined :
+                ['div', {class: 'alert alert-info py-2'},
+                 `Import mirror of ${mirrorSource} — edits belong in the transformed dictionary, not here.`],
             rows.length === 0
                 ? ['p', {class: 'text-muted'}, 'No words yet.']
                 : ['div', {class: 'list-group lm-list'},

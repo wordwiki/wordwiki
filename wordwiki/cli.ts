@@ -24,6 +24,8 @@ import * as publish from './publish.ts';
 import { validateVersionedDb, validateVariantInvariants,
          factViewsFromVersionedDb, assertVersionedDbValid } from './versioned-db-validate.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
+import * as sfm from './sfm.ts';
+import * as sfmImport from './sfm-import.ts';
 import * as workspace from './workspace.ts';
 import { selectAllAssertions, type Assertion } from './assertion.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
@@ -685,6 +687,44 @@ export async function cliMain(args: string[]): Promise<void> {
         // parsed) schema + metadata seeds.  The dictionary appears at once
         // (discovery is by the pair convention).
         //   ./wordwiki.sh new-dictionary <table> --schema=<file> [--slug=<slug>]
+        // STEP 1 of the SFM import (multi-dictionary-survey.md phase 5):
+        // auto-import a shoebox database as a RAW dictionary (an import
+        // mirror; schema = pure function of the .typ).
+        //   ./wordwiki.sh sfm-import <table> --typ=<file> --data=<file>
+        //       [--structure=tree|flat] [--typ-encoding=utf-8|windows-1252]
+        //       [--data-encoding=...] [--slug=...] [--report=path]
+        case 'sfm-import': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const table = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: sfm-import <table> --typ=<file> --data=<file> [--structure=tree|flat]');
+                const arg = (name: string) => args.find(a => a.startsWith(`--${name}=`))
+                    ?.slice(name.length + 3);
+                const typPath = arg('typ') ?? panic('sfm-import needs --typ=<file>');
+                const dataPath = arg('data') ?? panic('sfm-import needs --data=<file>');
+                const structure = (arg('structure') ?? 'tree') as sfmImport.SfmStructure;
+                if(structure !== 'tree' && structure !== 'flat')
+                    throw new Error("--structure must be 'tree' or 'flat'");
+                const dec = (p: string, enc: string|undefined) =>
+                    sfm.decodeSfmBytes(Deno.readFileSync(p),
+                                       (enc ?? 'utf-8') as 'utf-8'|'windows-1252');
+                const result = sfmImport.importSfm(
+                    dec(typPath, arg('typ-encoding')), dec(dataPath, arg('data-encoding')),
+                    {table, slug: arg('slug'), structure,
+                     sourceName: dataPath.split('/').pop()});
+                const report = sfmImport.importReportMarkdown(table, result);
+                console.info(report);
+                const reportPath = arg('report');
+                if(reportPath) Deno.writeTextFileSync(reportPath, report);
+                console.info(`imported '${table}' (generation ${result.generation}): ` +
+                             `${result.records} records, ${result.assertions} assertions, ` +
+                             `${result.problems.length} problems, ${result.droppedFields} dropped fields`);
+                return result.problems.length > 0 || result.droppedFields > 0 ? 2 : 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
         case 'new-dictionary': {
             const exitCode = security.runSystem(() => {
                 ww.ensureNewStyleTables();
