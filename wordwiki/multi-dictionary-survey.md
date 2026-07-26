@@ -609,9 +609,20 @@ honor:
   template fields skipped; 560 citation parse-misses + a 98-tuple
   unmapped tail = THE ITERATION WORKLIST.  e'n browses rich at
   wordwiki.dicts.rand.word(...) - pinned in the suite end to end.
+  WORKLIST ITERATION 1 (2026-07-26): randCitation EXTENDED to the
+  hand-typed variant zoo (punctuation soup, pp/pg, page LISTS -
+  first page wins, raw line kept in `source` - trailing junk, roman
+  intro pages as book-without-page) + the mapping's book recode
+  table made the KNOWN-BOOK VOCABULARY (identities for Rand 1888/
+  Clark 1902/Gina'masultiewei Glusuaqann; typo variants RRand/
+  RaRand/Rand1888/Claek/... fold in; recodeMisses now = genuinely
+  new books, currently 0).  Parse misses 1,057 -> 77, ALL genuine
+  non-citations (informant names, places, one scripture ref) left
+  as raw source text; 99.5% of the merged corpus's 31,723 entries
+  now carry a structured Rand 1888 page.
   NEXT (iteration, with dz/Watson): the mapping worklist (sd/li/lf/
-  ra/... tail, citation parser variants), the Ng/Lk reunification
-  (multi-source), and eventually publish for rand.
+  ra/... tail), and eventually publish for rand.  (The Ng/Lk
+  reunification: DONE pre-import - merge-rand-sources.ts.)
 
   THE TWO-STEP IMPORT DESIGN (converged dz + review 2026-07-25):
   STEP 1 - auto-import (no user intervention; encoding is the one

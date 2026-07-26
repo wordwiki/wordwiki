@@ -18,6 +18,33 @@ import { withTestDb, as, renderRoute } from "./testing.ts";
 
 const WATSON = new URL('../watson/', import.meta.url).pathname;
 
+test("randCitation: the hand-typed variant zoo parses; non-citations don't", () => {
+    const p = dt.PARSERS.randCitation;
+    // The canonical form and the punctuation-soup / page-list / junk
+    // variants (all drawn from the real 2026-07 \so inventory).
+    assertEquals(p('Rand 1888, p. 282'), {book: 'Rand 1888', page: 282, pages: '282'});
+    assertEquals(p('Clark 1902, p 100')!.book, 'Clark 1902');
+    assertEquals(p('Rand 1888, p 269, 270'), {book: 'Rand 1888', page: 269, pages: '269, 270'});
+    assertEquals(p('Rand 1888. p 146, 147')!.page, 146);
+    assertEquals(p('Rand,1888,pg151'), {book: 'Rand 1888', page: 151, pages: '151'});
+    assertEquals(p('Rand 1888.p.149')!.page, 149);
+    assertEquals(p('Rand 1888.p 148')!.book, 'Rand 1888');
+    assertEquals(p('Rand 1888 pp 1')!.page, 1);
+    assertEquals(p('Rand 1888, pp 4, 6, 9')!.pages, '4, 6, 9');
+    assertEquals(p('Rand 1888, p 201)')!.page, 201);         // trailing junk
+    assertEquals(p('Rand 1888, p 88ā')!.page, 88);
+    assertEquals(p('Rand 1888 p , 102, 164')!.page, 102);    // stray commas
+    assertEquals(p('Rand 1888, p 224. 225')!.pages, '224, 225');
+    assertEquals(p('Rand 1888, p 1, 4,\n206, 258')!.pages, '1, 4, 206, 258');
+    assertEquals(p('Rand 1888 p v intro.'),                  // roman intro page
+                 {book: 'Rand 1888', page: undefined, pages: undefined});
+    assertEquals(p('RRand 1888, p 12')!.book, 'RRand 1888'); // typo -> recode's business
+    // Non-citations (informant names, dates, codes) stay unparsed.
+    for(const nc of ['M Metallic', 'Manny Metallic', "So'sep Wilmot",
+                     'Cape Breton', 'dmm 2015-May-22', '5G-16n'])
+        assertEquals(p(nc), undefined, nc);
+});
+
 test("gate: bad rule paths and fields refuse; source-hash drift warns", async () => {
     await withTestDb(({ww}) => security.runSystem(() => {
         try {

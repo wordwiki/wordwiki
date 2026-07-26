@@ -59,11 +59,23 @@ export const DICT_TRANSFORM_USERNAME = '~dict-transform';
 // --- Parsers (rule-level; a tiny registry - bespoke ops stay data-named) ------
 
 export const PARSERS: Record<string, (content: string) => Record<string, any>|undefined> = {
-    /** "Rand 1888, p 282" (also "Clark 1902, p 100", "p." variants) ->
-     *  {book, page}; anything else -> undefined (counted, fields null). */
+    /** "Rand 1888, p 282" and Watson's hand-typed variants: punctuation
+     *  soup around the marker ("Rand,1888,pg151", "Rand 1888.p.149",
+     *  "pp"), page LISTS ("p 269, 270" - page = the FIRST; the raw line
+     *  is kept in the source field), trailing junk ("p 201)"), roman
+     *  intro pages ("p v intro." - book without page).  ->
+     *  {book, page, pages}; non-citations (informant names, dates) ->
+     *  undefined (counted, fields null).  Book-name typos (RRand 1888)
+     *  are the mapping recode table's business, not the parser's. */
     randCitation: (content: string) => {
-        const m = content.trim().match(/^(.*?),?\s+p\.?\s*(\d+)$/);
-        return m ? {book: m[1].trim(), page: Number(m[2])} : undefined;
+        const c = content.trim().replace(/\s+/g, ' ');
+        const m = c.match(/^(.*?)[\s.,]+p[pg]?\.?(?=[\s.,]|\d|$)[\s.,]*(.*)$/i);
+        if(!m) return undefined;
+        const book = m[1].replace(/[.,]+/g, ' ').replace(/\s+/g, ' ').trim() || undefined;
+        const pages = m[2].match(/\d+/g) ?? [];
+        if(pages.length === 0 && !/\d/.test(m[1])) return undefined;
+        return {book, page: pages.length > 0 ? Number(pages[0]) : undefined,
+                pages: pages.length > 0 ? pages.join(', ') : undefined};
     },
 };
 

@@ -413,7 +413,20 @@
      "content": true
     },
     "book": {
-     "parsed": "book"
+     "parsed": "book",
+     "recode": {
+      "Rand 1888": "Rand 1888",
+      "Clark 1902": "Clark 1902",
+      "RRand 1888": "Rand 1888",
+      "RaRand 1888": "Rand 1888",
+      "Rand 188": "Rand 1888",
+      "Rand": "Rand 1888",
+      "Rand1888": "Rand 1888",
+      "RanRand 1888": "Rand 1888",
+      "Claek 1902": "Clark 1902",
+      "Gina'masultiewei Glusuaqann": "Gina'masultiewei Glusuaqann"
+     },
+     "recodeMiss": "keep"
     },
     "page": {
      "parsed": "page"
