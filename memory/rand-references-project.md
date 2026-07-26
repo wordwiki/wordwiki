@@ -25,6 +25,13 @@ document references like MMO's, doc of record
 - preserve-foreign BUILT + landed 2026-07-26 (order-of-work step 1):
   fact-granular ownership, stamp reuse (byte-stable preserve
   re-runs), orphans re-parented under machine skeleton stubs.
+- Step 2 BUILT 2026-07-26: document_reference vocab verbatim from
+  MMO's live schema into rand at /entry/document_reference (dev at
+  transform gen 5); lexeme-ops referenceChain()/boundingGroupBind(),
+  chain-driven createLexemeFromGroup + NEW addReferenceToEntry
+  (reuses first live spine tuple; plain pending posture); tests in
+  reference-spine_test.ts.  NEXT: step 3, sheets + sheet-scoped
+  lookup + per-dictionary links.
 - Only three sites were position/table-bound: createLexemeFromGroup
   (fixed one-wrapper spine → generalize to parentRelation-chain
   spine), pageWordRows (hardcoded `FROM dict` → sweep discovered

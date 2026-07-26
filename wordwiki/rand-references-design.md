@@ -143,6 +143,19 @@ for attach: reuse the entry's FIRST existing spine tuple at each
 level, creating only what's missing (rand: nothing to decide; MMO:
 first subentry — good enough until MMO needs a subentry picker).
 
+STATUS (§3.1 + §3.2): BUILT 2026-07-26.  The vocab subtree was
+copied VERBATIM from MMO's live schema into rand-transform.json at
+/entry/document_reference (only the $view order changed, 12 at the
+entry level); dev instance transformed to generation 5 with the
+schema installed.  lexeme-ops: `referenceChain()` (the spine as
+schema data), `boundingGroupBind()` (no attr literals),
+createLexemeFromGroup rewritten chain-driven, addReferenceToEntry
+added (plain pending posture, same as create).  Tests:
+reference-spine_test.ts (spine-0 create+attach on a toy dictionary
+via the editorAppFor facade; spine-1 attach reusing MMO's first
+subentry) + the existing MMO create regression in
+page-word-sidebar_test.ts.
+
 **3.3 Sheets + the sheet-scoped reverse lookup.**  The `layer`
 table gains the nullable `dictionary` column (§2); startup stamps
 the existing Tagging layers `'dict'` (same idempotent-DDL pattern as
@@ -327,8 +340,9 @@ eventually more) flow without cross-writes.
 
 1. ~~Transform preserve-foreign + orphan report (§4)~~ DONE
    2026-07-26 (see the §4 STATUS block).
-2. Schema vocab into rand (§3.1) + spine generalization + attach op
-   (§3.2), with tests.
+2. ~~Schema vocab into rand (§3.1) + spine generalization + attach
+   op (§3.2), with tests~~ DONE 2026-07-26 (see the §3.2 STATUS
+   block).
 3. Sheets (layer.dictionary column + stamping migration) +
    sheet-scoped lookup + per-dictionary links (§3.3–3.5).
    — hand-tagging of rand now works end to end —

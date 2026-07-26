@@ -465,9 +465,50 @@ export class LexemeOps {
                                    attr4: 0, variant: 'mm'} as Partial<Assertion>);
     }
 
+    /** The REF SPINE (rand-references-design.md §3.2): the relation chain
+     *  from just under the entry root down to the documentReference-role
+     *  relation, INCLUSIVE.  MMO: [subentry, document_reference]; rand:
+     *  [document_reference] - the depth is schema data, not code shape. */
+    private referenceChain(): model.RelationField[] {
+        const refRel = this.app.dictSchema.relationsByRole.documentReference
+              ?? panic('the schema declares no documentReference role relation');
+        const entryRoot = this.app.dictSchema.relationFields[0];
+        const chain: model.RelationField[] = [];
+        for(let r: model.RelationField|undefined = refRel;
+            r !== undefined && r !== entryRoot; r = r.parentRelation)
+            chain.unshift(r);
+        if(chain.length === 0 || chain[0].parentRelation !== entryRoot)
+            panic('the documentReference relation is not under the entry root');
+        return chain;
+    }
+
+    /** The bind of the reference relation's boundingGroup-shaped field (the
+     *  same marker the renderers dispatch on - no attr literals). */
+    private boundingGroupBind(refRel: model.RelationField): string {
+        return refRel.scalarFields.find(f => f.style.$shape === 'boundingGroup')?.bind
+            ?? panic(`relation '${refRel.name}' has no boundingGroup field`);
+    }
+
+    /** Append-position order key among `tag` children of `parent` (the
+     *  postEntryFact ordering, reusable at any level; `undefined` parent =
+     *  a freshly created tuple with no children yet). */
+    private appendKey(parent: VersionedTuple|undefined, tag: string): string {
+        const rel = parent?.childRelations[tag];
+        const keys = rel
+            ? [...rel.tuples.values()]
+                .filter(t => t.mostRecentTuple?.isCurrent)
+                .map(t => t.mostRecentTuple!.assertion.order_key ?? '')
+                .filter(k => k !== '')
+                .toSorted()
+            : [];
+        return orderkey.between(keys[keys.length-1], undefined);
+    }
+
     /** CREATE A NEW LEXEME FROM A BOUNDING GROUP (dz: the page-primary
      *  transcription flow - tag the groups on the page first, then make the
-     *  dictionary entry from a group).  Builds an entry + subentry + a
+     *  dictionary entry from a group).  Builds an entry + the ref SPINE
+     *  (whatever tuple chain the schema plants the documentReference
+     *  relation under - MMO synthesizes its subentry, rand nothing) + a
      *  document_reference pointing at the group, all as ONE unapproved
      *  transaction (a new word starts as a pending draft, edited then
      *  approved like any other).  Returns the new entry_id for the caller
@@ -476,35 +517,78 @@ export class LexemeOps {
         if(!Number.isSafeInteger(bounding_group_id))
             throw new Error('createLexemeFromGroup needs a bounding_group_id');
         this.requireUsername();
-        // Parent before child: three ascending placeholder times (separate
-        // txes), like newLexemeAction - the workspace applies each once its
-        // parent exists.  applyTransactions rewrites them to server times.
-        const t0 = placeholderTxTime();
-        const t1 = timestamp.nextTime(t0);
-        const t2 = timestamp.nextTime(t1);
+        const chain = this.referenceChain();
+        const bgBind = this.boundingGroupBind(chain[chain.length-1]);
+        // Parent before child: ascending placeholder times (separate txes),
+        // like newLexemeAction - the workspace applies each once its parent
+        // exists.  applyTransactions rewrites them to server times.
         const EOT = timestamp.END_OF_TIME;
         const ok = orderkey.new_range_start_string;
-        const entry_id = newId(), subentry_id = newId(), ref_id = newId();
-        const refRel = this.app.dictSchema.relationsByRole.documentReference
-              ?? panic('the schema declares no documentReference role relation');
-        const D = this.rootTag, E = this.entryTag,
-              S = (refRel.parentRelation ?? panic('documentReference has no parent')).tag,
-              Rf = refRel.tag;
-        const entryA: Assertion = {
-            ...assertionPathToFields([[D, 0], [E, entry_id]]),
-            assertion_id: entry_id, id: entry_id, ty: E,
-            valid_from: t0, valid_to: EOT, order_key: ok, ...this.changeStamp() } as Assertion;
-        const subA: Assertion = {
-            ...assertionPathToFields([[D, 0], [E, entry_id], [S, subentry_id]]),
-            assertion_id: subentry_id, id: subentry_id, ty: S,
-            valid_from: t1, valid_to: EOT, order_key: ok, ...this.changeStamp() } as Assertion;
-        const refA: Assertion = {
-            ...assertionPathToFields([[D, 0], [E, entry_id], [S, subentry_id], [Rf, ref_id]]),
-            assertion_id: ref_id, id: ref_id, ty: Rf,
-            valid_from: t2, valid_to: EOT, order_key: ok,
-            attr1: bounding_group_id, ...this.changeStamp() } as Assertion;
-        this.app.applyTransactions([entryA, subA, refA]);
+        const entry_id = newId();
+        let t = placeholderTxTime();
+        let path: [string, number][] = [[this.rootTag, 0], [this.entryTag, entry_id]];
+        const assertions: Assertion[] = [{
+            ...assertionPathToFields(path),
+            assertion_id: entry_id, id: entry_id, ty: this.entryTag,
+            valid_from: t, valid_to: EOT, order_key: ok, ...this.changeStamp() } as Assertion];
+        for(const rel of chain) {
+            t = timestamp.nextTime(t);
+            const id = newId();
+            path = [...path, [rel.tag, id]];
+            assertions.push({
+                ...assertionPathToFields(path),
+                assertion_id: id, id, ty: rel.tag,
+                valid_from: t, valid_to: EOT, order_key: ok,
+                ...(rel === chain[chain.length-1] ? {[bgBind]: bounding_group_id} : {}),
+                ...this.changeStamp() } as Assertion);
+        }
+        this.app.applyTransactions(assertions);
         return {entry_id};
+    }
+
+    /** ATTACH A BOUNDING GROUP TO AN EXISTING ENTRY - the common case for
+     *  imported dictionaries (rand's 31,723 entries already exist) and the
+     *  auto-binder's landing op.  Reuses the entry's FIRST live tuple at
+     *  each spine level, creating only what's missing (rand: nothing to
+     *  decide; MMO: the first subentry - good enough until a real
+     *  multi-subentry tagging need appears).  A plain pending fact chain,
+     *  same approval posture as createLexemeFromGroup. */
+    addReferenceToEntry(entry_id: number, bounding_group_id: number): {fact_id: number} {
+        if(!Number.isSafeInteger(bounding_group_id))
+            throw new Error('addReferenceToEntry needs a bounding_group_id');
+        this.requireUsername();
+        const chain = this.referenceChain();
+        const bgBind = this.boundingGroupBind(chain[chain.length-1]);
+        const EOT = timestamp.END_OF_TIME;
+        let path: [string, number][] = [[this.rootTag, 0], [this.entryTag, entry_id]];
+        let parent: VersionedTuple|undefined = this.entryTuple(entry_id);
+        const assertions: Assertion[] = [];
+        let t = placeholderTxTime();
+        for(const rel of chain) {
+            const isRef = rel === chain[chain.length-1];
+            const existing: VersionedTuple|undefined = !isRef && parent
+                ? [...(parent.childRelations[rel.tag]?.tuples.values() ?? [])]
+                    .find(tu => tu.mostRecentTuple?.isCurrent)
+                : undefined;
+            if(existing) {
+                path = [...path, [rel.tag, existing.id]];
+                parent = existing;
+                continue;
+            }
+            const id = newId();
+            path = [...path, [rel.tag, id]];
+            assertions.push({
+                ...assertionPathToFields(path),
+                assertion_id: id, id, ty: rel.tag,
+                valid_from: t, valid_to: EOT,
+                order_key: this.appendKey(parent, rel.tag),
+                ...(isRef ? {[bgBind]: bounding_group_id} : {}),
+                ...this.changeStamp() } as Assertion);
+            parent = undefined;     // below a new tuple nothing exists yet
+            t = timestamp.nextTime(t);
+        }
+        this.app.applyTransactions(assertions);
+        return {fact_id: assertions[assertions.length - 1].id};
     }
 
     /** Add a tag from the word's Tags ☰ quick-pick: the chosen tag, no value
