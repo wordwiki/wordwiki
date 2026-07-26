@@ -94,6 +94,9 @@ instead of `'` — an MMO-side cleanup candidate independent of RAND.
    paradigm codes?
 5. Initial capitals (`Lnu` vs MMO `lnu`): a convention, or per-word?
 
+(Questions 6–7, on the Final files and the Ng/Lk divergence, are in
+rand-final-merge-design.md.)
+
 ## Part 2 — The auto-transliteration experiment (our notes)
 
 Method: pair RAND-li and MMO-li spellings exactly, then "near"
