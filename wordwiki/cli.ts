@@ -26,6 +26,7 @@ import { validateVersionedDb, validateVariantInvariants,
 import * as dictionaryConfig from './dictionary-config.ts';
 import * as sfm from './sfm.ts';
 import * as sfmImport from './sfm-import.ts';
+import * as dictionaryTransform from './dictionary-transform.ts';
 import * as workspace from './workspace.ts';
 import { selectAllAssertions, type Assertion } from './assertion.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
@@ -720,6 +721,84 @@ export async function cliMain(args: string[]): Promise<void> {
                              `${result.records} records, ${result.assertions} assertions, ` +
                              `${result.problems.length} problems, ${result.droppedFields} dropped fields`);
                 return result.problems.length > 0 || result.droppedFields > 0 ? 2 : 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
+        // STEP 2 of the import pipeline: the TRANSFORM (raw mirror -> rich
+        // dictionary), driven by the mapping in the TARGET's config pair.
+        //   ./wordwiki.sh load-mapping <target> <mapping.json> [--apply]
+        //   ./wordwiki.sh dump-mapping <target> [file]
+        //   ./wordwiki.sh transform <target> [--sample=N] [--report=path]
+        case 'load-mapping': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const target = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: load-mapping <target> <mapping.json> [--apply]');
+                const file = args[2] && !args[2].startsWith('--') ? args[2]
+                    : panic('load-mapping needs the mapping file');
+                const apply = args.includes('--apply');
+                const json = JSON.parse(Deno.readTextFileSync(file));
+                const sourceTable = json?.sources?.[0]?.table
+                    ?? panic('the mapping declares no sources[0].table');
+                const sourceSchemaText = dictionaryConfig.readConfigValue(sourceTable, 'schema')
+                    ?? panic(`source dictionary '${sourceTable}' has no stored schema`);
+                const sourceSchema = dictionaryConfig.readStoredDictionarySchema(sourceTable)!;
+                const gate = dictionaryTransform.checkMapping(json, sourceSchema, sourceSchemaText);
+                for(const w of gate.warnings) console.warn(`WARNING: ${w}`);
+                if(gate.problems.length > 0) {
+                    console.error('the mapping fails its gate:');
+                    for(const pb of gate.problems) console.error(`  - ${pb}`);
+                    return 1;
+                }
+                console.info('the mapping passes its gate');
+                if(apply) {
+                    const exists = db().first<{name: string}>(
+                        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = :n`,
+                        {n: target});
+                    if(!exists)
+                        dictionaryConfig.createDictionary(target, json.targetSchema, {slug: target});
+                    dictionaryConfig.writeConfigValue(target, 'transform',
+                                                      JSON.stringify(json, null, 1));
+                    console.info(`APPLIED to '${target}' - run: ./wordwiki.sh transform ${target}`);
+                } else console.info('(dry run - pass --apply to install it)');
+                return 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+        case 'dump-mapping': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const target = args[1] ?? panic('usage: dump-mapping <target> [file]');
+                const text = dictionaryConfig.readConfigValue(target, 'transform')
+                    ?? panic(`'${target}' has no transform config`);
+                const path = args[2] ?? `${target}-transform.json`;
+                Deno.writeTextFileSync(path, text + '\n');
+                console.info(`wrote the stored mapping to ${path}`);
+            });
+            Deno.exit(0);
+            break;
+        }
+        case 'transform': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const target = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: transform <target> [--sample=N] [--report=path]');
+                const mappingText = dictionaryConfig.readConfigValue(target, 'transform')
+                    ?? panic(`'${target}' has no transform config - load-mapping first`);
+                const sourceTable = JSON.parse(mappingText)?.sources?.[0]?.table;
+                const sampleArg = args.find(a => a.startsWith('--sample='))?.slice('--sample='.length);
+                const result = dictionaryTransform.runTransform(target, ww.storeFor(sourceTable),
+                    {stopAfterCount: sampleArg ? Number(sampleArg) : undefined});
+                const report = dictionaryTransform.transformReportMarkdown(target, result);
+                console.info(report);
+                const reportPath = args.find(a => a.startsWith('--report='))?.slice('--report='.length);
+                if(reportPath) Deno.writeTextFileSync(reportPath, report);
+                console.info(`transformed '${target}' (generation ${result.generation}): ` +
+                             `${result.entries} entries, ${result.assertions} assertions`);
+                return result.unmappedPerTag.size > 0 ? 2 : 0;
             });
             Deno.exit(exitCode);
             break;

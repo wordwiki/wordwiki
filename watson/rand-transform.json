@@ -1,0 +1,439 @@
+{
+ "formatVersion": 1,
+ "sources": [
+  {
+   "table": "randraw"
+  }
+ ],
+ "targetSchema": {
+  "$type": "schema",
+  "$name": "rand",
+  "$tag": "rand",
+  "entry": {
+   "$type": "relation",
+   "$tag": "ent",
+   "$prompt": "Entry",
+   "$style": {
+    "$shape": "containerRelation"
+   },
+   "entry_id": {
+    "$type": "primary_key"
+   },
+   "spelling": {
+    "$type": "relation",
+    "$tag": "spl",
+    "spelling_id": {
+     "$type": "primary_key"
+    },
+    "text": {
+     "$type": "string",
+     "$bind": "attr1"
+    },
+    "variant": {
+     "$type": "variant"
+    },
+    "$style": {
+     "$shape": "compactInlineListRelation",
+     "$view": {
+      "order": 1,
+      "titleRole": "headword",
+      "join": " / ",
+      "label": "inline"
+     }
+    }
+   },
+   "subentry": {
+    "$type": "relation",
+    "$tag": "sub",
+    "subentry_id": {
+     "$type": "primary_key"
+    },
+    "part_of_speech": {
+     "$type": "string",
+     "$bind": "attr1",
+     "$optional": true,
+     "$style": {
+      "$view": {
+       "order": 2,
+       "label": "inline"
+      },
+      "$prompt": "Paradigm (Mi'gmewi'suti)"
+     }
+    },
+    "part_of_speech_en": {
+     "$type": "string",
+     "$bind": "attr2",
+     "$optional": true,
+     "$style": {
+      "$view": {
+       "order": 3,
+       "label": "inline"
+      },
+      "$prompt": "Part of speech"
+     }
+    },
+    "$style": {
+     "$shape": "containerRelation",
+     "$view": {
+      "order": 3,
+      "singleton": "collapse",
+      "numbered": true,
+      "empty": "elide"
+     }
+    },
+    "gloss": {
+     "$type": "relation",
+     "$tag": "gls",
+     "gloss_id": {
+      "$type": "primary_key"
+     },
+     "gloss": {
+      "$type": "string",
+      "$bind": "attr1"
+     },
+     "$style": {
+      "$shape": "inlineListRelation",
+      "$view": {
+       "order": 4,
+       "titleRole": "gloss",
+       "label": "inline"
+      }
+     }
+    },
+    "literal_translation": {
+     "$type": "relation",
+     "$tag": "lit",
+     "$prompt": "Literal translation",
+     "literal_translation_id": {
+      "$type": "primary_key"
+     },
+     "text": {
+      "$type": "string",
+      "$bind": "attr1"
+     },
+     "$style": {
+      "$shape": "inlineListRelation",
+      "$view": {
+       "order": 5,
+       "label": "inline",
+       "empty": "elide"
+      }
+     }
+    },
+    "example": {
+     "$type": "relation",
+     "$tag": "exa",
+     "$prompt": "Examples",
+     "example_id": {
+      "$type": "primary_key"
+     },
+     "$style": {
+      "$shape": "containerRelation",
+      "$view": {
+       "order": 6,
+       "label": "heading",
+       "singleton": "list",
+       "empty": "elide"
+      }
+     },
+     "example_text": {
+      "$type": "relation",
+      "$tag": "etx",
+      "$prompt": "Text",
+      "example_text_id": {
+       "$type": "primary_key"
+      },
+      "text": {
+       "$type": "string",
+       "$bind": "attr1"
+      },
+      "variant": {
+       "$type": "variant",
+       "$mixed": true,
+       "$sourceOrthography": true
+      },
+      "$style": {
+       "$shape": "compactInlineListRelation",
+       "$view": {
+        "order": 1,
+        "label": "inline",
+        "empty": "elide"
+       }
+      }
+     },
+     "example_translation": {
+      "$type": "relation",
+      "$tag": "etr",
+      "$prompt": "Translation",
+      "example_translation_id": {
+       "$type": "primary_key"
+      },
+      "text": {
+       "$type": "string",
+       "$bind": "attr1"
+      },
+      "$style": {
+       "$shape": "compactInlineListRelation",
+       "$view": {
+        "order": 2,
+        "label": "inline",
+        "empty": "elide",
+        "emphasis": "italic"
+       }
+      }
+     }
+    }
+   },
+   "pronunciation": {
+    "$type": "relation",
+    "$tag": "prn",
+    "$prompt": "Pronunciation",
+    "pronunciation_id": {
+     "$type": "primary_key"
+    },
+    "text": {
+     "$type": "string",
+     "$bind": "attr1"
+    },
+    "$style": {
+     "$shape": "compactInlineListRelation",
+     "$view": {
+      "order": 7,
+      "label": "inline",
+      "empty": "elide"
+     }
+    }
+   },
+   "variant_form": {
+    "$type": "relation",
+    "$tag": "vaf",
+    "$prompt": "Variant form",
+    "variant_form_id": {
+     "$type": "primary_key"
+    },
+    "text": {
+     "$type": "string",
+     "$bind": "attr1"
+    },
+    "$style": {
+     "$shape": "inlineListRelation",
+     "$view": {
+      "order": 8,
+      "label": "inline",
+      "empty": "elide"
+     }
+    }
+   },
+   "source": {
+    "$type": "relation",
+    "$tag": "src",
+    "$prompt": "Source",
+    "source_id": {
+     "$type": "primary_key"
+    },
+    "source": {
+     "$type": "string",
+     "$bind": "attr1"
+    },
+    "book": {
+     "$type": "string",
+     "$bind": "attr2",
+     "$optional": true
+    },
+    "page": {
+     "$type": "integer",
+     "$bind": "attr3",
+     "$optional": true
+    },
+    "$style": {
+     "$shape": "inlineListRelation",
+     "$view": {
+      "order": 9,
+      "label": "inline",
+      "empty": "elide",
+      "compose": [
+       "source"
+      ],
+      "sep": " "
+     }
+    }
+   },
+   "note": {
+    "$type": "relation",
+    "$tag": "nte",
+    "note_id": {
+     "$type": "primary_key"
+    },
+    "note": {
+     "$type": "string",
+     "$bind": "attr1",
+     "$style": {
+      "$width": 80,
+      "$height": 5,
+      "$markdown": true
+     }
+    },
+    "$style": {
+     "$shape": "compactInlineListRelation",
+     "$view": {
+      "order": 10,
+      "label": "inline",
+      "empty": "elide"
+     }
+    }
+   },
+   "record_date": {
+    "$type": "relation",
+    "$tag": "rdt",
+    "$prompt": "Record date",
+    "record_date_id": {
+     "$type": "primary_key"
+    },
+    "date": {
+     "$type": "string",
+     "$bind": "attr1"
+    },
+    "$style": {
+     "$shape": "compactInlineListRelation",
+     "$view": {
+      "hidden": true,
+      "label": "inline"
+     }
+    }
+   }
+  }
+ },
+ "rules": [
+  {
+   "from": "lx",
+   "to": "spelling",
+   "set": {
+    "text": {
+     "content": true
+    },
+    "variant": {
+     "const": "mm-li"
+    }
+   }
+  },
+  {
+   "from": "lsf",
+   "to": "spelling",
+   "set": {
+    "text": {
+     "content": true
+    },
+    "variant": {
+     "const": "mm-sf"
+    }
+   }
+  },
+  {
+   "from": "ph",
+   "to": "pronunciation",
+   "set": {
+    "text": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "ps",
+   "to": "subentry",
+   "set": {
+    "part_of_speech": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "ps/pn",
+   "intoParentField": "part_of_speech_en",
+   "value": {
+    "content": true
+   }
+  },
+  {
+   "from": "ps/ge",
+   "to": "subentry/gloss",
+   "set": {
+    "gloss": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "ps/de",
+   "to": "subentry/literal_translation",
+   "set": {
+    "text": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "ps/xv",
+   "to": "subentry/example/example_text",
+   "set": {
+    "text": {
+     "content": true
+    },
+    "variant": {
+     "const": "rand"
+    }
+   }
+  },
+  {
+   "from": "ps/xv/xe",
+   "to": "subentry/example/example_translation",
+   "set": {
+    "text": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "so",
+   "to": "source",
+   "parser": "randCitation",
+   "set": {
+    "source": {
+     "content": true
+    },
+    "book": {
+     "parsed": "book"
+    },
+    "page": {
+     "parsed": "page"
+    }
+   }
+  },
+  {
+   "from": "nt",
+   "to": "note",
+   "set": {
+    "note": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "va",
+   "to": "variant_form",
+   "set": {
+    "text": {
+     "content": true
+    }
+   }
+  },
+  {
+   "from": "dt",
+   "to": "record_date",
+   "set": {
+    "date": {
+     "content": true
+    }
+   }
+  }
+ ]
+}
