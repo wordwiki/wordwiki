@@ -465,3 +465,19 @@ Reading: the direct mapping is not so much WRONG as it is two-thirds
 convention — which is fine while the team's conventions are stable, but
 means rule changes should be validated against the joint-miss and
 overreach lists, and the 194-item worklist is real reviewer material.
+
+### The dialect-residue report (2026-07-27, report: watson/dialect-residue.md)
+
+The 2,666 counterpart pairs after the systematic rules, residue = the
+modern mm-li reachable by NEITHER route (li spoke nor hub), classified:
+64.4% exact; then A length-mark practice 309 (270 of them the ONLY
+residue on high-confidence pairs — convention, not dialect), **C pure
+vowel substitutions 85** (the dialect table: a→o ×19, e→i ×17, i→e ×15,
+e→a ×14 — real Nova Scotia↔Listuguj vowel correspondences),
+**D uvularity g↔q 35**, E single-vowel epenthesis 92, F inflection-tail
+100 (different form chosen as headword, excluded from dialect claims),
+G unsorted 328.  Every row carries dict+rand entry ids and the confidence
+tier; the class C/D/E signal is all medium-tier by construction
+(high-confidence pairs have identical skeletons), so the report says so
+and tells reviewers to read the pair, not just the letters.  C and D are
+the tables for Watson/Dianne.
