@@ -62,6 +62,34 @@ candidate pair carries its mechanical evidence + a mechanical score.
 Pass 0 alone already lands the survey's 1,443 exact-skeleton pairs
 at 'high' with no LLM at all.
 
+**Pass 0's keys are a PERSISTENT INDEX (dz 2026-07-27) - the live
+single-entry path.**  A later, deliberately weaker consumer: as an
+editor CREATES an entry, dynamically surface likely duplicates and
+near-matches in the same dictionary AND others (Mi'gmaq's
+flexibility makes accidental duplicates and missed base-entries a
+constant editing risk) - by spelling under ortho transforms, by
+word-composition rules, perhaps by definition.  No LLM, no
+whole-dictionary context: the new entry's keys are computed with the
+SAME data-driven normalizers and probed against the index, ranked by
+the same IDF weights - milliseconds, always current.  What this
+requires of the batch design NOW:
+- pass 0 factors as (a) per-entry KEY EXTRACTION (pure; normalizers
+  incl. future word-composition segmentation are shared data) and
+  (b) join/cluster - with (a)'s output PERSISTED in a queryable
+  key table (dictionary, entry_id, kind, key; indexed by kind+key)
+  maintained INCREMENTALLY on entry edits, rebuilt by batch runs;
+- the key-frequency (IDF) stats queryable from the same table, so
+  live ranking agrees with batch ranking;
+- the live probe is the pair-scorer LIBRARY reused (the library-not-
+  monolith principle earning its keep), returning candidates +
+  mechanical evidence only - batch-grade confidence needs the judge,
+  and the editor hint panel does not need batch-grade confidence.
+  (An optional on-demand single-cluster judge call - one entry, one
+  cheap LLM call - can upgrade a hint when the editor asks.)
+- the existing SPELLING-DUPLICATES advisory (dup warning/report) is
+  this feature's ancestor: the live probe eventually SUBSUMES it,
+  cross-lane, cross-dictionary, definition-aware.
+
 **Pass 1 - CLUSTER JUDGMENT (LLM, small contexts, cached).**  One
 call per entry-with-candidates: the entry's full presentation
 (headwords all lanes, source spellings, definitions, categories,
@@ -214,9 +242,10 @@ those dictionaries when they exist.)
 ## 6. Order of work
 
 1. The pass-0 library: per-orthography normalizers as data, key
-   extraction, blocking, mechanical evidence/scores.  Eval against
-   the survey pairs (should reproduce 1,443 exact + rank the 577
-   near high).
+   extraction, blocking, mechanical evidence/scores - with the keys
+   PERSISTED as the incremental index (the live single-entry path's
+   substrate, above).  Eval against the survey pairs (should
+   reproduce 1,443 exact + rank the 577 near high).
 2. The pass-1 judgment stage on the extract substrate + the
    10-cluster eval; Sonnet-vs-Opus A/B while at it.
 3. '~rand-mmo-pair' landing via machineSync (the pairing relation +

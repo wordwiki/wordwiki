@@ -39,6 +39,10 @@ sketch + rand-references §6 pairing).  Core:
   the measured OCR confusion table for future Clark/Pacifique.
 - Category propagation runs as '~categorizer' consuming LANDED pair
   facts — never inside the batch (feedback loop).
+- Pass-0 keys are a PERSISTENT incremental INDEX (dz): powers the
+  future LIVE single-entry dup/near-match probe at entry-creation
+  time (same normalizers + IDF, no LLM; subsumes the
+  spelling-duplicates advisory eventually).
 
 **How to apply:** build in doc §6 order (pass-0 library first); dz
 has NOT yet said build.  See [[machine-contributors]],
