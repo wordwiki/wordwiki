@@ -24,8 +24,10 @@ import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transl
 import { transliterateLiToSf, transliterateCandidates,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
 import { transliterateWsfToWli, wsfWliCandidates, transliterateWliToMmli,
-         transliterateWsfToMmli, WSF_WLI_VERSION, WLI_MMLI_VERSION,
-         WSF_MMLI_VERSION } from './watson-transliterate.ts';
+         transliterateWsfToMmli, transliterateWliToWsf,
+         transliterateLiToSfViaWatson, WSF_WLI_VERSION, WLI_MMLI_VERSION,
+         WSF_MMLI_VERSION, WLI_WSF_VERSION,
+         LISF_VIA_WATSON_VERSION } from './watson-transliterate.ts';
 import type { WordWiki } from '../wordwiki/wordwiki.ts';
 
 const EOT = 9007199254740991;
@@ -87,7 +89,11 @@ export function registerMikmaqTransliterationPairs(): void {
         version: TRANSLITERATOR_VERSION,
         transliterate: (w, opts) => transliterateLiToSf(w, opts ?? {}),
         candidates: (w, k) => transliterateCandidates(w, k).map(c => c.text),
-        candidateTransliterators: CANDIDATE_TRANSLITERATORS,
+        candidateTransliterators: [...CANDIDATE_TRANSLITERATORS,
+            // The composition-audit candidate: what Rand's phonetics
+            // justify, nothing more (watson-transliterate.ts).
+            {name: `${LISF_VIA_WATSON_VERSION} (hub audit)`,
+             fn: transliterateLiToSfViaWatson}],
         // The existing export path (cli export-transliteration-pairs with
         // no --pair) keeps its bespoke junk filter; this extractor is the
         // registry face of the same corpus.
@@ -127,5 +133,20 @@ export function registerMikmaqTransliterationPairs(): void {
             {name: 'identity (baseline)', fn: (w) => w},
         ],
         extractCorpus: counterpartCorpus('watson-sf'),
+    });
+    registerTransliterationPair({
+        id: 'wli-wsf', sourceLane: 'watson-li', targetLane: 'watson-sf',
+        version: WLI_WSF_VERSION,
+        transliterate: transliterateWliToWsf,
+        candidateTransliterators: [
+            {name: `${WLI_WSF_VERSION} (current)`, fn: transliterateWliToWsf},
+            {name: 'identity (baseline)', fn: (w) => w},
+        ],
+        // The reversed both-lanes corpus.
+        extractCorpus: (ww) => {
+            const {pairs, notes} = randBothLanesCorpus(ww);
+            return {pairs: pairs.map(p =>
+                ({source: p.target, target: p.source, tag: p.tag})), notes};
+        },
     });
 }

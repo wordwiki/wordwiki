@@ -432,3 +432,36 @@ Consequences: when proposing mm-li counterpart spellings from rand, use
 the sf lane when the entry has one, the li spoke otherwise; growing
 watson-sf coverage (more rand transcription) directly buys transliteration
 accuracy.
+
+### The mm-li → mm-sf composition audit (2026-07-27, report: watson/mmsf-composition-audit.md)
+
+The suspect direct mapping, audited by the hub.  New machinery:
+**wli-wsf** (the INVERSE spoke, derived from the reversed rand oracle:
+apostrophe class-split — consonant side = schwa ɨ 250:32, vowel side =
+length 1393; g→k; -ei→-ey 331:11; final aqan→aqn 69:3; nn→ln 10:0) at
+**84.2% train / 86.1% holdout**; the **via-watson audit candidate** on the
+li-sf pair (only what Rand's phonetics license: g→k + -ei→-ey — the schwa
+apostrophe round-trips and Watson's archaisms are conventions, measured
+against TEAM practice: aqan kept 100:0, nn kept, schwa ' 1245:27); and
+**wsf-mmsf** (the convention bridge for independent Rand-side prediction).
+
+Results:
+
+- On the li-sf holdout: via-watson 53.1% vs rules-v4 75.5%.  **The
+  22-point gap IS the team-convention inventory**, itemized in the
+  report: the cluster-aspiration apostrophe (×323 — v4's biggest learned
+  convention), pos-conditioned final -ei (×29), lexical wjit (×5), î (×3).
+- **62 pairs where v4 overreaches** (the phonetics-only mapping is right
+  and v4 is wrong) — a direct rules-v4 bug worklist.
+- **194 joint misses** — both routes agree AGAINST the human mm-sf
+  spelling: the mm-sf consistency worklist the audit was for.
+- The 75 independent triples (watson-sf + mm-li + mm-sf on one entry):
+  44 all-agree; 24 v4-right (dialect/Watson divergence); **1 strong
+  suspect** — dict 7668 mm-sf 'angua'latl' is an UNtransliterated copy of
+  the li form (both routes: ankua'latl).  Sparse but the mechanism works;
+  it grows as counterpart coverage and the sf lane grow.
+
+Reading: the direct mapping is not so much WRONG as it is two-thirds
+convention — which is fine while the team's conventions are stable, but
+means rule changes should be validated against the joint-miss and
+overreach lists, and the 194-item worklist is real reviewer material.

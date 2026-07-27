@@ -62,4 +62,17 @@ test("mikmaq pairs: the watson rules", () => {
     const hub = transliterationPair('wsf-mmli')!;
     assertEquals(hub.transliterate("apt'skwa'q"), "apt'sgwa'q");
     assertEquals(hub.transliterate('keknasimkewey'), 'gegnasimgewei');
+
+    // The INVERSE spoke: apostrophe class-split (consonant side = schwa
+    // ɨ, vowel side = length), voicing, -ei→-ey, final aqan, nn→ln.
+    const inv = transliterationPair('wli-wsf')!;
+    assertEquals(inv.transliterate("g'p'ta'ig"), "kɨpɨta'ik");
+    assertEquals(inv.transliterate('mimgwaqan'), 'mimkwaqn');
+    assertEquals(inv.transliterate('nnuiasunaq'), 'lnuiasunaq');
+    assertEquals(inv.transliterate('gegnasimgewei'), 'keknasimkewey');
+
+    // The audit candidate rides on the li-sf pair's candidate list.
+    const lisf = transliterationPair('li-sf')!;
+    assert(lisf.candidateTransliterators!.some(c => c.name.includes('via-watson')),
+           'hub audit candidate registered');
 });

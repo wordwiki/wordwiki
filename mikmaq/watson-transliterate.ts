@@ -81,6 +81,57 @@ export function wsfWliCandidates(word: string, k = 5): string[] {
     return enumeratePattern(wsfWliPattern(wsfToWliBase(word)), k);
 }
 
+export const WLI_WSF_VERSION = 'wli-wsf/rules-v1';
+
+/** watson-li → watson-sf: the INVERSE spoke, derived from the reversed
+ *  rand oracle (train-fold counts):
+ *  - the apostrophe disambiguates by CLASS: after a consonant it is the
+ *    schwa (wsf ɨ; 250:32), after a vowel it is length and stays (1393);
+ *  - g → k (Listuguj g is the only velar; wsf writes voiceless);
+ *  - word-final/prevocalic -ei → -ey (331:11);
+ *  - word-final aqan drops the echo vowel (69:3 - wsf writes aqn);
+ *  - initial nn → ln (10:0, Watson's archaic root spelling). */
+export function transliterateWliToWsf(word: string): string {
+    let w = word;
+    w = w.replace(new RegExp(`([^${VOWELS}\\s'])'`, 'g'), '$1ɨ');
+    w = w.replaceAll('g', 'k').replaceAll('G', 'K');
+    w = w.replace(/ei(?=$|\s|[aeiou])/g, 'ey');
+    w = w.replace(/aqa([nm])(?=$|\s)/g, 'aq$1');
+    w = w.replace(/(^|\s)nn/g, '$1ln');
+    return w;
+}
+
+export const LISF_VIA_WATSON_VERSION = 'li-sf/via-watson-hub-v1';
+
+/** mm-li → mm-sf BY THE WATSON CHAIN, for the composition AUDIT against
+ *  the direct rules-v4: mm-li ≈ watson-li, route through the hub, land
+ *  on TEAM mm-sf conventions (measured on the li-sf oracle: aqan kept
+ *  100:0, initial nn kept 2:0, schwa written ' 1245:27) - so Watson's
+ *  archaisms (aqn, ln) are SKIPPED, and the schwa round-trip (C-'→ɨ→')
+ *  cancels.  What remains is the mapping Rand's phonetics can actually
+ *  justify: voicing re-encoding + the -ey re-encoding.  Everything
+ *  rules-v4 does beyond this (cluster aspiration apostrophes, lexical
+ *  exceptions, pos conditioning) is TEAM CONVENTION the hub cannot see -
+ *  the harness diff of the two candidates is exactly that inventory. */
+export function transliterateLiToSfViaWatson(word: string): string {
+    return word.replaceAll('g', 'k').replaceAll('G', 'K')
+        .replace(/ei(?=$|\s|[aeiou])/g, 'ey');
+}
+
+export const WSF_MMSF_VERSION = 'wsf-mmsf/bridge-v1';
+
+/** watson-sf → TEAM mm-sf: pure convention alignment (the phonetics
+ *  already match) - Watson's ɨ becomes the team's schwa apostrophe, his
+ *  archaic ln- becomes nn-, and the echo vowel the team writes in final
+ *  aqan is restored.  Used by the triple audit (independent Rand-side
+ *  prediction of mm-sf). */
+export function transliterateWsfToMmsf(word: string): string {
+    let w = word.replaceAll('ɨ', "'");
+    w = w.replace(/(^|\s)ln/g, '$1nn');
+    w = w.replace(/([aeiou])q([nm])(?=$|\s)/g, '$1q$1$2');
+    return w;
+}
+
 export const WSF_MMLI_VERSION = 'wsf-mmli/hub-compose-v1';
 
 /** watson-sf → mm-li BY HUB COMPOSITION: the sf lane carries the
