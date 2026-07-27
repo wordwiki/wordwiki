@@ -286,3 +286,149 @@ Invariants and gotchas:
 - dz reviews everything locally before staging sees it
   ([[staging-workflow]] memory) — polish reports on dev, never suggest
   pushing.
+
+---
+
+## Part 3 — The multi-pair generalization (2026-07-27)
+
+The li→sf machinery above is no longer the only customer.  The rand import
+produced two new parallel corpora an order of magnitude bigger than the one
+that trained the current rules, and the mechanism has been FACTORED so each
+orthography pair is a registered user of the same engine, oracle harness,
+and iteration loop.
+
+### The pair mechanism
+
+- `wordwiki/transliterate-pair.ts` — `TransliterationPairSpec` {id, source/
+  target lanes, version, transliterate(), ranked candidates(), candidate
+  variant list, corpus extractor} + a registry.  General code; knows no
+  Mi'gmaq.
+- `mikmaq/transliterate-pairs.ts` (registered by `mikmaq/register.ts`) —
+  the pairs themselves: `li-sf` wraps the mature engine above; `wsf-wli`
+  (watson-sf → watson-li) and `wli-mmli` (watson-li → mm-li) are new.
+- The harness (`transliterate-harness.ts`) is generalized: `--pair ID`
+  selects the pair, oracle files carry {source, target, tag} (legacy
+  {li, sf} still read), and the CORE is the exported `runHarness()` —
+  callable as a plain function on JSON query results, so a SAAS future
+  with no CLI runs the identical code (dz's requirement).  The CLI entry
+  is a binary edge and may import the mikmaq package.
+- `export-transliteration-pairs [path] [--pair=ID]` exports any registered
+  pair's corpus; the no-flag default is the unchanged li-sf export.
+  Corpora and baselines are gitignored scratch, re-exported from the db.
+
+### The ambiguity PATTERN form
+
+`wordwiki/transliterate-pattern.ts`: ranked candidate sets written as one
+compact string — `epa'q[oe]t`, `ta(s|ts|)ipow` — a deliberate strict
+SUBSET of regex (literals + the two alternation forms, nothing else), so
+the set stays finite and enumerable by construction and the regex
+transform is mechanical.  What plain regex cannot carry is RANK: here
+alternative order IS preference order, which is what top-k, confidence,
+and the display default need; `patternToRegExp()` is the one lossy
+direction (drops rank, keeps the set).  The bracket form reads like
+phonemic variant notation — the review audience is linguists.
+
+### The new corpora, and where they start
+
+Both exported from the dev db and scored with IDENTITY rules (train
+split) to map the ground before any rules exist:
+
+- **wsf-wli** — 4,565 pairs, every rand entry Watson wrote in both his
+  sf-style and Listuguj-style lanes (ONE author: no team-drift noise).
+  Identity: 19.3% exact.  The failures are overwhelmingly systematic:
+  k→g voicing (×3,781), word-final -y→-i, ɨ→', q_n→qan epenthesis.
+- **wli-mmli** — 2,131 pairs from the landed `~rand-mmo-pair` counterpart
+  links (1,409 high-confidence + 722 medium).  Identity: 56.7% exact —
+  and **79% on the high-confidence subset**: watson-li and mm-li are
+  close, as the Watson→Dianne manual-transliteration heritage predicts.
+  Residue: apostrophe length-marks, backtick→apostrophe schwa, qan
+  epenthesis, g→q.
+
+### The phonetic hub (Rand's claim, and what we do with it)
+
+Clarke's introduction records that Rand could train a NON-SPEAKER to read
+his spelling aloud intelligibly — the claim being that the orthography is
+phonetically complete.  Discounted for 19th-century enthusiasm (his
+diacritics drift, the typesetting errs, his ear was English-calibrated),
+the architectural consequence stands: the Rand-derived lanes are the
+information-RICH end of the pair graph, so:
+
+1. **watson-sf is the de-facto hub.**  It is a single author's normalized
+   machine-readable rendering of the phonetically complete source, with
+   4.5k pairs on each side.  Compositions route THROUGH it (rand ↔
+   watson-sf ↔ watson-li ↔ mm-li) and are information-preserving in the
+   out-of-hub direction precisely because of the completeness claim.  No
+   abstract phoneme inventory is minted — the hub plays that role.
+2. **Rules are written over phonological CLASSES**, not letter lists:
+   sonorants, obstruents, vowels, schwa sites.  The li-sf engine already
+   does this covertly ('lnm', 'ptjk'); the mikmaq package now names the
+   classes and the per-pair rules read as phonology — reviewable by the
+   people who know the phonology.
+3. **Ambiguity = measured underspecification.**  Branch points belong
+   exactly where a lane drops information the hub keeps; the corpus
+   measures each branch's probability (as the li-sf calibration already
+   does).
+4. **Residue is a worklist, not embarrassment.**  Once systematic rules
+   converge: what remains on the rand↔watson edge is transcription noise;
+   what remains on the watson↔mm edges is largely REAL DIALECT difference
+   (Rand's Nova Scotia informants vs Listuguj) — each worth surfacing on
+   its own report.
+
+The goal behind all of it: derive the ortho mappings from thousands of
+single-author pairs instead of the ~358 mixed pairs the current suspect
+mm-li→mm-sf understanding rests on, then audit mm-sf consistency by
+running the direct rules and the hub composition as two candidates on one
+oracle and reading their disagreements.
+
+### First derivation results (same day)
+
+One harness loop per pair, every rule justified by train-fold counts,
+scored on the untouched holdout:
+
+- **wsf-wli rules-v2** (`mikmaq/watson-transliterate.ts`): voicing k→g,
+  y→i, word-final -sik→s'g (21:2), echo-vowel epenthesis where Watson's
+  majority says so (always after o, otherwise medially before e/a),
+  w-possessive → ug-, initial ln→nn.  **86.2% train / 86.0% holdout**
+  (identity: 19.3%); +2,462 fixed / −15 regressed vs identity.  The two
+  branch points Watson's own writing leaves open — the schwa mark
+  (' vs `) and word-final aqn epenthesis (70:76, his coin flip) — are
+  RANKED PATTERN branches, not guesses: top-2 candidates cover **88.0%**
+  holdout.  Note this already beats the mature li-sf engine (75.9%) on
+  one day's rules: the single-author corpus is that much cleaner.
+- **wli-mmli rules-v1**: backtick→apostrophe, echo-vowel epenthesis.
+  **59.2% train / 57.2% holdout** overall; the high-confidence subset is
+  at **81%** with ZERO regressions (+43/−0).  The remaining residue needs
+  information the watson-li lane does not carry (vowel-length
+  apostrophes, g-vs-q uvularity, vowel quality) — exactly the predicted
+  underspecification; the path there is hub composition (route through
+  watson-sf/rand, which DO carry length and uvularity) and the dialect
+  worklist, not more letter rules.
+
+Iteration cost of a loop (edit rules → harness train + holdout + baseline
+diff): ~10 seconds, zero LLM spend.
+
+### The hub composition, measured (same day)
+
+A third registered pair puts the hub thesis under the oracle:
+**wsf-mmli** — watson-sf → mm-li over the same counterpart links (637
+pairs; only ~30% of counterpart-linked rand entries carry a watson-sf
+spelling, which is why it is smaller).  Its `transliterate` is LITERALLY
+the composition `wliToMmli(wsfToWli(word))` — zero new rules.
+
+Scores (train / holdout): identity 24.7%; **composition 73.8% / 70.7%**,
+and on the high-confidence subset **88% / 87%** — ABOVE the direct
+wli→mmli route's 81%, despite spending no rules on this pair, because the
+sf lane preserves exactly what the li spoke destroys (q-vs-k uvularity
+survives; sf vowel-length marks pass through).  Rand's phonetic
+completeness, cashed as measured accuracy.  (Caveat: the two corpora
+cover different entry subsets, so this is a strong signal, not a
+controlled A/B.)
+
+Residue worth noting: the top remaining cluster is mm-li vowel-length
+apostrophes the sf lane also lacks (lexical), and FOUR mm-li targets
+contain CURLY apostrophes (’) — a data-cleanup worklist item, not a rule.
+
+Consequences: when proposing mm-li counterpart spellings from rand, use
+the sf lane when the entry has one, the li spoke otherwise; growing
+watson-sf coverage (more rand transcription) directly buys transliteration
+accuracy.

@@ -7,6 +7,8 @@
 import { registerOrthoNormalizers } from '../wordwiki/similarity.ts';
 import { registerLanguageRules } from '../wordwiki/similarity-rules.ts';
 import { MIKMAQ_NORMALIZERS, MIKMAQ_RULES } from './language.ts';
+import { registerMikmaqTransliterationPairs } from './transliterate-pairs.ts';
 
 registerOrthoNormalizers(MIKMAQ_NORMALIZERS);
 registerLanguageRules(MIKMAQ_RULES);
+registerMikmaqTransliterationPairs();

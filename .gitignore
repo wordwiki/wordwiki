@@ -35,3 +35,8 @@
 # root); throwaway fake data, never tracked.
 /database/
 /.claude-home/
+
+# Transliteration oracle corpora + harness baselines - SCRATCH, regenerated
+# from the db (export-transliteration-pairs) / by the harness on demand.
+/transliteration-pairs*.json
+/*-baseline.json

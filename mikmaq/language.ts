@@ -18,6 +18,13 @@ import type { LanguageRules } from '../wordwiki/similarity-rules.ts';
  *  orthography survey: ' backtick ’ hyphen space). */
 const MARKS = "'`’- ";
 
+/** The phonological CLASSES the transliteration rules are written over
+ *  (transliteration-findings.md Part 3: rules read as phonology, not
+ *  letter accidents).  Skeleton/lane-neutral lowercase. */
+export const VOWELS = 'aeiou';
+export const SONORANTS = 'lnm';
+export const OBSTRUENTS = 'ptkqjsg';
+
 const PLAIN: OrthoNormalizer = {strip: MARKS};
 
 /** Per-orthography skeleton rules.  The modern and Watson lanes share

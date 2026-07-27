@@ -50,6 +50,7 @@ import { scanVariants } from './variant-scan.ts';
 import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
 import { pairJunkReason, autoPublishSf } from './auto-transliterate.ts';
+import { transliterationPair, transliterationPairIds } from './transliterate-pair.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -573,28 +574,46 @@ export async function cliMain(args: string[]): Promise<void> {
             break;
         }
 
-        // Export the transliteration ORACLE: every clean human-written
-        // Listuguj/Smith-Francis sibling pair, as JSON for the standalone
+        // Export a transliteration ORACLE as JSON for the standalone
         // rules-iteration harness (wordwiki/transliterate-harness.ts).
-        // Junky pairs are EXCLUDED AND NAMED (never silently).
-        //   ./wordwiki.sh export-transliteration-pairs [path.json]
+        // Default: the mature li-sf corpus - every clean human-written
+        // Listuguj/Smith-Francis sibling pair, junky pairs EXCLUDED AND
+        // NAMED (never silently).  --pair=<id> exports any REGISTERED
+        // pair's corpus instead (its extractor owns its own cleaning).
+        //   ./wordwiki.sh export-transliteration-pairs [path.json] [--pair=ID]
         case 'export-transliteration-pairs': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
+                const pairId = args.find(a => a.startsWith('--pair='))?.slice('--pair='.length);
                 const path = args[1] && !args[1].startsWith('--') ? args[1]
+                    : pairId ? `transliteration-pairs-${pairId}.json`
                     : 'transliteration-pairs.json';
-                const {pairs} = ww.transliterationReports.corpusPairs();
-                const clean: typeof pairs = [];
-                const excluded = new Map<string, number>();
-                for(const p of pairs) {
-                    const reason = pairJunkReason(p.li, p.sf, p.tag);
-                    if(reason) excluded.set(reason, (excluded.get(reason) ?? 0) + 1);
-                    else clean.push(p);
+                if(pairId && pairId !== 'li-sf') {
+                    const spec = transliterationPair(pairId);
+                    if(!spec?.extractCorpus) throw new Error(
+                        `no corpus extractor for pair '${pairId}' ` +
+                        `(registered: ${transliterationPairIds().join(', ')})`);
+                    const {pairs, notes} = spec.extractCorpus(ww);
+                    Deno.writeTextFileSync(path, JSON.stringify(pairs, null, 1));
+                    console.info(`wrote ${pairs.length} ${pairId} pairs to ${path}`);
+                    const perTag = new Map<string, number>();
+                    for(const p of pairs) perTag.set(p.tag, (perTag.get(p.tag) ?? 0) + 1);
+                    for(const [tag, n] of perTag) console.info(`  ${tag}: ${n}`);
+                    for(const note of notes ?? []) console.info(`  NOTE: ${note}`);
+                } else {
+                    const {pairs} = ww.transliterationReports.corpusPairs();
+                    const clean: typeof pairs = [];
+                    const excluded = new Map<string, number>();
+                    for(const p of pairs) {
+                        const reason = pairJunkReason(p.li, p.sf, p.tag);
+                        if(reason) excluded.set(reason, (excluded.get(reason) ?? 0) + 1);
+                        else clean.push(p);
+                    }
+                    Deno.writeTextFileSync(path, JSON.stringify(clean, null, 1));
+                    console.info(`wrote ${clean.length} clean pairs to ${path}`);
+                    for(const [reason, n] of excluded)
+                        console.info(`  excluded ×${n}: ${reason}`);
                 }
-                Deno.writeTextFileSync(path, JSON.stringify(clean, null, 1));
-                console.info(`wrote ${clean.length} clean pairs to ${path}`);
-                for(const [reason, n] of excluded)
-                    console.info(`  excluded ×${n}: ${reason}`);
             });
             Deno.exit(0);
             break;
