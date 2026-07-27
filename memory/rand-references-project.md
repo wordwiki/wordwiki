@@ -79,6 +79,24 @@ document references like MMO's, doc of record
   watson-li/watson-sf/rand seeded (lanes off mm-li/mm-sf; survey .py
   updated; editor dropdowns show them until vocabulary scoping).
   rand gen 7; eval re-extracted (prompt lanes/glosses changed).
+- STANDING (dz): keep refreshing the SAME sample pages (printed
+  46-55) after every pipeline change.  Sample now APPLIED (2026-07-27,
+  dz asked): 1,062 '~rand-binder' refs live on dev; refresh command:
+  bind-references Rand rand --cited-book='Rand 1888' --printed=46-55
+  --source-lane=rand --apply --details=../watson/rand-binder-eval-v2.md
+  --review-html=../resources/rand-binder-review.html (idempotent
+  top-up; --report= is now the FINDINGS fragment channel).  NO full
+  run until dz says.  Dev transforms MUST use --preserve-foreign now
+  (refs are foreign facts; proven: gen 8 preserved all 1,062).
+- Migration integration (2026-07-27): importWordWikiV1Db.sh steps
+  14-16/19 = rand import+transform, printed pages (Rand+Clark),
+  sample binding; all on the standard findings channel (--report=
+  fragment, --details= native md); EXPECTED tokens rand-import
+  rand-transform rand-printed-pages clark-printed-pages rand-binding.
+  Navbar: data-driven Dictionaries menu + Rand Binder Review link.
+  Binder landing is now O(n) (idempotence check via pure SQL, quiet
+  batch apply - touching store.entriesById per binding rebuilt the
+  entries JSON 1,062x = hours).
 - dz's review insights (doc §6b): the corpus IS Rand + Watson's
   REVISIONS (display name config set to 'Rand 1888, transcribed and
   revised by Watson'; \xv/\xe = interpretation layer, scan+bindings

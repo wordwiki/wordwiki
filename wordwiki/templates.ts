@@ -7,6 +7,7 @@ import {assetUrl} from "../liminal/assets.ts";
 import {pencilIcon} from "../liminal/table.ts";
 import * as security from "../liminal/security.ts";
 import {siteConfig} from './site-config.ts';
+import * as dictionaryConfig from './dictionary-config.ts';
 
 export interface PageContent {
     title?: any;
@@ -389,6 +390,25 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
              ]],
 
+            // --- Dictionaries (data-driven - rand-references-design.md:
+            //     drop a table pair into the db and it lists here; the
+            //     DEFAULT dictionary is the site itself, so only the
+            //     others appear).
+            (() => {
+                const dicts = dictionaryConfig.discoverDictionaries()
+                    .filter(t => t !== 'dict');
+                if(dicts.length === 0) return undefined;
+                return ['li', {class:'nav-item dropdown'},
+                    ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button',
+                           'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
+                     'Dictionaries'],
+                    ['ul', {class:'dropdown-menu'},
+                     dicts.map(t => ['li', {}, ['a',
+                         {class:'dropdown-item', href:`/ww/wordwiki.dicts.${t}.home()`},
+                         dictionaryConfig.readConfigValue(t, 'name')
+                             ?? dictionaryConfig.readConfigValue(t, 'slug') ?? t]])]];
+            })(),
+
             // --- Reports
             ['li', {class:'nav-item dropdown'},
              ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
@@ -412,6 +432,9 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               // and find their way back (dz).  Plain href: a standalone
               // page, not an app fragment.
               ['li', {}, ['a', {class:'dropdown-item', href:'/resources/transcribe-eval.html'}, 'PDM LLM Transcription Eval']],
+              // The rand reference-binder review gallery (bind-references
+              // --review-html): same standalone-page pattern as the eval.
+              ['li', {}, ['a', {class:'dropdown-item', href:'/resources/rand-binder-review.html'}, 'Rand Binder Review']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.transliterationReports.sfReadyReport()'}, 'SF-Ready Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.archivedWords()'}, 'Archived Words']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.editorReports.importReport()'}, 'Import Report']],

@@ -79,11 +79,24 @@ set -e
 #      gate, so the test db has an SF site to look at.  Production will
 #      instead guide the staff via the SF-Ready Words report; idempotent +
 #      proof
-#  14. verify-migration: read-only invariant checks; exits nonzero on failure
-#  15. verify-workspace: read-only STRUCTURAL invariants of the whole store
+#  14. the WATSON RAND corpus (multi-dictionary-survey.md phase 5 /
+#      rand-references-design.md): sfm-import the merged SFM into the
+#      randraw mirror (content-keyed ids), install the mapping, transform
+#      into the rich `rand` dictionary.  Deterministic: identical inputs
+#      re-create identical tables
+#  15. derive printed page numbers for the Rand + Clark scans (the
+#      citation->scan-page map; exits 2 on unassigned front matter, which
+#      is expected and tolerated)
+#  16. bind the SAMPLE pages (printed 46-55, dz's standing review set) -
+#      references land on rand's tagging sheet, '~rand-binder'-authored.
+#      The Opus extractions are memoized in the SHARED derived store, so
+#      re-migrations bind at ZERO LLM cost (a cold cache needs the
+#      wordwiki-anthropic-credential.json and pays ~10 calls)
+#  17. verify-migration: read-only invariant checks; exits nonzero on failure
+#  18. verify-workspace: read-only STRUCTURAL invariants of the whole store
 #      (variant invariants reported as warnings - only the hand-triage
 #      remainder should show post-migration)
-#  16. start the server, smoke-test it over HTTP, then STOP it - the import
+#  19. start the server, smoke-test it over HTTP, then STOP it - the import
 #      must end with the db AT REST: updateStaging.sh rsyncs the db file,
 #      and pushing one with a live writer risks a torn copy.  Restart by
 #      hand (./wordwiki.sh) when you want to poke around
@@ -143,6 +156,7 @@ backfill-publication backfill-publication-proof \
 normalize-shoebox-dates normalize-shoebox-dates-proof \
 migrate-status migrate-status-proof migrate-variants migrate-variants-proof \
 auto-publish-sf auto-publish-sf-proof \
+rand-import rand-transform rand-printed-pages clark-printed-pages rand-binding \
 verify-migration verify-workspace smoke"
 # ONE consolidated EXIT trap (bash keeps a single trap per signal - the
 # smoke test's cookie cleanup lives here too, NOT in its own trap, which
@@ -155,59 +169,59 @@ finish() {
 }
 trap finish EXIT
 
-step "[1/16] server liveness check passed above (wordwiki.pid absent)"
+step "[1/19] server liveness check passed above (wordwiki.pid absent)"
 
 if [ "$NO_PULL" = 1 ]; then
-    step "[2/16] pull SKIPPED (--no-pull): migrating the db already in place"
+    step "[2/19] pull SKIPPED (--no-pull): migrating the db already in place"
 else
-    step "[2/16] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
+    step "[2/19] pulling the V1 production db + content (pullWordWikiV1Db.sh)"
     ./pullWordWikiV1Db.sh
 fi
 
-step "[3/16] repairing pre-existing store corruption (idempotent)"
+step "[3/19] repairing pre-existing store corruption (idempotent)"
 ./wordwiki.sh repair-assertions $ALLOW_PROD --report=$RD/03-repair-assertions.md
 
-step "[4/16] creating the dictionary config pair + loading the schema (+ proof)"
+step "[4/19] creating the dictionary config pair + loading the schema (+ proof)"
 ./wordwiki.sh ensure-dict-config $ALLOW_PROD --report=$RD/04-ensure-dict-config.md
 ./wordwiki.sh ensure-dict-config $ALLOW_PROD --expect-no-changes --report=$RD/04-ensure-dict-config-proof.md
 
-step "[5/16] importing categories"
+step "[5/19] importing categories"
 ./wordwiki.sh import-categories $ALLOW_PROD --report=$RD/05-import-categories.md
 
-step "[6/16] category import idempotency proof"
+step "[6/19] category import idempotency proof"
 ./wordwiki.sh import-categories $ALLOW_PROD --expect-no-changes --report=$RD/06-import-categories-proof.md
 
-step "[7/16] importing lexical forms (+ idempotency proof)"
+step "[7/19] importing lexical forms (+ idempotency proof)"
 ./wordwiki.sh import-lexical-forms $ALLOW_PROD --report=$RD/07-import-lexical-forms.md
 ./wordwiki.sh import-lexical-forms $ALLOW_PROD --expect-no-changes --report=$RD/07-import-lexical-forms-proof.md
 
-step "[8/16] importing legacy twitter-posts (+ idempotency proof)"
+step "[8/19] importing legacy twitter-posts (+ idempotency proof)"
 # --report-skipped refreshes the committed hand-off list of the words a human
 # must place in production (homonyms/unmatched); it shrinks as they are fixed.
 ./wordwiki.sh import-twitter-posts $ALLOW_PROD --report-skipped=skipped-twitter-posts.md --report=$RD/08-import-twitter-posts.md
 ./wordwiki.sh import-twitter-posts $ALLOW_PROD --expect-no-changes --report=$RD/08-import-twitter-posts-proof.md
 
-step "[9/16] publication Phase 0: born-approve existing data (+ idempotency proof)"
+step "[9/19] publication Phase 0: born-approve existing data (+ idempotency proof)"
 ./wordwiki.sh backfill-publication $ALLOW_PROD --report=$RD/09-backfill-publication.md
 ./wordwiki.sh backfill-publication $ALLOW_PROD --expect-no-changes --report=$RD/09-backfill-publication-proof.md
 
-step "[10/16] normalizing legacy shoebox creation dates (+ idempotency proof)"
+step "[10/19] normalizing legacy shoebox creation dates (+ idempotency proof)"
 ./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD --report=$RD/10-normalize-shoebox-dates.md
 ./wordwiki.sh normalize-shoebox-dates $ALLOW_PROD --expect-no-changes --report=$RD/10-normalize-shoebox-dates-proof.md
 
-step "[11/16] the status remodel migration (+ idempotency proof)"
+step "[11/19] the status remodel migration (+ idempotency proof)"
 # Gates + renames + lifecycle synthesis; the committed report names the
 # CompleteAsPDMOnly words that leave the public site.
 ./wordwiki.sh migrate-status $ALLOW_PROD --report=$RD/11-migrate-status.md
 ./wordwiki.sh migrate-status $ALLOW_PROD --expect-no-changes --report=$RD/11-migrate-status-proof.md
 
-step "[12/16] the orthography variant migration (+ idempotency proof)"
+step "[12/19] the orthography variant migration (+ idempotency proof)"
 # The committed report is the point-in-time record (hand-triage remainder,
 # per-action counts); the LIVE Variant Cleanup page is the draining queue.
 ./wordwiki.sh migrate-variants $ALLOW_PROD --report=$RD/12-migrate-variants.md
 ./wordwiki.sh migrate-variants $ALLOW_PROD --expect-no-changes --report=$RD/12-migrate-variants-proof.md
 
-step "[13/16] TESTING: auto-publishing fully-transliterated words as SF (+ proof)"
+step "[13/19] TESTING: auto-publishing fully-transliterated words as SF (+ proof)"
 # The SF-site prototype (dz 2026-07-08): every li-public word whose li
 # content is FULLY matched by SF facts gets a born-published mm-sf gate.
 # On the production flow this decision belongs to the staff, guided by the
@@ -215,13 +229,45 @@ step "[13/16] TESTING: auto-publishing fully-transliterated words as SF (+ proof
 ./wordwiki.sh auto-publish-sf $ALLOW_PROD --report=$RD/13-auto-publish-sf.md
 ./wordwiki.sh auto-publish-sf $ALLOW_PROD --expect-no-changes --report=$RD/13-auto-publish-sf-proof.md
 
-step "[14/16] verifying the migration"
-./wordwiki.sh verify-migration --report=$RD/14-verify-migration.md
+step "[14/19] importing the Watson RAND corpus (mirror + mapping + transform)"
+# The two-step import (multi-dictionary-survey.md phase 5): the literal
+# mirror (content-keyed ids - stable across Watson drops), then the
+# mapping-driven transform into the rich dictionary.  Deterministic.
+# Both report on the standard FINDINGS channel (the researcher review
+# surface); exit 2 = worklist items remain, which is expected while the
+# mapping iterates.
+./wordwiki.sh sfm-import randraw --typ=../watson/rand-structural.typ \
+    --data=../watson/rand-merged.sfm --structure=tree \
+    --report=$RD/14-rand-import.md || [ $? -eq 2 ]
+./wordwiki.sh load-mapping rand ../watson/rand-transform.json --apply > /dev/null
+./wordwiki.sh transform rand --report=$RD/14-rand-transform.md \
+    --details=../watson/rand-transform-report.md || [ $? -eq 2 ]
 
-step "[15/16] verifying the assertion store is structurally well-formed"
-./wordwiki.sh verify-workspace --report=$RD/15-verify-workspace.md
+step "[15/19] deriving printed page numbers for the Rand + Clark scans"
+# The citation->scan-page map (rand-references-design.md §5); conflicts
+# report as findings for spot-checking.
+./wordwiki.sh derive-printed-pages Rand --apply --report=$RD/15-rand-printed-pages.md || [ $? -eq 2 ]
+./wordwiki.sh derive-printed-pages Clark --apply --report=$RD/15-clark-printed-pages.md || [ $? -eq 2 ]
 
-step "[16/16] starting the server + smoke test (stopped again after)"
+step "[16/19] binding the SAMPLE pages (printed 46-55) to rand entries"
+# dz's standing review set (rand-references-design.md §5).  Extractions
+# are memoized in the SHARED derived store: warm cache = zero LLM calls
+# (a cold cache needs wordwiki-anthropic-credential.json and pays ~10
+# calls).  The binder worklist (unmatched/low-confidence/unclaimed)
+# reports as findings; the visual gallery regenerates alongside.
+./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888' \
+    --printed=46-55 --source-lane=rand --apply \
+    --report=$RD/16-rand-binding.md \
+    --details=../watson/rand-binder-eval-v2.md \
+    --review-html=../resources/rand-binder-review.html || [ $? -eq 2 ]
+
+step "[17/19] verifying the migration"
+./wordwiki.sh verify-migration --report=$RD/17-verify-migration.md
+
+step "[18/19] verifying the assertion store is structurally well-formed"
+./wordwiki.sh verify-workspace --report=$RD/18-verify-workspace.md
+
+step "[19/19] starting the server + smoke test (stopped again after)"
 (./wordwiki.sh serve > /tmp/wordwiki-serve.log 2>&1 &)
 for _ in $(seq 1 60); do
     curl -s -o /dev/null --max-time 2 http://localhost:9000/ww/ && break
@@ -244,7 +290,7 @@ NFORMS=$(curl -s -b "$COOKIES" 'http://localhost:9000/ww/wordwiki.lexicalFormsPa
         | tr '<' '\n' | grep -c 'data-testid="lexical-form-row-')
 [ "$NFORMS" -ge 15 ] || { echo "SMOKE FAIL: lexical forms page shows only $NFORMS rows"; exit 1; }
 echo "smoke ok: server 200, $NCATS categories, $NFORMS lexical forms"
-cat > "$RUN_DIR/$RD/15-smoke.md" <<SMOKE
+cat > "$RUN_DIR/$RD/19-smoke.md" <<SMOKE
 # Smoke test
 
 **0 finding(s)** across 1 section(s):

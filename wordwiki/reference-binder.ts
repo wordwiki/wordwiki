@@ -33,6 +33,7 @@ import { panic } from '../liminal/utils.ts';
 import * as model from './model.ts';
 import * as schemaRoles from './schema-roles.ts';
 import { LexemeOps, type LexemeApp } from './lexeme-ops.ts';
+import type { Assertion } from './assertion.ts';
 import type { WordWiki } from './wordwiki.ts';
 import type { DictionaryStore } from './dictionary-store.ts';
 import { selectScannedDocumentByFriendlyId, selectLayerByLayerName,
@@ -321,7 +322,14 @@ export function binderOps(ww: WordWiki, store: DictionaryStore, author: string):
         get assertionTable() { return store.assertionTable; },
         get entriesById() { return store.entriesById; },
         applyTransaction: (a, o) => store.applyTransaction(a, o ?? {}),
-        applyTransactions: (a) => store.applyTransactions(a),
+        // Quiet batch apply: the landing loop runs a thousand of these -
+        // the default per-tx JSON echo is minutes of console alone.
+        applyTransactions: (a) => {
+            const byTx = Map.groupBy(a, (x: Assertion) => x.valid_from);
+            db().transaction(() => {
+                for(const g of byTx.values()) store.applyTransaction([...g], {quiet: true});
+            });
+        },
         allocTxTimestamps: (c, o) => store.allocTxTimestamps(c, o),
         requestWorkspaceReload: () => store.requestWorkspaceReload(),
         requestEntriesJSONReload: () => store.requestEntriesJSONReload(),
@@ -332,18 +340,22 @@ export function binderOps(ww: WordWiki, store: DictionaryStore, author: string):
 }
 
 /** The entry's existing reference groups that have a box on `page_id`
- *  (hand tags OR earlier binder runs) - the idempotence test. */
+ *  (hand tags OR earlier binder runs) - the idempotence test.  PURE SQL:
+ *  the landing loop runs this after every applied binding, and touching
+ *  store.entriesById there would rebuild the whole entries JSON per
+ *  binding (the applyTransaction invalidation) - hours, not minutes. */
 export function entryGroupsOnPage(store: DictionaryStore, entry_id: number,
                                   page_id: number): number[] {
-    const e = store.entriesById.get(entry_id);
-    if(!e) return [];
-    const groups = schemaRoles.referenceGroupIds(store.dictSchema, e)
-        .filter(g => g != null);
-    if(groups.length === 0) return [];
-    return groups.filter(g =>
-        (db().first<{n: number}, {g: number, p: number}>(
-            `SELECT COUNT(*) AS n FROM bounding_box ` +
-            `WHERE bounding_group_id = :g AND page_id = :p`, {g, p: page_id})?.n ?? 0) > 0);
+    const refRel = store.dictSchema.relationsByRole.documentReference;
+    if(!refRel) return [];
+    const bind = refRel.scalarFields.find(f => f.style.$shape === 'boundingGroup')?.bind;
+    if(!bind) return [];
+    return db().all<{g: number}, {ty: string, e: number, p: number}>(
+        `SELECT DISTINCT ref.${bind} AS g FROM ${store.assertionTable} AS ref ` +
+        `JOIN bounding_box AS bb ON bb.bounding_group_id = ref.${bind} ` +
+        `WHERE ref.ty = :ty AND ref.id1 = :e AND ref.valid_to = 9007199254740991 ` +
+        `AND bb.page_id = :p`,
+        {ty: refRel.tag, e: entry_id, p: page_id}).map(r => r.g);
 }
 
 export interface PlacedBox { id: number; page_id: number;
@@ -455,11 +467,13 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
     const sheet = getOrCreateTaggingSheet(doc.document_id, opts.dictionary);
     const ops = binderOps(ww, store, binderUsername(opts.dictionary));
     const minConfidence = opts.minConfidence ?? 'medium';
-    const headwordOf = (entry_id: number): string => {
-        const e = store.entriesById.get(entry_id);
-        return (e && schemaRoles.headwordFallback(store.dictSchema, e)?.text)
-            ?? `(entry ${entry_id})`;
-    };
+    // Headwords come from the page's CANDIDATES (already assembled), never
+    // from store.entriesById - the entries JSON is invalidated by every
+    // applied binding, and re-touching it per row rebuilds the whole
+    // dictionary's JSON each time.
+    let pageHeadwords = new Map<number, string>();
+    const headwordOf = (entry_id: number): string =>
+        pageHeadwords.get(entry_id) ?? `(entry ${entry_id})`;
 
     const reports: PageBindReport[] = [];
     for(const printed of opts.printedPages) {
@@ -471,6 +485,8 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
                           unmatched: [], unclaimed: [], noScanPage: true});
             continue;
         }
+        pageHeadwords = new Map(input.candidates.map(c =>
+            [c.entry_id, c.headwords[0]?.text ?? `(entry ${c.entry_id})`]));
         const r: PageBindReport = {
             printed_page: printed, page_id: input.page_id,
             page_number: input.page_number, candidates: input.candidates.length,
@@ -618,6 +634,18 @@ export async function bindReviewHtml(ww: WordWiki,
                     b.rects.some(x => x.extended)
                         ? ['span', {class: 'badge conf ms-1'}, 'widened'] : undefined]],
                   fullEntry(b.entry_id)]]]),
+            // Entries whose reference LANDED in an earlier run (idempotent
+            // top-ups): the full card still shows - the landed scan renders
+            // inside the entry itself (document_reference).
+            r.alreadyReferenced.map(id => {
+                const e = store.entriesById.get(id);
+                return ['section', {class: 'entry'},
+                    ['h3', {},
+                     ['a', {href: wordUrl(id), target: '_blank'},
+                      (e && schemaRoles.headwordFallback(schema, e)?.text) ?? `(entry ${id})`],
+                     ['span', {class: 'badge conf'}, 'landed earlier']],
+                    fullEntry(id)];
+            }),
             r.belowThreshold.map(b => [
                 ['section', {class: 'entry worklist'},
                  ['h3', {},

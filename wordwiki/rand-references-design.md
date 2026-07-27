@@ -509,6 +509,23 @@ gap Clark 1902 already tried to fix).  Consequences:
    AWAITING DZ REVIEW (see the §5 binder STATUS block).
 6. Full run (--apply, then the remaining pages); worklist reports;
    iterate promptVersion as needed.
+   STATUS 2026-07-27: the SAMPLE pages are APPLIED on dev - 1,062
+   '~rand-binder' references + groups on rand's sheet; word views
+   show their scans.  --preserve-foreign PROVEN live: a full
+   re-transform (gen 8) preserved all 1,062.  The pipeline is
+   INTEGRATED into importWordWikiV1Db.sh (steps 14-16 of 19:
+   rand corpus import+transform, printed pages, sample binding -
+   re-migrations re-derive everything; binder extractions ride the
+   shared derived store, so warm re-runs cost zero LLM).  All four
+   passes report on the STANDARD FINDINGS CHANNEL (dz): --report =
+   findings fragment (unmapped tail, parse misses, page conflicts,
+   binder worklist - the researcher review surface, assembled into
+   import-report.md / wordwiki.importReport()); --details = the
+   full native markdown (the committed watson/ artifacts).
+   NAVIGATION: the navbar's data-driven Dictionaries menu lists
+   every discovered dictionary (-> wordwiki.dicts.<t>.home()), and
+   Reports gains the Rand Binder Review gallery link.
+   Still pending dz's go: the remaining pages (--printed=1-286).
 7. (Own project) the pairing relation + rand↔MMO auto-pair, then
    via-pair rendering (§6); PDM→RAND matching after that.
 

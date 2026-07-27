@@ -714,18 +714,36 @@ export async function cliMain(args: string[]): Promise<void> {
                 const dec = (p: string, enc: string|undefined) =>
                     sfm.decodeSfmBytes(Deno.readFileSync(p),
                                        (enc ?? 'utf-8') as 'utf-8'|'windows-1252');
-                const result = sfmImport.importSfm(
-                    dec(typPath, arg('typ-encoding')), dec(dataPath, arg('data-encoding')),
-                    {table, slug: arg('slug'), structure,
-                     sourceName: dataPath.split('/').pop()});
-                const report = sfmImport.importReportMarkdown(table, result);
-                console.info(report);
-                const reportPath = arg('report');
-                if(reportPath) Deno.writeTextFileSync(reportPath, report);
-                console.info(`imported '${table}' (generation ${result.generation}): ` +
-                             `${result.records} records, ${result.assertions} assertions, ` +
-                             `${result.problems.length} problems, ${result.droppedFields} dropped fields`);
-                return result.problems.length > 0 || result.droppedFields > 0 ? 2 : 0;
+                // The pipeline REPORTING CHANNEL (dz): --report is a findings
+                // fragment like every other import step - worklist items are
+                // FINDINGS the researchers review; --details keeps the full
+                // native markdown for the committed artifacts.
+                const step = stepReport(`Import SFM corpus '${table}'`);
+                try {
+                    const result = sfmImport.importSfm(
+                        dec(typPath, arg('typ-encoding')), dec(dataPath, arg('data-encoding')),
+                        {table, slug: arg('slug'), structure,
+                         sourceName: dataPath.split('/').pop()});
+                    const report = sfmImport.importReportMarkdown(table, result);
+                    const detailsPath = arg('details');
+                    if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
+                    step.log(`imported '${table}' (generation ${result.generation}): ` +
+                             `${result.records} records, ${result.assertions} assertions`);
+                    if(result.idCollisions > 0)
+                        step.log(`id-hash collisions re-salted: ${result.idCollisions}`);
+                    if(result.problems.length > 0) {
+                        const sec = step.report.section('SFM parse problems');
+                        for(const prob of result.problems.slice(0, 40)) sec.finding(String(prob));
+                        if(result.problems.length > 40)
+                            sec.info(`... and ${result.problems.length - 40} more`);
+                    }
+                    if(result.droppedFields > 0)
+                        step.report.section('Dropped fields').finding(
+                            `${result.droppedFields} field(s) had a marker with no relation ` +
+                            `(see --details for the per-marker accounting)`);
+                    step.finish();
+                    return result.problems.length > 0 || result.droppedFields > 0 ? 2 : 0;
+                } catch(e) { step.crash(e); throw e; }
             });
             Deno.exit(exitCode);
             break;
@@ -790,21 +808,53 @@ export async function cliMain(args: string[]): Promise<void> {
             const exitCode = security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 const target = args[1] && !args[1].startsWith('--') ? args[1]
-                    : panic('usage: transform <target> [--sample=N] [--report=path] [--preserve-foreign]');
+                    : panic('usage: transform <target> [--sample=N] [--report=findings] [--details=full-md] [--preserve-foreign]');
                 const mappingText = dictionaryConfig.readConfigValue(target, 'transform')
                     ?? panic(`'${target}' has no transform config - load-mapping first`);
                 const sourceTable = JSON.parse(mappingText)?.sources?.[0]?.table;
                 const sampleArg = args.find(a => a.startsWith('--sample='))?.slice('--sample='.length);
-                const result = dictionaryTransform.runTransform(target, ww.storeFor(sourceTable),
-                    {stopAfterCount: sampleArg ? Number(sampleArg) : undefined,
-                     preserveForeign: args.includes('--preserve-foreign')});
-                const report = dictionaryTransform.transformReportMarkdown(target, result);
-                console.info(report);
-                const reportPath = args.find(a => a.startsWith('--report='))?.slice('--report='.length);
-                if(reportPath) Deno.writeTextFileSync(reportPath, report);
-                console.info(`transformed '${target}' (generation ${result.generation}): ` +
+                // The pipeline reporting channel (dz): --report = findings
+                // fragment; the UNMAPPED TAIL and parse/recode misses are
+                // exactly what the researchers review.  --details = the full
+                // native markdown (the committed artifact).
+                const step = stepReport(`Transform '${sourceTable}' -> '${target}'`);
+                try {
+                    const result = dictionaryTransform.runTransform(target, ww.storeFor(sourceTable),
+                        {stopAfterCount: sampleArg ? Number(sampleArg) : undefined,
+                         preserveForeign: args.includes('--preserve-foreign')});
+                    const report = dictionaryTransform.transformReportMarkdown(target, result);
+                    const detailsPath = args.find(a => a.startsWith('--details='))?.slice('--details='.length);
+                    if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
+                    step.log(`transformed '${target}' (generation ${result.generation}): ` +
                              `${result.entries} entries, ${result.assertions} assertions`);
-                return result.unmappedPerTag.size > 0 ? 2 : 0;
+                    step.log(`entry dates from source: ${result.entryDatesFromSource}; ` +
+                             `empty template fields skipped: ${result.skippedEmpty}`);
+                    if(result.unmappedPerTag.size > 0) {
+                        const sec = step.report.section('UNMAPPED source tags (the mapping worklist)');
+                        sec.finding([...result.unmappedPerTag.entries()]
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([k, n]) => `\\${k} (${n})`).join(', '));
+                    }
+                    if(result.parseMisses > 0)
+                        step.report.section('Citation parse misses').finding(
+                            `${result.parseMisses} source value(s) did not parse (see --details)`);
+                    if(result.recodeMisses > 0)
+                        step.report.section('Recode misses').finding(
+                            `${result.recodeMisses} value(s) hit no recode entry (new vocabulary?)`);
+                    if(result.orphans.length > 0) {
+                        const sec = step.report.section('ORPHANED preserved facts (human worklist)');
+                        for(const o of result.orphans.slice(0, 40))
+                            sec.finding(`fact ${o.id} (\\${o.ty}) in entry ${o.entry_id}: ` +
+                                        `ancestor ${o.missingAncestor} no longer exists`);
+                        if(result.orphans.length > 40)
+                            sec.info(`... and ${result.orphans.length - 40} more`);
+                    }
+                    if(result.preservedFacts > 0)
+                        step.log(`preserved foreign-owned facts: ${result.preservedFacts}; ` +
+                                 `resurrections skipped: ${result.resurrectionsSkipped}`);
+                    step.finish();
+                    return result.unmappedPerTag.size > 0 ? 2 : 0;
+                } catch(e) { step.crash(e); throw e; }
             });
             Deno.exit(exitCode);
             break;
@@ -818,13 +868,31 @@ export async function cliMain(args: string[]): Promise<void> {
             const exitCode = security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 const book = args[1] && !args[1].startsWith('--') ? args[1]
-                    : panic('usage: derive-printed-pages <friendlyDocId> [--apply] [--report=path]');
-                const {fit, report} = printedPages.derivePrintedPages(
-                    book, {apply: args.includes('--apply')});
-                console.info(report);
-                const reportPath = args.find(a => a.startsWith('--report='))?.slice('--report='.length);
-                if(reportPath) Deno.writeTextFileSync(reportPath, report);
-                return fit.unassigned.length > 0 || fit.conflicts.length > 0 ? 2 : 0;
+                    : panic('usage: derive-printed-pages <friendlyDocId> [--apply] [--report=findings] [--details=full-md]');
+                const step = stepReport(`Printed page numbers: ${book}`);
+                try {
+                    const {fit, report} = printedPages.derivePrintedPages(
+                        book, {apply: args.includes('--apply')});
+                    const detailsPath = args.find(a => a.startsWith('--details='))?.slice('--details='.length);
+                    if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
+                    for(const r of fit.runs)
+                        step.log(`scan ${r.fromPage}-${r.toPage}: printed ` +
+                                 `${r.fromPage + r.offset}-${r.toPage + r.offset} ` +
+                                 `(${r.confirmed} confirmed, ${r.interpolated} interpolated` +
+                                 (r.edgeExtended.length > 0
+                                     ? `; section-opener edge: ${r.edgeExtended.join(', ')}` : '') + ')');
+                    if(fit.conflicts.length > 0) {
+                        const sec = step.report.section('Conflicts (SPOT-CHECK)');
+                        for(const c of fit.conflicts.slice(0, 40))
+                            sec.finding(`scan page ${c.page_number}: expected ${c.expected}, ` +
+                                        `OCR says ${c.candidates.join(', ')}`);
+                    }
+                    if(fit.unassigned.length > 0)
+                        step.log(`unassigned scan pages (front matter/plates): ` +
+                                 `${fit.unassigned.length}`);
+                    step.finish();
+                    return fit.conflicts.length > 0 ? 2 : 0;
+                } catch(e) { step.crash(e); throw e; }
             });
             Deno.exit(exitCode);
             break;
@@ -885,15 +953,40 @@ export async function cliMain(args: string[]): Promise<void> {
                 });
                 const report = referenceBinder.bindReportMarkdown(
                     {book, dictionary, citedBook, apply}, reports);
-                console.info(report);
-                console.info(`LLM: ${usage.calls} call(s), ${usage.inputTokens} in / ` +
-                             `${usage.outputTokens} out tokens (cache hits are free)`);
-                const reportPath = flag('report');
-                if(reportPath) Deno.writeTextFileSync(reportPath, report);
+                const detailsPath = flag('details');
+                if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
                 const reviewPath = flag('review-html');
                 if(reviewPath) Deno.writeTextFileSync(reviewPath,
                     await referenceBinder.bindReviewHtml(ww,
                         {book, dictionary, citedBook, apply}, reports));
+                // The pipeline reporting channel (dz): the binder's human
+                // WORKLIST (unmatched entries, low confidence, unclaimed
+                // regions) reports as findings like every import step.
+                const step = stepReport(`Bind ${citedBook} pages -> '${dictionary}'`);
+                const tot = (f: (r: referenceBinder.PageBindReport) => number) =>
+                    reports.reduce((n, r) => n + f(r), 0);
+                step.log(`pages ${printedPages.length}; candidates ${tot(r => r.candidates)}; ` +
+                         `${apply ? 'bound' : 'proposed'} ${tot(r => r.bound.length)}; ` +
+                         `already-referenced ${tot(r => r.alreadyReferenced.length)}`);
+                step.log(`LLM: ${usage.calls} call(s), ${usage.inputTokens} in / ` +
+                         `${usage.outputTokens} out tokens (cache hits are free)`);
+                const worklist = step.report.section('Binder worklist');
+                for(const r of reports) {
+                    for(const u of r.unmatched)
+                        worklist.finding(`p.${r.printed_page}: unmatched - ` +
+                                         `${u.headword} (${u.entry_id})`);
+                    for(const b of r.belowThreshold)
+                        worklist.finding(`p.${r.printed_page}: below threshold ` +
+                                         `(${b.confidence}) - ${b.headword} (${b.entry_id})`);
+                    for(const id of r.badBoxes)
+                        worklist.finding(`p.${r.printed_page}: model returned bad box ids ` +
+                                         `for entry ${id}`);
+                    for(const u of r.unclaimed)
+                        worklist.finding(`p.${r.printed_page}: unclaimed region - ${u}`);
+                    if(r.noScanPage)
+                        worklist.finding(`p.${r.printed_page}: NO scan page carries this number`);
+                }
+                step.finish();
                 return reports.some(r => r.unmatched.length > 0 || r.belowThreshold.length > 0
                                     || r.unclaimed.length > 0) ? 2 : 0;
             });

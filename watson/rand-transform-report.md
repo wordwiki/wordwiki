@@ -1,4 +1,4 @@
-# Transform: rand (generation 7)
+# Transform: rand (generation 8)
 
 - entries: 31723
 - assertions: 312197
@@ -7,6 +7,14 @@
 - recode misses: 0
 - entry dates from source (entryValidFrom): 31559
 
+
+## Preserved foreign-owned facts: 1062
+- \~rand-binder: 1062
+- computed rows skipped (preserved version wins): 0
+- resurrections skipped (under a human-tombstoned ancestor): 0
+
+## ORPHANED preserved facts (ancestor gone; now under skeleton stubs - the human worklist)
+- (none)
 
 ## Mapped source tuples per tag
 - \xv: 33885
