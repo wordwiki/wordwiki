@@ -44,6 +44,10 @@ sketch + rand-references §6 pairing).  Core:
   time (same normalizers + IDF, no LLM; subsumes the
   spelling-duplicates advisory eventually).
 
-**How to apply:** build in doc §6 order (pass-0 library first); dz
-has NOT yet said build.  See [[machine-contributors]],
+- PASS 0 BUILT 2026-07-27 (similarity.ts + similarity_test.ts + CLI
+  similarity-rebuild/similarity-candidates): dev eval rand->dict =
+  59,316 candidates / 15,082 entries (mean 3.9), 5,716 exact-skel
+  pairs, 10s total, no LLM.  NEXT: pass-1 judge stage + 10-cluster
+  eval.
+**How to apply:** build in doc §6 order.  See [[machine-contributors]],
 [[rand-references-project]].

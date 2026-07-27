@@ -29,6 +29,8 @@ import * as sfmImport from './sfm-import.ts';
 import * as dictionaryTransform from './dictionary-transform.ts';
 import * as printedPages from './printed-pages.ts';
 import * as referenceBinder from './reference-binder.ts';
+import * as similarity from './similarity.ts';
+import * as schemaRoles from './schema-roles.ts';
 import * as scannedDocument from './scanned-document.ts';
 import { loadLlm } from '../liminal/llm.ts';
 import type { ExtractConfig } from '../liminal/extract.ts';
@@ -1002,6 +1004,53 @@ export async function cliMain(args: string[]): Promise<void> {
                                     || r.unclaimed.length > 0 || r.failed !== undefined) ? 2 : 0;
             });
             Deno.exit(exitCode);
+            break;
+        }
+
+        // Similarity PASS 0 (similarity-design.md §2): rebuild the
+        // persistent key index for one/all dictionaries, and generate the
+        // IDF-weighted candidate report between two of them.  No LLM.
+        //   ./wordwiki.sh similarity-rebuild [dict ...]
+        //   ./wordwiki.sh similarity-candidates dict rand [--top=12]
+        //                 [--sample=40] [--details=path]
+        case 'similarity-rebuild': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const names = args.slice(1).filter(a => !a.startsWith('--'));
+                const targets = names.length > 0 ? names : ww.dictionaries();
+                for(const t of targets) {
+                    const r = similarity.rebuildSimilarityIndex(ww.storeFor(t));
+                    console.info(`similarity index '${t}': ${r.entries} entries, ${r.keys} keys`);
+                }
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        case 'similarity-candidates': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const a = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: similarity-candidates <dictA> <dictB> [--top=] [--sample=] [--details=]');
+                const b = args[2] && !args[2].startsWith('--') ? args[2]
+                    : panic('similarity-candidates needs two dictionaries');
+                const flag = (name: string) =>
+                    args.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3);
+                const cands = similarity.candidatePairs(a, b,
+                    {topPerEntry: flag('top') ? Number(flag('top')) : undefined});
+                const headwordOf = (dict: string, id: number): string => {
+                    const store = ww.storeFor(dict);
+                    const e = store.entriesById.get(id);
+                    return (e && schemaRoles.headwordFallback(store.dictSchema, e)?.text)
+                        ?? `(entry ${id})`;
+                };
+                const report = similarity.candidateReportMarkdown(a, b, cands, headwordOf,
+                    {sample: flag('sample') ? Number(flag('sample')) : undefined});
+                console.info(report.split('\n').slice(0, 12).join('\n'));
+                const detailsPath = flag('details');
+                if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
+            });
+            Deno.exit(0);
             break;
         }
 

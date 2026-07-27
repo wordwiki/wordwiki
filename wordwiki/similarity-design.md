@@ -241,11 +241,24 @@ those dictionaries when they exist.)
 
 ## 6. Order of work
 
-1. The pass-0 library: per-orthography normalizers as data, key
-   extraction, blocking, mechanical evidence/scores - with the keys
-   PERSISTED as the incremental index (the live single-entry path's
-   substrate, above).  Eval against the survey pairs (should
-   reproduce 1,443 exact + rank the 577 near high).
+1. ~~The pass-0 library~~ BUILT 2026-07-27 (similarity.ts):
+   per-orthography normalizers as data (ORTHO_NORMALIZERS - survey
+   rules for the modern/Watson lanes, diacritic folding for
+   rand/mm-mp/mm-pm), entryKeys (skel per lane / def tokens with
+   stopwords + light plural fold / cat), the persistent
+   similarity_key index (rebuildSimilarityIndex; DDL in-module),
+   IDF-weighted candidatePairs with per-kind form/corroborate
+   limits (KEY_LIMITS - categories never form; limits overridable =
+   the feedback knobs), self-pair exclusion, top-N with
+   exact-skeleton always kept.  CLI: similarity-rebuild /
+   similarity-candidates [--details=].  DEV EVAL (rand->dict):
+   index 8s (78k + 85k keys), candidates 10s - 59,316 pairs across
+   15,082 rand entries (mean 3.9/entry - the forming rule bounding
+   the overwhelm), 5,716 EXACT-SKELETON pairs over 5,469 entries
+   (the survey's 1,443 counted distinct li-lane spellings; entry
+   pairs across ALL lane combinations see far more - recall
+   exceeds the survey anchor as hoped).  Report:
+   watson/rand-mmo-candidates.md.
 2. The pass-1 judgment stage on the extract substrate + the
    10-cluster eval; Sonnet-vs-Opus A/B while at it.
 3. '~rand-mmo-pair' landing via machineSync (the pairing relation +
