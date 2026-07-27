@@ -62,8 +62,19 @@ document references like MMO's, doc of record
   1,065/1,067 (99.8%), 0 below-threshold, 2 unmatched — report
   watson/rand-binder-eval-v2.md AWAITING DZ REVIEW; full book est
   ~5.4M in/1M out tokens; --model CLI knob for 5-family A/B.
-  NEXT: dz reviews v2 eval -> --apply 46-55 (free, cached) + full
-  run --printed=1-286.
+  v3: truncated-box widening (Textract has NO box for accented
+  line tails - model flags extend_box_ids, landing widens the COPY
+  to the column edge) + --review-html visual page (scan + FULL
+  entry side by side, resources/rand-binder-review.html).
+  10-page v3: 1,064/1,067, 4 widened.
+- dz's review insights (doc §6b): the corpus IS Rand + Watson's
+  REVISIONS (display name config set to 'Rand 1888, transcribed and
+  revised by Watson'; \xv/\xe = interpretation layer, scan+bindings
+  = the print); source is sparse/ambiguous (several equivalents per
+  English) -> bindings recover Rand's SYNONYM SETS free (shared
+  lines), MMO attestation = the missing usage signal; future
+  fidelity-judge stage.  NEXT: dz finishes review -> --apply 46-55
+  + full run --printed=1-286.
 - Only three sites were position/table-bound: createLexemeFromGroup
   (fixed one-wrapper spine → generalize to parentRelation-chain
   spine), pageWordRows (hardcoded `FROM dict` → sweep discovered

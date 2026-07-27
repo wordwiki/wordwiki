@@ -839,6 +839,7 @@ export async function cliMain(args: string[]): Promise<void> {
         //   ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888'
         //                 --printed=1-10 --source-lane=rand [--apply]
         //                 [--min-confidence=medium] [--model=...] [--report=bind.md]
+        //                 [--review-html=resources/rand-binder-review.html]
         case 'bind-references': {
             const exitCode = await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
@@ -889,6 +890,10 @@ export async function cliMain(args: string[]): Promise<void> {
                              `${usage.outputTokens} out tokens (cache hits are free)`);
                 const reportPath = flag('report');
                 if(reportPath) Deno.writeTextFileSync(reportPath, report);
+                const reviewPath = flag('review-html');
+                if(reviewPath) Deno.writeTextFileSync(reviewPath,
+                    await referenceBinder.bindReviewHtml(ww,
+                        {book, dictionary, citedBook, apply}, reports));
                 return reports.some(r => r.unmatched.length > 0 || r.belowThreshold.length > 0
                                     || r.unclaimed.length > 0) ? 2 : 0;
             });

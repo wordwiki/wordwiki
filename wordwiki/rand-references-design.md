@@ -380,6 +380,20 @@ LIVE 10-PAGE EVAL, v1 vs v2 (printed 46-55, dry runs):
    --model is a CLI knob (in the cache key) for A/B against the
    Claude 5 family when wanted; extractions memoized - the eval
    re-ran at 0 calls, --apply after review pays no LLM.
+ - v3 (dz's review catch, entry 48794 'buffoonery'): Textract
+   sometimes has NO BOX for the accented tail of a line (only the
+   English start is boxed), so the binder could not frame the
+   Mi'kmaq at all.  The model now flags TRUNCATED boxes
+   (extend_box_ids - verified against the image), and the landing
+   widens OUR COPY to the column edge (Text-layer originals
+   untouched; columns split at the page midline).  Review page
+   marks them 'widened'.  10-page re-run: 1,064/1,067 proposed,
+   4 widened, 2 below-threshold, 2 unmatched.
+ - The VISUAL review page (--review-html=, e.g.
+   resources/rand-binder-review.html): every proposal as scan
+   region + the FULL entry rendering (the word view's metadata
+   renderer + site CSS) side by side - the dry-run review surface
+   and, post-apply, the what-was-landed gallery.
 Tests: reference-binder_test.ts (input assembly incl. the v2 keys,
 landing, sheet + authorship, idempotence, thresholds,
 dry-run-writes-nothing) over an injected extractor.
@@ -418,6 +432,48 @@ eventually more) flow without cross-writes.
   not a redesign — noted for the pairing project.
 - MMO's existing direct Rand-book refs: grandfathered human work;
   pairing supplements, never replaces or migrates them.
+
+## 6b. What the 'rand' corpus IS (dz 2026-07-26, reading the bindings)
+
+Reviewing a thousand proposals side by side made two things plain
+that the doc should state:
+
+**This is not Rand - it is Rand + WATSON'S REVISIONS.**  Watson's
+entries carry details and differences with no counterpart on the
+printed page (modernized headwords, regularized English, added
+analysis).  Consequences:
+- PROVENANCE IN THE DISPLAY NAME: the dictionary's config `name` is
+  set to "Rand 1888, transcribed and revised by Watson" (config
+  data - refine freely).  The zpt partition records where the
+  revision effort landed (final vs queue).
+- THE ARCHIVAL LAYERING IS ALREADY RIGHT, but say it: the
+  print-as-printed is the SCAN + the bindings; Watson's \xv/\xe
+  are an INTERPRETATION layer (not a diplomatic transcription); the
+  modern headwords a third layer.
+- FUTURE (machine-contributors feature): a FIDELITY JUDGE stage -
+  the binder already holds the printed line's image and Watson's
+  version per entry; a judge classifies each binding faithful /
+  orthography-modernized / reworded / enriched / discrepant.  Turns
+  "a fair amount of differences" into a browsable worklist and a
+  question list for Watson.  Same memoized substrate; build when
+  wanted.
+
+**The SOURCE is ambiguous and over-sparse** (Rand's method: several
+Mi'kmaq equivalents per English phrase, collected from multiple
+informants/dialects, with no guidance on which to use when - the
+gap Clark 1902 already tried to fix).  Consequences:
+- THE BINDINGS RECOVER RAND'S SYNONYM SETS FOR FREE: sibling
+  entries bound to the SAME printed lines are exactly "the several
+  Mi'kmaq words for this English" - a ready-made seed for the
+  related-words feature and a natural word-view grouping ("Rand
+  also gives: ...").  No extra machinery - it is already data.
+- THE DISAMBIGUATION RAND LACKS LIVES IN MMO: once rand<->MMO
+  pairing exists, "attested in modern MMO" (recordings, examples,
+  speaker review) becomes an automatic annotation over each synonym
+  set - and the residue (Rand words with NO modern attestation) is
+  the most interesting list in the exercise for the researchers.
+- Confirms the §6 pairing design: pair on Mi'kmaq spelling
+  skeletons, never on the shared English.
 
 ## 7. Order of work
 

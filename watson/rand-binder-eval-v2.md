@@ -1,675 +1,729 @@
 # Reference binder: Rand 1888 pages -> 'rand' entries (DRY RUN)
 
-- pages: 10; candidates: 1067; proposed: 1065; already-referenced: 0; below-threshold: 0; bad-boxes: 0; unmatched: 2
+- pages: 10; candidates: 1067; proposed: 1064; already-referenced: 0; below-threshold: 2; bad-boxes: 0; unmatched: 2
 
 ## printed p.46 (116 candidates, 90 boxes)
-- **mest'gatgeg** (185026):
-    - Brushwood, Mestugâtkek.
+- **apligmu** (14221):
+    - Bullfrog, Adagâle ; ablegemoo.
+- **asoqoman** (20552):
+    - Bunch berries, usogomanul.
+- **ataqali** (22221):
+    - Bullfrog, Adagâle ; ablegemoo.
+- **ataqaliewi'sit** (22235):
+    - To croak as a bullfrog, Adagaleäweese.
+- **egasgwigwete'g** (24787):
+    - To buffet, egaskwegwedaäk.
+- **ejigla'sit** (26224):
+    - To budge, ejigulaase Wejipkotumkaase.
 - **elatg'te'get** (28685):
     - To make a hedge of brushwood, elatkudaägã.
+- **elitas'g** (32251):
+    - It is built, kesedäsik eledasik.
+- **elitasig** (32266):
+    - It is built, kesedäsik eledasik.
+- **elm'sga's'g** (33720):
+    - Bulkhead, Nabigwona' elmuskaasik.
+- **eloqomaqa'toq** (34348):
+    - dum ; elokumagaadoo; esnakpelowwä'
+- **elpaligatg** (34604):
+    - eooniskwobelum elpalegâdum käkpalegâ-
+- **el'toq** (35695):
+    - To build, aweegei' kesedoo' eledoo kese-
+    - gâdum keseegâdumase.
 - **elue'wiet** (36314):
     - Brutal, eloowäweet ; weisisooã' eloowäwe-
     - weisisooão.
-- **elue'wiwe'sisuet** (36458):
-    - Brutal, eloowäweet ; weisisooã' eloowäwe-
-    - weisisooão.
-- **waisisuet** (380885):
-    - Brutal, eloowäweet ; weisisooã' eloowäwe-
-    - weisisooão.
-- **elue'wi'sisauti** (36408):
-    - Brutality, eloowaweweisisãwoode.
-- **elue'wi'sisauti** (40466):
-    - Brutality, eloowaweweisisãwoode.
-- **waisis** (380773):
-    - Brute, Weisis.
-- **pisaqan** (290526):
-    - Bubble, Pesâkun.
-- **pisaqaniaq** (290555):
-    - To bubble, Pesakuneak'.
-- **pisaqna'toq** (290582):
-    - To make it bubble, Pesâkunaadoo.
-- **matelote'g** (162082):
-    - Buccaneer, Matelota' noojekumootunet'.
-- **nujigmutnet** (248052):
-    - Buccaneer, Matelota' noojekumootunet'.
-- **iap** (134490):
-    - A buck, (Yap), Netolow ; Latolow.
-- **nitolaw** (240726):
-    - A buck, (Yap), Netolow ; Latolow.
-- **lataqsun** (148621):
-    - A bucket, Ladksoon.
-- **lataqsunmit** (148676):
-    - To own a bucket, Ladoksoonume.
-- **lataqsuna'q** (148662):
-    - To have a bucket, Ladoksoonaam.
-- **nasitaqa'taqan** (216486):
-    - A buckle, Nasedaga'dakun.
-- **nasitaqa'teget** (216499):
-    - To be fastening buckles, Nasedaga'degal.
-- **nasitaqa'toq** (216512):
-    - To buckle it, Nasedagaadoo.
-- **mat'timgewei** (163478):
-    - Buckler, Matudimkãwa' legasoode 'mputuno-
-    - gumau.
-- **mp`tnoqomet** (203057):
-    - Buckler, Matudimkãwa' legasoode 'mputuno-
-    - gumau.
-- **pigasuti** (284811):
-    - Buckler, Matudimkãwa' legasoode 'mputuno-
-    - gumau.
-- **jipugtusg** (146120):
-    - Buctouche, p.n. Chebooktoosk'.
-- **suamanji'jl** (332673):
-    - Buckwheat, Sooomancheejul ; (Lit., Little
-    - Beechnuts.)
-- **wisg'saq** (433119):
-    - Bud, Wiskusok Keniskwin'emin ; Wiskusok-
-    - cheech.
-- **ginisgwini'mit** (101455):
-    - Bud, Wiskusok Keniskwin'emin ; Wiskusok-
-    - cheech.
-- **wisg'soqji'j** (433251):
-    - Bud, Wiskusok Keniskwin'emin ; Wiskusok-
-    - cheech.
-- **pusgigpa's'g** (305376):
-    - To bud, (put forth buds), Pooskikpaasik Sa-
-    - keipkeak'; Sakskeâk'.
-- **saqe'pgiaq** (314089):
-    - To bud, (put forth buds), Pooskikpaasik Sa-
-    - keipkeak'; Sakskeâk'.
-- **saqsgiaq** (315139):
-    - To bud, (put forth buds), Pooskikpaasik Sa-
-    - keipkeak'; Sakskeâk'.
-- **ejigla'sit** (26224):
-    - To budge, ejigulaase Wejipkotumkaase.
-- **wejipgotmga'sit** (398643):
-    - To budge, ejigulaase Wejipkotumkaase.
-- **mest'gipigajit** (185080):
-    - Buffalo, Mestügepegäjit (Thick ribbed)
-- **egasgwigwete'g** (24787):
-    - To buffet, egaskwegwedaäk.
 - **elue'wietap** (36339):
     - Buffoon, eloowäweedp.
 - **elue'wietape'wa'teget** (36353):
     - To play the buffoon,
+- **elue'wi'sisauti** (36408):
+    - Brutality, eloowaweweisisãwoode.
+- **elue'wiwe'sisuet** (36458):
+    - Brutal, eloowäweet ; weisisooã' eloowäwe-
+    - weisisooão.
+- **emgoqjajit** (37877):
+    - Bullsgut, p.n., emkokchäjit.
+- **elue'wi'sisauti** (40466):
+    - Brutality, eloowaweweisisãwoode.
+- **esnaqapilg** (46068):
+    - esnakapelum eooneskwegeäk', kelt.
+- **esnaqpilowet** (46082):
+    - dum ; elokumagaadoo; esnakpelowwä'
+- **esnaqsawe'g** (46124):
+    - Bunch, upkokt; esnaksawaak.
+- **espigana'toq** (47308):
+    - To build it high, espogoogoodoo ; espeg-
+    - anaadoo.
+- **espigana'toq** (47322):
+    - To build a house high, espeganaadoo.
+- **espisegn'g** (47661):
+    - To build it high with stone or bricks, espe-
+    - segunum.
+- **espoqugutoq** (48023):
+    - To build it high, espogoogoodoo ; espeg-
+    - anaadoo.
 - **etapewategemgewet** (48794):
     - Buffoonery,
+- **ewi'get** (55696):
+    - To build, aweegei' kesedoo' eledoo kese-
+- **ewnisgwapilg** (59100):
+    - eooniskwobelum elpalegâdum käkpalegâ-
+- **ewnisgwegiaq** (59277):
+    - esnakapelum eooneskwegeäk', kelt.
+- **ewnisgwepilaqan** (59291):
+    - ka'dâkun : Eooniskwebelâkün.
+- **gapaqsu** (62722):
+    - Bunglingly, kabâksu.
+- **gaqpaligatg** (68397):
+    - eooniskwobelum elpalegâdum käkpalegâ-
+- **gaqpaliget** (68411):
+    - To bundle up, kakpalegei' Mowokpelumanu
+- **gejoqwa'toq** (77258):
+    - To bulge, V. tr., kejogwaadoo. v. int., kejog-
+- **gejowa's'g** (77272):
+    - To bulge, V. tr., kejogwaadoo. v. int., kejog-
+    - waasik.
+- **geltapiteg** (78597):
+    - esnakapelum eooneskwegeäk', kelt.
+- **gesitas'g** (87992):
+    - It is built, kesedäsik eledasik.
+- **ginisgwini'mit** (101455):
+    - Bud, Wiskusok Keniskwin'emin ; Wiskusok-
+- **ginite'lsit** (101508):
+    - Bully, Mulgigunäwenoo; kinedäãluse.
+- **gis'gatmasit** (104193):
+    - gâdum keseegâdumase.
+- **gisigatg** (105079):
+    - gâdum keseegâdumase.
+- **gisitas'g** (107255):
+    - It is built, kesedäsik eledasik.
+- **gisite'taqan** (107471):
+    - Building, keseda'dakun ; Wigwom; Wenjee-
+- **gisitoq** (107793):
+    - To build, aweegei' kesedoo' eledoo kese-
 - **gmas** (116016):
-    - Bug, kúmäs' Choojeech.
-- **juji'j** (146845):
     - Bug, kúmäs' Choojeech.
 - **gmasuei** (116030):
     - Buggy, adj., kumäsoowa'.
 - **gutoqwa'sg** (129071):
     - A buggy, (a light carriage), kuhtogwaasik
     - tobâkun.
-- **tepaqn** (350487):
-    - A buggy, (a light carriage), kuhtogwaasik
-    - tobâkun.
-- **maqidisutnajg** (158238):
-    - Bugle horn, Makekesoodünachk'.
-- **ewi'get** (55696):
-    - To build, aweegei' kesedoo' eledoo kese-
-    - gâdum keseegâdumase.
-- **gisitoq** (107793):
-    - To build, aweegei' kesedoo' eledoo kese-
-    - gâdum keseegâdumase.
-- **el'toq** (35695):
-    - To build, aweegei' kesedoo' eledoo kese-
-    - gâdum keseegâdumase.
-- **gisigatg** (105079):
-    - To build, aweegei' kesedoo' eledoo kese-
-    - gâdum keseegâdumase.
-- **gis'gatmasit** (104193):
-    - To build, aweegei' kesedoo' eledoo kese-
-    - gâdum keseegâdumase.
-- **espoqugutoq** (48023):
-    - To build it high, espogoogoodoo ; espeg-
-    - anaadoo.
-- **espigana'toq** (47308):
-    - To build it high, espogoogoodoo ; espeg-
-    - anaadoo.
-- **espisegn'g** (47661):
-    - To build it high with stone or bricks, espe-
-    - segunum.
-- **espigana'toq** (47322):
-    - To build a house high, espeganaadoo.
-- **nujiget** (247358):
-    - Builder, Noojeegei Nedowweegei.
-- **nitawi'get** (240657):
-    - Builder, Noojeegei Nedowweegei.
-- **gisite'taqan** (107471):
-    - Building, keseda'dakun ; Wigwom; Wenjee-
-    - gwom.
-- **wigwan** (426833):
-    - Building, keseda'dakun ; Wigwom; Wenjee-
-    - gwom.
-- **wen'ji'gwom** (411390):
-    - Building, keseda'dakun ; Wigwom; Wenjee-
-    - gwom.
-- **elitas'g** (32251):
-    - It is built, kesedäsik eledasik.
-- **elitasig** (32266):
-    - It is built, kesedäsik eledasik.
-- **gesitas'g** (87992):
-    - It is built, kesedäsik eledasik.
-- **gisitas'g** (107255):
-    - It is built, kesedäsik eledasik.
-- **gejoqwa'toq** (77258):
-    - To bulge, V. tr., kejogwaadoo. v. int., kejog-
-    - waasik.
-- **gejowa's'g** (77272):
-    - To bulge, V. tr., kejogwaadoo. v. int., kejog-
-    - waasik.
-- **telims'gi'g** (346241):
-    - Bulk, Tan telimsugeek.
-- **elm'sga's'g** (33720):
-    - Bulkhead, Nabigwona' elmuskaasik.
-- **napigwanet** (212345):
-    - Bulkhead, Nabigwona' elmuskaasik.
+- **iap** (134490):
+    - A buck, (Yap), Netolow ; Latolow.
 - **iap** (134504):
     - Bull, Yap ; Netolo'w : Latolow. (From the
-    - French, Le taureau, the article being sup-
-    - posed to be a part of the word, and the r
-    - which is not in Micmac, being expressed
-    - by l.)
-- **netolaw** (229976):
-    - Bull, Yap ; Netolo'w : Latolow. (From the
-    - French, Le taureau, the article being sup-
-    - posed to be a part of the word, and the r
-    - which is not in Micmac, being expressed
-    - by l.)
-- **latolaw** (148764):
-    - Bull, Yap ; Netolo'w : Latolow. (From the
-    - French, Le taureau, the article being sup-
-    - posed to be a part of the word, and the r
-    - which is not in Micmac, being expressed
-    - by l.)
-- **utgignsi's** (379319):
-    - A bull bird, Ootkigunusees.
 - **iapaq** (134539):
-    - Bullbaiting, Yâpak' ak ulumooch', kusna'
-    - chenumook' matundooltijik.
-- **ji'nm** (144372):
-    - Bullbaiting, Yâpak' ak ulumooch', kusna'
-    - chenumook' matundooltijik.
-- **l'mu'j** (150172):
-    - Bullbaiting, Yâpak' ak ulumooch', kusna'
-    - chenumook' matundooltijik.
-- **matntulultijig** (163249):
     - Bullbaiting, Yâpak' ak ulumooch', kusna'
     - chenumook' matundooltijik.
 - **iapewesm** (134554):
     - Bulldog, Yapawaasum booldog.
-- **piluowei** (288928):
-    - Bullet, Pelooowwa',
-- **ataqali** (22221):
-    - Bullfrog, Adagâle ; ablegemoo.
-- **apligmu** (14221):
-    - Bullfrog, Adagâle ; ablegemoo.
-- **ataqaliewi'sit** (22235):
-    - To croak as a bullfrog, Adagaleäweese.
-- **wen'jutia'm** (412401):
-    - A bullock, Wenjooteaam.
-- **emgoqjajit** (37877):
-    - Bullsgut, p.n., emkokchäjit.
-- **mlgigne'winu** (199757):
-    - Bully, Mulgigunäwenoo; kinedäãluse.
-- **ginite'lsit** (101508):
-    - Bully, Mulgigunäwenoo; kinedäãluse.
-- **nasun** (216918):
-    - Bullrush, Nasoon.
-- **waqalusan** (387248):
-    - Bulwark, Wakaloosan ; Baloodâkun.
-- **palutaqan** (258982):
-    - Bulwark, Wakaloosan ; Baloodâkun.
-- **mijipjamuej** (192259):
-    - Bumble-bee, Mechipchämooech'.
-- **ugsuguni** (367442):
-    - Bum, 'Nsoogoone Oosoogoone.
-- **maqapsga's'g** (157673):
-    - Bump, Magâpskaasik ; Melchugopskek'.
-- **melj'gopsgig** (178335):
-    - Bump, Magâpskaasik ; Melchugopskek'.
-- **soqatpetesing** (331726):
-    - To bump my head, Sokatpedesin'.
-- **pgagt** (282279):
-    - Bunch, upkokt; esnaksawaak.
-- **esnaqsawe'g** (46124):
-    - Bunch, upkokt; esnaksawaak.
-- **snastaqpilaw** (331478):
-    - A bunch of fir boughs tied together, Snas-
-    - tokpelow.
-- **asoqoman** (20552):
-    - Bunch berries, usogomanul.
-- **mawpiteg** (170371):
-    - Bundle, Mowpedek'; Snâkpeläkun, Lokuma-
-    - ka'dâkun : Eooniskwebelâkün.
-- **snaqpilaqan** (331406):
-    - Bundle, Mowpedek'; Snâkpeläkun, Lokuma-
-    - ka'dâkun : Eooniskwebelâkün.
+- **ji'nm** (144372):
+    - Bullbaiting, Yâpak' ak ulumooch', kusna'
+    - chenumook' matundooltijik.
+- **jipugtusg** (146120):
+    - Buctouche, p.n. Chebooktoosk'.
+- **juji'j** (146845):
+    - Bug, kúmäs' Choojeech.
+- **lataqsun** (148621):
+    - A bucket, Ladksoon.
+- **lataqsuna'q** (148662):
+    - To have a bucket, Ladoksoonaam.
+- **lataqsunmit** (148676):
+    - To own a bucket, Ladoksoonume.
+- **latolaw** (148764):
+    - Bull, Yap ; Netolo'w : Latolow. (From the
+- **l'mu'j** (150172):
+    - Bullbaiting, Yâpak' ak ulumooch', kusna'
+    - chenumook' matundooltijik.
 - **loqmaqataqan** (150919):
     - Bundle, Mowpedek'; Snâkpeläkun, Lokuma-
-    - ka'dâkun : Eooniskwebelâkün.
-- **ewnisgwepilaqan** (59291):
+- **maqapsga's'g** (157673):
+    - Bump, Magâpskaasik ; Melchugopskek'.
+- **maqidisutnajg** (158238):
+    - Bugle horn, Makekesoodünachk'.
+- **matelote'g** (162082):
+    - Buccaneer, Matelota' noojekumootunet'.
+- **matntulultijig** (163249):
+    - Bullbaiting, Yâpak' ak ulumooch', kusna'
+    - chenumook' matundooltijik.
+- **mat'timgewei** (163478):
+    - Buckler, Matudimkãwa' legasoode 'mputuno-
+    - gumau.
+- **mawpiteg** (170371):
     - Bundle, Mowpedek'; Snâkpeläkun, Lokuma-
-    - ka'dâkun : Eooniskwebelâkün.
-- **gaqpaliget** (68411):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
+- **melj'gopsgig** (178335):
+    - Bump, Magâpskaasik ; Melchugopskek'.
+- **mest'gatgeg** (185026):
+    - Brushwood, Mestugâtkek.
+- **mest'gipigajit** (185080):
+    - Buffalo, Mestügepegäjit (Thick ribbed)
+- **mijipjamuej** (192259):
+    - Bumble-bee, Mechipchämooech'.
+- **mlgigne'winu** (199757):
+    - Bully, Mulgigunäwenoo; kinedäãluse.
 - **mowaqpelmaq** (202156):
     - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **ewnisgwapilg** (59100):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **elpaligatg** (34604):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **gaqpaligatg** (68397):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **eloqomaqa'toq** (34348):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **esnaqpilowet** (46082):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **esnaqapilg** (46068):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **ewnisgwegiaq** (59277):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **geltapiteg** (78597):
-    - To bundle up, kakpalegei' Mowokpelumanu
-    - eooniskwobelum elpalegâdum käkpalegâ-
-    - dum ; elokumagaadoo; esnakpelowwä'
-    - esnakapelum eooneskwegeäk', kelt.
-- **pusgiemaqwa'sit** (304748):
-    - A bungler, Booskeemägwaase; Booskabak-
-    - suloogwa'.
-- **pusgapaqslugwet** (303614):
-    - A bungler, Booskeemägwaase; Booskabak-
-    - suloogwa'.
-- **gapaqsu** (62722):
-    - Bunglingly, kabâksu.
+- **mp`tnoqomet** (203057):
+    - Buckler, Matudimkãwa' legasoode 'mputuno-
+    - gumau.
 - **musgulu'taqan** (208848):
     - Buoy, Mooskooloo'däkun.
 - **musgulutaqanategetoq** (208861):
     - To fix a boy, Mooskooloodâkunadegedoo.
+- **napigwanet** (212345):
+    - Bulkhead, Nabigwona' elmuskaasik.
+- **nasitaqa'taqan** (216486):
+    - A buckle, Nasedaga'dakun.
+- **nasitaqa'teget** (216499):
+    - To be fastening buckles, Nasedaga'degal.
+- **nasitaqa'toq** (216512):
+    - To buckle it, Nasedagaadoo.
+- **nasun** (216918):
+    - Bullrush, Nasoon.
+- **netolaw** (229976):
+    - Bull, Yap ; Netolo'w : Latolow. (From the
+- **nitawi'get** (240657):
+    - Builder, Noojeegei Nedowweegei.
+- **nitolaw** (240726):
+    - A buck, (Yap), Netolow ; Latolow.
+- **nujiget** (247358):
+    - Builder, Noojeegei Nedowweegei.
+- **nujigmutnet** (248052):
+    - Buccaneer, Matelota' noojekumootunet'.
+- **palutaqan** (258982):
+    - Bulwark, Wakaloosan ; Baloodâkun.
+- **pgagt** (282279):
+    - Bunch, upkokt; esnaksawaak.
+- **pigasuti** (284811):
+    - Buckler, Matudimkãwa' legasoode 'mputuno-
+    - gumau.
+- **piluowei** (288928):
+    - Bullet, Pelooowwa',
+- **pisaqan** (290526):
+    - Bubble, Pesâkun.
+- **pisaqaniaq** (290555):
+    - To bubble, Pesakuneak'.
+- **pisaqna'toq** (290582):
+    - To make it bubble, Pesâkunaadoo.
+- **pusgapaqslugwet** (303614):
+    - A bungler, Booskeemägwaase; Booskabak-
+    - suloogwa'.
+- **pusgiemaqwa'sit** (304748):
+    - A bungler, Booskeemägwaase; Booskabak-
+- **pusgigpa's'g** (305376):
+    - To bud, (put forth buds), Pooskikpaasik Sa-
+- **saqe'pgiaq** (314089):
+    - To bud, (put forth buds), Pooskikpaasik Sa-
+    - keipkeak'; Sakskeâk'.
+- **saqsgiaq** (315139):
+    - keipkeak'; Sakskeâk'.
+- **snaqpilaqan** (331406):
+    - Bundle, Mowpedek'; Snâkpeläkun, Lokuma-
+- **snastaqpilaw** (331478):
+    - A bunch of fir boughs tied together, Snas-
+    - tokpelow.
+- **soqatpetesing** (331726):
+    - To bump my head, Sokatpedesin'.
+- **suamanji'jl** (332673):
+    - Buckwheat, Sooomancheejul ; (Lit., Little
+    - Beechnuts.)
+- **telims'gi'g** (346241):
+    - Bulk, Tan telimsugeek.
+- **tepaqn** (350487):
+    - A buggy, (a light carriage), kuhtogwaasik
+    - tobâkun.
+- **ugsuguni** (367442):
+    - Bum, 'Nsoogoone Oosoogoone.
+- **utgignsi's** (379319):
+    - A bull bird, Ootkigunusees.
+- **waisis** (380773):
+    - Brute, Weisis.
+- **waisisuet** (380885):
+    - Brutal, eloowäweet ; weisisooã' eloowäwe-
+    - weisisooão.
+- **waqalusan** (387248):
+    - Bulwark, Wakaloosan ; Baloodâkun.
+- **wejipgotmga'sit** (398643):
+    - To budge, ejigulaase Wejipkotumkaase.
+- **wen'ji'gwom** (411390):
+    - Building, keseda'dakun ; Wigwom; Wenjee-
+    - gwom.
+- **wen'jutia'm** (412401):
+    - A bullock, Wenjooteaam.
+- **wigwan** (426833):
+    - Building, keseda'dakun ; Wigwom; Wenjee-
+- **wisg'saq** (433119):
+    - Bud, Wiskusok Keniskwin'emin ; Wiskusok-
+- **wisg'soqji'j** (433251):
+    - Bud, Wiskusok Keniskwin'emin ; Wiskusok-
+    - cheech.
 
 ## printed p.47 (109 candidates, 88 boxes)
-- **apujipa'toq** (16639):
-    - To burst it open, Aboojebaadoo.
+- **poqwija'toq** (297040):
+    - To buoy, Pokwijaadoo Pokwijaadega'.
+- **poqwija'teget** (297026):
+    - To buoy, Pokwijaadoo Pokwijaadega'.
+- **muqsun** (208227):
+    - Burden, Wuhsoon Muhsoon.
+- **ugsun** (367512):
+    - Burden, Wuhsoon Muhsoon.
+- **gesguna'latl** (85655):
+    - To burden, V. tr., keskoonaaluk.
+- **gisguniget** (104366):
+    - To carry a burden, keskoonega'; keskwow-
+    - oola'.
+- **gesgwawlet** (85862):
+    - To carry a burden, keskoonega'; keskwow-
+    - oola'.
+- **gesgunasit** (85669):
+    - To be burdened heavily, keskoonase.
 - **asuateja'taqan** (21096):
     - Burdock, usoowodejaadakun kesälooejijik.
+- **gepalueji'j** (80580):
+    - Burdock, usoowodejaadakun kesälooejijik.
+- **nujigmutnet** (248066):
+    - Burglar, Noojekümootunet' tan eleskwiska-
+    - déget' wenjeegwomku depkeegu.
 - **elisgwisga'teget** (31973):
     - Burglar, Noojekümootunet' tan eleskwiska-
     - déget' wenjeegwomku depkeegu.
-- **elmatgeg** (32907):
-    - The bushes extend in a direction from the
-    - speaker, elmatkek.
-- **elmatge'pit** (32921):
-    - To run through the bushes, elmatkeibe.
-- **etlamgleg** (49758):
-    - etlääk; etlamkulek'; etlänumei'; kasoksoose;
-- **etlaname'g** (49800):
-    - etlääk; etlamkulek'; etlänumei'; kasoksoose;
-- **etle'g** (50359):
-    - etlääk; etlamkulek'; etlänumei'; kasoksoose;
-- **gamatg** (61061):
-    - Bushes yonder beyond a cleared place,
-    - kamatk'.
-- **gamatgutoq** (61088):
-    - In the bushes beyond a cleared place,
-    - kamatkoodook.
-- **gapoqsit** (62945):
-    - kâksum, kâkse. Booktäweak ; kâksuk;
-- **gaqamgleg** (63611):
-    - kasoksuk ; Sabokse kakumkulek kâksoose;
-- **gaqaqa'toq** (64148):
-    - To burnish, kasagadegã kasagaadoo.
-- **gaqoqs'g** (68330):
-    - kakoksum kakoktek.
-- **gaqsatl** (68466):
-    - kâksum, kâkse. Booktäweak ; kâksuk;
+- **g'tepge'g** (125177):
+    - Burglar, Noojekümootunet' tan eleskwiska-
+    - déget' wenjeegwomku depkeegu.
+- **wen'ji'guom** (411240):
+    - Burglar, Noojekümootunet' tan eleskwiska-
+    - déget' wenjeegwomku depkeegu.
+- **utgutamg** (379401):
+    - Burial, Ootkoodaamk; Ootkoodajik.
+- **utgutajig** (379387):
+    - Burial, Ootkoodaamk; Ootkoodajik.
+- **maligigetm'gewei** (155395):
+    - Burlesque, Mälegegedumugãwal, kekâdaboo-
+    - gooemk'.
+- **gigatapuguemg** (97834):
+    - Burlesque, Mälegegedumugãwal, kekâdaboo-
+    - gooemk'.
+- **maligimg** (155539):
+    - To burlesque, Malegimk' ; Malegegedum
+    - kekädaboogooal.
+- **maligigetg** (155359):
+    - To burlesque, Malegimk' ; Malegegedum
+    - kekädaboogooal.
+- **gigatapuguet** (97848):
+    - To burlesque, Malegimk' ; Malegegedum
+    - kekädaboogooal.
+- **maqaqsit** (157839):
+    - Burly, Magokse.
+- **nugwa'toq** (245376):
+    - To burn, Noogwaadoo kâktek ; Sesooamkulek ;
+- **gaqteg** (68563):
+    - To burn, Noogwaadoo kâktek ; Sesooamkulek ;
+- **sisuamgleg** (330226):
+    - To burn, Noogwaadoo kâktek ; Sesooamkulek ;
 - **gaqs'g** (68493):
     - kâksum, kâkse. Booktäweak ; kâksuk;
 - **gaqsit** (68521):
     - kâksum, kâkse. Booktäweak ; kâksuk;
-- **gaqsusit** (68535):
-    - kasoksuk ; Sabokse kakumkulek kâksoose;
-- **gaqteg** (68563):
-    - To burn, Noogwaadoo kâktek ; Sesooamkulek ;
-- **gasaqateget** (69929):
-    - To burnish, kasagadegã kasagaadoo.
-- **gaseget** (70320):
-    - kesokse kesoksoose; Noogwäe; käsegã';
-- **gasoqsatl** (71530):
-    - kasoksuk ; Sabokse kakumkulek kâksoose;
+- **pugtewiaq** (299744):
+    - kâksum, kâkse. Booktäweak ; kâksuk;
+- **gaqsatl** (68466):
+    - kâksum, kâkse. Booktäweak ; kâksuk;
+- **etle'g** (50359):
+    - etlääk; etlamkulek'; etlänumei'; kasoksoose;
+- **etlamgleg** (49758):
+    - etlääk; etlamkulek'; etlänumei'; kasoksoose;
+- **etlaname'g** (49800):
+    - etlääk; etlamkulek'; etlänumei'; kasoksoose;
 - **gasoqsusit** (71544):
     - etlääk; etlamkulek'; etlänumei'; kasoksoose;
-- **gatu** (72174):
-    - But, conj., kadoo; koonoo.
-- **gegatgiew** (72614):
-    - A dry soft wood bush, kegatkeow'.
-- **gepalueji'j** (80580):
-    - Burdock, usoowodejaadakun kesälooejijik.
-- **gesguna'latl** (85655):
-    - To burden, V. tr., keskoonaaluk.
-- **gesgunasit** (85669):
-    - To be burdened heavily, keskoonase.
-- **gesgwawlet** (85862):
-    - To carry a burden, keskoonega'; keskwow-
-    - oola'.
+- **gasoqsatl** (71530):
+    - kasoksuk ; Sabokse kakumkulek kâksoose;
+- **gapoqsit** (62945):
+    - kasoksuk ; Sabokse kakumkulek kâksoose;
+- **gaqamgleg** (63611):
+    - kasoksuk ; Sabokse kakumkulek kâksoose;
+- **gaqsusit** (68535):
+    - kasoksuk ; Sabokse kakumkulek kâksoose;
 - **gesoqsit** (89058):
     - kesokse kesoksoose; Noogwäe; käsegã';
+- **gisoqsusit** (108592):
+    - kesokse kesoksoose; Noogwäe; käsegã';
+- **nugwe'g** (245483):
+    - kesokse kesoksoose; Noogwäe; käsegã';
+- **gaseget** (70320):
+    - kesokse kesoksoose; Noogwäe; käsegã';
+- **gaqoqs'g** (68330):
+    - kakoksum kakoktek.
+- **sapipsatl** (312016):
+    - To burn a hole through him, Sabipsuk.
 - **getmaqsit** (94302):
     - I am burned out; I lose all by five, kedum-
     - okse.
-- **getthrubushs1** (95110):
-    - To get through the bushes, Sabatkaase.
-- **gigatapuguemg** (97834):
-    - Burlesque, Mälegegedumugãwal, kekâdaboo-
-    - gooemk'.
-- **gigatapuguet** (97848):
-    - Burlesque, Mälegegedumugãwal, kekâdaboo-
-    - kekädaboogooal.
-- **gisguniget** (104366):
-    - To carry a burden, keskoonega'; keskwow-
-- **gisoqsusit** (108592):
-    - kesokse kesoksoose; Noogwäe; käsegã';
-- **g'tepge'g** (125177):
-    - Burglar, Noojekümootunet' tan eleskwiska-
-    - déget' wenjeegwomku depkeegu.
-- **gunu** (128601):
-    - But, conj., kadoo; koonoo.
-- **jagle'g** (140152):
-    - To Bustle, Chakulãe.
-- **jaqaleimgwei** (140312):
-    - A Bustle, Chakulaimkãwä'.
-- **jitnang'pisuti** (146438):
-    - A Busk, Chetunankupesoode.
-- **lamatguti** (147070):
-    - In the bushes, Lamatkoodook.
-- **lugowaqan** (151859):
-    - Business, umtumodákun : Loogowokun Na-
-- **maligigetg** (155359):
-    - To burlesque, Malegimk' ; Malegegedum
-- **maligigetm'gewei** (155395):
-    - Burlesque, Mälegegedumugãwal, kekâdaboo-
-- **maligimg** (155539):
-    - To burlesque, Malegimk' ; Malegegedum
-- **maqamigew** (157195):
-    - A Burrow, Wokwis-wigwom ; Wigwom ma-
-    - kumegäwiktook; Weisis000gwom makum-
-    - egäwiktook.
-- **maqamigewalgegwet** (157380):
-    - To burrow, Makümegowwolkegwet'.
-- **maqaqsit** (157839):
-    - Burly, Magokse.
-- **mest'gatgeg** (185040):
-    - Bushy, Full of Bushes, Mestugatkek.
 - **metg'ses'g** (186552):
     - I burn it to a cinder, Metküsesum.
-- **metuatgig** (188107):
-    - Thick bushes, Medoootkik.
-- **mtmataqan** (205415):
-    - Business, umtumodákun : Loogowokun Na-
-- **muqsun** (208227):
-    - Burden, Wuhsoon Muhsoon.
-- **natanguamg** (217165):
-    - Business, umtumodákun : Loogowokun Na-
-    - dankooomk' Nadankooomtümgãwa.
-- **natanguamtmgewei** (217191):
-    - dankooomk' Nadankooomtümgãwa.
-- **natanguaqtme'g** (217204):
-    - To transact business for one's self, Nadan-
-    - koooktumei'.
-- **natangue'g** (217244):
-    - To transact business, Nadankooei'.
-- **natangue'watl** (217284):
-    - To transact business for him, Nadankooaak.
-- **nipisoqon** (238466):
-    - A Bush, Nebesokun Stokun.
-- **nugwa'toq** (245376):
-    - To burn, Noogwaadoo kâktek ; Sesooamkulek ;
-- **nugwe'g** (245483):
-    - kesokse kesoksoose; Noogwäe; käsegã';
-- **nujigmutnet** (248066):
-    - Burglar, Noojekümootunet' tan eleskwiska-
-- **nujinepateget** (250327):
-    - Butcher, Noojenäbadega'.
-- **oqompgwa'teget** (257012):
-    - To be burying things, Okunipkwa'degä.
-- **oqonipgwa'atl** (257052):
-    - To bury, Okunipkwaadoo ; Okunipkwaaluk
-- **oqonipgwa'toq** (257066):
-    - To bury, Okunipkwaadoo ; Okunipkwaaluk
+- **sapips'g** (312030):
+    - To burn a hole through it, Sabipsum ;
+    - Säbiptegã.
+- **sapipteget** (312114):
+    - To burn a hole through it, Sabipsum ;
+    - Säbiptegã.
 - **oqoqwes'g** (257293):
     - To burn a kettle by letting it get dry, so that
     - the "material" burns to it, Okokwes-
     - um.
 - **oqoqwesit** (257307):
     - The kettle burns, Okokwesit Okokwes-
+    - umat'.
 - **oqoqwesmat** (257321):
     - The kettle burns, Okokwesit Okokwes-
     - umat'.
-- **pasasit** (264063):
-    - To burst, v. int., Paskaasik ; Pasase.
-- **pasgalatl** (264380):
-    - Paskaadoo Pastesum Paskaaluk.
-- **pasga's'g** (264422):
-    - To burst, v. int., Paskaasik ; Pasase.
-- **pasga'toq** (264477):
-    - Paskaadoo Pastesum Paskaaluk.
-- **pasgent'g** (264655):
-    - To bury it deep in the ground, Paskenum.
-- **pasginetesit** (264761):
-    - To burst the belly, Paskinedesin'.
-- **pasles'g** (265183):
-    - To burst, V. tr., Pastelum Pastum Pasum ;
-- **pastelg** (265311):
-    - To burst, V. tr., Pastelum Pastum Pasum ;
-- **pastesing** (265377):
-    - To fall and burst, Pastesink'.
-- **past'g** (265472):
-    - To burst, V. tr., Pastelum Pastum Pasum ;
-- **past'g** (265499):
-    - To burst, V. tr., Pastelum Pastum Pasum ;
-- **pematgeg** (271525):
-    - The bushes extend along, Pematkek
-- **poqwija'teget** (297026):
-    - To buoy, Pokwijaadoo Pokwijaadega'.
-- **poqwija'toq** (297040):
-    - To buoy, Pokwijaadoo Pokwijaadega'.
-- **pugtewiaq** (299744):
-    - kâksum, kâkse. Booktäweak ; kâksuk;
-- **pugwatlugwet** (300490):
-    - To have a bushy head, Poogwotloogwei'.
-- **pusgilutma'get** (305906):
-    - Busy body, Booskeloodumaagão
-- **sapatg'te'g** (311373):
-    - To chop a path through the bushes, Sabat-
-    - kudãäm.
-- **sapatg'te'get** (311387):
-    - To be chopping out paths through the
-    - bushes, Sabatkudaagã.
-- **sapipsatl** (312016):
-    - To burn a hole through him, Sabipsuk.
-- **sapips'g** (312030):
-    - To burn a hole through it, Sabipsum ;
-- **sapipteget** (312114):
-    - To burn a hole through it, Sabipsum ;
-    - Säbiptegã.
-- **sisuamgleg** (330226):
-    - To burn, Noogwaadoo kâktek ; Sesooamkulek ;
-- **stoqn** (332588):
-    - A Bush, Nebesokun Stokun.
-- **tgutei** (359794):
-    - To attend a burial, (a funeral), Ootkoodei
-- **ugsun** (367512):
-    - Burden, Wuhsoon Muhsoon.
-- **ujoq'g** (371060):
-    - But-end, Oochogum.
-- **us'gaqaelsuti** (376236):
-    - Buss, Oosugagelumoode ; Ooosugagelsoode.
-- **us'gaqelmuti** (376291):
-    - Buss, Oosugagelumoode ; Ooosugagelsoode.
-- **utgutajig** (379387):
-    - Burial, Ootkoodaamk; Ootkoodajik.
-- **utgutamg** (379401):
-    - Burial, Ootkoodaamk; Ootkoodajik.
-- **utgutlg** (379559):
-    - To bury, Okunipkwaadoo ; Okunipkwaaluk
-    - Ootkoodulk'.
-- **wejgwatgeg** (396014):
-    - The bushes extend along towards us,
-    - Wechkwotkek.
-- **wenaqaweteg** (410393):
-    - A bushy head of hair, Wenakawedek'.
-- **wen'ji'guom** (411240):
-    - Burglar, Noojekümootunet' tan eleskwiska-
-    - déget' wenjeegwomku depkeegu.
-- **wetme'g** (421784):
-    - Busy, Wedumãe elookwä'.
+- **gaqaqa'toq** (64148):
+    - To burnish, kasagadegã kasagaadoo.
+- **gasaqateget** (69929):
+    - To burnish, kasagadegã kasagaadoo.
+- **wowgwis** (437405):
+    - A Burrow, Wokwis-wigwom ; Wigwom ma-
+    - kumegäwiktook; Weisis000gwom makum-
+    - egäwiktook.
 - **wi'guam** (425693):
     - A Burrow, Wokwis-wigwom ; Wigwom ma-
     - kumegäwiktook; Weisis000gwom makum-
+    - egäwiktook.
 - **wi'siso'guom** (434403):
+    - A Burrow, Wokwis-wigwom ; Wigwom ma-
     - kumegäwiktook; Weisis000gwom makum-
     - egäwiktook.
-- **wowgwis** (437405):
+- **maqamigew** (157195):
     - A Burrow, Wokwis-wigwom ; Wigwom ma-
-- unclaimed region: To be burdened heavily line partially shared
-- unclaimed region: Bush headword line (A Bush) partly for nipisoqon/stoqn already claimed
+    - kumegäwiktook; Weisis000gwom makum-
+    - egäwiktook.
+- **maqamigewalgegwet** (157380):
+    - To burrow, Makümegowwolkegwet'.
+- **pastelg** (265311):
+    - To burst, V. tr., Pastelum Pastum Pasum ;
+    - Paskaadoo Pastesum Paskaaluk.
+- **past'g** (265472):
+    - To burst, V. tr., Pastelum Pastum Pasum ;
+    - Paskaadoo Pastesum Paskaaluk.
+- **past'g** (265499):
+    - To burst, V. tr., Pastelum Pastum Pasum ;
+    - Paskaadoo Pastesum Paskaaluk.
+- **pasga'toq** (264477):
+    - To burst, V. tr., Pastelum Pastum Pasum ;
+    - Paskaadoo Pastesum Paskaaluk.
+- **pasles'g** (265183):
+    - To burst, V. tr., Pastelum Pastum Pasum ;
+    - Paskaadoo Pastesum Paskaaluk.
+- **pasgalatl** (264380):
+    - To burst, V. tr., Pastelum Pastum Pasum ;
+    - Paskaadoo Pastesum Paskaaluk.
+- **pasga's'g** (264422):
+    - To burst, v. int., Paskaasik ; Pasase.
+- **pasasit** (264063):
+    - To burst, v. int., Paskaasik ; Pasase.
+- **pastesing** (265377):
+    - To fall and burst, Pastesink'.
+- **pasginetesit** (264761):
+    - To burst the belly, Paskinedesin'.
+- **apujipa'toq** (16639):
+    - To burst it open, Aboojebaadoo.
+- **oqonipgwa'toq** (257066):
+    - To bury, Okunipkwaadoo ; Okunipkwaaluk
+    - Ootkoodulk'.
+- **oqonipgwa'atl** (257052):
+    - To bury, Okunipkwaadoo ; Okunipkwaaluk
+    - Ootkoodulk'.
+- **utgutlg** (379559):
+    - To bury, Okunipkwaadoo ; Okunipkwaaluk
+    - Ootkoodulk'.
+- **oqompgwa'teget** (257012):
+    - To be burying things, Okunipkwa'degä.
+- **tgutei** (359794):
+    - To attend a burial, (a funeral), Ootkoodei
+- **pasgent'g** (264655):
+    - To bury it deep in the ground, Paskenum.
+- **nipisoqon** (238466):
+    - A Bush, Nebesokun Stokun.
+- **stoqn** (332588):
+    - A Bush, Nebesokun Stokun.
+- **metuatgig** (188107):
+    - Thick bushes, Medoootkik.
+- **pematgeg** (271525):
+    - The bushes extend along, Pematkek
+- **elmatgeg** (32907):
+    - The bushes extend in a direction from the
+    - speaker, elmatkek.
+- **wejgwatgeg** (396014):
+    - The bushes extend along towards us,
+    - Wechkwotkek.
+- **gamatg** (61061):
+    - Bushes yonder beyond a cleared place,
+    - kamatk'.
+- **gamatgutoq** (61088):
+    - In the bushes beyond a cleared place,
+    - kamatkoodook.
+- **elmatge'pit** (32921):
+    - To run through the bushes, elmatkeibe.
+- **mest'gatgeg** (185040):
+    - Bushy, Full of Bushes, Mestugatkek.
+- **lamatguti** (147070):
+    - In the bushes, Lamatkoodook.
+- **wenaqaweteg** (410393):
+    - A bushy head of hair, Wenakawedek'.
+- **pugwatlugwet** (300490):
+    - To have a bushy head, Poogwotloogwei'.
+- **gegatgiew** (72614):
+    - A dry soft wood bush, kegatkeow'.
+- **getthrubushs1** (95110):
+    - To get through the bushes, Sabatkaase.
+- **sapatg'te'get** (311387):
+    - To be chopping out paths through the
+    - bushes, Sabatkudaagã.
+- **sapatg'te'g** (311373):
+    - To chop a path through the bushes, Sabat-
+    - kudãäm.
+- **mtmataqan** (205415):
+    - Business, umtumodákun : Loogowokun Na-
+    - dankooomk' Nadankooomtümgãwa.
+- **lugowaqan** (151859):
+    - Business, umtumodákun : Loogowokun Na-
+    - dankooomk' Nadankooomtümgãwa.
+- **natanguamg** (217165):
+    - Business, umtumodákun : Loogowokun Na-
+    - dankooomk' Nadankooomtümgãwa.
+- **natanguamtmgewei** (217191):
+    - Business, umtumodákun : Loogowokun Na-
+    - dankooomk' Nadankooomtümgãwa.
+- **natangue'g** (217244):
+    - To transact business, Nadankooei'.
+- **natanguaqtme'g** (217204):
+    - To transact business for one's self, Nadan-
+    - koooktumei'.
+- **natangue'watl** (217284):
+    - To transact business for him, Nadankooaak.
+- **us'gaqelmuti** (376291):
+    - Buss, Oosugagelumoode ; Ooosugagelsoode.
+- **us'gaqaelsuti** (376236):
+    - Buss, Oosugagelumoode ; Ooosugagelsoode.
+- **jitnang'pisuti** (146438):
+    - A Busk, Chetunankupesoode.
+- **jagle'g** (140152):
+    - To Bustle, Chakulãe.
+- **jaqaleimgwei** (140312):
+    - A Bustle, Chakulaimkãwä'.
+- **wetme'g** (421784):
+    - Busy, Wedumãe elookwä'.
+- **pusgilutma'get** (305906):
+    - Busy body, Booskeloodumaagão
+- **gatu** (72174):
+    - But, conj., kadoo; koonoo.
+- **gunu** (128601):
+    - But, conj., kadoo; koonoo.
+- **ujoq'g** (371060):
+    - But-end, Oochogum.
+- **nujinepateget** (250327):
+    - Butcher, Noojenäbadega'.
+- unclaimed region: The kettle burns line has Okokwesumat continuation (box 150980) shared
+- unclaimed region: 'To have a bushy head' line fully claimed
 
 ## printed p.48 (98 candidates, 79 boxes)
+- **aluamugiaq** (5437):
+    - Caliginous, Piskeâk ; Alooomook'; Alooom-
+    - oogeâk'.
+- **amalegn** (6191):
+    - Calico, Amalegun.
+- **angalaw** (9485):
+    - The calf of the leg, Ankalow.
+- **aqapisgaqan** (17284):
+    - A cage for animals, Weisisâwe-akpiska'da-
+    - kun.
+- **egiljet** (24886):
+    - To calculate, egilchã' kesedädum ; kesedã -
+    - degã'
+- **elgomigtegemgewei** (30147):
+    - A call, Elkomiktegemkãwa'; Emitogwemkäwa'.
+- **elgonigteget** (30203):
+    - To call, elkomiktega; Wegoomk'; emitoogwa';
+    - Wesoonkäook'.
+- **emittugwemgewei** (37991):
+    - A call, Elkomiktegemkãwa'; Emitogwemkäwa'.
+- **emittugwet** (38004):
+    - To call, elkomiktega; Wegoomk'; emitoogwa';
+    - Wesoonkäook'.
+- **ewi'gigemgewei** (56105):
+    - Caligraphy, aweekugemkawal keloo'lk.
+- **galgunewei** (60800):
+    - Cake, n., külkoonäwã' Loosku'nigun.
+- **gejitalugte'get** (76755):
+    - To calk, kejetulooktääm kejetalooktääga!
+- **gejitlugte'g** (77119):
+    - To calk, kejetulooktääm kejetalooktääga!
+- **gelu'lg** (79091):
+    - Caligraphy, aweekugemkawal keloo'lk.
+- **gelusgutoq** (79576):
+    - To fasten a Button, To Button, kebejogoo-
+    - doo; Pejogulse; kelooskoodoo.
+- **gepijoqutoq** (81254):
+    - To fasten a Button, To Button, kebejogoo-
+    - doo; Pejogulse; kelooskoodoo.
+- **gesgnigwaleltieg** (85236):
+    - We cross over by a by-path, keskumgwöl-
+    - elteek'.
+- **gimutugewei** (99828):
+    - By-path, kemoodoogäwã' owteech.
+- **gisite'taqan** (107485):
+    - Calculation, egilchemk'; kesedäädegemkãwa ;
+    - kesedäädakun.
+- **gisite'tegemgewei** (107513):
+    - Calculation, egilchemk'; kesedäädegemkãwa ;
+    - kesedäädakun.
+- **gisite'teget** (107527):
+    - To calculate, egilchã' kesedädum ; kesedã -
+    - degã'
+- **gisite'tg** (107567):
+    - To calculate, egilchã' kesedädum ; kesedã -
+    - degã'
+- **gulpisuntugwapi** (127303):
+    - Cable, koolpesoontoogwobe.
+- **gwe'ijg** (129742):
+    - By, adv., Wejooow'; kweiichk'
+- **gwelapuguemg** (130582):
+    - By-word, kwelaboogooemk'.
+- **gwese'wimgewei** (131114):
+    - A cackle, n., kwesääwimkawä'.
+- **gwese'wit** (131130):
+    - To cackle, kwesäãwit.
+- **igtug** (136837):
+    - By, prep, Oochit, weje-iktook.
+- **jitaqign** (146396):
+    - Buttress, Chedokigun Tumaoo Malkoeegun.
+- **l'sqi'gnji'j** (151404):
+    - Caddy, Putawayã' luskeiguncheech.
+- **lusgnign** (152901):
+    - Cake, n., külkoonäwã' Loosku'nigun.
+- **malgui'gn** (154766):
+    - Buttress, Chedokigun Tumaoo Malkoeegun.
+- **mesgilgwa** (181891):
+    - Caldron, Meskilk w.
+- **metg'ses'g** (186567):
+    - To calcine, Metkusesum.
+- **mimigej** (196972):
+    - Butter-fly, Memegech'.
+- **ml'gejuimi** (199649):
+    - Butter, Mulugechweme; Tebooläwa'.
+- **mlj'gwui** (200234):
+    - Callow, Mulchügooes
+- **ms'gewgn** (203323):
+    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
+    - moogwa'dâkun; Woonmajode; Woonmaje-
+    - daâdakun Sespedäädakun.
+- **mtmataqan** (205428):
+    - Calling, 'Mtumodäkun ; Wegoodimk Weg-
+    - oomkoo'soode.
+- **mtuamugwa'taqan** (205823):
+    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
+    - moogwa'dâkun; Woonmajode; Woonmaje-
+    - daâdakun Sespedäädakun.
+- **mtuoti** (206009):
+    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
+    - moogwa'dâkun; Woonmajode; Woonmaje-
+    - daâdakun Sespedäädakun.
+- **munsamatl** (207808):
+    - Cajole, Moonsamk'.
 - **napateget** (211767):
     - To Butcher, Nabadega' Nabaak.
 - **nape'g** (211850):
     - To Butcher, Nabadega' Nabaak.
-- **soqotpetesing** (332010):
-    - To Butt, Sokotpedesin' ; Sokotpedeskak'.
-- **soqotpetesguatl** (331987):
-    - To Butt, Sokotpedesin' ; Sokotpedeskak'.
-- **soqotpetesga'tiet** (331978):
-    - To butt each other, Sokotpedeska'deek.
-- **ml'gejuimi** (199649):
-    - Butter, Mulugechweme; Tebooläwa'.
-- **tepulewei** (353040):
-    - Butter, Mulugechweme; Tebooläwa'.
-- **mimigej** (196972):
-    - Butter-fly, Memegech'.
-- **sigupaqtew** (326833):
-    - Butter-milk, Segooboktaoo; Segoobäktäägun.
-- **sigupaqte'gn** (326819):
-    - Butter-milk, Segooboktaoo; Segoobäktäägun.
-- **unagweg** (373707):
-    - Buttock, Oonagwegu
-- **panigtialsit** (259273):
-    - To uncover the buttocks, Baniktealluse.
-- **pijoq'suti** (286421):
-    - Button, Pejokusoode.
-- **gepijoqutoq** (81254):
-    - To fasten a Button, To Button, kebejogoo-
-    - doo; Pejogulse; kelooskoodoo.
-- **pijoqolsit** (286380):
-    - To fasten a Button, To Button, kebejogoo-
-    - doo; Pejogulse; kelooskoodoo.
-- **gelusgutoq** (79576):
-    - To fasten a Button, To Button, kebejogoo-
-    - doo; Pejogulse; kelooskoodoo.
-- **pgwilsign** (284401):
-    - Button hole, upkwilsigun.
-- **jitaqign** (146396):
-    - Buttress, Chedokigun Tumaoo Malkoeegun.
-- **tmaw** (361053):
-    - Buttress, Chedokigun Tumaoo Malkoeegun.
-- **malgui'gn** (154766):
-    - Buttress, Chedokigun Tumaoo Malkoeegun.
-- **pusgimila'sit** (306108):
-    - Buxom, Booskemelaase.
+- **napigwanei** (212331):
+    - Cabin, Poktuskaasik nabigwonau; Wenjeg-
+    - womcheech.
 - **napi'l** (212411):
     - Cabbage, Nebeel. (Note.-Nebe means a leaf.
     - But as applied to the leaf of a tree, etc., it
     - is of the animate gen, making the plur.
     - nebeek; but the plur. nebeel, inan. gen.,
     - means, a cabbage.)
-- **poqt'sga's'g** (296382):
-    - Cabin, Poktuskaasik nabigwonau; Wenjeg-
-    - womcheech.
-- **napigwanei** (212331):
-    - Cabin, Poktuskaasik nabigwonau; Wenjeg-
-    - womcheech.
-- **wen'jiguomji'j** (411349):
-    - Cabin, Poktuskaasik nabigwonau; Wenjeg-
-    - womcheech.
-- **gulpisuntugwapi** (127303):
-    - Cable, koolpesoontoogwobe.
-- **usgewoqon** (376472):
-    - Cachination, Oosugäwogun.
-- **gwese'wit** (131130):
-    - To cackle, kwesäãwit.
-- **gwese'wimgewei** (131114):
-    - A cackle, n., kwesääwimkawä'.
-- **tele'g** (343743):
-    - Cadaverous, Teläãk kusna telamook' stugã
-    - 'npooenoo.
-- **telamug** (341929):
-    - Cadaverous, Teläãk kusna telamook' stugã
-    - 'npooenoo.
 - **npuinu** (243311):
     - Cadaverous, Teläãk kusna telamook' stugã
     - 'npooenoo.
+- **nujigtalugte'get** (248582):
+    - A calker, Noojiktälooktääga'.
+- **panigtialsit** (259273):
+    - To uncover the buttocks, Baniktealluse.
+- **pegwateleget** (269378):
+    - To Buy, Pegwodelegã' ; Pegwodelum; Peg-
+    - wodelk'
+- **petgwatelatl** (280839):
+    - To Buy, Pegwodelegã' ; Pegwodelum; Peg-
+    - wodelk'
+- **petgwatelg** (280853):
+    - To Buy, Pegwodelegã' ; Pegwodelum; Peg-
+    - wodelk'
+- **pgwilsign** (284401):
+    - Button hole, upkwilsigun.
+- **pijoqolsit** (286380):
+    - To fasten a Button, To Button, kebejogoo-
+    - doo; Pejogulse; kelooskoodoo.
+- **pijoq'suti** (286421):
+    - Button, Pejokusoode.
+- **pisgiaq** (291069):
+    - Caliginous, Piskeâk ; Alooomook'; Alooom-
+    - oogeâk'.
+- **poqt'sga's'g** (296382):
+    - Cabin, Poktuskaasik nabigwonau; Wenjeg-
+    - womcheech.
 - **p'taweiet** (298344):
     - Caddy, Putawayã' luskeiguncheech.
-- **l'sqi'gnji'j** (151404):
-    - Caddy, Putawayã' luskeiguncheech.
-- **ugjignam** (364945):
-    - Cadet, 'Nchig'unum.
-- **aqapisgaqan** (17284):
-    - A cage for animals, Weisisâwe-akpiska'da-
-    - kun.
-- **waisiewei** (380759):
-    - A cage for animals, Weisisâwe-akpiska'da-
-    - kun.
+- **pusgimila'sit** (306108):
+    - Buxom, Booskemelaase.
+- **sespete'taqan** (321342):
+    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
+    - moogwa'dâkun; Woonmajode; Woonmaje-
+    - daâdakun Sespedäädakun.
+- **sigupaqte'gn** (326819):
+    - Butter-milk, Segooboktaoo; Segoobäktäägun.
+- **sigupaqtew** (326833):
+    - Butter-milk, Segooboktaoo; Segoobäktäägun.
 - **sisipewei** (329782):
     - A cage for birds,
-- **munsamatl** (207808):
-    - Cajole, Moonsamk'.
-- **galgunewei** (60800):
-    - Cake, n., külkoonäwã' Loosku'nigun.
-- **lusgnign** (152901):
-    - Cake, n., külkoonäwã' Loosku'nigun.
-- **mtuoti** (206009):
-    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
-    - moogwa'dâkun; Woonmajode; Woonmaje-
-    - daâdakun Sespedäädakun.
-- **ms'gewgn** (203323):
-    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
-    - moogwa'dâkun; Woonmajode; Woonmaje-
-    - daâdakun Sespedäädakun.
-- **mtuamugwa'taqan** (205823):
+- **soqotpetesga'tiet** (331978):
+    - To butt each other, Sokotpedeska'deek.
+- **soqotpetesguatl** (331987):
+    - To Butt, Sokotpedesin' ; Sokotpedeskak'.
+- **soqotpetesing** (332010):
+    - To Butt, Sokotpedesin' ; Sokotpedeskak'.
+- **talui't'g** (335372):
+    - What do you call ut ? Tälooweedumun
+- **telamug** (341929):
+    - Cadaverous, Teläãk kusna telamook' stugã
+    - 'npooenoo.
+- **tele'g** (343743):
+    - Cadaverous, Teläãk kusna telamook' stugã
+    - 'npooenoo.
+- **teluet** (348545):
+    - To Buzz, Tedooet' ; Tedooaase.
+- **telui't'g** (348778):
+    - I call (name) it so, Telooweedum.
+- **tepgigewei** (351126):
+    - Calendar, Depkunoosetäwä ; Depkegäwã.
+- **tepgnusetewei** (351641):
+    - Calendar, Depkunoosetäwä ; Depkegäwã.
+- **tepulewei** (353040):
+    - Butter, Mulugechweme; Tebooläwa'.
+- **tetoa'sit** (355713):
+    - To Buzz, Tedooet' ; Tedooaase.
+- **tetuemg** (357292):
+    - A Buzz, Tedooemk'
+- **tmaw** (361053):
+    - Buttress, Chedokigun Tumaoo Malkoeegun.
+- **ugjignam** (364945):
+    - Cadet, 'Nchig'unum.
+- **ugjit** (365363):
+    - By, prep, Oochit, weje-iktook.
+- **unagweg** (373707):
+    - Buttock, Oonagwegu
+- **unmajite'taqan** (374667):
     - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
     - moogwa'dâkun; Woonmajode; Woonmaje-
     - daâdakun Sespedäädakun.
@@ -677,497 +731,300 @@
     - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
     - moogwa'dâkun; Woonmajode; Woonmaje-
     - daâdakun Sespedäädakun.
-- **unmajite'taqan** (374667):
-    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
-    - moogwa'dâkun; Woonmajode; Woonmaje-
-    - daâdakun Sespedäädakun.
-- **sespete'taqan** (321342):
-    - Calamity, 'Mtooode : 'Msugãookun ; 'Mtooa-
-    - moogwa'dâkun; Woonmajode; Woonmaje-
-    - daâdakun Sespedäädakun.
-- **metg'ses'g** (186567):
-    - To calcine, Metkusesum.
-- **pegwateleget** (269378):
-    - To Buy, Pegwodelegã' ; Pegwodelum; Peg-
-    - wodelk'
-- **petgwatelg** (280853):
-    - To Buy, Pegwodelegã' ; Pegwodelum; Peg-
-    - wodelk'
-- **petgwatelatl** (280839):
-    - To Buy, Pegwodelegã' ; Pegwodelum; Peg-
-    - wodelk'
-- **teluet** (348545):
-    - To Buzz, Tedooet' ; Tedooaase.
-- **tetoa'sit** (355713):
-    - To Buzz, Tedooet' ; Tedooaase.
-- **wite'wistoq** (436094):
-    - The people or animals are making a confused
-    - noise-buzzing-in the distance, Wed-
-    - äwistk Wedäwistoodijik.
-- **wete'wistat** (420471):
-    - The people or animals are making a confused
-    - noise-buzzing-in the distance, Wed-
-    - äwistk Wedäwistoodijik.
-- **tetuemg** (357292):
-    - A Buzz, Tedooemk'
-- **ugjit** (365363):
-    - By, prep, Oochit, weje-iktook.
-- **igtug** (136837):
-    - By, prep, Oochit, weje-iktook.
+- **usgewoqon** (376472):
+    - Cachination, Oosugäwogun.
+- **utangalml** (378281):
+    - The calves of his legs, Ootankalamul.
+- **waisiewei** (380759):
+    - A cage for animals, Weisisâwe-akpiska'da-
+    - kun.
 - **weji** (396817):
     - By, prep, Oochit, weje-iktook.
 - **wejuow** (400453):
     - By, adv., Wejooow'; kweiichk'
-- **gwe'ijg** (129742):
-    - By, adv., Wejooow'; kweiichk'
-- **wigupjig** (426654):
-    - By-and-by, Wegoopchik.
-- **gimutugewei** (99828):
-    - By-path, kemoodoogäwã' owteech.
-- **gesgnigwaleltieg** (85236):
-    - We cross over by a by-path, keskumgwöl-
-    - elteek'.
-- **gwelapuguemg** (130582):
-    - By-word, kwelaboogooemk'.
-- **egiljet** (24886):
-    - To calculate, egilchã' kesedädum ; kesedã -
-    - degã'
-- **gisite'teget** (107527):
-    - To calculate, egilchã' kesedädum ; kesedã -
-    - degã'
-- **gisite'tg** (107567):
-    - To calculate, egilchã' kesedädum ; kesedã -
-    - degã'
-- **gisite'taqan** (107485):
-    - Calculation, egilchemk'; kesedäädegemkãwa ;
-    - kesedäädakun.
-- **gisite'tegemgewei** (107513):
-    - Calculation, egilchemk'; kesedäädegemkãwa ;
-    - kesedäädakun.
-- **mesgilgwa** (181891):
-    - Caldron, Meskilk w.
-- **tepgnusetewei** (351641):
-    - Calendar, Depkunoosetäwä ; Depkegäwã.
-- **tepgigewei** (351126):
-    - Calendar, Depkunoosetäwä ; Depkegäwã.
+- **wen'jiguomji'j** (411349):
+    - Cabin, Poktuskaasik nabigwonau; Wenjeg-
+    - womcheech.
 - **wen'jutia'muj** (412565):
     - Calf, Wenjoodeämoo'ch
-- **angalaw** (9485):
-    - The calf of the leg, Ankalow.
-- **utangalml** (378281):
-    - The calves of his legs, Ootankalamul.
-- **amalegn** (6191):
-    - Calico, Amalegun.
-- **ewi'gigemgewei** (56105):
-    - Caligraphy, aweekugemkawal keloo'lk.
-- **gelu'lg** (79091):
-    - Caligraphy, aweekugemkawal keloo'lk.
-- **pisgiaq** (291069):
-    - Caliginous, Piskeâk ; Alooomook'; Alooom-
-    - oogeâk'.
-- **aluamugiaq** (5437):
-    - Caliginous, Piskeâk ; Alooomook'; Alooom-
-    - oogeâk'.
-- **gejitlugte'g** (77119):
-    - To calk, kejetulooktääm kejetalooktääga!
-- **gejitalugte'get** (76755):
-    - To calk, kejetulooktääm kejetalooktääga!
-- **nujigtalugte'get** (248582):
-    - A calker, Noojiktälooktääga'.
-- **elgonigteget** (30203):
-    - To call, elkomiktega; Wegoomk'; emitoogwa';
-    - Wesoonkäook'.
+- **wete'wistat** (420471):
+    - The people or animals are making a confused
+    - noise-buzzing-in the distance, Wed-
+    - äwistk Wedäwistoodijik.
 - **wigumg** (426116):
     - To call, elkomiktega; Wegoomk'; emitoogwa';
     - Wesoonkäook'.
-- **emittugwet** (38004):
-    - To call, elkomiktega; Wegoomk'; emitoogwa';
-    - Wesoonkäook'.
-- **wisungewg** (435661):
-    - To call, elkomiktega; Wegoomk'; emitoogwa';
-    - Wesoonkäook'.
-- **talui't'g** (335372):
-    - What do you call ut ? Tälooweedumun
-- **telui't'g** (348778):
-    - I call (name) it so, Telooweedum.
-- **elgomigtegemgewei** (30147):
-    - A call, Elkomiktegemkãwa'; Emitogwemkäwa'.
-- **emittugwemgewei** (37991):
-    - A call, Elkomiktegemkãwa'; Emitogwemkäwa'.
-- **mtmataqan** (205428):
-    - Calling, 'Mtumodäkun ; Wegoodimk Weg-
-    - oomkoo'soode.
-- **wigutimg** (426723):
-    - Calling, 'Mtumodäkun ; Wegoodimk Weg-
-    - oomkoo'soode.
 - **wigumgusuti** (426145):
+    - Calling, 'Mtumodäkun ; Wegoodimk Weg-
+    - oomkoo'soode.
+- **wigupjig** (426654):
+    - By-and-by, Wegoopchik.
+- **wigutimg** (426723):
     - Calling, 'Mtumodäkun ; Wegoodimk Weg-
     - oomkoo'soode.
 - **wipgwesitamgewei** (431259):
     - Callosity, Callous, Wipkwesedamkäwa'.
 - **wipgwesitamgewei** (431272):
     - Callosity, Callous, Wipkwesedamkäwa'.
-- **mlj'gwui** (200234):
-    - Callow, Mulchügooes
+- **wisungewg** (435661):
+    - To call, elkomiktega; Wegoomk'; emitoogwa';
+    - Wesoonkäook'.
+- **wite'wistoq** (436094):
+    - The people or animals are making a confused
+    - noise-buzzing-in the distance, Wed-
+    - äwistk Wedäwistoodijik.
 
 ## printed p.49 (93 candidates, 89 boxes)
-- **sangewe'g** (310805):
-    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
-- **ewipniaq** (56361):
-    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
-- **ewipg** (56249):
-    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
-- **jigteg** (141911):
-    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
-- **atuamgewei** (23238):
-    - Calumet, adooomkãwa' tumakun.
-- **tmaqan** (360868):
-    - Calumet, adooomkãwa' tumakun.
-- **pilsimatl** (287977):
-    - To calumniate, Pilsimk; Pilsaboogoo ; Pil-
-    - säâk'.
-- **pilsapugwet** (287688):
-    - To calumniate, Pilsimk; Pilsaboogoo ; Pil-
-    - säâk'.
-- **pilse'g** (287790):
-    - To calumniate, Pilsimk; Pilsaboogoo ; Pil-
-    - säâk'.
-- **pusgipilsapugwet** (306758):
-    - Calumniator, Booskepilsaboogooal.
-- **pilsuti** (288230):
-    - Calumny, Pilsoode; Pilsäimk.
-- **pilse'matl** (287876):
-    - Calumny, Pilsoode; Pilsäimk.
-- **penetgwit** (274714):
-    - To calve, Penetkwit'.
-- **metg'seteg** (186595):
-    - Calx, Metkusedek'
-- **mesgilg** (181766):
-    - Camel, Meskilk weisis, tan mogwa' wesoonik.
-- **wi'sis** (434209):
-    - Camel, Meskilk weisis, tan mogwa' wesoonik.
-- **wesunig** (418592):
-    - Camel, Meskilk weisis, tan mogwa' wesoonik.
-- **utn** (380083):
-    - Camp, Oodun' wejekesedäsik wigwom-oo-
-    - iktook; Ségeguneegunul pegwelkul mow-
-    - a'dasigul.
-- **wejigisitas`g** (397439):
-    - Camp, Oodun' wejekesedäsik wigwom-oo-
-    - iktook; Ségeguneegunul pegwelkul mow-
-    - a'dasigul.
-- **wiguam** (425605):
-    - Camp, Oodun' wejekesedäsik wigwom-oo-
-    - iktook; Ségeguneegunul pegwelkul mow-
-    - a'dasigul.
-- **segigni'gn** (317276):
-    - Camp, Oodun' wejekesedäsik wigwom-oo-
-    - iktook; Ségeguneegunul pegwelkul mow-
-    - a'dasigul.
-- **pugwelg** (300676):
-    - Camp, Oodun' wejekesedäsik wigwom-oo-
-    - iktook; Ségeguneegunul pegwelkul mow-
-    - a'dasigul.
-- **mawa'tasig** (164305):
-    - Camp, Oodun' wejekesedäsik wigwom-oo-
-    - iktook; Ségeguneegunul pegwelkul mow-
-    - a'dasigul.
-- **matntimg** (162918):
-    - Campaign, Matundimk tan telipkijematunemk'.
-- **telipgijimatnemamg** (346494):
-    - Campaign, Matundimk tan telipkijematunemk'.
-- **pgu** (283389):
-    - Camphor, upkoo' welemaak.
-- **welima'q** (405654):
-    - Camphor, upkoo' welemaak.
-- **eptaqan** (43167):
-    - Can, eptâkun ; kuneepsumoon'.
-- **gni'psmoq** (117741):
-    - Can, eptâkun ; kuneepsumoon'.
-- **ps'ge'gn** (297768):
-    - Canal, upsugäagun.
 - **apji'jgmujue'gati** (13544):
     - Canard River, p.n., Apcheechkumoochwäakade
     - (Duckland. Hence the French name, Canard )
-- **gasueg'g** (71708):
-    - Cancel, kaswekum.
-- **pugteweg** (299635):
-    - Candent, Booktäwek'.
-- **getlewei** (93851):
-    - Candid, kedlawãe Welmudoo.
-- **welmtoq** (408202):
-    - Candid, kedlawãe Welmudoo.
-- **wasoqonmaqan** (391764):
-    - Candle, Wösogoonumakun.
-- **wasoqonmaqan'tg** (391957):
-    - Candlestick,
-    - ulnegalow'.
-- **getlewauaqan** (93609):
-    - Candor, kedlawaoookun kedlawäimkãwä'.
-- **getleweimgewei** (94069):
-    - Candor, kedlawaoookun kedlawäimkãwä'.
-- **pgu** (283403):
-    - Candy, Upkoo, (chewing gum.)
 - **aptu'n** (16119):
     - Cane, Aptoo'n.
-- **lmu'juei** (150245):
-    - Canine, ulumoojooa'.
-- **lmu'juepitl** (150259):
-    - Canine teeth, lmoochooobetul.
-- **gasgwamgiaq** (70961):
-    - Canker, kaskwamkeâk'.
-- **malgomajit** (154422):
-    - Cannibal, Memajooenoo' tan malkomaje mem-
-    - ajooenoou kookwes'.
-- **mimajuinu** (195468):
-    - Cannibal, Memajooenoo' tan malkomaje mem-
-    - ajooenoou kookwes'.
-- **gugwes** (126407):
-    - Cannibal, Memajooenoo' tan malkomaje mem-
-    - ajooenoou kookwes'.
-- **tulgawei** (363896):
-    - Cannon, Toolkowa'.
+- **atuamgewei** (23238):
+    - Calumet, adooomkãwa' tumakun.
 - **ejeliet** (26082):
     - I cannot, ejelaadoo; ejulea'; Mäseã'.
-- **mesiet** (182593):
-    - I cannot, ejelaadoo; ejulea'; Mäseã'.
-- **gwitn** (133421):
-    - Canoe, kwedun; Ootool 'Ntool, uktool,-his,
-    - my, thy canoe, or ship.
-- **ugtul** (369557):
-    - Canoe, kwedun; Ootool 'Ntool, uktool,-his,
-    - my, thy canoe, or ship.
-- **sgoqomul** (324022):
-    - A new bark canoe, Skogumool.
-- **ulsaqtew** (372748):
-    - A log canoe, Wölsâktäoo.
-- **witulemg** (436751):
-    - To go in the same "canoe," "ship," etc.,
-    - Weedoolemk'; Weedoolemooã',
-- **witulemuet** (436764):
-    - To go in the same "canoe," "ship," etc.,
-    - Weedoolemk'; Weedoolemooã',
-- **wetulit** (422705):
-    - To own a canoe, Wedoole.
-- **etulit** (54182):
-    - To build a canoe, edoole.
-- **gwitna'q** (133435):
-    - To go in a canoe, kwedunaam.
-- **menigwe'g** (180471):
-    - To go for birch bark, Mänegwa'.
-    - To go for timbers, Telooskã'.
-- **telusget** (348823):
-    - To go for timbers, Telooskã'.
 - **eliga'teget** (30738):
     - To bend the ribs, elegadegá'.
-- **oqajigne'get** (256602):
-    - To get the upper "timbers," Okwojegun-
-    - g.
-- **nmjisimun** (241544):
-    - The thwarts, Numjesemoonul.
-- **oqwajign** (257872):
-    - The gunwale, Okwojegun.
-- **nmjisimune'get** (241558):
-    - To get ready the thwarts, Numjesem-
-    - oonããg
+- **elisgate'gig** (31789):
+    - To cut out the places for the thwarts,
+    - eleskudaägik.
+- **eptaqan** (43167):
+    - Can, eptâkun ; kuneepsumoon'.
+- **etulit** (54182):
+    - To build a canoe, edoole.
+- **ewipg** (56249):
+    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
+- **ewipniaq** (56361):
+    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
+- **gasgwamgiaq** (70961):
+    - Canker, kaskwamkeâk'.
+- **gasueg'g** (71708):
+    - Cancel, kaswekum.
+- **getlewauaqan** (93609):
+    - Candor, kedlawaoookun kedlawäimkãwä'.
+- **getlewei** (93851):
+    - Candid, kedlawãe Welmudoo.
+- **getleweimgewei** (94069):
+    - Candor, kedlawaoookun kedlawäimkãwä'.
+- **gni'psmoq** (117741):
+    - Can, eptâkun ; kuneepsumoon'.
 - **g'taluge'g** (124738):
     - Midships," in the middle of the canoe,
     - kudäloogääk.
 - **g'talugwe'g** (124752):
     - The six ribs for the middle part of the
     - canoe, kudaloogwääk pegoonk'.
+- **gugwes** (126407):
+    - Cannibal, Memajooenoo' tan malkomaje mem-
+    - ajooenoou kookwes'.
+- **gwitn** (133421):
+    - Canoe, kwedun; Ootool 'Ntool, uktool,-his,
+- **gwitna'q** (133435):
+    - To go in a canoe, kwedunaam.
+- **jigteg** (141911):
+    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
+- **lmu'juei** (150245):
+    - Canine, ulumoojooa'.
+- **lmu'juepitl** (150259):
+    - Canine teeth, lmoochooobetul.
+- **lnigalaw** (150437):
+    - Ribs for the end next to the boonäk,
+    - ulnegalow'.
+- **lnigalej** (150451):
+    - Small ulnegalow', ulnegalâ'ch.
+- **malgomajit** (154422):
+    - Cannibal, Memajooenoo' tan malkomaje mem-
+    - ajooenoou kookwes'.
+- **matntimg** (162918):
+    - Campaign, Matundimk tan telipkijematunemk'.
+- **menigwe'g** (180471):
+    - To go for birch bark, Mänegwa'.
+- **mesgilg** (181766):
+    - Camel, Meskilk weisis, tan mogwa' wesoonik.
+- **mesiet** (182593):
+    - I cannot, ejelaadoo; ejulea'; Mäseã'.
+- **metg'seteg** (186595):
+    - Calx, Metkusedek'
+- **mimajuinu** (195468):
+    - Cannibal, Memajooenoo' tan malkomaje mem-
+    - ajooenoou kookwes'.
+- **mimgusgawig** (196544):
+    - Ribs next to the end, Mimkooskawijik.
+- **nasmigal'gig** (216550):
+    - To frame in the thwarts, Nasmiskalugik.
+- **nasmisgalgig** (216603):
+    - To frame in the thwarts, Nasmiskalugik.
+- **netuaqji'j** (230147):
+    - The last rib in the end, Nedoookcheech.
+- **nituaqji'j** (240742):
+    - The last rib in the end, Nedoookcheech.
+- **nitug** (240756):
+    - The ribs next to the mimkooska'wijik,
+    - Nedook, plur. Nedoookw.
+- **nmjisimun** (241544):
+    - The thwarts, Numjesemoonul.
+- **nmjisimune'get** (241558):
+    - To get ready the thwarts, Numjesem-
+    - oonããg
+- **oqajigne'get** (256602):
+    - To get the upper "timbers," Okwojegun-
+    - g.
+- **oqwajign** (257872):
+    - The gunwale, Okwojegun.
+- **penetgwit** (274714):
+    - To calve, Penetkwit'.
+- **pgu** (283389):
+    - Camphor, upkoo' welemaak.
+- **pgu** (283403):
+    - Candy, Upkoo, (chewing gum.)
+- **pigung** (285383):
+    - Curved oval ribs, Wolwobesijik pegoonk'.
+    - (Oval, Wolwobaak.)
 - **pigung** (285397):
     - The six ribs for the middle part of the
     - canoe, kudaloogwääk pegoonk'.
+- **pilsapugwet** (287688):
+    - To calumniate, Pilsimk; Pilsaboogoo ; Pil-
+- **pilse'g** (287790):
+    - To calumniate, Pilsimk; Pilsaboogoo ; Pil-
+    - säâk'.
+- **pilse'matl** (287876):
+    - Calumny, Pilsoode; Pilsäimk.
+- **pilsimatl** (287977):
+    - To calumniate, Pilsimk; Pilsaboogoo ; Pil-
+- **pilsuti** (288230):
+    - Calumny, Pilsoode; Pilsäimk.
+- **ps'ge'gn** (297768):
+    - Canal, upsugäagun.
+- **pugteweg** (299635):
+    - Candent, Booktäwek'.
+- **pugwelg** (300676):
+    - Camp, Oodun' wejekesedäsik wigwom-oo-
+    - iktook; Ségeguneegunul pegwelkul mow-
+    - a'dasigul.
+- **pujgalg'tug** (301872):
+    - The place near the end, Boochkalkudook.
 - **pun** (301955):
     - The sitting place: the cross-piece on which
     - the paddler sits, Boon.
 - **pune'g** (302610):
     - The ribs of the sitting place, Boonäk
     - pegoonk'.
-- **lnigalaw** (150437):
-    - Ribs for the end next to the boonäk,
-    - ulnegalow'.
-- **lnigalej** (150451):
-    - Small ulnegalow', ulnegalâ'ch.
-- **mimgusgawig** (196544):
-    - Ribs next to the end, Mimkooskawijik.
-- **nitug** (240756):
-    - The ribs next to the mimkooska'wijik,
-    - Nedook, plur. Nedoookw.
-- **pigung** (285383):
-    - Curved oval ribs, Wolwobesijik pegoonk'.
-    - (Oval, Wolwobaak.)
-- **waluapisit** (382636):
-    - Curved oval ribs, Wolwobesijik pegoonk'.
-    - (Oval, Wolwobaak.)
-- **walapa'q** (381385):
-    - (Oval, Wolwobaak.)
-- **waluapa'q** (382622):
-    - (Oval, Wolwobaak.)
-- **netuaqji'j** (230147):
-    - The last rib in the end, Nedoookcheech.
-- **nituaqji'j** (240742):
-    - The last rib in the end, Nedoookcheech.
-- **pujgalg'tug** (301872):
-    - The place near the end, Boochkalkudook.
-- **elisgate'gig** (31789):
-    - To cut out the places for the thwarts,
-    - eleskudaägik.
-- **nasmigal'gig** (216550):
-    - To frame in the thwarts, Nasmiskalugik.
-- **nasmisgalgig** (216603):
-    - To frame in the thwarts, Nasmiskalugik.
+- **pusgipilsapugwet** (306758):
+    - Calumniator, Booskepilsaboogooal.
+- **sangewe'g** (310805):
+    - Calm, Sankâwãe awi'buneak': âwipk Chiktek'.
+- **segigni'gn** (317276):
+    - Camp, Oodun' wejekesedäsik wigwom-oo-
+    - iktook; Ségeguneegunul pegwelkul mow-
+    - a'dasigul.
+- **sgoqomul** (324022):
+    - A new bark canoe, Skogumool.
 - **sipoqpisi'tij** (328769):
     - The ends of the okwoj'egun are fastened
     - together. Sebokpeseedich.
 - **sipoqpisi'tij** (328781):
     - The ends of the okwoj'egun are fastened
     - together. Sebokpeseedich.
-- **sipugpisi'tij** (329183):
-    - The ends of the okwoj'egun are fastened
-    - together. Sebokpeseedich.
-- **sipusepiteg** (329258):
-    - Brought together and fastened, Seboos-
-    - ebedek.
 - **sipugpi'sijig** (329155):
     - The frame is brought together at the ends
     - and fastened, Sebokpeesijik.
 - **sipugpi'sijig** (329169):
     - The frame is brought together at the ends
     - and fastened, Sebokpeesijik.
+- **sipugpisi'tij** (329183):
+    - The ends of the okwoj'egun are fastened
+    - together. Sebokpeseedich.
+- **sipusepiteg** (329258):
+    - Brought together and fastened, Seboos-
+    - ebedek.
 - **sunaqtewgm** (333791):
     - Stakes for setting up the frame, Soonok-
     - teogumul.
 - **sunaqtiaqam** (333805):
     - Stakes for setting up the frame, Soonok-
     - teogumul.
-- unclaimed region: Calvary (box 151099) has no Mi'kmaq equivalent and no candidate entry
+- **telipgijimatnemamg** (346494):
+    - Campaign, Matundimk tan telipkijematunemk'.
+- **telusget** (348823):
+    - To go for timbers, Telooskã'.
+- **tmaqan** (360868):
+    - Calumet, adooomkãwa' tumakun.
+- **tulgawei** (363896):
+    - Cannon, Toolkowa'.
+- **ugtul** (369557):
+    - Canoe, kwedun; Ootool 'Ntool, uktool,-his,
+    - my, thy canoe, or ship.
+- **ulsaqtew** (372748):
+    - A log canoe, Wölsâktäoo.
+- **utn** (380083):
+    - Camp, Oodun' wejekesedäsik wigwom-oo-
+    - iktook; Ségeguneegunul pegwelkul mow-
+- **walapa'q** (381385):
+    - The last rib in the end, Nedoookcheech.
+- **waluapa'q** (382622):
+    - The last rib in the end, Nedoookcheech.
+- **waluapisit** (382636):
+    - Curved oval ribs, Wolwobesijik pegoonk'.
+    - (Oval, Wolwobaak.)
+- **wasoqonmaqan** (391764):
+    - Candle, Wösogoonumakun.
+- **wasoqonmaqan'tg** (391957):
+    - Candlestick,
+    - Candor, kedlawaoookun kedlawäimkãwä'.
+- **wejigisitas`g** (397439):
+    - Camp, Oodun' wejekesedäsik wigwom-oo-
+    - iktook; Ségeguneegunul pegwelkul mow-
+- **welima'q** (405654):
+    - Camphor, upkoo' welemaak.
+- **welmtoq** (408202):
+    - Candid, kedlawãe Welmudoo.
+- **wesunig** (418592):
+    - Camel, Meskilk weisis, tan mogwa' wesoonik.
+- **wetulit** (422705):
+    - To own a canoe, Wedoole.
+- **wiguam** (425605):
+    - Camp, Oodun' wejekesedäsik wigwom-oo-
+    - iktook; Ségeguneegunul pegwelkul mow-
+- **wi'sis** (434209):
+    - Camel, Meskilk weisis, tan mogwa' wesoonik.
+- **witulemg** (436751):
+    - To go in the same "canoe," "ship," etc.,
+    - Weedoolemk'; Weedoolemooã',
+- **witulemuet** (436764):
+    - To go in the same "canoe," "ship," etc.,
+    - Weedoolemk'; Weedoolemooã',
+- unclaimed region: Calvary (English headword with no Mi'kmaq equivalent, box 151099)
+- unclaimed region: Candy 'Cane' related lines fully covered
+- unclaimed region: The ribs, the timbers. Pegoonk (box 151114) - no candidate entry
+- unclaimed region: Curved/Nedoookw ribs line partially
+- unclaimed region: running head and page number 49, and footer page number 7 (151173)
 
 ## printed p.50 (75 candidates, 88 boxes)
+- **sunaqtiaqame'get** (333819):
+    - To prepare the stakes for setting up the
+    - frame, Soonokteögumäägä.
+- **elamgi'get** (27207):
+    - To be preparing "the ship-yard," elam-
+    - keegã.
 - **elamge'g** (27175):
     - To level and prepare the place for build-
     - ing a cance. To prepare the "ship-
     - yard," elamkaam.
-- **elamgi'get** (27207):
-    - To be preparing "the ship-yard," elam-
-    - keegã.
-- **eligotuan** (30943):
-    - To affix the bajaadakun, elegodooon/ul.
-- **elisgu'tes'g** (31959):
-    - To shape the ends of the canoe, eliskoo'-
-    - desum.
-- **eloqte'get** (34436):
-    - To nail on the hoops, eloktäãgä.
-- **getguja'toq** (92927):
-    - To capsize it, ketkoojaadoo.
-- **getguja'toq** (92940):
-    - To capsize it, ketkoojaadoo.
-- **gistulit** (110075):
-    - To finish off the canoe, kestoole.
-- **gitulit** (111105):
-    - To finish off the canoe, kestoole.
-- **iga'latl** (134779):
-    - To place in the chigwöbedooow', to adjust
-    - it to its place, Egaaluk chigwobe-
-    - dooow'.
-- **iga'latl** (134849):
-    - To place in the chigwöbedooow', to adjust
-    - it to its place, Egaaluk chigwobe-
-    - dooow'.
+- **saqatua'tagoq** (313879):
+    - To set up the canoe, Sakadooaadagoo.
+- **utaqanji'j** (378749):
+    - Little paddles, Ootaguncheejul.
+- **utaqan** (378694):
+    - A paddle, Ootaagun.
+- **setamipit** (322581):
+    - The steering or stern paddle, Sedamebe.
+- **usgalipi** (376152):
+    - The prow paddle, Ooskalebe.
 - **itaqi'gn** (139890):
     - Pieces of something put under the bark
     - to make it level, Etakeegun, úl.
-- **jigwapituaq** (142105):
-    - To place in the chigwöbedooow', to adjust
-    - it to its place, Egaaluk chigwobe-
-    - dooow'.
-- **jigwapituaw** (142118):
-    - A small piece of board placed in at the
-    - end of the canoe, on the inside, Chig-
-    - wobedooow'.
-- **jigwapituow** (142131):
-    - To place in the chigwöbedooow', to adjust
-    - it to its place, Egaaluk chigwobe-
-    - dooow'.
-- **jigwopituaw** (142145):
-    - A small piece of board placed in at the
-    - end of the canoe, on the inside, Chig-
-    - wobedooow'.
-- **lamigus'g** (147387):
-    - To tar the inside before putting in the
-    - slats and ribs, Lamegoo'sum.
-- **lamigu's'g** (147401):
-    - To tar the inside before putting in the
-    - slats and ribs, Lamegoo'sum.
-- **lamigusign** (147414):
-    - Pitch for the inside, Lämegoosigun.
-- **lemigusign** (148778):
-    - Pitch for the inside, Lämegoosigun.
-- **lls'gn'g** (149860):
-    - I put in a slat, Ilsukunum.
-- **lls'gn'g** (149873):
-    - I put in a slat, Ilsukunum.
-- **lls'gnowet** (149886):
-    - To put in the slats or flat pieces between
-    - the ribs and the bark, Ilsukunowwa'.
-- **lls'gnowet** (149899):
-    - To put in the slats or flat pieces between
-    - the ribs and the bark, Ilsukunowwa'.
-- **ms'sugwi** (204103):
-    - The bottom of the canoe, 'Msusoogwe.
-- **naqn** (215208):
-    - A slat for a canoe, Nâkun.
-- **nemtaqani'sowet** (221847):
-    - To be sewing up the slits in the bark,
-    - Nemtaküneesowwa.
-- **nmaqani's'g** (241181):
-    - To sew up a slit in the bark, Nemtakun-
-    - eesum.
-- **nmtaqnign** (241686):
-    - A slit in the bark made for the purpose
-    - of making it set snugly, Numta-
-    - kunigun.
-- **pagi'gn** (258490):
-    - A "ribbon" to keep the bark snug up to
-    - the gunwale while the work is going
-    - on, Pakeegun.
-- **paja'taqan** (258685):
-    - The upper tier of bark, Bajaaddkun.
-- **paja'taqani's'g** (258701):
-    - I sew it up, i. e., the bajaadakun, Bajaa-
-    - dakuneesum.
-- **paja'taqani'sowet** (258714):
-    - To be sewing up the bajaadakun, Bajaa-
-    - daküneesowwä'.
-- **paqi'gn** (262242):
-    - A "ribbon" to keep the bark snug up to
-    - the gunwale while the work is going
-    - on, Pakeegun.
-- **pelowagw** (270711):
-    - The flat hoop that goes over the end,
-    - Pelowök, plur. .
-- **pelowaq** (270725):
-    - The flat hoop that goes over the end,
-    - Pelowök, plur. .
-- **pelowaq** (270738):
-    - The flat hoop that goes over the end,
-    - Pelowök, plur. .
-- **pelowaqw** (270752):
-    - The flat hoop that goes over the end,
-    - Pelowök, plur. .
-- **pigugwat'g** (285264):
-    - To pitch the canoe-to tar it, Pegoo-
-    - gwodum.
-- **pigugwat'g** (285277):
-    - To pitch the canoe-to tar it, Pegoo-
-    - gwodum.
-- **pijisgule'gn** (286228):
-    - The stuffing for the nose of the canoe,
-    - Pijeskoolaägun.
-- **pijisgule'gn** (286241):
-    - The stuffing for the nose of the canoe,
-    - Pijeskoolaägun.
 - **psi'gwati** (298000):
     - The stick to which the torch is affixed
     - when "torching" for fish, upsee-
@@ -1184,332 +1041,425 @@
     - To raise up the end of the canoe and
     - secure it in the upseegwodeech,
     - Wenakiskoolaadoo.
-- **saqatua'tagoq** (313879):
-    - To set up the canoe, Sakadooaadagoo.
-- **setamipit** (322581):
-    - The steering or stern paddle, Sedamebe.
-- **signpateget** (325818):
-    - To be testing its tightness, by filling it
-    - with water, Sigunbadega'.
-- **signpateget** (325831):
-    - To be testing its tightness, by filling it
-    - with water, Sigunbadega'.
-- **signpa'toq** (325844):
-    - To fill it with water, in order to discover
-    - the leaks, Sigunbaadoo.
-- **signpa'toq** (325857):
-    - To fill it with water, in order to discover
-    - the leaks, Sigunbaadoo.
-- **signtoq** (325954):
-    - (I christen it. Sigundoo'.)
-- **signtoq** (325968):
-    - (I christen it. Sigundoo'.)
-- **sunaqtiaqame'get** (333819):
-    - To prepare the stakes for setting up the
-    - frame, Soonokteögumäägä.
-- **tigutolit** (360007):
-    - To drive in ribs, Tekwtole.
-- **tmaw** (361067):
-    - A small prop, Tumäoo.
-- **tmew** (361080):
-    - A small prop, Tumäoo.
-- **usgalipi** (376152):
-    - The prow paddle, Ooskalebe.
-- **usgijigu'sign** (376540):
-    - Pitch for the outside, Ooskijegoo'sigun.
-- **usgijigu'sign** (376553):
-    - Pitch for the outside, Ooskijegoo'sigun.
-- **usgitaqte'gn** (376946):
-    - The flat hoop nailed on the top of the
-    - gunwale, Ooskedoktaägun.
-- **usgitaqte'gn** (376959):
-    - The flat hoop nailed on the top of the
-    - gunwale, Ooskedoktaägun.
-- **utaqan** (378694):
-    - A paddle, Ootaagun.
-- **utaqane'get** (378708):
-    - To make paddles, Ootaguneegã.
-- **utaqani'get** (378722):
-    - To make paddles, Ootaguneegã.
-- **utaqanji'j** (378749):
-    - Little paddles, Ootaguncheejul.
-- **waqpateget** (389627):
-    - To be sewing on the bark, Wökpadega'.
-- **waqpa'teget** (389640):
-    - To be sewing on the bark, Wökpadega'.
 - **wenaqisgula'toq** (410526):
     - To raise up the end of the canoe and
     - secure it in the upseegwodeech,
     - Wenakiskoolaadoo.
+- **nmtaqnign** (241686):
+    - A slit in the bark made for the purpose
+    - of making it set snugly, Numta-
+    - kunigun.
+- **nemtaqani'sowet** (221847):
+    - To be sewing up the slits in the bark,
+    - Nemtaküneesowwa.
+- **nmaqani's'g** (241181):
+    - To sew up a slit in the bark, Nemtakun-
+    - eesum.
+- **ms'sugwi** (204103):
+    - The bottom of the canoe, 'Msusoogwe.
+- **paja'taqan** (258685):
+    - The upper tier of bark, Bajaaddkun.
+- **paja'taqani'sowet** (258714):
+    - To be sewing up the bajaadakun, Bajaa-
+    - daküneesowwä'.
+- **paja'taqani's'g** (258701):
+    - I sew it up, i. e., the bajaadakun, Bajaa-
+    - dakuneesum.
+- **eligotuan** (30943):
+    - To affix the bajaadakun, elegodooon/ul.
 - **wenaqoqwa'teget** (410552):
     - To raise up the okwojegunul, Wenakok-
     - waadegã'.
 - **wenaqoqwa'teget** (410564):
     - To raise up the okwojegunul, Wenakok-
     - waadegã'.
+- **tmaw** (361067):
+    - A small prop, Tumäoo.
+- **tmew** (361080):
+    - A small prop, Tumäoo.
+- **waqpateget** (389627):
+    - To be sewing on the bark, Wökpadega'.
+- **waqpa'teget** (389640):
+    - To be sewing on the bark, Wökpadega'.
+- **eloqte'get** (34436):
+    - To nail on the hoops, eloktäãgä.
 - **wenaqoqwa'toq** (410590):
     - To raise it up, Wenakokwaadoo.
 - **wenaqoqwa'toq** (410602):
     - To raise it up, Wenakokwaadoo.
+- **getguja'toq** (92927):
+    - To capsize it, ketkoojaadoo.
+- **getguja'toq** (92940):
+    - To capsize it, ketkoojaadoo.
+- **elisgu'tes'g** (31959):
+    - To shape the ends of the canoe, eliskoo'-
+    - desum.
+- **pelowaq** (270725):
+    - The flat hoop that goes over the end,
+    - Pelowök, plur. .
+- **pelowaq** (270738):
+    - The flat hoop that goes over the end,
+    - Pelowök, plur. .
+- **pelowagw** (270711):
+    - The flat hoop that goes over the end,
+    - Pelowök, plur. .
+- **pelowaqw** (270752):
+    - The flat hoop that goes over the end,
+    - Pelowök, plur. .
+- **lamigus'g** (147387):
+    - To tar the inside before putting in the
+    - slats and ribs, Lamegoo'sum.
+- **lamigu's'g** (147401):
+    - To tar the inside before putting in the
+    - slats and ribs, Lamegoo'sum.
+- **lls'gnowet** (149886):
+    - To put in the slats or flat pieces between
+    - the ribs and the bark, Ilsukunowwa'.
+- **lls'gnowet** (149899):
+    - To put in the slats or flat pieces between
+    - the ribs and the bark, Ilsukunowwa'.
+- **lls'gn'g** (149860):
+    - I put in a slat, Ilsukunum.
+- **lls'gn'g** (149873):
+    - I put in a slat, Ilsukunum.
+- **naqn** (215208):
+    - A slat for a canoe, Nâkun.
+- **tigutolit** (360007):
+    - To drive in ribs, Tekwtole.
+- **jigwapituaw** (142118):
+    - A small piece of board placed in at the
+    - end of the canoe, on the inside, Chig-
+    - wobedooow'.
+- **jigwopituaw** (142145):
+    - A small piece of board placed in at the
+    - end of the canoe, on the inside, Chig-
+    - wobedooow'.
+- **iga'latl** (134779):
+    - To place in the chigwöbedooow', to adjust
+    - it to its place, Egaaluk chigwobe-
+    - dooow'.
+- **iga'latl** (134849):
+    - To place in the chigwöbedooow', to adjust
+    - it to its place, Egaaluk chigwobe-
+    - dooow'.
+- **jigwapituaq** (142105):
+    - To place in the chigwöbedooow', to adjust
+    - it to its place, Egaaluk chigwobe-
+    - dooow'.
+- **jigwapituow** (142131):
+    - To place in the chigwöbedooow', to adjust
+    - it to its place, Egaaluk chigwobe-
+    - dooow'.
+- **pigugwat'g** (285264):
+    - To pitch the canoe-to tar it, Pegoo-
+    - gwodum.
+- **pigugwat'g** (285277):
+    - To pitch the canoe-to tar it, Pegoo-
+    - gwodum.
+- **signpa'toq** (325844):
+    - To fill it with water, in order to discover
+    - the leaks, Sigunbaadoo.
+- **signpa'toq** (325857):
+    - To fill it with water, in order to discover
+    - the leaks, Sigunbaadoo.
+- **usgijigu'sign** (376540):
+    - Pitch for the outside, Ooskijegoo'sigun.
+- **usgijigu'sign** (376553):
+    - Pitch for the outside, Ooskijegoo'sigun.
+- **lamigusign** (147414):
+    - Pitch for the inside, Lämegoosigun.
+- **lemigusign** (148778):
+    - Pitch for the inside, Lämegoosigun.
+- **signpateget** (325818):
+    - To be testing its tightness, by filling it
+    - with water, Sigunbadega'.
+- **signpateget** (325831):
+    - To be testing its tightness, by filling it
+    - with water, Sigunbadega'.
+- **signtoq** (325954):
+    - (I christen it. Sigundoo'.)
+- **signtoq** (325968):
+    - (I christen it. Sigundoo'.)
+- **utaqane'get** (378708):
+    - To make paddles, Ootaguneegã.
+- **utaqani'get** (378722):
+    - To make paddles, Ootaguneegã.
+- **gistulit** (110075):
+    - To finish off the canoe, kestoole.
+- **gitulit** (111105):
+    - To finish off the canoe, kestoole.
+- **usgitaqte'gn** (376946):
+    - The flat hoop nailed on the top of the
+    - gunwale, Ooskedoktaägun.
+- **usgitaqte'gn** (376959):
+    - The flat hoop nailed on the top of the
+    - gunwale, Ooskedoktaägun.
+- **pijisgule'gn** (286228):
+    - The stuffing for the nose of the canoe,
+    - Pijeskoolaägun.
+- **pijisgule'gn** (286241):
+    - The stuffing for the nose of the canoe,
+    - Pijeskoolaägun.
+- **pagi'gn** (258490):
+    - A "ribbon" to keep the bark snug up to
+    - the gunwale while the work is going
+    - on, Pakeegun.
+- **paqi'gn** (262242):
+    - A "ribbon" to keep the bark snug up to
+    - the gunwale while the work is going
+    - on, Pakeegun.
+- below threshold (low): entry 315304
 - unmatched: **saqsigwet** (315304)
-- unclaimed region: Right column explanatory note lines 151184-151196 (eliskoo'dĕsŭm ... same nearly as the preceding ... explanation of long/short e)
+- unclaimed region: Right column note lines 151184-151196 (eliskoo'desum ... at the moment.) - explanatory note continuation, not a separate candidate entry
 
 ## printed p.51 (106 candidates, 89 boxes)
-- **samuqwaji'j** (310506):
-    - The frog-a small stick that the chigwebe-
-    - dow stands on, Samoogwoneech.
-- **utlpi'** (379879):
-    - Spruce roots for sewing the bark together,
-    - Ootubeek.
-- **malgopsgatign** (154606):
-    - Stones for keeping down the bark while
-    - setting up and building a canoe,
-    - Malkopskadigunul.
-- **pusinij** (308194):
-    - Let us take a trip by water: Let us go
-    - away in a canoe, Boo'senech.
-- **ji'met** (144152):
-    - To paddle, Cheema.
-- **esitemget** (45751):
-    - To steer, ésedemkã'.
-- **usgaliget** (376138):
-    - To paddle in the prow, Ooskalegã'.
-- **gesgwipiet** (85916):
-    - To shift your paddle to the other side,
-    - keskwebea'.
-- **wigujimet** (426034):
-    - To press the paddle from the canoe
-    - Wegoochema'.
-- **ntawijimet** (244031):
-    - To be a good hand to paddle, Nedow-
-    - wechema'.
-- **enmisugwet** (41370):
-    - To paddle towards home, elmesoogwe.
-- **elisugwit** (32221):
-    - To paddle myself, elesoogwe.
-- **mawigtugja'l'gig** (167263):
-    - To capsize them all together, Mowiktook-
-    - chaalugik.
-- **tplutaqan** (362991):
-    - Canon, utploodâkun.
-- **poqwasn** (296834):
-    - Canopy, Pogwosun; Mooskoon.
-- **musgun** (208874):
-    - Canopy, Pogwosun; Mooskoon.
-- **welta'q** (409236):
-    - Canorus, Weltaak.
-- **ga'sgwit** (71043):
-    - Canter, kaaskwit.
-- **gtapegiaqan** (124927):
-    - Canticle, uktabegeäkun.
-- **segi'gn'tatl** (317316):
-    - Canvass, Ségeegunutk.
-- **weliangapt`g** (403884):
-    - To canvass, Weleankaptum Togumajodegä ;
-    - Togumajodum Pebanooichkadum.
-- **toqomajateget** (362262):
-    - To canvass, Weleankaptum Togumajodegä ;
-    - Togumajodum Pebanooichkadum.
-- **toqomajat'g** (362275):
-    - To canvass, Weleankaptum Togumajodegä ;
-    - Togumajodum Pebanooichkadum.
-- **pipanuijgat'g** (289465):
-    - To canvass, Weleankaptum Togumajodegä ;
-    - Togumajodum Pebanooichkadum.
-- **a'gwesnmit** (1375):
-    - To own a cap, Agwesunume.
-- **a'kwesnmit** (38728):
-    - To own a cap, Agwesunume.
-- **a'gwesnit** (1361):
-    - I am a cap, Agwesune.
-- **a'gwesnig** (1346):
-    - It is a cap, There is a cap, Agwesunik'.
-- **a'kwesnik** (38714):
-    - It is a cap, There is a cap, Agwesunik'.
 - **a'gwesna'q** (1302):
     - I have a cap on, Agwesunaam.
-- **a'qwesna'latl** (19293):
-    - I put a cap on him, Agwesunaaluk.
+- **a'gwesnig** (1346):
+    - It is a cap, There is a cap, Agwesunik'.
+- **a'gwesnit** (1361):
+    - I am a cap, Agwesune.
+- **a'gwesnmit** (1375):
+    - To own a cap, Agwesunume.
 - **a'gwsna'sit** (1390):
     - To put on my own cap, agwesunaase.
-- **mlgigno'ti** (199821):
-    - Capability, Mulgigunöde; 'Nsutooogun ; Nã-
-    - dadaasoode.
-- **ns'tuaqan** (243674):
-    - Capability, Mulgigunöde; 'Nsutooogun ; Nã-
-    - dadaasoode.
-- **natata'suti** (217581):
-    - Capability, Mulgigunöde; 'Nsutooogun ; Nã-
-    - dadaasoode.
-- **nestue'g** (227063):
-    - Capable, Nestooããk Melkigunuk' Nedow-
-    - wetuladegã'.
-- **melgignatl** (176242):
-    - Capable, Nestooããk Melkigunuk' Nedow-
-    - wetuladegã'.
-- **netawil'lateget** (229373):
-    - Capable, Nestooããk Melkigunuk' Nedow-
-    - wetuladegã'.
-- **mesgi'g** (181484):
-    - Capacious, Meskeek.
-- **mesoqoq** (184066):
-    - Cap-a-pie, Wejadegemu oonjek' mesokoo
-    - ookwotku.
-- **uggwat** (364591):
-    - Cap-a-pie, Wejadegemu oonjek' mesokoo
-    - ookwotku.
-- **un'jeg** (374357):
-    - Cap-a-pie, Wejadegemu oonjek' mesokoo
-    - ookwotku.
-- **wejatig'g** (395239):
-    - Cap-a-pie, Wejadegemu oonjek' mesokoo
-    - ookwotku.
-- **gwesowe'g** (131325):
-    - Cape, kwesowwaäk kespuhsowwaäk.
-- **gespusowe'g** (90182):
-    - Cape, kwesowwaäk kespuhsowwaäk.
-- **Unma'gi** (374427):
-    - Cape Breton, p.n., Oonamaagik.
-- **gugmijinaqwenaq** (126173):
-    - Cape Dolphin, p. n., Kookumijenagwänäk'
-- **gispugwitg** (108926):
-    - Cape Negro, p.n., Kespoogwitk'.
-- **plegtiaq** (294071):
-    - Cape St. George, p. n., Plekteok.
-- **teji'guj** (341532):
-    - Cape Enrage, p.n., Tejeegooch.
-- **mespe'g** (184151):
-    - Cape Mispek, p.n., Mespääk.
-- **Puslue'gati** (308303):
-    - Cape Traverse, p.n., Booslooaakade.
-- **Nugumgigewe'j** (245005):
-    - Cape Spry, p.n., Noogoomkegäwäächk
-- **Gitpue'gati** (111015):
-    - Cape Shubenacadie, p.n., Kitpooaakade.
-- **Pug'tapsgwati** (299306):
-    - Cape Porcupine, p.n., Pookudapskwode.
-- **Gt'tnug** (125972):
-    - Cape North, p.n., uktutunook'.
-- **wenaqiet** (410434):
-    - To caper, Wenakuyã' ; Amalkei
-- **amalgat** (6276):
-    - To caper, Wenakuyã' ; Amalkei
-- **getguja'toq** (92913):
-    - Capsize, ketkoojaadoo.
-- **geptin** (82613):
-    - Captain, keptin; Sakumow.
-- **saqamaw** (313127):
-    - Captain, keptin; Sakumow.
-- **geptinewuti** (82640):
-    - Captainship, keptinãoode.
-- **goqwa'latl** (120200):
-    - To captivate, kokwaaluk; kestejooaaluk
-    - Boooinwaaluk.
-- **gistejua'latl** (109163):
-    - To captivate, kokwaaluk; kestejooaaluk
-    - Boooinwaaluk.
-- **puoinua'latl** (303018):
-    - To captivate, kokwaaluk; kestejooaaluk
-    - Boooinwaaluk.
-- **gestejoq** (90265):
-    - Captive, kestejoo.
-- **gestejuategemgewet** (90292):
-    - Captivity, kestejooädegemkäwä!.
-- **nujigistejuateget** (247723):
-    - Captor, Nooje-kestejooädegal Noojekokwaa-
-    - dégã'.
-- **nujigoqwea'teget** (248348):
-    - Captor, Nooje-kestejooädegal Noojekokwaa-
-    - dégã'.
-- **goqwa'teget** (120708):
-    - Capture, kokwaadegemk' kokwa'däkun.
-- **goqwa'taqan** (120447):
-    - Capture, kokwaadegemk' kokwa'däkun.
-- **gutoqwa's'g** (129083):
-    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
-    - makumegowa'.
-- **tepaqan** (350400):
-    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
-    - makumegowa'.
-- **maqamigawet** (157095):
-    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
-    - makumegowa'.
-- **pugtawulg** (299487):
-    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
-    - makumegowa'.
 - **alasuin** (3683):
     - Caravan, Mowömajik malsunâk tanik alasooe-
     - nook'.
-- **malsnaq** (156430):
-    - Caravan, Mowömajik malsunâk tanik alasooe-
-    - nook'.
-- **mowamajig** (202077):
-    - Caravan, Mowömajik malsunâk tanik alasooe-
-    - nook'.
-- **glmuejuapsgw** (114199):
-    - Carbon, kulumooech-wopskw.
-- **nepg** (224643):
-    - Carcass, 'Mtenin nepk
-- **ugtinin** (368429):
-    - Carcass, 'Mtenin nepk
-- **ila'sgw** (137236):
-    - Card, Weegädigunchech! Elaskw.
-- **wi'gatignji'j** (424231):
-    - Card, Weegädigunchech! Elaskw.
-- **lasgugwet** (148538):
-    - To play cards, Elaskoogwei'.
-- **nalgwe'get** (210950):
-    - To card wool, Nalkwaägã.
-- **nalgwaqane'l** (210924):
-    - Cards for carding wool, Nalkwagunäal.
+- **amalgat** (6276):
+    - To caper, Wenakuyã' ; Amalkei
 - **angita'taqan** (9964):
     - Care, Ankedä'däkun Ankodegemkäwä'.
+- **angotasit** (10229):
+    - Ankodase.
 - **angotegemgewei** (10257):
     - Care, Ankedä'däkun Ankodegemkäwä'.
 - **ango'teget** (10288):
-    - To care for, Ankodum : Ankwäâk' Anko-
-    - degã Sespãooâk' : Ankwäâk'; Agunäâk'
-- **ango'teget** (39428):
-    - To care for, Ankodum : Ankwäâk' Anko-
-    - degã Sespãooâk' : Ankwäâk'; Agunäâk'
-- **sespewaq** (321514):
     - To care for, Ankodum : Ankwäâk' Anko-
     - degã Sespãooâk' : Ankwäâk'; Agunäâk'
 - **angwe'watl** (11179):
     - To care for, Ankodum : Ankwäâk' Anko-
     - degã Sespãooâk' : Ankwäâk'; Agunäâk'
 - **aqanewatl** (17183):
+    - degã Sespãooâk' : Ankwäâk'; Agunäâk'
+- **a'qwesna'latl** (19293):
+    - I put a cap on him, Agwesunaaluk.
+- **elisugwit** (32221):
+    - To paddle myself, elesoogwe.
+- **a'kwesnik** (38714):
+    - It is a cap, There is a cap, Agwesunik'.
+- **a'kwesnmit** (38728):
+    - To own a cap, Agwesunume.
+- **ango'teget** (39428):
     - To care for, Ankodum : Ankwäâk' Anko-
     - degã Sespãooâk' : Ankwäâk'; Agunäâk'
-- **angotasit** (10229):
-    - Ankodase.
+- **enmisugwet** (41370):
+    - To paddle towards home, elmesoogwe.
+- **esitemget** (45751):
+    - To steer, ésedemkã'.
+- **ga'sgwit** (71043):
+    - Canter, kaaskwit.
+- **geptin** (82613):
+    - Captain, keptin; Sakumow.
+- **geptinewuti** (82640):
+    - Captainship, keptinãoode.
+- **gesgwipiet** (85916):
+    - To shift your paddle to the other side,
+    - keskwebea'.
+- **gesiango'teget** (86023):
+    - Careful, Booskeankwääse Noojeankdega'
+    - wetuladegã'.
+- **gespusowe'g** (90182):
+    - Cape, kwesowwaäk kespuhsowwaäk.
+- **gestejoq** (90265):
+    - Captive, kestejoo.
+- **gestejuategemgewet** (90292):
+    - Captivity, kestejooädegemkäwä!.
+- **getguja'toq** (92913):
+    - Capsize, ketkoojaadoo.
+- **getuapsit** (95263):
+    - To take care of one's self, Weläãse; ked-
+    - ooopse.
+- **gispugwitg** (108926):
+    - Cape Negro, p.n., Kespoogwitk'.
+- **gistejua'latl** (109163):
+    - To captivate, kokwaaluk; kestejooaaluk
+- **Gitpue'gati** (111015):
+    - Cape Shubenacadie, p.n., Kitpooaakade.
+- **glmuejuapsgw** (114199):
+    - Carbon, kulumooech-wopskw.
+- **goqwa'latl** (120200):
+    - To captivate, kokwaaluk; kestejooaaluk
+- **goqwa'taqan** (120447):
+    - Capture, kokwaadegemk' kokwa'däkun.
+- **goqwa'teget** (120708):
+    - Capture, kokwaadegemk' kokwa'däkun.
+- **gtapegiaqan** (124927):
+    - Canticle, uktabegeäkun.
+- **Gt'tnug** (125972):
+    - Cape North, p.n., uktutunook'.
+- **gugmijinaqwenaq** (126173):
+    - Cape Dolphin, p. n., Kookumijenagwänäk'
+- **gutoqwa's'g** (129083):
+    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
+    - makumegowa'.
+- **gwesowe'g** (131325):
+    - Cape, kwesowwaäk kespuhsowwaäk.
+- **ila'sgw** (137236):
+    - Card, Weegädigunchech! Elaskw.
+- **ji'met** (144152):
+    - To paddle, Cheema.
+- **lasgugwet** (148538):
+    - To play cards, Elaskoogwei'.
+- **malgopsgatign** (154606):
+    - Stones for keeping down the bark while
+    - setting up and building a canoe,
+    - Malkopskadigunul.
+- **malsnaq** (156430):
+    - Caravan, Mowömajik malsunâk tanik alasooe-
+    - nook'.
+- **maqamigawet** (157095):
+    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
+    - makumegowa'.
+- **mawigtugja'l'gig** (167263):
+    - To capsize them all together, Mowiktook-
+    - chaalugik.
+- **melgignatl** (176242):
+    - Capable, Nestooããk Melkigunuk' Nedow-
+- **menaqa** (179524):
+    - Carefully, Menâkã ; Menâk'uju.
+- **menaqaje'watg** (179574):
+    - To keep it carefully, Menakujawodum.
+- **menaq'ju** (179992):
+    - Carefully, Menâkã ; Menâk'uju.
+- **mesgi'g** (181484):
+    - Capacious, Meskeek.
+- **mesoqoq** (184066):
+    - Cap-a-pie, Wejadegemu oonjek' mesokoo
+    - ookwotku.
+- **mespe'g** (184151):
+    - Cape Mispek, p.n., Mespääk.
+- **mlgigno'ti** (199821):
+    - Capability, Mulgigunöde; 'Nsutooogun ; Nã-
+    - dadaasoode.
+- **mowamajig** (202077):
+    - Caravan, Mowömajik malsunâk tanik alasooe-
+    - nook'.
+- **musgun** (208874):
+    - Canopy, Pogwosun; Mooskoon.
+- **nalgwaqane'l** (210924):
+    - Cards for carding wool, Nalkwagunäal.
+- **nalgwe'get** (210950):
+    - To card wool, Nalkwaägã.
+- **natata'suti** (217581):
+    - Capability, Mulgigunöde; 'Nsutooogun ; Nã-
+    - dadaasoode.
+- **nepg** (224643):
+    - Carcass, 'Mtenin nepk
+- **nestue'g** (227063):
+    - Capable, Nestooããk Melkigunuk' Nedow-
+- **netawil'lateget** (229373):
+    - Capable, Nestooããk Melkigunuk' Nedow-
+    - wetuladegã'.
+- **ns'tuaqan** (243674):
+    - Capability, Mulgigunöde; 'Nsutooogun ; Nã-
+- **ntawijimet** (244031):
+    - To be a good hand to paddle, Nedow-
+    - wechema'.
+- **Nugumgigewe'j** (245005):
+    - Cape Spry, p.n., Noogoomkegäwäächk
+- **nujiangoteget** (246331):
+    - Careful, Booskeankwääse Noojeankdega'
+- **nujigistejuateget** (247723):
+    - Captor, Nooje-kestejooädegal Noojekokwaa-
+    - dégã'.
+- **nujigoqwea'teget** (248348):
+    - Captor, Nooje-kestejooädegal Noojekokwaa-
+    - dégã'.
+- **pemi'pimgewei** (273343):
+    - Career, Pemeebimkãwä'. Telowsimk'
+- **pipanuijgat'g** (289465):
+    - Togumajodum Pebanooichkadum.
+- **plegtiaq** (294071):
+    - Cape St. George, p. n., Plekteok.
+- **poqwasn** (296834):
+    - Canopy, Pogwosun; Mooskoon.
+- **Pug'tapsgwati** (299306):
+    - Cape Porcupine, p.n., Pookudapskwode.
+- **pugtawulg** (299487):
+    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
+    - makumegowa'.
+- **puoinua'latl** (303018):
+    - Boooinwaaluk.
+- **pusgiangwe'sit** (304352):
+    - Careful, Booskeankwääse Noojeankdega'
+- **pusinij** (308194):
+    - Let us take a trip by water: Let us go
+    - away in a canoe, Boo'senech.
+- **Puslue'gati** (308303):
+    - Cape Traverse, p.n., Booslooaakade.
+- **samuqwaji'j** (310506):
+    - The frog-a small stick that the chigwebe-
+    - dow stands on, Samoogwoneech.
+- **saqamaw** (313127):
+    - Captain, keptin; Sakumow.
+- **segi'gn'tatl** (317316):
+    - Canvass, Ségeegunutk.
+- **sespewaq** (321514):
+    - degã Sespãooâk' : Ankwäâk'; Agunäâk'
+- **teji'guj** (341532):
+    - Cape Enrage, p.n., Tejeegooch.
+- **telowsimg** (348003):
+    - Career, Pemeebimkãwä'. Telowsimk'
+- **tepaqan** (350400):
+    - Car, Tobâkun kuhtogwaasik ; Booktawoolk'
+    - makumegowa'.
+- **toqomajateget** (362262):
+    - To canvass, Weleankaptum Togumajodegä ;
+- **toqomajat'g** (362275):
+    - Togumajodum Pebanooichkadum.
+- **tplutaqan** (362991):
+    - Canon, utploodâkun.
+- **uggwat** (364591):
+    - Cap-a-pie, Wejadegemu oonjek' mesokoo
+    - ookwotku.
+- **ugtinin** (368429):
+    - Carcass, 'Mtenin nepk
+- **un'jeg** (374357):
+    - Cap-a-pie, Wejadegemu oonjek' mesokoo
+    - ookwotku.
+- **Unma'gi** (374427):
+    - Cape Breton, p.n., Oonamaagik.
+- **usgaliget** (376138):
+    - To paddle in the prow, Ooskalegã'.
+- **utlpi'** (379879):
+    - Spruce roots for sewing the bark together,
+    - Ootubeek.
+- **wejatig'g** (395239):
+    - Cap-a-pie, Wejadegemu oonjek' mesokoo
+    - ookwotku.
 - **weleiasit** (403071):
     - To take care of one's self, Weläãse; ked-
     - ooopse.
 - **weleiasit** (403083):
     - To take care of one's self, Weläãse; ked-
     - ooopse.
-- **getuapsit** (95263):
-    - To take care of one's self, Weläãse; ked-
-    - ooopse.
-- **pemi'pimgewei** (273343):
-    - Career, Pemeebimkãwä'. Telowsimk'
-- **telowsimg** (348003):
-    - Career, Pemeebimkãwä'. Telowsimk'
-- **pusgiangwe'sit** (304352):
-    - Careful, Booskeankwääse Noojeankdega'
-- **nujiangoteget** (246331):
-    - Careful, Booskeankwääse Noojeankdega'
-- **gesiango'teget** (86023):
-    - Careful, Booskeankwääse Noojeankdega'
-- **menaqa** (179524):
-    - Carefully, Menâkã ; Menâk'uju.
-- **menaq'ju** (179992):
-    - Carefully, Menâkã ; Menâk'uju.
-- **menaqaje'watg** (179574):
-    - To keep it carefully, Menakujawodum.
+- **weliangapt`g** (403884):
+    - To canvass, Weleankaptum Togumajodegä ;
+- **welta'q** (409236):
+    - Canorus, Weltaak.
+- **wenaqiet** (410434):
+    - To caper, Wenakuyã' ; Amalkei
+- **wi'gatignji'j** (424231):
+    - Card, Weegädigunchech! Elaskw.
+- **wigujimet** (426034):
+    - To press the paddle from the canoe
+    - Wegoochema'.
+- below threshold (low): entry 179601
 - unmatched: **menaqajewi'toq** (179601)
-- unclaimed region: Cape (headword line 151267) also has additional Mi'kmaq equivalent kespuhsowwaäk claimed
+- unclaimed region: To caper, Wenakuyã' ; Amalkei — right column line 151291 shared
+- unclaimed region: Captor continuation dega' box 151309
+- unclaimed region: Care continuation Ankodase box 151339
 
 ## printed p.52 (112 candidates, 88 boxes)
 - **ajgajit** (1582):
@@ -1640,24 +1590,19 @@
 - **matatimgewei** (161799):
     - Castigation, Matäimkawa; Wenmäje-kenoo-
     - dumooksoode; Matodimkw ; Wenmajeil-
-    - soodakun.
 - **mate'g** (161890):
     - To castigate, Matääk ; Wenmäjekenamäk';
-    - Matããgg Wenmäjekenamooa'.
 - **mate'get** (162027):
     - To castigate, Matääk ; Wenmäjekenamäk';
     - Matããgg Wenmäjekenamooa'.
 - **mate'mgewei** (162151):
     - Castigation, Matäimkawa; Wenmäje-kenoo-
-    - dumooksoode; Matodimkw ; Wenmajeil-
-    - soodakun.
 - **mesgi'g** (181602):
     - Carnival, Papawooltimk meskeek.
 - **mijisimgewei** (192766):
     - Case-knife, Wokun; Mijesimkãwa' wokun.
 - **munsamaq** (207795):
     - To caress, Moonsamák'; kesälk'; Welkwijaa-
-    - luk Weskagulemak'.
 - **munsam'gewet** (207915):
     - Caress, Moonsamugawa' Oosugagelsoode.
 - **natgiget** (217930):
@@ -1668,7 +1613,6 @@
     - Cashier, Noojeankotk' sooleäwãu.
 - **nuji'ge'g** (247303):
     - Carpenter, Noojeegei kaloosãwe ; kaloosäwit-
-    - awea'; käloosâwitälookwa'.
 - **nujimate'get** (249767):
     - Castigator, Noojematäägã Noojewoonmaje-
     - kenoodumooã'.
@@ -1699,15 +1643,10 @@
     - To carry him on the back, Pemobuk.
 - **pema'teget** (271323):
     - To carry, Pemaadoo; Pema'degã ; Pemnegâ-
-    - dum ; elaadoo elaaluk; Poktowoola'; Tä-
-    - wooptoo.
 - **pema'toq** (271630):
     - To carry, Pemaadoo; Pema'degã ; Pemnegâ-
-    - dum ; elaadoo elaaluk; Poktowoola'; Tä-
-    - wooptoo.
 - **pematumg** (271697):
     - Carriage, Pemadoomk' âladoomk'; Tobâkun ;
-    - Teladegemk'; kuhtogwaasik tobâkun.
 - **pemgetn'g** (271860):
     - To carry it in my hand, kedunum ; Pemked'-
     - unum. To bring, Wechkoonegá'.
@@ -1730,7 +1669,6 @@
 - **poqtawlet** (295920):
     - To carry, Pemaadoo; Pema'degã ; Pemnegâ-
     - dum ; elaadoo elaaluk; Poktowoola'; Tä-
-    - wooptoo.
 - **poqtmiga'laji** (296329):
     - To carry them slung over the shoulder,
     - Poktumega'lugik.
@@ -1780,19 +1718,16 @@
     - To caress, Moonsamák'; kesälk'; Welkwijaa-
     - luk Weskagulemak'.
 - **wenmaje'lsutaqan** (413029):
-    - Castigation, Matäimkawa; Wenmäje-kenoo-
     - dumooksoode; Matodimkw ; Wenmajeil-
     - soodakun.
 - **wenmajigenamaq** (413203):
     - To castigate, Matääk ; Wenmäjekenamäk';
-    - Matããgg Wenmäjekenamooa'.
 - **wenmajiginamuet** (413267):
     - To castigate, Matääk ; Wenmäjekenamäk';
     - Matããgg Wenmäjekenamooa'.
 - **wenmajiginutmugsuti** (413276):
     - Castigation, Matäimkawa; Wenmäje-kenoo-
     - dumooksoode; Matodimkw ; Wenmajeil-
-    - soodakun.
 - **wetawsit** (419877):
     - Carnivorous, Wedowsit weoo's iktook.
 - **weusigt** (422799):
@@ -1808,8 +1743,6 @@
     - Carrot, Wisowibuneksit.
 - **wius** (436860):
     - Carrion, Soogulugâk' weoos'; elküjak'.
-- unclaimed region: Line 151356 'To make it carefully, Menakujaweedoo' - no candidate entry
-- unclaimed region: Line 151372 'Car, Booktaoolkw makumegowa' - no candidate entry
 
 ## printed p.53 (135 candidates, 88 boxes)
 - **amaligja'jit** (6306):
@@ -1834,8 +1767,6 @@
     - dumâküne-kenamooksoode
 - **elmalqei** (32495):
     - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
-    - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
-    - aadâkun.
 - **elmse'g** (33691):
     - Cave, Cavern, Wolunsuktek'; Wowchakum-
     - egek'; Lamsok ; elmusäãk'.
@@ -1846,14 +1777,11 @@
     - dumâküne-kenamooksoode
 - **elmalqei** (40269):
     - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
-    - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
-    - aadâkun.
 - **e'pitewei** (42736):
     - Catamenia, Depkunoosetäwä ; äbitãwã' ukse-
     - noogowokun.
 - **gapsgw** (62987):
     - A Cataract, kapskw Mpukikã uksenoogo-
-    - wokun.
 - **ga'qaqujui'sit** (64244):
     - To caw, kakakoojooweese.
 - **gaqs'g** (68507):
@@ -1868,12 +1796,9 @@
     - dumâküne-kenamooksoode
 - **ginape'wit** (100551):
     - Cavalier, adj., Melkedaase ; kenab'âwe kenab-
-    - awedoodum ; Melkedoodum ; Noojematun-
-    - g.
 - **ginapewitut'g** (100565):
     - Cavalier, adj., Melkedaase ; kenab'âwe kenab-
     - awedoodum ; Melkedoodum ; Noojematun-
-    - g.
 - **glujiewtosimgewei** (114945):
     - Catholicism, kloocheowktosimkãwa alasoo-
     - dumâküne-kenamooksoode
@@ -1929,12 +1854,9 @@
     - wenjeegwom.
 - **melgita'sit** (177378):
     - Cavalier, adj., Melkedaase ; kenab'âwe kenab-
-    - awedoodum ; Melkedoodum ; Noojematun-
-    - g.
 - **melgitut'g** (177759):
     - Cavalier, adj., Melkedaase ; kenab'âwe kenab-
     - awedoodum ; Melkedoodum ; Noojematun-
-    - g.
 - **menatl** (180295):
     - To castrate, Mensuk.
 - **mensatl** (180596):
@@ -1996,11 +1918,8 @@
 - **pijisgig** (286115):
     - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
     - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
-    - aadâkun.
 - **pilnisgig** (287523):
-    - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
     - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
-    - aadâkun.
 - **pipanigemit** (289109):
     - To catechize, Pebanegese Wägwämäk';
     - Pebanegeme Pebanimkik.
@@ -2011,9 +1930,7 @@
     - Wägwämatinãwä'.
 - **pipanigesit** (289191):
     - To catechize, Pebanegese Wägwämäk';
-    - Pebanegeme Pebanimkik.
 - **pipanimgig** (289287):
-    - To catechize, Pebanegese Wägwämäk';
     - Pebanegeme Pebanimkik.
 - **pisgataqanamug** (290942):
     - Catenation, Piskadakunamook'; Telemowwa'-
@@ -2022,16 +1939,12 @@
     - Catenation, Piskadakunamook'; Telemowwa'-
     - dasik stugã piska'däkunäbe.
 - **psitgwa'tas'g** (298124):
-    - Cause, Tan eloogwek' tan wejetula'dasik tan
-    - pasuk kogooa'. 'Mtumodakun tébloodegem-
     - kâwa : upsitkwa'dasik.
 - **pugmaqan** (298908):
     - Cat-o-nine-tails, Poogumákun peskoonâduk-
     - täsootkugul.
 - **punatasit** (302446):
     - Ceaseless, Moo bonadäsinook Yapchoo eloo-
-    - gwek'; Yapchoo téla'dègã'; Moo yapchoo
-    - nenka'senook.
 - **qasgusi** (309509):
     - Cedar, kâkskoose Sâkskoose.
 - **saputa'taqan** (312776):
@@ -2042,7 +1955,6 @@
     - da'dakuna/ mpesoon.
 - **saqaweiamselapuguet** (313981):
     - To cavil, Sägãw-Amselaboogooa' Papaboo-
-    - gooa'.
 - **saqsgusi** (315235):
     - Cedar, kâkskoose Sâkskoose.
 - **segewiamselapuguemgewei** (317107):
@@ -2050,13 +1962,11 @@
     - boogooemkãwä'.
 - **sgna'gw** (323883):
     - Cattail-flags, Skünaaskw Skünow' plur.,
-    - Skunâk'.
 - **sgnaq** (323897):
     - Cattail-flags, Skünaaskw Skünow' plur.,
     - Skunâk'.
 - **sgnaw** (323911):
     - Cattail-flags, Skünaaskw Skünow' plur.,
-    - Skunâk'.
 - **sipelteg** (327964):
     - Catalogue, Mowwegasigul wesoonul sebeltegul.
 - **sitapuguemgewei** (330600):
@@ -2069,13 +1979,9 @@
     - ooa'dijik.
 - **talnanutewei** (335204):
     - A catechism, Talnanootãwa' ; ba weegäd'-
-    - igun wejuhchooeâk' pebanegesimkäwa-ooik-
-    - took ak usedaboogooemkãwa-ooiktook
-    - Wägwämatinãwä'.
 - **tela'teget** (343021):
     - Ceaseless, Moo bonadäsinook Yapchoo eloo-
     - gwek'; Yapchoo téla'dègã'; Moo yapchoo
-    - nenka'senook.
 - **telgi'g** (344286):
     - Catholic, Mowimsutawa; Tan telkeek oosit-
     - kumook tula; Mesteieek.
@@ -2084,7 +1990,6 @@
     - dasik stugã piska'däkunäbe.
 - **tepgnusitewei** (351684):
     - Catamenia, Depkunoosetäwä ; äbitãwã' ukse-
-    - noogowokun.
 - **tepisewei** (352157):
     - Cayenne, Dapesãwãäl mégwäägul.
 - **tetaputesg** (354654):
@@ -2102,8 +2007,6 @@
     - kumook tula; Mesteieek.
 - **tugune'g** (363681):
     - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
-    - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
-    - aadâkun.
 - **ugsitgmug** (367009):
     - Catholic, Mowimsutawa; Tan telkeek oosit-
     - kumook tula; Mesteieek.
@@ -2114,7 +2017,6 @@
 - **utue'mit** (380276):
     - To own cattle, Ootooame.
 - **walgopega'taqan** (381575):
-    - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
     - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
     - aadâkun.
 - **walgopega'toq** (381629):
@@ -2137,14 +2039,9 @@
 - **walpega'taqan** (382451):
     - Cavity, Toogoonääk ; elmälkük; Wlbegaa-
     - dâkun Pijiskik; (Peluniskik) ; Wölkobeg-
-    - aadâkun.
 - **waqalusan** (387261):
     - Castle, Wokaloosan Meskeek ak melkigunâk'
-    - wenjeegwom.
 - **wegwamatinewei** (394393):
-    - A catechism, Talnanootãwa' ; ba weegäd'-
-    - igun wejuhchooeâk' pebanegesimkäwa-ooik-
-    - took ak usedaboogooemkãwa-ooiktook
     - Wägwämatinãwä'.
 - **wegwemaq** (394674):
     - To catechize, Pebanegese Wägwämäk';
@@ -2158,7 +2055,6 @@
 - **wejitla'tas`g** (399453):
     - Cause, Tan eloogwek' tan wejetula'dasik tan
     - pasuk kogooa'. 'Mtumodakun tébloodegem-
-    - kâwa : upsitkwa'dasik.
 - **wejitligisita's`g** (399546):
     - Catastrophe, 'Mtooa'dakun tan wiskodaägek
     - wejetulekesedäsik.
@@ -2187,7 +2083,6 @@
     - Wägwämatinãwä'.
 - **wilili** (428124):
     - Castor, kobet Wesunow : Welele' Wesunâk';
-    - A'gwesun.
 - **wisgote'geg** (433092):
     - Catastrophe, 'Mtooa'dakun tan wiskodaägek
     - wejetulekesedäsik.
@@ -2195,10 +2090,8 @@
     - Cattle, Wenjoodeämook'; Weisisk.
 - **wisnaq** (434594):
     - Castor, kobet Wesunow : Welele' Wesunâk';
-    - A'gwesun.
 - **wisnaw** (434607):
     - Castor, kobet Wesunow : Welele' Wesunâk';
-    - A'gwesun.
 - **wisun** (435431):
     - Catalogue, Mowwegasigul wesoonul sebeltegul.
 - **wowjaqamigeg** (437522):
@@ -2242,7 +2135,7 @@
     - wäeagunoodum kegenoodumak'; kedlä-
     - waekenoodumäk'.
 - **eluitmasutietegemgewei** (37053):
-    - Certificate,
+    - Certainly, kedul edook: Meamooch' amooch'.
     - kegenooldimkawä'.
 - **anite'matl** (39450):
     - To censure, Anedalumuk'; Mesimk'; nadäle-
@@ -2252,6 +2145,7 @@
     - Laplesoon.
 - **e'pune'g** (43469):
     - Centenarian, Tan
+    - Centesimal, kuskimtulmakunal.
 - **etl'gatg** (50929):
     - Celestial, Wasogâwa'; Nikskamawa'; Tan
     - etlugätk wasgu ansäläwijik.
@@ -2263,7 +2157,7 @@
 - **gasg'ptlnaqanipug'g** (70906):
     - Century, küskimtulnküne-boonkük.
 - **geginultimgewei** (73377):
-    - Certificate,
+    - Certainly, kedul edook: Meamooch' amooch'.
     - kegenooldimkawä'.
 - **geginutmaq** (73418):
     - To certify, eloowedumasoodeâdegã; kedlã-
@@ -2397,8 +2291,10 @@
     - awomooksooltijik.
 - **nujimtmite'lmatl** (250166):
     - Celebrator, Noojimtumedäälumk ; Nootume-
+    - Celebrity, kepmäak ; Mowikpumedá/dakun
 - **nutmite'teget** (255537):
     - Celebrator, Noojimtumedäälumk ; Nootume-
+    - Celebrity, kepmäak ; Mowikpumedá/dakun
 - **oqsgijiguegewei** (257428):
     - Cement, Okskijegooegäwä'; 'mchügegun um-
     - chumuk'.
@@ -2424,20 +2320,16 @@
     - Booneâk'; Boonabek ; kespea' késpeâk'.
 - **punaqatg** (302418):
     - To cease, Boonaadega' Boonagdum; Boonea';
-    - Booneâk'; Boonabek ; kespea' késpeâk'.
 - **puna'teget** (302487):
     - To cease, Boonaadega' Boonagdum; Boonea';
-    - Booneâk'; Boonabek ; kespea' késpeâk'.
 - **punewaqwet** (302637):
     - To cease talking, Boonâwogwa.
 - **punewistoq** (302651):
     - I cease speaking, Boonâ-wistoo.
 - **puniaq** (302714):
-    - To cease, Boonaadega' Boonagdum; Boonea';
     - Booneâk'; Boonabek ; kespea' késpeâk'.
 - **puniet** (302794):
     - To cease, Boonaadega' Boonagdum; Boonea';
-    - Booneâk'; Boonabek ; kespea' késpeâk'.
 - **punigsipal'sit** (302834):
     - I cease scratching myself, &c., Boon-
     - ikseba'luse.
@@ -2522,6 +2414,8 @@
 - **wisga'timg** (432566):
     - Celerity, Säsakasooltimk; Säsakasimk'; Nak-
     - saasimk; Wiskaadimk.
+- unclaimed region: Line 151540-151542: 'Boonâ—as a prefix to any verb, signifies To cease—as:' (grammatical note, no candidate)
+- unclaimed region: Line 151569 'Certificate,' header portion shared
 
 ## printed p.55 (106 candidates, 86 boxes)
 - **amoqs'g** (8607):
@@ -2536,7 +2430,6 @@
     - Andadäwinkadum
 - **apsgwa'toq** (15063):
     - To change, Apskwaadoo ; kewonskaadoo.
-    - Sasawe; Sasawaadoo.
 - **aptaqopisotalatl** (15578):
     - To put a chaplet on him, Aptugopesodulk.
 - **aptaqopisutia'q** (15592):
@@ -2586,7 +2479,6 @@
     - Champion, kenap.
 - **giwansga'toq** (111752):
     - To change, Apskwaadoo ; kewonskaadoo.
-    - Sasawe; Sasawaadoo.
 - **glamuejuapsgw** (113565):
     - Charcoal, Loosakadow'; Booksetow'; kúlum-
     - ooechwopskw ; ebibunoktek booksetowu.
@@ -2669,7 +2561,6 @@
     - wodum.
 - **pitg'swawet** (292537):
     - To charge a gun, Pitkusowwa'; Pitkusa-
-    - wodum.
 - **poqt'sga's'g** (296410):
     - Chamber, kakwääk' poktuskaasik.
 - **ps'ge'gn** (297782):
@@ -2677,7 +2568,6 @@
 - **psitn** (298138):
     - Channel, upsedun; upsugäãgun.
 - **psulgusguaw** (298276):
-    - Chap, (The upper part of a beast's mouth),
     - kakwägã ootoon ; Upsoolkooskooow',
 - **pugsetaw** (299032):
     - Charcoal, Loosakadow'; Booksetow'; kúlum-
@@ -2728,11 +2618,9 @@
 - **tetapuiaqewei** (354478):
     - Tedâbooeagawä.
 - **ugwewti** (370428):
-    - Chagrin, Woonmajaooákun ; Woonmäjeda-
     - dâkun Ookweioode ; Sespãooâkun.
 - **unmajewaqan** (374454):
     - Chagrin, Woonmajaooákun ; Woonmäjeda-
-    - dâkun Ookweioode ; Sespãooâkun.
 - **unmajite'taqan** (374681):
     - Chagrin, Woonmajaooákun ; Woonmäjeda-
     - dâkun Ookweioode ; Sespãooâkun.
@@ -2743,7 +2631,6 @@
     - Chaps, Weisis ootoogobaggunul.
 - **wa'gus'g** (380646):
     - To channel, V. a., Wölkoosum ; Wölgwodum
-    - Wolkoosasik.
 - **walapsgig** (381437):
     - In a rock, Wölapskek'.
 - **walgusas'g** (381754):
@@ -2751,7 +2638,6 @@
     - Wolkoosasik.
 - **walgwat'g** (381868):
     - To channel, V. a., Wölkoosum ; Wölgwodum
-    - Wolkoosasik.
 - **wasoqonmaqn** (391970):
     - Chandler, Noojedogul wosogoonumákunul
 - **weaiugtuatl** (393760):
@@ -2781,6 +2667,5 @@
     - He has a bad character, Winmudok'.
 - **wi'sis** (434222):
     - Chaps, Weisis ootoogobaggunul.
-- unclaimed region: To chalk headword line (151646) also has variant continuation matched
-- unclaimed region: Chalk head (151644)
-- unclaimed region: To champ (151666) champ
+- unclaimed region: Chalk, kakayok' (headword 'Chalk' line 151644 shared)
+- unclaimed region: Chamber sub-line kakwääk' poktuskaasik

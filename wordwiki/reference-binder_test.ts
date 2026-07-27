@@ -91,10 +91,12 @@ function seed(fx: Fixture) {
         {document_id, page_number: 3, printed_page_number: 7,
          image_ref: 'content/x.jpg', width: 1000, height: 1000, description: ''}, 'page_id');
     const textLayer = scannedDocument.getOrCreateNamedLayer(document_id, 'Text', 1);
-    const box = (y: number, text: string) => db().insert<any, 'bounding_box_id'>(
+    const box = (y: number, text: string, w = 500) => db().insert<any, 'bounding_box_id'>(
         'bounding_box', {document_id, layer_id: textLayer, page_id,
-                         x: 100, y, w: 500, h: 40, text}, 'bounding_box_id');
-    const b1 = box(100, 'To abate, abatew.');
+                         x: 100, y, w, h: 40, text}, 'bounding_box_id');
+    // b1 is TRUNCATED (the OCR missed the line's accented tail): 200px wide
+    // in a column whose right edge is 600 (the other boxes).
+    const b1 = box(100, 'To abate,', 200);
     const b2 = box(150, 'continuation line.');
     const b3 = box(200, 'Something else.');
     return {ww, e1, e2, document_id, page_id, b1, b2, b3};
@@ -128,7 +130,9 @@ test("binder: input assembly, landing on the sheet, idempotence, thresholds, dry
                 // The fake extraction: e1 on lines b1+b2 (high), e2 not
                 // found (a p.9 dweller), b3 unclaimed.
                 const extraction: binder.BinderExtraction = {
-                    bindings: [{entry_id: e1, box_ids: [b1, b2], confidence: 'high'},
+                    bindings: [{entry_id: e1, box_ids: [b1, b2],
+                                extend_box_ids: [b1],       // truncated: widen
+                                confidence: 'high'},
                                {entry_id: e2, box_ids: [b3], confidence: 'low'}],
                     unmatched_entries: [],
                     unclaimed_regions: ['Something else.'],
@@ -143,8 +147,12 @@ test("binder: input assembly, landing on the sheet, idempotence, thresholds, dry
                 const dry = await binder.bindPages(ww, opts(false));
                 assertEquals(dry[0].bound.map(b => b.entry_id), [e1]);
                 assertEquals(dry[0].bound[0].boxTexts,
-                             ['To abate, abatew.', 'continuation line.']);
-                assertEquals(dry[0].belowThreshold, [{entry_id: e2, confidence: 'low'}]);
+                             ['To abate,', 'continuation line.']);
+                // The truncated box's rect widens to the column edge (600).
+                assertEquals(dry[0].bound[0].rects.map(x => [x.id, x.w, x.extended]),
+                             [[b1, 500, true], [b2, 500, false]]);
+                assertEquals(dry[0].belowThreshold.map(b => [b.entry_id, b.confidence]),
+                             [[e2, 'low']]);
                 assertEquals(db().all<any, any>(
                     `SELECT 1 FROM bndt WHERE ty='ref'`, {}).length, 0);
 
@@ -160,9 +168,14 @@ test("binder: input assembly, landing on the sheet, idempotence, thresholds, dry
                     {l: sheet.layer_id});
                 assertEquals(groups.length, 1);
                 const copied = db().all<any, any>(
-                    `SELECT imported_from_bounding_box_id AS src FROM bounding_box ` +
+                    `SELECT imported_from_bounding_box_id AS src, w FROM bounding_box ` +
                     `WHERE bounding_group_id=:g ORDER BY src`, {g: groups[0].bounding_group_id});
                 assertEquals(copied.map((c: any) => c.src), [b1, b2]);
+                // The COPY of the truncated box landed widened; the Text-layer
+                // original is untouched.
+                assertEquals(copied.map((c: any) => c.w), [500, 500]);
+                assertEquals(db().all<any, any>(
+                    `SELECT w FROM bounding_box WHERE bounding_box_id=:b`, {b: b1})[0].w, 200);
                 const ref = db().all<any, any>(
                     `SELECT id1, attr1, change_by_username FROM bndt WHERE ty='ref'`, {});
                 assertEquals(ref.length, 1);

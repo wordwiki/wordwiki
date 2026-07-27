@@ -37,12 +37,20 @@ import type { WordWiki } from './wordwiki.ts';
 import type { DictionaryStore } from './dictionary-store.ts';
 import { selectScannedDocumentByFriendlyId, selectLayerByLayerName,
          getOrCreateTaggingSheet, type ScannedDocument } from './scanned-document.ts';
-import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup } from './render-page-editor.ts';
+import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup,
+         renderStandaloneBoxes, renderStandaloneGroup,
+         pageEditorURLForBoundingGroup, imageRefDescription } from './render-page-editor.ts';
+import * as entryMeta from './render-entry-meta.ts';
+import { updateBoundingBox, type BoundingBox } from './scanned-document.ts';
+import { asyncRenderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { extractStage, type ExtractConfig, type ExtractStage } from '../liminal/extract.ts';
 import { containedImageSource } from './transcribe.ts';
 
-export const PROMPT_VERSION_BIND = 2;   // v2: english + source_spelling keys
-                                        //   (skeleton matching) - see bindPrompt
+export const PROMPT_VERSION_BIND = 3;   // v2: english + source_spelling keys
+                                        //   (skeleton matching); v3: truncated-
+                                        //   box extension (OCR missed the
+                                        //   accented tail of a line - widen to
+                                        //   the column edge) - see bindPrompt
 export const BIND_MODEL = 'claude-opus-4-8';
 export const BIND_IMAGE_BOX = 2000;   // dense two-column pages; gradeable knob
 
@@ -70,6 +78,7 @@ export interface BinderPageInput {
     printed_page: number;
     page_id: number;
     page_number: number;         // scan order
+    page_width: number;          // column split for truncated-box widening
     image_ref: string;
     boxes: BinderBox[];
     candidates: BinderCandidate[];
@@ -158,9 +167,10 @@ export function pageBinderInput(store: DictionaryStore, doc: ScannedDocument,
                                 citedBook: string, printedPage: number,
                                 opts: {sourceLane?: string} = {})
         : BinderPageInput|undefined {
-    const page = db().first<{page_id: number, page_number: number, image_ref: string},
+    const page = db().first<{page_id: number, page_number: number, image_ref: string,
+                             width: number},
                             {d: number, p: number}>(
-        `SELECT page_id, page_number, image_ref FROM scanned_page ` +
+        `SELECT page_id, page_number, image_ref, width FROM scanned_page ` +
         `WHERE document_id = :d AND printed_page_number = :p`,
         {d: doc.document_id, p: printedPage});
     if(!page) return undefined;
@@ -174,7 +184,8 @@ export function pageBinderInput(store: DictionaryStore, doc: ScannedDocument,
 /**/       ORDER BY x > (SELECT width/2 FROM scanned_page WHERE page_id = :page_id), y`,
         {page_id: page.page_id, layer_id: textLayer.layer_id});
     return {printed_page: printedPage, page_id: page.page_id,
-            page_number: page.page_number, image_ref: page.image_ref,
+            page_number: page.page_number, page_width: page.width,
+            image_ref: page.image_ref,
             boxes: boxes.map(b => ({...b, x: Math.round(b.x), y: Math.round(b.y),
                                     w: Math.round(b.w), h: Math.round(b.h)})),
             candidates: candidatesForPage(store, citedBook, printedPage, opts)};
@@ -185,6 +196,7 @@ export function pageBinderInput(store: DictionaryStore, doc: ScannedDocument,
 // ---------------------------------------------------------------------------------
 
 export interface BinderBinding { entry_id: number; box_ids: number[];
+                                 extend_box_ids?: number[];
                                  confidence: 'high'|'medium'|'low'; note?: string; }
 export interface BinderExtraction { bindings: BinderBinding[];
                                     unmatched_entries: number[];
@@ -197,6 +209,11 @@ export const BINDER_SCHEMA = {
             required: ['entry_id', 'box_ids', 'confidence'],
             properties: {entry_id: {type: 'integer'},
                          box_ids: {type: 'array', items: {type: 'integer'}},
+                         // Boxes (also listed in box_ids) whose printed line
+                         // visibly continues past the box's right edge with
+                         // text of THIS entry - the OCR missed the tail; the
+                         // landing widens the copy to the column edge.
+                         extend_box_ids: {type: 'array', items: {type: 'integer'}},
                          confidence: {enum: ['high', 'medium', 'low']},
                          note: {type: 'string'}}}},
         unmatched_entries: {type: 'array', items: {type: 'integer'}},
@@ -259,6 +276,12 @@ export function bindPrompt(input: BinderPageInput, bookTitle: string): string {
 /**/  is garbled but position and content agree); "low" = a guess.
 /**/- Page furniture (running heads, page numbers, guide words) belongs to
 /**/  no entry.
+/**/- TRUNCATED BOXES: the OCR sometimes missed the accented tail of a line,
+/**/  so its box covers only the start (often just the English words, with
+/**/  the Mi'kmaq equivalent visibly printed after it but outside the box).
+/**/  Check the image: when a chosen box's printed line continues past the
+/**/  box's right edge with text belonging to the SAME entry, list that box
+/**/  id in extend_box_ids too (the box will be widened to the column edge).
 /**/- unclaimed_regions: short text descriptions of body lines that belong
 /**/  to NO candidate (they indicate entries missing from the candidate
 /**/  list) - not box ids, just human-readable notes.
@@ -323,6 +346,30 @@ export function entryGroupsOnPage(store: DictionaryStore, entry_id: number,
             `WHERE bounding_group_id = :g AND page_id = :p`, {g, p: page_id})?.n ?? 0) > 0);
 }
 
+export interface PlacedBox { id: number; page_id: number;
+                             x: number; y: number; w: number; h: number;
+                             extended: boolean; }
+
+/** The final rectangles for a binding's boxes: extended boxes widen to
+ *  their COLUMN's right edge (the OCR missed the accented tail of the
+ *  line; the print runs to the column edge).  Columns split at the page
+ *  midline - the same rule the box ordering uses. */
+export function placedBoxes(input: BinderPageInput, boxIds: number[],
+                            extendIds: Set<number>): PlacedBox[] {
+    const byId = new Map(input.boxes.map(b => [b.id, b]));
+    const mid = input.page_width / 2;
+    const colEdge = (b: BinderBox) => Math.max(
+        ...input.boxes.filter(x => (x.x < mid) === (b.x < mid)).map(x => x.x + x.w));
+    return boxIds.flatMap(id => {
+        const b = byId.get(id);
+        if(!b) return [];
+        const extended = extendIds.has(id);
+        return [{id, page_id: input.page_id, x: b.x, y: b.y,
+                 w: extended ? Math.max(b.w, colEdge(b) - b.x) : b.w,
+                 h: b.h, extended}];
+    });
+}
+
 export type LandOutcome =
     | {outcome: 'bound', entry_id: number, bounding_group_id: number, fact_id: number}
     | {outcome: 'already-referenced', entry_id: number}
@@ -346,9 +393,19 @@ export function landBinding(ww: WordWiki, store: DictionaryStore, ops: LexemeOps
         return {outcome: 'bad-boxes', entry_id: b.entry_id};
     if(entryGroupsOnPage(store, b.entry_id, input.page_id).length > 0)
         return {outcome: 'already-referenced', entry_id: b.entry_id};
-    const {bounding_group_id} = copyRefBoxToNewGroup(boxIds[0], sheetLayerId, 'green');
-    for(const id of boxIds.slice(1))
-        copyRefBoxToExistingGroup(bounding_group_id, id);
+    const placed = placedBoxes(input, boxIds,
+                               new Set(b.extend_box_ids ?? []));
+    const {bounding_group_id, bounding_box_id: firstCopy} =
+        copyRefBoxToNewGroup(placed[0].id, sheetLayerId, 'green');
+    const copies = [{placed: placed[0], copy: firstCopy}];
+    for(const pb of placed.slice(1))
+        copies.push({placed: pb,
+                     copy: copyRefBoxToExistingGroup(bounding_group_id, pb.id).bounding_box_id});
+    // Widen the copies of truncated boxes to the column edge (the Text-
+    // layer originals stay untouched - only OUR copies stretch).
+    for(const c of copies)
+        if(c.placed.extended)
+            updateBoundingBox(c.copy, ['w'], {w: c.placed.w});
     const {fact_id} = ops.addReferenceToEntry(b.entry_id, bounding_group_id);
     return {outcome: 'bound', entry_id: b.entry_id, bounding_group_id, fact_id};
 }
@@ -374,11 +431,15 @@ export interface BindPagesOptions {
 
 export interface PageBindReport {
     printed_page: number;
+    page_id?: number;
+    page_number?: number;            // scan order (page-editor links)
     candidates: number;
     boxes: number;
-    bound: Array<{entry_id: number, headword: string, boxTexts: string[]}>;
+    bound: Array<{entry_id: number, headword: string, boxTexts: string[],
+                  rects: PlacedBox[], confidence: string}>;
     alreadyReferenced: number[];
-    belowThreshold: Array<{entry_id: number, confidence: string}>;
+    belowThreshold: Array<{entry_id: number, headword: string, confidence: string,
+                           rects: PlacedBox[]}>;
     badBoxes: number[];
     unmatched: Array<{entry_id: number, headword: string}>;
     unclaimed: string[];
@@ -411,7 +472,8 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
             continue;
         }
         const r: PageBindReport = {
-            printed_page: printed, candidates: input.candidates.length,
+            printed_page: printed, page_id: input.page_id,
+            page_number: input.page_number, candidates: input.candidates.length,
             boxes: input.boxes.length, bound: [], alreadyReferenced: [],
             belowThreshold: [], badBoxes: [], unmatched: [], unclaimed: []};
         if(input.candidates.length === 0) { reports.push(r); continue; }
@@ -426,14 +488,17 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
         const bindings = extraction.bindings.filter(b =>
             seen.has(b.entry_id) ? false : (seen.add(b.entry_id), true));
         for(const b of bindings) {
+            const known = b.box_ids.filter(id => boxText.has(id));
+            const rects = placedBoxes(input, known, new Set(b.extend_box_ids ?? []));
             if(!opts.apply) {
                 // Dry run: everything the LANDING would accept reports as a
                 // proposal (threshold + validity applied, nothing written).
                 if(CONFIDENCE_RANK[b.confidence] < CONFIDENCE_RANK[minConfidence]) {
-                    r.belowThreshold.push({entry_id: b.entry_id, confidence: b.confidence});
+                    r.belowThreshold.push({entry_id: b.entry_id,
+                                           headword: headwordOf(b.entry_id),
+                                           confidence: b.confidence, rects});
                     continue;
                 }
-                const known = b.box_ids.filter(id => boxText.has(id));
                 if(known.length === 0 ||
                    !input.candidates.some(c => c.entry_id === b.entry_id)) {
                     r.badBoxes.push(b.entry_id); continue;
@@ -442,18 +507,22 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
                     r.alreadyReferenced.push(b.entry_id); continue;
                 }
                 r.bound.push({entry_id: b.entry_id, headword: headwordOf(b.entry_id),
-                              boxTexts: known.map(id => boxText.get(id) ?? '')});
+                              boxTexts: known.map(id => boxText.get(id) ?? ''),
+                              rects, confidence: b.confidence});
                 continue;
             }
             const out = landBinding(ww, store, ops, sheet, input, b, minConfidence);
             switch(out.outcome) {
                 case 'bound':
                     r.bound.push({entry_id: b.entry_id, headword: headwordOf(b.entry_id),
-                                  boxTexts: b.box_ids.map(id => boxText.get(id) ?? '')});
+                                  boxTexts: known.map(id => boxText.get(id) ?? ''),
+                                  rects, confidence: b.confidence});
                     break;
                 case 'already-referenced': r.alreadyReferenced.push(b.entry_id); break;
                 case 'below-threshold':
-                    r.belowThreshold.push({entry_id: b.entry_id, confidence: b.confidence});
+                    r.belowThreshold.push({entry_id: b.entry_id,
+                                           headword: headwordOf(b.entry_id),
+                                           confidence: b.confidence, rects});
                     break;
                 case 'bad-boxes': r.badBoxes.push(b.entry_id); break;
             }
@@ -470,6 +539,132 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
             (r.unmatched.length ? `, ${r.unmatched.length} unmatched` : ''));
     }
     return reports;
+}
+
+/** The VISUAL review page (dz): a linear list of every proposal with its
+ *  scan region AND the FULL entry rendering (the word view's metadata
+ *  renderer - headword lanes, senses, the transcription/translation
+ *  pairs, citations), so each proposal can be judged against the
+ *  complete entry without leaving the list.  Tiles and styles serve from
+ *  the running app; written into resources/ (the transcribe-eval
+ *  pattern) - view it logged in, e.g. /resources/rand-binder-review.html. */
+export async function bindReviewHtml(ww: WordWiki,
+                                     opts: {book: string, dictionary: string,
+                                            citedBook: string, apply: boolean},
+                                     reports: PageBindReport[]): Promise<string> {
+    const store = ww.storeFor(opts.dictionary);
+    const schema = store.dictSchema;
+    const scan = (rects: PlacedBox[]) => {
+        try {
+            return renderStandaloneBoxes('/', rects.map(r => ({
+                bounding_box_id: r.id, page_id: r.page_id,
+                x: r.x, y: r.y, w: r.w, h: r.h} as BoundingBox)), 3);
+        } catch { return ['span', {class: 'muted'}, '(scan unavailable)']; }
+    };
+    // The full entry, same composition as the facade word page (incl. the
+    // reference-scan renderer for entries that ALREADY carry refs - the
+    // post-apply review).
+    const fullEntry = (entry_id: number) => {
+        const e = store.entriesById.get(entry_id);
+        if(!e) return ['p', {class: 'muted'}, '(entry not found)'];
+        return ['div', {class: 'page-content review-full'},
+                entryMeta.renderEntryMeta(
+                    {rootPath: '/', audience: 'internal',
+                     renderBoundingGroup: (gid: number) => {
+                         try {
+                             const sc = renderStandaloneGroup('/', gid);
+                             let url = ''; try { url = pageEditorURLForBoundingGroup(gid); } catch { /**/ }
+                             let desc = ''; try { desc = imageRefDescription(gid); } catch { /**/ }
+                             return ['div', {},
+                                 ['div', {class: 'lm-me-scan'}, url ? ['a', {href: url}, sc] : sc],
+                                 desc ? ['div', {}, url ? ['a', {href: url}, desc] : desc] : ''];
+                         } catch {
+                             return ['div', {class: 'muted small'}, `(scan group ${gid})`];
+                         }
+                     }},
+                    schema.relationFields[0], e)];
+    };
+    const wordUrl = (id: number) => `/ww/wordwiki.dicts.${opts.dictionary}.word(${id})`;
+    const tot = (f: (r: PageBindReport) => number) => reports.reduce((n, r) => n + f(r), 0);
+
+    const body = [
+        ['h1', {}, `Reference binder review: ${opts.citedBook} \u2192 '${opts.dictionary}'` +
+            (opts.apply ? '' : ' (dry run - nothing landed)')],
+        ['p', {class: 'muted'},
+         `${reports.length} page(s); ${tot(r => r.candidates)} candidates; ` +
+         `${tot(r => r.bound.length)} ${opts.apply ? 'bound' : 'proposed'}; ` +
+         `${tot(r => r.belowThreshold.length)} below threshold; ` +
+         `${tot(r => r.unmatched.length)} unmatched; ` +
+         `${tot(r => r.unclaimed.length)} unclaimed regions`],
+        reports.map(r => [
+            ['h2', {}, `Printed p.${r.printed_page} `,
+             r.noScanPage
+                 ? ['span', {class: 'muted'}, '- no scan page carries this number']
+                 : ['a', {href: `/ww/wordwiki.pages.pageEditor(${JSON.stringify(opts.book)}, ` +
+                                `${r.page_number}, 'Text', ${JSON.stringify(opts.dictionary)})`,
+                          target: '_blank', class: 'muted small'},
+                    `(open page in the tagger)`]],
+            r.bound.map(b => [
+                ['section', {class: 'entry'},
+                 ['h3', {},
+                  ['a', {href: wordUrl(b.entry_id), target: '_blank'}, b.headword],
+                  b.confidence !== 'high'
+                      ? ['span', {class: `badge conf`}, b.confidence] : undefined],
+                 ['div', {class: 'review-cols'},
+                  ['div', {class: 'review-scan'},
+                   ['div', {}, scan(b.rects)],
+                   ['div', {class: 'muted small'},
+                    b.boxTexts.join(' \u23ce '),
+                    b.rects.some(x => x.extended)
+                        ? ['span', {class: 'badge conf ms-1'}, 'widened'] : undefined]],
+                  fullEntry(b.entry_id)]]]),
+            r.belowThreshold.map(b => [
+                ['section', {class: 'entry worklist'},
+                 ['h3', {},
+                  ['a', {href: wordUrl(b.entry_id), target: '_blank'}, b.headword],
+                  ['span', {class: 'badge poor'}, `below threshold: ${b.confidence}`]],
+                 b.rects.length > 0 ? ['div', {}, scan(b.rects)] : undefined]]),
+            r.unmatched.map(u =>
+                ['p', {class: 'worklist'}, '\u2757 unmatched: ',
+                 ['a', {href: wordUrl(u.entry_id), target: '_blank'}, u.headword]]),
+            r.unclaimed.map(u =>
+                ['p', {class: 'muted'}, '\u2753 unclaimed region: ', u]),
+        ]),
+    ];
+    const inner = (await asyncRenderToStringViaLinkeDOM(['div', {}, body]))
+        .replace(/^<!DOCTYPE html>/, '');    // the shell supplies its own
+    // The site's own stylesheets (bootstrap + theme + liminal +
+    // page-editor's transparent svg frames) so the full entry renderings
+    // look exactly like the word views; served same-origin.
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference binder review \u2014 ${opts.citedBook}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/resources/site-theme.css" rel="stylesheet">
+<link href="/resources/instance.css" rel="stylesheet">
+<link href="/resources/liminal.css" rel="stylesheet">
+<link href="/resources/page-editor.css" rel="stylesheet">
+<style>
+ body { margin: 1.5rem auto; max-width: 70rem; padding: 0 1rem; }
+ h1 { font-size: 1.4rem; } h2 { font-size: 1.15rem; margin-top: 2rem;
+      border-bottom: 2px solid #ccc; padding-bottom: .3rem; }
+ h3 { font-size: 1.05rem; margin: 0 0 .3rem; }
+ .muted { color: #6c757d; } .small { font-size: .85rem; }
+ section.entry { margin: 1.3rem 0; padding-top: .8rem; border-top: 1px solid #ddd; }
+ section.worklist, p.worklist { background: #fff8f0; }
+ .conf { background: #fff3cd; color: #664d03; }
+ .poor { background: #f8d7da; color: #842029; }
+ .review-cols { display: flex; gap: 1.2rem; flex-wrap: wrap; align-items: flex-start; }
+ .review-scan { flex: 0 1 24rem; }
+ .review-full { flex: 1 1 26rem; min-width: 0; font-size: .92rem; }
+ .review-full h1 { font-size: 1.05rem; margin: 0 0 .3rem; }
+ .review-scan svg { max-width: 100%; height: auto; border: 1px solid #ddd;
+                    border-radius: 3px; background: #fff; }
+</style></head><body>
+${inner}
+</body></html>
+`;
 }
 
 export function bindReportMarkdown(opts: {book: string, dictionary: string,
