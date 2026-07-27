@@ -102,7 +102,9 @@ machine-contributors loop working as intended.
   printed lines ARE Rand's related-word clusters).  Posture: pending
   (the approval workflow is the control surface) - but see the
   review-UX prerequisite in machine-contributors-design.md §4 before
-  mass-landing.
+  mass-landing.  DZ: it is too much for editors to approve this - at
+  least for the first cuts - I would like this to be born approved,
+  may change after language editors review on staging.
 - **'~clark-support' / '~pacifique-support'** (future) - links from
   REAL dictionaries' entries to support-dictionary entries.
   ASYMMETRY IS EXPLICIT: the consuming side owns the link; support

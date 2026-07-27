@@ -12,6 +12,9 @@ sketch + rand-references §6 pairing).  Core:
 - LIBRARY not monolith: one pair-scorer, SEPARATE landings per
   purpose ('~rand-mmo-pair' high-precision 1:1; '~xref' A-A top-k
   relaxed; '~clark-support'/'~pacifique-support' future).
+- dz DECIDED (doc annotation 2026-07-27): '~xref' is BORN-APPROVED
+  ("too much for editors to approve, at least for the first cuts");
+  may revisit after language editors review on staging.
 - Pass 0 mechanical blocking (per-orthography normalizers AS DATA,
   skeleton + english + category keys — kills O(n^2), free; alone
   lands the survey's 1,443 exact pairs).  Pass 1 = LLM judging ONE
