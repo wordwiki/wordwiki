@@ -144,6 +144,38 @@ machine-contributors loop working as intended.
   feedback loop; separate batches over each other's landed,
   freeze-respecting outputs).
 
+## 2c. Pass 1a: the ALGORITHMIC judge (dz 2026-07-27 - the cost pivot)
+
+dz's economics observation, recorded because it reshaped pass 1: the
+transliteration/language-rules project will KEEP CHANGING the
+normalizers, each change invalidates the judge cache, so the real LLM
+cost is PER RULE-ITERATION - and a design where improving the rules
+costs hundreds of dollars strangles the improving.  "Much of what we
+are filtering here could be done by a normal algorithm authored by an
+LLM" - so it was: similarity-rules.ts, the LLM's development-time
+output committed as REVIEWABLE CODE.  Mi'gmaq-aware string rules in
+skeleton space - verb FINALS (stem comparison under different
+inflections), the diminutive, a curated ROOT_LEXICON (maw/gim/nesp
+seeded; internal roots invisible to prefix logic - GROW ME), prefix
+families, def-overlap bands (rare -> refer, moderate single token ->
+possible-synonym, common single token -> coincidence).  Confident
+verdicts for the clear cases; 'ambiguous' = the REFERRAL BAND, the
+only place an LLM (Sonnet per the judge A/B) would spend - so spend
+scales with genuine ambiguity, not corpus size, and rule iteration is
+free.
+
+Numbers (rules v2, rand->dict, 59,316 pairs, 10s, $0): same-word
+4.9%, related 27.8%, unrelated 59.9%, REFERRAL 7.4% (4,415 pairs -
+~$30 Sonnet if funded, only changed-evidence clusters on re-runs).
+Vs the 42 Opus-judged reference pairs: 36 agree / 4 refer / 2
+boundary disagreements (one where Opus was itself low-confidence; one
+where 'whoever' leaked from an example sentence - the v3 candidate:
+weight gloss tokens above example-translation tokens).  The
+possible-synonym band fired 11k times - generous by design (related
+is ranked + display-capped); a tuning knob if it proves noisy.
+The LLM judge (pass 1b, similarity-judge.ts) remains for the
+referral band + as the rules' free evaluation reference.
+
 ## 3b. The link relations (RESOLVED 2026-07-27, dz + discussion)
 
 **Per-target-dictionary RELATIONS, not a generic link.**  dz's
@@ -259,8 +291,24 @@ those dictionaries when they exist.)
    pairs across ALL lane combinations see far more - recall
    exceeds the survey anchor as hoped).  Report:
    watson/rand-mmo-candidates.md.
-2. The pass-1 judgment stage on the extract substrate + the
-   10-cluster eval; Sonnet-vs-Opus A/B while at it.
+2. ~~The pass-1 judgment stage~~ BUILT 2026-07-27
+   (similarity-judge.ts + text-only extractTextStage on the extract
+   substrate - llm.ts image made optional): one memoized call per
+   cluster (probe + candidates + mechanical evidence in the cache
+   key), verdicts same-word/related/unrelated + confidence + reason
+   + the §3b QUALIFIER, tolerant normalization (judgments-as-string
+   quirk handled), per-cluster failure isolation (nothing caches on
+   failure - the 1 failed eval cluster retried for one call).  CLI
+   similarity-judge [--sample=N] [--model=] [--details=].
+   10-CLUSTER EVAL (rand->dict, watson/rand-mmo-judge-eval.md):
+   5 same-word (plamu/wen/news'g... 4 high), 6 related (the maw-
+   root family, qualifiers like "synonym for 'crave', different
+   lexeme"), 19 coincidences rejected - precision-first as
+   prompted.  ~1.8k in / ~320 out tokens per cluster -> full
+   rand->dict (~15k clusters) est ~27M in / ~5M out (~2x the
+   binder) - a SONNET A/B is much more promising here than it was
+   for the binder (tiny structured outputs, no long-output
+   abandonment risk) and should run before the full batch.
 3. '~rand-mmo-pair' landing via machineSync (the pairing relation +
    role, both word views' support panels) - the first consumer, the
    Watson-packet strengthener.

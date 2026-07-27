@@ -46,7 +46,7 @@ export interface LlmUsage {
  */
 export interface Llm {
     readonly available: boolean;
-    extract(model: string, prompt: string, image: LlmImage,
+    extract(model: string, prompt: string, image: LlmImage|undefined,
             schema: Record<string, unknown>, opts?: LlmExtractOptions): Promise<unknown>;
 }
 
@@ -100,7 +100,7 @@ export class AnthropicLlm implements Llm {
     constructor(private cred: AnthropicCredential,
                 private fetchImpl: typeof fetch = fetch) {}
 
-    async extract(model: string, prompt: string, image: LlmImage,
+    async extract(model: string, prompt: string, image: LlmImage|undefined,
                   schema: Record<string, unknown>, opts: LlmExtractOptions = {}): Promise<unknown> {
         const useModel = model || this.cred.defaultModel;
         if(!useModel) throw new Error('llm: no model given and no defaultModel configured');
@@ -133,7 +133,7 @@ export class AnthropicLlm implements Llm {
 export class DisabledLlm implements Llm {
     readonly available = false;
     constructor(private reason: string) {}
-    extract(_model: string, _prompt: string, _image: LlmImage,
+    extract(_model: string, _prompt: string, _image: LlmImage|undefined,
             _schema: Record<string, unknown>, _opts?: LlmExtractOptions): Promise<unknown> {
         return Promise.reject(new Error(`llm: unavailable (${this.reason})`));
     }
@@ -148,7 +148,7 @@ export class DisabledLlm implements Llm {
  * tool whose input_schema is the caller's schema, with tool_choice pinned to it, and
  * the image (base64) before the prompt text in a single user turn.
  */
-export function buildAnthropicRequest(model: string, prompt: string, image: LlmImage,
+export function buildAnthropicRequest(model: string, prompt: string, image: LlmImage|undefined,
                                       schema: Record<string, unknown>,
                                       opts: LlmExtractOptions = {}): Record<string, unknown> {
     return {
@@ -164,8 +164,12 @@ export function buildAnthropicRequest(model: string, prompt: string, image: LlmI
         messages: [{
             role: 'user',
             content: [
-                {type: 'image', source: {type: 'base64',
-                                         media_type: image.mediaType, data: encodeBase64(image.bytes)}},
+                // TEXT-ONLY extractions (the similarity judge) simply omit
+                // the image block.
+                ...(image !== undefined
+                    ? [{type: 'image', source: {type: 'base64',
+                        media_type: image.mediaType, data: encodeBase64(image.bytes)}}]
+                    : []),
                 {type: 'text', text: prompt},
             ],
         }],

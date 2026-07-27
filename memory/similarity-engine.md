@@ -47,7 +47,23 @@ sketch + rand-references §6 pairing).  Core:
 - PASS 0 BUILT 2026-07-27 (similarity.ts + similarity_test.ts + CLI
   similarity-rebuild/similarity-candidates): dev eval rand->dict =
   59,316 candidates / 15,082 entries (mean 3.9), 5,716 exact-skel
-  pairs, 10s total, no LLM.  NEXT: pass-1 judge stage + 10-cluster
-  eval.
+  pairs, 10s total, no LLM.
+- PASS 1 BUILT 2026-07-27 (similarity-judge.ts; extractTextStage +
+  optional llm image): per-cluster memoized judge, verdict/conf/
+  reason/qualifier, failure isolation.  10-cluster eval: 5 same-word
+  4 high, 6 related w/ qualifiers, 19 rejected; ~1.8k in/cluster ->
+  full rand->dict est ~$250 on Opus; Sonnet A/B: 86% agreement, 0
+  failures, disagreements all fuzzy-boundary (watson/
+  rand-mmo-judge-model-ab.md).
+- PASS 1a BUILT 2026-07-27 (dz's cost pivot: rule iteration must be
+  FREE): similarity-rules.ts = the ALGORITHMIC judge, Mi'gmaq rules
+  as reviewable code (VERB_FINALS, DIMINUTIVE, ROOT_LEXICON
+  maw/gim/nesp - GROW ME, prefix families, def bands).  rand->dict:
+  59,316 pairs in 10s $0 - 4.9% same-word, 27.8% related, 59.9%
+  unrelated, 7.4% REFERRAL band (LLM only there, ~$30 Sonnet).
+  vs 42 Opus refs: 36 agree/4 refer/2 boundary.  v3 candidates:
+  gloss-vs-example token weighting; possible-synonym band tuning.
+  NEXT: '~rand-mmo-pair' landing consumes rule verdicts (+LLM band
+  when funded); CLI similarity-verdicts.
 **How to apply:** build in doc §6 order.  See [[machine-contributors]],
 [[rand-references-project]].

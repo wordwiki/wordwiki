@@ -88,6 +88,25 @@ export async function extractStageCached(cfg: ExtractConfig, photoPath: string,
                             await stageClosure(photoPath, rotate, stage, input), 'json');
 }
 
+/** A TEXT-ONLY stage (no image attached; imageBox ignored) - the
+ *  similarity judge's shape.  Same memoization discipline; the closure is
+ *  keyed 'extract-text' so image and text stages can never collide. */
+export async function extractTextStage(cfg: ExtractConfig, stage: ExtractStage,
+                                       input: unknown): Promise<unknown> {
+    const inputHash = await digestString(JSON.stringify(input ?? null));
+    const contentId = await getDerived(
+        `${cfg.derivedDir}/extractions`,
+        { 'extract-text': async (_target: string) => {
+            const raw = await cfg.llm.extract(stage.model, stage.prompt(input),
+                                              undefined, stage.schema,
+                                              {onUsage: u => cfg.onUsage?.(stage.name, u)});
+            return JSON.stringify(validateExtraction(stage.schema, raw));
+        }},
+        ['extract-text', stage.model, stage.promptVersion, stage.name, inputHash],
+        'json');
+    return JSON.parse(await readDerived(cfg.derivedDir, contentId));
+}
+
 export async function extractStage(cfg: ExtractConfig, photoPath: string, rotate: number,
                                    stage: ExtractStage, input: unknown): Promise<unknown> {
     const box = stage.imageBox || DEFAULT_IMAGE_BOX;

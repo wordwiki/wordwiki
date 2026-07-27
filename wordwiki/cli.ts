@@ -30,6 +30,8 @@ import * as dictionaryTransform from './dictionary-transform.ts';
 import * as printedPages from './printed-pages.ts';
 import * as referenceBinder from './reference-binder.ts';
 import * as similarity from './similarity.ts';
+import * as similarityJudge from './similarity-judge.ts';
+import * as similarityRules from './similarity-rules.ts';
 import * as schemaRoles from './schema-roles.ts';
 import * as scannedDocument from './scanned-document.ts';
 import { loadLlm } from '../liminal/llm.ts';
@@ -1047,6 +1049,87 @@ export async function cliMain(args: string[]): Promise<void> {
                 const report = similarity.candidateReportMarkdown(a, b, cands, headwordOf,
                     {sample: flag('sample') ? Number(flag('sample')) : undefined});
                 console.info(report.split('\n').slice(0, 12).join('\n'));
+                const detailsPath = flag('details');
+                if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Similarity PASS 1 (similarity-design.md §2): judge the pass-0
+        // candidate clusters with the LLM (text-only, memoized per
+        // cluster).  DRY - produces judged pairs + report; the machineSync
+        // landings are their own step.  --sample=N is the eval flow.
+        //   ./wordwiki.sh similarity-judge rand dict --sample=10
+        //                 [--model=...] [--details=path]
+        case 'similarity-judge': {
+            const exitCode = await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                const a = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: similarity-judge <dictA> <dictB> [--sample=N] [--model=] [--details=]');
+                const b = args[2] && !args[2].startsWith('--') ? args[2]
+                    : panic('similarity-judge needs two dictionaries');
+                const flag = (name: string) =>
+                    args.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3);
+                const llm = loadLlm('wordwiki');
+                if(!llm.available)
+                    panic('wordwiki-anthropic-credential.json missing/invalid - LLM unavailable');
+                const usage = {inTok: 0, outTok: 0, calls: 0};
+                const cfg: ExtractConfig = {
+                    derivedDir: 'derived',
+                    image: referenceBinder.binderImageSource(),   // unused (text-only)
+                    llm,
+                    onUsage: (_s, u) => { usage.inTok += u.inputTokens;
+                                          usage.outTok += u.outputTokens; usage.calls++; },
+                };
+                const cands = similarity.candidatePairs(a, b);
+                const r = await similarityJudge.judgeCandidates(
+                    cfg, ww.storeFor(a), ww.storeFor(b), cands,
+                    {model: flag('model'),
+                     sampleClusters: flag('sample') ? Number(flag('sample')) : undefined});
+                const headwordOf = (dict: string, id: number): string => {
+                    const store = ww.storeFor(dict);
+                    const e = store.entriesById.get(id);
+                    return (e && schemaRoles.headwordFallback(store.dictSchema, e)?.text)
+                        ?? `(entry ${id})`;
+                };
+                const report = similarityJudge.judgeReportMarkdown(a, b, r, headwordOf,
+                    {sample: flag('sample-report') ? Number(flag('sample-report')) : undefined});
+                console.info(report.split('\n').slice(0, 10).join('\n'));
+                console.info(`LLM: ${usage.calls} call(s), ${usage.inTok} in / ` +
+                             `${usage.outTok} out tokens (cache hits are free)`);
+                const detailsPath = flag('details');
+                if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
+                return r.failedClusters.length > 0 ? 2 : 0;
+            });
+            Deno.exit(exitCode);
+            break;
+        }
+
+        // Similarity PASS 1a: the ALGORITHMIC judge (similarity-rules.ts)
+        // over the pass-0 candidates - free, deterministic, and the
+        // referral-band accounting that decides any LLM spend.
+        //   ./wordwiki.sh similarity-verdicts rand dict [--details=path]
+        case 'similarity-verdicts': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const a = args[1] && !args[1].startsWith('--') ? args[1]
+                    : panic('usage: similarity-verdicts <dictA> <dictB> [--details=path]');
+                const b = args[2] && !args[2].startsWith('--') ? args[2]
+                    : panic('similarity-verdicts needs two dictionaries');
+                const flag = (name: string) =>
+                    args.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3);
+                const cands = similarity.candidatePairs(a, b);
+                const pairs = similarityRules.ruleVerdicts(a, b, cands);
+                const headwordOf = (dict: string, id: number): string => {
+                    const store = ww.storeFor(dict);
+                    const e = store.entriesById.get(id);
+                    return (e && schemaRoles.headwordFallback(store.dictSchema, e)?.text)
+                        ?? `(entry ${id})`;
+                };
+                const report = similarityRules.ruleReportMarkdown(a, b, pairs, headwordOf,
+                    {sample: flag('sample') ? Number(flag('sample')) : undefined});
+                console.info(report.split('\n').slice(0, 16).join('\n'));
                 const detailsPath = flag('details');
                 if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
             });
