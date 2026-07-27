@@ -5,6 +5,10 @@
    "table": "randraw"
   }
  ],
+ "entryValidFrom": {
+  "from": "dt",
+  "parser": "shoeboxDate"
+ },
  "targetSchema": {
   "$type": "schema",
   "$name": "rand",
@@ -579,7 +583,7 @@
      "content": true
     },
     "variant": {
-     "const": "mm-li"
+     "const": "watson-li"
     }
    }
   },
@@ -591,7 +595,7 @@
      "content": true
     },
     "variant": {
-     "const": "mm-sf"
+     "const": "watson-sf"
     }
    }
   },
@@ -625,7 +629,10 @@
    "to": "subentry/gloss",
    "set": {
     "gloss": {
-     "content": true
+     "content": true,
+     "replaceAll": {
+      "_": " "
+     }
     }
    }
   },
@@ -634,7 +641,10 @@
    "to": "subentry/literal_translation",
    "set": {
     "literal_translation": {
-     "content": true
+     "content": true,
+     "replaceAll": {
+      "_": " "
+     }
     }
    }
   },

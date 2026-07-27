@@ -1,10 +1,11 @@
-# Transform: rand (generation 6)
+# Transform: rand (generation 7)
 
 - entries: 31723
 - assertions: 312197
 - skipped empty: 153976
 - parse misses: 77
 - recode misses: 0
+- entry dates from source (entryValidFrom): 31559
 
 
 ## Mapped source tuples per tag

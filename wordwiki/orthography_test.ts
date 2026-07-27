@@ -30,13 +30,15 @@ test("orthography table: seeded once, idempotently; 'mm' is refused as a row", a
     await withTestDb((fx) => {
         const rows = fx.ww.orthographies.allByOrder.all({});
         assertEquals(rows.map((o: any) => [o.slug, !!o.publishable]),
-                     [['mm-li', true], ['mm-sf', true], ['mm-mp', false], ['mm-pm', false]]);
+                     [['mm-li', true], ['mm-sf', true], ['mm-mp', false], ['mm-pm', false],
+                      ['watson-li', false], ['watson-sf', false], ['rand', false]]);
         assertEquals(seedOrthographies(fx.ww.orthographies).inserted, 0);   // idempotent
         assertThrows(() => fx.ww.orthographies.insert({slug: 'mm', name: 'nope'}),
                      Error, 'wildcard');
         // The scan vocabulary = table slugs + the wildcard.
         assertEquals(orthographyVocabulary(fx.ww.orthographies).sort(),
-                     ['mm', 'mm-li', 'mm-mp', 'mm-pm', 'mm-sf']);
+                     ['mm', 'mm-li', 'mm-mp', 'mm-pm', 'mm-sf',
+                      'rand', 'watson-li', 'watson-sf']);
     });
 });
 

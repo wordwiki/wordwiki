@@ -73,6 +73,12 @@ document references like MMO's, doc of record
   keep identity across Watson drops (cache + refs + links survive;
   edits orphan visibly).  Dev: randraw gen 3, rand gen 6, eval
   re-extracted once (1,064/1,067).
+- Transform iteration 2 (dz 2026-07-26): entryValidFrom (ent
+  valid_from = shoebox \dt via mapping {from,parser}; children keep
+  stamp), VALUE replaceAll ('_'->' ' on ge/de), and OWN orthographies
+  watson-li/watson-sf/rand seeded (lanes off mm-li/mm-sf; survey .py
+  updated; editor dropdowns show them until vocabulary scoping).
+  rand gen 7; eval re-extracted (prompt lanes/glosses changed).
 - dz's review insights (doc §6b): the corpus IS Rand + Watson's
   REVISIONS (display name config set to 'Rand 1888, transcribed and
   revised by Watson'; \xv/\xe = interpretation layer, scan+bindings

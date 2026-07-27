@@ -78,6 +78,63 @@ test("gate: bad rule paths and fields refuse; source-hash drift warns", async ()
     }));
 });
 
+test("entryValidFrom + replaceAll: entry dates from the source; shoebox underscores", async () => {
+    await withTestDb(({ww}) => security.runSystem(() => {
+        try {
+            sfmImport.importSfm(
+                '\\+DatabaseType T\n\\mkrRecord lx\n\\+mkr lx\n\\+mkr ge\n\\mkrOverThis lx\n' +
+                '\\+mkr dt\n\\mkrOverThis lx\n',
+                '\\_sh t\n\n\\lx w1\n\\ge multi_word_gloss\n\\dt 02/Nov/2024\n\n' +
+                '\\lx w2\n\\ge plain\n\\dt junk-date\n',
+                {table: 'evfsrc', structure: 'tree'});
+            const target = {
+                $type: 'schema', $name: 'v', $tag: 'tevf',
+                entry: {$type: 'relation', $tag: 'ent', entry_id: {$type: 'primary_key'},
+                        gloss: {$type: 'relation', $tag: 'gls', gloss_id: {$type: 'primary_key'},
+                                gloss: {$type: 'string', $bind: 'attr1'}}}};
+            const mapping = {formatVersion: 1, sources: [{table: 'evfsrc'}],
+                targetSchema: target,
+                entryValidFrom: {from: 'dt', parser: 'shoeboxDate'},
+                rules: [{from: 'ge', to: 'gloss',
+                         set: {gloss: {content: true, replaceAll: {'_': ' '}}}}]};
+
+            // The gate vets the entryValidFrom path and parser.
+            const srcSchema = ww.storeFor('evfsrc').dictSchema;
+            const srcText = dictionaryConfig.readConfigValue('evfsrc', 'schema')!;
+            const bad = dt.checkMapping({...mapping,
+                entryValidFrom: {from: 'nope', parser: 'noSuch'}} as any, srcSchema, srcText);
+            assertEquals(bad.problems.length, 2);
+
+            dictionaryConfig.createDictionary('evftgt', target, {slug: 'evftgt'});
+            dictionaryConfig.writeConfigValue('evftgt', 'transform', JSON.stringify(mapping));
+            const r = dt.runTransform('evftgt', ww.storeFor('evfsrc'));
+            assertEquals(r.entryDatesFromSource, 1);       // w2's dt is junk
+
+            const q = (sql: string): any[] => db().all<any, any>(sql, {});
+            // The shoebox underscores read as spaces in the target...
+            assertEquals(q(`SELECT attr1 FROM evftgt WHERE ty='gls' ORDER BY attr1`)
+                         .map(g => g.attr1), ['multi word gloss', 'plain']);
+            // ...and w1's ENT assertion is dated by its shoebox date (its
+            // gloss keeps the transform stamp - always later, so the
+            // parent-before-child invariant holds); w2 falls back to the
+            // stamp.
+            const expected = dt.ENTRY_TIMESTAMP_PARSERS.shoeboxDate('02/Nov/2024')!;
+            const ents = q(`SELECT valid_from FROM evftgt WHERE ty='ent' ORDER BY valid_from`);
+            assertEquals(ents[0].valid_from, expected);
+            const stamp = ents[1].valid_from;              // w2 = the stamp
+            assertEquals(expected < stamp, true);
+            assertEquals(q(`SELECT MIN(valid_from) AS v FROM evftgt WHERE ty='gls'`)[0].v,
+                         stamp);
+            // The store loads (parent-dates-before-children validates).
+            assertEquals((ww.storeFor('evftgt').entries as any[]).length, 2);
+        } finally {
+            db().executeStatements(
+                'DROP TABLE IF EXISTS evfsrc; DROP TABLE IF EXISTS evfsrc_dict_config;' +
+                'DROP TABLE IF EXISTS evftgt; DROP TABLE IF EXISTS evftgt_dict_config;');
+        }
+    }));
+});
+
 test("preserve-foreign: human facts survive; tombstones stay dead; orphans report", async () => {
     const EOT = 9007199254740991;
     await withTestDb(({ww}) => security.runSystem(() => {
@@ -228,12 +285,12 @@ test("the MERGED corpus: lanes, partition + divergence ride as attrs", async () 
             const e0 = entries.find((e: any) =>
                 (e.spelling ?? []).some((sp: any) => sp.text === 'a'));
             assertEquals(e0.spelling.map((s: any) => [s.text, s.variant]),
-                         [['a', 'mm-li']]);         // its \lsf is empty
+                         [['a', 'watson-li']]);     // its \lsf is empty
             assertEquals(e0.attr.some((a: any) =>
                 a.attr === 'import-partition' && a.value === 'final'), true);
             assertEquals(entries.some((e: any) =>
-                (e.spelling ?? []).some((sp: any) => sp.variant === 'mm-sf')
-                && (e.spelling ?? []).some((sp: any) => sp.variant === 'mm-li')), true);
+                (e.spelling ?? []).some((sp: any) => sp.variant === 'watson-sf')
+                && (e.spelling ?? []).some((sp: any) => sp.variant === 'watson-li')), true);
             // The drift is in-band: some sampled entry carries a
             // merge-divergence attr.
             assertEquals(entries.some((e: any) => (e.attr ?? []).some(
@@ -275,7 +332,7 @@ test("transform: REAL RAND -> a rich entry (deterministic; edits block)", async 
             const e0 = (rand.entries as any[]).find((e: any) =>
                 (e.spelling ?? []).some((sp: any) => sp.text === "e'n"));
             assertEquals(e0.spelling.map((s: any) => [s.text, s.variant]),
-                         [["e'n", 'mm-li']]);          // empty lsf skipped
+                         [["e'n", 'watson-li']]);      // empty lsf skipped
             assertEquals(e0.subentry.length, 1);       // the all-empty sense vanished
             const sense = e0.subentry[0];
             assertEquals(sense.part_of_speech, 'voc');

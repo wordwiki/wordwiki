@@ -53,6 +53,8 @@
  * fact-granular ownership predicate of machine-contributors-design.md).
  */
 import * as model from './model.ts';
+import { parseShoeboxDate } from './creation-dates.ts';
+import * as schemaRoles from './schema-roles.ts';
 import * as dictionaryConfig from './dictionary-config.ts';
 import { db } from '../liminal/db.ts';
 import * as timestamp from '../liminal/timestamp.ts';
@@ -94,6 +96,9 @@ export interface TransformValue {
     parsed?: string;
     recode?: Record<string, string>;
     recodeMiss?: 'keep'|'drop';
+    // Literal substring substitutions, applied to string values after
+    // recode (the shoebox '_'-for-space convention in glosses - dz).
+    replaceAll?: Record<string, string>;
 }
 export interface TransformRule {
     from: string;
@@ -108,8 +113,26 @@ export interface TransformMapping {
     formatVersion: number;
     sources: Array<{table: string, schemaHash?: string}>;
     targetSchema: any;
+    // The ENTRY ROOT's valid_from from a source field (dz: the ent
+    // assertion never changes - its valid_from IS the entry's creation
+    // date; MMO's migration uses the shoebox date the same way).  The
+    // parser maps field content -> timestamp; unparseable/pre-epoch
+    // dates fall back to the transform stamp (counted in the report).
+    entryValidFrom?: {from: string, parser: string};
     rules: TransformRule[];
 }
+
+/** entryValidFrom parsers: field content -> assertion timestamp. */
+export const ENTRY_TIMESTAMP_PARSERS: Record<string, (content: string) => number|undefined> = {
+    /** dd/Mon/yyyy or ISO yyyy-mm-dd (parseShoeboxDate) -> a local-epoch
+     *  timestamp at UTC noon; undefined below the 2020 epoch. */
+    shoeboxDate: (content: string) => {
+        const iso = parseShoeboxDate(content);
+        if(iso === undefined) return undefined;
+        const seconds = Math.floor((Date.parse(`${iso}T12:00:00Z`) - timestamp.LOCAL_EPOCH_START) / 1000);
+        return seconds >= 0 ? timestamp.makeTimestamp(seconds, 0) : undefined;
+    },
+};
 
 /** Advisory content hash (djb2 hex) of a source's canonical schema text -
  *  a mapping declares what it was written against; a mismatch WARNS. */
@@ -177,6 +200,13 @@ export function checkMapping(json: any, sourceSchema: model.Schema,
     };
     walkTgt(tgtRoot, '');
 
+    if(mapping.entryValidFrom !== undefined) {
+        if(!srcByPath.has(mapping.entryValidFrom.from))
+            problems.push(`entryValidFrom: no source relation at tag path ` +
+                          `'${mapping.entryValidFrom.from}'`);
+        if(ENTRY_TIMESTAMP_PARSERS[mapping.entryValidFrom.parser] === undefined)
+            problems.push(`entryValidFrom: unknown parser '${mapping.entryValidFrom.parser}'`);
+    }
     for(const [i, rule] of (mapping.rules ?? []).entries()) {
         const at = `rule ${i} (from '${rule.from}')`;
         if(!srcByPath.has(rule.from))
@@ -212,6 +242,7 @@ export interface TransformResult {
     skippedEmpty: number;
     parseMisses: number;
     recodeMisses: number;
+    entryDatesFromSource: number;    // entry roots stamped from entryValidFrom
     generation: number;
     // preserve-foreign accounting (all zero/empty on a from-scratch run)
     preservedFacts: number;                 // foreign-owned facts kept intact
@@ -327,6 +358,7 @@ export function runTransform(targetTable: string, sourceStore: DictionaryStore,
         entries: 0, assertions: 0,
         mappedPerTag: new Map(), unmappedPerTag: new Map(),
         skippedEmpty: 0, parseMisses: 0, recodeMisses: 0,
+        entryDatesFromSource: 0,
         generation: Number(dictionaryConfig.readConfigValue(targetTable, 'transform_generation') ?? '0') + 1,
         preservedFacts: preservedIds.size, preservedByAuthor: new Map(),
         computedSkippedPreserved: 0, resurrectionsSkipped: 0, orphans: [],
@@ -355,17 +387,51 @@ export function runTransform(targetTable: string, sourceStore: DictionaryStore,
             if(hit !== undefined) out = hit;
             else { result.recodeMisses++; if(v.recodeMiss === 'drop') out = null; }
         }
+        if(v.replaceAll !== undefined && typeof out === 'string')
+            for(const [from, to] of Object.entries(v.replaceAll))
+                out = (out as string).split(from).join(to);
         return out;
     };
+
+    // The entryValidFrom source relation, resolved by TAG PATH (top-level
+    // segments walked by tag; the gate has already vetted the path).
+    const entryDateRel = (() => {
+        if(mapping.entryValidFrom === undefined) return undefined;
+        let rel: model.RelationField|undefined;
+        let at: model.RelationField = srcRoot;
+        for(const seg of mapping.entryValidFrom.from.split('/')) {
+            rel = at.relationFields.find(r => r.tag === seg);
+            if(rel === undefined) return undefined;
+            at = rel;
+        }
+        return rel;
+    })();
+    const entryDateParser = mapping.entryValidFrom !== undefined
+        ? ENTRY_TIMESTAMP_PARSERS[mapping.entryValidFrom.parser] : undefined;
 
     const entries = (sourceStore.entries as any[]).slice(0, opts.stopAfterCount ?? Infinity);
     for(const e of entries) {
         const entryId = e[srcPk] as number;
         result.entries++;
+        // The ent assertion never changes - its valid_from IS the entry's
+        // creation date (dz): stamp it from the source date field where
+        // one parses; children keep the transform stamp (always later,
+        // so the parent-before-child validator invariant holds).
+        let entryValidFrom = t;
+        if(entryDateRel !== undefined && entryDateParser !== undefined) {
+            const dateTuple = schemaRoles.collectTuples(e, entryDateRel)
+                .find(d => (d.content ?? '') !== '');
+            const ts = dateTuple !== undefined
+                ? entryDateParser(String(dateTuple.content)) : undefined;
+            if(ts !== undefined && ts <= t) {
+                entryValidFrom = ts;
+                result.entryDatesFromSource++;
+            }
+        }
         const entryRow = {
             ...assertionPathToFields([[targetSchema.tag, 0], [tgtRoot.tag, entryId]]),
             assertion_id: entryId, id: entryId, ty: tgtRoot.tag,
-            valid_from: t, valid_to: timestamp.END_OF_TIME,
+            valid_from: entryValidFrom, valid_to: timestamp.END_OF_TIME,
             order_key: orderkey.new_range_start_string,
             change_by_username: DICT_TRANSFORM_USERNAME,
         } as Assertion;
@@ -586,6 +652,7 @@ export function transformReportMarkdown(table: string, r: TransformResult): stri
         `- skipped empty: ${r.skippedEmpty}`,
         `- parse misses: ${r.parseMisses}`,
         `- recode misses: ${r.recodeMisses}`,
+        `- entry dates from source (entryValidFrom): ${r.entryDatesFromSource}`,
         ``,
         ...(r.preservedFacts === 0 ? [] : [
             ``,

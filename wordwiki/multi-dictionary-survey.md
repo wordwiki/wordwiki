@@ -620,6 +620,19 @@ honor:
   non-citations (informant names, places, one scripture ref) left
   as raw source text; 99.5% of the merged corpus's 31,723 entries
   now carry a structured Rand 1888 page.
+  WORKLIST ITERATION 2 (dz 2026-07-26): (a) entryValidFrom - the
+  mapping names a source date field + parser ('dt' / shoeboxDate)
+  and the ENT assertion's valid_from becomes the entry's true
+  creation date (the ent fact never changes, so its date never
+  moves - MMO's convention); children keep the stamp, so the
+  parent-before-child invariant holds; unparseable dates fall back
+  (counted).  rand: 686 distinct dates, 2020-2026.  (b) VALUE
+  replaceAll - the shoebox '_'-for-space convention undone on
+  glosses + literal translations (1,316 ge + 22 de).  (c) Watson's
+  lanes are their OWN orthographies now: watson-li / watson-sf /
+  rand seeded in the orthography table (publishable 0) and the
+  mapping's lanes switched off mm-li/mm-sf - the orthography
+  survey measured the drift; sharing MMO's lanes was wrong.
   NEXT (iteration, with dz/Watson): the mapping worklist (sd/li/lf/
   ra/... tail), and eventually publish for rand.  (The Ng/Lk
   reunification: DONE pre-import - merge-rand-sources.ts.)

@@ -16,8 +16,10 @@ db = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
 
 mmo = {t.replace('’', "'") for (t,) in db.execute(
     "SELECT attr1 FROM dict WHERE ty='spl' AND valid_to=? AND variant='mm-li' AND attr1 IS NOT NULL", (EOT,))}
+# (Watson's lanes moved to their own orthography rows 2026-07-26:
+#  watson-li / watson-sf, no longer sharing mm-li/mm-sf.)
 rand = {t for (t,) in db.execute(
-    "SELECT attr1 FROM rand WHERE ty='spl' AND valid_to=? AND variant='mm-li' AND attr1 IS NOT NULL", (EOT,))}
+    "SELECT attr1 FROM rand WHERE ty='spl' AND valid_to=? AND variant='watson-li' AND attr1 IS NOT NULL", (EOT,))}
 print(f"MMO li distinct: {len(mmo)};  RAND li distinct: {len(rand)}")
 print(f"exact matches (MMO ’ normalized): {len(rand & mmo)}")
 

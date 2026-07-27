@@ -251,6 +251,14 @@ export const SEED_ORTHOGRAPHIES: Array<{slug: string, name: string, abbreviation
     { slug: 'mm-sf', name: 'Smith-Francis',        abbreviation: 'SF', publishable: 1, edition: 'preview' },
     { slug: 'mm-mp', name: 'Modified Pacifique',   abbreviation: 'MP', publishable: 0, edition: 'preview' },
     { slug: 'mm-pm', name: 'Pacifique Manuscript', abbreviation: 'PM', publishable: 0, edition: 'preview' },
+    // The imported-book orthographies (dz 2026-07-26; rand-references-
+    // design.md §6b): Watson's transcription lanes are NOT MMO's lanes
+    // (the orthography survey measured the drift), and Rand's own 1888
+    // orthography is its own writing system.  Real content, never
+    // publish targets.
+    { slug: 'watson-li', name: 'Watson Listuguj',      abbreviation: 'WLi', publishable: 0, edition: 'preview' },
+    { slug: 'watson-sf', name: 'Watson Smith-Francis', abbreviation: 'WSF', publishable: 0, edition: 'preview' },
+    { slug: 'rand',      name: 'Rand (1888)',          abbreviation: 'Rd',  publishable: 0, edition: 'preview' },
 ];
 
 /** Idempotent seed (insert-if-missing; never overwrites an edited row - but
