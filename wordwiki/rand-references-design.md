@@ -405,8 +405,9 @@ sheets; entry-level PAIRINGS between dictionaries let imagery (and
 eventually more) flow without cross-writes.
 
 - **The pairing entity.**  rand↔MMO pairs are themselves FACTS — a
-  role-marked, xref-shaped relation on the entry (its own small
-  design when the auto-pair feature starts).  That makes pairing a
+  role-marked, xref-shaped relation on the entry (designed:
+  wordwiki/similarity-design.md, 2026-07-27 — the three-pass
+  similarity engine with per-purpose landings).  That makes pairing a
   machine-contributors citizen: '~rand-mmo-pair' proposes (the
   mark-insensitive match keys from rand-orthography-survey.md are
   the candidate generator), a human confirming or severing a pair

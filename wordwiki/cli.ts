@@ -987,10 +987,13 @@ export async function cliMain(args: string[]): Promise<void> {
                         worklist.finding(`p.${r.printed_page}: unclaimed region - ${u}`);
                     if(r.noScanPage)
                         worklist.finding(`p.${r.printed_page}: NO scan page carries this number`);
+                    if(r.failed)
+                        worklist.finding(`p.${r.printed_page}: EXTRACTION FAILED (re-run to ` +
+                                         `retry; nothing cached): ${r.failed}`);
                 }
                 step.finish();
                 return reports.some(r => r.unmatched.length > 0 || r.belowThreshold.length > 0
-                                    || r.unclaimed.length > 0) ? 2 : 0;
+                                    || r.unclaimed.length > 0 || r.failed !== undefined) ? 2 : 0;
             });
             Deno.exit(exitCode);
             break;

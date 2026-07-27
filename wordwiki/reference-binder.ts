@@ -204,10 +204,16 @@ export interface BinderExtraction { bindings: BinderBinding[];
                                     unclaimed_regions: string[]; }
 
 export const BINDER_SCHEMA = {
-    type: 'object', required: ['bindings', 'unmatched_entries', 'unclaimed_regions'],
+    // Only `bindings` is REQUIRED: models sometimes omit empty arrays
+    // despite `required` (a full-run killer on page 7 of 286) - the
+    // driver defaults the lists instead.
+    type: 'object', required: ['bindings'],
     properties: {
         bindings: {type: 'array', items: {type: 'object',
-            required: ['entry_id', 'box_ids', 'confidence'],
+            // Same tolerance at the item level (p.24 omitted box_ids on
+            // one of 135 bindings): the driver defaults; an id-less or
+            // box-less binding degrades to bad-boxes, never a dead page.
+            required: ['entry_id'],
             properties: {entry_id: {type: 'integer'},
                          box_ids: {type: 'array', items: {type: 'integer'}},
                          // Boxes (also listed in box_ids) whose printed line
@@ -302,7 +308,12 @@ export async function bindPageViaLlm(cfg: ExtractConfig, input: BinderPageInput,
         imageBox: BIND_IMAGE_BOX, schema: BINDER_SCHEMA,
         prompt: (i: unknown) => bindPrompt(i as BinderPageInput, bookTitle),
     };
-    return await extractStage(cfg, input.image_ref, 0, stage, input) as BinderExtraction;
+    const raw = await extractStage(cfg, input.image_ref, 0, stage, input) as BinderExtraction;
+    return {bindings: (raw.bindings ?? []).map(b => ({
+                ...b, box_ids: b.box_ids ?? [],
+                confidence: b.confidence ?? 'low'})),
+            unmatched_entries: raw.unmatched_entries ?? [],
+            unclaimed_regions: raw.unclaimed_regions ?? []};
 }
 
 export function binderImageSource() {
@@ -456,6 +467,8 @@ export interface PageBindReport {
     unmatched: Array<{entry_id: number, headword: string}>;
     unclaimed: string[];
     noScanPage?: boolean;
+    failed?: string;                 // the extraction failed (API/validation) -
+                                     //   the page is retryable (nothing cached)
 }
 
 export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
@@ -494,7 +507,19 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
             belowThreshold: [], badBoxes: [], unmatched: [], unclaimed: []};
         if(input.candidates.length === 0) { reports.push(r); continue; }
 
-        const extraction = await opts.extract(input);
+        // One bad page must not kill a multi-hour run: a failed extraction
+        // (transient API error, schema misfire) reports and moves on -
+        // nothing caches on failure, so a re-run retries exactly the
+        // failed pages at no extra cost for the rest.
+        let extraction: BinderExtraction;
+        try {
+            extraction = await opts.extract(input);
+        } catch(e) {
+            r.failed = e instanceof Error ? e.message : String(e);
+            log(`p.${printed}: EXTRACTION FAILED - ${r.failed}`);
+            reports.push(r);
+            continue;
+        }
         r.unclaimed = extraction.unclaimed_regions;
         const boxText = new Map(input.boxes.map(b => [b.id, b.text]));
         // The model occasionally contradicts itself (an entry both bound and
@@ -714,6 +739,7 @@ export function bindReportMarkdown(opts: {book: string, dictionary: string,
         lines.push(``, `## printed p.${r.printed_page}` +
             (r.noScanPage ? ' - NO SCAN PAGE CARRIES THIS NUMBER' :
              ` (${r.candidates} candidates, ${r.boxes} boxes)`));
+        if(r.failed) lines.push(`- EXTRACTION FAILED (retryable): ${r.failed}`);
         for(const b of r.bound)
             lines.push(`- **${b.headword}** (${b.entry_id}):`,
                        ...b.boxTexts.map(t => `    - ${t}`));

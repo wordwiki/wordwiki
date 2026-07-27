@@ -212,7 +212,9 @@ their own run reports.
   extraction stage's cache key (the candidate-entry json already
   carries glosses — the design anticipated this).  preserve-foreign
   is this doc's ownership rule enforced by the transform.
-- **Related words / all-to-all xref** ('~xref', pending posture,
+- **Related words / all-to-all xref** ('~xref' - the design resolved
+  into wordwiki/similarity-design.md, 2026-07-27; the sketch below
+  stands as first written) (pending posture,
   periodic batch): MULTI-PASS with delta-shaped cache keys —
   algorithmic candidate generation (embeddings/string keys; O(n²)
   Opus is out), then one Opus judgment per word over its candidate
