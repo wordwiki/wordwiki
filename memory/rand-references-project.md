@@ -94,6 +94,12 @@ document references like MMO's, doc of record
   fragment, --details= native md); EXPECTED tokens rand-import
   rand-transform rand-printed-pages clark-printed-pages rand-binding.
   Navbar: data-driven Dictionaries menu + Rand Binder Review link.
+  PROVEN end-to-end 2026-07-27 on a fresh production pull (dz pulls
+  OUTSIDE the container - the staging ssh key is not available
+  inside): all 19 steps exit 0; step 14 created rand from scratch;
+  1,062/1,067 bound at LLM 0 calls (shared derived store survives
+  re-migration); mapping carries targetName so the display name
+  reproduces.
   Binder landing is now O(n) (idempotence check via pure SQL, quiet
   batch apply - touching store.entriesById per binding rebuilt the
   entries JSON 1,062x = hours).

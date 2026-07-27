@@ -87,11 +87,12 @@ set -e
 #  15. derive printed page numbers for the Rand + Clark scans (the
 #      citation->scan-page map; exits 2 on unassigned front matter, which
 #      is expected and tolerated)
-#  16. bind the SAMPLE pages (printed 46-55, dz's standing review set) -
-#      references land on rand's tagging sheet, '~rand-binder'-authored.
-#      The Opus extractions are memoized in the SHARED derived store, so
+#  16. bind the FULL Rand book (printed 1-286) - references land on
+#      rand's tagging sheet, '~rand-binder'-authored.  The Opus
+#      extractions are memoized in the SHARED derived store, so
 #      re-migrations bind at ZERO LLM cost (a cold cache needs the
-#      wordwiki-anthropic-credential.json and pays ~10 calls)
+#      wordwiki-anthropic-credential.json and pays ~280 calls); the
+#      sample-page review gallery (46-55) regenerates alongside
 #  17. verify-migration: read-only invariant checks; exits nonzero on failure
 #  18. verify-workspace: read-only STRUCTURAL invariants of the whole store
 #      (variant invariants reported as warnings - only the hand-triage
@@ -249,17 +250,21 @@ step "[15/19] deriving printed page numbers for the Rand + Clark scans"
 ./wordwiki.sh derive-printed-pages Rand --apply --report=$RD/15-rand-printed-pages.md || [ $? -eq 2 ]
 ./wordwiki.sh derive-printed-pages Clark --apply --report=$RD/15-clark-printed-pages.md || [ $? -eq 2 ]
 
-step "[16/19] binding the SAMPLE pages (printed 46-55) to rand entries"
-# dz's standing review set (rand-references-design.md §5).  Extractions
-# are memoized in the SHARED derived store: warm cache = zero LLM calls
-# (a cold cache needs wordwiki-anthropic-credential.json and pays ~10
-# calls).  The binder worklist (unmatched/low-confidence/unclaimed)
-# reports as findings; the visual gallery regenerates alongside.
+step "[16/19] binding the FULL book (printed 1-286) to rand entries"
+# The whole-book binding (rand-references-design.md §5, full run
+# authorized by dz 2026-07-27).  Extractions are memoized in the SHARED
+# derived store: warm cache = ZERO LLM calls (a cold cache needs
+# wordwiki-anthropic-credential.json and pays ~280 Opus calls - only
+# ever once per corpus/prompt version).  The binder worklist
+# (unmatched/low-confidence/unclaimed) reports as findings; the visual
+# gallery regenerates for dz's standing SAMPLE pages (46-55).
+./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888' \
+    --printed=1-286 --source-lane=rand --apply \
+    --report=$RD/16-rand-binding.md \
+    --details=../watson/rand-binder-full-eval.md || [ $? -eq 2 ]
 ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888' \
     --printed=46-55 --source-lane=rand --apply \
-    --report=$RD/16-rand-binding.md \
-    --details=../watson/rand-binder-eval-v2.md \
-    --review-html=../resources/rand-binder-review.html || [ $? -eq 2 ]
+    --review-html=../resources/rand-binder-review.html > /dev/null || [ $? -eq 2 ]
 
 step "[17/19] verifying the migration"
 ./wordwiki.sh verify-migration --report=$RD/17-verify-migration.md
