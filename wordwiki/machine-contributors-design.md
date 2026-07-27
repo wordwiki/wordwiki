@@ -138,6 +138,14 @@ transform already does with derivedId — same collision posture.)
   can absorb them (§4); otherwise trickle — propose on the word view
   where a human is already looking, retract-unapproved-and-redo as
   the algo improves (dz's word-at-a-time pattern).
+- **Freeze policy** (added 2026-07-27, similarity-design.md §3c):
+  WHAT human actions freeze is itself per-feature.  Content-editing
+  features keep approval-freezes as decided above.  High-volume LINK
+  features (counterpart/related) land born-approved WITH CONFIDENCE
+  and offer NO approval verb at all — the verbs are sever (durable),
+  pin (explicit freeze, rare), annotate (a separate human-owned
+  child fact) — so corpus-wide algorithm improvements re-run freely
+  years in (dz: "freezing evolution will be the bigger loss").
 
 ## 3. The feedback loop (dz: user edits should FEED the next run)
 

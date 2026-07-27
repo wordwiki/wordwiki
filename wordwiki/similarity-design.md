@@ -93,9 +93,9 @@ machine-contributors loop working as intended.
   the batch's job, not the schema's).  This is the conduit: MMO's
   word view shows its rand pair as SUPPORT MATERIAL (and through it
   the Rand page scans); rand's shows its MMO pair (recordings,
-  vetted modern content).  Posture: born-approved at 'high' with
-  evidence exact-skeleton (they are the survey's anchor pairs);
-  PENDING otherwise.
+  vetted modern content).  Posture: BORN-APPROVED WITH
+  CONFIDENCE (§3c) - low-confidence pairs are a report, not a
+  review queue.
 - **'~xref' (A<->A related entries)** - top-k related per entry,
   relaxed precision, its own relation.  SEEDED/EVALUATED for free by
   the binder's shared-line synonym sets (siblings bound to the same
@@ -115,6 +115,75 @@ machine-contributors loop working as intended.
   (category-evidence boosting matches boosting categories is a
   feedback loop; separate batches over each other's landed,
   freeze-respecting outputs).
+
+## 3b. The link relations (RESOLVED 2026-07-27, dz + discussion)
+
+**Per-target-dictionary RELATIONS, not a generic link.**  dz's
+instinct ('rand-counterpart', 'clark-counterpart'), made principled:
+a link to rand and a link to Clark are foreign keys into DIFFERENT
+tables - different relations is the orthodox relational move, not
+the hack (the generic (target_dictionary, target_entry_id) pair was
+the EAV-flavored alternative).  The system's grain agrees: display
+and publish policy are RELATION-granular ($view order/audience/
+display name, publish audience filters), so "rand counterparts are
+public support material; Clark matches are internal-only, badged
+'uncorrected OCR'" costs zero new machinery.  Rules that keep it
+clean:
+- The target dictionary is a SCHEMA ANNOTATION on the relation
+  ($targetDictionary: 'rand') plus a shared $role - NEVER encoded in
+  and parsed out of names/tags.  Generic code iterates relations by
+  role and reads the annotation (the boundingGroup-$shape dispatch
+  pattern).  Storage tags stay short and arbitrary; names readable
+  (rand_counterpart).
+- TWO roles: `counterpart` (the near-1:1 "essentially the same entry
+  in another dictionary" claim) and `related` (the ranked many-link;
+  A<->A is simply a related relation whose $targetDictionary is the
+  dictionary itself; A<->B cross-dictionary related uses the same
+  role).  relationsByRole grows a PLURAL form for these roles.
+- Adding a dictionary means a schema edit on each consumer that
+  wants links to it - accepted, and half a feature: deciding to link
+  a new dictionary IS a policy moment (display? publish? audience?),
+  and the schema edit is where those decisions live, gated by
+  checkProposedSchema.
+
+**The link payload will grow - leave room.**  Beyond
+target_entry_id + confidence + evidence + rank, the judge can emit a
+QUALIFIER commentary ('plural form', 'diminutive', ...) - machine
+data on the link fact.  HUMAN commentary is a separate child fact
+(human-owned) beside the machine link, so annotating never entangles
+ownership (see §3c).  The shape will be discovered by use; the soft
+schema makes field additions cheap.
+
+## 3c. Ownership + verbs: DON'T create approval flows for links (dz)
+
+dz's scenario, recorded because it is the design's center of
+gravity: end users will engage lightly, gradually "approving" link
+facts if offered the verb - and six months in, when the big prompt
+improvement arrives ("things would be a lot better if only XXX"),
+the accumulated approvals would FREEZE thousands of facts against
+the re-run.  A small early gain, a large permanent loss: "freezing
+evolution will be the bigger loss."
+
+The reframe that fits machine-contributors: the "approval freezes"
+decision stays true WHERE APPROVAL EXISTS - for these high-volume
+link features we simply do not create an approval flow.  Everything
+lands BORN-APPROVED WITH CONFIDENCE (dz: not the same as generic
+born-approved - the confidence rides the fact, and low-confidence
+REPORTS give reviewers a bounded worklist without gating the data).
+The human verbs on a link fact are:
+- **sever** - "this link is wrong": a durable human tombstone;
+  never reasserted by any re-run (the existing rule).
+- **pin** - "keep this": an explicit, deliberate freeze.  Rare by
+  construction; a re-run that disagrees with a pin lists it in the
+  frozen-stale report - a tiny human worklist, not a blocked run.
+- **annotate** - a human commentary CHILD fact; the link itself
+  stays machine-owned, so re-runs remain free (a retracted link
+  orphans the annotation into the skeleton/report path, visibly).
+Under this scheme the six-month improvement re-runs the corpus
+freely: severs stick, the few pins report where stale, and nothing
+else resists.  (machine-contributors-design.md §2.5 gains this as a
+per-feature FREEZE-POLICY knob; the content-editing features keep
+approval-freezes as decided.)
 
 ## 4. Support-material dictionaries (a dictionary CLASS)
 
@@ -159,14 +228,35 @@ those dictionaries when they exist.)
 6. Support-dictionary class flag + Clark/Pacifique consumers when
    their OCR exists.
 
-## Open questions (dz)
+## Resolved questions (2026-07-27)
 
-- The pairing relation's home: a new role ('pairedEntry'?) on a
-  relation in each dictionary's schema, or a separate cross-dict
-  table?  Design leans ROLE-MARKED RELATION (assertion-native,
-  review/freeze machinery free, survives publish bundling); pushback
-  welcome.
-- Does 'high'-evidence pairing land born-approved (the design's
-  lean, anchor pairs are survey-verified) or should even those queue
-  for review initially?
-- A<->A k (how many related entries per word is useful in the UI)?
+- **The relations' home**: in each dictionary's schema, PER TARGET
+  DICTIONARY, roles `counterpart` + `related` with $targetDictionary
+  annotations - §3b.  (dz: 'pairedEntry' too generic; related may be
+  A<->B cross-dictionary - see related rand words for an MMO word;
+  counterpart expresses "close to being the same entry in two
+  dictionaries".)
+- **Posture**: born-approved WITH CONFIDENCE across the link
+  features; no approval flows on link facts - the verbs are sever /
+  pin / annotate (§3c).
+- **A<->A k** (dz): experiment - but the fixed limit is secondary to
+  CONCEPT COMMONNESS: 'bear bite' usefully relates on bear and bite
+  (uncommon concepts); 'time' words would overwhelm (and broad
+  topical grouping is the category mechanism's job anyway).
+  Mechanically this is pass-0 INVERSE-FREQUENCY weighting: a shared
+  key's evidence value is proportional to its rarity; keys above a
+  commonness threshold cannot FORM candidate clusters (they may only
+  corroborate).  The 'time' cluster never forms, and k becomes
+  largely self-regulating.  LAND generously (rank/score on the
+  facts), DISPLAY selectively (a UI cap) - display tuning must never
+  require re-running a batch.
+- **The third pass** (dz): after a full pairing, a JUDGE sweep over
+  the landed results produces a FEEDBACK DOCUMENT fed into
+  re-pairing.  Constraints: the feedback document is COMMITTED,
+  HUMAN-READABLE DATA (stop-list additions, weight adjustments,
+  worked examples), reviewed before it feeds back - never an opaque
+  model-to-model channel (the curated-not-auto-folded rule); and
+  bounded to one-two iterations per corpus change (self-feeding
+  critics converge on their own taste).  It rides the substrate:
+  the feedback doc sits in the pass-0 config and pass-1 prompt, both
+  in cache keys, so re-pairing recomputes exactly what it touched.

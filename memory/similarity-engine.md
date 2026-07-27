@@ -15,6 +15,16 @@ sketch + rand-references §6 pairing).  Core:
 - dz DECIDED (doc annotation 2026-07-27): '~xref' is BORN-APPROVED
   ("too much for editors to approve, at least for the first cuts");
   may revisit after language editors review on staging.
+- RESOLVED (doc §3b/§3c): PER-TARGET-DICTIONARY relations
+  (rand_counterpart etc.) with $targetDictionary annotation + plural
+  roles counterpart/related (NEVER name-parsed); link payload grows
+  (machine qualifier commentary; human commentary = separate child
+  fact).  NO approval flows on link facts - verbs are sever/pin/
+  annotate; ALL landings born-approved WITH CONFIDENCE +
+  low-confidence reports (dz's 6-month scenario: mass approvals
+  would freeze evolution - the bigger loss).  IDF-weighted blocking
+  (common keys can't form clusters); land generously/display top-k;
+  bounded committed-feedback third pass.
 - Pass 0 mechanical blocking (per-orthography normalizers AS DATA,
   skeleton + english + category keys — kills O(n^2), free; alone
   lands the survey's 1,443 exact pairs).  Pass 1 = LLM judging ONE
